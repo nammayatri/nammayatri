@@ -67,6 +67,9 @@ import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FarePolicy as FarePolicy
 import qualified Domain.Types.FarePolicy.Common as FarePolicy
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DFPEFB
+import qualified Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as FPIDPS
+import qualified Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffer as FPRDDB
+import qualified Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs as FPRDPS
 import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Geometry as DGEO
 import qualified Domain.Types.GoHomeConfig as DGoHomeConfig
@@ -983,7 +986,27 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     platformFeeSgstFarePolicyLevel :: Text,
     platformFeeChargesBy :: Text,
     perMinuteRideExtraTimeCharge :: Text,
-    searchSource :: Text
+    searchSource :: Text,
+    perExtraMinRate :: Text,
+    includedKmPerHr :: Text,
+    plannedPerKmRate :: Text,
+    maxAdditionalKmsLimit :: Text,
+    totalAdditionalKmsLimit :: Text,
+    timePercentage :: Text,
+    distancePercentage :: Text,
+    farePercentage :: Text,
+    includeActualTimePercentage :: Text,
+    includeActualDistPercentage :: Text,
+    rideDuration :: Text,
+    bufferKms :: Text,
+    bufferMeters :: Text,
+    perHourCharge :: Text,
+    perKmRateOneWay :: Text,
+    perKmRateRoundTrip :: Text,
+    kmPerPlannedExtraHour :: Text,
+    perDayMaxHourAllowance :: Text,
+    perDayMaxAllowanceInMins :: Text,
+    defaultWaitTimeAtDestination :: Text
   }
   deriving (Show)
 
@@ -1043,6 +1066,26 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "platform_fee_charges_by"
       <*> r .: "per_minute_ride_extra_time_charge"
       <*> r .: "search_source"
+      <*> r .: "per_extra_min_rate"
+      <*> r .: "included_km_per_hr"
+      <*> r .: "planned_per_km_rate"
+      <*> r .: "max_additional_kms_limit"
+      <*> r .: "total_additional_kms_limit"
+      <*> r .: "time_percentage"
+      <*> r .: "distance_percentage"
+      <*> r .: "fare_percentage"
+      <*> r .: "include_actual_time_percentage"
+      <*> r .: "include_actual_dist_percentage"
+      <*> r .: "ride_duration"
+      <*> r .: "buffer_kms"
+      <*> r .: "buffer_meters"
+      <*> r .: "per_hour_charge"
+      <*> r .: "per_km_rate_one_way"
+      <*> r .: "per_km_rate_round_trip"
+      <*> r .: "km_per_planned_extra_hour"
+      <*> r .: "per_day_max_hour_allowance"
+      <*> r .: "per_day_max_allowance_in_mins"
+      <*> r .: "default_wait_time_at_destination"
 
 postMerchantConfigFarePolicyUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
 postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
@@ -1130,6 +1173,50 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                               _ -> slabs <> NE.fromList (concat remainingSlabs)
                       let slabsDuplicateRemoved = NE.nubBy (\a b -> a.startDistance == b.startDistance) slabs'
                       return $ FarePolicy.SlabsDetails FarePolicy.FPSlabsDetails {slabs = slabsDuplicateRemoved}
+                    FarePolicy.RentalDetails FarePolicy.FPRentalDetails {currency = _currency', ..} -> do
+                      remainingRentalDistanceBuffer <-
+                        mapM
+                          ( \f ->
+                              case f.farePolicyDetails of
+                                FarePolicy.RentalDetails details -> return $ NE.toList details.distanceBuffers
+                                _ -> throwError $ InvalidRequest "Please have same fare policy type for all fare policies of a area, service tier, trip category and time bound"
+                          )
+                          remainingfarePolicies
+                      remainingPricingSlabs <-
+                        mapM
+                          ( \f ->
+                              case f.farePolicyDetails of
+                                FarePolicy.RentalDetails details -> return $ NE.toList details.pricingSlabs
+                                _ -> throwError $ InvalidRequest "Please have same fare policy type for all fare policies of a area, service tier, trip category and time bound"
+                          )
+                          remainingfarePolicies
+                      let pricingSlabs' =
+                            case remainingPricingSlabs of
+                              [] -> pricingSlabs
+                              _ -> pricingSlabs <> NE.fromList (concat remainingPricingSlabs)
+                      let distanceBuffers' =
+                            case remainingRentalDistanceBuffer of
+                              [] -> distanceBuffers
+                              _ -> distanceBuffers <> NE.fromList (concat remainingRentalDistanceBuffer)
+                      let distanceBuffersDuplicateRemoved = NE.nubBy (\a b -> a.rideDuration == b.rideDuration) distanceBuffers'
+                      let pricingSlabsDuplicateRemoved = NE.nubBy (\a b -> a.timePercentage == b.timePercentage) pricingSlabs'
+                      return $ FarePolicy.RentalDetails FarePolicy.FPRentalDetails {distanceBuffers = distanceBuffersDuplicateRemoved, pricingSlabs = pricingSlabsDuplicateRemoved, ..}
+                    FarePolicy.InterCityDetails FarePolicy.FPInterCityDetails {currency = _currency', ..} -> do
+                      remainingPricingSlabs <-
+                        mapM
+                          ( \f ->
+                              case f.farePolicyDetails of
+                                FarePolicy.InterCityDetails details -> return $ NE.toList details.pricingSlabs
+                                _ -> throwError $ InvalidRequest "Please have same fare policy type for all fare policies of a area, service tier, trip category and time bound"
+                          )
+                          remainingfarePolicies
+                      let pricingSlabs' =
+                            case remainingPricingSlabs of
+                              [] -> pricingSlabs
+                              _ -> pricingSlabs <> NE.fromList (concat remainingPricingSlabs)
+
+                      let pricingSlabsDuplicateRemoved = NE.nubBy (\a b -> a.timePercentage == b.timePercentage) pricingSlabs'
+                      return $ FarePolicy.InterCityDetails FarePolicy.FPInterCityDetails {pricingSlabs = pricingSlabsDuplicateRemoved, ..}
                     _ -> return farePolicyDetails
                 return $ FarePolicy.FarePolicy {id = newId, driverExtraFeeBounds = driverExtraFeeBoundsDuplicateRemoved, farePolicyDetails = farePolicyDetails', ..}
 
@@ -1323,6 +1410,60 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                       }
             let slabs = NE.fromList [FarePolicy.FPSlabsDetailsSlab {startDistance = baseDistance, nightShiftCharge = mbNightCharges, platformFeeInfo = mbPlatformFeeInfo, ..}]
             return $ FarePolicy.SlabsDetails FarePolicy.FPSlabsDetails {slabs}
+          FarePolicy.Rental -> do
+            baseFare :: HighPrecMoney <- readCSVField idx row.baseFare "Base Fare"
+            deadKmFare :: HighPrecMoney <- readCSVField idx row.deadKmFare "Dead Km Fare"
+            perHourCharge :: HighPrecMoney <- readCSVField idx row.deadKmFare "Per Hour Charge Amount"
+            perExtraMinRate :: HighPrecMoney <- readCSVField idx row.extraKmRateStartDistance "Per Extra Min Rate"
+            perExtraKmRate :: HighPrecMoney <- readCSVField idx row.perExtraKmRate "Per Extra Km Rate"
+            includedKmPerHr :: Kilometers <- readCSVField idx row.perExtraKmRate "Included Km Per Hour"
+            plannedPerKmRate :: HighPrecMoney <- readCSVField idx row.plannedPerKmRate "Planned Per Km Rate"
+            maxAdditionalKmsLimit :: Kilometers <- readCSVField idx row.maxAdditionalKmsLimit "Max Additional Kms Limit"
+            totalAdditionalKmsLimit :: Kilometers <- readCSVField idx row.totalAdditionalKmsLimit "Total Additional Kms Limit"
+
+            -- distanceBuffers
+            rideDuration :: Seconds <- readCSVField idx row.rideDuration "Ride Duration"
+            bufferKms :: Int <- readCSVField idx row.bufferKms "Buffer Kms"
+            bufferMeters :: Int <- readCSVField idx row.bufferMeters "Buffer Meters"
+
+            -- RentalpricingSlabs
+            timePercentage :: Int <- readCSVField idx row.timePercentage "Time Percentage"
+            distancePercentage :: Int <- readCSVField idx row.distancePercentage "Distance Percentage"
+            farePercentage :: Int <- readCSVField idx row.farePercentage "Fare Percentage"
+            includeActualTimePercentage :: Bool <- readCSVField idx row.includeActualTimePercentage "Include ActualTime Percentage"
+            includeActualDistPercentage :: Bool <- readCSVField idx row.includeActualDistPercentage "Include Actual Dist Percentage"
+
+            let waitingChargeInfo =
+                  Just
+                    FarePolicy.WaitingChargeInfo
+                      { waitingCharge = waitingCharges,
+                        freeWaitingTime = freeWatingTime
+                      }
+            let distanceBuffers = NE.fromList [FPRDDB.FPRentalDetailsDistanceBuffers {..}]
+            let pricingSlabs = NE.fromList [FPRDPS.FPRentalDetailsPricingSlabs {..}]
+            return $ FarePolicy.RentalDetails FarePolicy.FPRentalDetails {nightShiftCharge = mbNightCharges, ..}
+          FarePolicy.InterCity -> do
+            baseFare :: HighPrecMoney <- readCSVField idx row.baseFare "Base Fare"
+            deadKmFare :: HighPrecMoney <- readCSVField idx row.deadKmFare "Dead Km Fare"
+            perHourCharge :: HighPrecMoney <- readCSVField idx row.deadKmFare "Per Hour Charge Amount"
+            perExtraMinRate :: HighPrecMoney <- readCSVField idx row.extraKmRateStartDistance "Per Extra Min Rate"
+            perExtraKmRate :: HighPrecMoney <- readCSVField idx row.perExtraKmRate "Per Extra Km Rate"
+            perKmRateOneWay :: HighPrecMoney <- readCSVField idx row.perKmRateOneWay "Per Km Rate One Way"
+            kmPerPlannedExtraHour :: Kilometers <- readCSVField idx row.kmPerPlannedExtraHour "Km Per Planned Extra Hour"
+            perDayMaxHourAllowance :: Hours <- readCSVField idx row.perDayMaxHourAllowance "Per Day Max Hour Allowance"
+            perDayMaxAllowanceInMins :: Minutes <- readCSVField idx row.perDayMaxAllowanceInMins "Per Day Max Allowance In Mins"
+            perKmRateRoundTrip :: HighPrecMoney <- readCSVField idx row.perKmRateRoundTrip "Per Km Rate Round Trip"
+            defaultWaitTimeAtDestination :: Minutes <- readCSVField idx row.defaultWaitTimeAtDestination "Default Wait Time At Destination"
+            let mbPerDayMaxAllowanceInMins = Just perDayMaxAllowanceInMins
+            -- InterCityPricingSlabs
+            timePercentage :: Int <- readCSVField idx row.timePercentage "Time Percentage"
+            distancePercentage :: Int <- readCSVField idx row.distancePercentage "Distance Percentage"
+            farePercentage :: Int <- readCSVField idx row.farePercentage "Fare Percentage"
+            includeActualTimePercentage :: Bool <- readCSVField idx row.includeActualTimePercentage "Include ActualTime Percentage"
+            includeActualDistPercentage :: Bool <- readCSVField idx row.includeActualDistPercentage "Nnclude Actual Dist Percentage"
+
+            let pricingSlabs = NE.fromList [FPIDPS.FPInterCityDetailsPricingSlabs {..}]
+            return $ FarePolicy.InterCityDetails FarePolicy.FPInterCityDetails {nightShiftCharge = mbNightCharges, perDayMaxAllowanceInMins = mbPerDayMaxAllowanceInMins, ..}
           _ -> throwError $ InvalidRequest "Fare Policy Type not supported"
 
       driverExtraFeeBounds <- do

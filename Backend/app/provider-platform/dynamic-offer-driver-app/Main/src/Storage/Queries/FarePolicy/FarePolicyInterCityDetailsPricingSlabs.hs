@@ -44,4 +44,4 @@ instance FromTType' BeamFPRDPS.FarePolicyInterCityDetailsPricingSlabs BeamFPRDPS
 
 instance ToTType' BeamFPRDPS.FarePolicyInterCityDetailsPricingSlabs BeamFPRDPS.FullFarePolicyInterCityDetailsPricingSlabs where
   toTType' (KTI.Id farePolicyId, DFP.FPInterCityDetailsPricingSlabs {..}) =
-    BeamFPRDPS.FarePolicyInterCityDetailsPricingSlabsT {id = Nothing, ..}
+    BeamFPRDPS.FarePolicyInterCityDetailsPricingSlabsT {..}
