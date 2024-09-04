@@ -36,6 +36,7 @@ data BookingT f = BookingT
     estimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
     fareParametersId :: B.C f Kernel.Prelude.Text,
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    hasIntermediateStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     initiatedAs :: B.C f (Kernel.Prelude.Maybe Domain.Types.Trip.TripParty),
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

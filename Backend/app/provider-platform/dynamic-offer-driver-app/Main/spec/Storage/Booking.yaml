@@ -77,6 +77,7 @@ Booking:
     senderDetails: Maybe DeliveryPersonDetails
     receiverDetails: Maybe DeliveryPersonDetails
     initiatedAs: Maybe TripParty
+    hasIntermediateStops: Maybe Bool
 
   excludedFields:
     - merchantId

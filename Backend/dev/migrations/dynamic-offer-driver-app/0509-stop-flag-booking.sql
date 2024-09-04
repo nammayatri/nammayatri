@@ -1,0 +1,1 @@
+UPDATE atlas_driver_offer_bpp.booking set has_intermediate_stops = false;

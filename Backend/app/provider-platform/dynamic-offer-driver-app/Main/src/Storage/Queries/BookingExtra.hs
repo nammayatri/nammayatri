@@ -114,6 +114,7 @@ updateStop bookingId stopLocationId = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamB.stopLocationId stopLocationId,
+      Se.Set BeamB.hasIntermediateStops (Just True),
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]

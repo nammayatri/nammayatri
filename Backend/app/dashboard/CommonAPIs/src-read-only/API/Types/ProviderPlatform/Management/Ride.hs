@@ -227,7 +227,8 @@ data RideInfoRes = RideInfoRes
     mbDefaultServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rideCity :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    rideCreatedAt :: Kernel.Prelude.UTCTime
+    rideCreatedAt :: Kernel.Prelude.UTCTime,
+    stopLocations :: [API.Types.ProviderPlatform.Management.Ride.LocationAPIEntity]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

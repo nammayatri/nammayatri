@@ -41,6 +41,7 @@ data Booking = Booking
     estimatedFare :: Kernel.Types.Common.HighPrecMoney,
     fareParams :: Domain.Types.FareParameters.FareParameters,
     fromLocation :: Domain.Types.Location.Location,
+    hasIntermediateStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     initiatedAs :: Kernel.Prelude.Maybe Domain.Types.Trip.TripParty,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
