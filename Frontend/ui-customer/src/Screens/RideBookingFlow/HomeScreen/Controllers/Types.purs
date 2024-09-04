@@ -343,6 +343,7 @@ data Action = NoAction
   | ToggleCurrentPickupDropCurrentLocation Boolean
   | UpdateSearchActionType
   | DeliveryParcelImageOtpAction DeliveryParcelImageAndOtp.Action
+  | ConfirmDeliveryRide
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where

@@ -2,6 +2,7 @@ module Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.Controller where
 
 import Common.Types.App as App
 import Components.GenericHeader.Controller as GenericHeaderController
+import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ScreenData
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.ParcelDeliveryInstruction.Controller as ParcelDeliveryInstructionController
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
@@ -13,6 +14,7 @@ import Data.Array as DA
 import Data.Maybe( Maybe(..), fromMaybe, maybe)
 import Data.Tuple
 import Debug (spy)
+import Data.String as DS
 import Effect.Aff (launchAff)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.Commons as EHC
@@ -20,7 +22,7 @@ import JBridge as JB
 import Helpers.Utils as HU
 import Prelude
 import Storage
-import PrestoDOM (class Loggable, Eval, update, continue, exit, continueWithCmd)
+import PrestoDOM (class Loggable, Eval, update, continue, exit, continueWithCmd, updateAndExit)
 import Services.API as API
 import Screens.Types as ST
 import Screens.Types (ParcelDeliveryScreenData(..))
@@ -49,10 +51,12 @@ data ScreenOutput
   = GoToHomeScreen ST.ParcelDeliveryScreenState
   | RefreshScreen ST.ParcelDeliveryScreenState
   | GoToSelectLocation ST.ParcelDeliveryScreenState
+  | GoToChooseYourRide ST.ParcelDeliveryScreenState
+  | GoToConfirmgDelivery ST.ParcelDeliveryScreenState
 
 eval :: Action -> ST.ParcelDeliveryScreenState -> Eval Action ScreenOutput ST.ParcelDeliveryScreenState
 
-eval GoBack state = exit $ GoToHomeScreen state
+eval GoBack state = exit $ GoToChooseYourRide state
 
 eval (MapViewLoaded _ _ _) state =
   continueWithCmd state [do
@@ -88,8 +92,8 @@ eval (MapViewLoaded _ _ _) state =
 
 eval (EditAddress isSource) state =
   if isSource == true
-    then continue state {data {currentStage = ST.SENDER_DETAILS}}
-    else continue state {data {currentStage = ST.RECEIVER_DETAILS}}
+    then continue $ state {data {currentStage = ST.SENDER_DETAILS}}
+    else continue $ state {data {currentStage = ST.RECEIVER_DETAILS}}
 
 
 eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state =
@@ -102,59 +106,26 @@ eval (ParcelDeliveryInstructionAC (ParcelDeliveryInstructionController.PrimaryBu
   exit $ GoToSelectLocation state
 
 eval (DeliveryDetailAction (PopUpModalController.PersonMobile (PrimaryEditTextController.TextChanged valId newVal))) state = do
-  let (API.DeliveryDetails deliveryDetailsInfo) = state.data.deliveryDetailsInfo
-      (API.PersonLocationAndInstruction senderDetails) = deliveryDetailsInfo.senderDetails
-      (API.PersonLocationAndInstruction receiverDetails) = deliveryDetailsInfo.receiverDetails
-      newDeliveryDetails =
-        if state.data.currentStage == ST.SENDER_DETAILS then
-          deliveryDetailsInfo { senderDetails = API.PersonLocationAndInstruction senderDetails { phoneNumber = newVal }}
-        else if state.data.currentStage == ST.RECEIVER_DETAILS then
-          deliveryDetailsInfo { receiverDetails = API.PersonLocationAndInstruction receiverDetails { phoneNumber = newVal } }
-        else deliveryDetailsInfo
-  continue state { data { deliveryDetailsInfo = (API.DeliveryDetails newDeliveryDetails) } }
+  let (API.PersonLocationAndInstruction details) = state.props.editDetails
+  continue $ state { props { editDetails = API.PersonLocationAndInstruction details { phoneNumber = newVal } } }
 
 
 eval (DeliveryDetailAction (PopUpModalController.PersonName (PrimaryEditTextController.TextChanged valId newVal))) state = do
-  let (API.DeliveryDetails deliveryDetailsInfo) = state.data.deliveryDetailsInfo
-      (API.PersonLocationAndInstruction senderDetails) = deliveryDetailsInfo.senderDetails
-      (API.PersonLocationAndInstruction receiverDetails) = deliveryDetailsInfo.receiverDetails
-
-      newDeliveryDetails =
-        if state.data.currentStage == ST.SENDER_DETAILS then
-            deliveryDetailsInfo { senderDetails = API.PersonLocationAndInstruction senderDetails { name = newVal } }
-        else if state.data.currentStage == ST.RECEIVER_DETAILS then
-          deliveryDetailsInfo { receiverDetails = API.PersonLocationAndInstruction receiverDetails { name = newVal } }
-        else deliveryDetailsInfo
-  continue state { data { deliveryDetailsInfo = (API.DeliveryDetails newDeliveryDetails) } }
+  let (API.PersonLocationAndInstruction details) = state.props.editDetails
+  continue $ state { props { editDetails = API.PersonLocationAndInstruction details { name = newVal } } }
 
 
 eval (DeliveryDetailAction (PopUpModalController.PersonAddress (PrimaryEditTextController.TextChanged valId newVal))) state = do
-  let (API.DeliveryDetails deliveryDetailsInfo) = state.data.deliveryDetailsInfo
-      (API.PersonLocationAndInstruction senderDetails) = deliveryDetailsInfo.senderDetails
-      (API.PersonLocationAndInstruction receiverDetails) = deliveryDetailsInfo.receiverDetails
-      newDeliveryDetails =  
-        if state.data.currentStage == ST.SENDER_DETAILS then
-          let (API.InstructionAndAddress address) = senderDetails.address
-          in deliveryDetailsInfo { senderDetails = API.PersonLocationAndInstruction senderDetails { address = API.InstructionAndAddress address { extras = newVal }}}
-        else if state.data.currentStage == ST.RECEIVER_DETAILS then 
-          let (API.InstructionAndAddress address) = receiverDetails.address
-          in deliveryDetailsInfo { receiverDetails = API.PersonLocationAndInstruction receiverDetails { address = API.InstructionAndAddress address { extras = newVal }}}
-        else deliveryDetailsInfo
-  continue state { data { deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo } }
+  let (API.PersonLocationAndInstruction details) = state.props.editDetails
+      (API.InstructionAndAddress address) = details.address
+      
+  continue $ state { props { editDetails = API.PersonLocationAndInstruction details { address = API.InstructionAndAddress address { extras = newVal } } } }
 
 eval (DeliveryDetailAction (PopUpModalController.PersonInstruction (PrimaryEditTextController.TextChanged valId newVal))) state = do
-  let (API.DeliveryDetails deliveryDetailsInfo) = state.data.deliveryDetailsInfo
-      (API.PersonLocationAndInstruction senderDetails) = deliveryDetailsInfo.senderDetails
-      (API.PersonLocationAndInstruction receiverDetails) = deliveryDetailsInfo.receiverDetails
-      newDeliveryDetails =  
-        if state.data.currentStage == ST.SENDER_DETAILS then
-          let (API.InstructionAndAddress address) = senderDetails.address
-          in deliveryDetailsInfo { senderDetails = API.PersonLocationAndInstruction senderDetails { address = API.InstructionAndAddress address { instruction = Just newVal }}}
-        else if state.data.currentStage == ST.RECEIVER_DETAILS then 
-          let (API.InstructionAndAddress address) = receiverDetails.address
-          in deliveryDetailsInfo { receiverDetails = API.PersonLocationAndInstruction receiverDetails { address = API.InstructionAndAddress address { instruction = Just newVal }}}
-        else deliveryDetailsInfo
-  continue state { data { deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo } }
+  let (API.PersonLocationAndInstruction details) = state.props.editDetails
+      (API.InstructionAndAddress address) = details.address
+      
+  continue $ state { props { editDetails = API.PersonLocationAndInstruction details { address = API.InstructionAndAddress address { instruction = Just newVal } } } }
 
 eval (DeliveryDetailAction (PopUpModalController.CheckBoxClick)) state = do
   let userName = getValueToLocalStore USER_NAME
@@ -162,24 +133,31 @@ eval (DeliveryDetailAction (PopUpModalController.CheckBoxClick)) state = do
       (API.DeliveryDetails deliveryDetailsInfo) = state.data.deliveryDetailsInfo
       (API.PersonLocationAndInstruction senderDetails) = deliveryDetailsInfo.senderDetails
       (API.PersonLocationAndInstruction receiverDetails) = deliveryDetailsInfo.receiverDetails
+      (API.PersonLocationAndInstruction details) = state.props.editDetails
 
   if state.data.currentStage == ST.SENDER_DETAILS then
     if deliveryDetailsInfo.initiatedAs == API.Sender then
-      continue state {data { deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo {initiatedAs = API.SomeoneElse}}}
-    else continue state { data { deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo { initiatedAs = API.Sender, senderDetails = API.PersonLocationAndInstruction senderDetails { name = userName, phoneNumber = mobileNumber } } } }
+      continue $ state {data { deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo {initiatedAs = API.SomeoneElse}}}
+    else continue $ state { props { editDetails = API.PersonLocationAndInstruction details { name = userName, phoneNumber = mobileNumber} }, data { deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo { initiatedAs = API.Sender, senderDetails = API.PersonLocationAndInstruction senderDetails { name = userName, phoneNumber = mobileNumber } } } }
   else if deliveryDetailsInfo.initiatedAs == API.Receiver then
-    continue state {data {deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo {initiatedAs = API.SomeoneElse}}}
+    continue $ state {  props { editDetails = API.PersonLocationAndInstruction details { name = userName, phoneNumber = mobileNumber} }, data {deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo {initiatedAs = API.SomeoneElse}}}
   else
-    continue state { data { deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo { initiatedAs = API.Receiver, receiverDetails = API.PersonLocationAndInstruction receiverDetails { name = userName, phoneNumber = mobileNumber } } } }
+    continue $ state {  props { editDetails = API.PersonLocationAndInstruction details { name = userName, phoneNumber = mobileNumber} }, data { deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo { initiatedAs = API.Receiver, receiverDetails = API.PersonLocationAndInstruction receiverDetails { name = userName, phoneNumber = mobileNumber } } } }
 
-eval (DeliveryDetailAction (PopUpModalController.OnButton1Click)) state = 
-  continue state { data { currentStage = ST.SENDER_DETAILS } }
-
-eval (DeliveryDetailAction (PopUpModalController.OnButton2Click)) state =
+eval (DeliveryDetailAction (PopUpModalController.OnButton1Click)) state = do
+  let (API.DeliveryDetails deliveryDetailsInfo) = state.data.deliveryDetailsInfo
   if state.data.currentStage == ST.SENDER_DETAILS then
-    continue state { data { currentStage = ST.RECEIVER_DETAILS } }
+    continueWithCmd state { data { deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo { senderDetails = state.props.editDetails } } } $ [pure GoBack]
+  else 
+    continue $ state { props { editDetails = deliveryDetailsInfo.senderDetails}, data { currentStage = ST.SENDER_DETAILS, deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo { receiverDetails = state.props.editDetails } } }
+
+eval (DeliveryDetailAction (PopUpModalController.OnButton2Click)) state = do
+  let (API.DeliveryDetails deliveryDetailsInfo) = state.data.deliveryDetailsInfo
+  if state.data.currentStage == ST.SENDER_DETAILS then
+    continue $ state { props { editDetails = deliveryDetailsInfo.receiverDetails}, data { currentStage = ST.RECEIVER_DETAILS, deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo { senderDetails = state.props.editDetails } } }
   else
-    continue state { data { currentStage = ST.FINAL_DETAILS } }
+    exit $ GoToConfirmgDelivery $ state { data { currentStage = ST.FINAL_DETAILS, deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo { receiverDetails = state.props.editDetails } } }
+    -- continue $ state { data { currentStage = ST.FINAL_DETAILS, deliveryDetailsInfo = API.DeliveryDetails deliveryDetailsInfo { receiverDetails = state.props.editDetails } } }
 
 eval _ state = update state
 

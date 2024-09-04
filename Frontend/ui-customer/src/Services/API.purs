@@ -1242,12 +1242,24 @@ data InitiatedAs =  Sender | Receiver | SomeoneElse
 
 derive instance genericInitiatedAs :: Generic InitiatedAs _
 instance showInitiatedAs :: Show InitiatedAs where show = genericShow
-instance decodeInitiatedAs :: Decode InitiatedAs where decode = defaultEnumDecode
-instance encodeInitiatedAs :: Encode InitiatedAs where encode = defaultEnumEncode
+instance decodeInitiatedAs :: Decode InitiatedAs 
+  where 
+    decode body = case unsafeFromForeign body of
+                    "Sender" -> except $ Right Sender
+                    "Receiver" -> except $ Right Receiver
+                    "SomeoneElse" -> except $ Right SomeoneElse
+                    _ -> fail $ ForeignError "Unknown response"
+instance encodeInitiatedAs :: Encode InitiatedAs 
+  where
+    encode Sender = encode "Sender"
+    encode Receiver = encode "Receiver"
+    encode SomeoneElse = encode "SomeoneElse"
 instance eqInitiatedAs :: Eq InitiatedAs where eq = genericEq
 instance standardEncodeInitiatedAs :: StandardEncode InitiatedAs
   where
-    standardEncode _ = standardEncode {}
+    standardEncode Sender = standardEncode "Sender"
+    standardEncode Receiver = standardEncode "Receiver"
+    standardEncode SomeoneElse = standardEncode "SomeoneElse"
 
 
 instance makeSelectEstimateReq :: RestEndpoint SelectEstimateReq  where

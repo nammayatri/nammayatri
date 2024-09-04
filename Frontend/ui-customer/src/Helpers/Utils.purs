@@ -601,6 +601,7 @@ getScreenFromStage stage = case stage of
   ChangeToRideAccepted -> "change_to_ride_accepted"
   ChangeToRideStarted -> "change_to_ride_started"
   ConfirmingQuotes -> "confirming_quotes"
+  GoToConfirmgDelivery -> "confirm_delivery_screen"
 
 getGlobalPayload :: String -> Maybe GlobalPayload
 getGlobalPayload key = do
@@ -681,7 +682,7 @@ getVehicleVariantImage variant viewType =
                                       _ -> variantConfig.bookAny.leftViewImage
           "BIKE"          -> variantConfig.bike.leftViewImage
           "SUV_PLUS"      -> fetchImage FF_ASSET "ny_ic_suv_plus_left_side"
-          -- "BIKE_DELIVERY" -> variantConfig.bikeDelivery.leftViewImage
+          "DELIVERY_BIKE" -> variantConfig.deliveryBike.leftViewImage
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
       else do
         case variant of
@@ -709,7 +710,7 @@ getVehicleVariantImage variant viewType =
                                       _ -> variantConfig.bookAny.image
           "BIKE"          -> variantConfig.bike.image
           "SUV_PLUS"      -> fetchImage FF_ASSET "ny_ic_suv_plus_side"
-          -- "BIKE_DELIVERY" -> variantConfig.bikeDelivery.image
+          "DELIVERY_BIKE" -> variantConfig.deliveryBike.image
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         
 getVariantRideType :: String -> String
@@ -1114,7 +1115,7 @@ getCitySpecificMarker city variant currentStage =
         "SUV"           -> "ny_ic_suv_nav_on_map"
         "HATCHBACK"     -> "ny_ic_hatchback_nav_on_map"
         "BIKE"          -> if currentStage == Just RideStarted then "ny_ic_bike_pickup_nav_on_map" else "ny_ic_bike_nav_on_map"
-        "BIKE_DELIVERY" -> "ny_ic_bike_delivery_nav_on_map"
+        "DELIVERY_BIKE" -> "ny_ic_bike_delivery_nav_on_map"
         "SUV_PLUS"      -> "ny_ic_suv_plus_nav_on_map"
         _               -> "ny_ic_vehicle_nav_on_map"
 

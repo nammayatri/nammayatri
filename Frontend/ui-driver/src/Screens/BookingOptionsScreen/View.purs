@@ -303,6 +303,8 @@ ridePreferencesView push state ridePreferences =
 
 serviceTierItem :: forall w. ST.BookingOptionsScreenState -> (Action -> Effect Unit) -> ST.RidePreference -> Boolean -> Boolean -> Int -> PrestoDOM (Effect Unit) w
 serviceTierItem state push service enabled opacity index =
+  let _ = spy "DEBUG: serviceTierItem" (getVehicleVariantImage $ HU.getVehicleMapping service.serviceTierType)
+  in
   frameLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT

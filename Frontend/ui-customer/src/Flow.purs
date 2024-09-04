@@ -2515,6 +2515,7 @@ homeScreenFlow = do
           void $ pure $ toast $ "Image Not Uploaded"
           homeScreenFlow
     GO_TO_DELIVERY_DETAILS updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState)
       modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> ParcelDeliveryScreenData.initData{ data { currentStage = SENDER_DETAILS, sourceAddress = updatedState.data.sourceAddress, destinationAddress = updatedState.data.destinationAddress, route = updatedState.data.route, sourceLat = updatedState.props.sourceLat, sourceLong = updatedState.props.sourceLong, destinationLat = updatedState.props.destinationLat, destinationLong = updatedState.props.destinationLong}})
       parcelDeliveryFlow
     _ -> homeScreenFlow
@@ -6494,29 +6495,13 @@ parcelDeliveryFlow = do
       , data {fareProductType = FPT.DELIVERY, source="", locationList = homeScreen.data.recentSearchs.predictionArray} 
       })
       homeScreenFlow
+    ParcelDeliveryScreenController.GoToChooseYourRide state -> do
+      (GlobalState globalState) <- getState
+      updateLocalStage SettingPrice
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> globalState.homeScreen { props { currentStage = SettingPrice }})
+      homeScreenFlow
+    ParcelDeliveryScreenController.GoToConfirmgDelivery state -> do
+      updateLocalStage GoToConfirmgDelivery
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = GoToConfirmgDelivery }, data { deliveryDetailsInfo = Just state.data.deliveryDetailsInfo } })
+      homeScreenFlow
     _ -> pure unit
-
-findDeliveryEstimates :: SearchLocationScreenState -> FlowBT String Unit
-findDeliveryEstimates state = do
-    let
-      dropLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.destLoc
-      pickupLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.srcLoc
-    (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq (fromMaybe 0.0 pickupLoc.lat) (fromMaybe 0.0 pickupLoc.lon)) ORIGIN
-    void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
-    void $ lift $ lift $ toggleLoader true
-    srcFullAddress <- getPlaceName (fromMaybe 0.0 pickupLoc.lat) (fromMaybe 0.0 pickupLoc.lon) HomeScreenData.dummyLocation true
-    destFullAddress <- getPlaceName (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) HomeScreenData.dummyLocation true
-    let
-      currentTime = getCurrentUTC ""
-      address = maybe "" (\(PlaceName address) -> address.formattedAddress) srcFullAddress
-      destAddress = maybe "" (\(PlaceName address) -> address.formattedAddress) destFullAddress
-      srcMarkerConfig = defaultMarkerConfig { pointerIcon = "ny_ic_auto_map" }
-      destMarkerConfig = defaultMarkerConfig { pointerIcon = "src_marker" }
-
-    (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.mkDeliverylSearchReq (fromMaybe 0.0 pickupLoc.lat) (fromMaybe 0.0 pickupLoc.lon) (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) (encodeAddress address [] Nothing (fromMaybe 0.0 pickupLoc.lat) (fromMaybe 0.0 pickupLoc.lon)) (encodeAddress destAddress [] Nothing (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon)) currentTime)
-    modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData { data { srcLoc = Just pickupLoc { address = address }, destLoc = Just dropLoc, route = rideSearchRes.routeInfo, rideDetails { searchId = rideSearchRes.searchId, rideScheduledTimeUTC = currentTime } }, props { searchLocStage = ChooseYourRide } })
-    void $ lift $ lift $ toggleLoader false
-    (App.BackT $ App.BackPoint <$> pure unit)
-      >>= ( \_ -> do
-            searchLocationFlow
-          )

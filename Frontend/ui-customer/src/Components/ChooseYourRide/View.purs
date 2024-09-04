@@ -93,7 +93,7 @@ view push config =
       let variantBasedList = filterVariantAndEstimate config.quoteList
           topProviderList = filter (\element -> element.providerType == ONUS) config.quoteList
           currentPeekHeight = getQuoteListViewHeight config $ length if config.showMultiProvider then variantBasedList else topProviderList 
-      in (if currentPeekHeight == 0 then 470 else currentPeekHeight) + (if config.enableTips then 36 else 0)
+      in (if currentPeekHeight == 0 then 470 else currentPeekHeight) + (if config.enableTips then 36 else 0) + (if config.fareProductType == DELIVERY then 100 else 0)
 
 addTipView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 addTipView push state = 
@@ -501,10 +501,7 @@ chooseYourRideView push config =
                   ][]
                 ] 
               , textView (
-                [ text 
-                    if length config.quoteList > 1 
-                    then (getString CHOOSE_YOUR_RIDE)
-                    else (getString CONFIRM_YOUR_RIDE)
+                [ text headerText
                 , color Color.black800
                 , gravity CENTER_HORIZONTAL
                 , height WRAP_CONTENT

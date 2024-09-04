@@ -14,7 +14,7 @@ import Screens.Types as ST
 import Engineering.Helpers.Commons as EHC
 import Services.EndPoints as EP
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn3)
+import Effect.Uncurried (runEffectFn3, runEffectFn5)
 
 instance showAction :: Show Action where
     show _ =  ""
@@ -54,7 +54,7 @@ eval (UploadMultiPartDataCallback fileType fileId) state = do
 
 eval (ConfirmAndUpload (PrimaryButtonController.OnClick)) state = do
     continueWithCmd state { props { uploading = true}} [do
-        void $  runEffectFn3 JB.uploadMultiPartData state.data.imagePath (EP.uploadParcelImage state.data.rideId) "Image"
+        void $  runEffectFn5 JB.uploadMultiPartData state.data.imagePath (EP.uploadParcelImage state.data.rideId) "Image" "fileId" "file"
         pure NoAction
       ]
 

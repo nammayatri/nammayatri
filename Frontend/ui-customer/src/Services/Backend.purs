@@ -389,10 +389,10 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMo
                 }
             )
     in case searchActionType of
-        -- FPT.DELIVERY -> SearchReq 
-        --     { "contents" : DeliverySearchRequest searchRequest
-        --     , "fareProductType" : "DELIVERY"
-        --     }
+        FPT.DELIVERY -> SearchReq 
+            { "contents" : DeliverySearchRequest searchRequest
+            , "fareProductType" : "DELIVERY"
+            }
         _ -> SearchReq 
             { "contents" : OneWaySearchRequest searchRequest
             , "fareProductType" : "ONE_WAY"

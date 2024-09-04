@@ -414,12 +414,12 @@ view push state =
             , margin state.buttonLayoutMargin
             ]
             [   linearLayout
-                [ width $ if state.optionButtonOrientation == "VERTICAL" then MATCH_PARENT else if (not state.option1.visibility) || (not state.option2.visibility) then MATCH_PARENT else WRAP_CONTENT
+                [ width $ if state.optionButtonOrientation == "VERTICAL" then MATCH_PARENT else if (not state.option1.visibility) || (not state.option2.visibility) || ( state.deliveryDetailsConfig.visibility == VISIBLE ) then MATCH_PARENT else WRAP_CONTENT
                 , height WRAP_CONTENT
                 , orientation if state.optionButtonOrientation == "VERTICAL" then VERTICAL else HORIZONTAL
                 ]
                 [ linearLayout
-                    ([ if state.option2.visibility then width state.option1.width 
+                    ([ if state.option2.visibility && state.deliveryDetailsConfig.visibility /= VISIBLE then width state.option1.width 
                        else weight 1.0
                     , background state.option1.background
                     , height $ state.option1.height
@@ -478,7 +478,8 @@ view push state =
                         ]
                     ]
                 , linearLayout
-                    ([ if not state.showRetry then width state.option1.width 
+                    ([ if state.deliveryDetailsConfig.visibility == VISIBLE then weight 1.0
+                       else if not state.showRetry then width state.option1.width 
                        else if state.option1.visibility then width state.option2.width else weight 1.0
                     , height state.option2.height
                     , background state.option2.background
@@ -760,7 +761,6 @@ personName push state =
         height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation HORIZONTAL
-        , onClick push (const CheckBoxClick)
         ]
         [
         checkBoxView push state
@@ -781,6 +781,7 @@ checkBoxView push state =
     , height WRAP_CONTENT
     , padding (Padding 0 0 0 0)
     , margin (Margin 0 0 0 0)
+    , onClick push (const CheckBoxClick)
     ][ frameLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT      
@@ -791,8 +792,8 @@ checkBoxView push state =
             , cornerRadius 2.0
             ][
             imageView
-                [ width (V 18)
-                , height (V 18)
+                [ width (V 16)
+                , height (V 16)
                 , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_check_box"
                 , visibility if state.deliveryDetailsConfig.checkBoxDetails.isSelected then VISIBLE else GONE
                 ]

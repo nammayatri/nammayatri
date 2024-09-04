@@ -71,8 +71,7 @@ deliveryInstructionView push state =
 
 deliveryDetailsView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
 deliveryDetailsView push state =
-  Anim.screenAnimation $
-  relativeLayout
+  Anim.screenAnimation $ linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
@@ -81,7 +80,14 @@ deliveryDetailsView push state =
     -- , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
     , onClick push $ const NoAction
     ]
-    [ linearLayout
+    [ 
+      if state.data.currentStage == ST.SENDER_DETAILS
+        then deliveryDetailPopupView push state
+        else linearLayout[height WRAP_CONTENT, width WRAP_CONTENT][],
+      if state.data.currentStage == ST.RECEIVER_DETAILS
+        then deliveryDetailPopupView push state
+        else linearLayout[height WRAP_CONTENT, width WRAP_CONTENT][],
+      linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL

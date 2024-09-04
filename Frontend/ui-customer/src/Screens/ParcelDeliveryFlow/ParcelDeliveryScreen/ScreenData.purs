@@ -17,7 +17,9 @@ initData =
     , route : Nothing
     , deliveryDetailsInfo : dummyDeliveryDetailsInfo
     },
-    props : {}
+    props : {
+      editDetails : dummyPersonAndLocationInfo
+    }
   }
 
 dummyAddress :: ST.Address
@@ -38,7 +40,7 @@ dummyDeliveryDetailsInfo :: API.DeliveryDetails
 dummyDeliveryDetailsInfo = API.DeliveryDetails {
   senderDetails : dummyPersonAndLocationInfo
   , receiverDetails : dummyPersonAndLocationInfo
-  , initiatedAs : API.Sender
+  , initiatedAs : API.SomeoneElse
 }
 
 dummyPersonAndLocationInfo :: API.PersonLocationAndInstruction
@@ -50,6 +52,6 @@ dummyPersonAndLocationInfo = API.PersonLocationAndInstruction {
 
 dummyAddress' :: API.InstructionAndAddress
 dummyAddress' = API.InstructionAndAddress {
-  instruction : Just ""
+  instruction : Nothing
   , extras : ""
 }

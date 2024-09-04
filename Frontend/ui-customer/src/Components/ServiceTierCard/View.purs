@@ -123,7 +123,7 @@ showACDetails :: String -> Maybe Boolean -> Boolean
 showACDetails name isAc =
     case isAc of
         Just val -> val
-        Nothing -> (not DS.contains (DS.Pattern "Non-AC") name) && Array.notElem name ["Auto", "Taxi", "AUTO_RICKSHAW", "Eco", "Bike Taxi"]
+        Nothing -> (not DS.contains (DS.Pattern "Non-AC") name) && Array.notElem name ["Auto", "Taxi", "AUTO_RICKSHAW", "Eco", "Bike Taxi", "Delivery Bike"]
 
 type Config
   = { name :: String

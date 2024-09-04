@@ -153,7 +153,7 @@ driverDetailsView config uid nid =
                 ][ linearLayout
                   [ height $ V 38
                   , width WRAP_CONTENT
-                  , background if config.vehicleVariant == "BIKE" then "#FFFFFF" else config.config.driverInfoConfig.numberPlateBackground
+                  , background if config.vehicleVariant == "BIKE" || config.vehicleVariant == "DELIVERY_BIKE" then "#FFFFFF" else config.config.driverInfoConfig.numberPlateBackground
                   , cornerRadius 4.0
                   , orientation HORIZONTAL
                   , margin $ MarginRight 2
@@ -258,7 +258,7 @@ getVehicleImage variant vehicleDetail city = do
                           "TAXI"      -> "ic_white_taxi"
                           "TAXI_PLUS" -> "ny_ic_sedan_concept"
                           "BIKE"      -> "ny_ic_bike_concept"
-                          "BIKE_DELIVERY" -> "ny_ic_bike_delivery_concept"
+                          "DELIVERY_BIKE" -> "ny_ic_bike_delivery_concept"
                           "SUV_PLUS"  -> "ny_ic_suv_plus_concept"
                           _           -> "ny_ic_sedan_concept"
           _          -> case variant of
@@ -271,7 +271,7 @@ getVehicleImage variant vehicleDetail city = do
                           "COMFY"     -> "ny_ic_sedan_concept"
                           "BIKE"      -> "ny_ic_bike_concept"
                           "SUV_PLUS"  -> "ny_ic_suv_plus_concept"
-                          "BIKE_DELIVERY" -> "ny_ic_bike_delivery_concept"
+                          "DELIVERY_BIKE" -> "ny_ic_bike_delivery_concept"
                           _           -> "ny_ic_sedan_concept"              
     where 
       mkAutoImage :: City -> String

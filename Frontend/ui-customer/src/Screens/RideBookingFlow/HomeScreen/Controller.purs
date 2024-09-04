@@ -2468,17 +2468,20 @@ eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionControll
   else if state.data.iopState.showMultiProvider then do 
     void $  pure $ updateLocalStage ProviderSelection 
     exit $ RefreshHomeScreen state { data { iopState { providerSelectionStage = true}, otherSelectedEstimates = otherSelectedEstimates}, props {estimateId = estimateId}}
-  else if state.data.fareProductType == FPT.DELIVERY then do
-    exit $ GoToDeliveryDetails state
   else do
-    
     let customerTip = if state.props.tipViewProps.activeIndex == -1 then HomeScreenData.initData.props.customerTip else state.props.customerTip
         tipViewProps = if state.props.tipViewProps.activeIndex == -1 then HomeScreenData.initData.props.tipViewProps 
                           else if state.props.tipViewProps.stage == TIP_AMOUNT_SELECTED then state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH}
                           else state.props.tipViewProps
         updatedState = state{props{ searchExpire = (getSearchExpiryTime true), customerTip = customerTip, tipViewProps = tipViewProps, estimateId = estimateId}, data{otherSelectedEstimates = otherSelectedEstimates}}
     void $ pure $ setTipViewData (TipViewData { stage : tipViewProps.stage , activeIndex : tipViewProps.activeIndex , isVisible : tipViewProps.isVisible })
-    exit $ SelectEstimateAndQuotes updatedState
+    
+    if state.data.fareProductType == FPT.DELIVERY then do
+      exit $ GoToDeliveryDetails updatedState
+    else
+      exit $ SelectEstimateAndQuotes updatedState
+
+eval ConfirmDeliveryRide state = exit $ SelectEstimateAndQuotes state
 
 eval (ChooseYourRideAction ChooseYourRideController.NoAction) state = do
   continue state{ props{ defaultPickUpPoint = "" } }

@@ -2514,7 +2514,7 @@ nammaServices dummy =
                           case mbService of 
                             Just value -> acc <> [value]
                             Nothing -> acc
-              ) [{type: RemoteConfig.DELIVERY, name: DELIVERY_STR, image: "ny_ic_delivery_service", backgroundColor: "#fef9eb"}] enabledServices
+              ) [] enabledServices
 
 getAllServices :: LazyCheck -> Array RemoteConfig.Service
 getAllServices dummy = 

@@ -1471,7 +1471,7 @@ getEN stringKey =
         TEST_SOS_ACTIVATED -> "Test SOS Activated!"
         CONFIRM_PICKUP_AND_DROP_LOCATION -> "Confirm Pickup and Drop Location"
         CONFIRM_YOUR_DELIVERY -> "Confirm Your Delivery"
-        PAYMENT_AT_RECEIVING_END -> "Payment at Receiving End" 
+        PAYMENT_AT_RECEIVING_END -> "Payment at receiver’s end" 
         PAYMENT_AT_RECEIVING_END_DESC -> "Payment to be settled with the partner when receiving the parcel at drop location"
         SENDER -> "Sender"
         RECEIVER -> "Receiver"

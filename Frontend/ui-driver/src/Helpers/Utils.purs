@@ -631,7 +631,7 @@ getVehicleVariantImage variant =
       "BIKE_TIER" -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
       "SUV_PLUS"  -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
       "SUV_PLUS_TIER" -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
-      "BIKE_DELIVERY" -> "ny_ic_bike_parcel_side," <> commonUrl <> "ny_ic_bike_parcel_side.png"
+      "DELIVERY_BIKE" -> "ny_ic_bike_parcel_side," <> commonUrl <> "ny_ic_bike_parcel_side.png"
       _ -> fetchImage FF_ASSET "ic_vehicle_front"
 
 getVariantRideType :: String -> String
@@ -953,7 +953,7 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.INTERCITY -> "INTERCITY"
   SA.BIKE_TIER -> "BIKE"
   SA.SUV_PLUS_TIER -> "SUV_PLUS"
-  SA.BIKE_DELIVERY -> "BIKE_DELIVERY"
+  SA.DELIVERY_BIKE -> "DELIVERY_BIKE"
 
 getLatestAndroidVersion :: Merchant -> Int
 getLatestAndroidVersion merchant =

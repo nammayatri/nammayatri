@@ -743,7 +743,7 @@ dummyDeliveryPrimaryText =
           margin = Margin 0 20 0 0,
           cornerRadius = 8.0,
           editText {
-            text = "", -- TODO: Add the value from the state
+            text = "",
             textStyle = SubHeading3,
             padding = Padding 16 16 16 16,
             margin = Margin 0 0 0 0
@@ -752,7 +752,7 @@ dummyDeliveryPrimaryText =
             height = V 24
             , width = V 24
             , imageUrl = "ny_ic_id_filled"
-            , margin = (Margin 16 0 0 0)
+            , margin = (Margin 16 0 0 16)
             , padding = (Padding 0 0 0 0)
             , visibility = GONE
           },

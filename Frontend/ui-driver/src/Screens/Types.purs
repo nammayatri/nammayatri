@@ -2992,14 +2992,6 @@ type GullakSDKResp = {
   isNewUser :: Boolean
 }
 
-type GullakSDKResp = {
-  amount :: Number,
-  quantity :: String,
-  responseMessage :: String,
-  responseCode :: Int,
-  isNewUser :: Boolean
-}
-
 -------------------------------------------------- Parcel Image Upload Screen ------------------------------------
 
 type UploadParcelImageScreenState = {

@@ -488,7 +488,7 @@ type IndividualRideCardState =
   }
 
 
-data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE | SUV_PLUS
+data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE | SUV_PLUS | DELIVERY_BIKE
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance eqVehicleVariant :: Eq VehicleVariant where eq = genericEq
@@ -574,6 +574,7 @@ data Stage = HomeScreen
            | ConfirmingEditDestinationLoc
            | RevisedEstimate
            | FavouriteLocationModelEditDest
+           | GoToConfirmgDelivery
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -2877,31 +2878,5 @@ type ParcelDeliveryScreenData = {
 }
 
 type ParcelDeliveryScreenProps = {
+  editDetails:: API.PersonLocationAndInstruction
 }
-
-
--- type DeliveryDetailsInfo = {
---   senderDetails :: PersonAndLocationInfo
---   , receiverDetails :: PersonAndLocationInfo
---   , currentState :: DeliveryModalState
---   , initiatedAs :: InitiatedAs
--- }
-
--- type PersonAndLocationInfo = {
---   name :: String
---   , mobileNumber :: String
---   , address :: String
---   , instruction :: Maybe String
--- }
-
--- data DeliveryModalState = SenderModal | ReceiverModal
-
--- derive instance genericDeliveryModalState :: Generic DeliveryModalState _
--- instance eqDeliveryModalState :: Eq DeliveryModalState  where eq = genericEq
--- instance showDeliveryModalState :: Show DeliveryModalState where show = genericShow
-
--- data InitiatedAs = Sender | Receiver | Else
-
--- derive instance genericInitiatedAs :: Generic InitiatedAs _
--- instance eqInitiatedAs :: Eq InitiatedAs where eq = genericEq
--- instance showInitiatedAs :: Show InitiatedAs where show = genericShow

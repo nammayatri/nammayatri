@@ -17,6 +17,7 @@ import Language.Types (STR(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
+import Data.String.CodeUnits (slice)
 import Services.API as API
 import Data.Array as DA
 import Data.String as DS
@@ -77,10 +78,11 @@ deliveryPickupDetialsModalConfig state =
       isSenderModal = state.data.currentStage == ST.SENDER_DETAILS
       (API.DeliveryDetails deliveryDetails) = state.data.deliveryDetailsInfo
       (API.PersonLocationAndInstruction details) = if isSenderModal then deliveryDetails.senderDetails else deliveryDetails.receiverDetails
-      (API.InstructionAndAddress address) = details.address
+      (API.PersonLocationAndInstruction editDetails) = state.props.editDetails
+      (API.InstructionAndAddress editAddress) = editDetails.address
       isSelected = if isSenderModal then deliveryDetails.initiatedAs == API.Sender else deliveryDetails.initiatedAs == API.Receiver
       checkBoxDetailsText = if isSenderModal then getString I_AM_THE_SENDER else getString I_AM_THE_RECEIVER
-      isClickable = details.name /= "" && details.phoneNumber /= "" && address.extras /= ""
+      isClickable = validateInput state.props.editDetails
       popUpConfig' =
         config'
           { primaryText { 
@@ -107,10 +109,10 @@ deliveryPickupDetialsModalConfig state =
             , strokeColor = config.primaryBackground
             , color = config.primaryBackground
             , text = "Back"
-            , isClickable = not isSenderModal
+            , isClickable = true
             , enableRipple = true
             , margin = Margin 0 20 12 0
-            , width = (V 158)
+            , width = MATCH_PARENT
             }
           , option2
             { color = config.primaryTextColor
@@ -119,7 +121,7 @@ deliveryPickupDetialsModalConfig state =
             , text = if isSenderModal then "Next" else "Confirm" 
             , enableRipple = true
             , margin = Margin 0 20 0 0
-            , width = (V 158)
+            , width = MATCH_PARENT
             , isClickable = isClickable
             }
           , deliveryDetailsConfig { 
@@ -135,14 +137,22 @@ deliveryPickupDetialsModalConfig state =
     in
       popUpConfig'
   where
+    validateInput :: API.PersonLocationAndInstruction -> Boolean
+    validateInput (API.PersonLocationAndInstruction details) = 
+      let
+        (API.InstructionAndAddress address) = details.address
+        firstLetter = slice 0 1 details.phoneNumber
+        isValidNumber = firstLetter >= "6" && firstLetter <= "9"
+      in
+        details.name /= "" && DS.length details.phoneNumber == 10 && isValidNumber && address.extras /= ""
     personNameDetailsConfig :: API.PersonLocationAndInstruction -> Boolean -> PrimaryEditTextController.Config
     personNameDetailsConfig details' isSender = 
       let config = PopUpModal.dummyDeliveryPrimaryText
           (API.PersonLocationAndInstruction details) = details'
       in
         config {
-          editText { text = details.name, placeholder = "Name" },
-          topLabel { text = if isSender then getString SENDER else getString RECEIVER <> " " <> getString NAME <> "*" },
+          editText { text = details.name, placeholder = "Name", pattern = Just "[^\n]*,40" },
+          topLabel { text = (if isSender then getString SENDER else getString RECEIVER) <> " " <> getString NAME },
           textImage { visibility = VISIBLE },
           margin = Margin 0 0 0 8
         }
@@ -153,7 +163,7 @@ deliveryPickupDetialsModalConfig state =
       in
         config {
           editText { text = details.phoneNumber, placeholder = "9999999999", pattern = Just ("[0-9]*,10") },
-          topLabel { text = getString $ PHONE $ if isSender then getString SENDER else getString RECEIVER <> "*"  },
+          topLabel { text = (getString $ PHONE $ if isSender then getString SENDER else getString RECEIVER) },
           textImage { visibility = VISIBLE } 
         }
     addressDetailsConfig :: API.PersonLocationAndInstruction -> Boolean  -> PrimaryEditTextController.Config
@@ -163,8 +173,8 @@ deliveryPickupDetialsModalConfig state =
           (API.InstructionAndAddress address) = details.address
       in
         config {
-          editText { text = address.extras, placeholder = "Apt #1, 1st Block, Locality" },
-          topLabel { text = getString $ BUILDING_OR_FLAT $ (if isSender then getString SENDER else getString RECEIVER) <> "*"  }
+          editText { text = address.extras, placeholder = "Apt #1, 1st Block, Locality", pattern = Just "[^\n]*,50" },
+          topLabel { text = (getString $ BUILDING_OR_FLAT $ if isSender then getString SENDER else getString RECEIVER) <> "*"  }
         }
     instructionDetailsConfig :: API.PersonLocationAndInstruction -> Boolean  -> PrimaryEditTextController.Config
     instructionDetailsConfig details' isSender = 
@@ -174,6 +184,6 @@ deliveryPickupDetialsModalConfig state =
       in
         config {
           height = (V 90),
-          editText { text = fromMaybe "" address.instruction, placeholder = "Instruction", singleLine = false },
-          topLabel { text =if isSender then getString PICKUP else getString DROP  <> " " <> getString OPTIONAL_INSTRUCTION <> "*" }
+          editText { text = fromMaybe "" address.instruction, placeholder = "Instruction", singleLine = false, pattern = Just "[^\n]*,100" },
+          topLabel { text = (if isSender then getString PICKUP else getString DROP  <> " " <> getString OPTIONAL_INSTRUCTION) }
         }
