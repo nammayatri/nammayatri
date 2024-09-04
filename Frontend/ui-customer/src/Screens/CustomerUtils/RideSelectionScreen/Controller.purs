@@ -189,7 +189,7 @@ getTitle :: String -> String
 getTitle category  = 
   case category of
     "APP_RELATED"             -> getString APP_RELATED_ISSUE_PAGE_NAME
-    "RIDE_RELATED"            -> getString RIDE_RELATED_ISSUE_PAGE_NAME
+    "RIDE_RELATED"            -> getString VEHICLE_RELATED_ISSUE_PAGE_NAME
     "DRIVER_RELATED"          -> getString DRIVER_RELATED_ISSUE_PAGE_NAME
     "LOST_AND_FOUND"          -> getString LOST_AND_FOUND_ISSUE_PAGE_NAME
     "SOS"                     -> getString SOS_ISSUE_PAGE_NAME

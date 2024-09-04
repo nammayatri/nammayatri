@@ -24,7 +24,7 @@ import Engineering.Helpers.Commons as EHC
 import Helpers.Utils (FetchImageFrom(..), getAssetsBaseUrl, fetchImage)
 import Types.App (GlobalState(..), defaultGlobalState)
 import JBridge (lottieAnimationConfig, startLottieProcess)
-import Prelude (Unit, const, discard, pure, void, show, ($), (<>), (+), (<<<), (>), unit, bind, map)
+import Prelude (Unit, const, discard, pure, void, show, ($), (<>), (+), (<<<), (>), unit, bind, map, (/=), (==))
 import PrestoDOM
 import Data.Either (Either(..))
 import Data.Foldable (foldl)
@@ -47,6 +47,7 @@ import Presto.Core.Types.Language.Flow (doAff)
 import Effect.Class (liftEffect)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Storage (getValueToLocalStore, KeyStore(..))
 
 screen :: NammaSafetyScreenState -> Screen Action NammaSafetyScreenState ScreenOutput
 screen initialState =
@@ -136,8 +137,12 @@ view push state =
 safetySetupSection :: forall w. NammaSafetyScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 safetySetupSection state push =
   let
-    stepsCompleted = show $ foldl (\acc step -> if step.isCompleted then acc + 1 else acc) 0 state.data.safetySetupSteps
-    totalSteps = show $ Array.length state.data.safetySetupSteps
+    filteredSafetySteps = Array.filter (\step -> getString step.title /= getString SAFETY_DRILL) state.data.safetySetupSteps
+    safetySteps = if getValueToLocalStore IS_SOS_ACTIVE == "true" 
+                    then filteredSafetySteps
+                    else state.data.safetySetupSteps
+    stepsCompleted = show $ foldl (\acc step -> if step.isCompleted then acc + 1 else acc) 0 safetySteps
+    totalSteps = show $ Array.length safetySteps
   in
     linearLayout
       [ height WRAP_CONTENT
@@ -173,7 +178,7 @@ safetySetupSection state push =
           , height WRAP_CONTENT
           , orientation VERTICAL
           ]
-          (map (\item -> listItem push item state) state.data.safetySetupSteps)
+          (map (\item -> listItem push item state) safetySteps)
       ]
 
 listItem :: forall w. (Action -> Effect Unit) -> SafetyStepsConfig -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w

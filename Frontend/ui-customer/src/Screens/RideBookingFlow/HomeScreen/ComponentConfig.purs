@@ -2158,7 +2158,7 @@ shareRideConfig state =
 
     appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
     contactList = DA.filter (\item -> item.shareTripWithEmergencyContactOption.key /= API.NEVER_SHARE) $ fromMaybe [] state.data.contactList
-    trustedContactsNotSetup = DA.null contactList || not state.data.settingSideBar.hasCompletedSafetySetup
+    trustedContactsNotSetup = DA.null contactList
     shareRideConfig' =
       config
         { title = getString SHARE_RIDE

@@ -113,6 +113,7 @@ data Action
   | DismissTestDrill PrimaryButtonController.Action
   | OnPauseCallback
   | AudioPermission Boolean
+  | Exit ScreenOutput
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 eval AddContacts state = updateAndExit state $ GoToEmergencyContactScreen state
@@ -173,7 +174,16 @@ eval BackPressed state = do
       then exit $ GoBack newState
       else continue newState { props { showCallPolice = false, policeCallTimerValue = 5} }
   else 
-    exit $ GoBack newState
+    continueWithCmd state [do
+    if state.props.isAudioRecordingActive then do
+      void $ runEffectFn1 JB.removeMediaPlayer ""
+      void $ runEffectFn1 JB.stopAudioRecording ""
+      pure unit
+    else
+      pure unit
+
+    pure $ Exit $ GoBack newState
+  ]
 
 eval DisableShimmer state = continue state { props { showShimmer = false } }
 
@@ -412,7 +422,8 @@ eval OnPauseCallback state = continueWithCmd state [do
   pure $ SafetyAudioRecordingAction SafetyAudioRecording.CancelAudioRecording
 ]
 
-
+eval (Exit output) state = exit output
+  
 eval _ state = update state
 
 handleMediaPlayerRestart :: NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState

@@ -126,6 +126,7 @@ updateSafetyScreenState state defaultTimerValue showtestDrill triggerSos = do
                     , recordedAudioUrl = Nothing
                     , audioRecordingStatus = CTA.NOT_RECORDING
                     , recordingTimer = "00 : 00"
+                    , defaultCallPopup = false
                     }
                   , data
                     { rideId = state.data.driverInfoCardState.rideId
