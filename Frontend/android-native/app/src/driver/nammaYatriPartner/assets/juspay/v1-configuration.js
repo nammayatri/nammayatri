@@ -262,7 +262,8 @@ window.getMerchantConfig = function () {
 
           "auto" : {},
           "bike" : {}
-        }
+        },
+        "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Hyderabad",
@@ -354,7 +355,8 @@ window.getMerchantConfig = function () {
           "nonAcCab" : {},
           "auto" : {},
           "bike" : {}
-        }
+        },
+        "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Mysore",
@@ -428,7 +430,8 @@ window.getMerchantConfig = function () {
           "nonAcCab" : {},
           "auto" : {},
           "bike" : {}
-        }
+        },
+      "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Delhi",
@@ -515,7 +518,8 @@ window.getMerchantConfig = function () {
           "nonAcCab" : {},
           "auto" : {},
           "bike" : {}
-        }
+        },
+      "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Chennai",
@@ -602,7 +606,29 @@ window.getMerchantConfig = function () {
           "nonAcCab" : {},
           "auto" : {},
           "bike" : {}
+        },
+      "travelMode" : {
+        "pickup" : {
+          "autoRickshaw" : "TWOWHEELER",
+          "taxi" : "DRIVE",
+          "taxiPlus" : "DRIVE",
+          "sedan" : "DRIVE",
+          "suv" : "DRIVE",
+          "hatchback" : "DRIVE",
+          "bike" : "DRIVE",
+          "suvPlus" : "DRIVE"
+        },
+        "dropOff" : {
+          "autoRickshaw" : "DRIVE",
+          "taxi" : "DRIVE",
+          "taxiPlus" : "DRIVE",
+          "sedan" : "DRIVE",
+          "suv" : "DRIVE",
+          "hatchback" : "DRIVE",
+          "bike" : "DRIVE",
+          "suvPlus" : "DRIVE"
         }
+      }
       },
       {
         "cityName" : "Coimbatore",
@@ -676,7 +702,8 @@ window.getMerchantConfig = function () {
           "nonAcCab" : {},
           "auto" : {},
           "bike" : {}
-        }
+        },
+      "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Pondicherry",
@@ -750,7 +777,8 @@ window.getMerchantConfig = function () {
           "nonAcCab" : {},
           "auto" : {},
           "bike" : {}
-        }
+        },
+      "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Tumakuru",
@@ -824,7 +852,8 @@ window.getMerchantConfig = function () {
           "nonAcCab" : {},
           "auto" : {},
           "bike" : {}
-        }
+        },
+      "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Gurugram",
@@ -898,7 +927,8 @@ window.getMerchantConfig = function () {
           "nonAcCab" : {},
           "auto" : {},
           "bike" : {}
-        }
+        },
+      "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Noida",
@@ -972,7 +1002,8 @@ window.getMerchantConfig = function () {
           "nonAcCab" : {},
           "auto" : {},
           "bike" : {}
-        }
+        },
+      "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "TamilNaduCities",
@@ -1046,7 +1077,8 @@ window.getMerchantConfig = function () {
           "nonAcCab" : {},
           "auto" : {},
           "bike" : {}
-        }
+        },
+      "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Minneapolis",
@@ -1120,7 +1152,8 @@ window.getMerchantConfig = function () {
           "nonAcCab" : {},
           "auto" : {},
           "bike" : {}
-        }
+        },
+      "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Kochi",
@@ -1194,7 +1227,8 @@ window.getMerchantConfig = function () {
           "nonAcCab" : {},
           "auto" : {},
           "bike" : {}
-        }
+        },
+      "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Trichy",
@@ -1281,7 +1315,8 @@ window.getMerchantConfig = function () {
           "nonAcCab" : {},
           "auto" : {},
           "bike" : {}
-        }
+        },
+      "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Thanjavur",
@@ -1368,7 +1403,8 @@ window.getMerchantConfig = function () {
           "nonAcCab" : {},
           "auto" : {},
           "bike" : {}
-        }
+        },
+      "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Salem",
@@ -1455,7 +1491,8 @@ window.getMerchantConfig = function () {
           "nonAcCab" : {},
           "auto" : {},
           "bike" : {}
-        }
+        },
+      "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Tirunelveli",
@@ -1542,7 +1579,8 @@ window.getMerchantConfig = function () {
           "nonAcCab" : {},
           "auto" : {},
           "bike" : {}
-        }
+        },
+      "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Hosur",
@@ -1629,7 +1667,8 @@ window.getMerchantConfig = function () {
           "nonAcCab" : {},
           "auto" : {},
           "bike" : {}
-        }
+        },
+      "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Madurai",
@@ -1716,7 +1755,8 @@ window.getMerchantConfig = function () {
           "nonAcCab" : {},
           "auto" : {},
           "bike" : {}
-        }
+        },
+      "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Vellore",
@@ -1803,7 +1843,8 @@ window.getMerchantConfig = function () {
           "nonAcCab" : {},
           "auto" : {},
           "bike" : {}
-        }
+        },
+      "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Davanagere",
@@ -1877,7 +1918,8 @@ window.getMerchantConfig = function () {
           "onboarding_auto_image" : "ny_ic_auto_side",
           "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
           "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-        }
+        },
+        "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Shivamogga",
@@ -1951,7 +1993,8 @@ window.getMerchantConfig = function () {
           "onboarding_auto_image" : "ny_ic_auto_side",
           "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
           "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-        }
+        },
+        "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Hubli",
@@ -2025,7 +2068,8 @@ window.getMerchantConfig = function () {
           "onboarding_auto_image" : "ny_ic_auto_side",
           "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
           "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-        }
+        },
+        "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Mangalore",
@@ -2099,7 +2143,8 @@ window.getMerchantConfig = function () {
           "onboarding_auto_image" : "ny_ic_auto_side",
           "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
           "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-        }
+        },
+        "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Gulbarga",
@@ -2173,7 +2218,8 @@ window.getMerchantConfig = function () {
           "onboarding_auto_image" : "ny_ic_auto_side",
           "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
           "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-        }
+        },
+        "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Udupi",
@@ -2247,7 +2293,8 @@ window.getMerchantConfig = function () {
           "onboarding_auto_image" : "ny_ic_auto_side",
           "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
           "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-        }
+        },
+        "travelMode" : defaultTravelModeConfig
       }
   ]
   , "coinsConfig" : {
@@ -2337,3 +2384,26 @@ let defRateCardConfig = {
     "showLearnMore" : false,
     "learnMoreVideoLink" : ""
   }
+
+let defaultTravelModeConfig = {
+  "pickup" : {
+    "autoRickshaw" : "DRIVE",
+    "taxi" : "DRIVE",
+    "taxiPlus" : "DRIVE",
+    "sedan" : "DRIVE",
+    "suv" : "DRIVE",
+    "hatchback" : "DRIVE",
+    "bike" : "DRIVE",
+    "suvPlus" : "DRIVE"
+  },
+  "dropOff" : {
+    "autoRickshaw" : "DRIVE",
+    "taxi" : "DRIVE",
+    "taxiPlus" : "DRIVE",
+    "sedan" : "DRIVE",
+    "suv" : "DRIVE",
+    "hatchback" : "DRIVE",
+    "bike" : "DRIVE",
+    "suvPlus" : "DRIVE"
+  }
+}

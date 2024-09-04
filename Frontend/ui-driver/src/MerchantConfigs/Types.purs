@@ -254,7 +254,8 @@ type CityConfig = {
   enableHvSdk :: Boolean,
   enableGullak :: Boolean,
   purpleRideConfig :: PurpleRideConfigForVehicle,
-  rideStartAudio :: RideStartAudio
+  rideStartAudio :: RideStartAudio,
+  travelMode :: TravelMode
 }
 
 type CoinsConfig = {
@@ -356,6 +357,22 @@ type VariantToDisabilityVideo = {
 type DisabilityToVideo = {
   disabilityType :: String, 
   videoUrl :: String
+}
+
+type TravelMode = {
+  pickup :: TravelModeForVehicle,
+  dropOff :: TravelModeForVehicle
+}
+
+type TravelModeForVehicle = {
+  autoRickshaw :: String,
+  taxi :: String,
+  taxiPlus :: String,
+  sedan :: String,
+  suv :: String,
+  hatchback :: String,
+  bike :: String,
+  suvPlus :: String
 }
 
 type VariantSubscriptionConfig = {

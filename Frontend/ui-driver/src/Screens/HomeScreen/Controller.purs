@@ -126,6 +126,7 @@ import Timers as TF
 import Data.Ord (abs)
 import DecodeUtil
 import LocalStorage.Cache (getValueFromCache, setValueToCache)
+import Debug(spy)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -623,18 +624,11 @@ eval TriggerMaps state = continueWithCmd state[ do
   let _ = runFn2 EHC.updatePushInIdMap "PlayAudioAndLaunchMap" true
   if state.data.activeRide.tripType == ST.Rental then
       case state.data.activeRide.nextStopLat, state.data.activeRide.nextStopLon of
-        Just nextStopLat,Just nextStopLon -> if state.props.currentStage == ST.RideAccepted && state.data.vehicleType == "AUTO_RICKSHAW" && state.data.cityConfig.cityName == "Chennai"
-                                              then
-                                                pure $ openNavigation nextStopLat nextStopLon "TWOWHEELER"
-                                              else
-                                                pure $ openNavigation nextStopLat nextStopLon "DRIVE"
+        Just nextStopLat,Just nextStopLon -> 
+          openNav state nextStopLat nextStopLon 
         _,_ -> pure unit
   else 
-    if state.props.currentStage == ST.RideAccepted && state.data.vehicleType == "AUTO_RICKSHAW" && state.data.cityConfig.cityName == "Chennai"
-      then
-        pure $ openNavigation state.data.activeRide.dest_lat state.data.activeRide.dest_lon "TWOWHEELER"
-      else
-        pure $ openNavigation state.data.activeRide.dest_lat state.data.activeRide.dest_lon "DRIVE"
+    openNav state state.data.activeRide.dest_lat state.data.activeRide.dest_lon
   _ <- pure $ setValueToLocalStore TRIGGER_MAPS "false"
   pure NoAction
   ]
@@ -952,12 +946,8 @@ eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
   else action state.data.activeRide.dest_lat state.data.activeRide.dest_lon
   where 
     action lat lon = if getDistanceBwCordinates state.data.currentDriverLat state.data.currentDriverLon lat lon > 0.200
-      then do 
-        if state.props.currentStage == ST.RideAccepted && state.data.vehicleType == "AUTO_RICKSHAW" && state.data.cityConfig.cityName == "Chennai"
-          then
-            void $ pure $ openNavigation lat lon "TWOWHEELER"
-          else
-            void $ pure $ openNavigation lat lon "DRIVE"
+      then do
+        void $ pure $ openNav state lat lon
         continue state
       else 
         continueWithCmd state [do
@@ -1213,11 +1203,7 @@ eval (OnMarkerClickCallBack tag lat lon) state = do
     Just lat', Just lon' -> 
       if getDistanceBwCordinates state.data.currentDriverLat state.data.currentDriverLon lat' lon' > 0.200
         then do 
-          if state.props.currentStage == ST.RideAccepted && state.data.vehicleType == "AUTO_RICKSHAW" && state.data.cityConfig.cityName == "Chennai"
-            then
-              void $ pure $ openNavigation lat' lon' "TWOWHEELER"
-            else
-              void $ pure $ openNavigation lat' lon' "DRIVE"
+          void $ pure $ openNav state lat' lon'
           continue state
       else 
         continueWithCmd state [do
@@ -1821,3 +1807,33 @@ fetchStageFromRideStatus activeRide =
     COMPLETED -> ST.RideCompleted
     CANCELLED -> ST.HomeScreen
     _ -> ST.HomeScreen
+
+openNav :: ST.HomeScreenState -> Number -> Number -> Effect Unit
+openNav state lat lon = do
+  let pickupType = state.data.cityConfig.travelMode.pickup
+      dropOffType = state.data.cityConfig.travelMode.dropOff
+  case state.props.currentStage of
+    ST.RideAccepted -> do
+      let navType = case state.data.vehicleType of
+                      "AUTO_RICKSHAW" -> pickupType.autoRickshaw
+                      "TAXI" -> pickupType.taxi
+                      "BIKE" -> pickupType.bike
+                      "TAXI_PLUS" -> pickupType.taxiPlus
+                      "SEDAN" -> pickupType.sedan
+                      "SUV" -> pickupType.suv
+                      "HATCHBACK" -> pickupType.hatchback
+                      "SUV_PLUS" -> pickupType.suvPlus
+                      _ -> "DRIVE"
+      void $ pure $ openNavigation lat lon navType
+    _ -> do
+      let navType = case state.data.vehicleType of
+                      "AUTO_RICKSHAW" -> dropOffType.autoRickshaw
+                      "TAXI" -> dropOffType.taxi
+                      "BIKE" -> dropOffType.bike
+                      "TAXI_PLUS" -> dropOffType.taxiPlus
+                      "SEDAN" -> dropOffType.sedan
+                      "SUV" -> dropOffType.suv
+                      "HATCHBACK" -> dropOffType.hatchback
+                      "SUV_PLUS" -> dropOffType.suvPlus
+                      _ -> "DRIVE"
+      void $ pure $ openNavigation lat lon navType

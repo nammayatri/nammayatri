@@ -241,6 +241,7 @@ window.getMerchantConfig = function () {
           }
         }
       , "rideStartAudio" : defaultStartAudioConfig
+      , "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Hyderabad",
@@ -319,6 +320,7 @@ window.getMerchantConfig = function () {
           }
         }
       , "rideStartAudio" : defaultStartAudioConfig
+      , "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Mysore",
@@ -385,6 +387,7 @@ window.getMerchantConfig = function () {
         }
       }
       , "rideStartAudio" : defaultStartAudioConfig
+      , "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Delhi",
@@ -464,6 +467,7 @@ window.getMerchantConfig = function () {
         }
       }
       , "rideStartAudio" : defaultStartAudioConfig
+      , "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Chennai",
@@ -543,6 +547,28 @@ window.getMerchantConfig = function () {
         }
       }
       , "rideStartAudio" : defaultStartAudioConfig
+      , "travelMode" : {
+        "pickup" : {
+          "autoRickshaw" : "TWOWHEELER",
+          "taxi" : "DRIVE",
+          "taxiPlus" : "DRIVE",
+          "sedan" : "DRIVE",
+          "suv" : "DRIVE",
+          "hatchback" : "DRIVE",
+          "bike" : "DRIVE",
+          "suvPlus" : "DRIVE"
+        },
+        "dropOff" : {
+          "autoRickshaw" : "DRIVE",
+          "taxi" : "DRIVE",
+          "taxiPlus" : "DRIVE",
+          "sedan" : "DRIVE",
+          "suv" : "DRIVE",
+          "hatchback" : "DRIVE",
+          "bike" : "DRIVE",
+          "suvPlus" : "DRIVE"
+        }
+      }
       },
       {
         "cityName" : "Coimbatore",
@@ -609,6 +635,7 @@ window.getMerchantConfig = function () {
         }
       }
       , "rideStartAudio" : defaultStartAudioConfig
+      , "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Puducherry",
@@ -675,6 +702,7 @@ window.getMerchantConfig = function () {
         }
       }
       , "rideStartAudio" : defaultStartAudioConfig
+      , "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Tumakuru",
@@ -741,6 +769,7 @@ window.getMerchantConfig = function () {
         }
       }
       , "rideStartAudio" : defaultStartAudioConfig
+      , "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Gurugram",
@@ -807,6 +836,7 @@ window.getMerchantConfig = function () {
         }
       }
       , "rideStartAudio" : defaultStartAudioConfig
+      , "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Noida",
@@ -873,6 +903,7 @@ window.getMerchantConfig = function () {
         }
       }
       , "rideStartAudio" : defaultStartAudioConfig
+      , "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "TamilNaduCities",
@@ -939,6 +970,7 @@ window.getMerchantConfig = function () {
         }
       }
       , "rideStartAudio" : defaultStartAudioConfig
+      , "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Minneapolis",
@@ -1005,6 +1037,7 @@ window.getMerchantConfig = function () {
         }
       }
       , "rideStartAudio" : defaultStartAudioConfig
+      , "travelMode" : defaultTravelModeConfig
       },
       {
         "cityName" : "Kochi",
@@ -1069,6 +1102,7 @@ window.getMerchantConfig = function () {
         }
       }
       , "rideStartAudio" : defaultStartAudioConfig
+      , "travelMode" : defaultTravelModeConfig
       }
   ]
   , "coinsConfig" : {
@@ -1156,4 +1190,27 @@ let defaultStartAudioConfig = {
   "nonAcCab" : {},
   "auto" : {},
   "bike" : {}
+}
+
+let defaultTravelModeConfig = {
+  "pickup" : {
+    "autoRickshaw" : "DRIVE",
+    "taxi" : "DRIVE",
+    "taxiPlus" : "DRIVE",
+    "sedan" : "DRIVE",
+    "suv" : "DRIVE",
+    "hatchback" : "DRIVE",
+    "bike" : "DRIVE",
+    "suvPlus" : "DRIVE"
+  },
+  "dropOff" : {
+    "autoRickshaw" : "DRIVE",
+    "taxi" : "DRIVE",
+    "taxiPlus" : "DRIVE",
+    "sedan" : "DRIVE",
+    "suv" : "DRIVE",
+    "hatchback" : "DRIVE",
+    "bike" : "DRIVE",
+    "suvPlus" : "DRIVE"
+  }
 }

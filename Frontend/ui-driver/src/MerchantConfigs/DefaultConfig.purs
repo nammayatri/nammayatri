@@ -213,6 +213,28 @@ config =
                 },
                 auto : defaultStartAudioUrls,
                 bike : defaultStartAudioUrls
+              },
+              travelMode : {
+                pickup : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                },
+                dropOff : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                }
               }
             },
             {
@@ -288,6 +310,28 @@ config =
                 nonAcCab : defaultStartAudioUrls,
                 auto : defaultStartAudioUrls,
                 bike : defaultStartAudioUrls
+              },
+              travelMode : {
+                pickup : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                },
+                dropOff : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                }
               }
             },
             {
@@ -358,6 +402,28 @@ config =
                 nonAcCab : defaultStartAudioUrls,
                 auto : defaultStartAudioUrls,
                 bike : defaultStartAudioUrls
+              },
+              travelMode : {
+                pickup : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                },
+                dropOff : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                }
               }
             },
             {
@@ -428,6 +494,28 @@ config =
                 nonAcCab : defaultStartAudioUrls,
                 auto : defaultStartAudioUrls,
                 bike : defaultStartAudioUrls
+              },
+              travelMode : {
+                pickup : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                },
+                dropOff : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                }
               }
             },
             {
@@ -498,6 +586,28 @@ config =
                 nonAcCab : defaultStartAudioUrls,
                 auto : defaultStartAudioUrls,
                 bike : defaultStartAudioUrls
+              },
+              travelMode : {
+                pickup : {
+                  autoRickshaw : "TWOWHEELER",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                },
+                dropOff : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                }
               }
             },
             {
@@ -568,6 +678,28 @@ config =
                 nonAcCab : defaultStartAudioUrls,
                 auto : defaultStartAudioUrls,
                 bike : defaultStartAudioUrls
+              },
+              travelMode : {
+                pickup : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                },
+                dropOff : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                }
               }
             },
             {
@@ -638,6 +770,28 @@ config =
                 nonAcCab : defaultStartAudioUrls,
                 auto : defaultStartAudioUrls,
                 bike : defaultStartAudioUrls
+              },
+              travelMode : {
+                pickup : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                },
+                dropOff : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                }
               }
             },
             {
@@ -708,6 +862,28 @@ config =
                 nonAcCab : defaultStartAudioUrls,
                 auto : defaultStartAudioUrls,
                 bike : defaultStartAudioUrls
+              },
+              travelMode : {
+                pickup : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                },
+                dropOff : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                }
               }
             },
             {             
@@ -778,6 +954,28 @@ config =
                 nonAcCab : defaultStartAudioUrls,
                 auto : defaultStartAudioUrls,
                 bike : defaultStartAudioUrls
+              },
+              travelMode : {
+                pickup : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                },
+                dropOff : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                }
               }
             },
             {
@@ -848,6 +1046,28 @@ config =
                 nonAcCab : defaultStartAudioUrls,
                 auto : defaultStartAudioUrls,
                 bike : defaultStartAudioUrls
+              },
+              travelMode : {
+                pickup : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                },
+                dropOff : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                }
               }
             },
             {
@@ -931,6 +1151,28 @@ config =
                 nonAcCab : defaultStartAudioUrls,
                 auto : defaultStartAudioUrls,
                 bike : defaultStartAudioUrls
+              },
+              travelMode : {
+                pickup : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                },
+                dropOff : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                }
               }
             }, 
             {
@@ -1005,6 +1247,28 @@ config =
                 nonAcCab : defaultStartAudioUrls,
                 auto : defaultStartAudioUrls,
                 bike : defaultStartAudioUrls
+              },
+              travelMode : {
+                pickup : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                },
+                dropOff : {
+                  autoRickshaw : "DRIVE",
+                  taxi : "DRIVE",
+                  taxiPlus : "DRIVE",
+                  sedan : "DRIVE",
+                  suv : "DRIVE",
+                  hatchback : "DRIVE",
+                  bike : "DRIVE",
+                  suvPlus : "DRIVE"
+                }
               }
           }
             --, For future use
@@ -1291,6 +1555,28 @@ allCitiesDefaultCityConfig = {
       showVideo : false,
       disabilityToVideo : [{disabilityType : "BLIND_AND_LOW_VISION", videoUrl : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {disabilityType : "HEAR_IMPAIRMENT", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "LOCOMOTOR_DISABILITY", videoUrl : "https://www.youtube.com/watch?v=udkWOt0serg"}, {disabilityType : "SAFETY", videoUrl : ""}, {disabilityType : "SPECIAL_ZONE_PICKUP", videoUrl : ""}, {disabilityType : "OTHER_DISABILITY", videoUrl : ""}],
       genericVideoForVariant : "https://youtu.be/5s21p2rI58c"
+    }
+  }, 
+  travelMode : {
+    pickup : {
+      autoRickshaw : "DRIVE",
+      taxi : "DRIVE",
+      taxiPlus : "DRIVE",
+      sedan : "DRIVE",
+      suv : "DRIVE",
+      hatchback : "DRIVE",
+      bike : "DRIVE",
+      suvPlus : "DRIVE"
+    },
+    dropOff : {
+      autoRickshaw : "DRIVE",
+      taxi : "DRIVE",
+      taxiPlus : "DRIVE",
+      sedan : "DRIVE",
+      suv : "DRIVE",
+      hatchback : "DRIVE",
+      bike : "DRIVE",
+      suvPlus : "DRIVE"
     }
   },
   rideStartAudio : {
