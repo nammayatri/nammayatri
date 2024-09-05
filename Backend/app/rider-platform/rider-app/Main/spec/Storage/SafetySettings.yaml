@@ -22,6 +22,7 @@ SafetySettings:
     notifySafetyTeamForSafetyCheckFailure : Bool
     shakeToActivate : Bool
     enableOtpLessRide : Maybe Bool
+    aggregatedRideShareSetting : Maybe RideShareOptions
 
   beamType:
     falseSafetyAlarmCount: Maybe Int

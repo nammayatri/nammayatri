@@ -21,3 +21,8 @@ ALTER TABLE atlas_app.safety_settings ADD PRIMARY KEY ( person_id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.safety_settings ALTER COLUMN enable_unexpected_events_check SET DEFAULT 'NEVER_SHARE';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.safety_settings ADD COLUMN aggregated_ride_share_setting text ;
