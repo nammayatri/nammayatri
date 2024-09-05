@@ -69,20 +69,21 @@ import Utils.Common.Cac.KeyNameConstants
 
 data RiderDetailsWithRide = RiderDetailsWithRide
   { riderDetail :: DR.RiderDetails,
-    ride :: Maybe DRide.Ride
+    ride :: Maybe DRide.Ride,
+    driverPhoneNo :: Maybe Text
   }
 
-getPayoutPayoutReferralHistory :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow DTP.PayoutReferralHistoryRes
-getPayoutPayoutReferralHistory merchantShortId opCity areActivatedRidesOnly_ mbCustomerPhoneNo mbFrom mbLimit mbOffset mbReferredByDriver mbTo = do
+getPayoutPayoutReferralHistory :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow DTP.PayoutReferralHistoryRes
+getPayoutPayoutReferralHistory merchantShortId opCity areActivatedRidesOnly_ mbCustomerPhoneNo mbDriverId mbDriverPhoneNo mbFrom mbLimit mbOffset mbTo = do
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
       areActivatedRidesOnly = fromMaybe False areActivatedRidesOnly_
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   mbMobileNumberHash <- mapM getDbHash mbCustomerPhoneNo
-  allRiderDetails <- runInReplica $ QRD.findAllRiderDetailsWithOptions merchant.id limit offset mbFrom mbTo areActivatedRidesOnly (cast <$> mbReferredByDriver) mbMobileNumberHash
+  allRiderDetails <- runInReplica $ QRD.findAllRiderDetailsWithOptions merchant.id limit offset mbFrom mbTo areActivatedRidesOnly (cast <$> mbDriverId) mbMobileNumberHash
   riderDetailsWithRide_ <- mapM getRiderDetailsWithOpCity allRiderDetails
-  let riderDetailsWithRide = filter (\rd -> ((rd.ride <&> (.merchantOperatingCityId)) == Just merchantOpCity.id) || isNothing rd.ride) riderDetailsWithRide_
+  let riderDetailsWithRide = filter (\rd -> (rd.driverPhoneNo == mbDriverPhoneNo && ((rd.ride <&> (.merchantOperatingCityId)) == Just merchantOpCity.id) || isNothing rd.ride)) riderDetailsWithRide_
   history <- mapM (buildReferralHistoryItem merchantOpCity) riderDetailsWithRide
   pure $ DTP.PayoutReferralHistoryRes {history}
   where
@@ -103,12 +104,15 @@ getPayoutPayoutReferralHistory merchantShortId opCity areActivatedRidesOnly_ mbC
             dateOfActivation = utcToIst (secondsToMinutes transporterConfig.timeDiffFromUtc) rideEndTime,
             fraudFlaggedReason = castFlagReasonToCommon <$> rd.payoutFlagReason,
             rideId = Id <$> rd.firstRideId,
-            referredByDriver = cast <$> rd.referredByDriver,
+            driverId = cast <$> rd.referredByDriver,
             isReviewed = isJust rd.isFlagConfirmed
           }
     getRiderDetailsWithOpCity riderDetail = do
       mbRide <- forM riderDetail.firstRideId $ \rideId -> runInReplica $ QR.findById (Id rideId) >>= fromMaybeM (RideDoesNotExist rideId)
-      pure RiderDetailsWithRide {riderDetail = riderDetail, ride = mbRide}
+      driverId <- riderDetail.referredByDriver & fromMaybeM (InvalidRequest $ "DriverId is null for riderDetailsId:" <> riderDetail.id.getId)
+      driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      driverPhoneNo <- mapM decrypt driver.mobileNumber
+      pure RiderDetailsWithRide {riderDetail = riderDetail, ride = mbRide, driverPhoneNo = driverPhoneNo}
 
 utcToIst :: Minutes -> Maybe Kernel.Prelude.UTCTime -> Maybe LocalTime
 utcToIst timeZoneDiff = fmap $ utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinutes)

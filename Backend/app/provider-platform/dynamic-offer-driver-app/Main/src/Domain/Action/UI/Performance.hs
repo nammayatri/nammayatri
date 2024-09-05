@@ -50,5 +50,5 @@ getDriverPerformance (driverId, _, merchantOpCityId) = do
   driverStats <- QDS.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   let eligiblePayoutAmount = driverStats.totalPayoutEarnings
       totalPayoutAmountPaid = fromMaybe 0.0 driverStats.totalPayoutAmountPaid
-  mbLatestPayoutOrder <- QPayoutOrder.findLatestByCustomerId driverId.getId
+  mbLatestPayoutOrder <- QPayoutOrder.findLatestPaidPayoutByCustomerId driverId.getId
   pure $ PerformanceRes (Results (length allRefferedCustomers) (length ridesTakenList) totalReferredDrivers payoutConfig.isPayoutEnabled di.payoutVpa eligiblePayoutAmount totalPayoutAmountPaid (mbLatestPayoutOrder <&> (.createdAt)))
