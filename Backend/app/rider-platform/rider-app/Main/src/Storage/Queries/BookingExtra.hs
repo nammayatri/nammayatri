@@ -338,12 +338,3 @@ updateMultipleById isBookingUpdated estimatedFare estimatedTotalFare mbEstimated
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
-
-updateBookingFromLocationById :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Id DL.Location -> m ()
-updateBookingFromLocationById bookingId fromLocationId = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamB.fromLocationId $ Just $ getId fromLocationId,
-      Se.Set BeamB.updatedAt now
-    ]
-    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
