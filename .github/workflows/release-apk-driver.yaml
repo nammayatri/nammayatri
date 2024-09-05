@@ -127,7 +127,7 @@ jobs:
           DYNAMIC_ASSETS: ${{ secrets.DYNAMIC_ASSETS }}
       - name: Update includeDynamicFeature in gradle.properties
         run: |
-          sed -i 's/includeDynamicFeature=.*/includeDynamicFeature=true/' gradle.properties
+          sed -i 's/includeDynamicFeature=.*/includeDynamicFeature='${{ secrets.DYNAMIC_FEATURE }}'/' gradle.properties
           cat gradle.properties
 
       - name: Create Local Properties
