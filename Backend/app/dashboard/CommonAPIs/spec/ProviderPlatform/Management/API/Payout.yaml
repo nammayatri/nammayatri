@@ -16,7 +16,8 @@ apis:
         offset: Int
         areActivatedRidesOnly: Bool
         customerPhoneNo: Text
-        referredByDriver: (Id Driver)
+        driverPhoneNo: Text
+        driverId: (Id Driver)
         from: UTCTime
         to: UTCTime
       response:
@@ -78,7 +79,7 @@ types:
     - dateOfActivation: Maybe LocalTime
     - fraudFlaggedReason: Maybe PayoutFlagReason
     - rideId : Maybe (Id Ride)
-    - referredByDriver: Maybe (Id Driver)
+    - driverId: Maybe (Id Driver)
     - isReviewed: Bool
 
   PayoutHistoryRes:
