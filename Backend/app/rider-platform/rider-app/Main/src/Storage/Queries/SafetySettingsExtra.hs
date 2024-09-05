@@ -29,9 +29,13 @@ data UpdateEmergencyInfo = UpdateEmergencyInfo
     notifySosWithEmergencyContacts :: Maybe Bool,
     shakeToActivate :: Maybe Bool,
     safetyCenterDisabledOnDate :: Maybe UTCTime,
-    enableOtpLessRide :: Maybe Bool
+    enableOtpLessRide :: Maybe Bool,
+    aggregatedRideShare :: Maybe RideShareOptions
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+emptyUpdateEmergencyInfo :: UpdateEmergencyInfo
+emptyUpdateEmergencyInfo = UpdateEmergencyInfo Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 -- Extra code goes here --
 upsert ::
@@ -58,6 +62,7 @@ upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = do
             <> [Se.Set BeamP.shakeToActivate (fromJust shakeToActivate) | isJust shakeToActivate]
             <> [Se.Set BeamP.safetyCenterDisabledOnDate safetyCenterDisabledOnDate]
             <> [Se.Set BeamP.enableOtpLessRide enableOtpLessRide | isJust enableOtpLessRide]
+            <> [Se.Set BeamP.aggregatedRideShareSetting aggregatedRideShare | isJust aggregatedRideShare]
         )
         [Se.Is BeamP.personId (Se.Eq personId)]
     else do
@@ -79,7 +84,8 @@ upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = do
                 safetyCenterDisabledOnDate = bool person.safetyCenterDisabledOnDate safetyCenterDisabledOnDate (isJust safetyCenterDisabledOnDate),
                 shakeToActivate = fromMaybe False shakeToActivate,
                 updatedAt = now,
-                enableOtpLessRide = enableOtpLessRide <|> person.enableOtpLessRide
+                enableOtpLessRide = enableOtpLessRide <|> person.enableOtpLessRide,
+                aggregatedRideShareSetting = person.shareTripWithEmergencyContactOption
               }
       createWithKV safetySettings
 
@@ -118,6 +124,7 @@ findSafetySettingsWithFallback personId mbPerson = do
                 shakeToActivate = False,
                 updatedAt = now,
                 enableOtpLessRide = person.enableOtpLessRide,
+                aggregatedRideShareSetting = person.shareTripWithEmergencyContactOption,
                 ..
               }
       _ <- createWithKV safetySettings

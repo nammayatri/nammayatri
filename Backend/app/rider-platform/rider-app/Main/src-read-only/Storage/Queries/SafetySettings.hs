@@ -45,7 +45,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.SafetySettings.SafetySettings {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.autoCallDefaultContact autoCallDefaultContact,
+    [ Se.Set Beam.aggregatedRideShareSetting aggregatedRideShareSetting,
+      Se.Set Beam.autoCallDefaultContact autoCallDefaultContact,
       Se.Set Beam.enableOtpLessRide enableOtpLessRide,
       Se.Set Beam.enablePostRideSafetyCheck enablePostRideSafetyCheck,
       Se.Set Beam.enableUnexpectedEventsCheck enableUnexpectedEventsCheck,

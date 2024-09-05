@@ -17,7 +17,8 @@ instance FromTType' Beam.SafetySettings Domain.Types.SafetySettings.SafetySettin
     pure $
       Just
         Domain.Types.SafetySettings.SafetySettings
-          { autoCallDefaultContact = autoCallDefaultContact,
+          { aggregatedRideShareSetting = aggregatedRideShareSetting,
+            autoCallDefaultContact = autoCallDefaultContact,
             enableOtpLessRide = enableOtpLessRide,
             enablePostRideSafetyCheck = enablePostRideSafetyCheck,
             enableUnexpectedEventsCheck = enableUnexpectedEventsCheck,
@@ -37,7 +38,8 @@ instance FromTType' Beam.SafetySettings Domain.Types.SafetySettings.SafetySettin
 instance ToTType' Beam.SafetySettings Domain.Types.SafetySettings.SafetySettings where
   toTType' (Domain.Types.SafetySettings.SafetySettings {..}) = do
     Beam.SafetySettingsT
-      { Beam.autoCallDefaultContact = autoCallDefaultContact,
+      { Beam.aggregatedRideShareSetting = aggregatedRideShareSetting,
+        Beam.autoCallDefaultContact = autoCallDefaultContact,
         Beam.enableOtpLessRide = enableOtpLessRide,
         Beam.enablePostRideSafetyCheck = enablePostRideSafetyCheck,
         Beam.enableUnexpectedEventsCheck = enableUnexpectedEventsCheck,

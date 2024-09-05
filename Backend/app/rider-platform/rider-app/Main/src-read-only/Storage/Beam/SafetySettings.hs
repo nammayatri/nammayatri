@@ -13,7 +13,8 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data SafetySettingsT f = SafetySettingsT
-  { autoCallDefaultContact :: B.C f Kernel.Prelude.Bool,
+  { aggregatedRideShareSetting :: B.C f (Kernel.Prelude.Maybe Domain.Types.Person.RideShareOptions),
+    autoCallDefaultContact :: B.C f Kernel.Prelude.Bool,
     enableOtpLessRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enablePostRideSafetyCheck :: B.C f Domain.Types.Person.RideShareOptions,
     enableUnexpectedEventsCheck :: B.C f Domain.Types.Person.RideShareOptions,
