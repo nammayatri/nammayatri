@@ -266,6 +266,8 @@ editLocation rideId (personId, merchantId) req = do
       QLM.create pickupMapForBooking
       pickupMapForRide <- SLM.buildPickUpLocationMapping startLocation.id ride.id.getId DLM.RIDE (Just merchantId) ride.merchantOperatingCityId
       QLM.create pickupMapForRide
+      pickupMapForSearchReq <- SLM.buildPickUpLocationMapping startLocation.id booking.transactionId DLM.SEARCH_REQUEST (Just merchantId) ride.merchantOperatingCityId
+      QLM.create pickupMapForSearchReq
       let origin = Just $ startLocation{id = "0"}
       bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
       uuid <- generateGUID
