@@ -125,6 +125,10 @@ jobs:
           base64 -d -i bools.xml.b64 > app/src/main/res/values/bools.xml
         env:
           DYNAMIC_ASSETS: ${{ secrets.DYNAMIC_ASSETS }}
+      - name: Update includeDynamicFeature in gradle.properties
+        run: |
+          sed -i 's/includeDynamicFeature=.*/includeDynamicFeature=true/' gradle.properties
+          cat gradle.properties
 
       - name: Create Local Properties
         run : |

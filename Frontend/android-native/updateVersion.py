@@ -6,8 +6,6 @@ gradle_file_path = "app/build.gradle"
 # Define the path to the version information file
 version_info_file = "versions.txt"
 
-gradle_properties_path = "gradle.properties"
-
 # Function to read version information from the file
 def read_version_info(file_path):
     version_info = {}
@@ -56,25 +54,3 @@ if os.path.exists(gradle_file_path):
     print(f"Modified {gradle_file_path}")
 else:
     print(f"File {gradle_file_path} not found.")
-
-if app_type == "driver":
-    if os.path.exists(gradle_properties_path):
-        # Read the content of the file
-        with open(gradle_properties_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-
-        # Modify the content to update includeDynamicFeature to true
-        modified_lines = []
-        for line in lines:
-            if line.strip().startswith("includeDynamicFeature"):
-                modified_lines.append("includeDynamicFeature=true\n")  # Change to true
-            else:
-                modified_lines.append(line)
-
-        # Write the modified content back to the file
-        with open(gradle_properties_path, "w", encoding="utf-8") as f:
-            f.writelines(modified_lines)
-
-        print(f"Updated {gradle_properties_path} successfully.")
-    else:
-        print(f"File {gradle_properties_path} not found.")
