@@ -17,6 +17,7 @@ data ExophoneT f = ExophoneT
   { backupPhone :: B.C f Kernel.Prelude.Text,
     callService :: B.C f Kernel.External.Call.Types.CallService,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
+    enableAlternateNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     isPrimaryDown :: B.C f Kernel.Prelude.Bool,
     merchantId :: B.C f Kernel.Prelude.Text,

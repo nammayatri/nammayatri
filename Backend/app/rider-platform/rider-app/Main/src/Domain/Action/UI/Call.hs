@@ -45,6 +45,7 @@ import qualified Kernel.External.Call.Exotel.Types as Call
 import Kernel.External.Call.Interface.Exotel (exotelStatusToInterfaceStatus)
 import qualified Kernel.External.Call.Interface.Types as Call
 import qualified Kernel.External.Call.Interface.Types as CallTypes
+import qualified Kernel.External.Call.Types as CallTypes
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -85,6 +86,7 @@ data CallAttachments = CallAttachments
 type CallCallbackRes = AckResponse
 
 data DriverNumberType = AlternateNumber | PrimaryNumber | BothNumber
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
 type GetDriverMobileNumberResp = Text
 
@@ -212,6 +214,7 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
 
   mobileNumberHash <- getDbHash callFrom
   mbRiderDetails <- findRiderDetails merchantId mobileNumberHash
+  let driverNumberType' = if driverNumberType == BothNumber then (if exophone.callService == CallTypes.Exotel && exophone.enableAlternateNumber == Just True then BothNumber else PrimaryNumber) else driverNumberType
 
   (resNumber, ride, callType, dtmfNumberUsed) <-
     case mbRiderDetails of
@@ -219,7 +222,7 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
         ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
         ensureCallStatusExists id callSid ride.id callStatus booking.merchantOperatingCityId
         decRide <- decrypt ride
-        number <- getNumberBasedOnType driverNumberType decRide
+        number <- getNumberBasedOnType driverNumberType' decRide
         return (number, ride, "ANONYMOUS_CALLER", dtmfNumberUsed)
       Nothing -> do
         ride <- runInReplica $ QRide.findLatestByDriverPhoneNumber callFrom >>= fromMaybeM (PersonWithPhoneNotFound callFrom)

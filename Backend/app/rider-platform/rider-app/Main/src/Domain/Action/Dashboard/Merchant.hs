@@ -123,7 +123,8 @@ buildExophone merchantId merchantOperatingCityId now req = do
         isPrimaryDown = False,
         callService = req.callService,
         updatedAt = now,
-        createdAt = now
+        createdAt = now,
+        enableAlternateNumber = Just False
       }
 
 ---------------------------------------------------------------------
