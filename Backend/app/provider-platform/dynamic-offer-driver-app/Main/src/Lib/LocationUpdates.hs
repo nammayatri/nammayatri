@@ -231,7 +231,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
         if transportConfig.useWithSnapToRoadFallback
           then TMaps.snapToRoadWithFallback shouldRectifyDistantPointsFailure merchantId merchantOpCityId
           else snapToRoadWithService
-      enableNightSafety = (not isEndRide)
+      enableNightSafety = not isEndRide
   return $
     mkRideInterpolationHandler
       isEndRide

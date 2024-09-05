@@ -367,6 +367,8 @@ updateDefaultEmergencyNumbers personId merchantId req = do
   now <- getCurrentTime
   let uniqueRecords = getUniquePersonByMobileNumber req
   newPersonDENList <- buildPersonDefaultEmergencyNumber now `mapM` uniqueRecords
+  let updatedWithAggregatedRideShareSetting = QSafety.emptyUpdateEmergencyInfo {QSafety.aggregatedRideShare = getAggregatedRideShareSetting req.defaultEmergencyNumbers}
+  void $ QSafety.upsert personId updatedWithAggregatedRideShareSetting
   fork "Send Emergency Contact Added Message" $ do
     sendEmergencyContactAddedMessage personId newPersonDENList oldPersonDENList
   QPersonDEN.replaceAll personId newPersonDENList
@@ -390,6 +392,17 @@ updateDefaultEmergencyNumbers personId merchantId req = do
             shareTripWithEmergencyContactOption = defEmNum.shareTripWithEmergencyContactOption,
             ..
           }
+
+    getAggregatedRideShareSetting :: [PersonDefaultEmergencyNumber] -> Maybe Person.RideShareOptions
+    getAggregatedRideShareSetting [] = Nothing
+    getAggregatedRideShareSetting (x : xs) =
+      case x.shareTripWithEmergencyContactOption of
+        Just Person.ALWAYS_SHARE -> Just Person.ALWAYS_SHARE
+        Just Person.SHARE_WITH_TIME_CONSTRAINTS ->
+          let nextResult = getAggregatedRideShareSetting xs
+           in if nextResult == Just Person.ALWAYS_SHARE then nextResult else Just Person.SHARE_WITH_TIME_CONSTRAINTS
+        Just Person.NEVER_SHARE -> getAggregatedRideShareSetting xs
+        Nothing -> getAggregatedRideShareSetting xs
 
 sendEmergencyContactAddedMessage :: Id Person.Person -> [DPDEN.PersonDefaultEmergencyNumber] -> [DPDEN.PersonDefaultEmergencyNumber] -> Flow ()
 sendEmergencyContactAddedMessage personId newPersonDENList oldPersonDENList = do
@@ -465,7 +478,7 @@ updateEmergencySettings personId req = do
   when (fromMaybe False req.shareEmergencyContacts && null personENList) do
     throwError (InvalidRequest "Add atleast one emergency contact.")
   void $ updateSafetySettings req
-  QPersonDEN.updateShareTripWithEmergencyContactOptions personId shareTripOptions
+  when updateShareOptionForEmergencyContacts $ QPersonDEN.updateShareTripWithEmergencyContactOptions personId shareTripOptions
   pure APISuccess.Success
   where
     updateSafetySettings :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => UpdateEmergencySettingsReq -> m ()
@@ -476,9 +489,12 @@ updateEmergencySettings personId req = do
             QSafety.UpdateEmergencyInfo
               { autoCallDefaultContact = setContactField autoCallDefaultContact,
                 notifySosWithEmergencyContacts = setContactField notifySosWithEmergencyContacts,
+                aggregatedRideShare = guard updateShareOptionForEmergencyContacts >> shareTripWithEmergencyContactOption,
                 ..
               }
       void $ QSafety.upsert personId emergencyInfo
+
+    updateShareOptionForEmergencyContacts = isJust req.shareTripWithEmergencyContactOption || isJust req.shareTripWithEmergencyContacts
 
 data EmergencySettingsRes = EmergencySettingsRes
   { shareEmergencyContacts :: Bool,
