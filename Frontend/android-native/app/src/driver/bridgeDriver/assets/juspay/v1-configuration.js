@@ -240,6 +240,7 @@ window.getMerchantConfig = function () {
             "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
           }
         }
+      , "rideStartAudio" : defaultStartAudioConfig
       },
       {
         "cityName" : "Hyderabad",
@@ -317,6 +318,7 @@ window.getMerchantConfig = function () {
             "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
           }
         }
+      , "rideStartAudio" : defaultStartAudioConfig
       },
       {
         "cityName" : "Mysore",
@@ -382,6 +384,7 @@ window.getMerchantConfig = function () {
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
       }
+      , "rideStartAudio" : defaultStartAudioConfig
       },
       {
         "cityName" : "Delhi",
@@ -460,6 +463,7 @@ window.getMerchantConfig = function () {
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
       }
+      , "rideStartAudio" : defaultStartAudioConfig
       },
       {
         "cityName" : "Chennai",
@@ -538,6 +542,7 @@ window.getMerchantConfig = function () {
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
       }
+      , "rideStartAudio" : defaultStartAudioConfig
       },
       {
         "cityName" : "Coimbatore",
@@ -603,6 +608,7 @@ window.getMerchantConfig = function () {
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
       }
+      , "rideStartAudio" : defaultStartAudioConfig
       },
       {
         "cityName" : "Puducherry",
@@ -668,6 +674,7 @@ window.getMerchantConfig = function () {
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
       }
+      , "rideStartAudio" : defaultStartAudioConfig
       },
       {
         "cityName" : "Tumakuru",
@@ -733,6 +740,7 @@ window.getMerchantConfig = function () {
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
       }
+      , "rideStartAudio" : defaultStartAudioConfig
       },
       {
         "cityName" : "Gurugram",
@@ -798,6 +806,7 @@ window.getMerchantConfig = function () {
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
       }
+      , "rideStartAudio" : defaultStartAudioConfig
       },
       {
         "cityName" : "Noida",
@@ -863,6 +872,7 @@ window.getMerchantConfig = function () {
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
       }
+      , "rideStartAudio" : defaultStartAudioConfig
       },
       {
         "cityName" : "TamilNaduCities",
@@ -928,6 +938,7 @@ window.getMerchantConfig = function () {
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
       }
+      , "rideStartAudio" : defaultStartAudioConfig
       },
       {
         "cityName" : "Minneapolis",
@@ -993,6 +1004,7 @@ window.getMerchantConfig = function () {
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
       }
+      , "rideStartAudio" : defaultStartAudioConfig
       },
       {
         "cityName" : "Kochi",
@@ -1056,6 +1068,7 @@ window.getMerchantConfig = function () {
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
       }
+      , "rideStartAudio" : defaultStartAudioConfig
       }
   ]
   , "coinsConfig" : {
@@ -1136,3 +1149,11 @@ let defRateCardConfig = {
     "showLearnMore" : false,
     "learnMoreVideoLink" : ""
   }
+
+
+let defaultStartAudioConfig = {
+  "acCab" : {},
+  "nonAcCab" : {},
+  "auto" : {},
+  "bike" : {}
+}
