@@ -24,6 +24,7 @@ imports:
   PersonMobileNoReq: Dashboard.Common
   PersonRes: Dashboard.Common
   MandatoryQueryParam: Kernel.Utils.Common
+  DriverFeeStatus:  Dashboard.Common.Driver
 
 module: Driver
 
@@ -387,6 +388,26 @@ apis:
       response:
         type: APISuccess
 
+  - POST:
+      endpoint: /{driverId}/refundByPayout
+      params:
+        driverId: Id Driver
+      request:
+        type: RefundByPayoutReq
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REFUND_BY_PAYOUT
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /{driverId}/securityDepositStatus
+      params:
+        driverId: Id Driver
+      query:
+        - serviceName: ServiceNames
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SECURITY_DEPOSIT_STATUS
+      response:
+        type: ([SecurityDepositDfStatusRes])
 types:
   DriverListRes:
     - totalItems: Int # for backward compatibility
@@ -479,9 +500,10 @@ types:
     - derive: "'HideSecrets"
   PauseOrResumeServiceChargesReq:
     - serviceChargeEligibility: Bool
-    - vehicleId: Text
+    - vehicleId: Maybe Text
     - serviceName: ServiceNames
     - reason: Maybe ReasonForDisablingServiceCharge
+    - planId: Maybe Text
     - derive: "'HideSecrets"
   UpdateRCInvalidStatusReq:
     - rcId: Text
@@ -542,4 +564,15 @@ types:
     - countryCode: Text
     - documentType: SyncDocType
     - derive: "'HideSecrets"
-
+  SecurityDepositDfStatusRes:
+    - securityDepositStatus : DriverFeeStatus
+    - securityDepositAmountWithCurrency : Maybe PriceAPIEntity
+    - driverFeeId : Text
+    - createdAt : UTCTime
+  RefundByPayoutReq:
+    - serviceName : ServiceNames
+    - refundAmountDeduction : HighPrecMoney
+    - payerVpa : Maybe Text
+    - driverFeeType : DriverFeeType
+    - refundAmountSegregation : Maybe Text
+    - derive: "'HideSecrets"

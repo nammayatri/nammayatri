@@ -134,8 +134,10 @@ data CurrentPlanRes = CurrentPlanRes
     planRegistrationDate :: Maybe UTCTime,
     latestAutopayPaymentDate :: Maybe UTCTime,
     latestManualPaymentDate :: Maybe UTCTime,
+    isEligibleForCharge :: Maybe Bool,
     isLocalized :: Maybe Bool,
-    askForPlanSwitch :: Bool
+    askForPlanSwitch :: Bool,
+    payoutVpa :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -331,7 +333,7 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
   (autoPayStatus, mDriverPlan) <- getSubcriptionStatusWithPlan serviceName driverId
   mPlan <- maybe (pure Nothing) (\p -> QPD.findByIdAndPaymentModeWithServiceName p.planId (maybe AUTOPAY (.planType) mDriverPlan) serviceName) mDriverPlan
   mandateDetailsEntity <- mkMandateDetailEntity (join (mDriverPlan <&> (.mandateId)))
-
+  let isEligibleForCharge = mDriverPlan <&> (.enableServiceUsageCharge)
   latestManualPayment <- QDF.findLatestByFeeTypeAndStatusWithServiceName DF.RECURRING_INVOICE [DF.CLEARED, DF.COLLECTED_CASH] driverId serviceName
   latestAutopayPayment <- QDF.findLatestByFeeTypeAndStatusWithServiceName DF.RECURRING_EXECUTION_INVOICE [DF.CLEARED] driverId serviceName
 
@@ -359,6 +361,8 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
         latestAutopayPaymentDate = latestAutopayPayment <&> (.updatedAt),
         planRegistrationDate = mDriverPlan <&> (.createdAt),
         isLocalized = Just True,
+        isEligibleForCharge,
+        payoutVpa = driverInfo.payoutVpa,
         askForPlanSwitch
       }
   where
@@ -635,7 +639,11 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
             badDebtRecoveryDate = Nothing,
             merchantOperatingCityId = merchantOpCityId,
             serviceName,
-            currency
+            currency,
+            refundEntityId = Nothing,
+            refundedAmount = Nothing,
+            refundedAt = Nothing,
+            refundedBy = Nothing
           }
     calculateDues driverFees = sum $ map (\dueInvoice -> roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) driverFees
     checkIfInvoiceIsReusable invoice newDriverFees = do

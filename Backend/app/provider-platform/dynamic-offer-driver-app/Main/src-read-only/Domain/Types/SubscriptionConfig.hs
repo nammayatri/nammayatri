@@ -29,6 +29,7 @@ data SubscriptionConfig = SubscriptionConfig
     paymentLinkChannel :: Domain.Types.MerchantMessage.MediaChannel,
     paymentLinkJobTime :: Data.Time.NominalDiffTime,
     paymentServiceName :: Domain.Types.MerchantServiceConfig.ServiceName,
+    payoutServiceName :: Kernel.Prelude.Maybe Domain.Types.MerchantServiceConfig.ServiceName,
     sendDeepLink :: Kernel.Prelude.Bool,
     sendInAppFcmNotifications :: Kernel.Prelude.Bool,
     serviceName :: Domain.Types.Plan.ServiceNames,

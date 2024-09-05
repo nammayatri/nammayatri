@@ -84,6 +84,8 @@ module Domain.Action.Dashboard.Driver
     getDriverPanAadharSelfieDetails,
     postDriverSyncDocAadharPan,
     postDriverUpdateVehicleManufacturing,
+    postDriverRefundByPayout,
+    getDriverSecurityDepositStatus,
   )
 where
 
@@ -118,7 +120,7 @@ import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.DocumentVerificationConfig as DomainDVC
 import qualified Domain.Types.DriverBlockReason as DBR
-import Domain.Types.DriverFee
+import Domain.Types.DriverFee as DDF
 import qualified Domain.Types.DriverHomeLocation as DDHL
 import qualified Domain.Types.DriverInformation as DrInfo
 import Domain.Types.DriverLicense
@@ -385,16 +387,22 @@ getDriverDue merchantShortId _ mbMobileCountryCode phone = do
           ..
         }
 
-    castStatus status = case status of -- only PENDING and OVERDUE possible
-      ONGOING -> Common.ONGOING
-      PAYMENT_PENDING -> Common.PAYMENT_PENDING
-      PAYMENT_OVERDUE -> Common.PAYMENT_OVERDUE
-      CLEARED -> Common.CLEARED
-      EXEMPTED -> Common.EXEMPTED
-      COLLECTED_CASH -> Common.COLLECTED_CASH
-      INACTIVE -> Common.INACTIVE
-      CLEARED_BY_YATRI_COINS -> Common.CLEARED_BY_YATRI_COINS
-      MANUAL_REVIEW_NEEDED -> Common.MANUAL_REVIEW_NEEDED
+castStatus :: DriverFeeStatus -> Common.DriverFeeStatus
+castStatus status = case status of -- only PENDING and OVERDUE possible
+  ONGOING -> Common.ONGOING
+  PAYMENT_PENDING -> Common.PAYMENT_PENDING
+  PAYMENT_OVERDUE -> Common.PAYMENT_OVERDUE
+  CLEARED -> Common.CLEARED
+  EXEMPTED -> Common.EXEMPTED
+  COLLECTED_CASH -> Common.COLLECTED_CASH
+  INACTIVE -> Common.INACTIVE
+  CLEARED_BY_YATRI_COINS -> Common.CLEARED_BY_YATRI_COINS
+  MANUAL_REVIEW_NEEDED -> Common.MANUAL_REVIEW_NEEDED
+  REFUND_PENDING -> Common.REFUND_PENDING
+  REFUNDED -> Common.REFUNDED
+  REFUND_FAILED -> Common.REFUND_FAILED
+  REFUND_MANUAL_REVIEW_REQUIRED -> Common.REFUND_MANUAL_REVIEW_REQUIRED
+  ONE_TIME_SECURITY_ADJUSTED -> Common.ONE_TIME_SECURITY_ADJUSTED
 
 ---------------------------------------------------------------------
 driverAadhaarInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.DriverAadhaarInfoRes
@@ -1086,11 +1094,6 @@ setVehicleDriverRcStatusForFleet merchantShortId opCity reqDriverId fleetOwnerId
   unless (isJust vehicle.fleetOwnerId && vehicle.fleetOwnerId == Just fleetOwnerId) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId)
   Redis.set (DomainRC.makeFleetOwnerKey req.rcNo) fleetOwnerId
   _ <- DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) (DomainRC.RCStatusReq {isActivate = req.isActivate, rcNo = req.rcNo})
-  let mbSerivceName = mapServiceName <$> req.serviceName
-  case mbSerivceName of
-    Just YATRI_RENTAL -> do
-      void $ toggleDriverSubscriptionByService (driver.id, driver.merchantId, driver.merchantOperatingCityId) YATRI_RENTAL (Id <$> req.planToAssociate) req.isActivate req.rcNo
-    _ -> pure ()
   logTagInfo "dashboard -> addVehicle : " (show driver.id)
   pure Success
 
@@ -1372,7 +1375,6 @@ fleetUnlinkVehicle merchantShortId fleetOwnerId reqDriverId vehicleNo = do
   QDriverInfo.updateEnabledVerifiedState driverId False (Just False)
   rc <- RCQuery.findLastVehicleRCWrapper vehicleNo >>= fromMaybeM (RCNotFound vehicleNo)
   _ <- QRCAssociation.endAssociationForRC personId rc.id
-  void $ toggleDriverSubscriptionByService (personId, driver.merchantId, driver.merchantOperatingCityId) YATRI_RENTAL Nothing False vehicleNo
   logTagInfo "fleet -> unlinkVehicle : " (show personId)
   pure Success
 
@@ -1381,9 +1383,9 @@ toggleDriverSubscriptionByService ::
   ServiceNames ->
   Maybe (Id Plan) ->
   Bool ->
-  Text ->
+  Maybe Text ->
   Flow ()
-toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanToAssign toToggle vehicleNo = do
+toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanToAssign toToggle mbVehicleNo = do
   (autoPayStatus, driverPlan) <- DTPlan.getSubcriptionStatusWithPlan serviceName driverId
   transporterConfig <- CTC.findByMerchantOpCityId mOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
   if toToggle
@@ -1392,22 +1394,20 @@ toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanT
       case autoPayStatus of
         Just DrInfo.ACTIVE -> pure ()
         _ -> callSubscribeFlowForDriver planToAssign
-      QDP.updatesubscriptionServiceRelatedDataInDriverPlan driverId (DDPlan.RentedVehicleNumber vehicleNo) serviceName
+      whenJust mbVehicleNo $ \vehicleNo -> do
+        QDP.updatesubscriptionServiceRelatedDataInDriverPlan driverId (DDPlan.RentedVehicleNumber vehicleNo) serviceName
       QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName toToggle driverId serviceName
       fork "notify rental event" $ do
-        notifyYatriRentalEventsToDriver vehicleNo WHATSAPP_VEHICLE_LINKED_MESSAGE driverId transporterConfig Nothing WHATSAPP
+        notifyYatriRentalEventsToDriver mbVehicleNo WHATSAPP_VEHICLE_LINKED_MESSAGE driverId transporterConfig Nothing WHATSAPP
     else do
-      let vehicleLinkedWithDPlan = case driverPlan <&> (.subscriptionServiceRelatedData) of
-            Just (DDPlan.RentedVehicleNumber vNo) -> Just vNo
-            _ -> Nothing
-      when (isJust driverPlan && vehicleLinkedWithDPlan == Just vehicleNo) $ do
+      when (isJust driverPlan) $ do
         QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName toToggle driverId serviceName
         fork "track service toggle" $ do
           case driverPlan of
             Just dp -> SEVT.trackServiceUsageChargeToggle dp Nothing
             Nothing -> pure ()
         fork "notify rental event" $ do
-          notifyYatriRentalEventsToDriver vehicleNo WHATSAPP_VEHICLE_UNLINKED_MESSAGE driverId transporterConfig Nothing WHATSAPP
+          notifyYatriRentalEventsToDriver mbVehicleNo WHATSAPP_VEHICLE_UNLINKED_MESSAGE driverId transporterConfig Nothing WHATSAPP
   where
     getPlanId :: Maybe (Id Plan) -> Flow (Id Plan)
     getPlanId mbPlanId = do
@@ -1422,7 +1422,7 @@ toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanT
     callSubscribeFlowForDriver :: Id Plan -> Flow ()
     callSubscribeFlowForDriver planId = do
       driverInfo' <- QDriverInfo.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-      let serviceSpecificData = DDPlan.RentedVehicleNumber vehicleNo
+      let serviceSpecificData = maybe DDPlan.NoData DDPlan.RentedVehicleNumber mbVehicleNo
       _ <- DTPlan.planSubscribe serviceName planId (True, Just WHATSAPP) (cast driverId, mId, mOpCityId) driverInfo' serviceSpecificData
       pure ()
 
@@ -1844,10 +1844,8 @@ updateByPhoneNumber merchantShortId _ phoneNumber req = do
   pure Success
 
 fleetRemoveVehicle :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Flow APISuccess
-fleetRemoveVehicle _merchantShortId opCity fleetOwnerId_ vehicleNo = do
+fleetRemoveVehicle _merchantShortId _ fleetOwnerId_ vehicleNo = do
   vehicle <- QVehicle.findByRegistrationNo vehicleNo
-  merchant <- findMerchantByShortId _merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   whenJust vehicle $ \veh -> do
     isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId veh.driverId fleetOwnerId_ True
     when (isJust isFleetDriver) $ throwError (InvalidRequest "Vehicle is linked to fleet driver , first unlink then try")
@@ -1859,10 +1857,6 @@ fleetRemoveVehicle _merchantShortId opCity fleetOwnerId_ vehicleNo = do
     when (isJust isFleetDriver) $ QRCAssociation.endAssociationForRC assoc.driverId vehicleRC.id
   RCQuery.upsert (updatedVehicleRegistrationCertificate vehicleRC)
   FRAE.endAssociationForRC (Id fleetOwnerId_ :: Id DP.Person) vehicleRC.id
-  case vehicle <&> (.driverId) of
-    Just driverId -> do
-      void $ toggleDriverSubscriptionByService (driverId, merchant.id, merchantOpCityId) YATRI_RENTAL Nothing False vehicleNo
-    Nothing -> pure ()
   pure Success
   where
     updatedVehicleRegistrationCertificate VehicleRegistrationCertificate {..} = VehicleRegistrationCertificate {fleetOwnerId = Nothing, ..}
@@ -2156,22 +2150,32 @@ setServiceChargeEligibleFlagInDriverPlan merchantShortId opCity driverId req = d
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   let serviceName = mapServiceName req.serviceName
   driverPlan <- QDP.findByDriverIdWithServiceName personId serviceName
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  let mbEnableServiceUsageCharge = driverPlan <&> (.enableServiceUsageCharge)
-  when (mbEnableServiceUsageCharge /= Just req.serviceChargeEligibility) $ do
-    QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName req.serviceChargeEligibility personId serviceName
-    fork "track service toggle" $ do
-      case driverPlan of
-        Just dp -> SEVT.trackServiceUsageChargeToggle dp (show <$> req.reason)
-        Nothing -> pure ()
-    when (serviceName == YATRI_RENTAL) $ do
-      fork "notify rental event" $ do
-        notifyYatriRentalEventsToDriver req.vehicleId (getMkeyForEvent req.serviceChargeEligibility) personId transporterConfig (show <$> req.reason) WHATSAPP
+  case (driverPlan, req.planId) of
+    (Just dp, Just planId) -> do
+      if dp.planId == (Id planId)
+        then do
+          void $ toggleDriverSubscriptionByService (driver.id, driver.merchantId, driver.merchantOperatingCityId) serviceName (Id <$> req.planId) req.serviceChargeEligibility req.vehicleId
+        else do
+          void $ DTPlan.planSwitch serviceName (Id planId) (driver.id, driver.merchantId, driver.merchantOperatingCityId)
+          void $ toggleDriverSubscriptionByService (driver.id, driver.merchantId, driver.merchantOperatingCityId) serviceName (Id <$> req.planId) req.serviceChargeEligibility req.vehicleId
+    (Nothing, Just _) -> do
+      void $ toggleDriverSubscriptionByService (driver.id, driver.merchantId, driver.merchantOperatingCityId) serviceName (Id <$> req.planId) req.serviceChargeEligibility req.vehicleId
+    (Just dp, Nothing) -> do
+      transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      let enableServiceUsageCharge = dp.enableServiceUsageCharge
+      when (enableServiceUsageCharge /= req.serviceChargeEligibility) $ do
+        QDP.updateEnableServiceUsageChargeByDriverIdAndServiceName req.serviceChargeEligibility personId serviceName
+        fork "track service toggle" $ do
+          SEVT.trackServiceUsageChargeToggle dp (show <$> req.reason)
+        when (serviceName == YATRI_RENTAL) $ do
+          fork "notify rental event" $ do
+            notifyYatriRentalEventsToDriver req.vehicleId (getMkeyForEvent req.serviceChargeEligibility) personId transporterConfig (show <$> req.reason) WHATSAPP
+    (Nothing, Nothing) -> throwError $ InvalidRequest "pls provide a plan Id to enable subscription"
   pure Success
   where
     getMkeyForEvent serviceChargeEligiblity = if serviceChargeEligiblity then YATRI_RENTAL_RESUME else YATRI_RENTAL_PAUSE
 
-notifyYatriRentalEventsToDriver :: Text -> MessageKey -> Id DP.Person -> TransporterConfig -> Maybe Text -> MediaChannel -> Flow ()
+notifyYatriRentalEventsToDriver :: Maybe Text -> MessageKey -> Id DP.Person -> TransporterConfig -> Maybe Text -> MediaChannel -> Flow ()
 notifyYatriRentalEventsToDriver vehicleId messageKey personId transporterConfig mbReason channel = do
   smsCfg <- asks (.smsCfg)
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -2193,7 +2197,7 @@ notifyYatriRentalEventsToDriver vehicleId messageKey personId transporterConfig 
         merchantMessage <-
           QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId mkey
             >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show mkey))
-        result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId (Just vehicleId) (Just timeStamp) mbReason Nothing (Just merchantMessage.containsUrlButton))
+        result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId (Just $ fromMaybe "XXXXX" vehicleId) (Just timeStamp) mbReason Nothing (Just merchantMessage.containsUrlButton))
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
       _ -> pure ()
 
@@ -2487,3 +2491,42 @@ postDriverUpdateVehicleManufacturing merchantShortId opCity reqDriverId Common.U
   QVehicle.updateManufacturing (Just manufacturing) driverId
   RCQuery.updateManufacturing (Just manufacturing) (Id rcId)
   pure Success
+
+mapFeeType :: Common.DriverFeeType -> DDF.FeeType
+mapFeeType Common.PAYOUT_REGISTRATION = DDF.PAYOUT_REGISTRATION
+mapFeeType Common.ONE_TIME_SECURITY_DEPOSIT = DDF.ONE_TIME_SECURITY_DEPOSIT
+
+postDriverRefundByPayout :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RefundByPayoutReq -> Flow APISuccess
+postDriverRefundByPayout merchantShortId _opCity driverId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  let refundByPayoutReq =
+        DDriver.RefundByPayoutReq
+          { serviceName = mapServiceName req.serviceName,
+            refundAmountDeduction = req.refundAmountDeduction,
+            payerVpa = req.payerVpa,
+            driverFeeType = mapFeeType req.driverFeeType,
+            refundAmountSegregation = req.refundAmountSegregation
+          }
+  void $ DDriver.refundByPayoutDriverFee (personId, driver.merchantId, merchantOpCityId) refundByPayoutReq
+  return Success
+
+getDriverSecurityDepositStatus :: (ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Common.ServiceNames -> Flow [Common.SecurityDepositDfStatusRes])
+getDriverSecurityDepositStatus merchantShortId _opCity driverId serviceName' = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  let serviceName = maybe YATRI_RENTAL mapServiceName serviceName'
+  response <- DDriver.getSecurityDepositDfStatus (personId, driver.merchantId, merchantOpCityId) serviceName
+  return $ mapSecurityDepositDfStatusResToDashboardType response
+  where
+    mapSecurityDepositDfStatusResToDashboardType =
+      map
+        ( \(DDriver.SecurityDepositDfStatusRes {..}) -> do
+            Common.SecurityDepositDfStatusRes {securityDepositStatus = castStatus securityDepositStatus, ..}
+        )
