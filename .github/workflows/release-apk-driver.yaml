@@ -3,7 +3,7 @@ name: Release (Production - Driver)
 on:
   push:
     branches:
-      - main
+      - update-gradle-properties-test
 
 jobs:
   deploy:
@@ -127,8 +127,9 @@ jobs:
           DYNAMIC_ASSETS: ${{ secrets.DYNAMIC_ASSETS }}
       - name: Update includeDynamicFeature in gradle.properties
         run: |
-          sed -i 's/includeDynamicFeature=.*/includeDynamicFeature=true/' gradle.properties
+          sed -i 's/includeDynamicFeature=.*/includeDynamicFeature='${{ secrets.DYNAMIC_FEATURE }}'/' gradle.properties
           cat gradle.properties
+          echo "DYNAMIC_FEATURE=${{ secrets.DYNAMIC_FEATURE }}"
 
       - name: Create Local Properties
         run : |
@@ -137,44 +138,44 @@ jobs:
         env:
           LOCAL_PROPERTIES: ${{ secrets[matrix.variant.local_properties] }}
 
-      - name: Create Google Play Config file
-        run : |
-          echo "$PLAY_CONSOLE_SECRET" > play_config.json.b64
-          base64 -d -i play_config.json.b64 > play_config.json
-        env:
-          PLAY_CONSOLE_SECRET: ${{ secrets.PLAY_CONSOLE_SECRET }}
+      # - name: Create Google Play Config file
+      #   run : |
+      #     echo "$PLAY_CONSOLE_SECRET" > play_config.json.b64
+      #     base64 -d -i play_config.json.b64 > play_config.json
+      #   env:
+      #     PLAY_CONSOLE_SECRET: ${{ secrets.PLAY_CONSOLE_SECRET }}
 
-      - name: Distribute app to Production 🚀
-        run: |
-          echo "Hello, world! $FASTLANE_CMD"
-          echo "fastlane_cm: ${{ matrix.variant.name }}"
-          bash releaseApp.sh "$FASTLANE_CMD"
-        env: 
-          FASTLANE_CMD: ${{ matrix.variant.fastlane_cm }}
+      # - name: Distribute app to Production 🚀
+      #   run: |
+      #     echo "Hello, world! $FASTLANE_CMD"
+      #     echo "fastlane_cm: ${{ matrix.variant.name }}"
+      #     bash releaseApp.sh "$FASTLANE_CMD"
+      #   env: 
+      #     FASTLANE_CMD: ${{ matrix.variant.fastlane_cm }}
       
-      - name: Increment Version for the app
-        run: |
-          git stash
-          python updateLocalVersion.py driver
+      # - name: Increment Version for the app
+      #   run: |
+      #     git stash
+      #     python updateLocalVersion.py driver
       
-      - name: Create Pull Request
-        id: create_pr
-        uses: peter-evans/create-pull-request@v3
-        continue-on-error: true
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: post-release-apk-to-prod
-          title: "[BOT]updating version code and name post successful release"
-          body: "Automated pull request to update versionCode and versionName post release."
-          delete-branch: true
-          commit-message: "[BOT] updating version code and name post successful release"
-          add-paths: |
-            *ions.txt
+      # - name: Create Pull Request
+      #   id: create_pr
+      #   uses: peter-evans/create-pull-request@v3
+      #   continue-on-error: true
+      #   with:
+      #     token: ${{ secrets.GITHUB_TOKEN }}
+      #     branch: post-release-apk-to-prod
+      #     title: "[BOT]updating version code and name post successful release"
+      #     body: "Automated pull request to update versionCode and versionName post release."
+      #     delete-branch: true
+      #     commit-message: "[BOT] updating version code and name post successful release"
+      #     add-paths: |
+      #       *ions.txt
       
-      - name: Merge Pull Request
-        uses: peter-evans/enable-pull-request-automerge@v3
-        continue-on-error: true
-        with:
-          token: ${{ secrets.RELEASE_ASSET }}
-          merge-method: rebase
-          pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
+      # - name: Merge Pull Request
+      #   uses: peter-evans/enable-pull-request-automerge@v3
+      #   continue-on-error: true
+      #   with:
+      #     token: ${{ secrets.RELEASE_ASSET }}
+      #     merge-method: rebase
+      #     pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
