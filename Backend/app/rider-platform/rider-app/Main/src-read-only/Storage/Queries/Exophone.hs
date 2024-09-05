@@ -50,6 +50,7 @@ updateByPrimaryKey (Domain.Types.Exophone.Exophone {..}) = do
     [ Se.Set Beam.backupPhone backupPhone,
       Se.Set Beam.callService callService,
       Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.enableAlternateNumber enableAlternateNumber,
       Se.Set Beam.isPrimaryDown isPrimaryDown,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
