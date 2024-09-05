@@ -816,7 +816,7 @@ createPayoutService ::
   Text ->
   PT.CreatePayoutOrderReq ->
   (PT.CreatePayoutOrderReq -> m PT.CreatePayoutOrderResp) ->
-  m (Maybe PT.CreatePayoutOrderResp)
+  m (Maybe PT.CreatePayoutOrderResp, Maybe Payment.PayoutOrder)
 createPayoutService merchantId _personId mbEntityIds mbEntityName city createPayoutOrderReq createPayoutOrderCall = do
   mbExistingPayoutOrder <- QPayoutOrder.findByOrderId createPayoutOrderReq.orderId
   case mbExistingPayoutOrder of
@@ -824,7 +824,7 @@ createPayoutService merchantId _personId mbEntityIds mbEntityName city createPay
       createPayoutOrderResp <- createPayoutOrderCall createPayoutOrderReq -- api call
       payoutOrder <- buildPayoutOrder createPayoutOrderReq createPayoutOrderResp
       QPayoutOrder.create payoutOrder
-      return $ Just createPayoutOrderResp
+      return (Just createPayoutOrderResp, Just payoutOrder)
     Just existingPayoutOrder -> throwError $ PayoutOrderAlreadyExists (existingPayoutOrder.id.getId)
   where
     buildPayoutOrder req resp = do

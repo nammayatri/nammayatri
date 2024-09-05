@@ -26,3 +26,8 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD PRIMARY KEY ( service
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN sgst_percentage_one_time_security_deposit double precision ;
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN cgst_percentage_one_time_security_deposit double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN payout_service_name text  default 'Payout_Juspay';

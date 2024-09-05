@@ -202,3 +202,21 @@ data ServiceNames = YATRI_SUBSCRIPTION | YATRI_RENTAL
 $(mkHttpInstancesForEnum ''ServiceNames)
 
 $(mkHttpInstancesForEnum ''ReasonForDisablingServiceCharge)
+
+data DriverFeeStatus
+  = ONGOING
+  | PAYMENT_PENDING
+  | PAYMENT_OVERDUE
+  | CLEARED
+  | EXEMPTED
+  | COLLECTED_CASH
+  | INACTIVE
+  | CLEARED_BY_YATRI_COINS
+  | MANUAL_REVIEW_NEEDED
+  | REFUND_PENDING
+  | REFUNDED
+  | REFUND_FAILED
+  | REFUND_MANUAL_REVIEW_REQUIRED
+  | ONE_TIME_SECURITY_ADJUSTED
+  deriving stock (Eq, Show, Generic, Read)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

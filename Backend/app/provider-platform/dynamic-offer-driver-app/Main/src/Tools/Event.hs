@@ -151,7 +151,7 @@ data EventTrackerData = EventTrackerData
     updatedAt :: UTCTime
   }
 
-data EventName = DRIVER_FEE_AUTO_PAY_TO_MANUAL | AUTO_PAY_STATUS_TOGGLE | SERVICE_USAGE_CHARGE_TOGGLE
+data EventName = DRIVER_FEE_AUTO_PAY_TO_MANUAL | AUTO_PAY_STATUS_TOGGLE | SERVICE_USAGE_CHARGE_TOGGLE | REFUND_SECURITY_DEPOSIT
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 triggerEstimateEvent ::

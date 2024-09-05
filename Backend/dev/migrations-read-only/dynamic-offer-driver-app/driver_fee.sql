@@ -45,3 +45,11 @@ ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD PRIMARY KEY ( id);
 ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN total_earnings_amount double precision ;
 ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN govt_charges_amount double precision ;
 ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN currency character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN refunded_by text ;
+ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN refunded_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN refunded_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN refund_entity_id text ;

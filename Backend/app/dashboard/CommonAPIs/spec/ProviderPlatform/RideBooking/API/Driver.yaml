@@ -10,7 +10,7 @@ imports:
   City: Kernel.Types.Beckn.Context
   AddVehicleReq: Dashboard.ProviderPlatform.Fleet.Driver
   RCStatusReq: Dashboard.ProviderPlatform.Fleet.Driver
-
+  DriverFeeStatus:  Dashboard.Common.Driver
 module: Driver
 
 apis:
@@ -272,9 +272,6 @@ types:
     - feeWithCurrency: PriceAPIEntity
     - cgstWithCurrency: PriceAPIEntity
     - sgstWithCurrency: PriceAPIEntity
-  DriverFeeStatus:
-    - enum: "ONGOING, PAYMENT_PENDING, PAYMENT_OVERDUE, CLEARED, EXEMPTED, COLLECTED_CASH, INACTIVE, CLEARED_BY_YATRI_COINS, MANUAL_REVIEW_NEEDED"
-    - derive: "Read"
   VehicleRegistrationCertificateAPIEntity:
     - registrationCertificateId: Id VehicleRegistrationCertificate
     - documentImageId: Id Image

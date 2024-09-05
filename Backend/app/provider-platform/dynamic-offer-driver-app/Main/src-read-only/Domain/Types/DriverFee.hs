@@ -45,6 +45,10 @@ data DriverFee = DriverFee
     planMode :: Kernel.Prelude.Maybe Domain.Types.Plan.PaymentMode,
     planOfferTitle :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     platformFee :: Domain.Types.DriverFee.PlatformFee,
+    refundEntityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    refundedAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    refundedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    refundedBy :: Kernel.Prelude.Maybe Domain.Types.DriverFee.RefundedBy,
     schedulerTryCount :: Kernel.Prelude.Int,
     serviceName :: Domain.Types.Plan.ServiceNames,
     specialZoneAmount :: Kernel.Types.Common.HighPrecMoney,
@@ -77,6 +81,11 @@ data DriverFeeStatus
   | INACTIVE
   | CLEARED_BY_YATRI_COINS
   | MANUAL_REVIEW_NEEDED
+  | REFUND_PENDING
+  | REFUNDED
+  | REFUND_FAILED
+  | REFUND_MANUAL_REVIEW_REQUIRED
+  | ONE_TIME_SECURITY_ADJUSTED
   deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
 data FeeType
@@ -90,6 +99,17 @@ data FeeType
 data PlatformFee = PlatformFee {cgst :: Kernel.Types.Common.HighPrecMoney, currency :: Kernel.Types.Common.Currency, fee :: Kernel.Types.Common.HighPrecMoney, sgst :: Kernel.Types.Common.HighPrecMoney}
   deriving (Generic, Eq, Show)
 
+data RefundInfo = RefundInfo
+  { refundEntityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    refundedAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    refundedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    refundedBy :: Kernel.Prelude.Maybe Domain.Types.DriverFee.RefundedBy,
+    status :: Kernel.Prelude.Maybe Domain.Types.DriverFee.DriverFeeStatus
+  }
+  deriving (Generic, Eq, Show)
+
+data RefundedBy = PAYOUT | REFUNDS_API deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
+
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''DriverFeeStatus)
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''FeeType)
@@ -99,3 +119,7 @@ $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''DriverFeeStatus)
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''FeeType)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''AutopayPaymentStage)
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''RefundedBy)
+
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''RefundedBy)

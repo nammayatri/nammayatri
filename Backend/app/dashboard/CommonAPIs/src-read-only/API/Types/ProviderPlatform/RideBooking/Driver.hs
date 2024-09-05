@@ -19,19 +19,6 @@ import qualified Kernel.Types.Version
 import Servant
 import Servant.Client
 
-data DriverFeeStatus
-  = ONGOING
-  | PAYMENT_PENDING
-  | PAYMENT_OVERDUE
-  | CLEARED
-  | EXEMPTED
-  | COLLECTED_CASH
-  | INACTIVE
-  | CLEARED_BY_YATRI_COINS
-  | MANUAL_REVIEW_NEEDED
-  deriving stock (Eq, Show, Generic, Read)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data DriverInfoRes = DriverInfoRes
   { driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver,
     firstName :: Kernel.Prelude.Text,
@@ -104,7 +91,7 @@ data DriverOutstandingBalanceResp = DriverOutstandingBalanceResp
     totalEarningsWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     startTime :: Kernel.Prelude.UTCTime,
     endTime :: Kernel.Prelude.UTCTime,
-    status :: API.Types.ProviderPlatform.RideBooking.Driver.DriverFeeStatus
+    status :: Dashboard.Common.Driver.DriverFeeStatus
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

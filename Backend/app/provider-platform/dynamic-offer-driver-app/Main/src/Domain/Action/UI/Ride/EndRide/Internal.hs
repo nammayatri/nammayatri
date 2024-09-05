@@ -674,6 +674,10 @@ mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare gov
         merchantOperatingCityId = transporterConfig.merchantOperatingCityId,
         startTime = fromMaybe startTime startTime',
         endTime = fromMaybe endTime endTime',
+        refundEntityId = Nothing,
+        refundedAmount = Nothing,
+        refundedAt = Nothing,
+        refundedBy = Nothing,
         ..
       }
   where

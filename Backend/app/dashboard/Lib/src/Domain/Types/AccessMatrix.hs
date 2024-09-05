@@ -266,6 +266,8 @@ data UserActionType
   | FETCH_PERSON_ID
   | PAYOUT_MANAGEMENT
   | UPDATE_VEHICLE_MANUFACTURING
+  | REFUND_BY_PAYOUT
+  | SECURITY_DEPOSIT_STATUS
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)

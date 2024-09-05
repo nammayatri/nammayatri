@@ -47,6 +47,8 @@ module Domain.Action.ProviderPlatform.Management.Driver
     getDriverPanAadharSelfieDetails,
     postDriverSyncDocAadharPan,
     postDriverUpdateVehicleManufacturing,
+    postDriverRefundByPayout,
+    getDriverSecurityDepositStatus,
   )
 where
 
@@ -302,3 +304,14 @@ postDriverUpdateVehicleManufacturing merchantShortId opCity apiTokenInfo driverI
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.PostDriverUpdateVehicleManufacturingEndpoint apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ do Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.postDriverUpdateVehicleManufacturing) driverId req
+
+postDriverRefundByPayout :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.RefundByPayoutReq -> Environment.Flow APISuccess)
+postDriverRefundByPayout merchantShortId opCity apiTokenInfo driverId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.PostDriverRefundByPayoutEndpoint apiTokenInfo Nothing (Just req)
+  T.withTransactionStoring transaction (do Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.postDriverRefundByPayout) driverId req)
+
+getDriverSecurityDepositStatus :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Common.ServiceNames -> Environment.Flow [Common.SecurityDepositDfStatusRes])
+getDriverSecurityDepositStatus merchantShortId opCity apiTokenInfo driverId mbServiceName = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.getDriverSecurityDepositStatus) driverId mbServiceName

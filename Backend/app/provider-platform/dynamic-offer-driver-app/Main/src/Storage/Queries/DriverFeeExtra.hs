@@ -469,6 +469,20 @@ resetFee driverFeeId govtCharges platformFee mbFeeWithoutDiscount mbAmountPaidBy
     )
     [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
 
+updateRefundData ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DriverFee ->
+  RefundInfo ->
+  m ()
+updateRefundData driverFeeId RefundInfo {..} = do
+  updateOneWithKV
+    ( [Se.Set BeamDF.refundedBy refundedBy | isJust refundedBy]
+        <> [Se.Set BeamDF.refundEntityId refundEntityId | isJust refundEntityId]
+        <> [Se.Set BeamDF.refundedAt refundedAt | isJust refundedAt]
+        <> [Se.Set BeamDF.refundedAmount refundedAmount | isJust refundedAmount]
+    )
+    [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
+
 updateAutopayPaymentStageByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Domain.AutopayPaymentStage -> [Id DriverFee] -> m ()
 updateAutopayPaymentStageByIds autopayPaymentStage driverFeeIds = do
   now <- getCurrentTime

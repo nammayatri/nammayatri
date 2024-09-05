@@ -40,6 +40,8 @@ module Domain.Action.UI.Driver
     GetCityResp (..),
     DriverFeeResp (..),
     UpdateProfileInfoPoints (..),
+    RefundByPayoutReq (..),
+    SecurityDepositDfStatusRes (..),
     getInformation,
     activateGoHomeFeature,
     deactivateGoHomeFeature,
@@ -76,6 +78,9 @@ module Domain.Action.UI.Driver
     getInformationV2,
     clearDriverFeeWithCreate,
     verifyVpaStatus,
+    getSecurityDepositDfStatus,
+    refundByPayoutDriverFee,
+    mkPayoutLockKeyByDriverAndService,
   )
 where
 
@@ -122,6 +127,7 @@ import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverReferral as DR
 import Domain.Types.DriverStats
 import qualified Domain.Types.DriverStats as DStats
+import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
@@ -160,6 +166,8 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
+import qualified Kernel.External.Payout.Interface as Juspay
+import qualified Kernel.External.Payout.Types as TPayout
 import qualified Kernel.External.Verification.Interface.InternalScripts as IF
 import Kernel.Prelude (NominalDiffTime, handle, intToNominalDiffTime, roundToIntegral)
 import Kernel.Serviceability (rideServiceable)
@@ -185,6 +193,8 @@ import Kernel.Utils.Version
 import qualified Lib.DriverCoins.Coins as Coins
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Payment.Domain.Types.PaymentTransaction
 import Lib.Payment.Storage.Queries.PaymentTransaction
@@ -200,6 +210,7 @@ import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverPool as DP
 import SharedLogic.DriverPool as SDP
+import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
@@ -248,6 +259,7 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Tools.Auth as Auth
 import Tools.Error
 import Tools.Event
+import qualified Tools.Payout as Payout
 import Tools.SMS as Sms hiding (Success)
 import Tools.Verification
 import Utils.Common.Cac.KeyNameConstants
@@ -1719,10 +1731,10 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName mbDeepLinkData = d
 
     mkClearDuesResp (orderResp, orderId) = ClearDuesRes {orderId = orderId, orderResp}
 
-    mergeSortAndRemoveDuplicate :: [[INV.Invoice]] -> [INV.Invoice]
-    mergeSortAndRemoveDuplicate invoices = do
-      let uniqueInvoices = DL.nubBy (\x y -> x.id == y.id) (concat invoices)
-      sortOn (Down . (.createdAt)) uniqueInvoices
+mergeSortAndRemoveDuplicate :: [[INV.Invoice]] -> [INV.Invoice]
+mergeSortAndRemoveDuplicate invoices = do
+  let uniqueInvoices = DL.nubBy (\x y -> x.id == y.id) (concat invoices)
+  sortOn (Down . (.createdAt)) uniqueInvoices
 
 data HistoryEntityV2 = HistoryEntityV2
   { autoPayInvoices :: [AutoPayInvoiceHistory],
@@ -1875,6 +1887,14 @@ data DriverFeeInfoEntity = DriverFeeInfoEntity
     gstWithCurrency :: PriceAPIEntity,
     gstPercentage :: HighPrecMoney,
     vehicleNumber :: Maybe Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data SecurityDepositDfStatusRes = SecurityDepositDfStatusRes
+  { securityDepositStatus :: DDF.DriverFeeStatus,
+    securityDepositAmountWithCurrency :: Maybe PriceAPIEntity,
+    driverFeeId :: Text,
+    createdAt :: UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -2240,14 +2260,13 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
             badDebtRecoveryDate = Nothing,
             merchantOperatingCityId = opCityId,
             serviceName,
+            refundedBy = Nothing,
+            refundEntityId = Nothing,
+            refundedAt = Nothing,
+            refundedAmount = Nothing,
             currency
           }
     mkClearDuesResp (orderResp, orderId) = ClearDuesRes {orderId = orderId, orderResp}
-
-    mergeSortAndRemoveDuplicate :: [[INV.Invoice]] -> [INV.Invoice]
-    mergeSortAndRemoveDuplicate invoices = do
-      let uniqueInvoices = DL.nubBy (\x y -> x.id == y.id) (concat invoices)
-      sortOn (Down . (.createdAt)) uniqueInvoices
 
     feeTypeToInvoicetype driverFeeType =
       case driverFeeType of
@@ -2274,3 +2293,153 @@ verifyVpaStatus (personId, _, opCityId) = do
   driverInfo <- QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
   fork ("processing backlog payout for driver via verify vpaStatus " <> personId.getId) $ Payout.processPreviousPayoutAmount (cast personId) driverInfo.payoutVpa opCityId
   pure Success
+
+getSecurityDepositDfStatus ::
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  ServiceNames ->
+  m [SecurityDepositDfStatusRes]
+getSecurityDepositDfStatus (personId, _, _) serviceName = do
+  driverFees <- runInReplica $ QDFE.findAllByStatusAndDriverIdWithServiceNameFeetype personId [DDF.PAYMENT_PENDING, DDF.CLEARED, DDF.PAYMENT_OVERDUE, DDF.EXEMPTED] DDF.ONE_TIME_SECURITY_DEPOSIT serviceName
+  mapM buildSecurityDepositDfStatus $ sortOn (.createdAt) driverFees
+  where
+    buildSecurityDepositDfStatus dfee = do
+      let securityDepositAmount = SLDriverFee.roundToHalf dfee.currency dfee.govtCharges + dfee.platformFee.fee + dfee.platformFee.cgst + dfee.platformFee.sgst
+          securityDepositAmountWithCurrency = Just $ PriceAPIEntity securityDepositAmount dfee.currency
+      return $
+        SecurityDepositDfStatusRes
+          { securityDepositStatus = dfee.status,
+            driverFeeId = dfee.id.getId,
+            createdAt = dfee.createdAt,
+            ..
+          }
+
+data RefundByPayoutReq = RefundByPayoutReq
+  { serviceName :: ServiceNames,
+    refundAmountDeduction :: HighPrecMoney,
+    payerVpa :: Maybe Text,
+    refundAmountSegregation :: Maybe Text,
+    driverFeeType :: DDF.FeeType
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+mkPayoutLockKeyByDriverAndService :: Id SP.Person -> ServiceNames -> Text
+mkPayoutLockKeyByDriverAndService person serviceName = "POUT:REF:DRIVER:ID:" <> person.getId <> ":SN:" <> show serviceName
+
+refundByPayoutDriverFee :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> RefundByPayoutReq -> Flow APISuccess
+refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
+  let serviceName = refundByPayoutReq.serviceName
+  Redis.whenWithLockRedis (mkPayoutLockKeyByDriverAndService personId serviceName) 60 $ do
+    let driverFeeType = refundByPayoutReq.driverFeeType
+        refundAmountDeduction = refundByPayoutReq.refundAmountDeduction
+    (_, mDriverPlan) <- DAPlan.getSubcriptionStatusWithPlan serviceName personId
+    driverInfo <- QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
+    ------------ todo :-  put check for access post rbac implemtation --------------
+    let mbVpa = refundByPayoutReq.payerVpa <|> driverInfo.payoutVpa <|> (mDriverPlan >>= (.payerVpa))
+    unless (isJust mbVpa) $ throwError (InternalError $ "payer vpa not present for " <> personId.getId)
+    whenJust mbVpa $ \vpa -> do
+      driverFees <- runInReplica $ QDFE.findAllByStatusAndDriverIdWithServiceNameFeetype personId [DDF.CLEARED, DDF.REFUND_FAILED, DDF.COLLECTED_CASH] driverFeeType serviceName
+      dueDriverFees <- QDF.findAllByStatusAndDriverIdWithServiceName personId [DDF.PAYMENT_OVERDUE] serviceName
+      let totalSecurityDeposit = sum $ map mapToAmount driverFees
+          dueDriverFeesAmount = sum $ map mapToAmount dueDriverFees
+          refundAmount = totalSecurityDeposit - dueDriverFeesAmount - refundAmountDeduction
+      when (refundAmount < 0.0) $ throwError (InternalError "refund amount is less than 0")
+      let driverFeeSorted = sortOn (.platformFee.fee) driverFees
+      subscriptionConfig <- do
+        CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
+          >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
+      uid <- generateGUID
+      let (driverFeeToPayout, _) = driverFeeWithRefundData driverFeeSorted refundAmount uid
+      person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      phoneNo <- mapM decrypt person.mobileNumber
+      let createPayoutOrderReq = mkPayoutReq driverFeeToPayout person vpa uid phoneNo
+          payoutServiceName = fromMaybe (DEMSC.PayoutService TPayout.Juspay) subscriptionConfig.payoutServiceName
+          entityName = DPayment.DRIVER_FEE
+          createPayoutOrderCall = Payout.createPayoutOrder person.merchantId opCityId payoutServiceName
+      merchantOperatingCity <- CQMOC.findById (cast opCityId) >>= fromMaybeM (MerchantOperatingCityNotFound opCityId.getId)
+      logDebug $ "calling create payoutOrder with driverId: " <> personId.getId <> " | amount: " <> show createPayoutOrderReq.amount <> " | orderId: " <> show uid
+      void $ adjustDues dueDriverFees
+      (_, mbPayoutOrder) <- DPayment.createPayoutService (cast person.merchantId) (cast personId) (Just $ map ((.getId) . (.id)) driverFeeToPayout) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+      whenJust mbPayoutOrder $ \payoutOrder -> do
+        let refundAmountSegregation = fromMaybe "NA" refundByPayoutReq.refundAmountSegregation
+        ET.trackRefundSegregation payoutOrder refundAmountSegregation (show serviceName)
+      forM_ driverFeeToPayout $ \refundFee -> do
+        let refundData =
+              DDF.RefundInfo
+                { refundedBy = refundFee.refundedBy,
+                  refundEntityId = refundFee.refundEntityId,
+                  refundedAt = refundFee.refundedAt,
+                  status = Just refundFee.status,
+                  refundedAmount = refundFee.refundedAmount
+                }
+        QDF.updateRefundData refundFee.id refundData
+  return Success
+  where
+    mapToAmount = \dueDfee -> SLDriverFee.roundToHalf dueDfee.currency (dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst)
+    driverFeeWithRefundData driverFeeSorted refundAmount uid =
+      foldl'
+        ( \acc dfee@DDF.DriverFee {serviceName = planServiceName, ..} -> do
+            let amount = mapToAmount dfee
+            if snd acc > 0.0
+              then do
+                let dfee' =
+                      DDF.DriverFee
+                        { status = DDF.REFUND_PENDING,
+                          refundedBy = Just DDF.PAYOUT,
+                          refundEntityId = Just uid,
+                          refundedAmount = Just $ min (snd acc) amount,
+                          serviceName = planServiceName,
+                          ..
+                        }
+                (dfee' : fst acc, snd acc - fromMaybe 0.0 dfee'.refundedAmount)
+              else acc
+        )
+        ([], refundAmount)
+        driverFeeSorted
+    mkPayoutReq driverFeeToPayout person vpa uid phoneNo =
+      Juspay.CreatePayoutOrderReq
+        { orderId = uid,
+          amount = foldl (\acc dfee -> acc + mapToAmount dfee) 0.0 driverFeeToPayout,
+          customerPhone = fromMaybe "6666666666" phoneNo, -- dummy no.
+          customerEmail = fromMaybe "dummymail@gmail.com" person.email, -- dummy mail
+          customerId = personId.getId,
+          orderType = "YATRI_RENTAL_SECURITY_DEPOSIT",
+          remark = "Refund for security deposit",
+          customerName = person.firstName,
+          customerVpa = vpa
+        }
+    adjustDues dueDriverFees = do
+      now <- getCurrentTime
+      invoices <- mapM (\fee -> runInReplica (QINV.findActiveManualInvoiceByFeeId fee.id Domain.MANUAL_INVOICE Domain.ACTIVE_INVOICE)) dueDriverFees
+      let invoicesToBeUpdated = mergeSortAndRemoveDuplicate invoices
+      void $ mapM (\inv -> QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE inv.id) invoicesToBeUpdated
+      void $
+        mapM
+          ( \dFee -> do
+              invoice <- mkInvoice dFee
+              QDF.updateStatus DDF.ONE_TIME_SECURITY_ADJUSTED dFee.id now
+              QINV.create invoice
+          )
+          dueDriverFees
+    mkInvoice driverFee = do
+      id <- generateGUID
+      shortId <- generateShortId
+      now <- getCurrentTime
+      return $
+        INV.Invoice
+          { id = Id id,
+            invoiceShortId = shortId.getShortId,
+            driverFeeId = driverFee.id,
+            invoiceStatus = INV.SUCCESS,
+            driverId = driverFee.driverId,
+            maxMandateAmount = Nothing,
+            paymentMode = INV.ONE_TIME_SECURITY_ADJUSTED_INVOICE,
+            bankErrorCode = Nothing,
+            bankErrorMessage = Nothing,
+            bankErrorUpdatedAt = Nothing,
+            lastStatusCheckedAt = Nothing,
+            serviceName = driverFee.serviceName,
+            merchantOperatingCityId = driverFee.merchantOperatingCityId,
+            updatedAt = now,
+            createdAt = now
+          }

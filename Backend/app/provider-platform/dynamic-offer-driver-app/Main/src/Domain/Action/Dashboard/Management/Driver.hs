@@ -47,6 +47,8 @@ module Domain.Action.Dashboard.Management.Driver
     getDriverPanAadharSelfieDetails,
     postDriverSyncDocAadharPan,
     postDriverUpdateVehicleManufacturing,
+    postDriverRefundByPayout,
+    getDriverSecurityDepositStatus,
   )
 where
 
@@ -163,3 +165,9 @@ postDriverSyncDocAadharPan = DDriver.postDriverSyncDocAadharPan
 
 postDriverUpdateVehicleManufacturing :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateVehicleManufacturingReq -> Flow APISuccess
 postDriverUpdateVehicleManufacturing = DDriver.postDriverUpdateVehicleManufacturing
+
+postDriverRefundByPayout :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RefundByPayoutReq -> Flow APISuccess
+postDriverRefundByPayout = DDriver.postDriverRefundByPayout
+
+getDriverSecurityDepositStatus :: (ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Common.ServiceNames -> Flow [Common.SecurityDepositDfStatusRes])
+getDriverSecurityDepositStatus = DDriver.getDriverSecurityDepositStatus
