@@ -215,7 +215,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             Redis.setExp (multipleRouteKeySoftUpdate booking.id.getId) (map RR.createMultipleRouteInfo routeResponse) 600
             -- TODO: Currently isDashboard flagged is passed as False here, but fix it properly once we have edit destination from dashboard too
             fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id False srcPt (Just dropLatLong) (Just (TransactionId (Id booking.transactionId))) booking.tripCategory
-            farePolicy <- getFarePolicy (Just srcPt) merchantOperatingCity.id False booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just (TransactionId (Id booking.transactionId)))
+            farePolicy <- getFarePolicy (Just srcPt) merchantOperatingCity.id False booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just booking.startTime) (Just (TransactionId (Id booking.transactionId)))
             mbTollInfo <- getTollInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
             let isTollAllowed = maybe True (\(_, _, isAutoRickshawAllowed) -> (booking.vehicleServiceTier == DVST.AUTO_RICKSHAW && isAutoRickshawAllowed) || booking.vehicleServiceTier /= DVST.AUTO_RICKSHAW) mbTollInfo
             when (not isTollAllowed) $ do
