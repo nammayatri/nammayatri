@@ -33,7 +33,6 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import Storage.Queries.SafetySettings as QSafety
 import Tools.Error
 import Tools.Notifications
@@ -86,7 +85,6 @@ onInit req = do
   person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   decRider <- decrypt person
   safetySettings <- QSafety.findSafetySettingsWithFallback booking.riderId (Just person)
-  personENList <- QPDEN.findpersonENListWithFallBack booking.riderId (Just person)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   riderPhoneCountryCode <- decRider.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   riderPhoneNumber <-
@@ -125,7 +123,7 @@ onInit req = do
             transactionId = booking.transactionId,
             merchant = merchant,
             nightSafetyCheck = checkSafetySettingConstraint (Just safetySettings.enableUnexpectedEventsCheck) riderConfig now,
-            enableFrequentLocationUpdates = any (\item -> checkSafetySettingConstraint item.shareTripWithEmergencyContactOption riderConfig now) personENList,
+            enableFrequentLocationUpdates = checkSafetySettingConstraint safetySettings.aggregatedRideShareSetting riderConfig now,
             paymentId = req.paymentId,
             enableOtpLessRide = fromMaybe False safetySettings.enableOtpLessRide,
             ..
