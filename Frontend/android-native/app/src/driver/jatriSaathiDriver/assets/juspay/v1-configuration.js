@@ -448,6 +448,7 @@ window.getMerchantConfig = function () {
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
       }
+    , "rideStartAudio" : defaultStartAudioConfig
     },
     {
       "cityName" : "Siliguri",
@@ -544,6 +545,7 @@ window.getMerchantConfig = function () {
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
       }
+    , "rideStartAudio" : defaultStartAudioConfig
     },
     {
       "cityName" : "Asansol",
@@ -638,6 +640,7 @@ window.getMerchantConfig = function () {
           "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
         }
       }
+    , "rideStartAudio" : defaultStartAudioConfig
     }
   ]
   })
@@ -653,3 +656,12 @@ let staticSubscriptionConfig = [
   {"price" : 9.0, "frequency" : "PER_RIDE", "variantCategory" : "CarCategory", "name" : "DAILY_PER_RIDE", "introductoryOffer" : "" , "showSelected" : false, "planDesc" : "Up to a maximum of ₹99 per day-*$*-ದಿನಕ್ಕೆ ಗರಿಷ್ಠ ₹99-*$*-प्रति दिन अधिकतम ₹99 तक-*$*-প্রতিদিন সর্বোচ্চ ₹99 পর্যন্ত-*$*-പ്രതിദിനം പരമാവധി ₹99 വരെ-*$*-ஒரு நாளைக்கு அதிகபட்சம் ₹99 வரை-*$*-రోజుకు గరిష్టంగా ₹99 వరకు"},
   {"price" : 25.0, "frequency" : "PER_DAY", "variantCategory" : "AutoCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" : "NO_CHARGES_TILL", "showSelected" : true, "planDesc" : ""}
 ]
+
+
+
+let defaultStartAudioConfig = {
+  "acCab" : {},
+  "nonAcCab" : {},
+  "auto" : {},
+  "bike" : {}
+}
