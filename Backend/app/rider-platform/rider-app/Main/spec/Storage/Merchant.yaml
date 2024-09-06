@@ -73,6 +73,7 @@ Merchant:
     arrivingPickupThreshold: Distance
     driverOnTheWayNotifyExpiry: Seconds
     onlinePayment: Bool
+    isOnONDC: Bool
 
   excludedFields:
     - merchantId
@@ -201,6 +202,7 @@ Merchant:
     fakeOtpEmails: "'{}'"
     city: "'Kochi'"
     onlinePayment: "false"
+    isOnONDC: "false"
 
   constraints:
     shortId: SecondaryKey
@@ -219,6 +221,10 @@ Merchant:
     findBySubscriberId:
       kvFunction: findOneWithKV
       where: subscriberId
+    updateGatewayAndRegistry:
+      kvFunction: updateWithKV
+      params: [gatewayUrl, registryUrl]
+      where: id
 
   excludedDefaultQueries:
     - createMany

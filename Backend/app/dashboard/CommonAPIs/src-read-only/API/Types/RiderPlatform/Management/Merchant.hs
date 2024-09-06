@@ -4,7 +4,9 @@
 module API.Types.RiderPlatform.Management.Merchant where
 
 import qualified Dashboard.Common.Merchant
+import qualified Data.Maybe
 import Data.OpenApi (ToSchema)
+import qualified Data.Text
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -17,16 +19,26 @@ import Servant
 import Servant.Client
 
 data MerchantUpdateReq = MerchantUpdateReq
-  { name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    exoPhones :: Kernel.Prelude.Maybe (Kernel.Prelude.NonEmpty Dashboard.Common.Merchant.ExophoneReq),
-    fcmConfig :: Kernel.Prelude.Maybe Dashboard.Common.Merchant.FCMConfigUpdateReq,
-    gatewayUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl,
-    registryUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl
+  { name :: Data.Maybe.Maybe Data.Text.Text,
+    exoPhones :: Data.Maybe.Maybe (Kernel.Prelude.NonEmpty Dashboard.Common.Merchant.ExophoneReq),
+    fcmConfig :: Data.Maybe.Maybe Dashboard.Common.Merchant.FCMConfigUpdateReq,
+    gatewayUrl :: Data.Maybe.Maybe Kernel.Prelude.BaseUrl,
+    registryUrl :: Data.Maybe.Maybe Kernel.Prelude.BaseUrl
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("merchant" :> (PostMerchantUpdate :<|> GetMerchantServiceUsageConfig :<|> PostMerchantServiceConfigMapsUpdate :<|> PostMerchantServiceUsageConfigMapsUpdate :<|> PostMerchantServiceConfigSmsUpdate :<|> PostMerchantServiceUsageConfigSmsUpdate :<|> PostMerchantConfigOperatingCityCreateHelper :<|> PostMerchantSpecialLocationUpsertHelper :<|> DeleteMerchantSpecialLocationDelete :<|> PostMerchantSpecialLocationGatesUpsertHelper :<|> DeleteMerchantSpecialLocationGatesDelete))
+data SwitchGateWayAndRegistry = SwitchGateWayAndRegistry {gatewayType :: API.Types.RiderPlatform.Management.Merchant.ToggleToType, registryType :: API.Types.RiderPlatform.Management.Merchant.ToggleToType}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ToggleToType
+  = ONDC
+  | JUSPAY
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type API = ("merchant" :> (PostMerchantUpdate :<|> GetMerchantServiceUsageConfig :<|> PostMerchantServiceConfigMapsUpdate :<|> PostMerchantServiceUsageConfigMapsUpdate :<|> PostMerchantServiceConfigSmsUpdate :<|> PostMerchantServiceUsageConfigSmsUpdate :<|> PostMerchantConfigOperatingCityCreateHelper :<|> PostMerchantSpecialLocationUpsertHelper :<|> DeleteMerchantSpecialLocationDelete :<|> PostMerchantSpecialLocationGatesUpsertHelper :<|> DeleteMerchantSpecialLocationGatesDelete :<|> PostMerchantToggleGateWayAndRegistry))
 
 type PostMerchantUpdate = ("update" :> ReqBody '[JSON] API.Types.RiderPlatform.Management.Merchant.MerchantUpdateReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
@@ -136,8 +148,15 @@ type DeleteMerchantSpecialLocationGatesDelete =
            (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation)
       :> "gates"
       :> "delete"
-      :> Capture "gateName" Kernel.Prelude.Text
+      :> Capture "gateName" Data.Text.Text
       :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
+
+type PostMerchantToggleGateWayAndRegistry =
+  ( "toggleGateWayAndRegistry" :> ReqBody '[JSON] API.Types.RiderPlatform.Management.Merchant.SwitchGateWayAndRegistry
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 data MerchantAPIs = MerchantAPIs
@@ -151,13 +170,14 @@ data MerchantAPIs = MerchantAPIs
     postMerchantSpecialLocationUpsert :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation) -> Dashboard.Common.Merchant.UpsertSpecialLocationReqT -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     deleteMerchantSpecialLocationDelete :: Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantSpecialLocationGatesUpsert :: Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Dashboard.Common.Merchant.UpsertSpecialLocationGateReqT -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    deleteMerchantSpecialLocationGatesDelete :: Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    deleteMerchantSpecialLocationGatesDelete :: Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Data.Text.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postMerchantToggleGateWayAndRegistry :: API.Types.RiderPlatform.Management.Merchant.SwitchGateWayAndRegistry -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkMerchantAPIs :: (Client EulerHS.Types.EulerClient API -> MerchantAPIs)
 mkMerchantAPIs merchantClient = (MerchantAPIs {..})
   where
-    postMerchantUpdate :<|> getMerchantServiceUsageConfig :<|> postMerchantServiceConfigMapsUpdate :<|> postMerchantServiceUsageConfigMapsUpdate :<|> postMerchantServiceConfigSmsUpdate :<|> postMerchantServiceUsageConfigSmsUpdate :<|> postMerchantConfigOperatingCityCreate :<|> postMerchantSpecialLocationUpsert :<|> deleteMerchantSpecialLocationDelete :<|> postMerchantSpecialLocationGatesUpsert :<|> deleteMerchantSpecialLocationGatesDelete = merchantClient
+    postMerchantUpdate :<|> getMerchantServiceUsageConfig :<|> postMerchantServiceConfigMapsUpdate :<|> postMerchantServiceUsageConfigMapsUpdate :<|> postMerchantServiceConfigSmsUpdate :<|> postMerchantServiceUsageConfigSmsUpdate :<|> postMerchantConfigOperatingCityCreate :<|> postMerchantSpecialLocationUpsert :<|> deleteMerchantSpecialLocationDelete :<|> postMerchantSpecialLocationGatesUpsert :<|> deleteMerchantSpecialLocationGatesDelete :<|> postMerchantToggleGateWayAndRegistry = merchantClient
 
 data MerchantEndpointDSL
   = PostMerchantUpdateEndpoint
@@ -171,5 +191,6 @@ data MerchantEndpointDSL
   | DeleteMerchantSpecialLocationDeleteEndpoint
   | PostMerchantSpecialLocationGatesUpsertEndpoint
   | DeleteMerchantSpecialLocationGatesDeleteEndpoint
+  | PostMerchantToggleGateWayAndRegistryEndpoint
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

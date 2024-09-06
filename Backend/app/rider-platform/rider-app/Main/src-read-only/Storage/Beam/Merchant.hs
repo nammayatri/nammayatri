@@ -47,6 +47,7 @@ data MerchantT f = MerchantT
     originRestriction :: B.C f Kernel.Types.Geofencing.GeoRestriction,
     id :: B.C f Kernel.Prelude.Text,
     isAvoidToll :: B.C f Kernel.Prelude.Bool,
+    isOnONDC :: B.C f Kernel.Prelude.Bool,
     kaptureDisposition :: B.C f Kernel.Prelude.Text,
     mediaFileSizeUpperLimit :: B.C f Kernel.Prelude.Int,
     mediaFileUrlPattern :: B.C f Kernel.Prelude.Text,

@@ -41,6 +41,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     geofencingConfig :: Kernel.Types.Geofencing.GeofencingConfig,
     id :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     isAvoidToll :: Kernel.Prelude.Bool,
+    isOnONDC :: Kernel.Prelude.Bool,
     kaptureDisposition :: Kernel.Prelude.Text,
     mediaFileSizeUpperLimit :: Kernel.Prelude.Int,
     mediaFileUrlPattern :: Kernel.Prelude.Text,

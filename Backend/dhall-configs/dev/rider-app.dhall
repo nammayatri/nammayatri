@@ -242,6 +242,14 @@ let riderClickhouseCfg =
       , tls = False
       }
 
+let ondcRegistryUrl = "ondcRegistryUrl"
+
+let ondcGatewayUrl = "ondcGatewayUrl"
+
+let juspayRegistryUrl = "juspayRegistryUrl"
+
+let juspayGatewayUrl = "juspayGatewayUrl"
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = hcfg
@@ -319,4 +327,8 @@ in  { esqDBCfg
     , isMetroTestTransaction = False
     , urlShortnerConfig = common.urlShortnerConfig
     , sosAlertsTopicARN
+    , ondcRegistryUrl
+    , ondcGatewayUrl
+    , juspayRegistryUrl
+    , juspayGatewayUrl
     }

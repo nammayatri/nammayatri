@@ -8,6 +8,8 @@ import qualified Domain.Types.Merchant
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Registry
@@ -28,3 +30,13 @@ findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Typ
 
 findBySubscriberId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber -> m (Maybe Domain.Types.Merchant.Merchant))
 findBySubscriberId subscriberId = do findOneWithKV [Se.Is Beam.subscriberId $ Se.Eq (Kernel.Types.Id.getShortId subscriberId)]
+
+updateGatewayAndRegistry :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.BaseUrl -> Kernel.Types.Common.BaseUrl -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ())
+updateGatewayAndRegistry gatewayUrl registryUrl id = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.gatewayUrl (Kernel.Prelude.showBaseUrl gatewayUrl),
+      Se.Set Beam.registryUrl (Kernel.Prelude.showBaseUrl registryUrl),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

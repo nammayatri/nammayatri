@@ -25,9 +25,11 @@ module Domain.Action.Dashboard.Merchant
     postMerchantSpecialLocationGatesUpsert,
     deleteMerchantSpecialLocationGatesDelete,
     buildMerchantServiceConfig,
+    postMerchantToggleGateWayAndRegistry,
   )
 where
 
+import API.Types.RiderPlatform.Management.Merchant (ToggleToType (..))
 import Control.Applicative
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Merchant as Common
 import qualified Data.Text as T
@@ -504,3 +506,20 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             updatedAt = now,
             ..
           }
+
+postMerchantToggleGateWayAndRegistry :: ShortId DM.Merchant -> Context.City -> Common.SwitchGateWayAndRegistry -> Flow APISuccess
+postMerchantToggleGateWayAndRegistry _ _ toggleTo = do
+  newRegistryUrl <- case toggleTo.registryType of
+    ONDC -> asks (.ondcRegistryUrl)
+    JUSPAY -> asks (.juspayRegistryUrl)
+  newGatewayUrl <- case toggleTo.gatewayType of
+    ONDC -> asks (.ondcGatewayUrl)
+    JUSPAY -> asks (.juspayGatewayUrl)
+  merchants <- CQM.findAll
+  void $ traverse (updateMerchantUrls newRegistryUrl newGatewayUrl) merchants
+  pure Kernel.Types.APISuccess.Success
+
+updateMerchantUrls :: BaseUrl -> BaseUrl -> DM.Merchant -> Environment.Flow ()
+updateMerchantUrls regisrtyUrl gatewayUrl merchant = do
+  when (merchant.isOnONDC) $ do
+    CQM.updateGatewayAndRegistry merchant gatewayUrl regisrtyUrl

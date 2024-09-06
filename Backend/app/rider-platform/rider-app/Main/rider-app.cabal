@@ -189,6 +189,7 @@ library
       Domain.Action.UI.Invoice
       Domain.Action.UI.Location
       Domain.Action.UI.Maps
+      Domain.Action.UI.Merchant
       Domain.Action.UI.MerchantPaymentMethod
       Domain.Action.UI.MultiModal
       Domain.Action.UI.PartnerOrganizationFRFS
@@ -416,6 +417,7 @@ library
       API.Types.UI.FollowRide
       API.Types.UI.FRFSTicketService
       API.Types.UI.Invoice
+      API.Types.UI.Merchant
       API.Types.UI.MultiModal
       API.Types.UI.RidePayment
       API.Types.UI.SocialLogin

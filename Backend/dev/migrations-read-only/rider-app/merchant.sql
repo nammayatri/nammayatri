@@ -73,3 +73,9 @@ ALTER TABLE atlas_app.merchant ADD COLUMN online_payment boolean NOT NULL defaul
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant ADD COLUMN num_of_allowed_edit_location_attempts_threshold int NOT NULL default 3;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant ADD COLUMN is_on_ondc boolean  default false;
+ALTER TABLE atlas_app.merchant ALTER COLUMN is_on_ondc SET NOT NULL;

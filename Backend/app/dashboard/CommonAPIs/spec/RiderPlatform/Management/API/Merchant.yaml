@@ -1,4 +1,8 @@
 imports:
+  Text: Data.Text
+  Maybe: Data.Maybe
+  Merchant: Domain.Types.Merchant
+  APISuccess: Kernel.Types.APISuccess
   ExophoneReq: Dashboard.Common.Merchant
   FCMConfigUpdateReq: Dashboard.Common.Merchant
   MapsServiceConfigUpdateReq: Dashboard.Common.Merchant
@@ -173,6 +177,14 @@ apis:
       migrate:
         endpoint: MerchantAPI DeleteSpecialLocationGateEndpoint
         endpointV2:
+   # POST /toggleGateWayAndRegistry
+  - POST:
+      endpoint: /toggleGateWayAndRegistry
+      auth: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MERCHANT_UPDATE
+      request:
+          type: SwitchGateWayAndRegistry
+      response:
+          type: APISuccess
 
 types:
   MerchantUpdateReq:
@@ -181,6 +193,11 @@ types:
     - fcmConfig: Maybe FCMConfigUpdateReq
     - gatewayUrl: Maybe BaseUrl
     - registryUrl: Maybe BaseUrl
+  SwitchGateWayAndRegistry:
+    - gatewayType: ToggleToType
+    - registryType: ToggleToType
+  ToggleToType:
+    enum: "ONDC, JUSPAY"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

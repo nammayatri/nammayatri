@@ -23,6 +23,8 @@ module Storage.CachedQueries.Merchant
     getDefaultMerchantOperatingCity,
     getDefaultMerchantOperatingCity_,
     updateGeofencingConfig,
+    updateGatewayAndRegistry,
+    findAll,
   )
 where
 
@@ -118,3 +120,11 @@ getDefaultMerchantOperatingCity_ merchantShortId = do
 
 updateGeofencingConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> GeoRestriction -> GeoRestriction -> m ()
 updateGeofencingConfig = Queries.updateGeofencingConfig
+
+updateGatewayAndRegistry :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> BaseUrl -> BaseUrl -> m ()
+updateGatewayAndRegistry merchant registryUrl gatewayUrl = do
+  void $ Queries.updateGatewayAndRegistry registryUrl gatewayUrl merchant.id
+  clearCache merchant
+
+findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Merchant]
+findAll = Queries.findAll

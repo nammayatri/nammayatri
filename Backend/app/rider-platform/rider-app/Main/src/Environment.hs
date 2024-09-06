@@ -140,7 +140,11 @@ data AppCfg = AppCfg
     iosValidateEnpoint :: Text,
     isMetroTestTransaction :: Bool,
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
-    sosAlertsTopicARN :: Text
+    sosAlertsTopicARN :: Text,
+    ondcRegistryUrl :: BaseUrl,
+    ondcGatewayUrl :: BaseUrl,
+    juspayRegistryUrl :: BaseUrl,
+    juspayGatewayUrl :: BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -223,7 +227,11 @@ data AppEnv = AppEnv
     isMetroTestTransaction :: Bool,
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
     passettoContext :: PassettoContext,
-    sosAlertsTopicARN :: Text
+    sosAlertsTopicARN :: Text,
+    ondcRegistryUrl :: BaseUrl,
+    ondcGatewayUrl :: BaseUrl,
+    juspayRegistryUrl :: BaseUrl,
+    juspayGatewayUrl :: BaseUrl
   }
   deriving (Generic)
 

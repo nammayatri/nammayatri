@@ -9,6 +9,7 @@ where
 
 import qualified API.Types.RiderPlatform.Management.Merchant
 import qualified Dashboard.Common.Merchant
+import qualified Data.Text
 import qualified Domain.Action.Dashboard.Merchant as Domain.Action.Dashboard.Merchant
 import qualified Domain.Types.Merchant
 import qualified Environment
@@ -23,7 +24,7 @@ import Servant
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.RiderPlatform.Management.Merchant.API)
-handler merchantId city = postMerchantUpdate merchantId city :<|> getMerchantServiceUsageConfig merchantId city :<|> postMerchantServiceConfigMapsUpdate merchantId city :<|> postMerchantServiceUsageConfigMapsUpdate merchantId city :<|> postMerchantServiceConfigSmsUpdate merchantId city :<|> postMerchantServiceUsageConfigSmsUpdate merchantId city :<|> postMerchantConfigOperatingCityCreate merchantId city :<|> postMerchantSpecialLocationUpsert merchantId city :<|> deleteMerchantSpecialLocationDelete merchantId city :<|> postMerchantSpecialLocationGatesUpsert merchantId city :<|> deleteMerchantSpecialLocationGatesDelete merchantId city
+handler merchantId city = postMerchantUpdate merchantId city :<|> getMerchantServiceUsageConfig merchantId city :<|> postMerchantServiceConfigMapsUpdate merchantId city :<|> postMerchantServiceUsageConfigMapsUpdate merchantId city :<|> postMerchantServiceConfigSmsUpdate merchantId city :<|> postMerchantServiceUsageConfigSmsUpdate merchantId city :<|> postMerchantConfigOperatingCityCreate merchantId city :<|> postMerchantSpecialLocationUpsert merchantId city :<|> deleteMerchantSpecialLocationDelete merchantId city :<|> postMerchantSpecialLocationGatesUpsert merchantId city :<|> deleteMerchantSpecialLocationGatesDelete merchantId city :<|> postMerchantToggleGateWayAndRegistry merchantId city
 
 postMerchantUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.Merchant.MerchantUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantUpdate a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Merchant.postMerchantUpdate a3 a2 a1
@@ -55,5 +56,8 @@ deleteMerchantSpecialLocationDelete a3 a2 a1 = withFlowHandlerAPI $ Domain.Actio
 postMerchantSpecialLocationGatesUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Dashboard.Common.Merchant.UpsertSpecialLocationGateReqT -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantSpecialLocationGatesUpsert a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Merchant.postMerchantSpecialLocationGatesUpsert a4 a3 a2 a1
 
-deleteMerchantSpecialLocationGatesDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+deleteMerchantSpecialLocationGatesDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Data.Text.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 deleteMerchantSpecialLocationGatesDelete a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Merchant.deleteMerchantSpecialLocationGatesDelete a4 a3 a2 a1
+
+postMerchantToggleGateWayAndRegistry :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.Merchant.SwitchGateWayAndRegistry -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postMerchantToggleGateWayAndRegistry a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Merchant.postMerchantToggleGateWayAndRegistry a3 a2 a1

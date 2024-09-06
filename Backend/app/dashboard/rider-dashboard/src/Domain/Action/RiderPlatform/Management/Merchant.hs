@@ -175,3 +175,10 @@ mkGeom :: FilePath -> Flow (Maybe Text)
 mkGeom kmlFile = do
   result <- getGeomFromKML kmlFile >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom.")
   return $ Just $ T.pack result
+
+postMerchantToggleGateWayAndRegistry :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.SwitchGateWayAndRegistry -> Flow APISuccess
+postMerchantToggleGateWayAndRegistry merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.PostMerchantToggleGateWayAndRegistryEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callRiderAppOperations checkedMerchantId opCity (.merchantDSL.postMerchantToggleGateWayAndRegistry) req
