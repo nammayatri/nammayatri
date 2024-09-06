@@ -101,12 +101,10 @@ import in.juspay.mobility.app.CheckPermissionOverlay;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.LocationUpdateWorker;
 import in.juspay.mobility.app.NotificationUtils;
-import in.juspay.mobility.app.SliderComponent;
 import in.juspay.mobility.app.TranslatorMLKit;
 import in.juspay.mobility.common.MobilityCommonBridge;
-import in.juspay.mobility.common.Utils;
+import in.juspay.mobility.common.utils.Utils;
 import in.juspay.mobility.common.mediaPlayer.DefaultMediaPlayerControl;
-import in.juspay.mobility.app.R;
 
 public class MobilityDriverBridge extends MobilityCommonBridge {
 

@@ -1344,7 +1344,6 @@ getFR stringKey =
         PARKING_CHARGES_DESC -> "Les frais de stationnement dépendent des frais facturés au chauffeur au lieu de prise en charge"
         TOLL_CHARGES_INCLUDED_IN_FAIR -> "Les frais de péage sont inclus dans le tarif"
         PLEASE_DO_NOT_PAY_EXTRA_TO_DRIVER -> "Veuillez ne pas payer de supplément au chauffeur"
-
         VELLORE -> "Vellore"
         HOSUR -> "Hosur"
         MADURAI -> "Madurai"
@@ -1637,3 +1636,9 @@ getFR stringKey =
         HOUR -> "heure"
         SEC -> "seconde"
         BIKE_TAXI -> "Taxi Moto"
+        TRIVANDRUM -> "Trivandrum"
+        PHONE_NUMBER_PERMISSION -> "Autorisation du numéro de téléphone"
+        PHONE_NUMBER_PERMISSION_DESC -> "Redbus veut connaître votre numéro de téléphone Namma Yatri"
+        DENY -> "Refuser"
+        ALLOW -> "Autoriser"
+        INTERCITY_BUS -> "Bus interurbain"

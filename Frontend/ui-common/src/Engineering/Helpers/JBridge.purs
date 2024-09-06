@@ -306,6 +306,7 @@ foreign import fetchFilesFromFolderPath :: String -> Array String
 foreign import isPackageInstalled :: String -> Boolean
 foreign import requestUninstallPackage :: String -> Boolean
 foreign import storeOnPauseCallback :: forall action. Fn2 (action -> Effect Unit) action Unit
+foreign import launchCustomTab :: forall action. EffectFn2 String action  Unit
 
 type SliderConfig = { 
   id :: String,
@@ -1081,3 +1082,4 @@ handleLocateOnMapCallback screenName = (\push key lat lon -> do
 
 
 foreign import triggerReloadApp :: String ->Effect Unit
+foreign import rsEncryption :: String -> String

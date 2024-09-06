@@ -2976,3 +2976,15 @@ export const triggerReloadApp = function (lazy){
     window["onEvent'"]("onReloadApp", {});
   }
 }
+
+export const rsEncryption = (str) => window.JBridge.rsEncryption ? window.JBridge.rsEncryption(str) : "";
+  
+
+export const launchCustomTab = (url, cb) => {
+  if (window.JBridge.launchCustomTab) {
+    const callback = callbackMapper.map(function () {
+      console.log("launchCustomTab ", arguments)
+    });
+    window.JBridge.launchCustomTab(url, callback);
+  }
+}

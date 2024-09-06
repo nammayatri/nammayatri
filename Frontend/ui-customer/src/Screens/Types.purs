@@ -805,6 +805,7 @@ type HomeScreenStateData =
   , overLappingBooking :: Maybe RideBookingRes
   , upcomingRideDetails :: Maybe UpcomingRideDetails
   , selectedService :: Maybe RC.Service
+  , intercityBus :: IntercityBusData
 }
 
 type UpcomingRideDetails = {
@@ -822,6 +823,15 @@ type TollData = {
 type ParkingData = {
   estimatedCharge :: Maybe Number
 }
+  
+
+type IntercityBusData = {
+  showPermissionPopUp :: Boolean
+, showWebView :: Boolean
+, hasPhoneNumberPermission :: Boolean
+, url :: Maybe String
+}
+
 type InteroperabilityState = {
   timerId :: String,
   timerVal :: String,

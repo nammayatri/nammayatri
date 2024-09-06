@@ -1344,7 +1344,6 @@ getKN stringKey =
         PARKING_CHARGES_DESC -> "ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕಗಳು ಪಿಕಪ್ ಸ್ಥಳದಲ್ಲಿ ಚಾಲಕನಿಗೆ ವಿಧಿಸುವ ಶುಲ್ಕವನ್ನು ಅವಲಂಬಿಸಿರುತ್ತದೆ"
         TOLL_CHARGES_INCLUDED_IN_FAIR -> "ಟೋಲ್ ಶುಲ್ಕಗಳನ್ನು ದರಗಳಲ್ಲಿ ಸೇರಿಸಲಾಗಿದೆ"
         PLEASE_DO_NOT_PAY_EXTRA_TO_DRIVER -> "ದಯವಿಟ್ಟು ಚಾಲಕನಿಗೆ ಹೆಚ್ಚುವರಿ ಶುಲ್ಕಗಳನ್ನು ಪಾವತಿಸಬೇಡಿ"
-
         VELLORE -> "ವೆಲ್ಲೂರು"
         HOSUR -> "ಹೊಸೂರು"
         MADURAI -> "ಮದುರೈ"
@@ -1638,3 +1637,9 @@ getKN stringKey =
         HOUR -> "ಗಂಟೆ"
         SEC -> "ಸೆಕೆಂಡು"
         BIKE_TAXI -> "ಬೈಕ್ ಟ್ಯಾಕ್ಸಿ"
+        TRIVANDRUM -> "ತಿರುವನಂತಪುರಂ"
+        PHONE_NUMBER_PERMISSION -> "ಫೋನ್ ಸಂಖ್ಯೆ ಅನುಮತಿ"
+        PHONE_NUMBER_PERMISSION_DESC -> "Redbus ನಿಮ್ಮ ನಮ್ಮ ಯಾತ್ರಿ ಫೋನ್ ಸಂಖ್ಯೆಯನ್ನು ತಿಳಿಯಲು ಬಯಸುತ್ತದೆ"
+        DENY -> "ನಿರಾಕರಿಸಿ"
+        ALLOW -> "ಅನುಮತಿಸು"
+        INTERCITY_BUS -> "ಇಂಟರ್‌ಸಿಟಿ ಬಸ್"

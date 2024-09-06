@@ -1,8 +1,7 @@
-package in.juspay.mobility.common;
+package in.juspay.mobility.common.utils;
 
 import static in.juspay.hyper.core.JuspayCoreLib.getApplicationContext;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
@@ -17,11 +16,6 @@ import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
-import android.os.Build;
-import android.os.Bundle;
-import android.os.Parcel;
-import android.os.Parcelable;
-import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Base64;
 import android.util.Log;
@@ -31,9 +25,10 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
+import in.juspay.mobility.common.CircleRippleEffectOptions;
+import in.juspay.mobility.common.R;
+import in.juspay.mobility.common.UICallBacks;
 import in.juspay.mobility.common.cropImage.CropImage;
-import in.juspay.mobility.common.cropImage.CropImageActivity;
-import in.juspay.mobility.common.cropImage.CropImageView;
 
 import org.json.JSONObject;
 

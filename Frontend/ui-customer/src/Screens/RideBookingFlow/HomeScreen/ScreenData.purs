@@ -61,7 +61,7 @@ initData = let
     , rating : 4.0
     , locationList : []
     , savedLocations : []
-    , fareProductType : FPT.ONE_WAY
+    , fareProductType : ST.ONE_WAY
     , recentSearchs : { predictionArray : []}
     , destinationSuggestions : []
     , tripSuggestions: []
@@ -201,6 +201,7 @@ initData = let
     , overLappingBooking : Nothing
     , upcomingRideDetails : Nothing
     , selectedService : Nothing
+    , intercityBus : initialIntercityBusData
     },
     props: {
       rideRequestFlow : false
@@ -541,7 +542,7 @@ dummyDriverInfo =
   , providerName : ""
   , providerType : CT.ONUS
   , rentalData : dummyRentalBookingConfig
-  , fareProductType : FPT.ONE_WAY
+  , fareProductType : ST.ONE_WAY
   , driversPreviousRideDropLocLat : Nothing
   , driversPreviousRideDropLocLon : Nothing
   , spLocationName : Nothing
@@ -733,7 +734,7 @@ dummyInvalidBookingPopUpConfig = {
   bookingId : "",
   rideScheduledTime : "",
   maxEstimatedDuration : 0,
-  fareProductType : FPT.ONE_WAY
+  fareProductType : ST.ONE_WAY
 }
 
 initialRideCompletedData :: RideCompletedData
@@ -800,4 +801,11 @@ dummyNotificationBody :: NotificationBody
 dummyNotificationBody = {
     rideTime : Nothing,
     bookingId : Nothing
+}
+initialIntercityBusData :: ST.IntercityBusData
+initialIntercityBusData = {
+  showPermissionPopUp : false
+, showWebView: false
+, hasPhoneNumberPermission : false
+, url : Nothing
 }
