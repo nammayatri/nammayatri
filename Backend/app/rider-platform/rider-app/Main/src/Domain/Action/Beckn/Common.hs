@@ -254,6 +254,7 @@ buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now stat
         DRB.InterCityDetails details -> Just details.toLocation
         DRB.AmbulanceDetails details -> Just details.toLocation
         DRB.DeliveryDetails details -> Just details.toLocation
+        DRB.OneWayScheduledDetails details -> Just details.toLocation
   let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
   let allowedEditPickupLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
   let onlinePayment = maybe False (.onlinePayment) mbMerchant

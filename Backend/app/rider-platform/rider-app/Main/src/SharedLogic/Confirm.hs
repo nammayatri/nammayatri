@@ -184,6 +184,7 @@ confirm DConfirmReq {..} = do
       DQuote.DriverOfferDetails driverOffer -> getBppQuoteIdFromDriverOffer driverOffer now
       DQuote.OneWaySpecialZoneDetails details -> pure details.quoteId
       DQuote.InterCityDetails details -> pure details.id.getId
+      DQuote.OneWayScheduledDetails details -> pure details.quoteId
 
     getBppQuoteIdFromDriverOffer driverOffer now = do
       estimate <- QEstimate.findById driverOffer.estimateId >>= fromMaybeM EstimateNotFound
@@ -343,6 +344,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
       DQuote.DriverOfferDetails _ -> DRB.DriverOfferDetails <$> buildOneWayDetails
       DQuote.OneWaySpecialZoneDetails _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails
       DQuote.InterCityDetails _ -> DRB.InterCityDetails <$> buildInterCityDetails
+      DQuote.OneWayScheduledDetails _ -> DRB.OneWayScheduledDetails <$> buildOneWayScheduledDetails
 
     buildInterCityDetails = do
       -- we need to throw errors here because of some redundancy of our domain model
@@ -368,6 +370,11 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
       toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
       pure DRB.DeliveryBookingDetails {..}
+    buildOneWayScheduledDetails = do
+      -- we need to throw errors here because of some redundancy of our domain model
+      toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
+      distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
+      pure DRB.OneWayScheduledBookingDetails {..}
     makeDeliveryParties :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m [DBPL.BookingPartiesLink]
     makeDeliveryParties bookingId = do
       allSearchReqParties <- QSRPL.findAllBySearchRequestId searchRequest.id

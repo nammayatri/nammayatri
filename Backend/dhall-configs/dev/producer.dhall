@@ -8,7 +8,7 @@ let esqDBCfg =
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
-      , connectSchemaName = "yudhishthira"
+      , connectSchemaName = "atlas_driver_offer_bpp"
       , connectionPoolCount = +25
       }
 
@@ -77,9 +77,9 @@ in  { hedisCfg
     , waitTimeMilliSec = +1000.0
     , producerTimestampKey = "producerTimestampKey"
     , batchSize = +1
-    , streamName = "Available_Chakras"
+    , streamName = "Available_Jobs"
     , cacheConfig
-    , schedulerSetName = "Scheduled_Chakras"
+    , schedulerSetName = "Scheduled_Jobs"
     , entryId = "*"
     , reviverInterval = +2
     , reviveThreshold = +2

@@ -26,7 +26,7 @@ imports:
   Version: Kernel.Types.Version
   Device : Kernel.Types.Version
   DeviceType: Kernel.Types.Version
-
+  OneWayScheduledQuote: Domain.Types.OneWayScheduledQuote
 
 Quote:
   dataName: quote
@@ -34,7 +34,7 @@ Quote:
 
   types:
     QuoteDetails:
-      enum: OneWayDetails OneWayQuoteDetails, AmbulanceDetails DriverOffer, InterCityDetails InterCityDetails, RentalDetails RentalDetails, DriverOfferDetails DriverOffer, OneWaySpecialZoneDetails SpecialZoneQuote, DeliveryDetails DriverOffer
+      enum: OneWayDetails OneWayQuoteDetails, AmbulanceDetails DriverOffer, InterCityDetails InterCityDetails, RentalDetails RentalDetails, DriverOfferDetails DriverOffer, OneWaySpecialZoneDetails SpecialZoneQuote, DeliveryDetails DriverOffer, OneWayScheduledDetails OneWayScheduledQuote
       derive': Generic,Show
 
     OneWayQuoteDetails:
@@ -42,7 +42,7 @@ Quote:
       derive': Generic,Show
 
     QuoteAPIDetails:
-      enum: OneWayAPIDetails OneWayQuoteAPIDetails, AmbulanceAPIDetails DriverOfferAPIEntity, InterCityAPIDetails InterCityDetailsAPIEntity, RentalAPIDetails RentalDetailsAPIEntity, DriverOfferAPIDetails DriverOfferAPIEntity, OneWaySpecialZoneAPIDetails SpecialZoneQuoteAPIEntity, DeliveryAPIDetails DriverOfferAPIEntity
+      enum: OneWayAPIDetails OneWayQuoteAPIDetails, AmbulanceAPIDetails DriverOfferAPIEntity, InterCityAPIDetails InterCityDetailsAPIEntity, RentalAPIDetails RentalDetailsAPIEntity, DriverOfferAPIDetails DriverOfferAPIEntity, OneWaySpecialZoneAPIDetails SpecialZoneQuoteAPIEntity, DeliveryAPIDetails DriverOfferAPIEntity, OneWayScheduledAPIDetails OneWayScheduledQuoteAPIDetails
       derive': Generic,Show
 
     OneWayQuoteAPIDetails:
@@ -59,6 +59,9 @@ Quote:
       tollNames: "[Text]"
       derive': "Generic, Show"
 
+    OneWayScheduledQuoteAPIDetails:
+      quoteId: Text
+      tollCharges: Maybe PriceAPIEntity
 
   fields:
     id : Id Quote

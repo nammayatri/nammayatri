@@ -94,6 +94,7 @@ data BookingDetails
   | InterCityDetails Domain.Types.Booking.InterCityBookingDetails
   | AmbulanceDetails Domain.Types.Booking.AmbulanceBookingDetails
   | DeliveryDetails Domain.Types.Booking.DeliveryBookingDetails
+  | OneWayScheduledDetails Domain.Types.Booking.OneWayScheduledBookingDetails
   deriving (Show)
 
 data DeliveryBookingDetails = DeliveryBookingDetails {distance :: Kernel.Types.Common.Distance, otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, toLocation :: Domain.Types.Location.Location}
@@ -103,6 +104,9 @@ data InterCityBookingDetails = InterCityBookingDetails {distance :: Kernel.Types
   deriving (Show)
 
 data OneWayBookingDetails = OneWayBookingDetails {distance :: Kernel.Types.Common.Distance, toLocation :: Domain.Types.Location.Location} deriving (Show)
+
+data OneWayScheduledBookingDetails = OneWayScheduledBookingDetails {distance :: Kernel.Types.Common.Distance, otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, toLocation :: Domain.Types.Location.Location}
+  deriving (Show)
 
 data OneWaySpecialZoneBookingDetails = OneWaySpecialZoneBookingDetails {distance :: Kernel.Types.Common.Distance, otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, toLocation :: Domain.Types.Location.Location}
   deriving (Show)

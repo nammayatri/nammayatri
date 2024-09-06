@@ -362,6 +362,7 @@ library
       Storage.Queries.Transformers.MerchantMessage
       Storage.Queries.Transformers.MerchantPaymentMethod
       Storage.Queries.Transformers.MerchantServiceConfig
+      Storage.Queries.Transformers.OneWayScheduledQuote
       Storage.Queries.Transformers.PartnerOrgConfig
       Storage.Queries.Transformers.Person
       Storage.Queries.Transformers.Quote
@@ -470,6 +471,7 @@ library
       Domain.Types.MerchantServiceUsageConfig
       Domain.Types.MerchantState
       Domain.Types.NotificationSoundsConfig
+      Domain.Types.OneWayScheduledQuote
       Domain.Types.OnSearchEvent
       Domain.Types.PartnerOrganization
       Domain.Types.PartnerOrgConfig
@@ -560,6 +562,7 @@ library
       Storage.Beam.MerchantServiceUsageConfig
       Storage.Beam.MerchantState
       Storage.Beam.NotificationSoundsConfig
+      Storage.Beam.OneWayScheduledQuote
       Storage.Beam.OnSearchEvent
       Storage.Beam.PartnerOrganization
       Storage.Beam.PartnerOrgConfig
@@ -650,6 +653,7 @@ library
       Storage.Queries.MerchantServiceUsageConfig
       Storage.Queries.MerchantState
       Storage.Queries.NotificationSoundsConfig
+      Storage.Queries.OneWayScheduledQuote
       Storage.Queries.OnSearchEvent
       Storage.Queries.OrphanInstances.AppInstalls
       Storage.Queries.OrphanInstances.BecknConfig

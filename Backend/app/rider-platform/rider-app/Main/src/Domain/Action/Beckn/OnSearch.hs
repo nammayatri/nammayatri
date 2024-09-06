@@ -31,6 +31,7 @@ module Domain.Action.Beckn.OnSearch
     WaitingChargesInfo (..),
     onSearch,
     validateRequest,
+    OneWayScheduledQuoteDetails (..),
   )
 where
 
@@ -44,6 +45,7 @@ import qualified Domain.Types.InterCityDetails as DInterCityDetails
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.OneWayScheduledQuote as DScheduledQuote
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.QuoteBreakup as DQuoteBreakup
 import qualified Domain.Types.RentalDetails as DRentalDetails
@@ -193,12 +195,17 @@ data QuoteDetails
   | InterCityDetails InterCityQuoteDetails
   | RentalDetails RentalQuoteDetails
   | OneWaySpecialZoneDetails OneWaySpecialZoneQuoteDetails
+  | OneWayScheduledDetails OneWayScheduledQuoteDetails
 
 newtype OneWayQuoteDetails = OneWayQuoteDetails
   { distanceToNearestDriver :: HighPrecMeters
   }
 
 newtype OneWaySpecialZoneQuoteDetails = OneWaySpecialZoneQuoteDetails
+  { quoteId :: Text
+  }
+
+newtype OneWayScheduledQuoteDetails = OneWayScheduledQuoteDetails
   { quoteId :: Text
   }
 
@@ -417,6 +424,8 @@ buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo 
       DQuote.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails details
     InterCityDetails details -> do
       DQuote.InterCityDetails <$> buildInterCityQuoteDetails searchRequest.distanceUnit searchRequest.roundTrip details
+    OneWayScheduledDetails details -> do
+      DQuote.OneWayScheduledDetails <$> buildOneWayScheduledQuoteDetails details
   pure
     DQuote.Quote
       { id = uid,
@@ -460,6 +469,14 @@ buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do
   let createdAt = now
       updatedAt = now
   pure DSpecialZoneQuote.SpecialZoneQuote {..}
+
+buildOneWayScheduledQuoteDetails :: MonadFlow m => OneWayScheduledQuoteDetails -> m DScheduledQuote.OneWayScheduledQuote
+buildOneWayScheduledQuoteDetails OneWayScheduledQuoteDetails {..} = do
+  id <- generateGUID
+  now <- getCurrentTime
+  let createdAt = now
+      updatedAt = now
+  pure DScheduledQuote.OneWayScheduledQuote {..}
 
 buildInterCityQuoteDetails :: MonadFlow m => DistanceUnit -> Maybe Bool -> InterCityQuoteDetails -> m DInterCityDetails.InterCityDetails
 buildInterCityQuoteDetails distanceUnit roundTrip InterCityQuoteDetails {..} = do

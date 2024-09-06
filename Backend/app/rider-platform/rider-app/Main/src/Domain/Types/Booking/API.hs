@@ -145,6 +145,7 @@ data BookingAPIDetails
   | InterCityAPIDetails InterCityBookingAPIDetails
   | AmbulanceAPIDetails AmbulanceBookingAPIDetails
   | DeliveryAPIDetails DeliveryBookingAPIDetails
+  | OneWayScheduledAPIDetails OneWayScheduledBookingAPIDetails
   deriving (Show, Generic)
 
 instance ToJSON BookingAPIDetails where
@@ -185,6 +186,14 @@ data AmbulanceBookingAPIDetails = AmbulanceBookingAPIDetails
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data OneWaySpecialZoneBookingAPIDetails = OneWaySpecialZoneBookingAPIDetails
+  { toLocation :: LocationAPIEntity,
+    estimatedDistance :: HighPrecMeters,
+    estimatedDistanceWithUnit :: Distance,
+    otpCode :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data OneWayScheduledBookingAPIDetails = OneWayScheduledBookingAPIDetails
   { toLocation :: LocationAPIEntity,
     estimatedDistance :: HighPrecMeters,
     estimatedDistanceWithUnit :: Distance,
@@ -297,6 +306,7 @@ mkBookingAPIDetails booking = case booking.bookingDetails of
   InterCityDetails details -> return $ InterCityAPIDetails . mkInterCityAPIDetails $ details
   AmbulanceDetails details -> return $ AmbulanceAPIDetails . mkAmbulanceAPIDetails $ details
   DeliveryDetails details -> DeliveryAPIDetails <$> (mkDeliveryAPIDetails booking.id details)
+  OneWayScheduledDetails details -> return $ OneWayScheduledAPIDetails . mkOneWayScheduledAPIDetails $ details
   where
     mkOneWayAPIDetails OneWayBookingDetails {..} =
       OneWayBookingAPIDetails
@@ -311,6 +321,13 @@ mkBookingAPIDetails booking = case booking.bookingDetails of
         }
     mkOneWaySpecialZoneAPIDetails OneWaySpecialZoneBookingDetails {..} =
       OneWaySpecialZoneBookingAPIDetails
+        { toLocation = SLoc.makeLocationAPIEntity toLocation,
+          estimatedDistance = distanceToHighPrecMeters distance,
+          estimatedDistanceWithUnit = distance,
+          ..
+        }
+    mkOneWayScheduledAPIDetails OneWayScheduledBookingDetails {..} =
+      OneWayScheduledBookingAPIDetails
         { toLocation = SLoc.makeLocationAPIEntity toLocation,
           estimatedDistance = distanceToHighPrecMeters distance,
           estimatedDistanceWithUnit = distance,

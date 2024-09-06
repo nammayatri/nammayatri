@@ -1,0 +1,38 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+
+OneWayScheduledQuote:
+  tableName: one_way_scheduled_quote
+
+  fields:
+    id : Id OneWayScheduledQuote
+    quoteId : Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  derives: "Generic, Show, Kernel.Utils.GenericPretty.PrettyShow"
+
+  beamType:
+    createdAt: Maybe UTCTime
+    updatedAt: Maybe UTCTime
+
+  fromTType:
+    createdAt: getCreatedAt|M
+    updatedAt: getUpdatedAt|M
+
+  toTType:
+    createdAt: Kernel.Prelude.Just|I
+    updatedAt: Kernel.Prelude.Just|I
+
+  constraints:
+    id: PrimaryKey
+
+  sqlType:
+    quoteId: character varying(100)
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+  excludedFields: [merchantOperatingCityId, merchantId]

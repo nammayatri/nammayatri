@@ -59,6 +59,7 @@ getEstimateBreakupFromQuote quote =
       breakup <- CH.findAllByEstimateIdT (Id.cast driverOfferDetails.estimateId) quote.createdAt
       pure $ transformEstimate <$> breakup
     DQuote.OneWaySpecialZoneDetails _ -> pure []
+    DQuote.OneWayScheduledDetails _ -> pure []
 
 transformEstimate :: CH.EstimateBreakup -> API.Types.UI.EstimateBP.EstimateBreakup
 transformEstimate estimate =

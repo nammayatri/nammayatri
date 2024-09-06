@@ -12,6 +12,7 @@ import qualified Domain.Types.DriverOffer
 import qualified Domain.Types.InterCityDetails
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.OneWayScheduledQuote
 import qualified Domain.Types.QuoteBreakup
 import qualified Domain.Types.RentalDetails
 import qualified Domain.Types.SearchRequest
@@ -73,6 +74,9 @@ data OneWayQuoteAPIDetails = OneWayQuoteAPIDetails
 
 data OneWayQuoteDetails = OneWayQuoteDetails {distanceToNearestDriver :: Kernel.Types.Common.Distance} deriving (Generic, Show)
 
+data OneWayScheduledQuoteAPIDetails = OneWayScheduledQuoteAPIDetails {quoteId :: Kernel.Prelude.Text, tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
 data OneWaySpecialZoneQuoteAPIDetails = OneWaySpecialZoneQuoteAPIDetails {distanceToNearestDriver :: Kernel.Types.Common.HighPrecMeters, quoteId :: Kernel.Prelude.Text}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -84,6 +88,7 @@ data QuoteAPIDetails
   | DriverOfferAPIDetails Domain.Action.UI.DriverOffer.DriverOfferAPIEntity
   | OneWaySpecialZoneAPIDetails Domain.Action.UI.SpecialZoneQuote.SpecialZoneQuoteAPIEntity
   | DeliveryAPIDetails Domain.Action.UI.DriverOffer.DriverOfferAPIEntity
+  | OneWayScheduledAPIDetails Domain.Types.Quote.OneWayScheduledQuoteAPIDetails
   deriving (Generic, Show)
 
 data QuoteDetails
@@ -94,6 +99,7 @@ data QuoteDetails
   | DriverOfferDetails Domain.Types.DriverOffer.DriverOffer
   | OneWaySpecialZoneDetails Domain.Types.SpecialZoneQuote.SpecialZoneQuote
   | DeliveryDetails Domain.Types.DriverOffer.DriverOffer
+  | OneWayScheduledDetails Domain.Types.OneWayScheduledQuote.OneWayScheduledQuote
   deriving (Generic, Show)
 
 data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, Show)

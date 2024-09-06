@@ -44,6 +44,7 @@ import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.CancellationReason
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Location as DL
+import qualified Domain.Types.OneWayScheduledQuote as DScheduled
 import Domain.Types.Quote as DQuote
 import qualified Domain.Types.Quote as SQuote
 import Domain.Types.QuoteBreakup
@@ -173,6 +174,7 @@ mkQuoteAPIDetails tollCharges = \case
      in DQuote.DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickupWithUnit', durationToPickup = durationToPickup', rating = rating', ..}
   DQuote.OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> DQuote.OneWaySpecialZoneAPIDetails USpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
   DQuote.InterCityDetails details -> DQuote.InterCityAPIDetails $ DInterCityDetails.mkInterCityDetailsAPIEntity details tollCharges
+  DQuote.OneWayScheduledDetails DScheduled.OneWayScheduledQuote {..} -> DQuote.OneWayScheduledAPIDetails DQuote.OneWayScheduledQuoteAPIDetails {..}
 
 mkQAPIEntityList :: [Quote] -> [DBppDetails.BppDetails] -> [Bool] -> [QuoteAPIEntity]
 mkQAPIEntityList (q : qRemaining) (bpp : bppRemaining) (isValueAddNP : remVNP) =
@@ -294,6 +296,7 @@ getOffers searchRequest = do
         SQuote.DriverOfferDetails details -> details.distanceToPickup
         SQuote.OneWaySpecialZoneDetails _ -> Just $ Distance 0 Meter
         SQuote.InterCityDetails _ -> Just $ Distance 0 Meter
+        SQuote.OneWayScheduledDetails _ -> Nothing
     creationTime :: OfferRes -> UTCTime
     creationTime (OnDemandCab QuoteAPIEntity {createdAt}) = createdAt
     creationTime (Metro Metro.MetroOffer {createdAt}) = createdAt

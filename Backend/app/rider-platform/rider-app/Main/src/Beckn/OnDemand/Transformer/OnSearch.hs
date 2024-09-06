@@ -149,6 +149,7 @@ tfQuotesInfo provider fulfillments validTill item = do
             quoteInfo <- buildRentalQuoteInfo item quoteOrEstId_ currency & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing rental quote details")
             pure $ Domain.Action.Beckn.OnSearch.RentalDetails quoteInfo
           OneWay OneWayRideOtp -> pure $ Domain.Action.Beckn.OnSearch.OneWaySpecialZoneDetails (Domain.Action.Beckn.OnSearch.OneWaySpecialZoneQuoteDetails {quoteId = quoteOrEstId_})
+          OneWay OneWayOnDemandStaticOffer -> pure $ Domain.Action.Beckn.OnSearch.OneWayScheduledDetails (Domain.Action.Beckn.OnSearch.OneWayScheduledQuoteDetails {quoteId = quoteOrEstId_})
           InterCity OneWayRideOtp _ -> pure $ Domain.Action.Beckn.OnSearch.OneWaySpecialZoneDetails (Domain.Action.Beckn.OnSearch.OneWaySpecialZoneQuoteDetails {quoteId = quoteOrEstId_})
           InterCity _ _ -> do
             interCityQuoteInfo <- buildInterCityQuoteInfo item quoteOrEstId_ currency & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing intercity quote details")

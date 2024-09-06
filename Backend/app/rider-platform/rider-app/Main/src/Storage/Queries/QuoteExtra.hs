@@ -14,6 +14,7 @@ import qualified Storage.Beam.DriverOffer as BeamDO
 import qualified Storage.Beam.Quote as BeamQ
 import qualified Storage.Queries.DriverOffer as QueryDO
 import Storage.Queries.InterCityDetails as QueryICD
+import qualified Storage.Queries.OneWayScheduledQuote as QScheduled
 import Storage.Queries.OrphanInstances.Quote ()
 import qualified Storage.Queries.QuoteBreakup as QQB
 import Storage.Queries.RentalDetails as QueryRD
@@ -33,6 +34,7 @@ createDetails = \case
   DriverOfferDetails driverOffer -> QueryDO.create driverOffer
   OneWaySpecialZoneDetails specialZoneQuote -> QuerySZQ.create specialZoneQuote
   InterCityDetails interCityDetails -> QueryICD.create interCityDetails
+  OneWayScheduledDetails oneWayScheduledQuote -> QScheduled.create oneWayScheduledQuote
 
 createQuote' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Quote -> m ()
 createQuote' quote = do

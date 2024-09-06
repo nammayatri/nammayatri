@@ -212,6 +212,7 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
           DB.OneWayDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.RentalDetails _ -> Nothing
           DB.OneWaySpecialZoneDetails details -> Just $ makeLocationAPIEntity details.toLocation
+          DB.OneWayScheduledDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.InterCityDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.DriverOfferDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.AmbulanceDetails details -> Just $ makeLocationAPIEntity details.toLocation
