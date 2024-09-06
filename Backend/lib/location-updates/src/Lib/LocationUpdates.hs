@@ -22,6 +22,7 @@ module Lib.LocationUpdates
     getInterpolatedPoints,
     clearInterpolatedPoints,
     isPassedThroughDrop,
+    getTravelledDistanceOutsideThreshold,
   )
 where
 
@@ -65,3 +66,6 @@ isDistanceCalculationFailed ih = ih.isDistanceCalculationFailed
 
 isPassedThroughDrop :: (CacheFlow m r, Log m, MonadThrow m, MonadFlow m) => Id person -> m Bool
 isPassedThroughDrop = I.getPassedThroughDrop
+
+getTravelledDistanceOutsideThreshold :: (CacheFlow m r, Log m, MonadThrow m, MonadFlow m) => Id person -> m Meters
+getTravelledDistanceOutsideThreshold = I.getTravelledDistanceOutsideThreshold
