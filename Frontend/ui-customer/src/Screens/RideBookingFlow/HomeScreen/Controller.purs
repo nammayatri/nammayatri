@@ -162,6 +162,7 @@ import Helpers.API as HelpersAPI
 import Data.Date.Component
 import Data.Enum 
 import Services.FlowCache as FlowCache
+import RemoteConfig as RemoteConfig
 
 -- Controllers 
 import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBannerController
@@ -2803,7 +2804,8 @@ eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do
 eval IntercityBusAC state = 
   let 
     encryptedPhoneNumber = if state.data.intercityBus.hasPhoneNumberPermission then JB.rsEncryption (getValueToLocalStore MOBILE_NUMBER) else ""
-    url' = "https://pp-app-nammayatri.redbus.in/" <> if  state.data.intercityBus.hasPhoneNumberPermission  then "?mobileNo=" <> encryptedPhoneNumber else ""
+    remoteConfig = RemoteConfig.getInterCityBusConfig "lazy"
+    url' = remoteConfig.baseUrl <> if  state.data.intercityBus.hasPhoneNumberPermission  then "?mobileNo=" <> encryptedPhoneNumber else ""
   in 
     if state.data.intercityBus.showWebView && os == "IOS" then
       continueWithCmd state [do

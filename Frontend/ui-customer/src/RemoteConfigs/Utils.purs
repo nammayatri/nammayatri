@@ -4,7 +4,7 @@ import Prelude
 import DecodeUtil (decodeForeignObject, parseJSON)
 import Foreign (Foreign)
 import Foreign.Index (readProp)
-import Common.RemoteConfig (fetchRemoteConfigString, getCityBasedConfig, defaultRemoteConfig)
+import Common.RemoteConfig (fetchRemoteConfigString, getCityBasedConfig, defaultCityRemoteConfig)
 import Data.Maybe (Maybe(..), maybe)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Data.Generic.Rep (class Generic)
@@ -22,13 +22,13 @@ import Constants (languageKey)
 safetyVideoConfigData :: String -> String -> Array SafetyVideoConfig
 safetyVideoConfigData city language = do
     let config = fetchRemoteConfigString ("safety_videos_" <> language)
-        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig []
     getCityBasedConfig value city
 
 safetyBannerVideoConfigData :: String -> String -> Array SafetyVideoConfig
 safetyBannerVideoConfigData city language = do
     let config = fetchRemoteConfigString ("safety_banner_videos_" <> language)
-        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig []
     getCityBasedConfig value city
 
 pickupInstructions :: String -> String -> String -> Array PickupInstructions
@@ -67,43 +67,43 @@ getFamousDestinations city = do
     getLanguage lang = 
       let language = DS.toLower $ DS.take 2 lang
       in if not (DS.null language) then "_" <> language else "_en"
-    decodeConfig config = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
+    decodeConfig config = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig []
     defaultConfigInEnglish = decodeConfig (fetchRemoteConfigString "famous_destinations_en")
 
 getEstimatesOrder :: String -> Array String
 getEstimatesOrder city = do
     let config = fetchRemoteConfigString "estimates_order"
-        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig ["AUTO_RICKSHAW", "BOOK_ANY"]
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig ["AUTO_RICKSHAW", "BOOK_ANY"]
     getCityBasedConfig value city
 
 getPreferredVariant :: String -> String
 getPreferredVariant city = do
     let config = fetchRemoteConfigString "preferred_estimate_order"
-        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig ""
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig ""
     getCityBasedConfig value city
 
 getBookAnyServices :: String -> Array String
 getBookAnyServices city = do
     let config = fetchRemoteConfigString "book_any_services"
-        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig ["Auto", "Non-AC Mini", "AC Mini", "Sedan", "XL Cab"]
     getCityBasedConfig value city
 
 getBookAnySelectedServices :: String -> Array String
 getBookAnySelectedServices city = do
     let config = fetchRemoteConfigString "book_any_selected_services"
-        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig ["Auto", "Non-AC Mini", "AC Mini"]
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig ["Auto", "Non-AC Mini", "AC Mini"]
     getCityBasedConfig value city
 
 getLocationSuggestionsToExclude :: String -> Array String
 getLocationSuggestionsToExclude city = do
     let config = fetchRemoteConfigString "location_suggestions_to_exclude"
-        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig []
     getCityBasedConfig value city
 
 getEnabledServices :: String -> Array String
 getEnabledServices city = do
     let config = fetchRemoteConfigString "enabled_services"
-        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig []
     getCityBasedConfig value city
 
 defaultTipConfig :: TipsConfigRC
@@ -123,5 +123,9 @@ defaultTipConfig = {
 getTipConfigRC :: String -> TipsConfigRC
 getTipConfigRC city = do
     let config = fetchRemoteConfigString "tip_config"
-        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig defaultTipConfig
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultTipConfig
     getCityBasedConfig value city
+
+
+getInterCityBusConfig :: String -> InterCityBusConfig
+getInterCityBusConfig lazy = decodeForeignObject (parseJSON $ fetchRemoteConfigString "intercity_bus_config") $ {baseUrl : "https://app-nammayatri.redbus.in/"}
