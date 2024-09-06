@@ -646,6 +646,8 @@ view push state =
             , if state.data.toll.showIncludedPopUp then PopUpModal.view (push <<< TollChargeIncludedPopUpAction) (PopUpConfigs.tollChargesIncluded state) else emptyTextView state
             , if state.props.showEditPickupPopupOnCancel then PopUpModal.view (push <<< EditPickupPopupOnCancelAC) (editPickupPopupOnCancel state) else emptyTextView state
             , if state.props.searchLocationModelProps.showRideInfo then rideInfoCardView push state  else emptyTextView state
+            , if state.data.intercityBus.showPermissionPopUp then PopUpModal.view (push <<< IntercityBusPermissionAction) (PopUpConfigs.intercityBusPhoneNumberPermission state) else emptyTextView state
+            , if state.data.intercityBus.showWebView && isJust state.data.intercityBus.url then intercityWebView push state.data.intercityBus.url else emptyTextView state 
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -5289,3 +5291,23 @@ rideInfoCardView push state =
 
 
 --- Intercity Confirmation view----
+intercityWebView :: forall w . (Action -> Effect Unit) -> Maybe String -> PrestoDOM (Effect Unit) w
+intercityWebView push url' = 
+ linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.grey800
+  , afterRender
+        ( \action -> do
+            initialWebViewSetUp push (getNewIDWithTag "intercityWebView") HideIntercityBusView
+            pure unit
+        )
+        (const NoAction)
+  ] [
+  webView
+    [ url $ spy "RS_URL" $ fromMaybe "" url'
+    , height MATCH_PARENT
+    , width MATCH_PARENT
+    , id $ getNewIDWithTag "intercityWebView"
+    ]
+  ]

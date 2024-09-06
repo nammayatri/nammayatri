@@ -339,6 +339,9 @@ data Action = NoAction
   | EnableShareRideForContact String 
   | EditPickupPopupOnCancelAC PopUpModal.Action
   | DateSelectAction String String Int Int Int String Int Int
+  | IntercityBusPermissionAction PopUpModal.Action
+  | IntercityBusAC
+  | HideIntercityBusView String
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where

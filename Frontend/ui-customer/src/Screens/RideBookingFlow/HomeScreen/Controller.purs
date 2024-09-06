@@ -185,6 +185,7 @@ eval2 action  =
     ------------------------ PopUp Model Controllers ------------------------
     TollChargeAmbigousPopUpAction a ->PopUpModelControllers.tollChargeAmbigousPopUpAction a
     TollChargeIncludedPopUpAction a -> PopUpModelControllers.tollChargeIncludedPopUpAction a
+    IntercityBusPermissionAction a -> PopUpModelControllers.intercityBusPermissionAction a
 
     ------------------------ Other Home Screen Controller ------------------------
     
@@ -1005,6 +1006,11 @@ eval BackPressed state = do
                           else if state.props.showSpecialZoneInfoPopup then continue state { props{ showSpecialZoneInfoPopup = false } }
                           else if state.props.zoneOtpExpired then continue state {props {zoneOtpExpired = false}}
                           else if state.props.showScheduledRideExistsPopUp then continue state { props { showScheduledRideExistsPopUp = false }}
+                          else if state.data.intercityBus.showWebView 
+                            then continueWithCmd state 
+                                  [do
+                                  void $ goBackPrevWebPage (getNewIDWithTag "intercityWebView")
+                                  pure $ HideIntercityBusView ""]
                           else do
                               pure $ terminateApp state.props.currentStage true
                               continue state{props{showShimmer = false}}
@@ -2766,7 +2772,30 @@ eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do
           void $ pure $ toast $ getString INTERCITY_RIDES_COMING_SOON
           continue state
     "INSTANT" -> continueWithCmd state [ pure $ WhereToClick]
-    _ -> continue state
+    "INTERCITY_BUS" -> do 
+      let hasPhoneNumberPermission = getValueToLocalStore INTERCITY_BUS_PHONE_NUMBER_PERMISSION 
+      let _ = spy "INTERCITY_BUS" hasPhoneNumberPermission
+      continueWithCmd state { data { intercityBus {
+        showWebView = hasPhoneNumberPermission == "true" || hasPhoneNumberPermission == "false"
+      , showPermissionPopUp = hasPhoneNumberPermission /= "true" && hasPhoneNumberPermission /= "false"
+      , hasPhoneNumberPermission = hasPhoneNumberPermission == "true"
+      }}} [pure $ IntercityBusAC]
+    _ -> update state
+
+eval IntercityBusAC state = 
+  let 
+    encryptedPhoneNumber = if state.data.intercityBus.hasPhoneNumberPermission then JB.rsEncryption (getValueToLocalStore MOBILE_NUMBER) else ""
+    url' = "https://pp-app-nammayatri.redbus.in/" <> if  state.data.intercityBus.hasPhoneNumberPermission  then "?mobileNo=" <> encryptedPhoneNumber else ""
+  in 
+    if state.data.intercityBus.showWebView then
+      continueWithCmd state [do
+        void $ runEffectFn2 JB.launchCustomTab url' NoAction
+        pure NoAction
+      ]
+    else 
+      continue state { data { intercityBus { url = if state.data.intercityBus.showWebView then Just url' else Nothing} } }
+
+eval (HideIntercityBusView _) state = continue state { data { intercityBus { showWebView = false, url = Nothing } } }
   
 eval (RentalBannerClick) state = maybe (exit $ GoToScheduledRides state Nothing) (\rentalsInfo -> if rentalsInfo.multipleScheduled then exit (PastRides state true) else exit $ GoToScheduledRides state (Just rentalsInfo.bookingId)) state.data.rentalsInfo
 eval (BottomNavBarAction id) state = do 
@@ -2774,7 +2803,7 @@ eval (BottomNavBarAction id) state = do
   case id of 
     TICKETING -> updateAndExit newState $ GoToTicketBookingFlow newState
     MOBILITY -> continue newState 
-    _ -> continue state 
+    _ -> update state 
     
 eval (SafetyAlertAction PopUpModal.OnButton1Click) state = do
   void $ pure $ cleverTapCustomEvent "ny_user_night_safety_mark_i_feel_safe"
@@ -2837,7 +2866,7 @@ eval (ShareRideAction (PopupWithCheckboxController.ToggleSelect index)) state = 
           contactList = updatedContactList
         }
       }
-    Nothing -> continue state
+    Nothing -> update state
 
 eval (ShareRideAction (PopupWithCheckboxController.CallContact index)) state = do 
   let contacts = fromMaybe [] state.data.contactList
@@ -2883,25 +2912,25 @@ eval (ReferralComponentAction componentAction) state =
             REFERRAL_APPLIED -> do
               void $ pure $ setValueToLocalStore REFERRAL_STATUS "REFERRED_NOT_TAKEN_RIDE"
               continue state{ props{ referral{ referralStatus = NO_REFERRAL }, isReferred = true } } 
-            _ -> continue state
+            _ -> update state
         PopUpModal.OnButton2Click ->
           continue state{ props{ referral{ referralStatus = NO_REFERRAL, showAddReferralPopup = false } } }
-        _ -> continue state
+        _ -> update state
 
     ReferralComponent.ApplyAction buttonAction ->
       case buttonAction of
         PrimaryButtonController.OnClick ->
           case state.props.referralComponentProps.referralCode of
             Just code -> exit $ UpdateReferralCode state{ props{ referralComponentProps{ applyButtonActive = false } } } code
-            Nothing -> continue state
-        _ -> continue state
+            Nothing -> update state
+        _ -> update state
 
     ReferralComponent.SkipAction buttonAction ->
       case buttonAction of
         PrimaryButtonController.OnClick -> do
           void $ pure $ hideKeyboardOnNavigation true
           continue state{ props{ referralComponentProps{ stage = NO_REFERRAL_STAGE }, referral{ showAddReferralPopup = false } } }
-        _ -> continue state
+        _ -> update state
 
     ReferralComponent.OpenReferralProgramInfo ->
       continue state{ props{ referralComponentProps{ showReferralProgramInfoPopup = true } } }
@@ -2912,7 +2941,7 @@ eval (ReferralComponentAction componentAction) state =
     ReferralComponent.ReferralProgramInfo PopUpModal.OnButton2Click -> 
       continue state{ props{ referralComponentProps{ showReferralProgramInfoPopup = false } } }
 
-    _ -> continue state
+    _ -> update state
 
 eval GoToHomeScreen state = do
   logStatus "confirming_ride" "no_active_ride"
@@ -3153,7 +3182,23 @@ eval (ServicesOnClick service) state = do
     RC.INSTANT -> continueWithCmd updatedState [ pure $ WhereToClick]
     RC.TRANSIT -> exit $ GoToMetroTicketBookingFlow updatedState
     RC.BIKE_TAXI -> continueWithCmd updatedState [ pure $ WhereToClick]
+    RC.INTERCITY_BUS -> do
+      let hasPhoneNumberPermission = getValueToLocalStore INTERCITY_BUS_PHONE_NUMBER_PERMISSION 
+      continueWithCmd state { data { intercityBus {
+        showWebView = hasPhoneNumberPermission == "true" || hasPhoneNumberPermission == "false"
+      , showPermissionPopUp = hasPhoneNumberPermission /= "true" && hasPhoneNumberPermission /= "false"
+      , hasPhoneNumberPermission = hasPhoneNumberPermission == "true"
+      }}} [pure $ IntercityBusAC]
     _ -> continue state
+eval (IntercityBusPermissionAction (PopUpModal.OnButton1Click)) state = do
+  void $ pure $ setValueToLocalStore INTERCITY_BUS_PHONE_NUMBER_PERMISSION "false"
+  continueWithCmd state{data{intercityBus{showPermissionPopUp = false, showWebView = true, hasPhoneNumberPermission = false}}} [pure IntercityBusAC]
+
+eval (IntercityBusPermissionAction (PopUpModal.DismissPopup)) state = continue state { data { intercityBus { showPermissionPopUp = false } } }
+
+eval (IntercityBusPermissionAction (PopUpModal.OnButton2Click)) state = do
+  void $ pure $ setValueToLocalStore INTERCITY_BUS_PHONE_NUMBER_PERMISSION "true"
+  continueWithCmd state{data{intercityBus{showPermissionPopUp = false, showWebView = true, hasPhoneNumberPermission = true}}} [pure IntercityBusAC]
 
 eval (EnableShareRideForContact personId) state = do
   let updatedContactList = map (\item -> if item.contactPersonId == Just personId then item {enableForShareRide = true} else item) (fromMaybe [] state.data.contactList)

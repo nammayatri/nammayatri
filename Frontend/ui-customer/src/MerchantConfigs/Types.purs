@@ -433,6 +433,7 @@ type CityConfig = {
   intercityWaitingChargeConfig :: WaitingChargeConfig,
   enableWaitingConfig :: Boolean,
   allowBlockedUserLogin :: Boolean
+, enableIntercityBus :: Boolean
 }
 
 type CityBasedFeatures = {

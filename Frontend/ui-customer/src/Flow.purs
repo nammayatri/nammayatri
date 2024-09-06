@@ -1771,6 +1771,7 @@ homeScreenFlow = do
       void $ pure $ deleteValueFromLocalStore CUSTOMER_FIRST_RIDE
       void $ pure $ deleteValueFromLocalStore BOOKING_TIME_LIST
       void $ pure $ deleteValueFromLocalStore DISABILITY_NAME
+      deleteValueFromLocalStore INTERCITY_BUS_PHONE_NUMBER_PERMISSION
       void $ pure $ factoryResetApp ""
       void $ pure $ clearCache ""
       void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_logout"

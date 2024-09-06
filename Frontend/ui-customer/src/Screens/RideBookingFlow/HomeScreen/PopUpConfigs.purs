@@ -75,3 +75,39 @@ tollChargesIncluded lazyCheck = PopUpModal.config{
   , margin = MarginTop 24
   }
 }
+
+intercityBusPhoneNumberPermission :: HomeScreenState -> PopUpModal.Config
+intercityBusPhoneNumberPermission state = PopUpModal.config{
+  margin = MarginHorizontal 24 24
+, padding =  Padding 16 20 16 20
+, gravity = CENTER
+, buttonLayoutMargin = Margin 0 0 0 0
+, cornerRadius = Corners 24.0 true true true true
+, backgroundClickable = true
+, dismissPopup = true
+, coverImageConfig{
+    imageUrl = fetchImage APP_ASSET "ny_ic_ny_rs_phone_permission"
+  , visibility = VISIBLE
+  , height =  V 83
+  , width = V $ (screenWidth unit) - 80
+  }
+, primaryText {
+    text = getString PHONE_NUMBER_PERMISSION 
+  , color = Color.black800
+  , margin = Margin 0 24 0 0
+  }
+, secondaryText {
+    text = getString PHONE_NUMBER_PERMISSION_DESC 
+  , margin = Margin 0 8 0 0
+  }
+, option1{
+    text = getString DENY
+    , margin = Margin 0 24 0 0
+    , width = V  $ (screenWidth unit)/2 - 60
+  }
+, option2 {
+    text = getString ALLOW
+  , margin = Margin 12 24 0 0
+  , width = V $ (screenWidth unit)/2 - 60
+  }
+}

@@ -808,6 +808,7 @@ allCitiesDefCityConfig =
     enableRentals : false,
     enableIntercity : false, 
     enableScheduling : false,
+    enableIntercityBus : true,
     waitingChargeConfig : {
       auto : {
         freeMinutes : 3.0

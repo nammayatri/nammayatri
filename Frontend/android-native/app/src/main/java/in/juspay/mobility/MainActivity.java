@@ -21,7 +21,6 @@ import android.Manifest;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.NotificationChannelGroup;
 import android.app.NotificationManager;
@@ -30,25 +29,20 @@ import android.content.Intent;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.hardware.Sensor;
-import android.hardware.SensorManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Looper;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.util.Pair;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.WebView;
 
-import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -58,7 +52,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
-import androidx.fragment.app.FragmentActivity;
 import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
@@ -89,24 +82,13 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TimeZone;
-import java.util.Timer;
 import java.util.UUID;
 import java.util.Vector;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -116,7 +98,6 @@ import java.util.concurrent.TimeoutException;
 
 import in.juspay.hypersdk.core.PaymentConstants;
 import in.juspay.hypersdk.data.JuspayResponseHandler;
-import in.juspay.hypersdk.data.KeyValueStore;
 import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
 import in.juspay.mobility.app.ChatService;
 import in.juspay.mobility.app.InAppNotification;
@@ -130,23 +111,19 @@ import in.juspay.mobility.app.RideRequestActivity;
 import in.juspay.mobility.app.TranslatorMLKit;
 import in.juspay.mobility.app.WidgetService;
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
-import in.juspay.mobility.app.reels.ExoplayerItem;
 import in.juspay.mobility.app.services.MobilityAppUpdate;
-import in.juspay.mobility.common.Utils;
+import in.juspay.mobility.common.utils.CipherUtil;
+import in.juspay.mobility.common.utils.Utils;
 import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
 import in.juspay.services.HyperServices;
 
-import androidx.activity.result.ActivityResultCallback;
-import androidx.activity.result.ActivityResultLauncher;
 import java.util.Iterator;
 
 
 import co.hyperverge.hyperkyc.HyperKyc;
 import co.hyperverge.hyperkyc.data.models.HyperKycConfig;
 import co.hyperverge.hyperkyc.data.models.result.HyperKycResult;
-import in.juspay.hyper.core.BridgeComponents;
-
 
 
 public class MainActivity extends AppCompatActivity {
@@ -423,6 +400,8 @@ public class MainActivity extends AppCompatActivity {
         activity = this;
         initiateHvLauncher();
         if (isClassAvailable("com.facebook.soloader.SoLoader")) SoLoader.init(this, false);
+        initiateRSIntegration();
+
         Log.i("APP_PERF", "FORKED_INIT_TASKS_AND_APIS : " + System.currentTimeMillis());        
 
         boolean isPerfEnabled = false, isPerfEnabledCustomer = false;
@@ -495,6 +474,18 @@ public class MainActivity extends AppCompatActivity {
         countAppUsageDays();
         startForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> handleGlResp(result, hyperServices, MainActivity.this));
     }
+
+
+    private void initiateRSIntegration() {
+        String algo = BuildConfig.RS_ALGO;
+        String algoPadding = BuildConfig.RS_ALGO_PADDING;
+        String instanceType = BuildConfig.RS_INSTANCE_TYPE;
+        String encKey = BuildConfig.RS_ENC_KEY;
+
+        CipherUtil cipherUtil = CipherUtil.getInstance();
+        cipherUtil.setParams(algo, algoPadding, instanceType, encKey);
+    }
+
 
     public void initiateHvLauncher() {
         if (isClassAvailable ("co.hyperverge.hyperkyc.HyperKyc") && isClassAvailable("co.hyperverge.hyperkyc.data.models.result.HyperKycResult") && isClassAvailable("com.google.gson.Gson")) {

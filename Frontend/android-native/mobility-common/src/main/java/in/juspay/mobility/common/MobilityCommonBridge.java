@@ -16,11 +16,10 @@ import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.app.Activity.RESULT_OK;
 import static android.content.Context.MODE_PRIVATE;
-import static in.juspay.mobility.common.Utils.captureImage;
-import static in.juspay.mobility.common.Utils.drawableToBitmap;
-import static in.juspay.mobility.common.Utils.encodeImageToBase64;
-import static in.juspay.mobility.common.Utils.getCircleOptionsFromJSON;
-import static android.graphics.Color.GREEN;
+import static in.juspay.mobility.common.utils.Utils.captureImage;
+import static in.juspay.mobility.common.utils.Utils.drawableToBitmap;
+import static in.juspay.mobility.common.utils.Utils.encodeImageToBase64;
+import static in.juspay.mobility.common.utils.Utils.getCircleOptionsFromJSON;
 import static android.graphics.Color.green;
 import static android.graphics.Color.parseColor;
 import static android.graphics.Color.rgb;
@@ -173,10 +172,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -191,19 +187,14 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
-import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Objects;
 import java.util.TimeZone;
@@ -219,8 +210,9 @@ import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.hypersdk.data.KeyValueStore;
-import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
+import in.juspay.mobility.common.utils.CipherUtil;
+import in.juspay.mobility.common.utils.Utils;
 
 public class MobilityCommonBridge extends HyperBridge {
 
@@ -325,7 +317,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected LocateOnMapManager locateOnMapManager = null;
     private static Hashtable<String, Hashtable <String, PolyLineAnimationTimers>> polylineAnimationTimers = new Hashtable<>();
     protected BridgeComponents bridgeComponents ;
-    
+
    public MobilityCommonBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
         this.bridgeComponents = bridgeComponents;
@@ -5503,5 +5495,10 @@ public class MobilityCommonBridge extends HyperBridge {
         List<List<LatLng>> polygonCoordinates = getPolygonCoordinates(geoJson);
         Boolean res = pointInsidePolygon(polygonCoordinates, latitude, longitude);
         return res;
+    }
+
+    @JavascriptInterface
+    public String rsEncryption(String phoneNumber){
+        return CipherUtil.getInstance().encryptData(phoneNumber);
     }
 }
