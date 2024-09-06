@@ -265,6 +265,7 @@ in  { esqDBCfg
     , searchRequestExpiry = Some +600
     , migrationPath =
       [ "dev/migrations-read-only/rider-app"
+      , "dev/migrations/scheduler"
       , env:RIDER_APP_MIGRATION_PATH as Text ? "dev/migrations/rider-app"
       ]
     , autoMigrate = True
