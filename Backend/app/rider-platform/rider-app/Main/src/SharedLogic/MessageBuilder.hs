@@ -230,7 +230,7 @@ shortenTrackingUrl url = do
           { baseUrl = url,
             customShortCode = Nothing,
             shortCodeLength = Nothing,
-            expiryInHours = Just 86400
+            expiryInHours = Just 24
           }
   res <- UrlShortner.generateShortUrl shortUrlReq
   return res.shortUrl
