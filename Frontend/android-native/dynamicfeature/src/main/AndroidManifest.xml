@@ -12,14 +12,10 @@
         <dist:fusing dist:include="true" />
     </dist:module>
 
-    <application
-        android:name=".MainApplication"
-        tools:replace="android:name">
-
+    <application>
         <activity
             android:name="in.juspay.mobility.dynamicfeature.DynamicActivity"
             android:exported="true">
         </activity>
-
     </application>
 </manifest>

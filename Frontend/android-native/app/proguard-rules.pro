@@ -47,3 +47,6 @@
  -dontwarn org.openjsse.net.ssl.OpenJSSE
  -dontwarn org.openjsse.javax.net.ssl.SSLParameters
  -dontwarn org.openjsse.javax.net.ssl.SSLSocket
+
+ -dontwarn com.finternet.sdk.R$anim
+ -dontwarn com.finternet.sdk.R$styleable

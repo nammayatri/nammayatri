@@ -35,7 +35,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="${isUsesCleartextTraffic}"
-        tools:replace="android:allowBackup,android:theme" >
+        tools:replace="android:allowBackup,android:theme">
 
         <meta-data
             android:name="com.facebook.sdk.ApplicationId"

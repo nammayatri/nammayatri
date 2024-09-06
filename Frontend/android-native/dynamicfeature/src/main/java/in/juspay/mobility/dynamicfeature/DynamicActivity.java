@@ -1,14 +1,25 @@
 package in.juspay.mobility.dynamicfeature;
 
+import android.app.Application;
 import android.content.Intent;
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.annotation.Nullable;
+
+import com.facebook.react.PackageList;
+import com.facebook.react.ReactNativeHost;
+import com.facebook.react.ReactPackage;
+import com.facebook.react.defaults.DefaultReactNativeHost;
 import com.finternet.sdk.Callback;
 import com.finternet.sdk.GullakCore;
 import com.finternet.sdk.GullakSDKResponse;
+import com.finternet.sdk.MyEventPackage;
 import com.google.firebase.FirebaseApp;
 import com.google.gson.Gson;
+
+import java.util.List;
+
+import in.juspay.mobility.BuildConfig;
 
 public class DynamicActivity extends AppCompatActivity {
     @Override
@@ -34,4 +45,41 @@ public class DynamicActivity extends AppCompatActivity {
             }
         });
     }
+
+    public static ReactNativeHost createReactNativeHost(Application app) {
+        return new DefaultReactNativeHost(app) {
+            @Override
+            public boolean getUseDeveloperSupport() {
+                return BuildConfig.DEBUG;
+            }
+
+
+            @Override
+            protected List<ReactPackage> getPackages() {
+                @SuppressWarnings("UnnecessaryLocalVariable")
+                List<ReactPackage> packages = new PackageList(this).getPackages();
+                packages.add(new MyEventPackage());
+                return packages;
+            }
+
+
+            @Override
+            protected String getJSMainModuleName() {
+                return "index";
+            }
+
+
+            @Override
+            protected boolean isNewArchEnabled() {
+                return false;
+            }
+
+
+            @Override
+            protected Boolean isHermesEnabled() {
+                return false;
+            }
+        };
+    }
+
 }
