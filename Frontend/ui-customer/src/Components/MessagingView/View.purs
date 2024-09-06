@@ -69,7 +69,7 @@ view push config =
       if config.isKeyBoardOpen then Tuple "KeyBoardOpenChatView" $ messagingView config push
       else Tuple "KeyBoardCloseChatView" $ messagingView config push
       else 
-        Tuple "AndroidChatView" $ linearLayout
+        Tuple ("AndroidChatView_" <> config.currentChatRecipient.name) $ linearLayout
         [ height $ WRAP_CONTENT
         , width $ MATCH_PARENT
         , clickable $ os == "IOS"
@@ -91,14 +91,14 @@ view push config =
             , chatBodyView config push 
             ]
           ]
-    , Tuple "ChatFooterView" $ linearLayout
+    , Tuple ("ChatFooterView" <> config.currentChatRecipient.name) $ linearLayout
       [ height $ WRAP_CONTENT
       , width $ MATCH_PARENT
       , orientation VERTICAL
       , alignParentBottom "true,-1"
       , adjustViewWithKeyboard "true"
       ][ chatFooterView config push ]
-    , Tuple "MultiChatView" $ linearLayout 
+    , Tuple ("MultiChatView" <> config.currentChatRecipient.name) $ linearLayout 
       [ height $ MATCH_PARENT
       , width $ MATCH_PARENT
       , gravity BOTTOM

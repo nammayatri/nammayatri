@@ -996,26 +996,26 @@ chatButtonView push state =
   [ linearLayout
     [ height $ V 40
     , width $ V 64
-      , gravity CENTER
-      , cornerRadius if os == "IOS" then 20.0 else 32.0
-      , background state.data.config.driverInfoConfig.callBackground
-      , stroke state.data.config.driverInfoConfig.callButtonStroke
-      , onClick push $ const $ MessageDriver
-      , accessibilityHint "Chat and Call : Button"
-      , accessibility ENABLE
-      , rippleColor Color.rippleShade
-      ][ imageView
-          [ imageWithFallback imageAsset
-          , height $ V state.data.config.driverInfoConfig.callHeight
-          , width $ V state.data.config.driverInfoConfig.callWidth
-          ]
+    , gravity CENTER
+    , cornerRadius if os == "IOS" then 20.0 else 32.0
+    , background state.data.config.driverInfoConfig.callBackground
+    , stroke state.data.config.driverInfoConfig.callButtonStroke
+    , onClick push $ const $ MessageDriver
+    , accessibilityHint "Chat and Call : Button"
+    , accessibility ENABLE
+    , rippleColor Color.rippleShade
+    ][ imageView
+      [ imageWithFallback imageAsset
+      , height $ V state.data.config.driverInfoConfig.callHeight
+      , width $ V state.data.config.driverInfoConfig.callWidth
       ]
     ]
-    where 
-      feature = state.data.config.feature
-      imageAsset = case feature.enableChat, state.data.providerType of
-        true, ONUS -> fetchImage FF_ASSET if state.props.unReadMessages then "ic_chat_badge_green" else "ic_call_msg"
-        _, _ -> fetchImage FF_COMMON_ASSET "ny_ic_call"
+  ]
+  where 
+    feature = state.data.config.feature
+    imageAsset = case feature.enableChat, state.data.providerType of
+      true, ONUS -> fetchImage FF_ASSET if state.props.unReadMessages then "ic_chat_badge_green" else "ic_call_msg"
+      _, _ -> fetchImage FF_COMMON_ASSET "ny_ic_call"
 
 
 ---------------------------------- ratingView ---------------------------------------
