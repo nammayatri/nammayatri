@@ -34,8 +34,8 @@ foreign import fetchRemoteConfig :: forall a. String -> a
 
 foreign import isWhiteListed :: String -> Array String -> Boolean
 
-defaultRemoteConfig :: forall a. a -> RemoteConfig a
-defaultRemoteConfig defaultValue =
+defaultCityRemoteConfig :: forall a. a -> RemoteConfig a
+defaultCityRemoteConfig defaultValue =
   { bangalore : Just defaultValue
   , kolkata : Just defaultValue
   , chennai : Just defaultValue
@@ -77,7 +77,7 @@ carouselConfigData city configKey default userId categoryFilter variantFilter =
 
     parseVal = if not null remoteConfig then remoteConfig else fetchRemoteConfigString default
 
-    decodedConfg = decodeForeignObject (parseJSON parseVal) $ defaultRemoteConfig []
+    decodedConfg = decodeForeignObject (parseJSON parseVal) $ defaultCityRemoteConfig []
   in
     filterWhiteListedConfigs userId $ filterCategoryBasedCarousel categoryFilter variantFilter $ getCityBasedConfig decodedConfg city
 
@@ -126,7 +126,7 @@ forwardBatchConfigData :: String -> ForwardBatchConfigData
 forwardBatchConfigData city =
   let
     remoteConfig = fetchRemoteConfigString "Forward_Dispatch_Feature"
-    decodedConfg = decodeForeignObject (parseJSON remoteConfig) $ defaultRemoteConfig defaultForwardBatchConfigData
+    decodedConfg = decodeForeignObject (parseJSON remoteConfig) $ defaultCityRemoteConfig defaultForwardBatchConfigData
   in 
     getCityBasedConfig decodedConfg $ toLower city
 
@@ -173,7 +173,7 @@ tipConfigData city variant = do
           Just (config :: (RemoteConfig TipsConfig)) -> config
           Nothing -> do
             let remoteConfig = fetchRemoteConfigString "tips_config"
-                decodedConfg = decodeForeignObject (parseJSON remoteConfig) $ defaultRemoteConfig defaultTipsConfig
+                decodedConfg = decodeForeignObject (parseJSON remoteConfig) $ defaultCityRemoteConfig defaultTipsConfig
                 _ = runFn2 setAnyInWindow "tips_config" decodedConfg
             decodedConfg
   getTipForVariant variant $ getCityBasedConfig decodedConfig $ toLower city
@@ -244,7 +244,7 @@ subscriptionsConfigVariantLevel city variant = do
           Just (config :: (RemoteConfig SubscriptionConfigVariantLevel)) -> config
           Nothing -> do
             let remoteConfig = fetchRemoteConfigString "subscription_config_variant_level"
-                decodedConfg = decodeForeignObject (parseJSON remoteConfig) $ defaultRemoteConfig defaultSubscriptionsConfigVariantLevel
+                decodedConfg = decodeForeignObject (parseJSON remoteConfig) $ defaultCityRemoteConfig defaultSubscriptionsConfigVariantLevel
                 _ = runFn2 setAnyInWindow "subscription_config_variant_level" decodedConfg
             decodedConfg
   getConfigForVariant variant $ getCityBasedConfig decodedConfig $ toLower city
@@ -285,7 +285,7 @@ stuckRideFilterConfig _ =
 gullakConfig :: String -> GullakConfig
 gullakConfig city = do
     let config = fetchRemoteConfigString "gullak_config"
-        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig defaultGullakConfig
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultGullakConfig
     getCityBasedConfig value $ toLower city
 
 defaultOfferBannerConfig :: Types.OfferBanner

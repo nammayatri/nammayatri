@@ -102,7 +102,7 @@ reduceCancellationRate key =
 cancellationThresholds :: String -> String -> CancellationThresholdConfig
 cancellationThresholds key city = 
   let cancellationDataString = fetchRemoteConfigString key
-      decodedConfg = decodeForeignObject (parseJSON cancellationDataString) $ defaultRemoteConfig defaultCancellationThresholdConfig
+      decodedConfg = decodeForeignObject (parseJSON cancellationDataString) $ defaultCityRemoteConfig defaultCancellationThresholdConfig
   in getCityBasedConfig decodedConfg $ toLower city
 
 defaultCancellationThresholdConfig :: CancellationThresholdConfig
@@ -131,13 +131,13 @@ getReferralPopUpDelays popUpType = do
 getReferralBonusVideo :: String -> String 
 getReferralBonusVideo city = 
   let config = fetchRemoteConfigString "referral_bonus_videos"
-      value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig ""
+      value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig ""
   in getCityBasedConfig value city
 
 getMetroCoinsEvent ::  String -> MetroCoinsEvent 
 getMetroCoinsEvent city = do
     let config = fetchRemoteConfigString "metro_coins_event"
-        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig defaultMetroCoinsEvent
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultMetroCoinsEvent
     getCityBasedConfig value $ toLower city 
 
 defaultEnableOtpRideConfig :: EnableOtpRideConfig
@@ -150,7 +150,7 @@ getEnableOtpRideConfigData city = do
     let config = fetchRemoteConfigString "enable_otp_ride_config"
     if config == "" then defaultEnableOtpRideConfig
     else do
-      let value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig defaultEnableOtpRideConfig
+      let value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultEnableOtpRideConfig
           cityValue = getCityBasedConfig value $ toLower city
       getCityBasedConfig value $ toLower city
 
@@ -163,7 +163,7 @@ getenableScheduledRideConfigData :: String -> EnableScheduledRides
 getenableScheduledRideConfigData city = 
   let 
     config = fetchRemoteConfigString "enable_scheduled_rides"
-    value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig defaultScheduledRideConfigData
+    value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultScheduledRideConfigData
   in getCityBasedConfig value $ toLower city 
     
 defaultMetroCoinsEvent :: MetroCoinsEvent
