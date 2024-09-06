@@ -357,7 +357,9 @@ screen initialState =
                     Nothing -> void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ fetchContactsForMultiChat push initialState 
                     Just contacts -> do
                       push $ UpdateChatWithEM false $ fromMaybe dummyNewContacts $ Arr.head contacts
-                      checkAndStartChatService push initialState.data.driverInfoCardState.currentChatRecipient.uuid (if initialState.data.driverInfoCardState.currentChatRecipient.uuid == initialState.data.driverInfoCardState.bppRideId then "Customer" else (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)) false initialState
+                      let uuid = initialState.data.driverInfoCardState.currentChatRecipient.uuid
+                          chatUser = if uuid == initialState.data.driverInfoCardState.bppRideId then "Customer" else (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)
+                      checkAndStartChatService push uuid chatUser false initialState
                       pure unit
                   
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
@@ -399,7 +401,9 @@ screen initialState =
                   case initialState.data.contactList of 
                     Nothing -> void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ fetchContactsForMultiChat push initialState 
                     Just _ -> pure unit
-                  checkAndStartChatService push initialState.data.driverInfoCardState.currentChatRecipient.uuid (if initialState.data.driverInfoCardState.currentChatRecipient.uuid == initialState.data.driverInfoCardState.bppRideId then "Customer" else (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)) false initialState
+                  let uuid = initialState.data.driverInfoCardState.currentChatRecipient.uuid
+                      chatUser = if initialState.data.driverInfoCardState.currentChatRecipient.uuid == initialState.data.driverInfoCardState.bppRideId then "Customer" else (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)
+                  checkAndStartChatService push uuid chatUser false initialState
                   push LoadMessages
               ConfirmingLocation -> do
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
@@ -4799,7 +4803,9 @@ fetchContactsForMultiChat :: (Action -> Effect Unit) -> HomeScreenState -> FlowB
 fetchContactsForMultiChat push state = do
   contacts <- getFormattedContacts
   void $ liftFlowBT $ push $ UpdateContacts contacts
-  liftFlowBT $ checkAndStartChatService push state.data.driverInfoCardState.currentChatRecipient.uuid "Customer" false state 
+  let uuid = state.data.driverInfoCardState.currentChatRecipient.uuid
+      chatUser = if state.props.isChatWithEMEnabled then (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) else "Customer"
+  liftFlowBT $ checkAndStartChatService push uuid chatUser false state 
 
 validateAndStartChat :: Array NewContacts ->  (Action -> Effect Unit) -> HomeScreenState -> Maybe Int -> Maybe Int -> Effect Unit
 validateAndStartChat contacts push state safetyCheckStartSeconds safetyCheckEndSeconds = do
@@ -4814,13 +4820,14 @@ validateAndStartChat contacts push state safetyCheckStartSeconds safetyCheckEndS
           let primaryContact = fromMaybe dummyNewContacts $ Arr.head $ Arr.filter (\item -> (isJust item.contactPersonId)) contacts
           push $ UpdateChatWithEM true primaryContact
           let uuid = state.data.driverInfoCardState.rideId <> "$" <> (fromMaybe "" primaryContact.contactPersonId)
-          checkAndStartChatService push uuid (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys) true state else pure unit 
+              chatUser = (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)
+          checkAndStartChatService push uuid chatUser true state else pure unit 
 
 
 checkAndStartChatService ::  (Action -> Effect Unit) -> String -> String -> Boolean -> HomeScreenState -> Effect Unit
 checkAndStartChatService push chatChannelId chatUser rideStarted state = do
   let isChatServiceRunning = runFn1 JB.isServiceRunning chatService
-  if chatChannelId /= getValueToLocalStore CHAT_CHANNEL_ID && isChatServiceRunning then do
+  if os /= "IOS" && chatChannelId /= getValueToLocalStore CHAT_CHANNEL_ID && isChatServiceRunning then do
     stopChatListenerService 
     checkChatService push 5 chatChannelId chatUser rideStarted state
   else

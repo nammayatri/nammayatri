@@ -592,7 +592,7 @@ emergencyContactListItem push state contact index =
       , imageView
           [ height $ V 40
           , width $ V 40
-          , visibility $ boolToVisibility $ not $ any isLocalStageOn [RideAccepted, RideStarted]
+          , visibility $ boolToVisibility $ not $ any isLocalStageOn [RideAccepted, RideStarted, ChatWithDriver]
           , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_delete_bin"
           , onClick push $ const $ RemoveButtonClicked contact
           ]
