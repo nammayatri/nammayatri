@@ -1,0 +1,119 @@
+
+Journey:
+  tableName: journey
+
+  types:
+    TravelMode:
+      enum: "WALK,METRO,BUS,TAXI"
+
+  fields:
+    id: Id Journey
+    searchRequestId: Id SearchRequest
+    fare: Maybe Price
+    estimatedFare: Maybe Price
+    estimatedDistance: Maybe Distance
+    estimatedDuration: Maybe Seconds
+    modes: "[TravelMode]"
+    convenienceCost: Int
+
+  constraints:
+    id: PrimaryKey
+    searchRequestId: SecondaryKey
+
+JourneyLeg:
+
+  fields:
+    id: Id JourneyLeg
+    journeyId: Id Journey
+    journeyDetails: JourneyDetails
+    order: Int
+    fare: Maybe Price
+    estimatedFare: Maybe Price
+    estimatedDistance: Maybe Distance
+    estimatedDuration: Maybe Seconds
+    mode: TravelMode
+    convenienceCost: Int
+
+  constraints:
+    id: PrimaryKey
+    journeyId: SecondaryKey
+
+  types:
+    JourneyDetails:
+      enum: "Metro JourneyLegMetro, Bus JourneyLegBus, Walk JourneyLegWalk, Taxi JourneyLegTaxi"
+    MetroStation:
+      stationName: Text
+      stationCode: Text
+      stationLocation: LatLong
+      platform: Maybe Text
+
+    JourneyLegMetro:
+      startStation: MetroStation
+      endStation: MetroStation
+
+    BusStop:
+      stopName: Text
+      stopCode: Text
+      stopLocation: LatLong
+
+    JourneyLegBus:
+      busNumber: Text # check for proper type
+      startStop: BusStop
+      endStop: BusStop
+
+    JourneyLegWalk:
+      startLocation: LocationAPIEntity
+      endLocation: LocationAPIEntity
+
+    JourneyLegTaxi:
+      searchId: Id Search
+
+#passenger details
+JourneyBooking:
+  fields:
+    id: Id JourneyBooking
+    journeyId: Id Journey
+    fare: Maybe Price
+    estimatedFare: Maybe Price
+    estimatedDistance: Maybe Distance
+    estimatedDuration: Maybe Seconds
+    modes: "[TravelMode]"
+    numberOfPassengers: Int
+    convenienceCost: Int
+    cancellationCharges: Maybe Price
+    refundAmount: Maybe Price
+    isBookingCancellable: Bool
+    customerCancelled: Bool
+
+JourneyLegBooking:
+  fields:
+    id: Id JourneyLegBooking
+    journeyBookingId: Id JourneyBooking
+    journeyLegId: Id JourneyLeg
+    fare: Maybe Price
+    estimatedFare: Maybe Price
+    estimatedDistance: Maybe Distance
+    estimatedDuration: Maybe Seconds
+    mode: TravelMode
+    numberOfPassengers: Int
+    convenienceCost: Int
+    cancellationCharges: Maybe Price
+    refundAmount: Maybe Price
+    isBookingCancellable: Bool
+    customerCancelled: Bool
+
+PassengerDetails:
+  fields:
+    id: Id PassengerDetails
+    entityName: PassengerDetailEntity
+    entityId: Text
+    firstName: Text
+    lastName: Maybe Text
+    email : Maybe (EncryptedHashedField e Text)
+    mobileNumber : Maybe (EncryptedHashedField e Text)
+    govtId: Maybe (EncryptedHashedField e Text)
+    age: Maybe Int
+
+  types:
+    PassengerDetailEntity:
+      enum: "JourneyBooking, JourneyLegBooking"
