@@ -31,6 +31,7 @@ module Lib.LocationUpdates.Internal
     processWaypoints,
     mkRideInterpolationHandler,
     getPassedThroughDrop,
+    getTravelledDistanceOutsideThreshold,
   )
 where
 
@@ -39,6 +40,7 @@ import qualified Data.List.NonEmpty as NE
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import Kernel.External.Maps as Maps
+import Kernel.Prelude (roundToIntegral)
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
@@ -119,6 +121,7 @@ lastTwoOnRidePointsRedisKey driverId = "Driver-Location-Last-Two-OnRide-Points:D
 
 data SnapToRoadState = SnapToRoadState
   { distanceTravelled :: HighPrecMeters,
+    distanceTravelledOutSideDropThreshold :: Maybe HighPrecMeters,
     googleSnapToRoadCalls :: Int,
     osrmSnapToRoadCalls :: Int,
     numberOfSelfTuned :: Maybe Int,
@@ -209,15 +212,17 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
               osrmCalled = OSRM `elem` servicesUsed
               selfTunedCount = SelfTuned `elem` servicesUsed
               isPassedThroughDrop = bool passThroughDropThreshold (Just True) passedThroughDrop
+              distanceTravelledOutSideDropThreshold'' = bool (Just distanceTravelled) distanceTravelledOutSideDropThreshold (isPassedThroughDrop == Just True)
+              distanceTravelledOutSideDropThreshold' = bool (distanceTravelledOutSideDropThreshold'' <&> (+ dist)) distanceTravelledOutSideDropThreshold'' (isPassedThroughDrop == Just True || snapCallFailed)
           if snapCallFailed
-            then pure (SnapToRoadState distanceTravelled (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled) ((\numberOfSelfTuned' -> fromBool selfTunedCount + numberOfSelfTuned') <$> numberOfSelfTuned) isPassedThroughDrop, snapCallFailed)
-            else recalcDistanceBatches' (SnapToRoadState (distanceTravelled + dist) (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled) ((\numberOfSelfTuned' -> fromBool selfTunedCount + numberOfSelfTuned') <$> numberOfSelfTuned) isPassedThroughDrop) snapCallFailed
+            then pure (SnapToRoadState distanceTravelled distanceTravelledOutSideDropThreshold' (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled) ((\numberOfSelfTuned' -> fromBool selfTunedCount + numberOfSelfTuned') <$> numberOfSelfTuned) isPassedThroughDrop, snapCallFailed)
+            else recalcDistanceBatches' (SnapToRoadState (distanceTravelled + dist) distanceTravelledOutSideDropThreshold' (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled) ((\numberOfSelfTuned' -> fromBool selfTunedCount + numberOfSelfTuned') <$> numberOfSelfTuned) isPassedThroughDrop) snapCallFailed
         else pure (snapToRoad', snapToRoadCallFailed)
 
     processSnapToRoadCall = do
       prevSnapToRoadState :: SnapToRoadState <-
         Redis.safeGet (onRideSnapToRoadStateKey driverId)
-          <&> fromMaybe (SnapToRoadState 0 0 0 (Just 0) (Just passedThroughDrop))
+          <&> fromMaybe (SnapToRoadState 0 (Just 0) 0 0 (Just 0) (Just passedThroughDrop))
       (currSnapToRoadState, snapToRoadCallFailed) <- recalcDistanceBatches' prevSnapToRoadState False
       when snapToRoadCallFailed $ do
         updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls currSnapToRoadState.numberOfSelfTuned calculationFailed
@@ -227,7 +232,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
     processPassedThroughDrop = do
       prevSnapToRoadState :: SnapToRoadState <-
         Redis.safeGet (onRideSnapToRoadStateKey driverId)
-          <&> fromMaybe (SnapToRoadState 0 0 0 (Just 0) (Just passedThroughDrop))
+          <&> fromMaybe (SnapToRoadState 0 (Just 0) 0 0 (Just 0) (Just passedThroughDrop))
       let isPassedThroughDrop = bool prevSnapToRoadState.passThroughDropThreshold (Just True) passedThroughDrop
       let currSnapToRoadState = prevSnapToRoadState {passThroughDropThreshold = isPassedThroughDrop}
       Redis.setExp (onRideSnapToRoadStateKey driverId) currSnapToRoadState 21600 -- 6 hours
@@ -403,5 +408,12 @@ getPassedThroughDrop :: (HedisFlow m env) => Id person -> m Bool
 getPassedThroughDrop driverId = do
   prevSnapToRoadState :: SnapToRoadState <-
     Redis.safeGet (onRideSnapToRoadStateKey driverId)
-      <&> fromMaybe (SnapToRoadState 0 0 0 (Just 0) (Just False))
+      <&> fromMaybe (SnapToRoadState 0 (Just 0) 0 0 (Just 0) (Just False))
   fromMaybe False <$> pure prevSnapToRoadState.passThroughDropThreshold
+
+getTravelledDistanceOutsideThreshold :: (HedisFlow m env) => Id person -> m Meters
+getTravelledDistanceOutsideThreshold driverId = do
+  prevSnapToRoadState :: SnapToRoadState <-
+    Redis.safeGet (onRideSnapToRoadStateKey driverId)
+      <&> fromMaybe (SnapToRoadState 0 (Just 0) 0 0 (Just 0) (Just False))
+  pure . roundToIntegral $ fromMaybe prevSnapToRoadState.distanceTravelled prevSnapToRoadState.distanceTravelledOutSideDropThreshold
