@@ -27,6 +27,7 @@ data DriverStats = DriverStats
     totalCoinsConvertedCash :: Kernel.Types.Common.HighPrecMoney,
     totalDistance :: Kernel.Types.Common.Meters,
     totalEarnings :: Kernel.Types.Common.HighPrecMoney,
+    totalPayoutAmountPaid :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     totalPayoutEarnings :: Kernel.Types.Common.HighPrecMoney,
     totalRatingScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalRatings :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
