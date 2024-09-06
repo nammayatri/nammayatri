@@ -80,6 +80,10 @@ findByIdAndLanguage issueOptionId language = do
 findById :: BeamFlow m r => Id IssueOption -> m (Maybe IssueOption)
 findById (Id issueOptionId) = findOneWithKV [Is BeamIO.id $ Eq issueOptionId]
 
+findByIGMIssueSubCategory :: BeamFlow m r => Maybe Text -> m (Maybe IssueOption)
+findByIGMIssueSubCategory (Just igmSubCategory) = findOneWithKV [Is BeamIO.igmSubCategory $ Eq $ Just igmSubCategory]
+findByIGMIssueSubCategory Nothing = pure Nothing
+
 updatePriority :: BeamFlow m r => Id IssueOption -> Int -> m ()
 updatePriority issueOptionId priority =
   updateWithKV
@@ -95,6 +99,7 @@ instance FromTType' BeamIO.IssueOption IssueOption where
           { id = Id id,
             issueCategoryId = Id <$> issueCategoryId,
             merchantId = Id merchantId,
+            igmSubCategory = igmSubCategory,
             merchantOperatingCityId = Id merchantOperatingCityId,
             ..
           }
@@ -115,5 +120,6 @@ instance ToTType' BeamIO.IssueOption IssueOption where
         BeamIO.merchantId = getId merchantId,
         BeamIO.isActive = isActive,
         BeamIO.createdAt = createdAt,
-        BeamIO.updatedAt = updatedAt
+        BeamIO.updatedAt = updatedAt,
+        BeamIO.igmSubCategory = igmSubCategory
       }
