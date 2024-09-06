@@ -1004,15 +1004,15 @@ data FirstRideEvent = FirstRideEvent
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-notifyFirstRideEvent :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person -> BecknConfig.VehicleCategory -> m ()
-notifyFirstRideEvent personId vehicleCategory = do
+notifyFirstRideEvent :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person -> BecknConfig.VehicleCategory -> Maybe Text -> Maybe Text -> m ()
+notifyFirstRideEvent personId vehicleCategory mbTitle mbBody = do
   person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
   let notificationData =
         Notification.NotificationReq
           { category = Notification.FIRST_RIDE_EVENT,
             subCategory = Nothing,
-            showNotification = Notification.DO_NOT_SHOW,
+            showNotification = Notification.SHOW,
             messagePriority = Nothing,
             entity = Notification.Entity Notification.Product person.id.getId (FirstRideEvent vehicleCategory True),
             body = body,
@@ -1022,11 +1022,8 @@ notifyFirstRideEvent personId vehicleCategory = do
             ttl = Nothing,
             sound = Nothing
           }
-      title = T.pack "First Ride Event"
-      body =
-        unwords
-          [ "Congratulations! You have taken your first ride with us."
-          ]
+      title = fromMaybe (T.pack "First Ride Event") mbTitle
+      body = fromMaybe (unwords ["Congratulations! You have taken your first ride with us."]) mbBody
   notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
 
 notifyOnTripUpdate ::

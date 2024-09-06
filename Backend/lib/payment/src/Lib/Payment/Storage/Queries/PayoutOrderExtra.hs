@@ -67,3 +67,16 @@ findAllWithStatusAndEntity limit offset status entityNames = do
     (Se.Desc Beam.createdAt)
     (Just limit)
     (Just offset)
+
+findLatestPaidPayoutByCustomerId :: BeamFlow m r => Text -> m (Maybe PayoutOrder)
+findLatestPaidPayoutByCustomerId customerId = do
+  findAllWithOptionsKV
+    [ Se.And
+        ( [Se.Is Beam.customerId $ Se.Eq customerId]
+            <> [Se.Is Beam.status $ Se.Eq Payout.FULFILLMENTS_SUCCESSFUL]
+        )
+    ]
+    (Se.Desc Beam.createdAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe

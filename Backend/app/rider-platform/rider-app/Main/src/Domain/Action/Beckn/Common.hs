@@ -57,6 +57,7 @@ import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.MerchantConfig as CMC
@@ -524,7 +525,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         personClientInfo <- buildPersonClientInfo booking.riderId booking.clientId booking.merchantOperatingCityId booking.merchantId (DVST.castServiceTierToCategory booking.vehicleServiceTierType) (totalCount + 1)
         QCP.create personClientInfo
         when (totalCount + 1 == 1) $ do
-          Notify.notifyFirstRideEvent booking.riderId (DVST.castServiceTierToCategory booking.vehicleServiceTierType)
+          mbMerchantPN <- CPN.findMatchingMerchantPN booking.merchantOperatingCityId "FIRST_RIDE_EVENT" person.language
+          Notify.notifyFirstRideEvent booking.riderId (DVST.castServiceTierToCategory booking.vehicleServiceTierType) (mbMerchantPN <&> (.title)) (mbMerchantPN <&> (.body))
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
   when shouldUpdateRideComplete $ void $ QP.updateHasTakenValidRide booking.riderId

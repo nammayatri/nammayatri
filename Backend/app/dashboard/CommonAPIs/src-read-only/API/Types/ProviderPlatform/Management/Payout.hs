@@ -50,7 +50,8 @@ data PayoutHistoryItem = PayoutHistoryItem
     payoutAmount :: Kernel.Types.Common.HighPrecMoney,
     payoutStatus :: Kernel.Prelude.Text,
     payoutTime :: Data.Time.LocalTime,
-    payoutEntity :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Payout.EntityName
+    payoutEntity :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Payout.EntityName,
+    payoutOrderId :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -71,7 +72,7 @@ data ReferralHistoryItem = ReferralHistoryItem
     dateOfActivation :: Kernel.Prelude.Maybe Data.Time.LocalTime,
     fraudFlaggedReason :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Payout.PayoutFlagReason,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Ride),
-    referredByDriver :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver),
+    driverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver),
     isReviewed :: Kernel.Prelude.Bool
   }
   deriving stock (Generic)
@@ -108,14 +109,19 @@ type GetPayoutPayoutReferralHistory =
       :> QueryParam
            "customerPhoneNo"
            Kernel.Prelude.Text
-      :> QueryParam "from" Kernel.Prelude.UTCTime
-      :> QueryParam "limit" Kernel.Prelude.Int
+      :> QueryParam "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+      :> QueryParam
+           "driverPhoneNo"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "from"
+           Kernel.Prelude.UTCTime
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
-      :> QueryParam
-           "referredByDriver"
-           (Kernel.Types.Id.Id Dashboard.Common.Driver)
       :> QueryParam
            "to"
            Kernel.Prelude.UTCTime
@@ -166,7 +172,7 @@ type PostPayoutPayoutRetryAllWithStatus =
   )
 
 data PayoutAPIs = PayoutAPIs
-  { getPayoutPayoutReferralHistory :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Payout.PayoutReferralHistoryRes,
+  { getPayoutPayoutReferralHistory :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Payout.PayoutReferralHistoryRes,
     getPayoutPayoutHistory :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Payout.PayoutHistoryRes,
     postPayoutPayoutVerifyFraudStatus :: API.Types.ProviderPlatform.Management.Payout.UpdateFraudStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postPayoutPayoutRetryFailed :: API.Types.ProviderPlatform.Management.Payout.FailedRetryPayoutReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

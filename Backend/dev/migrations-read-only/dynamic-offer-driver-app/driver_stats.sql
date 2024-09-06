@@ -43,3 +43,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_stats DROP COLUMN rating;
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_valid_activated_rides integer ;
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_referral_counts integer ;
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_payout_earnings double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_payout_amount_paid double precision ;

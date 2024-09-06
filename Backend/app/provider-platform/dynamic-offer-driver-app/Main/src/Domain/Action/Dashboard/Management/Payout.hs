@@ -69,20 +69,21 @@ import Utils.Common.Cac.KeyNameConstants
 
 data RiderDetailsWithRide = RiderDetailsWithRide
   { riderDetail :: DR.RiderDetails,
-    ride :: Maybe DRide.Ride
+    ride :: Maybe DRide.Ride,
+    driverPhoneNo :: Maybe Text
   }
 
-getPayoutPayoutReferralHistory :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow DTP.PayoutReferralHistoryRes
-getPayoutPayoutReferralHistory merchantShortId opCity areActivatedRidesOnly_ mbCustomerPhoneNo mbFrom mbLimit mbOffset mbReferredByDriver mbTo = do
+getPayoutPayoutReferralHistory :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow DTP.PayoutReferralHistoryRes
+getPayoutPayoutReferralHistory merchantShortId opCity areActivatedRidesOnly_ mbCustomerPhoneNo mbDriverId mbDriverPhoneNo mbFrom mbLimit mbOffset mbTo = do
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
       areActivatedRidesOnly = fromMaybe False areActivatedRidesOnly_
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   mbMobileNumberHash <- mapM getDbHash mbCustomerPhoneNo
-  allRiderDetails <- runInReplica $ QRD.findAllRiderDetailsWithOptions merchant.id limit offset mbFrom mbTo areActivatedRidesOnly (cast <$> mbReferredByDriver) mbMobileNumberHash
+  allRiderDetails <- runInReplica $ QRD.findAllRiderDetailsWithOptions merchant.id limit offset mbFrom mbTo areActivatedRidesOnly (cast <$> mbDriverId) mbMobileNumberHash
   riderDetailsWithRide_ <- mapM getRiderDetailsWithOpCity allRiderDetails
-  let riderDetailsWithRide = filter (\rd -> ((rd.ride <&> (.merchantOperatingCityId)) == Just merchantOpCity.id) || isNothing rd.ride) riderDetailsWithRide_
+  let riderDetailsWithRide = filter (\rd -> (rd.driverPhoneNo == mbDriverPhoneNo && ((rd.ride <&> (.merchantOperatingCityId)) == Just merchantOpCity.id) || isNothing rd.ride)) riderDetailsWithRide_
   history <- mapM (buildReferralHistoryItem merchantOpCity) riderDetailsWithRide
   pure $ DTP.PayoutReferralHistoryRes {history}
   where
@@ -103,15 +104,23 @@ getPayoutPayoutReferralHistory merchantShortId opCity areActivatedRidesOnly_ mbC
             dateOfActivation = utcToIst (secondsToMinutes transporterConfig.timeDiffFromUtc) rideEndTime,
             fraudFlaggedReason = castFlagReasonToCommon <$> rd.payoutFlagReason,
             rideId = Id <$> rd.firstRideId,
-            referredByDriver = cast <$> rd.referredByDriver,
+            driverId = cast <$> rd.referredByDriver,
             isReviewed = isJust rd.isFlagConfirmed
           }
     getRiderDetailsWithOpCity riderDetail = do
       mbRide <- forM riderDetail.firstRideId $ \rideId -> runInReplica $ QR.findById (Id rideId) >>= fromMaybeM (RideDoesNotExist rideId)
-      pure RiderDetailsWithRide {riderDetail = riderDetail, ride = mbRide}
+      driverId <- riderDetail.referredByDriver & fromMaybeM (InvalidRequest $ "DriverId is null for riderDetailsId:" <> riderDetail.id.getId)
+      driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      driverPhoneNo <- mapM decrypt driver.mobileNumber
+      pure RiderDetailsWithRide {riderDetail = riderDetail, ride = mbRide, driverPhoneNo = driverPhoneNo}
 
 utcToIst :: Minutes -> Maybe Kernel.Prelude.UTCTime -> Maybe LocalTime
 utcToIst timeZoneDiff = fmap $ utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinutes)
+
+data PayoutHistoryWithCity = PayoutHistoryWithCity
+  { historyItem :: DTP.PayoutHistoryItem,
+    cityId :: Text
+  }
 
 getPayoutPayoutHistory :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow DTP.PayoutHistoryRes
 getPayoutPayoutHistory merchantShortId opCity mbDriverId mbDriverPhoneNo mbFrom mbIsFailedOnly mbLimit mbOffset mbTo = do
@@ -120,37 +129,32 @@ getPayoutPayoutHistory merchantShortId opCity mbDriverId mbDriverPhoneNo mbFrom 
       isFailedOnly = fromMaybe False mbIsFailedOnly
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-  person <- getPerson merchant.id
-  unless (person.merchantOperatingCityId == merchantOpCity.id) . throwError $ PersonNotFound "Given driverId / driverPhoneNumber does not belong to the city for the given user"
-  let driverId = person.id.getId
   mbMobileNumberHash <- mapM getDbHash mbDriverPhoneNo
-  payoutOrders <- runInReplica $ QPayoutOrder.findAllWithOptions limit offset (Just driverId) mbMobileNumberHash mbFrom mbTo isFailedOnly
-  historyList <- mapM (getPayoutPayoutHistoryItem person merchantOpCity) payoutOrders
+  payoutOrders <- runInReplica $ QPayoutOrder.findAllWithOptions limit offset (mbDriverId <&> (.getId)) mbMobileNumberHash mbFrom mbTo isFailedOnly
+  history <- mapM (getPayoutPayoutHistoryItem merchantOpCity) payoutOrders
+  let historyList_ = filter (\item -> item.cityId == merchantOpCity.id.getId) history
+      historyList = map (.historyItem) historyList_
   pure DTP.PayoutHistoryRes {history = historyList}
   where
     maxLimit = 20
     defaultLimit = 10
-    getPayoutPayoutHistoryItem person merchantOpCity payoutOrder = do
+    getPayoutPayoutHistoryItem merchantOpCity payoutOrder = do
+      person <- QPerson.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
       phoneNo <- decrypt payoutOrder.mobileNo
       transporterConfig <- CTC.findByMerchantOpCityId merchantOpCity.id (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCity.id.getId)
       let timeZoneDiff = secondsToMinutes transporterConfig.timeDiffFromUtc
-      pure $
-        DTP.PayoutHistoryItem
-          { driverName = person.firstName,
-            driverPhoneNo = phoneNo,
-            driverId = Id payoutOrder.customerId,
-            payoutAmount = payoutOrder.amount.amount,
-            payoutStatus = show payoutOrder.status,
-            payoutTime = utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinutes) payoutOrder.createdAt,
-            payoutEntity = castPayoutEntityName <$> payoutOrder.entityName
-          }
-
-    getPerson merchantId = case (mbDriverPhoneNo, mbDriverId) of
-      (Just phoneNo, _) -> do
-        numberHash <- getDbHash phoneNo
-        QPerson.findByMobileNumberAndMerchantAndRole "+91" numberHash merchantId DP.DRIVER >>= fromMaybeM (PersonNotFound $ "phoneNoHash-" <> show numberHash <> "-merchantId-" <> merchantId.getId <> "-role-" <> show DP.DRIVER)
-      (_, Just driverId) -> QPerson.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-      _ -> throwError $ InvalidRequest "Either driverId or driverPhoneNo is required"
+      let item =
+            DTP.PayoutHistoryItem
+              { driverName = person.firstName,
+                driverPhoneNo = phoneNo,
+                driverId = Id payoutOrder.customerId,
+                payoutAmount = payoutOrder.amount.amount,
+                payoutStatus = show payoutOrder.status,
+                payoutTime = utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinutes) payoutOrder.createdAt,
+                payoutEntity = castPayoutEntityName <$> payoutOrder.entityName,
+                payoutOrderId = payoutOrder.orderId
+              }
+      pure $ PayoutHistoryWithCity {historyItem = item, cityId = person.merchantOperatingCityId.getId}
 
 postPayoutPayoutVerifyFraudStatus :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DTP.UpdateFraudStatusReq -> Environment.Flow APISuccess
 postPayoutPayoutVerifyFraudStatus merchantShortId opCity req = do
