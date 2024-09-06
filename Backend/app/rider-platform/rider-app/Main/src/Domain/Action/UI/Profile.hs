@@ -367,7 +367,7 @@ updateDefaultEmergencyNumbers personId merchantId req = do
   now <- getCurrentTime
   let uniqueRecords = getUniquePersonByMobileNumber req
   newPersonDENList <- buildPersonDefaultEmergencyNumber now `mapM` uniqueRecords
-  let updatedWithAggregatedRideShareSetting = QSafety.emptyUpdateEmergencyInfo {QSafety.aggregatedRideShare = getAggregatedRideShareSetting req.defaultEmergencyNumbers}
+  let updatedWithAggregatedRideShareSetting = QSafety.emptyUpdateEmergencyInfo {QSafety.aggregatedRideShare = Just $ getAggregatedRideShareSetting req.defaultEmergencyNumbers}
   void $ QSafety.upsert personId updatedWithAggregatedRideShareSetting
   fork "Send Emergency Contact Added Message" $ do
     sendEmergencyContactAddedMessage personId newPersonDENList oldPersonDENList
@@ -393,14 +393,14 @@ updateDefaultEmergencyNumbers personId merchantId req = do
             ..
           }
 
-    getAggregatedRideShareSetting :: [PersonDefaultEmergencyNumber] -> Maybe Person.RideShareOptions
-    getAggregatedRideShareSetting [] = Nothing
+    getAggregatedRideShareSetting :: [PersonDefaultEmergencyNumber] -> Person.RideShareOptions
+    getAggregatedRideShareSetting [] = Person.NEVER_SHARE
     getAggregatedRideShareSetting (x : xs) =
       case x.shareTripWithEmergencyContactOption of
-        Just Person.ALWAYS_SHARE -> Just Person.ALWAYS_SHARE
+        Just Person.ALWAYS_SHARE -> Person.ALWAYS_SHARE
         Just Person.SHARE_WITH_TIME_CONSTRAINTS ->
           let nextResult = getAggregatedRideShareSetting xs
-           in if nextResult == Just Person.ALWAYS_SHARE then nextResult else Just Person.SHARE_WITH_TIME_CONSTRAINTS
+           in if nextResult == Person.ALWAYS_SHARE then nextResult else Person.SHARE_WITH_TIME_CONSTRAINTS
         Just Person.NEVER_SHARE -> getAggregatedRideShareSetting xs
         Nothing -> getAggregatedRideShareSetting xs
 
