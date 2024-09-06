@@ -167,6 +167,19 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
     )
     quotes
 
+-- /{jouneryId}/confirm
+-- => create JourneyBooking
+-- => loop for all journeyleg
+-- 	If leg is Auto/Cab -> call select
+-- if ONDC flow
+-- 	create JourneyBooking
+-- 	init
+-- 	Skipthis: onInit (create Payment link but what about unified flow)
+-- else if direct third party call
+-- 	Create journeyBooking
+-- 	Skip this: If they will collect the money? How will
+-- => create payment link of basis how may booking confirmed
+
 postFrfsQuoteConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
