@@ -1,0 +1,26 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  Text: Data.Text
+
+IGMConfig:
+  tableName: igm_config
+
+  fields:
+    id: Id IGMConfig
+    merchantId: Id Merchant
+    expectedResolutionTime: Int
+    expectedResponseTime: Int
+    groName: Text
+    groPhone: Text
+    groEmail: Text
+
+  constraints:
+    id: PrimaryKey
+    merchantId: SecondaryKey
+
+  excludedFields: [merchantOperatingCityId]
+
+  queries:
+    findByMerchantId:
+      kvFunction: findOneWithKV
+      where: merchantId

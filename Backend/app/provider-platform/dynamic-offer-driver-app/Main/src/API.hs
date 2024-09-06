@@ -16,6 +16,7 @@ module API where
 
 import qualified API.Beckn as Beckn
 import qualified API.Dashboard as Dashboard
+import qualified API.IGM as IGM
 import qualified API.Internal as Internal
 import qualified API.UI as UI
 import qualified Data.ByteString as BS
@@ -43,6 +44,7 @@ import Storage.Beam.SystemConfigs ()
 
 type DriverOfferAPI =
   MainAPI
+    :<|> IGM.API
     :<|> Beckn.API -- TODO : Revert after 2.x release
     :<|> SwaggerAPI
     :<|> OpenAPI
@@ -109,6 +111,7 @@ mainServer =
 driverOfferServer :: FlowServer DriverOfferAPI
 driverOfferServer =
   mainServer
+    :<|> IGM.handler
     :<|> Beckn.handler -- TODO : Revert after 2.x release
     :<|> writeSwaggerHTMLFlow
     :<|> writeOpenAPIFlow

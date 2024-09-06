@@ -35,7 +35,8 @@ data IssueOptionT f = IssueOptionT
     restrictedRideStatuses :: B.C f [Common.RideStatus],
     showOnlyWhenUserBlocked :: B.C f Bool,
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    igmSubCategory :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
