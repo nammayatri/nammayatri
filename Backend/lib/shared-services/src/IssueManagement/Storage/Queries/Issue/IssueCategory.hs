@@ -75,6 +75,9 @@ updatePriority issueCategoryId priority =
     [Set BeamIC.priority priority]
     [Is BeamIC.id $ Eq (getId issueCategoryId)]
 
+findByIGMIssueCategory :: BeamFlow m r => Text -> m (Maybe IssueCategory)
+findByIGMIssueCategory igmCategory = findOneWithKV [Is BeamIC.igmCategory $ Eq $ Just igmCategory]
+
 instance FromTType' BeamIC.IssueCategory IssueCategory where
   fromTType' BeamIC.IssueCategoryT {..} = do
     pure $
@@ -83,7 +86,8 @@ instance FromTType' BeamIC.IssueCategory IssueCategory where
           { id = Id id,
             merchantId = Id merchantId,
             merchantOperatingCityId = Id merchantOperatingCityId,
-            ..
+            ..,
+            igmCategory = igmCategory
           }
 
 instance ToTType' BeamIC.IssueCategory IssueCategory where
@@ -101,5 +105,6 @@ instance ToTType' BeamIC.IssueCategory IssueCategory where
         BeamIC.label = label,
         BeamIC.isActive = isActive,
         BeamIC.createdAt = createdAt,
-        BeamIC.updatedAt = updatedAt
+        BeamIC.updatedAt = updatedAt,
+        BeamIC.igmCategory = igmCategory
       }

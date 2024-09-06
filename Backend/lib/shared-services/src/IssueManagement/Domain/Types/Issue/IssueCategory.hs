@@ -22,7 +22,8 @@ data IssueCategory = IssueCategory
     maxAllowedRideAge :: Maybe Seconds,
     label :: Maybe Text,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    igmCategory :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq)
 

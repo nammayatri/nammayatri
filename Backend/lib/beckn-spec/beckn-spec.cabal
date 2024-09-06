@@ -203,6 +203,7 @@ library
       BecknV2.FRFS.Enums
       BecknV2.FRFS.Types
       BecknV2.FRFS.Utils
+      BecknV2.IGM.APIs
       BecknV2.OnDemand.Enums
       BecknV2.OnDemand.Tags
       BecknV2.OnDemand.Types
@@ -217,6 +218,9 @@ library
       Domain.Types.VehicleCategory
       Domain.Types.VehicleVariant
       Domain.Utils
+      IGM.Enums
+      IGM.Types
+      IGM.Utils
   other-modules:
       Paths_beckn_spec
   hs-source-dirs:

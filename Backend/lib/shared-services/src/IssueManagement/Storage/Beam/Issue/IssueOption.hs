@@ -34,7 +34,8 @@ data IssueOptionT f = IssueOptionT
     restrictedVariants :: B.C f [Common.VehicleVariant],
     showOnlyWhenUserBlocked :: B.C f Bool,
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    igmSubCategory :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

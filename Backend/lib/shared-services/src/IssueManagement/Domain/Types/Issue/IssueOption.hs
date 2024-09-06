@@ -21,6 +21,7 @@ data IssueOption = IssueOption
     merchantId :: Id Common.Merchant,
     isActive :: Bool,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    igmSubCategory :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)

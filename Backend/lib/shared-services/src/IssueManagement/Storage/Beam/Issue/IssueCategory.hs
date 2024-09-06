@@ -26,6 +26,7 @@ data IssueCategoryT f = IssueCategoryT
     category :: B.C f Text,
     merchantOperatingCityId :: B.C f Text,
     logoUrl :: B.C f Text,
+    igmCategory :: B.C f (Maybe Text),
     priority :: B.C f Int,
     merchantId :: B.C f Text,
     categoryType :: B.C f IC.CategoryType,

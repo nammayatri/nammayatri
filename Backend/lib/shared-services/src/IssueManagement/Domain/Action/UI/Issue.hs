@@ -359,8 +359,9 @@ createIssueReport ::
   Common.IssueReportReq ->
   ServiceHandle m ->
   Identifier ->
+  Maybe Text ->
   m Common.IssueReportRes
-createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} issueHandle identifier = do
+createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} issueHandle identifier becknIssueId = do
   category <- CQIC.findById categoryId identifier >>= fromMaybeM (IssueCategoryDoesNotExist categoryId.getId)
   mbOption <- forM optionId \justOptionId -> do
     issueOption <- CQIO.findById justOptionId identifier >>= fromMaybeM (IssueOptionDoesNotExist justOptionId.getId)
@@ -431,7 +432,8 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             updatedAt = now,
             description,
             chats = updatedChats,
-            merchantId = Just merchantId
+            merchantId = Just merchantId,
+            becknIssueId
           }
     createJsonMessage :: Text -> T.Text
     createJsonMessage descriptionText =
@@ -508,7 +510,8 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             phoneNo = phoneNumber,
             personId = person.id.getId,
             classification = castIdentifierToClassification identifier,
-            rideDescription = Just info
+            rideDescription = Just info,
+            becknIssueId
           }
 
     buildRideInfo :: (BeamFlow m r, EncFlow m r) => Id MerchantOperatingCity -> UTCTime -> Maybe Ride -> Maybe RideInfoRes -> ServiceHandle m -> m TIT.RideInfo
