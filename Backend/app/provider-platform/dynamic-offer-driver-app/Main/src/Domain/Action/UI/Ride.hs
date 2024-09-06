@@ -575,6 +575,7 @@ uploadDeliveryImage ::
 uploadDeliveryImage merchantOpCityId rideId DeliveryImageUploadReq {..} = do
   contentType <- validateContentType
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  unless (ride.status == DRide.NEW) $ throwError $ InvalidRequest "Cannot upload image due to unexpected ride status"
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   config <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   fileSize <- L.runIO $ withFile file ReadMode hFileSize
