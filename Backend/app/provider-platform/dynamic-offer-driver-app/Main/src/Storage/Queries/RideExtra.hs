@@ -410,6 +410,14 @@ updateArrival rideId now = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateDestinationArrival :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> UTCTime -> m ()
+updateDestinationArrival rideId now = do
+  updateOneWithKV
+    [ Se.Set BeamR.destinationReachedAt $ Just now,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 data RideItem = RideItem
   { rideShortId :: ShortId Ride,
     rideCreatedAt :: UTCTime,

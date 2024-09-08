@@ -1578,3 +1578,32 @@ mkFulfillmentState stateCode =
               descriptorName = Nothing
             }
     }
+
+mkDestinationReachedTimeTagGroupV2 :: Maybe UTCTime -> Maybe [Spec.TagGroup]
+mkDestinationReachedTimeTagGroupV2 destinationArrivalTime' =
+  destinationArrivalTime' <&> \destinationArrivalTime ->
+    [ Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.DRIVER_REACHED_DESTINATION_INFO,
+                  descriptorName = Just "Driver Reached Destination Info",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDisplay = Just False,
+                    tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.DRIVER_REACHED_DESTINATION,
+                            descriptorName = Just "Destination Reached Time",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = Just $ show destinationArrivalTime
+                  }
+              ]
+        }
+    ]

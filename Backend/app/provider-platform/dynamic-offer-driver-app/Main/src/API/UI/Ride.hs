@@ -114,6 +114,12 @@ type API =
                     :> "uploadDeliveryImage"
                     :> MultipartForm Tmp DRide.DeliveryImageUploadReq
                     :> Post '[JSON] APISuccess
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
+                    :> "arrived"
+                    :> "destination"
+                    :> ReqBody '[JSON] LatLong
+                    :> Post '[JSON] APISuccess
                 )
          )
 
@@ -150,6 +156,7 @@ handler =
              :<|> arrivedAtStop
              :<|> uploadOdometerReading
              :<|> uploadDeliveryImage
+             :<|> arrivedAtDestination
          )
 
 startRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> StartRideReq -> FlowHandler APISuccess
@@ -208,3 +215,6 @@ uploadOdometerReading (_, _, cityId) rideId req = withFlowHandlerAPI $ DRide.upl
 
 uploadDeliveryImage :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> DRide.DeliveryImageUploadReq -> FlowHandler APISuccess
 uploadDeliveryImage (_, _, cityId) rideId req = withFlowHandlerAPI $ DRide.uploadDeliveryImage cityId rideId req
+
+arrivedAtDestination :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
+arrivedAtDestination (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtDestination rideId req

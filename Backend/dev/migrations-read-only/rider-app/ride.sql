@@ -151,3 +151,8 @@ ALTER TABLE atlas_app.ride DROP COLUMN mobile_number_hash;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN safety_journey_status text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN destination_reached_at timestamp with time zone ;

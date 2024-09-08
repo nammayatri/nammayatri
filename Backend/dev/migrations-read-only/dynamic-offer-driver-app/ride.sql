@@ -156,3 +156,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN passed_through_destination bo
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN delivery_file_ids text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN destination_reached_at timestamp with time zone ;

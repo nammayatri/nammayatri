@@ -54,6 +54,7 @@ Ride:
     chargeableDistance: Maybe Meters
     distanceUnit: DistanceUnit
     driverArrivalTime: Maybe UTCTime
+    destinationReachedAt: Maybe UTCTime
     tripStartTime: Maybe UTCTime
     tripEndTime: Maybe UTCTime
     tripStartPos: Maybe LatLong

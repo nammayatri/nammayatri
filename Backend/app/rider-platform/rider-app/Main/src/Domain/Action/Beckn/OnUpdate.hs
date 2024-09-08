@@ -34,6 +34,7 @@ module Domain.Action.Beckn.OnUpdate
     EditDestErrorReq (..),
     TollCrossedEventReq (..),
     PhoneCallRequestEventReq (..),
+    DestinationReachedReq (..),
   )
 where
 
@@ -111,6 +112,7 @@ data OnUpdateReq
   | OUTollCrossedEventReq TollCrossedEventReq
   | OUPhoneCallRequestEventReq PhoneCallRequestEventReq
   | OUEditDestError EditDestErrorReq
+  | OUDestinationReachedReq DestinationReachedReq
 
 data ValidatedOnUpdateReq
   = OUValidatedScheduledRideAssignedReq Common.ValidatedRideAssignedReq
@@ -131,6 +133,7 @@ data ValidatedOnUpdateReq
   | OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq
   | OUValidatedPhoneCallRequestEventReq ValidatedPhoneCallRequestEventReq
   | OUValidatedEditDestError ValidatedEditDestErrorReq
+  | OUValidatedDestinationReachedReq ValidatedDestinationReachedReq
 
 data BookingReallocationReq = BookingReallocationReq
   { bppBookingId :: Id DRB.BPPBooking,
@@ -331,6 +334,17 @@ data ValidatedPhoneCallRequestEventReq = ValidatedPhoneCallRequestEventReq
     person :: DPerson.Person
   }
 
+data DestinationReachedReq = DestinationReachedReq
+  { bppRideId :: Id DRide.BPPRide,
+    destinationReachedTime :: UTCTime
+  }
+
+data ValidatedDestinationReachedReq = ValidatedDestinationReachedReq
+  { booking :: DRB.Booking,
+    ride :: DRide.Ride,
+    destinationReachedTime :: UTCTime
+  }
+
 onUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,
@@ -482,6 +496,8 @@ onUpdate = \case
     if bookingUpdateReqDetails.status == DBUR.SOFT
       then QBUR.updateErrorObjById (Just DBUR.ErrorObj {..}) bookingUpdateReqId
       else Notify.notifyOnTripUpdate booking ride errorCode errorMessage
+  OUValidatedDestinationReachedReq ValidatedDestinationReachedReq {..} -> do
+    QRide.updateDestinationReachedAt (Just destinationReachedTime) ride.id
 
 validateRequest ::
   ( CacheFlow m r,
@@ -584,6 +600,11 @@ validateRequest = \case
     booking <- runInReplica $ QRB.findById bookingUpdateReqDetails.bookingId >>= fromMaybeM (BookingDoesNotExist $ "bookingUpdateReq bookingId:- " <> bookingUpdateReqDetails.bookingId.getId)
     ride <- runInReplica $ QRide.findByRBId bookingUpdateReqDetails.bookingId >>= fromMaybeM (RideDoesNotExist $ " with bookingUpdateReq bookingId:- " <> bookingUpdateReqDetails.bookingId.getId)
     return $ OUValidatedEditDestError ValidatedEditDestErrorReq {bookingUpdateReqId = Id messageId, ..}
+  OUDestinationReachedReq DestinationReachedReq {..} -> do
+    ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+    unless (ride.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride is not in progress"
+    booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> ride.bookingId.getId)
+    return $ OUValidatedDestinationReachedReq ValidatedDestinationReachedReq {..}
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>

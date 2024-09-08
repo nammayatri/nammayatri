@@ -55,6 +55,7 @@ data RideAPIEntity = RideAPIEntity
     vehicleServiceTierType :: Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant,
     favCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    isAlreadyFav :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    isAlreadyFav :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    destinationReachedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
