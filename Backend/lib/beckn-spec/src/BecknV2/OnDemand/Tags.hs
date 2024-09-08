@@ -87,6 +87,7 @@ data BecknTagGroup
   | SETTLEMENT_DETAILS
   | DEVICE_ID_INFO
   | DELIVERY
+  | DRIVER_REACHED_DESTINATION_INFO
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance CompleteTagGroup BecknTagGroup where
@@ -102,6 +103,7 @@ instance CompleteTagGroup BecknTagGroup where
     SETTLEMENT_TERMS -> (Just "Settlement Terms Information", Nothing)
     REALLOCATION_INFO -> (Just "Reallocation Information", Nothing)
     DELIVERY -> (Just "Delivery Information", Nothing)
+    DRIVER_REACHED_DESTINATION_INFO -> (Just "Driver Reached Destination Information", Nothing)
     _ -> (Just $ convertToSentence tagGroup, Nothing) -- TODO: move all the tagGroups to this function and remove (_ -> case statement)
 
 data EXTRA_PER_KM_STEP_FARE = EXTRA_PER_KM_STEP_FARE
@@ -427,6 +429,7 @@ data BecknTag
   | RECEIVER_NAME
   | RECEIVER_LOCATION_INSTRUCTIONS
   | INITIATED_AS
+  | DRIVER_REACHED_DESTINATION
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -460,6 +463,7 @@ instance CompleteTag BecknTag where
     RECEIVER_NAME -> (Just "Delivery Receiver Name", Nothing)
     RECEIVER_LOCATION_INSTRUCTIONS -> (Just "Delivery Receiver Location Instructions", Nothing)
     INITIATED_AS -> (Just "Delivery Initiated As", Nothing)
+    DRIVER_REACHED_DESTINATION -> (Just "Destination Reached Time", Nothing)
     _ -> (Just $ convertToSentence tag, Nothing) -- TODO: move all the tags to this function and remove (_ -> case statement)
 
   getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) (Just $ getTagDisplay tag)
@@ -491,6 +495,7 @@ instance CompleteTag BecknTag where
     RECEIVER_NUMBER -> DELIVERY
     RECEIVER_NAME -> DELIVERY
     RECEIVER_LOCATION_INSTRUCTIONS -> DELIVERY
+    DRIVER_REACHED_DESTINATION -> DRIVER_REACHED_DESTINATION_INFO
     a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
 
 convertToSentence :: Show a => a -> Text

@@ -20,6 +20,7 @@ module SharedLogic.CallBAP
     sendBookingCancelledUpdateToBAP,
     sendDriverArrivalUpdateToBAP,
     sendStopArrivalUpdateToBAP,
+    sendDestinationArrivalUpdateToBAP,
     sendEstimateRepetitionUpdateToBAP,
     sendQuoteRepetitionUpdateToBAP,
     sendTollCrossedUpdateToBAP,
@@ -1025,6 +1026,39 @@ sendTollCrossedUpdateToBAP (Just booking) (Just ride) driver driverStats vehicle
 sendTollCrossedUpdateToBAP _ _ _ _ _ = do
   logTagError "on_update_req" "on_update_err - Could not send toll crossed update to BPP : booking or ride not found"
   pure ()
+
+sendDestinationArrivalUpdateToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  Maybe UTCTime ->
+  m ()
+sendDestinationArrivalUpdateToBAP booking ride destinationArrivalTime = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  merchant <-
+    CQM.findById booking.providerId
+      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
+  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+  let riderPhone = Nothing
+      paymentMethodInfo = Nothing
+      paymentUrl = Nothing
+      bookingDetails = ACL.BookingDetails {..}
+      driverReachedDestBuildReq = ACL.DriverReachedDestinationBuildReq ACL.DDriverReachedDestinationReq {..}
+  retryConfig <- asks (.shortDurationRetryCfg)
+  driverReachedDestMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverReachedDestBuildReq
+  void $ callOnUpdateV2 driverReachedDestMsgV2 retryConfig merchant.id
 
 callBecknAPIWithSignature' ::
   ( MonadFlow m,

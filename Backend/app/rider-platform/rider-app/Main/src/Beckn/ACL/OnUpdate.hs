@@ -113,6 +113,7 @@ parseEventV2 transactionId messageId order = do
         "PHONE_CALL_REQUEST" -> return $ DOnUpdate.OUPhoneCallRequestEventReq $ DOnUpdate.PhoneCallRequestEventReq transactionId
         "STOP_ARRIVED" -> parseStopArrivedEvent order
         "TOLL_CROSSED" -> return $ DOnUpdate.OUTollCrossedEventReq $ DOnUpdate.TollCrossedEventReq transactionId
+        "DRIVER_REACHED_DESTINATION" -> parseDriverReachedDestinationEvent order
         _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
 
 parseNewMessageEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
@@ -215,5 +216,19 @@ parseEditDestinationConfirmUpdate order messageId = do
     DOnUpdate.OUEditDestConfirmUpdateReq $
       DOnUpdate.EditDestConfirmUpdateReq
         { bookingUpdateRequestId = Id messageId,
+          ..
+        }
+
+parseDriverReachedDestinationEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseDriverReachedDestinationEvent order = do
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in DestinationReached Event.")
+  tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in DestinationReached Event.")
+  destinationReachedTime :: UTCTime <-
+    Utils.getTagV2 Tag.DRIVER_REACHED_DESTINATION_INFO Tag.DRIVER_REACHED_DESTINATION (Just tagGroups)
+      >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "DRIVER_REACHED_DESTINATION tag is not present in DestinationReached Event.")
+  return $
+    DOnUpdate.OUDestinationReachedReq $
+      DOnUpdate.DestinationReachedReq
+        { bppRideId = Id bppRideId,
           ..
         }

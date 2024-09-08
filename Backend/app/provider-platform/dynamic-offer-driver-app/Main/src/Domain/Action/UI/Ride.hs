@@ -22,6 +22,7 @@ module Domain.Action.UI.Ride
     DeliveryImageUploadReq (..),
     listDriverRides,
     arrivedAtPickup,
+    arrivedAtDestination,
     otpRideCreate,
     arrivedAtStop,
     uploadOdometerReading,
@@ -615,3 +616,22 @@ uploadDeliveryImage merchantOpCityId rideId DeliveryImageUploadReq {..} = do
                 s3FilePath = Just filePath,
                 createdAt = now
               }
+
+arrivedAtDestination :: Id DRide.Ride -> LatLong -> Flow APISuccess
+arrivedAtDestination rideId pt = do
+  ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus ("This ride " <> ride.id.getId <> " is not in progress" <> Text.pack (show ride.status))
+  destLoc <- booking.toLocation & fromMaybeM (InvalidRequest "To location doesn't exist for ride")
+  let curPt = LatLong destLoc.lat destLoc.lon
+      distance = distanceBetweenInMeters pt curPt
+  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  let dropLocThreshold = metersToHighPrecMeters transporterConfig.dropLocThreshold
+  unless (distance < dropLocThreshold) $ throwError $ InvalidRequest ("Driver is not at destination location for ride " <> ride.id.getId)
+  unless (isJust ride.destinationReachedAt) $ do
+    now <- getCurrentTime
+    QRide.updateDestinationArrival ride.id now
+    BP.sendDestinationArrivalUpdateToBAP booking ride (Just now)
+  pure Success
+  where
+    isValidRideStatus status = status == DRide.INPROGRESS

@@ -308,6 +308,7 @@ buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now stat
         favCount = Just favCount,
         safetyJourneyStatus = Nothing,
         driverImage = fileUrl,
+        destinationReachedAt = Nothing,
         ..
       }
 

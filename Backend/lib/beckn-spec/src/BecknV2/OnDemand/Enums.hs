@@ -86,6 +86,7 @@ data FulfillmentState
   | EDIT_LOCATION -- Custom type only used for on-us transaction
   | ADD_STOP -- Custom type only used for on-us transaction
   | EDIT_STOP -- Custom type only used for on-us transaction
+  | DRIVER_REACHED_DESTINATION
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data PaymentStatus

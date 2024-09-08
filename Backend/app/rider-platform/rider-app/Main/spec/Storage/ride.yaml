@@ -100,6 +100,7 @@ Ride:
     isAlreadyFav: Maybe Bool
     favCount: Maybe Int
     safetyJourneyStatus: Maybe SosJourneyStatus
+    destinationReachedAt: Maybe UTCTime
 
   sqlType:
     allowedEditLocationAttempts: int
@@ -252,6 +253,10 @@ Ride:
     updateCancellationFeeIfCancelledField:
       kvFunction: updateOneWithKV
       params: [cancellationFeeIfCancelled]
+      where: id
+    updateDestinationReachedAt:
+      kvFunction: updateOneWithKV
+      params: [destinationReachedAt]
       where: id
   excludedDefaultQueries:
     - create

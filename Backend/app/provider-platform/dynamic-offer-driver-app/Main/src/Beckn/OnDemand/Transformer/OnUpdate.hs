@@ -91,6 +91,7 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
   OU.RideCompletedBuildReq req -> Common.tfCompleteReqToOrder req mbFarePolicy becknConfig
   OU.BookingCancelledBuildReq req -> Common.tfCancelReqToOrder req becknConfig
   OU.DriverArrivedBuildReq req -> Common.tfArrivedReqToOrder req mbFarePolicy becknConfig
+  OU.DriverReachedDestinationBuildReq req -> Common.tfReachedDestinationReqToOrder req
   OU.EstimateRepetitionBuildReq OU.DEstimateRepetitionReq {..} -> do
     let BookingDetails {..} = bookingDetails
     let previousCancellationReasonsTags = UtilsOU.mkPreviousCancellationReasonsTags cancellationSource

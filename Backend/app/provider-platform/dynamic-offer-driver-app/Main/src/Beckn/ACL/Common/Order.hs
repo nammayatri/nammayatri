@@ -25,6 +25,7 @@ module Beckn.ACL.Common.Order
     tfCompleteReqToOrder,
     tfCancelReqToOrder,
     tfArrivedReqToOrder,
+    tfReachedDestinationReqToOrder,
   )
 where
 
@@ -47,6 +48,7 @@ import qualified Domain.Types.DriverStats as DDriverStats
 import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.OnUpdate as OU
 import qualified Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
@@ -371,6 +373,27 @@ tfArrivedReqToOrder Common.DDriverArrivedReq {..} mbFarePolicy becknConfig = do
         orderProvider = Utils.tfProvider becknConfig,
         orderQuote = quote,
         orderStatus = Just $ show EventEnum.ACTIVE,
+        orderCreatedAt = Just booking.createdAt,
+        orderUpdatedAt = Just booking.updatedAt
+      }
+
+tfReachedDestinationReqToOrder :: (MonadFlow m, EncFlow m r) => OU.DDriverReachedDestinationReq -> m Spec.Order
+tfReachedDestinationReqToOrder OU.DDriverReachedDestinationReq {..} = do
+  let BookingDetails {..} = bookingDetails
+      driverReachedDestinationTags = if isValueAddNP then Utils.mkDestinationReachedTimeTagGroupV2 destinationArrivalTime else Nothing
+  fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing driverReachedDestinationTags Nothing False False Nothing (Just $ show EventEnum.DRIVER_REACHED_DESTINATION) isValueAddNP Nothing False 0
+  pure $
+    Spec.Order
+      { orderId = Just $ booking.id.getId,
+        orderFulfillments = Just [fulfillment],
+        orderBilling = Nothing,
+        orderCancellation = Nothing,
+        orderCancellationTerms = Nothing,
+        orderItems = Nothing,
+        orderPayments = Nothing,
+        orderProvider = Nothing,
+        orderQuote = Nothing,
+        orderStatus = Nothing,
         orderCreatedAt = Just booking.createdAt,
         orderUpdatedAt = Just booking.updatedAt
       }
