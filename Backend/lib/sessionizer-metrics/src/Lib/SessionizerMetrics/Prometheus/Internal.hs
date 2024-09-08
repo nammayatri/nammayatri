@@ -15,26 +15,49 @@
 module Lib.SessionizerMetrics.Prometheus.Internal where
 
 import Kernel.Prelude
-import Kernel.Types.Common
-import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import Prometheus as P
 
-incrementCounter ::
-  ( MonadReader r1 m,
-    MonadGuid m,
-    MonadTime m,
-    MonadIO m,
-    EventStreamFlow m r
+type EventCounterMetric = P.Vector P.Label3 P.Counter
+
+data EventCountersContainer = EventCountersContainer
+  { eventRequestCounter :: EventCounterMetric,
+    callAttemptCounter :: EventCounterMetric
+  }
+
+registerEventRequestCounterMetric :: IO EventCountersContainer
+registerEventRequestCounterMetric = do
+  eventRequestCounter <-
+    P.register $
+      P.vector ("event", "merchant_name", "version") $
+        P.counter $ P.Info "event_count" ""
+  callAttemptCounter <-
+    P.register $
+      P.vector ("event", "merchant_op_city_id", "version") $
+        P.counter $ P.Info "event_count" ""
+  return EventCountersContainer {eventRequestCounter, callAttemptCounter}
+
+incrementEventRequestCounter ::
+  ( MonadReader r m,
+    MonadIO m
   ) =>
+  (r -> EventCounterMetric) ->
   Text ->
   Text ->
   Text ->
   m ()
-incrementCounter merchantId event deploymentVersion = do
-  counterName <- asks (.eventRequestCounter)
-  liftIO $ P.withLabel counterName (event, merchantId, deploymentVersion) P.incCounter
+incrementEventRequestCounter getEventCounter merchantId event deploymentVersion = do
+  counter' <- asks getEventCounter
+  liftIO $ P.withLabel counter' (event, merchantId, deploymentVersion) P.incCounter
 
-type EventCounterMetric = P.Vector P.Label3 P.Counter
-
-registerEventRequestCounterMetric :: IO EventCounterMetric
-registerEventRequestCounterMetric = P.register $ P.vector ("event", "merchant_name", "version") $ P.counter $ P.Info "event_count" ""
+incrementCallAttemptCounter ::
+  ( MonadReader r m,
+    MonadIO m
+  ) =>
+  (r -> EventCounterMetric) ->
+  Text ->
+  Text ->
+  Text ->
+  m ()
+incrementCallAttemptCounter getEventCounter merchantOpCityId event deploymentVersion = do
+  counter' <- asks getEventCounter
+  liftIO $ P.withLabel counter' (event, merchantOpCityId, deploymentVersion) P.incCounter

@@ -206,7 +206,7 @@ data AppEnv = AppEnv
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     locationTrackingServiceKey :: Text,
-    eventRequestCounter :: EventCounterMetric,
+    eventCounterMetrics :: EventCountersContainer,
     schedulerSetName :: Text,
     schedulerType :: SchedulerType,
     ltsCfg :: LocationTrackingeServiceConfig,
@@ -244,7 +244,7 @@ buildAppEnv cfg@AppCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
-  eventRequestCounter <- registerEventRequestCounterMetric
+  eventCounterMetrics <- registerEventRequestCounterMetric
   let modifierFunc = ("dynamic-offer-driver-app:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc -- will be depreciated once data is migrated to cluster
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg modifierFunc

@@ -23,7 +23,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.JSON (constructorsWithSnakeCase)
 import Lib.SessionizerMetrics.Kafka.Config
-import Prometheus
+import Lib.SessionizerMetrics.Prometheus.Internal
 
 data Event p = Event
   { id :: Text, -- id of the event
@@ -73,4 +73,4 @@ data EventType = RideCreated | RideStarted | RideEnded | RideCancelled | Booking
 instance ToJSON EventType => ToJSON EventType where
   toJSON = genericToJSON constructorsWithSnakeCase
 
-type EventStreamFlow m r = (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasField "version" r DeploymentVersion, HasField "eventStreamMap" r [EventStreamMap], HasField "eventRequestCounter" r (Vector (Text, Text, Text) Counter))
+type EventStreamFlow m r = (HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasField "version" r DeploymentVersion, HasField "eventStreamMap" r [EventStreamMap], HasFlowEnv m r '["eventCounterMetrics" ::: EventCountersContainer])

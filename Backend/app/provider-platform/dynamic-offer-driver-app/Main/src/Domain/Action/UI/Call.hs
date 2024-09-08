@@ -70,6 +70,7 @@ import Kernel.Types.Version (DeviceType (..))
 import Kernel.Utils.Common
 import Kernel.Utils.IOLogging (LoggerEnv)
 import Kernel.Utils.XML
+import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import Servant (FromHttpApiData (..))
 import qualified SharedLogic.CallBAP as CallBAP
@@ -420,6 +421,7 @@ sendFCMToBAPOnFailedCallStatus ::
 sendFCMToBAPOnFailedCallStatus callStatus idInfo =
   if isFailureStatus callStatus
     then do
+      deploymentVersion <- asks (.version)
       (ride, booking) <- case idInfo of
         Left driverId -> do
           ride <- runInReplica $ QRide.getActiveByDriverId driverId >>= fromMaybeM (RideForDriverNotFound $ getId driverId)
@@ -430,6 +432,7 @@ sendFCMToBAPOnFailedCallStatus callStatus idInfo =
           ride <- runInReplica $ QRide.findById (Id rideId) >>= fromMaybeM (RideNotFound rideId)
           booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
           return (ride, booking)
+      fork "updating in prometheus" $ incrementCallAttemptCounter (callAttemptCounter . (.eventCounterMetrics)) (show booking.providerId) "call_attempt" deploymentVersion.getDeploymentVersion
       void $ CallBAP.sendPhoneCallRequestUpdateToBAP booking ride
       return True
     else return False
@@ -449,7 +452,8 @@ type CallBAPConstraints m r c =
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     EsqDBReplicaFlow m r,
-    HasField "esqDBReplicaEnv" r EsqDBEnv
+    HasField "esqDBReplicaEnv" r EsqDBEnv,
+    EventStreamFlow m r
   )
 
 getCallTwillioAccessToken ::

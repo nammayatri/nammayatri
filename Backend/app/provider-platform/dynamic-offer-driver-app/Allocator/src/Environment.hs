@@ -87,7 +87,7 @@ data HandlerEnv = HandlerEnv
     smsCfg :: SmsConfig,
     version :: DeploymentVersion,
     eventStreamMap :: [EventStreamMap],
-    eventRequestCounter :: EventCounterMetric,
+    eventCounterMetrics :: EventCountersContainer,
     jobInfoMap :: M.Map Text Bool,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
@@ -118,7 +118,7 @@ buildHandlerEnv HandlerCfg {..} = do
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv appCfg.loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv appCfg.esqDBCfg loggerEnv
-  eventRequestCounter <- registerEventRequestCounterMetric
+  eventCounterMetrics <- registerEventRequestCounterMetric
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
   passettoContext <- (uncurry mkDefPassettoContext) encTools.service
