@@ -28,7 +28,7 @@ getInvoice (mbPersonId, merchantId) from to = do
   return $ catMaybes invoices
   where
     makeInvoiceResponse booking = do
-      mbRide <- CHR.findRideByBookingId booking.id
+      mbRide <- CHR.findRideByBookingId booking.id booking.createdAt
       case mbRide of
         Just ride -> do
           let breakupItems =
@@ -50,9 +50,13 @@ getInvoice (mbPersonId, merchantId) from to = do
                   ("WAITING_OR_PICKUP_CHARGES", "Wating Charge"),
                   ("PARKING_CHARGE", "Parking Charge")
                 ]
-          fareBreakups <- mapM (getFareBreakup booking.id) breakupItems
-          mbSource <- join <$> mapM CHL.findLocationById booking.fromLocationId
-          mbDestination <- join <$> mapM CHL.findLocationById booking.toLocationId
+          fareBreakups <- mapM (getFareBreakup booking) breakupItems
+          mbSource <- case booking.fromLocationId of
+            Just fromLocId -> CHL.findLocationById fromLocId booking.createdAt
+            Nothing -> return Nothing
+          mbDestination <- case booking.toLocationId of
+            Just toLocId -> CHL.findLocationById toLocId booking.createdAt
+            Nothing -> return Nothing
           return $
             Just $
               DTInvoice.InvoiceRes
@@ -70,8 +74,8 @@ getInvoice (mbPersonId, merchantId) from to = do
                   chargeableDistanceWithUnit = convertHighPrecMetersToDistance Meter <$> ride.chargeableDistance -- FIXME use proper unit
                 }
         Nothing -> return Nothing
-    getFareBreakup bookingId (tag, title) = do
-      fareBreakup <- CHFB.findFareBreakupByBookingIdAndDescription bookingId tag
+    getFareBreakup booking (tag, title) = do
+      fareBreakup <- CHFB.findFareBreakupByBookingIdAndDescription booking.id tag booking.createdAt
       case fareBreakup of
         Just breakup -> return . Just $ DTInvoice.FareBreakup {price = maybe notAvailableText show breakup.amount, title}
         Nothing -> return Nothing
