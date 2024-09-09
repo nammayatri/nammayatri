@@ -9,6 +9,7 @@ import qualified Domain.Types.SafetySettings as DSafety
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -43,7 +44,7 @@ upsert ::
   Kernel.Types.Id.Id Person ->
   UpdateEmergencyInfo ->
   m ()
-upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = do
+upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = Hedis.withLockRedis (mkSafetySettingsByPersonIdKey personId) 1 $ do
   now <- getCurrentTime
   res <- findOneWithKV [Se.And [Se.Is BeamP.personId $ Se.Eq personId]]
   if isJust res
@@ -101,7 +102,7 @@ updateSafetyCenterBlockingCounter personId counter mbDate = do
     [Se.Is BeamP.personId (Se.Eq personId.getId)]
 
 findSafetySettingsWithFallback :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Kernel.Types.Id.Id Person -> Maybe Person -> m DSafety.SafetySettings
-findSafetySettingsWithFallback personId mbPerson = do
+findSafetySettingsWithFallback personId mbPerson = Hedis.withLockRedisAndReturnValue (mkSafetySettingsByPersonIdKey personId.getId) 1 $ do
   now <- getCurrentTime
   res <- findOneWithKV [Se.And [Se.Is BeamP.personId $ Se.Eq personId.getId]]
   case res of
@@ -129,3 +130,6 @@ findSafetySettingsWithFallback personId mbPerson = do
               }
       _ <- createWithKV safetySettings
       return safetySettings
+
+mkSafetySettingsByPersonIdKey :: Text -> Text
+mkSafetySettingsByPersonIdKey personId = "SafetySettings:PersonId:" <> personId
