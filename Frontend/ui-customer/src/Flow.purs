@@ -2946,7 +2946,10 @@ tripDetailsScreenFlow = do
   (GlobalState globalState) <- getState
   logField_ <- lift $ lift $ getLogFields
   expiryTime <- pure $ getExpiryTime globalState.tripDetailsScreen.data.selectedItem.rideEndTimeUTC isForLostAndFound
-  modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { props { canConnectWithDriver = (expiryTime <= 86400) } }) -- expiryTime < 24hrs or 86400 seconds
+  categories <- if length globalState.tripDetailsScreen.data.categories > 0
+    then pure globalState.tripDetailsScreen.data.categories
+    else fetchCategories
+  modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { data {categories = categories}, props { canConnectWithDriver = (expiryTime <= 86400) } }) -- expiryTime < 24hrs or 86400 seconds
   flow <- UI.tripDetailsScreen
   case flow of
     GO_TO_HELPSCREEN -> flowRouter HelpAndSupportScreenFlow
@@ -3016,6 +3019,24 @@ tripDetailsScreenFlow = do
         , options = options'
         , chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{messages = messages'} }})
       flowRouter IssueReportChatScreenFlow
+  where
+    fetchCategories :: FlowBT String (Array CategoryListType)
+    fetchCategories = do    
+      let language = fetchLanguage $ getLanguageLocale languageKey 
+      (GetCategoriesRes response) <- Remote.getCategoriesBT language
+      pure $
+        map 
+          (\(Category catObj) ->
+            { categoryName : if (language == "en") then capitalize catObj.category else catObj.category 
+            , categoryId : catObj.issueCategoryId
+            , categoryAction : Just catObj.label
+            , categoryImageUrl : Just catObj.logoUrl
+            , isRideRequired : catObj.isRideRequired 
+            , maxAllowedRideAge : catObj.maxAllowedRideAge
+            , categoryType: catObj.categoryType
+            , allowedRideStatuses: catObj.allowedRideStatuses
+            }
+          ) response.categories
 
 invoiceScreenFlow :: FlowBT String Unit
 invoiceScreenFlow = do

@@ -135,7 +135,7 @@ myRideListTransform state listRes =
               (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !! 0))
               (RideBookingAPIDetails bookingDetails) = ride.bookingDetails
               baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
-
+              rideStatus = fromMaybe "" (ride.rideList !! 0 <#> \(RideAPIEntity ride) -> ride.status)
               updatedFareList = getFaresList ride.fareBreakup baseDistanceVal (bookingDetails.fareProductType == "OneWaySpecialZoneAPIDetails")
 
               config = getAppConfig appConfig
@@ -170,6 +170,8 @@ myRideListTransform state listRes =
                   , categories: state.data.categories
                   , merchantExoPhone: ride.merchantExoPhone
                   , isFaqListEmpty: state.data.isFaqListEmpty
+                  , rideCreatedAt: ride.createdAt
+                  , rideStatus: rideStatus
                   }
               , props:
                   { apiFailure: false

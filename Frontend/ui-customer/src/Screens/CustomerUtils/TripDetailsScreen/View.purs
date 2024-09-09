@@ -39,7 +39,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Mobility.Prelude (boolToVisibility, capitalize)
 import Prelude ((<>), show)
-import Prelude (Unit, const, map, unit, ($), (&&), (/=), (<<<), (<=), (<>), (==), (/), not, (-), (||))
+import Prelude (Unit, const, map, unit, ($), (&&), (/=), (<<<), (<=), (<>), (==), (/), not, (-), (||), (>))
 import PrestoDOM (Accessiblity(..), FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, color, cornerRadius, disableClickFeedback, editText, fontStyle, frameLayout, gravity, height, hint, hintColor, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, multiLineEditText, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, alpha)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
@@ -64,6 +64,12 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
 view push state =
+  let 
+    filteredTopics = DA.filter (\topic -> 
+        topic.categoryType == "Category" &&
+        RSST.findIfRideIsValid (Just topic) state.data.selectedItem.rideStatus state.data.selectedItem.rideCreatedAt state.data.selectedItem.status
+      ) (topicsList state)
+  in
   Anim.screenAnimation $
  relativeLayout
  [  height MATCH_PARENT
@@ -86,8 +92,8 @@ view push state =
         , orientation VERTICAL
         , padding $ PaddingVertical 16 16
         , gravity CENTER_VERTICAL
-        ][tripDetailsLayout state push
-        , reportIssueView state push
+        ][tripDetailsLayout state push (DA.length filteredTopics > 0)
+        , reportIssueView state push filteredTopics
         ]
       ]
     ] 
@@ -119,8 +125,8 @@ providerDetails state push =
         ] <> FontStyle.tags LanguageStyle
   ]
 
-tripDetailsLayout :: forall w. ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-tripDetailsLayout state push =
+tripDetailsLayout :: forall w. ST.TripDetailsScreenState -> (Action -> Effect Unit) -> Boolean -> PrestoDOM (Effect Unit) w
+tripDetailsLayout state push showDivider =
   linearLayout
   [height WRAP_CONTENT
   , width MATCH_PARENT
@@ -155,6 +161,7 @@ tripDetailsLayout state push =
              , width MATCH_PARENT
              , background Color.lightGreyShade
              , margin $ MarginVertical 16 16
+             , visibility $ boolToVisibility showDivider
              ][]
            ]
         ]]
@@ -451,8 +458,8 @@ invoiceView state push =
       ]
 
 ----------------- report Isssue ----------------
-reportIssueView ::  forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-reportIssueView state push =
+reportIssueView ::  forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> Array CategoryListType -> PrestoDOM (Effect Unit) w
+reportIssueView state push filteredTopics =
   linearLayout
     [ orientation VERTICAL
     , width MATCH_PARENT
@@ -465,7 +472,7 @@ reportIssueView state push =
         , gravity CENTER_VERTICAL
         , orientation HORIZONTAL
         , margin $ Margin 16 0 16 16
-        , visibility $ boolToVisibility (state.props.fromMyRides /= ReportIssueChat) 
+        , visibility $ boolToVisibility (state.props.fromMyRides /= ReportIssueChat && DA.length filteredTopics > 0) 
         ][  
           imageView
             [ width $ V 20
@@ -490,18 +497,12 @@ reportIssueView state push =
               ]
             ]
           ] 
-        , allTopicsView state push $ topicsList state
+        , allTopicsView state push filteredTopics
         ]
 
 
 allTopicsView :: forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> Array CategoryListType -> PrestoDOM (Effect Unit) w
 allTopicsView state push topicList = 
-  let 
-    filteredTopics = DA.filter (\topic -> 
-        topic.categoryType == "Category" &&
-        RSST.findIfRideIsValid (Just topic) state.data.selectedItem.rideStatus state.data.selectedItem.rideCreatedAt state.data.selectedItem.status
-      ) topicList
-  in
   PrestoAnim.animationSet ([] <>
     if EHC.os == "IOS" then
       [ Anim.fadeIn state.props.reportIssue 
@@ -558,4 +559,4 @@ allTopicsView state push topicList =
               , background Color.greyLight
               , visibility $ boolToVisibility $ not $ index == (DA.length (topicList)) - 1
               ][]
-          ]) filteredTopics)
+          ]) topicList)
