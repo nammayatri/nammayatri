@@ -350,7 +350,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
   config <- issueHandle.findMerchantConfig merchantId mocId (Just personId)
   processIssueReportTypeActions personId mbOption mbRide (Just config) True identifier issueHandle
   issueReport <- mkIssueReport mocId updatedChats shouldCreateTicket now
-  let isLOFeedback = (identifier == CUSTOMER) && (maybe False (any (T.isInfixOf $ T.toLower description) . map T.toLower) config.sensitiveWords)
+  let isLOFeedback = (identifier == CUSTOMER) && not (T.null description) && maybe False (any (\word -> T.toLower word `T.isInfixOf` T.toLower description)) (config.sensitiveWords)
   when isLOFeedback $
     fork "notify on slack" $ do
       sosAlertsTopicARN <- asks (.sosAlertsTopicARN)
