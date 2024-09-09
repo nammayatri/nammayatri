@@ -113,6 +113,8 @@ goToTripDetailsHandler state = do
       , vehicleVariant = state.data.vehicleVariant
       , selectedItem {
           status = state.data.status
+        , rideCreatedAt = state.data.rideCreatedAt
+        , rideStatus = state.data.rideStatus
         , faresList = state.data.faresList 
         , date = state.data.date
         , bookingId = state.data.bookingId
@@ -135,7 +137,8 @@ goToTripDetailsHandler state = do
       , destination = state.data.destination
       , driverName = state.data.driverName
       , totalAmount = state.data.totalAmount
-      ,rating = state.data.rating
+      , rating = state.data.rating
+      , categories = DA.filter (\(category) -> category.categoryType == "Category") state.data.categories
       }
     , props {
         fromMyRides = ST.HelpAndSupport

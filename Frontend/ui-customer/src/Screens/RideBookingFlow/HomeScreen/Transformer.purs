@@ -29,7 +29,7 @@ import Components.ChooseVehicle (Config, config, SearchResultType(..), FareProdu
 import Components.QuoteListItem.Controller (config) as QLI
 -- import Components.RideActionModal (estimatedFareView)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
-import Data.Array (mapWithIndex, filter, head, find, foldl)
+import Data.Array (mapWithIndex, filter, head, find, foldl, (!!))
 import Control.Monad.Except.Trans (lift)
 import Data.Array as DA
 import Data.Int (toNumber, round, fromString)
@@ -694,6 +694,7 @@ getTripDetailsState (RideBookingRes ride) state = do
       endTime = fromMaybe "" rideDetails.rideEndTime
       startTime = fromMaybe "" rideDetails.rideStartTime      
       dropLocation = if rideType == FPT.RENTAL then _stopLocation else _toLocation
+      rideStatus = fromMaybe "" (ride.rideList !! 0 <#> \(RideAPIEntity ride) -> ride.status)
   state {
     data {
       tripId = rideDetails.shortRideId,
@@ -734,7 +735,9 @@ getTripDetailsState (RideBookingRes ride) state = do
         vehicleModel = rideDetails.vehicleModel,
         rideStartTimeUTC = fromMaybe "" ride.rideStartTime,
         rideEndTimeUTC = fromMaybe "" ride.rideEndTime,
-        vehicleVariant = fetchVehicleVariant rideDetails.vehicleVariant
+        vehicleVariant = fetchVehicleVariant rideDetails.vehicleVariant,
+        rideStatus = rideStatus,
+        rideCreatedAt = ride.createdAt
       },
       vehicleVariant = fetchVehicleVariant rideDetails.vehicleVariant
     }
