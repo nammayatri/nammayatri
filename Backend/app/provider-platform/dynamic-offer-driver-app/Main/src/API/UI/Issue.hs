@@ -142,7 +142,8 @@ castRideInfo merchantId merchantOpCityId rideId = do
           estimatedFare = toHighPrecMoney res.estimatedFare,
           computedPrice = toHighPrecMoney <$> res.actualFare,
           fareBreakup = [],
-          rideCreatedAt = res.rideCreatedAt
+          rideCreatedAt = res.rideCreatedAt,
+          rideStartTime = res.rideStartTime
         }
 
     castBookingStatus :: DRide.BookingStatus -> Common.BookingStatus

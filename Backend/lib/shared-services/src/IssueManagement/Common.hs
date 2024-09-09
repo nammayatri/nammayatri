@@ -141,7 +141,8 @@ data RideInfoRes = RideInfoRes
     estimatedFare :: HighPrecMoney,
     computedPrice :: Maybe HighPrecMoney,
     fareBreakup :: [FareBreakup],
-    rideCreatedAt :: UTCTime
+    rideCreatedAt :: UTCTime,
+    rideStartTime :: Maybe UTCTime
   }
 
 data IssueStatus = OPEN | PENDING_INTERNAL | PENDING_EXTERNAL | RESOLVED | CLOSED | REOPENED | NOT_APPLICABLE
