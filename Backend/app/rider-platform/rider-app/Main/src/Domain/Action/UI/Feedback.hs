@@ -142,11 +142,12 @@ feedback request personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
-  let isLOFeedback = maybe False (checkSensitiveWords riderConfig) feedbackDetails
+  let sensitiveWords = fromMaybe [] riderConfig.sensitiveWords
+  let isLOFeedback = maybe False (checkSensitiveWords sensitiveWords) feedbackDetails
   when isLOFeedback $
     fork "notify on slack" $ do
       sosAlertsTopicARN <- asks (.sosAlertsTopicARN)
-      desc <- generateSlackMessage person ride unencryptedMobileNumber (T.pack $ show city)
+      desc <- generateSlackMessage person ride unencryptedMobileNumber (T.pack $ show city) request.rating feedbackDetails
       let message = createJsonMessage desc
       void $ L.runIO $ Slack.publishMessage sosAlertsTopicARN message
   pure
@@ -169,7 +170,9 @@ feedback request personId = do
         Just issue -> return $ Just issue.id.getId
         Nothing -> return Nothing
 
-    checkSensitiveWords riderConfig feedbackDetails = maybe False (any (T.isInfixOf $ T.toLower feedbackDetails) . map T.toLower) riderConfig.sensitiveWords
+    checkSensitiveWords sensitiveWords feedbackDetails =
+      let loweredcaseFeedback = T.toLower feedbackDetails
+       in not (T.null feedbackDetails) && any (\word -> T.toLower word `T.isInfixOf` loweredcaseFeedback) sensitiveWords
 
     createJsonMessage :: Text -> T.Text
     createJsonMessage descriptionText =
@@ -185,39 +188,55 @@ feedback request personId = do
               ]
        in TL.toStrict $ TLE.decodeUtf8 $ A.encode jsonValue
 
-    generateSlackMessage :: Person.Person -> DRide.Ride -> Maybe Text -> Text -> Flow Text
-    generateSlackMessage person ride mbCustomerPhone city = do
+    generateSlackMessage :: Person.Person -> DRide.Ride -> Maybe Text -> Text -> Int -> Maybe Text -> Flow Text
+    generateSlackMessage person ride mbCustomerPhone city rating feedbackDetails = do
+      now <- getCurrentTime
       mbDriverPhoneNumber <- mapM decrypt ride.driverPhoneNumber
       let customerPhone = fromMaybe "NA" mbCustomerPhone
           customerName = SLP.getName person
           driverPhoneNumber = fromMaybe "NA" mbDriverPhoneNumber
-          dropLoc = fromMaybe "NA" $ TL.toStrict . TLE.decodeUtf8 . A.encode . A.toJSON <$> ride.toLocation
+          dropLoc = maybe "NA" (TL.toStrict . TLE.decodeUtf8 . A.encode . A.toJSON) (ride.toLocation)
           pickupLocation = TL.toStrict $ TLE.decodeUtf8 $ A.encode $ A.toJSON ride.fromLocation
+          feedbackMsg = fromMaybe "NA" feedbackDetails
+          rideStartTime = maybe "NA" show ride.rideStartTime
       return $
-        "There is an L0 feedback given by customer_id " <> person.id.getId <> "\n"
-          <> "Customer Name - "
-          <> customerName
-          <> ", phone no: "
+        "There is an L0 feedback/report given by Customer Name : " <> customerName <> "\n"
+          <> "Customer Phone No : "
           <> customerPhone
           <> "\n"
-          <> "On ride id : "
-          <> ride.id.getId
-          <> "\n"
-          <> "Driver details - "
+          <> "Driver Name : "
           <> ride.driverName
-          <> ", phone no: "
+          <> "\n"
+          <> "Driver Phone No : "
           <> driverPhoneNumber
           <> "\n"
-          <> "Ride Details - city: "
+          <> "City : "
           <> city
-          <> ", variant: "
+          <> "\n"
+          <> "Variant : "
           <> show ride.vehicleVariant
           <> "\n"
-          <> "Pickup location: "
+          <> "Pickup Location : "
           <> pickupLocation
           <> "\n"
-          <> "Drop location: "
+          <> "Drop Location : "
           <> dropLoc
+          <> "\n"
+          <> "Ride Id : "
+          <> ride.id.getId
+          <> "\n"
+          <> "Ride Start Time : "
+          <> rideStartTime
+          <> "\n"
+          <> "Feedback Time : "
+          <> show now
+          <> "\n"
+          <> "Feedback Rating : "
+          <> show rating
+          <> "\n"
+          <> "Feedback Message : "
+          <> feedbackMsg
+          <> "\n"
 
 knowYourDriver :: Id DRide.Ride -> App.Flow DriverProfileResponse
 knowYourDriver rideId = do

@@ -388,14 +388,15 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
   config <- issueHandle.findMerchantConfig merchantId mocId (Just personId)
   processIssueReportTypeActions personId mbOption mbRide (Just config) True identifier issueHandle
   issueReport <- mkIssueReport mocId updatedChats shouldCreateTicket now
-  let isLOFeedback = (identifier == CUSTOMER) && (maybe False (any (T.isInfixOf $ T.toLower description) . map T.toLower) config.sensitiveWords)
+  let sensitiveWords = fromMaybe [] config.sensitiveWords
+  let isLOFeedback = (identifier == CUSTOMER) && not (T.null description) && any (\word -> T.toLower word `T.isInfixOf` T.toLower description) sensitiveWords
   when isLOFeedback $
     fork "notify on slack" $ do
       sosAlertsTopicARN <- asks (.sosAlertsTopicARN)
       moCity <-
         issueHandle.findMOCityById mocId
           >>= fromMaybeM (MerchantOperatingCityNotFound $ "MerchantOpCityId - " <> show mocId)
-      msg <- generateMsg moCity mbRide mbRideInfoRes person
+      msg <- generateMsg moCity mbRide mbRideInfoRes person description
       let message = createJsonMessage msg
       void $ L.runIO $ Slack.publishMessage sosAlertsTopicARN message
   _ <- QIR.create issueReport
@@ -447,9 +448,10 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
               ]
        in TL.toStrict $ TLE.decodeUtf8 $ A.encode jsonValue
 
-    generateMsg :: (BeamFlow m r, EncFlow m r) => MerchantOperatingCity -> Maybe Ride -> Maybe RideInfoRes -> Person -> m Text
-    generateMsg moCity mbRide mbRideInfoRes person = do
+    generateMsg :: (BeamFlow m r, EncFlow m r) => MerchantOperatingCity -> Maybe Ride -> Maybe RideInfoRes -> Person -> Text -> m Text
+    generateMsg moCity mbRide mbRideInfoRes person desc = do
       mbCustomerPhone <- mapM decrypt person.mobileNumber
+      now <- getCurrentTime
       let customerName = (fromMaybe "" person.firstName) <> " " <> (fromMaybe "" person.lastName)
           customerPhone = fromMaybe "NA" mbCustomerPhone
       case (mbRide, mbRideInfoRes) of
@@ -458,38 +460,55 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
               vehicleVariant = maybe "NA" show (rideInfo.vehicleVariant)
               pickupLocation = TL.toStrict $ TLE.decodeUtf8 $ A.encode $ A.toJSON rideInfo.customerPickupLocation
               dropLoc = maybe "NA" (TL.toStrict . TLE.decodeUtf8 . A.encode . A.toJSON) (rideInfo.customerDropLocation)
+              rideStartTime = maybe "NA" show rideInfo.rideStartTime
           return $
-            "There is an L0 feedback given by customer_id " <> person.id.getId <> "\n"
-              <> "Customer Name - "
-              <> customerName
-              <> ", phone no: "
+            "There is an L0 feedback/report given by Customer Name : " <> customerName <> "\n"
+              <> "Customer Phone No : "
               <> customerPhone
               <> "\n"
-              <> "On ride id : "
-              <> ride.id.getId
-              <> "\n"
-              <> "Driver details - "
+              <> "Driver Name : "
               <> rideInfo.driverName
-              <> ", phone no: "
+              <> "\n"
+              <> "Driver Phone No : "
               <> driverPhoneNumber
               <> "\n"
-              <> "Ride Details - city: "
+              <> "City : "
               <> show moCity.city
-              <> ", variant: "
+              <> "\n"
+              <> "Variant : "
               <> vehicleVariant
               <> "\n"
-              <> "Pickup location: "
+              <> "Pickup Location : "
               <> pickupLocation
               <> "\n"
-              <> "Drop location: "
+              <> "Drop Location : "
               <> dropLoc
+              <> "\n"
+              <> "Ride Id : "
+              <> ride.id.getId
+              <> "\n"
+              <> "Ride Start Time : "
+              <> rideStartTime
+              <> "\n"
+              <> "Feedback Time : "
+              <> show now
+              <> "\n"
+              <> "Feedback Message : "
+              <> desc
         _ -> do
           return $
-            "There is an L0 feedback given by customer_id " <> person.id.getId <> "\n"
-              <> "Customer Name - "
-              <> customerName
-              <> ", phone no: "
+            "There is an L0 feedback/report given by Customer Name : " <> customerName <> "\n"
+              <> "Customer Phone No : "
               <> customerPhone
+              <> "\n"
+              <> "Feedback Time : "
+              <> show now
+              <> "\n"
+              <> "Feedback Message : "
+              <> desc
+              <> "City : "
+              <> show moCity.city
+              <> "\n"
 
     buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Person -> Id MerchantOperatingCity -> MerchantConfig -> [Text] -> UTCTime -> ServiceHandle m -> m TIT.CreateTicketReq
     buildTicket issue category mbOption mbRide mbRideInfoRes person moCityId merchantCfg mediaFileUrls now iHandle = do
