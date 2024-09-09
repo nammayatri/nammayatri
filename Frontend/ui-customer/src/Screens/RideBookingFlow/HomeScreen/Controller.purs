@@ -1809,7 +1809,7 @@ eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActi
     _ <- pure $ clearTimerWithId id
     let
       autoSelecting = (getValueToLocalStore AUTO_SELECTING) == id
-    if (id == fromMaybe "" state.props.selectedQuote && autoSelecting && state.props.currentStage == QuoteList) then do
+    if (id == fromMaybe "" state.props.selectedQuote && autoSelecting && state.props.currentStage == QuoteList || state.props.currentStage == FindingQuotes ) then do
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_auto_assign"
       continueWithCmd state [ pure $ (QuoteListModelActionController (QuoteListModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) ]
     else do
@@ -2488,7 +2488,7 @@ eval (QuoteListModelActionController (QuoteListModelController.ProviderModelAC (
   
   let updatedState = state{props{searchExpire = (getSearchExpiryTime true)}, data { iopState { providerSelectionStage = false}}}
   void $ pure $ spy "ButtonClick updatedState" updatedState
-  exit $ (SelectEstimateAndQuotes updatedState)
+  updateAndExit updatedState $ SelectEstimateAndQuotes updatedState
 
 eval (QuoteListModelActionController (QuoteListModelController.ProviderModelAC (PM.FavClick item))) state = do
   let selectedItem = find (\quote -> quote.id == item.id) state.data.specialZoneQuoteList 
