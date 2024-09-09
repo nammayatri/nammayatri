@@ -10,8 +10,6 @@ import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as HM
 import Data.Text as T
-import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.Encoding as TLE
 import Data.Time.Format
 import qualified Domain.Action.UI.Call as DUCall
 import qualified Domain.Action.UI.FollowRide as DFR
@@ -54,7 +52,6 @@ import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import SharedLogic.Scheduler.Jobs.CallPoliceApi
 import SharedLogic.Scheduler.Jobs.SafetyCSAlert as SIVR
-import qualified Slack.AWS.Flow as Slack
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -147,11 +144,6 @@ postSosCreate (mbPersonId, _merchantId) req = do
   Redis.del $ CQSos.mockSosKey personId
   ride <- QRide.findById req.rideId >>= fromMaybeM (RideDoesNotExist req.rideId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-  fork "Notify on slack " $ do
-    sosAlertsTopicARN <- asks (.sosAlertsTopicARN)
-    desc <- generateSlackMessageDesc person ride req.customerLocation
-    let message = createJsonMessage desc
-    void $ L.runIO $ Slack.publishMessage sosAlertsTopicARN message
   let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
   sosId <- createTicketForNewSos person ride riderConfig trackLink req
   safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
@@ -176,64 +168,6 @@ postSosCreate (mbPersonId, _merchantId) req = do
       { sosId = sosId
       }
   where
-    createJsonMessage :: Text -> T.Text
-    createJsonMessage descriptionText =
-      let jsonValue :: A.Value
-          jsonValue =
-            A.object
-              [ "version" A..= ("1.0" :: String),
-                "source" A..= ("custom" :: String),
-                "content"
-                  A..= A.object
-                    [ "description" A..= descriptionText
-                    ]
-              ]
-       in TL.toStrict $ TLE.decodeUtf8 $ A.encode jsonValue
-
-    generateSlackMessageDesc :: Person.Person -> DRide.Ride -> Maybe Maps.LatLong -> Flow Text
-    generateSlackMessageDesc person ride customerLocation = do
-      mbCustomerPhone <- mapM decrypt person.mobileNumber
-      mbDriverPhoneNumber <- mapM decrypt ride.driverPhoneNumber
-      merchantOperatingCity <- do
-        case ride.merchantOperatingCityId of
-          Nothing -> pure Nothing
-          Just merchantOpCityId -> CQMOC.findById merchantOpCityId
-      let city = maybe "NA" (\x -> show $ x.city) merchantOperatingCity
-          customerPhone = fromMaybe "NA" mbCustomerPhone
-          customerName = SLP.getName person
-          driverPhoneNumber = fromMaybe "NA" mbDriverPhoneNumber
-          dropLoc = maybe "NA" (TL.toStrict . TLE.decodeUtf8 . A.encode . A.toJSON) (ride.toLocation)
-          sosRaisedLocation = maybe "NA" (TL.toStrict . TLE.decodeUtf8 . A.encode . A.toJSON) customerLocation
-          pickupLocation = TL.toStrict $ TLE.decodeUtf8 $ A.encode $ A.toJSON ride.fromLocation
-      return $
-        "There is an SOS raised by customer_id " <> person.id.getId <> "\n"
-          <> "Customer Name - "
-          <> customerName
-          <> ", phone no: "
-          <> customerPhone
-          <> "\n"
-          <> "On ride id : "
-          <> ride.id.getId
-          <> "\n"
-          <> "Driver details - "
-          <> ride.driverName
-          <> ", phone no: "
-          <> driverPhoneNumber
-          <> "\n"
-          <> "Ride Details - city: "
-          <> city
-          <> ", variant: "
-          <> show ride.vehicleVariant
-          <> "\n"
-          <> "Pickup location: "
-          <> pickupLocation
-          <> "\n"
-          <> "Drop location: "
-          <> dropLoc
-          <> "\n"
-          <> "SOS raised location: "
-          <> sosRaisedLocation
-
     triggerShareRideAndNotifyContacts safetySettings = (fromMaybe safetySettings.notifySosWithEmergencyContacts req.notifyAllContacts) && req.flow == DSos.SafetyFlow
     suffixNotificationBody = if fromMaybe False req.isRideEnded then " has initiated an SOS. Tap to follow and respond to the emergency situation" else " has activated SOS after their Namma Yatri ride. Please check on their safety"
     notificationBody person_ = SLP.getName person_ <> suffixNotificationBody

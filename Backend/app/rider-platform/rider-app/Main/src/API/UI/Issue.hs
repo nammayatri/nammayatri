@@ -144,7 +144,8 @@ castRideInfo merchantId _ rideId = do
           estimatedFare = toHighPrecMoney res.estimatedFare,
           computedPrice = res.computedPrice,
           fareBreakup = transformFareBreakup <$> res.fareBreakup,
-          rideCreatedAt = res.rideCreatedAt
+          rideCreatedAt = res.rideCreatedAt,
+          rideStartTime = res.rideStartTime
         }
 
     castLocationAPIEntity ent =
