@@ -553,3 +553,4 @@ data RATE_CARD_SCREEN_OUTPUT = REFRESH_RATE_CARD RateCardScreenState | RATE_CARD
 data CUSTOMER_REFERRAL_TRACKER_SCREEN_OUTPUT = ADD_UPI_FLOW CustomerReferralScreenTypes.CustomerReferralTrackerScreenState
                                                | DELETE_UPI_FLOW CustomerReferralScreenTypes.CustomerReferralTrackerScreenState
                                                | REFRESH_ORDER_STATUS CustomerReferralScreenTypes.CustomerReferralTrackerScreenState
+                                               | HOME_SCREEN_FROM_REFERRAL_TRACKER

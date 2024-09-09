@@ -566,6 +566,10 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
                 void $ getDriverInfoDataFromCache globalState false
                 modifyScreenState $ BookingOptionsScreenType (\bookingOptions ->  bookingOptions{ props{ fromDeepLink = true } })
                 bookingOptionsFlow
+            "addupi" -> do 
+              liftFlowBT hideSplash
+              modifyScreenState $ CustomerReferralTrackerScreenStateType (\customerReferralTracker -> customerReferralTracker{props{fromDeepLink = true, openPP = true}})
+              customerReferralTrackerFlow
             _ -> pure unit
         Nothing -> pure unit
   (GlobalState allState) <- getState
@@ -2946,7 +2950,7 @@ homeScreenFlow = do
     GO_TO_ADD_UPI_SCREEN -> do
       let (GlobalState defGlobalState) = defaultGlobalState
       let customerReferralTrackerScreenState = defGlobalState.customerReferralTrackerScreen
-      modifyScreenState $ CustomerReferralTrackerScreenStateType (\_ -> customerReferralTrackerScreenState{data{currentStage = CRST.UPIDetails}})
+      modifyScreenState $ CustomerReferralTrackerScreenStateType (\_ -> customerReferralTrackerScreenState{props {openPP = true}})
       customerReferralTrackerFlow
     VERIFY_MANUAL_UPI state -> do 
       response <- lift $ lift $ Remote.verifyVpaID ""
@@ -3917,6 +3921,7 @@ customerReferralTrackerFlow = do
           checkPaymentStatus orderId
         Nothing -> pure unit 
       customerReferralTrackerFlow
+    HOME_SCREEN_FROM_REFERRAL_TRACKER -> handleDeepLinksFlow Nothing Nothing Nothing
 
 addUPIFlow :: CRST.CustomerReferralTrackerScreenState -> FlowBT String Unit 
 addUPIFlow state = do 
