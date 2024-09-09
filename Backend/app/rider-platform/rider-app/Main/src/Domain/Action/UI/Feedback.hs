@@ -222,7 +222,6 @@ feedback request personId = do
 knowYourDriver :: Id DRide.Ride -> App.Flow DriverProfileResponse
 knowYourDriver rideId = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  unless (ride.status == DRide.COMPLETED) $ throwError (RideInvalidStatus "KnowYourDriver available only for completed rides.")
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
