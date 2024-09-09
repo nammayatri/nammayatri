@@ -144,7 +144,9 @@ feedback request personId = do
         Just issue -> return $ Just issue.id.getId
         Nothing -> return Nothing
 
-    checkSensitiveWords riderConfig feedbackDetails = maybe False (any (T.isInfixOf $ T.toLower feedbackDetails) . map T.toLower) riderConfig.sensitiveWords
+    checkSensitiveWords riderConfig feedbackDetails =
+      let loweredcaseFeedback = T.toLower feedbackDetails
+       in not (T.null feedbackDetails) && maybe False (any (\word -> T.toLower word `T.isInfixOf` loweredcaseFeedback)) (riderConfig.sensitiveWords)
 
     createJsonMessage :: Text -> T.Text
     createJsonMessage descriptionText =
