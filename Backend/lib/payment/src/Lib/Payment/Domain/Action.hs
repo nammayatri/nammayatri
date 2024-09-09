@@ -24,7 +24,7 @@ module Lib.Payment.Domain.Action
     buildSDKPayload,
     refundService,
     createPaymentIntentService,
-    cancelPaymentIntentService,
+    updateForCXCancelPaymentIntentService,
     chargePaymentIntentService,
     createPayoutService,
     payoutStatusService,
@@ -154,7 +154,7 @@ createPaymentIntentService merchantId personId rideId rideShortIdText createPaym
               case resp of
                 Left err -> do
                   logError $ "Failed to update payment intent amount for paymentIntentId: " <> paymentIntentId <> " err: " <> show err
-                  chargePaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall -- charge older payment intent
+                  void $ chargePaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall -- charge older payment intent
                   createNewTransaction existingOrder -- create new payment intent
                 Right _ -> updateOldTransaction paymentIntentId newTransactionAmount newApplicationFeeAmount existingOrder transaction
             else updateOldTransaction paymentIntentId newTransactionAmount newApplicationFeeAmount existingOrder transaction
@@ -293,6 +293,29 @@ cancelPaymentIntentService rideId cancelPaymentIntentCall = do
           QOrder.updateStatus existingOrder.id existingOrder.paymentServiceOrderId (Payment.castToTransactionStatus paymentIntentResp.status)
           QTransaction.updateStatusAndError transaction.id (Payment.castToTransactionStatus paymentIntentResp.status) Nothing Nothing
 
+updateForCXCancelPaymentIntentService ::
+  forall m r c.
+  ( EncFlow m r,
+    BeamFlow m r,
+    HasShortDurationRetryCfg r c
+  ) =>
+  Payment.PaymentIntentId ->
+  (Payment.PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()) ->
+  (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
+  HighPrecMoney ->
+  m Bool
+updateForCXCancelPaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancelTransactionAmount = do
+  transaction <- QTransaction.findByTxnId paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found: " <> paymentIntentId)
+  let newApplicationFeeAmount = transaction.applicationFeeAmount -- not changing application fee amount
+  updateOldTransaction newApplicationFeeAmount transaction
+  chargePaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall
+  where
+    updateOldTransaction newApplicationFeeAmount transaction = do
+      let newOrderAmount = cancelTransactionAmount -- changing whole amount with cancellation
+      QOrder.updateAmountAndPaymentIntentId transaction.orderId newOrderAmount paymentIntentId
+      QTransaction.updateAmount transaction.id cancelTransactionAmount newApplicationFeeAmount
+      pure ()
+
 chargePaymentIntentService ::
   forall m r c.
   ( EncFlow m r,
@@ -302,7 +325,7 @@ chargePaymentIntentService ::
   Payment.PaymentIntentId ->
   (Payment.PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()) ->
   (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
-  m ()
+  m Bool
 chargePaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall = do
   transaction <- QTransaction.findByTxnId paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found: " <> paymentIntentId)
   if transaction.status `notElem` [Payment.CHARGED, Payment.CANCELLED, Payment.AUTO_REFUNDED] -- if not already charged or cancelled or auto refunded
@@ -322,11 +345,13 @@ chargePaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIn
             else do
               -- should we retry on basis of error?
               QTransaction.updateRetryCountAndError transaction.id (transaction.retryCount + 1) errorCode errorMessage -- retry
+          pure False
         Right () -> do
           paymentIntentResp <- getPaymentIntentCall paymentIntentId
           QTransaction.updateStatusAndError transaction.id (Payment.castToTransactionStatus paymentIntentResp.status) Nothing Nothing
           QOrder.updateStatus transaction.orderId paymentIntentId (Payment.castToTransactionStatus paymentIntentResp.status)
-    else pure () -- if already charged or cancelled or auto refunded no need to charge again
+          pure True
+    else pure False -- if already charged or cancelled or auto refunded no need to charge again
 
 -- create order -----------------------------------------------------
 

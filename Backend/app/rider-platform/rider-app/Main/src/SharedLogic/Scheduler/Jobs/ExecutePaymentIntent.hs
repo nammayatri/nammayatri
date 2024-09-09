@@ -15,6 +15,7 @@
 module SharedLogic.Scheduler.Jobs.ExecutePaymentIntent where
 
 import qualified Data.HashMap.Strict as HM
+import qualified Domain.Action.UI.RidePayment as DRidePayment
 import qualified Domain.Types.Ride as DRide
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
@@ -36,7 +37,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
-sendExecutePaymentIntent ::
+executePaymentIntentJob ::
   ( EncFlow m r,
     CacheFlow m r,
     MonadFlow m,
@@ -46,13 +47,13 @@ sendExecutePaymentIntent ::
   ) =>
   Job 'ExecutePaymentIntent ->
   m ExecutionResult
-sendExecutePaymentIntent Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
+executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
       personId = jobData.personId
       rideId = jobData.rideId
       fare = jobData.fare
       applicationFeeAmount = jobData.applicationFeeAmount
-  Redis.withWaitOnLockRedisWithExpiry paymentJobExecLockKey 60 60 $ do
+  Redis.withWaitOnLockRedisWithExpiry (DRidePayment.paymentJobExecLockKey rideId.getId) 10 20 $ do
     logDebug "Executing payment intent"
     QRide.markPaymentStatus DRide.Initiated rideId
     person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -77,14 +78,11 @@ sendExecutePaymentIntent Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) d
 
     booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
     paymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId person.id ride createPaymentIntentReq
-    void $ SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId paymentIntentResp.paymentIntentId
-    QRide.markPaymentStatus DRide.Completed ride.id
+    paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId paymentIntentResp.paymentIntentId
+    when paymentCharged $ QRide.markPaymentStatus DRide.Completed ride.id
   return Complete
-  where
-    paymentJobExecLockKey :: Text
-    paymentJobExecLockKey = "PaymentJobExec:RideId-" <> jobInfo.jobData.rideId.getId
 
-sendCancelExecutePaymentIntent ::
+cancelExecutePaymentIntentJob ::
   ( EncFlow m r,
     CacheFlow m r,
     MonadFlow m,
@@ -95,7 +93,7 @@ sendCancelExecutePaymentIntent ::
   ) =>
   Job 'CancelExecutePaymentIntent ->
   m ExecutionResult
-sendCancelExecutePaymentIntent Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
+cancelExecutePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
       bookingId = jobData.bookingId
       personId = jobData.personId
@@ -112,8 +110,8 @@ sendCancelExecutePaymentIntent Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
   mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   when (isNothing ride.cancellationFeeIfCancelled) $ do
     QRide.updateCancellationFeeIfCancelledField (Just cancellationAmount.amount) rideId
-  void $ SPayment.makeCancellationPayment booking.merchantId booking.merchantOperatingCityId order.paymentServiceOrderId cancellationAmount.amount
-  QRide.markPaymentStatus DRide.Completed rideId
+  paymentCharged <- SPayment.makeCxCancellationPayment booking.merchantId booking.merchantOperatingCityId order.paymentServiceOrderId cancellationAmount.amount
+  when paymentCharged $ QRide.markPaymentStatus DRide.Completed rideId
   void $
     CallBPPInternal.customerCancellationDuesSync
       (merchant.driverOfferApiKey)

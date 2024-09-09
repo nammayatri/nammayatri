@@ -72,7 +72,7 @@ chargePaymentIntent ::
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Payment.PaymentIntentId ->
-  m ()
+  m Bool
 chargePaymentIntent merchantId merchantOpCityId paymentIntentId = do
   let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
@@ -107,7 +107,7 @@ paymentErrorHandler booking exec = do
       dCancelRes <- DCancel.cancel booking Nothing req SBCR.ByApplication
       void $ withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes req.reallocate
 
-makeCancellationPayment ::
+makeCxCancellationPayment ::
   ( MonadFlow m,
     EncFlow m r,
     EsqDBFlow m r,
@@ -118,8 +118,8 @@ makeCancellationPayment ::
   Id DMOC.MerchantOperatingCity ->
   Payment.PaymentIntentId ->
   HighPrecMoney ->
-  m ()
-makeCancellationPayment merchantId merchantOpCityId paymentIntentId cancellationAmount = do
+  m Bool
+makeCxCancellationPayment merchantId merchantOpCityId paymentIntentId cancellationAmount = do
   let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
-  DPayment.cancelPaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount
+  DPayment.updateForCXCancelPaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount

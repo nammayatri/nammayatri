@@ -176,6 +176,7 @@ newtype ScheduledRidePopupToRiderJobData = ScheduledRidePopupToRiderJobData
 instance JobInfoProcessor 'ScheduledRidePopupToRider
 
 type instance JobContent 'ScheduledRidePopupToRider = ScheduledRidePopupToRiderJobData
+
 data ExecutePaymentIntentJobData = ExecutePaymentIntentJobData
   { rideId :: Id DRide.Ride,
     personId :: Id Person,

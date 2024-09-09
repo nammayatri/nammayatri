@@ -42,7 +42,7 @@ Ride:
     EstimatedEndTimeRange:
       start: UTCTime
       end: UTCTime
-      
+
     PaymentStatus:
       enum: "Completed,NotInitiated,Initiated,Cancelled,Failed"
 
@@ -294,5 +294,6 @@ Ride:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+
 
 

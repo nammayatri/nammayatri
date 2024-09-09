@@ -13,7 +13,11 @@
 -}
 {-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
-module Domain.Action.Beckn.Common where
+module Domain.Action.Beckn.Common
+  ( module Domain.Action.Beckn.Common,
+    module Reexport,
+  )
+where
 
 import qualified BecknV2.OnDemand.Enums as BecknEnums
 import qualified BecknV2.OnDemand.Utils.Common as Utils
@@ -21,6 +25,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as Text
 import Data.Time hiding (getCurrentTime)
 import Domain.Action.UI.HotSpot
+import Domain.Action.UI.RidePayment as Reexport
 import qualified Domain.Types.Booking as BT
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -60,7 +65,6 @@ import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.MerchantConfig as CMC
@@ -236,11 +240,6 @@ data ValidatedDriverArrivedReq = ValidatedDriverArrivedReq
     booking :: DRB.Booking
   }
 
-data DFareBreakup = DFareBreakup
-  { amount :: Price,
-    description :: Text
-  }
-
 buildRide :: (MonadFlow m, EncFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion]) => ValidatedRideAssignedReq -> Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> DRide.RideStatus -> Bool -> Bool -> Int -> m DRide.Ride
 buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now status isFreeRide isAlreadyFav favCount = do
   guid <- generateGUID
@@ -386,8 +385,7 @@ rideAssignedReqHandler req = do
       let BookingDetails {..} = req'.bookingDetails
       let fareParams = fromMaybe [] req'.fareBreakups
       ride <- buildRide req' mbMerchant booking req'.bookingDetails req'.previousRideEndPos now rideStatus req'.isFreeRide req'.isAlreadyFav req'.favCount
-      let applicationFeeAmountBreakups = ["INSURANCE_CHARGE"] -- Not adding `CARD_CHARGES_ON_FARE` and `CARD_CHARGES_FIXED` since Driver is MOR
-      let applicationFeeAmount = sum $ map (.amount.amount) $ filter (\fp -> fp.description `elem` applicationFeeAmountBreakups) fareParams
+      let applicationFeeAmount = applicationFeeAmountForRide fareParams
       whenJust req'.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do
         let createPaymentIntentReq =
               Payment.CreatePaymentIntentReq
@@ -602,7 +600,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
              traveledDistance = convertHighPrecMetersToDistance distanceUnit <$> traveledDistance,
              tollConfidence,
              rideEndTime,
-             paymentStatus = maybe (DRide.Completed) (\m -> if (m.onlinePayment) then DRide.NotInitiated else DRide.Completed) mbMerchant,
+             paymentStatus = maybe DRide.Completed (\m -> if m.onlinePayment then DRide.NotInitiated else DRide.Completed) mbMerchant,
              endOdometerReading
             }
   breakups <- traverse (buildFareBreakup ride.id) fareBreakups
@@ -621,13 +619,11 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         personClientInfo <- buildPersonClientInfo booking.riderId booking.clientId booking.merchantOperatingCityId booking.merchantId (Utils.mapServiceTierToCategory booking.vehicleServiceTierType) (totalCount + 1)
         QCP.create personClientInfo
         when (totalCount + 1 == 1) $ do
-          mbMerchantPN <- CPN.findMatchingMerchantPN booking.merchantOperatingCityId "FIRST_RIDE_EVENT" person.language
           Notify.notifyFirstRideEvent booking.riderId (Utils.mapServiceTierToCategory booking.vehicleServiceTierType) booking.tripCategory
   -- we should create job for collecting money from customer
   let onlinePayment = maybe False (.onlinePayment) mbMerchant
   when onlinePayment $ do
-    let applicationFeeAmountBreakups = ["INSURANCE_CHARGE", "CARD_CHARGES_ON_FARE", "CARD_CHARGES_FIXED"]
-        applicationFeeAmount = sum $ map (.amount.amount) $ filter (\fp -> fp.description `elem` applicationFeeAmountBreakups) fareBreakups
+    let applicationFeeAmount = applicationFeeAmountForRide fareBreakups
     riderConfig <- QRiderConfig.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (InternalError "RiderConfig not found")
     maxShards <- asks (.maxShards)
     let scheduleAfter = riderConfig.executePaymentDelay

@@ -23,7 +23,6 @@ import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Data.Text as T
 import Domain.Action.Beckn.Common as Common
 import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
-import qualified Kernel.External.Payment.Interface as EPayment
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -99,8 +98,6 @@ buildOnConfirmReqV2 req isValueAddNP = do
           vehicleNumber <- fulf >>= (.fulfillmentVehicle) >>= (.vehicleRegistration) & maybe (Left "Missing fulfillment.vehicle.registration in on_confirm") Right
           let vehicleColor = fulf >>= (.fulfillmentVehicle) >>= (.vehicleColor)
           vehicleModel <- fulf >>= (.fulfillmentVehicle) >>= (.vehicleModel) & maybe (Left "Missing fulfillment.vehicle.model in on_confirm") Right
-          let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
-              (driverAccountId :: Maybe EPayment.AccountId) = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ACCOUNT_ID tagGroups
           Right $ DOnConfirm.RideAssigned DOnConfirm.RideAssignedInfo {fareParams = mbFareParams, ..}
         else Right $ DOnConfirm.BookingConfirmed DOnConfirm.BookingConfirmedInfo {fareParams = mbFareParams, bppBookingId, specialZoneOtp = mbRideOtp}
 
