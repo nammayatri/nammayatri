@@ -833,6 +833,7 @@ createPayoutService merchantId _personId mbEntityIds mbEntityName city createPay
       shortId <- generateShortId
       customerEmail <- encrypt req.customerEmail
       mobileNo <- encrypt req.customerPhone
+      let txn = listToMaybe <$> sortBy (comparing (.updatedAt)) =<< ((.transactions) =<< listToMaybe =<< resp.fulfillments)
       pure $
         Payment.PayoutOrder
           { id = uuid,
@@ -846,6 +847,8 @@ createPayoutService merchantId _personId mbEntityIds mbEntityName city createPay
             entityIds = mbEntityIds,
             entityName = mbEntityName,
             status = resp.status,
+            responseMessage = (.responseMessage) =<< txn,
+            responseCode = (.responseCode) =<< txn,
             accountDetailsType = (.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< resp.fulfillments, --- for now only one fullfillment supported
             vpa = Just req.customerVpa,
             customerEmail = customerEmail,
@@ -865,7 +868,7 @@ payoutStatusService ::
   m PayoutPaymentStatus
 payoutStatusService _merchantId _personId createPayoutOrderStatusReq createPayoutOrderStatusCall = do
   _ <- QPayoutOrder.findByOrderId createPayoutOrderStatusReq.orderId >>= fromMaybeM (PayoutOrderNotFound (createPayoutOrderStatusReq.orderId)) -- validation
-  let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = createPayoutOrderStatusReq.orderId}
+  let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = createPayoutOrderStatusReq.orderId, mbExpand = createPayoutOrderStatusReq.mbExpand}
   statusResp <- createPayoutOrderStatusCall payoutOrderStatusReq -- api call
   payoutStatusUpdates statusResp.status createPayoutOrderStatusReq.orderId (Just statusResp)
   pure $ PayoutPaymentStatus {status = statusResp.status, orderId = statusResp.orderId, accountDetailsType = show <$> ((.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< statusResp.fulfillments)}
@@ -874,10 +877,12 @@ payoutStatusUpdates :: (EncFlow m r, BeamFlow m r) => Payout.PayoutOrderStatus -
 payoutStatusUpdates status_ orderId statusResp = do
   order <- QPayoutOrder.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId)
   QPayoutOrder.updatePayoutOrderStatus status_ orderId
+  logDebug $ "Payout order Status: " <> show statusResp
   case statusResp of
     Just Payout.CreatePayoutOrderResp {orderId = _orderPayoutId, status = _status, ..} -> do
       let txns = (.transactions) =<< listToMaybe =<< fulfillments
           mbTxn = listToMaybe <$> sortBy (comparing (.updatedAt)) =<< txns
+      QPayoutOrder.updatePayoutOrderTxnRespInfo ((.responseCode) =<< mbTxn) ((.responseMessage) =<< mbTxn) orderId
       case mbTxn of
         Just Payout.Transaction {amount = amount_txn, ..} -> do
           findTransaction <- QPayoutTransaction.findByTransactionRef transactionRef

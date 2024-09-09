@@ -152,7 +152,10 @@ getPayoutOrderStatus ::
 getPayoutOrderStatus (mbPersonId, merchantId, merchantOpCityId) orderId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   payoutOrder <- QPayoutOrder.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId)
-  let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = orderId}
+  mbVehicle <- QVeh.findById personId
+  let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
+  payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory >>= fromMaybeM (InternalError $ "Payout config not present For CityId: " <> merchantOpCityId.getId)
+  let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = orderId, mbExpand = payoutConfig.expand}
       serviceName = DEMSC.PayoutService PT.Juspay
   statusResp <- TP.payoutOrderStatus merchantId merchantOpCityId serviceName payoutOrderStatusReq
   Payout.payoutStatusUpdates statusResp.status orderId (Just statusResp)

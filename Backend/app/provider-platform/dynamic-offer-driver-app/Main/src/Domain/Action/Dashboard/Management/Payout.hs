@@ -7,6 +7,7 @@ module Domain.Action.Dashboard.Management.Payout
     postPayoutPayoutVerifyFraudStatus,
     postPayoutPayoutRetryFailed,
     postPayoutPayoutRetryAllWithStatus,
+    postPayoutPayoutPendingPayout,
   )
 where
 
@@ -17,6 +18,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time (LocalTime, addUTCTime, minutesToTimeZone, utcToLocalTime, utctDay)
 import qualified Domain.Action.UI.Payout as DAP
+import qualified Domain.Action.UI.Payout as Payout
 import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Merchant
@@ -152,7 +154,9 @@ getPayoutPayoutHistory merchantShortId opCity mbDriverId mbDriverPhoneNo mbFrom 
                 payoutStatus = show payoutOrder.status,
                 payoutTime = utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinutes) payoutOrder.createdAt,
                 payoutEntity = castPayoutEntityName <$> payoutOrder.entityName,
-                payoutOrderId = payoutOrder.orderId
+                payoutOrderId = payoutOrder.orderId,
+                responseMessage = payoutOrder.responseMessage,
+                responseCode = payoutOrder.responseCode
               }
       pure $ PayoutHistoryWithCity {historyItem = item, cityId = person.merchantOperatingCityId.getId}
 
@@ -260,16 +264,29 @@ postPayoutPayoutRetryAllWithStatus merchantShortId opCity req = do
   mapM_ (callPayoutAndUpdateDailyStats merchant merchantOpCity) payoutOrders
   pure Success
 
+postPayoutPayoutPendingPayout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DTP.PendingPayoutReq -> Environment.Flow APISuccess
+postPayoutPayoutPendingPayout _merchantShortId _opCity req = do
+  let personId = req.personId
+  person <- QPerson.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+  mbVehicle <- QVeh.findById (cast personId)
+  let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
+  payoutConfig <- CPC.findByPrimaryKey person.merchantOperatingCityId vehicleCategory >>= fromMaybeM (InternalError $ "Payout config not present for cityId " <> person.merchantOperatingCityId.getId)
+  dInfo <- QDI.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+  when (isNothing dInfo.payoutVpa) $ throwError $ InvalidRequest $ "Vpa is not available for person: " <> personId.getId
+  when payoutConfig.isPayoutEnabled $ do
+    Payout.processPreviousPayoutAmount (cast personId) dInfo.payoutVpa person.merchantOperatingCityId
+  pure Success
+
 callPayoutAndUpdateDailyStats :: Domain.Types.Merchant.Merchant -> DMOC.MerchantOperatingCity -> PO.PayoutOrder -> Environment.Flow ()
 callPayoutAndUpdateDailyStats merchant merchantOpCity payoutOrder = do
   let driverId = Id payoutOrder.customerId
   dInfo <- QDI.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
+  mbVehicle <- QVeh.findById (cast driverId)
+  let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
+  payoutConfig <- CPC.findByPrimaryKey merchantOpCity.id vehicleCategory >>= fromMaybeM (InternalError $ "Payout config not present for " <> show merchantOpCity.city)
   when (isNothing dInfo.payoutVpa) $ throwError $ InvalidRequest "VPA does not Exist"
-  orderStatusRep <- getPayoutOrderStatus (driverId, merchant.id, merchantOpCity.id) payoutOrder
+  orderStatusRep <- getPayoutOrderStatus (driverId, merchant.id, merchantOpCity.id) payoutOrder payoutConfig
   when (orderStatusRep.status `elem` [TPayout.FULFILLMENTS_FAILURE, TPayout.FULFILLMENTS_CANCELLED, TPayout.FAILURE, TPayout.ERROR]) do
-    mbVehicle <- QVeh.findById (cast driverId)
-    let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
-    payoutConfig <- CPC.findByPrimaryKey merchantOpCity.id vehicleCategory >>= fromMaybeM (InternalError $ "Payout config not present for " <> show merchantOpCity.city)
     uid <- generateGUID
     createOrderReq <- createReq payoutConfig (fromMaybe "" dInfo.payoutVpa) uid driverId payoutOrder.amount.amount -- payout vpa will always exist here
     let serviceName = DEMSC.PayoutService PT.Juspay
@@ -302,9 +319,9 @@ createReq payoutConfig vpa uid driverId amount = do
         customerVpa = vpa
       }
 
-getPayoutOrderStatus :: (Id Dashboard.Common.Driver, Id Domain.Types.Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> PO.PayoutOrder -> Environment.Flow Juspay.PayoutOrderStatusResp
-getPayoutOrderStatus (driverId, merchantId, merchantOpCityId) payoutOrder = do
-  let payoutOrderStatusReq = Juspay.PayoutOrderStatusReq {orderId = payoutOrder.orderId}
+getPayoutOrderStatus :: (Id Dashboard.Common.Driver, Id Domain.Types.Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> PO.PayoutOrder -> DPC.PayoutConfig -> Environment.Flow Juspay.PayoutOrderStatusResp
+getPayoutOrderStatus (driverId, merchantId, merchantOpCityId) payoutOrder payoutConfig = do
+  let payoutOrderStatusReq = Juspay.PayoutOrderStatusReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand}
       serviceName = DEMSC.PayoutService PT.Juspay
   statusResp <- TP.payoutOrderStatus merchantId merchantOpCityId serviceName payoutOrderStatusReq
   Payout.payoutStatusUpdates statusResp.status payoutOrder.orderId (Just statusResp)
