@@ -35,6 +35,11 @@ import qualified Storage.Queries.Ride as QRide
 import Tools.Auth
 import qualified Tools.Payment as Payment
 
+data DFareBreakup = DFareBreakup
+  { amount :: Price,
+    description :: Text
+  }
+
 getCustomerPaymentId :: Domain.Types.Person.Person -> Environment.Flow CustomerId
 getCustomerPaymentId person =
   case person.customerPaymentId of
@@ -162,7 +167,7 @@ postPaymentAddTip ::
     Environment.Flow APISuccess
   )
 postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
-  Redis.withWaitOnLockRedisWithExpiry paymentJobExecLockKey 60 60 $ do
+  Redis.withWaitOnLockRedisWithExpiry (paymentJobExecLockKey rideId.getId) 10 20 $ do
     personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
     person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
@@ -180,13 +185,10 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         paymentMethodId <- person.defaultPaymentMethodId & fromMaybeM (PersonFieldNotPresent "defaultPaymentMethodId")
         driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
         email <- mapM decrypt person.email
-        let cardFixedCharges = HighPrecMoney 0.3
-        let cardPercentageCharges = 0.029 -- 2.9%
-        let applicationFeeAmount = HighPrecMoney (tipRequest.amount.amount.getHighPrecMoney * cardPercentageCharges) + cardFixedCharges
         let createPaymentIntentReq =
               Payment.CreatePaymentIntentReq
                 { amount = tipRequest.amount.amount,
-                  applicationFeeAmount,
+                  applicationFeeAmount = applicationFeeAmountForTipAmount tipRequest,
                   currency = tipRequest.amount.currency,
                   customer = customerPaymentId,
                   paymentMethod = paymentMethodId,
@@ -194,8 +196,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                   driverAccountId
                 }
         paymentIntentResp <- Payment.makePaymentIntent person.merchantId person.merchantOperatingCityId person.id ride createPaymentIntentReq
-        Payment.chargePaymentIntent person.merchantId person.merchantOperatingCityId paymentIntentResp.paymentIntentId
-
+        void $ Payment.chargePaymentIntent person.merchantId person.merchantOperatingCityId paymentIntentResp.paymentIntentId
     createFareBreakup
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     void $ CallBPPInternal.populateTipAmount merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId tipRequest.amount.amount
@@ -203,9 +204,6 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
   where
     tipFareBreakupTitle :: Text
     tipFareBreakupTitle = "RIDE_TIP"
-
-    paymentJobExecLockKey :: Text
-    paymentJobExecLockKey = "PaymentJobExec:RideId-" <> rideId.getId
 
     createFareBreakup = do
       id <- generateGUID
@@ -218,3 +216,17 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                 amount = mkPriceFromAPIEntity tipRequest.amount
               }
       QFareBreakup.create tipFareBreakup
+
+paymentJobExecLockKey :: Text -> Text
+paymentJobExecLockKey rideId = "PaymentJobExec:RideId-" <> rideId
+
+applicationFeeAmountForRide :: [DFareBreakup] -> HighPrecMoney
+applicationFeeAmountForRide fareBreakups = do
+  let applicationFeeAmountBreakups = ["INSURANCE_CHARGE", "CARD_CHARGES_ON_FARE", "CARD_CHARGES_FIXED"]
+  sum $ map (.amount.amount) $ filter (\fp -> fp.description `elem` applicationFeeAmountBreakups) fareBreakups
+
+applicationFeeAmountForTipAmount :: API.Types.UI.RidePayment.AddTipRequest -> HighPrecMoney
+applicationFeeAmountForTipAmount tipRequest = do
+  let cardFixedCharges = HighPrecMoney 0.3
+  let cardPercentageCharges = 0.029 -- 2.9%
+  HighPrecMoney (tipRequest.amount.amount.getHighPrecMoney * cardPercentageCharges) + cardFixedCharges

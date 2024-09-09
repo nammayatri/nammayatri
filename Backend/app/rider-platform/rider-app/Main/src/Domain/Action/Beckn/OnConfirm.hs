@@ -82,7 +82,6 @@ data RideAssignedInfo = RideAssignedInfo
     vehicleColor :: Maybe Text,
     vehicleModel :: Text,
     fareParams :: Maybe [DCommon.DFareBreakup],
-    driverAccountId :: Maybe Payment.AccountId,
     isAlreadyFav :: Bool,
     favCount :: Int,
     driverAccountId :: Maybe Payment.AccountId
@@ -174,27 +173,12 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
 onConfirm (ValidatedRideAssigned req) = DCommon.rideAssignedReqHandler req
 
 -- TODO: Make sure booking status is new here.
-validateRequest :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> Text -> m ValidatedOnConfirmReq
+validateRequest :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasHttpClientOptions r c, HasLongDurationRetryCfg r c, HasField "minTripDistanceForReferralCfg" r (Maybe Distance)) => OnConfirmReq -> Text -> m ValidatedOnConfirmReq
 validateRequest (BookingConfirmed BookingConfirmedInfo {..}) _txnId = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId-" <> bppBookingId.getId)
   return $ ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}
-validateRequest (RideAssigned req) transactionId = do
-  validatedRequest <- validateRideAssignedInfoReq transactionId req
-  return $ ValidatedRideAssigned validatedRequest
-
-validateRideAssignedInfoReq ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
-    EncFlow m r,
-    EsqDBReplicaFlow m r,
-    HasHttpClientOptions r c,
-    HasLongDurationRetryCfg r c,
-    HasField "minTripDistanceForReferralCfg" r (Maybe Distance)
-  ) =>
-  Text ->
-  RideAssignedInfo ->
-  m DCommon.ValidatedRideAssignedReq
-validateRideAssignedInfoReq transactionId RideAssignedInfo {..} = do
+validateRequest (RideAssigned RideAssignedInfo {..}) transactionId = do
+  let bookingDetails = DCommon.BookingDetails {otp = rideOtp, isInitiatedByCronJob = False, ..}
   booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
   mbMerchant <- CQM.findById booking.merchantId
   let onlinePayment = maybe False (.onlinePayment) mbMerchant
