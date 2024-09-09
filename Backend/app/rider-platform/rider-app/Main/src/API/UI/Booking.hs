@@ -61,7 +61,7 @@ type API =
              :> QueryParam "status" SRB.BookingStatus
              :> QueryParam "clientId" (Id DC.Client)
              :> ReqBody '[JSON] DBooking.DriverNo
-             :> Get '[JSON] DBooking.FavouriteBookingListRes
+             :> Post '[JSON] DBooking.FavouriteBookingListRes
            :<|> Capture "rideBookingId" (Id SRB.Booking)
              :> TokenAuth
              :> "addStop"
