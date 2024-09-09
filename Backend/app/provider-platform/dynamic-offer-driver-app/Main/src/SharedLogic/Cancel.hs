@@ -140,7 +140,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 messageId = booking.id.getId,
                 isRepeatSearch = False
               }
-      handleDriverSearchBatch driverSearchBatchInput booking searchTry.estimateId
+      handleDriverSearchBatch driverSearchBatchInput booking searchTry.estimateId False
 
     performStaticOfferReallocation quote searchReq searchTry transporterConfig now = do
       DP.addDriverToSearchCancelledList searchReq.id ride.driverId
@@ -162,15 +162,15 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 messageId = booking.id.getId,
                 isRepeatSearch = False
               }
-      handleDriverSearchBatch driverSearchBatchInput newBooking searchTry.estimateId
+      handleDriverSearchBatch driverSearchBatchInput newBooking searchTry.estimateId True
 
-    handleDriverSearchBatch driverSearchBatchInput newBooking estimateId = do
+    handleDriverSearchBatch driverSearchBatchInput newBooking estimateId isStatic = do
       result <- try @_ @SomeException (initiateDriverSearchBatch driverSearchBatchInput)
       case result of
         Right _ ->
           if isValueAddNP
             then do
-              BP.sendEstimateRepetitionUpdateToBAP newBooking ride (Id estimateId) bookingCReason.source driver vehicle
+              if isStatic then BP.sendQuoteRepetitionUpdateToBAP booking ride newBooking.id bookingCReason.source driver vehicle else BP.sendEstimateRepetitionUpdateToBAP booking ride (Id estimateId) bookingCReason.source driver vehicle
               return True
             else cancelRideTransactionForNonReallocation Nothing (Just estimateId)
         Left _ -> cancelRideTransactionForNonReallocation Nothing (Just estimateId)
