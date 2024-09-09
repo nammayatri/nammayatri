@@ -9,6 +9,7 @@ import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
+import qualified Kernel.External.Payout.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -16,6 +17,7 @@ import Tools.Beam.UtilsTH
 
 data PayoutConfigT f = PayoutConfigT
   { batchLimit :: B.C f Kernel.Prelude.Int,
+    expand :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.Expand),
     isPayoutEnabled :: B.C f Kernel.Prelude.Bool,
     maxRetryCount :: B.C f Kernel.Prelude.Int,
     merchantId :: B.C f Kernel.Prelude.Text,

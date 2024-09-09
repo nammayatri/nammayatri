@@ -51,6 +51,7 @@ updateByPrimaryKey (Domain.Types.PayoutConfig.PayoutConfig {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.batchLimit batchLimit,
+      Se.Set Beam.expand expand,
       Se.Set Beam.isPayoutEnabled isPayoutEnabled,
       Se.Set Beam.maxRetryCount maxRetryCount,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
@@ -73,6 +74,7 @@ instance FromTType' Beam.PayoutConfig Domain.Types.PayoutConfig.PayoutConfig whe
       Just
         Domain.Types.PayoutConfig.PayoutConfig
           { batchLimit = batchLimit,
+            expand = expand,
             isPayoutEnabled = isPayoutEnabled,
             maxRetryCount = maxRetryCount,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -94,6 +96,7 @@ instance ToTType' Beam.PayoutConfig Domain.Types.PayoutConfig.PayoutConfig where
   toTType' (Domain.Types.PayoutConfig.PayoutConfig {..}) = do
     Beam.PayoutConfigT
       { Beam.batchLimit = batchLimit,
+        Beam.expand = expand,
         Beam.isPayoutEnabled = isPayoutEnabled,
         Beam.maxRetryCount = maxRetryCount,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,

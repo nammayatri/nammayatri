@@ -12,3 +12,11 @@ UPDATE atlas_bpp_dashboard.transaction
 UPDATE atlas_bpp_dashboard.transaction
   SET endpoint = 'PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_RETRY_ALL_WITH_STATUS'
   WHERE endpoint = 'PayoutAPI PostPayoutPayoutRetryAllWithStatusEndpoint';
+
+
+------- SQL updates -------
+
+-- {"api":"PostPayoutPayoutPendingPayout","migration":"endpointV2","param":null,"schema":"atlas_bpp_dashboard"}
+UPDATE atlas_bpp_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_PENDING_PAYOUT'
+  WHERE endpoint = 'PayoutAPI PostPayoutPayoutPendingPayoutEndpoint';

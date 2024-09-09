@@ -67,6 +67,16 @@ apis:
       migrate:
         endpointV2:
 
+  - POST: # payout For Pending Vpa status.
+      endpoint: payout/pendingPayout
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+      request:
+        type: PendingPayoutReq
+      response:
+        type: APISuccess
+      migrate:
+        endpointV2:
+
 types:
 
   PayoutReferralHistoryRes:
@@ -97,6 +107,8 @@ types:
     - payoutTime: LocalTime
     - payoutEntity: Maybe EntityName
     - payoutOrderId: Text
+    - responseMessage: Maybe Text
+    - responseCode: Maybe Text
   UpdateFraudStatusReq:
     - isFlagConfirmed: Bool # false means pay
     - firstRideId: Id Ride
@@ -112,3 +124,6 @@ types:
     - status: PayoutOrderStatus
     - entityNames: [EntityName]
     - derive: "'HideSecrets"
+  PendingPayoutReq:
+   - personId : Id Driver
+   - derive: "'HideSecrets"

@@ -31,6 +31,8 @@ PayoutOrder:
     createdAt : UTCTime
     updatedAt : UTCTime
     entityIds : Maybe [Text]
+    responseCode : Maybe Text
+    responseMessage : Maybe Text
   beamFields:
     amount:
       currency: Maybe Currency
@@ -68,6 +70,10 @@ PayoutOrder:
     findAllByCustomerId:
       kvFunction: findAllWithKV
       where: customerId
+    updatePayoutOrderTxnRespInfo:
+      kvFunction: updateOneWithKV
+      params: [responseCode, responseMessage]
+      where: orderId
   extraOperations:
   - EXTRA_QUERY_FILE
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"

@@ -100,6 +100,9 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
     IPayout.OrderStatusPayoutResp {..} -> do
       payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
       unless (isSuccessStatus payoutOrder.status) do
+        mbVehicle <- QV.findById (Id payoutOrder.customerId)
+        let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
+        payoutConfig <- CPC.findByPrimaryKey merchanOperatingCityId vehicleCategory >>= fromMaybeM (InternalError $ "Payout config not present For CityId: " <> merchanOperatingCityId.getId)
         when (isSuccessStatus payoutStatus) do
           driverStats <- QDriverStats.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
           QDriverStats.updateTotalPayoutAmountPaid (driverStats.totalPayoutAmountPaid <&> (+ amount)) (Id payoutOrder.customerId)
@@ -112,19 +115,19 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                 when (dailyStats.payoutStatus /= DS.Success) $ do
                   QDailyStats.updatePayoutStatusById dPayoutStatus dailyStatsId
               fork "Update Payout Status and Transactions for DailyStats" $ do
-                callPayoutService dailyStats.driverId payoutOrderId
+                callPayoutService dailyStats.driverId payoutConfig payoutOrderId
           Just DPayment.MANUAL -> do
             forM_ (listToMaybe =<< payoutOrder.entityIds) $ \driverId -> do
               fork "Update Payout Status and Transactions for Manual Payout" $ do
-                callPayoutService (Id driverId) payoutOrderId
+                callPayoutService (Id driverId) payoutConfig payoutOrderId
           Just DPayment.BACKLOG -> do
             whenJust payoutOrder.entityIds $ \entityIds -> do
               fork "Update Payout Status for Backlog" $ do
-                mapM_ (updateStatsWithLock merchantId merchanOperatingCityId payoutStatus payoutOrderId) entityIds
+                mapM_ (updateStatsWithLock merchantId merchanOperatingCityId payoutStatus payoutOrderId payoutConfig) entityIds
           Just DPayment.RETRY_VIA_DASHBOARD -> do
             whenJust payoutOrder.entityIds $ \entityIds -> do
               fork "Update Payout Status for Retried Orders" $ do
-                mapM_ (updateStatsWithLock merchantId merchanOperatingCityId payoutStatus payoutOrderId) entityIds
+                mapM_ (updateStatsWithLock merchantId merchanOperatingCityId payoutStatus payoutOrderId payoutConfig) entityIds
           Just DPayment.DAILY_STATS_VIA_DASHBOARD -> do
             forM_ (listToMaybe =<< payoutOrder.entityIds) $ \dailyStatsId -> do
               dailyStats <- QDailyStats.findByPrimaryKey dailyStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
@@ -132,7 +135,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                 let dPayoutStatus = castPayoutOrderStatus payoutStatus
                 when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dailyStatsId
               fork "Update Payout Status For DailyStats Via Dashboard" $ do
-                callPayoutService dailyStats.driverId payoutOrderId
+                callPayoutService dailyStats.driverId payoutConfig payoutOrderId
           Just DPayment.DRIVER_FEE -> do
             forM_ (listToMaybe =<< payoutOrder.entityIds) $ \driverFeeId -> do
               driverFee <- QDF.findById (Id driverFeeId) >>= fromMaybeM (InternalError "DriverFee Not Found")
@@ -148,7 +151,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                         }
                 when (driverFee.status == DDF.REFUND_PENDING) $ QDF.updateRefundData (Id driverFeeId) refundData
               fork "Update Payout Status and Transactions for DriverFee" $ do
-                callPayoutService driverFee.driverId payoutOrderId
+                callPayoutService driverFee.driverId payoutConfig payoutOrderId
           _ -> pure ()
       pure ()
     IPayout.BadStatusResp -> pure ()
@@ -156,19 +159,19 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
   where
     isSuccessStatus payoutStatus = payoutStatus `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]
 
-    callPayoutService driverId payoutOrderId = do
+    callPayoutService driverId payoutConfig payoutOrderId = do
       driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-      let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrderId}
+      let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrderId, mbExpand = payoutConfig.expand}
           serviceName = DEMSC.PayoutService TPayout.Juspay
           createPayoutOrderStatusCall = Payout.payoutOrderStatus driver.merchantId driver.merchantOperatingCityId serviceName
       void $ DPayment.payoutStatusService (cast driver.merchantId) (cast driver.id) createPayoutOrderStatusReq createPayoutOrderStatusCall
 
-    updateStatsWithLock merchantId merchanOperatingCityId payoutStatus payoutOrderId dStatsId = do
+    updateStatsWithLock merchantId merchanOperatingCityId payoutStatus payoutOrderId payoutConfig dStatsId = do
       let dPayoutStatus = castPayoutOrderStatus payoutStatus
       dailyStats <- QDailyStats.findByPrimaryKey dStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
       Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
         when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dStatsId
-      let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrderId}
+      let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrderId, mbExpand = payoutConfig.expand}
           serviceName = DEMSC.PayoutService TPayout.Juspay
           createPayoutOrderStatusCall = Payout.payoutOrderStatus merchantId merchanOperatingCityId serviceName
       void $ DPayment.payoutStatusService (cast merchantId) (cast dailyStats.driverId) createPayoutOrderStatusReq createPayoutOrderStatusCall

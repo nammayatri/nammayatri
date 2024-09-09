@@ -1000,7 +1000,7 @@ notifyFirstRideEvent personId vehicleCategory mbTitle mbBody = do
         Notification.NotificationReq
           { category = Notification.FIRST_RIDE_EVENT,
             subCategory = Nothing,
-            showNotification = Notification.DO_NOT_SHOW,
+            showNotification = Notification.SHOW,
             messagePriority = Nothing,
             entity = Notification.Entity Notification.Product person.id.getId (FirstRideEvent vehicleCategory True),
             body = body,
