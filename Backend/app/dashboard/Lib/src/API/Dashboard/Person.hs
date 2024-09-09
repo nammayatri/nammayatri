@@ -117,7 +117,7 @@ type API =
                :> Get '[JSON] DMatrix.AccessMatrixRowAPIEntity
          )
     :<|> "release"
-      :> ( DashboardAuth 'DASHBOARD_RELEASE_ADMIN
+      :> ( DashboardAuth 'MJOS_RELEASE_USER
              :> ReqBody '[JSON] DPerson.ReleaseRegisterReq
              :> Post '[JSON] DPerson.ReleaseRegisterRes
              :<|> "getProductSpecInfo" -- :> DashboardAuth 'DASHBOARD_ADMIN

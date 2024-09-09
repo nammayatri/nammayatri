@@ -15,8 +15,13 @@
 module Domain.Action.Dashboard.Person where
 
 import Dashboard.Common
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Key
+import qualified Data.Aeson.KeyMap as KeyMap
+import qualified Data.ByteString.Lazy as BSL
 import Data.List (groupBy, nub, sortOn)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
@@ -113,14 +118,10 @@ newtype ChangeEnabledStatusReq = ChangeEnabledStatusReq
 data ReleaseRegisterRes = ReleaseRegisterRes
   { username :: Text,
     token :: Text,
-    otpEnabled :: Bool,
-    merchantId :: Maybe Text,
+    merchantId :: Text,
     email :: Text,
     context :: Text,
-    acl :: Maybe Text,
-    merchantTrack :: Maybe Text,
-    clientConfig :: Maybe Text,
-    resellerId :: Maybe Text
+    acl :: Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -138,20 +139,22 @@ registerRelease ::
   TokenInfo ->
   ReleaseRegisterReq ->
   m ReleaseRegisterRes
-registerRelease _ ReleaseRegisterReq {..} = do
+registerRelease tokenInfo ReleaseRegisterReq {..} = do
+  encPerson <- B.runInReplica $ QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
+  accessMatrixItems <- B.runInReplica $ QMatrix.findAllByRoleId encPerson.roleId
+  decPerson <- decrypt encPerson
   return
     ReleaseRegisterRes
-      { username = "Sidharth",
+      { username = encPerson.firstName <> " " <> encPerson.lastName,
         token = token,
-        otpEnabled = False,
-        merchantId = Just "merchantId",
-        email = "sidharth.sethu@juspay.in",
+        merchantId = "juspay",
+        email = fromMaybe decPerson.mobileNumber decPerson.email,
         context = "JUSPAY",
-        acl = Just "{\"mjos_manager\":\"RW\"}",
-        merchantTrack = Nothing,
-        clientConfig = Nothing,
-        resellerId = Nothing
+        acl = mapBppAclToGalactusAcl accessMatrixItems
       }
+
+mapBppAclToGalactusAcl :: [DMatrix.AccessMatrixItem] -> Text
+mapBppAclToGalactusAcl accessList = TE.decodeUtf8 $ BSL.toStrict $ Aeson.encode $ foldl (\acc accessItem -> if accessItem.userAccessType == DMatrix.USER_FULL_ACCESS then KeyMap.insert (Key.fromText $ T.toLower $ show accessItem.userActionType) "RW" acc else acc) (KeyMap.empty :: KeyMap.KeyMap Text) accessList
 
 getProductSpecInfo ::
   BeamFlow m r =>

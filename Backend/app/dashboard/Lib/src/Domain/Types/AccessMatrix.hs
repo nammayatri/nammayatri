@@ -16,6 +16,7 @@
 
 module Domain.Types.AccessMatrix where
 
+import Data.Aeson as Aeson
 import Data.Singletons.TH
 import Domain.Types.Merchant
 import Domain.Types.Role as DRole
@@ -268,6 +269,10 @@ data UserActionType
   | UPDATE_VEHICLE_MANUFACTURING
   | REFUND_BY_PAYOUT
   | SECURITY_DEPOSIT_STATUS
+  | MJOS_RELEASE
+  | MJOS_MANAGER
+  | MJOS_READONLY
+  | MJOS_PACKAGE_MANAGER
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)
