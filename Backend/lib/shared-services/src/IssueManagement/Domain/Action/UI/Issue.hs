@@ -506,6 +506,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
               <> "\n"
               <> "Feedback Message : "
               <> desc
+              <> "\n"
               <> "City : "
               <> show moCity.city
               <> "\n"
