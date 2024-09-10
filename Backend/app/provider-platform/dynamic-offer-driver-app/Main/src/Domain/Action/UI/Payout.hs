@@ -169,6 +169,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
   payoutConfig <- CPC.findByPrimaryKey merchOpCity vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
   when payoutConfig.isPayoutEnabled $ do
     redisLockDriverId <- Redis.tryLockRedis lockKey 10800
+    logDebug $ "Backlog Payout for person: " <> personId.getId <> " with vpa: " <> show mbVpa <> " and redisLockDriverId: " <> show redisLockDriverId
     dailyStats_ <- if not redisLockDriverId then pure [] else QDailyStats.findAllByPayoutStatusAndReferralEarningsAndDriver DS.Verifying personId
     transporterConfig <- SCTC.findByMerchantOpCityId merchOpCity (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchOpCity.getId)
     localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
@@ -177,6 +178,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
       person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       let statsIds = map (.id) dailyStats
           pendingAmount = sum $ map (.referralEarnings) dailyStats
+      logDebug $ "Backlog Payout for person: " <> personId.getId <> " with amount: " <> show pendingAmount
       case (mbVpa, pendingAmount <= payoutConfig.thresholdPayoutAmountPerPerson) of
         (Just vpa, True) -> do
           uid <- generateGUID

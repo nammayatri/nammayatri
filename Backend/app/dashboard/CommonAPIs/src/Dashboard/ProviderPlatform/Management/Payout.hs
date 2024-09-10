@@ -26,6 +26,7 @@ data PayoutEndpoint
   | PostPayoutPayoutVerifyFraudStatusEndpoint
   | PostPayoutPayoutRetryFailedEndpoint
   | PostPayoutPayoutRetryAllWithStatusEndpoint
+  | PostPayoutPayoutPendingPayoutEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "PayoutEndpoint"

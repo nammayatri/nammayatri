@@ -22,10 +22,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("payout" :> (GetPayoutPayoutReferralHistory :<|> GetPayoutPayoutHistory :<|> PostPayoutPayoutVerifyFraudStatus :<|> PostPayoutPayoutRetryFailed :<|> PostPayoutPayoutRetryAllWithStatus))
+type API = ("payout" :> (GetPayoutPayoutReferralHistory :<|> GetPayoutPayoutHistory :<|> PostPayoutPayoutVerifyFraudStatus :<|> PostPayoutPayoutRetryFailed :<|> PostPayoutPayoutRetryAllWithStatus :<|> PostPayoutPayoutPendingPayout))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getPayoutPayoutReferralHistory merchantId city :<|> getPayoutPayoutHistory merchantId city :<|> postPayoutPayoutVerifyFraudStatus merchantId city :<|> postPayoutPayoutRetryFailed merchantId city :<|> postPayoutPayoutRetryAllWithStatus merchantId city
+handler merchantId city = getPayoutPayoutReferralHistory merchantId city :<|> getPayoutPayoutHistory merchantId city :<|> postPayoutPayoutVerifyFraudStatus merchantId city :<|> postPayoutPayoutRetryFailed merchantId city :<|> postPayoutPayoutRetryAllWithStatus merchantId city :<|> postPayoutPayoutPendingPayout merchantId city
 
 type GetPayoutPayoutReferralHistory = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'PAYOUT_MANAGEMENT :> API.Types.ProviderPlatform.Management.Payout.GetPayoutPayoutReferralHistory)
 
@@ -36,6 +36,8 @@ type PostPayoutPayoutVerifyFraudStatus = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT '
 type PostPayoutPayoutRetryFailed = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'PAYOUT_MANAGEMENT :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutRetryFailed)
 
 type PostPayoutPayoutRetryAllWithStatus = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'PAYOUT_MANAGEMENT :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutRetryAllWithStatus)
+
+type PostPayoutPayoutPendingPayout = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'PAYOUT_MANAGEMENT :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutPendingPayout)
 
 getPayoutPayoutReferralHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.PayoutReferralHistoryRes)
 getPayoutPayoutReferralHistory merchantShortId opCity apiTokenInfo areActivatedRidesOnly customerPhoneNo driverId driverPhoneNo from limit offset to = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Payout.getPayoutPayoutReferralHistory merchantShortId opCity apiTokenInfo areActivatedRidesOnly customerPhoneNo driverId driverPhoneNo from limit offset to
@@ -51,3 +53,6 @@ postPayoutPayoutRetryFailed merchantShortId opCity apiTokenInfo req = withFlowHa
 
 postPayoutPayoutRetryAllWithStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Payout.RetryPayoutsReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPayoutPayoutRetryAllWithStatus merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Payout.postPayoutPayoutRetryAllWithStatus merchantShortId opCity apiTokenInfo req
+
+postPayoutPayoutPendingPayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Payout.PendingPayoutReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postPayoutPayoutPendingPayout merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Payout.postPayoutPayoutPendingPayout merchantShortId opCity apiTokenInfo req

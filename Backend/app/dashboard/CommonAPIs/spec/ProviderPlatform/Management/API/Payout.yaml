@@ -61,6 +61,16 @@ apis:
       response:
         type: APISuccess
 
+  - POST: # payout For Pending Vpa status.
+      endpoint: payout/pendingPayout
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+      request:
+        type: PendingPayoutReq
+      response:
+        type: APISuccess
+      migrate:
+        endpointV2:
+
 types:
 
   PayoutReferralHistoryRes:
@@ -106,3 +116,6 @@ types:
     - status: PayoutOrderStatus
     - entityNames: [EntityName]
     - derive: "'HideSecrets"
+  PendingPayoutReq:
+   - personId : Id Driver
+   - derive: "'HideSecrets"
