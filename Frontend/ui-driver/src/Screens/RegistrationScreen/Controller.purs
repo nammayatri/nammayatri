@@ -69,6 +69,8 @@ import Engineering.Helpers.Commons (liftFlow)
 import Common.RemoteConfig (fetchRemoteConfigString)
 import RemoteConfig
 import DecodeUtil (decodeForeignObject)
+import Engineering.Helpers.Events as EHE
+import Helpers.Utils as HU
 
 instance showAction :: Show Action where
   show _ = ""
@@ -143,7 +145,7 @@ data Action = BackPressed
             | SupportClick Boolean
             | WhatsAppClick
             | CallButtonClick
-            | ChooseVehicleCategory Int
+            | ChooseVehicleCategory Int ST.VehicleCategory
             | ContinueButtonAction PrimaryButtonController.Action
             | ExpandOptionalDocs
             | OptionsMenuAction OptionsMenu.Action
@@ -175,7 +177,8 @@ eval BackPressed state = do
 
 eval (RegistrationAction step ) state = do
        let item = step.stage
-       let hvFlowIds = decodeForeignObject (getHVRemoteConfig $ fetchRemoteConfigString "app_configs") (hvConfigs JB.getAppName)
+           hvFlowIds = decodeForeignObject (getHVRemoteConfig $ fetchRemoteConfigString "app_configs") (hvConfigs JB.getAppName)
+           _ = EHE.addEvent (EHE.defaultEventObject $ HU.getRegisterationStepClickEventName item)
        case item of 
           DRIVING_LICENSE_OPTION -> exit $ GoToUploadDriverLicense state
           VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state step.rcNumberPrefixList
@@ -328,7 +331,8 @@ eval ContactSupport state = continueWithCmd state [do
   pure NoAction
   ]
 
-eval (ChooseVehicleCategory index) state = 
+eval (ChooseVehicleCategory index item) state = do
+  let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getVehicleCategorySelectedEvent item)
   continue state { props { selectedVehicleIndex = Mb.Just index } }
 
 eval (ContinueButtonAction PrimaryButtonController.OnClick) state = do
