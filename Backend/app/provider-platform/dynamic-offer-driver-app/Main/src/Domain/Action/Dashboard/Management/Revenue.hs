@@ -46,9 +46,8 @@ getRevenueAllFeeHistory merchantShortId opCity mbFrom mbTo = do
   let defaultFrom = UTCTime (utctDay now) 0
       from = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
-  dueFees <- CHDriverFee.findAllByStatus merchant.id [Common.PAYMENT_PENDING, Common.PAYMENT_OVERDUE] Nothing Nothing
-  paidFees <- CHDriverFee.findAllByStatus merchant.id [Common.CLEARED, Common.COLLECTED_CASH, Common.EXEMPTED] (Just from) (Just to)
-  getAllFeeFromDriverFee `mapM` (dueFees <> paidFees)
+  allFees <- CHDriverFee.findAllByStatus merchant.id [Common.CLEARED, Common.COLLECTED_CASH, Common.EXEMPTED, Common.PAYMENT_PENDING, Common.PAYMENT_OVERDUE] (Just from) (Just to)
+  getAllFeeFromDriverFee `mapM` allFees
 
 getAllFeeFromDriverFee :: MonadFlow m => CHDriverFee.DriverFeeAggregated -> m Common.AllFees
 getAllFeeFromDriverFee CHDriverFee.DriverFeeAggregated {..} = do
