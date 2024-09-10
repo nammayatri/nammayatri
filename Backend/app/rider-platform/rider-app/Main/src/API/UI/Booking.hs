@@ -53,7 +53,8 @@ type API =
              :> QueryParam "status" SRB.BookingStatus
              :> QueryParam "clientId" (Id DC.Client)
              :> Get '[JSON] DBooking.BookingListRes
-           :<|> "favouriteList"
+           :<|> "favourites"
+             :> "list"
              :> TokenAuth
              :> QueryParam "limit" Integer
              :> QueryParam "offset" Integer
