@@ -39,6 +39,7 @@ import Screens.Types as ST
 import Helpers.Utils as HU
 import Effect.Unsafe (unsafePerformEffect)
 import Storage (KeyStore(..), getValueToLocalStore)
+import Engineering.Helpers.Events as EHE
 
 instance showAction :: Show Action where
   show _ = ""
@@ -69,6 +70,7 @@ data ScreenOutput = GoBack
 eval :: Action -> DocumentCaptureScreenState -> Eval Action ScreenOutput DocumentCaptureScreenState
 
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = continueWithCmd state [do
+  let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getDocUploadEventName state.data.docType) { module = HU.getRegisterationStepModule state.data.docType, source = HU.getRegisterationStepScreenSource state.data.docType}
   _ <- liftEffect $ JB.uploadFile false
   pure NoAction]
 

@@ -1485,7 +1485,7 @@ pushSDKEvents :: Flow GlobalState (Either ErrorResponse ApiSuccessResult)
 pushSDKEvents = do
     headers <- getHeaders "" false
     events <- liftFlow $ Events.getEvents
-    withAPIResult (EP.pushSDKEvents "") unwrapResponse $ callAPI headers (SDKEventsReq { event : events })
+    withAPIResult (EP.pushSDKEvents "") unwrapResponse $ callAPI headers (SDKEventsReq { event : events, events : [] })
     where
         unwrapResponse x = x
 -------------------------------------------------------------------------- List all lms modules --------------------------------------------------------------------------

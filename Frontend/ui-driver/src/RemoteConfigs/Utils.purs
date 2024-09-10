@@ -29,6 +29,7 @@ import Data.Maybe (Maybe(..))
 import Common.RemoteConfig.Utils
 import Screens.Types as ST
 import Resource.Constants (oneDayInMS)
+import RemoteConfig.Types as Types
 
 foreign import getSubsRemoteConfig :: String -> Foreign
 foreign import getHVRemoteConfig :: String -> Foreign
@@ -143,4 +144,16 @@ defaultMetroCoinsEvent :: MetroCoinsEvent
 defaultMetroCoinsEvent = {
   coins : 0,
   minDistance : 0
+}
+
+eventsConfig :: String -> Types.EventsConfig
+eventsConfig key =
+    let stringifiedConf = fetchRemoteConfigString key
+    in decodeForeignObject (parseJSON stringifiedConf) defEventsConfig
+
+defEventsConfig :: Types.EventsConfig
+defEventsConfig = {
+  enabled : false,
+  pushEventChunkSize : 10,
+  loggingIntervalInMs : 10000.0
 }

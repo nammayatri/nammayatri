@@ -66,3 +66,9 @@ type MetroCoinsEvent = {
   coins :: Int,
   minDistance :: Int
 }
+
+type EventsConfig = {
+  enabled :: Boolean,
+  pushEventChunkSize :: Int,
+  loggingIntervalInMs :: Number
+}
