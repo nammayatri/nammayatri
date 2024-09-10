@@ -7,6 +7,7 @@ module Domain.Action.Dashboard.Management.Payout
     postPayoutPayoutVerifyFraudStatus,
     postPayoutPayoutRetryFailed,
     postPayoutPayoutRetryAllWithStatus,
+    postPayoutPayoutPendingPayout,
   )
 where
 
@@ -17,6 +18,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time (LocalTime, addUTCTime, minutesToTimeZone, utcToLocalTime, utctDay)
 import qualified Domain.Action.UI.Payout as DAP
+import qualified Domain.Action.UI.Payout as Payout
 import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Merchant
@@ -255,6 +257,19 @@ postPayoutPayoutRetryAllWithStatus merchantShortId opCity req = do
   let entityNames = map castEntityName req.entityNames
   payoutOrders <- runInReplica $ QPayoutOrder.findAllWithStatusAndEntity req.limit req.offset req.status entityNames
   mapM_ (callPayoutAndUpdateDailyStats merchant merchantOpCity) payoutOrders
+  pure Success
+
+postPayoutPayoutPendingPayout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DTP.PendingPayoutReq -> Environment.Flow APISuccess
+postPayoutPayoutPendingPayout _merchantShortId _opCity req = do
+  let personId = req.personId
+  person <- QPerson.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+  mbVehicle <- QVeh.findById (cast personId)
+  let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
+  payoutConfig <- CPC.findByPrimaryKey person.merchantOperatingCityId vehicleCategory >>= fromMaybeM (InternalError $ "Payout config not present for cityId " <> person.merchantOperatingCityId.getId)
+  dInfo <- QDI.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+  when (isNothing dInfo.payoutVpa) $ throwError $ InvalidRequest $ "Vpa is not available for person: " <> personId.getId
+  when payoutConfig.isPayoutEnabled $ do
+    Payout.processPreviousPayoutAmount (cast personId) dInfo.payoutVpa person.merchantOperatingCityId
   pure Success
 
 callPayoutAndUpdateDailyStats :: Domain.Types.Merchant.Merchant -> DMOC.MerchantOperatingCity -> PO.PayoutOrder -> Environment.Flow ()
