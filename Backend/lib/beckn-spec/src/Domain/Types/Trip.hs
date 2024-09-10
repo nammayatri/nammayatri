@@ -309,13 +309,6 @@ skipDriverPoolCheck (Ambulance OneWayOnDemandDynamicOffer) = False
 skipDriverPoolCheck (Delivery OneWayOnDemandDynamicOffer) = False
 skipDriverPoolCheck _ = True
 
-isRideOtpBooking :: TripCategory -> Bool
-isRideOtpBooking (OneWay OneWayRideOtp) = True
-isRideOtpBooking (Rental RideOtp) = True
-isRideOtpBooking (RideShare RideOtp) = True
-isRideOtpBooking (Delivery _) = True
-isRideOtpBooking _ = False
-
 -- Move it to configs later if required
 isEndOtpRequired :: TripCategory -> Bool
 isEndOtpRequired (Rental _) = True

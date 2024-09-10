@@ -36,9 +36,10 @@ getFareProductType :: TripCategory -> FareProductType
 getFareProductType tripCategory =
   case tripCategory of
     OneWay OneWayRideOtp -> ONE_WAY_SPECIAL_ZONE
-    Rental OnDemandStaticOffer -> RENTAL
-    InterCity OneWayOnDemandStaticOffer Nothing -> INTER_CITY
-    Ambulance OneWayOnDemandDynamicOffer -> AMBULANCE
+    CrossCity OneWayRideOtp _ -> ONE_WAY_SPECIAL_ZONE
+    Rental _ -> RENTAL
+    InterCity _ _ -> INTER_CITY
+    Ambulance _ -> AMBULANCE
     _ -> DRIVER_OFFER
 
 -- TODO :: Deprecated, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
