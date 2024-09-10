@@ -36,6 +36,7 @@ toQuoteDetails fareProductType mbTripCategory distanceToNearestDriver rentalDeta
     Just tripCategory ->
       case tripCategory of
         OneWay OneWayRideOtp -> getSpecialZoneQuote specialZoneQuoteId >>= fromMaybeM (InternalError "No special zone details")
+        CrossCity OneWayRideOtp _ -> getSpecialZoneQuote specialZoneQuoteId >>= fromMaybeM (InternalError "No special zone details")
         InterCity _ _ -> getInterCityQuote specialZoneQuoteId >>= fromMaybeM (InternalError "No inter city details")
         RideShare _ -> getInterCityQuote specialZoneQuoteId >>= fromMaybeM (InternalError "No inter city details")
         Rental _ -> getRentalDetails rentalDetailsId >>= fromMaybeM (InternalError "No rental details")

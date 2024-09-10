@@ -121,6 +121,7 @@ tripCategoryToFulfillmentType = \case
   d@(Delivery _) -> show d
   -- TODO :: To be removed after released ---- STARTS HERE
   OneWay OneWayRideOtp -> show Enums.RIDE_OTP
+  CrossCity OneWayRideOtp _ -> show Enums.RIDE_OTP
   RideShare RideOtp -> show Enums.RIDE_OTP
   Rental _ -> show Enums.RENTAL
   InterCity _ _ -> show Enums.INTER_CITY

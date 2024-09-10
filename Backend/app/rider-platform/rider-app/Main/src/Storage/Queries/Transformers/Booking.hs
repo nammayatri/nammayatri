@@ -120,6 +120,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
         Just tripCategory ->
           case tripCategory of
             OneWay OneWayRideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
+            CrossCity OneWayRideOtp _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
             RideShare RideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
             Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
             InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocationId
@@ -149,6 +150,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
         Just tripCategory ->
           case tripCategory of
             OneWay OneWayRideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId
+            CrossCity OneWayRideOtp _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId
             RideShare RideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId
             Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
             InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocId
