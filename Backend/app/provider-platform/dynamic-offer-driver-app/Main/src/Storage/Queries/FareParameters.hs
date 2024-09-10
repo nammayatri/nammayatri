@@ -16,6 +16,7 @@
 module Storage.Queries.FareParameters where
 
 import Domain.Types.FareParameters as DFP
+import qualified Domain.Types.FarePolicy as FP
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -149,7 +150,9 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                       { onFare = cardChargeOnFare,
                         fixed = fixedCardCharge
                       },
-                updatedAt = fromMaybe now updatedAt
+                platformFeeChargesBy = fromMaybe FP.Subscription platformFeeChargesBy,
+                updatedAt = fromMaybe now updatedAt,
+                ..
               }
       Nothing -> return Nothing
 
@@ -183,6 +186,8 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.insuranceCharge = insuranceCharge,
         BeamFP.cardChargeOnFare = cardCharge >>= (.onFare),
         BeamFP.fixedCardCharge = cardCharge >>= (.fixed),
+        BeamFP.platformFeeChargesBy = Just platformFeeChargesBy,
         BeamFP.currency = Just currency,
-        BeamFP.updatedAt = Just updatedAt
+        BeamFP.updatedAt = Just updatedAt,
+        ..
       }

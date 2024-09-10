@@ -57,9 +57,9 @@ fromTTypeFarePolicyAmbulanceDetails BeamFPAD.FarePolicyAmbulanceDetailsSlabT {..
 instance ToTType' BeamFPAD.FarePolicyAmbulanceDetailsSlab BeamFPAD.FullFarePolicyAmbulanceDetailsSlab where
   toTType' (KTI.Id farePolicyId, Domain.FPAmbulanceDetailsSlab {..}) =
     BeamFPAD.FarePolicyAmbulanceDetailsSlabT
-      { platformFeeCharge = Domain.platformFeeCharge <$> platformFeeInfo,
-        platformFeeCgst = Domain.cgst <$> platformFeeInfo,
-        platformFeeSgst = Domain.sgst <$> platformFeeInfo,
+      { platformFeeCharge = Domain.platformFeeCharge <$> (platformFeeInfo :: Maybe Domain.PlatformFeeInfo),
+        platformFeeCgst = (.cgst) <$> (platformFeeInfo :: Maybe Domain.PlatformFeeInfo),
+        platformFeeSgst = (.sgst) <$> (platformFeeInfo :: Maybe Domain.PlatformFeeInfo),
         waitingCharge = (.waitingCharge) <$> waitingChargeInfo,
         nightShiftCharge = nightShiftCharge,
         freeWaitingTime = (.freeWaitingTime) <$> waitingChargeInfo,

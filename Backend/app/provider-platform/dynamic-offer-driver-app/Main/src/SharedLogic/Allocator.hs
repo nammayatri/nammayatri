@@ -131,7 +131,8 @@ data CalculateDriverFeesJobData = CalculateDriverFeesJobData
     scheduleOverlay :: Maybe Bool,
     scheduleManualPaymentLink :: Maybe Bool,
     scheduleDriverFeeCalc :: Maybe Bool,
-    createChildJobs :: Maybe Bool
+    createChildJobs :: Maybe Bool,
+    recalculateManualReview :: Maybe Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

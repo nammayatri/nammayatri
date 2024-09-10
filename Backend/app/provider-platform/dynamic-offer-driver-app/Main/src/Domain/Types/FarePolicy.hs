@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 
 module Domain.Types.FarePolicy (module Reexport, module Domain.Types.FarePolicy) where
 
@@ -32,6 +33,7 @@ import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI
+import Kernel.Utils.GenericPretty
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForJSON)
 
 data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
@@ -52,6 +54,10 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     farePolicyDetails :: FarePolicyDetailsD s,
     cancellationFarePolicyId :: Maybe (Id DTC.CancellationFarePolicy),
     description :: Maybe Text,
+    platformFee :: Maybe HighPrecMoney,
+    sgst :: Maybe HighPrecMoney,
+    cgst :: Maybe HighPrecMoney,
+    platformFeeChargesBy :: PlatformFeeMethods,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -109,13 +115,17 @@ data CongestionChargeMultiplier
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
-$(mkBeamInstancesForJSON ''CongestionChargeMultiplier)
+data PlatformFeeMethods = Subscription | FixedAmount | None | SlabBased
+  deriving (Generic, Show, Eq, FromJSON, Read, Ord, ToJSON, ToSchema)
+  deriving (PrettyShow) via Showable PlatformFeeMethods
 
 data FarePolicyType = Progressive | Slabs | Rental | InterCity | Ambulance
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 $(mkBeamInstancesForEnum ''FarePolicyType)
+$(mkBeamInstancesForJSON ''CongestionChargeMultiplier)
+$(mkBeamInstancesForEnum ''PlatformFeeMethods)
 
 data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
   { id :: Id FarePolicy,
@@ -138,6 +148,10 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     farePolicyDetails :: FarePolicyDetailsD s,
     description :: Maybe Text,
     cancellationFarePolicy :: Maybe DTC.CancellationFarePolicy,
+    platformFee :: Maybe HighPrecMoney,
+    sgst :: Maybe HighPrecMoney,
+    cgst :: Maybe HighPrecMoney,
+    platformFeeChargesBy :: PlatformFeeMethods,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
