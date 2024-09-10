@@ -192,6 +192,7 @@ filterRequiredBreakups fParamsType breakup = do
 mkFulfillmentType :: DCT.TripCategory -> Text
 mkFulfillmentType = \case
   DCT.OneWay DCT.OneWayRideOtp -> "RIDE_OTP"
+  DCT.CrossCity DCT.OneWayRideOtp _ -> "RIDE_OTP"
   DCT.RideShare DCT.RideOtp -> "RIDE_OTP"
   DCT.Rental _ -> "RENTAL"
   DCT.InterCity _ _ -> "INTER_CITY"

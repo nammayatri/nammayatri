@@ -228,6 +228,7 @@ castVariant Variant.SUV_PLUS = (show Enums.CAB, "SUV_PLUS")
 mkFulfillmentType :: DCT.TripCategory -> Text
 mkFulfillmentType = \case
   DCT.OneWay DCT.OneWayRideOtp -> show Enums.RIDE_OTP
+  DCT.CrossCity DCT.OneWayRideOtp _ -> show Enums.RIDE_OTP
   DCT.RideShare DCT.RideOtp -> show Enums.RIDE_OTP
   DCT.Rental _ -> show Enums.RENTAL
   DCT.InterCity _ _ -> show Enums.INTER_CITY
@@ -1179,6 +1180,7 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
     }
   where
     mapToFulfillmentType (DTC.OneWay DTC.OneWayRideOtp) = show Enums.RIDE_OTP
+    mapToFulfillmentType (DTC.CrossCity DTC.OneWayRideOtp _) = show Enums.RIDE_OTP
     mapToFulfillmentType (DTC.RideShare DTC.RideOtp) = show Enums.RIDE_OTP
     mapToFulfillmentType (DTC.Rental _) = show Enums.RENTAL
     mapToFulfillmentType (DTC.InterCity _ _) = show Enums.INTER_CITY
