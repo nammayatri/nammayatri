@@ -1473,3 +1473,4 @@ getBN stringKey =
         DEFAULT_CONTACT_NOT_SET -> "ডিফল্ট যোগাযোগ সেট করা হয়নি"
         DRIVER -> "ড্রাইভার"
         RECOMMEND_SHARE_MANUALLY -> "আপনি শেয়ার বোতাম ব্যবহার করে কাউকে ম্যানুয়ালি শেয়ার করতে পারেন"
+        CANNOT_ADD_OWN_NUMBER -> "আপনার নম্বর জরুরী যোগাযোগ হিসাবে যোগ করা যাবে না"

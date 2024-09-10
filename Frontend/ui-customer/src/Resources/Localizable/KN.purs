@@ -1477,3 +1477,4 @@ getKN stringKey =
         DEFAULT_CONTACT_NOT_SET -> "ಡಿಫಾಲ್ಟ್ ಸಂಪರ್ಕವನ್ನು ಸೆಟ್ ಮಾಡಿ"
         DRIVER -> "ಚಾಲಕ"
         RECOMMEND_SHARE_MANUALLY -> "ನೀವು ಶೇರ್ ಬಟನ್ ಬಳಸಿ ಯಾರಾದರೂ ಜೊತೆ ಶೇರ್ ಮಾಡಬಹುದು"
+        CANNOT_ADD_OWN_NUMBER -> "ನಿಮ್ಮ ಸಂಖ್ಯೆಯನ್ನು ತುರ್ತು ಸಂಪರ್ಕವಾಗಿ ಸೇರಿಸಲಾಗುವುದಿಲ್ಲ"

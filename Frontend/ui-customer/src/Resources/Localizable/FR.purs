@@ -1477,3 +1477,4 @@ getFR stringKey =
         DEFAULT_CONTACT_NOT_SET -> "Default contact not set"
         DRIVER -> "Conducteur"
         RECOMMEND_SHARE_MANUALLY -> "Vous pouvez également partager manuellement avec n'importe qui en utilisant le bouton de partage"
+        CANNOT_ADD_OWN_NUMBER -> "Votre numéro ne peut pas être ajouté comme contact d'urgence"
