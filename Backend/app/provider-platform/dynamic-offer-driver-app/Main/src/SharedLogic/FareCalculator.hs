@@ -340,6 +340,10 @@ calculateFareParameters params = do
                   },
             updatedAt = now,
             currency = params.currency,
+            platformFee = fp.platformFee,
+            sgst = fp.sgst,
+            cgst = fp.cgst,
+            platformFeeChargesBy = fp.platformFeeChargesBy,
             ..
           }
   KP.forM_ debugLogs $ logTagInfo ("FareCalculator:FarePolicyId:" <> show fp.id.getId)
