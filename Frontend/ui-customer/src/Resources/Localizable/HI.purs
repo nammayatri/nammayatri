@@ -1474,3 +1474,4 @@ getHI stringKey =
         DEFAULT_CONTACT_NOT_SET -> "डिफ़ॉल्ट संपर्क सेट नहीं है"
         DRIVER -> "ड्राइवर"
         RECOMMEND_SHARE_MANUALLY -> "आप शेयर बटन का उपयोग करके किसी के साथ भी मैन्युअल रूप से शेयर कर सकते हैं"
+        CANNOT_ADD_OWN_NUMBER -> "आपका नंबर आपातकालीन संपर्क के रूप में नहीं जोड़ा जा सकता"

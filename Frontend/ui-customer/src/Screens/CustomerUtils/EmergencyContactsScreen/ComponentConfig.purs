@@ -17,12 +17,13 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
-import Prelude (not, (<>), (==), ($), (&&), (>), (<))
+import Prelude (not, (<>), (==), ($), (&&), (>), (<), (||))
 import PrestoDOM (Length(..), Margin(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, height, margin, padding, text, textSize, width, imageUrl, visibility, stroke)
 import Screens.EmergencyContactsScreen.ScreenData as EMData
 import Screens.Types (EmergencyContactsScreenState, DropDownWithHeaderConfig, NewContacts)
 import Styles.Colors as Color
 import Components.PrimaryEditText as PrimaryEditText
+import Storage (KeyStore(..), getValueToLocalStore)
 
 --------------------------------------------------- genericHeaderConfig -----------------------------------------------------
 genericHeaderConfig :: EmergencyContactsScreenState -> GenericHeader.Config
@@ -60,6 +61,10 @@ genericHeaderConfig state =
 primaryEditTextConfig :: EmergencyContactsScreenState -> PrimaryEditText.Config
 primaryEditTextConfig state = let
     config = PrimaryEditText.config
+    isOwnNumber = state.data.manualContactNumber == getValueToLocalStore MOBILE_NUMBER
+    errorMessage = if isOwnNumber 
+                   then getString CANNOT_ADD_OWN_NUMBER
+                   else getString INVALID_MOBILE_NUMBER
     primaryEditTextConfig' = config
       { editText
         { color = Color.black800
@@ -80,10 +85,10 @@ primaryEditTextConfig state = let
       , margin = (Margin 16 16 16 0)
       , id = (EHC.getNewIDWithTag "TrustedNumberPET")
       , errorLabel
-        { text = (getString INVALID_MOBILE_NUMBER)
+        { text = errorMessage
         , margin = (MarginTop 1)
         }
-      , showErrorLabel = not state.props.validManualContact
+      , showErrorLabel = not state.props.validManualContact || isOwnNumber
       , width = MATCH_PARENT
       }
     in primaryEditTextConfig'

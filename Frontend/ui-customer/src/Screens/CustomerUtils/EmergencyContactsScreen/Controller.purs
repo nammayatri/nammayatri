@@ -38,6 +38,7 @@ import Data.Either (Either(..))
 import Components.DropDownWithHeader as DropDownWithHeader
 import Services.API as API
 import Screens.EmergencyContactsScreen.ScreenData (neverShareRideOption, shareWithTimeContraintsRideOption)
+import Storage (KeyStore(..), getValueToLocalStore)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -115,20 +116,37 @@ data ScreenOutput
 eval :: Action -> EmergencyContactsScreenState -> Eval Action ScreenOutput EmergencyContactsScreenState
 
 eval (TrustedNamePET (PrimaryEditText.TextChanged id value)) state = 
-  continue state{ data { manualContactName = value}, props{validManualName = not $ DS.null value }}
+  let trimmedValue = DS.trim value
+  in
+    continue state{ data { manualContactName = trimmedValue}, props{validManualName = not $ DS.null trimmedValue }}
 
 eval (TrustedNumberPET (PrimaryEditText.TextChanged id value)) state = 
-  let mobileNumberValid = case (charAt 0 value) of 
-                                Just a -> DA.notElem a ['0', '1', '2', '3', '4', '5']
-                                Nothing -> true
-  in continue state{ data { manualContactNumber = value}, props{validManualContact = mobileNumberValid }}
+  let 
+    userMobileNumber = getValueToLocalStore MOBILE_NUMBER
+    mobileNumberValid = case (charAt 0 value) of 
+                          Just a -> DA.notElem a ['0', '1', '2', '3', '4', '5']
+                          Nothing -> true
+    notOwnNumber = value /= userMobileNumber
+  in continue state{ 
+      data { manualContactNumber = value}, 
+      props { validManualContact = mobileNumberValid && notOwnNumber }
+    }
 
 eval (PrimaryButtonActionControll PrimaryButton.OnClick) state =
   if state.props.showAddContactOptions then do
     let newContact = createNewContact state.data.manualContactName state.data.manualContactNumber $ DA.length state.data.selectedContacts
         updatedContactList = DA.snoc state.data.emergencyContactsList newContact
         updatedContactSC = DA.snoc state.data.selectedContacts newContact
-        newState = state { data { emergencyContactsList = updatedContactList, selectedContacts = updatedContactSC }, props {showAddContactOptions = false, addContactsManually = false} }
+        newState = state { data { emergencyContactsList = updatedContactList
+                                , selectedContacts = updatedContactSC
+                                , manualContactName = ""
+                                , manualContactNumber = ""
+                                }
+                         , props { showAddContactOptions = false
+                                 , addContactsManually = false
+                                 , validManualName = false 
+                                 }
+                         }
     pure $ hideKeyboardOnNavigation true
     updateAndExit newState $ PostContacts newState false 
   else if null state.data.selectedContacts then

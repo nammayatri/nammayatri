@@ -1475,3 +1475,4 @@ getEN stringKey =
         DEFAULT_CONTACT_NOT_SET -> "Default contact not set"
         DRIVER -> "Driver"
         RECOMMEND_SHARE_MANUALLY -> "You can also share manually with anybody using the share button"
+        CANNOT_ADD_OWN_NUMBER -> "Your number cannot be added as an emergency contact."
