@@ -233,12 +233,6 @@ instance FromHttpApiData TripCategory where
 instance ToHttpApiData TripCategory where
   toUrlPiece = show
 
-isRideOtpBooking :: TripCategory -> Bool
-isRideOtpBooking (OneWay OneWayRideOtp) = True
-isRideOtpBooking (Rental RideOtp) = True
-isRideOtpBooking (RideShare RideOtp) = True
-isRideOtpBooking _ = False
-
 -- Move it to configs later if required
 isEndOtpRequired :: TripCategory -> Bool
 isEndOtpRequired (Rental _) = True
