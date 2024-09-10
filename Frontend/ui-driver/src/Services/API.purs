@@ -3631,8 +3631,28 @@ instance encodeDetectCityResp  :: Encode DetectCityResp where encode = defaultEn
 
 ----------------------------- SDK Events -----------------------------------------------------
 newtype SDKEventsReq = SDKEventsReq {
-  event :: String
+  event :: String,
+  events :: Array EventsPayload
 }
+
+newtype EventsPayload = EventsPayload {
+  eventName :: String,
+  module :: Maybe String,
+  clientType :: String,
+  sessionId :: String,
+  payload :: Maybe String,
+  source :: String,
+  userId :: String,
+  timestamp :: String,
+  vehicleType :: Maybe String,
+  cityId :: Maybe String
+}
+
+derive instance genericEventsPayload :: Generic EventsPayload _
+instance standardEncodeEventsPayload :: StandardEncode EventsPayload where standardEncode (EventsPayload res) = standardEncode res
+instance showEventsPayload :: Show EventsPayload where show = genericShow
+instance decodeEventsPayload :: Decode EventsPayload where decode = defaultDecode
+instance encodeEventsPayload  :: Encode EventsPayload where encode = defaultEncode
 
 
 instance makeSDKEventsReq :: RestEndpoint SDKEventsReq where

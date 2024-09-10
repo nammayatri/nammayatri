@@ -43,6 +43,8 @@ import Screens.RegistrationScreen.ComponentConfig (logoutPopUp)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Web.HTML.History (back)
+import Engineering.Helpers.Events as EHE
+import Helpers.Utils as HU
 
 screen :: ST.PermissionsScreenState -> Screen Action ST.PermissionsScreenState ScreenOutput
 screen initialState =
@@ -54,6 +56,7 @@ screen initialState =
     void $ JB.storeCallBackNotificationPermission push NotificationPermissionCallBack
     void $ JB.storeCallBackOverlayPermission push OverlayPermissionSwitchCallBack
     void $ if initialState.data.config.permissions.locationPermission then JB.storeCallBackDriverLocationPermission push LocationPermissionCallBack else pure unit
+    let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getRegisterationStepScreenLoadedEventName ST.GRANT_PERMISSION)
     pure $ pure unit)]
   , eval:
       ( \state action -> do

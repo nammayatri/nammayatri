@@ -157,6 +157,9 @@ data KeyStore = USER_NAME
                 | IS_ON_FREE_TRIAL
                 | INTRODUCING_YATRI_POINTS_POPUP_LIMIT
                 | PARCEL_IMAGE_UPLOADED
+                | LOGS_TRACKING
+                | FUNCTION_EXECUTED_IN_SESSION
+                | EVENT_STORAGE
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
