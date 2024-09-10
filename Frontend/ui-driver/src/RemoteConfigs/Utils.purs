@@ -31,6 +31,7 @@ import Screens.Types as ST
 import Resource.Constants (oneDayInMS)
 import Debug(spy)
 import Common.RemoteConfig (BundleLottieConfig)
+import RemoteConfig.Types as Types
 
 foreign import getSubsRemoteConfig :: String -> Foreign
 foreign import getHVRemoteConfig :: String -> Foreign
@@ -209,3 +210,15 @@ getCoinsConfigData city = do
     let config = fetchRemoteConfigString "coins_config"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultCoinsConfig
     getCityBasedConfig value $ toLower city
+
+eventsConfig :: String -> Types.EventsConfig
+eventsConfig key =
+    let stringifiedConf = fetchRemoteConfigString key
+    in decodeForeignObject (parseJSON stringifiedConf) defEventsConfig
+
+defEventsConfig :: Types.EventsConfig
+defEventsConfig = {
+  enabled : false,
+  pushEventChunkSize : 10,
+  loggingIntervalInMs : 10000.0
+}

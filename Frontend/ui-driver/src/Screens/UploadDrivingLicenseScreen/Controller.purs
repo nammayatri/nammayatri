@@ -50,6 +50,7 @@ import Components.OptionsMenu as OptionsMenu
 import Components.BottomDrawerList as BottomDrawerList
 import Screens.Types as ST
 import JBridge as JB
+import Engineering.Helpers.Events as EHE
 
 
 instance showAction :: Show Action where
@@ -217,10 +218,13 @@ eval (RegistrationModalAction (RegistrationModalController.OnCloseClick)) state 
 eval (PrimaryButtonAction (PrimaryButton.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
   if isJust state.data.dateOfIssue then  exit $ ValidateDataCall state
-  else if (state.props.openHowToUploadManual == false) then 
+  else if (not state.props.openHowToUploadManual) then do
+    let _ = EHE.addEvent (EHE.defaultEventObject "upload_dl_clicked") 
+    let _ = EHE.addEvent (EHE.defaultEventObject "upload_dl_page_loaded")
     continue state {props {openHowToUploadManual = true}}
   else
     continueWithCmd state {props {clickedButtonType = "front", fileCameraPopupModal = false, fileCameraOption = false}} [do
+     let _ = EHE.addEvent (EHE.defaultEventObject "upload_dl_photo_clicked")
      _ <- liftEffect $ uploadFile uploadFileConfig
      pure NoAction]
 
@@ -292,6 +296,7 @@ eval (DatePicker (label) resp year month date) state = do
     "SELECTED" -> case label of
                     "DATE_OF_BIRTH" -> do
                       let _ = unsafePerformEffect $ logEvent state.data.logField "NY Driver - DOB"
+                          _ = EHE.addEvent (EHE.defaultEventObject "dl_dob_entered") {payload = ""}
                       continue state {data = state.data { dob = fullDate, dobView = dateView }
                                                         , props {isDateClickable = true }}
                     "DATE_OF_ISSUE" -> continue state {data = state.data { dateOfIssue = Just fullDate , dateOfIssueView = dateView, imageFront = "null"}

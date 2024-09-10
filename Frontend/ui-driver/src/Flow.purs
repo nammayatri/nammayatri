@@ -236,6 +236,8 @@ baseAppFlow baseFlow event driverInfoResponse = do
       setValueToLocalStore DISABLE_WIDGET "false"
       setValueToLocalStore BUNDLE_TIME_OUT "500"
       setValueToLocalStore ENABLE_SPECIAL_PICKUP_WIDGET "true"
+      setValueToLocalStore LOGS_TRACKING "false"
+      setValueToLocalStore FUNCTION_EXECUTED_IN_SESSION "false"
       when baseFlow $ setValueToLocalStore APP_SESSION_TRACK_COUNT if (appSessionCount /= "false") then "false" else "true"
       if ((movedToOfflineDate /= "" && isYesterday movedToOfflineDate) || movedToOfflineDate == "__failed") 
         then setValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE "" 
@@ -686,6 +688,7 @@ onBoardingFlow = do
   logField_ <- lift $ lift $ getLogFields
   void $ pure $ hideKeyboardOnNavigation true
   config <- getAppConfigFlowBT Constants.appConfig
+  setValueToLocalStore LOGS_TRACKING "true"
   GlobalState allState <- getState
   DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
   let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
@@ -1126,6 +1129,7 @@ addVehicleDetailsflow addRcFromProf = do
           registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number resp.imageId state.data.dateOfRegistration true state.data.vehicleCategory state.props.buttonIndex state.data.oxygen state.data.ventilator )
           case registerDriverRCResp of
             Right (API.ApiSuccessResult resp) -> do
+              void $ pure $ Events.addEvent (Events.defaultEventObject "rc_upload_result") { module = "vehicle_registration_page", source = "RC", payload = "success" }
               void $ pure $ toast $ getString RC_ADDED_SUCCESSFULLY
               modifyScreenState $ HomeScreenStateType $ \hss -> hss{ props {acExplanationPopup = true}}
               liftFlowBT $ logEvent logField_ "ny_driver_submit_rc_details"
@@ -1142,6 +1146,7 @@ addVehicleDetailsflow addRcFromProf = do
                 modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {validating = false, multipleRCstatus = multiRcStatus, validateProfilePicturePopUp = false}}
                 addVehicleDetailsflow state.props.addRcFromProfile
             Left errorPayload -> do
+              void $ pure $ Events.addEvent (Events.defaultEventObject "rc_upload_result") { module = "vehicle_registration_page", source = "RC", payload = "failure" }
               modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { data { dateOfRegistration = Just ""}, props{validating = false}}
               if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
                 let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
@@ -2389,6 +2394,7 @@ homeScreenFlow :: FlowBT String Unit
 homeScreenFlow = do
   liftFlowBT $ markPerformance "HOME_SCREEN_FLOW"
   logField_ <- lift $ lift $ getLogFields
+  setValueToLocalStore LOGS_TRACKING "false"
   Events.measureDurationFlowBT "Flow.homeScreenFlow" $ do    
     void $ pure $ cleverTapSetLocation unit
     if (getValueToLocalNativeStore IS_RIDE_ACTIVE) == "true" && (not $ any (\item -> isLocalStageOn item) [RideAccepted, RideStarted, ChatWithCustomer])
