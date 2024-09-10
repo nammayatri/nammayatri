@@ -28,7 +28,7 @@ import Components.SourceToDestination.Controller as SourceToDestinationControlle
 import Components.Referral as ReferralComponent
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import Components.BannerCarousel as BannerCarousel
-
+import Components.RideScheduler as RideSchedulerController
 import PrestoDOM.Types.Core (class Loggable)
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (BottomSheetState, defaultPerformLog)
@@ -335,6 +335,10 @@ data Action = NoAction
   | ShakeActionCallback Int
   | UpdateShakePermission Boolean
   | ServicesOnClick RemoteConfig.Service
+  | OpenScheduler 
+  | RideSchedulerActionController RideSchedulerController.Action
+  | DatePickerAction String Int Int Int 
+  | TimePickerAction String Int Int
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where

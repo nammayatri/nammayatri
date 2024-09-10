@@ -2529,7 +2529,7 @@ findEstimates updatedState = do
     updateLocalStage HomeScreen
     homeScreenFlow
   let
-    startTimeUTC = if (isIntercity && state.data.startTimeUTC /= "") then state.data.startTimeUTC else (getCurrentUTC "")
+    startTimeUTC = if (state.data.startTimeUTC /= "") then state.data.startTimeUTC else (getCurrentUTC "")
   (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress startTimeUTC state.props.rideSearchProps.sourceManuallyMoved state.props.rideSearchProps.destManuallyMoved state.props.rideSearchProps.sessionId state.props.isSpecialZone)
   void $ pure $ setValueToLocalStore STARTED_ESTIMATE_SEARCH "FALSE"
   routeResponse <- Remote.drawMapRoute state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong srcMarkerConfig destMarkerConfig "NORMAL" rideSearchRes.routeInfo "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig)

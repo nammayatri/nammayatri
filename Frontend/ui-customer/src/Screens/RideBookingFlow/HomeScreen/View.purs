@@ -75,6 +75,7 @@ import Components.SelectListModal as CancelRidePopUp
 import Components.ServiceTierCard.View as ServiceTierCard
 import Components.SettingSideBar as SettingSideBar
 import Components.SourceToDestination as SourceToDestination
+import Components.RideScheduler as RideScheduler
 import Constants (defaultDensity)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
@@ -618,6 +619,7 @@ view push state =
             , if state.props.showScheduledRideExistsPopUp then scheduledRideExistsPopUpView push state else emptyTextView state
             , if state.data.toll.showAmbiguousPopUp then PopUpModal.view (push <<< TollChargeAmbigousPopUpAction) (PopUpConfigs.finalFareExcludesToll state) else emptyTextView state
             , if state.data.toll.showIncludedPopUp then PopUpModal.view (push <<< TollChargeIncludedPopUpAction) (PopUpConfigs.tollChargesIncluded state) else emptyTextView state
+            , if state.props.currentStage == SchedulerView then rideSchedulerView push state else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -3957,7 +3959,8 @@ mapView' push state idTag =
       -- banners = getBannerConfigs state BannerCarousel
       enableActions = isHomeScreenView state && state.props.isSrcServiceable
       buttonPadding = if os == "IOS" then Padding 16 20 16 20 else Padding 16 16 16 16
-    
+      cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
+      showSchedulingButton = true
   in
   PrestoAnim.animationSet[scaleYAnimWithDelay 5000] $
   Keyed.relativeLayout
@@ -4079,12 +4082,51 @@ mapView' push state idTag =
                   , margin $ MarginRight 12
                   ]
                 , textView $ 
-                  [ text $ getString WHERE_ARE_YOU_GOING
+                  [ text $ if showSchedulingButton then "Where To ?" else getString WHERE_ARE_YOU_GOING 
                   , color Color.yellow900
                   , singleLine false
                   , padding $ if (getLanguageLocale languageKey) == "EN_US" && os /= "IOS" then PaddingBottom 4 else PaddingBottom 0
                   ] <> FontStyle.subHeading3 TypoGraphy
                 ]
+            , linearLayout
+              ([
+                  height WRAP_CONTENT
+                , width MATCH_PARENT
+                , gravity RIGHT
+                , visibility $ boolToVisibility $ showSchedulingButton
+              ])[
+                   linearLayout[
+                        height MATCH_PARENT
+                      , width WRAP_CONTENT
+                      , padding $ Padding 6 8 6 8
+                      , cornerRadius 22.0
+                      , background $ Color.black800
+                      , gravity RIGHT
+                      , onClick ( \action -> do
+                              void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "primary_button_loader.json", lottieId = getNewIDWithTag "HomeScreenNewPrimaryButtonWithLottie"}
+                              push action
+                          ) $ const OpenScheduler
+                    ][
+                      imageView[
+                          imageWithFallback $ fetchImage FF_ASSET "ny_ic_calendar"
+                        , width $ V 12
+                        , height $ V 12
+                        , gravity LEFT
+                        ]
+                    , textView $
+                              [ text "Now" 
+                              , height WRAP_CONTENT
+                              , width WRAP_CONTENT
+                              , color $ Color.white900
+                              ] <> FontStyle.body9 TypoGraphy
+                    ,  imageView[
+                          imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_down"
+                        , width $ V 16
+                        , height $ V 16
+                        , gravity RIGHT
+                        ]
+                  ]
+              ]            
             , linearLayout
               ([ height WRAP_CONTENT
               , width MATCH_PARENT
@@ -4097,7 +4139,7 @@ mapView' push state idTag =
                   , width $ V 100
                   ]
               ]
-            ]
+          ]
       ]
   ]
   where 
@@ -5078,3 +5120,46 @@ getFollowers state = do
   let automaticallySharedFollowers = fromMaybe [] state.data.followers 
       manuallySharedFollowers = fromMaybe [] state.data.manuallySharedFollowers
   Arr.nubByEq (\a b -> a.bookingId == b.bookingId) $ Arr.union automaticallySharedFollowers manuallySharedFollowers
+
+
+schedulingButtonView :: forall w.(Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+schedulingButtonView push state = 
+  linearLayout
+    [
+        height MATCH_PARENT
+      , width WRAP_CONTENT
+      , padding $ Padding 6 8 6 8
+      , margin $ Margin 12 12 16 12
+      , cornerRadius 22.0
+      , background $ Color.black800
+      , gravity RIGHT
+      , onClick push $ const OpenScheduler
+    ][
+      imageView[
+          imageWithFallback $ fetchImage FF_ASSET "ny_ic_calendar"
+        , width $ V 12
+        , height $ V 12
+        , gravity LEFT
+        , margin $ Margin 6 8 5 8
+        ]
+    , textView $
+              [ text "Now" 
+              , height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , color $ Color.white900
+              ] <> FontStyle.body9 TypoGraphy
+    ,  imageView[
+          imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_down"
+        , width $ V 16
+        , height $ V 16
+        , gravity RIGHT
+        ]
+    ]
+
+rideSchedulerView :: forall w.(Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w 
+rideSchedulerView push state = 
+  linearLayout[
+      width MATCH_PARENT,
+      height MATCH_PARENT
+  ][ RideScheduler.view (push <<< RideSchedulerActionController) (rideSchedulerConfig state)]
+  

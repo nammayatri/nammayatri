@@ -643,3 +643,83 @@ export const getDateMinusNDays = function (dateStr, days) {
   date.setDate(date.getDate() - days);
   return date.toISOString().split("T")[0] + "T00:00:00";
 }
+
+export const toIST = function (date) {
+  const today = new Date(date);
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istTime = new Date(today.getTime() + istOffset);
+  return istTime;
+}
+
+
+export const getISTDay = function (date) {
+  const today = toIST(date);
+  return today.getDay();
+}
+
+
+export const getISTMonth = function (date) {
+  const today = toIST(date);
+  return today.getMonth();
+}
+
+export const getISTFullYear = function (date) {
+  const today = toIST(date);
+  return today.getFullYear();
+}
+
+export const getISTDate = function (date) {
+  const today = toIST(date);
+  return today.getDate();
+}
+
+export const getISTHours = function (date) {
+  const today = toIST(date);
+  return today.getHours();
+}
+
+export const getISTMinutes = function (date) {
+  const today = toIST(date);
+  return today.getMinutes();
+}
+
+export const getISTSeconds = function (date) {
+  const today = toIST(date);
+  return today.getSeconds();
+}
+
+
+export const getUTCDay = function (date) {
+  const today = new Date(date)
+  return today.getUTCDay();
+}
+
+export const getUTCMonth = function (date) {
+  const today = new Date(date)
+  return today.getUTCMonth();
+}
+
+export const getUTCFullYear = function (date) {
+  const today = new Date(date)
+  return today.getUTCFullYear();
+}
+
+export const getUTCDate = function (date) {
+  const today = new Date(date)
+  return today.getUTCDate();
+}
+
+export const getUTCHours = function (date) {
+  const today = new Date(date)
+  return today.getUTCHours();
+}
+
+export const getUTCMinutes = function (date) {
+  const today = new Date(date)
+  return today.getUTCMinutes();
+}
+
+export const getUTCSeconds = function (date) {
+  const today = new Date(date)
+  return today.getUTCSeconds();
+}

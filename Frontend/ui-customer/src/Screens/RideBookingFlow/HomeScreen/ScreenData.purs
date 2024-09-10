@@ -22,7 +22,7 @@ import Components.ChooseVehicle.Controller as CV
 import Data.Maybe (Maybe(..))
 import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig, RideCompletedData(..), ParkingData, TollData)
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..), LatLong(..))
-import Prelude (($) ,negate)
+import Prelude (($) ,negate,(+),(+))
 import Data.Array (head)
 import Prelude(negate)
 import Foreign.Object (empty)
@@ -36,7 +36,7 @@ import Common.Types.App as CT
 import MerchantConfig.DefaultConfig as MRC
 import Screens.Types (FareProductType(..)) as FPT
 import Screens.Types as ST
-
+import Engineering.Helpers.Commons as EHC
 initData :: HomeScreenState
 initData = let
   config = getAppConfig appConfig
@@ -389,6 +389,7 @@ initData = let
     , isSharedLocationFlow : false
     , isOtpRideFlow : false
     , isShakeEnabled : false
+    , rideSchedulerModelProps : getRideSchedulerModelProps
   }
 }
 
@@ -726,3 +727,26 @@ initialTollData = {
 , estimatedCharges : 0.0
 , showIncludedPopUp : false
 }
+getRideSchedulerModelProps = 
+  let 
+    currentUTC = EHC.getCurrentUTC ""
+    utcAfterThirtyMinutes = EHC.getUTCAfterNSeconds currentUTC 19860
+    currentYear = EHC.getUTCFullYear utcAfterThirtyMinutes
+    currentMonth = EHC.getUTCMonth utcAfterThirtyMinutes
+    currentDay = EHC.getUTCDate utcAfterThirtyMinutes
+    currentHour = EHC.getUTCHours utcAfterThirtyMinutes
+    currentMinute = EHC.getUTCMinutes utcAfterThirtyMinutes
+
+    dummyRideSchedulerModelProps = {
+      startDate : {
+        year : currentYear,
+        month : (currentMonth+1),
+        day : currentDay
+      },
+      startTime : {
+        hour : currentHour,
+        minute : currentMinute
+      }
+    }
+  in 
+    dummyRideSchedulerModelProps

@@ -119,6 +119,18 @@ foreign import compareUTCDateImpl :: Fn2 String String Int
 foreign import jBridgeMethodExists :: String -> Boolean
 foreign import getDateMinusNDays :: Fn2 String Int String
 
+foreign import getISTDate :: String -> Int
+foreign import getISTMonth :: String -> Int
+foreign import getISTFullYear :: String -> Int
+foreign import getISTHours :: String -> Int
+foreign import getISTMinutes :: String -> Int
+foreign import getISTSeconds :: String -> Int
+foreign import getUTCDate :: String -> Int 
+foreign import getUTCMonth :: String -> Int 
+foreign import getUTCFullYear :: String -> Int 
+foreign import getUTCHours :: String -> Int 
+foreign import getUTCMinutes :: String -> Int 
+foreign import getUTCSeconds :: String -> Int 
 
 os :: String
 os = getOs unit

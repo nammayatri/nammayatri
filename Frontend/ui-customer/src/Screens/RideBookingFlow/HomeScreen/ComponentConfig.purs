@@ -52,6 +52,7 @@ import Components.SearchLocationModel as SearchLocationModel
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.ServiceTierCard.View as ServiceTierCard
 import Components.SourceToDestination as SourceToDestination
+import Components.RideScheduler.Controller as RideScheduler
 import Control.Monad.Except (runExcept)
 import Data.Array ((!!), sortBy, mapWithIndex, elem, length, any)
 import Data.Array as DA
@@ -1250,6 +1251,7 @@ searchLocationModelViewState state =
     , currentLocationText: state.props.currentLocation.place
     , isEditDestination : false
     , isDestViewEditable : true
+    , fareProductType : state.data.fareProductType
     }
   where
   formatDate :: String -> String
@@ -1282,7 +1284,7 @@ editDestSearchLocationModelViewState state = { isSearchLocation: if state.props.
                                     , suffixButtonVisibility: boolToVisibility $ state.props.canScheduleRide
                                     , isPrimaryButtonForEditDest : state.props.currentStage == ConfirmEditDestinationLoc
                                     , suffixButton:
-                                        { text: ""
+                                        { text: if state.data.startTimeUTC /= "" then (EHC.convertUTCtoISC state.data.startTimeUTC "h:mm A,MMM D") else ""
                                         , fontStyle: FontStyle.subHeading2 LanguageStyle
                                         , prefixImage: "ny_ic_clock_unfilled"
                                         , suffixImage: "ny_ic_chevron_down"
@@ -1291,6 +1293,7 @@ editDestSearchLocationModelViewState state = { isSearchLocation: if state.props.
                                         }
                                     , headerText: getString TRIP_DETAILS_
                                     , isDestViewEditable : state.props.currentStage == EditingDestinationLoc
+                                    , fareProductType : state.data.fareProductType
                                     }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState
@@ -2080,6 +2083,7 @@ locationTagBarConfig state =
         )
         ( [ { image: "ny_ic_instant", text: (getString INSTANT), id: "INSTANT", background: Color.lightMintGreen, showBanner: GONE }
           , { image: "ny_ic_rental", text: (getString RENTALS_), id: "RENTALS", background: Color.moonCreme, showBanner: GONE }
+          , {image : "ny_ic_calendar_black", text : ("Schedule"), id: "SCHEDULE", background: Color.pinkPantone, showBanner: GONE}
           ]
             <> if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else []
         )
@@ -2517,4 +2521,18 @@ getAllServices dummy =
   , {type: RemoteConfig.RENTAL, image: fetchImage COMMON_ASSET "ny_ic_rental_service", name: RENTAL_STR}
   , {type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY}
   , {type: RemoteConfig.INTERCITY_BUS, image: fetchImage COMMON_ASSET "ny_ic_intercity_bus_service", name: INTERCITY_BUS}
+  , {type: RemoteConfig.SCHEDULE,image:fetchImage COMMON_ASSET "ny_ic_schedule_icon",name : SCHEDULED}
   ]
+
+
+-- ride Scheduler -- 
+
+rideSchedulerConfig :: ST.HomeScreenState -> RideScheduler.Config
+rideSchedulerConfig state= 
+  let 
+    config = {
+      startTimeUTC : state.data.startTimeUTC,
+      startTime : state.props.rideSchedulerModelProps.startTime,
+      startDate : state.props.rideSchedulerModelProps.startDate
+    }
+  in config

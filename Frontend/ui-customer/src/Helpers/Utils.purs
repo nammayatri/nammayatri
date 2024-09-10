@@ -140,6 +140,25 @@ foreign import validateEmail :: String -> Boolean
 
 foreign import getUTCDay :: Date -> Int
 
+foreign import getISTDate :: String -> Int
+
+foreign import getISTMonth :: String -> Int
+foreign import getISTFullYear :: String -> Int
+foreign import getISTHours :: String -> Int
+foreign import getISTMinutes :: String -> Int
+foreign import getISTSeconds :: String -> Int
+
+foreign import getUTCDate :: String -> Int 
+
+foreign import getUTCMonth :: String -> Int 
+
+foreign import getUTCFullYear :: String -> Int 
+
+foreign import getUTCHours :: String -> Int 
+
+foreign import getUTCMinutes :: String -> Int 
+
+foreign import getUTCSeconds :: String -> Int 
 foreign import makePascalCase :: String -> String
 
 foreign import validateInputPattern :: String -> String -> Boolean
@@ -601,6 +620,7 @@ getScreenFromStage stage = case stage of
   ChangeToRideAccepted -> "change_to_ride_accepted"
   ChangeToRideStarted -> "change_to_ride_started"
   ConfirmingQuotes -> "confirming_quotes"
+  SchedulerView -> "schedulerView_screen"
 
 getGlobalPayload :: String -> Maybe GlobalPayload
 getGlobalPayload key = do

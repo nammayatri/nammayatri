@@ -234,6 +234,8 @@
       "ny_ic_cab_auto_yellow" : true,
       "ny_ic_cab_launch" : true,
       "ny_ic_cab_multiple" : true,
+      "ny_ic_calendar" : true,
+      "ny_ic_calendar_black" : true,
       "ny_ic_calendar_blue" : true,
       "ny_ic_call" : true,
       "ny_ic_call_white_unfilled" : true,

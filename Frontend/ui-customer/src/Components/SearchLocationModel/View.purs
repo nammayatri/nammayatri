@@ -161,7 +161,7 @@ view push state =
               , cornerRadius 4.0
               , padding $ config.suffixButton.padding
               , gravity config.suffixButton.gravity
-              , onClick push $ const DateTimePickerButtonClicked
+              , onClick push $ const $ DateTimePickerButtonClicked config.fareProductType
               ]
               [ imageView
                   [ imageWithFallback $ fetchImage FF_ASSET config.suffixButton.prefixImage

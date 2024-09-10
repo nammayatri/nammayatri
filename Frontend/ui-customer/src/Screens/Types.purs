@@ -571,6 +571,7 @@ data Stage = HomeScreen
            | ConfirmingEditDestinationLoc
            | RevisedEstimate
            | FavouriteLocationModelEditDest
+           | SchedulerView
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -956,6 +957,7 @@ type HomeScreenStateProps =
   , isOtpRideFlow :: Boolean
   , isShakeEnabled :: Boolean
   , editedPickUpLocation :: EditedLocation
+  , rideSchedulerModelProps :: RideSchedulerModelProps
   }
 
 type EditedLocation = {
@@ -2782,4 +2784,20 @@ type PickupInstructionsScreenData = {
 
 type PickupInstructionsScreenProps = {
   
+}
+
+type RideSchedulerModelProps = {
+  startDate :: DateResp,
+  startTime :: TimeResp
+}
+
+type DateResp = {
+  year :: Int,
+  month :: Int,
+  day :: Int 
+}
+
+type TimeResp = {
+  hour :: Int,
+  minute :: Int
 }

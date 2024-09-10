@@ -78,7 +78,7 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWi
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, emChatSuggestion, chatSuggestion)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
-import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp,openUrlInMailApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers)
+import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp,openUrlInMailApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers, showDatePicker , showTimePicker, showDatePicker , showTimePicker, showDatePicker , showTimePicker)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, getCityConfig, compareDate, getCurrentDatev2, getDateAfterNDaysv2, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime, shuffle)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -150,6 +150,7 @@ import Screens.HomeScreen.Controllers.Types
 import Data.Show.Generic 
 import Data.Array as DA
 import Data.String as DS
+import Components.RideScheduler.Controller as RideSchedulerController
 
 -- Controllers 
 import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBannerController
@@ -1059,6 +1060,54 @@ eval BackPressed state = do
                       _ <- pure $ updateLocalStage (if state.props.isSearchLocation == NoView then HomeScreen else EditingDestinationLoc)
                       continue state { props { currentStage = if state.props.isSearchLocation == NoView then HomeScreen else EditingDestinationLoc}}
     ReAllocated ->    continue state
+    SchedulerView -> do
+                      void $ pure $ updateLocalStage HomeScreen
+                      void $ pure $ setValueToLocalStore SESSION_ID (generateSessionId unit)
+                      void $ pure $ enableMyLocation true
+                      void $ pure $ setValueToLocalStore NOTIFIED_CUSTOMER "false"
+                      let 
+                        { savedLocationsWithOtherTag
+                        , recentlySearchedLocations
+                        , suggestionsMap
+                        , trips
+                        , suggestedDestinations
+                        } = getHelperLists state.data.savedLocations state.data.recentSearchs state state.props.currentLocation.lat state.props.currentLocation.lng
+                        _ = removeMarker $ getCurrentLocationMarker ""
+                      continue 
+                        HomeScreenData.initData
+                          { data
+                            { disability = state.data.disability
+                            , bannerData = state.data.bannerData
+                            , tripSuggestions = trips
+                            , recentSearchs {predictionArray = recentlySearchedLocations}
+                            , destinationSuggestions = suggestedDestinations
+                            , source = state.props.currentLocation.place
+                            , rentalsInfo = state.data.rentalsInfo
+                            , settingSideBar
+                              { gender = state.data.settingSideBar.gender
+                              , email = state.data.settingSideBar.email
+                              , hasCompletedSafetySetup = state.data.settingSideBar.hasCompletedSafetySetup
+                              }
+                              , followers = state.data.followers
+                            , currentCityConfig = state.data.currentCityConfig
+                            , famousDestinations = state.data.famousDestinations
+                            }
+                          , props { 
+                              isBanner = state.props.isBanner
+                            , showShimmer = false
+                            , city = state.props.city
+                            , currentLocation = state.props.currentLocation
+                            , sosBannerType = state.props.sosBannerType 
+                            , followsRide = state.props.followsRide
+                            , sourceLat = state.props.currentLocation.lat 
+                            , sourceLong = state.props.currentLocation.lng
+                            , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
+                            , rideSearchProps { 
+                                cachedPredictions = state.props.rideSearchProps.cachedPredictions
+                              }
+                            , rideSchedulerModelProps = state.props.rideSchedulerModelProps -- might need to check on this one 
+                            }
+                          }
     _               -> do
                         if state.props.isLocationTracking then continue state{props{isLocationTracking = false}}
                           else if state.props.cancelSearchCallDriver then continue state{props{cancelSearchCallDriver = false}}
@@ -1309,7 +1358,9 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Primary
   let newState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, locateOnMap = false, defaultPickUpPoint = ""}}
   updateAndExit newState $ LocationSelected (fromMaybe dummyListItem (if state.props.isSource == Just false then state.data.selectedLocationListItem else Nothing)) (state.props.isSource == Just false) newState
 
-eval (SearchLocationModelActionController (SearchLocationModelController.DateTimePickerButtonClicked)) state = openDateTimePicker state 
+eval (SearchLocationModelActionController (SearchLocationModelController.DateTimePickerButtonClicked rideType)) state = case rideType of 
+                                                                                                                          FPT.ONE_WAY -> (continueWithCmd state [pure $ OpenScheduler])
+                                                                                                                          _ -> openDateTimePicker state 
 
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState = do
     _ <- pure $ spy "state homeScreen" newState
@@ -2565,6 +2616,7 @@ eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do
           void $ pure $ toast $ getString INTERCITY_RIDES_COMING_SOON
           continue state
     "INSTANT" -> continueWithCmd state [ pure $ WhereToClick]
+    "SCHEDULE" -> continueWithCmd state [pure $ OpenScheduler]
     _ -> continue state
   
 eval (RentalBannerClick) state = maybe (exit GoToScheduledRides) (\rentalsInfo -> if rentalsInfo.multipleScheduled then exit (PastRides state true) else exit GoToScheduledRides) state.data.rentalsInfo
@@ -2905,9 +2957,105 @@ eval (ServicesOnClick service) state = do
           continue state
     RC.INSTANT -> continueWithCmd state [ pure $ WhereToClick]
     RC.TRANSIT -> exit $ GoToMetroTicketBookingFlow state
+    RC.SCHEDULE -> continueWithCmd state [pure $ OpenScheduler]
     _ -> continue state
 
-eval _ state = update state
+
+eval OpenScheduler state = do
+   if state.props.currentStage == SearchLocationModel then continue state {props{currentStage = SchedulerView}}
+   else do
+        let 
+          currentUTC = getCurrentUTC ""
+          utcAfterThirtyMinutes = getUTCAfterNSeconds currentUTC 1860
+          currentYear = spy "UTCAfterFullYEar : " $ getISTFullYear utcAfterThirtyMinutes
+          currentMonth = spy "getUTCMonth" $ getISTMonth utcAfterThirtyMinutes
+          currentDay =  spy "getUTCDate" $ getISTDate utcAfterThirtyMinutes
+          currentHour = spy "getUTCHours" $ getISTHours utcAfterThirtyMinutes
+          currentMinute = spy "getUTCMinutes" $ getISTMinutes utcAfterThirtyMinutes
+        continue state{props {
+                            currentStage = SchedulerView
+                            ,rideSchedulerModelProps {
+                                  startDate{
+                                    year = currentYear,
+                                    month = (currentMonth+1),
+                                    day = currentDay
+                                  },
+                                  startTime{
+                                    hour = currentHour,
+                                    minute = currentMinute
+                                  }
+                                }
+                            }
+                            }
+
+eval (RideSchedulerActionController (RideSchedulerController.ExitScheduler)) state = do
+  void $ pure $ performHapticFeedback unit
+  continueWithCmd state
+    [ pure $ BackPressed]
+
+eval (RideSchedulerActionController (RideSchedulerController.OpenDatePicker)) state = openDatePicker state
+
+eval (RideSchedulerActionController (RideSchedulerController.OpenTimePicker)) state = openTimePicker state
+
+eval (RideSchedulerActionController (RideSchedulerController.DateSelected)) state = do
+  void $ pure $ updateLocalStage SearchLocationModel 
+  continue state { data { source=(getString CURRENT_LOCATION), rentalsInfo = Nothing}, props{isSource = Just false, canScheduleRide = true, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}}
+        
+
+eval (DatePickerAction dateResp year month day) state = do 
+  let 
+    startTime = state.props.rideSchedulerModelProps.startTime
+    newUTC = unsafePerformEffect $ convertDateTimeConfigToUTC year (month+1) day startTime.hour startTime.minute 0
+    selectedDateString = (show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month+1)) <> "-" <> (if day < 10 then "0"  else "") <> (show day)
+    isAfterThirtyMinutes = spy "isAfterThirtyMinutes" $ (compareUTCDate newUTC (getCurrentUTC "")) > (30 * 60)
+    validDate = (unsafePerformEffect $ runEffectFn2 compareDate (getDateAfterNDaysv2 (state.props.maxDateBooking)) selectedDateString)
+                        && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
+    _ = spy "validDate" validDate
+    _ = spy "year" year
+    _ = spy "month" month
+    _ = spy "day" day
+    _ = spy "dateResp" dateResp
+    _ = spy "UTC inside Date" newUTC
+  if validDate && isAfterThirtyMinutes then continue state { data { startTimeUTC = newUTC}
+                                                            , props { rideSchedulerModelProps {
+                                                                    startDate {
+                                                                      year =  year,
+                                                                      month = (month+1),
+                                                                      day = day
+                                                                      }
+                                                                  }}}
+   else do       
+      void $ pure $ toast ("Ride cannot be scheduled for selected Date")
+      continue state
+
+eval (TimePickerAction timeResp hour minute) state = do
+    let 
+      startDate = state.props.rideSchedulerModelProps.startDate
+      newUTC = unsafePerformEffect $ convertDateTimeConfigToUTC startDate.year startDate.month startDate.day hour minute 0
+      selectedDateString = (show startDate.year) <> "-" <> (if (startDate.month < 10) then "0" else "") <> (show (startDate.month)) <> "-" <> (if startDate.day < 10 then "0"  else "") <> (show startDate.day)
+      isAfterThirtyMinutes = spy "isAfterThirtyMinutes" $ (compareUTCDate newUTC (getCurrentUTC "")) > (30 * 60)
+      validDate = spy "ValidDAte" $ (unsafePerformEffect $ runEffectFn2 compareDate (getDateAfterNDaysv2 (state.props.maxDateBooking)) selectedDateString)
+                        && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
+      _ = spy "hour" hour
+      _ = spy "minute" minute
+      _ = spy "timeResp" timeResp
+      _ = spy "UTC inside Time" newUTC
+    if validDate && isAfterThirtyMinutes then do continue state {  data {startTimeUTC = newUTC}
+                                                                  , props {rideSchedulerModelProps {
+                                                                    startTime {
+                                                                      hour  = hour
+                                                                    , minute = minute
+                                                                  }}}}
+    else 
+      if not validDate then do
+        void $ pure $ toast $ ("Ride cannot be scheduled for selected Date")
+        continue state
+      else if not isAfterThirtyMinutes then do
+        void $ pure $ toast "Ride Should be Scheduled After Thirty Minutes from currentTime"
+        continue state
+      else continue state
+
+eval _ state= update state 
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
 validateSearchInput state searchString =
@@ -3369,3 +3517,23 @@ roundOff value = if isJust value then Just $ round (fromMaybe 0.0 value) else No
 checkRecentRideVariantInEstimates :: Array ChooseVehicleController.Config -> Maybe String -> Boolean
 checkRecentRideVariantInEstimates estimatesAndQuotes repeatRideServiceName = 
   any (\item -> item.providerType == CTP.ONUS && isJust item.serviceTierName && item.serviceTierName == repeatRideServiceName) estimatesAndQuotes 
+
+--- scheduling Stuff --
+
+openDatePicker :: HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+openDatePicker state = do
+    continueWithCmd state
+      [ do 
+        push <- getPushFn Nothing "HomeScreen"
+        _ <- launchAff $ showDatePicker push DatePickerAction
+        pure NoAction
+      ]
+
+openTimePicker :: HomeScreenState -> Eval Action ScreenOutput HomeScreenState 
+openTimePicker state = do    
+    continueWithCmd state
+      [ do 
+        push <- getPushFn Nothing "HomeScreen"
+        _ <- launchAff $ showTimePicker push TimePickerAction
+        pure NoAction
+      ]

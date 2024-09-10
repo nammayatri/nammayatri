@@ -1010,6 +1010,22 @@ showDateTimePicker push action = do
     liftEffect $ push $ action dateResp year month day timeResp hour minute
   else liftEffect $ push $ action dateResp year month day "" 0 0
 
+showDatePicker :: forall action. (action -> Effect Unit) -> (String -> Int -> Int -> Int->action) -> Aff Unit
+showDatePicker push action = do 
+  datePicker <- makeAff \cb -> datePickerWithTimeout (cb <<< Right) DatePicker 30000 $> nonCanceler 
+  let (DatePicker dateResp year month day) = datePicker 
+  if dateResp == show SELECTED then do 
+    liftEffect $ push $ action dateResp year month day 
+  else pure unit
+
+showTimePicker :: forall action. (action -> Effect Unit) -> (String -> Int -> Int -> action) -> Aff Unit 
+showTimePicker push action = do 
+    timePicker <- makeAff \cb -> timePickerWithTimeout (cb <<< Right) TimePicker $> nonCanceler
+    let (TimePicker hour minute timeResp) = timePicker
+    if timeResp == show SELECTED then do
+      liftEffect $ push $ action timeResp hour minute
+    else pure unit
+    
 renderSlider :: forall action. (action -> Effect Unit) -> (Int -> action) -> SliderConfig -> Effect Unit
 renderSlider = runEffectFn3 renderSliderImpl
 
