@@ -11,6 +11,7 @@ import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as MOC
 import Domain.Types.Person
 import qualified Domain.Types.Plan as DPlan
+import qualified Domain.Types.VehicleCategory as VC
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -164,13 +165,15 @@ findAllDriversEligibleForService serviceName merchantId merchantOperatingCity = 
         ]
     ]
 
-updatePlanIdByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id DPlan.Plan -> DPlan.ServiceNames -> m () -- ned DSL Fix
-updatePlanIdByDriverIdAndServiceName (Id driverId) (Id planId) serviceName = do
+updatePlanIdByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id DPlan.Plan -> DPlan.ServiceNames -> Maybe VC.VehicleCategory -> Id MOC.MerchantOperatingCity -> m () -- ned DSL Fix
+updatePlanIdByDriverIdAndServiceName (Id driverId) (Id planId) serviceName mbVehicleCategory merchantOperatingCity = do
   now <- getCurrentTime
   updateOneWithKV
     [Se.Set BeamDF.planId planId, Se.Set BeamDF.updatedAt now]
     [ Se.And
         [ Se.Is BeamDF.driverId (Se.Eq driverId),
-          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.vehicleCategory $ Se.Eq mbVehicleCategory,
+          Se.Is BeamDF.merchantOpCityId $ Se.Eq (Just merchantOperatingCity.getId)
         ]
     ]

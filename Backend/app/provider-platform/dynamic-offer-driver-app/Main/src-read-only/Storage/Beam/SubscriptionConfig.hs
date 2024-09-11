@@ -10,6 +10,7 @@ import Domain.Types.Common ()
 import qualified Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantServiceConfig
 import qualified Domain.Types.Plan
+import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -22,10 +23,14 @@ data SubscriptionConfigT f = SubscriptionConfigT
     allowManualPaymentLinks :: B.C f Kernel.Prelude.Bool,
     cgstPercentageOneTimeSecurityDeposit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     deepLinkExpiryTimeInMinutes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    defaultCityVehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
+    executionEnabledForVehicleCategories :: B.C f (Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory]),
+    freeTrialRidesApplicable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     genericBatchSizeForJobs :: B.C f Kernel.Prelude.Int,
     genericJobRescheduleTime :: B.C f Kernel.Types.Common.Seconds,
     isTriggeredAtEndRide :: B.C f Kernel.Prelude.Bool,
     maxRetryCount :: B.C f Kernel.Prelude.Int,
+    numberOfFreeTrialRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     paymentLinkChannel :: B.C f Domain.Types.MerchantMessage.MediaChannel,
     paymentLinkJobTime :: B.C f Kernel.Types.Common.Seconds,
     paymentServiceName :: B.C f Domain.Types.MerchantServiceConfig.ServiceName,
@@ -34,6 +39,7 @@ data SubscriptionConfigT f = SubscriptionConfigT
     sendInAppFcmNotifications :: B.C f Kernel.Prelude.Bool,
     serviceName :: B.C f Domain.Types.Plan.ServiceNames,
     sgstPercentageOneTimeSecurityDeposit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    subscriptionEnabledForVehicleCategories :: B.C f (Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory]),
     useOverlayService :: B.C f Kernel.Prelude.Bool,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

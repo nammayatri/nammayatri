@@ -442,7 +442,7 @@ library
       Storage.CachedQueries.Merchant.Overlay
       Storage.CachedQueries.Merchant.PayoutConfig
       Storage.CachedQueries.Merchant.TransporterConfig
-      Storage.CachedQueries.Plan
+      Storage.CachedQueries.PlanExtra
       Storage.CachedQueries.PlanTranslation
       Storage.CachedQueries.ReelsData
       Storage.CachedQueries.RegistryMapFallback
@@ -863,6 +863,7 @@ library
       Storage.Beam.Volunteer
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.CancellationFarePolicy
+      Storage.CachedQueries.Plan
       Storage.CachedQueries.SurgePricing
       Storage.Queries.AadhaarCard
       Storage.Queries.AadhaarOtpReq

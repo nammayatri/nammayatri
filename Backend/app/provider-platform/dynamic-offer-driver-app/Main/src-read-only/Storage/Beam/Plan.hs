@@ -9,6 +9,7 @@ import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Plan
+import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -39,6 +40,7 @@ data PlanT f = PlanT
     serviceName :: B.C f Domain.Types.Plan.ServiceNames,
     sgstPercentage :: B.C f Kernel.Types.Common.HighPrecMoney,
     subscribedFlagToggleAllowed :: B.C f Kernel.Prelude.Bool,
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant)
   }
   deriving (Generic, B.Beamable)

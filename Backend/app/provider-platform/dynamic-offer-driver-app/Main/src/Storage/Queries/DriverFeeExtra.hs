@@ -15,6 +15,7 @@ import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import Domain.Types.Plan as DPlan
 import Domain.Types.TransporterConfig (TransporterConfig)
+import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.CacheFlow (CacheFlow)
@@ -67,24 +68,31 @@ findFeeByDriverIdAndServiceNameInRange (Id driverId) serviceName from to =
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
           Se.Is BeamDF.startTime $ Se.Eq from,
           Se.Is BeamDF.endTime $ Se.Eq to,
-          Se.Is BeamDF.feeType $ Se.Not (Se.Eq MANDATE_REGISTRATION)
+          Se.Is BeamDF.feeType $ Se.Not $ Se.In [MANDATE_REGISTRATION, PAYOUT_REGISTRATION, ONE_TIME_SECURITY_DEPOSIT]
         ]
     ]
 
-findLatestFeeByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> ServiceNames -> m (Maybe DriverFee)
-findLatestFeeByDriverIdAndServiceName (Id driverId) serviceName = do
-  driverFees <-
-    findAllWithKV
-      [ Se.And
-          [ Se.Is BeamDF.driverId (Se.Eq driverId),
-            Se.Is BeamDF.feeType $ Se.Not (Se.Eq MANDATE_REGISTRATION),
-            Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
-            Se.Is BeamDF.status (Se.Eq ONGOING)
-          ]
-      ]
-  case driverFees of
-    [] -> pure Nothing
-    _ -> pure $ Just $ maximumBy (comparing Domain.createdAt) driverFees
+findLatestFeeByDriverIdAndServiceName ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Driver ->
+  ServiceNames ->
+  Id MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  m (Maybe DriverFee)
+findLatestFeeByDriverIdAndServiceName (Id driverId) serviceName merchantOperatingCityId startTime endTime = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamDF.driverId (Se.Eq driverId),
+          Se.Is BeamDF.feeType $ Se.Not $ Se.In [MANDATE_REGISTRATION, PAYOUT_REGISTRATION, ONE_TIME_SECURITY_DEPOSIT],
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.status (Se.Eq ONGOING),
+          Se.Is BeamDF.siblingFeeId $ Se.Eq Nothing,
+          Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
+          Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime
+        ]
+    ]
 
 findLatestRegisterationFeeByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> ServiceNames -> m (Maybe DriverFee)
 findLatestRegisterationFeeByDriverIdAndServiceName (Id driverId) serviceName =
@@ -100,44 +108,6 @@ findLatestRegisterationFeeByDriverIdAndServiceName (Id driverId) serviceName =
     (Just 1)
     Nothing
     <&> listToMaybe
-
-findOldestFeeByStatusAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> DriverFeeStatus -> ServiceNames -> m (Maybe DriverFee)
-findOldestFeeByStatusAndServiceName (Id driverId) status serviceName =
-  findAllWithOptionsKV
-    [ Se.And
-        [ Se.Is BeamDF.driverId $ Se.Eq driverId,
-          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
-          Se.Is BeamDF.status $ Se.Eq status
-        ]
-    ]
-    (Se.Asc BeamDF.createdAt)
-    (Just 1)
-    Nothing
-    <&> listToMaybe
-
-findFeesInRangeWithStatusAndServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  Maybe (Id Merchant) ->
-  UTCTime ->
-  UTCTime ->
-  DriverFeeStatus ->
-  Maybe Int ->
-  ServiceNames ->
-  m [DriverFee] -- remove maybe from merchantId later
-findFeesInRangeWithStatusAndServiceName mbMerchantId startTime endTime status mbLimit serviceName =
-  findAllWithOptionsKV'
-    [ Se.And $
-        [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
-          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
-          Se.Is BeamDF.status $ Se.Eq status,
-          Se.Or [Se.Is BeamDF.status (Se.Eq ONGOING), Se.Is BeamDF.payBy (Se.LessThanOrEq endTime)],
-          Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE,
-          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
-        ]
-          <> [Se.Is BeamDF.merchantId $ Se.Eq $ getId (fromJust mbMerchantId) | isJust mbMerchantId]
-    ]
-    mbLimit
-    Nothing
 
 findAllFeesInRangeWithStatusAndServiceName ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -157,23 +127,14 @@ findAllFeesInRangeWithStatusAndServiceName mbMerchantId merchantOperatingCityId 
           Se.Is BeamDF.status $ Se.Eq status,
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
           Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
-          Se.Is BeamDF.feeType $ Se.In [RECURRING_EXECUTION_INVOICE, RECURRING_INVOICE]
+          Se.Is BeamDF.feeType $ Se.In [RECURRING_EXECUTION_INVOICE, RECURRING_INVOICE],
+          Se.Is BeamDF.siblingFeeId $ Se.Eq Nothing
         ]
           <> [Se.Is BeamDF.merchantId $ Se.Eq $ getId (fromJust mbMerchantId) | isJust mbMerchantId]
     ]
     (Se.Desc BeamDF.endTime)
     mbLimit
     Nothing
-
-findPendingPaymentByDriversAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person] -> ServiceNames -> m [DriverFee]
-findPendingPaymentByDriversAndServiceName driverIds serviceName =
-  findAllWithKV
-    [ Se.And
-        [ Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE],
-          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
-          Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds)
-        ]
-    ]
 
 findFeeInRangeAndDriverIdAndServiceName ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -190,7 +151,7 @@ findFeeInRangeAndDriverIdAndServiceName startTime endTime driverId serviceName =
           Se.Is BeamDF.platformFee $ Se.GreaterThanOrEq 1.0,
           Se.Is BeamDF.driverId $ Se.Eq (getId driverId),
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
-          Se.Is BeamDF.feeType $ Se.Not (Se.Eq MANDATE_REGISTRATION)
+          Se.Is BeamDF.feeType $ Se.Not $ Se.In [MANDATE_REGISTRATION, PAYOUT_REGISTRATION, ONE_TIME_SECURITY_DEPOSIT]
         ]
     ]
 
@@ -241,33 +202,12 @@ findWindowsAndServiceNameWithFeeTypeAndLimitAndServiceName merchantId merchantOp
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
           Se.Is BeamDF.platformFee $ Se.Not (Se.Eq 0.0),
           Se.Is BeamDF.cgst $ Se.Not (Se.Eq 0.0),
-          Se.Is BeamDF.sgst $ Se.Not (Se.Eq 0.0)
+          Se.Is BeamDF.sgst $ Se.Not (Se.Eq 0.0),
+          Se.Is BeamDF.siblingFeeId $ Se.Eq Nothing
         ]
     ]
     (Just limit)
     Nothing
-
-findWindowsAndServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  Id Person ->
-  UTCTime ->
-  UTCTime ->
-  Int ->
-  Int ->
-  ServiceNames ->
-  m [DriverFee]
-findWindowsAndServiceName (Id driverId) from to limitVal offsetVal serviceName =
-  findAllWithOptionsKV
-    [ Se.And
-        [ Se.Is BeamDF.driverId $ Se.Eq driverId,
-          Se.Is BeamDF.createdAt $ Se.GreaterThanOrEq from,
-          Se.Is BeamDF.createdAt $ Se.LessThanOrEq to,
-          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
-        ]
-    ]
-    (Se.Desc BeamDF.createdAt)
-    (Just limitVal)
-    (Just offsetVal)
 
 findWindowsWithoutLimit :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> UTCTime -> UTCTime -> m [DriverFee]
 findWindowsWithoutLimit (Id driverId) from to = do
@@ -282,18 +222,6 @@ findWindowsWithoutLimit (Id driverId) from to = do
     (Se.Desc BeamDF.createdAt)
     Nothing
     Nothing
-
-findOngoingAfterEndTimeAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> UTCTime -> ServiceNames -> m (Maybe DriverFee)
-findOngoingAfterEndTimeAndServiceName (Id driverId) now serviceName =
-  findOneWithKV
-    [ Se.And
-        [ Se.Is BeamDF.driverId $ Se.Eq driverId,
-          Se.Is BeamDF.status $ Se.Eq ONGOING,
-          Se.Is BeamDF.endTime $ Se.LessThanOrEq now,
-          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
-          Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE
-        ]
-    ]
 
 findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatus ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -348,28 +276,6 @@ findDriverFeeInRangeWithOrderNotExecutedAndPendingByServiceName merchantId merch
     (Just limit)
     Nothing
 
-findDriverFeeInRangeEligibleForManualPaymentLinkByServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  Id Merchant ->
-  Int ->
-  UTCTime ->
-  UTCTime ->
-  ServiceNames ->
-  m [DriverFee]
-findDriverFeeInRangeEligibleForManualPaymentLinkByServiceName merchantId limit startTime endTime serviceName = do
-  findAllWithOptionsKV'
-    [ Se.And
-        [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
-          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
-          Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE,
-          Se.Is BeamDF.status $ Se.Eq PAYMENT_PENDING,
-          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
-          Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId
-        ]
-    ]
-    (Just limit)
-    Nothing
-
 findMaxBillNumberInRangeForServiceName ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id MerchantOperatingCity ->
@@ -389,18 +295,6 @@ findMaxBillNumberInRangeForServiceName merchantOperatingCityId startTime endTime
     (Se.Desc BeamDF.billNumber)
     (Just 1)
     Nothing
-
-findUnpaidAfterPayByWithServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> UTCTime -> ServiceNames -> m (Maybe DriverFee)
-findUnpaidAfterPayByWithServiceName (Id driverId) now serviceName =
-  findOneWithKV
-    [ Se.And
-        [ Se.Is BeamDF.driverId $ Se.Eq driverId,
-          Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE],
-          Se.Is BeamDF.payBy $ Se.LessThanOrEq now,
-          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
-          Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE
-        ]
-    ]
 
 updateFee ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -543,7 +437,7 @@ updateDriverFeeOverlayScheduledByServiceName driverIds val from to serviceName =
           Se.Is BeamDF.startTime $ Se.GreaterThanOrEq from,
           Se.Is BeamDF.endTime $ Se.LessThanOrEq to,
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
-          Se.Is BeamDF.feeType $ Se.Not $ Se.Eq Domain.MANDATE_REGISTRATION
+          Se.Is BeamDF.feeType $ Se.Not $ Se.In [MANDATE_REGISTRATION, PAYOUT_REGISTRATION, ONE_TIME_SECURITY_DEPOSIT]
         ]
     ]
 
@@ -638,41 +532,6 @@ findAllDriverFeesRequiredToMovedIntoBadDebt merchantId transporterConfig = do
         ]
     ]
     (Just limit)
-    Nothing
-
--- add fee collection time later if req'd
-findAllByVolunteerIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> [Text] -> UTCTime -> UTCTime -> m [DriverFee]
-findAllByVolunteerIds (Id merchantId) volunteerIds from to = do
-  findAllWithOptionsKV
-    [ Se.And $
-        [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
-          Se.Is BeamDF.collectedAt $ Se.GreaterThanOrEq (Just from),
-          Se.Is BeamDF.collectedAt $ Se.LessThanOrEq (Just to)
-        ]
-          <> [Se.Is BeamDF.collectedBy $ Se.In (map Just volunteerIds)]
-    ]
-    (Se.Desc BeamDF.updatedAt)
-    Nothing
-    Nothing
-
-findAllByStatusAndServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  Id Merchant ->
-  DriverFeeStatus ->
-  UTCTime ->
-  UTCTime ->
-  ServiceNames ->
-  m [DriverFee]
-findAllByStatusAndServiceName (Id merchantId) status from to serviceName = do
-  findAllWithOptionsKV
-    [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
-      Se.Is BeamDF.collectedAt $ Se.GreaterThanOrEq (Just from),
-      Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
-      Se.Is BeamDF.collectedAt $ Se.LessThanOrEq (Just to),
-      Se.Is BeamDF.status $ Se.Eq status
-    ]
-    (Se.Desc BeamDF.updatedAt)
-    Nothing
     Nothing
 
 findAllByDriverFeeIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DriverFee] -> m [DriverFee]
@@ -857,3 +716,60 @@ findAllByStatusAndDriverIdWithServiceNameFeetype (Id driverId) driverFeeStatus f
           Se.Is BeamDF.driverId $ Se.Eq driverId
         ]
     ]
+
+findAllChildsOFDriverFee ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  DriverFeeStatus ->
+  ServiceNames ->
+  [Id DriverFee] ->
+  m [DriverFee]
+findAllChildsOFDriverFee merchantOperatingCityId startTime endTime status serviceName driverFeeIds = do
+  findAllWithKV
+    [ Se.And $
+        [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
+          Se.Is BeamDF.status $ Se.Eq status,
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
+          Se.Is BeamDF.feeType $ Se.In [RECURRING_EXECUTION_INVOICE, RECURRING_INVOICE],
+          Se.Is BeamDF.siblingFeeId $ Se.In (map Just $ getId <$> driverFeeIds)
+        ]
+    ]
+
+updateDfeeByOperatingCityAndVehicleCategory ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  ServiceNames ->
+  DriverFeeStatus ->
+  UTCTime ->
+  UTCTime ->
+  DVC.VehicleCategory ->
+  Text ->
+  m ()
+updateDfeeByOperatingCityAndVehicleCategory merchantOperatingCityId serviceName status from to vehicleCategory planId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamDF.planId (Just planId),
+      Se.Set BeamDF.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.status $ Se.Eq status,
+          Se.Is BeamDF.startTime $ Se.GreaterThanOrEq from,
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq to,
+          Se.Is BeamDF.vehicleCategory $ Se.Eq (Just vehicleCategory)
+        ]
+    ]
+
+updateHasSiblingInDriverFee :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m ()
+updateHasSiblingInDriverFee driverFeeId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDF.hasSibling (Just True),
+      Se.Set BeamDF.updatedAt now
+    ]
+    [Se.Is BeamDF.id (Se.Eq driverFeeId.getId)]

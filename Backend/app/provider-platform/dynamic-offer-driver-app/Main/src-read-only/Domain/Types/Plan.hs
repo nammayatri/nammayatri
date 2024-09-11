@@ -10,6 +10,7 @@ import Domain.Types.Extra.Plan as ReExport
 import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleVariant
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
@@ -41,6 +42,7 @@ data Plan = Plan
     serviceName :: Domain.Types.Plan.ServiceNames,
     sgstPercentage :: Kernel.Types.Common.HighPrecMoney,
     subscribedFlagToggleAllowed :: Kernel.Prelude.Bool,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

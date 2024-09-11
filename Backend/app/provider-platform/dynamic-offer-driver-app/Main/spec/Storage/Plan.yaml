@@ -3,6 +3,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   PlanBaseAmount: Domain.Types.Extra.Plan
   VehicleVariant: Domain.Types.VehicleVariant
+  VehicleCategory: Domain.Types.VehicleCategory
 
 Plan:
   tableName: plan
@@ -54,6 +55,7 @@ Plan:
     basedOnEntity : BasedOnEntity
     serviceName : ServiceNames
     vehicleVariant : Maybe VehicleVariant|NoRelation
+    vehicleCategory : Maybe VehicleCategory|NoRelation
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentMode>
@@ -86,10 +88,41 @@ Plan:
       where:
         and: [merchantOpCityId, planType, serviceName]
 
+    findByMerchantOpCityIdTypeServiceNameVehicle:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOpCityId, paymentMode, serviceName, vehicleCategory, isDeprecated]
+
     findByMerchantOpCityIdAndTypeWithServiceNameAndVariant:
       kvFunction: findAllWithKV
       where:
         and: [merchantOpCityId, paymentMode, serviceName, vehicleVariant]
+
+  cachedQueries:
+    deletePlansKeys:
+      keyParams:
+        - merchantOpCityId
+        - paymentMode
+        - serviceName
+        - vehicleCategory
+        - isDeprecated
+      keyMaker: makeIdKey
+    findByMerchantOpCityIdTypeServiceNameVehicle:
+      keyParams:
+        - merchantOpCityId
+        - paymentMode
+        - serviceName
+        - vehicleCategory
+        - isDeprecated
+      keyMaker: makeIdKey
+      returnType: Array
+      dbQuery: findByMerchantOpCityIdTypeServiceNameVehicle
+      dbQueryParams:
+        - merchantOpCityId
+        - paymentMode
+        - serviceName
+        - vehicleCategory
+        - isDeprecated
 
   sqlType:
     maxAmount: integer
@@ -109,5 +142,6 @@ Plan:
   extraOperations:
     - EXTRA_QUERY_FILE
     - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_CACHED_QUERY_FILE
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
