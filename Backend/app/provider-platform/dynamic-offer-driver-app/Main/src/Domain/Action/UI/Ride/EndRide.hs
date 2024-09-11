@@ -378,7 +378,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                             then (Nothing, Nothing, Just Unsure)
                             else (updRide.tollCharges, updRide.tollNames, Just Sure)
 
-                let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollConfidence = tollConfidence}
+                let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollConfidence = tollConfidence, distanceCalculationFailed = Just distanceCalculationFailed}
 
                 (chargeableDistance, finalFare, mbUpdatedFareParams) <-
                   if shouldRectifyDistantPointsSnapToRoadFailure
@@ -459,61 +459,64 @@ checkSplLocation mbSplLocTag splLocation = do
     Nothing -> False
 
 recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> DTConf.TransporterConfig -> Bool -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
-recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thresholdConfig recomputeWithLatestPricing tripEndPoint = do
+recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresholdConfig recomputeWithLatestPricing tripEndPoint = do
   let merchantId = booking.providerId
       oldDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix later with rentals
   passedThroughDrop <- LocUpd.isPassedThroughDrop ride.driverId
-  distanceTravelledOutSideDropThreshold <- LocUpd.getTravelledDistanceOutsideThreshold ride.driverId
   pickupDropOutsideOfThreshold <- isDropOutsideOfThreshold booking tripEndPoint thresholdConfig
-  let recalcDistance = bool recalcDistance' distanceTravelledOutSideDropThreshold pickupDropOutsideOfThreshold
-  logDebug $ "Did we passed through drop yet in recalculateFareForDistance" <> show passedThroughDrop
   QRide.updatePassedThroughDestination ride.id passedThroughDrop
-  let estimatedFare = Fare.fareSum booking.fareParams
-  vehicleAge <-
-    if DTC.isAmbulanceTrip booking.tripCategory
-      then do
-        rideDetail <- QRD.findById ride.id -- replica?
-        pure $ (.vehicleAge) =<< rideDetail
-      else pure Nothing
-  tripEndTime <- getCurrentTime
-  farePolicy <-
-    if recomputeWithLatestPricing
-      then getFarePolicyOnEndRide (Just $ getCoordinates booking.fromLocation) (getCoordinates tripEndPoint) booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) (Just (TransactionId (Id booking.transactionId)))
-      else getFarePolicyByEstOrQuoteId (Just $ getCoordinates booking.fromLocation) booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) (Just (TransactionId (Id booking.transactionId)))
-  fareParams <-
-    calculateFareParameters
-      Fare.CalculateFareParametersParams
-        { farePolicy = farePolicy,
-          actualDistance = Just recalcDistance,
-          estimatedDistance = Just oldDistance,
-          rideTime = booking.startTime,
-          returnTime = booking.returnTime,
-          roundTrip = fromMaybe False booking.roundTrip,
-          waitingTime = if isNothing ride.driverArrivalTime then Nothing else fmap (max 0) (secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripStartTime <*> (liftA2 max ride.driverArrivalTime (Just booking.startTime)))),
-          actualRideDuration = roundToIntegral <$> (diffUTCTime <$> Just tripEndTime <*> ride.tripStartTime),
-          estimatedRideDuration = booking.estimatedDuration,
-          avgSpeedOfVehicle = thresholdConfig.avgSpeedOfVehicle,
-          driverSelectedFare = booking.fareParams.driverSelectedFare,
-          customerExtraFee = booking.fareParams.customerExtraFee,
-          nightShiftCharge = booking.fareParams.nightShiftCharge,
-          customerCancellationDues = booking.fareParams.customerCancellationDues,
-          nightShiftOverlapChecking = DTC.isFixedNightCharge booking.tripCategory,
-          timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc,
-          tollCharges = ride.tollCharges,
-          vehicleAge = vehicleAge,
-          currency = booking.currency,
-          distanceUnit = booking.distanceUnit
-        }
-  let finalFare = Fare.fareSum fareParams
-      distanceDiff = recalcDistance - oldDistance
-      fareDiff = finalFare - estimatedFare
-  logTagInfo "Fare recalculation" $
-    "Fare difference: "
-      <> show (realToFrac @_ @Double fareDiff)
-      <> ", Distance difference: "
-      <> show distanceDiff
-  putDiffMetric merchantId fareDiff distanceDiff
-  return (recalcDistance, finalFare, Just fareParams)
+  let tripCategoryForNoRecalc = [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer]
+  if passedThroughDrop && pickupDropOutsideOfThreshold && booking.tripCategory `elem` tripCategoryForNoRecalc && ride.distanceCalculationFailed == Just False
+    then do
+      logDebug "Passed through drop and outside of threshold for OneWay trip"
+      return (oldDistance, booking.estimatedFare, Nothing)
+    else do
+      let estimatedFare = Fare.fareSum booking.fareParams
+      vehicleAge <-
+        if DTC.isAmbulanceTrip booking.tripCategory
+          then do
+            rideDetail <- QRD.findById ride.id -- replica?
+            pure $ (.vehicleAge) =<< rideDetail
+          else pure Nothing
+      tripEndTime <- getCurrentTime
+      farePolicy <-
+        if recomputeWithLatestPricing
+          then getFarePolicyOnEndRide (Just $ getCoordinates booking.fromLocation) (getCoordinates tripEndPoint) booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) (Just (TransactionId (Id booking.transactionId)))
+          else getFarePolicyByEstOrQuoteId (Just $ getCoordinates booking.fromLocation) booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) (Just (TransactionId (Id booking.transactionId)))
+      fareParams <-
+        calculateFareParameters
+          Fare.CalculateFareParametersParams
+            { farePolicy = farePolicy,
+              actualDistance = Just recalcDistance,
+              estimatedDistance = Just oldDistance,
+              rideTime = booking.startTime,
+              returnTime = booking.returnTime,
+              roundTrip = fromMaybe False booking.roundTrip,
+              waitingTime = if isNothing ride.driverArrivalTime then Nothing else fmap (max 0) (secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripStartTime <*> (liftA2 max ride.driverArrivalTime (Just booking.startTime)))),
+              actualRideDuration = roundToIntegral <$> (diffUTCTime <$> Just tripEndTime <*> ride.tripStartTime),
+              estimatedRideDuration = booking.estimatedDuration,
+              avgSpeedOfVehicle = thresholdConfig.avgSpeedOfVehicle,
+              driverSelectedFare = booking.fareParams.driverSelectedFare,
+              customerExtraFee = booking.fareParams.customerExtraFee,
+              nightShiftCharge = booking.fareParams.nightShiftCharge,
+              customerCancellationDues = booking.fareParams.customerCancellationDues,
+              nightShiftOverlapChecking = DTC.isFixedNightCharge booking.tripCategory,
+              timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc,
+              tollCharges = ride.tollCharges,
+              vehicleAge = vehicleAge,
+              currency = booking.currency,
+              distanceUnit = booking.distanceUnit
+            }
+      let finalFare = Fare.fareSum fareParams
+          distanceDiff = recalcDistance - oldDistance
+          fareDiff = finalFare - estimatedFare
+      logTagInfo "Fare recalculation" $
+        "Fare difference: "
+          <> show (realToFrac @_ @Double fareDiff)
+          <> ", Distance difference: "
+          <> show distanceDiff
+      putDiffMetric merchantId fareDiff distanceDiff
+      return (recalcDistance, finalFare, Just fareParams)
 
 isPickupDropOutsideOfThreshold :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => SRB.Booking -> DRide.Ride -> LatLong -> DTConf.TransporterConfig -> m Bool
 isPickupDropOutsideOfThreshold booking ride tripEndPoint thresholdConfig = do

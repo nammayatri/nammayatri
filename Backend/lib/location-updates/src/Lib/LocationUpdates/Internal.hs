@@ -32,6 +32,7 @@ module Lib.LocationUpdates.Internal
     mkRideInterpolationHandler,
     getPassedThroughDrop,
     getTravelledDistanceOutsideThreshold,
+    updatePassedThroughDrop,
   )
 where
 
@@ -417,3 +418,10 @@ getTravelledDistanceOutsideThreshold driverId = do
     Redis.safeGet (onRideSnapToRoadStateKey driverId)
       <&> fromMaybe (SnapToRoadState 0 (Just 0) 0 0 (Just 0) (Just False))
   pure . roundToIntegral $ fromMaybe prevSnapToRoadState.distanceTravelled prevSnapToRoadState.distanceTravelledOutSideDropThreshold
+
+updatePassedThroughDrop :: (HedisFlow m env) => Id person -> m ()
+updatePassedThroughDrop driverId = do
+  prevSnapToRoadState :: SnapToRoadState <-
+    Redis.safeGet (onRideSnapToRoadStateKey driverId)
+      <&> fromMaybe (SnapToRoadState 0 (Just 0) 0 0 (Just 0) (Just False))
+  Redis.setExp (onRideSnapToRoadStateKey driverId) prevSnapToRoadState {passThroughDropThreshold = Just False} 21600
