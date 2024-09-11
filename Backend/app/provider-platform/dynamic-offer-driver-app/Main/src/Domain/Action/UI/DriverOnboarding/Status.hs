@@ -421,12 +421,11 @@ getProcessedVehicleDocuments docType driverId vehicleRC _merchantId _merchantOpC
 
 checkImageValidity :: DVC.DocumentType -> Id SP.Person -> Flow (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl)
 checkImageValidity docType driverId = do
-  validImages <- IQuery.findImageByPersonIdAndImageTypeAndVerificationStatus driverId docType [Documents.VALID, Documents.MANUAL_VERIFICATION_REQUIRED]
+  validImages <- IQuery.findValidImageByPersonIdAndImageType driverId docType
   checkValidity validImages
   where
     checkValidity validImages
       | any (\img -> img.verificationStatus == (Just Documents.VALID)) validImages = return (Just VALID, Nothing, Nothing)
-      | any (\img -> img.verificationStatus == (Just Documents.MANUAL_VERIFICATION_REQUIRED)) validImages = return (Just MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
       | otherwise = return (Nothing, Nothing, Nothing)
 
 checkBackgroundVerificationStatus :: Id SP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
@@ -474,9 +473,7 @@ getInProgressDriverDocuments docType driverId onboardingTryLimit merchantId merc
     DVC.AadhaarCard -> checkIfImageUploadedOrInvalidated DVC.AadhaarCard driverId
     DVC.PanCard -> checkIfImageUploadedOrInvalidated DVC.PanCard driverId
     DVC.Permissions -> return (VALID, Nothing, Nothing)
-    DVC.ProfilePhoto -> do
-      mbImages <- IQuery.findRecentLatestByPersonIdAndImageType driverId DVC.ProfilePhoto
-      return (fromMaybe NO_DOC_AVAILABLE (mapStatus <$> (mbImages >>= (.verificationStatus))), Nothing, Nothing)
+    DVC.ProfilePhoto -> checkIfImageUploadedOrInvalidated DVC.ProfilePhoto driverId
     DVC.UploadProfile -> checkIfImageUploadedOrInvalidated DVC.UploadProfile driverId
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
 

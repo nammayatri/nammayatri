@@ -158,7 +158,6 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
 
   -- WorkflowTransactionId is used only in case of hyperverge request
   when (isJust workflowTransactionId && any ((== Just Documents.VALID) . (.verificationStatus)) images) $ throwError $ DocumentAlreadyValidated (show imageType)
-  when (isJust workflowTransactionId && any ((== Just Documents.MANUAL_VERIFICATION_REQUIRED) . (.verificationStatus)) images) $ throwError $ DocumentUnderManualReview (show imageType)
 
   imagePath <- createPath personId.getId merchantId.getId imageType
   fork "S3 Put Image" do

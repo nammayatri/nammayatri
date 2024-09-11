@@ -49,18 +49,6 @@ findRecentByPersonIdAndImageType personId imgType = do
   where
     hoursAgo i now = negate (3600 * i) `DT.addUTCTime` now
 
-findRecentLatestByPersonIdAndImageType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> DocumentType -> m (Maybe DImage.Image)
-findRecentLatestByPersonIdAndImageType driverId imgType = do
-  findAllWithKV
-    [ Se.And
-        [ Se.Is BeamI.personId $ Se.Eq driverId.getId,
-          Se.Is BeamI.imageType $ Se.Eq imgType
-        ]
-    ]
-    >>= \case
-      [] -> pure Nothing
-      images -> pure $ Just (DL.maximumBy (compare `on` (.createdAt)) images)
-
 findByPersonIdImageTypeAndValidationStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> DocumentType -> DImage.SelfieFetchStatus -> m (Maybe DImage.Image)
 findByPersonIdImageTypeAndValidationStatus persondId docType fetchStatus = do
   case fetchStatus of
@@ -81,11 +69,11 @@ findByPersonIdImageTypeAndValidationStatus persondId docType fetchStatus = do
             ]
         ]
 
-findImageByPersonIdAndImageTypeAndVerificationStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> DocumentType -> [Documents.VerificationStatus] -> m [DImage.Image]
-findImageByPersonIdAndImageTypeAndVerificationStatus personId imgtype verificationStatus = do
+findValidImageByPersonIdAndImageType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> DocumentType -> [Documents.VerificationStatus] -> m [DImage.Image]
+findValidImageByPersonIdAndImageType personId imgtype verificationStatus = do
   findAllWithKV
     [ Se.And
-        [Se.Is BeamI.personId $ Se.Eq $ getId personId, Se.Is BeamI.imageType $ Se.Eq imgtype, Se.Is BeamI.verificationStatus $ Se.In (Just <$> verificationStatus)]
+        [Se.Is BeamI.personId $ Se.Eq $ getId personId, Se.Is BeamI.imageType $ Se.Eq imgtype, Se.Is BeamI.verificationStatus $ Se.Eq (Just VALID)]
     ]
 
 updateVerificationStatusOnlyById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Documents.VerificationStatus -> Kernel.Types.Id.Id DImage.Image -> m ())
