@@ -16,13 +16,14 @@ module SharedLogic.DriverFee where
 import Data.List ((\\))
 import qualified Data.List as DL
 import Data.Maybe (listToMaybe)
-import Data.Time (Day, UTCTime (utctDay))
+import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.Invoice as Domain
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.MerchantOperatingCity as MOC
 import Domain.Types.Person (Person)
 import Domain.Types.Plan (Plan, ServiceNames (..))
+import qualified Domain.Types.Plan as Plan
 import Domain.Types.TransporterConfig as TC
 import EulerHS.Prelude hiding (id, state)
 import GHC.Float (double2Int)
@@ -31,9 +32,12 @@ import Kernel.Beam.Functions
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (UTCTime)
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.Invoice as QINV
+import Tools.Error
+import Utils.Common.Cac.KeyNameConstants
 
 data DriverFeeByInvoice = DriverFeeByInvoice
   { invoiceId :: Id INV.Invoice,
@@ -223,3 +227,20 @@ toCreateDriverFeeForService serviceName merchantOpCityId = Hedis.withCrossAppRed
 setCreateDriverFeeForServiceInSchedulerKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ServiceNames -> Id MOC.MerchantOperatingCity -> Bool -> m ()
 setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId createDriverFeeForService = do
   Hedis.withCrossAppRedis $ Hedis.setExp (createDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId) createDriverFeeForService (3600 * 24) -- one day expiry
+
+getStartTimeAndEndTimeRange :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MOC.MerchantOperatingCity -> Id Person -> Maybe TransporterConfig -> m (UTCTime, UTCTime)
+getStartTimeAndEndTimeRange merchantOpCityId driverId transporterConfig = do
+  now <- getCurrentTime
+  transporterConfig' <- case transporterConfig of
+    Just tc -> pure tc
+    Nothing -> SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let potentialStart = addUTCTime transporterConfig'.driverPaymentCycleStartTime (UTCTime (utctDay now) (secondsToDiffTime 0))
+      startTime = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig'.driverPaymentCycleDuration) potentialStart
+      endTime = addUTCTime transporterConfig'.driverPaymentCycleDuration startTime
+  return (startTime, endTime)
+
+mkCachedKeyTotalRidesByDriverId :: Id Person -> Text
+mkCachedKeyTotalRidesByDriverId driverId = "TRIDES:DId:" <> driverId.getId
+
+getPaymentModeAndVehicleCategoryKey :: Plan.Plan -> Text
+getPaymentModeAndVehicleCategoryKey Plan.Plan {..} = (show paymentMode) <> maybe "" (\vc -> "_" <> show vc) vehicleCategory

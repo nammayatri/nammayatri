@@ -9,6 +9,7 @@ import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Plan
+import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -21,6 +22,7 @@ data DriverPlanT f = DriverPlanT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     driverId :: B.C f Kernel.Prelude.Text,
     enableServiceUsageCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isOnFreeTrial :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     lastPaymentLinkSentAtIstDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     mandateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     mandateSetupDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
@@ -32,7 +34,8 @@ data DriverPlanT f = DriverPlanT
     serviceName :: B.C f (Kernel.Prelude.Maybe Domain.Types.Plan.ServiceNames),
     rentedVehicleNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     totalCoinsConvertedCash :: B.C f Kernel.Types.Common.HighPrecMoney,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory)
   }
   deriving (Generic, B.Beamable)
 

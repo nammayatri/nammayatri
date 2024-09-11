@@ -31,3 +31,27 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN cgst_percentag
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN payout_service_name text  default 'Payout_Juspay';
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN default_city_vehicle_category text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN is_subscription_enabled_for_city boolean ;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN is_execution_enabled_for_city boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN number_of_free_trial_rides integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN free_trial_rides_applicable boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN subscription_enabled_for_vehicle_categories text ;
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN execution_enabled_for_vehicle_categories text ;

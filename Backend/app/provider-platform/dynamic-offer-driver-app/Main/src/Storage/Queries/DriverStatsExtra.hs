@@ -10,11 +10,13 @@ import GHC.Float (double2Int, int2Double)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
+import SharedLogic.DriverFee (mkCachedKeyTotalRidesByDriverId)
 import qualified Storage.Beam.DriverStats as BeamDS
 import Storage.Queries.OrphanInstances.DriverStats
 
@@ -75,16 +77,20 @@ fetchAll = findAllWithKV [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
 findAllByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Driver] -> m [DriverStats]
 findAllByDriverIds person = findAllWithKV [Se.Is BeamDS.driverId $ Se.In (getId <$> (person <&> (.id)))]
 
-incrementTotalRidesAndTotalDist :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Meters -> m ()
+incrementTotalRidesAndTotalDist :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) => Id Driver -> Meters -> m ()
 incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
   now <- getCurrentTime
-  findTotalRides (Id driverId') >>= \(rides, distance) ->
+  findTotalRides (Id driverId') >>= \(rides, distance) -> do
     updateOneWithKV
       [ Se.Set (\BeamDS.DriverStatsT {..} -> totalRides) (rides + 1),
         Se.Set BeamDS.totalDistance $ (\(Meters m) -> int2Double m) (rideDist + distance),
         Se.Set BeamDS.updatedAt now
       ]
       [Se.Is BeamDS.driverId (Se.Eq driverId')]
+    totalRideKey :: (Maybe Int) <- Redis.safeGet $ mkCachedKeyTotalRidesByDriverId (Id driverId')
+    case totalRideKey of
+      Nothing -> Redis.setExp (mkCachedKeyTotalRidesByDriverId (Id driverId')) (rides + 1) 86400
+      Just _ -> void $ Redis.incr (mkCachedKeyTotalRidesByDriverId (Id driverId'))
 
 findTotalRides :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Int, Meters)
 findTotalRides (Id driverId) = maybe (pure (0, 0)) (pure . (Domain.totalRides &&& Domain.totalDistance)) =<< findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId)]

@@ -52,12 +52,13 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
-import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, roundToHalf, setCoinToCashUsedAmount, setCreateDriverFeeForServiceInSchedulerKey, toCreateDriverFeeForService)
+import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, roundToHalf, setCoinToCashUsedAmount, setCreateDriverFeeForServiceInSchedulerKey, toCreateDriverFeeForService)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import Storage.Queries.DriverFee as QDF
 import Storage.Queries.DriverInformation (updatePendingPayment, updateSubscription)
@@ -96,7 +97,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
   merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
-  driverFees <- getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOpCityId transporterConfig recalculateManualReview
+  driverFees <- getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOpCityId transporterConfig recalculateManualReview subscriptionConfigs
   let threshold = transporterConfig.driverFeeRetryThresholdConfig
   driverFeesToProccess <-
     mapMaybeM
@@ -115,7 +116,9 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
   flip C.catchAll (\e -> C.mask_ $ logError $ "Driver fee scheduler for merchant id " <> merchantId.getId <> " failed. Error: " <> show e) $ do
     for_ driverFeesToProccess $ \driverFee -> do
       mbDriverPlan <- findByDriverIdWithServiceName (cast driverFee.driverId) serviceName
-      mbPlan <- getPlan mbDriverPlan serviceName merchantOpCityId (Just recalculateManualReview)
+      mbPlanFromDPlan <- getPlan mbDriverPlan serviceName merchantOpCityId (Just recalculateManualReview)
+      let useDriverPlan = ((mbPlanFromDPlan <&> (.merchantOpCityId)) == Just driverFee.merchantOperatingCityId) && ((mbPlanFromDPlan >>= (.vehicleCategory)) == driverFee.vehicleCategory)
+      mbPlan <- if useDriverPlan then pure mbPlanFromDPlan else maybe (pure Nothing) (\planId' -> CQP.findByIdAndPaymentModeWithServiceName planId' (fromMaybe MANUAL $ mbDriverPlan <&> (.planType)) serviceName) driverFee.planId
       mbDriverStat <- QDS.findById (cast driverFee.driverId)
       case mbPlan of
         Nothing -> pure ()
@@ -202,7 +205,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
           planId = plan.id.getId,
           registrationDate,
           dutyDate = dutyDate,
-          paymentMode = show $ plan.paymentMode,
+          paymentMode = getPaymentModeAndVehicleCategoryKey plan,
           numOfRides
         }
 
@@ -262,7 +265,7 @@ makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transport
       customer = Just customerReq,
       planId = plan.id.getId,
       registrationDate,
-      paymentMode = show plan.paymentMode,
+      paymentMode = getPaymentModeAndVehicleCategoryKey plan,
       dutyDate,
       numOfRides,
       offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_APPLICABLE else Nothing
@@ -309,15 +312,16 @@ splitPlatformFee feeWithoutDiscount_ totalFee plan DriverFee {..} maxAmountPerDr
   let numEntities = totalFee / maxAmount
       remainingFee = totalFee `mod'` maxAmount
       coinDiscount = if remainingFee <= 0 then coinClearedAmount else Nothing
-      entityList = replicate (floor numEntities) (maxAmount, coinDiscount) ++ [(remainingFee, coinClearedAmount) | remainingFee > 0]
+      entityList = replicate (floor numEntities) (maxAmount, coinDiscount, Nothing) ++ [(remainingFee, coinClearedAmount, Just id) | remainingFee > 0]
    in map
-        ( \(fee, coinPaidAmount) -> do
+        ( \(fee, coinPaidAmount, isSplitOf') -> do
             let (platformFee_, cgst, sgst) = calculatePlatformFeeAttr fee plan
             DriverFee
               { platformFee = PlatformFee {fee = platformFee_, ..},
                 feeType = feeType,
                 feeWithoutDiscount = Just feeWithoutDiscount_, -- same for all splitted ones, not remaining fee
                 amountPaidByCoin = coinPaidAmount,
+                splitOfDriverFeeId = isSplitOf',
                 ..
               }
         )
@@ -385,12 +389,16 @@ getOrGenerateDriverFeeDataBasedOnServiceName ::
   Id MerchantOperatingCity ->
   TransporterConfig ->
   Bool ->
+  SubscriptionConfig ->
   m [DriverFee]
-getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOperatingCityId transporterConfig recalculateManualReview = do
+getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOperatingCityId transporterConfig recalculateManualReview subsConfig = do
   now <- getCurrentTime
   let statusToCheck = if recalculateManualReview then MANUAL_REVIEW_NEEDED else ONGOING
   case serviceName of
-    YATRI_SUBSCRIPTION -> QDF.findAllFeesInRangeWithStatusAndServiceName (Just merchantId) merchantOperatingCityId startTime endTime statusToCheck transporterConfig.driverFeeCalculatorBatchSize serviceName
+    YATRI_SUBSCRIPTION -> do
+      driverFeeElderSiblings <- QDF.findAllFeesInRangeWithStatusAndServiceName (Just merchantId) merchantOperatingCityId startTime endTime statusToCheck transporterConfig.driverFeeCalculatorBatchSize serviceName
+      driverFeeRestSiblings <- QDF.findAllChildsOFDriverFee merchantOperatingCityId startTime endTime statusToCheck serviceName $ map (.id) $ filter (\dfee -> dfee.hasSibling == Just True) driverFeeElderSiblings
+      return $ filter (\dfee -> dfee.merchantOperatingCityId == merchantOperatingCityId) $ driverFeeElderSiblings <> driverFeeRestSiblings
     YATRI_RENTAL -> do
       when (startTime >= endTime) $ throwError (InternalError "Invalid time range for driver fee calculation")
       let mbStartTime = Just startTime
@@ -406,7 +414,7 @@ getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merch
                   if isNothing mbExistingDFee
                     then do
                       currency <- SMerchant.getCurrencyByMerchantOpCity merchantOperatingCityId
-                      driverFee <- mkDriverFee serviceName now mbStartTime mbEndTime merchantId dPlan.driverId Nothing 0 0.0 0.0 0.0 currency transporterConfig Nothing False
+                      driverFee <- mkDriverFee serviceName now mbStartTime mbEndTime merchantId dPlan.driverId Nothing 0 0.0 0.0 0.0 currency transporterConfig Nothing False Nothing (Just subsConfig)
                       QDF.create driverFee
                       return $ Just driverFee
                     else return Nothing

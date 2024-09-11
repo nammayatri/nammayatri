@@ -40,7 +40,7 @@ import Kernel.Utils.Common
 import SharedLogic.DriverFee (roundToHalf)
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
-import qualified Storage.CachedQueries.Plan as CQP
+import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QDP

@@ -6,7 +6,7 @@ imports:
   PaymentMode: Domain.Types.Plan
   ServiceNames: Domain.Types.Plan
   PlatformFee: Domain.Types.DriverFee
-
+  VehicleCategory : Domain.Types.VehicleCategory
 DriverFee:
   tableName: driver_fee
 
@@ -17,7 +17,7 @@ DriverFee:
 
     FeeType:
       enum: "MANDATE_REGISTRATION, RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE, PAYOUT_REGISTRATION, ONE_TIME_SECURITY_DEPOSIT"
-      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord, Enum"
 
     RefundedBy:
       enum: "PAYOUT, REFUNDS_API"
@@ -85,6 +85,10 @@ DriverFee:
     refundedAt : Maybe UTCTime
     refundedAmount : Maybe HighPrecMoney
     currency : Currency
+    vehicleCategory : Maybe VehicleCategory
+    siblingFeeId : Maybe (Id DriverFee)
+    hasSibling : Maybe Bool
+    splitOfDriverFeeId : Maybe (Id DriverFee)
 
   derives: "Generic, Show, Eq"
 

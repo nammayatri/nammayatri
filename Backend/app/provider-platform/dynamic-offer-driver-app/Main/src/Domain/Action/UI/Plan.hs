@@ -34,7 +34,9 @@ import qualified Domain.Types.MerchantMessage as MessageKey
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as P
+import Domain.Types.SubscriptionConfig
 import Domain.Types.TransporterConfig (TransporterConfig)
+import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Vehicle
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -47,7 +49,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as SOrder
-import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, roundToHalf)
+import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, getStartTimeAndEndTimeRange, mkCachedKeyTotalRidesByDriverId, roundToHalf)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -62,6 +64,7 @@ import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
 import Tools.Notifications
 import Tools.Payment as Payment
@@ -136,8 +139,9 @@ data CurrentPlanRes = CurrentPlanRes
     latestManualPaymentDate :: Maybe UTCTime,
     isEligibleForCharge :: Maybe Bool,
     isLocalized :: Maybe Bool,
-    askForPlanSwitch :: Bool,
-    payoutVpa :: Maybe Text
+    payoutVpa :: Maybe Text,
+    askForPlanSwitchByCity :: Bool,
+    askForPlanSwitchByVehicle :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -203,6 +207,7 @@ class Subscription a where
   planSwitch :: a -> Id Plan -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow APISuccess
   planSuspend :: a -> Bool -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow APISuccess
   planResume :: a -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow APISuccess
+  getSubscriptionConfigAndPlan :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DriverPlan -> m (SubscriptionConfig, [Plan])
 
 instance Subscription ServiceNames where
   getSubcriptionStatusWithPlan serviceName driverId = do
@@ -233,6 +238,10 @@ instance Subscription ServiceNames where
     case serviceName of
       YATRI_SUBSCRIPTION -> updateSubscriptionStatusGeneric YATRI_SUBSCRIPTION (driverId, merchantId, opCity) autoPayStatus mbPayerVpa
       YATRI_RENTAL -> updateSubscriptionStatusGeneric YATRI_RENTAL (driverId, merchantId, opCity) autoPayStatus mbPayerVpa
+  getSubscriptionConfigAndPlan serviceName (driverId, merchantId, opCity) mbDPlan = do
+    case serviceName of
+      YATRI_SUBSCRIPTION -> getSubsriptionConfigAndPlanSubscription YATRI_SUBSCRIPTION (driverId, merchantId, opCity) mbDPlan
+      YATRI_RENTAL -> getSubsriptionConfigAndPlanGeneric YATRI_RENTAL (driverId, merchantId, opCity) mbDPlan
 
 ---------------------------------------------------------------------------------------------------------
 --------------------------------------------- Controllers -----------------------------------------------
@@ -289,9 +298,34 @@ createDriverPlanGeneric serviceName (driverId, merchantId, merchantOpCityId) pla
             subscriptionServiceRelatedData = subscriptionServiceRelatedData,
             payerVpa = Nothing,
             lastPaymentLinkSentAtIstDate = Just now,
+            vehicleCategory = plan.vehicleCategory,
+            isOnFreeTrial = True,
             ..
           }
   QDPlan.create dPlan
+
+getSubsriptionConfigAndPlanGeneric ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  ServiceNames ->
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Maybe DriverPlan ->
+  m (SubscriptionConfig, [Plan])
+getSubsriptionConfigAndPlanGeneric serviceName (_, _, merchantOpCityId) mbDPlan = do
+  subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
+  plans <- QPD.findByMerchantOpCityIdAndPaymentModeWithServiceName merchantOpCityId (maybe AUTOPAY (.planType) mbDPlan) serviceName (Just False)
+  return (subscriptionConfig, plans)
+
+getSubsriptionConfigAndPlanSubscription ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  ServiceNames ->
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Maybe DriverPlan ->
+  m (SubscriptionConfig, [Plan])
+getSubsriptionConfigAndPlanSubscription serviceName (driverId, _, merchantOpCityId) mbDPlan = do
+  subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
+  vehicleCategory <- getVehicleCategory driverId subscriptionConfig
+  plans <- QPD.findByMerchantOpCityIdTypeServiceNameVehicle merchantOpCityId (maybe AUTOPAY (.planType) mbDPlan) serviceName vehicleCategory False
+  return (subscriptionConfig, plans)
 
 -- This API is for listing all the AUTO PAY plans
 planList ::
@@ -301,11 +335,11 @@ planList ::
   Maybe Int ->
   Maybe Vehicle.VehicleVariant ->
   Flow PlanListAPIRes
-planList (driverId, _, merchantOpCityId) serviceName _mbLimit _mbOffset _mbVariant = do
+planList (driverId, merchantId, merchantOpCityId) serviceName _mbLimit _mbOffset _mbVariant = do
   driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   mDriverPlan <- B.runInReplica $ QDPlan.findByDriverIdWithServiceName driverId serviceName
-  plans <- QPD.findByMerchantOpCityIdAndPaymentModeWithServiceName merchantOpCityId (maybe AUTOPAY (.planType) mDriverPlan) serviceName (Just False)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  (_, plans) <- getSubscriptionConfigAndPlan serviceName (driverId, merchantId, merchantOpCityId) mDriverPlan
   now <- getCurrentTime
   let mandateSetupDate = fromMaybe now ((.mandateSetupDate) =<< mDriverPlan)
   plansList <-
@@ -348,7 +382,8 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
         mbOrder <- if invoice.invoiceStatus == INV.ACTIVE_INVOICE then SOrder.findById (cast invoice.id) else return Nothing
         maybe (pure (Nothing, Nothing)) orderBasedCheck mbOrder
       Nothing -> return (Nothing, Nothing)
-  let askForPlanSwitch = (mPlan <&> (.merchantOpCityId)) /= Just merchantOperatingCityId
+  let askForPlanSwitchByCity = (mPlan <&> (.merchantOpCityId)) /= Just merchantOperatingCityId
+  let askForPlanSwitchByVehicle = (mPlan >>= (.vehicleCategory)) /= (mDriverPlan >>= (.vehicleCategory))
   return $
     CurrentPlanRes
       { currentPlanDetails = currentPlanEntity,
@@ -363,7 +398,7 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
         isLocalized = Just True,
         isEligibleForCharge,
         payoutVpa = driverInfo.payoutVpa,
-        askForPlanSwitch
+        ..
       }
   where
     checkIFActiveStatus (Just DI.ACTIVE) = True
@@ -394,6 +429,8 @@ planSubscribeGeneric serviceName planId (isDashboard, channel) (driverId, mercha
   when (autoPayStatus == Just DI.ACTIVE) $ throwError InvalidAutoPayStatus
   plan <- QPD.findByIdAndPaymentModeWithServiceName planId MANUAL serviceName >>= fromMaybeM (PlanNotFound planId.getId)
   let isSamePlan = maybe False (\dp -> dp.planId == planId) driverPlan
+  let isSubscriptionEnabledForCity = maybe False (\vcList -> isJust $ find (\enabledVc -> maybe False (enabledVc ==) plan.vehicleCategory) vcList) subscriptionConfig.subscriptionEnabledForVehicleCategories
+  when (not isSubscriptionEnabledForCity) $ throwError (InternalError $ "Subscription is not enabled for city :- " <> merchantOpCityId.getId <> " and vehicle category :- " <> fromMaybe "" (show <$> plan.vehicleCategory))
   when (autoPayStatus == Just DI.PAUSED_PSP) $ do
     let mbMandateId = (.mandateId) =<< driverPlan
     whenJust mbMandateId $ \mandateId -> do
@@ -406,7 +443,7 @@ planSubscribeGeneric serviceName planId (isDashboard, channel) (driverId, mercha
   when (isJust driverPlan) $ do
     unless (autoPayStatus == Just DI.PENDING && isSamePlan) $ do
       QDF.updateRegisterationFeeStatusByDriverIdForServiceName DF.INACTIVE driverId serviceName
-    QDPlan.updatePlanIdByDriverIdAndServiceName driverId planId serviceName
+    QDPlan.updatePlanIdByDriverIdAndServiceName driverId planId serviceName plan.vehicleCategory plan.merchantOpCityId
   (createOrderResp, orderId) <- createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData
   when isDashboard $ do
     fork "send link through dashboard" $ do
@@ -438,16 +475,25 @@ mkDriverPlan plan (driverId, merchantId, merchantOpCityId) = do
         merchantOpCityId = merchantOpCityId,
         subscriptionServiceRelatedData = NoData,
         lastPaymentLinkSentAtIstDate = Just now,
+        vehicleCategory = plan.vehicleCategory,
+        isOnFreeTrial = True,
         ..
       }
 
 -- This API is to switch between plans of current Payment Method Preference.
 planSwitchGeneric :: ServiceNames -> Id Plan -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow APISuccess
-planSwitchGeneric serviceName planId (driverId, _, _) = do
+planSwitchGeneric serviceName planId (driverId, _, merchantOpCityId) = do
   void $ B.runInReplica $ QDPlan.findByDriverIdWithServiceName driverId serviceName >>= fromMaybeM (NoCurrentPlanForDriver driverId.getId)
   (autoPayStatus, _) <- getSubcriptionStatusWithPlan serviceName driverId
-  void $ QPD.findByIdAndPaymentModeWithServiceName planId (getDriverPaymentMode autoPayStatus) serviceName >>= fromMaybeM (PlanNotFound planId.getId)
-  QDPlan.updatePlanIdByDriverIdAndServiceName driverId planId serviceName
+  plan <- QPD.findByIdAndPaymentModeWithServiceName planId (getDriverPaymentMode autoPayStatus) serviceName >>= fromMaybeM (PlanNotFound planId.getId)
+  QDPlan.updatePlanIdByDriverIdAndServiceName driverId planId serviceName plan.vehicleCategory plan.merchantOpCityId
+  when (serviceName == YATRI_SUBSCRIPTION) $ do
+    driverManualDuesFees <- QDF.findAllByStatusAndDriverIdWithServiceName driverId [DF.PAYMENT_OVERDUE] serviceName
+    let currentDues = calculateDues driverManualDuesFees
+    when plan.subscribedFlagToggleAllowed $ DI.updateSubscription (currentDues >= plan.maxCreditLimit) driverId
+  (from, to) <- getStartTimeAndEndTimeRange merchantOpCityId driverId Nothing
+  whenJust plan.vehicleCategory $ \vc -> do
+    QDF.updateDfeeByOperatingCityAndVehicleCategory merchantOpCityId serviceName DF.ONGOING from to vc plan.id.getId
   return Success
   where
     getDriverPaymentMode = \case
@@ -456,6 +502,7 @@ planSwitchGeneric serviceName planId (driverId, _, _) = do
       Just DI.PAUSED_PSP -> MANUAL
       Just DI.CANCELLED_PSP -> MANUAL
       _ -> MANUAL
+    calculateDues driverFees = sum $ map (\dueInvoice -> roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) driverFees
 
 -- This API is to make Mandate Inactive and switch to Manual plan type from Autopay.
 planSuspendGeneric :: ServiceNames -> Bool -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow APISuccess
@@ -643,7 +690,11 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
             refundEntityId = Nothing,
             refundedAmount = Nothing,
             refundedAt = Nothing,
-            refundedBy = Nothing
+            refundedBy = Nothing,
+            hasSibling = Just False,
+            siblingFeeId = Nothing,
+            splitOfDriverFeeId = Nothing,
+            vehicleCategory = Nothing
           }
     calculateDues driverFees = sum $ map (\dueInvoice -> roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) driverFees
     checkIfInvoiceIsReusable invoice newDriverFees = do
@@ -731,7 +782,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
             planId = plan.id.getId,
             registrationDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) date,
             dutyDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) now,
-            paymentMode = show paymentMode_,
+            paymentMode = getPaymentModeAndVehicleCategoryKey plan,
             numOfRides = if paymentMode_ == AUTOPAY then 0 else -1,
             offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_VISIBLE else Nothing
           }
@@ -888,3 +939,21 @@ calcExecutionTime transporterConfig' autopayPaymentStage scheduledAt = do
 minMaybe :: Ord a => Maybe a -> Maybe a -> Maybe a
 minMaybe (Just a) (Just b) = Just $ min a b
 minMaybe a b = a <|> b
+
+getVehicleCategory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> SubscriptionConfig -> m (Maybe DVC.VehicleCategory)
+getVehicleCategory personId subscriptionConfig = do
+  mVehicle <- QVehicle.findById personId
+  return $ ((.category) =<< mVehicle) <|> subscriptionConfig.defaultCityVehicleCategory
+
+isOnFreeTrial :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> SubscriptionConfig -> Int -> Maybe DriverPlan -> m (Bool, Maybe Int)
+isOnFreeTrial driverId subscriptionConfig freeTrialDaysLeft mbDriverPlan = do
+  numRides :: (Maybe Int) <- Redis.get $ mkCachedKeyTotalRidesByDriverId driverId
+  case mbDriverPlan <&> (.isOnFreeTrial) of
+    Just False -> return (False, Nothing)
+    _ -> do
+      driverStats <- if isJust numRides then pure Nothing else QDS.findByPrimaryKey driverId
+      let freeTrialRides = fromMaybe 0 $ subscriptionConfig.numberOfFreeTrialRides
+      let totalRides = fromMaybe 0 $ numRides <|> (driverStats <&> (.totalRides))
+      let isOnFreeTrial' = not $ (totalRides >= freeTrialRides && subscriptionConfig.freeTrialRidesApplicable) || freeTrialDaysLeft <= 0
+      fork "update free trial flag" $ QDPlan.updateFreeTrialByDriverIdAndServiceName isOnFreeTrial' driverId subscriptionConfig.serviceName
+      return (isOnFreeTrial', driverStats <&> (.totalRides))

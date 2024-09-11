@@ -1,9 +1,10 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Storage.CachedQueries.Plan where
+module Storage.CachedQueries.PlanExtra where
 
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Plan
+import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Vehicle
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -143,3 +144,6 @@ makeMerchantIdAndPaymentModeAndVariantKey merchantOpCityId paymentMode serviceNa
     <> show mbVehicleVariant
     <> ":IsDeprecated-"
     <> show mbIsDeprecated
+
+makeIdKey :: Id DMOC.MerchantOperatingCity -> PaymentMode -> ServiceNames -> Maybe DVC.VehicleCategory -> Bool -> Text
+makeIdKey merchantOpCityId planMode serviceName vehicleCategory isDeprecated = "driver-offer:CachedQueries:Plan:MerchantOperatingCityId-" <> merchantOpCityId.getId <> ":PlanMode-" <> show planMode <> ":ServiceName-" <> show serviceName <> ":IsDeprecated-" <> show isDeprecated <> ":VehicleCategory-" <> show vehicleCategory

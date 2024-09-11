@@ -11,6 +11,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Plan
+import qualified Domain.Types.VehicleCategory
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -33,6 +34,7 @@ data DriverFee = DriverFee
     feeType :: Domain.Types.DriverFee.FeeType,
     feeWithoutDiscount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     govtCharges :: Kernel.Types.Common.HighPrecMoney,
+    hasSibling :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
@@ -51,13 +53,16 @@ data DriverFee = DriverFee
     refundedBy :: Kernel.Prelude.Maybe Domain.Types.DriverFee.RefundedBy,
     schedulerTryCount :: Kernel.Prelude.Int,
     serviceName :: Domain.Types.Plan.ServiceNames,
+    siblingFeeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee),
     specialZoneAmount :: Kernel.Types.Common.HighPrecMoney,
     specialZoneRideCount :: Kernel.Prelude.Int,
+    splitOfDriverFeeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee),
     stageUpdatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     startTime :: Kernel.Prelude.UTCTime,
     status :: Domain.Types.DriverFee.DriverFeeStatus,
     totalEarnings :: Kernel.Types.Common.HighPrecMoney,
     updatedAt :: Kernel.Prelude.UTCTime,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, Show, Eq)
@@ -94,7 +99,7 @@ data FeeType
   | RECURRING_EXECUTION_INVOICE
   | PAYOUT_REGISTRATION
   | ONE_TIME_SECURITY_DEPOSIT
-  deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
+  deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord, Enum)
 
 data PlatformFee = PlatformFee {cgst :: Kernel.Types.Common.HighPrecMoney, currency :: Kernel.Types.Common.Currency, fee :: Kernel.Types.Common.HighPrecMoney, sgst :: Kernel.Types.Common.HighPrecMoney}
   deriving (Generic, Eq, Show)

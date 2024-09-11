@@ -11,6 +11,7 @@ import qualified Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantServiceConfig
 import qualified Domain.Types.Plan
+import qualified Domain.Types.VehicleCategory
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -22,10 +23,14 @@ data SubscriptionConfig = SubscriptionConfig
     allowManualPaymentLinks :: Kernel.Prelude.Bool,
     cgstPercentageOneTimeSecurityDeposit :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     deepLinkExpiryTimeInMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    defaultCityVehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
+    executionEnabledForVehicleCategories :: Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory],
+    freeTrialRidesApplicable :: Kernel.Prelude.Bool,
     genericBatchSizeForJobs :: Kernel.Prelude.Int,
     genericJobRescheduleTime :: Data.Time.NominalDiffTime,
     isTriggeredAtEndRide :: Kernel.Prelude.Bool,
     maxRetryCount :: Kernel.Prelude.Int,
+    numberOfFreeTrialRides :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     paymentLinkChannel :: Domain.Types.MerchantMessage.MediaChannel,
     paymentLinkJobTime :: Data.Time.NominalDiffTime,
     paymentServiceName :: Domain.Types.MerchantServiceConfig.ServiceName,
@@ -34,6 +39,7 @@ data SubscriptionConfig = SubscriptionConfig
     sendInAppFcmNotifications :: Kernel.Prelude.Bool,
     serviceName :: Domain.Types.Plan.ServiceNames,
     sgstPercentageOneTimeSecurityDeposit :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    subscriptionEnabledForVehicleCategories :: Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory],
     useOverlayService :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),

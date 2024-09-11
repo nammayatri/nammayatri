@@ -4,6 +4,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Merchant: Domain.Types.Merchant
   Id: Kernel.Types.Id
+  VehicleCategory: Domain.Types.VehicleCategory
 
 
 SubscriptionConfig:
@@ -12,53 +13,61 @@ SubscriptionConfig:
   derives: "Generic,Show,ToJSON,FromJSON"
 
   fields:
-    allowManualPaymentLinks : Bool
-    useOverlayService : Bool
-    paymentLinkChannel : Domain.Types.MerchantMessage.MediaChannel
-    paymentLinkJobTime : Data.Time.NominalDiffTime
-    genericBatchSizeForJobs : Int
-    genericJobRescheduleTime : Data.Time.NominalDiffTime
-    maxRetryCount : Int
-    sendInAppFcmNotifications : Bool
-    paymentServiceName : Domain.Types.MerchantServiceConfig.ServiceName
-    allowDueAddition : Bool
-    serviceName : Domain.Types.Plan.ServiceNames
-    sendDeepLink : Bool
-    deepLinkExpiryTimeInMinutes : Maybe Int
-    sgstPercentageOneTimeSecurityDeposit : Maybe  Kernel.Types.Common.HighPrecMoney
-    cgstPercentageOneTimeSecurityDeposit : Maybe Kernel.Types.Common.HighPrecMoney
-    payoutServiceName : Maybe Domain.Types.MerchantServiceConfig.ServiceName
-    isTriggeredAtEndRide : Bool
-    allowDriverFeeCalcSchedule : Bool
+    allowManualPaymentLinks: Bool
+    useOverlayService: Bool
+    paymentLinkChannel: Domain.Types.MerchantMessage.MediaChannel
+    paymentLinkJobTime: Data.Time.NominalDiffTime
+    genericBatchSizeForJobs: Int
+    genericJobRescheduleTime: Data.Time.NominalDiffTime
+    maxRetryCount: Int
+    sendInAppFcmNotifications: Bool
+    paymentServiceName: Domain.Types.MerchantServiceConfig.ServiceName
+    allowDueAddition: Bool
+    serviceName: Domain.Types.Plan.ServiceNames
+    sendDeepLink: Bool
+    deepLinkExpiryTimeInMinutes: Maybe Int
+    sgstPercentageOneTimeSecurityDeposit: Maybe  Kernel.Types.Common.HighPrecMoney
+    cgstPercentageOneTimeSecurityDeposit: Maybe Kernel.Types.Common.HighPrecMoney
+    payoutServiceName: Maybe Domain.Types.MerchantServiceConfig.ServiceName
+    isTriggeredAtEndRide: Bool
+    allowDriverFeeCalcSchedule: Bool
+    defaultCityVehicleCategory: Maybe VehicleCategory
+    numberOfFreeTrialRides: Maybe Int
+    subscriptionEnabledForVehicleCategories: Maybe [VehicleCategory]
+    freeTrialRidesApplicable: Bool
+    executionEnabledForVehicleCategories: Maybe [VehicleCategory]
 
   fromTType:
     genericJobRescheduleTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
-    paymentLinkJobTime : Kernel.Utils.Common.secondsToNominalDiffTime|I
+    paymentLinkJobTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
+    freeTrialRidesApplicable: Kernel.Prelude.fromMaybe False|I
   toTType:
     genericJobRescheduleTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
-    paymentLinkJobTime : Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+    paymentLinkJobTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+    freeTrialRidesApplicable: Kernel.Prelude.Just|I
 
   beamType:
     genericJobRescheduleTime: Seconds
     paymentLinkJobTime: Seconds
+    freeTrialRidesApplicable: Maybe Bool
 
   constraints:
-    serviceName : PrimaryKey
-    merchantOperatingCityId : PrimaryKey
+    serviceName: PrimaryKey
+    merchantOperatingCityId: PrimaryKey
 
 
-  queries :
+  queries:
     findSubscriptionConfigsByMerchantOpCityIdAndServiceName:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, serviceName]
 
-  default :
-    allowManualPaymentLinks : "false"
-    sendDeepLink : "false"
-    sendInAppFcmNotifications : "false"
-    allowDueAddition : "false"
-    paymentServiceName : "'Payment_Juspay'"
-    isTriggeredAtEndRide : "true"
-    allowDriverFeeCalcSchedule : "false"
-    payoutServiceName : "'Payout_Juspay'"
+  default:
+    allowManualPaymentLinks: "false"
+    sendDeepLink: "false"
+    sendInAppFcmNotifications: "false"
+    allowDueAddition: "false"
+    paymentServiceName: "'Payment_Juspay'"
+    isTriggeredAtEndRide: "true"
+    allowDriverFeeCalcSchedule: "false"
+    payoutServiceName: "'Payout_Juspay'"
