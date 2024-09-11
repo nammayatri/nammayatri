@@ -263,6 +263,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             when (bookingUpdateReq.validTill < now) $ throwError (InvalidRequest "BookingUpdateRequest is expired")
             when (bookingUpdateReq.status /= DBUR.SOFT) $ throwError (InvalidRequest "BookingUpdateRequest is not in SOFT state")
             QBUR.updateStatusById DBUR.USER_CONFIRMED bookingUpdateReq.id
+            updatePassedThroughDrop person.id
             if transporterConfig.editLocDriverPermissionNeeded
               then do
                 newEstimatedDistance <- bookingUpdateReq.estimatedDistance & fromMaybeM (InternalError $ "No estimated distance found for bookingUpdateReq with Id :" <> bookingUpdateReq.id.getId)
