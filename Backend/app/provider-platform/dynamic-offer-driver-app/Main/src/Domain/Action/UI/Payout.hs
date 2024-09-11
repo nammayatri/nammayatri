@@ -167,13 +167,15 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
   mbVehicle <- QV.findById personId
   let vehicleCategory = fromMaybe DV.AUTO_CATEGORY ((.category) =<< mbVehicle)
   payoutConfig <- CPC.findByPrimaryKey merchOpCity vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
-  when payoutConfig.isPayoutEnabled $ do
-    redisLockDriverId <- Redis.tryLockRedis lockKey 10800
-    logDebug $ "Backlog Payout for person: " <> personId.getId <> " with vpa: " <> show mbVpa <> " and redisLockDriverId: " <> show redisLockDriverId
-    dailyStats_ <- if not redisLockDriverId then pure [] else QDailyStats.findAllByPayoutStatusAndReferralEarningsAndDriver DS.Verifying personId
+  redisLockDriverId <- Redis.tryLockRedis lockKey 10800
+  logDebug $ "Backlog Payout for person: " <> personId.getId <> " with vpa: " <> show mbVpa <> " and redisLockDriverId: " <> show redisLockDriverId
+  when (payoutConfig.isPayoutEnabled && redisLockDriverId) do
+    dailyStats_ <- QDailyStats.findAllByPayoutStatusAndReferralEarningsAndDriver DS.PendingForVpa personId
+    logDebug $ "DailyStats for person: " <> personId.getId <> " is : " <> show dailyStats_
     transporterConfig <- SCTC.findByMerchantOpCityId merchOpCity (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchOpCity.getId)
     localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
     let dailyStats = filter (\ds -> (ds.activatedValidRides <= transporterConfig.maxPayoutReferralForADay) && ds.merchantLocalDate /= (utctDay localTime)) dailyStats_ -- filter out the flagged payouts and current day payout earning
+    logDebug $ "Final DailyStats for Payout for person: " <> personId.getId <> " is : " <> show dailyStats
     when (length dailyStats > 0) $ do
       person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       let statsIds = map (.id) dailyStats
