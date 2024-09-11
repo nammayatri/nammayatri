@@ -331,37 +331,35 @@ throwErrorOnRide includeDriverCurrentlyOnRide driverInfo isForwardRequest = do
   let checkOnRide = if includeDriverCurrentlyOnRide && isForwardRequest then driverInfo.hasAdvanceBooking else driverInfo.onRide
   when checkOnRide $ throwError DriverOnRide
 
-calculateEstimatedEndTimeRange :: UTCTime -> Seconds -> Maybe DTC.ArrivalTimeBufferOfVehicle -> DST.ServiceTierType -> DRide.EstimatedEndTimeRange
+calculateEstimatedEndTimeRange :: UTCTime -> Seconds -> Maybe DTC.ArrivalTimeBufferOfVehicle -> DST.ServiceTierType -> Maybe DRide.EstimatedEndTimeRange
 calculateEstimatedEndTimeRange currTime tripEstimatedDuration bufferJson serviceTier =
-  let timebufferOfVehicle = getArrivalTimeBufferOfVehicle bufferJson serviceTier
-      start = addUTCTime (secondsToNominalDiffTime (tripEstimatedDuration + div timebufferOfVehicle 2)) currTime
-      end = addUTCTime (secondsToNominalDiffTime timebufferOfVehicle) start
-   in DRide.EstimatedEndTimeRange {start = start, end = end}
+  case getArrivalTimeBufferOfVehicle bufferJson serviceTier of
+    Nothing -> Nothing
+    Just timebufferOfVehicle ->
+      let start = addUTCTime (secondsToNominalDiffTime (tripEstimatedDuration + div timebufferOfVehicle 2)) currTime
+          end = addUTCTime (secondsToNominalDiffTime timebufferOfVehicle) start
+       in Just $ DRide.EstimatedEndTimeRange {start = start, end = end}
 
-getArrivalTimeBufferOfVehicle :: Maybe DTC.ArrivalTimeBufferOfVehicle -> DST.ServiceTierType -> Seconds
+getArrivalTimeBufferOfVehicle :: Maybe DTC.ArrivalTimeBufferOfVehicle -> DST.ServiceTierType -> Maybe Seconds
 getArrivalTimeBufferOfVehicle bufferJson serviceTier =
-  maybe
-    (Seconds 600)
-    ( \buffer -> case serviceTier of
-        DST.SEDAN -> buffer.sedan
-        DST.SUV -> buffer.suv
-        DST.HATCHBACK -> buffer.hatchback
-        DST.AUTO_RICKSHAW -> buffer.autorickshaw
-        DST.BIKE -> buffer.bike
-        DST.DELIVERY_BIKE -> buffer.deliverybike
-        DST.TAXI -> buffer.taxi
-        DST.TAXI_PLUS -> buffer.taxiplus
-        DST.PREMIUM_SEDAN -> buffer.premiumsedan
-        DST.BLACK -> buffer.black
-        DST.BLACK_XL -> buffer.blackxl
-        DST.ECO -> buffer.hatchback
-        DST.COMFY -> buffer.sedan
-        DST.PREMIUM -> buffer.sedan
-        DST.AMBULANCE_TAXI -> buffer.ambulance
-        DST.AMBULANCE_TAXI_OXY -> buffer.ambulance
-        DST.AMBULANCE_AC -> buffer.ambulance
-        DST.AMBULANCE_AC_OXY -> buffer.ambulance
-        DST.AMBULANCE_VENTILATOR -> buffer.ambulance
-        DST.SUV_PLUS -> buffer.suvplus
-    )
-    bufferJson
+  bufferJson >>= \buffer -> case serviceTier of
+    DST.SEDAN -> buffer.sedan
+    DST.SUV -> buffer.suv
+    DST.HATCHBACK -> buffer.hatchback
+    DST.AUTO_RICKSHAW -> buffer.autorickshaw
+    DST.BIKE -> buffer.bike
+    DST.DELIVERY_BIKE -> buffer.deliverybike
+    DST.TAXI -> buffer.taxi
+    DST.TAXI_PLUS -> buffer.taxiplus
+    DST.PREMIUM_SEDAN -> buffer.premiumsedan
+    DST.BLACK -> buffer.black
+    DST.BLACK_XL -> buffer.blackxl
+    DST.ECO -> buffer.hatchback
+    DST.COMFY -> buffer.sedan
+    DST.PREMIUM -> buffer.sedan
+    DST.AMBULANCE_TAXI -> buffer.ambulance
+    DST.AMBULANCE_TAXI_OXY -> buffer.ambulance
+    DST.AMBULANCE_AC -> buffer.ambulance
+    DST.AMBULANCE_AC_OXY -> buffer.ambulance
+    DST.AMBULANCE_VENTILATOR -> buffer.ambulance
+    DST.SUV_PLUS -> buffer.suvplus

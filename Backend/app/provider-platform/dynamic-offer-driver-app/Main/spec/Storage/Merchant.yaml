@@ -653,19 +653,19 @@ TransporterConfig:
       alert: Int
       derive': Generic, Show, ToJSON, FromJSON, Read
     ArrivalTimeBufferOfVehicle:
-      sedan: Seconds
-      suv: Seconds
-      hatchback: Seconds
-      autorickshaw: Seconds
-      taxi: Seconds
-      taxiplus: Seconds
-      bike: Seconds
-      deliverybike: Seconds
-      ambulance: Seconds
-      premiumsedan: Seconds
-      black: Seconds
-      blackxl: Seconds
-      suvplus: Seconds
+      sedan: Maybe Seconds
+      suv: Maybe Seconds
+      hatchback: Maybe Seconds
+      autorickshaw: Maybe Seconds
+      taxi: Maybe Seconds
+      taxiplus: Maybe Seconds
+      bike: Maybe Seconds
+      deliverybike: Maybe Seconds
+      ambulance: Maybe Seconds
+      premiumsedan: Maybe Seconds
+      black: Maybe Seconds
+      blackxl: Maybe Seconds
+      suvplus: Maybe Seconds
       derive': Generic, Show, ToJSON, FromJSON, Read
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")]

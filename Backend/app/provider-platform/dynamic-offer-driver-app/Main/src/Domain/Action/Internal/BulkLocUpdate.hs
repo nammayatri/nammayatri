@@ -64,9 +64,11 @@ bulkLocUpdate req = do
   let passedThroughDrop = any (isDropInsideThreshold booking transportConfig) loc
   logDebug $ "Did we passed through drop yet in bulkLocation " <> show passedThroughDrop <> " and points: " <> show loc
   _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rectificationServiceConfig isTollApplicable transportConfig.enableTollCrossedNotifications rideId driverId passedThroughDrop loc
-  when (ride.status == DRide.INPROGRESS && isJust ride.estimatedEndTimeRange && isJust ride.toLocation) $ do
+
+  let buffertime' = getArrivalTimeBufferOfVehicle transportConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier
+  when (isJust buffertime' && ride.status == DRide.INPROGRESS && isJust ride.estimatedEndTimeRange && isJust ride.toLocation) $ do
     now <- getCurrentTime
-    let buffertime = getArrivalTimeBufferOfVehicle transportConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier
+    let buffertime = fromJust buffertime'
     let endTimeRange = fromJust ride.estimatedEndTimeRange
     when (now > addUTCTime (secondsToNominalDiffTime (div buffertime 2)) endTimeRange.start && not passedThroughDrop) $
       fork "update estimated end time" $ do
@@ -84,7 +86,7 @@ bulkLocUpdate req = do
         shortestRoute <- getRouteInfoWithShortestDuration routeResponse & fromMaybeM (InternalError "No route found for latlongs")
         (duration :: Seconds) <- shortestRoute.duration & fromMaybeM (InternalError "No duration found for new route")
         let newEstimatedEndTimeRange = SRide.calculateEstimatedEndTimeRange now duration transportConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier
-        let updatedRide = ride {DRide.estimatedEndTimeRange = Just newEstimatedEndTimeRange}
-        QRide.updateEstimatedEndTimeRange (Just newEstimatedEndTimeRange) rideId
+        let updatedRide = ride {DRide.estimatedEndTimeRange = newEstimatedEndTimeRange}
+        QRide.updateEstimatedEndTimeRange newEstimatedEndTimeRange rideId
         CallBAP.sendRideEstimatedEndTimeRangeUpdateToBAP booking updatedRide
   pure Success
