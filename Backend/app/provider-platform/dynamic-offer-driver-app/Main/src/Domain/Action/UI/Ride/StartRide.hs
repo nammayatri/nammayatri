@@ -136,12 +136,12 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   let driverId = ride.driverId
   driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  (openMarketAllow, includeDriverCurrentlyOnRide, arrivalTimeBufferOfVehicle) <-
+  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
+  (openMarketAllow, includeDriverCurrentlyOnRide) <-
     maybe
-      (pure (False, False, Nothing))
+      (pure (False, False))
       ( \_ -> do
-          transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
-          pure (transporterConfig.openMarketUnBlocked, transporterConfig.includeDriverCurrentlyOnRide, transporterConfig.arrivalTimeBufferOfVehicle)
+          pure (transporterConfig.openMarketUnBlocked, transporterConfig.includeDriverCurrentlyOnRide)
       )
       driverInfo.merchantId
   when (includeDriverCurrentlyOnRide && driverInfo.hasAdvanceBooking) do throwError $ CurrentRideInprogress driverId.getId
@@ -178,7 +178,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
           pure (getCoordinates driverLocation, dashboardReq.odometer)
   now <- getCurrentTime
   -- create first entry of eta here
-  let estimatedEndTimeRange = booking.estimatedDuration >>= \estDuration -> Just $ calculateEstimatedEndTimeRange now estDuration arrivalTimeBufferOfVehicle booking.vehicleServiceTier
+  let estimatedEndTimeRange = booking.estimatedDuration >>= \estDuration -> calculateEstimatedEndTimeRange now estDuration transporterConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier
   when (isJust estimatedEndTimeRange) $ QRide.updateEstimatedEndTimeRange estimatedEndTimeRange ride.id
   updatedRide <-
     if DTC.isEndOtpRequired booking.tripCategory

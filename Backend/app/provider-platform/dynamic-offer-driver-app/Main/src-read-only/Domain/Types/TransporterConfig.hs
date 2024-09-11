@@ -192,19 +192,19 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
 data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, Show, ToJSON, FromJSON, Read)
 
 data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
-  { ambulance :: Kernel.Types.Common.Seconds,
-    autorickshaw :: Kernel.Types.Common.Seconds,
-    bike :: Kernel.Types.Common.Seconds,
-    black :: Kernel.Types.Common.Seconds,
-    blackxl :: Kernel.Types.Common.Seconds,
-    deliverybike :: Kernel.Types.Common.Seconds,
-    hatchback :: Kernel.Types.Common.Seconds,
-    premiumsedan :: Kernel.Types.Common.Seconds,
-    sedan :: Kernel.Types.Common.Seconds,
-    suv :: Kernel.Types.Common.Seconds,
-    suvplus :: Kernel.Types.Common.Seconds,
-    taxi :: Kernel.Types.Common.Seconds,
-    taxiplus :: Kernel.Types.Common.Seconds
+  { ambulance :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    autorickshaw :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    bike :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    black :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    blackxl :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    deliverybike :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    hatchback :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    premiumsedan :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    sedan :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    suv :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    suvplus :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    taxi :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    taxiplus :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read)
 
