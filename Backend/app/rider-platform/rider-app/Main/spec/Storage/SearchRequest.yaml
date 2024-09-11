@@ -1,5 +1,6 @@
 imports:
   Merchant: Domain.Types.Merchant
+  TravelMode: Domain.Types.Common
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Version: Kernel.Types.Version
   Price: Kernel.Types.Common
@@ -23,7 +24,7 @@ imports:
   DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
   DbHash: Kernel.External.Encryption
   TripParty: Domain.Types.Trip
-
+  JourneySearchData: Lib.JourneyPlanner.Types
 
 SearchRequest:
   tableName: search_request
@@ -68,6 +69,7 @@ SearchRequest:
     availablePaymentMethods: "[Id MerchantPaymentMethod]"
     placeNameSource:  Maybe Text
     initiatedBy: Maybe TripParty
+    journeyLegInfo: Maybe JourneySearchData
 
   types:
     SearchRequestStatus:
@@ -118,6 +120,12 @@ SearchRequest:
       clientOsVersion: Maybe Text
       clientModelName: Maybe Text
       clientManufacturer: Maybe Text
+    journeyLegInfo:
+      journeyLegOrder: Maybe Int
+      journeyId: Maybe Text
+      agency: Maybe Text
+      skipBooking: Maybe Bool
+      convenienceCost: Maybe Int
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -141,6 +149,11 @@ SearchRequest:
     clientConfigVersion: Kernel.Utils.Version.versionToText <$> clientConfigVersion|E
     backendConfigVersion: Kernel.Utils.Version.versionToText <$> backendConfigVersion|E
     distanceUnit: Kernel.Prelude.Just|I
+    journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
+    journeyId: Kernel.Prelude.fmap (Kernel.Types.Id.getId . (.journeyId))|I
+    agency: (journeyLegInfo >>= (.agency))|E
+    skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
+    convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
 
   fromTType:
     merchantOperatingCityId: Storage.Queries.Transformers.SearchRequest.backfillMOCId merchantId merchantOperatingCityId|EM
@@ -156,6 +169,7 @@ SearchRequest:
     clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer|E
     backendConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)|EM
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
+    journeyLegInfo: Storage.Queries.Transformers.SearchRequest.mkJourneyLegInfo
 
   excludedFields: [updatedAt]
 

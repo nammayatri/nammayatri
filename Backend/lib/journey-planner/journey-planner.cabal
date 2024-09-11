@@ -25,6 +25,8 @@ flag Local
   default: False
 
 library
+  exposed-modules:
+      Lib.JourneyPlanner.Types
   other-modules:
       Paths_journey_planner
   hs-source-dirs:

@@ -363,6 +363,7 @@ library
       Storage.Queries.Transformers.BookingCancellationReason
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.Estimate
+      Storage.Queries.Transformers.FRFSSearch
       Storage.Queries.Transformers.Merchant
       Storage.Queries.Transformers.MerchantConfig
       Storage.Queries.Transformers.MerchantMessage
@@ -465,6 +466,8 @@ library
       Domain.Types.HotSpotConfig
       Domain.Types.InterCityDetails
       Domain.Types.Issue
+      Domain.Types.Journey
+      Domain.Types.JourneyBooking
       Domain.Types.Location
       Domain.Types.LocationMapping
       Domain.Types.Merchant
@@ -482,6 +485,7 @@ library
       Domain.Types.PartnerOrgConfig
       Domain.Types.PartnerOrgStation
       Domain.Types.PayoutConfig
+      Domain.Types.PassengerDetails
       Domain.Types.Person
       Domain.Types.PersonDefaultEmergencyNumber
       Domain.Types.PersonDisability
@@ -558,6 +562,8 @@ library
       Storage.Beam.HotSpotConfig
       Storage.Beam.InterCityDetails
       Storage.Beam.Issue
+      Storage.Beam.Journey
+      Storage.Beam.JourneyBooking
       Storage.Beam.Location
       Storage.Beam.LocationMapping
       Storage.Beam.Merchant
@@ -575,6 +581,7 @@ library
       Storage.Beam.PartnerOrgConfig
       Storage.Beam.PartnerOrgStation
       Storage.Beam.PayoutConfig
+      Storage.Beam.PassengerDetails
       Storage.Beam.Person
       Storage.Beam.PersonDefaultEmergencyNumber
       Storage.Beam.PersonDisability
@@ -651,6 +658,8 @@ library
       Storage.Queries.HotSpotConfig
       Storage.Queries.InterCityDetails
       Storage.Queries.Issue
+      Storage.Queries.Journey
+      Storage.Queries.JourneyBooking
       Storage.Queries.Location
       Storage.Queries.LocationMapping
       Storage.Queries.Merchant
@@ -706,6 +715,7 @@ library
       Storage.Queries.PartnerOrgConfig
       Storage.Queries.PartnerOrgStation
       Storage.Queries.PayoutConfig
+      Storage.Queries.PassengerDetails
       Storage.Queries.Person
       Storage.Queries.PersonDefaultEmergencyNumber
       Storage.Queries.PersonDisability
@@ -819,6 +829,7 @@ library
     , http-client-tls
     , http-media
     , http-types
+    , journey-planner
     , lens
     , lens-aeson
     , memory
@@ -943,6 +954,7 @@ executable rider-app-exe
     , http-client-tls
     , http-media
     , http-types
+    , journey-planner
     , lens
     , lens-aeson
     , memory

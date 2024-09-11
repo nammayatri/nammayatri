@@ -131,6 +131,7 @@ postFrfsSearchHandler (mbPersonId, merchantId) vehicleType_ FRFSSearchAPIReq {..
             riderId = personId,
             partnerOrgTransactionId = mbPOrgTxnId,
             partnerOrgId = mbPOrgId,
+            journeyLegInfo = Nothing,
             ..
           }
   QFRFSSearch.create searchReq

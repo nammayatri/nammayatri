@@ -1,72 +1,52 @@
+imports:
+  SearchRequest: Domain.Types.SearchRequest
+  TravelMode: Domain.Types.Common
+  Price: Kernel.Types.Common
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  EncryptedHashedField: Kernel.External.Encryption
+  Currency: Kernel.Types.Common
 
+# add journeyLegId (Maybe (Id JourneyLeg)) in SearchRequest
 Journey:
   tableName: journey
-
-  types:
-    TravelMode:
-      enum: "WALK,METRO,BUS,TAXI"
 
   fields:
     id: Id Journey
     searchRequestId: Id SearchRequest
     fare: Maybe Price
     estimatedFare: Maybe Price
-    estimatedDistance: Maybe Distance
+    estimatedDistance: Distance
     estimatedDuration: Maybe Seconds
     modes: "[TravelMode]"
     convenienceCost: Int
 
+  beamFields:
+    fare:
+      fare: Maybe HighPrecMoney
+      currency: Maybe Currency
+    estimatedDistance:
+      estimatedDistance: HighPrecDistance
+      distanceUnit: DistanceUnit
+
+  beamType:
+    estimatedFare: Maybe HighPrecMoney
+
+  fromTType:
+    fare: ((Kernel.Types.Common.mkPrice currency) <$> fare)|E
+    estimatedFare: ((Kernel.Types.Common.mkPrice currency) <$> estimatedFare)|E
+    estimatedDistance: (Kernel.Types.Common.Distance estimatedDistance distanceUnit)|E
+
+  toTType:
+    fare: (Kernel.Prelude.fmap (.amount))|I
+    currency: (Kernel.Prelude.fmap (.currency))|I
+    estimatedFare: (Kernel.Prelude.fmap (.amount))|I
+    estimatedDistance: ((.value))|I
+    distanceUnit: ((.unit))|I
+
   constraints:
     id: PrimaryKey
-    searchRequestId: SecondaryKey
-
-JourneyLeg:
-
-  fields:
-    id: Id JourneyLeg
-    journeyId: Id Journey
-    journeyDetails: JourneyDetails
-    order: Int
-    fare: Maybe Price
-    estimatedFare: Maybe Price
-    estimatedDistance: Maybe Distance
-    estimatedDuration: Maybe Seconds
-    mode: TravelMode
-    convenienceCost: Int
-
-  constraints:
-    id: PrimaryKey
-    journeyId: SecondaryKey
-
-  types:
-    JourneyDetails:
-      enum: "Metro JourneyLegMetro, Bus JourneyLegBus, Walk JourneyLegWalk, Taxi JourneyLegTaxi"
-    MetroStation:
-      stationName: Text
-      stationCode: Text
-      stationLocation: LatLong
-      platform: Maybe Text
-
-    JourneyLegMetro:
-      startStation: MetroStation
-      endStation: MetroStation
-
-    BusStop:
-      stopName: Text
-      stopCode: Text
-      stopLocation: LatLong
-
-    JourneyLegBus:
-      busNumber: Text # check for proper type
-      startStop: BusStop
-      endStop: BusStop
-
-    JourneyLegWalk:
-      startLocation: LocationAPIEntity
-      endLocation: LocationAPIEntity
-
-    JourneyLegTaxi:
-      searchId: Id Search
+    searchRequestId: "!SecondaryKey"
 
 #passenger details
 JourneyBooking:
@@ -75,45 +55,46 @@ JourneyBooking:
     journeyId: Id Journey
     fare: Maybe Price
     estimatedFare: Maybe Price
-    estimatedDistance: Maybe Distance
+    estimatedDistance: Distance
     estimatedDuration: Maybe Seconds
     modes: "[TravelMode]"
     numberOfPassengers: Int
     convenienceCost: Int
-    cancellationCharges: Maybe Price
-    refundAmount: Maybe Price
     isBookingCancellable: Bool
     customerCancelled: Bool
 
-JourneyLegBooking:
-  fields:
-    id: Id JourneyLegBooking
-    journeyBookingId: Id JourneyBooking
-    journeyLegId: Id JourneyLeg
-    fare: Maybe Price
-    estimatedFare: Maybe Price
-    estimatedDistance: Maybe Distance
-    estimatedDuration: Maybe Seconds
-    mode: TravelMode
-    numberOfPassengers: Int
-    convenienceCost: Int
-    cancellationCharges: Maybe Price
-    refundAmount: Maybe Price
-    isBookingCancellable: Bool
-    customerCancelled: Bool
+  beamFields:
+    fare:
+      fare: Maybe HighPrecMoney
+      currency: Maybe Currency
+    estimatedDistance:
+      estimatedDistance: HighPrecDistance
+      distanceUnit: DistanceUnit
 
+  beamType:
+    estimatedFare: Maybe HighPrecMoney
+
+  fromTType:
+    fare: ((Kernel.Types.Common.mkPrice currency) <$> fare)|E
+    estimatedFare: ((Kernel.Types.Common.mkPrice currency) <$> estimatedFare)|E
+    estimatedDistance: (Kernel.Types.Common.Distance estimatedDistance distanceUnit)|E
+
+  toTType:
+    fare: (Kernel.Prelude.fmap (.amount))|I
+    currency: (Kernel.Prelude.fmap (.currency))|I
+    estimatedFare: (Kernel.Prelude.fmap (.amount))|I
+    estimatedDistance: ((.value))|I
+    distanceUnit: ((.unit))|I
+
+  constraints:
+    id: PrimaryKey
+    journeyId: "!SecondaryKey"
+
+# use booking, FRFS booking and bus booking for journey leg booking and attach the journey booking id there
 PassengerDetails:
   fields:
     id: Id PassengerDetails
-    entityName: PassengerDetailEntity
-    entityId: Text
+    bookingId: Text
     firstName: Text
     lastName: Maybe Text
-    email : Maybe (EncryptedHashedField e Text)
-    mobileNumber : Maybe (EncryptedHashedField e Text)
-    govtId: Maybe (EncryptedHashedField e Text)
     age: Maybe Int
-
-  types:
-    PassengerDetailEntity:
-      enum: "JourneyBooking, JourneyLegBooking"

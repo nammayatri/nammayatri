@@ -35,7 +35,7 @@ import Servant
 import qualified Text.Show
 
 data TravelMode = Metro | Bus | Walk | Taxi
-  deriving (Generic, FromJSON, ToJSON, ToSchema, Show, Eq)
+  deriving (Generic, FromJSON, ToJSON, Read, ToSchema, Show, Eq, Ord)
 
 data TripCategory
   = OneWay OneWayMode

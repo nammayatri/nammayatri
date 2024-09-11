@@ -168,6 +168,7 @@ library:
     - shared-services
     - utils
     - external
+    - journey-planner
 
 executables:
   rider-app-exe:
@@ -195,3 +196,4 @@ executables:
       - rider-app
       - mobility-core
       - beckn-spec
+      - journey-planner

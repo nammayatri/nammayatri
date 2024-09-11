@@ -38,6 +38,7 @@ packages:
   lib/scheduler
   lib/sessionizer-metrics
   lib/yudhishthira
+  lib/journey-planner
   test
   lib/producer
   lib/utils
