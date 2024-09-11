@@ -101,8 +101,8 @@ reduceCancellationRate key =
 cancellationThresholds :: String -> String -> CancellationThresholdConfig
 cancellationThresholds key city = 
   let cancellationDataString = fetchRemoteConfigString key
-      decodedConfg = decodeForeignAny (parseJSON cancellationDataString) $ defaultRemoteConfig defaultCancellationThresholdConfig
-  in getCityBasedConfig decodedConfg city
+      decodedConfg = decodeForeignObject (parseJSON cancellationDataString) $ defaultRemoteConfig defaultCancellationThresholdConfig
+  in getCityBasedConfig decodedConfg $ toLower city
 
 defaultCancellationThresholdConfig :: CancellationThresholdConfig
 defaultCancellationThresholdConfig = {
