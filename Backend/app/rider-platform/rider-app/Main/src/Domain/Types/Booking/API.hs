@@ -122,7 +122,8 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
   { id :: Id Booking,
     isBookingUpdated :: Bool,
     bookingStatus :: BookingStatus,
-    rideStatus :: Maybe DRide.RideStatus
+    rideStatus :: Maybe DRide.RideStatus,
+    estimatedEndTimeRange :: Maybe DRide.EstimatedEndTimeRange
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -412,7 +413,8 @@ buildBookingStatusAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m
 buildBookingStatusAPIEntity booking = do
   mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
   rideStatus <- maybe (pure Nothing) (\ride -> pure $ Just ride.status) mbActiveRide
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus
+  estimatedEndTimeRange <- maybe (pure Nothing) (\ride -> pure $ ride.estimatedEndTimeRange) mbActiveRide
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus estimatedEndTimeRange
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride

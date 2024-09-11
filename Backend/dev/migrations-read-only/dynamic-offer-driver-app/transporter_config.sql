@@ -251,3 +251,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_ra
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_rate_calculation_threshold integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN arrival_time_buffer_of_vehicle json ;

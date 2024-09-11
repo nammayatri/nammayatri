@@ -82,7 +82,9 @@ data ShareRideInfoRes = ShareRideInfoRes
     nextStopLocation :: Maybe Location,
     rideScheduledAt :: UTCTime,
     fareProductType :: FareProductType, -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
-    tripCategory :: TripCategory
+    tripCategory :: TripCategory,
+    estimatedEndTimeRange :: Maybe (UTCTime, UTCTime),
+    destinationReachedAt :: Maybe UTCTime
   }
   deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
 

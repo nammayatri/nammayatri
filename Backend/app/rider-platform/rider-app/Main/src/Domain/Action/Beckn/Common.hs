@@ -143,7 +143,9 @@ data RideStartedReq = RideStartedReq
     endOtp_ :: Maybe Text,
     startOdometerReading :: Maybe Centesimal,
     rideStartTime :: Maybe UTCTime,
-    driverArrivalTime :: Maybe UTCTime
+    driverArrivalTime :: Maybe UTCTime,
+    estimatedEndTimeRangeStart :: Maybe UTCTime,
+    estimatedEndTimeRangeEnd :: Maybe UTCTime
   }
 
 data ValidatedRideStartedReq = ValidatedRideStartedReq
@@ -154,7 +156,8 @@ data ValidatedRideStartedReq = ValidatedRideStartedReq
     rideStartTime :: Maybe UTCTime,
     driverArrivalTime :: Maybe UTCTime,
     ride :: DRide.Ride,
-    booking :: DRB.Booking
+    booking :: DRB.Booking,
+    estimatedEndTimeRange :: Maybe DRide.EstimatedEndTimeRange
   }
 
 data RideCompletedReq = RideCompletedReq
@@ -309,6 +312,7 @@ buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now stat
         safetyJourneyStatus = Nothing,
         driverImage = fileUrl,
         destinationReachedAt = Nothing,
+        estimatedEndTimeRange = Nothing,
         ..
       }
 
@@ -485,7 +489,8 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
              rideEndTime = Nothing,
              endOtp = endOtp_,
              driverArrivalTime,
-             startOdometerReading
+             startOdometerReading,
+             estimatedEndTimeRange
             }
   triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
   _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
@@ -868,7 +873,10 @@ validateRideStartedReq RideStartedReq {..} = do
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (booking.status == DRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
   unless (ride.status == DRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
+  let estimatedEndTimeRange = mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd
   return $ ValidatedRideStartedReq {..}
+  where
+    mkEstimatedEndTimeRange start end = DRide.EstimatedEndTimeRange {start, end}
 
 validateDriverArrivedReq ::
   ( CacheFlow m r,

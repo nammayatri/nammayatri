@@ -156,3 +156,9 @@ ALTER TABLE atlas_app.ride ADD COLUMN safety_journey_status text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN destination_reached_at timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN estimated_end_time_range_start timestamp with time zone ;
+ALTER TABLE atlas_app.ride ADD COLUMN estimated_end_time_range_end timestamp with time zone ;

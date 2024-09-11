@@ -114,6 +114,7 @@ parseEventV2 transactionId messageId order = do
         "STOP_ARRIVED" -> parseStopArrivedEvent order
         "TOLL_CROSSED" -> return $ DOnUpdate.OUTollCrossedEventReq $ DOnUpdate.TollCrossedEventReq transactionId
         "DRIVER_REACHED_DESTINATION" -> parseDriverReachedDestinationEvent order
+        "ESTIMATED_END_TIME_RANGE_UPDATED" -> parseEstimatedEndTimeRangeUpdatedEvent order
         _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
 
 parseNewMessageEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
@@ -229,6 +230,23 @@ parseDriverReachedDestinationEvent order = do
   return $
     DOnUpdate.OUDestinationReachedReq $
       DOnUpdate.DestinationReachedReq
+        { bppRideId = Id bppRideId,
+          ..
+        }
+
+parseEstimatedEndTimeRangeUpdatedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseEstimatedEndTimeRangeUpdatedEvent order = do
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in DestinationReached Event.")
+  tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in DestinationReached Event.")
+  estimatedEndTimeRangeStart :: UTCTime <-
+    Utils.getTagV2 Tag.ESTIMATED_END_TIME_RANGE Tag.ESTIMATED_END_TIME_RANGE_START (Just tagGroups)
+      >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "ESTIMATED_END_TIME_RANGE_START tag is not present in EstimatedEndTimeRangeUpdated Event.")
+  estimatedEndTimeRangeEnd :: UTCTime <-
+    Utils.getTagV2 Tag.ESTIMATED_END_TIME_RANGE Tag.ESTIMATED_END_TIME_RANGE_END (Just tagGroups)
+      >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "ESTIMATED_END_TIME_RANGE_END tag is not present in EstimatedEndTimeRangeUpdated Event.")
+  return $
+    DOnUpdate.OUEstimatedEndTimeRangeReq $
+      DOnUpdate.EstimatedEndTimeRangeReq
         { bppRideId = Id bppRideId,
           ..
         }

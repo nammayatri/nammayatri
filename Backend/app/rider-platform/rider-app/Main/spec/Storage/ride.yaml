@@ -39,6 +39,10 @@ Ride:
     SosJourneyStatus:
       enum: "Safe,UnexpectedCondition UnexpectedConditionStage,IVRCallInitiated,CSAlerted,PoliceMonitoring"
 
+    EstimatedEndTimeRange:
+      start: UTCTime
+      end: UTCTime
+
   fields:
     id: Id Ride
     bppRideId: Id BPPRide
@@ -101,6 +105,7 @@ Ride:
     favCount: Maybe Int
     safetyJourneyStatus: Maybe SosJourneyStatus
     destinationReachedAt: Maybe UTCTime
+    estimatedEndTimeRange: Maybe EstimatedEndTimeRange
 
   sqlType:
     allowedEditLocationAttempts: int
@@ -163,6 +168,9 @@ Ride:
     driverAlternateNumber:
       driverAlternateNumberEncrypted: Maybe Text
       driverAlternateNumberHash: Maybe DbHash
+    estimatedEndTimeRange:
+      estimatedEndTimeRangeStart: Maybe UTCTime
+      estimatedEndTimeRangeEnd: Maybe UTCTime
 
   fromTType:
     toLocation: Storage.Queries.Extra.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
@@ -184,6 +192,7 @@ Ride:
     onlinePayment: Kernel.Prelude.fromMaybe False onlinePayment|E
     driverPhoneNumber: EncryptedHashed <$> (Encrypted <$> driverNumberEncrypted) <*> driverNumberHash|E
     driverAlternateNumber: EncryptedHashed <$> (Encrypted <$> driverAlternateNumberEncrypted) <*> driverAlternateNumberHash|E
+    estimatedEndTimeRange: Storage.Queries.Extra.Transformers.Ride.mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd|E
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -213,6 +222,8 @@ Ride:
     driverNumberHash: (driverPhoneNumber <&> (.hash))|E
     driverAlternateNumberEncrypted: (driverAlternateNumber <&> unEncrypted . (.encrypted))|E
     driverAlternateNumberHash: (driverAlternateNumber <&> (.hash))|E
+    estimatedEndTimeRangeStart: Kernel.Prelude.fmap (.start)|I
+    estimatedEndTimeRangeEnd: Kernel.Prelude.fmap (.end)|I
   beamType:
     fare: Maybe HighPrecMoney
     totalFare: Maybe HighPrecMoney
@@ -257,6 +268,10 @@ Ride:
     updateDestinationReachedAt:
       kvFunction: updateOneWithKV
       params: [destinationReachedAt]
+      where: id
+    updateEstimatedEndTimeRange:
+      kvFunction: updateOneWithKV
+      params: [estimatedEndTimeRange]
       where: id
   excludedDefaultQueries:
     - create

@@ -36,6 +36,9 @@ Ride:
     RideStatus:
       enum: "UPCOMING,NEW,INPROGRESS,COMPLETED,CANCELLED"
       derive: "'ListInstance,HttpInstance"
+    EstimatedEndTimeRange:
+      start: UTCTime
+      end: UTCTime
   fields:
     id: Id Ride
     bookingId: Id Booking
@@ -107,6 +110,7 @@ Ride:
     tipAmount: Maybe HighPrecMoney
     passedThroughDestination: Maybe Bool
     deliveryFileIds: Maybe [Id MediaFile]
+    estimatedEndTimeRange: Maybe EstimatedEndTimeRange
 
   sqlType:
     id: character(36)
@@ -162,6 +166,9 @@ Ride:
       currency: Maybe Currency
     distanceUnit:
       distanceUnit : Maybe DistanceUnit
+    estimatedEndTimeRange:
+      estimatedEndTimeRangeStart: Maybe UTCTime
+      estimatedEndTimeRangeEnd: Maybe UTCTime
 
   fromTType:
     toLocation: Storage.Queries.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
@@ -185,6 +192,7 @@ Ride:
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
     onlinePayment: Kernel.Prelude.fromMaybe False onlinePayment|E
     deliveryFileIds: (Kernel.Types.Id.Id <$> ) <$> deliveryFileIds|E
+    estimatedEndTimeRange: Storage.Queries.Transformers.Ride.mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd|E
 
   toTType:
     trackingUrl: Kernel.Prelude.showBaseUrl|I
@@ -214,6 +222,8 @@ Ride:
     clientModelName: (clientDevice <&> (.deviceModel))|E
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
     deliveryFileIds: (Kernel.Types.Id.getId <$> ) <$> deliveryFileIds|E
+    estimatedEndTimeRangeStart: Kernel.Prelude.fmap (.start)|I
+    estimatedEndTimeRangeEnd: Kernel.Prelude.fmap (.end)|I
 
   beamType:
     trackingUrl: Text
@@ -248,6 +258,11 @@ Ride:
       kvFunction: updateOneWithKV
       params: [previousRideTripEndPos, previousRideTripEndTime]
       where: id
+    updateEstimatedEndTimeRange:
+      kvFunction: updateOneWithKV
+      params: [estimatedEndTimeRange]
+      where: id
+
 
   excludedDefaultQueries:
     - create

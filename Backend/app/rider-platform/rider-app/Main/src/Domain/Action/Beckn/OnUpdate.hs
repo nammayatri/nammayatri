@@ -35,6 +35,7 @@ module Domain.Action.Beckn.OnUpdate
     TollCrossedEventReq (..),
     PhoneCallRequestEventReq (..),
     DestinationReachedReq (..),
+    EstimatedEndTimeRangeReq (..),
   )
 where
 
@@ -113,6 +114,7 @@ data OnUpdateReq
   | OUPhoneCallRequestEventReq PhoneCallRequestEventReq
   | OUEditDestError EditDestErrorReq
   | OUDestinationReachedReq DestinationReachedReq
+  | OUEstimatedEndTimeRangeReq EstimatedEndTimeRangeReq
 
 data ValidatedOnUpdateReq
   = OUValidatedScheduledRideAssignedReq Common.ValidatedRideAssignedReq
@@ -134,6 +136,7 @@ data ValidatedOnUpdateReq
   | OUValidatedPhoneCallRequestEventReq ValidatedPhoneCallRequestEventReq
   | OUValidatedEditDestError ValidatedEditDestErrorReq
   | OUValidatedDestinationReachedReq ValidatedDestinationReachedReq
+  | OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq
 
 data BookingReallocationReq = BookingReallocationReq
   { bppBookingId :: Id DRB.BPPBooking,
@@ -345,6 +348,18 @@ data ValidatedDestinationReachedReq = ValidatedDestinationReachedReq
     destinationReachedTime :: UTCTime
   }
 
+data EstimatedEndTimeRangeReq = EstimatedEndTimeRangeReq
+  { bppRideId :: Id DRide.BPPRide,
+    estimatedEndTimeRangeStart :: UTCTime,
+    estimatedEndTimeRangeEnd :: UTCTime
+  }
+
+data ValidatedEstimatedEndTimeRangeReq = ValidatedEstimatedEndTimeRangeReq
+  { booking :: DRB.Booking,
+    ride :: DRide.Ride,
+    estimatedEndTimeRange :: DRide.EstimatedEndTimeRange
+  }
+
 onUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,
@@ -498,6 +513,8 @@ onUpdate = \case
       else Notify.notifyOnTripUpdate booking ride errorCode errorMessage
   OUValidatedDestinationReachedReq ValidatedDestinationReachedReq {..} -> do
     QRide.updateDestinationReachedAt (Just destinationReachedTime) ride.id
+  OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq {..} -> do
+    QRide.updateEstimatedEndTimeRange (Just estimatedEndTimeRange) ride.id
 
 validateRequest ::
   ( CacheFlow m r,
@@ -605,6 +622,12 @@ validateRequest = \case
     unless (ride.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride is not in progress"
     booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> ride.bookingId.getId)
     return $ OUValidatedDestinationReachedReq ValidatedDestinationReachedReq {..}
+  OUEstimatedEndTimeRangeReq EstimatedEndTimeRangeReq {..} -> do
+    ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+    unless (ride.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride is not in progress"
+    booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> ride.bookingId.getId)
+    let estimatedEndTimeRange = DRide.EstimatedEndTimeRange {start = estimatedEndTimeRangeStart, end = estimatedEndTimeRangeEnd}
+    return $ OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq {..}
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>

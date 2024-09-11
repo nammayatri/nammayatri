@@ -28,6 +28,7 @@ data TransporterConfigT f = TransporterConfigT
     actualRideDistanceDiffThresholdIfWithinPickupDrop :: B.C f Kernel.Types.Common.HighPrecMeters,
     allowDefaultPlanAllocation :: B.C f Kernel.Prelude.Bool,
     approxRideDistanceDiffThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
+    arrivalTimeBufferOfVehicle :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     arrivedPickupThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     arrivedStopThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     arrivingPickupThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,

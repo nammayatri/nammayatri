@@ -31,6 +31,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     actualRideDistanceDiffThresholdIfWithinPickupDrop :: Kernel.Types.Common.HighPrecMeters,
     allowDefaultPlanAllocation :: Kernel.Prelude.Bool,
     approxRideDistanceDiffThreshold :: Kernel.Types.Common.HighPrecMeters,
+    arrivalTimeBufferOfVehicle :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.ArrivalTimeBufferOfVehicle,
     arrivedPickupThreshold :: Kernel.Types.Common.HighPrecMeters,
     arrivedStopThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     arrivingPickupThreshold :: Kernel.Types.Common.HighPrecMeters,
@@ -189,6 +190,23 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
   deriving (Generic, Show)
 
 data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, Show, ToJSON, FromJSON, Read)
+
+data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
+  { ambulance :: Kernel.Types.Common.Seconds,
+    autorickshaw :: Kernel.Types.Common.Seconds,
+    bike :: Kernel.Types.Common.Seconds,
+    black :: Kernel.Types.Common.Seconds,
+    blackxl :: Kernel.Types.Common.Seconds,
+    deliverybike :: Kernel.Types.Common.Seconds,
+    hatchback :: Kernel.Types.Common.Seconds,
+    premiumsedan :: Kernel.Types.Common.Seconds,
+    sedan :: Kernel.Types.Common.Seconds,
+    suv :: Kernel.Types.Common.Seconds,
+    suvplus :: Kernel.Types.Common.Seconds,
+    taxi :: Kernel.Types.Common.Seconds,
+    taxiplus :: Kernel.Types.Common.Seconds
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, Read)
 
 data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
   { ambulance :: Kernel.Types.Common.Kilometers,

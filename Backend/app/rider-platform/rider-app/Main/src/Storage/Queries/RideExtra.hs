@@ -116,6 +116,8 @@ updateMultiple rideId ride = do
       Se.Set BeamR.endOdometerReading ride.endOdometerReading,
       Se.Set BeamR.tollConfidence ride.tollConfidence,
       Se.Set BeamR.paymentDone (Just ride.paymentDone),
+      Se.Set BeamR.estimatedEndTimeRangeStart ((.start) <$> ride.estimatedEndTimeRange),
+      Se.Set BeamR.estimatedEndTimeRangeEnd ((.end) <$> ride.estimatedEndTimeRange),
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]

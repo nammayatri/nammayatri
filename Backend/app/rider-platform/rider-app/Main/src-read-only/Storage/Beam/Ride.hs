@@ -58,6 +58,8 @@ data RideT f = RideT
     driversPreviousRideDropLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     endOdometerReading :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
     endOtp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    estimatedEndTimeRangeEnd :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    estimatedEndTimeRangeStart :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     fare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     favCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

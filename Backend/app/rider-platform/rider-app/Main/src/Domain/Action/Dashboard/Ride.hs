@@ -183,7 +183,9 @@ buildShareRideInfo merchantId ride = do
         nextStopLocation = getStopFromBookingDetails booking.bookingDetails,
         rideScheduledAt = booking.startTime,
         fareProductType = fareProductType, -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
-        tripCategory = getTripCategory booking.tripCategory fareProductType
+        tripCategory = getTripCategory booking.tripCategory fareProductType,
+        estimatedEndTimeRange = (\tr -> (tr.start, tr.end)) <$> ride.estimatedEndTimeRange,
+        destinationReachedAt = ride.destinationReachedAt
       }
 
 getStopFromBookingDetails :: DTB.BookingDetails -> Maybe Common.Location

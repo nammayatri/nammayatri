@@ -281,3 +281,22 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
         }
+  OU.RideEstimatedEndTimeRangeBuildReq OU.DRideEstimatedEndTimeRangeReq {..} -> do
+    let BookingDetails {..} = bookingDetails
+    let estimatedEndTimeRangeTagGroup = Utils.mkEstimatedEndTimeRangeTagGroupV2 ride.estimatedEndTimeRange
+    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing estimatedEndTimeRangeTagGroup Nothing False False Nothing (Just $ show Event.ESTIMATED_END_TIME_RANGE_UPDATED) isValueAddNP Nothing False 0
+    pure $
+      Spec.Order
+        { orderId = Just ride.bookingId.getId,
+          orderFulfillments = Just [fulfillment],
+          orderBilling = Nothing,
+          orderCancellation = Nothing,
+          orderCancellationTerms = Nothing,
+          orderItems = Nothing,
+          orderPayments = Nothing,
+          orderProvider = Nothing,
+          orderQuote = Nothing,
+          orderStatus = Nothing,
+          orderCreatedAt = Just booking.createdAt,
+          orderUpdatedAt = Just booking.updatedAt
+        }

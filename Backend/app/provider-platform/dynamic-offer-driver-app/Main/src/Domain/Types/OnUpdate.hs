@@ -44,6 +44,7 @@ data OnUpdateBuildReq
   | EditDestinationUpdate DEditDestinationUpdateReq
   | TollCrossedBuildReq DTollCrossedBuildReq
   | DriverReachedDestinationBuildReq DDriverReachedDestinationReq
+  | RideEstimatedEndTimeRangeBuildReq DRideEstimatedEndTimeRangeReq
 
 data DErrorObject = DErrorObject
   { errorCode :: Text,
@@ -98,4 +99,8 @@ data UpdateType = SOFT_UPDATE | CONFIRM_UPDATE
 data DDriverReachedDestinationReq = DDriverReachedDestinationReq
   { bookingDetails :: BookingDetails,
     destinationArrivalTime :: Maybe UTCTime
+  }
+
+newtype DRideEstimatedEndTimeRangeReq = DRideEstimatedEndTimeRangeReq
+  { bookingDetails :: BookingDetails
   }

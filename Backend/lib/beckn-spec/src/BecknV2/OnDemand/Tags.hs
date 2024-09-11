@@ -88,6 +88,7 @@ data BecknTagGroup
   | DEVICE_ID_INFO
   | DELIVERY
   | DRIVER_REACHED_DESTINATION_INFO
+  | ESTIMATED_END_TIME_RANGE
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance CompleteTagGroup BecknTagGroup where
@@ -430,6 +431,8 @@ data BecknTag
   | RECEIVER_LOCATION_INSTRUCTIONS
   | INITIATED_AS
   | DRIVER_REACHED_DESTINATION
+  | ESTIMATED_END_TIME_RANGE_START
+  | ESTIMATED_END_TIME_RANGE_END
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
