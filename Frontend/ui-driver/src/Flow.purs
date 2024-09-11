@@ -1328,7 +1328,7 @@ driverProfileFlow = do
     ABOUT_US_SCREEN -> aboutUsFlow
     SELECT_LANGUAGE_SCREEN -> do
       liftFlowBT $ logEvent logField_ "ny_driver_language_select" 
-      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = ""}})
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = false}})
       selectLanguageFlow
     ON_BOARDING_FLOW -> onBoardingFlow
     DOCUMENTS_FLOW -> documentDetailsScreen
