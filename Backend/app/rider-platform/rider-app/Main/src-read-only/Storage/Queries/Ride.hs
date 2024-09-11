@@ -44,3 +44,13 @@ updateDestinationReachedAt :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Ke
 updateDestinationReachedAt destinationReachedAt id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.destinationReachedAt destinationReachedAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateEstimatedEndTimeRange :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.Ride.EstimatedEndTimeRange -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateEstimatedEndTimeRange estimatedEndTimeRange id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.estimatedEndTimeRangeEnd (Kernel.Prelude.fmap (.end) estimatedEndTimeRange),
+      Se.Set Beam.estimatedEndTimeRangeStart (Kernel.Prelude.fmap (.start) estimatedEndTimeRange),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

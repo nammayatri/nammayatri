@@ -30,6 +30,8 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchRequestForDriver as SReqD
 import Domain.Types.SearchTry
+import qualified Domain.Types.ServiceTierType as DST
+import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
 import Domain.Utils
 import Environment
@@ -247,7 +249,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         tipAmount = Nothing,
         passedThroughDestination = Nothing,
         deliveryFileIds = Nothing,
-        destinationReachedAt = Nothing
+        destinationReachedAt = Nothing,
+        estimatedEndTimeRange = Nothing
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl
@@ -327,3 +330,38 @@ throwErrorOnRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> DDI.D
 throwErrorOnRide includeDriverCurrentlyOnRide driverInfo isForwardRequest = do
   let checkOnRide = if includeDriverCurrentlyOnRide && isForwardRequest then driverInfo.hasAdvanceBooking else driverInfo.onRide
   when checkOnRide $ throwError DriverOnRide
+
+calculateEstimatedEndTimeRange :: UTCTime -> Seconds -> Maybe DTC.ArrivalTimeBufferOfVehicle -> DST.ServiceTierType -> DRide.EstimatedEndTimeRange
+calculateEstimatedEndTimeRange currTime tripEstimatedDuration bufferJson serviceTier =
+  let timebufferOfVehicle = getArrivalTimeBufferOfVehicle bufferJson serviceTier
+      start = addUTCTime (secondsToNominalDiffTime (tripEstimatedDuration + div timebufferOfVehicle 2)) currTime
+      end = addUTCTime (secondsToNominalDiffTime timebufferOfVehicle) start
+   in DRide.EstimatedEndTimeRange {start = start, end = end}
+
+getArrivalTimeBufferOfVehicle :: Maybe DTC.ArrivalTimeBufferOfVehicle -> DST.ServiceTierType -> Seconds
+getArrivalTimeBufferOfVehicle bufferJson serviceTier =
+  maybe
+    (Seconds 600)
+    ( \buffer -> case serviceTier of
+        DST.SEDAN -> buffer.sedan
+        DST.SUV -> buffer.suv
+        DST.HATCHBACK -> buffer.hatchback
+        DST.AUTO_RICKSHAW -> buffer.autorickshaw
+        DST.BIKE -> buffer.bike
+        DST.DELIVERY_BIKE -> buffer.deliverybike
+        DST.TAXI -> buffer.taxi
+        DST.TAXI_PLUS -> buffer.taxiplus
+        DST.PREMIUM_SEDAN -> buffer.premiumsedan
+        DST.BLACK -> buffer.black
+        DST.BLACK_XL -> buffer.blackxl
+        DST.ECO -> buffer.hatchback
+        DST.COMFY -> buffer.sedan
+        DST.PREMIUM -> buffer.sedan
+        DST.AMBULANCE_TAXI -> buffer.ambulance
+        DST.AMBULANCE_TAXI_OXY -> buffer.ambulance
+        DST.AMBULANCE_AC -> buffer.ambulance
+        DST.AMBULANCE_AC_OXY -> buffer.ambulance
+        DST.AMBULANCE_VENTILATOR -> buffer.ambulance
+        DST.SUV_PLUS -> buffer.suvplus
+    )
+    bufferJson

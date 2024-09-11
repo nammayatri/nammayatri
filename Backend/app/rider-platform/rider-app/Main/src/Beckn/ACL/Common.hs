@@ -195,6 +195,8 @@ parseRideStartedEvent order msgId = do
       startOdometerReading = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_ODOMETER_DETAILS Tag.START_ODOMETER_READING tagGroups
       tripStartLocation = getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
       driverArrivalTime :: Maybe UTCTime = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_ARRIVED_INFO Tag.ARRIVAL_TIME tagGroups
+      estimatedEndTimeRangeStart :: Maybe UTCTime = readMaybe . T.unpack =<< getTagV2' Tag.ESTIMATED_END_TIME_RANGE Tag.ESTIMATED_END_TIME_RANGE_START tagGroups
+      estimatedEndTimeRangeEnd :: Maybe UTCTime = readMaybe . T.unpack =<< getTagV2' Tag.ESTIMATED_END_TIME_RANGE Tag.ESTIMATED_END_TIME_RANGE_END tagGroups
   pure $
     Common.RideStartedReq
       { bookingDetails,

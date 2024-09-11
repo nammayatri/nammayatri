@@ -652,6 +652,21 @@ TransporterConfig:
       overlay: Int
       alert: Int
       derive': Generic, Show, ToJSON, FromJSON, Read
+    ArrivalTimeBufferOfVehicle:
+      sedan: Seconds
+      suv: Seconds
+      hatchback: Seconds
+      autorickshaw: Seconds
+      taxi: Seconds
+      taxiplus: Seconds
+      bike: Seconds
+      deliverybike: Seconds
+      ambulance: Seconds
+      premiumsedan: Seconds
+      black: Seconds
+      blackxl: Seconds
+      suvplus: Seconds
+      derive': Generic, Show, ToJSON, FromJSON, Read
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")]
     - Custom Domain.Types.UtilsTH.mkCacParseInstance
@@ -817,6 +832,7 @@ TransporterConfig:
     cachedDevicesOSForSearchRequest: "[Kernel.Types.Version.DeviceType]"
     cancellationRateWindow: Maybe Int
     cancellationRateCalculationThreshold: Maybe Int
+    arrivalTimeBufferOfVehicle: Maybe ArrivalTimeBufferOfVehicle
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -855,6 +871,7 @@ TransporterConfig:
     scheduledRideFilterExclusionThresholdHours: Maybe Int
     exotelStatusCheckSchedulerDelay: Maybe Seconds
     cachedDevicesOSForSearchRequest: "Maybe [Text]"
+    arrivalTimeBufferOfVehicle: Maybe Value
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -902,6 +919,7 @@ TransporterConfig:
     scheduledRideFilterExclusionThresholdHours: Kernel.Prelude.Just $ Kernel.Types.Common.getHours|I
     exotelStatusCheckSchedulerDelay: Just $ Kernel.Types.Common.Seconds exotelStatusCheckSchedulerDelay|E
     cachedDevicesOSForSearchRequest: Just (Data.Text.pack . Kernel.Prelude.show <$> cachedDevicesOSForSearchRequest)|E
+    arrivalTimeBufferOfVehicle: Kernel.Prelude.toJSON <$> arrivalTimeBufferOfVehicle|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -951,6 +969,8 @@ TransporterConfig:
     scheduledRideFilterExclusionThresholdHours: fromMaybe 2 (Kernel.Types.Common.Hours <$> scheduledRideFilterExclusionThresholdHours)|E
     exotelStatusCheckSchedulerDelay: maybe 120 (.getSeconds) exotelStatusCheckSchedulerDelay|E|E
     cachedDevicesOSForSearchRequest: maybe [] (mapMaybe (readMaybe . Data.Text.unpack)) cachedDevicesOSForSearchRequest|E
+    arrivalTimeBufferOfVehicle: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< arrivalTimeBufferOfVehicle|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1002,6 +1022,7 @@ TransporterConfig:
     arrivingPickupThreshold: double precision
     variantsToEnableForSubscription: "text[]"
     crossTravelCities: "text[]"
+    arrivalTimeBufferOfVehicle: json
 
   default:
     mediaFileUrlPattern: |-

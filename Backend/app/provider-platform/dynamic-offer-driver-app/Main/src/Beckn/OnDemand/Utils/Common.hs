@@ -747,6 +747,46 @@ mkArrivalTimeTagGroupV2 arrivalTime' =
         }
     ]
 
+mkEstimatedEndTimeRangeTagGroupV2 :: Maybe DRide.EstimatedEndTimeRange -> Maybe [Spec.TagGroup]
+mkEstimatedEndTimeRangeTagGroupV2 estimatedEndTimeRange' =
+  estimatedEndTimeRange' <&> \estimatedEndTimeRange ->
+    [ Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.ESTIMATED_END_TIME_RANGE,
+                  descriptorName = Just "Estimated End Time Range",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDisplay = Just False,
+                    tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.ESTIMATED_END_TIME_RANGE_START,
+                            descriptorName = Just "Estimated End Time Range Start",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = Just $ show $ estimatedEndTimeRange.start
+                  },
+                Spec.Tag
+                  { tagDisplay = Just False,
+                    tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.ESTIMATED_END_TIME_RANGE_END,
+                            descriptorName = Just "Estimated End Time Range End",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = Just $ show $ estimatedEndTimeRange.end
+                  }
+              ]
+        }
+    ]
+
 mkVehicleTags :: Maybe Double -> Maybe Bool -> Maybe [Spec.TagGroup]
 mkVehicleTags vehicleServiceTierAirConditioned' isAirConditioned =
   vehicleServiceTierAirConditioned' <&> \vehicleServiceTierAirConditioned ->

@@ -4,7 +4,7 @@ import Domain.Types
 import Domain.Types.Location
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.MerchantOperatingCity
-import Domain.Types.Ride (OdometerReading (..))
+import Domain.Types.Ride (EstimatedEndTimeRange (..), OdometerReading (..))
 import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Common (Centesimal)
@@ -74,3 +74,6 @@ getTripCategory bookingId tripCategory = case tripCategory of
   Nothing -> do
     booking <- QBooking.findById (cast $ Id bookingId) >>= fromMaybeM (BookingNotFound bookingId)
     pure $ booking.tripCategory
+
+mkEstimatedEndTimeRange :: UTCTime -> UTCTime -> EstimatedEndTimeRange
+mkEstimatedEndTimeRange start end = EstimatedEndTimeRange {..}

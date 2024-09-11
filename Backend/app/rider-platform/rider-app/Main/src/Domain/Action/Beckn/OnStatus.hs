@@ -342,6 +342,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       favCount = Just 0
       safetyJourneyStatus = Nothing
       destinationReachedAt = Nothing
+      estimatedEndTimeRange = Nothing
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::

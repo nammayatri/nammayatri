@@ -50,6 +50,7 @@ import qualified Lib.LocationUpdates as LocUpd
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.Ride (calculateEstimatedEndTimeRange)
 import qualified SharedLogic.ScheduledNotifications as SN
 import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
@@ -135,12 +136,12 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   let driverId = ride.driverId
   driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  (openMarketAllow, includeDriverCurrentlyOnRide) <-
+  (openMarketAllow, includeDriverCurrentlyOnRide, arrivalTimeBufferOfVehicle) <-
     maybe
-      (pure (False, False))
+      (pure (False, False, Nothing))
       ( \_ -> do
           transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
-          pure $ (transporterConfig.openMarketUnBlocked, transporterConfig.includeDriverCurrentlyOnRide)
+          pure (transporterConfig.openMarketUnBlocked, transporterConfig.includeDriverCurrentlyOnRide, transporterConfig.arrivalTimeBufferOfVehicle)
       )
       driverInfo.merchantId
   when (includeDriverCurrentlyOnRide && driverInfo.hasAdvanceBooking) do throwError $ CurrentRideInprogress driverId.getId
@@ -176,13 +177,16 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
             listToMaybe driverLocations & fromMaybeM LocationNotFound
           pure (getCoordinates driverLocation, dashboardReq.odometer)
   now <- getCurrentTime
+  -- create first entry of eta here
+  let estimatedEndTimeRange = booking.estimatedDuration >>= \estDuration -> Just $ calculateEstimatedEndTimeRange now estDuration arrivalTimeBufferOfVehicle booking.vehicleServiceTier
+  when (isJust estimatedEndTimeRange) $ QRide.updateEstimatedEndTimeRange estimatedEndTimeRange ride.id
   updatedRide <-
     if DTC.isEndOtpRequired booking.tripCategory
       then do
         endOtp <- Just <$> generateOTPCode
         QRide.updateEndRideOtp ride.id endOtp
-        return $ ride {DRide.endOtp = endOtp, DRide.startOdometerReading = odometer, DRide.tripStartTime = Just now}
-      else pure ride {DRide.tripStartTime = Just now}
+        return $ ride {DRide.endOtp = endOtp, DRide.startOdometerReading = odometer, DRide.tripStartTime = Just now, DRide.estimatedEndTimeRange = estimatedEndTimeRange}
+      else pure ride {DRide.tripStartTime = Just now, DRide.estimatedEndTimeRange = estimatedEndTimeRange}
 
   whenWithLocationUpdatesLock driverId $ do
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer

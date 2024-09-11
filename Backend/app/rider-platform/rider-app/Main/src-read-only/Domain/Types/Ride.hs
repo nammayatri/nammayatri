@@ -54,6 +54,7 @@ data RideE e = Ride
     driversPreviousRideDropLoc :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     endOdometerReading :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     endOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    estimatedEndTimeRange :: Kernel.Prelude.Maybe Domain.Types.Ride.EstimatedEndTimeRange,
     fare :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     favCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     fromLocation :: Domain.Types.Location.Location,
@@ -129,6 +130,7 @@ instance EncryptedItem Ride where
           driversPreviousRideDropLoc = driversPreviousRideDropLoc entity,
           endOdometerReading = endOdometerReading entity,
           endOtp = endOtp entity,
+          estimatedEndTimeRange = estimatedEndTimeRange entity,
           fare = fare entity,
           favCount = favCount entity,
           fromLocation = fromLocation entity,
@@ -196,6 +198,7 @@ instance EncryptedItem Ride where
             driversPreviousRideDropLoc = driversPreviousRideDropLoc entity,
             endOdometerReading = endOdometerReading entity,
             endOtp = endOtp entity,
+            estimatedEndTimeRange = estimatedEndTimeRange entity,
             fare = fare entity,
             favCount = favCount entity,
             fromLocation = fromLocation entity,
@@ -238,6 +241,8 @@ instance EncryptedItem' Ride where
   fromUnencrypted = fst
 
 data BPPRide = BPPRide {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data EstimatedEndTimeRange = EstimatedEndTimeRange {end :: Kernel.Prelude.UTCTime, start :: Kernel.Prelude.UTCTime} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 

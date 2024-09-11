@@ -2,6 +2,7 @@ module Storage.Queries.Extra.Transformers.Ride where
 
 import Domain.Types.Location
 import qualified Domain.Types.LocationMapping as DLM
+import Domain.Types.Ride (EstimatedEndTimeRange (..))
 import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -42,3 +43,6 @@ getFromLocation id bookingId merchantId merchantOperatingCityId = do
 
 mkLatLong :: Maybe Double -> Maybe Double -> Maybe LatLong
 mkLatLong lat lon = LatLong <$> lat <*> lon
+
+mkEstimatedEndTimeRange :: UTCTime -> UTCTime -> EstimatedEndTimeRange
+mkEstimatedEndTimeRange start end = EstimatedEndTimeRange {..}
