@@ -44,7 +44,7 @@ upsert ::
   Kernel.Types.Id.Id Person ->
   UpdateEmergencyInfo ->
   m ()
-upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = Hedis.withLockRedis (mkSafetySettingsByPersonIdKey personId) 1 $ do
+upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = Hedis.withLockRedis (mkSafetySettingsByPersonIdKey personId) 20 $ do
   now <- getCurrentTime
   res <- findOneWithKV [Se.And [Se.Is BeamP.personId $ Se.Eq personId]]
   if isJust res
@@ -102,7 +102,7 @@ updateSafetyCenterBlockingCounter personId counter mbDate = do
     [Se.Is BeamP.personId (Se.Eq personId.getId)]
 
 findSafetySettingsWithFallback :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Kernel.Types.Id.Id Person -> Maybe Person -> m DSafety.SafetySettings
-findSafetySettingsWithFallback personId mbPerson = Hedis.withLockRedisAndReturnValue (mkSafetySettingsByPersonIdKey personId.getId) 1 $ do
+findSafetySettingsWithFallback personId mbPerson = Hedis.withLockRedisAndReturnValue (mkSafetySettingsByPersonIdKey personId.getId) 20 $ do
   now <- getCurrentTime
   res <- findOneWithKV [Se.And [Se.Is BeamP.personId $ Se.Eq personId.getId]]
   case res of
