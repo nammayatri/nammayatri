@@ -561,7 +561,8 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         totalRidesCount,
         isDashboardRequest = Just isDashboardRequest,
         placeNameSource = mbPlaceNameSource,
-        initiatedBy = Nothing
+        initiatedBy = Nothing,
+        journeyLegInfo = Nothing
       }
   where
     getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime

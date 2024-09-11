@@ -16,6 +16,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Kernel.Utils.Common
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.SearchRequest as Beam
+import Storage.Queries.Transformers.SearchRequest
 import qualified Storage.Queries.Transformers.SearchRequest
 
 instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest where
@@ -53,6 +54,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             initiatedBy = initiatedBy,
             isAdvanceBookingEnabled = isAdvanceBookingEnabled,
             isDashboardRequest = isDashboardRequest,
+            journeyLegInfo = Storage.Queries.Transformers.SearchRequest.mkJourneyLegInfo agency convenienceCost journeyId journeyLegOrder skipBooking,
             language = language,
             maxDistance = Kernel.Utils.Common.mkDistanceWithDefault distanceUnit maxDistanceValue . Kernel.Types.Common.HighPrecMeters <$> maxDistance,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -101,6 +103,11 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.initiatedBy = initiatedBy,
         Beam.isAdvanceBookingEnabled = isAdvanceBookingEnabled,
         Beam.isDashboardRequest = isDashboardRequest,
+        Beam.agency = journeyLegInfo >>= (.agency),
+        Beam.convenienceCost = Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo,
+        Beam.journeyId = Kernel.Prelude.fmap (Kernel.Types.Id.getId . (.journeyId)) journeyLegInfo,
+        Beam.journeyLegOrder = Kernel.Prelude.fmap (.journeyLegOrder) journeyLegInfo,
+        Beam.skipBooking = Kernel.Prelude.fmap (.skipBooking) journeyLegInfo,
         Beam.language = language,
         Beam.maxDistance = Kernel.Utils.Common.getHighPrecMeters . Kernel.Utils.Common.distanceToHighPrecMeters <$> maxDistance,
         Beam.maxDistanceValue = Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> distance,

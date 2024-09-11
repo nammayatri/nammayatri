@@ -1,5 +1,6 @@
 imports:
   UTCTime: Kernel.Prelude
+  TravelMode: Domain.Types.Common
   HighPrecMoney: Kernel.Types.Common
   Currency: Kernel.Types.Common
   Price: Kernel.Types.Common
@@ -22,6 +23,7 @@ imports:
   City: Kernel.Types.Beckn.Context
   PartnerOrganization: Domain.Types.PartnerOrganization
   PartnerOrgTransaction: Domain.Types.PartnerOrganization
+  JourneySearchData: Lib.JourneyPlanner.Types
 
 FRFSSearch:
   tableName: frfs_search
@@ -37,6 +39,25 @@ FRFSSearch:
     merchantOperatingCityId: Id MerchantOperatingCity
     partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
+    journeyLegInfo: Maybe JourneySearchData
+
+  beamFields:
+    journeyLegInfo:
+      journeyLegOrder: Maybe Int
+      journeyId: Maybe Text
+      agency: Maybe Text
+      skipBooking: Maybe Bool
+      convenienceCost: Maybe Int
+
+  toTType:
+    journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
+    journeyId: Kernel.Prelude.fmap (Kernel.Types.Id.getId . (.journeyId))|I
+    agency: (journeyLegInfo >>= (.agency))|E
+    skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
+    convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
+
+  fromTType:
+    journeyLegInfo: mkJourneyLegInfo
 
   constraints:
     riderId: "!SecondaryKey" # forcing to be a secondary key
