@@ -1596,7 +1596,7 @@ getKN stringKey =
         CANCELLATION_RATE_TRIVIA -> "ರದ್ದು ದರವನ್ನು ಕಡಿಮೆ ಮಾಡುವ ವಿಧಾನಗಳು:"
         HIGH_CANCELLATION_RATE -> "ರದ್ದು ದರ ಚಾಲಕರ ಮಧ್ಯೆ 90% ಕ್ಕಿಂತ ಹೆಚ್ಚಾಗಿದೆ"
         LAST_N_DAYS n -> "(ಕೊನೆಯ " <> n <> " ದಿನಗಳು)"
-        CANCELLATION_RATE_TRIVIA_2 -> "ನೀವು ರದ್ದು ಮಾಡದಿದ್ದರೆ ಏನು ಆಗುತ್ತದೆ?"
+        CANCELLATION_RATE_TRIVIA_2 -> "ನೀವು ರದ್ದತಿ ದರವನ್ನು ಕಡಿಮೆ ಮಾಡದಿದ್ದರೆ ಏನಾಗುತ್ತದೆ?"
         LIFETIME_STATS -> "ಜೀವನದ ಸ್ಟ್ಯಾಟಿಸ್ಟಿಕ್ಸ್"
         TOTAL_RIDES_CANCELLED -> "ಒಟ್ಟು ಸವಾರಿಗಳನ್ನು ರದ್ದು ಮಾಡಲಾಗಿದೆ"
         TOTAL_EARNINGS_MISSED -> "ಒಟ್ಟು ಆದಾಯವನ್ನು ಮಿಸ್ ಮಾಡಲಾಗಿದೆ"
