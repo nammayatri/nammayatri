@@ -235,7 +235,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
           <> sosRaisedLocation
 
     triggerShareRideAndNotifyContacts safetySettings = (fromMaybe safetySettings.notifySosWithEmergencyContacts req.notifyAllContacts) && req.flow == DSos.SafetyFlow
-    suffixNotificationBody = if fromMaybe False req.isRideEnded then " has initiated an SOS. Tap to follow and respond to the emergency situation" else " has activated SOS after their Namma Yatri ride. Please check on their safety"
+    suffixNotificationBody = if req.isRideEnded /= Just True then " has initiated an SOS. Tap to follow and respond to the emergency situation" else " has activated SOS after their Namma Yatri ride. Please check on their safety"
     notificationBody person_ = SLP.getName person_ <> suffixNotificationBody
     notificationTitle = "SOS Alert"
     shouldNotifyContacts = bool True (req.sendPNOnPostRideSOS == Just True) (req.isRideEnded == Just True)
