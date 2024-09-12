@@ -453,14 +453,16 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
       mbCustomerPhone <- mapM decrypt person.mobileNumber
       now <- getCurrentTime
       let customerName = (fromMaybe "" person.firstName) <> " " <> (fromMaybe "" person.lastName)
-          customerPhone = fromMaybe "NA" mbCustomerPhone
+          customerPhone = fromMaybe "N/A" mbCustomerPhone
+          currentTimeInIST = showTimeIst now
       case (mbRide, mbRideInfoRes) of
         (Just ride, Just rideInfo) -> do
-          let driverPhoneNumber = fromMaybe "NA" rideInfo.driverPhoneNo
-              vehicleVariant = maybe "NA" show (rideInfo.vehicleVariant)
-              pickupLocation = TL.toStrict $ TLE.decodeUtf8 $ A.encode $ A.toJSON rideInfo.customerPickupLocation
-              dropLoc = maybe "NA" (TL.toStrict . TLE.decodeUtf8 . A.encode . A.toJSON) (rideInfo.customerDropLocation)
-              rideStartTime = maybe "NA" show rideInfo.rideStartTime
+          let driverPhoneNumber = fromMaybe "N/A" rideInfo.driverPhoneNo
+              vehicleVariant = maybe "N/A" show (rideInfo.vehicleVariant)
+              dropLocation = fromMaybe "N/A" (rideInfo.customerDropLocation >>= \loc -> Just ("area - " <> fromMaybe "N/A" (loc.area) <> ", street - " <> fromMaybe "N/A" (loc.street)))
+              fromLocation = rideInfo.customerPickupLocation
+              pickupLocation = "area - " <> fromMaybe "N/A" (fromLocation.area) <> ", street - " <> fromMaybe "N/A" (fromLocation.street)
+              rideStartTime = maybe "N/A" showTimeIst rideInfo.rideStartTime
           return $
             "There is an L0 feedback/report given by Customer Name : " <> customerName <> "\n"
               <> "Customer Phone No : "
@@ -482,7 +484,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
               <> pickupLocation
               <> "\n"
               <> "Drop Location : "
-              <> dropLoc
+              <> dropLocation
               <> "\n"
               <> "Ride Id : "
               <> ride.id.getId
@@ -491,7 +493,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
               <> rideStartTime
               <> "\n"
               <> "Feedback Time : "
-              <> show now
+              <> currentTimeInIST
               <> "\n"
               <> "Feedback Message : "
               <> desc
@@ -502,7 +504,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
               <> customerPhone
               <> "\n"
               <> "Feedback Time : "
-              <> show now
+              <> currentTimeInIST
               <> "\n"
               <> "Feedback Message : "
               <> desc
