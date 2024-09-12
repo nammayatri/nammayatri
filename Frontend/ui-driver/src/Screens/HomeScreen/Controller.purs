@@ -1374,10 +1374,11 @@ eval (PopUpModalAccessibilityAction PopUpModal.NoAction) state = continueWithCmd
 ]
 
 eval (PopUpRentalInfoAction PopUpModal.OnButton1Click) state = continue state{props{rentalInfoPopUp = false}} 
-eval (PopUpRentalInfoAction PopUpModal.OnButton2Click) state = do 
+
+eval (PopUpRentalInfoAction PopUpModal.OnSecondaryTextClick) state = do 
   let link = case state.data.linkedVehicleCategory of
-              "AUTO_RICKSHAW" -> "https://www.youtube.com/watch?v=nwXV-vT_X_8"
-              _ -> "https://www.youtube.com/watch?v=aKGPp5A2M0E"
+              "AUTO_RICKSHAW" -> state.data.config.rentalRideVideoConfig.auto 
+              _ -> state.data.config.rentalRideVideoConfig.cab 
   continueWithCmd state [ do 
     void $ JB.openUrlInApp link
     pure AfterRender

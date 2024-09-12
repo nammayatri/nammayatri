@@ -1138,6 +1138,10 @@ config =
   , clientName : ""
   , appUpdatePopupUrl : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner&pcampaignid=web_share"
   , showProfileAadhaarPan : true -- Only for backward compatibility and testing in PROD environment
+  , rentalRideVideoConfig : {
+      auto : "https://www.youtube.com/watch?v=nwXV-vT_X_8",
+      cab : "https://www.youtube.com/watch?v=aKGPp5A2M0E"
+  }
 }
 
 registrationConfig :: RegistrationConfig
