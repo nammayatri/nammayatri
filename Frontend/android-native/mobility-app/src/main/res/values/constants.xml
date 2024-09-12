@@ -8,6 +8,20 @@
     <integer name="WIDGET_CORNER_ANIMATION_DURATION">200</integer>
     <integer name="DURATION_OF_SHOWING_MESSAGE">5000</integer>
     <integer name="LOADER_WAITING_TIME">15000</integer>
+    <string name="CALL_SID_KEY" translatable="false">CALL_SID</string>
+    <string name="VOICE_CHANNEL_LOW_IMPORTANCE" translatable="false">notification-channel-low-importance</string>
+    <string name="VOICE_CHANNEL_HIGH_IMPORTANCE" translatable="false">notification-channel-high-importance</string>
+    <string name="OUTGOING_CALL_RECIPIENT" translatable="false">OUTGOING_CALL_RECIPIENT</string>
+    <string name="INCOMING_CALL_INVITE" translatable="false">INCOMING_CALL_INVITE</string>
+    <string name="CANCELLED_CALL_INVITE" translatable="false">CANCELLED_CALL_INVITE</string>
+    <string name="INCOMING_CALL_NOTIFICATION_ID" translatable="false">INCOMING_CALL_NOTIFICATION_ID</string>
+    <string name="ACTION_ACCEPT" translatable="false">ACTION_ACCEPT</string>
+    <string name="ACTION_REJECT" translatable="false">ACTION_REJECT</string>
+    <string name="ACTION_INCOMING_CALL_NOTIFICATION" translatable="false">ACTION_INCOMING_CALL_NOTIFICATION</string>
+    <string name="ACTION_INCOMING_CALL" translatable="false">ACTION_INCOMING_CALL</string>
+    <string name="ACTION_OUTGOING_CALL" translatable="false">ACTION_OUTGOING_CALL</string>
+    <string name="ACTION_CANCEL_CALL" translatable="false">ACTION_CANCEL_CALL</string>
+    <string name="ACTION_FCM_TOKEN" translatable="false">ACTION_FCM_TOKEN</string>
     <string name="DRIVER_STATUS" translatable="false">DRIVER_STATUS</string>
     <string name="WIDGET_MESSAGE" translatable="false">widgetMessage</string>
     <string name="IS_RIDE_ACTIVE" translatable="false">IS_RIDE_ACTIVE</string>
@@ -50,4 +64,6 @@
     <string name="REGISTRATION_APPROVED" translatable="false">REGISTRATION_APPROVED</string>
     <string name="ReAllocated" translatable="false">ReAllocated</string>
     <string name="FINDING_QUOTES_START_TIME" translatable="false">FINDING_QUOTES_START_TIME</string>
+    <string name="CALL_RESPONSE_ACTION_KEY" translatable="false">CALL_RESPONSE_ACTION_KEY</string>
+    <string name="FCM_DATA_KEY" translatable="false">FCM_DATA_KEY</string>
 </resources>

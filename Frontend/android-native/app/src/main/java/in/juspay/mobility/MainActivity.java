@@ -22,8 +22,11 @@ import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.NotificationChannelGroup;
 import android.app.NotificationManager;
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -36,6 +39,10 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
+import android.telecom.PhoneAccount;
+import android.telecom.PhoneAccountHandle;
+import android.telecom.TelecomManager;
+import android.telecom.VideoProfile;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.Pair;
@@ -52,6 +59,7 @@ import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
@@ -68,6 +76,7 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.tasks.CancellationTokenSource;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.android.play.core.appupdate.AppUpdateManager;
 import com.google.android.play.core.install.model.AppUpdateType;
 import com.google.android.play.core.install.model.UpdateAvailability;
@@ -89,9 +98,11 @@ import java.util.Collections;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.UUID;
@@ -105,6 +116,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import in.juspay.hypersdk.core.Constants;
 import in.juspay.hypersdk.core.PaymentConstants;
 import in.juspay.hypersdk.data.JuspayResponseHandler;
 import in.juspay.hypersdk.data.KeyValueStore;
@@ -115,6 +127,14 @@ import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.MobilityAppBridge;
 import in.juspay.mobility.app.MyFirebaseMessagingService;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
+import com.twilio.voice.Call;
+import com.twilio.voice.Call.CallQualityWarning;
+import com.twilio.voice.CallException;
+import com.twilio.voice.ConnectOptions;
+import com.twilio.voice.RegistrationException;
+import com.twilio.voice.RegistrationListener;
+import com.twilio.voice.Voice;
+
 import in.juspay.mobility.app.NotificationUtils;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.RideRequestActivity;
@@ -122,7 +142,9 @@ import in.juspay.mobility.app.TranslatorMLKit;
 import in.juspay.mobility.app.WidgetService;
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
 import in.juspay.mobility.app.reels.ExoplayerItem;
+import in.juspay.mobility.app.services.IncomingCallNotificationService;
 import in.juspay.mobility.app.services.MobilityAppUpdate;
+import in.juspay.mobility.app.services.VoiceConnectionService;
 import in.juspay.mobility.common.Utils;
 import in.juspay.mobility.common.services.MobilityAPIResponse;
 import in.juspay.mobility.common.services.MobilityCallAPI;
@@ -149,6 +171,10 @@ public class MainActivity extends AppCompatActivity {
     private static int updateType;
     MyFirebaseMessagingService.BundleUpdateCallBack bundleUpdateCallBack;
     private HyperServices hyperServices;
+    private Call activeCall;
+    private Call.Listener callListener = callListener();
+    private PhoneAccountHandle phoneAccountHandle;
+    private TelecomManager telecomManager;
 
     private FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
 
@@ -167,6 +193,9 @@ public class MainActivity extends AppCompatActivity {
     private static final MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
     ActivityResultLauncher<HyperKycConfig> launcher;
     private String registeredCallBackForHV;
+    private VoiceBroadcastReceiver voiceBroadcastReceiver;
+    RegistrationListener registrationListener = registrationListener();
+    private String accessToken = "";
 
     SharedPreferences.OnSharedPreferenceChangeListener mListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
         @Override
@@ -349,7 +378,7 @@ public class MainActivity extends AppCompatActivity {
                 Utils.updateLocaleResource(sharedPref.getString(getResources().getString(in.juspay.mobility.app.R.string.LANGUAGE_KEY), "null"),context);
             }
         }
-        
+
         MobilityAppUpdate mobilityAppUpdate = new MobilityAppUpdate(this);
         mobilityAppUpdate.checkAndUpdateApp(remoteConfigs);
 
@@ -413,8 +442,15 @@ public class MainActivity extends AppCompatActivity {
         sharedPref = context.getSharedPreferences(this.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
         activity = this;
         initiateHvLauncher();
+        phoneAccountHandle = new PhoneAccountHandle(new ComponentName(getApplicationContext(), VoiceConnectionService.class),"Bridge");
+        telecomManager = (TelecomManager) getApplicationContext().getSystemService(TELECOM_SERVICE);
+        PhoneAccount phoneAccount = new PhoneAccount.Builder(phoneAccountHandle, "Bridge ")
+                .setCapabilities(PhoneAccount.CAPABILITY_CALL_PROVIDER)
+                .setCapabilities(PhoneAccount.CAPABILITY_SELF_MANAGED)
+                .build();
+        telecomManager.registerPhoneAccount(phoneAccount);
 
-        Log.i("APP_PERF", "FORKED_INIT_TASKS_AND_APIS : " + System.currentTimeMillis());        
+        Log.i("APP_PERF", "FORKED_INIT_TASKS_AND_APIS : " + System.currentTimeMillis());
 
         boolean isPerfEnabled = false, isPerfEnabledCustomer = false;
         try{
@@ -425,7 +461,7 @@ public class MainActivity extends AppCompatActivity {
         }catch(Exception e){
             Log.i("PERF", "unable to fetch PERF remote config");
             Exception exception = new Exception("Error in parsing perf config " + e);
-            FirebaseCrashlytics.getInstance().recordException(exception);            
+            FirebaseCrashlytics.getInstance().recordException(exception);
         }
 
         if(isPerfEnabledCustomer){
@@ -484,8 +520,22 @@ public class MainActivity extends AppCompatActivity {
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
         window.setStatusBarColor(this.getResources().getColor(R.color.colorPrimaryDark, getTheme()));
         countAppUsageDays();
+//        startForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> handleGlResp(result, hyperServices, MainActivity.this));
+        voiceBroadcastReceiver = new VoiceBroadcastReceiver();
+        registerReceiver();
+        handleIncomingCallIntent(getIntent());
+        // check for permission before calling this function
+        registerForCallInvites();
+
     }
 
+    public void registerReceiver(){
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(String.valueOf(in.juspay.mobility.app.R.string.ACTION_INCOMING_CALL));
+        intentFilter.addAction(String.valueOf(in.juspay.mobility.app.R.string.ACTION_CANCEL_CALL));
+        intentFilter.addAction(String.valueOf(in.juspay.mobility.app.R.string.ACTION_FCM_TOKEN));
+        LocalBroadcastManager.getInstance(this).registerReceiver(voiceBroadcastReceiver, intentFilter);
+    }
     public void initiateHvLauncher() {
         if (isClassAvailable ("co.hyperverge.hyperkyc.HyperKyc") && isClassAvailable("co.hyperverge.hyperkyc.data.models.result.HyperKycResult") && isClassAvailable("com.google.gson.Gson")) {
             launcher = this.registerForActivityResult(new HyperKyc.Contract(), new ActivityResultCallback<HyperKycResult>() {
@@ -512,6 +562,7 @@ public class MainActivity extends AppCompatActivity {
             });
         }
     }
+
     private void handleSplashScreen() {
         try {
             setContentView(R.layout.activity_main);
@@ -583,6 +634,20 @@ public class MainActivity extends AppCompatActivity {
         } else {
             return false;
         }
+    }
+
+    private void registerForCallInvites() {
+        FirebaseMessaging.getInstance().getToken()
+                .addOnCompleteListener(task -> {
+                    if (!task.isSuccessful()) {
+                        return;
+                    }
+                    if (null != task.getResult()) {
+                        String fcmToken = Objects.requireNonNull(task.getResult());
+                        Log.i("TWILIO_VOICE", "Registering with FCM");
+                        Voice.register(accessToken, Voice.RegistrationChannel.FCM, fcmToken, registrationListener);
+                    }
+                });
     }
 
     @NonNull
@@ -663,7 +728,7 @@ public class MainActivity extends AppCompatActivity {
                 notificationManager.deleteNotificationChannel("DRIVER_HAS_REACHED");
                 notificationManager.deleteNotificationChannel("TRIP_FINISHED");
                 notificationManager.deleteNotificationChannel("SOS_TRIGGERED");
-                notificationManager.deleteNotificationChannel("SOS_RESOLVED"); 
+                notificationManager.deleteNotificationChannel("SOS_RESOLVED");
             } catch(Exception e) {
                 System.out.println("Notification Channel doesn't exists");
             }
@@ -840,6 +905,14 @@ public class MainActivity extends AppCompatActivity {
                         } catch (Exception ignored) {
                         }
                         break;
+
+                    case "twilio_call_event":
+//                        ConnectOptions connectOptions = new ConnectOptions.Builder(accessToken)
+//                                .build();
+//                        System.out.println("Inside connect");
+                        initiateCall();
+//                        activeCall = Voice.connect(MainActivity.this, connectOptions, callListener);
+
                     case "log_stream":
                         JSONObject payload;
                         try {
@@ -1010,6 +1083,58 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
+
+    private void handleIncomingCallIntent(Intent intent) {
+        if (intent != null && intent.getAction() != null) {
+            String action = intent.getAction();
+//            activeCallInvite = intent.getParcelableExtra(in.juspay.mobility.app.R.string.INCOMING_CALL_INVITE);
+//            activeCallNotificationId = intent.getIntExtra(in.juspay.mobility.app.R.string.INCOMING_CALL_NOTIFICATION_ID, 0);
+
+
+
+            if (action.equals(String.valueOf(in.juspay.mobility.app.R.string.ACTION_INCOMING_CALL))) {
+                System.out.println("handleIncomingCallIntent Getting Incoming Call");
+//                handleIncomingCall();
+            } else if (action.equals(String.valueOf(in.juspay.mobility.app.R.string.ACTION_INCOMING_CALL_NOTIFICATION))) {
+                System.out.println("handleIncomingCallIntent ACTION_INCOMING_CALL_NOTIFICATION");
+//                showIncomingCallDialog();
+            } else if (action.equals(String.valueOf(in.juspay.mobility.app.R.string.ACTION_CANCEL_CALL))) {
+                System.out.println("handleIncomingCallIntent ACTION_CANCEL_CALL");
+//                handleCancel();
+            } else if (action.equals(String.valueOf(in.juspay.mobility.app.R.string.ACTION_FCM_TOKEN))) {
+                System.out.println("handleIncomingCallIntent ACTION_FCM_INTENT");
+//                registerForCallInvites();
+            } else if (action.equals(String.valueOf(in.juspay.mobility.app.R.string.ACTION_ACCEPT))) {
+                System.out.println("handleIncomingCallIntent ACTION_ACCEPT");
+//                answer();
+            } else {
+                // Default case
+            }
+        }
+    }
+
+    private RegistrationListener registrationListener() {
+        return new RegistrationListener() {
+            @Override
+            public void onRegistered(@NonNull String accessToken, @NonNull String fcmToken) {
+                Log.d("TWILIO_VOICE", "Successfully registered FCM " + fcmToken);
+            }
+
+            @Override
+            public void onError(@NonNull RegistrationException error,
+                                @NonNull String accessToken,
+                                @NonNull String fcmToken) {
+                String message = String.format(
+                        Locale.US,
+                        "Registration Error: %d, %s",
+                        error.getErrorCode(),
+                        error.getMessage());
+                Log.e("TWILIO_VOICE", message);
+//                Snackbar.make(coordinatorLayout, message, Snackbar.LENGTH_LONG).show();
+            }
+        };
+    }
+
     @Override
     protected void onNewIntent(Intent intent) {
         Vector<String> res = handleDeepLinkIfAvailable(intent);
@@ -1214,6 +1339,14 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void initiateCall() {
+        Intent intent = new Intent(MainActivity.this, IncomingCallNotificationService.class);
+        System.out.println("Inside twilio Call event initiate call");
+        intent.setAction(String.valueOf(in.juspay.mobility.app.R.string.ACTION_OUTGOING_CALL));
+        intent.putExtra("OUTGOING_CALL_RECIPIENT",Uri.fromParts(PhoneAccount.SCHEME_TEL, "abcd", null));
+        startService(intent);
+    }
+
     private void checkRideRequest() {
         try {
             boolean rideReqExpired = NotificationUtils.lastRideReq.getBoolean("rideReqExpired", true);
@@ -1257,6 +1390,30 @@ public class MainActivity extends AppCompatActivity {
             Bundle params = new Bundle();
             params.putString("id",GAID);
             FirebaseAnalytics.getInstance(context).logEvent("ad_id", params);
+        }
+    }
+    private class VoiceBroadcastReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent){
+            String action = intent.getAction();
+            if(action != null && (action.equals(String.valueOf(in.juspay.mobility.app.R.string.ACTION_INCOMING_CALL)) || action.equals(String.valueOf(in.juspay.mobility.app.R.string.ACTION_CANCEL_CALL)))){
+                handleIncomingCallIntent(intent);
+            }else if(action != null && (action.equals(String.valueOf(in.juspay.mobility.app.R.string.ACTION_OUTGOING_CALL) )))
+            {
+                handleCallRequest(intent);
+            }
+
+        }
+    }
+
+    private void handleCallRequest(Intent intent) {
+        if (intent != null && intent.getAction() != null) {
+
+            ConnectOptions connectOptions = new ConnectOptions.Builder(accessToken)
+                    .build();
+            System.out.println("Inside connect");
+            activeCall = Voice.connect(MainActivity.this, connectOptions, callListener);
         }
     }
 
@@ -1309,6 +1466,122 @@ public class MainActivity extends AppCompatActivity {
         return payload;
     }
 
+    private Call.Listener callListener() {
+        return new Call.Listener() {
+            @Override
+            public void onConnectFailure(@NonNull Call call, @NonNull CallException callException) {
+//                audioSwitch.deactivate();
+//                if (BuildConfig.playCustomRingback) {
+//                    SoundPoolManager.getInstance(VoiceActivity.this).stopRinging();
+//                }
+                Log.d("TAG", "Connect failure");
+                String message = String.format(
+                        Locale.US,
+                        "Call Error: %d, %s",
+                        callException.getErrorCode(),
+                        callException.getMessage());
+                Log.e("TAG", message);
+//                Snackbar.make(coordinatorLayout, message, Snackbar.LENGTH_LONG).show();
+//                resetUI();
+            }
+
+            /*
+             * This callback is emitted once before the Call.Listener.onConnected() callback when
+             * the callee is being alerted of a Call. The behavior of this callback is determined by
+             * the answerOnBridge flag provided in the Dial verb of your TwiML application
+             * associated with this client. If the answerOnBridge flag is false, which is the
+             * default, the Call.Listener.onConnected() callback will be emitted immediately after
+             * Call.Listener.onRinging(). If the answerOnBridge flag is true, this will cause the
+             * call to emit the onConnected callback only after the call is answered.
+             * See answeronbridge for more details on how to use it with the Dial TwiML verb. If the
+             * twiML response contains a Say verb, then the call will emit the
+             * Call.Listener.onConnected callback immediately after Call.Listener.onRinging() is
+             * raised, irrespective of the value of answerOnBridge being set to true or false
+             */
+            @Override
+            public void onRinging(@NonNull Call call) {
+                Log.d("TAG", "Ringing");
+                /*
+                 * When [answerOnBridge](https://www.twilio.com/docs/voice/twiml/dial#answeronbridge)
+                 * is enabled in the <Dial> TwiML verb, the caller will not hear the ringback while
+                 * the call is ringing and awaiting to be accepted on the callee's side. The application
+                 * can use the `SoundPoolManager` to play custom audio files between the
+                 * `Call.Listener.onRinging()` and the `Call.Listener.onConnected()` callbacks.
+                 */
+//                if (BuildConfig.playCustomRingback) {
+//                    SoundPoolManager.getInstance(VoiceActivity.this).playRinging();
+//                }
+            }
+
+            @Override
+            public void onConnected(@NonNull Call call) {
+//                audioSwitch.activate();
+//                if (BuildConfig.playCustomRingback) {
+//                    SoundPoolManager.getInstance(VoiceActivity.this).stopRinging();
+//                }
+                Log.d("TAG", "Connected");
+                activeCall = call;
+            }
+
+            @Override
+            public void onReconnecting(@NonNull Call call, @NonNull CallException callException) {
+                Log.d("TAG", "onReconnecting");
+            }
+
+            @Override
+            public void onReconnected(@NonNull Call call) {
+                Log.d("TAG", "onReconnected");
+            }
+
+            @Override
+            public void onDisconnected(@NonNull Call call, CallException error) {
+//                audioSwitch.deactivate();
+//                if (BuildConfig.playCustomRingback) {
+//                    SoundPoolManager.getInstance(VoiceActivity.this).stopRinging();
+//                }
+                Log.d("TAG", "Disconnected");
+                if (error != null) {
+                    String message = String.format(
+                            Locale.US,
+                            "Call Error: %d, %s",
+                            error.getErrorCode(),
+                            error.getMessage());
+                    Log.e("TAG", message);
+//                    Snackbar.make(coordinatorLayout, message, Snackbar.LENGTH_LONG).show();
+                }
+//                resetUI();
+            }
+            /*
+             * currentWarnings: existing quality warnings that have not been cleared yet
+             * previousWarnings: last set of warnings prior to receiving this callback
+             *
+             * Example:
+             *   - currentWarnings: { A, B }
+             *   - previousWarnings: { B, C }
+             *
+             * Newly raised warnings = currentWarnings - intersection = { A }
+             * Newly cleared warnings = previousWarnings - intersection = { C }
+             */
+            public void onCallQualityWarningsChanged(@NonNull Call call,
+                                                     @NonNull Set<CallQualityWarning> currentWarnings,
+                                                     @NonNull Set<CallQualityWarning> previousWarnings) {
+
+                if (previousWarnings.size() > 1) {
+                    Set<CallQualityWarning> intersection = new HashSet<>(currentWarnings);
+                    currentWarnings.removeAll(previousWarnings);
+                    intersection.retainAll(previousWarnings);
+                    previousWarnings.removeAll(intersection);
+                }
+
+                String message = String.format(
+                        Locale.US,
+                        "Newly raised warnings: " + currentWarnings + " Clear warnings " + previousWarnings);
+                Log.e("TAG", message);
+//                Snackbar.make(coordinatorLayout, message, Snackbar.LENGTH_LONG).show();
+            }
+        };
+    }
+
     public void initHyperVergeSdk(String accessToken,  String workFlowId, String transactionId, boolean useLocation, String defLanguageCode, String inputsJson) {
         if (isClassAvailable ("co.hyperverge.hyperkyc.data.models.HyperKycConfig")) {
                 HyperKycConfig config = new HyperKycConfig(accessToken, workFlowId, transactionId);
@@ -1340,3 +1613,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
 }
+
+
+
+

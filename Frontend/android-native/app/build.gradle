@@ -338,6 +338,7 @@ dependencies {
     debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
     compileOnly 'co.hyperverge:hyperkyc:0.26.0'
     compileOnly 'com.google.code.gson:gson:2.8.8'
+    implementation 'com.twilio:voice-android:6.6.1'
 }
 
 def tmpSource = "/tmp/juspay"

@@ -2998,3 +2998,12 @@ export const initWebViewOnActivity = function (webViewUrl, cb, action) {
     }
   }
     
+
+  export const performTwilioVoiceCallImpl = function (rideId, accessToken) {
+
+    JOS.emitEvent("java")("onEvent")(JSON.stringify({
+      event: "twilio_call_event",
+      accessToken: accessToken,
+      rideId: rideId
+    }))()()
+  }

@@ -313,6 +313,7 @@ foreign import fetchFilesFromFolderPath :: String -> Array String
 foreign import isPackageInstalled :: String -> Boolean
 foreign import requestUninstallPackage :: String -> Boolean
 
+foreign import performTwilioVoiceCallImpl :: EffectFn2 String String Unit
 
 foreign import focusChild :: EffectFn2 String Int Unit
 
@@ -1061,3 +1062,6 @@ handleLocateOnMapCallback screenName = (\push key lat lon -> do
     pure isActive
 uploadFile :: Boolean -> Effect Unit
 uploadFile = runEffectFn1 uploadFileImpl
+
+performTwilioVoiceCall :: String -> String -> Effect Unit 
+performTwilioVoiceCall = runEffectFn2 performTwilioVoiceCallImpl
