@@ -48,9 +48,15 @@ type AppConfigDriver a =
     rateCardScreen :: RateCardScreenConfig,
     rcLimit :: Int,
     acExplanation :: Boolean,
-    showMonthlyLeaderBoard :: Boolean
+    showMonthlyLeaderBoard :: Boolean,
+    rentalRideVideoConfig :: RentalRideVideoConfig
     | a
   } 
+
+type RentalRideVideoConfig = {
+  auto :: String,
+  cab :: String
+}
 
 type PurpleRideConfig = {
   showPurpleVideos :: Boolean,
