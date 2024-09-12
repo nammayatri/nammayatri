@@ -5,6 +5,7 @@
 module Domain.Types.CallStatus where
 
 import Data.Aeson
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Call.Types
 import Kernel.Prelude
@@ -22,6 +23,7 @@ data CallStatus = CallStatus
     entityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.CallStatus.CallStatus,
     merchantId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     recordingUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Kernel.External.Call.Interface.Types.CallStatus
   }

@@ -105,6 +105,7 @@ sendSafetyIVR Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             conversationDuration = 0,
             recordingUrl = Nothing,
             merchantId = getId <$> ride.merchantId,
+            merchantOperatingCityId = ride.merchantOperatingCityId,
             callService = Just Call.Exotel,
             callAttempt = Nothing,
             callError = Nothing,

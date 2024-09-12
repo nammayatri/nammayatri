@@ -514,11 +514,11 @@ sendUnattendedSosTicketAlert ticketId = do
                   appletId = maybeAppId
                 }
         exotelResponse <- Call.initiateCall merchantOpCity.merchantId merchantOpCity.id callReq
-        callStatus <- buildCallStatus callStatusId exotelResponse sos
+        callStatus <- buildCallStatus callStatusId exotelResponse sos merchantOpCity.id
         QCallStatus.create callStatus
 
-    buildCallStatus :: Id DCall.CallStatus -> Call.InitiateCallResp -> DSos.Sos -> Flow DCall.CallStatus
-    buildCallStatus callStatusId exotelResponse sos = do
+    buildCallStatus :: Id DCall.CallStatus -> Call.InitiateCallResp -> DSos.Sos -> Id DMOC.MerchantOperatingCity -> Flow DCall.CallStatus
+    buildCallStatus callStatusId exotelResponse sos merchantOpCityId = do
       now <- getCurrentTime
       return $
         DCall.CallStatus
@@ -531,6 +531,7 @@ sendUnattendedSosTicketAlert ticketId = do
             conversationDuration = 0,
             recordingUrl = Nothing,
             merchantId = sos.merchantId <&> (.getId),
+            merchantOperatingCityId = Just merchantOpCityId,
             callService = Just Call.Exotel,
             callError = Nothing,
             createdAt = now,
