@@ -53,7 +53,6 @@ import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
-import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Maps
@@ -287,8 +286,10 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     filterQuotesByPrefference :: [QuoteInfo] -> [Enums.VehicleCategory] -> [QuoteInfo]
     filterQuotesByPrefference _quotesInfo blackListedVehicles =
       case searchRequest.riderPreferredOption of
-        Rental -> filter (not . isNotRental) _quotesInfo
-        OneWay -> filter (\quote -> isNotRental quote && isNotBlackListed blackListedVehicles quote.vehicleCategory) _quotesInfo
+        Rental -> filter (\quote -> not (isNotRental quote) && quote.vehicleVariant `notElem` ambulanceVariants) _quotesInfo
+        OneWay -> filter (\quote -> isNotRental quote && quote.vehicleVariant `notElem` ambulanceVariants && isNotBlackListed blackListedVehicles quote.vehicleCategory) _quotesInfo
+        AmbulanceRental -> filter (\quote -> not (isNotRental quote) && quote.vehicleVariant `elem` ambulanceVariants) _quotesInfo
+        AmbulanceInterCity -> filter (\quote -> isNotRental quote && quote.vehicleVariant `elem` ambulanceVariants) _quotesInfo
         _ -> filter isNotRental _quotesInfo
 
     filterEstimtesByPrefference :: [EstimateInfo] -> [Enums.VehicleCategory] -> [EstimateInfo]
@@ -355,7 +356,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
         providerUrl = providerInfo.url,
         estimatedDistance = searchRequest.distance,
         serviceTierName = serviceTierName,
-        vehicleServiceTierType = fromMaybe (DV.castVariantToServiceTier vehicleVariant) serviceTierType,
+        vehicleServiceTierType = fromMaybe (castVariantToServiceTier vehicleVariant) serviceTierType,
         serviceTierShortDesc = serviceTierShortDesc,
         estimatedDuration = searchRequest.estimatedRideDuration,
         estimatedStaticDuration = searchRequest.estimatedRideStaticDuration,

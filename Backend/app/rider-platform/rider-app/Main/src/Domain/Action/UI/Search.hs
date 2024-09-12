@@ -80,7 +80,7 @@ import qualified Tools.JSON as J
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 
-data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq | InterCitySearch InterCitySearchReq | AmbulanceSearch OneWaySearchReq | DeliverySearch OneWaySearchReq
+data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq | InterCitySearch InterCitySearchReq | AmbulanceSearch OneWaySearchReq | AmbulanceRentalSearch RentalSearchReq | AmbulanceInterCitySearch InterCitySearchReq | DeliverySearch OneWaySearchReq
   deriving (Generic, Show)
 
 instance ToJSON SearchReq where
@@ -119,6 +119,8 @@ fareProductConstructorModifier = \case
   "RentalSearch" -> "RENTAL"
   "InterCitySearch" -> "INTER_CITY"
   "AmbulanceSearch" -> "AMBULANCE"
+  "AmbulanceRentalSearch" -> "RENTAL"
+  "AmbulanceInterCitySearch" -> "INTER_CITY"
   "DeliverySearch" -> "DELIVERY"
   x -> x
 
@@ -397,6 +399,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
       AmbulanceSearch ambulanceReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId ambulanceReq stopsLatLong now sourceLatLong roundTrip
       InterCitySearch interCityReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId interCityReq stopsLatLong now sourceLatLong roundTrip
       RentalSearch rentalReq -> processRentalSearch person rentalReq stopsLatLong originCity
+      AmbulanceRentalSearch rentalReq -> processRentalSearch person rentalReq stopsLatLong originCity
+      AmbulanceInterCitySearch interCityReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId interCityReq stopsLatLong now sourceLatLong roundTrip
       DeliverySearch deliveryReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId deliveryReq stopsLatLong now sourceLatLong roundTrip
 
     extractSearchDetails :: UTCTime -> SearchReq -> SearchDetails
@@ -440,6 +444,20 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
             stops = [destination],
             startTime = fromMaybe now startTime,
             returnTime = Nothing,
+            ..
+          }
+      AmbulanceRentalSearch RentalSearchReq {..} ->
+        SearchDetails
+          { riderPreferredOption = SearchRequest.AmbulanceRental,
+            roundTrip = False,
+            stops = fromMaybe [] stops,
+            returnTime = Nothing,
+            ..
+          }
+      AmbulanceInterCitySearch InterCitySearchReq {..} ->
+        SearchDetails
+          { riderPreferredOption = SearchRequest.InterCity,
+            stops = fromMaybe [] stops,
             ..
           }
 

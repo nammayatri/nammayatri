@@ -272,6 +272,7 @@ getOffers searchRequest = do
       isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.id.getId
       let quotes = case searchRequest.riderPreferredOption of
             SSR.Rental -> OnRentalCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
+            SSR.AmbulanceRental -> OnRentalCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
             _ -> OnDemandCab <$> mkQAPIEntityList quoteList bppDetailList isValueAddNPList
       return . sortBy (compare `on` creationTime) $ quotes
     Nothing -> do

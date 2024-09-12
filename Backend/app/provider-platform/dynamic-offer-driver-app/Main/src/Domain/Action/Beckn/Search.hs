@@ -291,8 +291,7 @@ handler ValidatedDSearchReq {..} sReq = do
     selectFarePolicy distance duration mbIsAutoRickshawAllowed =
       filter isValid
       where
-        isValid farePolicy = checkDistanceBounds farePolicy && checkExtendUpto farePolicy && autosAllowedOnTollRoute farePolicy
-
+        isValid farePolicy = checkDistanceBounds farePolicy && checkExtendUpto farePolicy && autosAllowedOnTollRoute farePolicy -- ambulance tier allow rental intercity
         autosAllowedOnTollRoute farePolicy = if farePolicy.vehicleServiceTier == AUTO_RICKSHAW then (fromMaybe True mbIsAutoRickshawAllowed) else True
 
         checkDistanceBounds farePolicy = maybe True checkBounds farePolicy.allowedTripDistanceBounds

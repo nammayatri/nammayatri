@@ -39,6 +39,7 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DTR
+import Domain.Types.VehicleVariant
 import Environment
 import EulerHS.Prelude hiding (id, pack)
 import Kernel.Beam.Functions as B
@@ -210,7 +211,7 @@ processStop bookingId loc merchantId isEdit = do
             bppUrl = booking.providerUrl,
             transactionId = booking.transactionId,
             messageId = uuid,
-            city = merchant.defaultCity, -- TODO: Correct during interoperability
+            city = merchant.defaultCity,
             ..
           }
   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
@@ -231,11 +232,15 @@ validateStopReq booking isEdit loc merchant = do
     SRB.AmbulanceDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in ambulance rides"
     SRB.DeliveryDetails _ -> throwError $ RideInvalidStatus "Cannot add/edit stop in delivery rides"
 
-  nearestCity <- getNearestOperatingCityHelper merchant (merchant.geofencingConfig.origin) loc.gps (CityState {city = merchant.defaultCity, state = merchant.defaultState})
-  fromLocCity <- getNearestOperatingCityHelper merchant (merchant.geofencingConfig.origin) (LatLong booking.fromLocation.lat booking.fromLocation.lon) (CityState {city = merchant.defaultCity, state = merchant.defaultState})
-  case (nearestCity, fromLocCity) of
-    (Just nearest, Just source) -> unless (nearest.currentCity.city == source.currentCity.city) $ throwError (InvalidRequest "Outside city stops are allowed in Intercity rides only.")
-    _ -> throwError (InvalidRequest "Ride Unserviceable")
+  unless isPriorityBooking $ do
+    nearestCity <- getNearestOperatingCityHelper merchant (merchant.geofencingConfig.origin) loc.gps (CityState {city = merchant.defaultCity, state = merchant.defaultState})
+    fromLocCity <- getNearestOperatingCityHelper merchant (merchant.geofencingConfig.origin) (LatLong booking.fromLocation.lat booking.fromLocation.lon) (CityState {city = merchant.defaultCity, state = merchant.defaultState})
+    case (nearestCity, fromLocCity) of
+      (Just nearest, Just source) -> unless (nearest.currentCity.city == source.currentCity.city) $ throwError (InvalidRequest "Outside city stops are allowed in Intercity rides only.")
+      _ -> throwError (InvalidRequest "Ride Unserviceable")
+  where
+    isPriorityBooking = (castServiceTierToVariant booking.vehicleServiceTierType) `elem` ambulanceVariants
+    ambulanceVariants = [AMBULANCE_TAXI, AMBULANCE_TAXI_OXY, AMBULANCE_AC, AMBULANCE_AC_OXY, AMBULANCE_VENTILATOR]
 
 buildLocation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => StopReq -> m Location
 buildLocation req = do
