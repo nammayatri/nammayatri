@@ -46,7 +46,7 @@ data NearByReq = NearByReq
   { lat :: Double,
     lon :: Double,
     onRide :: Maybe Bool,
-    vehicleType :: Maybe VehicleVariant,
+    vehicleType :: Maybe [VehicleVariant],
     radius :: Int,
     merchantId :: Id DM.Merchant
   }

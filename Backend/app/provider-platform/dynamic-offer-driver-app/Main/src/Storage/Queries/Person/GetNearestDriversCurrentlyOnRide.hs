@@ -84,7 +84,9 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
   let onRideRadius = nearestRadius
   logDebug $ "On Ride radius " <> show onRideRadius
   logDebug $ "lat long" <> show fromLocLatLong
-  driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong onRideRadius
+  let allowedCityServiceTiers = filter (\cvst -> cvst.serviceTierType `elem` serviceTiers) cityServiceTiers
+      allowedVehicleVariant = DL.nub $ concatMap (.allowedVehicleVariant) allowedCityServiceTiers
+  driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong onRideRadius (Just allowedVehicleVariant)
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show driverLocs
   driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental isInterCity isValueAddNP
   logDebug $ "GetNearestDriversCurrentlyOnRide - DInfo:- " <> show driverInfos

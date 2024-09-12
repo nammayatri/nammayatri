@@ -34,7 +34,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Allocator (AllocatorJobType (..))
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle (Handle (..), MetricsHandle (..), handler)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal as I
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool hiding (getDriverPoolConfig)

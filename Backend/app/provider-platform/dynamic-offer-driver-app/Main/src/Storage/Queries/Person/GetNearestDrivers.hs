@@ -74,7 +74,9 @@ getNearestDrivers ::
   NearestDriversReq ->
   m [NearestDriversResult]
 getNearestDrivers NearestDriversReq {..} = do
-  driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong nearestRadius
+  let allowedCityServiceTiers = filter (\cvst -> cvst.serviceTierType `elem` serviceTiers) cityServiceTiers
+      allowedVehicleVariant = DL.nub (concatMap (.allowedVehicleVariant) allowedCityServiceTiers)
+  driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong nearestRadius (Just allowedVehicleVariant)
   driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) True False isRental isInterCity isValueAddNP
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
