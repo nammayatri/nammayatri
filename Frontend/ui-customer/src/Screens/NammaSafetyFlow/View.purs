@@ -24,7 +24,7 @@ import Engineering.Helpers.Commons as EHC
 import Helpers.Utils (FetchImageFrom(..), getAssetsBaseUrl, fetchImage)
 import Types.App (GlobalState(..), defaultGlobalState)
 import JBridge (lottieAnimationConfig, startLottieProcess)
-import Prelude (Unit, const, discard, pure, void, show, ($), (<>), (+), (<<<), (>), unit, bind, map, (/=), (==))
+import Prelude (Unit, const, discard, pure, void, show, ($), (<>), (+), (<<<), (>), (&&), unit, bind, map, (/=), (==))
 import PrestoDOM
 import Data.Either (Either(..))
 import Data.Foldable (foldl)
@@ -97,6 +97,7 @@ view push state =
         , width MATCH_PARENT
         , onBackPressed push $ const BackPressed
         , orientation VERTICAL
+        , padding padding'
         , background Color.white900
         , afterRender push (const AfterRender)
         ]
@@ -133,6 +134,8 @@ view push state =
                 ]
             ]
         ]
+  where 
+    padding' = if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 16 else EHC.safeMarginBottom)) else (PaddingLeft 0)
 
 safetySetupSection :: forall w. NammaSafetyScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 safetySetupSection state push =
@@ -205,7 +208,6 @@ listItem push item state =
         [ linearLayout
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
-            , cornerRadius 24.0
             , margin (MarginRight 14)
             ]
             [ imageView
@@ -277,6 +279,6 @@ carouselConfigTransform view state banners =
   , onPageScrolled: Nothing
   , currentIndex: state.data.bannerData.currentBanner
   , showScrollIndicator: true
-  , layoutHeight: V 137
+  , layoutHeight: if EHC.os == "IOS" then V 265 else V 137
   , overlayScrollIndicator: false
   }

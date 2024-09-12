@@ -158,7 +158,7 @@ primaryButtonConfigManualContact state =
         , isClickable = state.props.validManualContact
         , width = if EHC.os == "IOS" then (V 360) else (MATCH_PARENT)
         , margin = (Margin 16 16 16 16)
-        , id = "ConfirmEmergencyContactsButton"
+        , id = "ConfirmEmergencyContactsButtonManual"
         , enableRipple = true
         , rippleColor = Color.rippleShade
         }
