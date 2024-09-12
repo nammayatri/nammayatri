@@ -159,13 +159,13 @@ getDriverLoc rideId = do
       Nothing -> Redis.setExp distanceUpdates distance 3600
       Just startDistance -> when (startDistance - 50 > distance) $ do
         unless (isJust mbIsOnTheWayNotified) $ do
-          Notify.notifyDriverOnTheWay booking.riderId
+          Notify.notifyDriverOnTheWay booking.riderId booking.tripCategory
           Redis.setExp driverOnTheWay () merchant.driverOnTheWayNotifyExpiry.getSeconds
         when (isNothing mbHasReachedNotified && distance <= distanceToMeters merchant.arrivedPickupThreshold) $ do
-          Notify.notifyDriverHasReached booking.riderId ride.otp ride.vehicleNumber
+          Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber
           Redis.setExp driverHasReached () 1500
         when (isNothing mbHasReachingNotified && distance <= distanceToMeters merchant.arrivingPickupThreshold) $ do
-          Notify.notifyDriverReaching booking.riderId ride.otp ride.vehicleNumber
+          Notify.notifyDriverReaching booking.riderId booking.tripCategory ride.otp ride.vehicleNumber
           Redis.setExp driverReaching () 1500
   return $
     GetDriverLocResp

@@ -60,7 +60,6 @@ import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.MerchantConfig as CMC
@@ -349,7 +348,7 @@ rideAssignedReqHandler req = do
           unless isInitiatedByCronJob $ do
             Notify.notifyOnRideAssigned booking ride
             when req.isDriverBirthDay $ do
-              Notify.notifyDriverBirthDay booking.riderId driverName
+              Notify.notifyDriverBirthDay booking.riderId booking.tripCategory driverName
           withLongRetry $ CallBPP.callTrack booking ride
         Nothing -> do
           assignRideUpdate req mbMerchant booking DRide.UPCOMING now
@@ -412,7 +411,7 @@ rideAssignedReqHandler req = do
       unless isInitiatedByCronJob $ do
         if rideStatus == DRide.UPCOMING then Notify.notifyOnScheduledRideAccepted booking ride else Notify.notifyOnRideAssigned booking ride
         when req'.isDriverBirthDay $ do
-          Notify.notifyDriverBirthDay booking.riderId driverName
+          Notify.notifyDriverBirthDay booking.riderId booking.tripCategory driverName
       withLongRetry $ CallBPP.callTrack booking ride
 
       notifyRideRelatedNotificationOnEvent booking ride now DRN.RIDE_ASSIGNED
@@ -620,8 +619,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         personClientInfo <- buildPersonClientInfo booking.riderId booking.clientId booking.merchantOperatingCityId booking.merchantId (Utils.mapServiceTierToCategory booking.vehicleServiceTierType) (totalCount + 1)
         QCP.create personClientInfo
         when (totalCount + 1 == 1) $ do
-          mbMerchantPN <- CPN.findMatchingMerchantPN booking.merchantOperatingCityId "FIRST_RIDE_EVENT" person.language
-          Notify.notifyFirstRideEvent booking.riderId (Utils.mapServiceTierToCategory booking.vehicleServiceTierType) (mbMerchantPN <&> (.title)) (mbMerchantPN <&> (.body))
+          Notify.notifyFirstRideEvent booking.riderId (Utils.mapServiceTierToCategory booking.vehicleServiceTierType) booking.tripCategory
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
   when shouldUpdateRideComplete $ void $ QP.updateHasTakenValidRide booking.riderId

@@ -26,7 +26,9 @@ imports:
   BookingStatus: Domain.Types.Extra.Booking
   Language: Kernel.External.Types
   Category: Kernel.External.Notification.Interface.Types
+  SubCategory: Kernel.External.Notification.Interface.Types
   PaymentService: Kernel.External.Payment.Types
+  TripCategory: Domain.Types.Trip
 
 Merchant:
   derives: "Generic,Show,'UsageSafety"
@@ -497,17 +499,23 @@ MerchantPushNotification:
   tableName: merchant_push_notification
   derives: "Generic,Show,ToJSON,FromJSON"
   fields:
+    id: Id MerchantPushNotification
     key: Text
     title: Text
     body: Text
     language: Language
     fcmNotificationType: Category
+    fcmSubCategory: Maybe SubCategory
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    tripCategory: Maybe TripCategory
   constraints:
-    key: PrimaryKey
-    merchantOperatingCityId: PrimaryKey
-    language: PrimaryKey
+    id: PrimaryKey
+    # key: PrimaryKey
+    # merchantOperatingCityId: PrimaryKey
+    # language: PrimaryKey
+    # tripCategory: PrimaryKey
+    # fcmSubCategory: PrimaryKey
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
@@ -516,6 +524,10 @@ MerchantPushNotification:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, key]
+    findAllByMerchantOpCityAndMessageKeyAndTripCategory:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, key, tripCategory]
 
 PayoutConfig:
   tableName : payout_config

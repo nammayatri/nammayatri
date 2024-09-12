@@ -89,7 +89,7 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
       riderDetails <- mkRiderDetailsObj driverReferralLinkage.driverId currency flagReason
       QRD.create riderDetails
   driver <- QP.findById driverReferralLinkage.driverId >>= fromMaybeM (PersonNotFound driverReferralLinkage.driverId.getId)
-  mbMerchantPN <- CPN.findMatchingMerchantPN merchOpCityId "REFERRAL_FLOW" driver.language
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchOpCityId "REFERRAL_FLOW" Nothing Nothing driver.language
   whenJust mbMerchantPN $ \merchantPN -> do
     let entityData = NotifReq {entityId = driver.id.getId, title = merchantPN.title, message = merchantPN.body}
     notifyDriverOnEvents merchOpCityId driver.id driver.deviceToken entityData merchantPN.fcmNotificationType

@@ -79,7 +79,7 @@ triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
 
   now <- getCurrentTime
   let entityData = mkDummyNotificationEntityData now vehicle.variant dummyFromLocation dummyToLocation dummyShowDriverAdditions isValueAddNP
-  notificationData <- TN.buildSendSearchRequestNotificationData driver.id driver.deviceToken entityData TN.EmptyDynamicParam
+  notificationData <- TN.buildSendSearchRequestNotificationData merchantOperatingCityId driver.id driver.deviceToken entityData TN.EmptyDynamicParam Nothing
   logDebug $ "Sending dummy notification to driver:-" <> show driver.id <> ",entityData:-" <> show entityData <> ",triggeredByDashboard:-" <> show isDashboardTrigger
   let fallBackCity = TN.getNewMerchantOpCityId driver.clientSdkVersion merchantOperatingCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
   void $ TN.sendSearchRequestToDriverNotification driver.merchantId fallBackCity driver.id notificationData

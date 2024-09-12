@@ -11,7 +11,7 @@ INSERT INTO atlas_app.merchant_message (merchant_id, message_key, message, merch
 VALUES ('4b17bd06-ae7e-48e9-85bf-282fb310209c', 'SCHEDULED_RIDE_REMINDER', 'Your ride start OTP is {#rideStartOtp#} and ride end OTP is {#rideEndOtp#}. Driver will reach 15 minutes prior to scheduled start time.', 'b30daaf7-77d2-17c8-00d9-baf7ad0f5719');
 
 -- DO NOT RUN TOLL_CROSSED QUERY IN PROD
-INSERT INTO atlas_app.merchant_push_notification (key, merchant_id, merchant_operating_city_id, title, body, language, fcm_notification_type)
+INSERT INTO atlas_app.merchant_push_notification (id, key, merchant_id, merchant_operating_city_id, title, body, language, fcm_notification_type)
 VALUES
-( 'RIDE_START_REMINDER', '4b17bd06-ae7e-48e9-85bf-282fb310209c', 'b30daaf7-77d2-17c8-00d9-baf7ad0f5719', '{#isRentalOrIntercity#} Booking Reminder.', 'Ride starts at {#rideStartTime#}. Details will be shared shortly. ', 'ENGLISH', 'SCHEDULED_RIDE_NOTIFICATION'),
-( 'TOLL_CROSSED', '4b17bd06-ae7e-48e9-85bf-282fb310209c', 'b30daaf7-77d2-17c8-00d9-baf7ad0f5719', 'Toll Crossed !', 'Toll charges added to final fare', 'ENGLISH', 'TOLL_CROSSED');
+( atlas_app.uuid_generate_v4(), 'RIDE_START_REMINDER', '4b17bd06-ae7e-48e9-85bf-282fb310209c', 'b30daaf7-77d2-17c8-00d9-baf7ad0f5719', '{#isRentalOrIntercity#} Booking Reminder.', 'Ride starts at {#rideStartTime#}. Details will be shared shortly. ', 'ENGLISH', 'SCHEDULED_RIDE_NOTIFICATION'),
+( atlas_app.uuid_generate_v4(), 'TOLL_CROSSED', '4b17bd06-ae7e-48e9-85bf-282fb310209c', 'b30daaf7-77d2-17c8-00d9-baf7ad0f5719', 'Toll Crossed !', 'Toll charges added to final fare', 'ENGLISH', 'TOLL_CROSSED');
