@@ -75,7 +75,7 @@ window.getMerchantConfig = function () {
       , "name" : "Yatri Sathi"
       , "website" : "https://yatrisathi.in/"
     },
-    "tipEnabledCities" : ["Kolkata", "Siliguri", "Asansol"],
+    "tipEnabledCities" : ["Kolkata", "Siliguri", "Asansol", "Durgapur"],
     "customerTip" : {
       "auto" : true,
       "cabs" : true
