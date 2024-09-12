@@ -256,17 +256,18 @@ dataFetchScreenFlow :: NammaSafetyStage -> Int -> FlowBT String Unit
 dataFetchScreenFlow stageConfig stepVal = do
   let stageConfigSteps = DataExplainWithFetchSD.getStepsNumber stageConfig
       newHeaderValue = DataExplainWithFetchSD.getHeaderValue stageConfig
+      newHomeScreenStage homescreenState = if homescreenState.props.currentStage == ChatWithDriver then homescreenState.props.stageBeforeChatScreen else homescreenState.props.currentStage
   modifyScreenState $ DataFetchScreenStateType (\dataFetchScreen -> dataFetchScreen { config { stage = stageConfig, stageSteps = stageConfigSteps, currentStep = stepVal}, data { headerValue = newHeaderValue } })
   flow <- UI.dataFetchScreen
   
   case flow of
     DataExplainWithFetchC.AddEmergencyContacts state -> do
       modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen { props { fromNewSafetyFlow= true} })
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetySettings = Nothing, chatcallbackInitiated = false, currentStage = homeScreen.props.stageBeforeChatScreen}, data{contactList = Nothing }} )
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetySettings = Nothing, chatcallbackInitiated = false, currentStage = newHomeScreenStage homeScreen}, data{contactList = Nothing }} )
       emergencyScreenFlow
     DataExplainWithFetchC.UpdateEmergencyContacts state -> do
       void $ Remote.emergencyContactsBT $ Remote.postContactsReq state.data.emergencyContactsList
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetySettings = Nothing, chatcallbackInitiated = false, currentStage = homeScreen.props.stageBeforeChatScreen}, data{contactList = Nothing } })
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetySettings = Nothing, chatcallbackInitiated = false, currentStage = newHomeScreenStage homeScreen}, data{contactList = Nothing } })
       pure $ toast $ "ContactsUpdated"
       nammaSafetyFlow
     DataExplainWithFetchC.Exit state -> do
@@ -2623,6 +2624,9 @@ updateFollower callFollowersApi callInitUi eventType = do
     noOfFollowers = Arr.length followers
   setValueToLocalStore TRACKING_DRIVER "False"
   setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
+  let currentUserOnRide = elem allState.homeScreen.props.currentStage [ RideAccepted, RideStarted ]
+  when currentUserOnRide $ removeChatService ""
+  void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
   void $ liftFlowBT $ runEffectFn1 EHC.updateIdMap "FollowsRide"
   let
     currentFollowerName = getMockFollowerName ""
@@ -2658,7 +2662,7 @@ updateFollower callFollowersApi callInitUi eventType = do
                 }
               , props
                 { city = allState.homeScreen.props.city
-                , currentUserOnRide = elem allState.homeScreen.props.currentStage [ RideAccepted, RideStarted ]
+                , currentUserOnRide = currentUserOnRide
                 , isMock = elem eventType [ Just "SOS_MOCK_DRILL", Just "SOS_MOCK_DRILL_NOTIFY" ]
                 }
               }
@@ -2688,6 +2692,7 @@ followRideScreenFlow callInitUI = do
     GO_TO_HS_FROM_FOLLOW_RIDE state removeManualFollower -> do
       void $ liftFlowBT $ runEffectFn1 EHC.updateIdMap "FollowsRide"
       pure $ removeAllPolylines ""
+      removeChatService ""
       void $ liftFlowBT $ runEffectFn1 clearMap ""
       (GlobalState gs) <- getState
       let
@@ -2700,12 +2705,12 @@ followRideScreenFlow callInitUI = do
             "CustomerHomeScreen"
       void $ liftFlowBT $ reallocateMapFragment (getNewIDWithTag currentMapFragment)
       modifyScreenState $ FollowRideScreenStateType (\_ -> FollowRideScreenData.initData)
-      case state.data.currentFollower of
-        Just currfollower -> do
+      case state.data.currentFollower, removeManualFollower of
+        Just currfollower, true -> do
           let currentManualFollowers = fromMaybe [] gs.homeScreen.data.manuallySharedFollowers
               updatedManualFollowers = if currfollower.isManualFollower then Arr.filter (\follower -> follower.bookingId /= currfollower.bookingId ) currentManualFollowers else currentManualFollowers
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { manuallySharedFollowers = if null updatedManualFollowers then Nothing else Just updatedManualFollowers } })
-        Nothing -> pure unit
+        _,_ -> pure unit
       currentFlowStatus
     OPEN_GOOGLE_MAPS_FOLLOW_RIDE state -> do
       case state.data.driverInfoCardState of
@@ -3176,6 +3181,7 @@ selectLanguageScreenFlow goBackState = do
 emergencyScreenFlow :: FlowBT String Unit
 emergencyScreenFlow = do
   flow <- UI.emergencyContactsScreen
+  let newHomeScreenStage homescreenState = if homescreenState.props.currentStage == ChatWithDriver then homescreenState.props.stageBeforeChatScreen else homescreenState.props.currentStage
   case flow of
     UPDATE_DEFAULT_CONTACTS state -> do
       void $ Remote.emergencyContactsBT $ Remote.postContactsReq state.data.selectedContacts
@@ -3185,7 +3191,7 @@ emergencyScreenFlow = do
           pure $ toast $ getString STR.TRUSTED_CONTACS_ADDED_SUCCESSFULLY
       modifyScreenState $ EmergencyContactsScreenStateType (\_ -> state { data { emergencyContactsList = state.data.selectedContacts }, props { showInfoPopUp = false, saveEmergencyContacts = true, getDefaultContacts = true } })
       modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { emergencyContactsList = state.data.selectedContacts }, props { setupStage = ST.SetDefaultEmergencyContacts, showShimmer = true } })
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetySettings = Nothing, currentStage = homeScreen.props.stageBeforeChatScreen, chatcallbackInitiated = false}, data{contactList = Nothing } })
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetySettings = Nothing, currentStage = newHomeScreenStage homeScreen, chatcallbackInitiated = false}, data{contactList = Nothing } })
       modifyScreenState $ DataFetchScreenStateType (\ dataFetchScreen -> dataFetchScreen { data { emergencyContactsList = state.data.selectedContacts } })
       nammaSafetyFlow
     POST_CONTACTS_SAFETY state shouldGoToSafetyScreen -> do
@@ -3197,7 +3203,7 @@ emergencyScreenFlow = do
             pure $ toast $ getString STR.TRUSTED_CONTACS_ADDED_SUCCESSFULLY
       modifyScreenState $ EmergencyContactsScreenStateType (\_ -> state { data { emergencyContactsList = state.data.selectedContacts }, props { showInfoPopUp = false, saveEmergencyContacts = false, getDefaultContacts = true } })
       modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { emergencyContactsList = state.data.selectedContacts }, props { setupStage = ST.SetDefaultEmergencyContacts, showShimmer = true } })
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetySettings = Nothing, currentStage = homeScreen.props.stageBeforeChatScreen, chatcallbackInitiated = false}, data{contactList = Nothing } })
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetySettings = Nothing, currentStage = newHomeScreenStage homeScreen, chatcallbackInitiated = false}, data{contactList = Nothing } })
       modifyScreenState $ DataFetchScreenStateType (\ dataFetchScreen -> dataFetchScreen { data { emergencyContactsList = state.data.selectedContacts } })
       emergencyScreenFlow --dataFetchScreenFlow  (DataExplainWithFetchSD.stageData $ TrustedContacts []) 0
     POST_CONTACTS state shouldGoToSafetyScreen -> do
@@ -3214,7 +3220,7 @@ emergencyScreenFlow = do
         else do
           modifyScreenState $ EmergencyContactsScreenStateType (\_ -> state { data { emergencyContactsList = state.data.selectedContacts }, props { showInfoPopUp = false } })
           modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { emergencyContactsList = state.data.selectedContacts }, props { setupStage = ST.SetDefaultEmergencyContacts, showShimmer = true } })
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetySettings = Nothing, currentStage = homeScreen.props.stageBeforeChatScreen, chatcallbackInitiated = false}, data{contactList = Nothing } })
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetySettings = Nothing, currentStage = newHomeScreenStage homeScreen, chatcallbackInitiated = false}, data{contactList = Nothing } })
           modifyScreenState $ DataFetchScreenStateType (\ dataFetchScreen -> dataFetchScreen { data { emergencyContactsList = state.data.selectedContacts } })
       (GlobalState globalState) <- getState
       case globalState.nammaSafetyScreen.data.hasCompletedSafetySetup, shouldGoToSafetyScreen, state.props.fromSosFlow, state.props.fromNewSafetyFlow of

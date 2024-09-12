@@ -165,25 +165,43 @@ activateSafetyView state push =
     , orientation VERTICAL
     , weight 1.0
     ]
-    [ scrollView
-        [ height MATCH_PARENT
+    [ linearLayout
+        [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , fillViewport true
+        , weight 1.0
         ]
-        [ linearLayout
+        [ scrollView
             [ height MATCH_PARENT
             , width MATCH_PARENT
             , orientation VERTICAL
+            , fillViewport true
             ]
-            [ SosButtonAndDescription.view (push <<< SosButtonAndDescriptionAction) $ sosButtonConfig state
-
-            , if state.props.triggeringSos 
-                then triggeringSosView state push
-                else otherActionsView state push
+            [ linearLayout
+                [ height MATCH_PARENT
+                , width MATCH_PARENT
+                , orientation VERTICAL
+                ]
+                [ SosButtonAndDescription.view (push <<< SosButtonAndDescriptionAction) $ sosButtonConfig state
+                , if state.props.triggeringSos then
+                    triggeringSosView state push
+                  else
+                    otherActionsView state push
+                ]
             ]
         ]
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , visibility $ boolToVisibility $ state.props.triggeringSos
+        ]
+        [ separatorView Color.black700 $ MarginVertical 10 16
+        , PrimaryButton.view (push <<< CancelSosTrigger) $ btnConfig {id = "cancelSosTriggerBtn"}
+        ]
     ]
+  where 
+    btnConfig = dismissSoSButtonConfig state 
 
 sosButtonConfig :: NammaSafetyScreenState -> SosButtonAndDescription.Config
 sosButtonConfig state =
@@ -490,7 +508,7 @@ otherActionsView state push =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , cornerRadius 12.0
-    , margin $ MarginTop 16
+    , margin $ MarginVertical 16 16
     ]
     [ orSeparatorView state
     , relativeLayout
@@ -516,7 +534,6 @@ otherActionsView state push =
                     otherActions
                 )        
       ]
-    , layoutWithWeight
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -528,9 +545,9 @@ otherActionsView state push =
     ]
     where   
       otherActions =
-        [ { text: getString RECORD_AUDIO, image: "ny_ic_microphone_white", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< RecordAudio, isDisabled: false, height : MATCH_PARENT }
-        , { text: getString CALL_POLICE , image: "ny_ic_police_alert" , backgroundColor: Color.redOpacity20, strokeColor: Color.redOpacity30, push : push <<< ShowPoliceView, isDisabled: state.props.showTestDrill, height : MATCH_PARENT  }
-        , { text: getString CALL_SAFETY_TEAM, image: "ny_ic_support_unfilled", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< CallSafetyTeam, isDisabled: state.props.showTestDrill, height : WRAP_CONTENT }
+        [ { text: getString RECORD_AUDIO, image: fetchImage COMMON_ASSET "ny_ic_microphone_white", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< RecordAudio, isDisabled: false, height : MATCH_PARENT }
+        , { text: getString CALL_POLICE , image: fetchImage COMMON_ASSET "ny_ic_police_alert" , backgroundColor: Color.redOpacity20, strokeColor: Color.redOpacity30, push : push <<< ShowPoliceView, isDisabled: state.props.showTestDrill, height : MATCH_PARENT  }
+        , { text: getString CALL_SAFETY_TEAM, image: fetchImage FF_ASSET "ny_ic_support_unfilled", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< CallSafetyTeam, isDisabled: state.props.showTestDrill, height : WRAP_CONTENT }
         ]
 
 orSeparatorView :: forall w. NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
@@ -650,22 +667,16 @@ triggeringSosView state push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , weight 1.0
     ]
     [ linearLayout 
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , margin $ Margin 16 16 16 16
-      ][ SafetyActionTileView.view sirenImage (getString SIREN) (push <<< ToggleSiren) sirenTileBackgroundColor sirenTileStrokeColor MATCH_PARENT false false Color.white900 WRAP_CONTENT]
-    , warningView (getString SOS_WILL_BE_DISABLED) (not state.props.showTestDrill) true
-    , layoutWithWeight
-    , case state.props.showTestDrill of
-        true -> emptyTextView
-        false -> separatorView Color.black700 $ MarginVertical 10 16
-    , PrimaryButton.view (push <<< CancelSosTrigger) $ dismissSoSButtonConfig state
+      ][ SafetyActionTileView.view sirenImage (getString SIREN) (push <<< ToggleSiren) sirenTileBackgroundColor sirenTileStrokeColor MATCH_PARENT false false Color.white900 WRAP_CONTENT ]
+    , warningView (getString SOS_WILL_BE_DISABLED) (not state.props.showTestDrill) true    
     ]
     where
-      sirenImage = if state.props.triggerSiren then "ny_ic_full_volume" else "ny_ic_no_volume"
+      sirenImage = fetchImage COMMON_ASSET $ if state.props.triggerSiren then "ny_ic_full_volume" else "ny_ic_no_volume"
       sirenTileBackgroundColor = if state.props.triggerSiren then Color.black712 else Color.blackOpacity12
       sirenTileStrokeColor = if state.props.triggerSiren then Color.black700 else Color.black800
 

@@ -409,7 +409,9 @@ eval (LocFromMap key lat lon) state = do
           exit $ UpdateLocName state{data{defaultGate = key}} lat lon
         MB.Nothing -> continue state
 
-eval MetroRouteMapAction state = exit $ GoToMetroRouteMap state
+eval MetroRouteMapAction state = do
+  void $ pure $ hideKeyboardOnNavigation true
+  exit $ GoToMetroRouteMap state
 
 eval BackPressed state = do
  if state.data.fromScreen == getScreen METRO_TICKET_BOOKING_SCREEN then exit $ MetroTicketBookingScreen state 

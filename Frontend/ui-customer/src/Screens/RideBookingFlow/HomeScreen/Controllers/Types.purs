@@ -330,7 +330,6 @@ data Action = NoAction
   | MarkerLabelOnClick String 
   | ShimmerTimer Int String String
   | ContactSupportAction PopUpModal.Action
-  | EnableNotificationForMultiChat (Maybe String)
   | TollChargeIncludedPopUpAction PopUpModal.Action
   | LocateOnMapCallBack String String String
   | UpdatePickupLocation String String String

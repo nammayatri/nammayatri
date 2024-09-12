@@ -368,8 +368,8 @@ optionsMenuConfig :: NammaSafetyScreenState -> OptionsMenuConfig.Config
 optionsMenuConfig state = OptionsMenuConfig.config {
   menuItems = [
     {image : fetchImage FF_ASSET "ny_ic_issue_box", textdata : getString REPORT_SAFETY_ISSUE, action : "report_safety_issue", isVisible : not state.props.showTestDrill, color : Color.white900},
-    {image : fetchImage FF_ASSET "ny_ic_safety_drill", textdata : getString START_TEST_DRILL, action : "start_test_drill", isVisible : not state.props.showTestDrill, color : Color.white900},
-    {image : fetchImage FF_ASSET "ny_ic_board_menu", textdata : getString LEARN_ABOUT_NAMMA_SAFETY, action : "learn_about_safety", isVisible : true, color : Color.white900}
+    {image : fetchImage COMMON_ASSET "ny_ic_safety_drill", textdata : getString START_TEST_DRILL, action : "start_test_drill", isVisible : not state.props.showTestDrill, color : Color.white900},
+    {image : fetchImage COMMON_ASSET "ny_ic_board_menu", textdata : getString LEARN_ABOUT_NAMMA_SAFETY, action : "learn_about_safety", isVisible : true, color : Color.white900}
   ],
   backgroundColor = Color.blackLessTrans,
   menuBackgroundColor = Color.black900,

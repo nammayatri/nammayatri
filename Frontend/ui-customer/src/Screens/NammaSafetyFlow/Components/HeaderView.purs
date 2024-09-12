@@ -47,7 +47,7 @@ view push state =
                     state.showCrossImage
             ]
         , imageView
-            [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_kebab_white"
+            [ imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_kebab_white"
             , height $ V 24
             , width $ V 56
             , gravity RIGHT

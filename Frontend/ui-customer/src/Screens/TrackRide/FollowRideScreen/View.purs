@@ -17,7 +17,7 @@ module Screens.FollowRideScreen.View where
 import Accessor (_lat, _lon)
 import Animation
 import Animation.Config
-import Common.Resources.Constants (pickupZoomLevel, zoomLevel)
+import Common.Resources.Constants (pickupZoomLevel, zoomLevel, chatService)
 import Common.Types.App (LazyCheck(..), Paths)
 import Components.DriverInfoCard.Common.View (addressShimmerView, driverDetailsView, driverInfoShimmer, sourceDestinationView)
 import Constants.Configs (getPolylineAnimationConfig)
@@ -97,16 +97,16 @@ screen initialState globalState =
                   $ [ { key : "BookingId", value : unsafeToForeign $ currentFollower.bookingId},
                       { key : "FollowerId", value : unsafeToForeign $ getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys }
                     ]
-                when (not initialState.props.chatCallbackInitiated) $ do
-                  case initialState.data.driverInfoCardState of
-                    Nothing -> pure unit
-                    Just ride -> do
-                        void $ clearChatMessages
-                        void $ storeCallBackMessageUpdated push (ride.rideId <> "$" <> getValueToLocalStore CUSTOMER_ID) (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)  UpdateMessages AllChatsLoaded
-                        void $ storeCallBackOpenChatScreen push OpenChatScreen
-                        void $ startChatListenerService
-                        void $ scrollOnResume push ScrollToBottom
-                        push InitializeChat
+                case initialState.data.driverInfoCardState, not initialState.props.chatCallbackInitiated of
+                  Just ride, true -> do
+                    if os /= "IOS" then do
+                      checkChatService push 5 ride.rideId
+                    else if os == "IOS" then do
+                      startChatServices push ride.rideId
+                    else
+                      pure unit
+                  _,_ -> pure unit
+                        
                 when tracking.shouldPush $ void $ launchAff $ flowRunner globalState $ driverLocationTracking push UpdateStatus 2000.0 tracking.id "trip"
             pure $ pure unit
         )
@@ -119,6 +119,25 @@ screen initialState globalState =
           _ = spy "FollowRideScreen state " state
         eval action state
   }
+
+checkChatService :: forall w . (Action -> Effect Unit) -> Int -> String -> Effect Unit
+checkChatService push retry rideId = 
+  when (retry > 0) $ do 
+    let isChatServiceRunning = runFn1 JB.isServiceRunning chatService
+    if isChatServiceRunning then do
+      void $ pure $ delay $ Milliseconds 2000.0
+      checkChatService push (retry-1) rideId
+    else
+      startChatServices push rideId
+
+startChatServices :: (Action -> Effect Unit) -> String -> Effect Unit
+startChatServices push rideId = do
+  void $ clearChatMessages
+  void $ storeCallBackMessageUpdated push (rideId <> "$" <> getValueToLocalStore CUSTOMER_ID) (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)  UpdateMessages AllChatsLoaded
+  void $ storeCallBackOpenChatScreen push OpenChatScreen
+  void $ startChatListenerService
+  void $ scrollOnResume push ScrollToBottom
+  push InitializeChat
 
 type Layout w
   = PrestoDOM (Effect Unit) w
@@ -727,8 +746,8 @@ emergencyActionsView push state =
     ]
   where   
     safetyActions =
-      [ { text: getStringWithoutNewLine CALL_POLICE , image: "ny_ic_ny_support" , backgroundColor: Color.white900, strokeColor: Color.grey900, push : push <<< CallPolice, isDisabled: false }
-      , { text: getStringWithoutNewLine CALL_SAFETY_TEAM, image: "ny_ic_help_and_support_dark", backgroundColor: Color.white900, strokeColor: Color.grey900, push : push <<< CallSafetyTeam, isDisabled: false }
+      [ { text: getStringWithoutNewLine CALL_POLICE , image: "ny_ic_ny_support" , backgroundColor: Color.white900, strokeColor: Color.grey900, push : push <<< CallPolice, isDisabled: state.props.isMock }
+      , { text: getStringWithoutNewLine CALL_SAFETY_TEAM, image: "ny_ic_help_and_support_dark", backgroundColor: Color.white900, strokeColor: Color.grey900, push : push <<< CallSafetyTeam, isDisabled: state.props.isMock }
       ]
     
 

@@ -344,10 +344,13 @@ eval (TimerCallback timerId timeInMinutes seconds) state =
 
 eval (UpdateState newState) state = continue newState
 
-eval (RecordAudio SafetyActionTileView.OnClick) state = continueWithCmd state [do
+eval (RecordAudio SafetyActionTileView.OnClick) state = continueWithCmd state {props{isAudioRecordingActive = EHC.os == "IOS"}} [do
   push <- getPushFn Nothing "ActivateSafetyScreen"
-  let _ = JB.askRequestedPermissionsWithCallback [ "android.permission.RECORD_AUDIO" ] push AudioPermission
-  pure $ UpdateState state
+  if EHC.os == "IOS" then do
+    pure $ SafetyAudioRecordingAction SafetyAudioRecording.StartRecord
+  else do
+    let _ = JB.askRequestedPermissionsWithCallback [ "android.permission.RECORD_AUDIO" ] push AudioPermission
+    pure $ UpdateState state
 ]
 
 eval (AudioPermission status) state = 
