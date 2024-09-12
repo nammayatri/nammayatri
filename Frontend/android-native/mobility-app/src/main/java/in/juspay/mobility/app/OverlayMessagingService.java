@@ -250,7 +250,6 @@ public class OverlayMessagingService extends Service {
             TextView destination = messageView.findViewById(R.id.new_drop);
             String destinationAddress = "Drop: "+ destAddressString;
             updateViewFromMlTranslation(destination, destinationAddress, getApplicationContext());
-            // destination.setText(destinationAddress);
             TextView pincode = messageView.findViewById(R.id.pin_code);
             pincode.setText(destPincode);
             pincode.setVisibility(View.VISIBLE);
