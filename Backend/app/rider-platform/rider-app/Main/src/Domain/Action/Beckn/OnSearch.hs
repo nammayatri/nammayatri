@@ -289,6 +289,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       case searchRequest.riderPreferredOption of
         Rental -> filter (not . isNotRental) _quotesInfo
         OneWay -> filter (\quote -> isNotRental quote && isNotBlackListed blackListedVehicles quote.vehicleCategory) _quotesInfo
+        Delivery -> []
         _ -> filter isNotRental _quotesInfo
 
     filterEstimtesByPrefference :: [EstimateInfo] -> [Enums.VehicleCategory] -> [EstimateInfo]
