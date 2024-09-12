@@ -165,6 +165,7 @@ import Kernel.Utils.Validation (runRequestValidation)
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import qualified Lib.Yudhishthira.Flow.Dashboard as Yudhishthira
 import SharedLogic.Allocator
+import qualified SharedLogic.CancellationRate as SCR
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
@@ -788,6 +789,8 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
           (filter (\v -> maybe False (\veh -> veh.variant `elem` v.allowedVehicleVariant) vehicle) cityVehicleServiceTiers)
   let isACAllowedForDriver = checkIfACAllowedForDriver info (catMaybes serviceTierACThresholds)
   let isVehicleACWorking = maybe False (\v -> v.airConditioned /= Just False) vehicle
+  cancellationData <- SCR.getCancellationRateData person.merchantOperatingCityId person.id
+
   pure
     Common.DriverInfoRes
       { driverId = cast @DP.Person @Common.Driver person.id,
@@ -823,6 +826,10 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         totalAcRestrictionUnblockCount = info.acRestrictionLiftCount,
         lastACStatusCheckedAt = info.lastACStatusCheckedAt,
         currentACStatus = isACAllowedForDriver && isVehicleACWorking,
+        assignedCount = cancellationData.assignedCount,
+        cancelledCount = cancellationData.cancelledCount,
+        cancellationRate = cancellationData.cancellationRate,
+        windowSize = cancellationData.windowSize,
         blockedDueToRiderComplains = not isACAllowedForDriver,
         driverTag = person.driverTag,
         email
