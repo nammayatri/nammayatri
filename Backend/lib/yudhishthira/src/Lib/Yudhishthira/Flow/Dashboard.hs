@@ -84,7 +84,7 @@ postQueryCreate queryRequest = do
       let repeatedFields = newQueryFields `DL.intersect` existingQueryFields
       unless (null repeatedFields) $ throwError (RepeatedQueryFields repeatedFields)
 
-verifyDynamicLogic :: (BeamFlow m r, ToJSON a) => [Value] -> a -> m Lib.Yudhishthira.Types.AppDynamicLogicResp
+verifyDynamicLogic :: (BeamFlow m r, ToJSON a) => [Value] -> a -> m Lib.Yudhishthira.Types.RunLogicResp
 verifyDynamicLogic logics data_ = runLogics logics data_
 
 verifyTag :: BeamFlow m r => Text -> m ()

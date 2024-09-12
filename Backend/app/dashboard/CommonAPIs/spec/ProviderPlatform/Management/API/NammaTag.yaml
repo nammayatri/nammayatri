@@ -4,6 +4,8 @@ imports:
   ChakraQueriesAPIEntity: Lib.Yudhishthira.Types
   AppDynamicLogicReq: Lib.Yudhishthira.Types
   AppDynamicLogicResp: Lib.Yudhishthira.Types
+  LogicDomain: Lib.Yudhishthira.Types
+  AppDynamicLogic: Lib.Yudhishthira.Types.AppDynamicLogic
 
 module: NammaTag
 
@@ -35,5 +37,14 @@ apis:
         type: AppDynamicLogicReq
       response:
         type: AppDynamicLogicResp
+      migrate:
+        endpointV2:
+  - GET:
+      endpoint: /appDynamicLogic
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+      mandatoryQuery:
+        domain: LogicDomain
+      response:
+        type: "[AppDynamicLogic]"
       migrate:
         endpointV2:

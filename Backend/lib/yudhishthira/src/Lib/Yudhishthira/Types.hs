@@ -9,6 +9,7 @@ module Lib.Yudhishthira.Types
     LogicDomain (..),
     AppDynamicLogicReq (..),
     AppDynamicLogicResp (..),
+    RunLogicResp (..),
   )
 where
 
@@ -16,6 +17,8 @@ import Data.Aeson
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.HideSecrets
+import Kernel.Types.TimeBound
+import Kernel.Utils.TH
 import Lib.Yudhishthira.Types.Application as Reexport
 import Lib.Yudhishthira.Types.Common as Reexport
 import Lib.Yudhishthira.Types.KaalChakra as Reexport
@@ -60,18 +63,29 @@ newtype YudhishthiraDecideResp = YudhishthiraDecideResp
 data LogicDomain
   = POOLING
   | FARE_POLICY
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(mkBeamInstancesForEnumAndList ''LogicDomain)
+$(mkHttpInstancesForEnum ''LogicDomain)
 
 data AppDynamicLogicReq = AppDynamicLogicReq
   { rules :: [Value],
     inputData :: [Value],
+    shouldUpdateRule :: Maybe Bool,
+    updatePassword :: Maybe Text,
+    timeBounds :: Maybe TimeBound,
     domain :: LogicDomain
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data AppDynamicLogicResp = AppDynamicLogicResp
+  { result :: Value,
+    isRuleUpdated :: Bool,
+    errors :: [String]
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data RunLogicResp = RunLogicResp
   { result :: Value,
     errors :: [String]
   }
