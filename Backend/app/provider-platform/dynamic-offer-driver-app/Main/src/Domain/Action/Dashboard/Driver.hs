@@ -491,7 +491,7 @@ updateACUsageRestriction merchantShortId opCity reqDriverId req = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
-  checkAndUpdateAirConditioned True req.isWorking personId cityVehicleServiceTiers
+  checkAndUpdateAirConditioned True req.isWorking personId cityVehicleServiceTiers req.downgradeReason
   logTagInfo "dashboard -> updateACUsageRestriction : " (show personId)
   pure Success
 
@@ -823,6 +823,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         totalAcRestrictionUnblockCount = info.acRestrictionLiftCount,
         lastACStatusCheckedAt = info.lastACStatusCheckedAt,
         currentACStatus = isACAllowedForDriver && isVehicleACWorking,
+        downgradeReason = vehicle >>= (.downgradeReason),
         blockedDueToRiderComplains = not isACAllowedForDriver,
         driverTag = person.driverTag,
         email

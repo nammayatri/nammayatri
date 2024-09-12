@@ -213,7 +213,7 @@ data SyncDocType
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-newtype UpdateACUsageRestrictionReq = UpdateACUsageRestrictionReq {isWorking :: Kernel.Prelude.Bool}
+data UpdateACUsageRestrictionReq = UpdateACUsageRestrictionReq {isWorking :: Kernel.Prelude.Bool, downgradeReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

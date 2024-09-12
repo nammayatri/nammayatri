@@ -267,7 +267,7 @@ postDriverUpdateAirCondition ::
 postDriverUpdateAirCondition (mbPersonId, _, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.UpdateAirConditionUpdateRequest {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId
-  checkAndUpdateAirConditioned False isAirConditioned personId cityVehicleServiceTiers
+  checkAndUpdateAirConditioned False isAirConditioned personId cityVehicleServiceTiers Nothing
   now <- getCurrentTime
   QDI.updateLastACStatusCheckedAt (Just now) personId
   return Success
@@ -367,7 +367,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
   -- driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
   cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId
 
-  whenJust airConditioned $ \ac -> checkAndUpdateAirConditioned False ac.isWorking personId cityVehicleServiceTiers
+  whenJust airConditioned $ \ac -> checkAndUpdateAirConditioned False ac.isWorking personId cityVehicleServiceTiers Nothing
   driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
 

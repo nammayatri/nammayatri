@@ -42,6 +42,7 @@ Vehicle:
     registrationCategory: Maybe RegistrationCategory
     vehicleClass: Text
     airConditioned: Maybe Bool
+    downgradeReason: Maybe Text
     oxygen: Maybe Bool
     ventilator: Maybe Bool
     luggageCapacity: Maybe Int
@@ -91,7 +92,7 @@ Vehicle:
       where: driverId
     updateAirConditioned:
       kvFunction: updateWithKV
-      params: [airConditioned]
+      params: [airConditioned,downgradeReason]
       where: driverId
     updateOxygen:
       kvFunction: updateWithKV

@@ -32,10 +32,12 @@ findById driverId = do findOneWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.
 findByRegistrationNo :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Vehicle.Vehicle))
 findByRegistrationNo registrationNo = do findOneWithKV [Se.Is Beam.registrationNo $ Se.Eq registrationNo]
 
-updateAirConditioned :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateAirConditioned airConditioned driverId = do
+updateAirConditioned ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateAirConditioned airConditioned downgradeReason driverId = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.airConditioned airConditioned, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+  updateWithKV [Se.Set Beam.airConditioned airConditioned, Se.Set Beam.downgradeReason downgradeReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateManufacturing :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateManufacturing mYManufacturing driverId = do
@@ -86,6 +88,7 @@ updateByPrimaryKey (Domain.Types.Vehicle.Vehicle {..}) = do
       Se.Set Beam.capacity capacity,
       Se.Set Beam.category category,
       Se.Set Beam.color color,
+      Se.Set Beam.downgradeReason downgradeReason,
       Se.Set Beam.energyType energyType,
       Se.Set Beam.luggageCapacity luggageCapacity,
       Se.Set Beam.mYManufacturing mYManufacturing,
