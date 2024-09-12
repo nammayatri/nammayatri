@@ -49,7 +49,7 @@ view image title push backgroundColor strokeColor width' useMargin isDisabled co
     , clickable $ not isDisabled
     ] <> if useMargin then [ margin $ MarginHorizontal 6 6 ] else [])
     [ imageView
-        [ imageWithFallback $ fetchImage FF_ASSET image
+        [ imageWithFallback image
         , height $ V 24
         , width $ V 24
         ]

@@ -57,7 +57,7 @@ view push state =
             , height WRAP_CONTENT
             , gravity CENTER_VERTICAL
             ][ imageView
-                [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_microphone_white"
+                [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_microphone_white"
                 , height $ V 24
                 , width $ V 24
                 ]

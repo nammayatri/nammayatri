@@ -307,7 +307,7 @@ eval (UpdateFollowers (FollowRideRes resp)) state = do
     transformFollower follower = {name : follower.name, bookingId : follower.bookingId, mobileNumber : follower.mobileNumber, priority : follower.priority, isManualFollower : false}
 
 
-eval GoToFollowRide state = exit $ ExitToFollowRide state
+eval GoToFollowRide state = exit $ ExitToFollowRide state{props{chatcallbackInitiated = false}}
 
 eval (UpdateRepeatTrips rideList) state = do
   void $ pure $ setValueToLocalStore UPDATE_REPEAT_TRIPS "false"
@@ -765,10 +765,6 @@ eval (MessagingViewActionController (MessagingView.SendMessage)) state = do
     triggerFCM state {data{messageToBeSent = ""},props {sendMessageActive = false}} message 
   else
     continue state
-
-eval (EnableNotificationForMultiChat contactPersonId) state = do 
-  let updatedContactList = (map (\item -> if item.contactPersonId == contactPersonId then item{ notifiedViaFCM = Just true} else item)) <$> state.data.contactList
-  continue state { data {contactList = updatedContactList, driverInfoCardState {currentChatRecipient {notifiedViaFCM = Just true}}}}
 
 eval (MessagingViewActionController (MessagingView.BackPressed)) state = do
   void $ pure $ performHapticFeedback unit
@@ -2623,7 +2619,7 @@ eval (UpdateChatWithEM flag primaryContact) state =
   continue state 
     { data 
       { driverInfoCardState 
-        { currentChatRecipient = CMC.dummyChatRecipient 
+        { currentChatRecipient = if flag then CMC.dummyChatRecipient 
           { name = primaryContact.name
           , number = primaryContact.number
           , uuid = state.data.driverInfoCardState.rideId <> "$" <> (fromMaybe "" primaryContact.contactPersonId)
@@ -2633,6 +2629,7 @@ eval (UpdateChatWithEM flag primaryContact) state =
           , notifiedViaFCM = primaryContact.notifiedViaFCM
           , shareTripWithEmergencyContactOption = primaryContact.shareTripWithEmergencyContactOption.key
           }
+          else state.data.driverInfoCardState.currentChatRecipient
         }
       } 
     , props {isChatWithEMEnabled = flag}
@@ -3439,7 +3436,7 @@ triggerFCM state message = do
         do
           void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
             $ do
-                when (state.data.driverInfoCardState.currentChatRecipient.notifiedViaFCM /= Just true && state.data.driverInfoCardState.currentChatRecipient.recipient /= CMC.DRIVER ) $ do
+                when (state.data.driverInfoCardState.currentChatRecipient.recipient /= CMC.DRIVER ) $ do
                   push <- liftFlowBT $ getPushFn Nothing "HomeScreen"
                   case state.data.driverInfoCardState.currentChatRecipient.contactPersonId of
                     Just contactId -> do
@@ -3452,8 +3449,7 @@ triggerFCM state message = do
                             Just (API.GetEmergencySettingsRes safetySettings) -> Tuple safetySettings.safetyCheckStartTime safetySettings.safetyCheckEndTime
                             Nothing -> Tuple Nothing Nothing 
                       let isAlreadyRideShared = state.data.driverInfoCardState.currentChatRecipient.enableForShareRide || checkRideShareOptionConstraint state.data.driverInfoCardState.currentChatRecipient.shareTripWithEmergencyContactOption safetyCheckStartSeconds safetyCheckEndSeconds Nothing
-                      when (state.props.currentStage == RideAccepted || not isAlreadyRideShared) $ void $ lift $ lift $ Remote.shareRide $ API.ShareRideReq { emergencyContactNumbers : [state.data.driverInfoCardState.currentChatRecipient.number]}
-                      liftFlowBT $ push $ EnableNotificationForMultiChat state.data.driverInfoCardState.currentChatRecipient.contactPersonId
+                      when (state.props.stageBeforeChatScreen == RideAccepted || not isAlreadyRideShared) $ void $ lift $ lift $ Remote.shareRide $ API.ShareRideReq { emergencyContactNumbers : [state.data.driverInfoCardState.currentChatRecipient.number]}
                       pure unit
                     Nothing -> pure unit
           pure NoAction

@@ -116,7 +116,10 @@ view push state =
           , clickable true
           ][ otpAndWaitView push state 
             , endOTPView push state
-            , linearLayout [weight 1.0] []
+            , linearLayout [
+                weight 1.0
+              , visibility $ boolToVisibility $ state.props.currentStage == RideStarted
+            ] []
             -- , if state.props.currentStage == RideStarted || state.props.stageBeforeChatScreen == RideStarted then trackRideView push state else dummyView push -- TODO: may use in future: Ashish Singh
             , if enableShareRide then shareRideButton push state else if enableSupport then contactSupport push state else dummyView push -- TEMP FIX UNTIL THE NEW DESIGN IS DONE
             ]
@@ -261,8 +264,8 @@ sizedBox height' width' =
 shareRideButton :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 shareRideButton push state = 
   linearLayout
-  [ height WRAP_CONTENT
-  , width WRAP_CONTENT
+  [ width $ V 56
+  , height $ V 56
   , gravity RIGHT
   , orientation VERTICAL
   , clickable $ state.data.providerType == ONUS
@@ -329,14 +332,15 @@ contactSupport push state =
 otpAndWaitView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit) w
 otpAndWaitView push state =
   horizontalScrollView
-  ([ height $ V 56
+  [ height $ V 56
   , disableKeyboardAvoidance true
   , scrollBarX false
   , scrollBarY false
   , visibility $ boolToVisibility $ (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver] && (state.props.stageBeforeChatScreen /= RideStarted))
   , gravity CENTER
   , accessibility DISABLE
-  ] <> if os == "IOS" then [width MATCH_PARENT] else [weight 1.0])[ linearLayout
+  , weight 1.0
+  ][ linearLayout
      [ height$ V 56
      , width WRAP_CONTENT
      , orientation HORIZONTAL

@@ -9,7 +9,7 @@
 module Screens.NammaSafetyFlow.SosActiveScreen.View where
 
 import PrestoDOM.Animation as PrestoAnim
-import Animation (screenAnimationFadeInOut, fadeIn, fadeOut)
+import Animation (screenAnimationFadeInOut, fadeIn, fadeOut, screenAnimation)
 import Prelude (Unit, const, discard, not, pure, unit, void, ($), (&&), (<<<), (<>), (==), (<#>), map, (/), (-), (/=), show, when, bind)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alignParentBottom, alpha, background, color, cornerRadius, gravity, height, id, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, relativeLayout, rippleColor, scrollView, stroke, text, textView, visibility, weight, width, accessibilityHint, maxLines, ellipsize, fillViewport, enableAnimateOnGone)
 import Screens.NammaSafetyFlow.ComponentConfig (cancelSOSBtnConfig, safetyAudioRecordingConfig)
@@ -78,7 +78,7 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  linearLayout
+  screenAnimation $ linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
@@ -116,33 +116,39 @@ sosActiveView state push =
   linearLayout
   [ weight 1.0
   , width MATCH_PARENT
+  , orientation VERTICAL
   ]
-  [ scrollView
-    [ width MATCH_PARENT
-    , height MATCH_PARENT
-    , fillViewport true
-    ][ linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        ]
-        [ SosButtonAndDescription.view (push <<< SosButtonAndDescriptionAction) $ emergencySosConfig state   
-        , emergencyContactsView state push
-        , SafetyAudioRecording.view (push <<< SafetyAudioRecordingAction) $ safetyAudioRecordingConfig state
-        , sosActionTilesView state push
-        , layoutWithWeight
-        , linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , margin $ Margin 16 16 16 16
-            , orientation VERTICAL
-            ]
-            [ separatorView Color.black800 $ MarginTop 0
-            , PrimaryButton.view (push <<< MarkRideAsSafe) (cancelSOSBtnConfig state)
-            ]
-        ]
+  [ linearLayout
+    [ weight 1.0
+    , width MATCH_PARENT
+    ]
+    [ scrollView
+      [ width MATCH_PARENT
+      , height MATCH_PARENT
+      , fillViewport true
+      ][ linearLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          ]
+          [ SosButtonAndDescription.view (push <<< SosButtonAndDescriptionAction) $ emergencySosConfig state   
+          , emergencyContactsView state push
+          , SafetyAudioRecording.view (push <<< SafetyAudioRecordingAction) $ safetyAudioRecordingConfig state
+          , sosActionTilesView state push
+          ]
+      ]
+    ]
+  , linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ Margin 16 16 16 16
+    , orientation VERTICAL
+    ]
+    [ separatorView Color.black800 $ MarginTop 0
+    , PrimaryButton.view (push <<< MarkRideAsSafe) (cancelSOSBtnConfig state)
     ]
   ]
+  
   
 
 emergencySosConfig :: ST.NammaSafetyScreenState -> SosButtonAndDescription.Config
@@ -192,13 +198,13 @@ sosActionTilesView state push =
 
   where
     actionsRow1 =
-        [ { text: getStringWithoutNewLine RECORD_AUDIO, image: "ny_ic_microphone_white", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< RecordAudio, isDisabled: false }
-        , { text: getStringWithoutNewLine CALL_POLICE , image: "ny_ic_police_alert" , backgroundColor: Color.redOpacity20, strokeColor: Color.redOpacity30, push : push <<< ShowPoliceView, isDisabled: state.props.showTestDrill }
+        [ { text: getStringWithoutNewLine RECORD_AUDIO, image: fetchImage COMMON_ASSET "ny_ic_microphone_white", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< RecordAudio, isDisabled: false }
+        , { text: getStringWithoutNewLine CALL_POLICE , image: fetchImage COMMON_ASSET "ny_ic_police_alert" , backgroundColor: Color.redOpacity20, strokeColor: Color.redOpacity30, push : push <<< ShowPoliceView, isDisabled: state.props.showTestDrill }
         ]
 
     actionsRow2 =
         [ { text: getString SIREN, image: sirenImage, backgroundColor: sirenTileBackgroundColor, strokeColor: sirenTileStrokeColor, push : push <<< ToggleSiren, isDisabled: false }
-        , { text: getStringWithoutNewLine CALL_SAFETY_TEAM, image: "ny_ic_support_unfilled", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< CallSafetyTeam, isDisabled: state.props.showTestDrill }
+        , { text: getStringWithoutNewLine CALL_SAFETY_TEAM, image: fetchImage FF_ASSET "ny_ic_support_unfilled", backgroundColor: Color.blackOpacity12, strokeColor: Color.black800, push : push <<< CallSafetyTeam, isDisabled: state.props.showTestDrill }
         ]
 
     safetyActionRow actionItems push =
@@ -223,7 +229,7 @@ sosActionTilesView state push =
             )
         ]
       
-    sirenImage = if state.props.triggerSiren then "ny_ic_full_volume" else "ny_ic_no_volume"
+    sirenImage = fetchImage COMMON_ASSET if state.props.triggerSiren then "ny_ic_full_volume" else "ny_ic_no_volume"
     sirenTileBackgroundColor = if state.props.triggerSiren then Color.black712 else Color.blackOpacity12
     sirenTileStrokeColor = if state.props.triggerSiren then Color.black700 else Color.black800
 

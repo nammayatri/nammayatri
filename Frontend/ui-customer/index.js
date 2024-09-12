@@ -295,7 +295,9 @@ window.onPause = function () {
       window.onPauseListeners[i].call();
     }
   }
-  JBridge.unregisterShakeListener();
+  if(JBridge.unregisterShakeListener) {
+    JBridge.unregisterShakeListener();
+  }
 }
 function checkInternet() {
   return window.__OS === "IOS" ? JBridge.isNetworkAvailable() === "1" : JBridge.isInternetAvailable();
@@ -310,7 +312,9 @@ window.onResume = function () {
     if(window.scrollAction) {
       window.scrollAction();
     }
-    JBridge.registerShakeListener();
+    if(JBridge.registerShakeListener) {
+      JBridge.registerShakeListener();
+    }
   }
 }
 

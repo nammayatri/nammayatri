@@ -2209,7 +2209,7 @@ shareLinkButtonConfig state =
     , id = "ShareRideLinkButton"
     , margin = MarginTop 20
     , prefixImageConfig {
-        imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_share_yellow"
+        imageUrl = HU.fetchImage HU.COMMON_ASSET "ny_ic_share_yellow"
       , margin = MarginRight 8
       }
     , isPrefixImage = true
