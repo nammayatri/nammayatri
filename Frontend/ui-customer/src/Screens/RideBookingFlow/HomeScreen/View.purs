@@ -4010,7 +4010,7 @@ mapView' push state idTag =
       bottomPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize extraBottomPadding else 0
       -- banners = getBannerConfigs state BannerCarousel
       enableActions = isHomeScreenView state && state.props.isSrcServiceable
-      buttonPadding = if os == "IOS" then Padding 16 20 16 20 else Padding 16 16 16 16
+      buttonPadding = if os == "IOS" then Padding 16 16 16 12 else Padding 16 16 16 16
     
   in
   PrestoAnim.animationSet[scaleYAnimWithDelay 5000] $

@@ -133,6 +133,8 @@ addContactsOptionView push state =
         , width MATCH_PARENT
         , cornerRadii $ Corners 16.0 true true false false
         , orientation VERTICAL
+        , clickable true
+        , onClick push $ const NoAction
         , background Color.white900
         ]
         [ textView
@@ -403,9 +405,11 @@ emptyContactsView push state =
     [ height $ WRAP_CONTENT
     , width $ MATCH_PARENT
     , orientation VERTICAL
+    , weight 1.0
     ]
     [ scrollView
-        [ width MATCH_PARENT
+        [ height MATCH_PARENT 
+        , width MATCH_PARENT
         , scrollBarY false
         , height WRAP_CONTENT
         , orientation VERTICAL

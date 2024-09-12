@@ -24,7 +24,7 @@ import Engineering.Helpers.Commons as EHC
 import Helpers.Utils (FetchImageFrom(..), getAssetsBaseUrl, fetchImage)
 import Types.App (GlobalState(..), defaultGlobalState)
 import JBridge (lottieAnimationConfig, startLottieProcess)
-import Prelude (Unit, const, discard, pure, void, ($), (<>), (<<<), (>), (==), (||), unit, bind, map, not)
+import Prelude (Unit, const, discard, pure, void, ($), (<>), (<<<), (>), (==), (||), (&&), unit, bind, map, not)
 import PrestoDOM
 import Screens.DataExplainWithFetch.Controller (Action(..), ScreenOutput, eval, getStepConfig, getStageConfig)
 import Screens.DataExplainWithFetch.ComponentConfig as CC
@@ -78,6 +78,7 @@ view push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
+        , padding padding'
         , onBackPressed push $ const BackPressed
         , background Color.white900
         , gravity CENTER_HORIZONTAL
@@ -89,7 +90,8 @@ view push state =
             , weight 1.0
             ]
             [ scrollView
-                [ width MATCH_PARENT
+                [ height MATCH_PARENT 
+                , width MATCH_PARENT
                 , scrollBarY false
                 ]
                 [ explanationContentView push state
@@ -98,6 +100,8 @@ view push state =
         , separator
         , PrimaryButton.view (push <<< PrimaryButtonAC) (CC.primaryButtonConfig state)
         ]
+  where 
+    padding' = if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 16 else EHC.safeMarginBottom)) else (PaddingLeft 0)
 
 separator :: forall w. PrestoDOM (Effect Unit) w
 separator =
