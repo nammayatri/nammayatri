@@ -21,7 +21,7 @@ IGMIssue:
   fields:
     id: Id IGMIssue
     riderId: Id Person
-    bookingId: Id Booking
+    bookingId: Text
     issueType: IssueType
     issueStatus: Status
     respondentEntityType: Maybe Entity

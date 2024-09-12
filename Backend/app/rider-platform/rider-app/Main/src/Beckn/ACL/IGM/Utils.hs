@@ -18,10 +18,11 @@ module Beckn.ACL.IGM.Utils where
 import Control.Lens ((%~))
 import Data.Aeson as A
 import qualified Data.Text as T
-import Domain.Types.Booking
 import qualified Domain.Types.IGMIssue as DIGM
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMop
 import Domain.Types.Person
+import qualified Domain.Types.Ride as Ride
 import qualified IGM.Enums as Spec
 import qualified IGM.Types as Spec
 import qualified IssueManagement.Common.UI.Issue as Common
@@ -115,7 +116,7 @@ mapDomainIssueType _ _ = DIGM.GRIEVANCE
 timeToText :: UTCTime -> Text
 timeToText = T.pack . show
 
-buildIGMIssue :: UTCTimeRFC3339 -> Text -> Booking -> Person -> Text -> DIGM.IGMIssue
+buildIGMIssue :: UTCTimeRFC3339 -> Text -> RideBooking -> Person -> Text -> DIGM.IGMIssue
 buildIGMIssue now issueId booking rider transactionId = do
   DIGM.IGMIssue
     { createdAt = convertRFC3339ToUTC now,
@@ -131,7 +132,7 @@ buildIGMIssue now issueId booking rider transactionId = do
       respondentEntityType = Nothing,
       transactionId = transactionId,
       merchantOperatingCityId = booking.merchantOperatingCityId,
-      bookingId = booking.id,
+      bookingId = booking.bookingId,
       updatedAt = convertRFC3339ToUTC now
     }
 
@@ -161,3 +162,17 @@ data BppData = BppData
     bppUri :: Text
   }
   deriving (Show, Eq, Generic)
+
+data RideBooking = RideBooking
+  { bookingId :: Text,
+    providerId :: Text,
+    providerUrl :: BaseUrl,
+    merchantOperatingCityId :: Id DMop.MerchantOperatingCity,
+    merchantId :: Id DM.Merchant,
+    bppItemId :: Text,
+    ride :: Maybe Ride.Ride,
+    bppBookingId :: Maybe Text,
+    status :: Maybe Text,
+    contactPhone :: Maybe Text,
+    igmCategory :: Spec.Domain
+  }

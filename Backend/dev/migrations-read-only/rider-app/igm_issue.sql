@@ -65,3 +65,8 @@ ALTER TABLE atlas_app.igm_issue ADD COLUMN merchant_operating_city_id character 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.igm_issue DROP COLUMN merchant_id;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.igm_issue ALTER COLUMN booking_id TYPE text;

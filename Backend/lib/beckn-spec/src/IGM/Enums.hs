@@ -25,19 +25,23 @@ import Prelude (show)
 
 data Domain
   = ON_DEMAND
+  | PUBLIC_TRANSPORT
   deriving (Eq, Generic, Read, FromDhall, ToSchema)
   deriving (PrettyShow) via Showable Domain
 
 instance Show Domain where
   show ON_DEMAND = "ONDC:TRV10"
+  show PUBLIC_TRANSPORT = "ONDC:TRV11"
 
 instance FromJSON Domain where
   parseJSON (String "ONDC:TRV10") = pure ON_DEMAND
+  parseJSON (String "ONDC:TRV11") = pure PUBLIC_TRANSPORT
   parseJSON (String _) = parseFail "Invalid Domain"
   parseJSON e = typeMismatch "String" e
 
 instance ToJSON Domain where
   toJSON ON_DEMAND = String "ONDC:TRV10"
+  toJSON PUBLIC_TRANSPORT = String "ONDC:TRV11"
 
 data Action
   = ISSUE
@@ -250,7 +254,7 @@ instance FromJSON RespondentInfo where
   parseJSON (String "INTERFACING-NP") = return RESPONDING_INTERFACING_NP
   parseJSON (String "TRANSACTION-COUNTERPARTY-NP") = return TRANSACTION_COUNTERPARTY_NP
   parseJSON (String "CASCADED-COUNTERPARTY-NP") = return CASCADED_COUNTERPARTY_NP
-  parseJSON wrongVal = typeMismatch "Invalid RespondentInfo" wrongVal
+  parseJSON wrongVal = typeMismatch "Invalid Respon```` ```````dentInfo" wrongVal
 
 data IssueSubCategory
   = -- ..issue.sub_category

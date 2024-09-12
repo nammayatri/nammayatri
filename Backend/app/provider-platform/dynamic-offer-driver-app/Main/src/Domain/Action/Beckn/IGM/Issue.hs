@@ -186,7 +186,7 @@ closeBecknIssue ValidatedDIssue {..} now = do
   QIR.updateStatusAssignee issueReport.id (Just Common.CLOSED) issueReport.assignee
   void $ Common.updateTicketStatus issueReport TIT.CL (cast merchant.id) (cast merchantOperatingCity.id) driverIssueHandle "Closed by person"
   pure $
-    IssueRes
+    IssueResku
       { issueId = issueId,
         respondentAction = show Spec.RESOLVED,
         groName = igmConfig.groName,

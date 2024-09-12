@@ -306,7 +306,8 @@ data CreateIssueCategoryReq = CreateIssueCategoryReq
     isActive :: Maybe Bool,
     translations :: [Translation],
     messages :: [CreateIssueMessageReq],
-    label :: Maybe Text
+    label :: Maybe Text,
+    igmCategory :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -337,7 +338,9 @@ data CreateIssueOptionReq = CreateIssueOptionReq
     messages :: [CreateIssueMessageReq],
     restrictedVariants :: Maybe [VehicleVariant],
     restrictedRideStatuses :: Maybe [RideStatus],
-    showOnlyWhenUserBlocked :: Maybe Bool
+    showOnlyWhenUserBlocked :: Maybe Bool,
+    showOnlyWhenUserBlocked :: Maybe Bool,
+    igmSubCategory :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
