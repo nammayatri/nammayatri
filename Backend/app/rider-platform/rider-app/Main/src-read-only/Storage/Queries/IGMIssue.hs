@@ -22,23 +22,23 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.IGMIssue.IGMIssue] -> m ())
 createMany = traverse_ create
 
-findAllByRiderIdandStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.IGMIssue.Status -> m ([Domain.Types.IGMIssue.IGMIssue]))
-findAllByRiderIdandStatus (Kernel.Types.Id.Id riderId) issueStatus = do findAllWithKV [Se.And [Se.Is Beam.riderId $ Se.Eq riderId, Se.Is Beam.issueStatus $ Se.Eq issueStatus]]
+findAllByRiderIdandStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.IGMIssue.Status -> m [Domain.Types.IGMIssue.IGMIssue])
+findAllByRiderIdandStatus riderId issueStatus = do findAllWithKV [Se.And [Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId), Se.Is Beam.issueStatus $ Se.Eq issueStatus]]
 
-findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.IGMIssue.Status -> m ([Domain.Types.IGMIssue.IGMIssue]))
+findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.IGMIssue.Status -> m [Domain.Types.IGMIssue.IGMIssue])
 findAllByStatus issueStatus = do findAllWithKV [Se.Is Beam.issueStatus $ Se.Eq issueStatus]
 
 findByTransactionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> m (Maybe Domain.Types.IGMIssue.IGMIssue))
 findByTransactionId transactionId = do findOneWithKV [Se.Is Beam.transactionId $ Se.Eq transactionId]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.IGMIssue.IGMIssue -> m (Maybe Domain.Types.IGMIssue.IGMIssue))
-findByPrimaryKey (Kernel.Types.Id.Id id) = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq id]]
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.IGMIssue.IGMIssue -> m ())
 updateByPrimaryKey (Domain.Types.IGMIssue.IGMIssue {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.bookingId (Kernel.Types.Id.getId bookingId),
+    [ Se.Set Beam.bookingId bookingId,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.issueStatus issueStatus,
       Se.Set Beam.issueType issueType,
@@ -60,7 +60,7 @@ instance FromTType' Beam.IGMIssue Domain.Types.IGMIssue.IGMIssue where
     pure $
       Just
         Domain.Types.IGMIssue.IGMIssue
-          { bookingId = Kernel.Types.Id.Id bookingId,
+          { bookingId = bookingId,
             createdAt = createdAt,
             id = Kernel.Types.Id.Id id,
             issueStatus = issueStatus,
@@ -80,7 +80,7 @@ instance FromTType' Beam.IGMIssue Domain.Types.IGMIssue.IGMIssue where
 instance ToTType' Beam.IGMIssue Domain.Types.IGMIssue.IGMIssue where
   toTType' (Domain.Types.IGMIssue.IGMIssue {..}) = do
     Beam.IGMIssueT
-      { Beam.bookingId = Kernel.Types.Id.getId bookingId,
+      { Beam.bookingId = bookingId,
         Beam.createdAt = createdAt,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.issueStatus = issueStatus,

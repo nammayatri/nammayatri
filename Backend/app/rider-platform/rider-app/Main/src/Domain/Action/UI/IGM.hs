@@ -30,7 +30,7 @@ data IGMIssueReq = IGMIssueReq
     ride :: Ride,
     booking :: Booking
   }
-  deriving (Generic, Show)
+  deriving (Generic)
 
 buildIGMIssueReq :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Maybe (Id Common.Ride) -> m (Maybe IGMIssueReq)
 buildIGMIssueReq mbRideId =

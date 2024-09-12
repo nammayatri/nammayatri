@@ -59,6 +59,15 @@ data MerchantOperatingCity = MerchantOperatingCity
     city :: Context.City
   }
 
+data MetroTicketBooking = MetroTicketBooking
+  { id :: Id MetroTicketBooking,
+    merchantOperatingCityId :: Id MerchantOperatingCity,
+    merchantId :: Id Merchant,
+    providerId :: Text,
+    providerUrl :: BaseUrl,
+    bppItemId :: Text
+  }
+
 data PersonE e = Person
   { id :: Id Person,
     language :: Maybe Language,

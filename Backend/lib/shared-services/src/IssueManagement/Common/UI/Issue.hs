@@ -37,9 +37,12 @@ data IssueReportReq = IssueReportReq
     categoryId :: Id IssueCategory,
     description :: Text,
     chats :: Maybe [Chat],
-    createTicket :: Maybe Bool
+    createTicket :: Maybe Bool,
+    ticketBookingId :: Maybe (Id TicketBooking)
   }
   deriving (Generic, FromJSON, ToSchema, Show)
+
+data TicketBooking = TicketBooking
 
 data IssueReportRes = IssueReportRes
   { issueReportId :: Id IssueReport,

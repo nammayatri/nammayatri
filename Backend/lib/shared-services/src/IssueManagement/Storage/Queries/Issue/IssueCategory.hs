@@ -87,8 +87,7 @@ instance FromTType' BeamIC.IssueCategory IssueCategory where
           { id = Id id,
             merchantId = Id merchantId,
             merchantOperatingCityId = Id merchantOperatingCityId,
-            ..,
-            igmCategory = igmCategory
+            ..
           }
 
 instance ToTType' BeamIC.IssueCategory IssueCategory where

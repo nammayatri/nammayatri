@@ -98,7 +98,8 @@ mkTicket person phoneNumber mediaLinks info flow disposition queue = do
       classification = Ticket.CUSTOMER,
       rideDescription = Just info,
       disposition,
-      queue
+      queue,
+      becknIssueId = Nothing
     }
   where
     issueDescription = case flow of

@@ -166,8 +166,7 @@ buildDBIssue (Id customerId) SendIssueReq {..} merchantId = do
         nightSafety = fromMaybe False nightSafety,
         createdAt = time,
         updatedAt = time,
-        merchantId = Just merchantId,
-        becknIssueId = Nothing
+        merchantId = Just merchantId
       }
 
 mkTicket :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DIssue.Issue -> Person.Person -> Maybe Text -> Text -> Text -> m Ticket.CreateTicketReq

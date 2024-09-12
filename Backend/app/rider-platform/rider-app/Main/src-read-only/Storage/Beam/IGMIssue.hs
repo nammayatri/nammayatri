@@ -7,6 +7,7 @@ module Storage.Beam.IGMIssue where
 
 import qualified Data.Text
 import qualified Database.Beam as B
+import Domain.Types.Common ()
 import qualified Domain.Types.IGMIssue
 import Kernel.External.Encryption
 import Kernel.Prelude
