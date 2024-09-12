@@ -773,7 +773,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         } else if (key != null && key.equals("passcultureprovider")) {
             merchantLogo.setText("Alliance Taxis");
         } else if (appName.contains("Mana")) {
-            merchantLogo.setText("mana\nyatri");
+            merchantLogo.setText("Mana Yatri");
         }
 
         progressDialog = inflater.inflate(R.layout.loading_screen_overlay, null);

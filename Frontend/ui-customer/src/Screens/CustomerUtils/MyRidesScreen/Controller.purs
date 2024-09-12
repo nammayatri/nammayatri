@@ -235,7 +235,7 @@ myRideListTransformerProp listRes =
         showDestination : toPropValue if (decodeAddress $ Booking destination) == "" then "gone" else "visible",
         variantImage : toPropValue $ if os == "IOS" then "url->" <> imageUrl <> "," <> imageName else  "url->" <> imageUrl,
         showVariantImage : toPropValue "visible"
-      }) $ reverse $ sortWith (\(RideBookingRes ride) -> fromMaybe ride.createdAt ride.rideScheduledTime) listRes)
+      }) $ reverse $ sortWith (\(RideBookingRes ride) ->fromMaybe ride.createdAt $ if ride.status == "CONFIRMED" then ride.rideScheduledTime else ride.rideStartTime) listRes)
 
 
 myRideListTransformer :: MyRidesScreenState -> Array RideBookingRes -> Array IndividualRideCardState
@@ -332,7 +332,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
   , providerType : maybe CTP.ONUS (\valueAdd -> if valueAdd then CTP.ONUS else CTP.OFFUS) ride.isValueAddNP
   , rideCreatedAt : ride.createdAt
   , rideStatus : rideStatus
-}) ( reverse $ sortWith (\(RideBookingRes ride) -> fromMaybe ride.createdAt ride.rideScheduledTime ) listRes ))
+}) ( reverse $ sortWith (\(RideBookingRes ride) -> fromMaybe ride.createdAt $ if  ride.status == "CONFIRMED" then ride.rideScheduledTime else ride.rideStartTime) listRes ))
 
 matchRidebyId :: IndividualRideCardState -> IndividualRideCardState -> Boolean
 matchRidebyId rideOne rideTwo = rideOne.bookingId == rideTwo.bookingId
