@@ -83,7 +83,9 @@ getNearestGoHomeDrivers ::
   NearestGoHomeDriversReq ->
   m [NearestGoHomeDriversResult]
 getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
-  driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocation nearestRadius
+  let allowedCityServiceTiers = filter (\cvst -> cvst.serviceTierType `elem` serviceTiers) cityServiceTiers
+      allowedVehicleVariant = DL.nub $ concatMap (.allowedVehicleVariant) allowedCityServiceTiers
+  driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocation nearestRadius (Just allowedVehicleVariant)
   driverHomeLocs <- Int.getDriverGoHomeReqNearby (driverLocs <&> (.driverId))
   driverInfos <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False isRental isInterCity isValueAddNP
   vehicle <- Int.getVehicles driverInfos
