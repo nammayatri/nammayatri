@@ -286,8 +286,9 @@ instance JobInfoProcessor 'ScheduledRideAssignedOnUpdate
 
 type instance JobContent 'ScheduledRideAssignedOnUpdate = ScheduledRideAssignedOnUpdateJobData
 
-newtype CheckExotelCallStatusAndNotifyBAPJobData = CheckExotelCallStatusAndNotifyBAPJobData
-  { rideId :: Id DRide.Ride
+data CheckExotelCallStatusAndNotifyBAPJobData = CheckExotelCallStatusAndNotifyBAPJobData
+  { rideId :: Id DRide.Ride,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
   }
   deriving (Generic, FromJSON, ToJSON)
 

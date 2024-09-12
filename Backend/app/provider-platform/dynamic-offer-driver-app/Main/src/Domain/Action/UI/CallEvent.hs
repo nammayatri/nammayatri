@@ -76,7 +76,8 @@ callOnClickTracker rideId = do
   QCallStatus.create callStatusObj
   createJobIn @_ @'CheckExotelCallStatusAndNotifyBAP (fromIntegral transporterConfig.exotelStatusCheckSchedulerDelay) maxShards $
     CheckExotelCallStatusAndNotifyBAPJobData
-      { rideId = ride.id
+      { rideId = ride.id,
+        merchantOperatingCityId = booking.merchantOperatingCityId
       }
   return ()
   where

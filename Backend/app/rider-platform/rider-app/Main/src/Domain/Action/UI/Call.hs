@@ -54,6 +54,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id as ID
 import Kernel.Utils.Common
 import Lib.Scheduler.Types (SchedulerType)
+import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import Storage.Beam.SchedulerJob ()
@@ -160,7 +161,7 @@ initiateCallToDriver rideId = do
             customerIvrResponse = Nothing
           }
 
-callStatusCallback :: (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => CallCallbackReq -> m CallCallbackRes
+callStatusCallback :: (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], EventStreamFlow m r) => CallCallbackReq -> m CallCallbackRes
 callStatusCallback req = do
   let callStatusId = req.customField.callStatusId
   callStatus <- QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist
@@ -361,7 +362,8 @@ handleCallStatus status
 sendFCMToDriverOnCallFailure ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    EventStreamFlow m r
   ) =>
   CallTypes.CallStatus ->
   Maybe (Id SRide.Ride) ->
@@ -370,10 +372,13 @@ sendFCMToDriverOnCallFailure ::
 sendFCMToDriverOnCallFailure callStatus mbRideId mbMerchantId =
   if isFailureStatus callStatus
     then do
+      deploymentVersion <- asks (.version)
       rideId <- fromMaybeM (CallStatusFieldNotPresent "rideId") mbRideId
-      ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+      ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+      booking <- runInReplica $ QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
       merchantId <- fromMaybeM (RideFieldNotPresent "merchantId") mbMerchantId
-      merchant <- SMerchant.findById (ID.Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
+      merchant <- runInReplica $ SMerchant.findById (ID.Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
+      fork "updating in prometheus" $ incrementCounter (getId booking.merchantOperatingCityId) "call_attempt" deploymentVersion.getDeploymentVersion
       void $ CallBPPInternal.callCustomerFCM merchant.driverOfferApiKey merchant.driverOfferBaseUrl (getId ride.bppRideId)
       return True
     else return False
