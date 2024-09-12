@@ -167,13 +167,15 @@ feedback request personId = do
     generateSlackMessage person ride mbCustomerPhone city rating feedbackDetails = do
       now <- getCurrentTime
       mbDriverPhoneNumber <- mapM decrypt ride.driverPhoneNumber
-      let customerPhone = fromMaybe "NA" mbCustomerPhone
+      let customerPhone = fromMaybe "N/A" mbCustomerPhone
           customerName = SLP.getName person
-          driverPhoneNumber = fromMaybe "NA" mbDriverPhoneNumber
-          dropLoc = maybe "NA" (TL.toStrict . TLE.decodeUtf8 . A.encode . A.toJSON) (ride.toLocation)
-          pickupLocation = TL.toStrict $ TLE.decodeUtf8 $ A.encode $ A.toJSON ride.fromLocation
-          feedbackMsg = fromMaybe "NA" feedbackDetails
-          rideStartTime = maybe "NA" show ride.rideStartTime
+          driverPhoneNumber = fromMaybe "N/A" mbDriverPhoneNumber
+          dropLocation = fromMaybe "N/A" (ride.toLocation >>= \loc -> Just ("area - " <> fromMaybe "N/A" (loc.address.area) <> ", street - " <> fromMaybe "N/A" (loc.address.street)))
+          fromLocation = ride.fromLocation
+          pickupLocation = "area - " <> fromMaybe "N/A" (fromLocation.address.area) <> ", street - " <> fromMaybe "N/A" (fromLocation.address.street)
+          feedbackMsg = fromMaybe "N/A" feedbackDetails
+          rideStartTime = maybe "N/A" showTimeIst ride.rideStartTime
+          currentTimeInIST = showTimeIst now
       return $
         "There is an L0 feedback/report given by Customer Name : " <> customerName <> "\n"
           <> "Customer Phone No : "
@@ -195,7 +197,7 @@ feedback request personId = do
           <> pickupLocation
           <> "\n"
           <> "Drop Location : "
-          <> dropLoc
+          <> dropLocation
           <> "\n"
           <> "Ride Id : "
           <> ride.id.getId
@@ -204,7 +206,7 @@ feedback request personId = do
           <> rideStartTime
           <> "\n"
           <> "Feedback Time : "
-          <> show now
+          <> currentTimeInIST
           <> "\n"
           <> "Feedback Rating : "
           <> show rating
