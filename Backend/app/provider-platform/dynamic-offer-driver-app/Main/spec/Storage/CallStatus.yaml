@@ -21,6 +21,7 @@ CallStatus:
     recordingUrl : Maybe Text
     conversationDuration : Int
     merchantId : Maybe Text
+    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
     callService : Maybe CallService
     callError : Maybe Text
     callAttempt : Maybe CallAttemptStatus
@@ -66,6 +67,7 @@ CallStatus:
     dtmfNumberUsed: character varying (255)
     entityId: character varying (36)
     merchantId: character varying (36)
+    merchantOperatingCityId: character varying(36)
 
   default:
     entityId: "'UNKNOWN'"
