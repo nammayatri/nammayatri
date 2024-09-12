@@ -1,6 +1,6 @@
 let common = ./common.dhall
 
-let sec = ./secrets/dynamic-offer-driver-app.dhall
+let sec = ./secrets/kaal-chakra.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"
@@ -8,7 +8,7 @@ let esqDBCfg =
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
-      , connectSchemaName = "yudhishthira"
+      , connectSchemaName = "kaal-chakra"
       , connectionPoolCount = +25
       }
 

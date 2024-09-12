@@ -6,6 +6,8 @@ module Domain.Action.Dashboard.Management.NammaTag
     postNammaTagQueryCreate,
     postNammaTagAppDynamicLogicVerify,
     getNammaTagAppDynamicLogic,
+    postNammaTagRunJob,
+    kaalChakraHandle,
   )
 where
 
@@ -14,6 +16,7 @@ import Data.Default.Class (Default (..))
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person as DPerson
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import JsonLogic
@@ -21,8 +24,10 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
+import qualified Kernel.Types.Id
 import Kernel.Types.TimeBound
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Event.KaalChakra as KaalChakra
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogic as CADL
 import qualified Lib.Yudhishthira.Types
@@ -34,6 +39,7 @@ import SharedLogic.Merchant
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.Person as QPerson
 import Tools.Auth
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.CreateNammaTagRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
@@ -104,3 +110,20 @@ getNammaTagAppDynamicLogic merchantShortId opCity domain = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   CADL.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
+
+kaalChakraHandle :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => KaalChakra.Handle m
+kaalChakraHandle =
+  KaalChakra.Handle
+    { getUserTags = \userId -> do
+        mbDriver <- QPerson.findById $ cast @Lib.Yudhishthira.Types.User @DPerson.Person userId
+        pure $ mbDriver <&> (\driver -> fromMaybe [] driver.driverTag),
+      updateUserTags = \userId driverTags -> QPerson.updateDriverTag (Just driverTags) (cast @Lib.Yudhishthira.Types.User @DPerson.Person userId)
+    }
+
+postNammaTagRunJob ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Lib.Yudhishthira.Types.RunKaalChakraJobReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagRunJob _merchantShortId _opCity req = do
+  YudhishthiraFlow.postRunKaalChakraJob kaalChakraHandle req

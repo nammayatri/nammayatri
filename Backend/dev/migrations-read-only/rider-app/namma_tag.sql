@@ -14,3 +14,14 @@ ALTER TABLE atlas_app.namma_tag ADD COLUMN rule text NOT NULL;
 ALTER TABLE atlas_app.namma_tag ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.namma_tag ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.namma_tag ADD PRIMARY KEY ( name);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.namma_tag ALTER COLUMN validity TYPE integer USING validity::integer;
+ALTER TABLE atlas_app.namma_tag ADD COLUMN rule_engine json ;
+ALTER TABLE atlas_app.namma_tag ADD COLUMN llm_context text ;
+
+--- Now DSL don't allow dropping tables instead we will drop not null constraint if any .Please be careful while running ---
+ALTER TABLE atlas_app.namma_tag ALTER COLUMN rule DROP NOT NULL;
+--- Drop section ends. Please check before running ---

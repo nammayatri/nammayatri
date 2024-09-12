@@ -1,16 +1,9 @@
-{-# OPTIONS_GHC -Wno-dodgy-exports #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogic where
 
-import qualified Data.Text
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Id
 import Kernel.Types.TimeBound
-import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogic as Queries
 import qualified Lib.Yudhishthira.Types

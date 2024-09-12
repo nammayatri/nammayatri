@@ -10,6 +10,7 @@ module Lib.Yudhishthira.Types
     AppDynamicLogicReq (..),
     AppDynamicLogicResp (..),
     RunLogicResp (..),
+    RunKaalChakraJobReq (..),
   )
 where
 
@@ -41,6 +42,7 @@ instance HideSecrets CreateNammaTagRequest where
 
 data ChakraQueriesAPIEntity = ChakraQueriesAPIEntity
   { chakra :: Chakra,
+    queryName :: Text,
     queryResults :: [Text],
     queryText :: Text
   }
@@ -92,4 +94,12 @@ data RunLogicResp = RunLogicResp
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets AppDynamicLogicReq where
+  hideSecrets = identity
+
+newtype RunKaalChakraJobReq = RunKaalChakraJobReq
+  { chakra :: Chakra
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets RunKaalChakraJobReq where
   hideSecrets = identity

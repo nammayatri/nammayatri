@@ -92,6 +92,7 @@ dependencies:
   - singletons
   - unordered-containers
   - beckn-services
+  - dynamic-offer-driver-app
 
 ghc-options:
   - -fwrite-ide-info

@@ -27,6 +27,7 @@ flag Local
 library
   exposed-modules:
       Lib.Yudhishthira.Event
+      Lib.Yudhishthira.Event.KaalChakra
       Lib.Yudhishthira.Flow.Dashboard
       Lib.Yudhishthira.Storage.Beam.BeamFlow
       Lib.Yudhishthira.Storage.Beam.SystemConfigs
@@ -45,14 +46,17 @@ library
       Lib.Yudhishthira.Storage.Beam.AppDynamicLogic
       Lib.Yudhishthira.Storage.Beam.ChakraQueries
       Lib.Yudhishthira.Storage.Beam.NammaTag
+      Lib.Yudhishthira.Storage.Beam.UserData
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogic
       Lib.Yudhishthira.Storage.Queries.ChakraQueries
       Lib.Yudhishthira.Storage.Queries.NammaTag
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogic
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.NammaTag
+      Lib.Yudhishthira.Storage.Queries.UserData
       Lib.Yudhishthira.Types.AppDynamicLogic
       Lib.Yudhishthira.Types.ChakraQueries
       Lib.Yudhishthira.Types.NammaTag
+      Lib.Yudhishthira.Types.UserData
   other-modules:
       Paths_yudhishthira
   hs-source-dirs:

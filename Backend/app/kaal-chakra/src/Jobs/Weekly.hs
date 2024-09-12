@@ -1,4 +1,4 @@
-module Jobs.Daily where
+module Jobs.Weekly where
 
 import "dynamic-offer-driver-app" Domain.Action.Dashboard.Management.NammaTag (kaalChakraHandle)
 import Kernel.External.Types (SchedulerFlow)
@@ -11,7 +11,7 @@ import qualified Lib.Yudhishthira.Event.KaalChakra as Event
 import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Yudhishthira.Types
 
-runDailyJob ::
+runWeeklyJob ::
   ( EncFlow m r,
     CacheFlow m r,
     MonadFlow m,
@@ -21,9 +21,9 @@ runDailyJob ::
     SchedulerFlow r,
     BeamFlow m r
   ) =>
-  Job 'Daily ->
+  Job 'Weekly ->
   m ExecutionResult
-runDailyJob Job {id, jobInfo = _} = withLogTag ("JobId-" <> id.getId) do
-  logInfo "Running Daily Job"
-  Event.kaalChakraEvent kaalChakraHandle Daily
-  ReSchedule <$> (addUTCTime 86400 <$> getCurrentTime) -- day difference
+runWeeklyJob Job {id, jobInfo = _} = withLogTag ("JobId-" <> id.getId) do
+  logInfo "Running Weekly Job"
+  Event.kaalChakraEvent kaalChakraHandle Weekly
+  ReSchedule <$> (addUTCTime 604800 <$> getCurrentTime) -- week difference

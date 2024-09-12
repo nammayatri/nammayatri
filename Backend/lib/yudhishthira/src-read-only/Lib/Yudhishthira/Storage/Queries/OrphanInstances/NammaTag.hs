@@ -23,7 +23,7 @@ instance FromTType' Beam.NammaTag Lib.Yudhishthira.Types.NammaTag.NammaTag where
             info = mkTagInfo chakra event tagType validity,
             name = name,
             possibleValues = mkTagValues rangeEnd rangeStart tags,
-            rule = rule,
+            rule = mkTagRule llmContext ruleEngine,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -41,7 +41,8 @@ instance ToTType' Beam.NammaTag Lib.Yudhishthira.Types.NammaTag.NammaTag where
         Beam.rangeEnd = getRangeEnd possibleValues,
         Beam.rangeStart = getRangeStart possibleValues,
         Beam.tags = getTags possibleValues,
-        Beam.rule = rule,
+        Beam.llmContext = getLlmContext rule,
+        Beam.ruleEngine = getRuleEngine rule,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

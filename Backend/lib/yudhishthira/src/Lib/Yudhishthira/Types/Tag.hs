@@ -5,7 +5,7 @@ import Kernel.Types.Common
 
 data TagValue
   = TextValue Text
-  | NumberValue Int
+  | NumberValue Double -- Int
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data NammaTagResponse = NammaTagResponse

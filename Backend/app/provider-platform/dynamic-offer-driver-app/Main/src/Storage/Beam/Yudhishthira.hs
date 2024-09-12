@@ -19,6 +19,7 @@ import qualified Data.Text as T
 import Lib.Yudhishthira.Storage.Beam.AppDynamicLogic as Reexport
 import Lib.Yudhishthira.Storage.Beam.ChakraQueries as Reexport
 import Lib.Yudhishthira.Storage.Beam.NammaTag as Reexport
+import Lib.Yudhishthira.Storage.Beam.UserData as Reexport
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 
 instance HasSchemaName AppDynamicLogicT where
@@ -28,4 +29,7 @@ instance HasSchemaName NammaTagT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName ChakraQueriesT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName UserDataT where
   schemaName _ = T.pack currentSchemaName

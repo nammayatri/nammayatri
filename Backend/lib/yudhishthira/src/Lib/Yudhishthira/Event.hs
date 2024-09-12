@@ -55,8 +55,8 @@ yudhishthiraDecide req = do
       mbTagValue <- case respValue of
         A.String text -> return $ Just (TextValue text)
         A.Number number -> do
-          let mbValue :: Maybe Int = toBoundedInteger number
-          return $ NumberValue <$> mbValue
+          let doubleValue = toRealFloat number -- :: Maybe Int = toBoundedInteger number
+          return $ Just (NumberValue doubleValue)
         value -> do
           logError $ "Invalid value for tag: " <> show value
           return Nothing
@@ -97,4 +97,5 @@ addEvent event Handle {..} = do
       TextValue text -> return text
       NumberValue number -> return $ show number
     let tagText = tag.tagName <> "#" <> tagValue
+    -- can we update once, instead of update each tag separately?
     updateTags tagText

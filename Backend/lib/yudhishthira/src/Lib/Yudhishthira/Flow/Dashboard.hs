@@ -1,16 +1,13 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Lib.Yudhishthira.Flow.Dashboard where
 
 import qualified Data.Aeson as A
 import qualified Data.List as DL
-import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Kernel.Prelude
-import qualified Kernel.Types.APISuccess
-import Kernel.Types.Id
+import qualified Kernel.Storage.ClickhouseV2 as CH
+import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Utils.Common
+import Lib.Yudhishthira.Event.KaalChakra as KaalChakraEvent
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.Queries.ChakraQueries as SQCQ
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTag as QNT
@@ -19,7 +16,6 @@ import Lib.Yudhishthira.Tools.Utils
 import qualified Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types.ChakraQueries
 import qualified Lib.Yudhishthira.Types.NammaTag as DNT
-import Servant hiding (throwError)
 
 postTagCreate :: BeamFlow m r => Lib.Yudhishthira.Types.CreateNammaTagRequest -> m Kernel.Types.APISuccess.APISuccess
 postTagCreate tagRequest = do
@@ -61,18 +57,27 @@ postTagCreate tagRequest = do
                 updatedAt = now
               }
 
-postQueryCreate :: BeamFlow m r => Lib.Yudhishthira.Types.ChakraQueriesAPIEntity -> m Kernel.Types.APISuccess.APISuccess
+postQueryCreate ::
+  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  Lib.Yudhishthira.Types.ChakraQueriesAPIEntity ->
+  m Kernel.Types.APISuccess.APISuccess
 postQueryCreate queryRequest = do
   existingQueryFields <- getChakraQueryFields queryRequest.chakra
   checkIfMandtoryFieldsArePresent queryRequest.queryResults
   checkIfFieldsAreNotRepeated queryRequest.queryResults existingQueryFields
-  query <- buildQuery
-  SQCQ.create query
+  existingChakraQuery <- SQCQ.findByPrimaryKey queryRequest.chakra queryRequest.queryName
+  whenJust existingChakraQuery $ \_ -> do
+    throwError $ InvalidRequest "Chakra query with this name already exists"
+  chakraQuery <- buildQuery
+
+  -- TODO find a better way to validate query than run it
+  void $ KaalChakraEvent.runQueryRequest chakraQuery
+  SQCQ.create chakraQuery
+
   pure Kernel.Types.APISuccess.Success
   where
     buildQuery = do
       now <- getCurrentTime
-      id <- generateGUID
       let Lib.Yudhishthira.Types.ChakraQueriesAPIEntity {..} = queryRequest
       return $ Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries {createdAt = now, updatedAt = now, ..}
 
@@ -105,3 +110,12 @@ verifyTag fullTag = do
         Lib.Yudhishthira.Types.AnyText -> pure ()
     [_] -> return ()
     _ -> throwError $ InvalidRequest "Tag should have format of name#value or just name"
+
+postRunKaalChakraJob ::
+  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  Handle m ->
+  Lib.Yudhishthira.Types.RunKaalChakraJobReq ->
+  m APISuccess
+postRunKaalChakraJob h req = do
+  kaalChakraEvent h req.chakra
+  pure Success

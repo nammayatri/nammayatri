@@ -5,6 +5,7 @@
 
 module Lib.Yudhishthira.Storage.Beam.NammaTag where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -25,7 +26,8 @@ data NammaTagT f = NammaTagT
     rangeEnd :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     rangeStart :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     tags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
-    rule :: B.C f Lib.Yudhishthira.Types.TagRule,
+    llmContext :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    ruleEngine :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

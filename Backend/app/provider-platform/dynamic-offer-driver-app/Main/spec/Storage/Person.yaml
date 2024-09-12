@@ -230,6 +230,11 @@ Person:
       params: [usedCoins]
       where: id
 
+    updateDriverTag:
+      kvFunction: updateOneWithKV
+      params: [driverTag]
+      where: id
+
   extraOperations:
     - EXTRA_QUERY_FILE
 

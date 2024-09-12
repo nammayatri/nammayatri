@@ -1,15 +1,8 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Lib.Yudhishthira.Storage.Queries.Transformers.NammaTag where
 
-import Kernel.Beam.Functions
-import Kernel.External.Encryption
+import qualified Data.Aeson
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types.NammaTag
 
@@ -59,9 +52,28 @@ getTags = \case
   Lib.Yudhishthira.Types.Tags tags -> Just tags
   Lib.Yudhishthira.Types.AnyText -> Nothing
 
+getRuleEngine :: Lib.Yudhishthira.Types.TagRule -> Kernel.Prelude.Maybe Data.Aeson.Value
+getRuleEngine = \case
+  Lib.Yudhishthira.Types.RuleEngine ruleEngine -> Just ruleEngine
+  Lib.Yudhishthira.Types.LLM _ -> Nothing
+
+getLlmContext :: Lib.Yudhishthira.Types.TagRule -> Kernel.Prelude.Maybe Kernel.Prelude.Text
+getLlmContext = \case
+  Lib.Yudhishthira.Types.RuleEngine _ -> Nothing
+  Lib.Yudhishthira.Types.LLM llmContext -> Just llmContext
+
 mkTagValues :: (Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Lib.Yudhishthira.Types.TagValues)
 mkTagValues rangeEnd rangeStart mbTags = case mbTags of
   Just tags -> Lib.Yudhishthira.Types.Tags tags
   Nothing -> case (rangeStart, rangeEnd) of
     (Just start, Just end) -> Lib.Yudhishthira.Types.Range start end
     _ -> Lib.Yudhishthira.Types.AnyText
+
+mkTagRule ::
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Data.Aeson.Value ->
+  Lib.Yudhishthira.Types.TagRule
+mkTagRule mbLlmContext mbRuleEngine = case (mbRuleEngine, mbLlmContext) of
+  (Just ruleEngine, _) -> Lib.Yudhishthira.Types.RuleEngine ruleEngine
+  (_, Just llmContext) -> Lib.Yudhishthira.Types.LLM llmContext
+  (Nothing, Nothing) -> Lib.Yudhishthira.Types.RuleEngine Data.Aeson.Null

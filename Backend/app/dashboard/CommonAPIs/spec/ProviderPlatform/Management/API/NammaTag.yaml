@@ -6,6 +6,7 @@ imports:
   AppDynamicLogicResp: Lib.Yudhishthira.Types
   LogicDomain: Lib.Yudhishthira.Types
   AppDynamicLogic: Lib.Yudhishthira.Types.AppDynamicLogic
+  RunKaalChakraJobReq: Lib.Yudhishthira.Types
 
 module: NammaTag
 
@@ -46,5 +47,10 @@ apis:
         domain: LogicDomain
       response:
         type: "[AppDynamicLogic]"
-      migrate:
-        endpointV2:
+  - POST:
+      endpoint: /runJob
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG RUN_KAAL_CHAKRA_JOB
+      request:
+        type: RunKaalChakraJobReq
+      response:
+        type: APISuccess

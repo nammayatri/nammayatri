@@ -20,18 +20,18 @@ import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Storage.Beam.AppDynamicLogic as BeamADL
 import qualified Lib.Yudhishthira.Storage.Beam.ChakraQueries as BeamCQ
 import qualified Lib.Yudhishthira.Storage.Beam.NammaTag as BeamNT
+import qualified Lib.Yudhishthira.Storage.Beam.UserData as BeamUD
 
 type BeamFlow m r =
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    HasSchemaName BeamADL.AppDynamicLogicT,
-    HasSchemaName BeamCQ.ChakraQueriesT,
-    HasSchemaName BeamNT.NammaTagT
+    HasYudhishthiraTablesSchema
   )
 
 type HasYudhishthiraTablesSchema =
   ( HasSchemaName BeamADL.AppDynamicLogicT,
     HasSchemaName BeamCQ.ChakraQueriesT,
-    HasSchemaName BeamNT.NammaTagT
+    HasSchemaName BeamNT.NammaTagT,
+    HasSchemaName BeamUD.UserDataT
   )
