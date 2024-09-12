@@ -1,7 +1,8 @@
 INSERT INTO atlas_app.merchant_push_notification (
-    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
+    atlas_app.uuid_generate_v4(),
     'FIRST_RIDE_EVENT',
     'FIRST_RIDE_EVENT',
     moc.merchant_id,
@@ -15,9 +16,10 @@ FROM
     atlas_app.merchant_operating_city moc;
 
 INSERT INTO atlas_app.merchant_push_notification (
-    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
+    atlas_app.uuid_generate_v4(),
     'FIRST_RIDE_EVENT',
     'FIRST_RIDE_EVENT',
     moc.merchant_id,
@@ -31,9 +33,10 @@ FROM
     atlas_app.merchant_operating_city moc;
 
 INSERT INTO atlas_app.merchant_push_notification (
-    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
+    atlas_app.uuid_generate_v4(),
     'FIRST_RIDE_EVENT',
     'FIRST_RIDE_EVENT',
     moc.merchant_id,
@@ -47,9 +50,10 @@ FROM
     atlas_app.merchant_operating_city moc;
 
 INSERT INTO atlas_app.merchant_push_notification (
-    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
+    atlas_app.uuid_generate_v4(),
     'FIRST_RIDE_EVENT',
     'FIRST_RIDE_EVENT',
     moc.merchant_id,
@@ -63,9 +67,10 @@ FROM
     atlas_app.merchant_operating_city moc;
 
 INSERT INTO atlas_app.merchant_push_notification (
-    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
+    atlas_app.uuid_generate_v4(),
     'FIRST_RIDE_EVENT',
     'FIRST_RIDE_EVENT',
     moc.merchant_id,

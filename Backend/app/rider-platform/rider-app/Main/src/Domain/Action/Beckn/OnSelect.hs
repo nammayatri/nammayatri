@@ -124,10 +124,10 @@ onSelect OnSelectValidatedReq {..} = do
               void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq searchRequest.merchantId
         Nothing -> do
           bppDetails <- forM ((.providerId) <$> quotes) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
-          Notify.notifyOnDriverOfferIncoming estimate.id quotes person bppDetails
+          Notify.notifyOnDriverOfferIncoming estimate.id estimate.tripCategory quotes person bppDetails
     else do
       bppDetails <- forM ((.providerId) <$> quotes) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
-      Notify.notifyOnDriverOfferIncoming estimate.id quotes person bppDetails
+      Notify.notifyOnDriverOfferIncoming estimate.id estimate.tripCategory quotes person bppDetails
   where
     errHandler booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking booking

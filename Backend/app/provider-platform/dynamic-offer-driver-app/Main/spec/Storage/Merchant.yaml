@@ -32,6 +32,7 @@ imports:
   NominalDiffTime: Kernel.Prelude
   Currency: Kernel.Types.Common
   FCMActions: Kernel.External.Notification.FCM.Types
+  SubCategory: Kernel.External.Notification.Interface.Types
   BookingStatus: Domain.Types.Booking
   FCMNotificationType: Kernel.External.Notification.FCM.Types
   ServiceTierType: Domain.Types.Common
@@ -39,6 +40,7 @@ imports:
   Hours: Kernel.Types.Common
   ExotelMapping: Domain.Types.Extra.TransporterConfig
   Expand: Kernel.External.Payout.Interface.Types
+  TripCategory: Domain.Types.Trip
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -1254,17 +1256,23 @@ MerchantPushNotification:
   tableName: merchant_push_notification
   derives: "Generic,Show,ToJSON,FromJSON"
   fields:
+    id: Id MerchantPushNotification
     key: Text
     title: Text
     body: Text
     language: Language
     fcmNotificationType: FCMNotificationType
+    fcmSubCategory: Maybe SubCategory
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    tripCategory: Maybe TripCategory
   constraints:
-    key: PrimaryKey
-    merchantOperatingCityId: PrimaryKey
-    language: PrimaryKey
+    id: PrimaryKey
+    # key: PrimaryKey
+    # merchantOperatingCityId: PrimaryKey
+    # language: PrimaryKey
+    # tripCategory: PrimaryKey
+    # fcmSubCategory: PrimaryKey
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
@@ -1273,6 +1281,10 @@ MerchantPushNotification:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, key]
+    findAllByMerchantOpCityIdAndMessageKeyAndTripCategory:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, key, tripCategory]
 
 RideRelatedNotificationConfig:
   tableName : ride_related_notification_config

@@ -1,9 +1,10 @@
 DELETE FROM atlas_driver_offer_bpp.merchant_push_notification WHERE key = 'TOLL_CROSSED' AND merchant_operating_city_id = '1e7b7ab9-3b9b-4d3e-a47c-11e7d2a9ff98';
 
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
+    atlas_driver_offer_bpp.uuid_generate_v4(),
     'TOLL_CROSSED',
     'TOLL_CROSSED',
     moc.merchant_id,

@@ -251,7 +251,7 @@ cancelSearch _merchantId searchTry = do
   QDQ.setInactiveBySRId searchTry.requestId
   for_ driverSearchReqs $ \driverReq -> do
     driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
-    Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driver_ driverReq.searchTryId
+    Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driver_ driverReq.searchTryId searchTry.tripCategory
 
 validateCancelSearchRequest ::
   ( CacheFlow m r,
