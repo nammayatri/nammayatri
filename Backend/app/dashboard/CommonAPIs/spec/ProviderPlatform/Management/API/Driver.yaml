@@ -443,9 +443,10 @@ types:
     - recordType: Type
     - type: DriverAadhaarInfoRes
   UpdateACUsageRestrictionReq:
-    - recordType: NewType
+    # - recordType: NewType
     - isWorking: Bool
     - derive: "'HideSecrets"
+    - downgradeReason: Maybe Text
   BlockDriverWithReasonReq:
     - reasonCode: Text
     - blockReason: Maybe Text

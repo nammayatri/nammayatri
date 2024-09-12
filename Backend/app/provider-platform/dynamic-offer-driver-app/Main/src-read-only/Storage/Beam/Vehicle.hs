@@ -22,6 +22,7 @@ data VehicleT f = VehicleT
     capacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     category :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     color :: B.C f Kernel.Prelude.Text,
+    downgradeReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverId :: B.C f Kernel.Prelude.Text,
     energyType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     luggageCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

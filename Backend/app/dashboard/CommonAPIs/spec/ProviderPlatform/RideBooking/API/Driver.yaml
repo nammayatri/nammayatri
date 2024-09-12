@@ -239,6 +239,7 @@ types:
     - totalAcRestrictionUnblockCount: Int
     - lastACStatusCheckedAt: Maybe UTCTime
     - currentACStatus: Bool
+    - downgradeReason: Maybe Text
     - blockedDueToRiderComplains: Bool
     - blockStateModifier: Maybe Text
     - driverTag: Maybe [Text]

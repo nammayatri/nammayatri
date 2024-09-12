@@ -22,6 +22,7 @@ data Vehicle = Vehicle
     capacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     category :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     color :: Kernel.Prelude.Text,
+    downgradeReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     energyType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

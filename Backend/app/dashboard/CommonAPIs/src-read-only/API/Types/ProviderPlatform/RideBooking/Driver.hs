@@ -52,6 +52,7 @@ data DriverInfoRes = DriverInfoRes
     totalAcRestrictionUnblockCount :: Kernel.Prelude.Int,
     lastACStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     currentACStatus :: Kernel.Prelude.Bool,
+    downgradeReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blockedDueToRiderComplains :: Kernel.Prelude.Bool,
     blockStateModifier :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverTag :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],

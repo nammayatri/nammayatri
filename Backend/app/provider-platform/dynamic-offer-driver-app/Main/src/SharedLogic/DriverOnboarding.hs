@@ -141,8 +141,8 @@ enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified =
     person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     triggerOnboardingAlertsAndMessages person merchant merchantOpCity
 
-checkAndUpdateAirConditioned :: Bool -> Bool -> Id Person -> [DVST.VehicleServiceTier] -> Flow ()
-checkAndUpdateAirConditioned isDashboard isAirConditioned personId cityVehicleServiceTiers = do
+checkAndUpdateAirConditioned :: Bool -> Bool -> Id Person -> [DVST.VehicleServiceTier] -> Maybe Text -> Flow ()
+checkAndUpdateAirConditioned isDashboard isAirConditioned personId cityVehicleServiceTiers downgradeReason = do
   driverInfo <- runInReplica $ DIQuery.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
   let serviceTierACThresholds = map (\DVST.VehicleServiceTier {isAirConditioned = _a, ..} -> airConditionedThreshold) (filter (\v -> vehicle.variant `elem` v.allowedVehicleVariant) cityVehicleServiceTiers)
@@ -158,7 +158,7 @@ checkAndUpdateAirConditioned isDashboard isAirConditioned personId cityVehicleSe
     when (driverInfo.acUsageRestrictionType `elem` [DI.ToggleAllowed, DI.NoRestriction]) $
       DIQuery.updateAcUsageRestrictionAndScore DI.ToggleNotAllowed (Just 0.0) personId
   mbRc <- runInReplica $ QRC.findLastVehicleRCWrapper vehicle.registrationNo
-  QVehicle.updateAirConditioned (Just isAirConditioned) personId
+  QVehicle.updateAirConditioned (Just isAirConditioned) downgradeReason personId
   whenJust mbRc $ \rc -> QRC.updateAirConditioned (Just isAirConditioned) rc.id
 
 checkIfACAllowedForDriver :: DI.DriverInformation -> [Double] -> Bool
@@ -285,6 +285,7 @@ makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now 
       vehicleRating = rc.vehicleRating,
       mYManufacturing = rc.mYManufacturing,
       selectedServiceTiers = [],
+      downgradeReason = Nothing,
       createdAt = now,
       updatedAt = now
     }
