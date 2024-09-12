@@ -2,7 +2,7 @@ let globalCommon = ../generic/common.dhall
 
 let common = ./common.dhall
 
-let sec = ./secrets/yudhishthira.dhall
+let sec = ./secrets/kaal-chakra.dhall
 
 let rcfg =
       { connectHost = "localhost"
@@ -30,7 +30,7 @@ let esqDBCfg =
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
-      , connectSchemaName = "yudhishthira"
+      , connectSchemaName = "kaal-chakra"
       , connectionPoolCount = +25
       }
 
@@ -94,7 +94,7 @@ let schedulerConfig =
       , enableRedisLatencyLogging = False
       , enablePrometheusMetricLogging = True
       , groupName = "myGroup_Chakras"
-      , schedulerType = globalCommon.schedulerType.RedisBased
+      , schedulerType = globalCommon.schedulerType.DbBased
       , schedulerSetName = "Scheduled_Chakras"
       , streamName = "Available_Chakras"
       , maxThreads = +10
@@ -104,9 +104,14 @@ let schedulerConfig =
       , cacConfig
       }
 
-let KaalChakraJobType = < Daily | Weekly | Monthly | Quaterly >
+let KaalChakraJobType = < Daily | Weekly | Monthly | Quarterly >
 
-let jobInfoMapx = [ { mapKey = KaalChakraJobType.Daily, mapValue = True } ]
+let jobInfoMapx =
+      [ { mapKey = KaalChakraJobType.Daily, mapValue = True }
+      , { mapKey = KaalChakraJobType.Weekly, mapValue = True }
+      , { mapKey = KaalChakraJobType.Monthly, mapValue = True }
+      , { mapKey = KaalChakraJobType.Quarterly, mapValue = True }
+      ]
 
 let cacheConfig = { configsExpTime = +86400 }
 
@@ -130,4 +135,6 @@ in  { esqDBReplicaCfg
     , httpClientOptions = common.httpClientOptions
     , encTools
     , maxShards = +5
+    , shouldCreateJobs = True
+    , shouldCompleteOldJobs = True
     }

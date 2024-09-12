@@ -5,10 +5,14 @@ ChakraQueries:
   tableName: chakra_queries
 
   fields:
-    id: Id ChakraQueries
     chakra: Chakra
+    queryName: Text
     queryText: Text
     queryResults: '[Text]'
+
+  constraints:
+    chakra: PrimaryKey
+    queryName: PrimaryKey
 
   sqlType:
     queryResults: text[]

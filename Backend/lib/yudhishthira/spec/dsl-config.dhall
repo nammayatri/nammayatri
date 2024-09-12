@@ -109,6 +109,7 @@ let sqlMapper =
       , { _1 = "TimeOfDay", _2 = "time without time zone" }
       , { _1 = "Day", _2 = "date" }
       , { _1 = "Seconds", _2 = "integer" }
+      , { _1 = "Hours", _2 = "integer" }
       , { _1 = "Kilometers", _2 = "integer" }
       , { _1 = "Meters", _2 = "integer" }
       , { _1 = "Currency", _2 = "character varying(255)" }

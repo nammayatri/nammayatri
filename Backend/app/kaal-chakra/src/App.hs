@@ -14,17 +14,22 @@
 
 module App where
 
+import Data.Singletons
 import Environment (HandlerCfg, HandlerEnv, buildHandlerEnv)
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as R
 import Jobs.Daily
+import Jobs.Monthly
+import Jobs.Quarterly
+import Jobs.Weekly
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Migration
+import Kernel.Storage.Queries.SystemConfigs as QSystemConfigs
 import Kernel.Types.Flow (runFlowR)
 import Kernel.Utils.App (getPodName, handleLeft)
 import Kernel.Utils.Common
@@ -35,12 +40,13 @@ import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import Lib.Yudhishthira.Types
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.SystemConfigs ()
+import Storage.Beam.Yudhishthira ()
 
 allocatorHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle Chakra
 allocatorHandle flowRt env =
   SchedulerHandle
     { getTasksById = QAllJ.getTasksById,
-      getReadyTasks = QAllJ.getReadyTasks $ Just env.maxShards,
+      getReadyTasks = setTablesOption >> QAllJ.getReadyTasks (Just env.maxShards),
       getReadyTask = QAllJ.getReadyTask,
       markAsComplete = QAllJ.markAsComplete,
       markAsFailed = QAllJ.markAsFailed,
@@ -51,6 +57,28 @@ allocatorHandle flowRt env =
       jobHandlers =
         emptyJobHandlerList
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runDailyJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runWeeklyJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runMonthlyJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyJob)
+    }
+  where
+    setTablesOption = do
+      opt <- L.getOption KBT.Tables
+      when (isNothing opt) $ do
+        logError "KV Tables option did not found, setting up value from db."
+        mbKvConfigs <- findById "kv_configs" >>= pure . decodeFromText' @Tables
+        when (isNothing mbKvConfigs) $ do
+          logError "KV Tables option did not found in db, setting up empty value."
+        L.setOption KBT.Tables $ fromMaybe emptyKVConfigs mbKvConfigs
+
+emptyKVConfigs :: Tables
+emptyKVConfigs =
+  Tables
+    { enableKVForWriteAlso = [],
+      enableKVForRead = [],
+      useCAC = [],
+      useCACForFrontend = False,
+      readFromMasterDb = []
     }
 
 runKaalChakra ::
@@ -78,16 +106,31 @@ runKaalChakra configModifier = do
       withLogTag "Server startup" $ do
         migrateIfNeeded handlerCfg.migrationPath handlerCfg.autoMigrate handlerCfg.schedulerConfig.esqDBCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
-        logInfo "Setting up for signature auth..."
-        let kvConfigs =
-              Tables
-                { enableKVForWriteAlso = [],
-                  enableKVForRead = [],
-                  useCAC = [],
-                  useCACForFrontend = False,
-                  readFromMasterDb = []
-                }
-        L.setOption KBT.Tables kvConfigs
+        mbKvConfigs <- findById "kv_configs" >>= pure . decodeFromText' @Tables
+        when (isNothing mbKvConfigs) $ do
+          logError "KV Tables option did not found in db, setting up empty value."
+        L.setOption KBT.Tables $ fromMaybe emptyKVConfigs mbKvConfigs
+        kafkaProducerTools <- asks (.kafkaProducerTools)
+        L.setOption KBT.KafkaConn kafkaProducerTools
+
+        shouldCompleteOldJobs <- asks (.shouldCompleteOldJobs)
+        when shouldCompleteOldJobs $ do
+          allJobs :: [AnyJob Chakra] <- QAllJ.findAll
+          forM_ allJobs $ \(AnyJob job) -> do
+            let jobType = fromSing $ job.jobInfo.jobType
+            QAllJ.markAsComplete (show jobType) job.id
+            logInfo $ "Completed old " <> show jobType <> " job: " <> show job.id
+
+        shouldCreateJobs <- asks (.shouldCreateJobs)
+        when shouldCreateJobs $ do
+          maxShards <- asks (.maxShards)
+          -- FIXME its better to schedule jobs on particular time
+          QAllJ.createJobIn @_ @'Daily 0 maxShards EmptyData
+          QAllJ.createJobIn @_ @'Weekly 60 maxShards EmptyData
+          QAllJ.createJobIn @_ @'Monthly 120 maxShards EmptyData
+          QAllJ.createJobIn @_ @'Quarterly 180 maxShards EmptyData
+          logInfo "Scheduled new Daily, Weekly, Monthly, Quarterly jobs"
+
         logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))
         pure flowRt
     runSchedulerService handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.kvConfigUpdateFrequency handlerEnv.maxShards $ allocatorHandle flowRt' handlerEnv

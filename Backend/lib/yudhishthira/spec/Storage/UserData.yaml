@@ -1,0 +1,20 @@
+imports:
+  Chakra: Lib.Yudhishthira.Types
+  Value: Data.Aeson
+  User: Lib.Yudhishthira.Types.Common
+
+UserData:
+  tableName: user_data
+
+  # TODO Used for debug, remove if we don't need it
+  fields:
+    id: Id UserData
+    chakra: Chakra
+    userId: Id User
+    userDataValue: Value
+
+  sqlType:
+    userData: json
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"

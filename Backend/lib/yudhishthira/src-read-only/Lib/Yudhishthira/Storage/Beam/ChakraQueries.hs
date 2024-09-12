@@ -14,7 +14,7 @@ import Tools.Beam.UtilsTH
 
 data ChakraQueriesT f = ChakraQueriesT
   { chakra :: B.C f Lib.Yudhishthira.Types.Chakra,
-    id :: B.C f Kernel.Prelude.Text,
+    queryName :: B.C f Kernel.Prelude.Text,
     queryResults :: B.C f [Kernel.Prelude.Text],
     queryText :: B.C f Kernel.Prelude.Text,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
@@ -23,11 +23,11 @@ data ChakraQueriesT f = ChakraQueriesT
   deriving (Generic, B.Beamable)
 
 instance B.Table ChakraQueriesT where
-  data PrimaryKey ChakraQueriesT f = ChakraQueriesId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = ChakraQueriesId . id
+  data PrimaryKey ChakraQueriesT f = ChakraQueriesId (B.C f Lib.Yudhishthira.Types.Chakra) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+  primaryKey = ChakraQueriesId <$> chakra <*> queryName
 
 type ChakraQueries = ChakraQueriesT Identity
 
-$(enableKVPG ''ChakraQueriesT ['id] [])
+$(enableKVPG ''ChakraQueriesT ['chakra, 'queryName] [])
 
 $(mkTableInstancesGenericSchema ''ChakraQueriesT "chakra_queries")

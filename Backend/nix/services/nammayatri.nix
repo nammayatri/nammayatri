@@ -245,6 +245,7 @@ in
                   ../../dev/local-testing-data/safety-dashboard.sql
                   ../../dev/sql-seed/special-zone-seed.sql
                   ../../dev/local-testing-data/special-zone.sql
+                  ../../dev/sql-seed/kaal-chakra-seed.sql
                 ];
               }
             ];

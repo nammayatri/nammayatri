@@ -20,4 +20,4 @@ import Kernel.Beam.Lib.UtilsTH
 import Lib.Scheduler.JobStorageType.DB.Table as Reexport
 
 instance HasSchemaName SchedulerJobT where
-  schemaName _ = T.pack "yudhishthira"
+  schemaName _ = T.pack "kaal_chakra"

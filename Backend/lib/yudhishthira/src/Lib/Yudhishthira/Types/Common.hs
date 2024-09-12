@@ -1,3 +1,6 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module Lib.Yudhishthira.Types.Common where
 
 import Data.Aeson
@@ -7,6 +10,8 @@ import Kernel.Prelude
 type LLMContext = Text
 
 data MerchantOperatingCity
+
+data User
 
 data TagRule
   = RuleEngine Value
@@ -22,3 +27,6 @@ data TagValues
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnumAndList ''TagValues)
+
+newtype TagName = TagName Text
+  deriving newtype (Eq, Ord, Show)

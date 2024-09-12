@@ -4,6 +4,7 @@ imports:
   ApplicationEvent: Lib.Yudhishthira.Types
   TagValues: Lib.Yudhishthira.Types
   Hours: Kernel.Types.Common
+  Value: Data.Aeson
 
 NammaTag:
   tableName: namma_tag
@@ -42,10 +43,14 @@ NammaTag:
       tags: Maybe [Text]
       rangeStart: Maybe Double
       rangeEnd: Maybe Double
+    rule:
+      llmContext: Maybe Text
+      ruleEngine: Maybe Value
 
   fromTType:
     info: mkTagInfo
     possibleValues: mkTagValues
+    rule: mkTagRule
 
   toTType:
     tagType: getTag
@@ -55,6 +60,11 @@ NammaTag:
     tags: getTags
     rangeStart: getRangeStart
     rangeEnd: getRangeEnd
+    ruleEngine: getRuleEngine
+    llmContext: getLlmContext
+
+  sqlType:
+    ruleEngine: json
 
   extraOperations:
     - EXTRA_QUERY_FILE

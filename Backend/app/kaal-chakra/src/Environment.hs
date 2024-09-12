@@ -54,7 +54,9 @@ data HandlerCfg = HandlerCfg
     cacheConfig :: CacheConfig,
     httpClientOptions :: HttpClientOptions,
     encTools :: EncTools,
-    maxShards :: Int
+    maxShards :: Int,
+    shouldCreateJobs :: Bool,
+    shouldCompleteOldJobs :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -85,7 +87,12 @@ data HandlerEnv = HandlerEnv
     serviceClickhouseEnv :: ClickhouseEnv,
     passettoContext :: PassettoContext,
     cacConfig :: CacConfig,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    kafkaProducerTools :: KafkaProducerTools,
+    groupName :: Text,
+    streamName :: Text,
+    shouldCreateJobs :: Bool,
+    shouldCompleteOldJobs :: Bool
   }
   deriving (Generic)
 

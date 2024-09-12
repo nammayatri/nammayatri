@@ -20,7 +20,10 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.AppDynamicLogic
 
 mandatoryChakraFields :: [Text]
-mandatoryChakraFields = ["userId"]
+mandatoryChakraFields = [userIdField]
+
+userIdField :: Text
+userIdField = "userId"
 
 getChakraQueryFields :: BeamFlow m r => LYT.Chakra -> m [Text]
 getChakraQueryFields chakra = do

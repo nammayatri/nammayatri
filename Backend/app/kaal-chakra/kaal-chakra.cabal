@@ -29,8 +29,10 @@ library
       App
       Environment
       Jobs.Daily
+      Jobs.Monthly
+      Jobs.Quarterly
+      Jobs.Weekly
       Storage.Beam.SchedulerJob
-      Storage.Beam.SystemConfigs
   other-modules:
       Paths_kaal_chakra
   hs-source-dirs:
@@ -79,6 +81,7 @@ library
     , bytestring
     , containers
     , cryptonite
+    , dynamic-offer-driver-app
     , either
     , euler-hs
     , exceptions
@@ -167,6 +170,7 @@ executable kaal-chakra-exe
     , bytestring
     , containers
     , cryptonite
+    , dynamic-offer-driver-app
     , either
     , euler-hs
     , exceptions

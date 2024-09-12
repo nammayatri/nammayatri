@@ -149,7 +149,7 @@ VALUES
         '3339bb0b-b012-4d1a-abed-32555212e333',
         'COMPLETED',
         '352',
-        'abcdbb0b-b012-4d1a-abed-32555212e213',
+        'favorit-bike-00000000000000000000000',
         '352',
         '2024-01-22 07:02:42',
         '2024-01-22 07:02:42'
@@ -170,7 +170,7 @@ VALUES
         '2229bb0b-b012-4d1a-abed-32555212e222',
         'COMPLETED',
         '247',
-        'abcdbb0b-b012-4d1a-abed-32555212e213',
+        'favorit-bike-00000000000000000000000',
         '248',
         '2024-01-22 07:02:42',
         '2024-01-22 07:02:42'
@@ -188,13 +188,74 @@ INSERT INTO
     )
 VALUES
     (
-        '1119bb0b-b012-4d1a-abed-32555212e111',
+        'favorit-auto1-0000000000000000000001',
         'CANCELLED',
-        '102',
-        'abcdbb0b-b012-4d1a-abed-32555212e213',
-        '102',
+        '112',
+        'favorit-auto1-0000000000000000000000',
+        '122',
         '2024-01-22 07:02:42',
         '2024-01-22 07:02:42'
     );
 
+INSERT INTO
+    atlas_driver_offer_bpp.ride (
+        id,
+        status,
+        fare,
+        driver_id,
+        chargeable_distance,
+        created_at,
+        updated_at
+    )
+VALUES
+    (
+        'favorit-auto1-0000000000000000000002',
+        'COMPLETED',
+        '362',
+        'favorit-auto1-0000000000000000000000',
+        '372',
+        '2024-01-22 07:02:42',
+        '2024-01-22 07:02:42'
+    );
 
+INSERT INTO
+    atlas_driver_offer_bpp.ride (
+        id,
+        status,
+        fare,
+        driver_id,
+        chargeable_distance,
+        created_at,
+        updated_at
+    )
+VALUES
+    (
+        'favorit-auto1-0000000000000000000003',
+        'COMPLETED',
+        '257',
+        'favorit-auto1-0000000000000000000000',
+        '268',
+        '2024-01-22 07:02:42',
+        '2024-01-22 07:02:42'
+    );
+
+INSERT INTO
+    atlas_driver_offer_bpp.ride (
+        id,
+        status,
+        fare,
+        driver_id,
+        chargeable_distance,
+        created_at,
+        updated_at
+    )
+VALUES
+    (
+        'favorit-auto1-0000000000000000000004',
+        'CANCELLED',
+        '112',
+        'favorit-auto1-0000000000000000000000',
+        '122',
+        '2024-01-22 07:02:42',
+        '2024-01-22 07:02:42'
+    );
