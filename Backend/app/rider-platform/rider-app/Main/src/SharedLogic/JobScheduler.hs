@@ -100,7 +100,8 @@ type instance JobContent 'ScheduledRideNotificationsToRider = ScheduledRideNotif
 data CheckExotelCallStatusAndNotifyBPPJobData = CheckExotelCallStatusAndNotifyBPPJobData
   { rideId :: Id DR.Ride,
     bppRideId :: Id DR.BPPRide,
-    merchantId :: Id DM.Merchant
+    merchantId :: Id DM.Merchant,
+    merchantOpCityId :: Id DMOC.MerchantOperatingCity
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

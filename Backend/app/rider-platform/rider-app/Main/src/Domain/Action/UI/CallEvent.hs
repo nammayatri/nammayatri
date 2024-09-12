@@ -75,7 +75,7 @@ callOnClickTracker rideId = do
   riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   buildCallStatus <- callStatusObj booking.merchantOperatingCityId booking.merchantId
   QCallStatus.create buildCallStatus
-  scheduleJobs ride booking.merchantId maxShards (riderConfig.exotelStatusCheckSchedulerDelay)
+  scheduleJobs ride booking.merchantId booking.merchantOperatingCityId maxShards (riderConfig.exotelStatusCheckSchedulerDelay)
   return ()
   where
     callStatusObj merchantOperatingCityId merchantId = do
@@ -101,10 +101,11 @@ callOnClickTracker rideId = do
             customerIvrResponse = Nothing
           }
 
-    scheduleJobs ride merchantId maxShards exotelStatusCheckSchedulerDelay = do
+    scheduleJobs ride merchantId merchantOperatingCityId maxShards exotelStatusCheckSchedulerDelay = do
       createJobIn @_ @'CheckExotelCallStatusAndNotifyBPP (fromIntegral exotelStatusCheckSchedulerDelay) maxShards $
         CheckExotelCallStatusAndNotifyBPPJobData
           { rideId = ride.id,
             bppRideId = ride.bppRideId,
-            merchantId = merchantId
+            merchantId = merchantId,
+            merchantOpCityId = merchantOperatingCityId
           }
