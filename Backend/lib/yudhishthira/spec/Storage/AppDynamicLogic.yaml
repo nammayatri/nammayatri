@@ -48,6 +48,9 @@ AppDynamicLogic:
   default:
     timeBounds: "'Unbounded'"
 
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
   beamInstance: MakeTableInstancesGenericSchema
   defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"
 

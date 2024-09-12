@@ -5,6 +5,7 @@ module Domain.Action.ProviderPlatform.Management.NammaTag
   ( postNammaTagTagCreate,
     postNammaTagQueryCreate,
     postNammaTagAppDynamicLogicVerify,
+    getNammaTagAppDynamicLogic,
   )
 where
 
@@ -19,6 +20,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types
+import qualified Lib.Yudhishthira.Types.AppDynamicLogic
 import qualified Lib.Yudhishthira.Types.ChakraQueries
 import qualified ProviderPlatformClient.DynamicOfferDriver.Operations
 import qualified SharedLogic.Transaction
@@ -45,3 +47,8 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.NammaTagAPI Dashboard.Common.NammaTag.PostNammaTagAppDynamicLogicVerifyEndpoint) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do ProviderPlatformClient.DynamicOfferDriver.Operations.callDriverOfferBPPOperations checkedMerchantId opCity (.nammaTagDSL.postNammaTagAppDynamicLogicVerify) req)
+
+getNammaTagAppDynamicLogic :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow [Lib.Yudhishthira.Types.AppDynamicLogic.AppDynamicLogic])
+getNammaTagAppDynamicLogic merchantShortId opCity apiTokenInfo domain = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  ProviderPlatformClient.DynamicOfferDriver.Operations.callDriverOfferBPPOperations checkedMerchantId opCity (.nammaTagDSL.getNammaTagAppDynamicLogic) domain

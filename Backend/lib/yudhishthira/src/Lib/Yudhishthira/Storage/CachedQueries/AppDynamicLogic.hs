@@ -9,6 +9,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Id
+import Kernel.Types.TimeBound
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogic as Queries
@@ -31,3 +32,13 @@ findByMerchantOpCityAndDomain merchantOperatingCityId domain = do
               )
                 /=<< Queries.findByMerchantOpCityAndDomain Nothing Nothing merchantOperatingCityId domain
         )
+
+delete :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> TimeBound -> m ()
+delete = Queries.delete
+
+clearCache :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ()
+clearCache cityId domain =
+  Hedis.del $ "driverOfferCachedQueries:AppDynamicLogic:" <> ":MerchantOperatingCityId-" <> show (Kernel.Types.Id.getId cityId) <> ":Domain-" <> show domain
+
+createMany :: (BeamFlow.BeamFlow m r) => [Lib.Yudhishthira.Types.AppDynamicLogic.AppDynamicLogic] -> m ()
+createMany = Queries.createMany

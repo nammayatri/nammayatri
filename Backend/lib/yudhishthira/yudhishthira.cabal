@@ -31,6 +31,7 @@ library
       Lib.Yudhishthira.Storage.Beam.BeamFlow
       Lib.Yudhishthira.Storage.Beam.SystemConfigs
       Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogic
+      Lib.Yudhishthira.Storage.Queries.AppDynamicLogicExtra
       Lib.Yudhishthira.Storage.Queries.NammaTagExtra
       Lib.Yudhishthira.Storage.Queries.Transformers.NammaTag
       Lib.Yudhishthira.Tools.Error
@@ -47,6 +48,7 @@ library
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogic
       Lib.Yudhishthira.Storage.Queries.ChakraQueries
       Lib.Yudhishthira.Storage.Queries.NammaTag
+      Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogic
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.NammaTag
       Lib.Yudhishthira.Types.AppDynamicLogic
       Lib.Yudhishthira.Types.ChakraQueries

@@ -9,10 +9,11 @@ import qualified EulerHS.Types
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Lib.Yudhishthira.Types
+import qualified Lib.Yudhishthira.Types.AppDynamicLogic
 import Servant
 import Servant.Client
 
-type API = ("nammaTag" :> (PostNammaTagTagCreate :<|> PostNammaTagQueryCreate :<|> PostNammaTagAppDynamicLogicVerify))
+type API = ("nammaTag" :> (PostNammaTagTagCreate :<|> PostNammaTagQueryCreate :<|> PostNammaTagAppDynamicLogicVerify :<|> GetNammaTagAppDynamicLogic))
 
 type PostNammaTagTagCreate = ("tag" :> "create" :> ReqBody '[JSON] Lib.Yudhishthira.Types.CreateNammaTagRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
@@ -20,13 +21,16 @@ type PostNammaTagQueryCreate = ("query" :> "create" :> ReqBody '[JSON] Lib.Yudhi
 
 type PostNammaTagAppDynamicLogicVerify = ("appDynamicLogic" :> "verify" :> ReqBody '[JSON] Lib.Yudhishthira.Types.AppDynamicLogicReq :> Post '[JSON] Lib.Yudhishthira.Types.AppDynamicLogicResp)
 
+type GetNammaTagAppDynamicLogic = ("appDynamicLogic" :> MandatoryQueryParam "domain" Lib.Yudhishthira.Types.LogicDomain :> Get '[JSON] [Lib.Yudhishthira.Types.AppDynamicLogic.AppDynamicLogic])
+
 data NammaTagAPIs = NammaTagAPIs
   { postNammaTagTagCreate :: Lib.Yudhishthira.Types.CreateNammaTagRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postNammaTagQueryCreate :: Lib.Yudhishthira.Types.ChakraQueriesAPIEntity -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postNammaTagAppDynamicLogicVerify :: Lib.Yudhishthira.Types.AppDynamicLogicReq -> EulerHS.Types.EulerClient Lib.Yudhishthira.Types.AppDynamicLogicResp
+    postNammaTagAppDynamicLogicVerify :: Lib.Yudhishthira.Types.AppDynamicLogicReq -> EulerHS.Types.EulerClient Lib.Yudhishthira.Types.AppDynamicLogicResp,
+    getNammaTagAppDynamicLogic :: Lib.Yudhishthira.Types.LogicDomain -> EulerHS.Types.EulerClient [Lib.Yudhishthira.Types.AppDynamicLogic.AppDynamicLogic]
   }
 
 mkNammaTagAPIs :: (Client EulerHS.Types.EulerClient API -> NammaTagAPIs)
 mkNammaTagAPIs nammaTagClient = (NammaTagAPIs {..})
   where
-    postNammaTagTagCreate :<|> postNammaTagQueryCreate :<|> postNammaTagAppDynamicLogicVerify = nammaTagClient
+    postNammaTagTagCreate :<|> postNammaTagQueryCreate :<|> postNammaTagAppDynamicLogicVerify :<|> getNammaTagAppDynamicLogic = nammaTagClient

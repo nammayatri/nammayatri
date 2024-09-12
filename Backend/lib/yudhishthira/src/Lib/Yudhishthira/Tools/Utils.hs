@@ -52,12 +52,12 @@ runJsonLogic data' ruleText = do
       Left err -> throwError $ InternalError ("Unable to decode rule:" <> show err)
   jsonLogic rule data'
 
-runLogics :: (MonadFlow m, ToJSON a) => [A.Value] -> a -> m LYT.AppDynamicLogicResp
+runLogics :: (MonadFlow m, ToJSON a) => [A.Value] -> a -> m LYT.RunLogicResp
 runLogics logics data_ = do
   let logicData = A.toJSON data_
   logDebug $ "logics- " <> show logics
   logDebug $ "logicData- " <> CS.cs (A.encode logicData)
-  let startingPoint = LYT.AppDynamicLogicResp logicData []
+  let startingPoint = LYT.RunLogicResp logicData []
   foldlM
     ( \acc logic -> do
         let result = jsonLogicEither logic acc.result
@@ -65,8 +65,8 @@ runLogics logics data_ = do
           case result of
             Left err -> do
               logError $ "Got error: " <> show err <> " while running logic: " <> CS.cs (A.encode logics)
-              pure $ LYT.AppDynamicLogicResp acc.result (acc.errors <> [show err])
-            Right res -> pure $ LYT.AppDynamicLogicResp res acc.errors
+              pure $ LYT.RunLogicResp acc.result (acc.errors <> [show err])
+            Right res -> pure $ LYT.RunLogicResp res acc.errors
         logDebug $ "logic- " <> (CS.cs . A.encode $ logic)
         logDebug $ "json logic result - " <> (CS.cs . A.encode $ res)
         return res
