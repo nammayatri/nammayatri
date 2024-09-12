@@ -4,6 +4,19 @@ branch_name=$1
 
 files_to_be_added=();
 
+black_listed_files=( "juspay_assets.json" )
+
+valid_file() {
+    fileName="$1"
+    for file in ${black_listed_files[@]}; do
+        if [[ "$fileName" == "$file" ]]; then
+            echo "File is blacklisted"
+            return 1 # 1 indicate failure in bash
+        fi
+    done
+
+    return 0 # 0 indicates success in bash
+}
 
 add_file_for_commit() { #dir , sub_dir, asset_type, asset_name, source_path
     local dir="$1"
@@ -11,8 +24,9 @@ add_file_for_commit() { #dir , sub_dir, asset_type, asset_name, source_path
     local asset_type="$3"
     local asset_name="$4"
     local updated_path="beckn/$dir/$sub_dir/$asset_type/$asset_name"
-    files_to_be_added+=("../../../$source_path:$updated_path")
-
+    if valid_file "$asset_name"; then 
+        files_to_be_added+=("../../../$source_path:$updated_path")
+    fi
     echo "Inside add_file_for_commit" $source_path "->" $updated_path
 }
 
