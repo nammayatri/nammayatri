@@ -1601,4 +1601,10 @@ getEN stringKey =
         TOTAL_EARNINGS_MISSED -> "Total Earnings Missed"
         RENTAL_RIDE -> "Rental Ride"
         THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE duration -> "There might be multiple stops on this ride. This rental ride is booked for" <> " <br></br><span><b>" <> duration <> "</b></span>&nbsp"
-        RENTAL_RIDE_ACCEPTED -> "Rental Ride Accepted"
+        RENTAL_RIDE_ACCEPTED -> "Rental Ride Accepted"        
+        MY_REFERRAL_BONUS -> "My Referral Bonus"
+        ADD_UPI_ID -> "Add UPI ID"
+        LINKED_UPI_ID -> "linked UPI ID"
+        TO_GET_MONEY -> "To get money"
+        TILL date -> "till " <> date
+        REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK -> "Referral bonus will be credited to your bank account"

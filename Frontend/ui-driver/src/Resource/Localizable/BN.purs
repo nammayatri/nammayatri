@@ -1605,4 +1605,9 @@ getBN stringKey =
         RENTAL_RIDE -> "ভাড়ার রাইড"
         THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE duration -> "এই ভ্রমণে একাধিক বিরতি থাকতে পারে। এই ভাড়ার ভ্রমণটি বুক করা হয়েছে" <> " <br></br><span><b>" <> duration <> "</b></span>&nbsp"
         RENTAL_RIDE_ACCEPTED -> "ভাড়ার যাত্রা গৃহীত হয়েছে"
- 
+        MY_REFERRAL_BONUS -> "আমার রেফারেল বোনাস"
+        ADD_UPI_ID -> "UPI আইডি যোগ করুন"
+        LINKED_UPI_ID -> "লিঙ্ক করা UPI আইডি"
+        TO_GET_MONEY -> "টাকা পেতে"
+        TILL date -> date <> " পর্যন্ত"
+        REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK -> "রেফারেল বোনাস আপনার ব্যাঙ্ক অ্যাকাউন্টে জমা হবে"

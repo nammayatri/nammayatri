@@ -126,3 +126,9 @@ getReferralPopUpDelays popUpType = do
       ST.AddUPI -> value.add_upi
       ST.VerifyUPI -> value.verify_upi
       _ -> oneDayInMS
+
+getReferralBonusVideo :: String -> String 
+getReferralBonusVideo city = 
+  let config = fetchRemoteConfigString "referral_bonus_videos"
+      value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig ""
+  in getCityBasedConfig value city

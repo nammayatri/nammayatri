@@ -40,6 +40,6 @@ benefitsScreen = do
     GoToLmsVideoScreen updatedState -> do
       modifyScreenState $ BenefitsScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure  $ GO_TO_LMS_VIDEO_SCREEN updatedState)
-    GoToCustomerReferralTrackerScreen updatedState -> do  
+    GoToCustomerReferralTrackerScreen openPP updatedState -> do  
       modifyScreenState $ BenefitsScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ CUSTOMER_REFERRAL_TRACKER_NAV)
+      App.BackT $ App.BackPoint <$> (pure $ CUSTOMER_REFERRAL_TRACKER_NAV openPP )
