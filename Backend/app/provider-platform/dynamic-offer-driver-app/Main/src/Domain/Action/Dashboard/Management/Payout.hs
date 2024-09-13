@@ -29,7 +29,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as DR
 import qualified Domain.Types.VehicleCategory as DV
 import qualified Environment
-import EulerHS.Prelude hiding (elem, forM_, id, map, mapM_, whenJust)
+import EulerHS.Prelude hiding (elem, forM_, id, length, map, mapM_, whenJust)
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt, decryptItem, encrypt, getDbHash)
 import qualified Kernel.External.Payout.Interface as Juspay
@@ -87,7 +87,9 @@ getPayoutPayoutReferralHistory merchantShortId opCity areActivatedRidesOnly_ mbC
   riderDetailsWithRide_ <- mapM getRiderDetailsWithOpCity allRiderDetails
   let riderDetailsWithRide = filter (\rd -> (rd.driverPhoneNo == mbDriverPhoneNo && ((rd.ride <&> (.merchantOperatingCityId)) == Just merchantOpCity.id) || isNothing rd.ride)) riderDetailsWithRide_
   history <- mapM (buildReferralHistoryItem merchantOpCity) riderDetailsWithRide
-  pure $ DTP.PayoutReferralHistoryRes {history}
+  let count = length history
+      summary = Dashboard.Common.Summary {totalCount = 1000, count}
+  pure $ DTP.PayoutReferralHistoryRes {history, summary}
   where
     maxLimit = 20
     defaultLimit = 10
@@ -136,7 +138,9 @@ getPayoutPayoutHistory merchantShortId opCity mbDriverId mbDriverPhoneNo mbFrom 
   history <- mapM (getPayoutPayoutHistoryItem merchantOpCity) payoutOrders
   let historyList_ = filter (\item -> item.cityId == merchantOpCity.id.getId) history
       historyList = map (.historyItem) historyList_
-  pure DTP.PayoutHistoryRes {history = historyList}
+      count = length historyList
+      summary = Dashboard.Common.Summary {totalCount = 1000, count}
+  pure DTP.PayoutHistoryRes {history = historyList, summary}
   where
     maxLimit = 20
     defaultLimit = 10
