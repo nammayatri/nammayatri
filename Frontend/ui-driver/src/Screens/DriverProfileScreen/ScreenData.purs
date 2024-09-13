@@ -232,6 +232,13 @@ dummyDriverInfo = GetDriverInfoResp {
     , cancelledRidesCountInWindow : Nothing
     , assignedRidesCountInWindow : Nothing
     , windowSize : Nothing
+    , isSubscriptionVehicleCategoryChanged : Nothing
+    , isOnFreeTrial : Nothing
+    , planMandatoryForCategory : Nothing
+    , isSubscriptionCityChanged : Nothing
+    , freeTrialDays : Nothing
+    , freeTrialRides : Nothing
+    , totalRidesTaken : Nothing
 }
 
 organizationInfo :: OrganizationInfo

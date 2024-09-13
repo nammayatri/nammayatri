@@ -126,6 +126,9 @@ import Timers as TF
 import Data.Ord (abs)
 import DecodeUtil
 import LocalStorage.Cache (getValueFromCache, setValueToCache)
+import Components.SelectPlansModal as SelectPlansModal
+import Screens.SubscriptionScreen.Transformer as SubscriptionTransformer
+import Components.PlanCard.Controller as PlanCard
 
 instance showAction :: Show Action where
   show _ = ""
@@ -304,6 +307,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | BenefitsScreen ST.HomeScreenState
                     | GotoAddUPIScreen ST.HomeScreenState
                     | VerifyManualUPI ST.HomeScreenState
+                    | SwitchPlan ST.PlanCardState ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -437,6 +441,8 @@ data Action = NoAction
             | UpdateSpecialZoneList
             | ReferralPopUpAction ST.HomeScreenPopUpTypes (Maybe KeyStore) PopUpModal.Action
             | AddAlternateNumberAction
+            | SelectPlansModalAction SelectPlansModal.Action
+            | PlanListResponse API.UiPlansResp
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -607,6 +613,7 @@ eval BackPressed state = do
   else if state.props.showVerifyUPIPopUp then do 
     void $ pure $ setValueToLocalNativeStore VERIFY_UPI_LAST_SHOWN (getCurrentUTC "")
     continue state {props { showVerifyUPIPopUp = false}}
+  else if state.data.plansState.showSwitchPlanModal then continue state { data { plansState { showSwitchPlanModal = false }}}
   else do
     _ <- pure $ minimizeApp ""
     continue state
@@ -1266,6 +1273,7 @@ eval RecenterButtonAction state = continue state
 eval (SwitchDriverStatus status) state =
   if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then continue state { props{ subscriptionPopupType = ST.GO_ONLINE_BLOCKER }}
   else if state.data.paymentState.driverBlocked then continue state { data{paymentState{ showBlockingPopup = true}}}
+  else if state.data.plansState.cityOrVehicleChanged then continue state {data { plansState { showSwitchPlanModal = true}}}
   else if not state.props.rcActive then do
     void $ pure $ toast $ getString PLEASE_ADD_RC
     exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false , rcDeactivePopup = true }} ST.Offline)
@@ -1551,6 +1559,24 @@ eval (SwitchBookingStage stage) state = do
       data {activeRide = activeRideData, currentRideData = Just currentRideData},
       props {bookingStage = stage, currentStage = fetchStageFromRideStatus activeRideData}
     }
+
+eval (PlanListResponse (API.UiPlansResp plansListResp)) state = do
+  let isTamilSelected = (getLanguageLocale languageKey) == "TA_IN"
+  let plans = map (\plan -> SubscriptionTransformer.transformPlan isTamilSelected $ SubscriptionTransformer.getPlanCardConfig plan false false state.data.config.subscriptionConfig) plansListResp.list
+  continue state { data { plansState { plansList = plans, selectedPlan = Array.head plans, showSwitchPlanModal = true }}}
+
+eval (SelectPlansModalAction SelectPlansModal.Dismiss) state = continue state {data {plansState {showSwitchPlanModal = false}}}
+
+eval (SelectPlansModalAction SelectPlansModal.Support) state = do
+  void $ pure $ showDialer state.data.config.subscriptionConfig.supportNumber false
+  continue state
+
+eval (SelectPlansModalAction (SelectPlansModal.PrimaryButtonAC PrimaryButtonController.OnClick)) state = 
+  case state.data.plansState.selectedPlan of
+    Nothing -> continue state
+    Just plan -> exit $ SwitchPlan plan state
+
+eval (SelectPlansModalAction (SelectPlansModal.PlanCardAction item _)) state = continue state {data {plansState {selectedPlan = Just item}}}
 
 eval _ state = continue state
 

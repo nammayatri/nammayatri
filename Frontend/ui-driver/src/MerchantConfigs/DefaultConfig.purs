@@ -66,7 +66,7 @@ config =
       viewAutopayDetails : false
     },
     gradientConfig : [],
-    enableSubscriptionSupportPopup : false,
+    enableSubscriptionSupportPopup : true,
     earnAmountInADay : 2500,
     showFeeBreakup : true,
     noChargesTillDate : "Oct 1st 2024-*$*-ಅಕ್ಟೋಬರ್ 01, ರವರೆಗೆ-*$*-1 अक्टूबर 2024-*$*-১লা অক্টোবর, ২০২৪-*$*-ഒക്ടോബര്‍ 1, 2024-*$*-1 அக்டோபர் 2024-*$*-1 అక్టోబర్ 2024",

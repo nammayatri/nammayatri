@@ -45,6 +45,7 @@ import Services.API as API
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
 import Data.Foldable (foldl)
 import Engineering.Helpers.Utils (getFixedTwoDecimals)
+import Screens.Types as ST
 
 type PlanData = {
     title :: String,
@@ -343,3 +344,26 @@ getTranslatedString str = case str of
                     "CAB_DAILY_UNLIMITED_OFFER" -> getString DAILY_UNLIMITED_PLAN_DESC
                     "CAB_DAILY_PER_RIDE_OFFER" -> getString $ DAILY_PER_RIDE_PLAN_DESC "90"
                     _ -> splitBasedOnLanguage str
+
+transformPlan :: Boolean -> ST.PlanCardConfig -> ST.PlanCardState
+transformPlan isSelectedLangTamil planEntity = 
+  {
+    id : planEntity.id,
+    title : planEntity.title,
+    description : planEntity.description,
+    isSelected : planEntity.isSelected,
+    offers : planEntity.offers,
+    priceBreakup : planEntity.priceBreakup,
+    frequency : planEntity.frequency,
+    freeRideCount : planEntity.freeRideCount,
+    showOffer : planEntity.showOffer,
+    isSelectedLangTamil : isSelectedLangTamil,
+    clickable : true,
+    showBanner : false,
+    isMyPlan : false,
+    isActivePlan : false,
+    offerBannerProps : Nothing,
+    isIntroductory : false,
+    mbCoinDiscountUpto : Nothing,
+    offerBannerPlans : []
+  }

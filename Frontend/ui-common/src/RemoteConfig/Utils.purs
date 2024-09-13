@@ -26,6 +26,7 @@ import Data.Function.Uncurried (runFn3, runFn2)
 import DecodeUtil (getAnyFromWindow)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
+import Common.RemoteConfig.Types as Types
 
 foreign import fetchRemoteConfigString :: String -> String
 
@@ -227,7 +228,11 @@ defaultSubscriptionsConfigVariantLevelEntity =
   { 
     noChargesTillDate : "Oct 1st 2024-*$*-ಅಕ್ಟೋಬರ್ 01, ರವರೆಗೆ-*$*-1 अक्टूबर 2024-*$*-১লা অক্টোবর, ২০২৪-*$*-ഒക്ടോബര്‍ 1, 2024-*$*-1 அக்டோபர் 2024-*$*-1 అక్టోబర్ 2024",
     lowestFeesFromDate : "Oct 2nd 2024-*$*-ಅಕ್ಟೋಬರ್ 2, 2024-*$*-2 अक्टूबर 2024-*$*-২য় অক্টোবর, ২০২৪-*$*-രണ്ടാം ഒക്ടോബര്‍, 2024-*$*-அக்டோபர் 2, 2024-*$*-అక్టోబరు 2, 2024",
-    useFreeTrialLottie : Just false
+    useFreeTrialLottie : Just false,
+    earnUptoAmout : Just 5000,
+    yatriPlansPlaylist : Just "https://www.youtube.com/playlist?list=PL4AEiRR3V7kHcg2-fgzvDXDqWihZD9mTK",
+    enableSubscriptionSupportPopup : Just false,
+    offerBannerConfig : Just defaultOfferBannerConfig
   }
 
 subscriptionsConfigVariantLevel :: String -> String -> SubscriptionConfigVariantLevelEntity
@@ -269,3 +274,12 @@ gullakConfig city = do
     let config = fetchRemoteConfigString "gullak_config"
         value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig defaultGullakConfig
     getCityBasedConfig value $ toLower city
+
+defaultOfferBannerConfig :: Types.OfferBanner
+defaultOfferBannerConfig = {
+    showOfferBanner : false,
+    offerBannerValidTill : "2025-01-01T00:00:00",
+    offerBannerDeadline : "January 1-*$*-ಜನವರಿ 1-*$*-1 जनवरी-*$*-ஜனவரி 1",
+    offerBannerPlans : ["a35ffc7c-de0d-4dcc-83a8-e36a5a29cc1d"],
+    payAmount : "10"
+  }

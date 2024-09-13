@@ -558,7 +558,7 @@ getFR stringKey =
         REFRESH_STR ->  "Actualiser"
         TRANSACTION_DETAILS ->  "Détails de la transaction"
         RIDE_DETAILS ->  "Détails du trajet"
-        MY_PLAN_TITLE _ ->  "À propos de nous"
+        MY_PLAN_TITLE ->  "À propos de nous"
         SWITCH_TO ->  "Passer à {}"
         YOUR_RENTAL_RIDE_STARTS_IN ->  "Votre trajet de location commence dans {}"
         YOUR_INTERCITY_RIDE_STARTS_IN -> "Votre trajet interurbain commence après {}"
@@ -674,7 +674,7 @@ getFR stringKey =
         EXECUTION_ATTEMPTING ->  "Tentative d'exécution"
         EXECUTION_SUCCESS ->  "Exécution réussie"
         PAYMENT_SCHEDULED ->  "Paiement Programmé"
-        OFFER_CARD_BANNER_TITLE _ ->  "Configurez le paiement automatique et ne payez que 15 ₹/jour jusqu'à {}"
+        OFFER_CARD_BANNER_TITLE _ date price ->  "Configurez le paiement automatique et ne payez que "<> price <>" ₹/jour jusqu'à " <> date
         OFFER_CARD_BANNER_DESC ->  "Ne payez que 15 ₹/jour jusqu'au 1er novembre"
         OFFER_CARD_BANNER_ALERT ->  "Votre configuration de paiement automatique est en attente !"
         OR ->  "OU"

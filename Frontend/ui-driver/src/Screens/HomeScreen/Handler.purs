@@ -192,3 +192,6 @@ homeScreen = do
     VerifyManualUPI updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ VERIFY_MANUAL_UPI updatedState)
+    SwitchPlan plan updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ SWITCH_PLAN_FROM_HS plan updatedState)

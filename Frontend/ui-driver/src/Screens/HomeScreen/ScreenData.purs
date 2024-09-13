@@ -159,6 +159,12 @@ initData =
       , payoutVpaBankAccount : Nothing
       , cancellationRate : 10
       , coinsEarned : []
+      , plansState : {
+        showSwitchPlanModal : false,
+        plansList : [],
+        selectedPlan : Nothing,
+        cityOrVehicleChanged : false
+      }
     }
   , props:
       { isFreeRide: false

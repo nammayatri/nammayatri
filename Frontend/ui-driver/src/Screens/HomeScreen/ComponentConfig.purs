@@ -85,6 +85,7 @@ import ConfigProvider
 import Data.Int 
 import Styles.Types (Color(..))
 import RemoteConfig as RemoteConfig
+import Components.SelectPlansModal.Controller as SelectPlansModal
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -574,7 +575,7 @@ offerConfigParams state = PromotionPopupConfig $ {
   description : getString JOIN_THE_UNLIMITED_PLAN,
   imageUrl : fetchImage FF_ASSET "ny_ic_limited_time_offer",
   buttonText : getString JOIN_NOW,
-  heading : getString $ MY_PLAN_TITLE "MY_PLAN_TITLE"
+  heading : getString MY_PLAN_TITLE
 }
 
 ------------------------------------ cancelConfirmationConfig -----------------------------
@@ -1033,6 +1034,9 @@ autopayBannerConfig state configureImage =
     config = Banner.config
     bannerType = state.props.autoPayBanner
     dues = getFixedTwoDecimals state.data.paymentState.totalPendingManualDues
+    isVehicleAuto = (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.AutoCategory
+    autopayBannerImg = if isVehicleAuto then "ny_ic_driver_offer" else "ny_ic_driver_offer_cab"
+    duesImg = if isVehicleAuto then "ny_ic_clear_dues" else "ny_ic_clear_dues_cab"
     config' = config
       {
         backgroundColor = case bannerType of
@@ -1060,10 +1064,10 @@ autopayBannerConfig state configureImage =
                             _ -> Color.white900,
           style = if configureImage then FontStyle.Body3 else FontStyle.ParagraphText
         },
-        imageUrl = fetchImage FF_ASSET $ case bannerType of
+        imageUrl = fetchImage COMMON_ASSET $ case bannerType of
                       FREE_TRIAL_BANNER -> "ic_free_trial_period" 
-                      SETUP_AUTOPAY_BANNER -> "ny_ic_driver_offer"
-                      _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> "ny_ic_clear_dues"
+                      SETUP_AUTOPAY_BANNER -> autopayBannerImg
+                      _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> duesImg
                       DUE_LIMIT_WARNING_BANNER -> "ny_ic_due_limit_warning"
                       _ -> "",
         imageHeight = if configureImage then (V 75) else (V 105),
@@ -1512,6 +1516,8 @@ getRideCompletedConfig state = let
                       {condition : isRentalRide, elementView : RideCompletedCard.RENTAL_RIDE_VIEW}
                     ]
   pspIcon = (Const.getPspIcon payerVpa)
+  isVehicleAuto = (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.AutoCategory
+  endrideQrAnim = if isVehicleAuto then "lottie/end_ride_qr_anim.json" else "lottie/end_ride_qr_anim_cab.json"
   config' = config{
     isFreeRide = state.props.isFreeRide,
     serviceTierAndAC = state.data.endRideData.serviceTier,
@@ -1614,7 +1620,7 @@ getRideCompletedConfig state = let
     viewsByOrder = map (_.elementView) (DA.filter (_.condition) viewOrderConfig),
     lottieQRAnim {
       visible = state.data.config.rideCompletedCardConfig.lottieQRAnim,
-      url = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/end_ride_qr_anim.json"
+      url = (HU.getAssetsBaseUrl FunctionCall) <> endrideQrAnim
     }
   , additionalCharges = additionalCharges
   , coinsEarned  {
@@ -2737,3 +2743,12 @@ verifyUPI state =
         }
   in
     requestInfoCardConfig'
+
+selectPlansModalState :: ST.HomeScreenState -> SelectPlansModal.SelectPlansState
+selectPlansModalState state = SelectPlansModal.config
+  {
+    selectedPlan = state.data.plansState.selectedPlan,
+    plansList = case state.data.plansState.selectedPlan of
+                  Just justPlan -> map (\plan -> plan {isSelected = plan.id == justPlan.id }) state.data.plansState.plansList
+                  Nothing -> state.data.plansState.plansList
+  }

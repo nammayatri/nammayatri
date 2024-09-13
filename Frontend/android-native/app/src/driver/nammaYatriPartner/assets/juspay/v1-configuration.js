@@ -46,7 +46,7 @@ window.getMerchantConfig = function () {
       "EARNED_ON_APP" : "Earned on NY",
       "TRAVELLED_ON_APP" : "Travelled On Namma Yatri",
       "GUARANTEED_FIXED_PRICE" : "Guaranteed fixed price until \nApr 1, 2025",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\nNamma Yatri Plans!"
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\n Yatri Plans!"
     },
     "hindiStrings": {
       "MERCHANT_NAME" : appName.includes("namma") ? "नम्मा यात्री" : "मना यात्री",
@@ -120,8 +120,8 @@ window.getMerchantConfig = function () {
           "offerBannerDeadline" : "December 31-*$*-ಡಿಸೆಂಬರ್ 31-*$*-31 दिसंबर-*$*-டிசம்பர் 31",
           "offerBannerConfig" : {
             "showDUOfferBanner" : true,
-            "offerBannerValidTill" : "2024-01-16T00:00:00",
-            "offerBannerDeadline" : "January 15-*$*-ಜನವರಿ 15-*$*-15 जनवरी-*$*-ஜனவரி 15",
+            "offerBannerValidTill" : "2025-01-01T00:00:00",
+            "offerBannerDeadline" : "January 1-*$*-ಜನವರಿ 1-*$*-1 जनवरी-*$*-ஜனவரி 1",
             "offerBannerPlans" : ["a35ffc7c-de0d-4dcc-83a8-e36a5a29cc1d"],
           },
           "highDueWarningLimit" : 75.0,
@@ -208,7 +208,7 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : true,
-          "variantList" : ["AutoCategory"],
+          "variantList": ["AutoCategory", "CarCategory"],
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
@@ -381,7 +381,7 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : true,
-          "variantList" : ["AutoCategory"],
+          "variantList" : ["AutoCategory", "CarCategory"],
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
@@ -777,7 +777,7 @@ window.getMerchantConfig = function () {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : true,
-          "variantList" : ["AutoCategory"],
+          "variantList" : ["AutoCategory", "CarCategory"],
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
@@ -2297,9 +2297,10 @@ window.getMerchantConfig = function () {
 }
 
 let staticSubscriptionConfig = [
-  {"price" : 90.0, "frequency" : "PER_DAY", "variantCategory" : "CarCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" :  "FREE_RIDE_OFFER", "showSelected" : false, "planDesc" : "CAB_DAILY_UNLIMITED_OFFER"},
-  {"price" : 9.0, "frequency" : "PER_RIDE", "variantCategory" : "CarCategory", "name" : "DAILY_PER_RIDE", "introductoryOffer" : "" , "showSelected" : false, "planDesc" : "Up to a maximum of ₹99 per day-*$*-ದಿನಕ್ಕೆ ಗರಿಷ್ಠ ₹99-*$*-प्रति दिन अधिकतम ₹99 तक-*$*-প্রতিদিন সর্বোচ্চ ₹99 পর্যন্ত-*$*-പ്രതിദിനം പരമാവധി ₹99 വരെ-*$*-ஒரு நாளைக்கு அதிகபட்சம் ₹99 வரை-*$*-రోజుకు గరిష్టంగా ₹99 వరకు"},
-  {"price" : 25.0, "frequency" : "PER_DAY", "variantCategory" : "AutoCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" : "NO_CHARGES_TILL", "showSelected" : true, "planDesc" : ""}
+  {"price" : 45.0, "frequency" : "PER_DAY", "variantCategory" : "CarCategory", "name" : "DAILY_UNLIMITED", "introductoryOffer" :  "", "showSelected" : false, "planDesc" : "CAB_DAILY_UNLIMITED_OFFER"},
+  {"price" : 9.0, "frequency" : "PER_RIDE", "variantCategory" : "CarCategory", "name" : "DAILY_PER_RIDE", "introductoryOffer" : "" , "showSelected" : false, "planDesc" : "Up to a maximum of ₹90 per day-*$*-ದಿನಕ್ಕೆ ಗರಿಷ್ಠ ₹90-*$*-प्रति दिन अधिकतम ₹90 तक-*$*-প্রতিদিন সর্বোচ্চ ₹90 পর্যন্ত-*$*-പ്രതിദിനം പരമാവധി ₹90 വരെ-*$*-ஒரு நாளைக்கு அதிகபட்சம் ₹90 வரை-*$*-రోజుకు గరిష్టంగా ₹99 వరకు"},
+  { "price": 25.0, "frequency": "PER_DAY", "variantCategory": "AutoCategory", "name": "DAILY_UNLIMITED", "introductoryOffer": "", "showSelected": false, "planDesc": "CAB_DAILY_UNLIMITED_OFFER"},
+  { "price": 3.5, "frequency": "PER_RIDE", "variantCategory": "AutoCategory", "name": "DAILY_PER_RIDE", "introductoryOffer": "", "showSelected": false, "planDesc": "Up to a maximum of ₹35 per day-*$*-ದಿನಕ್ಕೆ ಗರಿಷ್ಠ ₹35-*$*-प्रति दिन अधिकतम ₹35 तक-*$*-প্রতিদিন সর্বোচ্চ ₹35 পর্যন্ত-*$*-പ്രതിദിനം പരമാവധി ₹35 വരെ-*$*-ஒரு நாளைக்கு அதிகபட்சம் ₹35 வரை-*$*-రోజుకు గరిష్టంగా ₹35 వరకు" }
 ]
 
 let defWaitingChargesConfig = {

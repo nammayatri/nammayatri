@@ -15,7 +15,7 @@
 
 module Storage where
 
-import Prelude (show, Unit, void, pure, class Show, ($), (<<<), (==),(>))
+import Prelude (show, Unit, void, pure, class Show, ($), (<<<), (==),(>), (/=))
 import JBridge as JBridge
 import Types.App (FlowBT)
 import Control.Monad.Trans.Class (lift)
@@ -152,6 +152,7 @@ data KeyStore = USER_NAME
                 | VERIFY_UPI_LAST_SHOWN
                 | GULLAK_TOKEN
                 | DONT_CALL_REFRESH
+                | IS_ON_FREE_TRIAL
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
@@ -185,4 +186,9 @@ isLocalStageOn :: HomeScreenStage -> Boolean
 isLocalStageOn stage = (getValueToLocalNativeStore LOCAL_STAGE) == show stage
 
 isOnFreeTrial :: LazyCheck -> Boolean
-isOnFreeTrial dummy = fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) > 0
+isOnFreeTrial dummy = do 
+  let freeTrialFromLocal = getValueToLocalNativeStore IS_ON_FREE_TRIAL
+  if freeTrialFromLocal /= "Nothing" then 
+    freeTrialFromLocal == "true" 
+  else 
+    fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) > 0
