@@ -898,7 +898,7 @@ driverLocationTracking push action duration id routeState = do
         mbPoint = head locationResp.points
       liftFlow
         $ runEffectFn1 updateRoute
-            updateRouteConfig { json = newPoints, destMarker = markers.destMarker, eta = (HSConfig.metersToKm locationResp.distance true), srcMarker = markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel, autoZoom = false, polylineKey = "DEFAULT" }
+            updateRouteConfig { json = newPoints, destMarker = markers.destMarker, eta = (HSConfig.metersToKm locationResp.distance true), srcMarker = markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel, autoZoom = false, polylineKey = "DEFAULT", pureScriptID = (getNewIDWithTag "FollowRideMap") }
       case mbPoint of
         Just point -> addSosMarkers state.data.sosStatus point
         Nothing -> pure unit
