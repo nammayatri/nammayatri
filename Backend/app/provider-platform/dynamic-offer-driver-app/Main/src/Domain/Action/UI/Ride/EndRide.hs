@@ -469,7 +469,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
   if passedThroughDrop && pickupDropOutsideOfThreshold && booking.tripCategory `elem` tripCategoryForNoRecalc && ride.distanceCalculationFailed == Just False
     then do
       logDebug "Passed through drop and outside of threshold for OneWay trip"
-      return (oldDistance, booking.estimatedFare, Nothing)
+      return (oldDistance, booking.estimatedFare - fromMaybe 0 ride.estimatedTollCharges, Nothing)
     else do
       let estimatedFare = Fare.fareSum booking.fareParams
       vehicleAge <-
