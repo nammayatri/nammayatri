@@ -27,6 +27,7 @@ module Domain.Action.UI.Ride.EndRide
   )
 where
 
+import qualified Beckn.OnDemand.Utils.Common as BODUC
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Data.Text as Text
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
@@ -453,9 +454,11 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
 checkSplLocation :: Maybe Text -> Text -> Bool
 checkSplLocation mbSplLocTag splLocation = do
   case mbSplLocTag of
-    Just splLocTag -> case Text.splitOn "_" splLocTag of
-      [pickupSplTag, dropSplTag, _] -> pickupSplTag == splLocation || dropSplTag == splLocation
-      _ -> False
+    Just splLocTag ->
+      let tagArr = Text.splitOn "_" splLocTag
+          sourceTag = tagArr BODUC.!? 0
+          destTag = tagArr BODUC.!? 1
+       in (sourceTag == Just splLocation || destTag == Just splLocation)
     Nothing -> False
 
 recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> DTConf.TransporterConfig -> Bool -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
