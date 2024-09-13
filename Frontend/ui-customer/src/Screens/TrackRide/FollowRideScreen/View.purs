@@ -93,13 +93,15 @@ screen initialState globalState =
                   $ [ { key : "BookingId", value : unsafeToForeign $ currentFollower.bookingId},
                       { key : "FollowerId", value : unsafeToForeign $ getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys }
                     ]
-                when (currentFollower.priority == 0 && not initialState.props.chatCallbackInitiated) $ do
+                when ( not initialState.props.chatCallbackInitiated) $ do
                   case initialState.data.driverInfoCardState of
                     Nothing -> pure unit
-                    Just ride -> do
-                      when (initialState.props.isRideStarted && not initialState.props.currentUserOnRide) $ do
+                    Just ride ->
+                      let customerId = getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys
+                          channelId = if currentFollower.priority == 0 then ride.rideId else ride.rideId <> "$" <> customerId
+                      in when (initialState.props.isRideStarted && not initialState.props.currentUserOnRide) $ do
                           void $ clearChatMessages
-                          void $ storeCallBackMessageUpdated push ride.rideId (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)  UpdateMessages AllChatsLoaded
+                          void $ storeCallBackMessageUpdated push channelId customerId  UpdateMessages AllChatsLoaded
                           void $ storeCallBackOpenChatScreen push OpenChatScreen
                           void $ startChatListenerService
                           void $ scrollOnResume push ScrollToBottom
@@ -384,7 +386,7 @@ getMessageNotificationViewConfig state =
       driverInfoCard = fromMaybe mockDriverInfo state.data.driverInfoCardState
       currentFollower = getCurrentFollower state.data.currentFollower
       name = fromMaybe currentFollower.mobileNumber currentFollower.name
-      removeNotification = if state.props.isRideStarted && not state.props.currentUserOnRide && currentFollower.priority == 0 
+      removeNotification = if state.props.isRideStarted && not state.props.currentUserOnRide
                               then state.props.removeNotification 
                               else true
   in {
@@ -690,7 +692,7 @@ headerView push state =
           ]
       ]
   where 
-    isChatEnabled currentFollower = state.data.config.feature.enableChat && (currentFollower.priority == 0) && state.props.isRideStarted && not state.props.currentUserOnRide
+    isChatEnabled currentFollower = state.data.config.feature.enableChat && state.props.isRideStarted && not state.props.currentUserOnRide
 
 emergencyActionsView ::
   forall w.
