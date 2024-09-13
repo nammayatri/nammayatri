@@ -36,6 +36,7 @@ module SharedLogic.CallBAP
     sendPhoneCallRequestUpdateToBAP,
     mkTxnIdKey,
     sendOnConfirmToBAP,
+    notfyDeliveryImageUploadedToBAP,
   )
 where
 
@@ -1112,6 +1113,38 @@ sendDestinationArrivalUpdateToBAP booking ride destinationArrivalTime = do
   retryConfig <- asks (.shortDurationRetryCfg)
   driverReachedDestMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverReachedDestBuildReq
   void $ callOnUpdateV2 driverReachedDestMsgV2 retryConfig merchant.id
+
+notfyDeliveryImageUploadedToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  m ()
+notfyDeliveryImageUploadedToBAP booking ride = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  merchant <-
+    CQM.findById booking.providerId
+      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
+  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+  let riderPhone = Nothing
+      paymentMethodInfo = Nothing
+      paymentUrl = Nothing
+      bookingDetails = ACL.BookingDetails {..}
+      deliveryImageUploadReq = ACL.ParcelImageUploadedBuildReq ACL.DParcelImageUploadedReq {..}
+  retryConfig <- asks (.shortDurationRetryCfg)
+  deliveryImageUploadMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing deliveryImageUploadReq
+  void $ callOnUpdateV2 deliveryImageUploadMsgV2 retryConfig merchant.id
 
 callBecknAPIWithSignature' ::
   ( MonadFlow m,

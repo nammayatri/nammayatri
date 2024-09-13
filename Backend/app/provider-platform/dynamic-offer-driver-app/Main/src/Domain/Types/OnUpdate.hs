@@ -45,10 +45,15 @@ data OnUpdateBuildReq
   | TollCrossedBuildReq DTollCrossedBuildReq
   | DriverReachedDestinationBuildReq DDriverReachedDestinationReq
   | RideEstimatedEndTimeRangeBuildReq DRideEstimatedEndTimeRangeReq
+  | ParcelImageUploadedBuildReq DParcelImageUploadedReq
 
 data DErrorObject = DErrorObject
   { errorCode :: Text,
     errorMessage :: Text
+  }
+
+newtype DParcelImageUploadedReq = DParcelImageUploadedReq
+  { bookingDetails :: BookingDetails
   }
 
 newtype DStopArrivedBuildReq = DStopArrivedBuildReq

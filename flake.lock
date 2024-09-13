@@ -4176,13 +4176,12 @@
         "narHash": "sha256-KsAHxUj99MFqOoHcFCGq9KkSsD63L9cLGiye6BbxE4A=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "ec05f16723d1fbf9ddf2fb78b3ab23b5d25d9a32",
+        "rev": "727ee18176057664082a4eaf0f00d3452dfe166a",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "8cd3785e18191be47fc95c96e1afea30e9ef158c",
         "type": "github"
       }
     },
