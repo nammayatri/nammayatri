@@ -2250,7 +2250,7 @@ updateDriverTag merchantShortId opCity driverId req = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  if (req.isAddingTag && maybe False (elem req.driverTag) driver.driverTag) $ throwError (InvalidRequest "Tag already exists")
+  when (req.isAddingTag && maybe False (elem req.driverTag) driver.driverTag) $ throwError (InvalidRequest "Tag already exists")
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   Yudhishthira.verifyTag req.driverTag
