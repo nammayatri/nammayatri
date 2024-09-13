@@ -275,6 +275,7 @@ public class MobilityAppBridge extends HyperBridge {
             }
 
             @Override
+
             public void bundleUpdatedCallBack(String event, JSONObject payload) {
                 String command = String.format("window[\"onEvent'\"]('%s','%s')", event, payload.toString());
                 bridgeComponents.getJsCallback().addJsToWebView(command);

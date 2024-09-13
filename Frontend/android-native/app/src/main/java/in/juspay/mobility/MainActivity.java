@@ -1396,6 +1396,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onReceive(Context context, Intent intent){
+            System.out.println("Inside voice BroadCast Receiver");
             String action = intent.getAction();
             if(action != null && (action.equals(String.valueOf(in.juspay.mobility.app.R.string.ACTION_INCOMING_CALL)) || action.equals(String.valueOf(in.juspay.mobility.app.R.string.ACTION_CANCEL_CALL)))){
                 handleIncomingCallIntent(intent);
@@ -1501,6 +1502,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onRinging(@NonNull Call call) {
                 Log.d("TAG", "Ringing");
+                Notification notification =
+                NotificationUtility.createOutgoingCallNotificationWithLowImportance(
+                  VoiceService.this,
+                  callRecord);
+                createOrReplaceNotification(callRecord.getNotificationId(), notification);
                 /*
                  * When [answerOnBridge](https://www.twilio.com/docs/voice/twiml/dial#answeronbridge)
                  * is enabled in the <Dial> TwiML verb, the caller will not hear the ringback while

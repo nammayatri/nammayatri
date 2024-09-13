@@ -75,6 +75,7 @@ public class IncomingCallNotificationService  extends Service {
                     handleOutgoingCall(intent);
                 }
                 else if (action.equals(String.valueOf(R.string.ACTION_ACCEPT))) {
+                    System.out.println("INisde accept call ");
                     accept(callInvite, notificationId);
                 } else if (action.equals(String.valueOf(R.string.ACTION_REJECT))) {
                 System.out.println("Inside reject call");
@@ -118,12 +119,13 @@ public class IncomingCallNotificationService  extends Service {
                 //noinspection deprecation
                 return new NotificationCompat.Builder(this)
                         .setSmallIcon(R.drawable.ny_ic_call)
-                        .setContentTitle(getString(R.string.app_name))
+                        .setContentTitle("CHecking")
                         .setContentText("ABCD" + " is calling.")
                         .setAutoCancel(true)
                         .setExtras(extras)
                         .setContentIntent(pendingIntent)
                         .setGroup("test_app_notification")
+                        .setPriority(Notification.PRIORITY_HIGH)
                         .setCategory(Notification.CATEGORY_CALL)
                         .setColor(Color.rgb(214, 10, 37)).build();
             }
@@ -157,10 +159,11 @@ public class IncomingCallNotificationService  extends Service {
             Notification.Builder builder =
                     new Notification.Builder(getApplicationContext(), channelId)
                             .setSmallIcon(R.drawable.ny_ic_call)
-                            .setContentTitle(getString(R.string.app_name))
+                            .setContentTitle("Incoming Call")
                             .setContentText(text)
                             .setCategory(Notification.CATEGORY_CALL)
                             .setExtras(extras)
+                            .setPriority(Notification.PRIORITY_HIGH)
                             .setAutoCancel(true)
                             .addAction(android.R.drawable.ic_menu_delete, getString(R.string.decline), piRejectIntent)
                             .addAction(android.R.drawable.ic_menu_call, "Answer", piAcceptIntent)
@@ -244,7 +247,7 @@ public class IncomingCallNotificationService  extends Service {
         private void setCallInProgressNotification(int notificationId) {
             if (isAppVisible()) {
                 Log.i(TAG, "setCallInProgressNotification - app is visible.");
-                startForegroundService(notificationId, createNotification( notificationId, NotificationManager.IMPORTANCE_LOW));
+                startForegroundService(notificationId, createNotification( notificationId, NotificationManager.IMPORTANCE_HIGH));
             } else {
                 Log.i(TAG, "setCallInProgressNotification - app is NOT visible.");
                 startForeground(notificationId, createNotification( notificationId, NotificationManager.IMPORTANCE_HIGH));
