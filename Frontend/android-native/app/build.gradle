@@ -361,6 +361,9 @@ dependencies {
     api("com.squareup.okhttp3:okhttp")
     compileOnly 'com.facebook.react:react-android:0.72.3'
 
+    implementation fileTree(dir: "libs", include: ["*.jar"])
+    implementation "com.facebook.soloader:soloader:0.10.5"
+    implementation files('libs/android-jsc-r250231.aar')
 }
 
 def tmpSource = "/tmp/juspay"

@@ -66,6 +66,7 @@ import com.clevertap.android.pushtemplates.PushTemplateNotificationHandler;
 import com.clevertap.android.sdk.ActivityLifecycleCallback;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.sdk.interfaces.NotificationHandler;
+import com.facebook.soloader.SoLoader;
 import com.google.android.gms.ads.identifier.AdvertisingIdClient;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
@@ -421,6 +422,7 @@ public class MainActivity extends AppCompatActivity {
         sharedPref = context.getSharedPreferences(this.getString(in.juspay.mobility.app.R.string.preference_file_key), Context.MODE_PRIVATE);
         activity = this;
         initiateHvLauncher();
+        SoLoader.init(this, false);
 
         Log.i("APP_PERF", "FORKED_INIT_TASKS_AND_APIS : " + System.currentTimeMillis());        
 
