@@ -2619,17 +2619,21 @@ eval (UpdateChatWithEM flag primaryContact) state =
   continue state 
     { data 
       { driverInfoCardState 
-        { currentChatRecipient = if flag then CMC.dummyChatRecipient 
-          { name = primaryContact.name
-          , number = primaryContact.number
-          , uuid = state.data.driverInfoCardState.rideId <> "$" <> (fromMaybe "" primaryContact.contactPersonId)
-          , recipient = CMC.USER
-          , enableForShareRide = primaryContact.enableForShareRide
-          , contactPersonId = primaryContact.contactPersonId
-          , notifiedViaFCM = primaryContact.notifiedViaFCM
-          , shareTripWithEmergencyContactOption = primaryContact.shareTripWithEmergencyContactOption.key
-          }
-          else state.data.driverInfoCardState.currentChatRecipient
+        { currentChatRecipient = 
+            if flag 
+              then 
+                let channelId = if primaryContact.priority == 0 then state.data.driverInfoCardState.rideId else state.data.driverInfoCardState.rideId <> "$" <> fromMaybe "" primaryContact.contactPersonId
+                in CMC.dummyChatRecipient 
+                    { name = primaryContact.name
+                    , number = primaryContact.number
+                    , uuid = channelId
+                    , recipient = CMC.USER
+                    , enableForShareRide = primaryContact.enableForShareRide
+                    , contactPersonId = primaryContact.contactPersonId
+                    , notifiedViaFCM = primaryContact.notifiedViaFCM
+                    , shareTripWithEmergencyContactOption = primaryContact.shareTripWithEmergencyContactOption.key
+                    }
+              else state.data.driverInfoCardState.currentChatRecipient
         }
       } 
     , props {isChatWithEMEnabled = flag}
