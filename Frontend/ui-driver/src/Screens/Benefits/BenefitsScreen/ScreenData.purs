@@ -45,6 +45,11 @@ initData = {
                         , bannerScrollState: "0"
                         , currentPage: 0
                         }
+        , eligiblePayoutAmount : 0
+        , lastPayoutAt : Nothing
+        , payoutAmountPaid : 0
+        , payoutVpa : Nothing
+        , payoutRewardAmount : Nothing
         },
     props : {
       showDriverReferralQRCode : false,

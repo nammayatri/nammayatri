@@ -2671,6 +2671,11 @@ type BenefitsScreenData = {
   , moduleList :: LmsModuleList
   , bannerData :: BannerCarousalData
   , cityConfig :: CityConfig
+  , eligiblePayoutAmount :: Int
+  , lastPayoutAt :: Maybe String
+  , payoutAmountPaid :: Int
+  , payoutVpa :: Maybe String
+  , payoutRewardAmount :: Maybe Int
 }
 
 type BenefitsScreenProps = {

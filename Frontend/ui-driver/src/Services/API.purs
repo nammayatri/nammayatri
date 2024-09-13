@@ -1468,7 +1468,11 @@ newtype GetPerformanceRes = GetPerformanceRes {
     totalActivatedCustomers :: Int,
     totalReferredCustomers :: Int,
     totalReferredDrivers :: Maybe Int,
-    isPayoutEnabled :: Boolean
+    isPayoutEnabled :: Boolean,
+    eligiblePayoutAmount :: Int,
+    lastPayoutAt :: Maybe String,
+    payoutAmountPaid :: Int,
+    payoutVpa :: Maybe String
   }
 }
 

@@ -34,7 +34,7 @@ import Debug (spy)
 import Mobility.Prelude
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
-import Data.Maybe (isJust, fromMaybe, Maybe(..), maybe)
+import Data.Maybe (isJust, fromMaybe, Maybe(..), maybe, isNothing)
 import Effect.Uncurried (runEffectFn4)
 import ConfigProvider
 import Data.Int(fromNumber, toNumber, ceil)
@@ -60,6 +60,7 @@ import Data.Either (Either(..))
 import Helpers.API as HelperAPI
 import Engineering.Helpers.Utils as EHU
 import Common.RemoteConfig.Utils as CRC
+import RemoteConfig.Utils as RC
 import Helpers.Utils as HU
 import Services.API as API
 import Data.String as DS
@@ -150,8 +151,8 @@ referralScreenInnerBody push state =
   [ width $ MATCH_PARENT
   , height $ WRAP_CONTENT
   , orientation VERTICAL
-  ]([ if fromMaybe false state.props.isPayoutEnabled then getCarouselView else dummyView
-    , GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
+  ]([ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
+    , referralStatsView push state
     , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -163,8 +164,150 @@ referralScreenInnerBody push state =
       ]
     , learnAndEarnShimmerView push state
   ] <> if not (null state.data.moduleList.completed) || not (null state.data.moduleList.remaining) then [learnAndEarnView push state] else [])
-  where
-    getCarouselView = maybe (linearLayout[][]) (\item -> bannersCarousal item state push) state.data.bannerData.bannerItem
+
+referralStatsView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
+referralStatsView push state =
+  let referralBonusVideo = RC.getReferralBonusVideo $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION 
+  in 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , cornerRadius 12.0
+  , orientation VERTICAL
+  , padding $ Padding 16 16 16 16
+  , margin $ Margin 16 0 16 16
+  , stroke $ "1," <> Color.grey900
+  , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just true
+  ][ if state.data.payoutAmountPaid > 0 then referralBonusView push state else emptyReferralBonusView push state
+   , linearLayout
+     [ height WRAP_CONTENT
+     , width MATCH_PARENT
+     , background Color.green100
+     , padding $ Padding 12 6 12 6
+     , gravity CENTER_VERTICAL
+     , visibility $ boolToVisibility $ referralBonusVideo /= ""
+     , margin $ MarginTop 16
+     , cornerRadius 6.0
+     , onClick (\_ -> if referralBonusVideo /= "" then void $ JB.openUrlInApp referralBonusVideo else pure unit) (const NoAction)
+     ][ textView $ 
+        [ text $ getString REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK 
+        , color $ Color.black700
+        , gravity CENTER_VERTICAL
+        , weight 1.0
+        , height WRAP_CONTENT
+        , singleLine false
+        ] <> FontStyle.body3 TypoGraphy
+      , imageView
+        [ height $ V 22
+        , width $ V 22
+        , gravity RIGHT
+        , margin $ MarginLeft 8
+        , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_youtube"
+        ]
+     ]
+  ]
+
+referralBonusView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
+referralBonusView push state = 
+  let lastPayoutAt = fromMaybe "" state.data.lastPayoutAt
+  in
+  relativeLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  ][ linearLayout
+     [ height WRAP_CONTENT
+     , width MATCH_PARENT
+     , orientation VERTICAL
+     , onClick push $ const $ GoToCustomerReferralTracker false
+     ][textView $ 
+       [ text $ getString MY_REFERRAL_BONUS
+       , color $ Color.black700
+       , margin $ MarginRight 36
+       ] <> FontStyle.paragraphText TypoGraphy 
+     , linearLayout
+       [ height WRAP_CONTENT
+       , width MATCH_PARENT
+       ][ textView $ 
+         [ text $ state.data.config.currency <> show state.data.payoutAmountPaid
+         , color Color.limeGreen
+         ] <> FontStyle.title2 TypoGraphy
+       , textView $ 
+         [ text $ getString $ TILL (convertUTCtoISC lastPayoutAt "DD MMM YYYY")
+         , color $ Color.black700
+         , visibility $ boolToVisibility $ lastPayoutAt /= ""
+         , margin $ MarginLeft 4
+         ] <> FontStyle.body3 TypoGraphy
+       ]
+     , linearLayout
+       [ height WRAP_CONTENT
+       , width MATCH_PARENT
+       , visibility $ boolToVisibility $ not $ isNothing state.data.payoutVpa
+       ][ textView $ 
+          [ textFromHtml $ getString LINKED_UPI_ID <> ": " <> "<b>" <> (fromMaybe "" state.data.payoutVpa) <> "</b>"
+          , color $ Color.black700
+          ] <> FontStyle.paragraphText TypoGraphy
+        ]
+     , linearLayout
+       [ height WRAP_CONTENT
+       , width MATCH_PARENT
+       , visibility $ boolToVisibility $ isNothing state.data.payoutVpa
+       ][ textView $ 
+          [ text $ getString TO_GET_MONEY <> ", "
+          , color $ Color.black700
+          ] <> FontStyle.paragraphText TypoGraphy
+        , linearLayout
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , cornerRadius 12.0
+          , onClick push $ const $ GoToCustomerReferralTracker true
+          , padding $ Padding 6 2 6 2
+          , background Color.blue800
+          ][ textView $ 
+             [ text $ getString ADD_UPI_ID
+             , color Color.white900
+             , padding $ PaddingBottom 1
+             ] <> FontStyle.tags TypoGraphy
+          ]
+        ]
+     ]
+   , linearLayout
+     [ height WRAP_CONTENT
+     , width MATCH_PARENT
+     , gravity RIGHT
+     ][ imageView
+       [ height $ V 32
+       , width $ V 32
+       , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_arrow_right_grey"
+       ]
+     ]
+   ]
+
+emptyReferralBonusView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
+emptyReferralBonusView push state = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , onClick push $ const $ GoToCustomerReferralTracker false
+  ][ imageView
+     [ height $ V 48
+     , width $ V 48
+     , margin $ MarginRight 16
+     , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_coins_stack"
+     ]
+   , textView $ 
+     [ text $ getString $ EARN_FOR_EACH_REFERRAL (state.data.config.currency <> (show $ fromMaybe 0 state.data.payoutRewardAmount))
+     , color Color.black900
+     , weight 1.0
+     , height WRAP_CONTENT
+     , margin $ MarginRight 6
+     , singleLine false
+     ] <> FontStyle.body25 TypoGraphy
+   , imageView
+     [ height $ V 32
+     , width $ V 32
+     , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_arrow_right_grey"
+     ] 
+  ]
 
 tabView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 tabView push state =
@@ -346,53 +489,7 @@ driverReferralCode push state =
       , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just false || state.props.driverReferralType == DRIVER
       ][ referralCountView false (getString REFERRED) (show state.data.totalReferredCustomers) (state.props.driverReferralType == CUSTOMER) push REFERRED_CUSTOMERS_POPUP
        , referralCountView true config.infoText (show activatedCount) true push config.popupType
-       ] 
-     , linearLayout
-       [ height WRAP_CONTENT
-       , width MATCH_PARENT
-       , margin $ MarginTop 16
-       , cornerRadius 8.0
-       , background Color.lightBlue80
-       , gravity CENTER_VERTICAL
-       , visibility $ boolToVisibility $ state.props.isPayoutEnabled == Just true && state.props.driverReferralType == CUSTOMER
-       , onClick push $ const $ GoToCustomerReferralTracker
-       ][ relativeLayout
-          [ height MATCH_PARENT
-          , width MATCH_PARENT
-          ][ linearLayout
-             [ height MATCH_PARENT
-             , width MATCH_PARENT
-             , padding $ PaddingHorizontal 8 8
-             , gravity CENTER_VERTICAL
-             ][imageView
-               [ imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_star_black"
-               , height $ V 15
-               , width $ V 12
-               , margin $ MarginRight 4
-               ]
-             , textView $ 
-               [ height WRAP_CONTENT 
-               , text $ getString REFERRAL_BONUS_TRACKER 
-               , color Color.black900
-               , gravity CENTER_VERTICAL
-               , padding $ PaddingVertical 12 12
-               , lineHeight "18"
-               ] <> FontStyle.body6 TypoGraphy
-             , linearLayout [weight 1.0, height MATCH_PARENT][]
-             , linearLayout
-               [ height MATCH_PARENT
-               , width WRAP_CONTENT
-               , gravity CENTER_VERTICAL
-               ][ imageView
-                   [ height $ V 16
-                   , width $ V 16
-                   , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_chevron_right_black_900"
-                   ]
-                ]
-              ]
-            , shineAnimation state
-          ]
-        ]
+       ]
     ]
   where
   activatedCount = if state.props.driverReferralType == DRIVER then state.data.totalReferredDrivers else state.data.totalActivatedCustomers
@@ -900,34 +997,6 @@ computeListItem :: (Action -> Effect Unit) -> Flow GlobalState Unit
 computeListItem push = do
   bannerItem <- preComputeListItem $ BannerCarousel.view push (BannerCarousel.config BannerCarousal)
   void $ EHC.liftFlow $ push (SetBannerItem bannerItem)
-
-bannersCarousal :: forall w. ListItem -> BenefitsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-bannersCarousal view state push =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , margin $ MarginTop 24
-  , visibility $ boolToVisibility $ state.props.bannerLength > 0
-  ][CarouselHolder.carouselView push $ getCarouselConfig view state]
-
-getCarouselConfig ∷ forall a. ListItem → BenefitsScreenState → CarouselHolder.CarouselHolderConfig BannerCarousel.PropConfig Action
-getCarouselConfig view state = {
-    view
-  , items : BannerCarousel.bannerTransformer $ getRemoteBannerConfigs BannerCarousal
-  , orientation : VERTICAL
-  , currentPage : state.data.bannerData.currentPage
-  , autoScroll : true
-  , autoScrollDelay : 5000.0
-  , id : "referralBannerCarousel"
-  , autoScrollAction : Just UpdateBanner
-  , onPageSelected : Just BannerChanged
-  , onPageScrollStateChanged : Just BannerStateChanged
-  , onPageScrolled : Nothing
-  , currentIndex : state.data.bannerData.currentBanner
-  , showScrollIndicator : true
-  , layoutHeight : V 100
-  , overlayScrollIndicator : true
-}
 
 checkTokenAndInitSDK :: forall action. (action -> Effect Unit) ->  (String -> action) -> Flow GlobalState Unit
 checkTokenAndInitSDK push action = do

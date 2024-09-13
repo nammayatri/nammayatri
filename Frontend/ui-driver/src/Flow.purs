@@ -3870,9 +3870,11 @@ benefitsScreenFlow = do
   logField_ <- lift $ lift $ getLogFields
   void $ lift $ lift $ liftFlow $ logEvent logField_ "benefitsScreenFlow"
   appConfig <- getAppConfigFlowBT Constants.appConfig
+  (GlobalState globalstate) <- getState
+  (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalstate) false
   let referralCode = getValueToLocalStore REFERRAL_CODE
       cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-  modifyScreenState $ BenefitsScreenStateType (\benefitsScreen -> benefitsScreen { data {referralCode = referralCode, cityConfig = cityConfig}})
+  modifyScreenState $ BenefitsScreenStateType (\benefitsScreen -> benefitsScreen { data {referralCode = referralCode, cityConfig = cityConfig, payoutRewardAmount = getDriverInfoResp.payoutRewardAmount}})
   benefitsScreen <- UI.benefitsScreen
   case benefitsScreen of
     DRIVER_REFERRAL_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
@@ -3890,7 +3892,9 @@ benefitsScreenFlow = do
                               else cachedSelectedLanguage
       modifyScreenState $ LmsVideoScreenStateType (\lmsVideoScreen -> lmsVideoScreen { props {selectedLanguage = selectedLanguage, selectedModule = state.props.selectedModule}})
       lmsVideoScreenFlow
-    CUSTOMER_REFERRAL_TRACKER_NAV -> customerReferralTrackerFlow
+    CUSTOMER_REFERRAL_TRACKER_NAV openPP -> do 
+      modifyScreenState $ CustomerReferralTrackerScreenStateType (\customerReferralTrackerScreenState -> customerReferralTrackerScreenState{props {openPP = openPP}})
+      customerReferralTrackerFlow
 
 customerReferralTrackerFlow :: FlowBT String Unit 
 customerReferralTrackerFlow = do 

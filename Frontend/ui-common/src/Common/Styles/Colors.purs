@@ -412,3 +412,6 @@ lightBlue80 = "#CC80B2FF"
 
 surfaceRed :: Color
 surfaceRed = "#FDEAEA"
+
+limeGreen :: Color 
+limeGreen = "#3AA215"

@@ -531,7 +531,7 @@ data CHOOSE_LANG_SCREEN_OUTPUT = LOGIN_FLOW
 data BENEFITS_SCREEN_OUTPUT = DRIVER_REFERRAL_SCREEN_NAV NAVIGATION_ACTIONS
                               | DRIVER_CONTEST_SCREEN
                               | GO_TO_LMS_VIDEO_SCREEN BenefitsScreenState
-                              | CUSTOMER_REFERRAL_TRACKER_NAV
+                              | CUSTOMER_REFERRAL_TRACKER_NAV Boolean
 
 data LMS_VIDEO_SCREEN_OUTPUT = GO_TO_QUIZ_SCREEN LmsVideoScreenState | REFRESH_LMS_VIDEO_SCREEN LmsVideoScreenState | GO_TO_BENEFITS_SCREEN | SELECT_LANGUAGE_FOR_VIDEOS LmsVideoScreenState
 
