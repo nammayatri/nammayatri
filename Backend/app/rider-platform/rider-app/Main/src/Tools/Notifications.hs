@@ -139,7 +139,8 @@ notifyOnDriverOfferIncoming estimateId quotes person bppDetailList = do
 
 data RideAssignedParam = RideAssignedParam
   { driverName :: Text,
-    rideTime :: UTCTime
+    rideTime :: UTCTime,
+    bookingId :: Id SRB.Booking
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
@@ -166,7 +167,7 @@ notifyOnRideAssigned booking ride = do
             entity = Notification.Entity Notification.Product rideId.getId (),
             body = body,
             title = title,
-            dynamicParams = RideAssignedParam driverName booking.startTime,
+            dynamicParams = RideAssignedParam driverName booking.startTime booking.id,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
             ttl = Nothing,
             sound = notificationSound
@@ -365,8 +366,9 @@ notifyOnRegistration regToken person mbDeviceToken = do
           ]
    in notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
 
-newtype RideCancelParam = RideCancelParam
-  { rideTime :: UTCTime
+data RideCancelParam = RideCancelParam
+  { rideTime :: UTCTime,
+    bookingId :: Id SRB.Booking
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
@@ -400,10 +402,10 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide = do
           subCategory = Just subCategory,
           showNotification = Notification.SHOW,
           messagePriority = Nothing,
-          entity = Notification.Entity Notification.Product booking.id.getId (RideCancelParam booking.startTime),
+          entity = Notification.Entity Notification.Product booking.id.getId (RideCancelParam booking.startTime booking.id),
           body = getCancellationText orgName,
           title = getTitle,
-          dynamicParams = RideCancelParam booking.startTime,
+          dynamicParams = RideCancelParam booking.startTime booking.id,
           auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
           ttl = Nothing,
           sound = notificationSound
@@ -469,8 +471,9 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide = do
                 "Please try to book again"
               ]
 
-newtype BookingReallocatedParam = BookingReallocatedParam
-  { rideTime :: UTCTime
+data BookingReallocatedParam = BookingReallocatedParam
+  { rideTime :: UTCTime,
+    bookingId :: Id SRB.Booking
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
@@ -495,7 +498,7 @@ notifyOnBookingReallocated booking = do
           entity = Notification.Entity Notification.Product booking.id.getId (),
           body = body,
           title = title,
-          dynamicParams = BookingReallocatedParam booking.startTime,
+          dynamicParams = BookingReallocatedParam booking.startTime booking.id,
           auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
           ttl = Nothing,
           sound = notificationSound
@@ -528,7 +531,7 @@ notifyOnEstOrQuoteReallocated cancellationSource booking estOrQuoteId = do
           subCategory = Nothing,
           showNotification = Notification.SHOW,
           messagePriority = Nothing,
-          entity = Notification.Entity Notification.Product estOrQuoteId (BookingReallocatedParam booking.startTime),
+          entity = Notification.Entity Notification.Product estOrQuoteId (BookingReallocatedParam booking.startTime booking.id),
           body = body,
           title = title,
           dynamicParams = EmptyDynamicParam,
