@@ -100,9 +100,9 @@ screen initialState globalState =
                 case initialState.data.driverInfoCardState, not initialState.props.chatCallbackInitiated of
                   Just ride, true -> do
                     if os /= "IOS" then do
-                      checkChatService push 5 ride.rideId
+                      checkChatService push 5 ride.rideId initialState
                     else if os == "IOS" then do
-                      startChatServices push ride.rideId
+                      startChatServices push ride.rideId initialState
                     else
                       pure unit
                   _,_ -> pure unit
@@ -120,20 +120,23 @@ screen initialState globalState =
         eval action state
   }
 
-checkChatService :: forall w . (Action -> Effect Unit) -> Int -> String -> Effect Unit
-checkChatService push retry rideId = 
+checkChatService :: forall w . (Action -> Effect Unit) -> Int -> String -> FollowRideScreenState -> Effect Unit
+checkChatService push retry rideId state = 
   when (retry > 0) $ do 
     let isChatServiceRunning = runFn1 JB.isServiceRunning chatService
     if isChatServiceRunning then do
       void $ pure $ delay $ Milliseconds 2000.0
-      checkChatService push (retry-1) rideId
+      checkChatService push (retry-1) rideId state
     else
-      startChatServices push rideId
+      startChatServices push rideId state
 
-startChatServices :: (Action -> Effect Unit) -> String -> Effect Unit
-startChatServices push rideId = do
+startChatServices :: (Action -> Effect Unit) -> String -> FollowRideScreenState -> Effect Unit
+startChatServices push rideId state = do
+  let cFollower = getCurrentFollower state.data.currentFollower
+      customerId = getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys
+      channelId = if cFollower.priority == 0 then rideId else rideId <> "$" <> customerId
   void $ clearChatMessages
-  void $ storeCallBackMessageUpdated push (rideId <> "$" <> getValueToLocalStore CUSTOMER_ID) (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)  UpdateMessages AllChatsLoaded
+  void $ storeCallBackMessageUpdated push channelId customerId UpdateMessages AllChatsLoaded
   void $ storeCallBackOpenChatScreen push OpenChatScreen
   void $ startChatListenerService
   void $ scrollOnResume push ScrollToBottom

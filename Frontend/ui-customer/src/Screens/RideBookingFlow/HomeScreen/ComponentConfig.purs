@@ -2532,31 +2532,36 @@ getAllServices dummy =
   ]
 
 getChatDetails :: ST.HomeScreenState -> Array NewContacts -> Array ChatContacts
-getChatDetails state contacts = do
-  let multiChatContacts = 
-        foldl
-          ( \acc item -> if ( isJust item.contactPersonId) then 
-                            acc <> [ { name : item.name
-                              , number : item.number
-                              , uuid : state.data.driverInfoCardState.rideId <> "$" <> (fromMaybe "" item.contactPersonId)
-                              , recipient : CMC.USER
-                              , enableForShareRide : item.enableForShareRide
-                              , contactPersonId : item.contactPersonId
-                              , notifiedViaFCM : item.notifiedViaFCM
-                              , shareTripWithEmergencyContactOption : item.shareTripWithEmergencyContactOption.key
-                              }]
-                          else acc
-          ) [] contacts
-  multiChatContacts <> (if state.props.stageBeforeChatScreen == ST.RideStarted && state.data.fareProductType /= FPT.RENTAL then []
-                        else 
-                        [
-                          { name :  state.data.driverInfoCardState.driverName
-                          , number : ""
-                          , uuid : state.data.driverInfoCardState.bppRideId
-                          , recipient : CMC.DRIVER
-                          , enableForShareRide : false
-                          , contactPersonId : Nothing
-                          , notifiedViaFCM : Nothing
-                          , shareTripWithEmergencyContactOption : API.NEVER_SHARE
-                          }
-                        ])
+getChatDetails state contacts = 
+  let createContact :: Maybe NewContacts -> ChatContacts
+      createContact Nothing = 
+        { name : state.data.driverInfoCardState.driverName
+        , number : ""
+        , uuid : state.data.driverInfoCardState.bppRideId
+        , recipient : CMC.DRIVER
+        , enableForShareRide : false
+        , contactPersonId : Nothing
+        , notifiedViaFCM : Nothing
+        , shareTripWithEmergencyContactOption : API.NEVER_SHARE
+        }
+      createContact (Just item) = 
+        let channelId = if item.priority == 0 then state.data.driverInfoCardState.rideId else state.data.driverInfoCardState.rideId <> "$" <> fromMaybe "" item.contactPersonId
+        in { name : item.name
+            , number : item.number
+            , uuid : channelId
+            , recipient : CMC.USER
+            , enableForShareRide : item.enableForShareRide
+            , contactPersonId : item.contactPersonId
+            , notifiedViaFCM : item.notifiedViaFCM
+            , shareTripWithEmergencyContactOption : item.shareTripWithEmergencyContactOption.key
+          }
+
+      multiChatContacts = 
+        foldl (\acc item -> maybe acc (\_ -> acc <> [createContact (Just item)]) item.contactPersonId) [] contacts
+
+      driverChatContact = 
+        if state.props.stageBeforeChatScreen == ST.RideStarted && state.data.fareProductType /= FPT.RENTAL
+        then []
+        else [createContact Nothing]
+
+  in multiChatContacts <> driverChatContact

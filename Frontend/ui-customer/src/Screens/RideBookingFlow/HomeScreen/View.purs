@@ -4819,7 +4819,8 @@ validateAndStartChat contacts push state safetyCheckStartSeconds safetyCheckEndS
         if (not $ state.props.chatcallbackInitiated ) then do 
           let primaryContact = fromMaybe dummyNewContacts $ Arr.head $ Arr.filter (\item -> (isJust item.contactPersonId)) contacts
           push $ UpdateChatWithEM true primaryContact
-          let uuid = state.data.driverInfoCardState.rideId <> "$" <> (fromMaybe "" primaryContact.contactPersonId)
+          let 
+              uuid = if primaryContact.priority == 0 then state.data.driverInfoCardState.rideId else state.data.driverInfoCardState.rideId <> "$" <> (fromMaybe "" primaryContact.contactPersonId)
               chatUser = (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)
           checkAndStartChatService push uuid chatUser true state else pure unit 
 
