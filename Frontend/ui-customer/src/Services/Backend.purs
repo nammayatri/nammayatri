@@ -285,13 +285,14 @@ searchLocationBT payload = do
                 BackT $ pure GoBack
 
 
-makeSearchLocationReq :: String -> Number -> Number -> String -> String -> GeoCodeConfig -> Maybe AutoCompleteReqType -> String -> SearchLocationReq
-makeSearchLocationReq input lat lng language components geoCodeConfig autoCompleteType sessionToken = SearchLocationReq {
+makeSearchLocationReq :: String -> Number -> Number -> String -> String -> GeoCodeConfig -> Maybe AutoCompleteReqType -> String -> Maybe String -> SearchLocationReq
+makeSearchLocationReq input lat lng language components geoCodeConfig autoCompleteType sessionToken types_ = SearchLocationReq {
     "input" : input,
     "location" : (show lat <> "," <> show lng),
     "radius" : geoCodeConfig.radius,
     "components" : components,
     "language" : language,
+    "types_" : types_,
     "strictbounds": if geoCodeConfig.strictBounds then Just true else Nothing,
     "origin" : LatLong {
             "lat" : lat,
@@ -360,8 +361,8 @@ rideSearchBT payload = do
             BackT $ pure GoBack
 
 
-makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Boolean -> Boolean -> String -> Boolean -> SearchReq
-makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMoved destManuallyMoved sessionToken isSpecialLocation = -- check this for rentals
+makeRideSearchReq :: String -> Number -> Number -> Number -> Number -> Address -> Address -> String -> Boolean -> Boolean -> String -> Boolean -> SearchReq
+makeRideSearchReq fareProductType slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMoved destManuallyMoved sessionToken isSpecialLocation = -- check this for rentals
     let appConfig = CP.getAppConfig CP.appConfig
     in  SearchReq 
         { "contents" : OneWaySearchRequest 
@@ -387,10 +388,10 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMo
                 , "sessionToken" : Just sessionToken
                 , "isSpecialLocation" : Just isSpecialLocation
                 , "quotesUnifiedFlow" : Just true
-                , "rideRequestAndRideOtpUnifiedFlow" : Just true 
+                , "rideRequestAndRideOtpUnifiedFlow" : if fareProductType == "AMBULANCE" then Just false else Just true 
                 }
             )
-        , "fareProductType" : "ONE_WAY"
+        , "fareProductType" : fareProductType
         }
     where 
         validateLocationAddress :: Number -> Number -> LocationAddress -> LocationAddress
@@ -1446,8 +1447,7 @@ mkRentalSearchReq slat slong dlat dlong srcAdd desAdd startTime estimatedRentalD
                     "fareProductType" : "RENTAL"
                    }
 
-------------------------------------------------------------------------- Edit Location API -----------------------------------------------------------------------------
-
+------------------------------------------------------------------------ Edit Destination -----------------------------------------------------------------------------
 makeEditLocationRequest :: String -> Maybe SearchReqLocation -> Maybe SearchReqLocation -> EditLocationRequest
 makeEditLocationRequest rideId srcAddress destAddress =
     EditLocationRequest rideId $ makeEditLocationReq srcAddress destAddress

@@ -367,19 +367,23 @@ window.getMerchantConfig = function () {
         "staticViewPlans" : []
       },
       "waitingChargesConfig" : {
-        "cab" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 2.0
-        },
-        "auto" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 1.50
-        },
-        "bike" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 2.0
-        }
-      },
+           "cab" : {
+             "freeSeconds" : 180,
+             "perMinCharges" : 2.0
+           },
+           "auto" : {
+             "freeSeconds" : 180,
+             "perMinCharges" : 2.00
+           },
+           "bike" : {
+             "freeSeconds" : 180,
+             "perMinCharges" : 2.0
+           },
+           "ambulance" : {
+             "freeSeconds" : 480,
+             "perMinCharges" : 2.0
+           }
+         },
       "rentalWaitingChargesConfig" : {
         "cab" : {
           "freeSeconds" : 180,
@@ -391,6 +395,10 @@ window.getMerchantConfig = function () {
         },
         "bike" : {
           "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
           "perMinCharges" : 2.0
         }
       }
@@ -411,10 +419,14 @@ window.getMerchantConfig = function () {
         },
         "auto" : {
           "freeSeconds" : 180,
-          "perMinCharges" : 1.50
+          "perMinCharges" : 2.00
         },
         "bike" : {
           "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
           "perMinCharges" : 2.0
         }
       },
@@ -430,6 +442,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 180,
           "perMinCharges" : 2.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
     },
@@ -441,15 +457,97 @@ window.getMerchantConfig = function () {
       "cityLat" : 23.6889,
       "cityLong" : 86.9661,
       "supportNumber" : "08069724949",
-      "languageKey" : "BN_IN"
-    },
-    { ...baseCityConfig
-    , "cityName" : "Durgapur"
-    , "mapImage" : "ys_ic_durgapur_map"
-    , "cityCode" : "std:0343"
-    , "cityLat" : 23.5204
-    , "cityLong" : 87.3119
-    , "showSubscriptions" : false
+      "languageKey" : "BN_IN",
+      "showDriverReferral" : true,
+      "showCustomerReferral" : true,
+      "uploadRCandDL" : true,
+      "enableYatriCoins" : false,
+      "enableGullak": false,
+      "vehicleNSImg" : "ny_ic_location_unserviceable",
+      "registration" : {
+          "supportWAN" : "918618963188",
+          "callSupport" : true,
+          "whatsappSupport" : true
+      },
+      "variantSubscriptionConfig" : {
+        "enableVariantBasedSubscription" : false,
+        "variantList" : [],
+        "enableCabsSubscriptionView" : false,
+        "staticViewPlans" : []
+      },
+      "showEarningSection" : true,
+      "referral" : {
+          "domain" : "https://www.yatrisathi.in"
+        , "customerAppId" : "in.juspay.jatrisaathi"
+        , "driverAppId" : "in.juspay.jatrisaathidriver"
+      },
+      "waitingCharges" : 1.50,
+      "waitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 2.00
+        },
+        "bike" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
+        }
+      },
+      "rateCardConfig" : defRateCardConfig,
+      "gstPercentage" : "18",
+      "rentalWaitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        },
+        "bike" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
+        }
+      },
+      "assets" :{
+        "auto_image" : "ny_ic_auto_side_view",
+        "onboarding_auto_image" : "ny_ic_auto_side",
+        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+        "empty_referral_cab" : "ny_ic_refer_now_cab_ys,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ys.png"
+      },
+      "enableHvSdk" : true,
+      "purpleRideConfig" : {
+        "purpleRideConfigForAuto" : {
+          "vehicleVariant" : "Auto",
+          "showVideo" : false,
+          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+        },
+        "purpleRideConfigForCabs" : {
+          "vehicleVariant" : "Cab",
+          "showVideo" : false,
+          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+        },
+        "purpleRideConfigForBikes" : {
+          "vehicleVariant" : "Bike",
+          "showVideo" : false,
+          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+        }
+      }
+    , "rideStartAudio" : defaultStartAudioConfig
     }
   ]
   })

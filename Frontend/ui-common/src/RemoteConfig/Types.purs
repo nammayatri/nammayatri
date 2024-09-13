@@ -127,6 +127,11 @@ type TipsConfig
       taxi :: Maybe (Array Int),
       taxiPlus :: Maybe (Array Int),
       bike :: Maybe (Array Int),
+      ambulanceTaxi :: Maybe (Array Int),
+      ambulanceTaxiOxy :: Maybe (Array Int),
+      ambulanceAc :: Maybe (Array Int),
+      ambulanceAcOxy :: Maybe (Array Int),
+      ambulanceVentilator :: Maybe (Array Int),
       default :: Maybe (Array Int)
     }
 
@@ -138,6 +143,11 @@ type SubscriptionConfigVariantLevel
       bookAny :: Maybe SubscriptionConfigVariantLevelEntity,
       taxi :: Maybe SubscriptionConfigVariantLevelEntity,
       taxiPlus :: Maybe SubscriptionConfigVariantLevelEntity,
+      ambulanceTaxi ::Maybe SubscriptionConfigVariantLevelEntity,
+      ambulanceTaxiOxy :: Maybe SubscriptionConfigVariantLevelEntity,
+      ambulanceAc :: Maybe SubscriptionConfigVariantLevelEntity,
+      ambulanceAcOxy :: Maybe SubscriptionConfigVariantLevelEntity,
+      ambulanceVentilator :: Maybe SubscriptionConfigVariantLevelEntity,
       default :: Maybe SubscriptionConfigVariantLevelEntity
     }
 
@@ -151,7 +161,7 @@ type SubscriptionConfigVariantLevelEntity = {
   
 ---------------------------------Remote Config Dynamic AC-----------------------------------------------
 
-data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking | Rentals | Intercity | SafetyExplaination
+data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking | Rentals | Intercity | AmbulanceBooking | SafetyExplaination
 
 instance eqRemoteAC :: Eq RemoteAC where eq = genericEq
 instance encodeJsonRemoteAC :: EncodeJson RemoteAC where encodeJson = genericEncodeJson

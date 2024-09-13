@@ -1493,3 +1493,11 @@ getTA stringKey =
     DRIVER -> "இயக்கி"
     RECOMMEND_SHARE_MANUALLY -> "நீங்கள் பகிர்வதை கைமுறையாகப் பகிரலாம்"
     CANNOT_ADD_OWN_NUMBER -> "உங்கள் எண்ணை அவசரகாலத் தொடர்புகளாகச் சேர்க்க முடியாது"
+    A_C ->  "ஒப்புக்கொள் & தெரிவி"
+    NO_OXYGEN -> "ஆக்சிஜன் இல்லை"
+    OXYGEN -> "ஆக்சிஜன்"
+    VENTILATOR -> "குளிர்ச்சிக்குரிய"
+    AMBULANCE_ -> "ஆம்புலன்ஸ்"
+    UNCOMFORTABLE_AMBULANCE -> "சிரமமான ஆம்புலன்ஸ்"
+    CLEAN_AMBULANCE -> "சுத்தமான ஆம்புலன்ஸ்"
+

@@ -284,47 +284,79 @@ window.getMerchantConfig = function () {
       }
     ]
     , "estimateAndQuoteConfig" : 
-      { "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"] ]
-      , "variantOrder" : ["AUTO_RICKSHAW", "BOOK_ANY"]
+      { "variantTypes" : [["AUTO_RICKSHAW"], ["SUV"], ["SEDAN", "TAXI_PLUS"], ["HATCHBACK"], ["TAXI"], ["BOOK_ANY"], ["BIKE"],["SUV_PLUS"], ["AMBULANCE_VENTILATOR"],["AMBULANCE_AC_OXY"], ["AMBULANCE_AC"],["AMBULANCE_TAXI_OXY"] ,["AMBULANCE_TAXI"]]
+      , "variantOrder" : ["BIKE", "BOOK_ANY", "HATCHBACK", "TAXI", "SEDAN", "TAXI_PLUS", "SUV" , "SUV_PLUS","AMBULANCE_VENTILATOR","AMBULANCE_AC_OXY", "AMBULANCE_AC","AMBULANCE_TAXI_OXY" ,"AMBULANCE_TAXI"]
       , "variantInfo" : {
-        "hatchback" : {
-          "name" : "Hatchback",
-          "image" : "ic_hatchback_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_hatchback_ac.png",
-          "leftViewImage" : "ny_ic_hatchback_left_view,"
+          "hatchback" : {
+            "name" : "Hatchback",
+            "image" : "ny_ic_hatchback_ac_side,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_hatchback_ac.png",
+            "leftViewImage" : "ny_ic_hatchback_left_view,"
           },
-        "taxiPlus" : {
-          "name" : "AC Taxi",
-          "image" : "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_sedan_ac.png",
-          "leftViewImage" : "ny_ic_sedan_left_view,"
-        },
-        "sedan" : {
-          "name" : "Sedan",
-          "image" : "ny_ic_sedan_ac_new,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_sedan_ac.png",
-          "leftViewImage" : "ny_ic_sedan_left_view,"
-        },
-        "taxi" : {
-          "name" : "Non-AC Taxi",
-          "image" : "ic_taxi,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_taxi.png",
-          "leftViewImage" : "ny_ic_sedan_left_view,"
-        },
-        "suv" : {
-          "name" : "SUV",
-          "image" : "ic_suv_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_suv_ac.png",
-          "leftViewImage" : "ny_ic_suv_left_view,"
-        },
-        "autoRickshaw" : {
-          "name" : "Auto Rickshaw",
-          "image" : "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
-          "leftViewImage" : "ny_ic_auto_left_view,"
-        },
-        "bookAny" : {
-          "name" : "Book Any",
-          "image" : "ny_ic_cab_auto_green,https://assets.moving.tech/beckn/common/user/images/ny_ic_cab_auto_green.png",
-          "leftViewImage" : ","
-        },
-        "bike" : {
-          "name" : "Bike",
-          "image" : "ny_ic_bike_side,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_bike_side.png"
+          "taxiPlus" : {
+            "name" : "AC Taxi",
+            "image" : "ny_ic_sedan_ac_side,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_sedan_ac.png",
+            "leftViewImage" : "ny_ic_sedan_left_view,"
+          },
+          "sedan" : {
+            "name" : "Sedan",
+            "image" : "ny_ic_sedan_ac_side,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_sedan_ac.png",
+            "leftViewImage" : "ny_ic_sedan_left_view,"
+          },
+          "taxi" : {
+            "name" : "Non AC Taxi",
+            "image" : "ny_ic_taxi_side,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_taxi.png",
+            "leftViewImage" : "ny_ic_hatchback_left_view,"
+          },
+          "suv" : {
+            "name" : "SUV",
+            "image" : "ny_ic_suv_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_suv_ac_side.png",
+            "leftViewImage" : "ny_ic_suv_left_view,"
+          },
+          "autoRickshaw" : {
+            "name" : "Auto Rickshaw",
+            "image" : "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
+            "leftViewImage" : "ny_ic_auto_left_view,"
+          },
+          "bike" : {
+            "name" : "Bike",
+            "image": "ny_ic_bike_side,https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_bike_side.png",
+            "leftViewImage" : "ny_ic_bike_left_side,"
+          },
+          "bookAny" : {
+            "name" : "Book Any",
+            "image" : "ny_ic_cab_multiple,https://assets.juspay.in/beckn/jatrisaathicommon/images/ny_ic_cab_multiple.png",
+            "leftViewImage" : ","
+          },
+          "suvPlus" : {
+            "name" : "XL Plus",
+            "image" : "ny_ic_suv_plus_side,https://assets.juspay.in/beckn/jatrisaathicommon/images/ny_ic_suv_plus_side.png",
+            "leftViewImage" : "ny_ic_suv_plus_left_side,"
+          },
+          "ambulanceTaxi" : {
+            "name" : "Ambulance Taxi",
+            "image" : "ny_ic_ambulance_noac_nooxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_noac_nooxy.png",
+            "leftViewImage" : "ny_ic_ambulance_noac_nooxy,"
+          },
+          "ambulanceTaxiOxy" : {
+            "name" : "Ambulance Taxi with Oxygen",
+            "image" : "ny_ic_ambulance_noac_oxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_noac_oxy.png",
+            "leftViewImage" : "ny_ic_ambulance_noac_oxy,"
+          },
+          "ambulanceAc" : {
+            "name" : "Ambulance AC",
+            "image" : "ny_ic_ambulance_ac_nooxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ac_nooxy.png",
+            "leftViewImage" : "ny_ic_ambulance_ac_nooxy,"
+          },
+          "ambulanceAcOxy" : {
+            "name" : "Ambulance AC with Oxygen",
+            "image" : "ny_ic_ambulance_ac_oxy,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ac_oxy.png",
+            "leftViewImage" : "ny_ic_ambulance_ac_oxy,"
+          },
+          "ambulanceVentilator" : {
+            "name" : "Ambulance with Ventilator",
+            "image" : "ny_ic_ambulance_ventilator,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_ambulance_ventilator.png",
+            "leftViewImage" : "ny_ic_ambulance_ventilator,"
+          }
         }
       }
       , "enableOnlyAuto" : true

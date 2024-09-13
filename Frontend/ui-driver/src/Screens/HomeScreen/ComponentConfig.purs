@@ -50,7 +50,7 @@ import Font.Size as FontSize
 import Font.Style (Style(..))
 import Font.Style (Style(..))
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), isYesterday, getMerchantVehicleSize, onBoardingSubscriptionScreenCheck, getCityConfig, getPurpleRideConfigForVehicle)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), isYesterday, getMerchantVehicleSize, onBoardingSubscriptionScreenCheck, getCityConfig, getPurpleRideConfigForVehicle, isAmbulance)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
@@ -121,6 +121,7 @@ rideActionModalConfig state =
     notifiedCustomer = state.data.activeRide.notifiedCustomer,
     currentStage = state.props.currentStage,
     unReadMessages = state.props.unReadMessages,
+    vehicleType = state.data.vehicleType,
     specialLocationTag = rideData.specialLocationTag,
     requestedVehicleVariant = rideData.requestedVehicleVariant,
     accessibilityTag = rideData.disabilityTag,
@@ -585,13 +586,19 @@ cancelConfirmationConfig state = let
     margin = MarginHorizontal 24 24 ,
     buttonLayoutMargin = Margin 16 24 16 20 ,
     primaryText {
-      text = case state.data.activeRide.specialLocationTag of
-              Nothing -> getString FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES
-              Just specialLocationTag -> getString $ getCancelAlertText $ (HU.getRideLabelData (Just specialLocationTag)).cancelText
+      text = 
+        let
+          isAmbulance = RC.getCategoryFromVariant state.data.vehicleType == Just ST.AmbulanceCategory
+          ambulanceText = getString CANCELING_THIS_BOOKING_MAY_AFFECT_THE_EMERGENCY_MEDICAL
+          nonAmbulanceText = case state.data.activeRide.specialLocationTag of
+            Nothing -> getString FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES
+            Just specialLocationTag -> getString $ getCancelAlertText $ (HU.getRideLabelData (Just specialLocationTag)).cancelText
+        in
+          if isAmbulance then ambulanceText else nonAmbulanceText
     , margin = Margin 16 24 16 0 },
     secondaryText {
-      visibility = if state.data.activeRide.specialLocationTag == (Just "GOTO") then VISIBLE else GONE,
-      text = getString GO_TO_CANCELLATION_DESC,
+      visibility = if state.data.activeRide.specialLocationTag == (Just "GOTO") || RC.getCategoryFromVariant state.data.vehicleType == Just ST.AmbulanceCategory then VISIBLE else GONE,
+      text = if state.data.activeRide.specialLocationTag == (Just "GOTO") then getString GO_TO_CANCELLATION_DESC else getString DRIVERS_ARE_PERMITTED_TO_CANCEL_AMBULANCE_BOOKINGS,
       margin = MarginTop 6
       },
     option1 {
@@ -618,7 +625,7 @@ cancelConfirmationConfig state = let
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
       imageUrl = fetchImage FF_ASSET  if (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag state.data.activeRide.specialLocationTag) == Nothing) 
-                    then if (RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY) == Just ST.CarCategory then "ic_cancel_prevention_cab" else "ic_cancel_prevention"
+                    then if (RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY) == Just ST.CarCategory then "ic_cancel_prevention_cab" else if (RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY) == Just ST.AmbulanceCategory then "ic_cancel_prevention_ambulance" else  "ic_cancel_prevention"
                   else (HU.getRideLabelData state.data.activeRide.specialLocationTag).cancelConfirmImage
     , visibility = VISIBLE
     , margin = Margin 16 20 16 0
@@ -2429,7 +2436,7 @@ isAcWorkingPopupConfig state = PopUpModal.config {
     optionButtonOrientation = "HORIZONTAL",
     buttonLayoutMargin = MarginBottom 10,
     dismissPopup = true,
-    isVisible = not (state.data.linkedVehicleCategory `elem` ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]), -- Temporary Fix until Ambulance Ride Flow is completed from BE
+    isVisible = not (isAmbulance state.data.linkedVehicleCategory), -- Temporary Fix until Ambulance Ride Flow is completed from BE
     margin = MarginHorizontal 25 25, 
     primaryText {
       text = getString IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING,

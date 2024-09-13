@@ -9,7 +9,7 @@ import Prelude (Unit, const, ($), (<>), (==), (&&), not, pure, unit, (+), show, 
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Shadow(..), Accessiblity(..), background, clickable, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, relativeLayout, stroke, text, textView, visibility, weight, width, id, afterRender, layoutGravity, singleLine, ellipsize, frameLayout, onAnimationEnd, shimmerFrameLayout, alpha, shadow, pivotY, accessibility, clipChildren, maxLines, accessibilityHint, accessibility, Accessiblity(..), accessibilityFocusable)
 import Common.Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..) , isAmbulance)
 import Debug
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Mobility.Prelude (boolToVisibility)
@@ -129,7 +129,7 @@ view push config =
           , accessibility DISABLE
           , onClick push $ const $ case config.showInfo && isActiveIndex of
                                     false -> OnSelect config
-                                    true  -> if config.showInfo && isOneWayOrRental then ShowRateCard config else NoAction config                        
+                                    true  -> if config.showInfo && isOneWayOrRental  && not ( isAmbulance config.vehicleVariant) then ShowRateCard config else NoAction config                
           ][]
        ]
     ]
@@ -293,13 +293,18 @@ getVehicleName config =
     "BIKE" -> "Bike Taxi"
     "BOOK_ANY" -> "Book Any"
     "SUV_PLUS" -> "XL Plus"
+    "AMBULANCE_TAXI" -> "Non-AC" <> "\x00B7" <> "O̶₂"
+    "AMBULANCE_TAXI_OXY" -> "Non-AC" <> "\x00B7" <> "O₂"
+    "AMBULANCE_AC" -> "AC" <> "\x00B7" <> "O̶₂"
+    "AMBULANCE_AC_OXY" -> "AC" <> "\x00B7" <> "O₂"
+    "AMBULANCE_VENTILATOR" -> "Ventilator"
     _ -> "Non-AC Mini"
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 priceDetailsView push config =
   let isActiveIndex = config.index == config.activeIndex
       infoIcon ="ny_ic_info_blue_lg"
-      enableRateCard = config.showInfo && (isActiveIndex || config.singleVehicle) && config.vehicleVariant /= "BOOK_ANY" && config.searchResultType /= QUOTES OneWaySpecialZoneAPIDetails
+      enableRateCard = config.showInfo && (isActiveIndex || config.singleVehicle) && config.vehicleVariant /= "BOOK_ANY" && config.searchResultType /= QUOTES OneWaySpecialZoneAPIDetails && (not $ isAmbulance config.vehicleVariant)
       isBookAny = config.vehicleVariant == "BOOK_ANY"
   in
   linearLayout
@@ -308,7 +313,7 @@ priceDetailsView push config =
     , padding $ PaddingLeft 8
     , clickable isActiveIndex
     , afterRender push (const $ NoAction config)
-    , onClick push $ case enableRateCard of
+    , onClick push $ case  enableRateCard of
                           false -> const $ NoAction config
                           true  -> const $ ShowRateCard config
     , accessibility DISABLE
@@ -410,16 +415,17 @@ capacityView push config =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    ][ vehicleInfoView "ic_user_filled" config.capacity
+    ][ vehicleInfoView "ic_user_filled" config.capacity config.vehicleVariant
      , descriptionView config.serviceTierShortDesc config.vehicleVariant config.airConditioned
      ]
 
-vehicleInfoView :: forall w. String -> String -> PrestoDOM (Effect Unit) w
-vehicleInfoView imageName description = do
+vehicleInfoView :: forall w. String -> String -> String -> PrestoDOM (Effect Unit) w
+vehicleInfoView imageName description vehicleVariant = do
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , gravity CENTER_VERTICAL
+    , visibility $ boolToVisibility $ not (isAmbulance vehicleVariant)
     ][ imageView
         [ imageWithFallback $ fetchImage FF_ASSET imageName
         , width $ V 14
@@ -446,6 +452,7 @@ descriptionView description vehicleVariant airConditioned =
         , width $ V 3
         , height $ V 3
         , margin $ Margin 2 2 0 0
+        , visibility $ boolToVisibility $ not $ isAmbulance vehicleVariant
         ]
      , imageView
         [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_ac"

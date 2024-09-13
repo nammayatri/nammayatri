@@ -1069,6 +1069,10 @@ let defWaitingChargesConfig = {
   "bike" : {
     "freeSeconds" : 300,
     "perMinCharges" : 1.0
+  },
+  "ambulance" : {
+    "freeSeconds" : 480,
+    "perMinCharges" : 2.0
   }
 }
 
@@ -1083,6 +1087,10 @@ let rentalWaitingChargesConfig = {
   },
   "bike" : {
     "freeSeconds" : 180,
+    "perMinCharges" : 2.0
+  },
+  "ambulance" : {
+    "freeSeconds" : 480,
     "perMinCharges" : 2.0
   }
 }

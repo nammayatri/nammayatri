@@ -1102,6 +1102,8 @@ getFR stringKey =
         HIGH_CANCELLATION_RATE -> "Le taux d'annulation est supérieur à 90% des conducteurs"
         LAST_N_DAYS n -> "(les " <> n <> " derniers jours)"
         CANCELLATION_RATE_TRIVIA_2 -> "Que se passe-t-il si vous ne le faites pas ?"
+        CANCELING_THIS_BOOKING_MAY_AFFECT_THE_EMERGENCY_MEDICAL -> "Annuler cette réservation peut affecter les services médicaux d'urgence pour le patient"
+        DRIVERS_ARE_PERMITTED_TO_CANCEL_AMBULANCE_BOOKINGS -> "Les conducteurs sont autorisés à annuler uniquement pour des raisons médicales ou des pannes de véhicule"
         RENTAL_RIDE -> "Balade en location"
         THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE duration -> "Il pourrait y avoir plusieurs arrêts lors de ce trajet. Cette location est réservée pour" <> " <br></br><span><b>" <> duration <> "</b></span>&nbsp"
         RENTAL_RIDE_ACCEPTED -> "La location de la course a été acceptée"

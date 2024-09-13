@@ -1585,6 +1585,8 @@ getTE stringKey =
         REMOVE_EYEWERE -> "దయచేసి కళ్లద్దాలు లేదా సన్ గ్లాసెస్ ఏదైనా ఉంటే తీసివేయండి"
         IMAGE_VALIDATION_EXCEED_LIMIT -> "చిత్రాన్ని ధృవీకరించడానికి చేసిన ప్రయత్నాల సంఖ్య మించిపోయింది"
         DB_CHECK_AND_NAME_MATCH_FAILED -> "పాన్ ధృవీకరణ విఫలమైంది"
+        CANCELING_THIS_BOOKING_MAY_AFFECT_THE_EMERGENCY_MEDICAL -> "ఈ బుకింగ్‌ను రద్దు చేస్తే, రోగికి అత్యవసర వైద్య సేవలు ప్రభావితం కావచ్చు"
+        DRIVERS_ARE_PERMITTED_TO_CANCEL_AMBULANCE_BOOKINGS -> "డ్రైవర్లు తమ వైద్య కారణాలు లేదా వాహన విఫలమై ఉన్న కారణాల వల్ల మాత్రమే రద్దు చేయడానికి అనుమతించబడతారు"
         ADD_UPI_TO_RECEIVE_REFERRAL_REWARD -> "రెఫరల్ రివార్డ్ మొత్తాన్ని అందుకోవడానికి UPI వివరాలను జోడించండి"
         DO_YOU_WANT_TO_RECEIVE_AMOUNT_HERE -> "మీరు ఈ ఖాతాలో రెఫరల్ రివార్డ్ మొత్తాన్ని అందుకోవాలనుకుంటున్నారా?"
         YES_PAY_TO_THIS_ACCOUNT -> "సరే, ఈ ఖాతాకు చెల్లించండి"

@@ -109,6 +109,7 @@ import Common.RemoteConfig.Utils (forwardBatchConfigData)
 import Common.RemoteConfig.Types (ForwardBatchConfigData(..))
 import DecodeUtil (getAnyFromWindow)
 import Data.Foldable (foldl)
+import Debug (spy)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Data.Function (flip)
 import Data.Ord (compare)
@@ -623,11 +624,11 @@ getVehicleVariantImage variant =
           "Kochi"     -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
           _           -> fetchImage FF_ASSET "ic_vehicle_front"
       "BIKE"      -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
-      "AMBULANCE_TAXI" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-      "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-      "AMBULANCE_AC" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-      "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
-      "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_side," <> commonUrl <> "ny_ic_ambulance_side.png"
+      "AMBULANCE_TAXI" -> "ny_ic_ambulance_noac_nooxy," <> commonUrl <> "ny_ic_ambulance_noac_nooxy.png"
+      "AMBULANCE_TAXI_OXY" -> "ny_ic_ambulance_noac_oxy," <> commonUrl <> "ny_ic_ambulance_noac_oxy.png"
+      "AMBULANCE_AC" -> "ny_ic_ambulance_ac_nooxy," <> commonUrl <> "ny_ic_ambulance_ac_nooxy.png"
+      "AMBULANCE_AC_OXY" -> "ny_ic_ambulance_ac_oxy," <> commonUrl <> "ny_ic_ambulance_ac_oxy.png"
+      "AMBULANCE_VENTILATOR" -> "ny_ic_ambulance_ventilator," <> commonUrl <> "ny_ic_ambulance_ventilator.png"
       "BIKE_TIER" -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
       "SUV_PLUS"  -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
       "SUV_PLUS_TIER" -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
@@ -898,12 +899,22 @@ getChargesOb tripType cityConfig driverVehicle =
   else
     case driverVehicle of
       "AUTO_RICKSHAW" -> cityConfig.waitingChargesConfig.auto
+      "AMBULANCE_VENTILATOR" -> cityConfig.waitingChargesConfig.ambulance
+      "AMBULANCE_AC" -> cityConfig.waitingChargesConfig.ambulance
+      "AMBULANCE_AC_OXY" -> cityConfig.waitingChargesConfig.ambulance
+      "AMBULANCE_TAXI" -> cityConfig.waitingChargesConfig.ambulance
+      "AMBULANCE_TAXI_OXY" -> cityConfig.waitingChargesConfig.ambulance
       _ -> cityConfig.waitingChargesConfig.cab
 
 getRentalChargesOb :: MCT.CityConfig -> String -> CTC.ChargesEntity
 getRentalChargesOb cityConfig driverVehicle = 
   case driverVehicle of
     "AUTO_RICKSHAW" -> cityConfig.rentalWaitingChargesConfig.auto
+    "AMBULANCE_VENTILATOR" -> cityConfig.waitingChargesConfig.ambulance
+    "AMBULANCE_AC" -> cityConfig.waitingChargesConfig.ambulance
+    "AMBULANCE_AC_OXY" -> cityConfig.waitingChargesConfig.ambulance
+    "AMBULANCE_TAXI" -> cityConfig.waitingChargesConfig.ambulance
+    "AMBULANCE_TAXI_OXY" -> cityConfig.waitingChargesConfig.ambulance
     _ -> cityConfig.rentalWaitingChargesConfig.cab
 
 
@@ -951,7 +962,18 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.RENTALS -> "RENTALS"
   SA.INTERCITY -> "INTERCITY"
   SA.BIKE_TIER -> "BIKE"
+  SA.AMBULANCE_TAXI_TIER -> "AMBULANCE_TAXI"
+  SA.AMBULANCE_TAXI_OXY_TIER -> "AMBULANCE_TAXI_OXY"
+  SA.AMBULANCE_AC_TIER -> "AMBULANCE_AC"
+  SA.AMBULANCE_AC_OXY_TIER -> "AMBULANCE_AC_OXY"
+  SA.AMBULANCE_VENTILATOR_TIER -> "AMBULANCE_VENTILATOR"
   SA.SUV_PLUS_TIER -> "SUV_PLUS"
+
+filterVariantForPlanListCall :: String -> String
+filterVariantForPlanListCall variant = 
+  case variant of
+    "BIKE" -> "BIKE"
+    _ -> "null"
 
 getLatestAndroidVersion :: Merchant -> Int
 getLatestAndroidVersion merchant =
@@ -1009,3 +1031,11 @@ categoryTransformer categories language =
     , allowedRideStatuses : catObj.allowedRideStatuses
     }) categories
     
+isAmbulance :: String -> Boolean
+isAmbulance vehicleVariant = case vehicleVariant of
+  "AMBULANCE_TAXI" -> true
+  "AMBULACE_TAXI_OXY" -> true
+  "AMBULANCE_AC" -> true
+  "AMBULANCE_AC_OXY" -> true
+  "AMBULANCE_VENTILATOR" -> true
+  _ -> false

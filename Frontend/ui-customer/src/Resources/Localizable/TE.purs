@@ -1488,3 +1488,11 @@ getTE stringKey =
     DRIVER -> "డ్రైవర్"
     RECOMMEND_SHARE_MANUALLY -> "మీరు మనువల్లో కూడా షేర్ బటన్ ఉపయోగించి ఎవరితో కూడా షేర్ చేయవచ్చు"
     CANNOT_ADD_OWN_NUMBER -> "మీ నంబర్‌ను ఎమర్జెన్సీ కాంటాక్ట్‌గా జోడించడం సాధ్యం కాదు"
+    A_C -> "ఆమోదించండి & కొనసాగించండి"
+    NO_OXYGEN -> "ఆక్సిజన్ లేదు"
+    OXYGEN -> "ఆక్సిజన్"
+    VENTILATOR -> "వెంటిలేటర్"
+    AMBULANCE_ -> "అంబులెన్స్"
+    UNCOMFORTABLE_AMBULANCE -> "అసౌకర్యవంతమైన అంబులెన్స్"
+    CLEAN_AMBULANCE -> "శుభ్రమైన అంబులెన్స్"
+

@@ -130,6 +130,7 @@ type DriverInfoCardData =
   , spLocationName :: Maybe String
   , addressWard :: Maybe String
   , hasToll :: Boolean
+  , isAirConditioned :: Maybe Boolean
   }
 
 data LocationType = SOURCE | DESTINATION

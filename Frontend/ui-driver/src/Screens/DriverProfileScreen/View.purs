@@ -65,7 +65,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii, scrollBarY)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Resource.Constants (verifiedVehicleOnly, pendingVehicleOnly)
+import Resource.Constants (verifiedVehicleOnly, pendingVehicleOnly,decodeVehicleType)
 import Resource.Constants as Const
 import Screens as ScreenNames
 import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, checkGenderSelect, getGenderName, optionList)
@@ -1486,8 +1486,8 @@ profileOptionsLayout state push =
     ]
   where
   visibilityCondition optionItem = case optionItem.menuOptions of
-    GO_TO_LOCATIONS -> state.props.enableGoto
-    DRIVER_BOOKING_OPTIONS -> state.data.config.profile.showBookingOption && not (state.data.driverVehicleType `elem` ["BIKE", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]) -- Temporary Fix until Ambulance Ride Flow is complete
+    GO_TO_LOCATIONS -> state.props.enableGoto && decodeVehicleType (getValueToLocalStore VEHICLE_CATEGORY) /= Just ST.AmbulanceCategory
+    DRIVER_BOOKING_OPTIONS -> state.data.config.profile.showBookingOption && state.data.driverVehicleType /= "BIKE" 
     LIVE_STATS_DASHBOARD -> state.data.config.dashboard.enable && not DS.null state.data.config.dashboard.url
     _ -> true
 
@@ -1626,7 +1626,7 @@ vehicleListItem state push vehicle =
         , orientation HORIZONTAL
         , background Color.blue600
         , cornerRadius 8.0
-        , visibility $ MP.boolToVisibility $ vehicle.isActive && vehicle.isVerified && not (vehicle.userSelectedVehicleCategory == ST.AmbulanceCategory || vehicle.userSelectedVehicleCategory == ST.BikeCategory)
+        , visibility $ MP.boolToVisibility $ vehicle.isActive && vehicle.isVerified && not (vehicle.userSelectedVehicleCategory == ST.BikeCategory)
         , padding $ Padding 16 8 16 8
         , margin $ MarginTop 16
         , onClick push $ const $ OptionClick DRIVER_BOOKING_OPTIONS

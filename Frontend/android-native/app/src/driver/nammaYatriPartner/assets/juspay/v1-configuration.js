@@ -312,6 +312,10 @@ window.getMerchantConfig = function () {
           "bike" : {
             "freeSeconds" : 300,
             "perMinCharges" : 1.0
+          },
+          "ambulance" : {
+            "freeSeconds" : 480,
+            "perMinCharges" : 2.0
           }
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -478,6 +482,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -565,6 +573,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1244,6 +1256,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1331,6 +1347,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1418,6 +1438,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1505,6 +1529,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1592,6 +1620,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1679,6 +1711,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1766,6 +1802,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -2314,6 +2354,10 @@ let defWaitingChargesConfig = {
     "bike" : {
       "freeSeconds" : 300,
       "perMinCharges" : 1.0
+    },
+    "ambulance" : {
+      "freeSeconds" : 480,
+      "perMinCharges" : 2.0
     }
   }
 
@@ -2329,6 +2373,10 @@ let defRentalWaitingChargesConfig = {
   },
   "bike" : {
     "freeSeconds" : 180,
+    "perMinCharges" : 2.0
+  },
+  "ambulance" : {
+    "freeSeconds" : 480,
     "perMinCharges" : 2.0
   }
 }

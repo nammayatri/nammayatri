@@ -205,6 +205,11 @@ defaultTipsConfig =
   , taxiPlus: Nothing
   , bike : Nothing
   , bookAny: Nothing
+  , ambulanceTaxi : Nothing
+  , ambulanceTaxiOxy : Nothing
+  , ambulanceAc : Nothing
+  , ambulanceAcOxy : Nothing
+  , ambulanceVentilator : Nothing
   , default: Nothing
   }
 
@@ -218,6 +223,11 @@ defaultSubscriptionsConfigVariantLevel =
   , taxi: Nothing
   , taxiPlus: Nothing
   , bookAny: Nothing
+  , ambulanceTaxi : Nothing
+  , ambulanceTaxiOxy : Nothing
+  , ambulanceAc : Nothing
+  , ambulanceAcOxy : Nothing
+  , ambulanceVentilator : Nothing
   , default: Nothing
   }
 

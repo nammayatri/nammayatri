@@ -661,7 +661,8 @@ view push state =
                       , onClick push $ const NoAction
                       , background Color.black9000
                       ][ PrestoAnim.animationSet [ fadeIn state.props.showEducationalCarousel] $ carouselView state push ]] 
-                    else [])
+                    else []
+              <> if state.props.bookAmbulanceModal then [PopUpModal.view (push <<< AgreePopUp) (PopUpConfigs.bookAmbulanceModalConfig state)] else [])
         ]
   ]
   where
@@ -3633,7 +3634,7 @@ servicesView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDO
 servicesView push state = 
   let itemLen = length $ nammaServices FunctionCall
       appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
-      firstName = fromMaybe "Yatri " (head (DS.split (DS.Pattern " ") appName))
+      firstName = fromMaybe "Yatri " (head (DS.split (DS.Pattern " ") if appName == "Yatri Sathi" then "More" else appName))
   in
   linearLayout
   [ height WRAP_CONTENT
