@@ -256,22 +256,22 @@ window.getMerchantConfig = function () {
           "background" :"#F5EDFF"
         }
   , "enterMobileNumberScreen" : {
-        "headerBackground": "#11032F"
-      , "emailAuth" : true
-      }
+          "headerBackground": "#11032f"
+        , "emailAuth" : false
+        }
   , "defaultCountryCodeConfig" : {
-      "countryName" : "UnitedStates"
-    , "countryCode"  : "+1"
-    , "countryShortCode" : "US"
-    }
+        "countryName" : "UnitedStates"
+      , "countryCode"  : "+91"
+      , "countryShortCode" : "US"
+      }
   , "flowConfig" : {
       "chooseCity" : {
-        "runFlow" : false,
-        "directAuth" : true,
-        "defCity" : "Minneapolis",
-        "useDefault" : true
+      "runFlow" : false,
+      "directAuth" : true,
+      "defCity" : "Bangalore",
+      "useDefault" : true
       }
-  }
+    }
   , "vehicleRegisterationScreen" : {
       "collectVehicleDetails" : true
   }

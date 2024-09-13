@@ -125,6 +125,24 @@
             android:exported="true"
             android:largeHeap="true" />
         <service
+            android:name=".services.VoiceConnectionService"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE"
+            />
+        <service
+            android:name=".services.IncomingCallNotificationService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="microphone"
+            >
+            <intent-filter>
+                <action android:name="ACTION_ACCEPT" />
+                <action android:name="ACTION_REJECT" />
+            </intent-filter>
+            </service>
+        
+        <service
             android:name=".GpsListeningService"
             android:exported="false"
             android:foregroundServiceType="location"

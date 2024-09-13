@@ -72,9 +72,11 @@ handleForeignError error object defaultObject mbKey = case error of
   where
   updateTheKey key =
     let isKeyExistInDefault = unsafeHas key defaultObject
+        _ = spy "INsied isKeyExistInDefault" isKeyExistInDefault
     in if isKeyExistInDefault then do
           let
             value = unsafeGet key defaultObject
+            _ = spy "Inside updateTheKey" value
           runFn3 unsafeSetForeign key object value
         else
           unsafeToForeign $ defaultObject
