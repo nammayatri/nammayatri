@@ -1705,7 +1705,7 @@ window.getMerchantConfig = function () {
     "showBookingOption" : true
   }
   , "waitTimeConfig" : {
-    "thresholdDist" : 0.03,
+    "thresholdDist" : 0.05,
     "routeDistance" : 30,
     "diffBtwTwoHeartBeats" : 10,
     "straightLineDist" : 0.015
