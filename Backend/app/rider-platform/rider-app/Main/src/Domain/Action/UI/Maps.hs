@@ -71,7 +71,7 @@ data AutoCompleteReq = AutoCompleteReq
 makeAutoCompleteKey :: Text -> Text -> Text
 makeAutoCompleteKey token typeOfSearch = "Analytics-RiderApp-AutoComplete-Data" <> token <> "|" <> typeOfSearch
 
-autoComplete :: (ServiceFlow m r, EventStreamFlow m r) => (Id DP.Person, Id DMerchant.Merchant) -> AutoCompleteReq -> m Maps.AutoCompleteResp
+autoComplete :: (ServiceFlow m r, EventStreamFlow m r, HasShortDurationRetryCfg r c) => (Id DP.Person, Id DMerchant.Merchant) -> AutoCompleteReq -> m Maps.AutoCompleteResp
 autoComplete (personId, merchantId) AutoCompleteReq {..} = do
   merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
   merchantOperatingCity <- QMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)

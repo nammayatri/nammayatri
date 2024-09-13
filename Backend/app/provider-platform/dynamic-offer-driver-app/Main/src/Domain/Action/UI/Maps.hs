@@ -133,7 +133,7 @@ convertResultsRespToPlaceNameCache resultsResp latitude longitude geoHashPrecisi
           }
   return res
 
-autoComplete :: ServiceFlow m r => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> AutoCompleteReq -> m Maps.AutoCompleteResp
+autoComplete :: (ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> AutoCompleteReq -> m Maps.AutoCompleteResp
 autoComplete merchantId merchantOpCityId AutoCompleteReq {..} = do
   merchantCity <- QMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   Maps.autoComplete
