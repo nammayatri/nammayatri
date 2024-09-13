@@ -795,6 +795,35 @@ mkEstimatedEndTimeRangeTagGroupV2 estimatedEndTimeRange' =
         }
     ]
 
+mkParcelImageUploadedTag :: Maybe [Spec.TagGroup]
+mkParcelImageUploadedTag =
+  Just $
+    [ Spec.TagGroup
+        { tagGroupDisplay = Just False,
+          tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.DELIVERY,
+                  descriptorName = Just "Delivery Info",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDisplay = Just False,
+                    tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just $ show Tags.PARCEL_IMAGE_UPLOADED,
+                            descriptorName = Just "Parcel file uploaded info",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagValue = Just "True"
+                  }
+              ]
+        }
+    ]
+
 mkVehicleTags :: Maybe Double -> Maybe Bool -> Maybe [Spec.TagGroup]
 mkVehicleTags vehicleServiceTierAirConditioned' isAirConditioned =
   vehicleServiceTierAirConditioned' <&> \vehicleServiceTierAirConditioned ->

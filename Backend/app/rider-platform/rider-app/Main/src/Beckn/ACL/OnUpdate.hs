@@ -115,6 +115,7 @@ parseEventV2 transactionId messageId order = do
         "TOLL_CROSSED" -> return $ DOnUpdate.OUTollCrossedEventReq $ DOnUpdate.TollCrossedEventReq transactionId
         "DRIVER_REACHED_DESTINATION" -> parseDriverReachedDestinationEvent order
         "ESTIMATED_END_TIME_RANGE_UPDATED" -> parseEstimatedEndTimeRangeUpdatedEvent order
+        "PARCEL_IMAGE_UPLOADED" -> parseParcelImageUploaded order
         _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
 
 parseNewMessageEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
@@ -250,3 +251,14 @@ parseEstimatedEndTimeRangeUpdatedEvent order = do
         { bppRideId = Id bppRideId,
           ..
         }
+
+parseParcelImageUploaded :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseParcelImageUploaded order = do
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in DestinationReached Event.")
+  tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in DestinationReached Event.")
+  isParcelImageUploaded :: Bool <-
+    Utils.getTagV2 Tag.DELIVERY Tag.PARCEL_IMAGE_UPLOADED (Just tagGroups)
+      >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "PARCEL_IMAGE_UPLOADED tag is not present in ParcelImage Event.")
+  return $
+    DOnUpdate.OUParcelImageFileUploadReq $
+      DOnUpdate.ParcelImageFileUploadReq {bppRideId = Id bppRideId, ..}

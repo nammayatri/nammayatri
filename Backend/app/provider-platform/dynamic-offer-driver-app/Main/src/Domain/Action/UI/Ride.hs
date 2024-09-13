@@ -576,6 +576,7 @@ uploadDeliveryImage merchantOpCityId rideId DeliveryImageUploadReq {..} = do
   fileId <- createMediaEntry fileUrl filePath now
   let deliveryFileIds = fromMaybe [fileId] (ride.deliveryFileIds <&> (\dFileIds -> dFileIds ++ [fileId]))
   QRide.updateDeliveryFileIds rideId deliveryFileIds now
+  BP.notfyDeliveryImageUploadedToBAP booking ride
   return Success
   where
     validateContentType = do

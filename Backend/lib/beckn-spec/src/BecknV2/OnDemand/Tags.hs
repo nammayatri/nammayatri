@@ -433,6 +433,7 @@ data BecknTag
   | DRIVER_REACHED_DESTINATION
   | ESTIMATED_END_TIME_RANGE_START
   | ESTIMATED_END_TIME_RANGE_END
+  | PARCEL_IMAGE_UPLOADED
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where

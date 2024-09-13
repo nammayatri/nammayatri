@@ -302,3 +302,22 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
         }
+  OU.ParcelImageUploadedBuildReq OU.DParcelImageUploadedReq {..} -> do
+    let BookingDetails {..} = bookingDetails
+    let parcelImageUploadedTag = Utils.mkParcelImageUploadedTag
+    fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing parcelImageUploadedTag Nothing False False Nothing (Just $ show Event.PARCEL_IMAGE_UPLOADED) isValueAddNP Nothing False 0
+    pure $
+      Spec.Order
+        { orderId = Just ride.bookingId.getId,
+          orderFulfillments = Just [fulfillment],
+          orderBilling = Nothing,
+          orderCancellation = Nothing,
+          orderCancellationTerms = Nothing,
+          orderItems = Nothing,
+          orderPayments = Nothing,
+          orderProvider = Nothing,
+          orderQuote = Nothing,
+          orderStatus = Nothing,
+          orderCreatedAt = Just booking.createdAt,
+          orderUpdatedAt = Just booking.updatedAt
+        }

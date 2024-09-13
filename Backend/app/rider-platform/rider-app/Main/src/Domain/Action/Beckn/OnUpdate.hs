@@ -36,10 +36,12 @@ module Domain.Action.Beckn.OnUpdate
     PhoneCallRequestEventReq (..),
     DestinationReachedReq (..),
     EstimatedEndTimeRangeReq (..),
+    ParcelImageFileUploadReq (..),
   )
 where
 
 import qualified Data.HashMap.Strict as HM
+import Data.List (nub)
 import qualified Data.Text as Text
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Beckn.Common as Common
@@ -115,6 +117,7 @@ data OnUpdateReq
   | OUEditDestError EditDestErrorReq
   | OUDestinationReachedReq DestinationReachedReq
   | OUEstimatedEndTimeRangeReq EstimatedEndTimeRangeReq
+  | OUParcelImageFileUploadReq ParcelImageFileUploadReq
 
 data ValidatedOnUpdateReq
   = OUValidatedScheduledRideAssignedReq Common.ValidatedRideAssignedReq
@@ -137,6 +140,7 @@ data ValidatedOnUpdateReq
   | OUValidatedEditDestError ValidatedEditDestErrorReq
   | OUValidatedDestinationReachedReq ValidatedDestinationReachedReq
   | OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq
+  | OUValidatedParcelImageFileUploadReq ValidatedParcelImageFileUploadReq
 
 data BookingReallocationReq = BookingReallocationReq
   { bppBookingId :: Id DRB.BPPBooking,
@@ -360,6 +364,17 @@ data ValidatedEstimatedEndTimeRangeReq = ValidatedEstimatedEndTimeRangeReq
     estimatedEndTimeRange :: DRide.EstimatedEndTimeRange
   }
 
+data ParcelImageFileUploadReq = ParcelImageFileUploadReq
+  { bppRideId :: Id DRide.BPPRide,
+    isParcelImageUploaded :: Bool
+  }
+
+data ValidatedParcelImageFileUploadReq = ValidatedParcelImageFileUploadReq
+  { booking :: DRB.Booking,
+    ride :: DRide.Ride,
+    isParcelImageUploaded :: Bool
+  }
+
 onUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,
@@ -513,8 +528,18 @@ onUpdate = \case
       else Notify.notifyOnTripUpdate booking ride (Just (errorCode, errorMessage))
   OUValidatedDestinationReachedReq ValidatedDestinationReachedReq {..} -> do
     QRide.updateDestinationReachedAt (Just destinationReachedTime) ride.id
+    allBookingParty <- QBPL.findAllActiveByBookingId booking.id
+    let allBookingPartyIds = map (.partyId) allBookingParty
+    allParty <- catMaybes <$> mapM QPerson.findById (nub $ booking.riderId : allBookingPartyIds)
+    Notify.notifyToAllBookingParties allParty booking.tripCategory "DRIVER_HAS_REACHED_DESTINATION"
   OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq {..} -> do
     QRide.updateEstimatedEndTimeRange (Just estimatedEndTimeRange) ride.id
+  OUValidatedParcelImageFileUploadReq ValidatedParcelImageFileUploadReq {..} ->
+    when (isParcelImageUploaded) $ do
+      allBookingParty <- QBPL.findAllActiveByBookingId booking.id
+      let allBookingPartyIds = map (.partyId) allBookingParty
+      allParty <- catMaybes <$> mapM QPerson.findById (nub $ booking.riderId : allBookingPartyIds)
+      Notify.notifyToAllBookingParties allParty booking.tripCategory "PARCEL_IMAGE_UPLOADED"
 
 validateRequest ::
   ( CacheFlow m r,
@@ -628,6 +653,11 @@ validateRequest = \case
     booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> ride.bookingId.getId)
     let estimatedEndTimeRange = DRide.EstimatedEndTimeRange {start = estimatedEndTimeRangeStart, end = estimatedEndTimeRangeEnd}
     return $ OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq {..}
+  OUParcelImageFileUploadReq ParcelImageFileUploadReq {..} -> do
+    ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+    unless (ride.status == DRide.NEW) $ throwError $ RideInvalidStatus "This ride is not in progress"
+    booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> ride.bookingId.getId)
+    return $ OUValidatedParcelImageFileUploadReq ValidatedParcelImageFileUploadReq {..}
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>

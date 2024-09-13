@@ -240,6 +240,37 @@ FROM
     atlas_app.merchant_operating_city moc;
 
 
+-- Driver has reached destination --
+INSERT INTO atlas_app.notification_sounds_config
+    (merchant_id, merchant_operating_city_id, notification_type, default_sound, blind_sound)
+SELECT
+    city.merchant_id,
+    city.id,
+    'DRIVER_HAS_REACHED_DESTINATION',
+    'driver_arrived.mp3',
+    'driver_arrived.mp3'
+FROM atlas_app.merchant_operating_city AS city;
+
+-- DRIVER_HAS_REACHED --
+INSERT INTO atlas_app.merchant_push_notification (
+    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+)
+SELECT
+    atlas_app.uuid_generate_v4(),
+    'DRIVER_HAS_REACHED_DESTINATION',
+    'DRIVER_HAS_REACHED_DESTINATION',
+    'Delivery_OneWayOnDemandDynamicOffer',
+    moc.merchant_id,
+    moc.id,
+    'Driver reached destination!',
+    'Driver has reached the parcel drop location',
+    'ENGLISH',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+FROM
+    atlas_app.merchant_operating_city moc;
+
+
 -- DRIVER_REACHING --
 INSERT INTO atlas_app.merchant_push_notification (
     id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
