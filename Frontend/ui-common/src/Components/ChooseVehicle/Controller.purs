@@ -81,6 +81,7 @@ data FareProductType =  ONE_WAY
                       | RENTAL
                       | DRIVER_OFFER
                       | OneWaySpecialZoneAPIDetails
+                      | AMBULANCE
 
 derive instance genericFareProductType :: Generic FareProductType _
 instance showFareProductType :: Show FareProductType where show = genericShow

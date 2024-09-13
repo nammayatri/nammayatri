@@ -591,9 +591,9 @@ drawRouteOnMap state =
   ] 
 
 quotesFlow res state = do
-  let quoteList = getQuotesTransformer res.quotes state.appConfig.estimateAndQuoteConfig
+  let quoteList = getQuotesTransformer res.quotes state.appConfig.estimateAndQuoteConfig state.props.fareProductType
       fareProductType = getFareProductType $ MB.maybe "" extractFareProductType (DA.head res.quotes)
-      filteredQuoteList = (getFilteredQuotes res.quotes state.appConfig.estimateAndQuoteConfig)
+      filteredQuoteList = (getFilteredQuotes res.quotes state.appConfig.estimateAndQuoteConfig state.props.fareProductType)
       sortedByFare = DA.sortBy compareByFare filteredQuoteList
       rentalsQuoteList =  (DA.mapWithIndex (\index quote -> 
     let quoteDetails = transformQuote quote index 
