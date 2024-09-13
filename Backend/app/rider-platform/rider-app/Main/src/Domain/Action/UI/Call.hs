@@ -216,14 +216,14 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
     case mbRiderDetails of
       Just (dtmfNumberUsed, booking) -> do
         ride <- runInReplica $ QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
-        ensureCallStatusExists id callSid ride.id callStatus booking.merchantOperatingCityId
+        ensureCallStatusExists id callSid ride.id callStatus booking.merchantOperatingCityId booking.merchantId
         decRide <- decrypt ride
         number <- getNumberBasedOnType driverNumberType decRide
         return (number, ride, "ANONYMOUS_CALLER", dtmfNumberUsed)
       Nothing -> do
         ride <- runInReplica $ QRide.findLatestByDriverPhoneNumber callFrom >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
         booking <- runInReplica $ QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-        ensureCallStatusExists id callSid ride.id callStatus booking.merchantOperatingCityId
+        ensureCallStatusExists id callSid ride.id callStatus booking.merchantOperatingCityId booking.merchantId
         isValueAddNP <- CQVAN.isValueAddNP booking.providerId
         when isValueAddNP $
           throwCallError id (PersonWithPhoneNotFound callFrom) (Just exophone.merchantId.getId) (Just exophone.callService)
@@ -247,14 +247,14 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
             Nothing -> pure Nothing
             Just activeBooking -> return $ Just (Nothing, activeBooking)
 
-    ensureCallStatusExists id callId rideId callStatus' merchantOperatingCityId =
+    ensureCallStatusExists id callId rideId callStatus' merchantOperatingCityId merchantId =
       QCallStatus.findOneByRideId (Just $ getId rideId) >>= \case
         Nothing -> do
-          callStatusObj <- buildCallStatus id callId (Just rideId) (exotelStatusToInterfaceStatus callStatus') merchantOperatingCityId
+          callStatusObj <- buildCallStatus id callId (Just rideId) (exotelStatusToInterfaceStatus callStatus') merchantOperatingCityId merchantId
           void $ QCallStatus.create callStatusObj
         Just cs -> QCallStatus.updateCallStatusCallId callId cs.id
 
-    buildCallStatus id exotelCallId rideId exoStatus merchantOperatingCityId = do
+    buildCallStatus id exotelCallId rideId exoStatus merchantOperatingCityId merchantId = do
       now <- getCurrentTime
       return $
         CallStatus
@@ -265,7 +265,7 @@ getDriverMobileNumber driverNumberType callSid callFrom_ callTo_ _dtmfNumber cal
             status = exoStatus,
             conversationDuration = 0,
             recordingUrl = Nothing,
-            merchantId = Nothing,
+            merchantId = Just merchantId.getId,
             merchantOperatingCityId = Just merchantOperatingCityId,
             callService = Nothing,
             customerIvrResponse = Nothing,

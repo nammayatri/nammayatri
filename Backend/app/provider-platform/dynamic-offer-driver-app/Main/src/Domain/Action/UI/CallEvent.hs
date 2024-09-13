@@ -71,7 +71,7 @@ callOnClickTracker rideId = do
   transporterConfig <-
     CCT.findByMerchantOpCityId booking.merchantOperatingCityId Nothing
       >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  callStatusObj <- buildCallStatus booking.merchantOperatingCityId
+  callStatusObj <- buildCallStatus booking.merchantOperatingCityId booking.providerId
   QCallStatus.create callStatusObj
   createJobIn @_ @'CheckExotelCallStatusAndNotifyBAP (fromIntegral transporterConfig.exotelStatusCheckSchedulerDelay) maxShards $
     CheckExotelCallStatusAndNotifyBAPJobData
@@ -79,7 +79,7 @@ callOnClickTracker rideId = do
       }
   return ()
   where
-    buildCallStatus merchantOpCityId = do
+    buildCallStatus merchantOpCityId merchantId = do
       callStatusId <- generateGUID
       callId <- generateGUID -- added random placeholder for backward compatibility
       now <- getCurrentTime
@@ -92,7 +92,7 @@ callOnClickTracker rideId = do
             status = CallTypes.ATTEMPTED,
             conversationDuration = 0,
             recordingUrl = Nothing,
-            merchantId = Nothing,
+            merchantId = Just merchantId.getId,
             merchantOperatingCityId = Just merchantOpCityId,
             callService = Nothing,
             callError = Nothing,
