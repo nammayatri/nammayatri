@@ -22,11 +22,13 @@ import ConfigProvider
 import Screens.Types (AutoPayStatus(..), KeyValType, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..), DueItem)
 import Services.API (AutopayPaymentStage(..), DriverDuesEntity(..), FeeType(..), InvoiceStatus(..), OfferEntity(..), PaymentBreakUp(..))
 import RemoteConfig as RC
+import Common.RemoteConfig.Utils as CommonRC
 
 initData :: SubscriptionScreenState
 initData = 
-  let config = getAppConfig appConfig 
-  in {
+    let config = getAppConfig appConfig 
+        defVehicleAndCityConfig = CommonRC.defaultSubscriptionsConfigVariantLevelEntity
+    in {
     data: {
         driverId : "",
         paymentMode : "",
@@ -64,7 +66,14 @@ initData =
             payerUpiId : Mb.Nothing,
             pspLogo : ""
         },
-        config
+        config,
+        switchPlanModalState : {
+            showSwitchPlanModal : false,
+            plansList : [],
+            selectedPlan : Mb.Nothing
+      },
+      vehicleAndCityConfig : defVehicleAndCityConfig,
+      linkedVehicleVariant : ""
     },
     props : {
         isSelectedLangTamil : false,
@@ -100,11 +109,7 @@ initData =
         optionsMenuState : ALL_COLLAPSED,
         redirectToNav : "",
         lastPaymentType : Mb.Nothing,
-        offerBannerProps : {
-          showOfferBanner : config.subscriptionConfig.offerBannerConfig.showDUOfferBanner,
-          offerBannerValidTill : config.subscriptionConfig.offerBannerConfig.offerBannerValidTill,
-          offerBannerDeadline : config.subscriptionConfig.offerBannerConfig.offerBannerDeadline
-        },
+        offerBannerProps : CommonRC.defaultOfferBannerConfig,
         isEndRideModal : false
     }
 }

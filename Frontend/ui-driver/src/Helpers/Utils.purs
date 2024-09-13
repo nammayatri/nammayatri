@@ -57,7 +57,7 @@ import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<), not, (=<<), (>>=))
+import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<), not, (=<<), (>>=), negate)
 import Prelude (class Eq, class Show, (<<<))
 import Prelude (map, (*), (-), (/), (==), div, mod, not)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
@@ -1009,3 +1009,15 @@ categoryTransformer categories language =
     , allowedRideStatuses : catObj.allowedRideStatuses
     }) categories
     
+getPlanPrice :: Array SA.PaymentBreakUp -> String -> String
+getPlanPrice fares priceType = do
+  let price = (DA.filter(\(SA.PaymentBreakUp item) -> item.component == priceType) fares)
+  case price DA.!! 0 of
+    Just (SA.PaymentBreakUp element) -> EHU.getFixedTwoDecimals element.amount
+    Nothing -> ""
+
+getAllFareFromArray :: Array SA.PaymentBreakUp -> Array String -> Number
+getAllFareFromArray fares titles = do
+  let matchingFares = (DA.filter (\(SA.PaymentBreakUp fare) -> DA.elem fare.component titles) fares)
+  let price = (DA.foldl (\acc (SA.PaymentBreakUp fare) -> fare.amount - acc) 0.0 matchingFares)
+  price * -1.0

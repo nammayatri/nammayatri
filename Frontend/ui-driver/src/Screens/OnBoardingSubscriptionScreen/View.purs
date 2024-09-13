@@ -35,7 +35,6 @@ import Screens.Types (PlanCardConfig, PromoConfig)
 import Data.Maybe (Maybe(..), isJust, fromMaybe)
 import Data.Array as DA
 import Services.API (GetCurrentPlanResp(..), GetDriverInfoResp(..), OrderStatusRes(..), UiPlansResp(..), PaymentBreakUp(..), KioskLocationResp(..), KioskLocationRes(..))
-import Screens.SubscriptionScreen.Controller (getAllFareFromArray, getPlanPrice)
 import Components.PrimaryButton as PrimaryButton
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import JBridge as JB
@@ -46,7 +45,6 @@ import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.OnBoardingSubscriptionScreen.ComponentConfig (joinPlanButtonConfig, popupModalConfig)
 import Screens.OnBoardingSubscriptionScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.SubscriptionScreen.Controller (getAllFareFromArray, getPlanPrice)
 import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
 import Screens.Types (PlanCardConfig, PromoConfig)
 import Screens.Types as ST
@@ -60,6 +58,8 @@ import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
 import Locale.Utils
 import RemoteConfig (ReelItem(..))
+import Common.RemoteConfig.Utils as RemoteConfig
+import Helpers.Utils as HU
 
 screen :: ST.OnBoardingSubscriptionScreenState -> Screen Action ST.OnBoardingSubscriptionScreenState ScreenOutput
 screen initialState =
@@ -251,11 +251,15 @@ headerLayout push state =
         ]
       ]
     ]
-  , commonTV push (getString $ MY_PLAN_TITLE "MY_PLAN_TITLE") Color.white900 FontStyle.h1 LEFT 20 NoAction false
+  , commonTV push (getString MY_PLAN_TITLE) Color.white900 FontStyle.h1 LEFT 20 NoAction false
   ]
 
 infoView :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w
 infoView push state =
+  let freeTrialDays = fromMaybe 30 state.data.freeTrialDays
+      freeRides = fromMaybe 20 state.data.freeTrialRides
+      earnUptoAmout = fromMaybe 5000 state.data.vehicleAndCityConfig.earnUptoAmout
+  in
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -265,8 +269,8 @@ infoView push state =
   , cornerRadii $ Corners 24.0 false false true true
   , gravity CENTER
   ][
-    commonTV push (getString SEVEN_DAY_FREE_TRIAL_ACTIVATED) Color.black900 FontStyle.h2 CENTER 0 NoAction false
-  , commonTV push (getString TAKE_UNLIMITED_RIDES_FOR_THE_NEXT_SEVEN_DAYS) Color.black700 FontStyle.subHeading2 CENTER 1 NoAction false
+    commonTV push (getString $ N_DAY_FREE_TRIAL_ACTIVATED (show freeTrialDays)) Color.black900 FontStyle.h2 CENTER 0 NoAction false
+  , commonTV push (getString $ TAKE_N_RIDES_FOR_THE_NEXT_N_DAYS (show freeRides) (show freeTrialDays)) Color.black700 FontStyle.subHeading2 CENTER 1 NoAction false
   , case (state.data.reelsData DA.!! 0)  of 
     Just reelData -> youtubeView push state reelData
     Nothing -> linearLayout [][]
@@ -310,13 +314,18 @@ infoView push state =
         , height $ V 32
         , imageWithFallback $ fetchImage FF_ASSET "ic_mingcute_currency_rupee"
         ]
-      , commonTV push (getVarString EARN_UPTO_PER_DAY [show state.data.subscriptionConfig.earnAmountInADay]) Color.black900 FontStyle.h3 CENTER 0 NoAction false
+      , commonTV push (getVarString EARN_UPTO_PER_DAY [show earnUptoAmout]) Color.black900 FontStyle.h3 CENTER 0 NoAction false
       ]
     ]
   ]
 
 workFlowView :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w
 workFlowView push state = 
+  let freeTrialDays = fromMaybe 30 state.data.freeTrialDays
+      freeTrialRemonderDays = freeTrialDays - 2
+      freeRides = fromMaybe 20 state.data.freeTrialRides
+      freeTrialReminderRides = freeRides - 5
+  in
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -348,9 +357,9 @@ workFlowView push state =
       ][
         commonTV push (getString TODAY) Color.black800 FontStyle.body1 LEFT 0 NoAction false
       , commonTV push (getString SIGN_UP_FOR_AUTOPAY_BY_PAYING_JUST) Color.black700 font2 LEFT 0 NoAction false
-      , commonTV push (getString FREE_TRIAL_REMINDER) Color.black800 FontStyle.body1 LEFT 25 NoAction false
+      , commonTV push (getString $ FREE_TRIAL_REMINDER_N_DAYS_M_RIDES (show freeTrialRemonderDays) (show freeTrialReminderRides)) Color.black800 FontStyle.body1 LEFT 25 NoAction false
       , commonTV push (getString GET_REMINDED_ABOUT_YOUR_PLAN_SETUP) Color.black700 font2 LEFT 0 NoAction false
-      , commonTV push (getString PLAN_STARTS) Color.black800 FontStyle.body1 LEFT 25 NoAction false
+      , commonTV push (getString $ PLAN_STARTS_N_DAYS_M_RIDES (show freeTrialDays) (show freeRides)) Color.black800 FontStyle.body1 LEFT 25 NoAction false
       , commonTV push (getString EASY_AUTOMATIC_PAYMENTS_START) Color.black700 font2 LEFT 0 NoAction false
       ]
     ]
@@ -639,12 +648,12 @@ planPriceView fares frequency isSelectedLangTamil =
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   ][ textView $ 
-     [ textFromHtml $ "<strike> ₹" <> getPlanPrice fares "INITIAL_BASE_FEE" <> "</stike>"
-     , visibility if (getAllFareFromArray fares ["INITIAL_BASE_FEE", "FINAL_FEE"]) > 0.0 then VISIBLE else GONE
+     [ textFromHtml $ "<strike> ₹" <> HU.getPlanPrice fares "INITIAL_BASE_FEE" <> "</stike>"
+     , visibility if (HU.getAllFareFromArray fares ["INITIAL_BASE_FEE", "FINAL_FEE"]) > 0.0 then VISIBLE else GONE
      , color Color.black600
      ] <> FontStyle.body7 TypoGraphy
    , textView
-      [ text $ "₹" <> (getPlanPrice fares "FINAL_FEE") <> "/" <> case frequency of
+      [ text $ "₹" <> (HU.getPlanPrice fares "FINAL_FEE") <> "/" <> case frequency of
                                                                     "PER_RIDE" -> getString RIDE
                                                                     "DAILY" -> getString DAY
                                                                     _ -> getString DAY

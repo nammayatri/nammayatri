@@ -13,7 +13,10 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.Types where
+module Screens.Types 
+  ( module Screens.Types
+  , module ReExport
+  ) where
 
 import Common.Types.Config
 
@@ -60,6 +63,8 @@ import MerchantConfig.Types
 import RemoteConfig.Types as RC
 import Services.API as API
 import Styles.Types (FontSize)
+import Common.RemoteConfig.Types as CommonRC
+import Common.RemoteConfig.Types (OfferBanner(..)) as ReExport
 
 
 type EditTextInLabelState =
@@ -1044,9 +1049,39 @@ type HomeScreenData =  {
   payoutVpaStatus :: Maybe PayoutVpaStatus,
   isPayoutEnabled :: Maybe Boolean,
   payoutRewardAmount :: Maybe Int,
-  payoutVpaBankAccount :: Maybe String
-, cancellationRate :: Int
-, coinsEarned :: Array API.CoinsEarned
+  cancellationRate :: Int,
+  coinsEarned :: Array API.CoinsEarned,
+  payoutVpaBankAccount :: Maybe String,
+  plansState :: PlansState
+}
+
+type PlansState = {
+  showSwitchPlanModal :: Boolean,
+  plansList :: Array PlanCardState,
+  selectedPlan :: Maybe PlanCardState,
+  cityOrVehicleChanged :: Boolean
+}
+
+type PlanCardState = {
+    id :: String
+    , title :: String
+    , description :: String
+    , isSelected :: Boolean
+    , offers :: Array PromoConfig
+    , priceBreakup :: Array API.PaymentBreakUp
+    , frequency :: String
+    , freeRideCount :: Int
+    , showOffer :: Boolean
+
+    , clickable :: Boolean
+    , showBanner :: Boolean
+    , isMyPlan :: Boolean
+    , isSelectedLangTamil :: Boolean
+    , isActivePlan :: Boolean
+    , offerBannerProps :: Maybe CommonRC.OfferBanner
+    , isIntroductory :: Boolean
+    , offerBannerPlans :: Array String
+    , mbCoinDiscountUpto :: Maybe Number
 }
 
 type ParkingData = {
@@ -1614,7 +1649,11 @@ type OnBoardingSubscriptionScreenData = {
   selectedPlanItem :: Maybe PlanCardConfig,
   subscriptionConfig :: SubscriptionConfig,
   reelsData :: Array RC.ReelItem,
-  vehicleCategory :: Maybe VehicleCategory
+  vehicleCategory :: Maybe VehicleCategory,
+  freeTrialDays :: Maybe Int,
+  freeTrialRides :: Maybe Int,
+  totalRidesTaken :: Maybe Int,
+  vehicleAndCityConfig :: CommonRC.SubscriptionConfigVariantLevelEntity
 }
 
 type OnBoardingSubscriptionScreenProps = {
@@ -2100,7 +2139,16 @@ type SubscriptionScreenData = {
   planId :: String,
   orderId :: Maybe String,
   errorMessage :: String,
-  config :: AppConfig
+  config :: AppConfig,
+  switchPlanModalState :: SwitchPlanModalState,
+  vehicleAndCityConfig :: CommonRC.SubscriptionConfigVariantLevelEntity,
+  linkedVehicleVariant :: String
+}
+
+type SwitchPlanModalState = {
+  showSwitchPlanModal :: Boolean,
+  plansList :: Array PlanCardState,
+  selectedPlan :: Maybe PlanCardState
 }
 
 type AutoPayDetails = {
@@ -2137,14 +2185,8 @@ type SubscriptionScreenProps = {
   optionsMenuState :: OptionsMenuState,
   redirectToNav :: String,
   lastPaymentType :: Maybe LastPaymentType,
-  offerBannerProps :: OfferBanner,
+  offerBannerProps :: CommonRC.OfferBanner,
   isEndRideModal :: Boolean
-}
-
-type OfferBanner = {
-    showOfferBanner :: Boolean,
-    offerBannerValidTill :: String,
-    offerBannerDeadline :: String
 }
 
 type JoinPlanData = {

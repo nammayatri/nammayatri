@@ -663,7 +663,7 @@ tabImageView state push =
     vc = getVehicleCategory state
     driverImage = case (fromMaybe "UNKNOWN" state.data.driverGender) of
       "MALE" | vc == ST.AutoCategory -> "ny_ic_new_avatar_profile"
-      "MALE" | vc == ST.CarCategory -> "ny_ic_new_avatar_profile"
+      "MALE" | vc == ST.CarCategory -> "ny_ic_white_avatar_profile"
       "MALE" | vc == ST.BikeCategory -> "ny_ic_new_avatar_profile"
       "MALE" | vc == ST.AmbulanceCategory -> "ny_ic_new_avatar_profile"
       "FEMALE" -> "ny_ic_profile_female"

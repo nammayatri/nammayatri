@@ -434,6 +434,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | GO_TO_BENEFITS_SCREEN_FROM_HOME
                           | GO_TO_ADD_UPI_SCREEN
                           | VERIFY_MANUAL_UPI HomeScreenState
+                          | SWITCH_PLAN_FROM_HS PlanCardState HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
@@ -498,6 +499,7 @@ data SUBSCRIPTION_SCREEN_OUTPUT = GOTO_HOMESCREEN
                                   | CLEAR_DUES_ACT
                                   | SUBSCRIBE_API SubscriptionScreenState
                                   | REMOVE_REELS_VIEW_MY_PLANS SubscriptionScreenState
+                                  | SWITCH_PLAN_ON_CITY_VEHICLE_CHANGE PlanCardState SubscriptionScreenState
 
 data NAVIGATION_ACTIONS = HomeScreenNav
                           | GoToRideHistory

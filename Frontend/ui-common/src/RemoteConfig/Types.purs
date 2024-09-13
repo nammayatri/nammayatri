@@ -145,7 +145,19 @@ type SubscriptionConfigVariantLevel
 type SubscriptionConfigVariantLevelEntity = {
    noChargesTillDate :: String,
    lowestFeesFromDate :: String,
-   useFreeTrialLottie :: Maybe Boolean
+   useFreeTrialLottie :: Maybe Boolean,
+   earnUptoAmout :: Maybe Int,
+   yatriPlansPlaylist :: Maybe String,
+   enableSubscriptionSupportPopup :: Maybe Boolean,
+   offerBannerConfig :: Maybe OfferBanner
+}
+
+type OfferBanner = {
+    showOfferBanner :: Boolean,
+    offerBannerValidTill :: String,
+    offerBannerDeadline :: String,
+    offerBannerPlans :: Array String,
+    payAmount :: String
 }
 
   

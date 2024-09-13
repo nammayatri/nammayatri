@@ -460,6 +460,13 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , cancelledRidesCountInWindow :: Maybe Int
     , assignedRidesCountInWindow :: Maybe Int
     , windowSize :: Maybe Int
+    , isSubscriptionVehicleCategoryChanged :: Maybe Boolean
+    , isOnFreeTrial :: Maybe Boolean
+    , planMandatoryForCategory :: Maybe Boolean
+    , isSubscriptionCityChanged :: Maybe Boolean
+    , freeTrialDays :: Maybe Int
+    , freeTrialRides :: Maybe Int
+    , totalRidesTaken :: Maybe Int
     }
 
 
@@ -2805,7 +2812,9 @@ newtype GetCurrentPlanResp = GetCurrentPlanResp {
   autoPayStatus :: Maybe String,
   orderId :: Maybe String,
   isLocalized :: Maybe Boolean,
-  lastPaymentType :: Maybe LastPaymentType
+  lastPaymentType :: Maybe LastPaymentType,
+  askForPlanSwitchByCity :: Maybe Boolean,
+  askForPlanSwitchByVehicle :: Maybe Boolean
 }
 
 newtype MandateData = MandateData {
