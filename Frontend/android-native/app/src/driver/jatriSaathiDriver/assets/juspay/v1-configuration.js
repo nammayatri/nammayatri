@@ -449,6 +449,7 @@ window.getMerchantConfig = function () {
         }
       }
     , "rideStartAudio" : defaultStartAudioConfig
+    , "travelMode": defaultTravelModeConfig
     },
     {
       "cityName" : "Siliguri",
@@ -546,6 +547,7 @@ window.getMerchantConfig = function () {
         }
       }
     , "rideStartAudio" : defaultStartAudioConfig
+    , "travelMode": defaultTravelModeConfig
     },
     {
       "cityName" : "Asansol",
@@ -641,6 +643,7 @@ window.getMerchantConfig = function () {
         }
       }
     , "rideStartAudio" : defaultStartAudioConfig
+    , "travelMode": defaultTravelModeConfig
     }
   ]
   })
@@ -664,4 +667,27 @@ let defaultStartAudioConfig = {
   "nonAcCab" : {},
   "auto" : {},
   "bike" : {}
+}
+
+let defaultTravelModeConfig = {
+  "pickup" : {
+    "autoRickshaw" : "DRIVE",
+    "taxi" : "DRIVE",
+    "taxiPlus" : "DRIVE",
+    "sedan" : "DRIVE",
+    "suv" : "DRIVE",
+    "hatchback" : "DRIVE",
+    "bike" : "DRIVE",
+    "suvPlus" : "DRIVE"
+  },
+  "dropOff" : {
+    "autoRickshaw" : "DRIVE",
+    "taxi" : "DRIVE",
+    "taxiPlus" : "DRIVE",
+    "sedan" : "DRIVE",
+    "suv" : "DRIVE",
+    "hatchback" : "DRIVE",
+    "bike" : "DRIVE",
+    "suvPlus" : "DRIVE"
+  }
 }
