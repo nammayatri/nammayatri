@@ -72,12 +72,12 @@ callOnClickTracker rideId = do
   ride <- runInReplica $ QRide.findById (ID.Id rideId.getId) >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- runInReplica $ QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-  buildCallStatus <- callStatusObj booking.merchantOperatingCityId
+  buildCallStatus <- callStatusObj booking.merchantOperatingCityId booking.merchantId
   QCallStatus.create buildCallStatus
   scheduleJobs ride booking.merchantId maxShards (riderConfig.exotelStatusCheckSchedulerDelay)
   return ()
   where
-    callStatusObj merchantOperatingCityId = do
+    callStatusObj merchantOperatingCityId merchantId = do
       id <- generateGUID
       callId <- generateGUID -- added random placeholder for backward compatibility
       now <- getCurrentTime
@@ -91,7 +91,7 @@ callOnClickTracker rideId = do
             callAttempt = Just Attempted,
             conversationDuration = 0,
             recordingUrl = Nothing,
-            merchantId = Nothing,
+            merchantId = Just merchantId.getId,
             merchantOperatingCityId = Just merchantOperatingCityId,
             callService = Nothing,
             callError = Nothing,
