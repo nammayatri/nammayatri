@@ -4,6 +4,7 @@ imports:
   Ride: Dashboard.Common
   LocalTime: Data.Time
   PayoutOrderStatus: Kernel.External.Payout.Juspay.Types.Payout
+  Summary: Dashboard.Common
 
 module: Payout
 
@@ -81,6 +82,7 @@ types:
 
   PayoutReferralHistoryRes:
     - history: [ReferralHistoryItem]
+    - summary: Summary
   ReferralHistoryItem:
     - referralDate: UTCTime
     - customerPhone: Maybe Text
@@ -94,6 +96,7 @@ types:
 
   PayoutHistoryRes:
     - history: [PayoutHistoryItem]
+    - summary: Summary
   PayoutFlagReason:
     - enum: "ExceededMaxReferral,MinRideDistanceInvalid,MinPickupDistanceInvalid,CustomerExistAsDriver,MultipleDeviceIdExists"
   EntityName:

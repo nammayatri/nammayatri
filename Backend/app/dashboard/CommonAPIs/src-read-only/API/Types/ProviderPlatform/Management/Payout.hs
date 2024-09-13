@@ -59,11 +59,11 @@ data PayoutHistoryItem = PayoutHistoryItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PayoutHistoryRes = PayoutHistoryRes {history :: [API.Types.ProviderPlatform.Management.Payout.PayoutHistoryItem]}
+data PayoutHistoryRes = PayoutHistoryRes {history :: [API.Types.ProviderPlatform.Management.Payout.PayoutHistoryItem], summary :: Dashboard.Common.Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PayoutReferralHistoryRes = PayoutReferralHistoryRes {history :: [API.Types.ProviderPlatform.Management.Payout.ReferralHistoryItem]}
+data PayoutReferralHistoryRes = PayoutReferralHistoryRes {history :: [API.Types.ProviderPlatform.Management.Payout.ReferralHistoryItem], summary :: Dashboard.Common.Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
