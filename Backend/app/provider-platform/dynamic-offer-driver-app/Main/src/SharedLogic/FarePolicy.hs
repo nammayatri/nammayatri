@@ -84,14 +84,21 @@ clearCachedFarePolicyByEstOrQuoteId = Redis.del . makeFarePolicyByEstOrQuoteIdKe
 
 getFarePolicyOnEndRide :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Maybe LatLong -> LatLong -> Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe UTCTime -> Maybe Bool -> Maybe CacKey -> m FarePolicyD.FullFarePolicy
 getFarePolicyOnEndRide mbFromLocation toLocationLatLong merchantOpCityId tripCategory vehicleServiceTier area estOrQuoteId mbBookingStartTime isDashboardRequest txnId = do
-  dropSpecialLocation <- Esq.runInReplica (QSpecialLocation.findSpecialLocationByLatLong' toLocationLatLong) >>= mapM (FareProduct.getDropSpecialLocation merchantOpCityId)
-  let isDropSpecialLocation = (Just . SL.Drop . DSpecialLocation.id . fst) =<< dropSpecialLocation
-  selectedFarePolicy <-
-    if area /= isDropSpecialLocation
-      then getFarePolicy mbFromLocation merchantOpCityId (fromMaybe False isDashboardRequest) tripCategory vehicleServiceTier area mbBookingStartTime txnId
-      else getFarePolicyByEstOrQuoteId mbFromLocation merchantOpCityId tripCategory vehicleServiceTier area estOrQuoteId mbBookingStartTime isDashboardRequest txnId
-  logInfo $ "Drop Special Location during end ride: " <> show isDropSpecialLocation <> " and area at estimate stage is: " <> show area <> ", fare policyId for end ride calc: " <> show (selectedFarePolicy.id)
+  selectedFarePolicy <- case area of
+    Just SL.Default -> handleFarePolicy
+    Just (SL.Drop _) -> handleFarePolicy
+    _ -> getFarePolicyByEstOrQuoteId mbFromLocation merchantOpCityId tripCategory vehicleServiceTier area estOrQuoteId mbBookingStartTime isDashboardRequest txnId
   return selectedFarePolicy
+  where
+    handleFarePolicy = do
+      dropSpecialLocation <- Esq.runInReplica (QSpecialLocation.findSpecialLocationByLatLong' toLocationLatLong) >>= mapM (FareProduct.getDropSpecialLocation merchantOpCityId)
+      let isDropSpecialLocation = (Just . SL.Drop . DSpecialLocation.id . fst) =<< dropSpecialLocation
+      selectedFarePolicy' <-
+        if isJust isDropSpecialLocation && area /= isDropSpecialLocation
+          then getFarePolicy mbFromLocation merchantOpCityId (fromMaybe False isDashboardRequest) tripCategory vehicleServiceTier isDropSpecialLocation mbBookingStartTime txnId
+          else getFarePolicyByEstOrQuoteId mbFromLocation merchantOpCityId tripCategory vehicleServiceTier area estOrQuoteId mbBookingStartTime isDashboardRequest txnId
+      logInfo $ "Drop Special Location during end ride: " <> show isDropSpecialLocation <> " and area at estimate stage is: " <> show area <> ", fare policyId for end ride calc: " <> show (selectedFarePolicy'.id)
+      return selectedFarePolicy'
 
 getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Maybe LatLong -> Id DMOC.MerchantOperatingCity -> Bool -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Maybe UTCTime -> Maybe CacKey -> m FarePolicyD.FullFarePolicy
 getFarePolicy mbFromlocaton merchantOpCityId isDashboard tripCategory serviceTier Nothing mbBookingStartTime txnId = do
