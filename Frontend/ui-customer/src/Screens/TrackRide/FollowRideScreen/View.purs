@@ -99,7 +99,7 @@ screen initialState globalState =
                     Just ride ->
                       let customerId = getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys
                           channelId = if currentFollower.priority == 0 then ride.rideId else ride.rideId <> "$" <> customerId
-                      in when (initialState.props.isRideStarted && not initialState.props.currentUserOnRide) $ do
+                      in when (not initialState.props.currentUserOnRide) $ do
                           void $ clearChatMessages
                           void $ storeCallBackMessageUpdated push channelId customerId  UpdateMessages AllChatsLoaded
                           void $ storeCallBackOpenChatScreen push OpenChatScreen
@@ -386,7 +386,7 @@ getMessageNotificationViewConfig state =
       driverInfoCard = fromMaybe mockDriverInfo state.data.driverInfoCardState
       currentFollower = getCurrentFollower state.data.currentFollower
       name = fromMaybe currentFollower.mobileNumber currentFollower.name
-      removeNotification = if state.props.isRideStarted && not state.props.currentUserOnRide
+      removeNotification = if not state.props.currentUserOnRide
                               then state.props.removeNotification 
                               else true
   in {
@@ -692,7 +692,7 @@ headerView push state =
           ]
       ]
   where 
-    isChatEnabled currentFollower = state.data.config.feature.enableChat && state.props.isRideStarted && not state.props.currentUserOnRide
+    isChatEnabled currentFollower = state.data.config.feature.enableChat && not state.props.currentUserOnRide
 
 emergencyActionsView ::
   forall w.
