@@ -31,7 +31,7 @@ delete = Queries.delete
 
 clearCache :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ()
 clearCache cityId domain =
-  Hedis.del $ "driverOfferCachedQueries:AppDynamicLogic:" <> ":MerchantOperatingCityId-" <> show (Kernel.Types.Id.getId cityId) <> ":Domain-" <> show domain
+  Hedis.withCrossAppRedis $ Hedis.del $ "driverOfferCachedQueries:AppDynamicLogic:" <> ":MerchantOperatingCityId-" <> show (Kernel.Types.Id.getId cityId) <> ":Domain-" <> show domain
 
 createMany :: (BeamFlow.BeamFlow m r) => [Lib.Yudhishthira.Types.AppDynamicLogic.AppDynamicLogic] -> m ()
 createMany = Queries.createMany

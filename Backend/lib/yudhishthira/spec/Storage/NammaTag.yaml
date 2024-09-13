@@ -10,9 +10,9 @@ NammaTag:
   tableName: namma_tag
   types:
     TagInfo:
-      enum: "Application ApplicationTagInfo, KaalChakra KaalChakraTagInfo"
+      enum: "Application ApplicationTagInfo, KaalChakra KaalChakraTagInfo, Manual"
     TagType:
-      enum: "ApplicationTag, KaalChakraTag"
+      enum: "ApplicationTag, KaalChakraTag, ManualTag"
     ApplicationTagInfo:
       recordType: NewType
       event: ApplicationEvent

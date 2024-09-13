@@ -41,6 +41,7 @@ library
       Lib.Yudhishthira.Types.Application
       Lib.Yudhishthira.Types.Common
       Lib.Yudhishthira.Types.KaalChakra
+      Lib.Yudhishthira.Types.Manual
       Lib.Yudhishthira.Types.Tag
       Tools.Beam.UtilsTH
       Lib.Yudhishthira.Storage.Beam.AppDynamicLogic

@@ -11,30 +11,35 @@ getChakra tag =
   case tag of
     Lib.Yudhishthira.Types.NammaTag.Application (Lib.Yudhishthira.Types.NammaTag.ApplicationTagInfo _) -> Kernel.Prelude.Nothing
     Lib.Yudhishthira.Types.NammaTag.KaalChakra (Lib.Yudhishthira.Types.NammaTag.KaalChakraTagInfo chakra _) -> Just chakra
+    Lib.Yudhishthira.Types.NammaTag.Manual -> Kernel.Prelude.Nothing
 
 getEvent :: (Lib.Yudhishthira.Types.NammaTag.TagInfo -> Kernel.Prelude.Maybe Lib.Yudhishthira.Types.ApplicationEvent)
 getEvent tag =
   case tag of
     Lib.Yudhishthira.Types.NammaTag.Application (Lib.Yudhishthira.Types.NammaTag.ApplicationTagInfo event) -> Just event
     Lib.Yudhishthira.Types.NammaTag.KaalChakra (Lib.Yudhishthira.Types.NammaTag.KaalChakraTagInfo _ _) -> Kernel.Prelude.Nothing
+    Lib.Yudhishthira.Types.NammaTag.Manual -> Kernel.Prelude.Nothing
 
 getTag :: (Lib.Yudhishthira.Types.NammaTag.TagInfo -> Lib.Yudhishthira.Types.NammaTag.TagType)
 getTag tag =
   case tag of
     Lib.Yudhishthira.Types.NammaTag.Application _ -> Lib.Yudhishthira.Types.NammaTag.ApplicationTag
     Lib.Yudhishthira.Types.NammaTag.KaalChakra _ -> Lib.Yudhishthira.Types.NammaTag.KaalChakraTag
+    Lib.Yudhishthira.Types.NammaTag.Manual -> Lib.Yudhishthira.Types.NammaTag.ManualTag
 
 getValidity :: (Lib.Yudhishthira.Types.NammaTag.TagInfo -> Kernel.Prelude.Maybe Kernel.Types.Common.Hours)
 getValidity tag =
   case tag of
     Lib.Yudhishthira.Types.NammaTag.Application (Lib.Yudhishthira.Types.NammaTag.ApplicationTagInfo _) -> Kernel.Prelude.Nothing
     Lib.Yudhishthira.Types.NammaTag.KaalChakra (Lib.Yudhishthira.Types.NammaTag.KaalChakraTagInfo _ validity) -> validity
+    Lib.Yudhishthira.Types.NammaTag.Manual -> Kernel.Prelude.Nothing
 
 mkTagInfo :: (Kernel.Prelude.Maybe Lib.Yudhishthira.Types.Chakra -> Kernel.Prelude.Maybe Lib.Yudhishthira.Types.ApplicationEvent -> Lib.Yudhishthira.Types.NammaTag.TagType -> Kernel.Prelude.Maybe Kernel.Types.Common.Hours -> Lib.Yudhishthira.Types.NammaTag.TagInfo)
 mkTagInfo chakra event tagType validity =
   case tagType of
     Lib.Yudhishthira.Types.NammaTag.ApplicationTag -> Lib.Yudhishthira.Types.NammaTag.Application (Lib.Yudhishthira.Types.NammaTag.ApplicationTagInfo (fromMaybe Lib.Yudhishthira.Types.RideEnd event))
     Lib.Yudhishthira.Types.NammaTag.KaalChakraTag -> Lib.Yudhishthira.Types.NammaTag.KaalChakra (Lib.Yudhishthira.Types.NammaTag.KaalChakraTagInfo (fromMaybe Lib.Yudhishthira.Types.Monthly chakra) validity)
+    Lib.Yudhishthira.Types.NammaTag.ManualTag -> Lib.Yudhishthira.Types.NammaTag.Manual
 
 getRangeEnd :: (Lib.Yudhishthira.Types.TagValues -> Kernel.Prelude.Maybe Kernel.Prelude.Double)
 getRangeEnd = \case

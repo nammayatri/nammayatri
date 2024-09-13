@@ -56,6 +56,18 @@ postTagCreate tagRequest = do
                 createdAt = now,
                 updatedAt = now
               }
+        Lib.Yudhishthira.Types.ManualTag Lib.Yudhishthira.Types.NammaTagManual {..} ->
+          return $
+            DNT.NammaTag
+              { category = tagCategory,
+                info = DNT.Manual,
+                name = tagName,
+                possibleValues = tagPossibleValues,
+                rule = Lib.Yudhishthira.Types.LLM "empty-context",
+                description = description,
+                createdAt = now,
+                updatedAt = now
+              }
 
 postQueryCreate ::
   (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>

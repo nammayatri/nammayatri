@@ -23,6 +23,7 @@ import Kernel.Utils.TH
 import Lib.Yudhishthira.Types.Application as Reexport
 import Lib.Yudhishthira.Types.Common as Reexport
 import Lib.Yudhishthira.Types.KaalChakra as Reexport
+import Lib.Yudhishthira.Types.Manual as Reexport
 import Lib.Yudhishthira.Types.Tag as Reexport
 
 data Source
@@ -35,6 +36,7 @@ type SourceData = Value -- json to be decoded in the respective tag
 data CreateNammaTagRequest
   = ApplicationTag NammaTagApplication
   | KaalChakraTag NammaTagChakra
+  | ManualTag NammaTagManual
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets CreateNammaTagRequest where

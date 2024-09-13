@@ -45,8 +45,8 @@ yudhishthiraDecide req = do
     convertToTagResponse :: (MonadFlow m) => DNT.NammaTag -> m (Maybe NammaTagResponse)
     convertToTagResponse tag = do
       let tagValidity = case tag.info of
-            DNT.Application _ -> Nothing
             DNT.KaalChakra (DNT.KaalChakraTagInfo _ validity) -> validity
+            _ -> Nothing
       respValue <-
         case tag.rule of
           LLM context -> throwError $ InternalError $ "LLM not supported yet: " <> show context

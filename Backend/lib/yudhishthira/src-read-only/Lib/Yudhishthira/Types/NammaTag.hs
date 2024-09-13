@@ -30,9 +30,10 @@ data KaalChakraTagInfo = KaalChakraTagInfo {chakra :: Lib.Yudhishthira.Types.Cha
 data TagInfo
   = Application Lib.Yudhishthira.Types.NammaTag.ApplicationTagInfo
   | KaalChakra Lib.Yudhishthira.Types.NammaTag.KaalChakraTagInfo
+  | Manual
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data TagType = ApplicationTag | KaalChakraTag deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data TagType = ApplicationTag | KaalChakraTag | ManualTag deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''TagInfo)
 
