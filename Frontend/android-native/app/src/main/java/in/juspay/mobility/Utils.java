@@ -125,14 +125,14 @@ public class Utils {
 
 // Creates a listener for request status updates.
         SplitInstallStateUpdatedListener listener = state -> {
-            if (state.sessionId() == mSessionId) {
+//            if (state.sessionId() == mSessionId) {
                 // Read the status of the request to handle the state update.
                 if (state.status() == SplitInstallSessionStatus.FAILED
                         && state.errorCode() == SplitInstallErrorCode.SERVICE_DIED) {
                     // Retry the request.
                     return;
                 }
-                if (state.sessionId() == mSessionId) {
+//                if (state.sessionId() == mSessionId) {
                     switch (state.status()) {
                         case SplitInstallSessionStatus.DOWNLOADING:
                             long totalBytes = state.totalBytesToDownload();
@@ -152,8 +152,8 @@ public class Utils {
                             }
                             break;
                     }
-                }
-            }
+//                }
+//            }
         };
 
         // Registers the listener.
