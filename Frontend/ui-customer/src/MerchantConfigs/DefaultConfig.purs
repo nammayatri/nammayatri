@@ -836,7 +836,8 @@ allCitiesDefCityConfig =
       , perMinCharges : 2.0
       }
     },
-    enableWaitingConfig : false
+    enableWaitingConfig : false,
+    allowBlockedUserLogin : true
   }
 
 ysDefaultCityConfig :: CityConfig
