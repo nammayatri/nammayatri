@@ -64,7 +64,9 @@ buildMapsCallHandler getMapsService merchantId merchantOpCityId = Maps.MapsCallH
   where
     getMapsProvidersList = do
       merchantServiceUsageConfig <- QMSUC.findByMerchantOperatingCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
-      pure $ getMapsService merchantServiceUsageConfig
+      let mapsServices = getMapsService merchantServiceUsageConfig
+      when (null mapsServices) $ throwError $ InternalError "No Maps Service Configured"
+      pure mapsServices
 
     getMapsProviderConfig mapsService = do
       merchantMapsServiceConfig <-

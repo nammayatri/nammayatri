@@ -31,6 +31,7 @@ import qualified Domain.Types.VehicleVariant as DVeh
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Maps.Types
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -63,6 +64,7 @@ triggerDummyRideRequest ::
     EsqDBFlow m r,
     EncFlow m r,
     CacheFlow m r,
+    ServiceFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   DP.Person ->

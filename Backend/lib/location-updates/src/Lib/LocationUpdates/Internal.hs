@@ -252,11 +252,8 @@ recalcDistanceBatchStep RideInterpolationHandler {..} rectifyDistantPointsFailur
     void $ Redis.rPushExp (onRideTollNamesKey driverId) tollNames 21600
     void $ Redis.incrby (onRideTollChargesKey driverId) (round tollCharges.getHighPrecMoney)
     Redis.expire (onRideTollChargesKey driverId) 21600 -- 6 hours
-  whenJust (nonEmpty interpolatedWps) $ \nonEmptyInterpolatedWps -> do
-    addInterpolatedPoints driverId nonEmptyInterpolatedWps
-  when snapToRoadFailed $ do
-    whenJust (nonEmpty batchWaypoints) $ \nonEmptyBatchWaypoints ->
-      addInterpolatedPoints driverId nonEmptyBatchWaypoints
+  let pointsToStore = if snapToRoadFailed then batchWaypoints else interpolatedWps
+  whenJust (nonEmpty pointsToStore) $ addInterpolatedPoints driverId
   deleteFirstNwaypoints driverId batchSize -- delete the batch irrespective of the snapToRoadFailed
   unless snapToRoadFailed $ do
     logInfo $ mconcat ["points interpolation: input=", show batchWaypoints, "; output=", show interpolatedWps]

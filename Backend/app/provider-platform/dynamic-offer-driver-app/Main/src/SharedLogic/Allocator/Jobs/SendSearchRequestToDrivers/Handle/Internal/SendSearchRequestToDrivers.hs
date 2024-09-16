@@ -34,6 +34,7 @@ import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.TransporterConfig as DTR
 import Kernel.Beam.Functions
 import qualified Kernel.External.Maps as EMaps
+import Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -68,6 +69,7 @@ sendSearchRequestToDrivers ::
     Esq.EsqDBReplicaFlow m r,
     TranslateFlow m r,
     CacheFlow m r,
+    ServiceFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int, "version" ::: DeploymentVersion]
   ) =>

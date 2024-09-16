@@ -57,3 +57,17 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN get_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ALTER COLUMN get_distances_for_scheduled_rides SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN get_trip_routes_priority_list text[] ;
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN get_routes_priority_list text[] ;
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN get_place_name_priority_list text[] ;
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN get_place_details_priority_list text[] ;
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN get_pickup_routes_priority_list text[] ;
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN get_estimated_pickup_distances_priority_list text[] ;
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN get_distances_priority_list text[] ;
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN get_distances_for_scheduled_rides_priority_list text[] ;
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN get_distances_for_cancel_ride_priority_list text[] ;
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN auto_complete_priority_list text[] ;

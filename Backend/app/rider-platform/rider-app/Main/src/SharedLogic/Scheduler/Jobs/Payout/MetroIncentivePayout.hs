@@ -23,7 +23,7 @@ import Domain.Types.PayoutConfig
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payout.Interface as Juspay
 import qualified Kernel.External.Payout.Types as PT
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -50,6 +50,7 @@ sendCustomerRefund ::
     CacheFlow m r,
     MonadFlow m,
     EsqDBFlow m r,
+    ServiceFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r
   ) =>
@@ -98,6 +99,7 @@ callPayout ::
     MonadFlow m,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
+    ServiceFlow m r,
     SchedulerFlow r
   ) =>
   Id Merchant ->

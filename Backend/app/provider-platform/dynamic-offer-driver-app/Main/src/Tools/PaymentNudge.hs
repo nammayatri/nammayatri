@@ -32,7 +32,7 @@ import qualified Domain.Types.TransporterConfig as TC
 import Kernel.Beam.Functions as B
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Types as Payments
-import Kernel.External.Types (Language (..))
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -77,6 +77,7 @@ sendSwitchPlanNudge ::
   ( EsqDBFlow m r,
     EncFlow m r,
     CacheFlow m r,
+    ServiceFlow m r,
     MonadFlow m
   ) =>
   TC.TransporterConfig ->

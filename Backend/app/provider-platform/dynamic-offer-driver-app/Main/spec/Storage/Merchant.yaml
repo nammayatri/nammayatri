@@ -429,16 +429,26 @@ MerchantServiceUsageConfig:
     merchantOperatingCityId: Id MerchantOperatingCity
     initiateCall: CallService
     getDistances: MapsService
+    getDistancesPriorityList: "[MapsService]"
     getEstimatedPickupDistances: MapsService
+    getEstimatedPickupDistancesPriorityList: "[MapsService]"
     getRoutes: MapsService
+    getRoutesPriorityList: "[MapsService]"
     getPickupRoutes: MapsService
+    getPickupRoutesPriorityList: "[MapsService]"
     getTripRoutes: MapsService
+    getTripRoutesPriorityList: "[MapsService]"
     snapToRoad: MapsService
     getPlaceName: MapsService
+    getPlaceNamePriorityList: "[MapsService]"
     getPlaceDetails: MapsService
+    getPlaceDetailsPriorityList: "[MapsService]"
     autoComplete: MapsService
+    autoCompletePriorityList: "[MapsService]"
     getDistancesForCancelRide: MapsService
+    getDistancesForCancelRidePriorityList: "[MapsService]"
     getDistancesForScheduledRides: MapsService
+    getDistancesForScheduledRidesPriorityList: "[MapsService]"
     smsProvidersPriorityList: "[SmsService]"
     snapToRoadProvidersList: "[MapsService]"
     whatsappProvidersPriorityList: "[WhatsappService]"
@@ -492,6 +502,17 @@ MerchantServiceUsageConfig:
     serviceName: VARCHAR(50)
     rectifyDistantPointsFailure: text
     backgroundVerification: text
+    getDistancesPriorityList: "text[]"
+    getEstimatedPickupDistancesPriorityList: "text[]"
+    getRoutesPriorityList: "text[]"
+    getPickupRoutesPriorityList: "text[]"
+    getTripRoutesPriorityList: "text[]"
+    getPlaceNamePriorityList: "text[]"
+    getPlaceDetailsPriorityList: "text[]"
+    autoCompletePriorityList: "text[]"
+    getDistancesForCancelRidePriorityList: "text[]"
+    getDistancesForScheduledRidesPriorityList: "text[]"
+
   default:
     getPickupRoutes: "'Google'"
     getTripRoutes: "'Google'"
@@ -506,6 +527,44 @@ MerchantServiceUsageConfig:
     backgroundVerification: "'Checkr'"
     sdkVerificationService: "'HyperVerge'"
     getDistancesForScheduledRides: "'OSRM'"
+
+  beamType:
+    getDistancesPriorityList: Maybe [MapsService]
+    getEstimatedPickupDistancesPriorityList: Maybe [MapsService]
+    getRoutesPriorityList: Maybe [MapsService]
+    getPickupRoutesPriorityList: Maybe [MapsService]
+    getTripRoutesPriorityList: Maybe [MapsService]
+    getPlaceNamePriorityList: Maybe [MapsService]
+    getPlaceDetailsPriorityList: Maybe [MapsService]
+    autoCompletePriorityList: Maybe [MapsService]
+    getDistancesForCancelRidePriorityList: Maybe [MapsService]
+    getDistancesForScheduledRidesPriorityList: Maybe [MapsService]
+    rectifyDistantPointsFailurePriorityList: Maybe [MapsService]
+
+  fromTType:
+    getDistancesPriorityList: fromMaybe [] getDistancesPriorityList|E
+    getEstimatedPickupDistancesPriorityList: fromMaybe [] getEstimatedPickupDistancesPriorityList|E
+    getRoutesPriorityList: fromMaybe [] getRoutesPriorityList|E
+    getPickupRoutesPriorityList: fromMaybe [] getPickupRoutesPriorityList|E
+    getTripRoutesPriorityList: fromMaybe [] getTripRoutesPriorityList|E
+    getPlaceNamePriorityList: fromMaybe [] getPlaceNamePriorityList|E
+    getPlaceDetailsPriorityList: fromMaybe [] getPlaceDetailsPriorityList|E
+    autoCompletePriorityList: fromMaybe [] autoCompletePriorityList|E
+    getDistancesForCancelRidePriorityList: fromMaybe [] getDistancesForCancelRidePriorityList|E
+    getDistancesForScheduledRidesPriorityList: fromMaybe [] getDistancesForScheduledRidesPriorityList|E
+
+  toTType:
+    getDistancesPriorityList: Just getDistancesPriorityList|E
+    getEstimatedPickupDistancesPriorityList: Just getEstimatedPickupDistancesPriorityList|E
+    getRoutesPriorityList: Just getRoutesPriorityList|E
+    getPickupRoutesPriorityList: Just getPickupRoutesPriorityList|E
+    getTripRoutesPriorityList: Just getTripRoutesPriorityList|E
+    getPlaceNamePriorityList: Just getPlaceNamePriorityList|E
+    getPlaceDetailsPriorityList: Just getPlaceDetailsPriorityList|E
+    autoCompletePriorityList: Just autoCompletePriorityList|E
+    getDistancesForCancelRidePriorityList: Just getDistancesForCancelRidePriorityList|E
+    getDistancesForScheduledRidesPriorityList: Just getDistancesForScheduledRidesPriorityList|E
+
 
   queries:
     findByMerchantOpCityId:

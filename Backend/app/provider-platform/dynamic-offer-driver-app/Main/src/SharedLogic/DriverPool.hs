@@ -497,6 +497,7 @@ calculateGoHomeDriverPool ::
     EsqDBFlow m r,
     CoreMetrics m,
     MonadIO m,
+    ServiceFlow m r,
     HasCoordinates a,
     LT.HasLocationService m r,
     CoreMetrics m
@@ -544,6 +545,7 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
     CacheFlow m r,
     EsqDBFlow m r,
     CoreMetrics m,
+    ServiceFlow m r,
     MonadIO m,
     HasCoordinates a,
     LT.HasLocationService m r,
@@ -668,6 +670,7 @@ calculateDriverPool ::
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
+    ServiceFlow m r,
     CoreMetrics m,
     MonadFlow m,
     HasCoordinates a,
@@ -715,6 +718,7 @@ calculateDriverPoolWithActualDist ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
+    ServiceFlow m r,
     Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
     HasCoordinates a,
@@ -842,6 +846,7 @@ calculateDriverPoolCurrentlyOnRide ::
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
+    ServiceFlow m r,
     MonadFlow m,
     HasCoordinates a,
     LT.HasLocationService m r,
@@ -902,6 +907,7 @@ calculateDriverCurrentlyOnRideWithActualDist ::
     Esq.EsqDBReplicaFlow m r,
     HasCoordinates a,
     LT.HasLocationService m r,
+    ServiceFlow m r,
     CoreMetrics m
   ) =>
   CalculateDriverPoolReq a ->
@@ -971,6 +977,7 @@ computeActualDistanceOneToOne ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
+    ServiceFlow m r,
     HasCoordinates a
   ) =>
   DistanceUnit ->
@@ -987,6 +994,7 @@ computeActualDistanceOneToOne distanceUnit merchantId merchantOpCityId prevRideD
 computeActualDistance ::
   ( CacheFlow m r,
     EsqDBFlow m r,
+    ServiceFlow m r,
     EncFlow m r,
     HasCoordinates a
   ) =>
@@ -1035,6 +1043,7 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
 computeActualDistanceOneToOneSrcAndDestMapping ::
   ( CacheFlow m r,
     EsqDBFlow m r,
+    ServiceFlow m r,
     EncFlow m r
   ) =>
   DistanceUnit ->

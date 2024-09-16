@@ -24,7 +24,7 @@ import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payout.Interface as Juspay
 import qualified Kernel.External.Payout.Types as PT
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -62,6 +62,7 @@ sendDriverReferralPayoutJobData ::
     MonadFlow m,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
+    ServiceFlow m r,
     SchedulerFlow r
   ) =>
   Job 'DriverReferralPayout ->
@@ -125,6 +126,7 @@ callPayout ::
     CacheFlow m r,
     MonadFlow m,
     EsqDBReplicaFlow m r,
+    ServiceFlow m r,
     EsqDBFlow m r,
     SchedulerFlow r
   ) =>

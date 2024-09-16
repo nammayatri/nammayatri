@@ -65,6 +65,7 @@ createOrder ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
+    ServiceFlow m r,
     CoreMetrics m,
     MonadFlow m
   ) =>
@@ -187,7 +188,7 @@ makeOfferListCacheKey includeDriverId req = do
         _ -> show offerListingMetric'
 
 sendLinkTroughChannelProvided ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasField "smsCfg" r SmsConfig) =>
+  (MonadFlow m, ServiceFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasField "smsCfg" r SmsConfig) =>
   Maybe Payment.PaymentLinks ->
   Id DP.Person ->
   Maybe HighPrecMoney ->
