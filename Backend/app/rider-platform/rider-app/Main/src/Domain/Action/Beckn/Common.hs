@@ -39,7 +39,7 @@ import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface.Types as Payment
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
@@ -466,6 +466,7 @@ rideStartedReqHandler ::
     MonadFlow m,
     EncFlow m r,
     EsqDBReplicaFlow m r,
+    ServiceFlow m r,
     SchedulerFlow r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
@@ -567,6 +568,7 @@ rideCompletedReqHandler ::
     MonadFlow m,
     EncFlow m r,
     EsqDBReplicaFlow m r,
+    ServiceFlow m r,
     ClickhouseFlow m r,
     SchedulerFlow r,
     HasHttpClientOptions r c,
@@ -711,6 +713,7 @@ bookingCancelledReqHandler ::
     CacheFlow m r,
     EsqDBFlow m r,
     ClickhouseFlow m r,
+    ServiceFlow m r,
     MonadFlow m,
     EncFlow m r,
     EsqDBReplicaFlow m r,
@@ -733,6 +736,7 @@ cancellationTransaction ::
     ClickhouseFlow m r,
     MonadFlow m,
     EncFlow m r,
+    ServiceFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
@@ -936,6 +940,7 @@ validateBookingCancelledReq ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
+    ServiceFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     HasField "minTripDistanceForReferralCfg" r (Maybe Distance)
@@ -976,6 +981,7 @@ sendRideEndMessage ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     CacheFlow m r,
     EsqDBFlow m r,
+    ServiceFlow m r,
     MonadFlow m,
     EncFlow m r
   ) =>

@@ -520,6 +520,7 @@ validateRequest ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
+    ServiceFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,

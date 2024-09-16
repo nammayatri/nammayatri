@@ -6,7 +6,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:nammayatri/shared-kernel/backend/fallback-logic-for-maps-api";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 

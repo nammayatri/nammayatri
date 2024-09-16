@@ -4172,15 +4172,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1726199501,
-        "narHash": "sha256-qslvYo12k6ZjtkkzYo1U4DNbK/002keXsWWb6yGdLAU=",
+        "lastModified": 1726487443,
+        "narHash": "sha256-SXu2oaTbI3CeWQcv8HCZgSJo8rG8mbBM1qVwW7yjn64=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "831f77fb658c2ed44da5a0b1d3761e51baface57",
+        "rev": "e24ae9314d5de4e9dafeb62e4999e82965fc915a",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/fallback-logic-for-maps-api",
         "repo": "shared-kernel",
         "type": "github"
       }

@@ -47,13 +47,13 @@ import qualified Kernel.External.Call.Interface.Types as Call
 import qualified Kernel.External.Call.Interface.Types as CallTypes
 import qualified Kernel.External.Call.Types as CallTypes
 import Kernel.External.Encryption
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Common
 import Kernel.Types.Id as ID
 import Kernel.Utils.Common
-import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import Storage.Beam.SchedulerJob ()
@@ -111,6 +111,7 @@ initiateCallToDriver ::
   ( EncFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
+    ServiceFlow m r,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>

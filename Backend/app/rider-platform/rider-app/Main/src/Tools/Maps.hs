@@ -25,6 +25,7 @@ module Tools.Maps
     getTripRoutes,
     getDistanceForCancelRide,
     getDistanceForScheduledRides,
+    buildMapsCallHandler,
   )
 where
 
@@ -53,6 +54,38 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QM
 import qualified Storage.CachedQueries.Person as CQP
 import Tools.Error
 
+buildMapsCallHandler ::
+  ServiceFlow m r =>
+  (MerchantServiceUsageConfig -> [MapsService]) ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  Maps.MapsCallHandler m
+buildMapsCallHandler getMapsService merchantId merchantOpCityId = Maps.MapsCallHandler {..}
+  where
+    getMapsProvidersList = do
+      merchantServiceUsageConfig <- QMSUC.findByMerchantOperatingCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+      pure $ getMapsService merchantServiceUsageConfig
+
+    getMapsProviderConfig mapsService = do
+      merchantMapsServiceConfig <-
+        QMSC.findByMerchantOpCityIdAndService merchantId merchantOpCityId (DMSC.MapsService mapsService)
+          >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show mapsService))
+      case merchantMapsServiceConfig.serviceConfig of
+        DMSC.MapsServiceConfig msc -> pure msc
+        _ -> throwError $ InternalError "Unknown Service Config"
+
+runWithMapsCallHandler ::
+  ServiceFlow m r =>
+  (MerchantServiceUsageConfig -> [MapsService]) ->
+  (Maps.MapsCallHandler m -> req -> m resp) ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  req ->
+  m resp
+runWithMapsCallHandler getMapsService func merchantId merchantOpCityId req = do
+  let mapsCallHandler = buildMapsCallHandler getMapsService merchantId merchantOpCityId
+  func mapsCallHandler req
+
 getDistance ::
   ( ServiceFlow m r,
     HasCoordinates a,
@@ -62,7 +95,7 @@ getDistance ::
   Id MerchantOperatingCity ->
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
-getDistance = runWithServiceConfig Maps.getDistance (.getDistances)
+getDistance = runWithMapsCallHandler (.getDistancesPriorityList) Maps.callGetDistanceWithFallback
 
 getDistanceForCancelRide ::
   ( ServiceFlow m r,
@@ -73,7 +106,7 @@ getDistanceForCancelRide ::
   Id MerchantOperatingCity ->
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
-getDistanceForCancelRide = runWithServiceConfig Maps.getDistance (.getDistancesForCancelRide)
+getDistanceForCancelRide = runWithMapsCallHandler (.getDistancesForCancelRidePriorityList) Maps.callGetDistanceWithFallback
 
 getDistanceForScheduledRides ::
   ( ServiceFlow m r,
@@ -84,7 +117,7 @@ getDistanceForScheduledRides ::
   Id MerchantOperatingCity ->
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
-getDistanceForScheduledRides = runWithServiceConfig Maps.getDistance (.getDistancesForScheduledRides)
+getDistanceForScheduledRides = runWithMapsCallHandler (.getDistancesForScheduledRidesPriorityList) Maps.callGetDistanceWithFallback
 
 getDistances ::
   ( ServiceFlow m r,
@@ -95,25 +128,25 @@ getDistances ::
   Id MerchantOperatingCity ->
   GetDistancesReq a b ->
   m (GetDistancesResp a b)
-getDistances = runWithServiceConfig Maps.getDistances (.getDistances)
+getDistances = runWithMapsCallHandler (.getDistancesPriorityList) Maps.callGetDistancesWithFallback
 
-getRoutes :: ServiceFlow m r => Maybe Bool -> Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
+getRoutes :: (ServiceFlow m r, Maps.MapsFlow m r) => Maybe Bool -> Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
 getRoutes isAvoidToll personId merchantId mbMOCId req = do
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mOCId <- getMerchantOperatingCityId personId mbMOCId
-  runWithServiceConfig (Maps.getRoutes $ fromMaybe merchant.isAvoidToll isAvoidToll) (.getRoutes) merchantId mOCId req
+  runWithMapsCallHandler (.getRoutesPriorityList) (Maps.callGetRoutesWithFallback $ fromMaybe merchant.isAvoidToll isAvoidToll) merchantId mOCId req
 
 getPickupRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
 getPickupRoutes personId merchantId mbMOCId req = do
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mOCId <- getMerchantOperatingCityId personId mbMOCId
-  runWithServiceConfig (Maps.getRoutes merchant.isAvoidToll) (.getPickupRoutes) merchantId mOCId req
+  runWithMapsCallHandler (.getPickupRoutesPriorityList) (Maps.callGetRoutesWithFallback merchant.isAvoidToll) merchantId mOCId req
 
 getTripRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
 getTripRoutes personId merchantId mbMOCId req = do
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mOCId <- getMerchantOperatingCityId personId mbMOCId
-  runWithServiceConfig (Maps.getRoutes merchant.isAvoidToll) (.getTripRoutes) merchantId mOCId req
+  runWithMapsCallHandler (.getTripRoutesPriorityList) (Maps.callGetRoutesWithFallback merchant.isAvoidToll) merchantId mOCId req
 
 snapToRoad ::
   ( ServiceFlow m r
@@ -124,14 +157,14 @@ snapToRoad ::
   m SnapToRoadResp
 snapToRoad = runWithServiceConfig Maps.snapToRoad (.snapToRoad)
 
-autoComplete :: (ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Merchant -> Id MerchantOperatingCity -> AutoCompleteReq -> m AutoCompleteResp
-autoComplete = runWithServiceConfig Maps.autoComplete (.autoComplete)
+autoComplete :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> AutoCompleteReq -> m AutoCompleteResp
+autoComplete = runWithMapsCallHandler (.autoCompletePriorityList) Maps.callAutoCompleteWithFallback
 
-getPlaceName :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetPlaceNameReq -> m GetPlaceNameResp
-getPlaceName = runWithServiceConfig Maps.getPlaceName (.getPlaceName)
+getPlaceName :: (ServiceFlow m r, Maps.MapsFlow m r) => Id Merchant -> Id MerchantOperatingCity -> GetPlaceNameReq -> m GetPlaceNameResp
+getPlaceName = runWithMapsCallHandler (.getPlaceNamePriorityList) Maps.callGetPlaceNameWithFallback
 
-getPlaceDetails :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
-getPlaceDetails = runWithServiceConfig Maps.getPlaceDetails (.getPlaceDetails)
+getPlaceDetails :: (ServiceFlow m r, Maps.MapsFlow m r) => Id Merchant -> Id MerchantOperatingCity -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
+getPlaceDetails = runWithMapsCallHandler (.getPlaceDetailsPriorityList) Maps.callGetPlaceDetailsWithFallback
 
 runWithServiceConfig ::
   ServiceFlow m r =>

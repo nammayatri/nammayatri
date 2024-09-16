@@ -44,6 +44,7 @@ import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps
+import Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.Beckn.Context as Context
@@ -129,6 +130,7 @@ cancel ::
     Esq.EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
+    ServiceFlow m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   SRB.Booking ->
@@ -269,7 +271,8 @@ driverDistanceToPickup ::
     CacheFlow m r,
     EsqDBFlow m r,
     Maps.HasCoordinates tripStartPos,
-    Maps.HasCoordinates tripEndPos
+    Maps.HasCoordinates tripEndPos,
+    ServiceFlow m r
   ) =>
   SRB.Booking ->
   Id DMOC.MerchantOperatingCity ->

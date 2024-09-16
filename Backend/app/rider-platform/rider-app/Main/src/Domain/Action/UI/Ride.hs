@@ -52,6 +52,7 @@ import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
+import Kernel.External.Types
 import Kernel.Prelude hiding (HasField)
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto hiding (isNothing)
@@ -120,6 +121,7 @@ getDriverLoc ::
   ( CacheFlow m r,
     EncFlow m r,
     EsqDBFlow m r,
+    ServiceFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],

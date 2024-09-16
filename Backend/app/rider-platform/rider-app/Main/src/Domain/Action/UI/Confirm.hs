@@ -24,6 +24,7 @@ import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
 import qualified Kernel.External.Payment.Interface.Types as Payment
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Tools.Metrics.CoreMetrics
@@ -64,7 +65,7 @@ confirm personId quoteId paymentMethodId = do
   SConfirm.confirm SConfirm.DConfirmReq {..}
 
 -- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
-cancelBooking :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => DRB.Booking -> m ()
+cancelBooking :: (CacheFlow m r, EncFlow m r, ServiceFlow m r, EsqDBFlow m r) => DRB.Booking -> m ()
 cancelBooking booking = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
   bookingCancellationReason <- buildBookingCancellationReason
