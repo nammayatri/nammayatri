@@ -66,6 +66,7 @@ import GHC.Float (double2Int)
 import GHC.Num.Integer (integerFromInt, integerToInt)
 import Kernel.External.Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
+import Kernel.External.Types
 import Kernel.Prelude hiding (forM_, whenJust)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis as Hedis
@@ -80,7 +81,6 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
-import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.DriverOnboarding
@@ -121,6 +121,7 @@ endRideTransaction ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
+    ServiceFlow m r,
     MonadFlow m,
     Esq.EsqDBReplicaFlow m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
@@ -435,6 +436,7 @@ putDiffMetric merchantId money mtrs = do
 getRouteAndDistanceBetweenPoints ::
   ( EncFlow m r,
     CacheFlow m r,
+    ServiceFlow m r,
     EsqDBFlow m r
   ) =>
   Id Merchant ->
@@ -492,6 +494,7 @@ createDriverFee ::
     EsqDBFlow m r,
     EncFlow m r,
     MonadFlow m,
+    ServiceFlow m r,
     JobCreatorEnv r,
     HasField "schedulerType" r SchedulerType
   ) =>

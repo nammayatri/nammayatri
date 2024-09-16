@@ -42,6 +42,7 @@ import Domain.Types.SubscriptionConfig
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Kernel.External.Payment.Interface as PaymentInterface
 import qualified Kernel.External.Payment.Interface.Types as Payment
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -269,7 +270,7 @@ makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transport
     }
 
 getFinalOrderAmount ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, ServiceFlow m r) =>
   HighPrecMoney ->
   Id Merchant ->
   TransporterConfig ->
@@ -559,6 +560,7 @@ calcFinalOrderAmounts ::
   ( MonadFlow m,
     CacheFlow m r,
     EsqDBFlow m r,
+    ServiceFlow m r,
     EncFlow m r
   ) =>
   Id Merchant ->
@@ -622,7 +624,7 @@ sendManualPaymentLink Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       ReSchedule <$> getRescheduledTime subscriptionConfigs.genericJobRescheduleTime
 
 processAndSendManualPaymentLink ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig) =>
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig, ServiceFlow m r) =>
   [DPlan.DriverPlan] ->
   SubscriptionConfig ->
   Id Merchant ->

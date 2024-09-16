@@ -168,6 +168,7 @@ import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payout.Interface as Juspay
 import qualified Kernel.External.Payout.Types as TPayout
+import Kernel.External.Types
 import qualified Kernel.External.Verification.Interface.InternalScripts as IF
 import Kernel.Prelude (NominalDiffTime, handle, intToNominalDiffTime, roundToIntegral)
 import Kernel.Serviceability (rideServiceable)
@@ -1470,6 +1471,7 @@ validationCheck DriverAlternateNumberReq {..} = do
 validate ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
+    ServiceFlow m r,
     EncFlow m r,
     CacheFlow m r,
     HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig]
@@ -1558,6 +1560,7 @@ resendOtp ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
+    ServiceFlow m r,
     EncFlow m r,
     CacheFlow m r
   ) =>
@@ -1691,7 +1694,7 @@ getDriverPayments (personId, _, merchantOpCityId) mbFrom mbTo mbStatus mbLimit m
       ]
 
 clearDriverDues ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, ServiceFlow m r) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ServiceNames ->
   Maybe SPayment.DeepLinkData ->
@@ -2064,7 +2067,8 @@ getDummyRideRequest ::
     EsqDBFlow m r,
     EncFlow m r,
     CacheFlow m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    ServiceFlow m r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   m APISuccess
@@ -2154,7 +2158,7 @@ acceptScheduledBooking (personId, merchantId, _) clientId bookingId = do
   pure Success
 
 clearDriverFeeWithCreate ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig) =>
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig, ServiceFlow m r) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ServiceNames ->
   (HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney) ->
@@ -2282,7 +2286,7 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
 
     calcPercentage percentage = (percentage * fee') / 100.0
 
-verifyVpaStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m APISuccess
+verifyVpaStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r, ServiceFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m APISuccess
 verifyVpaStatus (personId, _, opCityId) = do
   void $ QDriverInformation.updatePayoutVpaStatus (Just DriverInfo.VERIFIED_BY_USER) personId
   driverInfo <- QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound

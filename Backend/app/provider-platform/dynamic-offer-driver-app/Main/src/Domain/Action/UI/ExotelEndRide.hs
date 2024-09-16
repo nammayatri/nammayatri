@@ -23,6 +23,7 @@ import Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Types.Beckn.Ack
@@ -46,6 +47,7 @@ callBasedEndRide ::
       (Maybe HighPrecMeters),
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    ServiceFlow m r,
     EncFlow m r,
     LT.HasLocationService m r
   ) =>

@@ -43,6 +43,7 @@ import qualified Domain.Types.SearchTry as DST
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.VehicleServiceTier as DVST
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Types
 import Kernel.Randomizer (randomizeList)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -91,6 +92,7 @@ prepareDriverPoolBatch ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
+    ServiceFlow m r,
     LT.HasLocationService m r
   ) =>
   [DVST.VehicleServiceTier] ->
@@ -723,7 +725,8 @@ getNextDriverPoolBatch ::
     CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    ServiceFlow m r
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->

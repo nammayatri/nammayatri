@@ -22,6 +22,7 @@ import Domain.Types.IdfyVerification
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Error
@@ -38,6 +39,7 @@ import qualified Tools.Verification as Verification
 retryDocumentVerificationJob ::
   ( TranslateFlow m r,
     EsqDBReplicaFlow m r,
+    ServiceFlow m r,
     CacheFlow m r,
     EsqDBFlow m r
   ) =>

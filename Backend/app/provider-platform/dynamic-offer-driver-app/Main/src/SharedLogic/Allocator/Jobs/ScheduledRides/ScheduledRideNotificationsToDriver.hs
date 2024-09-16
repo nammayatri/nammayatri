@@ -27,7 +27,7 @@ import Domain.Types.TransporterConfig
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Call.Interface.Types
 import Kernel.External.Encryption (decrypt)
-import Kernel.External.Types (Language (..), SchedulerFlow)
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Types.Error
@@ -54,6 +54,7 @@ sendScheduledRideNotificationsToDriver ::
     CacheFlow m r,
     MonadFlow m,
     EsqDBFlow m r,
+    ServiceFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     SchedulerFlow r
   ) =>
