@@ -42,13 +42,20 @@ postTriggerFCMMessage (_, _) (API.Types.UI.TriggerFCM.TriggerFcmReq {..}) = do
       Notification.NotificationReq
         { category = Notification.TRIGGER_FCM,
           subCategory = Nothing,
-          showNotification = Notification.SHOW,
+          showNotification = if showNotification == Just False then Notification.DO_NOT_SHOW else Notification.SHOW,
           messagePriority = Nothing,
-          entity = Notification.Entity Notification.Product person.id.getId (),
+          entity = Notification.Entity Notification.Product person.id.getId buildFCMEntityData,
           body = body,
           title = title,
           dynamicParams = EmptyDynamicParam,
           auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
           ttl = Nothing,
           sound = Just "default"
+        }
+
+    buildFCMEntityData =
+      API.Types.UI.TriggerFCM.FCMEntityData
+        { channelId = channelId,
+          personId = chatPersonId,
+          source = source
         }
