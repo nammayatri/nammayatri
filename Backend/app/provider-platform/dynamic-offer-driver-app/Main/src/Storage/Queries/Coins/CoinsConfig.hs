@@ -59,6 +59,16 @@ fetchFunctionsOnEventbasis eventType (Id merchantId) (Id merchantOptCityId) = do
 getCoinInfo :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m [CoinsConfig]
 getCoinInfo (Id merchantId) = findAllWithKV [Se.Is BeamDC.merchantId $ Se.Eq merchantId]
 
+getConfigBasedOnMerchantAndCity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m [CoinsConfig]
+getConfigBasedOnMerchantAndCity (Id merchantId) (Id merchantOptCityId) = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamDC.merchantId $ Se.Eq merchantId,
+          Se.Is BeamDC.merchantOptCityId $ Se.Eq merchantOptCityId,
+          Se.Is BeamDC.active $ Se.Eq True
+        ]
+    ]
+
 instance FromTType' BeamDC.CoinsConfig CoinsConfig where
   fromTType' BeamDC.CoinsConfigT {..} = do
     pure $

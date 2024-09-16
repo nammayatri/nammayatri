@@ -27,6 +27,7 @@ module Domain.Action.UI.Ride.EndRide
   )
 where
 
+import qualified Beckn.OnDemand.Utils.Common as BODUC
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Data.Text as Text
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
@@ -409,9 +410,10 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     fork "DriverRideCompletedCoin Event : " $ do
       expirationPeriod <- DC.getExpirationSeconds thresholdConfig.timeDiffFromUtc
       validRideTaken <- DC.checkHasTakenValidRide (Just chargeableDistance)
+      let metroRide = checkSplLocation booking.specialLocationTag "SureMetro" || checkSplLocation booking.specialLocationTag "SureWarriorMetro"
       when (DTC.isDynamicOfferTrip booking.tripCategory && validRideTaken) $ do
         DC.incrementValidRideCount driverId expirationPeriod 1
-        DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) chargeableDistance)
+        DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) chargeableDistance metroRide) (Just ride.id.getId)
 
     mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
       findPaymentMethodByIdAndMerchantId paymentMethodId booking.merchantOperatingCityId
@@ -443,6 +445,16 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
             Just NoFareProduct -> return defaultVal
             _ -> throwError $ InternalError (Text.pack $ displayException someException)
         Right resp -> return resp
+
+checkSplLocation :: Maybe Text -> Text -> Bool
+checkSplLocation mbSplLocTag splLocation = do
+  case mbSplLocTag of
+    Just splLocTag ->
+      let tagArr = Text.splitOn "_" splLocTag
+          sourceTag = tagArr BODUC.!? 0
+          destTag = tagArr BODUC.!? 1
+       in (sourceTag == Just splLocation || destTag == Just splLocation)
+    Nothing -> False
 
 recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> DTConf.TransporterConfig -> m (Meters, HighPrecMoney, Maybe FareParameters)
 recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresholdConfig = do
