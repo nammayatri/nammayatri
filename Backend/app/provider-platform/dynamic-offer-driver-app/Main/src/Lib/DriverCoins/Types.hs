@@ -40,11 +40,12 @@ data DriverCoinsFunctionType
   | TrainingCompleted
   | BulkUploadFunction
   | BulkUploadFunctionV2 CoinMessage
+  | MetroRideCompleted
   deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
 
 data DriverCoinsEventType
   = Rating {ratingValue :: Int, chargeableDistance :: Maybe Meters}
-  | EndRide {isDisabled :: Bool, chargeableDistance_ :: Meters}
+  | EndRide {isDisabled :: Bool, chargeableDistance_ :: Meters, metroRide :: Bool}
   | Cancellation {rideStartTime :: UTCTime, intialDisToPickup :: Maybe Meters, cancellationDisToPickup :: Maybe Meters}
   | DriverToCustomerReferral {chargeableDistance :: Maybe Meters}
   | CustomerToDriverReferral

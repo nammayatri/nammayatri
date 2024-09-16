@@ -41,6 +41,7 @@ import qualified Domain.Action.UI.RideDetails as RD
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Client as DC
+import Domain.Types.Coins.CoinHistory
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
@@ -90,6 +91,7 @@ import Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QBooking
+import Storage.Queries.Coins.CoinHistory as SQCC
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Location as QLoc
@@ -208,7 +210,14 @@ data DriverRideRes = DriverRideRes
     bookingType :: BookingType,
     enableFrequentLocationUpdates :: Maybe Bool,
     fleetOwnerId :: Maybe Text,
-    enableOtpLessRide :: Bool
+    enableOtpLessRide :: Bool,
+    coinsEarned :: [CoinsEarned]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data CoinsEarned = CoinsEarned
+  { coins :: Int,
+    eventType :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -247,8 +256,9 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbFlee
     mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
     bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
     isValueAddNP <- CQVAN.isValueAddNP booking.bapId
+    coinsEarned <- SQCC.findCoinsByEntityId (Just ride.id.getId)
     let goHomeReqId = ride.driverGoHomeRequestId
-    mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP
+    mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP coinsEarned
   filteredRides <- case mbFleetOwnerId of
     Just fleetOwnerId -> do
       isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId True
@@ -271,8 +281,9 @@ mkDriverRideRes ::
   Maybe (Id DDGR.DriverGoHomeRequest) ->
   Maybe DI.DriverInformation ->
   Bool ->
+  [CoinHistory] ->
   m DriverRideRes
-mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP = do
+mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP coinsEarned = do
   let fareParams = booking.fareParams
       estimatedBaseFare =
         fareSum $
@@ -356,8 +367,19 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         isValueAddNP,
         enableFrequentLocationUpdates = ride.enableFrequentLocationUpdates,
         fleetOwnerId = rideDetails.fleetOwnerId,
-        enableOtpLessRide = fromMaybe False ride.enableOtpLessRide
+        enableOtpLessRide = fromMaybe False ride.enableOtpLessRide,
+        coinsEarned = mkCoinsEarned coinsEarned
       }
+
+mkCoinsEarned :: [CoinHistory] -> [CoinsEarned]
+mkCoinsEarned =
+  map
+    ( \coinHistory ->
+        CoinsEarned
+          { coins = coinHistory.coins,
+            eventType = show coinHistory.eventFunction
+          }
+    )
 
 calculateLocations ::
   ( CacheFlow m r,
@@ -417,7 +439,8 @@ otpRideCreate driver otpCode booking clientId = do
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-  mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP
+  coinsEarned <- SQCC.findCoinsByEntityId (Just booking.id.getId)
+  mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP coinsEarned
   where
     errHandler uBooking transporter exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking uBooking (Just driver) transporter >> throwM exc

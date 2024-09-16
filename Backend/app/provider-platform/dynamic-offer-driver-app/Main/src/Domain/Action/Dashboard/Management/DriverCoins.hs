@@ -53,7 +53,7 @@ postDriverCoinsBulkUploadCoins merchantShortId opCity Common.BulkUploadCoinsReq 
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchant.id.getId
-  mapM_ (\Common.DriverIdListWithCoins {..} -> bulkUpdateByDriverId merchant.id merchantOpCityId (Id driverId :: Id SP.Person) DCT.BulkUploadFunction coins bulkUploadTitle expirationTime transporterConfig) driverIdListWithCoins
+  mapM_ (\Common.DriverIdListWithCoins {..} -> bulkUpdateByDriverId merchant.id merchantOpCityId (Id driverId :: Id SP.Person) DCT.BulkUploadFunction coins bulkUploadTitle expirationTime transporterConfig Nothing) driverIdListWithCoins
   pure Success
 
 bulkUpdateByDriverId ::
@@ -74,8 +74,9 @@ bulkUpdateByDriverId ::
   Common.Translations ->
   Maybe Int ->
   TransporterConfig ->
+  Maybe Text ->
   m ()
-bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsValue bulkUploadTitle mbexpirationTime transporterConfig = do
+bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsValue bulkUploadTitle mbexpirationTime transporterConfig entityId = do
   if coinsValue < 0
     then do
       logError $ "Coins value cannot be negative in bulk upload for driverId: " <> show driverId <> " coin value: " <> show coinsValue
@@ -98,7 +99,8 @@ bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsVal
                 updatedAt = now,
                 expirationAt = expiryTime,
                 coinsUsed = 0,
-                bulkUploadTitle = Just bulkUploadTitle
+                bulkUploadTitle = Just bulkUploadTitle,
+                entityId = entityId
               }
       CHistory.updateCoinEvent driverCoinEvent
       Coins.sendCoinsNotification merchantOpCityId driverId coinsValue
@@ -112,7 +114,7 @@ postDriverCoinsBulkUploadCoinsV2 merchantShortId opCity Common.BulkUploadCoinsRe
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchant.id.getId
   SMerchant.checkCurrencies merchantOpCity.currency $ driverIdListWithCoins <&> (.amountWithCurrency)
-  mapM_ (\Common.DriverIdListWithAmount {..} -> bulkUpdateByDriverIdV2 merchant.id merchantOpCity.id (Id driverId :: Id SP.Person) (castEventFunctionForCoinsReverse eventFunction) (fromMaybe amount $ amountWithCurrency <&> (.amount)) bulkUploadTitle expirationTime transporterConfig) driverIdListWithCoins
+  mapM_ (\Common.DriverIdListWithAmount {..} -> bulkUpdateByDriverIdV2 merchant.id merchantOpCity.id (Id driverId :: Id SP.Person) (castEventFunctionForCoinsReverse eventFunction) (fromMaybe amount $ amountWithCurrency <&> (.amount)) bulkUploadTitle expirationTime transporterConfig Nothing) driverIdListWithCoins
   pure Success
 
 bulkUpdateByDriverIdV2 ::
@@ -133,8 +135,9 @@ bulkUpdateByDriverIdV2 ::
   Common.Translations ->
   Maybe Int ->
   TransporterConfig ->
+  Maybe Text ->
   m ()
-bulkUpdateByDriverIdV2 merchantId merchantOpCityId driverId eventFunction amount bulkUploadTitle mbexpirationTime transporterConfig = do
+bulkUpdateByDriverIdV2 merchantId merchantOpCityId driverId eventFunction amount bulkUploadTitle mbexpirationTime transporterConfig entityId = do
   case eventFunction of
     DCT.BulkUploadFunctionV2 _ -> do
       let coinsValue_ = amount.getHighPrecMoney / transporterConfig.coinConversionRate.getHighPrecMoney
@@ -157,7 +160,8 @@ bulkUpdateByDriverIdV2 merchantId merchantOpCityId driverId eventFunction amount
                 updatedAt = now,
                 expirationAt = expiryTime,
                 coinsUsed = 0,
-                bulkUploadTitle = Just bulkUploadTitle
+                bulkUploadTitle = Just bulkUploadTitle,
+                entityId = entityId
               }
       CHistory.updateCoinEvent driverCoinEvent
       Coins.sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue eventFunction
@@ -241,6 +245,7 @@ castEventFunctionForCoins e = case e of
   DCT.FiveRidesCompleted -> Common.FiveRidesCompleted
   DCT.TenRidesCompleted -> Common.TenRidesCompleted
   DCT.BulkUploadFunctionV2 msg -> Common.BulkUploadFunctionV2 (castCoinMessage msg)
+  DCT.MetroRideCompleted -> Common.MetroRideCompleted
 
 castCoinMessageReverse :: Common.CoinMessage -> DCT.CoinMessage
 castCoinMessageReverse msg = case msg of
@@ -265,3 +270,4 @@ castEventFunctionForCoinsReverse e = case e of
   Common.FiveRidesCompleted -> DCT.FiveRidesCompleted
   Common.TenRidesCompleted -> DCT.TenRidesCompleted
   Common.BulkUploadFunctionV2 msg -> DCT.BulkUploadFunctionV2 (castCoinMessageReverse msg)
+  Common.MetroRideCompleted -> DCT.MetroRideCompleted
