@@ -825,7 +825,7 @@ notifyRideStartToEmergencyContacts booking ride = do
   let shouldShare = not $ null followingContacts
   if shouldShare
     then do
-      let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
+      let trackLink = riderConfig.trackingShortUrlPattern <> ride.id.getId
       decEmContacts <- decrypt `mapM` followingContacts
       for_ decEmContacts \contact -> do
         case contact.contactPersonId of

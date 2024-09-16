@@ -7,7 +7,17 @@ types:
     chatPersonId : Id Person
     body : Text
     title: Text
+    channelId: Maybe Text
+    source: Maybe MessageSource
+    showNotification: Maybe Bool
 
+  MessageSource:
+    enum: "USER, TRUSTED_CONTACT"
+
+  FCMEntityData:
+    personId : Id Person
+    channelId: Maybe Text
+    source: Maybe MessageSource
 
 apis :
   - POST :

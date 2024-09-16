@@ -13,6 +13,7 @@ types:
     bookingId: Id Booking
     mobileNumber: Text
     priority: Int
+    personId: Id Person
 
   ShareRideReq:
     emergencyContactNumbers: [Text]
