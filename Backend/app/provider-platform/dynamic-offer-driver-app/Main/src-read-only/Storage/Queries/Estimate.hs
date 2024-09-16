@@ -40,7 +40,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.estimatedDistance estimatedDistance,
       Se.Set Beam.fareParamsId ((Kernel.Types.Id.getId . (.id) <$>) fareParams),
-      Se.Set Beam.farePolicyId ((Kernel.Types.Id.getId . (.id) <$>) farePolicy),
+      Se.Set Beam.farePolicyId (((Kernel.Types.Id.getId . (.id) <$>)) farePolicy),
       Se.Set Beam.isBlockedRoute isBlockedRoute,
       Se.Set Beam.isCustomerPrefferedSearchRoute isCustomerPrefferedSearchRoute,
       Se.Set Beam.isScheduled (Kernel.Prelude.Just isScheduled),
@@ -50,6 +50,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.minFareAmount (Kernel.Prelude.Just minFare),
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
       Se.Set Beam.specialLocationTag specialLocationTag,
+      Se.Set Beam.tollCharges tollCharges,
       Se.Set Beam.tollNames tollNames,
       Se.Set Beam.tripCategory (Kernel.Prelude.Just tripCategory),
       Se.Set Beam.updatedAt (Just _now),
@@ -60,7 +61,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
 
 instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
   fromTType' (Beam.EstimateT {..}) = do
-    farePolicy' <- maybe (pure Nothing) (Storage.Cac.FarePolicy.findById Nothing . Kernel.Types.Id.Id) farePolicyId
+    farePolicy' <- (maybe (pure Nothing) ((Storage.Cac.FarePolicy.findById Nothing) . Kernel.Types.Id.Id)) farePolicyId
     fareParams' <- maybe (pure Nothing) (Storage.Queries.FareParameters.findById . Kernel.Types.Id.Id) fareParamsId
     pure $
       Just
@@ -79,6 +80,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             minFare = Kernel.Types.Common.mkAmountWithDefault minFareAmount minFare,
             requestId = Kernel.Types.Id.Id requestId,
             specialLocationTag = specialLocationTag,
+            tollCharges = tollCharges,
             tollNames = tollNames,
             tripCategory = Kernel.Prelude.fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer) tripCategory,
             updatedAt = Kernel.Prelude.fromMaybe createdAt updatedAt,
@@ -93,8 +95,8 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.currency = Kernel.Prelude.Just currency,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.estimatedDistance = estimatedDistance,
-        Beam.fareParamsId = (Kernel.Types.Id.getId . (.id) <$>) fareParams,
-        Beam.farePolicyId = (Kernel.Types.Id.getId . (.id) <$>) farePolicy,
+        Beam.fareParamsId = ((Kernel.Types.Id.getId . (.id) <$>) fareParams),
+        Beam.farePolicyId = ((Kernel.Types.Id.getId . (.id) <$>)) farePolicy,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isBlockedRoute = isBlockedRoute,
         Beam.isCustomerPrefferedSearchRoute = isCustomerPrefferedSearchRoute,
@@ -105,6 +107,7 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.minFareAmount = Kernel.Prelude.Just minFare,
         Beam.requestId = Kernel.Types.Id.getId requestId,
         Beam.specialLocationTag = specialLocationTag,
+        Beam.tollCharges = tollCharges,
         Beam.tollNames = tollNames,
         Beam.tripCategory = Kernel.Prelude.Just tripCategory,
         Beam.updatedAt = Kernel.Prelude.Just updatedAt,

@@ -45,6 +45,7 @@ SearchRequestForDriver:
     driverId : Id Person
     actualDistanceToPickup : Meters
     straightLineDistanceToPickup : Meters
+    estimatedDistance: Maybe Meters
     durationToPickup : Seconds
     vehicleVariant : VehicleVariant|NoRelation
     vehicleServiceTier : ServiceTierType|NoRelation

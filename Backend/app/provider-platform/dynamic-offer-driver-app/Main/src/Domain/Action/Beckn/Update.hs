@@ -197,7 +197,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                 else return (srcPt :| [dropLatLong], Nothing)
             logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show pickedWaypoints
             routeResponse <-
-              Maps.getRoutes merchantOperatingCity.merchantId merchantOperatingCity.id $
+              Maps.getRoutes Nothing merchantOperatingCity.merchantId merchantOperatingCity.id $
                 Maps.GetRoutesReq
                   { waypoints = pickedWaypoints,
                     mode = Just Maps.CAR,

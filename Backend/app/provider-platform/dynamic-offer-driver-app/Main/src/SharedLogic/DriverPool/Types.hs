@@ -165,7 +165,6 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     pickupZone :: Bool,
     specialZoneExtraTip :: Maybe HighPrecMoney,
     searchTags :: Maybe A.Value,
-    tripDistance :: Maybe Meters,
     isForwardRequest :: Bool,
     previousDropGeoHash :: Maybe Text,
     goHomeReqId :: Maybe (Id DDGR.DriverGoHomeRequest)
@@ -185,7 +184,6 @@ instance Default DriverPoolWithActualDistResult where
         pickupZone = False,
         specialZoneExtraTip = Nothing,
         searchTags = Nothing,
-        tripDistance = Nothing,
         isForwardRequest = False,
         previousDropGeoHash = Nothing,
         goHomeReqId = Nothing
@@ -230,7 +228,8 @@ data TripQuoteDetail = TripQuoteDetail
     driverDefaultStepFee :: Maybe HighPrecMoney,
     driverPickUpCharge :: Maybe HighPrecMoney,
     driverParkingCharge :: Maybe HighPrecMoney,
-    estimateOrQuoteId :: Text
+    estimateOrQuoteId :: Text,
+    distance :: Maybe Meters
   }
 
 data DriverSearchBatchInput m = DriverSearchBatchInput

@@ -48,3 +48,8 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN currency character varyin
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN distance_unit character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN toll_charges double precision ;

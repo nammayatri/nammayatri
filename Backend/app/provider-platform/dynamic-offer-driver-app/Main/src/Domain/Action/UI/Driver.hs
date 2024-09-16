@@ -1198,7 +1198,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             status = DDrQuote.Active,
             vehicleVariant = sd.vehicleVariant,
             vehicleServiceTier = sd.vehicleServiceTier,
-            distance = searchReq.estimatedDistance,
+            distance = sd.estimatedDistance <|> searchReq.estimatedDistance,
             distanceToPickup = sd.actualDistanceToPickup,
             durationToPickup = sd.durationToPickup,
             currency = sd.currency,
@@ -1235,7 +1235,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
     acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbDevice' reqOfferedValue = do
       let estimateId = fromMaybe searchTry.estimateId sReqFD.estimateId -- backward compatibility
       logDebug $ "offered fare: " <> show reqOfferedValue
-      quoteLimit <- getQuoteLimit searchReq.estimatedDistance sReqFD.vehicleServiceTier searchTry.tripCategory searchReq.transactionId (fromMaybe SL.Default searchReq.area)
+      quoteLimit <- getQuoteLimit (sReqFD.estimatedDistance <|> searchReq.estimatedDistance) sReqFD.vehicleServiceTier searchTry.tripCategory searchReq.transactionId (fromMaybe SL.Default searchReq.area)
       quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
       driverStats <- runInReplica $ QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound
       when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
@@ -1253,7 +1253,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
         calculateFareParameters
           CalculateFareParametersParams
             { farePolicy = farePolicy,
-              actualDistance = searchReq.estimatedDistance,
+              actualDistance = sReqFD.estimatedDistance <|> searchReq.estimatedDistance,
               rideTime = sReqFD.startTime,
               returnTime = searchReq.returnTime,
               roundTrip = fromMaybe False searchReq.roundTrip,

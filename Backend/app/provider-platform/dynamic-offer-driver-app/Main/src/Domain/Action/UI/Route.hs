@@ -21,6 +21,7 @@ module Domain.Action.UI.Route
   )
 where
 
+import Data.Maybe
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -30,7 +31,7 @@ import qualified Tools.Maps as Maps
 
 getRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getRoutes (_, merchantId, merchantOpCityId) req = do
-  Maps.getRoutes merchantId merchantOpCityId req
+  Maps.getRoutes Nothing merchantId merchantOpCityId req
 
 getPickupRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getPickupRoutes (_, merchantId, merchantOpCityId) req = do

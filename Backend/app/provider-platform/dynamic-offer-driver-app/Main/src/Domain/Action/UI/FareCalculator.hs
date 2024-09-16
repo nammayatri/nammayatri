@@ -44,7 +44,7 @@ getCalculateFare (_, merchantId, merchanOperatingCityId) distanceWeightage dropL
   let mbTollNames = (\(_, tollNames, _) -> tollNames) <$> mbTollChargesAndNames
   let mbIsAutoRickshawAllowed = (\(_, _, mbIsAutoRickshawAllowed') -> mbIsAutoRickshawAllowed') <$> mbTollChargesAndNames
   let allFarePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed fareProducts.farePolicies
-  estimates <- mapM (DBS.buildEstimate merchanOperatingCityId INR Meter Nothing now False Nothing False mbDistance Nothing mbTollCharges mbTollNames Nothing Nothing Nothing False) allFarePolicies
+  estimates <- mapM (DBS.buildEstimate merchanOperatingCityId INR Meter Nothing now False Nothing False Nothing mbTollCharges mbTollNames False mbDistance mbDuration Nothing Nothing) allFarePolicies
   let estimateAPIEntity = map buildEstimateApiEntity estimates
   return API.Types.UI.FareCalculator.FareResponse {estimatedFares = estimateAPIEntity}
   where
@@ -83,7 +83,7 @@ calculateDistanceAndRoutes merchantId merchantOpCityId distanceWeightage latLong
             calcPoints = True,
             mode = Just Utils.CAR
           }
-  routeResponse <- Maps.getRoutes merchantId merchantOpCityId request
+  routeResponse <- Maps.getRoutes Nothing merchantId merchantOpCityId request
   let durationWeightage = 100 - distanceWeightage
       (shortestRouteInfo, shortestRouteIndex) = Utils.getEfficientRouteInfo routeResponse distanceWeightage durationWeightage
       longestRouteDistance = (.distance) =<< Utils.getLongestRouteDistance routeResponse

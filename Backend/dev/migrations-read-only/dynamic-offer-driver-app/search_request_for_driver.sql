@@ -92,3 +92,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN previous
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN updated_at timestamp with time zone  default CURRENT_TIMESTAMP;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN estimated_distance integer ;

@@ -46,34 +46,34 @@ isRouteServiceable routePoints blockedRoutes = do
 data RouteServiceability = RouteServiceability
   { isCustomerPrefferedSearchRoute :: Bool,
     isBlockedRoute :: Bool,
-    multipleRoutes :: [Maps.RouteInfo],
     routePoints :: RoutePoints,
     routeDistance :: Meters,
     routeDuration :: Seconds
   }
 
-checkRouteServiceability :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> (Int, RoutePoints, Meters, Seconds) -> [Maps.RouteInfo] -> m RouteServiceability
+checkRouteServiceability :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> (Int, RoutePoints, Meters, Seconds) -> [Maps.RouteInfo] -> m (RouteServiceability, [Maps.RouteInfo])
 checkRouteServiceability merchantOperatingCityId (customerPrefferedSearchRouteIdx, customerPrefferedSearchRoutePoints, customerPrefferedSearchRouteDistance, customerPrefferedSearchRouteDuration) routes = do
   let route' =
         if null routes
-          then [Maps.RouteInfo (Just customerPrefferedSearchRouteDuration) Nothing (Just customerPrefferedSearchRouteDistance) (Just $ Distance (toHighPrecDistance customerPrefferedSearchRouteDistance) Meter) Nothing [] customerPrefferedSearchRoutePoints]
+          then [Maps.RouteInfo (Just customerPrefferedSearchRouteDuration) Nothing (Just customerPrefferedSearchRouteDistance) (Just $ Distance (toHighPrecDistance customerPrefferedSearchRouteDistance) Meter) Nothing [] customerPrefferedSearchRoutePoints True]
           else routes
   blockedRoutes <- B.runInReplica $ findAllBlockedRoutesByMerchantOperatingCity merchantOperatingCityId
   return $ getServiceableRoute route' 0 blockedRoutes
   where
-    getServiceableRoute _ _ [] = defaultCustomerPrefferedRouteServiceability False
-    getServiceableRoute [] _ _ = defaultCustomerPrefferedRouteServiceability True
-    getServiceableRoute ((Maps.RouteInfo (Just duration) _ (Just distance) _ _ _ points) : rs) idx blockedRoutes = do
+    getServiceableRoute _ _ [] = (defaultCustomerPrefferedRouteServiceability False, routes)
+    getServiceableRoute [] _ _ = (defaultCustomerPrefferedRouteServiceability True, routes)
+    getServiceableRoute ((Maps.RouteInfo (Just duration) _ (Just distance) _ _ _ points _) : rs) idx blockedRoutes = do
       if isRouteServiceable points blockedRoutes
         then
-          RouteServiceability
-            { routePoints = points,
-              routeDistance = distance,
-              routeDuration = duration,
-              multipleRoutes = updateEfficientRoutePosition routes idx,
-              isCustomerPrefferedSearchRoute = idx == customerPrefferedSearchRouteIdx,
-              isBlockedRoute = False
-            }
+          ( RouteServiceability
+              { routePoints = points,
+                routeDistance = distance,
+                routeDuration = duration,
+                isCustomerPrefferedSearchRoute = idx == customerPrefferedSearchRouteIdx,
+                isBlockedRoute = False
+              },
+            updateEfficientRoutePosition routes idx
+          )
         else getServiceableRoute rs (idx + 1) blockedRoutes
     getServiceableRoute (_ : rs) idx blockedRoutes = getServiceableRoute rs (idx + 1) blockedRoutes
 
@@ -86,7 +86,6 @@ checkRouteServiceability merchantOperatingCityId (customerPrefferedSearchRouteId
         { routePoints = customerPrefferedSearchRoutePoints,
           routeDistance = customerPrefferedSearchRouteDistance,
           routeDuration = customerPrefferedSearchRouteDuration,
-          multipleRoutes = routes,
           isCustomerPrefferedSearchRoute = True,
           isBlockedRoute
         }

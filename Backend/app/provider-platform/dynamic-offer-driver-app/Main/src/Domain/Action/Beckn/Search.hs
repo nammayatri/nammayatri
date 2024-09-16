@@ -25,7 +25,7 @@ where
 
 import qualified Beckn.Types.Core.Taxi.Search as BA
 import Control.Applicative ((<|>))
-import Data.List (sortBy)
+import Data.List (nub, sortBy)
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
@@ -159,12 +159,100 @@ data NearestDriverInfo = NearestDriverInfo
   }
   deriving (Generic, Show)
 
-getRouteServiceability :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DistanceUnit -> LatLong -> LatLong -> Maybe [LatLong] -> Maybe Meters -> Maybe Seconds -> Maybe [Maps.RouteInfo] -> Flow RouteServiceability
-getRouteServiceability _ merchantOpCityId _ _ _ (Just routePoints) (Just distance) (Just duration) (Just multipleRoutes) = do
-  checkRouteServiceability merchantOpCityId (0, routePoints, distance, duration) multipleRoutes
-getRouteServiceability _ merchantOpCityId _ _ _ (Just routePoints) (Just distance) (Just duration) Nothing = do
-  checkRouteServiceability merchantOpCityId (0, routePoints, distance, duration) []
-getRouteServiceability merchantId merchantOpCityId distanceUnit fromLocation toLocation _ _ _ _ = do
+getRouteServiceability :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DistanceUnit -> LatLong -> LatLong -> Maybe [LatLong] -> Maybe Meters -> Maybe Seconds -> Maybe [Maps.RouteInfo] -> [ServiceTierType] -> Flow ([(ServiceTierType, Maybe RouteServiceability)], [Maps.RouteInfo], Maybe (HighPrecMoney, [Text], Bool))
+getRouteServiceability merchantId merchantOpCityId _ fromLocation toLocation (Just routePoints) (Just distance) (Just duration) (Just multipleRoutes) serviceableVehicleServiceTiers = do
+  (serviceableRoute, allRoutes) <- checkRouteServiceability merchantOpCityId (0, routePoints, distance, duration) multipleRoutes
+  mbTollChargesAndNames <- getTollInfoOnRoute merchantOpCityId Nothing serviceableRoute.routePoints
+  (serviceableRoutes, allServiceableRoutes) <-
+    foldrM
+      ( \serviceableVehicleServiceTier acc@(serviceableServiceTierRoute, allRoutes') -> do
+          case serviceableVehicleServiceTier of
+            AUTO_RICKSHAW | maybe False (\(_, _, isAutoRickshawAllowed) -> isAutoRickshawAllowed) mbTollChargesAndNames -> do
+              nonTollRoutes <-
+                filterM
+                  ( \route -> do
+                      mbTollRouteInfo <- getTollInfoOnRoute merchantOpCityId Nothing (route.points)
+                      return $ isNothing mbTollRouteInfo
+                  )
+                  multipleRoutes
+              let mbNonTollRoute = if null nonTollRoutes then Nothing else Just $ minimumBy (\r1 r2 -> compare r1.distance r2.distance) nonTollRoutes
+              case (mbNonTollRoute <&> (.points), mbNonTollRoute >>= (.distance), mbNonTollRoute >>= (.duration)) of
+                (Just nonTollRoutePoints, Just nonTollRouteDistance, Just nonTollRouteDuration) ->
+                  return
+                    ( ( AUTO_RICKSHAW,
+                        Just $
+                          RouteServiceability
+                            { routePoints = nonTollRoutePoints,
+                              routeDistance = nonTollRouteDistance,
+                              routeDuration = nonTollRouteDuration,
+                              isCustomerPrefferedSearchRoute = False,
+                              isBlockedRoute = False
+                            }
+                      ) :
+                      serviceableServiceTierRoute,
+                      allRoutes'
+                    )
+                _ -> do
+                  routes <-
+                    Maps.getRoutes (Just True) merchantId merchantOpCityId $
+                      Maps.GetRoutesReq
+                        { waypoints = NE.fromList [fromLocation, toLocation],
+                          calcPoints = True,
+                          mode = Just Maps.CAR
+                        }
+                  nonTollRoutes' <-
+                    filterM
+                      ( \route -> do
+                          mbTollRouteInfo <- getTollInfoOnRoute merchantOpCityId Nothing (route.points)
+                          return $ isNothing mbTollRouteInfo
+                      )
+                      routes
+                  let mbNonTollRoute' = find (.isDefaultRoute) nonTollRoutes' <|> (if null nonTollRoutes' then Nothing else Just $ minimumBy (\r1 r2 -> compare r1.distance r2.distance) nonTollRoutes')
+                  case (mbNonTollRoute', mbNonTollRoute' <&> (.points), mbNonTollRoute' >>= (.distance), mbNonTollRoute' >>= (.duration)) of
+                    (Just nonTollRoute, Just nonTollRoutePoints, Just nonTollRouteDistance, Just nonTollRouteDuration) ->
+                      return
+                        ( ( AUTO_RICKSHAW,
+                            Just $
+                              RouteServiceability
+                                { routePoints = nonTollRoutePoints,
+                                  routeDistance = nonTollRouteDistance,
+                                  routeDuration = nonTollRouteDuration,
+                                  isCustomerPrefferedSearchRoute = False,
+                                  isBlockedRoute = False
+                                }
+                          ) :
+                          serviceableServiceTierRoute,
+                          nonTollRoute : allRoutes'
+                        )
+                    _ -> return acc
+            serviceableVst -> return ((serviceableVst, Just serviceableRoute) : serviceableServiceTierRoute, allRoutes')
+      )
+      ([], allRoutes)
+      serviceableVehicleServiceTiers
+  return (serviceableRoutes, allServiceableRoutes, mbTollChargesAndNames)
+-- TODO :: Interaoperability - In On Us this part of flow is not reached
+getRouteServiceability _ merchantOpCityId _ _ _ (Just routePoints) (Just distance) (Just duration) Nothing serviceableVehicleServiceTiers = do
+  (serviceableRoute, routes) <- checkRouteServiceability merchantOpCityId (0, routePoints, distance, duration) []
+  return $
+    ( map
+        ( \serviceableVehicleServiceTier ->
+            ( serviceableVehicleServiceTier,
+              Just $
+                RouteServiceability
+                  { routePoints = serviceableRoute.routePoints,
+                    routeDistance = serviceableRoute.routeDistance,
+                    routeDuration = serviceableRoute.routeDuration,
+                    isCustomerPrefferedSearchRoute = serviceableRoute.isCustomerPrefferedSearchRoute,
+                    isBlockedRoute = serviceableRoute.isBlockedRoute
+                  }
+            )
+        )
+        serviceableVehicleServiceTiers,
+      routes,
+      Nothing
+    )
+-- TODO :: Interaoperability - In On Us this part of flow is not reached
+getRouteServiceability merchantId merchantOpCityId distanceUnit fromLocation toLocation _ _ _ _ serviceableVehicleServiceTiers = do
   response <-
     Maps.getDistance merchantId merchantOpCityId $
       Maps.GetDistanceReq
@@ -175,14 +263,23 @@ getRouteServiceability merchantId merchantOpCityId distanceUnit fromLocation toL
           distanceUnit
         }
   return $
-    RouteServiceability
-      { routePoints = [],
-        routeDistance = response.distance,
-        routeDuration = response.duration,
-        multipleRoutes = [],
-        isCustomerPrefferedSearchRoute = True,
-        isBlockedRoute = False
-      }
+    ( map
+        ( \serviceableVehicleServiceTier ->
+            ( serviceableVehicleServiceTier,
+              Just $
+                RouteServiceability
+                  { routePoints = [],
+                    routeDistance = response.distance,
+                    routeDuration = response.duration,
+                    isCustomerPrefferedSearchRoute = True,
+                    isBlockedRoute = False
+                  }
+            )
+        )
+        serviceableVehicleServiceTiers,
+      [],
+      Nothing
+    )
 
 handler :: ValidatedDSearchReq -> DSearchReq -> Flow DSearchRes
 handler ValidatedDSearchReq {..} sReq = do
@@ -192,31 +289,38 @@ handler ValidatedDSearchReq {..} sReq = do
   let merchantId = merchant.id
   sessiontoken <- generateGUIDText
   fromLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
-  (mbSetRouteInfo, mbToLocation, mbDistance, mbDuration, mbIsCustomerPrefferedSearchRoute, mbIsBlockedRoute, mbTollCharges, mbTollNames, mbIsAutoRickshawAllowed) <-
+  allFarePoliciesProduct <- combineFarePoliciesProducts <$> ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation (Just (TransactionId (Id sReq.transactionId)))) `mapM` possibleTripOption.tripCategories)
+  let allServiceableServiceTiers = nub $ map (.vehicleServiceTier) allFarePoliciesProduct.farePolicies
+  (serviceableVehicleServiceTierRoutes, mbTollInfo, mbToLocation) <-
     case sReq.dropLocation of
       Just dropLoc -> do
-        serviceableRoute <- getRouteServiceability merchant.id merchantOpCityId distanceUnit sReq.pickupLocation dropLoc sReq.routePoints sReq.routeDistance sReq.routeDuration sReq.multipleRoutes
-        let estimatedDistance = serviceableRoute.routeDistance
-            estimatedDuration = serviceableRoute.routeDuration
-        logDebug $ "distance: " <> show estimatedDistance
-        let routeInfo = RouteInfo {distance = Just estimatedDistance, distanceWithUnit = Just $ convertMetersToDistance distanceUnit estimatedDistance, duration = Just estimatedDuration, points = Just serviceableRoute.routePoints}
         toLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.dropAddrress sReq.customerLanguage dropLoc
-        let setRouteInfo transactionId =
-              ( do
-                  Redis.setExp (searchRequestKey transactionId) routeInfo 3600
-                  Redis.setExp (multipleRouteKey transactionId) (createMultipleRouteInfo <$> serviceableRoute.multipleRoutes) 3600
-              )
-        logDebug $ "Route serviceability: " <> show serviceableRoute.multipleRoutes
-        mbTollChargesAndNames <- getTollInfoOnRoute merchantOpCityId Nothing serviceableRoute.routePoints
-        return (Just setRouteInfo, Just toLocation, Just estimatedDistance, Just estimatedDuration, Just serviceableRoute.isCustomerPrefferedSearchRoute, Just serviceableRoute.isBlockedRoute, (\(charges, _, _) -> charges) <$> mbTollChargesAndNames, (\(_, names, _) -> names) <$> mbTollChargesAndNames, (\(_, _, isAutoRickshawAllowed) -> isAutoRickshawAllowed) <$> mbTollChargesAndNames)
-      _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration, Nothing, Nothing, Nothing, Nothing, Nothing) -- estimate distance and durations by user
-  allFarePoliciesProduct <- combineFarePoliciesProducts <$> ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation (Just (TransactionId (Id sReq.transactionId)))) `mapM` possibleTripOption.tripCategories)
-  let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed allFarePoliciesProduct.farePolicies
+        (serviceableVehicleServiceTierRoutes, multipleRoutesInfo, mbTollInfo) <- getRouteServiceability merchant.id merchantOpCityId distanceUnit sReq.pickupLocation dropLoc sReq.routePoints sReq.routeDistance sReq.routeDuration sReq.multipleRoutes allServiceableServiceTiers
+        let singleRouteInfo = RouteInfo {distance = sReq.routeDistance, distanceWithUnit = convertMetersToDistance distanceUnit <$> sReq.routeDistance, duration = sReq.routeDuration, points = sReq.routePoints}
+        void $ setRouteInfo sReq.transactionId singleRouteInfo multipleRoutesInfo
+        return (serviceableVehicleServiceTierRoutes, mbTollInfo, Just toLocation)
+      _ -> do
+        let serviceableVehicleServiceTierRoutes =
+              map
+                ( \serviceableVehicleServiceTier ->
+                    ( serviceableVehicleServiceTier,
+                      Nothing
+                    )
+                )
+                allServiceableServiceTiers
+        return (serviceableVehicleServiceTierRoutes, Nothing, Nothing) -- estimate distance and durations by user
+  let (mbTollCharges, mbTollNames) = ((\(tollCharges, _, _) -> tollCharges) <$> mbTollInfo, (\(_, tollNames, _) -> tollNames) <$> mbTollInfo)
+  let farePolicies = selectFarePolicy serviceableVehicleServiceTierRoutes allFarePoliciesProduct.farePolicies
+  let mbServiceableRoute =
+        -- TODO :: For backward compatibility, routeDistance and routeDuration should be removed from searchRequest level adn estimate or quote level it should be used.
+        case find (\(_, mbRoute) -> isJust mbRoute) serviceableVehicleServiceTierRoutes of
+          Just (_, Just serviceableRoute) -> Just serviceableRoute
+          _ -> Nothing
   now <- getCurrentTime
   (driverPool, selectedFarePolicies) <-
     if transporterConfig.considerDriversForSearch
       then do
-        (pool, policies) <- selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocation transporterConfig possibleTripOption.isScheduled allFarePoliciesProduct.area farePolicies now isValueAddNP
+        (pool, policies) <- selectDriversAndMatchFarePolicies merchant merchantOpCityId (mbServiceableRoute <&> (.routeDistance)) fromLocation transporterConfig possibleTripOption.isScheduled allFarePoliciesProduct.area farePolicies now isValueAddNP
         pure (nonEmpty pool, policies)
       else return (Nothing, farePolicies)
   (mbSpecialZoneGateId, mbDefaultDriverExtra) <- getSpecialPickupZoneInfo allFarePoliciesProduct.specialLocationTag fromLocation
@@ -224,8 +328,7 @@ handler ValidatedDSearchReq {..} sReq = do
   let specialLocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> allFarePoliciesProduct.specialLocationTag <&> (<> "_PickupZone")) mbSpecialZoneGateId
       specialLocationName = allFarePoliciesProduct.specialLocationName
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
-  searchReq <- buildSearchRequest sReq bapCity mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag allFarePoliciesProduct.area mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute currency distanceUnit
-  whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo sReq.transactionId
+  searchReq <- buildSearchRequest sReq bapCity mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation (mbServiceableRoute <&> (.routeDistance)) (mbServiceableRoute <&> (.routeDuration)) specialLocationTag allFarePoliciesProduct.area mbTollCharges mbTollNames (mbServiceableRoute <&> (.isCustomerPrefferedSearchRoute)) (mbServiceableRoute <&> (.isBlockedRoute)) currency distanceUnit
   triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
   void $ QSR.createDSReq searchReq
 
@@ -239,8 +342,8 @@ handler ValidatedDSearchReq {..} sReq = do
             }
     addNammaTags tagData
 
-  let buildEstimateHelper = buildEstimate merchantOpCityId currency distanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance specialLocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute searchReq.estimatedDuration
-  let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration specialLocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute
+  let buildEstimateHelper = buildEstimate merchantOpCityId currency distanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip specialLocationTag mbTollCharges mbTollNames
+  let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip specialLocationTag mbTollCharges mbTollNames
   (estimates, quotes) <- foldrM (processPolicy buildEstimateHelper buildQuoteHelper) ([], []) selectedFarePolicies
   QEst.createMany estimates
   for_ quotes QQuote.create
@@ -250,6 +353,11 @@ handler ValidatedDSearchReq {..} sReq = do
   driverInfoEstimates <- addNearestDriverInfo merchantOpCityId driverPool estimates
   buildDSearchResp sReq.pickupLocation sReq.dropLocation specialLocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocationName now
   where
+    setRouteInfo :: Text -> RouteInfo -> [Maps.RouteInfo] -> Flow ()
+    setRouteInfo transactionId singleRouteInfo multipleRoutesInfo = do
+      Redis.setExp (searchRequestKey transactionId) singleRouteInfo 3600
+      Redis.setExp (multipleRouteKey transactionId) (createMultipleRouteInfo <$> multipleRoutesInfo) 3600
+
     getSpecialPickupZoneInfo :: Maybe Text -> DLoc.Location -> Flow (Maybe Text, Maybe HighPrecMoney)
     getSpecialPickupZoneInfo Nothing _ = pure (Nothing, Nothing)
     getSpecialPickupZoneInfo (Just _) fromLocation = do
@@ -268,15 +376,21 @@ handler ValidatedDSearchReq {..} sReq = do
         }
 
     processPolicy ::
-      (Bool -> DFP.FullFarePolicy -> Flow DEst.Estimate) ->
-      (Bool -> DFP.FullFarePolicy -> Flow DQuote.Quote) ->
-      DFP.FullFarePolicy ->
+      (Bool -> Maybe Meters -> Maybe Seconds -> Maybe Bool -> Maybe Bool -> DFP.FullFarePolicy -> Flow DEst.Estimate) ->
+      (Bool -> Maybe Meters -> Maybe Seconds -> Maybe Bool -> Maybe Bool -> DFP.FullFarePolicy -> Flow DQuote.Quote) ->
+      (DFP.FullFarePolicy, Maybe RouteServiceability) ->
       ([DEst.Estimate], [DQuote.Quote]) ->
       Flow ([DEst.Estimate], [DQuote.Quote])
-    processPolicy buildEstimateHelper buildQuoteHelper fp (estimates, quotes) =
+    processPolicy buildEstimateHelper buildQuoteHelper (fp, route) (estimates, quotes) = do
+      let (mbDistance, mbDuration, isCustomerPrefferedSearchRoute, isBlockedRoute) =
+            ( route <&> (.routeDistance),
+              route <&> (.routeDuration),
+              route <&> (.isCustomerPrefferedSearchRoute),
+              route <&> (.isBlockedRoute)
+            )
       case tripCategoryToPricingPolicy fp.tripCategory of
-        EstimateBased {..} -> (buildEstimateHelper nightShiftOverlapChecking) fp >>= \est -> pure (est : estimates, quotes)
-        QuoteBased {..} -> (buildQuoteHelper nightShiftOverlapChecking) fp >>= \quote -> pure (estimates, quote : quotes)
+        EstimateBased {..} -> (buildEstimateHelper nightShiftOverlapChecking mbDistance mbDuration isCustomerPrefferedSearchRoute isBlockedRoute) fp >>= \est -> pure (est : estimates, quotes)
+        QuoteBased {..} -> (buildQuoteHelper nightShiftOverlapChecking mbDistance mbDuration isCustomerPrefferedSearchRoute isBlockedRoute) fp >>= \quote -> pure (estimates, quote : quotes)
 
     buildDSearchResp fromLocation toLocation specialLocationTag searchMetricsMVar quotes estimates specialLocationName now = do
       merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId merchantOpCityId
@@ -288,18 +402,25 @@ handler ValidatedDSearchReq {..} sReq = do
             ..
           }
 
-    selectFarePolicy distance duration mbIsAutoRickshawAllowed =
-      filter isValid
+    selectFarePolicy serviceableVehicleServiceTierRoutes =
+      foldr (select serviceableVehicleServiceTierRoutes) []
       where
-        isValid farePolicy = checkDistanceBounds farePolicy && checkExtendUpto farePolicy && autosAllowedOnTollRoute farePolicy
+        select serviceableServiceTierRoutes farePolicy acc =
+          case lookup (farePolicy.vehicleServiceTier) serviceableServiceTierRoutes of
+            Nothing -> acc -- No matching RouteServiceability; skip this farePolicy
+            Just routeServiceability ->
+              if isValid (maybe 0 (.routeDistance) routeServiceability) (maybe 0 (.routeDuration) routeServiceability) farePolicy
+                then (farePolicy, routeServiceability) : acc -- Include the farePolicy and its RouteServiceability
+                else acc -- Not valid; skip it
+        isValid routeDistance routeDuration farePolicy = do
+          checkDistanceBounds routeDistance farePolicy
+            && checkExtendUpto routeDistance routeDuration farePolicy
 
-        autosAllowedOnTollRoute farePolicy = if farePolicy.vehicleServiceTier == AUTO_RICKSHAW then (fromMaybe True mbIsAutoRickshawAllowed) else True
+        checkDistanceBounds distance farePolicy = maybe True (checkBounds distance) farePolicy.allowedTripDistanceBounds
 
-        checkDistanceBounds farePolicy = maybe True checkBounds farePolicy.allowedTripDistanceBounds
+        checkBounds distance bounds = bounds.minAllowedTripDistance <= distance && distance <= bounds.maxAllowedTripDistance
 
-        checkBounds bounds = bounds.minAllowedTripDistance <= distance && distance <= bounds.maxAllowedTripDistance
-
-        checkExtendUpto farePolicy = case farePolicy.farePolicyDetails of
+        checkExtendUpto distance duration farePolicy = case farePolicy.farePolicyDetails of
           DFP.RentalDetails det -> checkLimits det
           _ -> True
           where
@@ -369,9 +490,9 @@ addNearestDriverInfo merchantOpCityId (Just driverPool) estdOrQuotes = do
               nearestDriverInfo = NearestDriverInfo {..}
           return (input, vehicleServiceTierItem, Just nearestDriverInfo)
 
-selectDriversAndMatchFarePolicies :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DLoc.Location -> DTMT.TransporterConfig -> Bool -> SL.Area -> [DFP.FullFarePolicy] -> UTCTime -> Bool -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])
-selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocation transporterConfig isScheduled area farePolicies now isValueAddNP = do
-  driverPoolCfg <- CDP.getSearchDriverPoolConfig merchantOpCityId mbDistance area
+selectDriversAndMatchFarePolicies :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DLoc.Location -> DTMT.TransporterConfig -> Bool -> SL.Area -> [(DFP.FullFarePolicy, Maybe RouteServiceability)] -> UTCTime -> Bool -> Flow ([DriverPoolResult], [(DFP.FullFarePolicy, Maybe RouteServiceability)])
+selectDriversAndMatchFarePolicies merchant merchantOpCityId tripDistance fromLocation transporterConfig isScheduled area farePolicies now isValueAddNP = do
+  driverPoolCfg <- CDP.getSearchDriverPoolConfig merchantOpCityId tripDistance area
   cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId
   let calculateDriverPoolReq =
         CalculateDriverPoolReq
@@ -400,7 +521,7 @@ selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocat
         driverPoolNotOnRide
           <> map (\DriverPoolResultCurrentlyOnRide {..} -> DriverPoolResult {customerTags = Nothing, ..}) driverPoolCurrentlyOnRide
   logDebug $ "Search handler: driver pool " <> show driverPool
-  let onlyFPWithDrivers = filter (\fp -> (isScheduled || (skipDriverPoolCheck fp.tripCategory) || isJust (find (\dp -> dp.serviceTier == fp.vehicleServiceTier) driverPool)) && (isValueAddNP || fp.vehicleServiceTier `elem` offUsVariants)) farePolicies
+  let onlyFPWithDrivers = filter (\(fp, _) -> (isScheduled || (skipDriverPoolCheck fp.tripCategory) || isJust (find (\dp -> dp.serviceTier == fp.vehicleServiceTier) driverPool)) && (isValueAddNP || fp.vehicleServiceTier `elem` offUsVariants)) farePolicies
   return (driverPool, onlyFPWithDrivers)
 
 buildSearchRequest ::
@@ -473,23 +594,22 @@ buildQuote ::
   Bool ->
   Maybe UTCTime ->
   Bool ->
-  Maybe Meters ->
-  Maybe Seconds ->
   Maybe Text ->
   Maybe HighPrecMoney ->
   Maybe [Text] ->
-  Maybe Bool ->
-  Maybe Bool ->
   Bool ->
+  Maybe Meters ->
+  Maybe Seconds ->
+  Maybe Bool ->
+  Maybe Bool ->
   DFP.FullFarePolicy ->
   m DQuote.Quote
-buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled returnTime roundTrip mbDistance mbDuration specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute nightShiftOverlapChecking fullFarePolicy = do
-  let dist = fromMaybe 0 mbDistance
+buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled returnTime roundTrip specialLocationTag tollCharges tollNames nightShiftOverlapChecking mbDistance mbDuration isCustomerPrefferedSearchRoute isBlockedRoute fullFarePolicy = do
   fareParams <-
     calculateFareParameters
       CalculateFareParametersParams
         { farePolicy = fullFarePolicy,
-          actualDistance = Just dist,
+          actualDistance = mbDistance,
           rideTime = pickupTime,
           returnTime,
           roundTrip,
@@ -502,8 +622,8 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
           nightShiftCharge = Nothing,
           customerCancellationDues = Nothing,
           nightShiftOverlapChecking = nightShiftOverlapChecking,
-          estimatedDistance = searchRequest.estimatedDistance,
-          estimatedRideDuration = searchRequest.estimatedDuration,
+          estimatedDistance = mbDistance,
+          estimatedRideDuration = mbDuration,
           timeDiffFromUtc = Nothing,
           tollCharges = tollCharges,
           currency = searchRequest.currency,
@@ -547,24 +667,23 @@ buildEstimate ::
   Bool ->
   Maybe UTCTime ->
   Bool ->
-  Maybe Meters ->
   Maybe Text ->
   Maybe HighPrecMoney ->
   Maybe [Text] ->
-  Maybe Bool ->
-  Maybe Bool ->
-  Maybe Seconds ->
   Bool ->
+  Maybe Meters ->
+  Maybe Seconds ->
+  Maybe Bool ->
+  Maybe Bool ->
   DFP.FullFarePolicy ->
   m DEst.Estimate
-buildEstimate merchantOpCityId currency distanceUnit mbSearchReq startTime isScheduled returnTime roundTrip mbDistance specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute mbEstimatedDuration nightShiftOverlapChecking fullFarePolicy = do
-  let dist = fromMaybe 0 mbDistance -- TODO: Fix Later
-      isAmbulanceEstimate = isAmbulanceTrip fullFarePolicy.tripCategory
+buildEstimate merchantOpCityId currency distanceUnit mbSearchReq startTime isScheduled returnTime roundTrip specialLocationTag tollCharges tollNames nightShiftOverlapChecking mbDistance mbDuration isCustomerPrefferedSearchRoute isBlockedRoute fullFarePolicy = do
+  let isAmbulanceEstimate = isAmbulanceTrip fullFarePolicy.tripCategory
   (minFareParams, maxFareParams) <- do
     let params =
           CalculateFareParametersParams
             { farePolicy = fullFarePolicy,
-              actualDistance = Just dist,
+              actualDistance = mbDistance,
               rideTime = startTime,
               returnTime,
               roundTrip,
@@ -578,7 +697,7 @@ buildEstimate merchantOpCityId currency distanceUnit mbSearchReq startTime isSch
               customerCancellationDues = Nothing,
               nightShiftOverlapChecking = nightShiftOverlapChecking,
               estimatedDistance = Nothing,
-              estimatedRideDuration = mbEstimatedDuration,
+              estimatedRideDuration = mbDuration,
               timeDiffFromUtc = Nothing,
               tollCharges = tollCharges,
               currency,
@@ -594,7 +713,7 @@ buildEstimate merchantOpCityId currency distanceUnit mbSearchReq startTime isSch
   estimateId <- Id <$> generateGUID
   now <- getCurrentTime
   void $ cacheFarePolicyByEstimateId estimateId.getId fullFarePolicy
-  let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance dist <$> fullFarePolicy.driverExtraFeeBounds
+  let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance (fromMaybe 0 mbDistance) <$> fullFarePolicy.driverExtraFeeBounds
       minFare = fareSum minFareParams + maybe 0.0 (.minFee) mbDriverExtraFeeBounds
       maxFare = fareSum maxFareParams + maybe 0.0 (.maxFee) mbDriverExtraFeeBounds
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId fullFarePolicy.vehicleServiceTier merchantOpCityId >>= fromMaybeM (VehicleServiceTierNotFound (show fullFarePolicy.vehicleServiceTier))

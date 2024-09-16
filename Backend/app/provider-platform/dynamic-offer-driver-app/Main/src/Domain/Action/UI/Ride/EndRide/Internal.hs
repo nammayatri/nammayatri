@@ -449,7 +449,7 @@ getRouteAndDistanceBetweenPoints merchantId merchantOpCityId origin destination 
   let pickedWaypoints = origin :| (pickWaypoints interpolatedPoints <> [destination])
   logTagInfo "endRide" $ "pickedWaypoints: " <> show pickedWaypoints
   routeResponse <-
-    Maps.getRoutes merchantId merchantOpCityId $
+    Maps.getRoutes Nothing merchantId merchantOpCityId $
       Maps.GetRoutesReq
         { waypoints = pickedWaypoints,
           mode = Just Maps.CAR,

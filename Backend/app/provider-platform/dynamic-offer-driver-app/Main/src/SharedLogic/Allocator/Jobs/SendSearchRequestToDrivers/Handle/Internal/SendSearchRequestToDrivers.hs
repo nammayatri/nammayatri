@@ -137,8 +137,8 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
         Fare.calculateFareParameters
           Fare.CalculateFareParametersParams
             { farePolicy = farePolicy,
-              actualDistance = searchReq.estimatedDistance,
-              estimatedDistance = searchReq.estimatedDistance,
+              actualDistance = tripQuoteDetail.distance <|> searchReq.estimatedDistance,
+              estimatedDistance = tripQuoteDetail.distance <|> searchReq.estimatedDistance,
               rideTime = searchReq.startTime,
               returnTime = searchReq.returnTime,
               roundTrip = fromMaybe False searchReq.roundTrip,
@@ -209,6 +209,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 airConditioned = dpRes.isAirConditioned,
                 actualDistanceToPickup = dpwRes.actualDistanceToPickup,
                 straightLineDistanceToPickup = dpRes.distanceToPickup,
+                estimatedDistance = tripQuoteDetail.distance,
                 durationToPickup = dpwRes.actualDurationToPickup,
                 status = Active,
                 lat = Just dpRes.lat,

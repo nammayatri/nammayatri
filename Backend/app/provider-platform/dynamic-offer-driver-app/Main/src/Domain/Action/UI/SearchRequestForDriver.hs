@@ -122,8 +122,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           toLocation = convertDomainType <$> searchRequest.toLocation,
           -- newFromLocation = searchRequest.fromLocation,
           -- newToLocation = searchRequest.toLocation,
-          distance = searchRequest.estimatedDistance,
-          distanceWithUnit = convertMetersToDistance searchRequest.distanceUnit <$> searchRequest.estimatedDistance,
+          distance = nearbyReq.estimatedDistance <|> searchRequest.estimatedDistance,
+          distanceWithUnit = convertMetersToDistance searchRequest.distanceUnit <$> (nearbyReq.estimatedDistance <|> searchRequest.estimatedDistance),
           driverLatLong =
             LatLong
               { lat = fromMaybe 0.0 nearbyReq.lat,

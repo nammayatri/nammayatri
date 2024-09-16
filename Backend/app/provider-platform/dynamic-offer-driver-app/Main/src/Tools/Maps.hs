@@ -110,10 +110,10 @@ getDistanceForScheduledRides ::
   m (GetDistanceResp a b)
 getDistanceForScheduledRides = runWithServiceConfig Maps.getDistance (.getDistancesForScheduledRides)
 
-getRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetRoutesReq -> m GetRoutesResp
-getRoutes merchantId merchantOpCityId req = do
+getRoutes :: ServiceFlow m r => Maybe Bool -> Id Merchant -> Id MerchantOperatingCity -> GetRoutesReq -> m GetRoutesResp
+getRoutes isAvoidToll merchantId merchantOpCityId req = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
-  runWithServiceConfig (Maps.getRoutes transporterConfig.isAvoidToll) (.getRoutes) merchantId merchantOpCityId req
+  runWithServiceConfig (Maps.getRoutes $ fromMaybe transporterConfig.isAvoidToll isAvoidToll) (.getRoutes) merchantId merchantOpCityId req
 
 getPickupRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetRoutesReq -> m GetRoutesResp
 getPickupRoutes merchantId merchantOpCityId req = do

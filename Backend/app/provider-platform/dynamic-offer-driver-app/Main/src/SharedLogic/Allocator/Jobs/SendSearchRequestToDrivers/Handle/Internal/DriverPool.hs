@@ -171,7 +171,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                 case searchReq.toLocation of
                   Just toLoc | isGoHomeAvailable searchTry.tripCategory -> do
                     let dropLocation = searchReq.toLocation <&> (\loc -> LatLong loc.lat loc.lon)
-                        routeDistance = searchReq.estimatedDistance
+                        routeDistance = (tripQuoteDetails <&> (\tripQuoteDetail -> (tripQuoteDetail.vehicleServiceTier, tripQuoteDetail.distance <|> searchReq.estimatedDistance)))
                     let currentSearchInfo = DTS.CurrentSearchInfo {..}
                     let goHomeReq =
                           CalculateGoHomeDriverPoolReq
@@ -402,7 +402,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
           case (searchReq.toLocation, isGoHomeAvailable searchTry.tripCategory) of
             (Just toLoc, True) -> do
               let dropLocation = searchReq.toLocation <&> (\loc -> LatLong loc.lat loc.lon)
-                  routeDistance = searchReq.estimatedDistance
+                  routeDistance = (tripQuoteDetails <&> (\tripQuoteDetail -> (tripQuoteDetail.vehicleServiceTier, tripQuoteDetail.distance <|> searchReq.estimatedDistance)))
               let currentSearchInfo = DTS.CurrentSearchInfo {..}
               calculateGoHomeDriverPoolBatch <-
                 calculateGoHomeDriverPool
@@ -436,7 +436,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
           let pickupLoc = searchReq.fromLocation
           let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
           let dropLocation = searchReq.toLocation <&> (\loc -> LatLong loc.lat loc.lon)
-              routeDistance = searchReq.estimatedDistance
+              routeDistance = (tripQuoteDetails <&> (\tripQuoteDetail -> (tripQuoteDetail.vehicleServiceTier, tripQuoteDetail.distance <|> searchReq.estimatedDistance)))
           let currentSearchInfo = DTS.CurrentSearchInfo {..}
           let driverPoolReq =
                 CalculateDriverPoolReq
@@ -459,7 +459,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               let pickupLoc = searchReq.fromLocation
               let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
               let dropLocation = searchReq.toLocation <&> (\loc -> LatLong loc.lat loc.lon)
-                  routeDistance = searchReq.estimatedDistance
+                  routeDistance = (tripQuoteDetails <&> (\tripQuoteDetail -> (tripQuoteDetail.vehicleServiceTier, tripQuoteDetail.distance <|> searchReq.estimatedDistance)))
               let currentSearchInfo = DTS.CurrentSearchInfo {..}
               let driverPoolReq =
                     CalculateDriverPoolReq
@@ -580,7 +580,7 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
   pure $ take batchSize sortedPool
   where
     updateDriverPoolWithActualDistResult DriverPoolWithActualDistResult {..} =
-      DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, searchTags = Just $ maybe A.emptyObject convertTags searchReq.searchTags, tripDistance = searchReq.estimatedDistance, ..}
+      DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, searchTags = Just $ maybe A.emptyObject convertTags searchReq.searchTags, ..}
 
     updateDriverPoolResult DriverPoolResult {..} =
       DriverPoolResult {customerTags = Just $ maybe A.emptyObject convertTags customerNammaTags, ..}

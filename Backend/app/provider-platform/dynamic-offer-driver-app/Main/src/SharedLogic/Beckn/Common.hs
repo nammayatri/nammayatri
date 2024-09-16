@@ -17,6 +17,7 @@ module SharedLogic.Beckn.Common where
 import Domain.Types.BecknConfig as DBC
 import Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import Domain.Types.Common
 import qualified Domain.Types.DriverStats as DStats
 import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.Merchant as DM
@@ -83,7 +84,7 @@ data DDriverArrivedReq = DDriverArrivedReq
   }
 
 data CurrentSearchInfo = CurrentSearchInfo
-  { routeDistance :: Maybe Meters,
+  { routeDistance :: [(ServiceTierType, Maybe Meters)],
     dropLocation :: Maybe LatLong
   }
   deriving (Generic, Show)

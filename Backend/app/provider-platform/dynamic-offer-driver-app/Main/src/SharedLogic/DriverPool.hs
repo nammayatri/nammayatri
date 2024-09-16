@@ -618,7 +618,8 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           distanceWithUnit = Nothing,
           boundingBox = Nothing,
           snappedWaypoints = [],
-          points = []
+          points = [],
+          isDefaultRoute = False
         }
 
     makeDriverPoolWithActualDistResult (driverPoolRes, _, ghrId, driverGoHomePoolWithActualDistance) = do
@@ -631,7 +632,6 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           pickupZone = False,
           specialZoneExtraTip = Nothing,
           searchTags = Nothing,
-          tripDistance = Nothing,
           keepHiddenForSeconds = Seconds 0,
           goHomeReqId = Just ghrId,
           isForwardRequest = False,
@@ -752,7 +752,6 @@ calculateDriverPoolWithActualDist calculateReq@CalculateDriverPoolReq {..} poolT
           pickupZone = False,
           specialZoneExtraTip = Nothing,
           searchTags = Nothing,
-          tripDistance = Nothing,
           keepHiddenForSeconds = Seconds 0,
           goHomeReqId = Nothing,
           isForwardRequest = False,
@@ -771,11 +770,12 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
   let minimumScheduledBookingLeadTimeInSecs = KP.intToNominalDiffTime (transporterConfig.minmRentalAndScheduledBookingLeadTimeHours.getHours * 3600)
       scheduledRideFilterExclusionThresholdInSecs = KP.intToNominalDiffTime (transporterConfig.scheduledRideFilterExclusionThresholdHours.getHours * 3600)
       haveScheduled = isJust driverInfo.latestScheduledBooking
+      searchRouteDistance = snd =<< find (\(vst, _) -> vst == driverInfo.serviceTier) currentSearchInfo.routeDistance
   if
       | haveScheduled && isIntercity -> return False
       | haveScheduled && isRental -> return $ canTakeRental driverInfo.latestScheduledBooking now minimumScheduledBookingLeadTimeInSecs
       | isScheduledRideUnderFilterExclusionThresholdHours driverInfo.latestScheduledBooking now scheduledRideFilterExclusionThresholdInSecs -> do
-        case (currentSearchInfo.dropLocation, driverInfo.latestScheduledPickup, currentSearchInfo.routeDistance, transporterConfig.avgSpeedOfVehicle) of
+        case (currentSearchInfo.dropLocation, driverInfo.latestScheduledPickup, searchRouteDistance, transporterConfig.avgSpeedOfVehicle) of
           (Just dropLoc, Just scheduledPickup, Just routeDistance, Just avgSpeeds) -> do
             currentDroptoScheduledPickupDistance <-
               TMaps.getDistanceForScheduledRides merchantId merchantOpCityId $
@@ -1025,7 +1025,6 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
           pickupZone = False,
           specialZoneExtraTip = Nothing,
           searchTags = Nothing,
-          tripDistance = Nothing,
           keepHiddenForSeconds = Seconds 0,
           goHomeReqId = Nothing,
           isForwardRequest = False,
@@ -1078,7 +1077,6 @@ computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCity
           pickupZone = False,
           specialZoneExtraTip = Nothing,
           searchTags = Nothing,
-          tripDistance = Nothing,
           keepHiddenForSeconds = Seconds 0,
           goHomeReqId = Nothing,
           isForwardRequest = False,
@@ -1096,7 +1094,8 @@ refactorRoutesResp goHomeCfg (nearestDriverRes, route, ghrId, driverGoHomePoolWi
           staticDuration = route'.staticDuration,
           points = getStartPoint $ filterInitPoints (refactor [] route'.points),
           snappedWaypoints = route'.snappedWaypoints,
-          boundingBox = route'.boundingBox
+          boundingBox = route'.boundingBox,
+          isDefaultRoute = route'.isDefaultRoute
         }
 
     filterInitPoints (x1 : x2 : xs) = if highPrecMetersToMeters (distanceBetweenInMeters x1 x2) <= goHomeCfg.ignoreWaypointsTill then filterInitPoints (x1 : xs) else x1 : x2 : xs
