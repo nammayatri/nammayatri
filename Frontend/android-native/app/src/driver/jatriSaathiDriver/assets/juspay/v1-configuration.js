@@ -570,6 +570,148 @@ window.getMerchantConfig = function () {
         "onboarding_auto_image" : "ny_ic_auto_side"
       },
       "enableHvSdk" : true
+    },
+    {
+      "cityName" : "Durgapur",
+      "mapImage" : "ys_ic_durgapur_map",
+      "cityCode" : "std:0342",
+      "showSubscriptions" : false,
+      "enableAdvancedBooking" : false,
+      "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
+      "cityLat" : 26.708845,
+      "cityLong" : 88.434362,
+      "supportNumber" : "08069724949",
+      "languageKey" : "BN_IN",
+      "showDriverReferral" : true,
+      "showCustomerReferral" : true,
+      "uploadRCandDL" : true,
+      "enableYatriCoins" : false,
+      "vehicleNSImg" : "ny_ic_location_unserviceable",
+      "registration" : {
+          "supportWAN" : "918618963188",
+          "callSupport" : true,
+          "whatsappSupport" : true
+      },
+      "variantSubscriptionConfig" : {
+        "enableVariantBasedSubscription" : false,
+        "variantList" : [],
+        "enableCabsSubscriptionView" : false,
+        "staticViewPlans" : []
+      },
+      "showEarningSection" : true,
+      "referral" : {
+          "domain" : "https://www.yatrisathi.in"
+        , "customerAppId" : "in.juspay.jatrisaathi"
+        , "driverAppId" : "in.juspay.jatrisaathidriver"
+      },
+      "waitingCharges" : 1.50,
+      "waitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 1.50
+        },
+        "bike" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        }
+      },
+      "rateCardConfig" : defRateCardConfig,
+      "gstPercentage" : "18",
+      "rentalWaitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        },
+        "bike" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        }
+      },
+      "assets" :{
+        "auto_image" : "ny_ic_auto_side_view",
+        "onboarding_auto_image" : "ny_ic_auto_side"
+      },
+      "enableHvSdk" : true
+    },
+    {
+      "cityName" : "Petrapole",
+      "mapImage" : "ys_ic_petrapole_map",
+      "cityCode" : "std:03215",
+      "showSubscriptions" : false,
+      "enableAdvancedBooking" : false,
+      "advancedRidePopUpYoutubeLink" : "" ,
+      "callDriverInfoPost": false, // Dummy link need to change
+      "cityLat" : 26.708845,
+      "cityLong" : 88.434362,
+      "supportNumber" : "08069724949",
+      "languageKey" : "BN_IN",
+      "showDriverReferral" : true,
+      "showCustomerReferral" : true,
+      "uploadRCandDL" : true,
+      "enableYatriCoins" : false,
+      "vehicleNSImg" : "ny_ic_location_unserviceable",
+      "registration" : {
+          "supportWAN" : "918618963188",
+          "callSupport" : true,
+          "whatsappSupport" : true
+      },
+      "variantSubscriptionConfig" : {
+        "enableVariantBasedSubscription" : false,
+        "variantList" : [],
+        "enableCabsSubscriptionView" : false,
+        "staticViewPlans" : []
+      },
+      "showEarningSection" : true,
+      "referral" : {
+          "domain" : "https://www.yatrisathi.in"
+        , "customerAppId" : "in.juspay.jatrisaathi"
+        , "driverAppId" : "in.juspay.jatrisaathidriver"
+      },
+      "waitingCharges" : 1.50,
+      "waitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 1.50
+        },
+        "bike" : {
+          "freeSeconds" : 300,
+          "perMinCharges" : 1.0
+        }
+      },
+      "rateCardConfig" : defRateCardConfig,
+      "gstPercentage" : "18",
+      "rentalWaitingChargesConfig" : {
+        "cab" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        },
+        "auto" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        },
+        "bike" : {
+          "freeSeconds" : 180,
+          "perMinCharges" : 2.0
+        }
+      },
+      "assets" :{
+        "auto_image" : "ny_ic_auto_side_view",
+        "onboarding_auto_image" : "ny_ic_auto_side"
+      },
+      "enableHvSdk" : true
     }
   ]
   })
