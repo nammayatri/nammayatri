@@ -25,7 +25,13 @@ data FollowRideCustomerDetailsRes = FollowRideCustomerDetailsRes {bookingId :: K
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data Followers = Followers {bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking, mobileNumber :: Data.Text.Text, name :: Kernel.Prelude.Maybe Data.Text.Text, priority :: Kernel.Prelude.Int}
+data Followers = Followers
+  { bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
+    mobileNumber :: Data.Text.Text,
+    name :: Kernel.Prelude.Maybe Data.Text.Text,
+    personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    priority :: Kernel.Prelude.Int
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

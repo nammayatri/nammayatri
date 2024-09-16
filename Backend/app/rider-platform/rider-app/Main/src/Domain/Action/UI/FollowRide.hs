@@ -62,19 +62,20 @@ getFollowRide (mbPersonId, _) = do
             case mbBookingId of
               Nothing -> pure acc
               Just bookingId -> do
-                let follower = buildFollower phoneNo person.firstName bookingId contact.priority
+                let follower = buildFollower phoneNo person bookingId contact.priority
                 pure $ acc <> [follower]
     )
     []
     followingEmContacts
 
-buildFollower :: Maybe Text -> Maybe Text -> Id Booking -> Int -> Followers
-buildFollower phoneNo name bookingId priority =
+buildFollower :: Maybe Text -> Person.Person -> Id Booking -> Int -> Followers
+buildFollower phoneNo person bookingId priority =
   Followers
     { bookingId,
       mobileNumber = fromMaybe "" phoneNo,
-      name,
-      priority
+      name = person.firstName,
+      priority,
+      personId = person.id
     }
 
 postShareRide :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> ShareRideReq -> Flow APISuccess.APISuccess
