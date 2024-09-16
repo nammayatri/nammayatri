@@ -714,6 +714,7 @@ currentFlowStatus = do
 enterMobileNumberScreenFlow :: FlowBT String Unit
 enterMobileNumberScreenFlow = do
   config <- getAppConfigFlowBT appConfig
+  let currentCityConfig = getCityConfig config.cityConfig $ getValueToLocalStore CUSTOMER_LOCATION
   hideLoaderFlow -- Removed initial choose langauge screen
   if (any (_ == getLanguageLocale languageKey) [ "__failed", "(null)" ]) then void $ pure $ setLanguageLocale config.defaultLanguage else pure unit
   logField_ <- lift $ lift $ getLogFields
@@ -775,7 +776,7 @@ enterMobileNumberScreenFlow = do
       void $ pure $ setValueInWindow (show MOBILE_NUMBER) state.data.mobileNumber
       setValueToLocalStore COUNTRY_CODE (state.data.countryObj.countryCode)
       void $ liftFlowBT $ setCleverTapProfileData "Phone" (state.data.countryObj.countryCode <> (getValueToLocalStore MOBILE_NUMBER))
-      (TriggerOTPResp triggerOtpResp) <- Remote.triggerOTPBT (Remote.makeTriggerOTPReq state.data.mobileNumber state.data.countryObj.countryCode (show state.data.otpChannel))
+      (TriggerOTPResp triggerOtpResp) <- Remote.triggerOTPBT (Remote.makeTriggerOTPReq state.data.mobileNumber state.data.countryObj.countryCode (show state.data.otpChannel) currentCityConfig.allowBlockedUserLogin)
       void $ pure $ toast (getString if state.data.otpChannel == SMS then STR.SENT_OTP_VIA_SMS else STR.SENT_OTP_VIA_WHATSAPP)
       modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen { data { tokenId = triggerOtpResp.authId, attempts = triggerOtpResp.attempts }, props { enterOTP = true, resendEnable = false } })
       modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { data { settingSideBar { number = state.data.mobileNumber } }, props { userBlocked = triggerOtpResp.isPersonBlocked } })

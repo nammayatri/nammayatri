@@ -186,15 +186,16 @@ triggerOTPBT payload = do
         BackT $ pure GoBack
 
 
-makeTriggerOTPReq :: String -> String -> String -> TriggerOTPReq
-makeTriggerOTPReq mobileNumber countryCode otpChannel=
+makeTriggerOTPReq :: String -> String -> String -> Boolean -> TriggerOTPReq
+makeTriggerOTPReq mobileNumber countryCode otpChannel allowBlockedUserLogin =
     let merchant = SC.getMerchantId ""
     in TriggerOTPReq
     {
       "mobileNumber"      : mobileNumber,
       "mobileCountryCode" : countryCode,
       "merchantId" : if merchant == "NA" then getValueToLocalNativeStore MERCHANT_ID else merchant,
-      "otpChannel" : otpChannel
+      "otpChannel" : otpChannel,
+      "allowBlockedUserLogin" : allowBlockedUserLogin
     }
 
 ---------------------------------------------------------------TriggerSignatureOTPBT Function---------------------------------------------------------------------------------------------------

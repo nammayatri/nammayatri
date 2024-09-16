@@ -429,7 +429,8 @@ type CityConfig = {
   waitingChargeConfig :: WaitingChargeConfig,
   rentalWaitingChargeConfig :: WaitingChargeConfig,
   intercityWaitingChargeConfig :: WaitingChargeConfig,
-  enableWaitingConfig :: Boolean
+  enableWaitingConfig :: Boolean,
+  allowBlockedUserLogin :: Boolean
 }
 
 type CityBasedFeatures = {
