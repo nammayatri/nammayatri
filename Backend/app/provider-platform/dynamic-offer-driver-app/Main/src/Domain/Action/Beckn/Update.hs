@@ -189,11 +189,12 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                 then do
                   currentLocationPointsBatch <- LTS.driverLocation rideId merchantOperatingCity.merchantId ride.driverId
                   previousLocationPointBatches <- getInterpolatedPointsImplementation ride.driverId
+                  intermediateLocationPoints <- getAllWaypointsImplementation ride.driverId
                   let (currentPoint :: Maps.LatLong) =
                         fromMaybe (Maps.LatLong ride.fromLocation.lat ride.fromLocation.lon) $
                           (if not $ null currentLocationPointsBatch.loc then Just (last currentLocationPointsBatch.loc) else Nothing)
                             <|> (if not $ null previousLocationPointBatches then Just (last previousLocationPointBatches) else Nothing)
-                  return (srcPt :| (pickWaypoints (previousLocationPointBatches <> currentLocationPointsBatch.loc) ++ [currentPoint, dropLatLong]), Just currentPoint)
+                  return (srcPt :| (pickWaypoints (previousLocationPointBatches <> intermediateLocationPoints <> currentLocationPointsBatch.loc) ++ [currentPoint, dropLatLong]), Just currentPoint)
                 else return (srcPt :| [dropLatLong], Nothing)
             logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show pickedWaypoints
             routeResponse <-
