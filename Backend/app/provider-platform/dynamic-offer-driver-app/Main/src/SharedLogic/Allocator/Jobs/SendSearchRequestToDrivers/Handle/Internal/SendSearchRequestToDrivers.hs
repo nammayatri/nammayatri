@@ -245,6 +245,8 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 previousDropGeoHash = dpwRes.previousDropGeoHash,
                 notificationSource = Nothing,
                 totalRides = fromMaybe (-1) (driverStats <&> (.totalRides)),
+                renderedAt = Nothing,
+                respondedAt = Nothing,
                 ..
               }
       pure searchRequestForDriver

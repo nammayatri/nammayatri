@@ -86,6 +86,8 @@ SearchRequestForDriver:
     distanceUnit: DistanceUnit
     totalRides: Int
     previousDropGeoHash : Maybe Text
+    renderedAt : Maybe UTCTime
+    respondedAt: Maybe UTCTime
 
   beamType:
     clientBundleVersion: Maybe Text
@@ -202,7 +204,7 @@ SearchRequestForDriver:
 
     updateDriverResponse:
       kvFunction: updateOneWithKV
-      params: [response, status, notificationSource]
+      params: [response, status, notificationSource, renderedAt, respondedAt]
       where: id
 
   sqlType:
