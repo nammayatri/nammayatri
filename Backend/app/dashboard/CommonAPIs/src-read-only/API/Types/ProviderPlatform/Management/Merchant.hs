@@ -301,6 +301,7 @@ data MerchantCommonConfigRes = MerchantCommonConfigRes
     searchRepeatLimit :: Kernel.Prelude.Int,
     actualRideDistanceDiffThreshold :: Kernel.Types.Common.HighPrecMeters,
     upwardsRecomputeBuffer :: Kernel.Types.Common.HighPrecMeters,
+    upwardsRecomputeBufferPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     approxRideDistanceDiffThreshold :: Kernel.Types.Common.HighPrecMeters,
     actualRideDistanceDiffThresholdWithUnit :: Kernel.Types.Common.Distance,
     upwardsRecomputeBufferWithUnit :: Kernel.Types.Common.Distance,

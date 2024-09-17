@@ -182,6 +182,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     updatePayoutStatusBatchSize :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
     upwardsRecomputeBuffer :: Kernel.Types.Common.HighPrecMeters,
+    upwardsRecomputeBufferPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     useOfferListCache :: Kernel.Prelude.Bool,
     useSilentFCMForForwardBatch :: Kernel.Prelude.Bool,
     useWithSnapToRoadFallback :: Kernel.Prelude.Bool,

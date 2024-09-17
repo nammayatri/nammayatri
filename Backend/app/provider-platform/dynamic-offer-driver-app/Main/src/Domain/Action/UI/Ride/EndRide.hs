@@ -561,7 +561,7 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
   (mbDailyExtraKms, mbWeeklyExtraKms) <- if thresholdChecks then handleExtraKmsRecomputation distanceDiff else return (Nothing, Nothing)
   fork "Send Extra Kms Limit Exceeded Overlay" $
     when (thresholdConfig.toNotifyDriverForExtraKmsLimitExceed && not (checkExtraKmsThreshold mbDailyExtraKms mbWeeklyExtraKms)) notifyDriverOnExtraKmsLimitExceed
-  let maxDistance = fromMaybe ride.traveledDistance mbMaxDistance + thresholdConfig.upwardsRecomputeBuffer
+  let maxDistance = fromMaybe ride.traveledDistance mbMaxDistance + maxUpwardBuffer
   let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix with rentals
   if not pickupDropOutsideOfThreshold
     then
@@ -576,6 +576,9 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
             then recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig True tripEndPoint
             else recalculateFareForDistance handle booking ride (roundToIntegral ride.traveledDistance) thresholdConfig True tripEndPoint
   where
+    maxUpwardBuffer = case (booking.estimatedDistance, thresholdConfig.upwardsRecomputeBufferPercentage) of
+      (Just estDistance, Just percentage) -> HighPrecMeters (max (fromRational $ (toRational estDistance.getMeters) * (toRational percentage / 100)) thresholdConfig.upwardsRecomputeBuffer.getHighPrecMeters)
+      _ -> thresholdConfig.upwardsRecomputeBuffer
     makeDailyAndWeeklyExtraKmsKey personId = ("DailyExtraKms:PersonId-" <> personId, "WeeklyExtraKms:PersonId-" <> personId)
 
     checkExtraKmsThreshold (Just dailyExtraKms) (Just weeklyExtraKms) = thresholdConfig.fareRecomputeDailyExtraKmsThreshold >= dailyExtraKms && thresholdConfig.fareRecomputeWeeklyExtraKmsThreshold >= weeklyExtraKms
@@ -619,8 +622,12 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
             then do
               recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig True tripEndPoint
             else do
-              if distanceDiff < thresholdConfig.upwardsRecomputeBuffer
+              if highPrecMetersToMeters distanceDiff < maxDistance
                 then recalculateFareForDistance handle booking ride approxTraveledDistance thresholdConfig True tripEndPoint -- TODO :: Recompute Toll Charges Here ?
                 else do
                   logTagInfo "Inaccurate Location Updates and Pickup/Drop Deviated." ("DistanceDiff: " <> show distanceDiff)
-                  recalculateFareForDistance handle booking ride (estimatedDistance + highPrecMetersToMeters thresholdConfig.upwardsRecomputeBuffer) thresholdConfig True tripEndPoint
+                  recalculateFareForDistance handle booking ride (estimatedDistance + maxDistance) thresholdConfig True tripEndPoint
+  where
+    maxDistance = case (booking.estimatedDistance, thresholdConfig.upwardsRecomputeBufferPercentage) of
+      (Just estDistance, Just percentage) -> Meters $ max (round $ (toRational estDistance.getMeters) * (toRational percentage / 100)) (round thresholdConfig.upwardsRecomputeBuffer.getHighPrecMeters)
+      _ -> highPrecMetersToMeters thresholdConfig.upwardsRecomputeBuffer

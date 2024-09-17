@@ -703,6 +703,7 @@ TransporterConfig:
     actualRideDistanceDiffThresholdIfWithinPickupDrop: HighPrecMeters
     recomputeIfPickupDropNotOutsideOfThreshold: Bool
     upwardsRecomputeBuffer: HighPrecMeters
+    upwardsRecomputeBufferPercentage: Maybe Int
     approxRideDistanceDiffThreshold: HighPrecMeters
     minLocationAccuracy: Double
     driverPaymentCycleBuffer: NominalDiffTime

@@ -260,4 +260,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN arrival_time_bu
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN upwards_recompute_buffer_percentage integer ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN demand_hotspots_config json ;
