@@ -446,9 +446,17 @@ window.getMerchantConfig = function () {
     { ...baseCityConfig
     , "cityName" : "Durgapur"
     , "mapImage" : "ys_ic_durgapur_map"
-    , "cityCode" : "std:0343"
+    , "cityCode" : "std:0342"
     , "cityLat" : 23.5204
     , "cityLong" : 87.3119
+    , "showSubscriptions" : false
+    },
+    { ...baseCityConfig
+    , "cityName" : "Petrapole"
+    , "mapImage" : "ys_ic_petrapole_map"
+    , "cityCode" : "std:03215"
+    , "cityLat" : 22.40117
+    , "cityLong" : 88.58293
     , "showSubscriptions" : false
     }
   ]
