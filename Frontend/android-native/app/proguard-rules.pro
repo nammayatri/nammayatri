@@ -27,6 +27,7 @@
 -keep class androidx.coordinatorlayout.widget.* { *;}
 -keep class androidx.coordinatorlayout.widget.CoordinatorLayout.* { *;}
 -keep class com.airbnb.lottie.* { *;}
+-keep class androidx.profileinstaller.** { *; }
 
 -assumenosideeffects class android.util.Log {
     public static boolean isLoggable(java.lang.String, int);
