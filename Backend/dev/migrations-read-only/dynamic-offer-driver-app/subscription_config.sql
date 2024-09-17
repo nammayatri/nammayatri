@@ -55,3 +55,9 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN free_trial_rid
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN subscription_enabled_for_vehicle_categories text ;
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN execution_enabled_for_vehicle_categories text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ALTER COLUMN subscription_enabled_for_vehicle_categories TYPE text[];
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ALTER COLUMN execution_enabled_for_vehicle_categories TYPE text[];

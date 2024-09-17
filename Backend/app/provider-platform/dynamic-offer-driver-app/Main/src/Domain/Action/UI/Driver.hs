@@ -321,7 +321,14 @@ data DriverInformationRes = DriverInformationRes
     cancellationRateInWindow :: Maybe Int,
     cancelledRidesCountInWindow :: Maybe Int,
     assignedRidesCountInWindow :: Maybe Int,
-    windowSize :: Maybe Int
+    windowSize :: Maybe Int,
+    isSubscriptionVehicleCategoryChanged :: Bool,
+    isOnFreeTrial :: Bool,
+    planMandatoryForCategory :: Bool,
+    isSubscriptionCityChanged :: Bool,
+    freeTrialDays :: Int,
+    freeTrialRides :: Int,
+    totalRidesTaken :: Maybe Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
