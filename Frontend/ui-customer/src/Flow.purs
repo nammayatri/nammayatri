@@ -407,8 +407,8 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
                       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { followers = Just [follower], manuallySharedFollowers = Just [follower] } })
                       void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                       updateFollower false true Nothing
-                    Left _ -> currentFlowStatus
-                _ -> currentFlowStatus
+                    Left _ -> currentFlowStatus false
+                _ -> currentFlowStatus false
             _ -> pure unit
         _ -> do
           case breakPrefixAndId screen of
@@ -416,8 +416,8 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
               case bookingId of
                 Just id -> hideSplashAndCallFlow $ viewTicketDetialsFlow (Just id)
                 _ -> pure unit
-            _ -> if skipDefaultCase then pure unit else currentFlowStatus
-      Nothing -> currentFlowStatus
+            _ -> if skipDefaultCase then pure unit else currentFlowStatus false
+      Nothing -> currentFlowStatus false
     Nothing -> do
       let
         mBPayload = getGlobalPayload Constants.globalPayload
@@ -473,8 +473,8 @@ toggleSplash =
           void $ lift $ lift $ delay $ Milliseconds 2000.0
           liftFlowBT $ terminateUI $ Just "SplashScreen"
 
-currentFlowStatus :: FlowBT String Unit
-currentFlowStatus = do
+currentFlowStatus :: Boolean -> FlowBT String Unit
+currentFlowStatus prioritizeRating = do
   logField_ <- lift $ lift $ getLogFields
   liftFlowBT $ markPerformance "CURRENT_FLOW_STATUS"
   void $ lift $ lift $ toggleLoader false
@@ -488,11 +488,11 @@ currentFlowStatus = do
     WAITING_FOR_DRIVER_OFFERS currentStatus -> goToFindingQuotesStage currentStatus.estimateId (flowStatus ^. _isValueAddNP) currentStatus.otherSelectedEstimates false
     DRIVER_OFFERED_QUOTE currentStatus -> goToFindingQuotesStage currentStatus.estimateId (flowStatus ^. _isValueAddNP) (Just []) true
     WAITING_FOR_DRIVER_ASSIGNMENT currentStatus -> goToConfirmRide currentStatus
-    RIDE_ASSIGNED _ -> checkRideStatus true
+    RIDE_ASSIGNED _ -> checkRideStatus true prioritizeRating
     PENDING_RATING _ -> do
       firstRideCompletedEvent ""
-      checkRideStatus false
-    _ -> checkRideStatus false
+      checkRideStatus false prioritizeRating
+    _ -> checkRideStatus false prioritizeRating
   liftFlowBT $ markPerformance "HIDE_LOADER_FLOW"
   hideLoaderFlow
   void $ pure $ hideKeyboardOnNavigation true -- TODO:: Why is this added here @ashkriti?  
@@ -706,7 +706,7 @@ currentFlowStatus = do
       fareProductType = currentStatus.fareProductType
     in
       if any (_ == fareProductType) [ Just "ONE_WAY_SPECIAL_ZONE", Nothing ] then
-        checkRideStatus false
+        checkRideStatus false false
       else if (fareProductType == Just "ONE_WAY") then do
         hideLoaderFlow
         updateLocalStage ConfirmingRide
@@ -753,7 +753,7 @@ enterMobileNumberScreenFlow = do
                     setValueToLocalStore REGISTERATION_TOKEN response.token
                     setValueToLocalStore USER_NAME $ (fromMaybe "" $ response.person ^. _firstName) <> " " <> (fromMaybe "" $ response.person ^. _middleName) <> " " <> (fromMaybe "" $ response.person ^. _lastName)
                     void $ liftFlowBT $ loginCleverTapUser unit
-                    if isNothing (response.person ^. _firstName) then currentFlowStatus else handleDeepLinks Nothing false
+                    if isNothing (response.person ^. _firstName) then currentFlowStatus false else handleDeepLinks Nothing false
               Left err -> do
                 pure $ setText (getNewIDWithTag "EnterOTPNumberEditText") ""
                 let errResp = err.response
@@ -873,7 +873,7 @@ homeScreenFlow = do
   void $ checkAndUpdateSavedLocations currentState.homeScreen
   let
     isRideCompleted = getAndRemoveLatestNotificationType unit == "TRIP_FINISHED"
-  when isRideCompleted $ currentFlowStatus
+  when isRideCompleted $ currentFlowStatus (isJust currentState.homeScreen.data.upcomingRideDetails)
   void $ pure $ cleverTapSetLocation unit
   -- TODO: REQUIRED ONCE WE NEED TO STORE RECENT CURRENTLOCATIONS
   -- resp <- lift $ lift $ getCurrentLocationsObjFromLocal currentState.homeScreen
@@ -942,7 +942,7 @@ homeScreenFlow = do
                   }
             )
       searchLocationFlow
-    CHECK_FLOW_STATUS -> currentFlowStatus
+    CHECK_FLOW_STATUS -> currentFlowStatus false
     GO_TO_MY_RIDES fromBanner -> do
       let _ = spy "fromBanner " fromBanner
       modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen { data { offsetValue = 0 }, props { fromNavBar = true, fromBanner = fromBanner } , prestoListArrayItems =[],itemsRides = []})
@@ -1032,7 +1032,7 @@ homeScreenFlow = do
             else do
               void $ pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = SearchLocationModel } })
-            currentFlowStatus
+            currentFlowStatus false
 
     EDIT_DESTINATION_SOFT state -> do
       let destAddress = SearchReqLocation { gps : LatLong { lat : state.props.destinationLat , lon : state.props.destinationLong } , address : (LocationAddress state.data.destinationAddress)} 
@@ -1044,7 +1044,7 @@ homeScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{destination = state.data.driverInfoCardState.destination, destinationAddress = state.data.driverInfoCardState.destinationAddress}, props{destinationLat = state.data.driverInfoCardState.destinationLat, destinationLong = state.data.driverInfoCardState.destinationLng}})
             setValueToLocalStore TRACKING_DRIVER "False"
             void $ lift $ lift $ toggleLoader true
-            checkRideStatus true
+            checkRideStatus true false
             else do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingEditDestinationLoc, bookingUpdateRequestId = editDestinationSoftResp.bookingUpdateRequestId}})
         Left (err) -> do
@@ -1052,7 +1052,7 @@ homeScreenFlow = do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{destination = state.data.driverInfoCardState.destination, destinationAddress = state.data.driverInfoCardState.destinationAddress}, props{destinationLat = state.data.driverInfoCardState.destinationLat, destinationLong = state.data.driverInfoCardState.destinationLng}})
           setValueToLocalStore TRACKING_DRIVER "False"
           void $ lift $ lift $ toggleLoader true
-          checkRideStatus true
+          checkRideStatus true false
       homeScreenFlow
     
     EDIT_DEST_BACKPRESSED ->  do
@@ -1062,7 +1062,7 @@ homeScreenFlow = do
       setValueToLocalStore FINDING_EDIT_LOC_RESULTS "false"
       setValueToLocalStore TRACKING_DRIVER "False"
       void $ lift $ lift $ toggleLoader true
-      checkRideStatus true
+      checkRideStatus true false
       homeScreenFlow
 
     EDIT_LOCATION_SELECTED item addToRecents -> do
@@ -1365,7 +1365,7 @@ homeScreenFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{destination = state.data.driverInfoCardState.destination, destinationAddress = state.data.driverInfoCardState.destinationAddress}, props{destinationLat = state.data.driverInfoCardState.destinationLat, destinationLong = state.data.driverInfoCardState.destinationLng}})
       setValueToLocalStore TRACKING_DRIVER "False"
       void $ lift $ lift $ toggleLoader true
-      checkRideStatus true
+      checkRideStatus true false
       homeScreenFlow
 
     GET_QUOTES state -> do
@@ -1675,15 +1675,17 @@ homeScreenFlow = do
                   , exit_app: false
                   }
             }
+      let currentStage = state.props.currentStage
       updateUserInfoToState state
-      if state.props.currentStage == RideCompleted then
+      if currentStage == RideCompleted then
         if (getSearchType unit) == "direct_search" then do
           void $ updateLocalStage SearchLocationModel
           checkAndUpdateLocations
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = HomeScreen } })
           searchLocationFlow
         else
-          pure unit
+          currentFlowStatus false
+      else if currentStage == RideRating then currentFlowStatus false
       else
         pure unit
       if state.data.rideRatingState.rating == 5 then do
@@ -1704,7 +1706,7 @@ homeScreenFlow = do
       updateLocalStage RideAccepted
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = RideAccepted, locateOnMap = false}})
       setValueToLocalStore TRACKING_DRIVER "False" 
-      checkRideStatus true
+      checkRideStatus true false
       homeScreenFlow
     UPDATE_CHAT -> do 
       removeChatService ""
@@ -1796,7 +1798,7 @@ homeScreenFlow = do
       homeScreenFlow
     REALLOCATE_RIDE state -> do
       if DS.null state.props.estimateId then
-        currentFlowStatus
+        currentFlowStatus false
       else
         homeScreenFlow
     CHECK_SERVICEABILITY updatedState lat long -> do
@@ -1866,7 +1868,7 @@ homeScreenFlow = do
       void $ pure $ currentPosition ""
       void $ updateLocalStage HomeScreen
       updateUserInfoToState state.homeScreen
-      currentFlowStatus
+      currentFlowStatus false
     UPDATE_LOCATION_NAME state lat lon -> do
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.locServiceabilityBT (Remote.makeServiceabilityReq lat lon) ORIGIN
       let
@@ -2804,7 +2806,7 @@ followRideScreenFlow callInitUI = do
               updatedManualFollowers = if currfollower.isManualFollower then Arr.filter (\follower -> follower.bookingId /= currfollower.bookingId ) currentManualFollowers else currentManualFollowers
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { manuallySharedFollowers = if null updatedManualFollowers then Nothing else Just updatedManualFollowers } })
         _,_ -> pure unit
-      currentFlowStatus
+      currentFlowStatus false
     OPEN_GOOGLE_MAPS_FOLLOW_RIDE state -> do
       case state.data.driverInfoCardState of
         Nothing -> followRideScreenFlow false
@@ -2881,7 +2883,7 @@ editDestinationFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{destination = homeScreenState.data.driverInfoCardState.destination, destinationAddress = homeScreenState.data.driverInfoCardState.destinationAddress}, props{destinationLat = homeScreenState.data.driverInfoCardState.destinationLat, destinationLong = homeScreenState.data.driverInfoCardState.destinationLng}})
       setValueToLocalStore TRACKING_DRIVER "False"
       void $ lift $ lift $ toggleLoader true
-      checkRideStatus true
+      checkRideStatus true false
 
 
 rideSearchFlow :: String -> FlowBT String Unit
@@ -3352,7 +3354,7 @@ permissionScreenFlow = do
   case flow of
     REFRESH_INTERNET -> do
       if internetCondition then
-        currentFlowStatus
+        currentFlowStatus false
       else do
         modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen { stage = INTERNET_ACTION })
         permissionScreenFlow
@@ -3362,7 +3364,7 @@ permissionScreenFlow = do
         permissionScreenFlow
       else do
         setValueToLocalStore PERMISSION_POPUP_TIRGGERED "true"
-        currentFlowStatus
+        currentFlowStatus false
     TURN_ON_INTERNET -> case (getValueToLocalStore USER_NAME == "__failed") of
       true -> pure unit
       _ ->
@@ -3373,7 +3375,7 @@ permissionScreenFlow = do
           modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen { stage = LOCATION_DISABLED })
           permissionScreenFlow
         else
-          currentFlowStatus
+          currentFlowStatus false
 
 myProfileScreenFlow :: FlowBT String Unit
 myProfileScreenFlow = do
@@ -4007,7 +4009,7 @@ updateFlowStatus eventType = do
   (FlowStatusRes flowStatus) <- Remote.flowStatusBT "LazyCheck"
   case flowStatus.currentStatus of
     RIDE_ASSIGNED _ -> do
-      checkRideStatus true
+      checkRideStatus true false
       homeScreenFlow
     _ -> do
       res <- lift $ lift $ Remote.notifyFlowEvent (Remote.makeNotifyFlowEventReq (show eventType))
@@ -4021,7 +4023,7 @@ updateFlowStatus eventType = do
             codeMessage = decodeError errResp.errorMessage "errorCode"
           when (err.code == 400 && codeMessage == "ACTIVE_BOOKING_EXISTS")
             $ do
-                currentFlowStatus
+                currentFlowStatus false
 
 getTicketBookings :: Array TicketBookingItem -> Array TicketBookingItem -> Array TicketBookingItem -> TicketBookings
 getTicketBookings bookedRes pendingRes cancelledRes =
@@ -4053,7 +4055,7 @@ cancelEstimate bookingId = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { isSearchCancelled = true } })
           _ -> do
             void $ liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_booking_exists_right"
-            currentFlowStatus
+            currentFlowStatus false
       Left err -> do
         let
           errResp = err.response
@@ -4061,7 +4063,7 @@ cancelEstimate bookingId = do
           codeMessage = decodeError errResp.errorMessage "errorCode"
         if (err.code == 400 && codeMessage == "ACTIVE_BOOKING_EXISTS") then do
           void $ liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_booking_exists_left"
-          currentFlowStatus
+          currentFlowStatus false
         else do
           void $ pure $ toast $ getString STR.CANCELLATION_UNSUCCESSFULL_PLEASE_TRY_AGAIN
           void $ liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_failed_left"
@@ -4290,6 +4292,7 @@ updateUserInfoToState state =
                 , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
                 , city = state.props.city
                 , showShimmer = false
+                , bookingId = state.props.bookingId
                 }
               }
         )
@@ -4702,7 +4705,7 @@ zooTicketInfoFlow = do
   flow <- UI.ticketInfoScreen
   modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> ticketBookingScreenState { props { currentStage = MyTicketsStage } })
   case flow of
-    GO_TO_HOME_SCREEN_FROM_TICKET_INFO -> currentFlowStatus
+    GO_TO_HOME_SCREEN_FROM_TICKET_INFO -> currentFlowStatus false
     _ -> pure unit
 
 fillBookingDetails :: TicketBookingDetails -> String -> String -> FlowBT String Unit
@@ -5063,7 +5066,7 @@ searchLocationFlow = do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> metroTicketBookingFlow )
     SearchLocationController.RideScheduledScreen state ->  (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  rideScheduledFlow)
-    SearchLocationController.CurrentFlowStatus -> (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  currentFlowStatus)
+    SearchLocationController.CurrentFlowStatus -> (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  currentFlowStatus false)
     SearchLocationController.SelectedQuote state -> do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
       modifyScreenState $ RentalScreenStateType (\rentalScreenState -> rentalScreenState { data { selectedQuote = state.data.selectedQuote, currentStage = RENTAL_CONFIRMATION }, props { showPrimaryButton = true } })
@@ -6346,7 +6349,7 @@ fcmHandler notification state notificationBody= do
   case notification of
     "TRIP_STARTED" -> do -- OTP ENTERED'
       logStatus "trip_started_notification" ("bookingId : " <> state.props.bookingId)
-      checkRideStatus true
+      checkRideStatus true false
       (GlobalState updatedState) <- getState
       let
         homeScreenState = updatedState.homeScreen
@@ -6494,9 +6497,12 @@ fcmHandler notification state notificationBody= do
           currentUtcAfterScheduledTime = spy "currentUtcAfterScheduledTime" $ EHC.getUTCAfterNSeconds (getCurrentUTC "") scheduledBufferTime
           timeDiff = spy "compareUTC" $ EHC.compareUTCDate bookingScheduledTime (currentUtcAfterScheduledTime)
           fcmBookingId = spy "fcmBookingID" $ fromMaybe "null" notificationBody.bookingId
-      if (fcmBookingId /= state.props.bookingId && timeDiff > 0) then do
-         let _ = spy "CANCELLING_SCHEDULED" "CANCELLED_PRODUCT"
-         homeScreenFlow 
+      if (fcmBookingId /= state.props.bookingId && state.props.bookingId /= "") then do
+        let _ = spy "CANCELLATION" "CANCELLED_PRODUCT"
+        currentFlowStatus false
+      else if (fcmBookingId /= state.props.bookingId && state.props.bookingId == "" && timeDiff > 0) then do 
+        updateLocalStage HomeScreen
+        pure unit  
       else do
         void $ pure $ JB.exitLocateOnMap ""
         void $ pure $ removeAllPolylines ""
@@ -6524,8 +6530,12 @@ fcmHandler notification state notificationBody= do
           currentUtcAfterScheduledTime = spy "currentUtcAfterScheduledTime" $ EHC.getUTCAfterNSeconds (getCurrentUTC "") scheduledBufferTime
           timeDiff = spy "compareUTC" $ EHC.compareUTCDate bookingScheduledTime (currentUtcAfterScheduledTime)
           fcmBookingId = spy "fcmBookingID" $ fromMaybe "null" notificationBody.bookingId
-      if (fcmBookingId /= state.props.bookingId && timeDiff > 0) then do 
+      if (state.props.bookingId /= "" && fcmBookingId /= state.props.bookingId && timeDiff >= -1800 && timeDiff <= 0) then do 
         let _ = spy "scheduledRide DriverAssigned" "DRIVER_ASSIGNMENT"
+            rideScheduledAt = fromMaybe "" notificationBody.rideTime
+            rideSchTimeInIST = convertUTCtoISC rideScheduledAt "D" <> " " <> convertUTCtoISC rideScheduledAt "MMMM" <> " " <> convertUTCtoISC rideScheduledAt "YYYY" <> " , " <> convertUTCtoISC rideScheduledAt "HH" <> ":" <> convertUTCtoISC rideScheduledAt "mm"
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{upcomingRideDetails = Just { bookingId : fcmBookingId ,
+  rideScheduledAt : rideSchTimeInIST}}})
         homeScreenFlow 
       else do
         if (not (isLocalStageOn RideAccepted || isLocalStageOn RideStarted)) then do
@@ -6533,7 +6543,7 @@ fcmHandler notification state notificationBody= do
           void $ liftFlowBT $ logEvent logField_ "ny_fs_driver_assignment"
           lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
           let _ = spy "driver Assigned" notification
-          checkRideStatus true
+          checkRideStatus true false
           homeScreenFlow
         else
           homeScreenFlow
@@ -6548,9 +6558,12 @@ fcmHandler notification state notificationBody= do
           timeDiff = spy "compareUTC" $ EHC.compareUTCDate bookingScheduledTime (currentUtcAfterScheduledTime)
           fcmBookingId = spy "fcmBookingID" $ fromMaybe "null" notificationBody.bookingId
       
-      if (fcmBookingId /= state.props.bookingId && timeDiff > 0) then do
+      if (fcmBookingId /= state.props.bookingId && state.props.bookingId /= "") then do
        let _ = spy "Skipping Reallocation" "REALLOCATE_PRODUCT"
-       updateLocalStage HomeScreen 
+       pure unit
+      else if (fcmBookingId /= state.props.bookingId && state.props.bookingId == "" && timeDiff > 0) then do 
+        updateLocalStage HomeScreen
+        pure unit  
       else do
         void $ pure $ spy "after scheduled checks" notificationBody
         void $ pure $ JB.exitLocateOnMap ""
@@ -6571,7 +6584,7 @@ fcmHandler notification state notificationBody= do
     _
       | any (_ == notification) [ "FOLLOW_RIDE", "SHARE_RIDE", "SOS_RESOLVED" ] -> do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { followers = Nothing } })
-        currentFlowStatus
+        currentFlowStatus false
     _
       | any (_ == notification) [ "SOS_MOCK_DRILL", "SOS_MOCK_DRILL_NOTIFY" ] -> do
         updateFollower true false $ Just notification
@@ -6653,7 +6666,7 @@ rideSummaryScreenFlow = do
               void $ updateScheduledRides true false
               pure unit)
             modifyScreenState $ RideSummaryScreenStateType (\rideSummaryScreen -> RideSummaryScreenData.initData)
-            checkRideStatus false
+            checkRideStatus false false
             updateLocalStage HomeScreen
             updateUserInfoToState state
             homeScreenFlow
@@ -6664,11 +6677,9 @@ rideSummaryScreenFlow = do
             let 
               _ = runFn2 EHC.updatePushInIdMap "EstimatePolling" true
               state = newState.homeScreen
-            -- _ <- FlowCache.fetchAndUpdateScheduledRides true
             updateScheduledRides true false
-            updateLocalStage HomeScreen
-            updateUserInfoToState state
-            homeScreenFlow
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { settingSideBar { opened = SettingSideBarController.CLOSED } } })
+            currentFlowStatus false
         Left _ -> do
           void $ pure $ toast "Failed To Cancel Ride"
           rideSummaryScreenFlow

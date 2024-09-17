@@ -227,6 +227,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
         , startOdometer = show $ fromMaybe 0.0 rideList.startOdometerReading
         , endOdometer = show $ fromMaybe 0.0 rideList.endOdometerReading
         }
+      , rideScheduledAtUTC : resp.rideScheduledTime
       , serviceTierName : resp.serviceTierName
       , vehicleModel : rideList.vehicleModel
       , vehicleColor : rideList.vehicleColor

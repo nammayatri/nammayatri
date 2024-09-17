@@ -1723,7 +1723,23 @@ topLeftIconView state push =
             ]
         ]
       )
+    <> (case state.data.upcomingRideDetails of 
+          Nothing -> []
+          Just rideDetails -> [upcomingRideBanner push rideDetails])
 
+
+upcomingRideBanner push rideDetails = 
+  linearLayout
+        [ height $ V 45
+        , width MATCH_PARENT
+        , background Color.black
+        , margin $ Margin 16 16 16 0 
+        , cornerRadius 8.0
+        , gravity CENTER
+        ][  textView[
+            text $ " Your upcoming Ride start at" <> rideDetails.rideScheduledAt
+          , color Color.white900
+        ]]
 ----------- estimatedFareView ----------------
 estimatedFareView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 estimatedFareView push state =

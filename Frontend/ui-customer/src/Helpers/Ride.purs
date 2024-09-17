@@ -54,15 +54,17 @@ import Engineering.Helpers.Commons as EHC
 import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
 import Debug(spy)
 
-checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
-checkRideStatus rideAssigned = do
+checkRideStatus :: Boolean -> Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
+checkRideStatus rideAssigned prioritizeRating = do
   logField_ <- lift $ lift $ getLogFields
-  rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "true"
+
+  rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "2" "0" "true"
   (GlobalState state') <- getState
   let state = state'.homeScreen
+      _ = spy "Inside checkRideStatus" prioritizeRating
   case rideBookingListResponse of
     Right (RideBookingListRes listResp) -> do
-      if not (null listResp.list) then do
+      if not (null listResp.list) && not prioritizeRating then do
         let multipleScheduled = length listResp.list > 1
             (RideBookingRes resp) = (fromMaybe HSD.dummyRideBooking (head listResp.list))
             status = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._status
@@ -73,13 +75,24 @@ checkRideStatus rideAssigned = do
             rideScheduledAt = if bookingStatus == "CONFIRMED" || bookingStatus == "TRIP_ASSIGNED" then fromMaybe "" resp.rideScheduledTime else ""
             dropLocation = if (fareProductType == FPT.RENTAL) then _stopLocation else _toLocation
             stopLocationDetails = (resp.bookingDetails ^._contents^._stopLocation)
-            _ = spy "rideBookingListResponse" rideBookingListResponse
-            _ = spy "rideBookingList head" (head listResp.list)
-            _ = spy "rideBookingList Last" (last listResp.list)
+            response = listResp.list
+            activeRideListData = map (\resp -> let listData = fetchListData resp state 
+              in listData) (response)
             newState = 
               state
                 { data
                     { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) (fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || isJust otpCode) state.data.driverInfoCardState
+                    , activeRidesList = activeRideListData
+                    , upcomingRideDetails = 
+                        maybe 
+                          Nothing 
+                          (\ride -> 
+                            let rideScheduledAt = fromMaybe "" ride.rideScheduledAtUTC
+                                rideScheduledTimeInIST = convertUTCtoISC rideScheduledAt "D" <> " " <> convertUTCtoISC rideScheduledAt "MMMM" <> " " <> convertUTCtoISC rideScheduledAt "YYYY" <> " , " <> convertUTCtoISC rideScheduledAt "HH" <> ":" <> convertUTCtoISC rideScheduledAt "mm"
+                            in if ride.status == "NEW" 
+                                then Just {bookingId : "", rideScheduledAt : rideScheduledTimeInIST } 
+                                else Nothing) 
+                          (activeRideListData!!1)
                     , finalAmount = fromMaybe 0 $ (fromMaybe dummyRideAPIEntity (head resp.rideList) )^. _computedPrice
                     , sourceAddress = getAddressFromBooking resp.fromLocation
                     , destinationAddress = getAddressFromBooking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.dropLocation))
@@ -307,3 +320,11 @@ getFlowStatusData dummy =
     Right res -> Just res
     Left err -> Nothing
 
+
+-- fetchListData :: RideBookingRes -> HomeScreenState -> DriverInfoCard
+fetchListData (RideBookingRes resp) state = let 
+    otp = ((resp.bookingDetails) ^. _contents ^. _otpCode)
+    fPT = getFareProductType ((resp.bookingDetails) ^. _fareProductType)
+    ans = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) (fPT == FPT.ONE_WAY_SPECIAL_ZONE || isJust otp ) state.data.driverInfoCardState
+  in ans
+  

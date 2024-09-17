@@ -69,6 +69,7 @@ initData = let
     , previousCurrentLocations : {pastCurrentLocations:[]}
     , selectList : []
     , quoteListModelState : []
+    , activeRidesList : []
     , driverInfoCardState : dummyDriverInfo
     , rideRatingState : dummyPreviousRiderating
     , settingSideBar : dummySettingBar
@@ -199,6 +200,7 @@ initData = let
     , tripEstDuration : 0
     , latestScheduledRides : Nothing
     , overLappingBooking : Nothing
+    , upcomingRideDetails : Nothing
     },
     props: {
       rideRequestFlow : false
@@ -545,6 +547,7 @@ dummyDriverInfo =
   , addressWard : Nothing
   , currentChatRecipient : dummyChatRecipient
   , hasToll : false
+  , rideScheduledAtUTC : Nothing
   }
 
 dummySettingBar :: SettingSideBarState

@@ -623,7 +623,8 @@ type HomeScreenStateData =
   , tripSuggestions :: Array Trip
   , selectList :: Array QuoteAPIEntity
   , quoteListModelState :: Array QuoteListItemState
-  , driverInfoCardState :: DriverInfoCard
+  , driverInfoCardState :: DriverInfoCard -- current visible active ride
+  , activeRidesList :: Array DriverInfoCard -- list of all active rides
   , rideRatingState :: RatingCard
   , settingSideBar :: SettingSideBarState
   , sourceAddress :: Address
@@ -699,7 +700,13 @@ type HomeScreenStateData =
   , tripEstDuration :: Int
   , latestScheduledRides :: Maybe RideBookingListRes
   , overLappingBooking :: Maybe RideBookingRes
+  , upcomingRideDetails :: Maybe UpcomingRideDetails
 }
+
+type UpcomingRideDetails = {
+  bookingId :: String,
+  rideScheduledAt :: String
+  }
 
 type TollData = {
   confidence :: Maybe CTA.Confidence
@@ -1401,6 +1408,7 @@ type DriverInfoCard =
   , addressWard :: Maybe String
   , currentChatRecipient :: ChatContacts
   , hasToll :: Boolean
+  , rideScheduledAtUTC :: Maybe String
   }
 
 type RatingCard =
