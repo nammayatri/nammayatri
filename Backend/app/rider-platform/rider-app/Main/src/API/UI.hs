@@ -26,6 +26,7 @@ import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.FavouriteDriver as FavouriteDriver
 import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.Invoice as Invoice
+import qualified API.Action.UI.MultiModalFareComputation as MultiModalFareComputation
 import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.Sos as SosApi
@@ -113,6 +114,7 @@ type API =
            :<|> FavouriteDriver.API
            :<|> PartnerOrgFRFS.API
            :<|> TriggerFCM.API
+           :<|> MultiModalFareComputation.API
        )
 
 handler :: FlowServer API
@@ -162,3 +164,4 @@ handler =
     :<|> FavouriteDriver.handler
     :<|> PartnerOrgFRFS.handler
     :<|> TriggerFCM.handler
+    :<|> MultiModalFareComputation.handler

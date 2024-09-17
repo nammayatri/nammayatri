@@ -192,6 +192,7 @@ library
       Domain.Action.UI.Maps
       Domain.Action.UI.MerchantPaymentMethod
       Domain.Action.UI.MultiModal
+      Domain.Action.UI.MultiModalFareComputation
       Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Payment
       Domain.Action.UI.Person
@@ -337,6 +338,7 @@ library
       Storage.Queries.MerchantPaymentMethodExtra
       Storage.Queries.MerchantServiceConfigExtra
       Storage.Queries.MerchantServiceUsageConfigExtra
+      Storage.Queries.MultiModalFareLegRulesExtra
       Storage.Queries.PartnerOrganizationExtra
       Storage.Queries.PartnerOrgConfigExtra
       Storage.Queries.PersonDefaultEmergencyNumberExtra
@@ -409,6 +411,7 @@ library
       API.Action.UI.FRFSTicketService
       API.Action.UI.Invoice
       API.Action.UI.MultiModal
+      API.Action.UI.MultiModalFareComputation
       API.Action.UI.RidePayment
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
@@ -422,6 +425,7 @@ library
       API.Types.UI.FRFSTicketService
       API.Types.UI.Invoice
       API.Types.UI.MultiModal
+      API.Types.UI.MultiModalFareComputation
       API.Types.UI.RidePayment
       API.Types.UI.SocialLogin
       API.Types.UI.Sos
@@ -474,6 +478,11 @@ library
       Domain.Types.MerchantServiceConfig
       Domain.Types.MerchantServiceUsageConfig
       Domain.Types.MerchantState
+      Domain.Types.MultiModalCalendar
+      Domain.Types.MultiModalFareLegRules
+      Domain.Types.MultiModalNetwork
+      Domain.Types.MultiModalStops
+      Domain.Types.MultiModalTimeFrame
       Domain.Types.NotificationSoundsConfig
       Domain.Types.OnSearchEvent
       Domain.Types.PartnerOrganization
@@ -565,6 +574,11 @@ library
       Storage.Beam.MerchantServiceConfig
       Storage.Beam.MerchantServiceUsageConfig
       Storage.Beam.MerchantState
+      Storage.Beam.MultiModalCalendar
+      Storage.Beam.MultiModalFareLegRules
+      Storage.Beam.MultiModalNetwork
+      Storage.Beam.MultiModalStops
+      Storage.Beam.MultiModalTimeFrame
       Storage.Beam.NotificationSoundsConfig
       Storage.Beam.OnSearchEvent
       Storage.Beam.PartnerOrganization
@@ -656,6 +670,11 @@ library
       Storage.Queries.MerchantServiceConfig
       Storage.Queries.MerchantServiceUsageConfig
       Storage.Queries.MerchantState
+      Storage.Queries.MultiModalCalendar
+      Storage.Queries.MultiModalFareLegRules
+      Storage.Queries.MultiModalNetwork
+      Storage.Queries.MultiModalStops
+      Storage.Queries.MultiModalTimeFrame
       Storage.Queries.NotificationSoundsConfig
       Storage.Queries.OnSearchEvent
       Storage.Queries.OrphanInstances.AppInstalls
@@ -677,6 +696,7 @@ library
       Storage.Queries.OrphanInstances.MerchantPaymentMethod
       Storage.Queries.OrphanInstances.MerchantServiceConfig
       Storage.Queries.OrphanInstances.MerchantServiceUsageConfig
+      Storage.Queries.OrphanInstances.MultiModalFareLegRules
       Storage.Queries.OrphanInstances.PartnerOrganization
       Storage.Queries.OrphanInstances.PartnerOrgConfig
       Storage.Queries.OrphanInstances.Person

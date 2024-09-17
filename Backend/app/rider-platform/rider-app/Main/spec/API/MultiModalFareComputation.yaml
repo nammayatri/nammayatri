@@ -1,0 +1,39 @@
+imports:
+  MultiModalFareLegRules: Domain.Types.MultiModalFareLegRules
+  Currency: Kernel.Types.Common
+  Estimate: Domain.Types.Estimate
+  HighPrecMoney: Kernel.Types.Common
+  MultiModalFareMediaType: Domain.Types.MultiModalFareLegRules
+  MultiModalPassengerType: Domain.Types.MultiModalFareLegRules
+  MultiModalNetwork: Domain.Types.MultiModalNetwork
+
+module: MultiModalFareComputation
+
+types:
+  MultiModalFare:
+    # id: Id
+    fare: HighPrecMoney
+    currency: Currency
+  GetFareReq:
+    media: MultiModalFareMediaType
+    distance: Meters
+    passengerType: MultiModalPassengerType
+    networkId: Id MultiModalNetwork
+
+
+
+apis:
+  - GET:
+      endpoint: /multimodal/{legRuleId}/fare
+      # auth: TokenAuth
+      params:
+        legRuleId: Id MultiModalFareLegRules
+      response:
+        type: MultiModalFare
+
+  - POST:
+      endpoint: /multimodal/fare
+      request:
+        type: GetFareReq
+      response:
+        type: MultiModalFare

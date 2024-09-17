@@ -1,0 +1,136 @@
+imports:
+  Currency: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+MultiModalFareLegRules:
+  tableName: multi_modal_fare_leg_rules
+
+  derives: "Generic, Show, Eq"
+
+  fields:
+    id: Id MultiModalFareLegRules
+    networkId: Id MultiModalNetwork
+    minDist: Meters
+    maxDist: Meters
+    fromTimeFrameId: Id MultiModalTimeFrame
+    toTimeFrameId: Id MultiModalTimeFrame
+    paymentMedia: MultiModalFareMediaType
+    amount: HighPrecMoney
+    currency: Currency
+    passengerType: MultiModalPassengerType
+
+  types:
+    MultiModalFareMediaType:
+      enum: "Cash, TransitCard, PrePaid"
+    MultiModalPassengerType:
+      enum: "Adult, Child, SeniorCitizen"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByNetworkId:
+      kvFunction: findAllWithKV
+      where: networkId
+    findByMinDist:
+      kvFunction: findAllWithKV
+      where: minDist
+    findByMaxDist:
+      kvFunction: findAllWithKV
+      where: maxDist
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+
+MultiModalTimeFrame:
+  tableName: multi_modal_time_frame
+
+  derives: "Generic, Show, Eq"
+
+  fields:
+    id: Id MultiModalTimeFrame
+    startTime: TimeOfDay
+    endTime: TimeOfDay
+    serviceId: Id MultiModalCalendar
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByStartTime:
+      kvFunction: findAllWithKV
+      where: startTime
+    findByEndTime:
+      kvFunction: findAllWithKV
+      where: endTime
+
+
+MultiModalNetwork:
+  tableName: multi_modal_network
+
+  derives: "Generic, Show, Eq"
+
+  fields:
+    id: Id MultiModalNetwork
+    name: Text
+    networkType: MultiModalNetworkType
+    networkCode: Text                                   # Eg: metro colour
+    networkClass: Text                                  # Eg: luxury bus, rapid metro ettc
+
+  types:
+    MultiModalNetworkType:
+      enum: "Bus, Train, Metro, Taxi"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByNetworkType:
+      kvFunction: findAllWithKV
+      where: networkType
+
+MultiModalCalendar:
+  tableName: multi_modal_calendar
+
+  derives: "Generic, Show, Eq"
+
+  fields:
+    id: Id MultiModalCalendar
+    startDate: Day                                          # to see
+    endDate: Day                                            # to see
+    monday: ServiceType
+    tuesday: ServiceType
+    wednesday: ServiceType
+    thursday: ServiceType
+    friday: ServiceType
+    saturday: ServiceType
+    sunday: ServiceType
+
+  types:
+    MultiModalDay:
+      enum: "Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday"
+
+    ServiceType:
+      enum: "Service, NoService"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+MultiModalStops:
+  tableName: multi_modal_stops
+
+  derives: "Generic, Show, Eq"
+
+  fields:
+    id: Id MultiModalStops
+    name: Text
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
