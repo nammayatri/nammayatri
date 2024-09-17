@@ -20,6 +20,7 @@ instance FromTType' Beam.DriverPlan Domain.Types.DriverPlan.DriverPlan where
     merchantId' <- Storage.Queries.Transformers.DriverPlan.getMerchantId merchantId driverId serviceName
     merchantOpCityId' <- Storage.Queries.Transformers.DriverPlan.getMerchantOpCityId merchantOpCityId driverId serviceName
     subscriptionServiceRelatedData' <- Storage.Queries.Transformers.DriverPlan.getSubscriptionServiceRelatedData rentedVehicleNumber
+    vehicleCategory' <- Storage.Queries.Transformers.DriverPlan.backfillVehicleCategoryByDriverIdAndServiceName vehicleCategory driverId serviceName planType planId
     pure $
       Just
         Domain.Types.DriverPlan.DriverPlan
@@ -41,7 +42,7 @@ instance FromTType' Beam.DriverPlan Domain.Types.DriverPlan.DriverPlan where
             subscriptionServiceRelatedData = subscriptionServiceRelatedData',
             totalCoinsConvertedCash = totalCoinsConvertedCash,
             updatedAt = updatedAt,
-            vehicleCategory = vehicleCategory
+            vehicleCategory = vehicleCategory'
           }
 
 instance ToTType' Beam.DriverPlan Domain.Types.DriverPlan.DriverPlan where

@@ -53,7 +53,7 @@ DriverPlan:
     subscriptionServiceRelatedData: Storage.Queries.Transformers.DriverPlan.getSubscriptionServiceRelatedData rentedVehicleNumber|EM
     merchantOpCityId: Storage.Queries.Transformers.DriverPlan.getMerchantOpCityId merchantOpCityId driverId serviceName|EM
     merchantId: Storage.Queries.Transformers.DriverPlan.getMerchantId merchantId driverId serviceName|EM
-
+    vehicleCategory: Storage.Queries.Transformers.DriverPlan.backfillVehicleCategoryByDriverIdAndServiceName vehicleCategory driverId serviceName planType planId|EM
   toTType:
     enableServiceUsageCharge: Kernel.Prelude.Just|I
     isOnFreeTrial : Kernel.Prelude.Just|I

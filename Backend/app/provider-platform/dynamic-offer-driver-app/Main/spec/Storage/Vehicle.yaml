@@ -50,6 +50,8 @@ Vehicle:
     vehicleRating: Maybe Double
     selectedServiceTiers: '[ServiceTierType]'
 
+  fromTType:
+    category : Domain.Types.VehicleVariant.getVehicleCategory category variant |E
   default:
     selectedServiceTiers: "'{}'"
 

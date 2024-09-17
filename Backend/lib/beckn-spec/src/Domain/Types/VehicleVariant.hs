@@ -19,6 +19,7 @@
 
 module Domain.Types.VehicleVariant where
 
+import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleCategory as DVC
@@ -109,3 +110,6 @@ castVehicleVariantToVehicleCategory = \case
   AMBULANCE_VENTILATOR -> DVC.AMBULANCE
   SUV_PLUS -> DVC.CAR
   DELIVERY_BIKE -> DVC.MOTORCYCLE
+
+getVehicleCategory :: Maybe DVC.VehicleCategory -> VehicleVariant -> Maybe DVC.VehicleCategory
+getVehicleCategory mbVehicleCategory variant = mbVehicleCategory <|> (Just $ castVehicleVariantToVehicleCategory variant)
