@@ -50,8 +50,20 @@ data Ride = Ride
     merchantOperatingCityId :: Id MerchantOperatingCity,
     createdAt :: UTCTime,
     counterPartyRideId :: Maybe Text,
-    merchantId :: Id Merchant
+    merchantId :: Id Merchant,
+    driverId :: Id Person
   }
+
+data Booking = Booking
+  { id :: Id Booking,
+    bapId :: Text,
+    bapUri :: BaseUrl,
+    quoteId :: Maybe (Id Quote),
+    providerId :: Id Merchant,
+    merchantOperatingCityId :: Id MerchantOperatingCity
+  }
+
+data Quote = Quote
 
 data MerchantOperatingCity = MerchantOperatingCity
   { id :: Id MerchantOperatingCity,
@@ -59,8 +71,8 @@ data MerchantOperatingCity = MerchantOperatingCity
     city :: Context.City
   }
 
-data MetroTicketBooking = MetroTicketBooking
-  { id :: Id MetroTicketBooking,
+data FRFSTicketBooking = FRFSTicketBooking
+  { id :: Id FRFSTicketBooking,
     merchantOperatingCityId :: Id MerchantOperatingCity,
     merchantId :: Id Merchant,
     providerId :: Text,
@@ -98,9 +110,13 @@ instance EncryptedItem' Person where
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
 
-newtype Merchant = Merchant
-  { shortId :: ShortId Merchant
+data Merchant = Merchant
+  { id :: Id Merchant,
+    shortId :: ShortId Merchant,
+    subscriberId :: ShortId Subscriber
   }
+
+data Subscriber = Subscriber {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data RideT
 

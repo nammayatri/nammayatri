@@ -12,6 +12,8 @@ module Storage.Beam.IssueManagement where
 
 import qualified Data.Text as T
 import qualified IssueManagement.Storage.Beam.Issue.Comment as BeamC
+import qualified IssueManagement.Storage.Beam.Issue.IGMConfig as BeamIGMC
+import qualified IssueManagement.Storage.Beam.Issue.IGMIssue as BeamIGI
 import qualified IssueManagement.Storage.Beam.Issue.IssueCategory as BeamIC
 import qualified IssueManagement.Storage.Beam.Issue.IssueConfig as BeamIC
 import qualified IssueManagement.Storage.Beam.Issue.IssueMessage as BeamIM
@@ -28,6 +30,12 @@ instance HasSchemaName BeamIC.IssueCategoryT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamIC.IssueConfigT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamIGI.IGMIssueT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamIGMC.IGMConfigT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamIM.IssueMessageT where

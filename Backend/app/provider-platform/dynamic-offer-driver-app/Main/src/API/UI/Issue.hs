@@ -28,6 +28,8 @@ import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.Booking as QB
+import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QR
 import Tools.Auth
@@ -62,6 +64,9 @@ driverIssueHandle =
       findRideById = castRideById,
       findMOCityById = castMOCityById,
       findMOCityByMerchantShortIdAndCity = castMOCityByMerchantShortIdAndCity,
+      findByBookingId = castBookingById,
+      findOneByBookingId = castRideByBookingId,
+      findByMerchantId = castMerchantById,
       getRideInfo = castRideInfo,
       createTicket = castCreateTicket,
       updateTicket = castUpdateTicket,
@@ -93,10 +98,10 @@ castPersonById driverId = do
 castRideById :: Id Common.Ride -> Id Common.Merchant -> Flow (Maybe Common.Ride)
 castRideById rideId merchantId = do
   ride <- runInReplica $ QR.findById (cast rideId)
-  return $ fmap castRide ride
+  return $ fmap castRideMapping ride
   where
     castRide ride =
-      Common.Ride (cast ride.id) (ShortId ride.shortId.getShortId) (cast ride.merchantOperatingCityId) ride.createdAt Nothing (maybe merchantId cast ride.merchantId)
+      Common.Ride (cast ride.id) (ShortId ride.shortId.getShortId) (cast ride.merchantOperatingCityId) ride.createdAt Nothing (maybe merchantId cast ride.merchantId) (cast ride.driverId)
 
 castMOCityById :: Id Common.MerchantOperatingCity -> Flow (Maybe Common.MerchantOperatingCity)
 castMOCityById moCityId = do
@@ -115,6 +120,41 @@ castMOCity moCity =
       city = moCity.city,
       merchantId = cast moCity.merchantId
     }
+
+castBookingById :: Id Common.Booking -> Flow (Maybe Common.Booking)
+castBookingById bookingId = do
+  booking <- runInReplica $ QB.findById (cast bookingId)
+  return $ fmap castBooking booking
+  where
+    castBooking booking =
+      Common.Booking
+        { id = cast booking.id,
+          bapId = booking.bapId,
+          bapUri = booking.bapUri,
+          quoteId = Nothing,
+          providerId = cast booking.providerId,
+          merchantOperatingCityId = cast booking.merchantOperatingCityId
+        }
+
+castRideByBookingId :: Id Common.Booking -> Flow (Maybe Common.Ride)
+castRideByBookingId bookingId = do
+  ride <- runInReplica $ QR.findOneByBookingId (cast bookingId)
+  return $ fmap castRide ride
+  where
+    castRide ride =
+      Common.Ride (cast ride.id) (ShortId ride.shortId.getShortId) (cast ride.merchantOperatingCityId) ride.createdAt Nothing (cast ride.driverId)
+
+castMerchantById :: Id Common.Merchant -> Flow (Maybe Common.Merchant)
+castMerchantById merchantId = do
+  merchant <- runInReplica $ QM.findById (cast merchantId)
+  return $ fmap castMerchant merchant
+  where
+    castMerchant merchant =
+      Common.Merchant
+        { id = cast merchant.id,
+          shortId = ShortId merchant.shortId.getShortId,
+          subscriberId = ShortId merchant.subscriberId.getShortId
+        }
 
 castRideInfo ::
   Id Common.Merchant ->

@@ -34,6 +34,7 @@ library
       API.Beckn.FRFS.OnInit
       API.Beckn.FRFS.OnSearch
       API.Beckn.FRFS.OnStatus
+      API.Beckn.IGM.Issue
       API.Beckn.IGM.OnIssue
       API.Beckn.IGM.OnIssueStatus
       API.Beckn.OnCancel

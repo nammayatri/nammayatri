@@ -26,14 +26,21 @@ flag Local
 
 library
   exposed-modules:
+      IssueManagement.API.Beckn.Issue
       IssueManagement.API.Dashboard.Issue
       IssueManagement.API.UI.Issue
+      IssueManagement.Beckn.ACL.IGM.Utils
+      IssueManagement.Beckn.ACL.Issue
       IssueManagement.Common
+      IssueManagement.Common.Beckn.Issue
       IssueManagement.Common.Dashboard.Issue
       IssueManagement.Common.UI.Issue
+      IssueManagement.Domain.Action.Beckn.Issue
       IssueManagement.Domain.Action.Dashboard.Issue
       IssueManagement.Domain.Action.UI.Issue
       IssueManagement.Domain.Types.Issue.Comment
+      IssueManagement.Domain.Types.Issue.IGMConfig
+      IssueManagement.Domain.Types.Issue.IGMIssue
       IssueManagement.Domain.Types.Issue.IssueCategory
       IssueManagement.Domain.Types.Issue.IssueConfig
       IssueManagement.Domain.Types.Issue.IssueMessage
@@ -42,6 +49,8 @@ library
       IssueManagement.Domain.Types.Issue.IssueTranslation
       IssueManagement.Domain.Types.MediaFile
       IssueManagement.Storage.Beam.Issue.Comment
+      IssueManagement.Storage.Beam.Issue.IGMConfig
+      IssueManagement.Storage.Beam.Issue.IGMIssue
       IssueManagement.Storage.Beam.Issue.IssueCategory
       IssueManagement.Storage.Beam.Issue.IssueConfig
       IssueManagement.Storage.Beam.Issue.IssueMessage
@@ -56,6 +65,8 @@ library
       IssueManagement.Storage.CachedQueries.Issue.IssueOption
       IssueManagement.Storage.CachedQueries.MediaFile
       IssueManagement.Storage.Queries.Issue.Comment
+      IssueManagement.Storage.Queries.Issue.IGMConfig
+      IssueManagement.Storage.Queries.Issue.IGMIssue
       IssueManagement.Storage.Queries.Issue.IssueCategory
       IssueManagement.Storage.Queries.Issue.IssueConfig
       IssueManagement.Storage.Queries.Issue.IssueMessage

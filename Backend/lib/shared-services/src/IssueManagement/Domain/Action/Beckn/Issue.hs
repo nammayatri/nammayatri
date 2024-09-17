@@ -12,33 +12,32 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Action.Beckn.IGM.Issue where
+module IssueManagement.Domain.Action.Beckn.Issue where
 
-import API.UI.Issue
-import Domain.Types.Booking
-import Domain.Types.IGMConfig
-import qualified Domain.Types.IGMIssue as DIGM
-import Domain.Types.Merchant
-import Domain.Types.MerchantOperatingCity
-import Environment
 import qualified IGM.Enums as Spec
+import IssueManagement.Common
 import qualified IssueManagement.Common.UI.Issue as Common
+import IssueManagement.Domain.Action.UI.Issue
 import qualified IssueManagement.Domain.Action.UI.Issue as Common
+import IssueManagement.Domain.Types.Issue.IGMConfig
+import qualified IssueManagement.Domain.Types.Issue.IGMIssue as DIGM
+-- import Kernel.Prelude
+-- import EulerHS.Prelude (withFile)
+
+import IssueManagement.Storage.BeamFlow
+import qualified IssueManagement.Storage.Queries.Issue.IGMConfig as QIGMConfig
+import qualified IssueManagement.Storage.Queries.Issue.IGMIssue as QIGM
 import qualified IssueManagement.Storage.Queries.Issue.IssueCategory as QIC
 import qualified IssueManagement.Storage.Queries.Issue.IssueOption as QIO
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.Merchant as QM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMOC
-import Storage.Queries.Booking as QB
-import qualified Storage.Queries.IGMConfig as QIGMConfig
-import qualified Storage.Queries.IGMIssue as QIGM
-import qualified Storage.Queries.Ride as QRide
 
 data DIssue = DIssue
   { issueId :: Text,
@@ -55,6 +54,21 @@ data DIssue = DIssue
     bapId :: Text
   }
   deriving (Show, Generic)
+
+data IssueRes = IssueRes
+  { issueId :: Text,
+    respondentAction :: Text,
+    groName :: Text,
+    groPhone :: Text,
+    groEmail :: Text,
+    createdAt :: UTCTimeRFC3339,
+    updatedAt :: UTCTimeRFC3339,
+    merchant :: Merchant,
+    merchantOperatingCity :: MerchantOperatingCity,
+    issueStatus :: DIGM.Status,
+    bapId :: Text,
+    bppId :: Text
+  }
 
 data ValidatedDIssue = ValidatedDIssue
   { issueId :: Text,
@@ -75,43 +89,53 @@ data ValidatedDIssue = ValidatedDIssue
     bppId :: Text
   }
 
-data IssueRes = IssueRes
-  { issueId :: Text,
-    respondentAction :: Text,
-    groName :: Text,
-    groPhone :: Text,
-    groEmail :: Text,
-    createdAt :: UTCTimeRFC3339,
-    updatedAt :: UTCTimeRFC3339,
-    merchant :: Merchant,
-    merchantOperatingCity :: MerchantOperatingCity,
-    issueStatus :: DIGM.Status,
-    bapId :: Text,
-    bppId :: Text
-  }
-
-validateRequest :: Id Merchant -> DIssue -> Flow ValidatedDIssue
-validateRequest merchantId dIssue@DIssue {..} = do
-  merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  booking <- QB.findById (Id dIssue.bookingId) >>= fromMaybeM (BookingDoesNotExist dIssue.bookingId)
-  merchantOperatingCity <- QMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
+validateRequest ::
+  ( BeamFlow m r,
+    EsqDBReplicaFlow m r,
+    CoreMetrics m
+  ) =>
+  Id Merchant ->
+  DIssue ->
+  ServiceHandle m ->
+  m ValidatedDIssue
+validateRequest merchantId dIssue@DIssue {..} iHandle = do
+  merchant <- iHandle.findByMerchantId merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  booking <- iHandle.findByBookingId (Id dIssue.bookingId) >>= fromMaybeM (BookingDoesNotExist dIssue.bookingId)
+  merchantOperatingCity <- iHandle.findMOCityById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
   issueStatus <- mapStatusAndTypeToStatus issueStatusText issueTypeText
   issueType <- mapType issueTypeText
   igmConfig <- QIGMConfig.findByMerchantId merchantId >>= fromMaybeM (InternalError $ "IGMConfig not found " <> show merchantId)
   let bppId = merchant.subscriberId.getShortId
   pure $ ValidatedDIssue {..}
 
-handler :: ValidatedDIssue -> Flow IssueRes
-handler ValidatedDIssue {..} = do
+handler ::
+  ( BeamFlow m r,
+    EsqDBReplicaFlow m r,
+    CoreMetrics m,
+    EncFlow m r,
+    HasField "sosAlertsTopicARN" r Text
+  ) =>
+  ValidatedDIssue ->
+  ServiceHandle m ->
+  m IssueRes
+handler ValidatedDIssue {..} iHandle = do
   now <- getCurrentTime
   case issueStatus of
-    DIGM.OPEN -> openBecknIssue ValidatedDIssue {..}
+    DIGM.OPEN -> openBecknIssue ValidatedDIssue {..} iHandle
     DIGM.ESCALATED -> escalateBecknIssue ValidatedDIssue {..} now
-    DIGM.CLOSED -> closeBecknIssue ValidatedDIssue {..} now
+    DIGM.CLOSED -> closeBecknIssue ValidatedDIssue {..} now iHandle
 
-openBecknIssue :: ValidatedDIssue -> Flow IssueRes
-openBecknIssue dIssue@ValidatedDIssue {..} = do
-  ride <- QRide.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
+openBecknIssue ::
+  ( EsqDBReplicaFlow m r,
+    EncFlow m r,
+    BeamFlow m r,
+    HasField "sosAlertsTopicARN" r Text
+  ) =>
+  ValidatedDIssue ->
+  ServiceHandle m ->
+  m IssueRes
+openBecknIssue dIssue@ValidatedDIssue {..} iHandle = do
+  ride <- iHandle.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
   -- riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id") -- shrey00 : incorporate it back?
   let igmIssue =
         DIGM.IGMIssue
@@ -120,7 +144,7 @@ openBecknIssue dIssue@ValidatedDIssue {..} = do
             DIGM.customerName = customerName,
             DIGM.customerPhone = customerPhone,
             DIGM.id = Id issueId,
-            DIGM.bookingId = booking.id,
+            DIGM.bookingId = getId booking.id,
             DIGM.issueRaisedByMerchant = bapId,
             DIGM.issueStatus = issueStatus,
             DIGM.issueType = issueType,
@@ -134,8 +158,8 @@ openBecknIssue dIssue@ValidatedDIssue {..} = do
   mbOption <- QIO.findByIGMIssueSubCategory issueSubCategory
   let optionId = mbOption <&> (.id)
       description = maybe "No description provided" (.option) mbOption
-  let issueReport = Common.IssueReportReq (Just $ cast ride.id) [] optionId category.id description Nothing (Just True)
-  void $ Common.createIssueReport (cast ride.driverId, cast dIssue.merchant.id) Nothing issueReport driverIssueHandle Common.DRIVER (Just issueId)
+  let issueReport = Common.IssueReportReq (Just $ cast ride.id) [] optionId category.id description Nothing (Just True) Nothing -- insert ticketbookingId, which is given by UI
+  void $ Common.createIssueReport (cast ride.driverId, cast dIssue.merchant.id) Nothing issueReport iHandle Common.DRIVER (Just issueId)
   pure $
     IssueRes
       { issueId = issueId,
@@ -149,7 +173,14 @@ openBecknIssue dIssue@ValidatedDIssue {..} = do
         ..
       }
 
-escalateBecknIssue :: ValidatedDIssue -> UTCTime -> Flow IssueRes
+escalateBecknIssue ::
+  ( EsqDBReplicaFlow m r,
+    EncFlow m r,
+    BeamFlow m r
+  ) =>
+  ValidatedDIssue ->
+  UTCTime ->
+  m IssueRes
 escalateBecknIssue ValidatedDIssue {..} now = do
   igmIssue <- QIGM.findByPrimaryKey (Id issueId) >>= fromMaybeM (InvalidRequest "Issue not found")
   let updatedIssue =
@@ -172,8 +203,16 @@ escalateBecknIssue ValidatedDIssue {..} now = do
         ..
       }
 
-closeBecknIssue :: ValidatedDIssue -> UTCTime -> Flow IssueRes
-closeBecknIssue ValidatedDIssue {..} now = do
+closeBecknIssue ::
+  ( EsqDBReplicaFlow m r,
+    EncFlow m r,
+    BeamFlow m r
+  ) =>
+  ValidatedDIssue ->
+  UTCTime ->
+  ServiceHandle m ->
+  m IssueRes
+closeBecknIssue ValidatedDIssue {..} now iHandle = do
   igmIssue <- QIGM.findByPrimaryKey (Id issueId) >>= fromMaybeM (InvalidRequest "Issue not found")
   let updatedIssue =
         igmIssue
@@ -184,9 +223,9 @@ closeBecknIssue ValidatedDIssue {..} now = do
   QIGM.updateByPrimaryKey updatedIssue
   issueReport <- QIR.findByBecknIssueId issueId >>= fromMaybeM (InvalidRequest "Issue Report not found")
   QIR.updateStatusAssignee issueReport.id (Just Common.CLOSED) issueReport.assignee
-  void $ Common.updateTicketStatus issueReport TIT.CL (cast merchant.id) (cast merchantOperatingCity.id) driverIssueHandle "Closed by person"
+  void $ Common.updateTicketStatus issueReport TIT.CL (cast merchant.id) (cast merchantOperatingCity.id) iHandle "Closed by person"
   pure $
-    IssueResku
+    IssueRes
       { issueId = issueId,
         respondentAction = show Spec.RESOLVED,
         groName = igmConfig.groName,
@@ -198,16 +237,16 @@ closeBecknIssue ValidatedDIssue {..} now = do
         ..
       }
 
-mapType :: MonadFlow m => Text -> m DIGM.IssueType
-mapType "ISSUE" = return DIGM.ISSUE
-mapType "GRIEVANCE" = return DIGM.GRIEVANCE
-mapType _ = throwError $ InvalidRequest "Invalid issue type"
-
 mapStatusAndTypeToStatus :: MonadFlow m => Text -> Text -> m DIGM.Status
 mapStatusAndTypeToStatus "OPEN" "ISSUE" = return DIGM.OPEN
 mapStatusAndTypeToStatus "OPEN" "GRIEVANCE" = return DIGM.ESCALATED
 mapStatusAndTypeToStatus "CLOSED" _ = return DIGM.CLOSED
 mapStatusAndTypeToStatus _ _ = throwError $ InvalidRequest "Invalid issue status or type"
+
+mapType :: MonadFlow m => Text -> m DIGM.IssueType
+mapType "ISSUE" = return DIGM.ISSUE
+mapType "GRIEVANCE" = return DIGM.GRIEVANCE
+mapType _ = throwError $ InvalidRequest "Invalid issue type"
 
 mapDomainStatusToSpecStatus :: DIGM.Status -> Maybe Text
 mapDomainStatusToSpecStatus DIGM.CLOSED = Just $ show Spec.CLOSED

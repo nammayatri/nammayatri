@@ -20,6 +20,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified EulerHS.Types as ET
 import IGM.Enums as Spec
 import IGM.Types as Spec
+import qualified IssueManagement.Common as Common
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -38,7 +39,7 @@ callOnIssue ::
   ) =>
   Spec.OnIssueReq ->
   BaseUrl ->
-  DM.Merchant ->
+  Common.Merchant ->
   m ()
 callOnIssue req bap_uri merchant = do
   let bppSubscriberId = getShortId $ merchant.subscriberId

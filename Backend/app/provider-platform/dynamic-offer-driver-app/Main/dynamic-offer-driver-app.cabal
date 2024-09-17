@@ -106,9 +106,7 @@ library
       Beckn.ACL.Common
       Beckn.ACL.Common.Order
       Beckn.ACL.Confirm
-      Beckn.ACL.IGM.Issue
       Beckn.ACL.IGM.IssueStatus
-      Beckn.ACL.IGM.OnIssue
       Beckn.ACL.IGM.OnIssueStatus
       Beckn.ACL.IGM.Utils
       Beckn.ACL.Init
@@ -138,7 +136,6 @@ library
       Beckn.OnDemand.Utils.Search
       Domain.Action.Beckn.Cancel
       Domain.Action.Beckn.Confirm
-      Domain.Action.Beckn.IGM.Issue
       Domain.Action.Beckn.IGM.IssueStatus
       Domain.Action.Beckn.Init
       Domain.Action.Beckn.Rating
@@ -716,8 +713,6 @@ library
       Domain.Types.FullFarePolicyProgressiveDetailsPerMinRateSection
       Domain.Types.GoHomeConfig
       Domain.Types.IdfyVerification
-      Domain.Types.IGMConfig
-      Domain.Types.IGMIssue
       Domain.Types.Image
       Domain.Types.Invoice
       Domain.Types.KioskLocation
@@ -835,8 +830,6 @@ library
       Storage.Beam.FullFarePolicyProgressiveDetailsPerMinRateSection
       Storage.Beam.GoHomeConfig
       Storage.Beam.IdfyVerification
-      Storage.Beam.IGMConfig
-      Storage.Beam.IGMIssue
       Storage.Beam.Image
       Storage.Beam.Invoice
       Storage.Beam.KioskLocation
@@ -958,8 +951,6 @@ library
       Storage.Queries.FullFarePolicyProgressiveDetailsPerMinRateSection
       Storage.Queries.GoHomeConfig
       Storage.Queries.IdfyVerification
-      Storage.Queries.IGMConfig
-      Storage.Queries.IGMIssue
       Storage.Queries.Image
       Storage.Queries.Invoice
       Storage.Queries.KioskLocation

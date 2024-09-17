@@ -46,7 +46,6 @@ import Domain.Types.CallStatus as CallStatus
 import Domain.Types.CallStatus as DCallStatus
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.Exophone as DExophone
-import Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
