@@ -14,6 +14,7 @@
 
 module Domain.Action.Beckn.Init where
 
+import qualified Domain.Action.UI.DemandHotspots as DemandHotspots
 import Domain.Types
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.DeliveryDetails as DTDD
@@ -39,6 +40,7 @@ import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.RiderDetails as SRD
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
+import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -52,6 +54,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Event
+import qualified Tools.Maps as Maps
 import Utils.Common.CacUtils
 
 data FulfillmentId = QuoteId (Id DQ.Quote) | DriverQuoteId (Id DDQ.DriverQuote)
@@ -127,7 +130,12 @@ handler merchantId req validatedReq = do
         booking <- buildBooking searchRequest quote quote.id.getId quote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl Nothing req.initReqDetails
         QRB.createBooking booking
         return (booking, Nothing, Nothing)
-
+  fork "Updating Demand Hotspots on booking" $ do
+    let lat = searchRequest.fromLocation.lat
+        lon = searchRequest.fromLocation.lon
+        merchantOpCityId = searchRequest.merchantOperatingCityId
+    transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    DemandHotspots.updateDemandHotspotsOnBooking merchantOpCityId transporterConfig (Maps.LatLong lat lon)
   let paymentMethodInfo = req.paymentMethodInfo
       bppSubscriberId = req.bppSubscriberId
       estimateId = req.estimateId

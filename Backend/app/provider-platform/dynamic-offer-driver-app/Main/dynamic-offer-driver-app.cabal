@@ -180,6 +180,7 @@ library
       Domain.Action.UI.CallStatus
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.City
+      Domain.Action.UI.DemandHotspots
       Domain.Action.UI.Driver
       Domain.Action.UI.DriverCoin
       Domain.Action.UI.DriverGoHomeRequest
@@ -613,6 +614,7 @@ library
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.RideBooking.Driver
       API.Action.UI.Cac
+      API.Action.UI.DemandHotspots
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.DriverProfileQuestions
       API.Action.UI.EditBooking
@@ -624,6 +626,7 @@ library
       API.Action.UI.SpecialLocation
       API.Action.UI.Tokenization
       API.Action.UI.VehicleDetails
+      API.Types.UI.DemandHotspots
       API.Types.UI.DriverOnboardingV2
       API.Types.UI.DriverProfileQuestions
       API.Types.UI.EditBooking

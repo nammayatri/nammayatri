@@ -71,6 +71,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     crossTravelCities :: [Kernel.Types.Beckn.City.City],
     currency :: Kernel.Types.Common.Currency,
     defaultPopupDelay :: Kernel.Types.Common.Seconds,
+    demandHotspotsConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DemandHotspotsConfig,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     dlNumberVerification :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverAutoPayExecutionTime :: Kernel.Prelude.NominalDiffTime,
@@ -226,6 +227,15 @@ data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
 
 data DashboardMediaSendingLimit = DashboardMediaSendingLimit {alert :: Kernel.Prelude.Int, overlay :: Kernel.Prelude.Int, sms :: Kernel.Prelude.Int, whatsapp :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, Read)
+
+data DemandHotspotsConfig = DemandHotspotsConfig
+  { analysisDurationMinutes :: Kernel.Prelude.Int,
+    enableDemandHotspots :: Kernel.Prelude.Bool,
+    noOfGeohashesToReturn :: Kernel.Prelude.Int,
+    precisionOfGeohash :: Kernel.Prelude.Int,
+    resultDurationMinutes :: Kernel.Prelude.Int
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 type TransporterConfig = TransporterConfigD 'Safe
 

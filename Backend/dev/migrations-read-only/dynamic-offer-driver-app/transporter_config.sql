@@ -256,3 +256,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_ra
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN arrival_time_buffer_of_vehicle json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN demand_hotspots_config json ;
