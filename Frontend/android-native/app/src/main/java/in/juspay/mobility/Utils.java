@@ -33,7 +33,6 @@ import in.juspay.services.HyperServices;
 public class Utils {
 
     public static void onGullakEvent(JSONObject jsonObject, Context context, SharedPreferences sharedPref, ActivityResultLauncher<Intent> activityResultLauncher){
-        if (!isClassAvailable("in.juspay.mobility.dynamicfeature.DynamicActivity")) return;
         try {
             if (jsonObject.has("action") && jsonObject.has("innerPayload")) {
                 JSONObject innerPayload = new JSONObject(jsonObject.getString("innerPayload"));
@@ -89,7 +88,7 @@ public class Utils {
 
     public static JSONObject getInnerPayload(JSONObject payload, String action, Context context) throws JSONException{
         String appName = "";
-        boolean loadDynamicModule = BuildConfig.includeDynamicFeature && isClassAvailable("in.juspay.mobility.dynamicfeature.DynamicActivity");
+        boolean loadDynamicModule = BuildConfig.includeDynamicFeature;
         try{
             appName = context.getApplicationInfo().loadLabel(context.getPackageManager()).toString();
         }catch (Exception e){
