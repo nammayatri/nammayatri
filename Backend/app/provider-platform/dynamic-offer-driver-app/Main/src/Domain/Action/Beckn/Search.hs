@@ -31,6 +31,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
 import Data.Ord
 import qualified Data.Text as T
+import qualified Domain.Action.UI.DemandHotspots as DemandHotspots
 import qualified Domain.Action.UI.Maps as DMaps
 import Domain.Types
 import Domain.Types.BapMetadata
@@ -238,7 +239,8 @@ handler ValidatedDSearchReq {..} sReq = do
               specialLocationName = allFarePoliciesProduct.specialLocationName
             }
     addNammaTags tagData
-
+  fork "Updating Demand Hotspots on search" $ do
+    DemandHotspots.updateDemandHotspotsOnSearch merchantOpCityId transporterConfig sReq.pickupLocation
   let buildEstimateHelper = buildEstimate merchantOpCityId currency distanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance specialLocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute searchReq.estimatedDuration
   let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration specialLocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute
   (estimates, quotes) <- foldrM (processPolicy buildEstimateHelper buildQuoteHelper) ([], []) selectedFarePolicies

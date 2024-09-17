@@ -628,6 +628,12 @@ DriverIntelligentPoolConfig:
 TransporterConfig:
   derives: Generic,Show,'UsageSafety
   types:
+    DemandHotspotsConfig:
+      enableDemandHotspots: Bool
+      precisionOfGeohash: Int
+      analysisDurationMinutes: Int
+      resultDurationMinutes: Int
+      noOfGeohashesToReturn: Int
     AadhaarImageResizeConfig:
       height: Int
       width: Int
@@ -833,6 +839,7 @@ TransporterConfig:
     cancellationRateWindow: Maybe Int
     cancellationRateCalculationThreshold: Maybe Int
     arrivalTimeBufferOfVehicle: Maybe ArrivalTimeBufferOfVehicle
+    demandHotspotsConfig: Maybe DemandHotspotsConfig
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -872,6 +879,7 @@ TransporterConfig:
     exotelStatusCheckSchedulerDelay: Maybe Seconds
     cachedDevicesOSForSearchRequest: "Maybe [Text]"
     arrivalTimeBufferOfVehicle: Maybe Value
+    demandHotspotsConfig: Maybe Value
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -920,6 +928,7 @@ TransporterConfig:
     exotelStatusCheckSchedulerDelay: Just $ Kernel.Types.Common.Seconds exotelStatusCheckSchedulerDelay|E
     cachedDevicesOSForSearchRequest: Just (Data.Text.pack . Kernel.Prelude.show <$> cachedDevicesOSForSearchRequest)|E
     arrivalTimeBufferOfVehicle: Kernel.Prelude.toJSON <$> arrivalTimeBufferOfVehicle|E
+    demandHotspotsConfig: Kernel.Prelude.toJSON <$> demandHotspotsConfig|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -971,6 +980,8 @@ TransporterConfig:
     cachedDevicesOSForSearchRequest: maybe [] (mapMaybe (readMaybe . Data.Text.unpack)) cachedDevicesOSForSearchRequest|E
     arrivalTimeBufferOfVehicle: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< arrivalTimeBufferOfVehicle|E
+    demandHotspotsConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< demandHotspotsConfig|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1023,6 +1034,7 @@ TransporterConfig:
     variantsToEnableForSubscription: "text[]"
     crossTravelCities: "text[]"
     arrivalTimeBufferOfVehicle: json
+    demandHotspotsConfig: json
 
   default:
     mediaFileUrlPattern: |-

@@ -202,7 +202,7 @@ let jobInfoMapx =
         , mapValue = False
         }
       , { mapKey = RiderJobType.OtherJobTypes, mapValue = False }
-      , { mapKey = AllocatorJobType.MetroIncentivePayout, mapValue = True }
+      , { mapKey = RiderJobType.MetroIncentivePayout, mapValue = True }
       ]
 
 let cacConfig =
