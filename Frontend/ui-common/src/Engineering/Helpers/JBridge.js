@@ -1026,14 +1026,16 @@ export const uploadMultiPartData = function (path, url, fileType, outputField, i
 
 export const startAudioRecording = function (fileName) {
   if (window.JBridge.startAudioRecording){
+    let response;
+    try {
+      response = JBridge.startAudioRecording(fileName);
+    } catch (err) {
+      response = JBridge.startAudioRecording();
+    }
     if (window.__OS == "IOS") {
-      return JBridge.startAudioRecording() == "0" ? false : true;
+        return response == "0" ? false : true;
     } else {
-      try {
-        return JBridge.startAudioRecording(fileName);
-      } catch (err) {
-        return JBridge.startAudioRecording();
-      }
+      return response
     }
   }
 };

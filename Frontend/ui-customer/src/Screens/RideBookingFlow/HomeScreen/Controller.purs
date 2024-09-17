@@ -304,7 +304,7 @@ eval (UpdateFollowers (FollowRideRes resp)) state = do
     }
   }
   where
-    transformFollower follower = {name : follower.name, bookingId : follower.bookingId, mobileNumber : follower.mobileNumber, priority : follower.priority, isManualFollower : false}
+    transformFollower follower = {name : follower.name, bookingId : follower.bookingId, mobileNumber : follower.mobileNumber, priority : follower.priority, isManualFollower : false, personId : follower.personId}
 
 
 eval GoToFollowRide state = exit $ ExitToFollowRide state{props{chatcallbackInitiated = false}}
@@ -2970,6 +2970,10 @@ eval (ServicesOnClick service) state = do
     RC.TRANSIT -> exit $ GoToMetroTicketBookingFlow state
     _ -> continue state
 
+eval (EnableShareRideForContact personId) state = do
+  let updatedContactList = map (\item -> if item.contactPersonId == Just personId then item {enableForShareRide = true} else item) (fromMaybe [] state.data.contactList)
+  continue state {data{contactList = Just updatedContactList, driverInfoCardState{currentChatRecipient{enableForShareRide = true}}}}
+
 eval _ state = update state
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
@@ -3447,13 +3451,19 @@ triggerFCM state message = do
                       let requestBody = { chatPersonId : contactId
                                         , body : message
                                         , title : "Message from " <> if DA.any (_ == (getValueToLocalStore USER_NAME)) ["__failed", ""] then (getString USER) else (getValueToLocalStore USER_NAME)
+                                        , source : Just API.USER
+                                        , channelId : Just state.data.driverInfoCardState.currentChatRecipient.uuid
+                                        , showNotification : Nothing
                                         }
                       (_ :: API.APISuccessResp) <- HelpersAPI.callApiBT $ API.MultiChatReq requestBody
                       let Tuple safetyCheckStartSeconds safetyCheckEndSeconds = case state.props.safetySettings of
                             Just (API.GetEmergencySettingsRes safetySettings) -> Tuple safetySettings.safetyCheckStartTime safetySettings.safetyCheckEndTime
                             Nothing -> Tuple Nothing Nothing 
-                      let isAlreadyRideShared = state.data.driverInfoCardState.currentChatRecipient.enableForShareRide || checkRideShareOptionConstraint state.data.driverInfoCardState.currentChatRecipient.shareTripWithEmergencyContactOption safetyCheckStartSeconds safetyCheckEndSeconds Nothing
-                      when (state.props.stageBeforeChatScreen == RideAccepted || not isAlreadyRideShared) $ void $ lift $ lift $ Remote.shareRide $ API.ShareRideReq { emergencyContactNumbers : [state.data.driverInfoCardState.currentChatRecipient.number]}
+                      let isAutomaticallyRideShared =  checkRideShareOptionConstraint state.data.driverInfoCardState.currentChatRecipient.shareTripWithEmergencyContactOption safetyCheckStartSeconds safetyCheckEndSeconds Nothing
+                          shouldTriggerShareRide = not state.data.driverInfoCardState.currentChatRecipient.enableForShareRide && (state.props.stageBeforeChatScreen == RideAccepted || not isAutomaticallyRideShared)
+                      when shouldTriggerShareRide $ do
+                        void $ lift $ lift $ Remote.shareRide $ API.ShareRideReq { emergencyContactNumbers : [state.data.driverInfoCardState.currentChatRecipient.number]}
+                        liftFlowBT $ push $ EnableShareRideForContact contactId
                       pure unit
                     Nothing -> pure unit
           pure NoAction

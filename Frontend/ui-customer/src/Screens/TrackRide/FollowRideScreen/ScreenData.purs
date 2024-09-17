@@ -64,6 +64,7 @@ dummyFollower =
   , mobileNumber: ""
   , priority: 0
   , isManualFollower : false
+  , personId : Nothing
   }
 
 mockFollower :: Followers
@@ -73,6 +74,7 @@ mockFollower =
   , mobileNumber: ""
   , priority: 0
   , isManualFollower : false
+  , personId : Nothing
   }
 
 mockRoute :: Route

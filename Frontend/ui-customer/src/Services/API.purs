@@ -3051,7 +3051,8 @@ newtype Followers = Followers {
   bookingId :: String,
   mobileNumber :: String,
   name :: Maybe String,
-  priority :: Int
+  priority :: Int,
+  personId :: Maybe String
 }
 
 instance makeFollowRideReq :: RestEndpoint FollowRideReq  where
@@ -3794,7 +3795,8 @@ data GetManuallySharedDetailsReq = GetManuallySharedDetailsReq String
 newtype GetManuallySharedDetailsRes = GetManuallySharedDetailsRes {
   bookingId :: String,
   customerName :: String,
-  customerPhone :: String
+  customerPhone :: String,
+  customerId :: Maybe String
 }
 
 instance makeGetManuallySharedDetailsReq :: RestEndpoint GetManuallySharedDetailsReq where
@@ -3821,12 +3823,15 @@ instance encodeGetManuallySharedDetailsRes :: Encode GetManuallySharedDetailsRes
 newtype MultiChatReq = MultiChatReq {
   chatPersonId :: String,
   body :: String,
-  title :: String
+  title :: String,
+  channelId :: Maybe String,
+  showNotification :: Maybe Boolean,
+  source :: Maybe MessageSource
 }
 
 instance makeMultiChatReq :: RestEndpoint MultiChatReq  where
  makeRequest reqBody@(MultiChatReq payload) headers = defaultMakeRequest POST (EP.multiChat "") headers reqBody Nothing
- encodeRequest req = standardEncode req
+ encodeRequest req = defaultEncode req
 
 derive instance genericMultiChatReq :: Generic MultiChatReq _
 derive instance newtypeMultiChatReq :: Newtype MultiChatReq _
@@ -3834,3 +3839,12 @@ instance standardEncodeMultiChatReq :: StandardEncode MultiChatReq where standar
 instance showMultiChatReq :: Show MultiChatReq where show = genericShow
 instance decodeMultiChatReq :: Decode MultiChatReq where decode = defaultDecode
 instance encodeMultiChatReq :: Encode MultiChatReq where encode = defaultEncode
+
+data MessageSource = USER | TRUSTED_CONTACT
+
+derive instance genericMessageSource :: Generic MessageSource _
+instance standardEncodeMessageSource :: StandardEncode MessageSource where standardEncode _ = standardEncode {}
+instance showMessageSource :: Show MessageSource where show = genericShow
+instance decodeMessageSource :: Decode MessageSource where decode = defaultDecode
+instance encodeMessageSource  :: Encode MessageSource where encode = defaultEnumEncode
+instance eqMessageSource :: Eq MessageSource where eq = genericEq

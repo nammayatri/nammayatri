@@ -15,10 +15,10 @@
 module Screens.FollowRideScreen.Controller where
 
 import Accessor (_lat, _lon)
-import Data.Array (elem, last, length, filter, delete, notElem)
+import Data.Array (elem, last, length, filter, delete, notElem, any)
 import Data.Function.Uncurried (runFn3, runFn1)
 import Data.Int (fromString)
-import Data.Maybe (Maybe(..), fromMaybe, isNothing)
+import Data.Maybe (Maybe(..), fromMaybe, isNothing, maybe)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, setText, updateIdMap, flowRunner, liftFlow)
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey, emChatSuggestion)
@@ -28,7 +28,7 @@ import PrestoDOM (BottomSheetState(..), Eval, update, continue, continueWithCmd,
 import Screens.HomeScreen.Transformer (getDriverInfo)
 import Screens.HomeScreen.ScreenData (dummyDriverInfo)
 import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState)
-import Services.API (RideBookingRes(..), Route, GetDriverLocationResp(..))
+import Services.API (RideBookingRes(..), Route, GetDriverLocationResp(..), MultiChatReq(..), APISuccessResp(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Common.Types.App (LazyCheck(..), SosStatus(..), Paths)
 import Components.DriverInfoCard as DriverInfoCard
@@ -60,6 +60,14 @@ import Storage (getValueToLocalStore)
 import DecodeUtil (stringifyJSON, decodeForeignAny, parseJSON)
 import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
 import Components.Safety.SafetyActionTileView as SafetyActionTileView
+import Control.Monad.Except.Trans (runExceptT)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Control.Transformers.Back.Trans (runBackT)
+import Helpers.API as HelpersAPI
+import Services.API as API
+import Engineering.Helpers.Suggestions(getMessageFromKey, chatSuggestion)
+import Constants (languageKey)
+import Locale.Utils (getLanguageLocale)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -328,7 +336,7 @@ eval action state = case action of
   SendQuickMessage chatSuggestion -> do
     if state.props.canSendSuggestion then do
       _ <- pure $ sendMessage chatSuggestion
-      continue state { props { unReadMessages = false } }
+      triggerFCM state { props { unReadMessages = false } } $ getMessageFromKey emChatSuggestion chatSuggestion (getLanguageLocale languageKey)
     else
       continue state
   RemoveNotification -> continue state { props { showChatNotification = false, isChatNotificationDismissed = true } }
@@ -356,7 +364,8 @@ eval action state = case action of
       if state.data.messageToBeSent /= "" then do
         pure $ sendMessage state.data.messageToBeSent
         pure $ setText (getNewIDWithTag "ChatInputEditText") ""
-        continue state { data { messageToBeSent = "" }, props { sendMessageActive = false } }
+        let message = state.data.messageToBeSent
+        triggerFCM state { data { messageToBeSent = "" }, props { sendMessageActive = false } } message
       else
         continue state
     MessagingView.BackPressed -> do
@@ -369,7 +378,7 @@ eval action state = case action of
     MessagingView.SendSuggestion chatSuggestion ->
       if state.props.canSendSuggestion then do
         _ <- pure $ sendMessage chatSuggestion
-        continue state { data { chatSuggestionsList = [] }, props { canSendSuggestion = false } }
+        triggerFCM state { data { chatSuggestionsList = [] }, props { canSendSuggestion = false } } $ getMessageFromKey emChatSuggestion chatSuggestion (getLanguageLocale languageKey)
       else
         continue state
     _ -> continue state
@@ -485,3 +494,37 @@ clearAlarmStatus currentFollower = do
   let bookingId = if currentFollower.bookingId /= "mock_drill" then "mock_" <> currentFollower.bookingId else currentFollower.bookingId
       _ = removeSOSAlarmStatus bookingId
   unit
+
+triggerFCM :: FollowRideScreenState -> String -> Eval Action ScreenOutput FollowRideScreenState
+triggerFCM state message = do 
+  continueWithCmd state [
+        do
+          void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT
+            $ do
+                push <- liftFlowBT $ getPushFn Nothing "FollowRideScreen"
+                case state.data.currentFollower of
+                  Just follower -> 
+                    maybe (pure unit) (\personId -> do
+                        let requestBody = 
+                              { chatPersonId : personId
+                              , body : message
+                              , title : "Message from " <> 
+                                          if any (_ == (getValueToLocalStore USER_NAME)) ["__failed", ""] 
+                                            then (getString USER) 
+                                            else (getValueToLocalStore USER_NAME)
+                              , source : Just API.TRUSTED_CONTACT
+                              , channelId : Just $ getChatChannelId state
+                              , showNotification : Nothing
+                              }
+                        (_ :: APISuccessResp) <- HelpersAPI.callApiBT $ MultiChatReq requestBody
+                        pure unit) follower.personId
+                  Nothing -> pure unit
+          pure NoAction
+    ]
+
+getChatChannelId :: FollowRideScreenState -> String
+getChatChannelId state = do 
+  let cFollower = fromMaybe dummyFollower state.data.currentFollower
+      customerId = getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys
+      rideId = fromMaybe "" $ state.data.driverInfoCardState <#> _.rideId
+  if cFollower.priority == 0 then rideId else rideId <> "$" <> customerId

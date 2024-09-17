@@ -306,7 +306,10 @@ eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
 eval (SafetyAudioRecordingAction SafetyAudioRecording.StartRecord) state = 
   continueWithCmd state { props { recordingTimer = "00 : 00", audioRecordingStatus = CTA.RECORDING  } }  [do
     push <- getPushFn Nothing "ActivateSafetyScreen"
-    recordingStarted <- runEffectFn1 JB.startAudioRecording $ "/safety-recording/" <> state.data.rideId <> "/" <> EHC.getCurrentUTC "" <> ".mp3"
+    let extension = if EHC.os == "IOS" then ".wav" else ".mp3"
+        audioPath = if state.props.showTestDrill then "" else ("/safety-recording/" <> state.data.rideId <> "/" <> EHC.getCurrentUTC "" <> extension)
+
+    recordingStarted <- runEffectFn1 JB.startAudioRecording audioPath
     if recordingStarted then do
       void $ pure $ clearTimerWithId state.props.recordingTimerId
       void $ runEffectFn1 JB.removeMediaPlayer ""

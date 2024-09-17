@@ -336,7 +336,8 @@ data Action = NoAction
   | ShakeActionCallback Int
   | UpdateSafetySettings GetEmergencySettingsRes
   | ServicesOnClick RemoteConfig.Service
-
+  | EnableShareRideForContact String 
+  
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where
   performLog = defaultPerformLog
