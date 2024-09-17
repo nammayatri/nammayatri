@@ -16,6 +16,7 @@ module SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS where
 
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Types.Id
@@ -30,6 +31,7 @@ checkPNAndSendSMS ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     MonadFlow m,
+    ServiceFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig]
   ) =>
@@ -48,6 +50,7 @@ sendSMS ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     MonadFlow m,
+    ServiceFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig]
   ) =>

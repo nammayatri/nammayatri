@@ -52,6 +52,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import qualified Kernel.External.Maps as Maps
+import Kernel.External.Types
 import qualified Kernel.External.Types as Language
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
@@ -199,6 +200,7 @@ auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
     CacheFlow m r,
     DB.EsqDBReplicaFlow m r,
+    ServiceFlow m r,
     EsqDBFlow m r,
     EncFlow m r
   ) =>
@@ -299,6 +301,7 @@ signatureAuth ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion],
     CacheFlow m r,
     DB.EsqDBReplicaFlow m r,
+    ServiceFlow m r,
     EsqDBFlow m r,
     EncFlow m r
   ) =>
@@ -484,7 +487,7 @@ makeSession authMedium SmsSessionConfig {..} entityId merchantId fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
 
-verifyFlow :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
+verifyFlow :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m, ServiceFlow m r) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
 verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   let isNewPerson = person.isNew
   RegistrationToken.deleteByPersonIdExceptNew person.id regToken.id
@@ -509,6 +512,7 @@ verify ::
   ( CacheFlow m r,
     HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
     EsqDBFlow m r,
+    ServiceFlow m r,
     DB.EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
     EncFlow m r
@@ -549,7 +553,8 @@ verify tokenId req = do
 callWhatsappOptApi ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    ServiceFlow m r
   ) =>
   Text ->
   Id SP.Person ->
@@ -630,6 +635,7 @@ resend ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     EncFlow m r,
+    ServiceFlow m r,
     CacheFlow m r
   ) =>
   Id SR.RegistrationToken ->

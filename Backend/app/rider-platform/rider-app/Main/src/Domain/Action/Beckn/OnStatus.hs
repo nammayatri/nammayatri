@@ -36,7 +36,7 @@ import qualified Domain.Types.VehicleVariant as DV
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -232,6 +232,7 @@ validateRequest ::
     CacheFlow m r,
     EsqDBFlow m r,
     HasBAPMetrics m r,
+    ServiceFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,

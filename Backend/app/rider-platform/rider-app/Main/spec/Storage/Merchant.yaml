@@ -273,16 +273,25 @@ MerchantServiceUsageConfig:
     initiateCall: CallService
     notifyPerson: NotificationService
     getDistances: MapsService
+    getDistancesPriorityList: "[MapsService]"
     getRoutes: MapsService
+    getRoutesPriorityList: "[MapsService]"
     snapToRoad: MapsService
     getPlaceName: MapsService
+    getPlaceNamePriorityList: "[MapsService]"
     getPickupRoutes: MapsService
+    getPickupRoutesPriorityList: "[MapsService]"
     getTripRoutes: MapsService
+    getTripRoutesPriorityList: "[MapsService]"
     getPlaceDetails: MapsService
+    getPlaceDetailsPriorityList: "[MapsService]"
     autoComplete: MapsService
+    autoCompletePriorityList: "[MapsService]"
     aadhaarVerificationService: AadhaarVerificationService
     getDistancesForCancelRide: MapsService
+    getDistancesForCancelRidePriorityList: "[MapsService]"
     getDistancesForScheduledRides: MapsService
+    getDistancesForScheduledRidesPriorityList: "[MapsService]"
     smsProvidersPriorityList: "[SmsService]"
     whatsappProvidersPriorityList: "[WhatsappService]"
     issueTicketService: IssueTicketService
@@ -304,12 +313,41 @@ MerchantServiceUsageConfig:
 
   beamType:
     cancelPaymentIntent: Maybe PaymentService
+    getDistancesPriorityList : Maybe [MapsService]
+    getRoutesPriorityList : Maybe [MapsService]
+    getPlaceNamePriorityList : Maybe [MapsService]
+    getPickupRoutesPriorityList : Maybe [MapsService]
+    getTripRoutesPriorityList : Maybe [MapsService]
+    getPlaceDetailsPriorityList : Maybe [MapsService]
+    autoCompletePriorityList : Maybe [MapsService]
+    getDistancesForCancelRidePriorityList : Maybe [MapsService]
+    getDistancesForScheduledRidesPriorityList : Maybe [MapsService]
 
   fromTType:
     cancelPaymentIntent: fromMaybe (Kernel.External.Payment.Types.Stripe) cancelPaymentIntent|E
+    getDistancesPriorityList: fromMaybe [] getDistancesPriorityList|E
+    getRoutesPriorityList: fromMaybe [] getRoutesPriorityList|E
+    getPlaceNamePriorityList: fromMaybe [] getPlaceNamePriorityList|E
+    getPickupRoutesPriorityList: fromMaybe [] getPickupRoutesPriorityList|E
+    getTripRoutesPriorityList: fromMaybe [] getTripRoutesPriorityList|E
+    getPlaceDetailsPriorityList: fromMaybe [] getPlaceDetailsPriorityList|E
+    autoCompletePriorityList: fromMaybe [] autoCompletePriorityList|E
+    getDistancesForCancelRidePriorityList: fromMaybe [] getDistancesForCancelRidePriorityList|E
+    getDistancesForScheduledRidesPriorityList: fromMaybe [] getDistancesForScheduledRidesPriorityList|E
+
+
 
   toTType:
     cancelPaymentIntent: Kernel.Prelude.Just|I
+    getDistancesPriorityList: Kernel.Prelude.Just|I
+    getRoutesPriorityList: Kernel.Prelude.Just|I
+    getPlaceNamePriorityList: Kernel.Prelude.Just|I
+    getPickupRoutesPriorityList: Kernel.Prelude.Just|I
+    getTripRoutesPriorityList: Kernel.Prelude.Just|I
+    getPlaceDetailsPriorityList: Kernel.Prelude.Just|I
+    autoCompletePriorityList: Kernel.Prelude.Just|I
+    getDistancesForCancelRidePriorityList: Kernel.Prelude.Just|I
+    getDistancesForScheduledRidesPriorityList: Kernel.Prelude.Just|I
 
   beamInstance:
     - MakeTableInstances
@@ -343,6 +381,15 @@ MerchantServiceUsageConfig:
     issueTicketService: character varying(30)
     getExophone: character varying (255)
     aadhaarVerificationService: character varying(30)
+    getPickupRoutesPriorityList: "text[]"
+    getRoutesPriorityList: "text[]"
+    getDistancesPriorityList: "text[]"
+    getTripRoutesPriorityList: "text[]"
+    getPlaceNamePriorityList: "text[]"
+    getPlaceDetailsPriorityList: "text[]"
+    autoCompletePriorityList: "text[]"
+    getDistancesForCancelRidePriorityList: "text[]"
+    getDistancesForScheduledRidesPriorityList: "text[]"
 
   default:
     getPickupRoutes: "'Google'"
@@ -361,6 +408,8 @@ MerchantServiceUsageConfig:
     createSetupIntent: "'Stripe'"
     deleteCard: "'Stripe'"
     getDistancesForScheduledRides: "'OSRM'"
+
+
 
 MerchantPaymentMethod:
   derives: "Generic,'UsageSafety"

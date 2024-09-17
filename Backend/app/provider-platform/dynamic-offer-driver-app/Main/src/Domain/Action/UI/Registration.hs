@@ -44,6 +44,7 @@ import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
+import Kernel.External.Types
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -132,6 +133,7 @@ auth ::
     CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
+    ServiceFlow m r,
     EncFlow m r
   ) =>
   Bool ->
@@ -389,6 +391,7 @@ verify ::
     EsqDBFlow m r,
     EncFlow m r,
     CacheFlow m r,
+    ServiceFlow m r,
     EsqDBReplicaFlow m r
   ) =>
   Id SR.RegistrationToken ->
@@ -430,7 +433,8 @@ verify tokenId req = do
 callWhatsappOptApi ::
   ( EsqDBFlow m r,
     EncFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    ServiceFlow m r
   ) =>
   Text ->
   Id SP.Person ->
@@ -455,7 +459,8 @@ resend ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
     EncFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    ServiceFlow m r
   ) =>
   Id SR.RegistrationToken ->
   m ResendAuthRes

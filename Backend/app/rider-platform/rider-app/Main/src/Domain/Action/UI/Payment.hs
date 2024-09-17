@@ -34,6 +34,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Types as Payment
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
 import qualified Kernel.Storage.Hedis as Redis
@@ -110,7 +111,8 @@ getStatus ::
     L.MonadFlow m,
     EsqDBFlow m r,
     EncFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    ServiceFlow m r
   ) =>
   (Id DP.Person, Id DM.Merchant) ->
   Id DOrder.PaymentOrder ->

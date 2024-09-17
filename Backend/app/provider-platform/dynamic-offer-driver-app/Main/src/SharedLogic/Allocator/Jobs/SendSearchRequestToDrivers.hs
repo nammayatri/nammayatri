@@ -25,6 +25,7 @@ import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import Domain.Types.SearchTry (SearchTry)
 import qualified Kernel.Beam.Functions as B
+import Kernel.External.Types
 import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
@@ -61,6 +62,7 @@ sendSearchRequestToDrivers ::
     Metrics.HasSendSearchRequestToDriverMetrics m r,
     CacheFlow m r,
     EsqDBFlow m r,
+    ServiceFlow m r,
     Log m,
     MonadFlow m,
     LT.HasLocationService m r,
@@ -122,6 +124,7 @@ sendSearchRequestToDrivers' ::
     EsqDBReplicaFlow m r,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
     CacheFlow m r,
+    ServiceFlow m r,
     EsqDBFlow m r,
     Log m,
     LT.HasLocationService m r,

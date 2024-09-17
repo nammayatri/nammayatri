@@ -23,7 +23,7 @@ import Domain.Types.RiderConfig
 import qualified Kernel.Beam.Functions as B
 import qualified Kernel.External.Call.Interface.Types as Call
 import Kernel.External.Encryption (decrypt)
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -43,6 +43,7 @@ sendSafetyIVR ::
     CacheFlow m r,
     MonadFlow m,
     EsqDBFlow m r,
+    ServiceFlow m r,
     SchedulerFlow r
   ) =>
   Job 'SafetyIVR ->
@@ -69,6 +70,7 @@ sendSafetyIVR Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
         CacheFlow m r,
         MonadFlow m,
         EsqDBFlow m r,
+        ServiceFlow m r,
         SchedulerFlow r
       ) =>
       DP.Person ->
