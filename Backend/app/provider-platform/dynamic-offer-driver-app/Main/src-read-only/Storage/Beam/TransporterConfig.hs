@@ -181,6 +181,7 @@ data TransporterConfigT f = TransporterConfigT
     updatePayoutStatusBatchSize :: B.C f Kernel.Prelude.Int,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     upwardsRecomputeBuffer :: B.C f Kernel.Types.Common.HighPrecMeters,
+    upwardsRecomputeBufferPercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     useOfferListCache :: B.C f Kernel.Prelude.Bool,
     useSilentFCMForForwardBatch :: B.C f Kernel.Prelude.Bool,
     useWithSnapToRoadFallback :: B.C f Kernel.Prelude.Bool,

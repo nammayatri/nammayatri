@@ -444,6 +444,7 @@ types:
     - searchRepeatLimit: Int
     - actualRideDistanceDiffThreshold: HighPrecMeters
     - upwardsRecomputeBuffer: HighPrecMeters
+    - upwardsRecomputeBufferPercentage: Maybe Int
     - approxRideDistanceDiffThreshold: HighPrecMeters
     - actualRideDistanceDiffThresholdWithUnit: Distance
     - upwardsRecomputeBufferWithUnit: Distance
