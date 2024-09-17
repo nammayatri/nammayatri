@@ -40,7 +40,7 @@ import PrestoDOM (PrestoDOM, Screen, BottomSheetState(..), onAnimationEnd, onBac
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout, frameLayout, imageView, linearLayout, relativeLayout, scrollView, textView)
 import PrestoDOM.Properties (alignParentBottom, accessibility, alpha, background, clickable, color, cornerRadii, cornerRadius, enableShift, gradient, gravity, height, id, imageWithFallback, margin, orientation, padding, peakHeight, stroke, sheetState, text, visibility, weight, width)
 import PrestoDOM.Types.DomAttributes (Accessiblity(..), Corners(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..))
-import Screens.FollowRideScreen.Controller (Action(..), ScreenOutput, eval, isMockDrill, localDelay, getPoint, getPeekHeight, getSosStatus)
+import Screens.FollowRideScreen.Controller (Action(..), ScreenOutput, eval, isMockDrill, localDelay, getPoint, getPeekHeight, getSosStatus, getChatChannelId)
 import Screens.FollowRideScreen.ScreenData (mockDriverInfo, mockDriverLocation, mockRoute)
 import Screens.FollowRideScreen.Config (SOSOverlayConfig, genericHeaderConfig, getCurrentFollower, getDriverDetails, getFollowerName, getSosOverlayConfig, getTripDetails, primaryButtonConfig, getChatSuggestions)
 import Services.API (GetDriverLocationResp(..), GetRouteResp(..), LatLong(..), RideBookingRes(..), Route(..), Snapped(..))
@@ -132,9 +132,8 @@ checkChatService push retry rideId state =
 
 startChatServices :: (Action -> Effect Unit) -> String -> FollowRideScreenState -> Effect Unit
 startChatServices push rideId state = do
-  let cFollower = getCurrentFollower state.data.currentFollower
-      customerId = getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys
-      channelId = if cFollower.priority == 0 then rideId else rideId <> "$" <> customerId
+  let customerId = getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys
+      channelId = getChatChannelId state
   void $ clearChatMessages
   void $ storeCallBackMessageUpdated push channelId customerId UpdateMessages AllChatsLoaded
   void $ storeCallBackOpenChatScreen push OpenChatScreen

@@ -401,7 +401,7 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
                   res <- lift $ lift $ HelpersAPI.callApi $ GetManuallySharedDetailsReq rId
                   case res of
                     Right (GetManuallySharedDetailsRes rideDetails) -> do
-                      let follower = { name : Just rideDetails.customerName, bookingId : rideDetails.bookingId, mobileNumber : rideDetails.customerPhone, priority : 0, isManualFollower : true }
+                      let follower = { name : Just rideDetails.customerName, bookingId : rideDetails.bookingId, mobileNumber : rideDetails.customerPhone, priority : 0, isManualFollower : true, personId : rideDetails.customerId }
                       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { followers = Just [follower], manuallySharedFollowers = Just [follower] } })
                       void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                       updateFollower false true Nothing
@@ -2678,7 +2678,7 @@ updateFollower callFollowersApi callInitUi eventType = do
         Left err -> pure $ fromMaybe [] allState.homeScreen.data.followers
     else do
       pure $ fromMaybe [] allState.homeScreen.data.followers
-  transformFollower follower = {name : follower.name, bookingId : follower.bookingId, mobileNumber : follower.mobileNumber, priority : follower.priority, isManualFollower : false}
+  transformFollower follower = {name : follower.name, bookingId : follower.bookingId, mobileNumber : follower.mobileNumber, priority : follower.priority, isManualFollower : false, personId : follower.personId}
 
 followRideScreenFlow :: Boolean -> FlowBT String Unit
 followRideScreenFlow callInitUI = do
