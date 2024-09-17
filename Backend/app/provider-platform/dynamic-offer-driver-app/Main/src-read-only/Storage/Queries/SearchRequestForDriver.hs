@@ -33,13 +33,15 @@ findAllActiveBySTId searchTryId status = do findAllWithKV [Se.And [Se.Is Beam.se
 
 updateDriverResponse ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriverResponse -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource -> Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m ())
-updateDriverResponse response status notificationSource id = do
+  (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.SearchRequestForDriverResponse -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver -> m ())
+updateDriverResponse response status notificationSource renderedAt respondedAt id = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.response response,
       Se.Set Beam.status status,
       Se.Set Beam.notificationSource notificationSource,
+      Se.Set Beam.renderedAt renderedAt,
+      Se.Set Beam.respondedAt respondedAt,
       Se.Set Beam.updatedAt (Just _now)
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -99,7 +101,9 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.parallelSearchRequestCount parallelSearchRequestCount,
       Se.Set Beam.pickupZone pickupZone,
       Se.Set Beam.previousDropGeoHash previousDropGeoHash,
+      Se.Set Beam.renderedAt renderedAt,
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
+      Se.Set Beam.respondedAt respondedAt,
       Se.Set Beam.response response,
       Se.Set Beam.rideFrequencyScore rideFrequencyScore,
       Se.Set Beam.rideRequestPopupDelayDuration rideRequestPopupDelayDuration,
