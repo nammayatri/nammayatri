@@ -27,3 +27,8 @@ type IssueAPI =
   Capture "merchantId" (Id Merchant)
     :> SignatureAuth 'Domain.MOBILITY "Authorization"
     :> Spec.IssueAPI
+
+type IssueStatusAPI =
+  Capture "merchantId" (Id Merchant)
+    :> SignatureAuth 'Domain.MOBILITY "Authorization"
+    :> Spec.IssueStatusAPI

@@ -97,8 +97,16 @@ customerIssueHandle =
       mbReportIssue = Just reportIssue,
       mbFindLatestBookingByPersonId = Just findLatestBookingByRiderId,
       mbFindRideByBookingId = Just findRideByBookingId,
-      mbSyncRide = Just syncRide
+      mbSyncRide = Just syncRide,
+      getAppEnvs = getAppEnvs
     }
+
+getAppEnvs :: Flow AppEnvs
+getAppEnvs = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  nwAddress <- asks (.nwAddress)
+  let res = AppEnvs {internalEndPointHashMap = internalEndPointHashMap, nwAddress = nwAddress}
+  return res
 
 castPersonById :: Id Common.Person -> Flow (Maybe Common.Person)
 castPersonById personId = do

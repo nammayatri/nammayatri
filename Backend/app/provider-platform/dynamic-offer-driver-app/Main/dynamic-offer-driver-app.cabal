@@ -31,7 +31,6 @@ library
       API.Beckn.Cancel
       API.Beckn.Confirm
       API.Beckn.IGM.Issue
-      API.Beckn.IGM.IssueStatus
       API.Beckn.Init
       API.Beckn.Rating
       API.Beckn.Search
@@ -106,8 +105,6 @@ library
       Beckn.ACL.Common
       Beckn.ACL.Common.Order
       Beckn.ACL.Confirm
-      Beckn.ACL.IGM.IssueStatus
-      Beckn.ACL.IGM.OnIssueStatus
       Beckn.ACL.IGM.Utils
       Beckn.ACL.Init
       Beckn.ACL.OnCancel
@@ -136,7 +133,6 @@ library
       Beckn.OnDemand.Utils.Search
       Domain.Action.Beckn.Cancel
       Domain.Action.Beckn.Confirm
-      Domain.Action.Beckn.IGM.IssueStatus
       Domain.Action.Beckn.Init
       Domain.Action.Beckn.Rating
       Domain.Action.Beckn.Search

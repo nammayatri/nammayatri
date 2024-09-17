@@ -31,11 +31,13 @@ library
       IssueManagement.API.UI.Issue
       IssueManagement.Beckn.ACL.IGM.Utils
       IssueManagement.Beckn.ACL.Issue
+      IssueManagement.Beckn.ACL.IssueStatus
       IssueManagement.Common
       IssueManagement.Common.Beckn.Issue
       IssueManagement.Common.Dashboard.Issue
       IssueManagement.Common.UI.Issue
       IssueManagement.Domain.Action.Beckn.Issue
+      IssueManagement.Domain.Action.Beckn.IssueStatus
       IssueManagement.Domain.Action.Dashboard.Issue
       IssueManagement.Domain.Action.UI.Issue
       IssueManagement.Domain.Types.Issue.Comment
@@ -48,6 +50,7 @@ library
       IssueManagement.Domain.Types.Issue.IssueReport
       IssueManagement.Domain.Types.Issue.IssueTranslation
       IssueManagement.Domain.Types.MediaFile
+      IssueManagement.SharedLogic.CallAPI
       IssueManagement.Storage.Beam.Issue.Comment
       IssueManagement.Storage.Beam.Issue.IGMConfig
       IssueManagement.Storage.Beam.Issue.IGMIssue
