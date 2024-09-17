@@ -43,14 +43,6 @@ type API = BI.IssueAPI
 handler :: FlowServer API
 handler = issue
 
--- becknIssueHandle :: DIssue.ServiceHandle Flow
--- becknIssueHandle =
---   DIssue.ServiceHandle
---     { findByBookingId = AUI.castBookingById,
---       findOneByBookingId = AUI.castRideByBookingId,
---       findByMerchantId = AUI.buildMerchantConfig
---     }
-
 issue ::
   Id Common.Merchant ->
   SignatureAuthResult ->
@@ -79,12 +71,3 @@ issueLockKey message_id = "IGM:Issue:MessageId" <> message_id
 
 issueProcessingLockKey :: Text -> Text
 issueProcessingLockKey id = "IGM:OnIssue:Processing:MessageId-" <> id
-
--- castCommonToMerchantDomainType :: Common.Merchant -> DM.Merchant
--- castCommonToMerchantDomainType merchant =
---   DM.Merchant
---     { DM.id = cast merchant.id,
---       DM.shortId = ShortId $ getShortId merchant.shortId,
---       DM.subscriberId = ShortId $ getShortId merchant.subscriberId,
---       ..
---     }

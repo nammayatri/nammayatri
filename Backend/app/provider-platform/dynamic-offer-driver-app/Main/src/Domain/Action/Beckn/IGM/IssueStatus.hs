@@ -14,22 +14,23 @@
 
 module Domain.Action.Beckn.IGM.IssueStatus where
 
-import Domain.Types.IGMConfig
-import qualified Domain.Types.IGMIssue as DIGM
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity
-import Environment
-import qualified IGM.Enums as Spec
+import IssueManagement.Domain.Types.Issue.IGMConfig
+import qualified IssueManagement.Domain.Types.Issue.IGMIssue as DIGM
+-- import Environment
+-- import qualified IGM.Enums as Spec
 import Kernel.Prelude
-import Kernel.Types.Error
+-- import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.TimeRFC339
-import Kernel.Utils.Common
-import qualified Storage.CachedQueries.Merchant as QM
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMOC
-import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.IGMConfig as QIGMConfig
-import qualified Storage.Queries.IGMIssue as QIGM
+
+-- import Kernel.Utils.Common
+-- import qualified Storage.CachedQueries.Merchant as QM
+-- import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMOC
+-- import qualified Storage.Queries.Booking as QRB
+-- import qualified IssueManagement.Storage.Queries.Issue.IGMConfig as QIGMConfig
+-- import qualified IssueManagement.Storage.Queries.Issue.IGMIssue as QIGM
 
 data DIssueStatus = DIssueStatus
   { issueId :: Text,
@@ -62,25 +63,25 @@ data IssueStatusRes = IssueStatusRes
   }
   deriving (Show, Generic)
 
-validateRequest :: DIssueStatus -> Flow ValidatedDIssueStatus
-validateRequest DIssueStatus {..} = do
-  issue <- QIGM.findByPrimaryKey (Id issueId) >>= fromMaybeM (InvalidRequest "Issue not found")
-  merchant <- QM.findById (issue.merchantId) >>= fromMaybeM (InvalidRequest "Merchant not found")
-  booking <- QRB.findById (issue.bookingId) >>= fromMaybeM (InvalidRequest "Booking not found")
-  igmConfig <- QIGMConfig.findByMerchantId merchant.id >>= fromMaybeM (InternalError $ "IGMConfig not found " <> show merchant.id)
-  merchantOperatingCity <- QMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-  pure ValidatedDIssueStatus {..}
+-- validateRequest :: DIssueStatus -> Flow ValidatedDIssueStatus
+-- validateRequest DIssueStatus {..} = do
+--   issue <- QIGM.findByPrimaryKey (Id issueId) >>= fromMaybeM (InvalidRequest "Issue not found")
+--   merchant <- QM.findById (cast issue.merchantId) >>= fromMaybeM (InvalidRequest "Merchant not found")
+--   booking <- QRB.findById (cast $ Id issue.bookingId) >>= fromMaybeM (InvalidRequest "Booking not found")
+--   igmConfig <- QIGMConfig.findByMerchantId (cast merchant.id) >>= fromMaybeM (InternalError $ "IGMConfig not found " <> show merchant.id)
+--   merchantOperatingCity <- QMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
+--   pure ValidatedDIssueStatus {..}
 
-handler :: ValidatedDIssueStatus -> Flow IssueStatusRes
-handler ValidatedDIssueStatus {..} = do
-  now <- getCurrentTime
-  let issueStatus = issue.issueStatus
-      issueId = issue.id
-      respondentAction = fromMaybe (show Spec.PROCESSING) issue.respondentAction
-      groName = igmConfig.groName
-      groPhone = igmConfig.groPhone
-      groEmail = igmConfig.groEmail
-      createdAt = UTCTimeRFC3339 issue.createdAt
-      updatedAt = UTCTimeRFC3339 now
-      resolutionAction = issue.resolutionAction
-  pure IssueStatusRes {..}
+-- handler :: ValidatedDIssueStatus -> Flow IssueStatusRes
+-- handler ValidatedDIssueStatus {..} = do
+--   now <- getCurrentTime
+--   let issueStatus = issue.issueStatus
+--       issueId = issue.id
+--       respondentAction = fromMaybe (show Spec.PROCESSING) issue.respondentAction
+--       groName = igmConfig.groName
+--       groPhone = igmConfig.groPhone
+--       groEmail = igmConfig.groEmail
+--       createdAt = UTCTimeRFC3339 issue.createdAt
+--       updatedAt = UTCTimeRFC3339 now
+--       resolutionAction = issue.resolutionAction
+--   pure IssueStatusRes {..}

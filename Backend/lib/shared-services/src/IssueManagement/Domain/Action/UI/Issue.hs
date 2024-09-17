@@ -50,6 +50,9 @@ import Text.Regex.TDFA (AllTextMatches (..), getAllTextMatches, (=~))
 
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id Ride -> Id Merchant -> m (Maybe Ride),
+    findByBookingId :: Id Booking -> m (Maybe Booking),
+    findOneByBookingId :: Id Booking -> m (Maybe Ride),
+    findByMerchantId :: Id Merchant -> m (Maybe Merchant),
     findPersonById :: Id Person -> m (Maybe Person),
     findMOCityById :: Id MerchantOperatingCity -> m (Maybe MerchantOperatingCity),
     findMOCityByMerchantShortIdAndCity :: ShortId Merchant -> Context.City -> m (Maybe MerchantOperatingCity),

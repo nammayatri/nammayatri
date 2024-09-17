@@ -1,0 +1,38 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
+module IssueManagement.Storage.Beam.Issue.IGMIssue where
+
+import qualified Database.Beam as B
+import Database.Beam.MySQL ()
+import qualified IssueManagement.Domain.Types.Issue.IGMIssue as IC
+import IssueManagement.Tools.UtilsTH hiding (label)
+
+data IGMIssueT f = IGMIssueT
+  { bookingId :: B.C f Text,
+    createdAt :: B.C f UTCTime,
+    customerEmail :: B.C f (Maybe Text),
+    customerName :: B.C f (Maybe Text),
+    customerPhone :: B.C f (Maybe Text),
+    id :: B.C f Text,
+    issueRaisedByMerchant :: B.C f Text,
+    issueStatus :: B.C f IC.Status,
+    issueType :: B.C f IC.IssueType,
+    merchantId :: B.C f Text,
+    resolutionAction :: B.C f (Maybe Text),
+    respondentAction :: B.C f (Maybe Text),
+    updatedAt :: B.C f UTCTime
+  }
+  deriving (Generic, B.Beamable)
+
+instance B.Table IGMIssueT where
+  data PrimaryKey IGMIssueT f = IGMIssueId (B.C f Text) deriving (Generic, B.Beamable)
+  primaryKey = IGMIssueId . id
+
+type IGMIssue = IGMIssueT Identity
+
+$(enableKVPG ''IGMIssueT ['id] [])
+
+$(mkTableInstancesGenericSchema ''IGMIssueT "igm_issue")

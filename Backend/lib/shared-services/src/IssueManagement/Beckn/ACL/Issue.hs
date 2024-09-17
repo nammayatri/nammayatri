@@ -1,27 +1,43 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
+module IssueManagement.Beckn.ACL.Issue where
 
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
-
-module Beckn.ACL.IGM.OnIssue (buildOnIssueReq) where
-
-import qualified Beckn.ACL.IGM.Utils as Utils
-import qualified Domain.Action.Beckn.IGM.Issue as DIssue
 import qualified IGM.Enums as Spec
 import qualified IGM.Types as Spec
+-- import Kernel.Prelude
+
+-- import qualified IGM.Enums as Spec
+-- import qualified IGM.Types as Spec
 import IGM.Utils (mkOrgName)
+import qualified IGM.Utils as Utils
+import qualified IssueManagement.Beckn.ACL.IGM.Utils as Utils
+import qualified IssueManagement.Domain.Action.Beckn.Issue as DIssue
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
+
+buildIssueReq ::
+  (MonadFlow m) =>
+  Spec.IssueReq ->
+  m DIssue.DIssue
+buildIssueReq req = do
+  Utils.validateContext Spec.ISSUE req.context
+  issueCategory <- req.issueReqMessage.issueReqMessageIssue.issueCategory & fromMaybeM (InvalidRequest "IssueCategory not found")
+  issueTypeText <- req.issueReqMessage.issueReqMessageIssue.issueIssueType & fromMaybeM (InvalidRequest "IssueType not found")
+  issueStatusText <- req.issueReqMessage.issueReqMessageIssue.issueStatus & fromMaybeM (InvalidRequest "IssueStatus not found")
+  bookingId <- req.issueReqMessage.issueReqMessageIssue.issueOrderDetails >>= (.orderDetailsId) & fromMaybeM (InvalidRequest "BookingId not found")
+  bapId <- req.context.contextBapId & fromMaybeM (InvalidRequest "BapId not found")
+  let issueRaisedBy = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= listToMaybe >>= (.complainantActionUpdatedBy) >>= (.organizationOrg) >>= (.organizationOrgName)
+      issueSubCategory = req.issueReqMessage.issueReqMessageIssue.issueSubCategory
+      issueId = req.issueReqMessage.issueReqMessageIssue.issueId
+      customerContact = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= listToMaybe >>= (.complainantActionUpdatedBy) >>= (.organizationContact)
+      customerName = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= listToMaybe >>= (.complainantActionUpdatedBy) >>= (.organizationPerson) >>= (.complainantPersonName)
+      createdAt = req.issueReqMessage.issueReqMessageIssue.issueCreatedAt
+  pure $
+    DIssue.DIssue
+      { customerEmail = customerContact >>= (.gROContactEmail),
+        customerPhone = customerContact >>= (.gROContactPhone),
+        ..
+      }
 
 buildOnIssueReq ::
   ( MonadFlow m,
