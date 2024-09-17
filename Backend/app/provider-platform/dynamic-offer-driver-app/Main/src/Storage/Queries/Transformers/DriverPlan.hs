@@ -15,6 +15,7 @@ import qualified Domain.Types.MerchantOperatingCity as MOC
 import Domain.Types.Person
 import qualified Domain.Types.Plan
 import qualified Domain.Types.Plan as DPlan
+import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -27,6 +28,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverPlan as BeamDF
+import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.Queries.Person as QP
 
 getMerchantId :: (MonadFlow m, EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.Plan.ServiceNames -> m (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant))
@@ -96,3 +98,20 @@ updateMerchantIdAndOpCityByDriverAndServiceName driverId merchantId merchantOpCi
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
         ]
     ]
+
+backfillVehicleCategoryByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DVC.VehicleCategory -> Text -> Maybe DPlan.ServiceNames -> DPlan.PaymentMode -> Text -> m (Maybe DVC.VehicleCategory)
+backfillVehicleCategoryByDriverIdAndServiceName mbVehicleCategory driverId mbServiceName planType planId = do
+  now <- getCurrentTime
+  let serviceName = fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName
+  case mbVehicleCategory of
+    Nothing -> do
+      plan <- CQP.findByIdAndPaymentModeWithServiceName (Id planId) planType serviceName
+      updateOneWithKV
+        [Se.Set BeamDF.vehicleCategory $ plan >>= (.vehicleCategory), Se.Set BeamDF.updatedAt now]
+        [ Se.And
+            [ Se.Is BeamDF.driverId (Se.Eq driverId),
+              Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
+            ]
+        ]
+      return $ plan >>= (.vehicleCategory)
+    Just vehicleCategory' -> return $ Just vehicleCategory'
