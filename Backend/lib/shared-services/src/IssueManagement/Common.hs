@@ -70,6 +70,7 @@ data MerchantOperatingCity = MerchantOperatingCity
     merchantId :: Id Merchant,
     city :: Context.City
   }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data FRFSTicketBooking = FRFSTicketBooking
   { id :: Id FRFSTicketBooking,
@@ -115,6 +116,7 @@ data Merchant = Merchant
     shortId :: ShortId Merchant,
     subscriberId :: ShortId Subscriber
   }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data Subscriber = Subscriber {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -260,6 +262,7 @@ data MerchantConfig = MerchantConfig
     counterPartyApiKey :: Text,
     sensitiveWords :: Maybe [Text]
   }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 allLanguages :: [Language]
 allLanguages = [minBound .. maxBound]
