@@ -71,3 +71,7 @@ SubscriptionConfig:
     isTriggeredAtEndRide: "true"
     allowDriverFeeCalcSchedule: "false"
     payoutServiceName: "'Payout_Juspay'"
+
+  sqlType:
+   executionEnabledForVehicleCategories: text[]
+   subscriptionEnabledForVehicleCategories: text[]
