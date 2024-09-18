@@ -120,9 +120,6 @@ totalCoinEarnHistory (Id driverId) mbLimit mbOffset = do
     (Just limitVal)
     (Just offsetVal)
 
-findCoinsByEntityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> m [CoinHistory]
-findCoinsByEntityId entityId = findAllWithKV [Se.Is BeamDC.entityId $ Se.Eq entityId]
-
 instance FromTType' BeamDC.CoinHistory CoinHistory where
   fromTType' BeamDC.CoinHistoryT {..} = do
     pure $
