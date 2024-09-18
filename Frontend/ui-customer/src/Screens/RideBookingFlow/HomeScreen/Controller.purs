@@ -15,7 +15,7 @@
 
 module Screens.HomeScreen.Controller where
 
-import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), OptionButtonList, Payload(..), RateCardType(..), FeedbackAnswer(..), ProviderType(..))
+import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), OptionButtonList, Payload(..), RateCardType(..), FeedbackAnswer(..), ProviderType(..),TicketType(..))
 import Accessor (_estimatedFare, _estimateId, _vehicleVariant, _status, _estimateFareBreakup, _title, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _selectedQuotes, _specialLocationTag, _contents, _toLocation, _lat, _lon, _otpCode, _list, _fareProductType, _stopLocation, _toLocation)
 import Components.Banner as Banner
 import Components.MessagingView as MessagingView
@@ -38,6 +38,8 @@ import Components.MenuButton.Controller (Action(..)) as MenuButtonController
 import Components.PopUpModal.Controller as PopUpModal
 import Components.PricingTutorialModel.Controller as PricingTutorialModelController
 import Components.PrimaryButton.Controller as PrimaryButtonController
+import Components.DateTimeSelector.Controller as DateSelectorController
+import Components.Selector.Controller as SelectorController
 import Components.TipsView as TipsView
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.QuoteListItem.Controller as QuoteListItemController
@@ -46,6 +48,7 @@ import Components.QuoteListModel.View (dummyQuoteList)
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
+import Components.RequestInfoCard.Controller as RequestInfoCardController
 import Components.SaveFavouriteCard as SaveFavouriteCardController
 import Components.SavedLocationCard.Controller as SavedLocationCardController
 import Components.SearchLocationModel.Controller as SearchLocationModelController
@@ -62,12 +65,13 @@ import Helpers.Ride
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, reverse, sortWith, foldl, index, mapWithIndex, find, updateAt, insert, delete, tail, singleton, take, drop, head)
 import Data.Function.Uncurried (runFn3, runFn2)
-import Data.Int (toNumber, round, fromString, fromNumber, ceil)
+import Data.Int (toNumber, round, fromString, fromNumber, ceil, floor)
 import Data.Lens ((^.), view)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.Number (fromString, round) as NUM
 import Data.String as STR
 import Debug (spy)
+import Data.Boolean(otherwise)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Unsafe (unsafePerformEffect)
@@ -79,12 +83,12 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
 import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp,openUrlInMailApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, getCityConfig, compareDate, getCurrentDatev2, getDateAfterNDaysv2, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime, shuffle)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, getCityConfig, compareDate, getCurrentDatev2, getDateAfterNDaysv2, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime, shuffle, getUTCDay, getUTCMonth , getUTCFullYear, getUTCDate, getUTCHours, getUTCMinutes, getUTCSeconds , getISTDate, getISTMonth, getISTFullYear, getISTHours, getISTMinutes, getISTSeconds)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent, logInfo, logStatus)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<), (*>), (<#>), (<$>))
+import Prelude (class Applicative, class Show, Unit, Ordering, bind, compare, discard, map, negate, pure, show, unit, not , mod, div, ($), (&&), (-), (/=), (<>), (==), (>), (||), (>=), void, (<), (*), (<=), (/), (+), when, (<<<), (*>), (<#>), (<$>))
 import Control.Monad (unless)
 import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (BottomSheetState(..), Eval, update, ScrollState(..), Visibility(..), continue, continueWithCmd, defaultPerformLog, exit, payload, updateAndExit, updateWithCmdAndExit)
@@ -97,7 +101,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getQuotesTransformer, transformContactList, getNearByDrivers, dummyEstimateEntity, filterSpecialZoneAndInterCityQuotes, getFareProductType, extractFareProductType, getEstimateIdFromSelectedServices, getSpecialZoneQuotes)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..), NewContacts(..), City(..), CancelSearchType(..))
+import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..), NewContacts(..), City(..), CancelSearchType(..),TripTypeData)
 import Services.API (BookingLocationAPIEntity(..), EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..),RideBookingStatusRes(..), SelectListRes(..), GetEditLocResultResp(..), BookingUpdateRequestDetails(..),  SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..), Route(..), RideAPIEntity(..), RideBookingDetails(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -156,6 +160,9 @@ import Data.String as DS
 import Components.MessagingView.Controller as CMC
 import Screens.EmergencyContactsScreen.ScreenData (neverShareRideOption)
 import Helpers.API as HelpersAPI
+import Data.Date.Component
+import Data.Enum 
+import Services.FlowCache as FlowCache
 
 -- Controllers 
 import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBannerController
@@ -452,17 +459,17 @@ eval (UpdateCurrentStageStatus stage (RideBookingStatusRes resp)) newState = do
     void $ pure $ setValueToLocalStore TRACKING_DRIVER "False"
   else pure unit
   if stage == "REALLOCATED" then
-    exit $ NotificationHandler "REALLOCATE_PRODUCT" newState
+    exit $ NotificationHandler "REALLOCATE_PRODUCT" HomeScreenData.dummyNotificationBody newState
   else if (stage == "INPROGRESS") && (not $ (isLocalStageOn RideStarted || (isLocalStageOn ChatWithDriver && newState.props.stageBeforeChatScreen == RideStarted))) then
-    updateAndExit newState $ NotificationHandler "TRIP_STARTED" newState
+    updateAndExit newState $ NotificationHandler "TRIP_STARTED" HomeScreenData.dummyNotificationBody newState
   else if stage == "INPROGRESS" && isDestChanged then
-    updateAndExit newState $ NotificationHandler "TRIP_STARTED" newState
+    updateAndExit newState $ NotificationHandler "TRIP_STARTED" HomeScreenData.dummyNotificationBody newState
   else if stage == "NEW" && isDestChanged then
-    updateAndExit newState $ NotificationHandler "DRIVER_ASSIGNMENT" newState
+    updateAndExit newState $ NotificationHandler "DRIVER_ASSIGNMENT" HomeScreenData.dummyNotificationBody newState
   else if (stage == "COMPLETED") && (not $ isLocalStageOn HomeScreen) then
-    exit $ NotificationHandler "TRIP_FINISHED" newState
+    exit $ NotificationHandler "TRIP_FINISHED" HomeScreenData.dummyNotificationBody newState
   else if (stage == "CANCELLED") && (not $ isLocalStageOn HomeScreen) then
-    exit $ NotificationHandler "CANCELLED_PRODUCT" newState
+    exit $ NotificationHandler "CANCELLED_PRODUCT" HomeScreenData.dummyNotificationBody newState
   else
     continue newState
 
@@ -505,17 +512,17 @@ eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
     void $ pure $ setValueToLocalStore TRACKING_DRIVER "False"
   else pure unit
   if stage == "REALLOCATED" then
-    exit $ NotificationHandler "REALLOCATE_PRODUCT" newState
+    exit $ NotificationHandler "REALLOCATE_PRODUCT" HomeScreenData.dummyNotificationBody newState
   else if (stage == "INPROGRESS") && (not $ (isLocalStageOn RideStarted || (isLocalStageOn ChatWithDriver && state.props.stageBeforeChatScreen == RideStarted))) then
-    updateAndExit newState $ NotificationHandler "TRIP_STARTED" newState
+    updateAndExit newState $ NotificationHandler "TRIP_STARTED" HomeScreenData.dummyNotificationBody newState
   else if stage == "INPROGRESS" && isDestChanged then
-    updateAndExit newState $ NotificationHandler "TRIP_STARTED" newState
+    updateAndExit newState $ NotificationHandler "TRIP_STARTED" HomeScreenData.dummyNotificationBody newState
   else if stage == "NEW" && isDestChanged then
-    updateAndExit newState $ NotificationHandler "DRIVER_ASSIGNMENT" newState
+    updateAndExit newState $ NotificationHandler "DRIVER_ASSIGNMENT" HomeScreenData.dummyNotificationBody newState
   else if (stage == "COMPLETED") && (not $ isLocalStageOn HomeScreen) then
-    exit $ NotificationHandler "TRIP_FINISHED" newState
+    exit $ NotificationHandler "TRIP_FINISHED" HomeScreenData.dummyNotificationBody newState
   else if (stage == "CANCELLED") && (not $ isLocalStageOn HomeScreen) then
-    exit $ NotificationHandler "CANCELLED_PRODUCT" newState
+    exit $ NotificationHandler "CANCELLED_PRODUCT" HomeScreenData.dummyNotificationBody newState
   else
     continue newState
 
@@ -667,7 +674,7 @@ eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButt
       exit $ GoToIssueReportChatScreenWithIssue ratingUpdatedState priorityIssue
   else do
     void $ pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
-    if state.data.fareProductType == FPT.RENTAL then continue state{data{fareProductType = FPT.ONE_WAY}} 
+    if state.data.fareProductType == FPT.RENTAL || state.data.fareProductType == FPT.INTER_CITY then continue state{data{fareProductType = FPT.ONE_WAY}} 
     else updateAndExit state $ SubmitRating state{ data {rideRatingState {rating = state.data.ratingViewState.selectedRating }}}
 
 ------------------------------- Ride Completed Screen - End --------------------------
@@ -998,6 +1005,7 @@ eval BackPressed state = do
           data{
             rideHistoryTrip = Nothing
           , specialZoneQuoteList = []
+          , fareProductType = FPT.ONE_WAY
           }
         , props{
             rideRequestFlow = false
@@ -1009,6 +1017,7 @@ eval BackPressed state = do
           , customerTip = HomeScreenData.initData.props.customerTip
           , tipViewProps = HomeScreenData.initData.props.tipViewProps
           , hasEstimateBackpoint = false
+          , searchLocationModelProps {tripType = ONE_WAY_TRIP}
           }
         }
     ConfirmingLocation -> do
@@ -1017,6 +1026,12 @@ eval BackPressed state = do
                       _ <- pure $ removeAllPolylines ""
                       _ <- pure $ updateLocalStage SearchLocationModel
                       continue state{props{defaultPickUpPoint = "", rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation,isSharedLocationFlow = false},data{polygonCoordinates = "", nearByPickUpPoints = []}}
+    GoToTripSelect -> do
+                     void $ pure $ performHapticFeedback unit
+                     _ <- pure $ exitLocateOnMap ""
+                     _ <- pure $ removeAllPolylines ""
+                     _ <- pure $ updateLocalStage SearchLocationModel
+                     continue state{props{defaultPickUpPoint = "", rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation},data{polygonCoordinates = "", nearByPickUpPoints = [] ,fareProductType = FPT.ONE_WAY}}
     EditPickUpLocation -> do 
                       void $ pure $ exitLocateOnMap ""
                       void $ pure $ removeAllPolylines ""
@@ -1326,13 +1341,114 @@ eval (SettingSideBarActionController (SettingSideBarController.LiveStatsDashboar
 
 eval OpenLiveDashboard state = openLiveDashboard state{props{showShimmer = false}}
 
-eval (SearchLocationModelActionController (SearchLocationModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = do
-  void $ pure $ performHapticFeedback unit
-  _ <- pure $ exitLocateOnMap ""
-  let newState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, locateOnMap = false, defaultPickUpPoint = ""}}
-  updateAndExit newState $ LocationSelected (fromMaybe dummyListItem (if state.props.isSource == Just false then state.data.selectedLocationListItem else Nothing)) (state.props.isSource == Just false) newState
+eval (SearchLocationModelActionController (SearchLocationModelController.RideInfoButtonPressed)) state = continue state{ props {searchLocationModelProps {showRideInfo= true } }}
+
+eval (SearchLocationModelActionController (SearchLocationModelController.RequestInfoCardAction (RequestInfoCardController.Close)))  state = continue state{ props {searchLocationModelProps {showRideInfo= false } }}
+
+eval (SearchLocationModelActionController (SearchLocationModelController.RequestInfoCardAction (RequestInfoCardController.BackPressed))) state = continue state{ props {searchLocationModelProps {showRideInfo= false } }}
+
+eval (SearchLocationModelActionController (SearchLocationModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state =  
+  if state.props.isSearchLocation == SelectTripType then do
+        void $ pure $ performHapticFeedback unit
+        _ <- pure $ exitLocateOnMap ""
+        _ <- pure $ updateLocalStage FindingEstimate
+        let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.ConfirmLocation" "true"
+        let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_confirm_pickup"
+        let updatedState = state{props{locateOnMap = false}, data { iopState { showMultiProvider = false}}}
+        updateAndExit updatedState $  (UpdatedSource updatedState)
+  else do
+    void $ pure $ performHapticFeedback unit
+    _ <- pure $ exitLocateOnMap ""
+    let newState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, locateOnMap = false, defaultPickUpPoint = ""}}
+    updateAndExit newState $ LocationSelected (fromMaybe dummyListItem (if state.props.isSource == Just false then state.data.selectedLocationListItem else Nothing)) (state.props.isSource == Just false) newState
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DateTimePickerButtonClicked)) state = openDateTimePicker state 
+
+eval(SearchLocationModelActionController (SearchLocationModelController.DateSelectButtonClicked (DateSelectorController.OnClick str))) state = 
+    if(str == "Pickup") then
+          if ( state.data.startTimeUTC /= "") then openDateTimeSelector str state (Just state.data.startTimeUTC) 
+          else do 
+            let  scheduledUTC = runFn2 getUTCAfterNSecondsImpl (getCurrentUTC "") 1860
+            openDateTimeSelector str state (Just scheduledUTC)
+    else openDateTimeSelector str state (Just state.data.returnTimeUTC)
+
+eval (SearchLocationModelActionController (SearchLocationModelController.DateSelectButtonClicked (DateSelectorController.MenuButtonActionController (MenuButtonController.OnClick config)))) state = do
+  if state.props.searchLocationModelProps.tripType == ONE_WAY_TRIP then 
+    if config.id == "LeaveNow" then 
+          continue state {
+            props { searchLocationModelProps {totalRideDuration=state.data.tripEstDuration},isTripSchedulable = false}
+          , data {returnTimeUTC = "", startTimeUTC = "",estReturnTimeUTC="" ,
+                    tripTypeDataConfig = HomeScreenData.tripTypeDataConfig{
+                      tripPickupData = Just HomeScreenData.dummyTripTypeData{tripDateReadableString = convertUTCtoISC (getCurrentUTC "") "D MMM, h:mm A" }
+                    }
+                  }}
+    else 
+      let scheduledUTC = runFn2 getUTCAfterNSecondsImpl (getCurrentUTC "") 1860
+          pickupTripConfig = calculateDateInfo (getUTCFullYear scheduledUTC) (getUTCMonth scheduledUTC) (getUTCDate scheduledUTC) (getUTCHours scheduledUTC) ( getUTCMinutes scheduledUTC) 19800
+      in continue state{ data{
+              startTimeUTC =scheduledUTC,
+              tripTypeDataConfig { 
+                                tripPickupData = Just HomeScreenData.dummyTripTypeData { 
+                                    tripDateTimeConfig =  pickupTripConfig.tripObj.tripDateTimeConfig , 
+                                    tripDateUTC = pickupTripConfig.tripObj.tripDateUTC , 
+                                    tripDateReadableString = pickupTripConfig.tripObj.tripDateReadableString
+                                  } 
+              }}
+            ,props{isTripSchedulable = true}
+            }
+  else do
+    if config.id == "LeaveNow" then
+        let currentUTC = (getCurrentUTC "")
+            day = getUTCDate currentUTC
+            month = getUTCMonth currentUTC
+            year = getUTCFullYear currentUTC
+            hour = getUTCHours currentUTC
+            minute = getUTCMinutes currentUTC
+            estDuration = state.data.tripEstDuration
+            returnTripConfig = calculateDateInfo year month day hour minute (2*estDuration + 3600 + 19800)
+        in continue state {data 
+                              {
+                              returnTimeUTC= returnTripConfig.returnTimeUTCString,
+                              estReturnTimeUTC = returnTripConfig.returnTimeUTCString ,
+                              tripTypeDataConfig { 
+                                tripPickupData = Just HomeScreenData.dummyTripTypeData{
+                                    tripDateReadableString = convertUTCtoISC (getCurrentUTC "") "D MMM, h:mm A"
+                                  },
+                                tripReturnData = Just HomeScreenData.dummyTripTypeData { 
+                                    tripDateTimeConfig =  returnTripConfig.tripObj.tripDateTimeConfig , 
+                                    tripDateUTC = returnTripConfig.tripObj.tripDateUTC , 
+                                    tripDateReadableString = returnTripConfig.tripObj.tripDateReadableString
+                                  } 
+                                }}
+                            ,props { 
+                              searchLocationModelProps {
+                                                        totalRideDuration = 2*state.data.tripEstDuration + 3600
+                                                        } 
+                                          ,isTripSchedulable = false
+                                  }
+                                }
+    else
+      let scheduledUTC = runFn2 getUTCAfterNSecondsImpl (getCurrentUTC "") 1860
+          pickupTripConfig = calculateDateInfo (getUTCFullYear scheduledUTC) (getUTCMonth scheduledUTC) (getUTCDate scheduledUTC) (getUTCHours scheduledUTC) (getUTCMinutes scheduledUTC) 19800
+          returnTripConfig = calculateDateInfo (getUTCFullYear scheduledUTC) (getUTCMonth scheduledUTC) (getUTCDate scheduledUTC) (getUTCHours scheduledUTC) (getUTCMinutes scheduledUTC) (2 * state.data.tripEstDuration + 3600 + 19800)
+      in continue state { data {
+                            startTimeUTC = scheduledUTC,
+                            returnTimeUTC = returnTripConfig.returnTimeUTCString,
+                            tripTypeDataConfig { 
+                              tripPickupData = Just HomeScreenData.dummyTripTypeData {
+                                tripDateTimeConfig = pickupTripConfig.tripObj.tripDateTimeConfig,
+                                tripDateUTC = pickupTripConfig.tripObj.tripDateUTC,
+                                tripDateReadableString = pickupTripConfig.tripObj.tripDateReadableString
+                              },
+                              tripReturnData = Just HomeScreenData.dummyTripTypeData {
+                                tripDateTimeConfig = returnTripConfig.tripObj.tripDateTimeConfig,
+                                tripDateUTC = returnTripConfig.tripObj.tripDateUTC,
+                                tripDateReadableString = returnTripConfig.tripObj.tripDateReadableString
+                              }
+                            }
+                          },
+                          props { isTripSchedulable = true }
+                        }
 
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState = do
     _ <- pure $ spy "state homeScreen" newState
@@ -1342,9 +1458,11 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState 
         void $ pure $ performHapticFeedback unit
         let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.DestinationSearch" "true"
             _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
-            maybeInvalidBookingDetails = invalidBookingTime (getCurrentUTC "") Nothing
-        if (isJust maybeInvalidBookingDetails) then do
-          continue state {data{invalidBookingId = maybe Nothing (\invalidBookingTime -> Just invalidBookingTime.bookingId) maybeInvalidBookingDetails}, props{showScheduledRideExistsPopUp = true}}
+            -- maybeInvalidBookingDetails = invalidBookingTime (getCurrentUTC "") Nothing
+            latestScheduledRides = state.data.latestScheduledRides
+            {overLapping,overLappedBooking} = HU.overlappingRides (getCurrentUTC "") Nothing 1800 latestScheduledRides
+        if overLapping then do
+          continue state {data{overLappingBooking =overLappedBooking}, props{showScheduledRideExistsPopUp = true}}
         else do
           void $ pure $ updateLocalStage SearchLocationModel
           exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}, data{source= state.data.source}}
@@ -1358,7 +1476,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState 
                                   then state.props.defaultPickUpPoint
                                   else state.data.source
         let updatedState = state{props{currentStage = FindingEstimate, locateOnMap = false}, data { iopState { showMultiProvider = false}, sourceAddress { ward = Just sourceAddressWard}}}
-        updateAndExit updatedState $  (UpdatedSource updatedState)
+        updateAndExit updatedState $  (GoToTripSelectionScreen updatedState)
       EditPickUpLocation -> do
         void $ pure $ performHapticFeedback unit
         void $ pure $ exitLocateOnMap ""
@@ -1379,9 +1497,13 @@ eval WhereToClick state = do
   void $ pure $ performHapticFeedback unit
   let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.DestinationSearch" "true"
       _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
-      maybeInvalidBookingDetails = invalidBookingTime (getCurrentUTC "") Nothing
-  if (isJust maybeInvalidBookingDetails) then do
-    continue state {data{invalidBookingId = maybe Nothing (\invalidBookingTime -> Just invalidBookingTime.bookingId) maybeInvalidBookingDetails}, props{showScheduledRideExistsPopUp = true}}
+      -- maybeInvalidBookingDetails = invalidBookingTime (getCurrentUTC "") Nothing
+      latestScheduledRides = state.data.latestScheduledRides
+      {overLapping,overLappedBooking} = HU.overlappingRides (getCurrentUTC "") Nothing 1800 latestScheduledRides
+  if overLapping then do
+      continue state {data{overLappingBooking =overLappedBooking}, props{showScheduledRideExistsPopUp = true}}
+  -- if (isJust maybeInvalidBookingDetails) then do
+  --   continue state {data{invalidBookingId = maybe Nothing (\invalidBookingTime -> Just invalidBookingTime.bookingId) maybeInvalidBookingDetails}, props{showScheduledRideExistsPopUp = true}}
   else do
     void $ pure $ updateLocalStage SearchLocationModel
     exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}, data{source= if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source}}
@@ -1710,6 +1832,11 @@ eval (SearchLocationModelActionController (SearchLocationModelController.GoBack)
         pure $ BackPressed
     ]
 
+eval (SearchLocationModelActionController (SearchLocationModelController.GoBackSearchModel)) state = do
+  let updatedState = state { data {startTimeUTC = "", returnTimeUTC= "",estReturnTimeUTC = "", tripTypeDataConfig =  HomeScreenData.tripTypeDataConfig},props{searchLocationModelProps{tripType = ONE_WAY_TRIP}}}
+  void $ pure $ performHapticFeedback unit
+  continueWithCmd updatedState [ do pure $ BackPressed ]
+
 eval (SearchLocationModelActionController (SearchLocationModelController.SetCurrentLocation)) state = do
   _ <- pure $ currentPosition ""
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_currentlocation_click"
@@ -1980,7 +2107,7 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
   let 
     alreadyGotEstimates = not $ null $ state.data.specialZoneQuoteList 
     estimates = getEstimateList quotesRes.estimates state.data.config.estimateAndQuoteConfig state.data.selectedEstimatesObject.activeIndex
-    quotes = filter filterNonAcAsPerGates $ getSpecialZoneQuotes quotesRes.quotes state.data.config.estimateAndQuoteConfig (state.data.fareProductType == FPT.INTER_CITY)
+    quotes = filter filterNonAcAsPerGates $ getSpecialZoneQuotes quotesRes.quotes state.data.config.estimateAndQuoteConfig (state.data.fareProductType == FPT.INTER_CITY) (Just state.props.searchLocationModelProps.tripType)
     allQuoteListWithUpdatedIndex = spy "debug quotes allQuoteListWithUpdatedIndex" (mapWithIndex (\index item -> item{ index = index }) (estimates <> quotes))
     quoteList = filter (\item -> item.providerType == ONUS || (item.providerType == OFFUS && state.data.currentCityConfig.iopConfig.enable)) allQuoteListWithUpdatedIndex
     repeatRideFailCheck =  not $ checkRecentRideVariantInEstimates quoteList state.props.repeatRideServiceTierName -- check if the repeat ride variant is available in the estimates
@@ -2144,6 +2271,7 @@ eval (ContinueWithoutOffers (SelectListRes resp)) state = do
 
 eval (GetRideConfirmation (RideBookingRes response)) state = do
   logStatus "confirming_ride" response
+  void $ pure $ FlowCache.fetchAndUpdateScheduledRides true
   let (RideBookingAPIDetails bookingDetails) = response.bookingDetails
       (RideBookingDetails contents) = bookingDetails.contents
       otpCode = contents.otpCode
@@ -2170,11 +2298,11 @@ eval (GetRideConfirmation (RideBookingRes response)) state = do
                         }
   exit $ RideConfirmed newState
 
-eval (NotificationListener notificationType) state = do
+eval (NotificationListener notificationType notificationBody) state = do
   _ <- pure $ printLog "storeCallBackCustomer notificationType" notificationType
   case notificationType of
     "DRIVER_QUOTE_INCOMING" -> continue state
-    _ -> exit $ NotificationHandler notificationType state { props { callbackInitiated = false}}
+    _ -> exit $ NotificationHandler notificationType notificationBody state { props { callbackInitiated = false}}
 
 eval RecenterCurrentLocation state = do
   recenterCurrentLocation state
@@ -2187,6 +2315,49 @@ eval (SearchLocationModelActionController (SearchLocationModelController.UpdateC
   else
     continue state
 
+
+eval (SearchLocationModelActionController (SearchLocationModelController.SelectorControllerAction (SelectorController.OnClick tripType))) state = do
+  if tripType == ONE_WAY_TRIP then 
+  continue state {props { searchLocationModelProps {tripType = tripType,totalRideDuration=state.data.tripEstDuration},isTripSchedulable = false}
+                , data {
+                         returnTimeUTC = ""
+                        ,startTimeUTC = ""
+                        ,estReturnTimeUTC="" 
+                        ,tripTypeDataConfig = HomeScreenData.tripTypeDataConfig{
+                              tripPickupData = Just HomeScreenData.dummyTripTypeData{tripDateReadableString = convertUTCtoISC (getCurrentUTC "") "D MMM, h:mm A" }
+                            } 
+                    }}
+  else 
+    let currentUTC = (getCurrentUTC "")
+        day = getUTCDate currentUTC
+        month = getUTCMonth currentUTC
+        year = getUTCFullYear currentUTC
+        hour = getUTCHours currentUTC
+        minute = getUTCMinutes currentUTC
+        estDuration = state.data.tripEstDuration
+        returnTripConfig = calculateDateInfo year month day hour minute (2*estDuration + 3600 + 19800)
+    in continue state  
+                    {data 
+                        {
+                        returnTimeUTC= returnTripConfig.returnTimeUTCString,
+                        estReturnTimeUTC = returnTripConfig.returnTimeUTCString ,
+                        tripTypeDataConfig { 
+                          tripPickupData = Just HomeScreenData.dummyTripTypeData{tripDateReadableString = convertUTCtoISC (getCurrentUTC "") "D MMM, h:mm A" },
+                          tripReturnData = Just HomeScreenData.dummyTripTypeData { 
+                              tripDateTimeConfig =  returnTripConfig.tripObj.tripDateTimeConfig , 
+                              tripDateUTC = returnTripConfig.tripObj.tripDateUTC , 
+                              tripDateReadableString = returnTripConfig.tripObj.tripDateReadableString
+                            } 
+                          }}
+                      ,props { 
+                        searchLocationModelProps {tripType = tripType,
+                                                  totalRideDuration = 2*state.data.tripEstDuration + 3600
+                                                  } 
+                                    ,isTripSchedulable = false
+                              }
+                          }
+      -- else continue state {props { searchLocationModelProps {tripType = tripType, totalRideDuration = 2*state.data.tripEstDuration + 3600},isTripSchedulable = false}}
+  
 eval (UpdateCurrentLocation lat lng) state = updateCurrentLocation state lat lng
 
 eval (CurrentLocation lat lng) state = do
@@ -2212,6 +2383,13 @@ eval (RateCardAction RateCard.GoToWaitingCharges) state = continue state { data{
 
 eval (RateCardAction RateCard.GoToTollOrParkingCharges) state = continue state { data{rateCard{currentRateCardType = TollOrParkingCharges,onFirstPage = true}}}
 
+eval (RateCardAction RateCard.GoToDriverAllowance) state = continue state { data{rateCard{currentRateCardType = DriverAllowance,onFirstPage = true}}}
+
+eval (RateCardAction RateCard.GoToNightShiftCharges) state = continue state { data{rateCard{currentRateCardType = NightShiftCharges,onFirstPage = true}}}
+
+eval (RateCardAction RateCard.GoToTollAndParkingCharges) state = continue state { data{rateCard{currentRateCardType = TollAndParkingCharges,onFirstPage = true}}}
+
+
 eval (RequestInfoCardAction RequestInfoCard.Close) state = 
   continueWithCmd state { props { showMultipleRideInfo = false }, data {waitTimeInfo = false , iopState {providerPrefInfo = false }}} [ do
     pure $ (RequestInfoCardAction RequestInfoCard.BackPressed)
@@ -2220,6 +2398,8 @@ eval (RequestInfoCardAction RequestInfoCard.Close) state =
 eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = 
   if state.props.showSpecialZoneInfoPopup then
     continue state{ props{ showSpecialZoneInfoPopup = false } }
+  else if state.props.searchLocationModelProps.showRideInfo then 
+    continue state{props {searchLocationModelProps { showRideInfo = false}}}
   else
     continue state { props { showMultipleRideInfo = false }, data {waitTimeInfo = false }}
 
@@ -2455,9 +2635,11 @@ eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionControll
   _ <- pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price
   void $ pure $ setValueToLocalStore SELECTED_VARIANT (state.data.selectedEstimatesObject.vehicleVariant)
   void $ pure $ cacheRateCard state
-  if any (_ == state.data.fareProductType) [FPT.ONE_WAY_SPECIAL_ZONE, FPT.INTER_CITY] then do
+  if state.data.fareProductType  == FPT.ONE_WAY_SPECIAL_ZONE then do
     _ <- pure $ updateLocalStage ConfirmingRide
     exit $ ConfirmRide state{props{currentStage = ConfirmingRide}}
+  else if state.data.fareProductType == FPT.INTER_CITY then do 
+    exit $ RideSummary state
   else if state.data.iopState.showMultiProvider then do 
     void $  pure $ updateLocalStage ProviderSelection 
     exit $ RefreshHomeScreen state { data { iopState { providerSelectionStage = true}, otherSelectedEstimates = otherSelectedEstimates}, props {estimateId = estimateId}}
@@ -2561,16 +2743,20 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
   else
     let selectedDateString = (show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month+1)) <> "-" <> (if day < 10 then "0"  else "") <> (show day)
         selectedUTC = unsafePerformEffect $ convertDateTimeConfigToUTC year (month + 1) day hour minute 0
-        isAfterThirtyMinutes = (compareUTCDate selectedUTC (getCurrentUTC "")) > (30 * 60)
+        isAfterThirtyMinutes = (compareUTCDate selectedUTC (getCurrentUTC "")) >= (30 * 60)
         validDate = (unsafePerformEffect $ runEffectFn2 compareDate (getDateAfterNDaysv2 (state.props.maxDateBooking)) selectedDateString)
                         && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
         updatedDateTime = state.data.selectedDateTimeConfig { year = year, month = month, day = day, hour = hour, minute = minute }
         newState = if validDate && isAfterThirtyMinutes then state { data { selectedDateTimeConfig = updatedDateTime, startTimeUTC = selectedUTC}} else state
     in 
       if validDate && isAfterThirtyMinutes then do
-        let maybeInvalidBookingDetails = invalidBookingTime selectedUTC Nothing
-        if (isJust maybeInvalidBookingDetails) then do
-          continue state {data{invalidBookingId = maybe Nothing (\invalidBookingTime -> Just invalidBookingTime.bookingId) maybeInvalidBookingDetails}, props{showScheduledRideExistsPopUp = true}}
+        let latestScheduledRides = state.data.latestScheduledRides
+            {overLapping,overLappedBooking} = HU.overlappingRides selectedUTC Nothing 1800 latestScheduledRides
+        if overLapping then do
+          continue state {data{overLappingBooking =overLappedBooking}, props{showScheduledRideExistsPopUp = true}}
+        -- let maybeInvalidBookingDetails = invalidBookingTime selectedUTC Nothing
+        -- if (isJust maybeInvalidBookingDetails) then do
+          -- continue state {data{invalidBookingId = maybe Nothing (\invalidBookingTime -> Just invalidBookingTime.bookingId) maybeInvalidBookingDetails}, props{showScheduledRideExistsPopUp = true}}
         else continue newState
       else 
         if isAfterThirtyMinutes then do 
@@ -2580,13 +2766,104 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
           void $ pure $ toast $ getString SCHEDULE_RIDE_AVAILABLE
           continue state 
 
+eval (DateSelectAction title dateResp year month day timeResp hour minute ) state = do 
+    if any (_ /= "SELECTED") [dateResp, timeResp] then continue state 
+    else
+      let selectedDateString = (show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month+1)) <> "-" <> (if day < 10 then "0"  else "") <> (show day)
+
+          currentUTC = (getCurrentUTC "")
+
+          selectedDateTest = (show day) <> " " <> (formatMonth (month+1)) <> " , " <> (if(hour > 12) then show (hour - 12) else show hour) <> ":" <>  (if minute < 10 then "0"  else "") <> (show minute) <> (if (hour >= 12) then " PM" else " AM")
+
+          selectedUTC = unsafePerformEffect $ convertDateTimeConfigToUTC year (month + 1) day hour minute 0
+
+          estDuration = state.data.tripEstDuration
+          currentStartTimeUTC = if state.data.startTimeUTC == "" then (getCurrentUTC "") else state.data.startTimeUTC
+          compareUTCwithEstReturn = if (title =="Return" && state.data.estReturnTimeUTC /= "") then (compareUTCDate selectedUTC state.data.estReturnTimeUTC) else 0
+
+          returnTripConfig = calculateDateInfo year month day hour minute (2*estDuration + 3600 + compareUTCwithEstReturn)
+           -- additional check can happen here
+          isAfterThirtyMinutes = spy "isAfterThirtyMinutes"  $ ((compareUTCDate selectedUTC (getCurrentUTC "")) > (30 * 60))
+
+          updatedDateTime = state.data.selectedDateTimeConfig { year = year, month = month, day = day, hour = hour, minute = minute }
+
+          validDate = spy "validDate" $ (unsafePerformEffect $ runEffectFn2 compareDate (getDateAfterNDaysv2 (state.props.maxDateBooking)) selectedDateString)
+                        && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
+
+          validRoundTripReturnUTC = spy "validRoundTripReturnUTC" $ (selectedUTC > state.data.estReturnTimeUTC && title == "Return")
+
+          bookingDurationCheck = spy "bookingDurationCheck" $ ((title =="Return") && (compareUTCDate currentStartTimeUTC selectedUTC) < (48 * 60 * 60))
+          totalRideDuration = if state.props.searchLocationModelProps.tripType == ONE_WAY_TRIP  then estDuration else (2*estDuration + 3600)
+          newState = if validDate && isAfterThirtyMinutes && title == "Pickup" then 
+                           state {data 
+                           {startTimeUTC = selectedUTC,
+                           estReturnTimeUTC = returnTripConfig.returnTimeUTCString, 
+                           returnTimeUTC= returnTripConfig.returnTimeUTCString,
+                           tripTypeDataConfig {
+                            tripPickupData =  Just HomeScreenData.dummyTripTypeData { 
+                              tripDateTimeConfig =  updatedDateTime, 
+                              tripDateUTC = selectedUTC , 
+                              tripDateReadableString = selectedDateTest},
+                            tripReturnData = Just HomeScreenData.dummyTripTypeData { 
+                              tripDateTimeConfig =  returnTripConfig.tripObj.tripDateTimeConfig , 
+                              tripDateUTC = returnTripConfig.tripObj.tripDateUTC , 
+                              tripDateReadableString = returnTripConfig.tripObj.tripDateReadableString} 
+                            }},
+                             props{
+                              searchLocationModelProps
+                              {totalRideDuration = totalRideDuration
+                              }
+                            }
+                            }
+                    else if validDate && isAfterThirtyMinutes && title == "Return" && selectedUTC > state.data.estReturnTimeUTC && ((compareUTCDate selectedUTC currentStartTimeUTC) < (48 * 60 * 60)) then
+                           state { data 
+                           { returnTimeUTC = selectedUTC, 
+                           tripTypeDataConfig {
+                            tripReturnData = Just HomeScreenData.dummyTripTypeData{
+                               tripDateTimeConfig = updatedDateTime, 
+                               tripDateUTC = selectedUTC , 
+                               tripDateReadableString = selectedDateTest
+                              }}},
+                            props{searchLocationModelProps{totalRideDuration = (2*estDuration + 3600 + compareUTCwithEstReturn)}}}
+                    else state
+      in
+        if validDate then do
+          let       
+            latestScheduledRides = state.data.latestScheduledRides
+            {overLapping,overLappedBooking} = HU.overlappingRides selectedUTC (Just returnTripConfig.returnTimeUTCString) 1800 latestScheduledRides
+          if overLapping then do
+            continue state {data{overLappingBooking =overLappedBooking}, props{showScheduledRideExistsPopUp = true}}
+          -- let maybeInvalidBookingDetails = invalidBookingTime selectedUTC Nothing
+          -- if isJust maybeInvalidBookingDetails then do
+            -- continue state {data{invalidBookingId = maybe Nothing (\invalidBookingTime -> Just invalidBookingTime.bookingId) maybeInvalidBookingDetails}, props{showScheduledRideExistsPopUp = true}}
+          else if title == "Pickup" && isAfterThirtyMinutes then
+            continue newState
+          else if title == "Return" then
+            if not isAfterThirtyMinutes then do
+              void $ pure $ toast $ getVarString DATE_INVALID_MESSAGE $ singleton $ show state.props.maxDateBooking
+              continue state
+            else if not validRoundTripReturnUTC then do
+              void $ pure $ toast $ getString ROUND_TRIP_INVALID_MESSAGE
+              continue state
+            else if not bookingDurationCheck then do
+              void $ pure $ toast $ getString BOOKING_DURATION_INVALID
+              continue state
+            else
+              continue newState
+          else do
+            void $ pure $ toast $ getString SCHEDULE_RIDE_AVAILABLE
+            continue state
+        else do
+          void $ pure $ toast $ getVarString DATE_INVALID_MESSAGE $ singleton $ show state.props.maxDateBooking
+          continue state
+
 eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do 
   case tag of 
     "RENTALS" -> exit $ GoToRentalsFlow state { data {rentalsInfo = Nothing } }
     "INTER_CITY" ->
       if state.data.currentCityConfig.enableIntercity then do 
         void $ pure $ updateLocalStage SearchLocationModel 
-        continue state { data { source=(getString CURRENT_LOCATION), rentalsInfo = Nothing}, props{isSource = Just false, canScheduleRide = false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}}
+        continue state { data { source=(getString CURRENT_LOCATION), rentalsInfo = Nothing}, props{isIntercityFlow = true,isSource = Just false, canScheduleRide = false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}}
         else do
           void $ pure $ toast $ getString INTERCITY_RIDES_COMING_SOON
           continue state
@@ -2680,7 +2957,7 @@ eval (UpdateBookingDetails (RideBookingRes response)) state = do
   
 eval (DriverInfoCardActionController (DriverInfoCardController.ShowEndOTP)) state = continue state { props { showEndOTP = true } }
 
-eval (ScheduledRideExistsAction (PopUpModal.OnButton2Click)) state = continue state{data{ startedAt = "", invalidBookingId = Nothing, maxEstimatedDuration = 0}, props{showScheduledRideExistsPopUp = false}}
+eval (ScheduledRideExistsAction (PopUpModal.OnButton2Click)) state = continue state{data{ startedAt = "", invalidBookingId = Nothing, maxEstimatedDuration = 0,overLappingBooking= Nothing}, props{showScheduledRideExistsPopUp = false}}
 
 eval (ReferralComponentAction componentAction) state =
   case componentAction of
@@ -2962,7 +3239,7 @@ eval (ServicesOnClick service) state = do
     RC.INTERCITY ->
       if state.data.currentCityConfig.enableIntercity then do 
         void $ pure $ updateLocalStage SearchLocationModel 
-        continue state { data { source=(getString CURRENT_LOCATION), rentalsInfo = Nothing}, props{isSource = Just false, canScheduleRide = true, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}}
+        continue state { data { source=(getString CURRENT_LOCATION), rentalsInfo = Nothing}, props{isSource = Just false, canScheduleRide = true, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }, isIntercityFlow = true}}
         else do
           void $ pure $ toast $ getString INTERCITY_RIDES_COMING_SOON
           continue state
@@ -3419,9 +3696,82 @@ openDateTimePicker state =
   continueWithCmd state
     [ do 
       push <- getPushFn Nothing "HomeScreen"
-      _ <- launchAff $ showDateTimePicker push DateTimePickerAction
+      _ <- launchAff $ showDateTimePicker push DateTimePickerAction Nothing
       pure NoAction
     ]
+
+
+openDateTimeSelector :: String -> HomeScreenState -> Maybe String -> Eval Action ScreenOutput HomeScreenState
+openDateTimeSelector str state prevDate = 
+  continueWithCmd state 
+    [
+      do 
+      push <- getPushFn Nothing "HomeScreen"
+      _ <- launchAff $ showDateTimePicker push (DateSelectAction str) prevDate
+      pure NoAction 
+    ]
+
+
+formatMonth :: Int -> String -- this would be moved to Utils or Common
+formatMonth x
+  | x == 1 = (getString JANUARY)
+  | x == 2 = (getString FEBRUARY)
+  | x == 3 = (getString MARCH)
+  | x == 4 = (getString APRIL)
+  | x == 5 = (getString MAY)
+  | x == 6 = (getString JUNE)
+  | x == 7 = (getString JULY)
+  | x == 8 = (getString AUGUST)
+  | x == 9 = (getString SEPTEMBER)
+  | x == 10 = (getString OCTOBER)
+  | x == 11 = (getString NOVEMBER)
+  | x == 12 = (getString DECEMBER)
+  | otherwise = "Invalid"
+-- same for this either in Utils or Jbridge
+calculateDateInfo :: Int -> Int -> Int -> Int -> Int -> Int -> { returnTimeUTCString :: String, tripObj :: TripTypeData }
+calculateDateInfo year month day hour minute estDuration =
+  let 
+      hours = estDuration `div` 3600
+      remSeconds = estDuration `mod` 3600
+      mins = remSeconds / 60 
+
+      totalMin = (mins + minute )
+      totalHrs = hour + hours + (totalMin `div` 60)
+      totalDays = day + (totalHrs `div` 24)
+    
+      finalMin =  totalMin `mod` 60
+      finalHrs =  totalHrs `mod` 24
+      finalDay = totalDays
+
+      dateObj = addDaysToDate year (month+1) finalDay
+      returnTimeUTCString = unsafePerformEffect $ convertDateTimeConfigToUTC dateObj.year (dateObj.month) dateObj.day finalHrs finalMin 0
+      selectedDateTest = (show dateObj.day) <> " " <> (formatMonth (dateObj.month)) <> " , " <> (if(finalHrs > 12) then show (finalHrs - 12) else show finalHrs) <> ":" <>  (if finalMin < 10 then "0"  else "") <> (show finalMin) <> (if (finalHrs >= 12) then " PM" else " AM")
+      tripObj = 
+        { tripDateTimeConfig: 
+            { year: dateObj.year
+            , month: dateObj.month
+            , day: dateObj.day
+            , hour: finalHrs
+            , minute: finalMin
+            }
+        , tripDateUTC: returnTimeUTCString
+        , tripDateReadableString : selectedDateTest
+        }
+  in { returnTimeUTCString : returnTimeUTCString, tripObj : tripObj }
+
+addDaysToDate :: Int -> Int -> Int -> {year :: Int , month :: Int , day :: Int }
+addDaysToDate year month day
+  | day <= daysInMonth year month = { year: year, month: month, day: day }
+  | month == 12 = addDaysToDate (year + 1) 1 (day - daysInMonth year month)
+  | otherwise = addDaysToDate year (month + 1) (day - daysInMonth year month)
+
+daysInMonth :: Int -> Int -> Int
+daysInMonth y m
+  | m == 4 || m == 6 || m == 9 || m == 11 = 30
+  | m == 2 = if isLeapYear y then 29 else 28
+  | otherwise = 31
+isLeapYear :: Int -> Boolean
+isLeapYear y = (y `mod` 4 == 0 && y `mod` 100 /= 0) || (y `mod` 400 == 0)
 
 
 truncate :: Int -> Maybe Number -> Maybe Number

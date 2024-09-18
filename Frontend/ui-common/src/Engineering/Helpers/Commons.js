@@ -621,6 +621,12 @@ export const getUTCAfterNSecondsImpl = function (str, seconds) {
   return date.toISOString();
 }
 
+export const getUTCBeforeNSecondsImpl = function (str,seconds){
+  const date = new Date(str);
+  date.setSeconds(date.getSeconds() - seconds);
+  return date.toISOString();
+}
+
 export const compareUTCDateImpl = function (date1, date2) {
   return Math.floor((new Date(date1) - new Date(date2))/1000); 
 }

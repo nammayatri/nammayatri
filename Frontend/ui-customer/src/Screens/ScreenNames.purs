@@ -15,6 +15,8 @@
 
 module Screens where
 
+import Language.Types (STR(..))
+
 data ScreenName = SPLASH_SCREEN
                 | CHOOSE_LANGUAGE_SCREEN
                 | ENTER_MOBILE_NUMBER_SCREEN
@@ -47,6 +49,7 @@ data ScreenName = SPLASH_SCREEN
                 | NAMMASAFETY_SCREEN
                 | METRO_TICKET_BOOKING_SCREEN
                 | RENTAL_SCREEN
+                | RIDE_SUMMARY_SCREEN
 
 getScreen :: ScreenName -> String
 getScreen str = case str of 
@@ -82,3 +85,4 @@ getScreen str = case str of
         NAMMASAFETY_SCREEN            -> "nammasafety_screen"
         METRO_TICKET_BOOKING_SCREEN   -> "metro_ticket_booking_screen"
         RENTAL_SCREEN                 -> "rental_screen"
+        RIDE_SUMMARY_SCREEN           -> "ride_summary_screen"

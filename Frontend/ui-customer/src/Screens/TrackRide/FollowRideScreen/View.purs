@@ -85,7 +85,7 @@ screen initialState globalState =
   , name: "FollowRideScreen"
   , globalEvents:
       [ ( \push -> do
-            storeCallBackCustomer push NotificationListener "FollowRideScreen"
+            storeCallBackCustomer push NotificationListener "FollowRideScreen" Just Nothing
             tracking <- runEffectFn1 getValueFromIdMap "FollowsRide"
             case initialState.data.currentStage of
               MockFollowRide -> void $ launchAff $ flowRunner globalState $ updateMockData push initialState tracking.id

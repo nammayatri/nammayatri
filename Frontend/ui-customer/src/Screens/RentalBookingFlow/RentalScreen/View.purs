@@ -54,7 +54,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..) , Accessiblity(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width, onBackPressed, visibility, shimmerFrameLayout, accessibility, imageView, imageWithFallback, alignParentBottom, singleLine, ellipsize, clickable, textFromHtml, accessibilityHint , accessibility)
 import PrestoDOM.Animation as PrestoAnim
-import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig, locUnserviceablePopUpConfig, rentalPolicyInfoConfig)
+import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig, locUnserviceablePopUpConfig, rentalPolicyInfoConfig,scheduledRideExistsPopUpConfig)
 import Screens.RentalBookingFlow.RentalScreen.Controller (Action(..), FareBreakupRowType(..), ScreenOutput, eval, dummyRentalQuote, DescriptionType(..))
 import Screens.Types (RentalScreenState, RentalScreenStage(..))
 import Services.API (GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..))
@@ -91,6 +91,7 @@ view push state =
     [ getRentalScreenView push state
     ] <> if state.props.showPopUpModal then [locUnserviceableView push state] else []
       <> if state.props.showRentalPolicy then [rentalPolicyExplainerView push state] else []
+      <> if state.props.showScheduledRideExistsPopUp then [scheduledRideExistsPopUpView push state] else []
 
 rentalPolicyExplainerView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
 rentalPolicyExplainerView push state = 
@@ -596,3 +597,11 @@ locUnserviceableView push state =
         PopUpModal.view (push <<< PopUpModalAC) (locUnserviceablePopUpConfig state) ]
 
 fetchSelectedQuote rentalsQuoteList = head $ filter (\item -> item.activeIndex == item.index) rentalsQuoteList
+
+scheduledRideExistsPopUpView :: forall w . (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
+scheduledRideExistsPopUpView push state = 
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , accessibility DISABLE
+  ][PopUpModal.view (push <<< ScheduledRideExistsAction) (scheduledRideExistsPopUpConfig state)]

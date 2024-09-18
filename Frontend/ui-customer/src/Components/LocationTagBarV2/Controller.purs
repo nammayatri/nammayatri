@@ -42,7 +42,7 @@ type TagConfig = {
   id :: String,
   enableRipple  :: Boolean,
   rippleColor :: String,
-  orientation :: Orientation,
+  orientation :: String,
   bannerConfig :: BannerConfig,
   showBanner :: Visibility
   }

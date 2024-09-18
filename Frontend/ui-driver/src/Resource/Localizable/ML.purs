@@ -1609,4 +1609,7 @@ getML stringKey =
         LINKED_UPI_ID -> "ലിങ്ക് ചെയ്‌ത UPI ഐഡി"
         TO_GET_MONEY -> "പണം ലഭിക്കാൻ"
         TILL date -> date <> " വരെ"
-        REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK -> "റഫറൽ ബോണസ് നിങ്ങളുടെ ബാങ്ക് അക്കൗണ്ടിലേക്ക് ക്രെഡിറ്റ് ചെയ്യപ്പെടും" 
+        REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK -> "റഫറൽ ബോണസ് നിങ്ങളുടെ ബാങ്ക് അക്കൗണ്ടിലേക്ക് ക്രെഡിറ്റ് ചെയ്യപ്പെടും"         
+        ROUND_TRIP_EXPLAINER -> "(ഈ തീയതി & സമയത്ത് നിങ്ങളുടെ ഉല്പത്തിയിലേക്ക് തിരിച്ചുകൊടുക്കും)"
+        RESERVE -> "റിസർവ് ചെയ്യുക"
+        LEAVE_NOW -> "ഇപ്പൊഴേയും പോകുക"

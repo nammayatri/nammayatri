@@ -1610,3 +1610,6 @@ getHI stringKey =
         TO_GET_MONEY -> "धन प्राप्ति के लिए"
         TILL date -> date <> " तक"
         REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK -> "रेफरल बोनस आपके बैंक खाते में जमा किया जाएगा"
+        ROUND_TRIP_EXPLAINER -> "(आपको इस तारीख और समय पर आपके मूल स्थान पर वापस लाया जाएगा)"
+        RESERVE -> "आरक्षित करें"
+        LEAVE_NOW -> "अभी निकलें"

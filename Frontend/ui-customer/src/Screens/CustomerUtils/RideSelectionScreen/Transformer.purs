@@ -15,16 +15,26 @@
 
 module Screens.RideSelectionScreen.Transformer where
 
+import ConfigProvider
+import Data.Maybe
+import Screens.RideSelectionScreen.ScreenData
+
 import Accessor (_computedPrice, _contents, _driverName, _estimatedDistance, _id, _otpCode, _rideRating, _toLocation, _vehicleNumber, _vehicleVariant, _stopLocation)
 import Common.Types.App (LazyCheck(..), CategoryListType(..))
 import Common.Types.App as CTP
 import Data.Array (filter, null, (!!), any, elem, mapMaybe)
+import Data.Function.Uncurried (runFn2)
 import Data.Lens ((^.))
-import Data.Maybe 
+import Data.Ord (abs)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (convertUTCtoISC, os, getCurrentUTC)
+import Engineering.Helpers.Utils (getFixedTwoDecimals)
+import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
 import Helpers.Utils (FetchImageFrom(..), fetchImage, isHaveFare, withinTimeRange, getCityFromString, getVehicleVariantImage, getCityConfig)
+import JBridge (differenceBetweenTwoUTCInMinutes)
+import Language.Strings (getVarString)
 import Language.Types (STR(..))
+import MerchantConfig.Types (AppConfig(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (map, show, ($), (&&), (+), (-), (/=), (<>), (==), (||), (<#>), (>), (=<<))
 import PrestoDOM.Types.Core (toPropValue)
@@ -41,11 +51,12 @@ import Data.Function.Uncurried (runFn2)
 import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
 import Engineering.Helpers.Utils (getFixedTwoDecimals)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getFareProductType)
-import Services.API (FareBreakupAPIEntity, RideAPIEntity(..), RideBookingRes(..), RideBookingAPIDetails(..))
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.Types (FareProductType(..)) as FPT
-import Language.Strings (getVarString)
-import MerchantConfig.Types (AppConfig(..))
+import Screens.Types (Fares, IndividualRideCardState, ItemState, Stage(..), ZoneType(..), City(..), VehicleViewType(..))
+import Services.API (FareBreakupAPIEntity, RideAPIEntity(..), RideBookingRes(..), RideBookingAPIDetails(..))
+import Storage (isLocalStageOn, getValueToLocalStore, KeyStore(..))
+import Styles.Colors as Color
 import Data.Array as DA
 import Helpers.Utils as HU
 
@@ -66,6 +77,7 @@ myRideListTransformerProp listRes selectedCategory = mapMaybe transformRide list
                imageUrl = fromMaybe "" $ imageInfo !!1
                (RideBookingAPIDetails rideApiDetails) = ride.bookingDetails
                destination = fromMaybe dummyBookingDetails $ if ride.status == "CONFIRMED" then (ride.bookingDetails ^._contents^._stopLocation) else (ride.bookingDetails ^._contents^._toLocation)
+               rideType = getFareProductType rideApiDetails.fareProductType
            in  
              Just 
                {
@@ -93,7 +105,11 @@ myRideListTransformerProp listRes selectedCategory = mapMaybe transformRide list
                  variantImage : toPropValue $ if os == "IOS" then "url->" <> imageUrl <> "," <> imageName else  "url->" <> imageUrl,
                  showVariantImage : toPropValue $ if ride.status == "CONFIRMED" then "gone" else "visible",
                  showRepeatRide : toPropValue if (getFareProductType $ rideApiDetails.fareProductType) == FPT.RENTAL then "gone" else "visible",
-                 showDestination : toPropValue if (decodeAddress $ Booking destination) == "" then "gone" else "visible"
+                 showDestination : toPropValue if (decodeAddress $ Booking destination) == "" then "gone" else "visible",
+                 itemRideType : toPropValue $ (show rideType),
+                 rideTypeVisibility : toPropValue $ "gone",
+                 rideTypeBackground : toPropValue $ Color.white900,
+                 cornerRadius : toPropValue $ "0"
                }
           ) 
         else Nothing

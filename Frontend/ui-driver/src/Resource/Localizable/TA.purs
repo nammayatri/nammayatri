@@ -1609,4 +1609,7 @@ getTA stringKey =
         LINKED_UPI_ID -> "இணைக்கப்பட்ட UPI ஐடி"
         TO_GET_MONEY -> "பணம் பெற" 
         TILL date -> date <> " வரை"
-        REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK -> "பரிந்துரை போனஸ் உங்கள் வங்கிக் கணக்கில் வரவு வைக்கப்படும்"
+        REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK -> "பரிந்துரை போனஸ் உங்கள் வங்கிக் கணக்கில் வரவு வைக்கப்படும்"        
+        ROUND_TRIP_EXPLAINER -> "(இந்த தேதியில் மற்றும் நேரத்தில் உங்கள் மூல இடத்திற்கு திரும்ப நீங்கள் விட்டுவிடப்படும்)"
+        RESERVE -> "ரிசர்வ் செய்யவும்"
+        LEAVE_NOW -> "இப்போதே செல்லவும்"

@@ -111,9 +111,9 @@ homeScreen = do
     UpdatedState screenState saveToCurrLocs -> do
        modifyScreenState $ HomeScreenStateType (\homeScreenState → screenState)
        App.BackT $ App.BackPoint <$> (pure $ RELOAD saveToCurrLocs)
-    NotificationHandler notification updatedState ->  do
+    NotificationHandler notification notificationBody updatedState ->  do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-      App.BackT $ App.NoBack <$> (pure $ FCM_NOTIFICATION notification updatedState)
+      App.BackT $ App.NoBack <$> (pure $ FCM_NOTIFICATION notification notificationBody updatedState)
     RefreshHomeScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ REFRESH_HOME_SCREEN)
@@ -281,3 +281,9 @@ homeScreen = do
     UpdatePickupName updatedState lat lng -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> pure (UPDATE_PICKUP_NAME updatedState lat lng)
+    GoToTripSelectionScreen state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state) 
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_TRIP_TYPE_SELECTION state)
+    RideSummary state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state) 
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDE_SUMMARY_SCREEN state)

@@ -99,6 +99,7 @@ public class NotificationUtils {
     public static final String DRIVER_QUOTE_INCOMING = "DRIVER_QUOTE_INCOMING_NEW";
     public static final String SOS_TRIGGERED = "SOS_TRIGGERED_NEW";
     public static final String SOS_RESOLVED = "SOS_RESOLVED_NEW";
+    public static final String NOSOUND_NOTIFICATION = "NOSOUND_NOTIFICATION";
     public static String RENTAL = "Rental";
     public static String INTERCITY = "InterCity";
     public static Uri soundUri = null;
@@ -449,6 +450,7 @@ public class NotificationUtils {
     public static void showNotification(Context context, String title, String msg, JSONObject data, String imageUrl) throws JSONException {
         Log.e(TAG, "SHOWNOTIFICATION MESSAGE");
         int smallIcon =  Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ic_launcher", "drawable") ;
+        String show_notification = data.getString("show_notification");
         Bitmap bitmap = null;
         if (imageUrl != null) {
             bitmap = getBitmapfromUrl(imageUrl);
@@ -464,6 +466,7 @@ public class NotificationUtils {
         System.out.println("imageUrl" + imageUrl);
         System.out.println("smallIcon" + smallIcon);
         intent.putExtra("NOTIFICATION_DATA", data.toString());
+        Log.e("ShowNotificationData -> ",data.toString());
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("title",title)
                   .put("msg",msg);
@@ -476,10 +479,12 @@ public class NotificationUtils {
         String merchantType = context.getString(R.string.service);
         String key = merchantType.contains("provider") ? "DRIVER" : "USER";
         System.out.println("key" + key);
-        System.out.println("showNotification:- " + notificationType);
+        System.out.println("Notification:- " + notificationType);
+
         if (MyFirebaseMessagingService.NotificationTypes.TRIP_STARTED.equals(notificationType)) {
             channelId = RIDE_STARTED;
-        } else if (notificationType.equals(MyFirebaseMessagingService.NotificationTypes.CANCELLED_PRODUCT) ||
+        }
+        else if (notificationType.equals(MyFirebaseMessagingService.NotificationTypes.CANCELLED_PRODUCT) ||
                 notificationType.equals(MyFirebaseMessagingService.NotificationTypes.DRIVER_HAS_REACHED) ||
                 notificationType.equals(MyFirebaseMessagingService.NotificationTypes.SOS_RESOLVED) ||
                 notificationType.equals(MyFirebaseMessagingService.NotificationTypes.SOS_TRIGGERED) ||
@@ -490,6 +495,11 @@ public class NotificationUtils {
         } 
         else {
             channelId = GENERAL_NOTIFICATION;
+        }
+
+        if(!allowSoundForNotification(notificationType,data,key)){
+            channelId = NOSOUND_NOTIFICATION;
+            Log.e("channelId -> ",channelId);
         }
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, channelId);
         if (imageUrl != null && bitmap != null) {
@@ -533,7 +543,10 @@ public class NotificationUtils {
             } else {
                 notificationSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
             }
-            mBuilder.setSound(notificationSound);
+            boolean playSoundForNotification = allowSoundForNotification(notificationType,data,key);
+            if(playSoundForNotification){
+              mBuilder.setSound(notificationSound);
+            } 
             System.out.println("Default sound" + notificationSound);
        }
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
@@ -590,7 +603,10 @@ public class NotificationUtils {
                     else
                         cancellationSound = R.raw.you_have_cancelled_the_ride;
                 }
-                startMediaPlayer(context, cancellationSound, false);
+                if(allowSoundForNotification(notificationType,data,key)) {
+                    Log.e("we played this ->",notificationType);
+                    startMediaPlayer(context, cancellationSound, false);
+                }
             }
         }
         if (MyFirebaseMessagingService.NotificationTypes.DRIVER_ASSIGNMENT.equals(notificationType)) {
@@ -605,7 +621,9 @@ public class NotificationUtils {
             if(key.equals("USER") && disabilityName.equals("BLIND_LOW_VISION")) {
                 audio = R.raw.ride_assigned_talkback;
             }
-            startMediaPlayer(context, audio, key.equals("DRIVER") && incVol );
+            if(allowSoundForNotification(notificationType,data,key)) {
+                startMediaPlayer(context, audio, key.equals("DRIVER") && incVol );
+            }
         }
         notificationId++;
         if(MyFirebaseMessagingService.NotificationTypes.NEW_STOP_ADDED.equals(notificationType) || MyFirebaseMessagingService.NotificationTypes.EDIT_STOP.equals(notificationType) ){
@@ -620,6 +638,26 @@ public class NotificationUtils {
         }
     }
 
+    public static Boolean allowSoundForNotification(String notificationType, JSONObject data,String key){
+        if(data.has("rideTime")){
+            try {
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
+                sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+                Date rideTime = sdf.parse(data.getString("rideTime"));
+                Date currentTime = new Date();
+                assert rideTime != null;
+                long timeDifference = rideTime.getTime() - currentTime.getTime();
+                Log.e("timeDifference -> " , "" + timeDifference);
+                if (timeDifference > 30 * 60 * 1000) {
+                    Log.e("playSoundForNotification -> ", ""+false);
+                    return false;
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error parsing rideTime: " + e.getMessage());
+            }
+        }
+        return true;
+    }
     public static void triggerUICallbacks (String notificationType, String notificationData) {
         for (int i = 0; i < callBack.size(); i++) {
             callBack.get(i).customerCallBack(notificationType,notificationData);
@@ -658,6 +696,7 @@ public class NotificationUtils {
                 }
                 NotificationChannel channel = new NotificationChannel(channel_Id, channel_Id, importance);
                 channel.setDescription(description);
+                Log.e("channel_id",channel_Id);
                 switch (channel_Id) {
                     case RIDE_STARTED:
                         soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/raw/ride_started");
@@ -699,6 +738,12 @@ public class NotificationUtils {
                         channel.setName("Ride Reallocation");
                         channel.setDescription("Ride Reallocation related Notifications");
                         break;
+                    case NOSOUND_NOTIFICATION:
+                        soundUri = null;
+                        channel.setName("Other Silent notifications");
+                        channel.setDescription("Other ride related silent Notifications");
+                        channel.setSound(null,null);
+                        break;
                     default:
                         soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
                         channel.setName("Other ride related");
@@ -710,8 +755,9 @@ public class NotificationUtils {
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                         .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                         .build();
-                channel.setSound(soundUri, attributes);
-
+                if(soundUri!=null){
+                    channel.setSound(soundUri, attributes);
+                }
 
                 switch (channel_Id) {
                     case RIDE_STARTED:

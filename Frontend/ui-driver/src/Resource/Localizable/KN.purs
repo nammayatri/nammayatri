@@ -1609,3 +1609,6 @@ getKN stringKey =
         TO_GET_MONEY -> "ಹಣ ಪಡೆಯಲು"
         TILL date -> date <> " ರವರೆಗೆ"
         REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK -> "ರೆಫರಲ್ ಬೋನಸ್ ಅನ್ನು ನಿಮ್ಮ ಬ್ಯಾಂಕ್ ಖಾತೆಗೆ ಜಮಾ ಮಾಡಲಾಗುತ್ತದೆ"
+        ROUND_TRIP_EXPLAINER -> "(ನೀವು ಈ ದಿನಾಂಕ ಮತ್ತು ಸಮಯದಲ್ಲಿ ನಿಮ್ಮ ಮೂಲ ಸ್ಥಳಕ್ಕೆ ಇಳಿಸಲಾಗುತ್ತದೆ)"
+        RESERVE -> "ಆಹ್ವಾನಿಸು"
+        LEAVE_NOW -> "ಈಗ ಹೋಗಿ"

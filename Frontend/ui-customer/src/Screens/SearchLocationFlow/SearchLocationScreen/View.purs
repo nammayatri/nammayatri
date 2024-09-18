@@ -105,7 +105,7 @@ searchLocationScreen initialState globalProps =
   }
   where 
     globalEventsFunc push = do
-      void $ storeCallBackCustomer push NotificationListener "SearchLocationScreen"
+      void $ storeCallBackCustomer push NotificationListener "SearchLocationScreen" MB.Just MB.Nothing
       case initialState.props.searchLocStage of 
         LocateOnMapStage -> do
           void $ runEffectFn2 storeCallBackLocateOnMap (\key lat lon -> push $ LocFromMap key lat lon) (handleLocateOnMapCallback "SearchLocationScreen")

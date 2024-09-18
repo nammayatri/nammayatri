@@ -198,6 +198,23 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     String key = getString(R.string.service);
                     String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider") ? "DRIVER" : "USER";
                     JSONObject notificationData = new JSONObject();
+                    String entityDataString = remoteMessage.getData().get("entity_data");
+                    if (entityDataString != null) {
+                        Log.e("EntityDataString", entityDataString);
+                        try{
+                            JSONObject entityData = new JSONObject(entityDataString);                        
+                            if (entityData.has("rideTime")) {
+                                notificationData.put("rideTime", entityData.getString("rideTime"));
+                                payload.put("rideTime",entityData.getString("rideTime"));
+                            }
+                            if (entityData.has("bookingId")){
+                                notificationData.put("bookingId",entityData.getString("bookingId"));
+                            }
+                        } catch (JSONException e) {
+                            Log.e("MyFirebaseMessagingService", "Error parsing entity_data: " + e.getMessage());
+                            FirebaseCrashlytics.getInstance().recordException(e);
+                        }
+                    }
                     notificationData.put("title", title)
                                     .put("msg",body);
                     NotificationUtils.triggerUICallbacks(notificationType, notificationData.toString());

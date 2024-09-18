@@ -15,12 +15,12 @@
 
 module Screens.HomeScreen.ScreenData where
 
-import Common.Types.App (RateCardType(..), RentalBookingConfig, CustomerIssueTypes(..))
+import Common.Types.App (RateCardType(..), RentalBookingConfig, CustomerIssueTypes(..),TicketType(..))
 import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller as CV
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig, RideCompletedData(..), ParkingData, TollData, NewContacts(..))
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..), BottomNavBarIcon(..), ReferralStatus(..), LocationSelectType(..), ReferralStage(..), BookingTime, InvalidBookingPopUpConfig, RideCompletedData(..), ParkingData, TollData, NewContacts(..) , TripTypeData,NotificationBody)
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..), LatLong(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -38,6 +38,9 @@ import Screens.Types (FareProductType(..)) as FPT
 import Screens.Types as ST
 import Components.MessagingView.Controller (ChatContacts, dummyChatRecipient)
 import Screens.EmergencyContactsScreen.ScreenData (neverShareRideOption)
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Engineering.Helpers.Commons (convertUTCtoISC,getCurrentUTC)
 
 initData :: HomeScreenState
 initData = let
@@ -178,6 +181,8 @@ initData = let
     , rateCardCache : Nothing
     , rentalsInfo : Nothing 
     , startTimeUTC : ""
+    , returnTimeUTC : ""
+    , estReturnTimeUTC : ""
     , invalidBookingId : Nothing
     , maxEstimatedDuration : 0
     , invalidBookingPopUpConfig : Nothing
@@ -188,6 +193,12 @@ initData = let
     , chatPersonId : "Customer"
     , parking : initialParkingData
     , toll : initialTollData
+    , tripTypeDataConfig : tripTypeDataConfig
+    , srcCity : Nothing
+    , destCity : Nothing
+    , tripEstDuration : 0
+    , latestScheduledRides : Nothing
+    , overLappingBooking : Nothing
     },
     props: {
       rideRequestFlow : false
@@ -394,14 +405,37 @@ initData = let
     , isSharedLocationFlow : false
     , isOtpRideFlow : false
     , safetySettings : Nothing
+    , isIntercityFlow : false
+    , isTripSchedulable : false
   }
 }
 
+
+tripTypeDataConfig =  {
+      tripPickupData : Just dummyTripTypeData,
+      tripReturnData : Just dummyTripTypeData
+    }
+dummyTripTypeData :: TripTypeData
+dummyTripTypeData = {
+  tripDateTimeConfig : {
+    year : 0
+  , month : 0
+  , day : 0
+  , hour : 0
+  , minute : 0
+  },
+  tripDateUTC : "",
+  tripDateReadableString : convertUTCtoISC (getCurrentUTC "") "D MMM, h:mm A"
+}
 dummySearchLocationModelProps = {
     isAutoComplete : false
   , showLoader : false
   , crossBtnSrcVisibility : false
   , crossBtnDestVisibility : false
+  , tripType : ONE_WAY_TRIP
+  , totalRideDistance : 0
+  , totalRideDuration : 0
+  , showRideInfo : false
 }
 
 dummySearchLocationModelData = {
@@ -618,8 +652,12 @@ dummyRideBooking = RideBookingRes
   tollConfidence : Nothing,
   driversPreviousRideDropLocLat : Nothing,
   driversPreviousRideDropLocLon : Nothing,
-  specialLocationName : Nothing
-, estimatedFareBreakup : []
+  specialLocationName : Nothing,
+  isScheduled : false,
+  estimatedFareBreakup : [],
+  vehicleServiceTierAirConditioned : Nothing,
+  vehicleServiceTierSeatingCapacity : Nothing,
+  returnTime : Nothing
 }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails
@@ -746,4 +784,10 @@ dummyNewContacts = {
   notifiedViaFCM : Nothing,
   isFollowing : Nothing,
   shareTripWithEmergencyContactOption : neverShareRideOption
+}
+
+dummyNotificationBody :: NotificationBody 
+dummyNotificationBody = {
+    rideTime : Nothing,
+    bookingId : Nothing
 }

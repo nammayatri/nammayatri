@@ -45,7 +45,7 @@ view push config =
     fromPrice = fromMaybe "" (priceRange DA.!! 0)
     toPrice = fromMaybe "" (priceRange DA.!! 1)
     accessibilityText = selectedVehicle <> (if isActiveIndex then " selected : " else " Un Selected : ") <> fromPrice <> (if toPrice /= "" then " to " <> toPrice else "") <> " with capacity of " <> config.capacity
-    isOneWayOrRental = config.searchResultType `DA.elem` [ESTIMATES, QUOTES RENTAL]
+    isOneWayOrRental = config.searchResultType `DA.elem` [ESTIMATES, QUOTES RENTAL,QUOTES INTER_CITY]
   in
     frameLayout
       [ width MATCH_PARENT

@@ -577,6 +577,10 @@ chooseYourRideView push config =
 
 estimatedTimeAndDistanceView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 estimatedTimeAndDistanceView push config =
+  let 
+    startTime = fromMaybe (EHC.getCurrentUTC "") config.startTimeUTC
+    returnTime = fromMaybe "" config.returnTimeUTC
+  in
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -595,7 +599,7 @@ estimatedTimeAndDistanceView push config =
         [ height $ V 4
         , width $ V 4
         , cornerRadius 2.5
-        , background Color.black600
+        , background Color.black700
         , margin (Margin 6 2 6 0)
         ]
         []
@@ -605,9 +609,45 @@ estimatedTimeAndDistanceView push config =
         , text config.rideDuration
         , color Color.black650
         , accessibilityHint $ "Estimated time is : " <> config.rideDuration
-        ]
-        <> FontStyle.paragraphText TypoGraphy
-    ]
+          ]
+          <> FontStyle.paragraphText TypoGraphy
+      , linearLayout
+          [ height $ V 4
+          , width $ V 4
+          , cornerRadius 2.5
+          , visibility $ GONE --boolToVisibility config.intercity
+          , background Color.black600
+          , margin (Margin 6 2 6 0)
+          ]
+          []
+      , textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text $ EHC.convertUTCtoISC startTime "DD MMM,h:mm A"
+          , color Color.black650
+          , visibility $ GONE -- boolToVisibility config.intercity
+          , accessibilityHint $ "Start time is : " <> EHC.convertUTCtoISC startTime "DD MMM,h:mm A"
+          ]
+          <> FontStyle.paragraphText TypoGraphy
+      , linearLayout
+          [ height $ V 4
+          , width $ V 4
+          , cornerRadius 2.5
+          , visibility $ GONE -- boolToVisibility $ config.intercity && config.roundTrip
+          , background Color.black600
+          , margin (Margin 6 2 6 0)
+          ]
+          []
+      , textView $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text $ EHC.convertUTCtoISC returnTime "DD MMM,h:mm A"
+          , color Color.black650
+          , visibility $ GONE --  boolToVisibility $ config.intercity && config.roundTrip
+          , accessibilityHint $ "Return time is : " <> EHC.convertUTCtoISC returnTime "DD MMM,h:mm A"
+          ]
+          <> FontStyle.paragraphText TypoGraphy
+      ]
 
 quoteListView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 quoteListView push config =
@@ -677,7 +717,7 @@ quoteListView push config =
                                 bookAnyConfig = getBookAnyProps estimates
                                 price = getMinMaxPrice bookAnyConfig item estimates
                                 capacity = getMinMaxCapacity bookAnyConfig item estimates
-                            ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = (item.searchResultType == CCC.ESTIMATES), capacity = capacity, singleVehicle = (length topProviderList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
+                            ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length topProviderList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
                         ) topProviderList)
            , if EHC.os /= "IOS" then bottomLayoutViewKeyed push config "BottomLayoutView" else Tuple "EmptyLL" $ linearLayout[][]-- TODO:: Temporary fix, should make scrollable list better
           ]
@@ -810,7 +850,10 @@ primaryButtonRequestRideConfig config id' = PrimaryButton.config
               Nothing -> ChooseVehicle.config
     name = fromMaybe "" selectedItem.serviceTierName
     disableButton = ((selectedItem.selectedServices == []) && selectedItem.vehicleVariant == "BOOK_ANY") || (config.fareProductType == RENTAL && name == "")
-    additionalString = if config.fareProductType == RENTAL then "Rental" else ""
+    additionalString = case config.fareProductType of 
+                            RENTAL -> "Rental"
+                            INTER_CITY -> "Intercity"
+                            _ -> ""--if config.fareProductType == RENTAL then "Rental" else ""
     title = if selectedItem.vehicleVariant == "BOOK_ANY" then getString $ BOOK_ANY else getString $ BOOK ( additionalString <> " " <> name )
 
 filterVariantAndEstimate :: Array ChooseVehicle.Config -> Array ChooseVehicle.Config -- showing unique quotes based on variant and arrange price range (In case of multiple provider)

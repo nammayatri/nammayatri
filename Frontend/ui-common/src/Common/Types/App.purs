@@ -39,6 +39,11 @@ type FlowBT e st a = BackT (ExceptT e (Free (FlowWrapper st))) a
 data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance_Taxi | Ambulance_Taxi_Oxy | Ambulance_AC | Ambulance_AC_Oxy | Ambulance_Ventilator | SUV_PLUS
 data LazyCheck = LanguageStyle | EndPoint | BaseUrl | TypoGraphy | WithoutOffers | FunctionCall | Config | Language
 
+data TicketType = ONE_WAY_TRIP | ROUND_TRIP
+
+derive instance genericTicketType :: Generic TicketType _
+instance eqTicketType :: Eq TicketType where eq = genericEq
+
 newtype Place = Place {
   id :: String
 , address :: String
@@ -240,7 +245,17 @@ type LayoutBound =
 -- instance encodeLocationLatLong :: Encode LocationLatLong where encode = defaultEncode
 -- instance decodeLocationLatLong :: Decode LocationLatLong where decode = defaultDecode
 
-data RateCardType = DefaultRateCard | DriverAddition | FareUpdate | PaymentFareBreakup | WaitingCharges | TollOrParkingCharges | RentalRateCard
+data RateCardType = 
+    DefaultRateCard 
+  | DriverAddition 
+  | FareUpdate 
+  | PaymentFareBreakup 
+  | WaitingCharges 
+  | TollOrParkingCharges 
+  | RentalRateCard
+  | DriverAllowance
+  | NightShiftCharges
+  | TollAndParkingCharges
 derive instance genericRateCardType :: Generic RateCardType _
 instance eqRateCardType :: Eq RateCardType where eq = genericEq
 instance decodeRateCardType :: Decode RateCardType where decode = defaultEnumDecode
@@ -656,6 +671,37 @@ type RateCard =
     waitingTimeInfo :: WaitingTimeInfo,
     serviceTierName :: Maybe String
   }
+
+newtype TripCategory = TripCategory {
+  contents :: Maybe String,
+  tag :: TripCategoryTag
+}
+data TripCategoryTag  = OneWay | Rental | RideShare | InterCity |CrossCity 
+
+
+derive instance genericTripCategoryTag  :: Generic TripCategoryTag   _
+instance showTripCategoryTag :: Show TripCategoryTag  where show = genericShow
+instance decodeTripCategoryTag :: Decode TripCategoryTag  where decode = defaultEnumDecode
+instance encodeTripCategoryTag :: Encode TripCategoryTag  where encode = defaultEnumEncode
+instance eqTripCategoryTag :: Eq TripCategoryTag  where eq = genericEq
+instance standardTripCategoryTag :: StandardEncode TripCategoryTag   where standardEncode _ = standardEncode {}
+
+derive instance genericTripCategory :: Generic TripCategory  _
+instance showTripCategory:: Show TripCategory where show = genericShow
+instance decodeTripCategory:: Decode TripCategory where decode = defaultDecode
+instance encodeTripCategory:: Encode TripCategory where encode = defaultEncode
+instance eqTripCategory:: Eq TripCategory where eq = genericEq
+instance standardTripCategory:: StandardEncode TripCategory where standardEncode _ = standardEncode {}
+
+
+data BookingStatus = UPCOMING |UPCOMING_6HRS | ONGOING | ONGOING_6HRS | COMPLETED | CANCELLED | NEW    
+
+derive instance genericBookingStatus :: Generic BookingStatus  _
+instance showBookingStatus:: Show BookingStatus where show = genericShow
+instance decodeBookingStatus :: Decode BookingStatus where decode = defaultEnumDecode
+instance encodeBookingStatus :: Encode BookingStatus where encode = defaultEnumEncode
+instance eqBookingStatus:: Eq BookingStatus where eq = genericEq
+instance standardEncodeBookingStatus :: StandardEncode BookingStatus where standardEncode _ = standardEncode {}
 
 data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED | RECORDED
 

@@ -15,47 +15,49 @@
 
 module Screens.MyRidesScreen.Controller where
 
-import Accessor (_amount, _computedPrice, _contents, _description, _driverName, _estimatedDistance, _id, _list, _rideRating, _toLocation, _vehicleNumber, _otpCode, _vehicleVariant, _stopLocation)
+import ConfigProvider
+import Debug
+import Accessor (_amount, _computedPrice, _contents, _description, _driverName, _estimatedDistance, _id, _list, _rideRating, _toLocation, _vehicleNumber, _otpCode, _vehicleVariant, _stopLocation , _status ,_isScheduled)
+import Common.Types.App as CTP
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
 import Components.IndividualRideCard.Controller as IndividualRideCardController
 import Components.PrimaryButton as PrimaryButton
 import Data.Array (union, (!!), length, filter, unionBy, head, all, null, sortWith, reverse, any)
+import Data.Function.Uncurried (runFn2)
 import Data.Int (fromString, round, toNumber)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String (Pattern(..), split)
-import Engineering.Helpers.Commons (strToBool, os)
-import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, isHaveFare, withinTimeRange, fetchImage, FetchImageFrom(..), isParentView, emitTerminateApp, getCityFromString, getVehicleVariantImage, getAssetLink, getCityConfig)
+import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (convertUTCtoISC)
+import Engineering.Helpers.Commons (strToBool, os)
+import Engineering.Helpers.LogEvent (logEvent)
+import Engineering.Helpers.Utils (getFixedTwoDecimals)
+import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
+import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, isHaveFare, withinTimeRange, fetchImage, FetchImageFrom(..), isParentView, emitTerminateApp, getCityFromString, getVehicleVariantImage, getAssetLink, getCityConfig)
 import JBridge (firebaseLogEvent)
+import JBridge (toast, differenceBetweenTwoUTCInMinutes)
+import Language.Strings (getString, getVarString)
+import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
+import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&), (+), (/=), (<>), (||), (-), (<), (/), (*), negate, (<<<), not, void, (<#>))
 import PrestoDOM (Eval, update, ScrollState(..), continue, continueWithCmd, exit, updateAndExit)
-import PrestoDOM.Types.Core (class Loggable, toPropValue)
-import Screens (ScreenName(..), getScreen)
-import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..), ZoneType(..), VehicleVariant(..),City(..), VehicleViewType(..))
-import Storage (isLocalStageOn, getValueToLocalStore,  KeyStore(..))
-import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getFareProductType)
-import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..), RideBookingAPIDetails(..))
-import Language.Strings (getString, getVarString)
-import Resources.Localizable.EN (getEN)
-import Language.Types (STR(..))
-import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getFilteredFares, getKmMeter, fetchVehicleVariant)
-import Common.Types.App as CTP
-import MerchantConfig.Utils (getMerchant, Merchant(..))
-import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.LogEvent (logEvent)
-import ConfigProvider
 import PrestoDOM.List as PrestoList
-import JBridge (toast, differenceBetweenTwoUTCInMinutes)
-import Data.Function.Uncurried (runFn2)
-import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
-import Engineering.Helpers.Utils (getFixedTwoDecimals)
+import PrestoDOM.Types.Core (class Loggable, toPropValue)
+import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getFilteredFares, getKmMeter, fetchVehicleVariant)
+import Resources.Localizable.EN (getEN)
+import Screens (ScreenName(..), getScreen)
+import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getFareProductType)
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
+import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..), ZoneType(..), VehicleVariant(..), City(..), VehicleViewType(..),NotificationBody)
 import Screens.Types (FareProductType(..)) as FPT
 import Data.Array as DA
 import Helpers.Utils as HU
+import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..), RideBookingAPIDetails(..))
+import Storage (isLocalStageOn, getValueToLocalStore, KeyStore(..))
+import Styles.Colors as Color
 
 instance showAction :: Show Action where
   show _ = ""
@@ -95,7 +97,7 @@ instance loggableAction :: Loggable Action where
     ScrollStateChanged scrollState -> trackAppScreenEvent appId (getScreen MY_RIDES_SCREEN) "in_screen" "scroll_state_changed"
     RideBookingListAPIResponseAction rideList status -> trackAppScreenEvent appId (getScreen MY_RIDES_SCREEN) "in_screen" "ride_booking_list"
     NoAction -> trackAppScreenEvent appId (getScreen MY_RIDES_SCREEN) "in_screen" "no_action"
-
+    NotificationListener notification notificationBody -> trackAppScreenEvent appId (getScreen MY_RIDES_SCREEN) "in_screen" "notification_listener_action"
 data ScreenOutput = GoBack MyRidesScreenState
   | MyRidesScreen MyRidesScreenState
   | GoToTripDetails MyRidesScreenState
@@ -103,6 +105,7 @@ data ScreenOutput = GoBack MyRidesScreenState
   | BookRide
   | RepeatRide MyRidesScreenState
   | GoToRideScheduledScreen MyRidesScreenState
+  | NotificationListenerSO String NotificationBody
 
 data Action = NoAction
             | OnFadeComplete String
@@ -116,7 +119,8 @@ data Action = NoAction
             | APIFailureActionController ErrorModal.Action
             | Scroll String 
             | AfterRender
-            | ScrollStateChanged ScrollState
+            | ScrollStateChanged ScrollState 
+            | NotificationListener String NotificationBody
 
 eval :: Action -> MyRidesScreenState -> Eval Action ScreenOutput MyRidesScreenState
 
@@ -162,7 +166,7 @@ eval (IndividualRideCardActionController (IndividualRideCardController.OnClick i
   let selectedCard = state.itemsRides !! index
   case selectedCard of
     Just selectedRide -> do
-      if selectedRide.status == "CONFIRMED" then exit $ GoToRideScheduledScreen state { data { selectedItem = selectedRide}}
+      if selectedRide.status == "CONFIRMED" || selectedRide.status=="TRIP_ASSIGNED" then exit $ GoToRideScheduledScreen state { data { selectedItem = selectedRide}}
         else exit $ GoToTripDetails state { data { selectedItem = selectedRide}}
     Nothing -> continue state
 
@@ -179,9 +183,11 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
   _ <- pure $ setRefreshing "2000031" false
   case status of
     "success" -> do
-                  let bufferCardDataPrestoList = ((myRideListTransformerProp (rideList ^. _list)))
-                      bufferCardData = myRideListTransformer state (rideList  ^. _list)
-                      loaderBtnDisabled = if(length (rideList ^. _list )== 0) then true else false
+                  let 
+                      filteredList = if state.props.fromBanner then filter (\item -> (any (_ == item ^. _status) ["CONFIRMED" , "TRIP_ASSIGNED"]) && item ^._isScheduled) (rideList^._list) else (rideList ^. _list)
+                      bufferCardDataPrestoList = myRideListTransformerProp filteredList
+                      bufferCardData = myRideListTransformer state filteredList
+                      loaderBtnDisabled = if (length (filteredList) == 0) then true else false
                   _ <- pure $ setRefreshing "2000031" false
                   continue $ state {shimmerLoader = AnimatedOut ,prestoListArrayItems = union (state.prestoListArrayItems) (bufferCardDataPrestoList), itemsRides = unionBy matchRidebyId (state.itemsRides) (bufferCardData),props{loadMoreDisabled = loaderBtnDisabled, receivedResponse = true ,refreshLoader = false}}
     "listCompleted" -> continue state {data{loadMoreText = false},props  {refreshLoader = false}}
@@ -193,14 +199,15 @@ eval (ErrorModalActionController (ErrorModal.PrimaryButtonActionController Prima
 
 eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit $ BookRide
 
+eval (NotificationListener notification notificationBody) state = exit $ NotificationListenerSO notification notificationBody
 
 eval _ state = update state
 
 myRideListTransformerProp :: Array RideBookingRes  -> Array ItemState
 myRideListTransformerProp listRes =
-    filter (\item -> (any (_ == item.status) [(toPropValue "COMPLETED"), (toPropValue "CANCELLED"), (toPropValue "REALLOCATED"), (toPropValue "CONFIRMED")])) (map (\(RideBookingRes ride) -> 
+    filter (\item -> (any (_ == item.status) [(toPropValue "COMPLETED"), (toPropValue "CANCELLED"), (toPropValue "REALLOCATED"), (toPropValue "CONFIRMED"),(toPropValue "UPCOMING") ,(toPropValue "TRIP_ASSIGNED")])) (map (\(RideBookingRes ride) -> 
     let (RideBookingAPIDetails rideApiDetails) = ride.bookingDetails
-        isScheduled = ride.status == "CONFIRMED"
+        isScheduled = ride.status == "CONFIRMED" || ride.status == "TRIP_ASSIGNED"
         rideStartTime = fromMaybe ride.createdAt $ if isScheduled then ride.rideScheduledTime else ride.rideStartTime
         destination = fromMaybe dummyBookingDetails $ if (getFareProductType rideApiDetails.fareProductType) == FPT.RENTAL then (ride.bookingDetails ^._contents^._stopLocation) else (ride.bookingDetails ^._contents^._toLocation)
         imageInfo = case fetchVehicleVariant ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleVariant)of
@@ -208,6 +215,14 @@ myRideListTransformerProp listRes =
                     Nothing -> if isJust ride.vehicleServiceTierType then split (Pattern ",") (getVehicleVariantImage (fromMaybe "" ride.vehicleServiceTierType) RIGHT_VIEW) else ["",""]
         imageName = fromMaybe "" $ imageInfo !!0
         imageUrl = fromMaybe "" $ imageInfo !!1
+        rideType = getFareProductType rideApiDetails.fareProductType
+        rideString = if rideType == FPT.INTER_CITY then (getString INTER_CITY_ <>" " <> getString RIDE)
+                      else if rideType == FPT.RENTAL then (getString RENTAL_RIDE)
+                      else (getString RIDE)
+        rideTypeString = (if isScheduled then (getString SCHEDULED <> " ") else "" )<> (rideString)
+        rideTypeBackground = if rideType  == FPT.INTER_CITY then Color.blue800
+                            else if rideType == FPT.RENTAL then Color.blueGreen
+                            else Color.blueGreen
     in
       {
         date : toPropValue (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC rideStartTime "llll")) !!0 )) <> ", " <>  (convertUTCtoISC rideStartTime "Do MMM") )),
@@ -230,16 +245,20 @@ myRideListTransformerProp listRes =
         status :toPropValue (if ride.status == "REALLOCATED" then "CANCELLED" else ride.status),
         rideEndTimeUTC : toPropValue (fromMaybe ride.createdAt ride.rideEndTime),
         alpha : toPropValue if isLocalStageOn HomeScreen then "1.0" else "0.5",
-        zoneVisibility : toPropValue if (getSpecialTag ride.specialLocationTag).priorityTag == METRO then "visible" else "gone",
+        zoneVisibility : toPropValue if ((getSpecialTag ride.specialLocationTag).priorityTag == METRO && not (rideType == FPT.RENTAL || rideType == FPT.INTER_CITY )) then "visible" else "gone",
         showRepeatRide : toPropValue if getFareProductType rideApiDetails.fareProductType == FPT.RENTAL || isScheduled then "gone" else "visible",
         showDestination : toPropValue if (decodeAddress $ Booking destination) == "" then "gone" else "visible",
         variantImage : toPropValue $ if os == "IOS" then "url->" <> imageUrl <> "," <> imageName else  "url->" <> imageUrl,
-        showVariantImage : toPropValue "visible"
+        showVariantImage : toPropValue "visible",
+        itemRideType : toPropValue (rideTypeString),
+        rideTypeVisibility : toPropValue (if (rideType == FPT.INTER_CITY || rideType == FPT.RENTAL) then "visible" else "gone"),
+        rideTypeBackground : toPropValue $ rideTypeBackground,
+        cornerRadius : toPropValue $ "24.0"
       }) $ reverse $ sortWith (\(RideBookingRes ride) ->fromMaybe ride.createdAt $ if ride.status == "CONFIRMED" then ride.rideScheduledTime else ride.rideStartTime) listRes)
 
 
 myRideListTransformer :: MyRidesScreenState -> Array RideBookingRes -> Array IndividualRideCardState
-myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) ["COMPLETED", "CANCELLED", "REALLOCATED", "CONFIRMED" ])) (map (\(RideBookingRes ride) ->
+myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) ["COMPLETED", "CANCELLED", "REALLOCATED", "CONFIRMED", "UPCOMING", "TRIP_ASSIGNED" ])) (map (\(RideBookingRes ride) ->
   let
     (RideBookingAPIDetails rideApiDetails) = ride.bookingDetails
     fares = getFares ride.fareBreakup
@@ -255,7 +274,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
     nightChargeTill = "5 AM"
     startTime = fromMaybe "" ride.rideStartTime
     endTime = fromMaybe "" ride.rideEndTime
-    isScheduled = ride.status == "CONFIRMED"
+    isScheduled = ride.status == "CONFIRMED" || ride.status == "TRIP_ASSIGNED"
     rideStartTime = fromMaybe ride.createdAt $ if isScheduled then ride.rideScheduledTime else ride.rideStartTime
     destination = (fromMaybe dummyBookingDetails $ if (getFareProductType rideApiDetails.fareProductType) == FPT.RENTAL then (ride.bookingDetails ^._contents^._stopLocation) else (ride.bookingDetails ^._contents^._toLocation))
     cityConfig = getCityConfig state.data.config.cityConfig cityStr

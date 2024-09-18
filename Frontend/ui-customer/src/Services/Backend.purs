@@ -1475,3 +1475,31 @@ makeMultiChatReq chatPersonId body title =
         body : body,
         title : title
     }
+
+------------------------------------------------------------------------------- Intercity ---------------------------------------------------------------------------------
+makeRoundTripReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Maybe String ->  Boolean -> SearchReq
+makeRoundTripReq slat slong dlat dlong srcAdd desAdd startTime returnTime roundTrip =
+    let appConfig = CP.getAppConfig CP.appConfig
+    in  SearchReq { "contents" : RoundTripSearchRequest (
+                                RoundTripSearchReq {
+                                        "stops" : if dlat == 0.0 then Nothing else 
+                                            (Just [SearchReqLocation {
+                                                    "gps" : LatLong {
+                                                        "lat" : dlat ,
+                                                        "lon" : dlong
+                                                        },
+                                                    "address" : (LocationAddress desAdd)
+                                            }]), 
+                                            "origin" : SearchReqLocation {
+                                            "gps" : LatLong {
+                                                        "lat" : slat ,
+                                                        "lon" : slong
+                                            },"address" : (LocationAddress srcAdd)
+                                            },
+                                            "startTime" : startTime,
+                                            "returnTime" : returnTime,
+                                            "roundTrip" : roundTrip,
+                                            "isReallocationEnabled" : Just appConfig.feature.enableReAllocation
+                                            }),
+                    "fareProductType" : "INTER_CITY"
+                   }

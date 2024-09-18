@@ -230,8 +230,8 @@ screen initialState =
             when (initialState.props.followsRide && isNothing initialState.data.followers) $ void $ launchAff $ flowRunner defaultGlobalState $ getFollowRide push UpdateFollowers
             if (not initialState.props.callbackInitiated) then do
               _ <- pure $ printLog "storeCallBackCustomer initiateCallback" "."
-              _ <- storeCallBackCustomer push NotificationListener "HomeScreen"
-              _ <- pure $ runFn2 storeOnResumeCallback push OnResumeCallback
+              _ <- storeCallBackCustomer push NotificationListener "HomeScreen" Just Nothing
+              _ <- pure $ runFn2 storeOnResumeCallback push OnResumeCallback 
               _ <- runEffectFn3 JB.storeCallBackInternetAction push InternetCallBackCustomer "HomeScreen"
               _ <- runEffectFn2 JB.storeNoInternetAction push UpdateNoInternet
               _ <- runEffectFn2 storeKeyBoardCallback push KeyboardCallback
@@ -630,6 +630,7 @@ view push state =
             , if state.props.currentStage == RideCompleted || state.props.currentStage == RideRating then rideCompletedCardView push state else emptyTextView state
             , if state.props.currentStage == RideRating then rideRatingCardView state push else emptyTextView state
             , if state.props.showRateCard then (rateCardView push state) else emptyTextView state
+            , if state.props.currentStage == GoToTripSelect then (selectTripViewIntercity push state) else emptyTextView state
             -- , if state.props.zoneTimerExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.showDisabilityPopUp &&  (getValueToLocalStore DISABILITY_UPDATED == "true") then disabilityPopUpView push state else emptyTextView state
@@ -645,6 +646,7 @@ view push state =
             , if state.props.showScheduledRideExistsPopUp then scheduledRideExistsPopUpView push state else emptyTextView state
             , if state.data.toll.showAmbiguousPopUp then PopUpModal.view (push <<< TollChargeAmbigousPopUpAction) (PopUpConfigs.finalFareExcludesToll state) else emptyTextView state
             , if state.data.toll.showIncludedPopUp then PopUpModal.view (push <<< TollChargeIncludedPopUpAction) (PopUpConfigs.tollChargesIncluded state) else emptyTextView state
+            , if state.props.searchLocationModelProps.showRideInfo then rideInfoCardView push state  else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -1261,7 +1263,10 @@ rateCardView push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         ]
-        [ RateCard.view (push <<< RateCardAction) (rateCardConfig state) ]
+        [ RateCard.view (push <<< RateCardAction) (getCardConfig state) ]
+  where 
+  getCardConfig state = do 
+    if (state.data.fareProductType == FPT.INTER_CITY) then (intercityRateCardConfig state) else (rateCardConfig state)
 
 buttonLayout :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 buttonLayout state push =
@@ -4688,7 +4693,7 @@ rentalBanner push state =
     , width MATCH_PARENT
     , padding $ Padding 8 0 8 0
     , margin $ Margin 8 24 8 0
-    , visibility $ boolToVisibility $ (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) 
+    , visibility $ spy "rentalBannerVisibility" $ boolToVisibility $ (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) 
     , gradient (Linear 0.0 [Color.transparent, "#FFFFFF" , "#FFFFFF" , "#FFFFFF"])
     ][  if state.props.showShimmer then 
           textView[]
@@ -4698,32 +4703,43 @@ rentalBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> Pres
 rentalBannerView state push = 
   let 
     bannerText = (maybe "" (\rentalsInfo ->
-                              if rentalsInfo.multipleScheduled then getEN UPCOMING_BOOKINGS
+                              if rentalsInfo.multipleScheduled then getString UPCOMING_BOOKINGS
+                              else if (length (rentalsInfo.rideList) > 0) then fetchDriverDetails rentalsInfo
                               else do
                                 let timeUTC = rentalsInfo.rideScheduledAtUTC
                                     fpt = rentalsInfo.fareProductType
                                     bookingInfoString = if fpt == FPT.INTER_CITY then YOU_HAVE_UPCOMING_INTERCITY_BOOKING
                                                         else YOU_HAVE_UPCOMING_RENTAL_BOOKING
-                                getEN $ bookingInfoString $ convertUTCtoISC timeUTC "D" <> " " <> convertUTCtoISC timeUTC "MMMM" <> " " <> convertUTCtoISC timeUTC "YYYY" <> " , " <> convertUTCtoISC timeUTC "HH" <> ":" <> convertUTCtoISC timeUTC "mm"
+                                getString $ bookingInfoString $ convertUTCtoISC timeUTC "D" <> " " <> convertUTCtoISC timeUTC "MMMM" <> " " <> convertUTCtoISC timeUTC "YYYY" <> " , " <> convertUTCtoISC timeUTC "HH" <> ":" <> convertUTCtoISC timeUTC "mm"
                           ) state.data.rentalsInfo)
+    fpt = (maybe FPT.ONE_WAY (\rentalsInfo -> rentalsInfo.fareProductType) state.data.rentalsInfo)
+    {textColor,backGroundColor,bannerImg} = ( maybe {textColor : Color.black800,backGroundColor:Color.grey700,bannerImg:"ny_ic_mutiple_bg"} 
+                                            (\rentalsInfo -> if rentalsInfo.multipleScheduled then {textColor : Color.black800,backGroundColor:Color.grey700,bannerImg:"ny_ic_mutiple_bg"}
+                                                            else do 
+                                                                case fpt of 
+                                                                  FPT.RENTAL -> {textColor : Color.blueGreen,backGroundColor:Color.blueGreenBg,bannerImg:"ny_ic_rental_banner_bg"}
+                                                                  FPT.INTER_CITY -> {textColor : Color.blue800,backGroundColor:Color.blue600,bannerImg:"ny_ic_intercity_bg_img"}
+                                                                  _ -> {textColor : Color.black800,backGroundColor:Color.grey700,bannerImg:"ny_ic_mutiple_bg"}
+                                            ) state.data.rentalsInfo) 
+
   in 
   linearLayout 
     [ height WRAP_CONTENT 
     , width MATCH_PARENT 
     , orientation HORIZONTAL 
     , gravity CENTER_VERTICAL
-    , background Color.blue600
+    , background $ backGroundColor
     , padding $ PaddingLeft 16
     , cornerRadius 12.0
     , onClick push $ const RentalBannerClick
-    ][  textView
+    ][  textView $
         [ weight 1.0 
         , height WRAP_CONTENT
         , textFromHtml $ bannerText
-        , color Color.black900
+        , color $ textColor
         , accessibility ENABLE
         , accessibilityHint $ bannerText
-        ]
+        ]<> FontStyle.tags TypoGraphy
       , frameLayout
         [ height WRAP_CONTENT
         , gravity CENTER
@@ -4732,7 +4748,7 @@ rentalBannerView state push =
           imageView
             [ height $ V 60
             , width $ V 115
-            , imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_rental_bg_blue"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET bannerImg
             ]
           , imageView
             [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleVariantImage (maybe "" (\item -> item.vehicleVariant) state.data.rentalsInfo) LEFT_VIEW
@@ -4743,6 +4759,26 @@ rentalBannerView state push =
         ]
 
     ]
+    where 
+      fetchDriverDetails rentalsInfo = 
+        case head (rentalsInfo.rideList) of 
+          Just (RideAPIEntity resp) -> do 
+            let 
+              driverName =  if DS.length resp.driverName > 12 then DS.take 12 resp.driverName <> ".." else resp.driverName
+              vehicleNumber = resp.vehicleNumber
+              fpt = rentalsInfo.fareProductType
+              bookingInfoString = case fpt of 
+                                      FPT.INTER_CITY -> "Intercity"
+                                      FPT.RENTAL -> "Rental"
+                                      _ -> "Scheduled"
+            "Driver Assigned" <> " &#8226; " <> bookingInfoString <> "<br> <b>" <> driverName <> " &#8226; " <> vehicleNumber <> "</b>"
+          _ -> do 
+            let timeUTC = rentalsInfo.rideScheduledAtUTC
+                fpt = rentalsInfo.fareProductType
+                bookingInfoString = if fpt == FPT.INTER_CITY then YOU_HAVE_UPCOMING_INTERCITY_BOOKING
+                                    else YOU_HAVE_UPCOMING_RENTAL_BOOKING
+            getString $ bookingInfoString $ convertUTCtoISC timeUTC "D" <> " " <> convertUTCtoISC timeUTC "MMMM" <> " " <> convertUTCtoISC timeUTC "YYYY" <> " , " <> convertUTCtoISC timeUTC "HH" <> ":" <> convertUTCtoISC timeUTC "mm"
+                          
 
 additionalServicesView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 additionalServicesView push state = let 
@@ -4947,7 +4983,9 @@ preferenceView push state =
       bookingPrefVisibility = (not state.data.currentCityConfig.iopConfig.enable) && state.data.config.estimateAndQuoteConfig.enableBookingPreference
       isProviderPrefView = state.data.currentCityConfig.iopConfig.enable
       followerBar = (showFollowerBar (fromMaybe [] state.data.followers) state) && (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver])
-      isVisible = (any (_ == state.props.currentStage) [SettingPrice])
+      startTimeUTC = if state.data.startTimeUTC == "" then (getCurrentUTC "") else (state.data.startTimeUTC)
+      compareStartTime = (compareUTCDate startTimeUTC (getCurrentUTC "")) < 30 * 60
+      isVisible = (any (_ == state.props.currentStage) [SettingPrice]) && compareStartTime
   in
     relativeLayout [
       width MATCH_PARENT
@@ -5173,3 +5211,52 @@ getFollowers state = do
   let automaticallySharedFollowers = fromMaybe [] state.data.followers 
       manuallySharedFollowers = fromMaybe [] state.data.manuallySharedFollowers
   Arr.nubByEq (\a b -> a.bookingId == b.bookingId) $ Arr.union automaticallySharedFollowers manuallySharedFollowers
+
+
+--- select Trip view  -- 
+
+selectTripViewIntercity :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+selectTripViewIntercity push state = 
+  linearLayout [
+    width MATCH_PARENT
+  , height MATCH_PARENT
+  , orientation VERTICAL
+  , background  Color.red
+][ SearchLocationModel.selectTripView (push <<< SearchLocationModelActionController) $ searchLocationModelViewState state]
+
+rideInfoCardConfig :: forall w. HomeScreenState ->  RequestInfoCard.Config
+rideInfoCardConfig state = let 
+  config = RequestInfoCard.config
+  rideInfoCardConfig' = config{
+    title {
+      text = "Round Trip Policy" ,
+      accessibilityHint = "Round Trip Policy",
+      textStyle = FontStyle.Heading1
+    }
+  , imageConfig {
+      imageUrl = fetchImage FF_COMMON_ASSET "ic_baggage",
+      height = V 130,
+      width = V 130,
+      padding = Padding 0 2 2 0,
+      visibility = VISIBLE
+    }
+  , bulletPoints = ["By default, 1hr is added to your booking in addition to the estimated travel duration.","For every extra hour you add, you will be allocated 10 extra kilometers of distance in your package."]
+  , buttonConfig {
+      text = getString GOT_IT,
+      padding = PaddingVertical 16 20,
+      accessibilityHint = (getEN GOT_IT) <> " : Button"
+    }
+  }
+  in rideInfoCardConfig'
+
+rideInfoCardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+rideInfoCardView push state = 
+  PrestoAnim.animationSet [ fadeIn true ]
+  $ linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , accessibility DISABLE
+  ][ RequestInfoCard.view (push <<< RequestInfoCardAction) (rideInfoCardConfig state) ]
+
+
+--- Intercity Confirmation view----

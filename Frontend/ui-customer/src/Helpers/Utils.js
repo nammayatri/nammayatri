@@ -122,8 +122,84 @@ export const secondsToHms = function (d) {
   return hDisplay + mDisplay;
 }
 
+export const toIST = function (date) {
+  const today = new Date(date);
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istTime = new Date(today.getTime() + istOffset);
+  return istTime;
+}
+
+
+export const getISTDay = function (date) {
+  const today = toIST(date);
+  return today.getDay();
+}
+
+
+export const getISTMonth = function (date) {
+  const today = toIST(date);
+  return today.getMonth();
+}
+
+export const getISTFullYear = function (date) {
+  const today = toIST(date);
+  return today.getFullYear();
+}
+
+export const getISTDate = function (date) {
+  const today = toIST(date);
+  return today.getDate();
+}
+
+export const getISTHours = function (date) {
+  const today = toIST(date);
+  return today.getHours();
+}
+
+export const getISTMinutes = function (date) {
+  const today = toIST(date);
+  return today.getMinutes();
+}
+
+export const getISTSeconds = function (date) {
+  const today = toIST(date);
+  return today.getSeconds();
+}
+
+
 export const getUTCDay = function (date) {
-  return date.getUTCDay();
+  const today = new Date(date)
+  return today.getUTCDay();
+}
+
+export const getUTCMonth = function (date) {
+  const today = new Date(date)
+  return today.getUTCMonth();
+}
+
+export const getUTCFullYear = function (date) {
+  const today = new Date(date)
+  return today.getUTCFullYear();
+}
+
+export const getUTCDate = function (date) {
+  const today = new Date(date)
+  return today.getUTCDate();
+}
+
+export const getUTCHours = function (date) {
+  const today = new Date(date)
+  return today.getUTCHours();
+}
+
+export const getUTCMinutes = function (date) {
+  const today = new Date(date)
+  return today.getUTCMinutes();
+}
+
+export const getUTCSeconds = function (date) {
+  const today = new Date(date)
+  return today.getUTCSeconds();
 }
 
 export const getTime = function (unit) {
@@ -140,40 +216,50 @@ export const requestKeyboardShow = function (id) {
 }
 
 export const storeCallBackCustomer = function (cb) {
-
   return function (action) {
     return function(screenName){
-      return function () {
-        try {
-          notificationCallBacks[screenName] = function(notificationType){
-            cb(action(notificationType))();
-          }
-          const callback = callbackMapper.map(function (notificationType, notificationBody) {
-            console.log("notificationType ->", notificationType);
-            window.notificationType = notificationType;
-            if (window.whitelistedNotification.includes(notificationType)) {
-              Object.keys(notificationCallBacks).forEach((key) => {
-                notificationCallBacks[key](notificationType);
-              })
-              if (notificationBody) {
-                window.notificationBody = JSON.parse(notificationBody);
+      return function(just){
+        return function(nothing){
+          return function () {
+            try {
+              notificationCallBacks[screenName] = function(notificationType,notificationBody){
+                const parsedNotificationBody = JSON.parse(notificationBody || {});
+                const currentTimeUTC = new Date().toISOString();
+                const rideTimeIfAvailable = (parsedNotificationBody.rideTime) ? just (parsedNotificationBody.rideTime) : just (currentTimeUTC);
+                const bookingIdIfAvailable = (parsedNotificationBody.bookingId) ? just (parsedNotificationBody.bookingId) : nothing;
+                console.log("notificationType step 1->", notificationType);
+                console.log("notificationBody step 1->", notificationBody);
+                cb(action(notificationType)({rideTime : rideTimeIfAvailable, bookingId : bookingIdIfAvailable}))();
               }
+              const callback = callbackMapper.map(function (notificationType, notificationBody) {
+                console.log("notificationType ->", notificationType);
+                console.log("notificationBody ->", notificationBody);
+                window.notificationType = notificationType;
+                if (window.whitelistedNotification.includes(notificationType)) {
+                  Object.keys(notificationCallBacks).forEach((key) => {
+                    notificationCallBacks[key](notificationType,notificationBody);
+                  })
+                  if (notificationBody) {
+                    window.notificationBody = JSON.parse(notificationBody);
+                  }
+                }
+              });
+              const notificationCallBack = function (notificationType,notificationBody) {
+                console.log("notificationType ->", notificationType);
+                if (window.whitelistedNotification.includes(notificationType)) {
+                  Object.keys(notificationCallBacks).forEach((key) => {
+                    notificationCallBacks[key](notificationType,notificationBody);
+                  })
+                }
+              };
+              window.callNotificationCallBack = notificationCallBack;
+              console.log("In storeCallBackCustomer ---------- + " + action);
+              JBridge.storeCallBackCustomer(callback);
             }
-          });
-          const notificationCallBack = function (notificationType) {
-            console.log("notificationType ->", notificationType);
-            if (window.whitelistedNotification.includes(notificationType)) {
-              Object.keys(notificationCallBacks).forEach((key) => {
-                notificationCallBacks[key](notificationType);
-              })
+            catch (error) {
+              console.log("Error occurred in storeCallBackCustomer ------", error);
             }
-          };
-          window.callNotificationCallBack = notificationCallBack;
-          console.log("In storeCallBackCustomer ---------- + " + action);
-          JBridge.storeCallBackCustomer(callback);
-        }
-        catch (error) {
-          console.log("Error occurred in storeCallBackCustomer ------", error);
+          }
         }
       }
     }

@@ -1610,4 +1610,7 @@ getBN stringKey =
         LINKED_UPI_ID -> "লিঙ্ক করা UPI আইডি"
         TO_GET_MONEY -> "টাকা পেতে"
         TILL date -> date <> " পর্যন্ত"
-        REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK -> "রেফারেল বোনাস আপনার ব্যাঙ্ক অ্যাকাউন্টে জমা হবে"
+        REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK -> "রেফারেল বোনাস আপনার ব্যাঙ্ক অ্যাকাউন্টে জমা হবে"        
+        ROUND_TRIP_EXPLAINER -> "(আপনাকে এই তারিখ এবং সময়ে আপনার মূল স্থানে ফেরত দেওয়া হবে)"
+        RESERVE -> "রিজার্ভ করুন"
+        LEAVE_NOW -> "এখনই চলে যান"

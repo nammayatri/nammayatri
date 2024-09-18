@@ -1612,3 +1612,6 @@ getTE stringKey =
         TO_GET_MONEY -> "డబ్బు పొందడానికి"
         TILL date -> date <> " వరకు"
         REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK -> "రెఫరల్ బోనస్ మీ బ్యాంక్ ఖాతాకు జమ చేయబడుతుంది"
+        ROUND_TRIP_EXPLAINER -> "(మీరు ఈ తేదీ మరియు సమయంలో మీ మూల స్థలానికి చేరుస్తారు)"
+        RESERVE -> "రిజర్వ్ చేయండి"
+        LEAVE_NOW -> "ఇప్పుడు వెళ్లండి"

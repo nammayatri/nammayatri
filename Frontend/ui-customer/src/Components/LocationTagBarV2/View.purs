@@ -17,7 +17,7 @@ module Components.LocationTagBarV2.View where
 
 import Components.LocationTagBarV2.Controller(Action(..), LocationTagBarConfig, TagConfig )
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import PrestoDOM (PrestoDOM, Length(..), Padding(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Margin(..), Gravity(..), Visibility(..),  alignItems, linearLayout, height, width, background, stroke, cornerRadius, padding, imageView, imageWithFallback, textView, text, textSize, color, flexBoxLayout, flexDirection, justifyContent, flexWrap, margin, flexWrap, onClick, weight, gravity, rippleColor, orientation, visibility, singleLine, maxLines)
+import PrestoDOM (PrestoDOM, Length(..), Padding(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Margin(..), Gravity(..), Visibility(..), Orientation (..), alignItems, linearLayout, height, width, background, stroke, cornerRadius, padding, imageView, imageWithFallback, textView, text, textSize, color, flexBoxLayout, flexDirection, justifyContent, flexWrap, margin, flexWrap, onClick, weight, gravity, rippleColor, orientation, visibility, singleLine, maxLines)
 import PrestoDOM.Properties (cornerRadii)
 import Engineering.Helpers.Commons (screenWidth)
 import Prelude(Unit, map, unit, ($), (<>), (-), (==), const)
@@ -64,7 +64,7 @@ tagView item isLast push =
           height WRAP_CONTENT
         , width MATCH_PARENT
         , gravity CENTER
-        , orientation item.orientation
+        , orientation if item.orientation == "VERTICAL" then VERTICAL else HORIZONTAL
         ][
           linearLayout
             [ height WRAP_CONTENT
@@ -72,7 +72,7 @@ tagView item isLast push =
             , background item.bannerConfig.background
             , cornerRadii item.bannerConfig.cornerRadii
             , visibility $ item.showBanner
-            , margin $ MarginHorizontal 8 8
+            , margin if item.orientation == "VERTICAL" then (Margin 8 0 8 8) else  (MarginHorizontal 8 8)
             , gravity CENTER
             ][  textView $
                 [ text item.bannerConfig.text

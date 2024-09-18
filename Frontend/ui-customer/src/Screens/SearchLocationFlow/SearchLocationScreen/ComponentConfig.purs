@@ -82,7 +82,7 @@ locationTagBarConfig state globalProps =
             stroke : "1," <> Color.grey900 ,
             cornerRadius : Corners 8.0 true true true true ,
             background : Color.white900 ,
-            orientation : HORIZONTAL ,
+            orientation : "HORIZONTAL" ,
             height : WRAP_CONTENT ,
             width : WRAP_CONTENT,
             padding : Padding 8 8 8 8 ,

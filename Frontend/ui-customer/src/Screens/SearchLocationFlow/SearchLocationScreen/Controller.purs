@@ -108,7 +108,7 @@ data Action = NoAction
             | CheckFlowStatusAction
             | CurrentLocation 
             | ChooseYourRideAC ChooseYourRideController.Action
-            | NotificationListener String
+            | NotificationListener String NotificationBody
             
 
 data ScreenOutput = NoOutput SearchLocationScreenState
@@ -128,7 +128,7 @@ data ScreenOutput = NoOutput SearchLocationScreenState
                   | RideScheduledScreen SearchLocationScreenState
                   | SelectedQuote SearchLocationScreenState
                   | CurrentFlowStatus
-                  | NotificationListenerSO String
+                  | NotificationListenerSO String NotificationBody
 
 eval :: Action -> SearchLocationScreenState -> Eval Action ScreenOutput SearchLocationScreenState
 
@@ -433,7 +433,8 @@ eval (ChooseYourRideAC (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleC
       newState = if variant.activeIndex == variant.index then state else state{props{customerTip = SearchLocationScreenData.initData.props.customerTip, tipViewProps = SearchLocationScreenData.initData.props.tipViewProps}}
   continue newState { data { quotesList = updatedQuotes , selectedQuote = selectedQuote}}
 
-eval (ChooseYourRideAC (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config))) state = continue state { props { showRateCard = true }}
+eval (ChooseYourRideAC (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config))) state = do 
+  continue state { props { showRateCard = true }}
 
 eval (ChooseYourRideAC ChooseYourRideController.AddTip) state = do
   continue state { props { tipViewProps {stage = TIP_AMOUNT_SELECTED}}}
@@ -464,7 +465,7 @@ eval (ChooseYourRideAC (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleC
       updatedState = state{props{currentEstimateHeight = if config.vehicleVariant == "BOOK_ANY" then height else state.props.currentEstimateHeight, selectedEstimateHeight = if config.vehicleVariant /= "BOOK_ANY" then height else state.props.selectedEstimateHeight}}
   continue updatedState
 
-eval (NotificationListener notificationType) state = exit $ NotificationListenerSO notificationType
+eval (NotificationListener notificationType notificationBody) state = exit $ NotificationListenerSO notificationType notificationBody
 
 eval _ state = update state
 
@@ -591,12 +592,12 @@ drawRouteOnMap state =
   ] 
 
 quotesFlow res state = do
-  let quoteList = getQuotesTransformer res.quotes state.appConfig.estimateAndQuoteConfig
+  let quoteList = getQuotesTransformer res.quotes state.appConfig.estimateAndQuoteConfig MB.Nothing
       fareProductType = getFareProductType $ MB.maybe "" extractFareProductType (DA.head res.quotes)
       filteredQuoteList = (getFilteredQuotes res.quotes state.appConfig.estimateAndQuoteConfig)
       sortedByFare = DA.sortBy compareByFare filteredQuoteList
       rentalsQuoteList =  (DA.mapWithIndex (\index quote -> 
-    let quoteDetails = transformQuote quote index 
+    let quoteDetails = transformQuote quote index MB.Nothing
         fareDetails = case quote of 
           RentalQuotes body -> 
             let (QuoteAPIEntity quoteEntity) = body.onRentalCab
@@ -612,9 +613,16 @@ quotesFlow res state = do
     void $ pure $ toast $ getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN
     exit $ RentalsScreen state {props {showLoader = false}}
     else 
-    continueWithCmd state { props{fareProductType = fareProductType},data{quotesList = rentalsQuoteList, selectedQuote = if MB.isNothing state.data.selectedQuote then DA.head $ rentalsQuoteList else state.data.selectedQuote}}[
-      pure NoAction
-      ]
+    continueWithCmd state { 
+      props{
+        fareProductType = fareProductType
+      }
+    , data{
+        quotesList = rentalsQuoteList
+      , selectedQuote = if (MB.isNothing state.data.selectedQuote) then DA.head $ rentalsQuoteList else state.data.selectedQuote
+      }
+    }[ pure NoAction]
+
   where 
     transFormQuoteDetails quoteDetails = 
         { includedKmPerHr : MB.fromMaybe 0 quoteDetails.includedKmPerHr 

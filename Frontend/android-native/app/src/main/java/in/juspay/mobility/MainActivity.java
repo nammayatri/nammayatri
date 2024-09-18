@@ -672,7 +672,8 @@ public class MainActivity extends AppCompatActivity {
                 notificationManager.deleteNotificationChannel("DRIVER_HAS_REACHED");
                 notificationManager.deleteNotificationChannel("TRIP_FINISHED");
                 notificationManager.deleteNotificationChannel("SOS_TRIGGERED");
-                notificationManager.deleteNotificationChannel("SOS_RESOLVED"); 
+                notificationManager.deleteNotificationChannel("SOS_RESOLVED");
+                notificationManager.deleteNotificationChannel("NOSOUND_NOTIFICATION");
             } catch(Exception e) {
                 System.out.println("Notification Channel doesn't exists");
             }
@@ -708,6 +709,7 @@ public class MainActivity extends AppCompatActivity {
         NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_HAS_REACHED);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.SOS_TRIGGERED);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.SOS_RESOLVED);
+        NotificationUtils.createNotificationChannel(this, NotificationUtils.NOSOUND_NOTIFICATION);
     }
 
     public void updateConfigURL() {

@@ -27,7 +27,7 @@ import Engineering.Helpers.BackTrack (getState)
 import Types.App (GlobalState(..))
 import Data.Either (Either(..))
 import Services.API
-import Data.Array (any, null, head, length, (!!))
+import Data.Array (any, null, head, length, (!!),last)
 import Data.Maybe (Maybe(..), fromMaybe, isNothing, isJust, maybe', maybe)
 import Screens.HomeScreen.ScreenData (dummyRideBooking, initData) as HSD
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getFareProductType)
@@ -52,6 +52,7 @@ import Data.Array as DA
 import Screens.Types as ST
 import Engineering.Helpers.Commons as EHC
 import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
+import Debug(spy)
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
@@ -68,10 +69,13 @@ checkRideStatus rideAssigned = do
             bookingStatus = resp.status
             fareProductType = getFareProductType ((resp.bookingDetails) ^. _fareProductType)
             otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
-            rideStatus = if status == "NEW" || (bookingStatus == "CONFIRMED" && (fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || isJust otpCode)) then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
-            rideScheduledAt = if bookingStatus == "CONFIRMED" then fromMaybe "" resp.rideScheduledTime else ""
+            rideStatus = spy "rideStatus" $ if status == "NEW" || ((bookingStatus == "CONFIRMED" || bookingStatus == "TRIP_ASSIGNED") && (fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || isJust otpCode)) then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
+            rideScheduledAt = if bookingStatus == "CONFIRMED" || bookingStatus == "TRIP_ASSIGNED" then fromMaybe "" resp.rideScheduledTime else ""
             dropLocation = if (fareProductType == FPT.RENTAL) then _stopLocation else _toLocation
             stopLocationDetails = (resp.bookingDetails ^._contents^._stopLocation)
+            _ = spy "rideBookingListResponse" rideBookingListResponse
+            _ = spy "rideBookingList head" (head listResp.list)
+            _ = spy "rideBookingList Last" (last listResp.list)
             newState = 
               state
                 { data
@@ -89,6 +93,7 @@ checkRideStatus rideAssigned = do
                       , fareProductType : fareProductType
                       , nearestRideScheduledAtUTC : ""
                       , vehicleVariant : fromMaybe "" resp.vehicleServiceTierType
+                      , rideList : resp.rideList
                       }))
                     , toll {
                         estimatedCharges = getFareFromArray resp.estimatedFareBreakup "TOLL_CHARGES"
@@ -118,6 +123,7 @@ checkRideStatus rideAssigned = do
                       , fareProductType : fareProductType
                       , nearestRideScheduledAtUTC : ""
                       , vehicleVariant : fromMaybe "" resp.vehicleServiceTierType
+                      , rideList : resp.rideList
                       }))}})
           updateLocalStage HomeScreen
         else do

@@ -1588,4 +1588,7 @@ data STR = LETS_GET_STARTED
         | LINKED_UPI_ID
         | TO_GET_MONEY
         | TILL String
-        | REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK
+        | REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK        
+        | ROUND_TRIP_EXPLAINER
+        | LEAVE_NOW
+        | RESERVE
