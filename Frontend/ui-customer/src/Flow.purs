@@ -20,7 +20,7 @@ import Screens.TicketBookingFlow.TicketBooking.Transformer
 import Services.API
 import Services.API as API
 import Common.Resources.Constants (zoomLevel)
-import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate, ProviderType(..), CategoryListType(..))
+import Common.Types.App (ChatFCMData(..), GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate, ProviderType(..), CategoryListType(..))
 import Common.Types.App as CTA
 import Components.ChatView.Controller (makeChatComponent')
 import Components.LocationListItem.Controller (locationListStateObj, dummyAddress)
@@ -99,7 +99,7 @@ import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getTripFromRideHistory, getFormattedContacts, getFareProductType, getEstimateIdFromSelectedServices)
+import Screens.HomeScreen.Transformer (getLocationList, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getTripFromRideHistory, getFormattedContacts, getFareProductType, getEstimateIdFromSelectedServices)
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
@@ -218,6 +218,7 @@ import Presto.Core.Types.API (ErrorResponse(..))
 import AssetsProvider (renewFile)
 import Data.Tuple
 import Screens.HomeScreen.Controllers.Types
+import Components.MessagingView.Controller as CMC
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -235,7 +236,9 @@ baseAppFlow gPayload callInitUI = do
   tokenValidity <- validateToken signatureAuthData
   lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
   if tokenValidity then
-    handleDeepLinks (Just gPayload) false
+    if isJust (gPayload ^. _payload ^. _chatMessageData) 
+      then handleChatMessage $ gPayload ^. _payload ^. _chatMessageData
+      else handleDeepLinks (Just gPayload) false
   else
     validateAuthData $ signatureAuthData
   where
@@ -362,6 +365,47 @@ updateDataFetchScreenState safetyScreenState setupCompleted apiResponse = do
               }
         )
   pure unit
+
+handleChatMessage :: Maybe ChatFCMData -> FlowBT String Unit
+handleChatMessage chatFCMData = do
+  case chatFCMData of
+    Just (ChatFCMData chatData) -> 
+      if (fromMaybe "" chatData.source) == "TRUSTED_CONTACT" 
+        then do
+          contacts <- getFormattedContacts
+          let filteredContact = getContact contacts $ fromMaybe "" chatData.personId
+          void $ pure $ updateLocalStage ChatWithDriver
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { 
+            data 
+              { channelIdFromFCM = fromMaybe "" chatData.channelId
+              , personIdFromFCM = fromMaybe "" chatData.personId
+              , sourceFromFCM = fromMaybe "" chatData.source
+              , chatPersonId = getValueToLocalStore CUSTOMER_ID
+              , driverInfoCardState =
+                homeScreen.data.driverInfoCardState{
+                  currentChatRecipient{ name = filteredContact.name
+                    , number = ""
+                    , uuid = fromMaybe "" chatData.channelId
+                    , recipient = CMC.USER
+                    , enableForShareRide = true
+                    , contactPersonId = chatData.personId
+                    , notifiedViaFCM = Nothing
+                    , shareTripWithEmergencyContactOption = filteredContact.shareTripWithEmergencyContactOption.key
+                  }
+                }
+              },
+            props {
+              isChatWithEMEnabled = true
+            }
+          })
+          currentFlowStatus
+        else updateFollower true false Nothing
+    Nothing -> currentFlowStatus
+  where 
+    getContact contactList userId = 
+      case Arr.find (\contact ->  (fromMaybe "" contact.contactPersonId) == userId) contactList of
+        Just contact -> contact
+        Nothing -> HomeScreenData.dummyNewContacts
 
 handleDeepLinks :: Maybe GlobalPayload -> Boolean -> FlowBT String Unit
 handleDeepLinks mBGlobalPayload skipDefaultCase = do

@@ -157,10 +157,11 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     }
                     if (remoteMessage.getData().containsKey("entity_data")) {
                         String notificationType = remoteMessage.getData().get("notification_type");
-                        if (notificationType != null && notificationType.equals("NEW_RIDE_AVAILABLE")) {
+                        if (notificationType != null && (notificationType.equals(NotificationTypes.NEW_RIDE_AVAILABLE) || notificationType.equals(NotificationTypes.TRIGGER_FCM))) {
                             String entityPayload = remoteMessage.getData().get("entity_data");
                             if (entityPayload != null) {
                                 entity_payload = new JSONObject(entityPayload);
+                                payload.put("entity_data", entity_payload);
                             }
                         }
                     }
@@ -750,6 +751,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         public static final String EDIT_STOP = "EDIT_STOP";
         public static final String TRIGGER_SERVICE = "TRIGGER_SERVICE";
         public static final String NEW_RIDE_AVAILABLE = "NEW_RIDE_AVAILABLE";
+        public static final String TRIGGER_FCM = "TRIGGER_FCM";
         public static final String CLEARED_FARE = "CLEARED_FARE";
         public static final String CANCELLED_PRODUCT = "CANCELLED_PRODUCT";
         public static final String DRIVER_QUOTE_INCOMING = "DRIVER_QUOTE_INCOMING";

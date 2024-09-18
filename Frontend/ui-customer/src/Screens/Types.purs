@@ -686,6 +686,9 @@ type HomeScreenStateData =
   , chatPersonId :: String
   , parking :: ParkingData
   , toll :: TollData
+  , channelIdFromFCM :: String
+  , personIdFromFCM :: String
+  , sourceFromFCM :: String
 }
 
 type TollData = {

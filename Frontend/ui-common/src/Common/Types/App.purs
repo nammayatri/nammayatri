@@ -92,6 +92,17 @@ derive instance newtypeNotificationData :: Newtype NotificationData _
 instance encodeNotificationData :: Encode NotificationData where encode = defaultEncode
 instance decodeNotificationData :: Decode NotificationData where decode = defaultDecode
 
+newtype ChatFCMData = ChatFCMData {
+  channelId :: Maybe String,
+  personId :: Maybe String,
+  source :: Maybe String
+  }
+
+derive instance genericChatFCMData :: Generic ChatFCMData _
+derive instance newtypeChatFCMData :: Newtype ChatFCMData _
+instance encodeChatFCMData :: Encode ChatFCMData where encode = defaultEncode
+instance decodeChatFCMData :: Decode ChatFCMData where decode = defaultDecode
+
 newtype SignatureAuthData = SignatureAuthData {
   signature :: String
   , authData :: String
@@ -135,6 +146,7 @@ newtype Payload = Payload
   , view_param :: Maybe String
   , deeplinkOptions :: Maybe DeeplinkOptions
   , deepLinkJSON :: Maybe QueryParam
+  , chatMessageData :: Maybe ChatFCMData
   }
 
 newtype QueryParam = QueryParam {

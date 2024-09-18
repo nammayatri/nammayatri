@@ -253,7 +253,9 @@ window.onMerchantEvent = function (_event, globalPayload) {
       window.openChatScreen();
     } else {
       console.log("client Payload: ", clientPaylod);
-      if(clientPaylod.notification_type == "SOS_MOCK_DRILL" || clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SOS_MOCK_DRILL"){
+      if(clientPaylod.notification_type == "TRIGGER_FCM"){
+        purescript.main(makeEvent("", ""))(!clientPaylod.onNewIntent)();
+      }else if(clientPaylod.notification_type == "SOS_MOCK_DRILL" || clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SOS_MOCK_DRILL"){
         purescript.mockFollowRideEvent(makeEvent("SOS_MOCK_DRILL", ""))();
       }else if(clientPaylod.notification_type == "SOS_MOCK_DRILL_NOTIFY" || clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SOS_MOCK_DRILL_NOTIFY"){
         purescript.mockFollowRideEvent(makeEvent("SOS_MOCK_DRILL_NOTIFY", ""))();

@@ -1080,6 +1080,14 @@ public class MainActivity extends AppCompatActivity {
                 notificationManager.cancel(NotificationUtils.chatNotificationId);
                 innerPayload.put("notification_type", "CHAT_MESSAGE");
             }
+
+            if(jsonData.has("entity_data")){
+                JSONObject entityData = (JSONObject) jsonData.get("entity_data");
+                if(entityData!=null && entityData.has("channelId")){
+                    innerPayload.put("chatMessageData", jsonData.get("entity_data"));
+                }
+            }
+
             if (jsonData.has("notification_type") && jsonData.has("entity_ids")) {
                 String id = jsonData.getString("entity_ids");
                 String type = jsonData.getString("notification_type");
