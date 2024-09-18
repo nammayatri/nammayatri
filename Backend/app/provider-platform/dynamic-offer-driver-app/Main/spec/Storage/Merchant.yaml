@@ -701,6 +701,7 @@ TransporterConfig:
     onboardingRetryTimeInHours: Int
     checkImageExtractionForDashboard: Bool
     searchRepeatLimit: Int
+    scheduledRideSearchRepeatLimit: Int
     actualRideDistanceDiffThreshold: HighPrecMeters
     actualRideDistanceDiffThresholdIfWithinPickupDrop: HighPrecMeters
     recomputeIfPickupDropNotOutsideOfThreshold: Bool
@@ -883,6 +884,7 @@ TransporterConfig:
     cachedDevicesOSForSearchRequest: "Maybe [Text]"
     arrivalTimeBufferOfVehicle: Maybe Value
     demandHotspotsConfig: Maybe Value
+    scheduledRideSearchRepeatLimit: Maybe Int
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -932,6 +934,7 @@ TransporterConfig:
     cachedDevicesOSForSearchRequest: Just (Data.Text.pack . Kernel.Prelude.show <$> cachedDevicesOSForSearchRequest)|E
     arrivalTimeBufferOfVehicle: Kernel.Prelude.toJSON <$> arrivalTimeBufferOfVehicle|E
     demandHotspotsConfig: Kernel.Prelude.toJSON <$> demandHotspotsConfig|E
+    scheduledRideSearchRepeatLimit: Just scheduledRideSearchRepeatLimit|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -985,6 +988,7 @@ TransporterConfig:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< arrivalTimeBufferOfVehicle|E
     demandHotspotsConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< demandHotspotsConfig|E
+    scheduledRideSearchRepeatLimit: fromMaybe 10 scheduledRideSearchRepeatLimit|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1160,6 +1164,7 @@ TransporterConfig:
     maxPayoutReferralForADay: "5"
     exotelStatusCheckSchedulerDelay: "120"
     cachedDevicesOSForSearchRequest: "'{}'"
+    scheduledRideSearchRepeatLimit: "10"
 
   excludedDefaultQueries:
     - findByPrimaryKey
@@ -1186,6 +1191,7 @@ TransporterConfig:
         - onboardingRetryTimeInHours
         - checkImageExtractionForDashboard
         - searchRepeatLimit
+        - scheduledRideSearchRepeatLimit
         - driverPaymentCycleStartTime
         - timeDiffFromUtc
         - driverPaymentCycleBuffer

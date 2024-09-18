@@ -19,11 +19,13 @@ module Domain.Action.UI.Confirm
 where
 
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Map as M
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
 import qualified Kernel.External.Payment.Interface.Types as Payment
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Tools.Metrics.CoreMetrics
@@ -50,7 +52,12 @@ confirm ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CacheFlow m r,
     EventStreamFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    SchedulerFlow r,
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool)
   ) =>
   Id DP.Person ->
   Id DQuote.Quote ->

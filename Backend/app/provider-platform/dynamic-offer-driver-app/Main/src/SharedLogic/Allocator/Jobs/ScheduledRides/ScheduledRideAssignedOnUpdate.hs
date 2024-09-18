@@ -104,11 +104,42 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
           mbVehicle <- runInReplica $ QVeh.findById driverId
           case (mbDriver, mbVehicle, mbBooking) of
             (Just driver, Just vehicle, Just booking) -> do
-              void $ QDI.updateOnRideAndLatestScheduledBookingAndPickup True Nothing Nothing driverId
-              void $ QRide.updateStatus ride.id DRide.NEW
-              void $ LF.rideDetails ride.id DRide.NEW booking.providerId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
-              void $ sendRideAssignedUpdateToBAP booking ride driver vehicle -- TODO: handle error
-              return Complete
+              let fromLocation = booking.fromLocation
+                  pickupLoc = LatLong {lat = fromLocation.lat, lon = fromLocation.lon}
+                  merchantId = booking.providerId
+                  merchantOperatingCityId = booking.merchantOperatingCityId
+              currentDriverLocation' <- LTF.driversLocation [driverId]
+              mbtransporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing
+              let isAllJust = isJust driverInfo.latestScheduledBooking && isJust (mbtransporterConfig >>= (.avgSpeedOfVehicle))
+              case (listToMaybe currentDriverLocation', isAllJust) of
+                (Just dloc, True) -> do
+                  let currentDriverLocation = LatLong {lat = dloc.lat, lon = dloc.lon}
+                  currentLocationtoPickupDistance' <-
+                    TMaps.getDistanceForScheduledRides merchantId merchantOperatingCityId $
+                      TMaps.GetDistanceReq
+                        { origin = currentDriverLocation,
+                          destination = pickupLoc,
+                          travelMode = Just TMaps.CAR,
+                          distanceUnit = Meter,
+                          sourceDestinationMapping = Nothing
+                        }
+                  let estimatedDistinKm = metersToKilometers currentLocationtoPickupDistance'.distance
+                  isDriverTooFar <- isDriverTooFarFromPickup mbtransporterConfig mbVehicle estimatedDistinKm driverInfo
+                  if isDriverTooFar
+                    then do
+                      let cReason = "Ride is Cancelled because driver can't reach pickup of its scheduled booking on time"
+                      cancelOrReallocate ride cReason True (RideCancel.MerchantRequestorId (merchantId, merchantOperatingCityId))
+                      return $ Terminate "Job is Terminated and Ride is Reallocated because driver can't reach pickup of its scheduled booking on time"
+                    else do
+                      void $ QDI.updateOnRideAndLatestScheduledBookingAndPickup True Nothing Nothing driverId
+                      void $ QRide.updateStatus ride.id DRide.NEW
+                      void $ LF.rideDetails ride.id DRide.NEW booking.providerId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
+                      void $ sendRideAssignedUpdateToBAP booking ride driver vehicle True -- TODO: handle error
+                      return Complete
+                _ -> do
+                  let cReason = "Ride is Reallocated transporterConfig  Or driverInfo.latestScheduledBooking is Nothing"
+                  cancelOrReallocate ride cReason True (RideCancel.ApplicationRequestorId id.getId)
+                  return $ Terminate "Job is Terminated and Ride is Reallocated transporterConfig  Or driverInfo.latestScheduledBooking is Nothing"
             (_, _, _) -> do
               let cReason = "Ride is Reallocated driver/vehicle/booking not found"
               cancelOrReallocate ride cReason True (RideCancel.ApplicationRequestorId id.getId)
@@ -155,25 +186,16 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                             distanceUnit = Meter,
                             sourceDestinationMapping = Nothing
                           }
-                    let transporterConfig = fromJust mbtransporterConfig
-                        vehicle = fromJust mbVehicle
-                        avgSpeeds = fromJust transporterConfig.avgSpeedOfVehicle
-                        estimatedDistinKm = metersToKilometers (currentLocationtoDropDistance + currentDroptoScheduledPickupDistance.distance)
-                        avgSpeedOfVehicleInKM = SDP.getVehicleAvgSpeed vehicle.variant avgSpeeds
-                        estimatedDistKmDouble = fromIntegral (getKilometers estimatedDistinKm) :: Double
-                        avgSpeedKmPerHrDouble = fromIntegral (getKilometers avgSpeedOfVehicleInKM) :: Double
-                        totalTimeinHr = estimatedDistKmDouble / avgSpeedKmPerHrDouble
-                        totalTimeInSeconds = realToFrac (totalTimeinHr * 3600) :: NominalDiffTime
-                        expectedEndTime = addUTCTime totalTimeInSeconds now
-                        scheduledPickupTime = fromJust driverInfo.latestScheduledBooking
-                        scheduledPickupTimeWithGraceTime = addUTCTime (transporterConfig.graceTimeForScheduledRidePickup) scheduledPickupTime
-                    if expectedEndTime > scheduledPickupTimeWithGraceTime
+                    let estimatedDistinKm = metersToKilometers (currentLocationtoDropDistance + currentDroptoScheduledPickupDistance.distance)
+                    isDriverTooFar <- isDriverTooFarFromPickup mbtransporterConfig mbVehicle estimatedDistinKm driverInfo
+                    if isDriverTooFar
                       then do
                         let cReason = "Ride is Cancelled because driver can't reach pickup of its scheduled booking on time"
                         cancelOrReallocate ride cReason True (RideCancel.MerchantRequestorId (merchantId, merchantOperatingCityId))
                         return $ Terminate "Job is Terminated and Ride is Reallocated because driver can't reach pickup of its scheduled booking on time"
                       else do
-                        let rescheduleTime = addUTCTime (transporterConfig.scheduledRideJobRescheduleTime) now
+                        let transporterConfig = fromJust mbtransporterConfig
+                            rescheduleTime = addUTCTime (transporterConfig.scheduledRideJobRescheduleTime) now
                         return $ ReSchedule rescheduleTime
                 )
               else
@@ -185,6 +207,21 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
             )
         (_, _, _) -> do
           return $ Terminate "Job is terminated due to invalid ride status "
+  where
+    isDriverTooFarFromPickup mbtransporterConfig mbVehicle estimatedDistinKm driverInfo = do
+      now <- getCurrentTime
+      let transporterConfig = fromJust mbtransporterConfig
+          vehicle = fromJust mbVehicle
+          avgSpeeds = fromJust transporterConfig.avgSpeedOfVehicle
+          avgSpeedOfVehicleInKM = SDP.getVehicleAvgSpeed vehicle.variant avgSpeeds
+          estimatedDistKmDouble = fromIntegral (getKilometers estimatedDistinKm) :: Double
+          avgSpeedKmPerHrDouble = fromIntegral (getKilometers avgSpeedOfVehicleInKM) :: Double
+          totalTimeinHr = estimatedDistKmDouble / avgSpeedKmPerHrDouble
+          totalTimeInSeconds = realToFrac (totalTimeinHr * 3600) :: NominalDiffTime
+          expectedEndTime = addUTCTime totalTimeInSeconds now
+          scheduledPickupTime = fromJust driverInfo.latestScheduledBooking
+          scheduledPickupTimeWithGraceTime = addUTCTime (transporterConfig.graceTimeForScheduledRidePickup) scheduledPickupTime
+      return $ expectedEndTime > scheduledPickupTimeWithGraceTime
 
 cancelOrReallocate ::
   ( MonadFlow m,

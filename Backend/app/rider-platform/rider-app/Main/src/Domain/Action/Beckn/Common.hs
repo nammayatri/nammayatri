@@ -351,8 +351,6 @@ rideAssignedReqHandler req = do
             when req.isDriverBirthDay $ do
               Notify.notifyDriverBirthDay booking.riderId driverName
           withLongRetry $ CallBPP.callTrack booking ride
-          notifyRideRelatedNotificationOnEvent booking ride now DRN.RIDE_ASSIGNED
-          notifyRideRelatedNotificationOnEvent booking ride now DRN.PICKUP_TIME
         Nothing -> do
           assignRideUpdate req mbMerchant booking DRide.UPCOMING now
     else do
@@ -412,7 +410,7 @@ rideAssignedReqHandler req = do
       QRide.createRide ride
       QPFS.clearCache booking.riderId
       unless isInitiatedByCronJob $ do
-        Notify.notifyOnRideAssigned booking ride
+        if rideStatus == DRide.UPCOMING then Notify.notifyOnScheduledRideAccepted booking ride else Notify.notifyOnRideAssigned booking ride
         when req'.isDriverBirthDay $ do
           Notify.notifyDriverBirthDay booking.riderId driverName
       withLongRetry $ CallBPP.callTrack booking ride

@@ -4171,12 +4171,12 @@
         "passetto-hs": "passetto-hs",
         "prometheus-haskell": "prometheus-haskell_2"
       },
-      "locked": {
-        "lastModified": 1726582968,
-        "narHash": "sha256-K2sDThiCrlULPwvHm8hLv1sWoAWRfByOqLTwVMTGs/k=",
+       "locked": {
+        "lastModified": 1726646772,
+        "narHash": "sha256-KsAHxUj99MFqOoHcFCGq9KkSsD63L9cLGiye6BbxE4A=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "278b677f6644447f80ba3ce7fd912ba8e8099461",
+        "rev": "ec05f16723d1fbf9ddf2fb78b3ab23b5d25d9a32",
         "type": "github"
       },
       "original": {
