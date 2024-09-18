@@ -718,29 +718,29 @@ driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNu
       mobileNumberDbHash <- getDbHash mobileNumber
       let mobileCountryCode = fromMaybe mobileIndianCode (appendPlusInMobileCountryCode mbMobileCountryCode)
       B.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing Nothing Nothing
+        QDriverStats.fetchDriverInfoWithRidesCount merchant merchantOpCity (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing Nothing Nothing
           >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
     (Nothing, Just vehicleNumber, Nothing, Nothing, Nothing, Nothing) -> do
       B.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing (Just vehicleNumber) Nothing Nothing Nothing Nothing
+        QDriverStats.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing (Just vehicleNumber) Nothing Nothing Nothing Nothing
           >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
     (Nothing, Nothing, Just driverLicenseNumber, Nothing, Nothing, Nothing) -> do
       dlNumberHash <- getDbHash driverLicenseNumber
       B.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing Nothing (Just dlNumberHash) Nothing Nothing Nothing
+        QDriverStats.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing Nothing (Just dlNumberHash) Nothing Nothing Nothing
           >>= fromMaybeM (InvalidRequest "License does not exist.")
     (Nothing, Nothing, Nothing, Just rcNumber, Nothing, Nothing) -> do
       rcNumberHash <- getDbHash rcNumber
       B.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing Nothing Nothing (Just rcNumberHash) Nothing Nothing
+        QDriverStats.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing Nothing Nothing (Just rcNumberHash) Nothing Nothing
           >>= fromMaybeM (InvalidRequest "Registration certificate does not exist.")
     (Nothing, Nothing, Nothing, Nothing, Just email, Nothing) -> do
       B.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing Nothing Nothing Nothing (Just email) Nothing
+        QDriverStats.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing Nothing Nothing Nothing (Just email) Nothing
           >>= fromMaybeM (InvalidRequest "Email does not exist.")
     (Nothing, Nothing, Nothing, Nothing, Nothing, Just personId) -> do
       B.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing Nothing Nothing Nothing Nothing (Just personId)
+        QDriverStats.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing Nothing Nothing Nothing Nothing (Just personId)
           >>= fromMaybeM (PersonDoesNotExist $ personId.getId)
     _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\", \"dlNumber\", \"rcNumber\", \"Email\" is required"
   let driverId = driverWithRidesCount.person.id

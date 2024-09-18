@@ -4,8 +4,13 @@
 module Storage.Queries.DriverStatsExtra where
 
 import Control.Applicative (liftA2)
+import Domain.Types.DriverInformation
 import Domain.Types.DriverStats as Domain
+import Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.Person
 import Domain.Types.Person (Driver)
+import Domain.Types.Vehicle
 import GHC.Float (double2Int, int2Double)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -19,6 +24,8 @@ import qualified Sequelize as Se
 import SharedLogic.DriverFee (mkCachedKeyTotalRidesByDriverId)
 import qualified Storage.Beam.DriverStats as BeamDS
 import Storage.Queries.OrphanInstances.DriverStats
+import Storage.Queries.Person (DriverWithRidesCount (..), fetchDriverInfo)
+import Tools.Error
 
 -- Extra code goes here --
 
@@ -217,3 +224,17 @@ updateAverageRating (Id driverId') totalRatingsCount' totalRatingScore' isValidR
       Se.Set BeamDS.updatedAt now
     ]
     [Se.Is BeamDS.driverId (Se.Eq driverId')]
+
+fetchDriverInfoWithRidesCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> Maybe Text -> Maybe (Id Person) -> m (Maybe DriverWithRidesCount)
+fetchDriverInfoWithRidesCount merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash email mbDriverId = do
+  mbDriverInfo <- fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash email mbDriverId
+  addRidesCount `mapM` mbDriverInfo
+  where
+    addRidesCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => (Person, DriverInformation, Maybe Vehicle) -> m DriverWithRidesCount
+    addRidesCount (person, info, vehicle) = do
+      driverStats <- findById person.id >>= fromMaybeM DriverInfoNotFound
+      let ridesCount = Just driverStats.totalRides
+      pure (mkDriverWithRidesCount (person, info, vehicle, ridesCount))
+
+mkDriverWithRidesCount :: (Person, DriverInformation, Maybe Vehicle, Maybe Int) -> DriverWithRidesCount
+mkDriverWithRidesCount (person, info, vehicle, ridesCount) = DriverWithRidesCount {..}

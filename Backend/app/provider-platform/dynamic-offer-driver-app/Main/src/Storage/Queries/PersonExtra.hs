@@ -263,27 +263,6 @@ data DriverWithRidesCount = DriverWithRidesCount
     ridesCount :: Maybe Int
   }
 
-mkDriverWithRidesCount :: (Person, DriverInformation, Maybe Vehicle, Maybe Int) -> DriverWithRidesCount
-mkDriverWithRidesCount (person, info, vehicle, ridesCount) = DriverWithRidesCount {..}
-
-fetchDriverInfoWithRidesCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> Maybe Text -> Maybe (Id Person) -> m (Maybe DriverWithRidesCount)
-fetchDriverInfoWithRidesCount merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash email mbDriverId = do
-  mbDriverInfo <- fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash email mbDriverId
-  addRidesCount `mapM` mbDriverInfo
-  where
-    addRidesCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => (Person, DriverInformation, Maybe Vehicle) -> m DriverWithRidesCount
-    addRidesCount (person, info, vehicle) = do
-      dbConf <- getMasterBeamConfig
-      resp <-
-        L.runDB dbConf $
-          L.findRow $
-            B.select $
-              B.aggregate_ (\ride -> (B.group_ (BeamR.driverId ride), B.as_ @Int B.countAll_)) $
-                B.filter_' (\(BeamR.RideT {driverId, status}) -> driverId B.==?. B.val_ (getId person.id) B.&&?. B.sqlNot_ (B.sqlBool_ (B.in_ status $ B.val_ <$> [Ride.NEW, Ride.CANCELLED]))) $
-                  B.all_ (BeamCommon.ride BeamCommon.atlasDB)
-      let ridesCount = either (const (Just 0)) (snd <$>) resp
-      pure (mkDriverWithRidesCount (person, info, vehicle, ridesCount))
-
 fetchDriverInfo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> Maybe (DbHash, Text) -> Maybe Text -> Maybe DbHash -> Maybe DbHash -> Maybe Text -> Maybe (Id Person) -> m (Maybe (Person, DriverInformation, Maybe Vehicle))
 fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbDlNumberHash mbRcNumberHash mbEmail mbPersonId = do
   dbConf <- getMasterBeamConfig
