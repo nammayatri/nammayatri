@@ -30,21 +30,22 @@ postTriggerFCMMessage ::
     API.Types.UI.TriggerFCM.TriggerFcmReq ->
     Environment.Flow APISuccess.APISuccess
   )
-postTriggerFCMMessage (_, _) (API.Types.UI.TriggerFCM.TriggerFcmReq {..}) = do
+postTriggerFCMMessage (mbPersonId, _) (API.Types.UI.TriggerFCM.TriggerFcmReq {..}) = do
+  senderId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ QPerson.findById chatPersonId >>= fromMaybeM (PersonNotFound (getId chatPersonId))
   case person.deviceToken of
     Nothing -> throwError DeviceTokenNotFound
     Just _ -> do
-      notifyPerson person.merchantId person.merchantOperatingCityId person.id (buildNotificationData person)
+      notifyPerson person.merchantId person.merchantOperatingCityId person.id (buildNotificationData person senderId)
   return APISuccess.Success
   where
-    buildNotificationData person =
+    buildNotificationData person senderId =
       Notification.NotificationReq
         { category = Notification.TRIGGER_FCM,
           subCategory = Nothing,
           showNotification = if showNotification == Just False then Notification.DO_NOT_SHOW else Notification.SHOW,
           messagePriority = Nothing,
-          entity = Notification.Entity Notification.Product person.id.getId buildFCMEntityData,
+          entity = Notification.Entity Notification.Product person.id.getId (buildFCMEntityData senderId),
           body = body,
           title = title,
           dynamicParams = EmptyDynamicParam,
@@ -53,9 +54,9 @@ postTriggerFCMMessage (_, _) (API.Types.UI.TriggerFCM.TriggerFcmReq {..}) = do
           sound = Just "default"
         }
 
-    buildFCMEntityData =
+    buildFCMEntityData senderId =
       API.Types.UI.TriggerFCM.FCMEntityData
         { channelId = channelId,
-          personId = chatPersonId,
+          personId = senderId,
           source = source
         }
