@@ -47,7 +47,6 @@ import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Client as DC
-import Domain.Types.Coins.CoinHistory
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
@@ -95,7 +94,6 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
-import Storage.Queries.Coins.CoinHistory as SQCC
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Location as QLoc
@@ -244,8 +242,7 @@ data DriverRideRes = DriverRideRes
     tipAmount :: Maybe PriceAPIEntity,
     penalityCharge :: Maybe PriceAPIEntity,
     senderDetails :: Maybe DeliveryPersonDetailsAPIEntity,
-    receiverDetails :: Maybe DeliveryPersonDetailsAPIEntity,
-    coinsEarned :: [CoinsEarned]
+    receiverDetails :: Maybe DeliveryPersonDetailsAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -297,9 +294,8 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbFlee
     mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
     bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
     isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-    coinsEarned <- SQCC.findCoinsByEntityId (Just ride.id.getId)
     let goHomeReqId = ride.driverGoHomeRequestId
-    mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP coinsEarned
+    mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP
   filteredRides <- case mbFleetOwnerId of
     Just fleetOwnerId -> do
       isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId True
@@ -322,9 +318,8 @@ mkDriverRideRes ::
   Maybe (Id DDGR.DriverGoHomeRequest) ->
   Maybe DI.DriverInformation ->
   Bool ->
-  [CoinHistory] ->
   m DriverRideRes
-mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP coinsEarned = do
+mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP = do
   let fareParams = booking.fareParams
       estimatedBaseFare =
         fareSum $
@@ -414,19 +409,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         tipAmount = flip PriceAPIEntity ride.currency <$> ride.tipAmount,
         penalityCharge = flip PriceAPIEntity ride.currency <$> ride.cancellationFeeIfCancelled,
         senderDetails = booking.senderDetails <&> (\sd -> DeliveryPersonDetailsAPIEntity (sd.name) sd.primaryExophone),
-        receiverDetails = booking.receiverDetails <&> (\rd -> DeliveryPersonDetailsAPIEntity (rd.name) rd.primaryExophone),
-        coinsEarned = mkCoinsEarned coinsEarned
+        receiverDetails = booking.receiverDetails <&> (\rd -> DeliveryPersonDetailsAPIEntity (rd.name) rd.primaryExophone)
       }
-
-mkCoinsEarned :: [CoinHistory] -> [CoinsEarned]
-mkCoinsEarned =
-  map
-    ( \coinHistory ->
-        CoinsEarned
-          { coins = coinHistory.coins,
-            eventType = show coinHistory.eventFunction
-          }
-    )
 
 calculateLocations ::
   ( CacheFlow m r,
@@ -486,8 +470,7 @@ otpRideCreate driver otpCode booking clientId = do
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-  coinsEarned <- SQCC.findCoinsByEntityId (Just booking.id.getId)
-  mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP coinsEarned
+  mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP
   where
     errHandler uBooking transporter exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking uBooking (Just driver) transporter >> throwM exc
