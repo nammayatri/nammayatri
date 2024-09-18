@@ -61,3 +61,8 @@ type ReferralPopUpDelays = {
   add_upi :: Int, 
   verify_upi :: Int
 }
+
+type MetroCoinsEvent = {
+  coins :: Int,
+  minDistance :: Int
+}

@@ -1589,3 +1589,5 @@ data STR = LETS_GET_STARTED
         | TO_GET_MONEY
         | TILL String
         | REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK
+        | POINTS_EARNED_ String
+        | FOR_METRO_RIDE 

@@ -1590,7 +1590,6 @@ getEN stringKey =
         SHARE_WITH_SAFETY_TEAM -> "Share with safety team"
         RECORD_AUDIO -> "Record Audio"
         CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY -> "Cannot Enable Go-To for different City."        
-
         RIDE_CANCELLATION_RATE -> "Ride Cancellation Rate"
         CANCELLATION_RATE_TRIVIA -> "How to Reduce the Cancellation Rate:"
         HIGH_CANCELLATION_RATE -> "Cancellation rate is higher than 90% of drivers"
@@ -1608,3 +1607,6 @@ getEN stringKey =
         TO_GET_MONEY -> "To get money"
         TILL date -> "till " <> date
         REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK -> "Referral bonus will be credited to your bank account"
+        RENTAL_RIDE_ACCEPTED -> "Rental Ride Accepted"
+        POINTS_EARNED_ points -> points <> " Points Earned ✨"
+        FOR_METRO_RIDE -> "For Metro Ride"

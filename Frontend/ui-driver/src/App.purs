@@ -278,6 +278,7 @@ data DRIVER_EARNINGS_SCREEN_OUTPUT = EARNINGS_NAV NAVIGATION_ACTIONS DriverEarni
                                    | GOTO_MY_PLAN_FROM_COINS
                                    | GOTO_TRIP_DETAILS IndividualRideCardState
                                    | LOAD_MORE_HISTORY DriverEarningsScreenState
+                                   | GOTO_COINS_EARNING_INFO DriverEarningsScreenState
 
 data REFERRAL_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_RIDES_SCREEN_FROM_REFERRAL_SCREEN
