@@ -689,6 +689,7 @@ type HomeScreenStateData =
   , channelIdFromFCM :: String
   , personIdFromFCM :: String
   , sourceFromFCM :: String
+  , suggestedVehicalVarient :: Array (Maybe String)
 }
 
 type TollData = {

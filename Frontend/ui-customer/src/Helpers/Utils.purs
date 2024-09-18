@@ -1029,8 +1029,8 @@ getAllServices dummy =
     _ ->  ["Auto", "Eco", "Hatchback", "Sedan", "SUV"]
 
 -- Deprecated function (using remote configs instead) 11th July 2024
-getSelectedServices :: LazyCheck -> Array String
-getSelectedServices dummy = 
+getSelectedServices :: String -> Array String
+getSelectedServices preferedVarient = 
   let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   in case city of 
     Bangalore -> ["Non-AC Mini", "AC Mini", "Sedan"]

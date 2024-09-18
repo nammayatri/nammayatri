@@ -66,6 +66,7 @@ initData = let
     , destinationSuggestions : []
     , tripSuggestions: []
     , suggestionsData : { suggestionsMap: Map.empty }
+    , suggestedVehicalVarient : []
     , previousCurrentLocations : {pastCurrentLocations:[]}
     , selectList : []
     , quoteListModelState : []
