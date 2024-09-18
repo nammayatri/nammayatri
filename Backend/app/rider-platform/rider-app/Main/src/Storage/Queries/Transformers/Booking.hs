@@ -155,7 +155,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
             InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocId
             Ambulance _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocId
-            Delivery _ -> DRB.DeliveryDetails <$> buildDeliveryDetails toLocationId
+            Delivery _ -> DRB.DeliveryDetails <$> buildDeliveryDetails toLocId
             _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocId
         Nothing ->
           case fareProductType of

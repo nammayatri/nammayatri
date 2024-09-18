@@ -535,7 +535,7 @@ onUpdate = \case
   OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq {..} -> do
     QRide.updateEstimatedEndTimeRange (Just estimatedEndTimeRange) ride.id
   OUValidatedParcelImageFileUploadReq ValidatedParcelImageFileUploadReq {..} ->
-    when (isParcelImageUploaded) $ do
+    when isParcelImageUploaded $ do
       allBookingParty <- QBPL.findAllActiveByBookingId booking.id
       let allBookingPartyIds = map (.partyId) allBookingParty
       allParty <- catMaybes <$> mapM QPerson.findById (nub $ booking.riderId : allBookingPartyIds)

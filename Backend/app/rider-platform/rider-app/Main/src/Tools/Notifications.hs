@@ -59,6 +59,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
 import qualified Storage.Queries.Person as Person
 import Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
@@ -288,15 +289,18 @@ notifyOnRideStarted booking ride = do
   tag <- getDisabilityTag person.hasDisability personId
   let entity = Notification.Entity Notification.Product rideId.getId ()
       dynamicParams = RideStartedParam driverName
-  dynamicNotifyPerson
-    person
-    defaultNotification {notificationKey = "TRIP_STARTED", soundTag = tag}
-    dynamicParams
-    entity
-    booking.tripCategory
-    [ ("driverName", driverName),
-      ("serviceTierName", serviceTierName)
-    ]
+  -- finding other booking parties for delivery --
+  allOtherBookingPartyPersons <- getAllOtherRelatedPartyPersons booking
+  forM_ (person : allOtherBookingPartyPersons) $ \person' -> do
+    dynamicNotifyPerson
+      person'
+      defaultNotification {notificationKey = "TRIP_STARTED", soundTag = tag}
+      dynamicParams
+      entity
+      booking.tripCategory
+      [ ("driverName", driverName),
+        ("serviceTierName", serviceTierName)
+      ]
 
 -- title = "Your {#serviceTierName#} ride has started!"
 -- body = "Your {#serviceTierName#} ride with {#driverName#} has started. Enjoy the ride!"
@@ -324,15 +328,17 @@ notifyOnRideCompleted booking ride = do
       dynamicParams = RideCompleteParam driverName $ show totalFare.amountInt
   disableFollowRide personId
   Redis.del $ CQSos.mockSosKey personId
-  dynamicNotifyPerson
-    person
-    defaultNotification {notificationKey = "TRIP_FINISHED", soundTag = tag}
-    dynamicParams
-    entity
-    booking.tripCategory
-    [ ("driverName", driverName),
-      ("totalFare", showPriceWithRounding totalFare)
-    ]
+  allOtherBookingPartyPersons <- getAllOtherRelatedPartyPersons booking
+  forM_ (person : allOtherBookingPartyPersons) $ \person' ->
+    dynamicNotifyPerson
+      person'
+      defaultNotification {notificationKey = "TRIP_FINISHED", soundTag = tag}
+      dynamicParams
+      entity
+      booking.tripCategory
+      [ ("driverName", driverName),
+        ("totalFare", showPriceWithRounding totalFare)
+      ]
 
 -- title = "Trip finished!"
 -- body = "Hope you enjoyed your trip with {#driverName#}. Total Fare {#totalFare#}"
@@ -443,7 +449,7 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide = do
         Just _ -> "BOOKING_CANCEL_WITH_RIDE"
         Nothing -> "BOOKING_CANCEL_WITH_NO_RIDE"
       entity = Notification.Entity Notification.Product booking.id.getId (RideCancelParam booking.startTime booking.id)
-      dynamicParams = dynamicParams = RideCancelParam booking.startTime booking.id
+      dynamicParams = RideCancelParam booking.startTime booking.id
   dynamicNotifyPerson
     person
     defaultNotification
@@ -1004,10 +1010,10 @@ notifyOnTripUpdate booking ride err = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
   (title, body) <- case err of
-    Just errorMessage -> return $ errorMessage
+    Just errorMessage -> return errorMessage
     Nothing -> do
       mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "TRIP_UPDATED" booking.tripCategory Nothing person.language >>= fromMaybeM (InternalError "Trip update merchant push notification not found")
-      return $ (mbMerchantPN.title, mbMerchantPN.body)
+      return (mbMerchantPN.title, mbMerchantPN.body)
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.TRIP_UPDATED merchantOperatingCityId
   let notificationSound = maybe (Just "default") NSC.defaultSound notificationSoundFromConfig
   let notificationData =
@@ -1047,3 +1053,14 @@ notifyAboutScheduledRide booking title body = do
             sound = notificationSound
           }
   notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData
+
+
+getAllOtherRelatedPartyPersons :: ServiceFlow m r => SRB.Booking -> m [Person]
+getAllOtherRelatedPartyPersons booking = do
+  case booking.tripCategory of
+    Just (Trip.Delivery _) -> do
+      allBookingParties <- QBPL.findAllActiveByBookingId booking.id
+      let allBookingPartyIds = filter (booking.riderId /=) $ map (.partyId) allBookingParties
+      allParty <- catMaybes <$> mapM Person.findById allBookingPartyIds
+      pure $ filter (isJust . (.deviceToken)) allParty
+    _ -> pure []
