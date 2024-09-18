@@ -80,6 +80,11 @@ window.getMerchantConfig = function () {
       "auto" : true,
       "cabs" : true
     },
+    "acPopupConfig" : {
+      "enableAcPopup" : true,
+      "enableNonAcPopup" : true,
+      "showAfterTime" : 5
+  },
     "showChargeDesc" : false,
     "isShareAppEnabled": "true",
     "apiLoaderLottie": "primary_button_loader.json",
