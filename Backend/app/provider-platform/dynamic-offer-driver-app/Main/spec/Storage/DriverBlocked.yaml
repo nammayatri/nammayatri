@@ -1,0 +1,29 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person : Domain.Types.Person
+  DriverBlockReason: Domain.Types.DriverBlockReason
+DriverBlockTransactions:
+  tableName: driver_block_transactions
+
+  types:
+    BlockedBy:
+          enum : "Dashboard, Application"
+  fields:
+    id : Id DriverBlockTransactions
+    reasonCode :  Maybe Text
+    blockReason : Maybe Text
+    blockTimeInHours : Maybe Int
+    driverId : Id Person
+    reportedAt : UTCTime
+    blockLiftTime : Maybe UTCTime
+    blockedBy : BlockedBy
+    requestorId : Maybe Text
+  constraints:
+    id: PrimaryKey
+    driverId: "!SecondaryKey"
+  queries:
+    findByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+

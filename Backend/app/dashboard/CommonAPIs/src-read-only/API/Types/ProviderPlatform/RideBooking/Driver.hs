@@ -19,6 +19,18 @@ import qualified Kernel.Types.Version
 import Servant
 import Servant.Client
 
+data DriverBlockTransactions = DriverBlockTransactions
+  { reasonCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    blockReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    blockTimeInHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    reportedAt :: Kernel.Prelude.UTCTime,
+    blockLiftTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    blockedBy :: Kernel.Prelude.Text,
+    requestorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DriverInfoRes = DriverInfoRes
   { driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver,
     firstName :: Kernel.Prelude.Text,
@@ -60,7 +72,8 @@ data DriverInfoRes = DriverInfoRes
     blockedDueToRiderComplains :: Kernel.Prelude.Bool,
     blockStateModifier :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverTag :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
-    email :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    blockedInfo :: [API.Types.ProviderPlatform.RideBooking.Driver.DriverBlockTransactions]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

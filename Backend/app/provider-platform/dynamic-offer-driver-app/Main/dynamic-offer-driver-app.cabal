@@ -667,6 +667,7 @@ library
       Domain.Types.DocumentVerificationConfig
       Domain.Types.DriverBankAccount
       Domain.Types.DriverBlockReason
+      Domain.Types.DriverBlockTransactions
       Domain.Types.DriverFee
       Domain.Types.DriverGoHomeRequest
       Domain.Types.DriverGullakAssociation
@@ -781,6 +782,7 @@ library
       Storage.Beam.DocumentVerificationConfig
       Storage.Beam.DriverBankAccount
       Storage.Beam.DriverBlockReason
+      Storage.Beam.DriverBlockTransactions
       Storage.Beam.DriverFee
       Storage.Beam.DriverGoHomeRequest
       Storage.Beam.DriverGullakAssociation
@@ -898,6 +900,7 @@ library
       Storage.Queries.DocumentVerificationConfig
       Storage.Queries.DriverBankAccount
       Storage.Queries.DriverBlockReason
+      Storage.Queries.DriverBlockTransactions
       Storage.Queries.DriverFee
       Storage.Queries.DriverGoHomeRequest
       Storage.Queries.DriverGullakAssociation
@@ -963,6 +966,7 @@ library
       Storage.Queries.OrphanInstances.DocumentVerificationConfig
       Storage.Queries.OrphanInstances.DriverBankAccount
       Storage.Queries.OrphanInstances.DriverBlockReason
+      Storage.Queries.OrphanInstances.DriverBlockTransactions
       Storage.Queries.OrphanInstances.DriverFee
       Storage.Queries.OrphanInstances.DriverGoHomeRequest
       Storage.Queries.OrphanInstances.DriverHomeLocation

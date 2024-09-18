@@ -121,6 +121,7 @@ import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DocumentVerificationConfig as DomainDVC
 import qualified Domain.Types.DriverBlockReason as DBR
+import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import Domain.Types.DriverFee as DDF
 import qualified Domain.Types.DriverHomeLocation as DDHL
 import qualified Domain.Types.DriverInformation as DrInfo
@@ -192,6 +193,7 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
+import qualified Storage.Queries.DriverBlockTransactions as QDBT
 import Storage.Queries.DriverFee (findPendingFeesByDriverIdAndServiceName)
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverHomeLocation as QDHL
@@ -516,7 +518,7 @@ blockDriverWithReason merchantShortId opCity reqDriverId dashboardUserName req =
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when (driverInf.blocked) $ throwError DriverAccountAlreadyBlocked
-  QDriverInfo.updateDynamicBlockedState driverId req.blockReason req.blockTimeInHours dashboardUserName True
+  QDriverInfo.updateDynamicBlockedState driverId req.blockReason req.blockTimeInHours dashboardUserName merchantId req.reasonCode driver.merchantOperatingCityId DTDBT.Dashboard True
   maxShards <- asks (.maxShards)
   case req.blockTimeInHours of
     Just hrs -> do
@@ -544,7 +546,7 @@ blockDriver merchantShortId opCity reqDriverId = do
   let merchantId = driver.merchantId
   unless (merchant.id == merchantId && driver.merchantOperatingCityId == merchantOpCityId) $ throwError (PersonDoesNotExist personId.getId)
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
-  when (not driverInf.blocked) (void $ QDriverInfo.updateBlockedState driverId True Nothing)
+  when (not driverInf.blocked) (void $ QDriverInfo.updateBlockedState driverId True Nothing merchantId driver.merchantOperatingCityId DTDBT.Dashboard)
   logTagInfo "dashboard -> blockDriver : " (show personId)
   pure Success
 
@@ -664,7 +666,7 @@ unblockDriver merchantShortId opCity reqDriverId dashboardUserName = do
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
-  when driverInf.blocked (void $ QDriverInfo.updateBlockedState driverId False (Just dashboardUserName))
+  when driverInf.blocked (void $ QDriverInfo.updateBlockedState driverId False (Just dashboardUserName) merchantId driver.merchantOperatingCityId DTDBT.Dashboard)
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success
 
@@ -749,18 +751,22 @@ driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNu
   let driverId = driverWithRidesCount.person.id
   mbDriverLicense <- B.runInReplica $ QDriverLicense.findByDriverId driverId
   rcAssociationHistory <- B.runInReplica $ QRCAssociation.findAllByDriverId driverId
-  buildDriverInfoRes driverWithRidesCount mbDriverLicense rcAssociationHistory
+  blockHistory <- B.runInReplica $ QDBT.findByDriverId driverId
+
+  buildDriverInfoRes driverWithRidesCount mbDriverLicense rcAssociationHistory blockHistory
 
 buildDriverInfoRes ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
   QPerson.DriverWithRidesCount ->
   Maybe DriverLicense ->
   [(DriverRCAssociation, VehicleRegistrationCertificate)] ->
+  [DTDBT.DriverBlockTransactions] ->
   m Common.DriverInfoRes
-buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociationHistory = do
+buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociationHistory blockHistory = do
   mobileNumber <- traverse decrypt person.mobileNumber
   let email = person.email
   driverLicenseDetails <- traverse buildDriverLicenseAPIEntity mbDriverLicense
+  let blockDetails = map buildBlockedListAPIEntity blockHistory
   vehicleRegistrationDetails <- traverse buildRCAssociationAPIEntity rcAssociationHistory
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
   unencryptedAlternateMobileNumber <- mapM decrypt person.alternateMobileNumber
@@ -835,6 +841,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         windowSize = cancellationData.windowSize,
         blockedDueToRiderComplains = not isACAllowedForDriver,
         driverTag = person.driverTag,
+        blockedInfo = blockDetails,
         email
       }
 
@@ -850,6 +857,13 @@ buildDriverLicenseAPIEntity DriverLicense {..} = do
         verificationStatus = castVerificationStatus verificationStatus,
         ..
       }
+
+buildBlockedListAPIEntity :: DTDBT.DriverBlockTransactions -> Common.DriverBlockTransactions
+buildBlockedListAPIEntity DTDBT.DriverBlockTransactions {..} =
+  Common.DriverBlockTransactions
+    { blockedBy = show blockedBy,
+      ..
+    }
 
 buildRCAssociationAPIEntity ::
   EncFlow m r =>
