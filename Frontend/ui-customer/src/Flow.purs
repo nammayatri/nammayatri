@@ -2669,8 +2669,9 @@ updateFollower callFollowersApi callInitUi eventType = do
     noOfFollowers = Arr.length followers
   setValueToLocalStore TRACKING_DRIVER "False"
   setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-  let currentUserOnRide = elem allState.homeScreen.props.currentStage [ RideAccepted, RideStarted ]
-  when currentUserOnRide $ removeChatService ""
+  let currentUserOnRide = elem allState.homeScreen.props.currentStage [ RideAccepted, RideStarted, ChatWithDriver ] 
+      checkUsersLocalStage = elem (getValueToLocalStore LOCAL_STAGE) [ "RideAccepted", "RideStarted", "ChatWithDriver" ]
+  when (currentUserOnRide || checkUsersLocalStage) $ removeChatService ""
   void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
   void $ liftFlowBT $ runEffectFn1 EHC.updateIdMap "FollowsRide"
   let
@@ -3964,6 +3965,8 @@ removeChatService _ = do
               , data { messages = [], messagesSize = "-1", chatSuggestionsList = [], messageToBeSent = "", lastMessage = state.lastMessage, waitTimeInfo = false, lastSentMessage = state.lastSentMessage, lastReceivedMessage = state.lastReceivedMessage }
               }
         )
+
+  modifyScreenState $ FollowRideScreenStateType (\followRideScreenState -> followRideScreenState { props { chatCallbackInitiated = false } })
 
 setFlowStatusData :: Encode FlowStatusData => FlowStatusData -> Effect Unit
 setFlowStatusData object = void $ pure $ setValueToLocalStore FLOW_STATUS_DATA (encodeJSON object)

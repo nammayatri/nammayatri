@@ -1543,7 +1543,7 @@ eval ShareRide state = do
   continueWithCmd state
         [ do
             let appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
-            _ <- pure $ shareTextMessage "" $ getString $ TRACK_RIDE_STRING appName state.data.driverInfoCardState.driverName (state.data.config.appData.website <> "u?vp=shareRide&rideId="<>state.data.driverInfoCardState.rideId) state.data.driverInfoCardState.registrationNumber
+            _ <- pure $ shareTextMessage "" $ getString $ TRACK_RIDE_STRING appName state.data.driverInfoCardState.driverName (state.data.config.appData.website <> "t?i="<>state.data.driverInfoCardState.rideId) state.data.driverInfoCardState.registrationNumber
             void $ pure $ cleverTapCustomEvent "ny_user_share_ride_via_link"
             pure NoAction
          ]
@@ -2633,7 +2633,15 @@ eval (UpdateChatWithEM flag primaryContact) state =
                     , notifiedViaFCM = primaryContact.notifiedViaFCM
                     , shareTripWithEmergencyContactOption = primaryContact.shareTripWithEmergencyContactOption.key
                     }
-              else state.data.driverInfoCardState.currentChatRecipient
+              else { name : state.data.driverInfoCardState.driverName
+                   , number : ""
+                   , uuid : state.data.driverInfoCardState.bppRideId
+                   , recipient : CMC.DRIVER
+                   , enableForShareRide : false
+                   , contactPersonId : Nothing
+                   , notifiedViaFCM : Nothing
+                   , shareTripWithEmergencyContactOption : API.NEVER_SHARE
+                   }
         }
       } 
     , props {isChatWithEMEnabled = flag}

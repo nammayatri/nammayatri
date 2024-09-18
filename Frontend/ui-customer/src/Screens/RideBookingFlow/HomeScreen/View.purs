@@ -349,7 +349,6 @@ screen initialState =
                       Nothing -> pure unit
                   void $ launchAff $ flowRunner defaultGlobalState $ driverLocationTracking push UpdateCurrentStage DriverArrivedAction UpdateETA 3000.0 (getValueToLocalStore TRACKING_ID) initialState "pickup" 1
                 else pure unit
-                push LoadMessages
                 when (not initialState.props.chatcallbackInitiated && initialState.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE) $ do
                   -- @TODO need to revert once apk update is done
                   --when (initialState.data.driverInfoCardState.providerType == CTP.ONUS) $ void $ JB.showInAppNotification JB.inAppNotificationPayload{title = "Showing Approximate Location", message = "Driver locations of other providers are only approximate", channelId = "ApproxLoc", showLoader = true}
@@ -357,12 +356,12 @@ screen initialState =
                     Nothing -> void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ fetchContactsForMultiChat push initialState 
                     Just contacts -> do
                       push $ UpdateChatWithEM false $ fromMaybe dummyNewContacts $ Arr.head contacts
-                      let uuid = initialState.data.driverInfoCardState.currentChatRecipient.uuid
+                      let uuid = initialState.data.driverInfoCardState.bppRideId
                           chatUser = if uuid == initialState.data.driverInfoCardState.bppRideId then "Customer" else (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)
                       checkAndStartChatService push uuid chatUser false initialState
                       pure unit
-                  
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
+                push LoadMessages
               EditPickUpLocation -> do
                 void $ pure $ enableMyLocation true
                 void $ runEffectFn2 storeCallBackLocateOnMap (\key lat lon -> push $ UpdatePickupLocation key lat lon) (handleLocateOnMapCallback "HomeScreen")
