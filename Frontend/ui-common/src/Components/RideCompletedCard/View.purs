@@ -728,6 +728,7 @@ getViewsByOrder config item push =
     BADGE_CARD -> badgeCardView config push
     DRIVER_BOTTOM_VIEW -> driverFareBreakUpView config push
     RENTAL_RIDE_VIEW -> rentalRideInfoView push config
+    COINS_EARNED_VIEW -> coinsEarnedView config.coinsEarned
 
 
 ------------------------------------ (Driver Card 1) rideEndBannerView -------------------------------------------------------------------------------------------------------------------------
@@ -1357,4 +1358,45 @@ sosButtonView config push =
         , visibility GONE
         ]
       <> FontStyle.body6 TypoGraphy
+  ]
+
+
+coinsEarnedView :: forall w. CoinsEarnedConfigType -> PrestoDOM (Effect Unit) w
+coinsEarnedView coinsEarned = 
+  linearLayout [
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation HORIZONTAL
+  , background Color.white900
+  , cornerRadius 16.0
+  ][
+    linearLayout [
+      height WRAP_CONTENT
+    , orientation VERTICAL
+    , padding $ Padding 14 20 4 20
+    , gravity CENTER_VERTICAL
+    ][
+      textView $ [
+        text coinsEarned.title
+      , color Color.black800
+      ] <> FontStyle.body25 TypoGraphy
+    , textView $ [
+        text coinsEarned.subTitle
+      , color Color.black700 
+      ] <> FontStyle.body6 TypoGraphy
+    ]
+  , linearLayout [height WRAP_CONTENT, weight 1.0] []
+  , linearLayout [
+      height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , cornerRadius 16.0
+    ][
+      imageView [
+        height $ V 85
+      , width $ V 165
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_metro_coins_earned"
+      , gravity RIGHT
+      , cornerRadius 16.0
+      ]
+    ]
   ]

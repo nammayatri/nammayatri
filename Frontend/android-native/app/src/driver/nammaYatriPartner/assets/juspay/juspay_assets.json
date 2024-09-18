@@ -547,6 +547,7 @@
       "ny_ic_media" : true,
       "ny_ic_message_square" : true,
       "ny_ic_message_unfilled" : true,
+      "ny_ic_metro_coins_earned" : true,
       "ny_ic_metro_logo_mini" : true,
       "ny_ic_minus_dec" : true,
       "ny_ic_money_filled" : true,

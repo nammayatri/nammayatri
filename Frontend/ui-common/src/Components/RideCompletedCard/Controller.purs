@@ -85,7 +85,8 @@ type Config = {
   additionalCharges :: Array AdditionalCharges,
   rentalRowDetails :: RentalRowConfig,
   rentalBookingData :: RentalBookingConfig,
-  showRentalRideDetails :: Boolean
+  showRentalRideDetails :: Boolean,
+  coinsEarned :: CoinsEarnedConfigType
 }
 
 data Theme = DARK | LIGHT
@@ -95,7 +96,7 @@ instance decodeTheme :: Decode Theme where decode = defaultEnumDecode
 instance encodeTheme :: Encode Theme where encode = defaultEnumEncode
 instance eqTheme :: Eq Theme where eq = genericEq
 
-data RideCompletedElements = BANNER | QR_VIEW | NO_VPA_VIEW | BADGE_CARD | DRIVER_BOTTOM_VIEW | RENTAL_RIDE_VIEW
+data RideCompletedElements = BANNER | QR_VIEW | NO_VPA_VIEW | BADGE_CARD | DRIVER_BOTTOM_VIEW | RENTAL_RIDE_VIEW | COINS_EARNED_VIEW
 
 derive instance genericRideCompletedElements :: Generic RideCompletedElements _
 instance eqRideCompletedElements :: Eq RideCompletedElements where eq = genericEq
@@ -234,7 +235,8 @@ config = {
   additionalCharges : [],
   rentalRowDetails : dummyRentalRowConfig,
   rentalBookingData : dummyRentalBookingConfig,
-  showRentalRideDetails : false
+  showRentalRideDetails : false,
+  coinsEarned : initialConinsEarnedConfig
 }
 
 type CustomerIssue = {
@@ -509,4 +511,15 @@ type PillActionConfig = {
   action :: Action,
   useMarginRight :: Boolean,
   image :: String
+}
+
+type CoinsEarnedConfigType = {
+  title :: String,
+  subTitle :: String
+}
+
+initialConinsEarnedConfig :: CoinsEarnedConfigType 
+initialConinsEarnedConfig = {
+  title : "",
+  subTitle : ""
 }
