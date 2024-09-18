@@ -102,6 +102,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
     DTC.Ambulance DTC.OneWayOnDemandDynamicOffer -> reallocateDynamicOffer
     DTC.Rental DTC.OnDemandStaticOffer -> reallocateStaticOffer
     DTC.InterCity DTC.OneWayOnDemandStaticOffer _ -> reallocateStaticOffer
+    DTC.Delivery DTC.OneWayOnDemandDynamicOffer -> reallocateDynamicOffer
     _ -> cancelRideTransactionForNonReallocation Nothing Nothing
   where
     reallocateDynamicOffer = do

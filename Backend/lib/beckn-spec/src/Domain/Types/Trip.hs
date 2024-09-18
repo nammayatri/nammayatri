@@ -324,6 +324,7 @@ isOdometerReadingsRequired _ = False
 -- Move it to configs later if required
 isGoHomeAvailable :: TripCategory -> Bool
 isGoHomeAvailable (OneWay _) = True
+isGoHomeAvailable (Delivery _) = True
 isGoHomeAvailable _ = False
 
 shouldRectifyDistantPointsSnapToRoadFailure :: TripCategory -> Bool

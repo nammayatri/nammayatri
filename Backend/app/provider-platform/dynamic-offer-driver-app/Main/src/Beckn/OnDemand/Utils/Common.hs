@@ -797,7 +797,7 @@ mkEstimatedEndTimeRangeTagGroupV2 estimatedEndTimeRange' =
 
 mkParcelImageUploadedTag :: Maybe [Spec.TagGroup]
 mkParcelImageUploadedTag =
-  Just $
+  Just
     [ Spec.TagGroup
         { tagGroupDisplay = Just False,
           tagGroupDescriptor =
