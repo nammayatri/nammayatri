@@ -169,11 +169,13 @@ updatePlanIdByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m
 updatePlanIdByDriverIdAndServiceName (Id driverId) (Id planId) serviceName mbVehicleCategory merchantOperatingCity = do
   now <- getCurrentTime
   updateOneWithKV
-    [Se.Set BeamDF.planId planId, Se.Set BeamDF.updatedAt now]
+    [ Se.Set BeamDF.planId planId,
+      Se.Set BeamDF.vehicleCategory mbVehicleCategory,
+      Se.Set BeamDF.merchantOpCityId (Just merchantOperatingCity.getId),
+      Se.Set BeamDF.updatedAt now
+    ]
     [ Se.And
         [ Se.Is BeamDF.driverId (Se.Eq driverId),
-          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
-          Se.Is BeamDF.vehicleCategory $ Se.Eq mbVehicleCategory,
-          Se.Is BeamDF.merchantOpCityId $ Se.Eq (Just merchantOperatingCity.getId)
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
         ]
     ]
