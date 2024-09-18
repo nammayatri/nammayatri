@@ -180,6 +180,43 @@ notifyOnRideAssigned booking ride = do
           ]
   notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
 
+notifyOnScheduledRideAccepted ::
+  ServiceFlow m r =>
+  SRB.Booking ->
+  SRide.Ride ->
+  m ()
+notifyOnScheduledRideAccepted booking ride = do
+  let personId = booking.riderId
+      rideId = ride.id
+      driverName = ride.driverName
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.DRIVER_ASSIGNMENT merchantOperatingCityId
+  tag <- getDisabilityTag person.hasDisability personId
+  notificationSound <- getNotificationSound tag notificationSoundFromConfig
+  let notificationData =
+        Notification.NotificationReq
+          { category = Notification.DRIVER_ASSIGNMENT,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product rideId.getId (RideAssignedParam driverName booking.startTime booking.id),
+            body = body,
+            title = title,
+            dynamicParams = RideAssignedParam driverName booking.startTime booking.id,
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing,
+            sound = notificationSound
+          }
+      title = T.pack "Driver assigned!"
+      body =
+        unwords
+          [ driverName,
+            "will be your driver for your scheduled trip starting at ",
+            showTimeIst booking.startTime
+          ]
+  notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+
 newtype RideStartedParam = RideStartedParam
   { driverName :: Text
   }
@@ -1052,3 +1089,24 @@ notifyOnTripUpdate booking ride title body = do
             sound = notificationSound
           }
   notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+
+notifyAboutScheduledRide :: (ServiceFlow m r) => SRB.Booking -> Text -> Text -> m ()
+notifyAboutScheduledRide booking title body = do
+  person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.SCHEDULED_RIDE_REMINDER person.merchantOperatingCityId
+  let notificationSound = maybe (Just "default") NSC.defaultSound notificationSoundFromConfig
+  let notificationData =
+        Notification.NotificationReq
+          { category = Notification.SCHEDULED_RIDE_REMINDER,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product booking.id.getId (),
+            body,
+            title,
+            dynamicParams = EmptyDynamicParam,
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing,
+            sound = notificationSound
+          }
+  notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData

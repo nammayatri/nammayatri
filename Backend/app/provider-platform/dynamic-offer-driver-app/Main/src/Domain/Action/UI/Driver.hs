@@ -1343,7 +1343,7 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
       Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id searchTry.id $ mkPrice (Just quote.currency) quote.estimatedFare
       Nothing -> pure []
   uBooking <- QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-  handle (errHandler uBooking) $ sendRideAssignedUpdateToBAP uBooking ride driver vehicle
+  handle (errHandler uBooking) $ sendRideAssignedUpdateToBAP uBooking ride driver vehicle False
   when uBooking.isScheduled $ do
     now <- getCurrentTime
     let scheduledPickup = uBooking.fromLocation

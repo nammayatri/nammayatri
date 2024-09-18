@@ -165,6 +165,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     scheduleRideBufferTime :: Kernel.Prelude.NominalDiffTime,
     scheduledRideFilterExclusionThresholdHours :: Kernel.Types.Common.Hours,
     scheduledRideJobRescheduleTime :: Kernel.Prelude.NominalDiffTime,
+    scheduledRideSearchRepeatLimit :: Kernel.Prelude.Int,
     searchRepeatLimit :: Kernel.Prelude.Int,
     snapToRoadConfidenceThreshold :: Kernel.Prelude.Double,
     specialDrivers :: [Kernel.Prelude.Text],

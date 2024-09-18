@@ -50,6 +50,7 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.onboardingRetryTimeInHours onboardingRetryTimeInHours,
       Se.Set Beam.checkImageExtractionForDashboard checkImageExtractionForDashboard,
       Se.Set Beam.searchRepeatLimit searchRepeatLimit,
+      Se.Set Beam.scheduledRideSearchRepeatLimit (Just scheduledRideSearchRepeatLimit),
       Se.Set Beam.driverPaymentCycleStartTime (Kernel.Utils.Common.nominalDiffTimeToSeconds driverPaymentCycleStartTime),
       Se.Set Beam.timeDiffFromUtc timeDiffFromUtc,
       Se.Set Beam.driverPaymentCycleBuffer (Kernel.Utils.Common.nominalDiffTimeToSeconds driverPaymentCycleBuffer),

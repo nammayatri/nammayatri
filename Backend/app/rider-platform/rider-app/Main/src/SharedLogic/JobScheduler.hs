@@ -42,6 +42,7 @@ data RiderJobType
   | SafetyCSAlert
   | OtherJobTypes
   | MetroIncentivePayout
+  | ScheduledRidePopupToRider
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -57,6 +58,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SCheckExotelCallStatusAndNotifyBPP jobData = AnyJobInfo <$> restoreJobInfo SCheckExotelCallStatusAndNotifyBPP jobData
   restoreAnyJobInfo SOtherJobTypes jobData = AnyJobInfo <$> restoreJobInfo SOtherJobTypes jobData
   restoreAnyJobInfo SMetroIncentivePayout jobData = AnyJobInfo <$> restoreJobInfo SMetroIncentivePayout jobData
+  restoreAnyJobInfo SScheduledRidePopupToRider jobData = AnyJobInfo <$> restoreJobInfo SScheduledRidePopupToRider jobData
 
 data CheckPNAndSendSMSJobData = CheckPNAndSendSMSJobData
   { bookingId :: Id Booking,
@@ -160,3 +162,12 @@ data MetroIncentivePayoutJobData = MetroIncentivePayoutJobData
 instance JobInfoProcessor 'MetroIncentivePayout
 
 type instance JobContent 'MetroIncentivePayout = MetroIncentivePayoutJobData
+
+newtype ScheduledRidePopupToRiderJobData = ScheduledRidePopupToRiderJobData
+  { bookingId :: Id Booking
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'ScheduledRidePopupToRider
+
+type instance JobContent 'ScheduledRidePopupToRider = ScheduledRidePopupToRiderJobData

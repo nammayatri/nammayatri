@@ -266,3 +266,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN upwards_recompu
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN demand_hotspots_config json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_search_repeat_limit integer  default 10;

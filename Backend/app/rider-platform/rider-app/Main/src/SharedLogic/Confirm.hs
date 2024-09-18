@@ -16,6 +16,7 @@ module SharedLogic.Confirm where
 
 import Data.Foldable.Extra (anyM)
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Map as M
 import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Quote as DQuote
 import qualified Domain.Types.Booking as DRB
@@ -37,7 +38,7 @@ import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Types
 import qualified Kernel.External.Payment.Interface as Payment
-import Kernel.External.Types (ServiceFlow)
+import Kernel.External.Types
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto.Config
@@ -46,7 +47,10 @@ import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.JobScheduler
+import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -109,7 +113,12 @@ confirm ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "version" ::: DeploymentVersion],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    EncFlow m r
+    EncFlow m r,
+    SchedulerFlow r,
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool)
   ) =>
   DConfirmReq ->
   m DConfirmRes
@@ -141,6 +150,14 @@ confirm DConfirmReq {..} = do
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
   (booking, bookingParties) <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled
+  when isScheduled $ do
+    let scheduledRideReminderTime = addUTCTime (- (merchant.scheduleRideBufferTime + 10 * 60)) booking.startTime
+    let scheduleAfter = diffUTCTime scheduledRideReminderTime now
+    when (scheduleAfter > 0) $ do
+      let dfCalculationJobTs = max 2 scheduleAfter
+          scheduledRidePopupToRiderJobData = ScheduledRidePopupToRiderJobData {bookingId = booking.id}
+      maxShards <- asks (.maxShards)
+      createJobIn @_ @'ScheduledRidePopupToRider dfCalculationJobTs maxShards (scheduledRidePopupToRiderJobData :: ScheduledRidePopupToRiderJobData)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   riderPhone <-

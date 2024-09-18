@@ -264,6 +264,7 @@ library
       SharedLogic.Scheduler.Jobs.SafetyCSAlert
       SharedLogic.Scheduler.Jobs.SafetyIVR
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
+      SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
       SharedLogic.Serviceability
       Storage.Beam.BecknRequest
       Storage.Beam.Common

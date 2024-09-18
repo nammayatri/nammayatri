@@ -181,6 +181,7 @@ let kvConfigUpdateFrequency = +10
 
 let RiderJobType =
       < CheckPNAndSendSMS
+      | ScheduledRidePopupToRider
       | ScheduledRideNotificationsToRider
       | SafetyIVR
       | CallPoliceApi
@@ -192,6 +193,7 @@ let RiderJobType =
 
 let jobInfoMapx =
       [ { mapKey = RiderJobType.CheckPNAndSendSMS, mapValue = True }
+      , { mapKey = RiderJobType.ScheduledRidePopupToRider, mapValue = False }
       , { mapKey = RiderJobType.ScheduledRideNotificationsToRider
         , mapValue = True
         }

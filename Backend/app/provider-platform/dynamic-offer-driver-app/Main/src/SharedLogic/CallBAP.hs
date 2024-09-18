@@ -59,6 +59,7 @@ import Control.Lens ((%~))
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.List as DL
+import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import qualified Data.Text as Text
 import qualified Data.Text.Lazy as TL
@@ -90,6 +91,7 @@ import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Types as Maps
+import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -126,6 +128,7 @@ import Storage.Queries.RiderDriverCorrelation as SQR
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
+import qualified Tools.Notifications as Notify
 import TransactionLogs.PushLogs
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
@@ -484,14 +487,16 @@ sendRideAssignedUpdateToBAP ::
     LT.HasLocationService m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
   DP.Person ->
   DVeh.Vehicle ->
+  Bool ->
   m ()
-sendRideAssignedUpdateToBAP booking ride driver veh = do
+sendRideAssignedUpdateToBAP booking ride driver veh isScheduledRideAssignment = do
   merchant <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
@@ -500,7 +505,18 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
   rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq
   let generatedMsg = A.encode rideAssignedMsgV2
   logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
+  when isScheduledRideAssignment $ Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken
   void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig merchant.id
+  where
+    notificationType = Notification.DRIVER_ASSIGNMENT
+    notificationTitle = "Driver has been assigned the ride!"
+    message uBooking =
+      cs $
+        unwords
+          [ "You have been assigned a ride for",
+            cs (showTimeIst uBooking.startTime) <> ".",
+            "Check the app for more details."
+          ]
 
 sendRideStartedUpdateToBAP ::
   ( CacheFlow m r,
