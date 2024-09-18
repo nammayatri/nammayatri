@@ -140,3 +140,9 @@ getNumberWithSuffix n
       2 -> "nd"
       3 -> "rd"
       _ -> "th"
+
+convertMonthsToSeconds :: Int -> Int
+convertMonthsToSeconds months = months * daysPerMonth * secondsPerDay
+  where
+    daysPerMonth = 30 
+    secondsPerDay = 24 * 60 * 60

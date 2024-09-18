@@ -14,7 +14,7 @@
 -}
 module SuggestionUtils where
 
-import Data.Map (Map, insert, update, lookup, member, delete, keys, isEmpty, empty)
+import Data.Map (Map, insert, update, lookup, member, delete, keys, isEmpty, empty, values)
 import Data.Tuple.Nested ((/\))
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, compareUTCDate)
 import Data.Maybe
@@ -40,13 +40,14 @@ import Data.Number(fromString)
 import ConfigProvider
 import Services.API (RideBookingRes(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromBooking)
-import Data.Foldable (foldl)
+import Data.Foldable (foldl,maximum)
 import Data.Lens((^.))
 import Accessor (_contents, _lat, _lon, _toLocation, _otpCode)
 import Data.String as DS
 import Data.Array as DA
 import Engineering.Helpers.GeoHash (encodeGeohash, geohashNeighbours)
-import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
+import Data.List as DL
+-- import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Accessor (_vehicleVariant)
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import RemoteConfig (FamousDestination(..), getFamousDestinations)
@@ -54,6 +55,17 @@ import Screens.HomeScreen.ScreenData (dummyAddress)
 import RemoteConfig as RC
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Debug
+import Data.Array (sort, group, head,groupBy)
+import Data.Foldable (maximumBy)
+import Data.Maybe (Maybe(..))
+import Data.Ord (comparing)
+import Data.Array.NonEmpty as DAN
+import Data.Map as DM
+import JBridge as JB
+import Data.Function.Uncurried (runFn2)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate, getExpiryTime, getDeviceHeight, getScreenPpi, safeMarginTopWithDefault, markPerformance, getValueFromIdMap, updatePushInIdMap, getCurrentUTC, convertUTCtoISC, compareUTCDate, getCurrentUTC, getMarkerCallback)
+import Data.Tuple (Tuple(..))
+import Mobility.Prelude
 
 foreign import setSuggestionsMapInJson :: Json -> Json
 foreign import getSuggestedDestinationsJsonFromLocal :: String -> Json
@@ -498,6 +510,49 @@ fetchFamousDestinations _ = do
   let destinations = getFamousDestinations $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
   map getFamousCityDestination destinations
 
+
+fetchLocationBasedPreferredVariant :: SourceGeoHash -> SuggestionsMap -> Maybe String
+fetchLocationBasedPreferredVariant sourceGeohash suggestionsMap = 
+  let 
+    mbSuggestion = lookup sourceGeohash suggestionsMap
+    suggestion =  fromMaybe dummySuggestionsObject mbSuggestion
+    monthInSecond = convertMonthsToSeconds 1
+    tripSuggestionsOfLast30days = filter (\x -> (runFn2 JB.differenceBetweenTwoUTC (fromMaybe "" x.recencyDate) (getCurrentUTC "")) <= monthInSecond) suggestion.tripSuggestions
+    sortedRecencyGroup = DA.sortBy (\a b -> compare b.recencyDate a.recencyDate) tripSuggestionsOfLast30days
+    lastFiveTrips  = getLast5Trips sortedRecencyGroup dummyFreqencyCount 
+    sortedTripList = ( (DA.sortBy (\(Tuple varient frequency) (Tuple varient1 frequency1) ->compare frequency1 frequency ) lastFiveTrips.vehicleVariant))
+  in 
+    case head sortedTripList of 
+      Just (Tuple varient frequency) -> varient 
+      Nothing -> Nothing 
+
+getPreferredVariant :: SuggestionsMap -> Maybe String
+getPreferredVariant suggestionsMap = 
+  let
+    suggestionsMap =  getSuggestionsMapFromLocal FunctionCall
+    suggestionMapValues =  values suggestionsMap
+    suggestions =  suggestionMapValues
+    tripSuggestion  = foldl (\acc item -> acc <> item.tripSuggestions) [] suggestions
+    monthInSecond = convertMonthsToSeconds 1
+    suggestionsOfLast30days = filter (\x -> (runFn2 JB.differenceBetweenTwoUTC (fromMaybe "" x.recencyDate) (getCurrentUTC "")) <= monthInSecond) tripSuggestion
+    sortedRecencyGroup =  DA.sortBy (\a b -> compare b.recencyDate a.recencyDate) suggestionsOfLast30days
+    lastFiveTrips  = getLast5Trips sortedRecencyGroup dummyFreqencyCount 
+    sortedTripList = ( (DA.sortBy (\(Tuple varient frequency) (Tuple varient1 frequency1) ->compare frequency1 frequency ) lastFiveTrips.vehicleVariant))
+  in 
+    case head sortedTripList of 
+      Just (Tuple varient frequency) -> varient 
+      Nothing -> Nothing
+
+
+
+mostFrequentElement :: forall a. (Ord a) => Array a -> Maybe a
+mostFrequentElement arr =
+  let
+    grouped = groupBy (==) arr
+    mbLargestGroup = maximumBy (\x y -> compare (DAN.length y) (DAN.length x)) grouped
+  in 
+    maybe Nothing (\largestGroup -> Just (DAN.head largestGroup)) mbLargestGroup
+
 getFamousCityDestination :: FamousDestination -> LocationListItemState
 getFamousCityDestination (FamousDestination destnData)  = 
   { prefixImageUrl : ""
@@ -529,3 +584,23 @@ getFamousCityDestination (FamousDestination destnData)  =
     , locationScore : Nothing
     , dynamicAction : destnData.dynamic_action
     }
+
+type FrequencyCount = {
+  frequency :: Int,
+  vehicleVariant :: Array (Tuple (Maybe String) Int)
+}
+
+dummyFreqencyCount :: FrequencyCount 
+dummyFreqencyCount = {
+  frequency: 5, 
+  vehicleVariant: []
+}
+
+getLast5Trips :: Array Trip -> FrequencyCount -> FrequencyCount
+getLast5Trips  sortedRecencyGroup dummyFreqencyCount = do
+          foldl  (\acc item -> do
+                                  let frequency = fromMaybe 0 item.frequencyCount
+                                  if frequency >= acc.frequency then acc {frequency = 0, vehicleVariant = acc.vehicleVariant <> [(Tuple item.vehicleVariant acc.frequency)]}
+                                  else if frequency <= acc.frequency then acc {frequency = acc.frequency - frequency, vehicleVariant = acc.vehicleVariant <> [(Tuple item.vehicleVariant frequency)]}
+                                  else acc  
+                  ) dummyFreqencyCount sortedRecencyGroup

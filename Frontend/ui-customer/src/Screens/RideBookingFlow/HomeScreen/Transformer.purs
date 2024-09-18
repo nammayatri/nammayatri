@@ -33,6 +33,7 @@ import Data.Array (mapWithIndex, filter, head, find, foldl, (!!))
 import Control.Monad.Except.Trans (lift)
 import Data.Array as DA
 import Data.Int (toNumber, round, fromString)
+import Data.Number as DN
 import Data.Lens ((^.), view)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String (Pattern(..), drop, indexOf, length, split, trim, null, toLower)
@@ -55,7 +56,7 @@ import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), Delete
 import Services.Backend as Remote
 import Services.API as API
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
-import Storage (setValueToLocalStore, getValueToLocalStore, KeyStore(..))
+import Storage (setValueToLocalStore, getValueToLocalStore, getValueToLocalNativeStore, KeyStore(..))
 import JBridge (fromMetersToKm, getLatLonFromAddress, Location, differenceBetweenTwoUTCInMinutes)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getCityFromString, intersection)
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
@@ -88,6 +89,9 @@ import RemoteConfig as RC
 import Screens.Types as ST
 import Screens.EmergencyContactsScreen.ScreenData (getRideOptionFromKeyEM)
 import Components.MessagingView.Controller as CMC
+import Engineering.Helpers.GeoHash (encodeGeohash, geohashNeighbours)
+import Data.Function.Uncurried (runFn3, runFn2, runFn1, mkFn1)
+import SuggestionUtils
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -419,25 +423,48 @@ transformQuote quote index =
     }
 
 
-getEstimateList :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Int -> Array ChooseVehicle.Config
-getEstimateList estimates estimateAndQuoteConfig activeIndex = 
+getEstimateList ::HomeScreenState -> Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Int -> Array ChooseVehicle.Config
+getEstimateList state estimates estimateAndQuoteConfig activeIndex = 
   let estimatesWithOrWithoutBookAny = (createEstimateForBookAny estimates) <> estimates
-      filteredWithVariantAndFare = filterWithFareAndVariant estimatesWithOrWithoutBookAny estimateAndQuoteConfig
-      estimatesConfig = mapWithIndex (\index item -> getEstimates item filteredWithVariantAndFare index activeIndex) filteredWithVariantAndFare
+      preferredVariantConfig = RC.getPreferredVariant $ toLower $ getValueToLocalStore CUSTOMER_LOCATION
+      filteredWithVariantAndFare  = filterWithFareAndVariant state estimatesWithOrWithoutBookAny estimateAndQuoteConfig preferredVariantConfig
+      estimatesConfig = mapWithIndex (\index item -> getEstimates state item filteredWithVariantAndFare "" index activeIndex preferredVariantConfig) filteredWithVariantAndFare
   in
     updateBookAnyEstimate estimatesConfig 
 
-filterWithFareAndVariant :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Array EstimateAPIEntity
-filterWithFareAndVariant estimates estimateAndQuoteConfig =
+
+fetchPreferredVariant :: HomeScreenState -> Array EstimateAPIEntity -> String
+fetchPreferredVariant state estimates = 
+  let
+    preferredVariantConfig = RC.getPreferredVariant $ toLower $ getValueToLocalStore CUSTOMER_LOCATION
+    lat = fromMaybe 0.0 $ DN.fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT
+    lon = fromMaybe 0.0 $ DN.fromString $ getValueToLocalNativeStore LAST_KNOWN_LON
+    currentGeoHash = runFn3 encodeGeohash lat lon state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
+    suggestionsMap = getSuggestionsMapFromLocal FunctionCall
+
+    fetchVariant1 = fromMaybe "" $ fetchLocationBasedPreferredVariant currentGeoHash suggestionsMap
+    fetchVariant2 = fromMaybe "" $ getPreferredVariant suggestionsMap
+
+    preferredVariant
+      | not (null fetchVariant1) = fetchVariant1
+      | not (null fetchVariant2) = fetchVariant2
+      | otherwise = preferredVariantConfig
+  in
+    preferredVariant
+    
+filterWithFareAndVariant :: HomeScreenState -> Array EstimateAPIEntity -> EstimateAndQuoteConfig -> String  -> (Array EstimateAPIEntity) 
+filterWithFareAndVariant state estimates estimateAndQuoteConfig preferredVariantConfig =
   let
     estimatesOrder = RC.getEstimatesOrder $ toLower $ getValueToLocalStore CUSTOMER_LOCATION
+    preferedVariant = if not null preferredVariantConfig then  (fetchPreferredVariant state estimates) else preferredVariantConfig
+    finalList = [preferedVariant]<> estimatesOrder
     filteredEstimate = 
       case (getMerchant FunctionCall) of
         YATRISATHI -> DA.concat (map (\variant -> filterEstimateByVariants variant estimates) (estimateAndQuoteConfig.variantTypes :: Array (Array String)))
         _ -> estimates
     sortWithFare = DA.sortWith (\(EstimateAPIEntity estimate) -> getFareFromEstimate (EstimateAPIEntity estimate)) filteredEstimate
   in
-    sortEstimateWithVariantOrder sortWithFare estimatesOrder
+   sortEstimateWithVariantOrder sortWithFare finalList
   where
   sortEstimateWithVariantOrder :: Array EstimateAPIEntity -> Array String -> Array EstimateAPIEntity
   sortEstimateWithVariantOrder estimates orderList =
@@ -531,11 +558,12 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
           variant
       )
 
-getEstimates :: EstimateAPIEntity -> Array EstimateAPIEntity -> Int -> Int -> ChooseVehicle.Config
-getEstimates (EstimateAPIEntity estimate) estimates index activeIndex =
+getEstimates :: HomeScreenState -> EstimateAPIEntity -> Array EstimateAPIEntity -> String -> Int -> Int -> String -> ChooseVehicle.Config
+getEstimates  state (EstimateAPIEntity estimate) estimates variant index activeIndex preferredVariantConfig =
   let currency = getCurrency appConfig
+      variant = if not null preferredVariantConfig then  (fetchPreferredVariant state estimates) else preferredVariantConfig
       userCity = toLower $ getValueToLocalStore CUSTOMER_LOCATION
-      allSelectedServices = RC.getBookAnySelectedServices userCity
+      allSelectedServices =     if variant /= "AUTO_RICKSHAW" && userCity == "bangalore"  then (getServiceNames estimates variant) else  RC.getBookAnySelectedServices userCity 
       estimateAndQuoteConfig = (getAppConfig appConfig).estimateAndQuoteConfig
       config = getCityConfig (getAppConfig appConfig).cityConfig userCity
       tipConfig = getTipConfig estimate.vehicleVariant
@@ -610,8 +638,8 @@ getEstimateIdFromSelectedServices estimates config =
                         else acc
         ) [] estimates
 
-updateBookAnyEstimate :: Array ChooseVehicle.Config -> Array ChooseVehicle.Config
-updateBookAnyEstimate estimates =
+updateBookAnyEstimate :: Array ChooseVehicle.Config  -> Array ChooseVehicle.Config
+updateBookAnyEstimate estimates  =
     map
       ( \estimate -> 
           if estimate.vehicleVariant == "BOOK_ANY" then
@@ -622,7 +650,7 @@ updateBookAnyEstimate estimates =
                                       )
                                       []
                                       estimates
-                allSelectedServices = getSelectedServices FunctionCall
+                allSelectedServices =  estimate.selectedServices
                 selectedServices = intersection allSelectedServices availableServices
                 headEstimateId = (fromMaybe ChooseVehicle.config (DA.find (\item -> DA.any (_ == fromMaybe "" item.serviceTierName) selectedServices) estimates)).id
                 validTill = (fromMaybe ChooseVehicle.config (DA.find (\item -> item.id == headEstimateId) estimates)).validTill
@@ -953,3 +981,9 @@ getFareProductType fareProductType =
     "ONE_WAY" -> FPT.ONE_WAY
     "DRIVER_OFFER" -> FPT.DRIVER_OFFER
     _ -> FPT.ONE_WAY
+
+getServiceNames :: Array EstimateAPIEntity -> String -> Array String
+getServiceNames estimate  prefervariant =
+  let filter = if prefervariant == "AUTO_RICKSHAW" then  ["AUTO_RICKSHAW" , "TAXI"] else ["SEDAN", "TAXI", "TAXI_PLUS"]
+      array  =  foldl (\acc (EstimateAPIEntity  estimate) -> if  DA.elem estimate.vehicleVariant filter then acc <> [fromMaybe "" estimate.serviceTierName] else acc ) [] estimate 
+  in array
