@@ -397,13 +397,14 @@ screen initialState =
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               ChatWithDriver -> do 
                 if (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION" then waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction else pure unit
-                when ((isNothing initialState.data.contactList || not initialState.props.chatcallbackInitiated) && initialState.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE ) $ do
+                when ((not initialState.props.chatcallbackInitiated) && initialState.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE ) $ do
                   case initialState.data.contactList of 
                     Nothing -> void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ fetchContactsForMultiChat push initialState 
-                    Just _ -> pure unit
-                  let uuid = initialState.data.driverInfoCardState.currentChatRecipient.uuid
-                      chatUser = if initialState.data.driverInfoCardState.currentChatRecipient.uuid == initialState.data.driverInfoCardState.bppRideId then "Customer" else (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)
-                  checkAndStartChatService push uuid chatUser false initialState
+                    Just _ -> do
+                      let uuid = initialState.data.driverInfoCardState.currentChatRecipient.uuid
+                          chatUser = if initialState.data.driverInfoCardState.currentChatRecipient.uuid == initialState.data.driverInfoCardState.bppRideId then "Customer" else (getValueFromCache (show CUSTOMER_ID) getKeyInSharedPrefKeys)
+                      checkAndStartChatService push uuid chatUser false initialState
+                      pure unit
                   push LoadMessages
               ConfirmingLocation -> do
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
@@ -4829,6 +4830,7 @@ checkAndStartChatService ::  (Action -> Effect Unit) -> String -> String -> Bool
 checkAndStartChatService push chatChannelId chatUser rideStarted state = do
   let isChatServiceRunning = runFn1 JB.isServiceRunning chatService
   if os /= "IOS" && chatChannelId /= getValueToLocalStore CHAT_CHANNEL_ID && isChatServiceRunning then do
+    
     stopChatListenerService 
     checkChatService push 5 chatChannelId chatUser rideStarted state
   else

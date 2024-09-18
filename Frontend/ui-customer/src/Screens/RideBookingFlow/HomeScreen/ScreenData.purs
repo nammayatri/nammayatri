@@ -47,6 +47,9 @@ initData = let
     data: {
       suggestedAmount : 0
     , finalAmount : 0
+    , channelIdFromFCM : ""
+    , personIdFromFCM : ""
+    , sourceFromFCM : ""
     , isBookingUpdated : false
     , startedAt : ""
     , endedAt : ""

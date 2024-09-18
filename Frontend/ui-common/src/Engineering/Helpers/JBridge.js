@@ -698,15 +698,23 @@ export const updateRoute = (configObj) => {
     }
   }
 };
+
+let localChatChannelID = undefined;
+let delayedCallback = true;
+
 export const storeCallBackMessageUpdated = function (cb) {
   return function (chatChannelID) {
     return function (chatUserId) {
       return function (action) {
         return function (messagesLoadedCallBack) {
           return function () {
+            if(localChatChannelID || localChatChannelID != chatChannelID){
+              localChatChannelID = chatChannelID;
+              delayedCallback = true;
+            }
             const messageLoaded = setTimeout(()=>{
               cb(messagesLoadedCallBack)();
-            },1000)
+            },2000)
             const callback = callbackMapper.map(function (message, sentBy, timeStamp, messagesSize) {
               clearTimeout(messageLoaded);
               if (messagesSize == undefined) {
@@ -723,7 +731,14 @@ export const storeCallBackMessageUpdated = function (cb) {
               if (sentBy != chatUserId) window.didReceiverMessage = true;
               window.chatMessages.push(messageObj);
               if (window.chatMessages.length - 1 == messagesSize || messagesSize === "-1") {
-                cb(action(message)(sentBy)(timeStamp)(messagesSize))();
+                if(delayedCallback){ 
+                  setTimeout(()=>{
+                    cb(action(message)(sentBy)(timeStamp)(messagesSize))();
+                  },1000)
+                  delayedCallback = false;
+                }else{
+                  cb(action(message)(sentBy)(timeStamp)(messagesSize))();
+                }
               }
             });
 
