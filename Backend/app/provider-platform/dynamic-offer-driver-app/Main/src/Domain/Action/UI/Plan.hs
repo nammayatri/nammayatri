@@ -490,7 +490,7 @@ planSwitchGeneric serviceName planId (driverId, _, merchantOpCityId) = do
   when (serviceName == YATRI_SUBSCRIPTION) $ do
     driverManualDuesFees <- QDF.findAllByStatusAndDriverIdWithServiceName driverId [DF.PAYMENT_OVERDUE] serviceName
     let currentDues = calculateDues driverManualDuesFees
-    when plan.subscribedFlagToggleAllowed $ DI.updateSubscription (currentDues >= plan.maxCreditLimit) driverId
+    when plan.subscribedFlagToggleAllowed $ DI.updateSubscription (currentDues < plan.maxCreditLimit) driverId
   (from, to) <- getStartTimeAndEndTimeRange merchantOpCityId driverId Nothing
   whenJust plan.vehicleCategory $ \vc -> do
     QDF.updateDfeeByOperatingCityAndVehicleCategory merchantOpCityId serviceName DF.ONGOING from to vc plan.id.getId
