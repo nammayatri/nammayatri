@@ -244,6 +244,7 @@ types:
     - blockStateModifier: Maybe Text
     - driverTag: Maybe [Text]
     - email: Maybe Text
+    - blockedInfo : [DriverBlockTransactions]
   DriverLicenseAPIEntity:
     - driverLicenseId: Id DriverLicense
     - documentImageId1: Id Image
@@ -259,6 +260,14 @@ types:
     - consentTimestamp: UTCTime
     # - createdAt: UTCTime # do we need it?
     # - updatedAt UTCTime
+  DriverBlockTransactions:
+    - reasonCode :  Maybe Text
+    - blockReason : Maybe Text
+    - blockTimeInHours : Maybe Int
+    - reportedAt : UTCTime
+    - blockLiftTime : Maybe UTCTime
+    - blockedBy : Text
+    - requestorId : Maybe Text
   DriverRCAssociationAPIEntity:
     - associatedOn: UTCTime
     - associatedTill: Maybe UTCTime

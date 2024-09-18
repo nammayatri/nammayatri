@@ -17,6 +17,8 @@ module SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
   )
 where
 
+import qualified Domain.Types.DriverBlockTransactions as DTDBT
+import Kernel.Beam.Functions as BF
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Id
@@ -25,6 +27,8 @@ import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.Queries.DriverInformation as QDriverInfo
+import qualified Storage.Queries.Person as QPerson
+import Tools.Error
 
 unblockDriver ::
   ( TranslateFlow m r,
@@ -37,5 +41,7 @@ unblockDriver ::
 unblockDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
   let driverId = jobData.driverId
-  QDriverInfo.updateBlockedState (cast driverId) False (Just "AUTOMATICALLY_UNBLOCKED")
+  driver <- BF.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+  let merchantId = driver.merchantId
+  QDriverInfo.updateBlockedState (cast driverId) False (Just "AUTOMATICALLY_UNBLOCKED") merchantId driver.merchantOperatingCityId DTDBT.Application
   return Complete

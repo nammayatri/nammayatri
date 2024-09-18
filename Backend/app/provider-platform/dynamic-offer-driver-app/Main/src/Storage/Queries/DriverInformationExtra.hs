@@ -6,6 +6,7 @@ module Storage.Queries.DriverInformationExtra where
 import qualified Data.Either as Either
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
+import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.Merchant (Merchant)
@@ -13,6 +14,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
+import Kernel.Beam.Functions as BF
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -24,7 +26,9 @@ import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Person as BeamP
+import qualified Storage.Queries.DriverBlockTransactions as QDBT
 import Storage.Queries.OrphanInstances.DriverInformation
+import qualified Storage.Queries.Person as QPerson
 import Storage.Queries.PersonExtra (findAllPersonWithDriverInfos)
 
 -- Extra code goes here --
@@ -125,11 +129,31 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateDynamicBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Bool -> m ()
-updateDynamicBlockedState driverId blockedReason blockedExpiryTime dashboardUserName isBlocked = do
+updateDynamicBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Id Merchant -> Text -> (Id DMOC.MerchantOperatingCity) -> DTDBT.BlockedBy -> Bool -> m ()
+updateDynamicBlockedState driverId blockedReason blockedExpiryTime dashboardUserName merchantId reasonCode merchantOperatingCityId blockedBy isBlocked = do
   now <- getCurrentTime
   driverInfo <- findById driverId
   let expiryTime = (\secs -> addUTCTime (fromIntegral secs * 3600) now) <$> blockedExpiryTime
+
+  uid <- generateGUID
+  let driverBlockDetails =
+        DTDBT.DriverBlockTransactions
+          { blockLiftTime = blockedExpiryTime <&> (\blockedTime -> addUTCTime (60 * 60 * fromIntegral blockedTime) now),
+            blockReason = blockedReason,
+            blockTimeInHours = blockedExpiryTime,
+            driverId = driverId,
+            id = uid,
+            reasonCode = Just reasonCode,
+            reportedAt = now,
+            merchantId = Just merchantId,
+            createdAt = now,
+            updatedAt = now,
+            merchantOperatingCityId = Just merchantOperatingCityId,
+            blockedBy = blockedBy,
+            requestorId = Just dashboardUserName
+          }
+
+  QDBT.create driverBlockDetails
   let numOfLocks' = case driverInfo of
         Just driverInfoResult -> driverInfoResult.numOfLocks
         Nothing -> 0
@@ -144,10 +168,30 @@ updateDynamicBlockedState driverId blockedReason blockedExpiryTime dashboardUser
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
 
-updateBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe Text -> m ()
-updateBlockedState driverId isBlocked blockStateModifier = do
+updateBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe Text -> Id Merchant -> (Id DMOC.MerchantOperatingCity) -> DTDBT.BlockedBy -> m ()
+updateBlockedState driverId isBlocked blockStateModifier merchantId merchantOperatingCityId blockedBy = do
   now <- getCurrentTime
   driverInfo <- findById driverId
+  uid <- generateGUID
+
+  let driverBlockDetails =
+        DTDBT.DriverBlockTransactions
+          { blockLiftTime = Nothing,
+            blockReason = Nothing,
+            blockTimeInHours = Nothing,
+            driverId = driverId,
+            id = uid,
+            reasonCode = Nothing,
+            reportedAt = now,
+            merchantId = Just merchantId,
+            createdAt = now,
+            updatedAt = now,
+            merchantOperatingCityId = Just merchantOperatingCityId,
+            blockedBy = blockedBy,
+            requestorId = Nothing
+          }
+
+  QDBT.create driverBlockDetails
   let numOfLocks' = case driverInfo of
         Just driverInfoResult -> driverInfoResult.numOfLocks
         Nothing -> 0

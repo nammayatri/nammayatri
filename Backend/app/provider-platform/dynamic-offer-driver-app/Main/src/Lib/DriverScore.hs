@@ -20,6 +20,7 @@ where
 import Control.Applicative (liftA2)
 import Data.Time (utctDay)
 import qualified Domain.Types.DailyStats as DDS
+import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverStats as DS
 import Domain.Types.FareParameters
 import qualified Domain.Types.FareParameters as Fare
@@ -85,7 +86,7 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
   cancellationRateExceeded <- overallCancellationRate driverStats merchantConfig
   when (driverStats.totalRidesAssigned > merchantConfig.minRidesToUnlist && cancellationRateExceeded) $ do
     logDebug $ "Blocking Driver: " <> driverId.getId
-    QDI.updateBlockedState (cast driverId) True (Just "AUTOMATICALLY_BLOCKED_DUE_TO_CANCELLATIONS")
+    QDI.updateBlockedState (cast driverId) True (Just "AUTOMATICALLY_BLOCKED_DUE_TO_CANCELLATIONS") merchantId merchantOpCityId DTDBT.Application
   DP.incrementCancellationCount merchantOpCityId driverId
   where
     overallCancellationRate driverStats merchantConfig = do
