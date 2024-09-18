@@ -390,6 +390,7 @@ type StaticViewPlans = {
 type WaitingChargesConfig = {
   cab :: ChargesEntity,
   auto :: ChargesEntity,
-  bike :: ChargesEntity
+  bike :: ChargesEntity,
+  ambulance :: ChargesEntity
 }
 
