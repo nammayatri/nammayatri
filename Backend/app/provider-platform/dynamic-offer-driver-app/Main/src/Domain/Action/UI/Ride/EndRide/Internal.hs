@@ -118,6 +118,7 @@ import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import Tools.Notifications
 import qualified Tools.PaymentNudge as PaymentNudge
+import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
 
 endRideTransaction ::
@@ -126,7 +127,6 @@ endRideTransaction ::
     EncFlow m r,
     MonadFlow m,
     Esq.EsqDBReplicaFlow m r,
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     HasField "maxShards" r Int,
     EventStreamFlow m r,
     HasField "schedulerSetName" r Text,
@@ -147,8 +147,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   whenJust mbFareParams QFare.create
   QRide.updateAll ride.id ride
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  QDriverStats.updateIdleTime driverId
-  QDriverStats.incrementTotalRidesAndTotalDist (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
+  QDriverStats.incrementTotalRidesAndTotalDistAndIdleTime (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
   Hedis.del $ multipleRouteKey booking.transactionId
   Hedis.del $ searchRequestKey booking.transactionId
   clearCachedFarePolicyByEstOrQuoteId booking.quoteId
@@ -163,8 +162,9 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
 
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
 
-  sendReferralFCM ride booking mbRiderDetails thresholdConfig
-  updateLeaderboardZScore booking.providerId booking.merchantOperatingCityId ride
+  let validRide = isValidRide ride
+  sendReferralFCM validRide ride mbRiderDetails thresholdConfig
+  when validRide $ updateLeaderboardZScore booking.providerId booking.merchantOperatingCityId ride
   DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride, fareParameter = Just newFareParams}
   let currency = booking.currency
   let customerCancellationDues = fromMaybe 0.0 newFareParams.customerCancellationDues
@@ -196,34 +196,27 @@ sendReferralFCM ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    Esq.EsqDBReplicaFlow m r,
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)
+    Esq.EsqDBReplicaFlow m r
   ) =>
+  Bool ->
   Ride.Ride ->
-  SRB.Booking ->
   Maybe RD.RiderDetails ->
   TransporterConfig ->
   m ()
-sendReferralFCM ride booking mbRiderDetails transporterConfig = do
-  minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
+sendReferralFCM validRide ride mbRiderDetails transporterConfig = do
   now <- getCurrentTime
-  let shouldUpdateRideComplete =
-        case minTripDistanceForReferralCfg of
-          Just distance -> (metersToHighPrecMeters <$> ride.chargeableDistance) >= Just distance && maybe True (not . (.hasTakenValidRide)) mbRiderDetails
-          Nothing -> True
+  let shouldUpdateRideComplete = validRide && maybe True (not . (.hasTakenValidRide)) mbRiderDetails
   whenJust mbRiderDetails $ \riderDetails -> do
     fork "REFERRAL_ACTIVATED FCM to Driver" $ do
-      when shouldUpdateRideComplete $
-        QRD.updateHasTakenValidRide True (Just now) riderDetails.id
+      when shouldUpdateRideComplete $ QRD.updateHasTakenValidRide True (Just now) riderDetails.id
       case riderDetails.referredByDriver of
         Just referredDriverId -> do
-          let referralMessage = "Congratulations!"
-          let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
           driver <- SQP.findById referredDriverId >>= fromMaybeM (PersonNotFound referredDriverId.getId)
           when shouldUpdateRideComplete $ do
+            let referralMessage = "Congratulations!"
+            let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
             sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
-            logDebug "Driver Referral Coin Event"
-            fork "DriverToCustomerReferralCoin Event : " $ DC.driverCoinsEvent driver.id driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride.chargeableDistance) (Just ride.id.getId)
+            fork "DriverToCustomerReferralCoin Event : " $ DC.driverCoinsEvent driver.id driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride) (Just ride.id.getId)
           mbVehicle <- QV.findById referredDriverId
           let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
           payoutConfig <- CPC.findByPrimaryKey driver.merchantOperatingCityId vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
@@ -288,18 +281,15 @@ sendReferralFCM ride booking mbRiderDetails transporterConfig = do
 
     fraudChecksForReferralPayout mobileNumberHash riderDetails mbDailyStats = do
       availablePersonWithNumber <- SQP.findAllMerchantIdByPhoneNo riderDetails.mobileCountryCode mobileNumberHash
-      let isValidForMinPickupThreshold = maybe True (>= transporterConfig.minPickupDistanceThresholdForReferralPayout) booking.distanceToPickup
-          isValidForMinRideDistance = ride.traveledDistance >= transporterConfig.minRideDistanceThresholdForReferralPayout
-          isMaxReferralExceeded = maybe True ((<= transporterConfig.maxPayoutReferralForADay) . (.activatedValidRides)) mbDailyStats
+      let isMaxReferralExceeded = maybe True ((<= transporterConfig.maxPayoutReferralForADay) . (.activatedValidRides)) mbDailyStats
           isMultipleDeviceIdExists = isJust riderDetails.payoutFlagReason
       let mbFlagReason =
-            case (listToMaybe availablePersonWithNumber, isValidForMinRideDistance, isValidForMinPickupThreshold, isMaxReferralExceeded) of
-              (Just _, _, _, _) -> Just RD.CustomerExistAsDriver
-              (_, False, _, _) -> Just RD.MinRideDistanceInvalid
-              (_, _, False, _) -> Just RD.MinPickupDistanceInvalid
-              (_, _, _, False) -> Just RD.ExceededMaxReferral
+            case (listToMaybe availablePersonWithNumber, validRide, isMaxReferralExceeded) of
+              (Just _, _, _) -> Just RD.CustomerExistAsDriver
+              (_, False, _) -> Just RD.RideConstraintInvalid
+              (_, _, False) -> Just RD.ExceededMaxReferral
               _ -> riderDetails.payoutFlagReason
-      let isValid = null availablePersonWithNumber && isValidForMinPickupThreshold && isValidForMinRideDistance && not isMultipleDeviceIdExists
+      let isValid = null availablePersonWithNumber && validRide && not isMultipleDeviceIdExists
       return (isValid, mbFlagReason)
 
     payoutProcessingLockKey driverId = "Payout:Processing:DriverId" <> driverId

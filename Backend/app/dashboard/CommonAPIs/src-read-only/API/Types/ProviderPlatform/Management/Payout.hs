@@ -42,6 +42,7 @@ data PayoutFlagReason
   | MinPickupDistanceInvalid
   | CustomerExistAsDriver
   | MultipleDeviceIdExists
+  | RideConstraintInvalid
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

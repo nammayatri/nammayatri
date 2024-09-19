@@ -71,12 +71,7 @@ yudhishthiraDecide req = do
                 tagValidity
               }
 
-data Handle m a = Handle
-  { updateTags :: (Text -> m ()),
-    getData :: m a
-  }
-
-addEvent ::
+computeNammaTags ::
   ( MonadFlow m,
     Metrics.CoreMetrics m,
     EsqDBFlow m r,
@@ -85,17 +80,14 @@ addEvent ::
     ToJSON a
   ) =>
   ApplicationEvent ->
-  Handle m a ->
-  m ()
-addEvent event Handle {..} = do
-  sourceData_ <- getData
+  a ->
+  m [Text]
+computeNammaTags event sourceData_ = do
   let sourceData = A.toJSON sourceData_
   let req = YudhishthiraDecideReq {source = Application event, sourceData}
   resp <- yudhishthiraDecide req
-  resp.tags `forM_` \tag -> do
+  resp.tags `forM` \tag -> do
     tagValue <- case tag.tagValue of
       TextValue text -> return text
       NumberValue number -> return $ show number
-    let tagText = tag.tagName <> "#" <> tagValue
-    -- can we update once, instead of update each tag separately?
-    updateTags tagText
+    return $ tag.tagName <> "#" <> tagValue

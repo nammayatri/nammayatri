@@ -32,6 +32,7 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.OnUpdate as OU
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -55,7 +56,8 @@ buildOnUpdateReqV2 ::
 buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country booking req = do
   becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   ttl <- becknConfig.onUpdateTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
+  bapUri <- Kernel.Prelude.parseBaseUrl booking.bapUri
+  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
   message <- mkOnUpdateMessageV2 req farePolicy becknConfig
   pure $

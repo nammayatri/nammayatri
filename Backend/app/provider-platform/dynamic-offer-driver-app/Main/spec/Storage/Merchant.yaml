@@ -832,8 +832,6 @@ TransporterConfig:
     payoutBatchLimit: Int
     updatePayoutStatusBatchSize: Int
     lastNdaysToCheckForPayoutOrderStatus: Int
-    minRideDistanceThresholdForReferralPayout: HighPrecMeters
-    minPickupDistanceThresholdForReferralPayout: Meters
     maxPayoutReferralForADay: Int
     exotelAppIdMapping: Maybe ExotelMapping
     createDocumentRequired: Maybe Bool
@@ -1159,8 +1157,6 @@ TransporterConfig:
     payoutBatchLimit: "10"
     updatePayoutStatusBatchSize: "20"
     lastNdaysToCheckForPayoutOrderStatus: "2"
-    minRideDistanceThresholdForReferralPayout: "1500.0"
-    minPickupDistanceThresholdForReferralPayout: "10"
     maxPayoutReferralForADay: "5"
     exotelStatusCheckSchedulerDelay: "120"
     cachedDevicesOSForSearchRequest: "'{}'"

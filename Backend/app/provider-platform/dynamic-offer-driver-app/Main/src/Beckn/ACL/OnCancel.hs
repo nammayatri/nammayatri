@@ -40,6 +40,7 @@ import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -109,7 +110,8 @@ buildOnCancelReq ::
   m Spec.OnCancelReq
 buildOnCancelReq action domain messageId bppSubscriberId bppUri city country cancelStatus merchant driverName customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) rideStatus becknConfig mbVehicle mbFarePolicy driverPhone = do
   ttl <- becknConfig.onCancelTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
+  bapUri <- Kernel.Prelude.parseBaseUrl booking.bapUri
+  context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
   pure $
     Spec.OnCancelReq
       { onCancelReqError = Nothing,

@@ -19,7 +19,6 @@ module Lib.DriverCoins.Coins
     setCoinAccumulationByDriverIdKey,
     getCoinsByDriverId,
     getExpirationSeconds,
-    checkHasTakenValidRide,
     incrementValidRideCount,
     updateDriverCoins,
     sendCoinsNotification,
@@ -37,6 +36,7 @@ import qualified Domain.Types.Coins.CoinHistory as DTCC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Ride as DR
 import Domain.Types.TransporterConfig
 import qualified Kernel.Beam.Functions as B
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -53,9 +53,10 @@ import qualified Storage.Queries.Coins.CoinHistory as CHistory
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Tools.Notifications as Notify
+import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
 
-type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters))
+type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m)
 
 getCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m Int
 getCoinsByDriverId driverId timeDiffFromUtc = Hedis.withLockRedisAndReturnValue driverId.getId 60 $ do
@@ -99,34 +100,34 @@ driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId = do
 calculateCoins :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> m Int
 calculateCoins eventType driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig entityId = do
   case eventType of
-    DCT.Rating {..} -> handleRating driverId merchantId merchantOpCityId ratingValue chargeableDistance eventFunction mbexpirationTime numCoins transporterConfig entityId
-    DCT.EndRide {..} -> handleEndRide driverId merchantId merchantOpCityId isDisabled chargeableDistance_ metroRide eventFunction mbexpirationTime numCoins transporterConfig entityId
-    DCT.DriverToCustomerReferral {..} -> handleDriverReferral driverId merchantId merchantOpCityId chargeableDistance eventFunction mbexpirationTime numCoins transporterConfig entityId
+    DCT.Rating {..} -> handleRating driverId merchantId merchantOpCityId ratingValue ride eventFunction mbexpirationTime numCoins transporterConfig entityId
+    DCT.EndRide {..} -> handleEndRide driverId merchantId merchantOpCityId isDisabled ride metroRide eventFunction mbexpirationTime numCoins transporterConfig entityId
+    DCT.DriverToCustomerReferral {..} -> handleDriverReferral driverId merchantId merchantOpCityId ride eventFunction mbexpirationTime numCoins transporterConfig entityId
     DCT.Cancellation {..} -> handleCancellation driverId merchantId merchantOpCityId rideStartTime intialDisToPickup cancellationDisToPickup eventFunction mbexpirationTime numCoins transporterConfig entityId
     _ -> pure 0
 
-handleRating :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Int -> Maybe Meters -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> m Int
-handleRating driverId merchantId merchantOpCityId ratingValue chargeableDistance eventFunction mbexpirationTime numCoins _ entityId = do
+handleRating :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Int -> DR.Ride -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> m Int
+handleRating driverId merchantId merchantOpCityId ratingValue ride eventFunction mbexpirationTime numCoins _ entityId = do
   logDebug $ "Driver Coins Handle Rating Event Triggered - " <> show eventFunction
   case eventFunction of
     DCT.OneOrTwoStarRating ->
       runActionWhenValidConditions
         [ pure (ratingValue == 1 || ratingValue == 2),
-          checkHasTakenValidRide chargeableDistance
+          pure $ isValidRide ride
         ]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId
     DCT.FiveStarRating ->
       runActionWhenValidConditions
         [ pure $ ratingValue == 5,
-          checkHasTakenValidRide chargeableDistance
+          pure $ isValidRide ride
         ]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId
     _ -> pure 0
 
-handleEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Meters -> Bool -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> m Int
-handleEndRide driverId merchantId merchantOpCityId isDisabled chargeableDistance_ metroRide eventFunction mbexpirationTime numCoins _ entityId = do
+handleEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> DR.Ride -> Bool -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> m Int
+handleEndRide driverId merchantId merchantOpCityId isDisabled ride metroRide eventFunction mbexpirationTime numCoins _ entityId = do
   logDebug $ "Driver Coins Handle EndRide Event Triggered - " <> show eventFunction
-  validRideTaken <- checkHasTakenValidRide (Just chargeableDistance_)
+  let validRideTaken = isValidRide ride
   case eventFunction of
     DCT.RideCompleted -> do
       runActionWhenValidConditions
@@ -175,13 +176,13 @@ handleEndRide driverId merchantId merchantOpCityId isDisabled chargeableDistance
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId
     _ -> pure 0
 
-handleDriverReferral :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> m Int
-handleDriverReferral driverId merchantId merchantOpCityId chargeableDistance eventFunction mbexpirationTime numCoins _ entityId = do
+handleDriverReferral :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DR.Ride -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> m Int
+handleDriverReferral driverId merchantId merchantOpCityId ride eventFunction mbexpirationTime numCoins _ entityId = do
   logDebug $ "Driver Coins Handle Referral Event Triggered - " <> show eventFunction
   case eventFunction of
     DCT.DriverReferral ->
       runActionWhenValidConditions
-        [ checkHasTakenValidRide chargeableDistance
+        [ pure $ isValidRide ride
         ]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId
     _ -> pure 0
@@ -274,16 +275,6 @@ sendCoinsNotification merchantOpCityId driverId coinsValue =
             _ -> logDebug "Invalid message format."
         Nothing -> logDebug "Could not find Translations."
     replaceCoinsValue = T.replace "{#coinsValue#}" (T.pack $ show coinsValue)
-
-checkHasTakenValidRide :: (MonadReader r m, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)) => Maybe Meters -> m Bool
-checkHasTakenValidRide chargeableDistance = do
-  minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
-  pure $ case minTripDistanceForReferralCfg of
-    Just distance ->
-      case fmap metersToHighPrecMeters chargeableDistance of
-        Just meters -> meters >= distance
-        Nothing -> False
-    Nothing -> False
 
 getExpirationSeconds :: MonadFlow m => Seconds -> m Int
 getExpirationSeconds timeDiffFromUtc = do

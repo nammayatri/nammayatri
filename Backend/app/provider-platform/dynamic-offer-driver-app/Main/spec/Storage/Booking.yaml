@@ -3,7 +3,6 @@ imports:
   Area: Lib.Types.SpecialLocation
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  BaseUrl: Kernel.Types.Common
   Money: Kernel.Types.Common
   RiderDetails: Domain.Types.RiderDetails
   Location: Domain.Types.Location
@@ -19,7 +18,7 @@ imports:
   TripParty: Domain.Types.Trip
 
 Booking:
-  derives: "Generic"
+  derives: "Generic,Show,FromJSON,ToJSON"
   types:
     BookingStatus:
       enum: "NEW,TRIP_ASSIGNED,COMPLETED,CANCELLED,REALLOCATED"
@@ -41,7 +40,7 @@ Booking:
     merchantOperatingCityId: Id MerchantOperatingCity
     primaryExophone: Text
     bapId: Text
-    bapUri: BaseUrl
+    bapUri: Text
     bapCity: Maybe City
     bapCountry: Maybe Country
     startTime: UTCTime
@@ -82,7 +81,6 @@ Booking:
     - merchantId
 
   beamType:
-    bapUri: Text
     currency: Maybe Currency
     tripCategory: Maybe TripCategory
     riderId: Maybe Text
@@ -118,7 +116,6 @@ Booking:
 
   toTType:
     currency: Just currency|E
-    bapUri: Kernel.Prelude.showBaseUrl|I
     tripCategory: (Just tripCategory)|E
     vehicleServiceTierName: (Just vehicleServiceTierName)|E
     #estimatedFare: Kernel.Prelude.realToFrac|I
@@ -150,7 +147,6 @@ Booking:
     tripCategory: getTripCategory
     merchantOperatingCityId: Storage.CachedQueries.Merchant.MerchantOperatingCity.getMerchantOpCityId (Kernel.Types.Id.Id <$> merchantOperatingCityId) merchant bapCity|EM
     fareParams: 'Storage.Queries.FareParameters.findById (Kernel.Types.Id.Id fareParametersId) >>= fromMaybeM (Kernel.Types.Error.InternalError ("FareParameters not found for booking: " <> show id))|EM'
-    bapUri: Kernel.Prelude.parseBaseUrl bapUri|EM
     fromLocation: fst fromAndToLocation'|E
     toLocation: snd fromAndToLocation'|E
     vehicleServiceTier: vehicleVariant|E

@@ -167,3 +167,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN destination_reached_at timest
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN estimated_end_time_range_start timestamp with time zone ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN estimated_end_time_range_end timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN ride_tags text[] ;

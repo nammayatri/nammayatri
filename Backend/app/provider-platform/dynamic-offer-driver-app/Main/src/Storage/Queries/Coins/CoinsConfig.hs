@@ -22,7 +22,7 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.DriverCoins.Types as DCT (DriverCoinsEventType (..), DriverCoinsFunctionType (..))
+import qualified Lib.DriverCoins.Types as DCT
 import qualified Sequelize as Se
 import qualified Storage.Beam.Coins.CoinsConfig as BeamDC
 
@@ -37,16 +37,7 @@ fetchCoins eventFunction (Id merchantId) =
 
 fetchFunctionsOnEventbasis :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m [CoinsConfig]
 fetchFunctionsOnEventbasis eventType (Id merchantId) (Id merchantOptCityId) = do
-  let dbEventName =
-        case eventType of
-          DCT.Rating {} -> "Rating"
-          DCT.EndRide {} -> "EndRide"
-          DCT.Cancellation {} -> "Cancellation"
-          DCT.DriverToCustomerReferral {} -> "DriverToCustomerReferral"
-          DCT.CustomerToDriverReferral {} -> "CustomerToDriverReferral"
-          DCT.LeaderBoard -> "LeaderBoard"
-          DCT.Training -> "Training"
-          DCT.BulkUploadEvent -> "BulkUploadEvent"
+  let dbEventName = DCT.getEventName eventType
   findAllWithKV
     [ Se.And
         [ Se.Is BeamDC.eventName $ Se.Eq dbEventName,

@@ -13,7 +13,7 @@ RiderDetails:
 
   types:
     PayoutFlagReason:
-        enum: "ExceededMaxReferral,MinRideDistanceInvalid,MinPickupDistanceInvalid,CustomerExistAsDriver,MultipleDeviceIdExists"
+        enum: "ExceededMaxReferral,MinRideDistanceInvalid,MinPickupDistanceInvalid,CustomerExistAsDriver,MultipleDeviceIdExists,RideConstraintInvalid"
 
   fields:
     id : Id RiderDetails

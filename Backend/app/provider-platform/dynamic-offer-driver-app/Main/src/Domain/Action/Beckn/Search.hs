@@ -25,6 +25,7 @@ where
 
 import qualified Beckn.Types.Core.Taxi.Search as BA
 import Control.Applicative ((<|>))
+import Data.Either.Extra (eitherToMaybe)
 import Data.List (sortBy)
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.List.NonEmpty as NE
@@ -313,18 +314,9 @@ handler ValidatedDSearchReq {..} sReq = do
 
     addNammaTags :: TagData -> Flow ()
     addNammaTags tagData = do
-      let handler_ =
-            Yudhishthira.Handle
-              { updateTags = insertTagBySearchId tagData.searchRequest.id,
-                getData = return tagData
-              }
-      Yudhishthira.addEvent Yudhishthira.Search handler_
-
-    insertTagBySearchId :: Id DSR.SearchRequest -> Text -> Flow ()
-    insertTagBySearchId searchId tag = do
-      search <- QSR.findById searchId >>= fromMaybeM (SearchRequestNotFound searchId.getId)
-      let searchTags = (fromMaybe [] search.searchTags) <> [tag]
-      QSR.updateSearchTags (Just searchTags) searchId
+      newSearchTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.Search tagData)
+      let tags = tagData.searchRequest.searchTags <> (eitherToMaybe newSearchTags)
+      QSR.updateSearchTags tags tagData.searchRequest.id
 
     mkBapMetaData :: Flow BapMetadata
     mkBapMetaData = do

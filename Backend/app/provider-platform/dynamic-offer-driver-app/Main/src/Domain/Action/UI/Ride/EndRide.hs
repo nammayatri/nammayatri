@@ -28,6 +28,7 @@ module Domain.Action.UI.Ride.EndRide
 where
 
 import qualified Beckn.OnDemand.Utils.Common as BODUC
+import Data.Either.Extra (eitherToMaybe)
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Data.Text as Text
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
@@ -66,6 +67,8 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Event as Yudhishthira
+import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -87,7 +90,7 @@ import Tools.Error
 import qualified Tools.Maps as TM
 import qualified Tools.Notifications as TN
 import qualified Tools.SMS as Sms
-import Tools.Utils (isDropInsideThreshold)
+import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
 
 data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq | CallBasedReq CallBasedEndRideReq | CronJobReq CronJobEndRideReq
@@ -122,6 +125,12 @@ data CronJobEndRideReq = CronJobEndRideReq
 newtype CallBasedEndRideReq = CallBasedEndRideReq
   { requestor :: DP.Person
   }
+
+data EndRideTagData = EndRideTagData
+  { ride :: DRide.Ride,
+    booking :: SRB.Booking
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data ServiceHandle m = ServiceHandle
   { findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
@@ -177,11 +186,7 @@ type EndRideFlow m r =
     MonadReader r m,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
-    LT.HasLocationService m r,
-    HasField
-      "minTripDistanceForReferralCfg"
-      r
-      (Maybe HighPrecMeters)
+    LT.HasLocationService m r
   )
 
 driverEndRide ::
@@ -390,7 +395,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                         else calculateFinalValuesForCorrectDistanceCalculations handle booking ride booking.maxEstimatedDistance pickupDropOutsideOfThreshold thresholdConfig tripEndPoint
                 pure (chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed)
     let newFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
-    let updRide =
+    let updRide' =
           ride{tripEndTime = Just now,
                chargeableDistance = Just chargeableDistance,
                fare = Just finalFare,
@@ -402,6 +407,8 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
                endOdometerReading = mbOdometer
               }
+    newRideTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.RideEnd (EndRideTagData updRide' booking))
+    let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
     fork "updating time and latlong in advance ride if any" $ do
       advanceRide <- QRide.getActiveAdvancedRideByDriverId driverId
       whenJust advanceRide $ \advanceRide' -> do
@@ -414,11 +421,11 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
     logDebug $ "RideCompleted Coin Event" <> show chargeableDistance
     fork "DriverRideCompletedCoin Event : " $ do
       expirationPeriod <- DC.getExpirationSeconds thresholdConfig.timeDiffFromUtc
-      validRideTaken <- DC.checkHasTakenValidRide (Just chargeableDistance)
+      let validRideTaken = isValidRide updRide
       let metroRide = checkSplLocation booking.specialLocationTag "SureMetro" || checkSplLocation booking.specialLocationTag "SureWarriorMetro"
       when (DTC.isDynamicOfferTrip booking.tripCategory && validRideTaken) $ do
         DC.incrementValidRideCount driverId expirationPeriod 1
-        DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) chargeableDistance metroRide) (Just ride.id.getId)
+        DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) updRide metroRide) (Just ride.id.getId)
 
     mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
       findPaymentMethodByIdAndMerchantId paymentMethodId booking.merchantOperatingCityId

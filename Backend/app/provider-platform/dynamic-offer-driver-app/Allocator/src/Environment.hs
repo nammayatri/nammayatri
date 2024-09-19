@@ -104,7 +104,6 @@ data HandlerEnv = HandlerEnv
     ondcTokenHashMap :: HMS.HashMap KeyConfig TokenConfig,
     cacConfig :: CacConfig,
     modelNamesHashMap :: HMS.HashMap Text Text,
-    minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     searchRequestExpirationSeconds :: NominalDiffTime,
     s3Env :: S3Env Flow,
     passettoContext :: PassettoContext

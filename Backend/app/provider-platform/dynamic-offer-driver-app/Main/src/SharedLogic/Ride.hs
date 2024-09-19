@@ -250,7 +250,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         passedThroughDestination = Nothing,
         deliveryFileIds = Nothing,
         destinationReachedAt = Nothing,
-        estimatedEndTimeRange = Nothing
+        estimatedEndTimeRange = Nothing,
+        rideTags = Nothing
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl
