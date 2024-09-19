@@ -570,6 +570,9 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
               liftFlowBT hideSplash
               modifyScreenState $ CustomerReferralTrackerScreenStateType (\customerReferralTracker -> customerReferralTracker{props{fromDeepLink = true, openPP = true}})
               customerReferralTrackerFlow
+            "alerts" -> do
+              liftFlowBT hideSplash
+              notificationFlow
             _ -> pure unit
         Nothing -> pure unit
   (GlobalState allState) <- getState
