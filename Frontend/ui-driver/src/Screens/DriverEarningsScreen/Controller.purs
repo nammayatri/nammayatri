@@ -764,7 +764,7 @@ dummyRideHistoryItem = RidesInfo {
       bapName : Nothing,
       isValueAddNP : false
     , parkingCharge : Nothing
- , coinsEarned : []   
+ , coinsEarned : Nothing  
 }
 
 dummyLocationInfo :: LocationInfo
