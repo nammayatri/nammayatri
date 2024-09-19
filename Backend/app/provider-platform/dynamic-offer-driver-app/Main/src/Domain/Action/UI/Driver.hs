@@ -668,7 +668,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
     DriverSpecificSubscriptionData {..} <- getDriverSpecificSubscriptionDataWithSubsConfig (personId, merchantId, merchantOpCityId) transporterConfig driverInfo mbVehicle
     let commonSubscriptionChecks = not isOnFreeTrial && not transporterConfig.allowDefaultPlanAllocation && isEnableForCategory
     let planBasedChecks = planMandatoryForCategory && isNothing autoPayStatus && commonSubscriptionChecks
-    let changeBasedChecks = isSubscriptionVehicleCategoryChanged || isSubscriptionCityChanged && commonSubscriptionChecks
+    let changeBasedChecks = (isSubscriptionVehicleCategoryChanged || isSubscriptionCityChanged) && commonSubscriptionChecks
     when (planBasedChecks || changeBasedChecks) $ throwError (NoPlanSelected personId.getId)
     when merchant.onlinePayment $ do
       driverBankAccount <- QDBA.findByPrimaryKey driverId >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
