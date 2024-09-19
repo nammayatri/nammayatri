@@ -104,11 +104,11 @@ data Action = GenericHeaderActionController GenericHeaderController.Action
             | ListExpandAinmationEnd
             | ContactSupportPopUpAction PopUpModalController.Action
 
-data ScreenOutput = GoBack TripDetailsGoBackType | GoToInvoice TripDetailsScreenState | GoHome TripDetailsScreenState | ConnectWithDriver TripDetailsScreenState | GetCategorieList TripDetailsScreenState | GoToIssueChatScreen TripDetailsScreenState CategoryListType
+data ScreenOutput = GoBack TripDetailsGoBackType TripDetailsScreenState | GoToInvoice TripDetailsScreenState | GoHome TripDetailsScreenState | ConnectWithDriver TripDetailsScreenState | GetCategorieList TripDetailsScreenState | GoToIssueChatScreen TripDetailsScreenState CategoryListType
 
 eval :: Action -> TripDetailsScreenState -> Eval Action ScreenOutput TripDetailsScreenState
 
-eval BackPressed state = exit $ GoBack state.props.fromMyRides
+eval BackPressed state = exit $ GoBack state.props.fromMyRides state
 
 eval ShowPopUp state = continue state{props{showConfirmationPopUp = true}}
 
