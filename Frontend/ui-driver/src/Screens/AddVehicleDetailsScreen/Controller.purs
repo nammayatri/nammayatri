@@ -39,7 +39,7 @@ import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Helpers.Utils (contactSupportNumber)
-import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderCameraProfilePicture, showDialer, uploadFile, renderBase64ImageFile)
+import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderCameraPicture, showDialer, uploadFile, renderBase64ImageFile)
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, bind, pure, ($), class Show, unit, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+), void)
@@ -105,6 +105,7 @@ instance loggableAction :: Loggable Action where
       ReferralMobileNumberController.PrimaryEditTextActionController act -> case act of 
         PrimaryEditTextController.TextChanged valId newVal -> trackAppTextInput appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "referral_mobile_number_text_changed" "primary_edit_text"
         PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "referral_mobile_number_text_focus_changed" "primary_edit_text"
+        PrimaryEditTextController.TextImageClicked -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "referral_mobile_number" "text_image_onclick"
       ReferralMobileNumberController.OnSubTextClick -> pure unit
     ReferralMobileNumber -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "trigger_referral_mobile_number"
     GenericMessageModalAction act -> case act of
@@ -295,7 +296,7 @@ eval (CallBackImageUpload base_64 imageName imagePath) state = do
       pure $ ValidateDocumentModalAction (ValidateDocumentModal.PrimaryButtonActionController (PrimaryButtonController.OnClick))]
     else continue state{props{isValidState = false}}
 eval (UploadFile) state = continueWithCmd (state {props {validateProfilePicturePopUp = false, imageCaptureLayoutView = true}}) [do
-     _ <- liftEffect $ renderCameraProfilePicture (getNewIDWithTag "ProfilePictureCaptureLayout")
+     _ <- liftEffect $ renderCameraPicture (getNewIDWithTag "ProfilePictureCaptureLayout") "PROFILE_PICTURE"
      pure NoAction
       ]
 eval (VehicleRCNumber val) state = do

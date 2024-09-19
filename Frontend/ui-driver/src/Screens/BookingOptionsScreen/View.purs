@@ -279,11 +279,17 @@ downgradeVehicleView push state =
               , height WRAP_CONTENT
               , orientation VERTICAL
               ]
-              (( ridePreferencesView push state defaultRidePreferences) <> 
-              [ 
-                  rentalPreferenceView push state,
-                  intercityPreferenceView push state
-              ])
+              (( ridePreferencesView push state defaultRidePreferences) 
+                <> 
+                (
+                  if state.data.vehicleType /= "BIKE" then
+                  [ 
+                    rentalPreferenceView push state,
+                    intercityPreferenceView push state
+                  ] 
+                  else []
+                )
+              )
           ]
       ]
 
@@ -308,7 +314,13 @@ serviceTierItem state push service enabled opacity index =
     , height WRAP_CONTENT
     , weight 1.0
     ]
-    [ linearLayout
+    [ 
+      linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      ][
+        linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , padding (Padding 12 4 12 4)
@@ -364,8 +376,33 @@ serviceTierItem state push service enabled opacity index =
             , gravity RIGHT
             ]
             [ toggleView push service.isSelected service.isDefault service ]
-        ]
+        ],
+        serviceTierItemDesc state service
+      ]
     ]
+
+serviceTierItemDesc :: forall w. ST.BookingOptionsScreenState -> ST.RidePreference -> PrestoDOM (Effect Unit) w
+serviceTierItemDesc state service =
+  linearLayout
+  [
+    width MATCH_PARENT,
+    height WRAP_CONTENT,
+    padding $ Padding 12 2 12 2,
+    visibility $ MP.boolToVisibility $ DA.any (_ == service.serviceTierType) [API.DELIVERY_BIKE]
+  ][
+    textView $
+    [
+      height WRAP_CONTENT,
+      width MATCH_PARENT,
+      text $ getDescBasedOnServiceType service.serviceTierType,
+      color Color.black700
+    ] <> FontStyle.body3 TypoGraphy
+  ]
+  where
+    getDescBasedOnServiceType :: API.ServiceTierType -> String
+    getDescBasedOnServiceType serviceType = case serviceType of
+      API.DELIVERY_BIKE -> getString DELIVERY_BIKE_SERVICE_TIER_DESC
+      _ -> ""
 
 rentalPreferenceView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
 rentalPreferenceView push state = 

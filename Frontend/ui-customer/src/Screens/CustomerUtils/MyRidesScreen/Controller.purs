@@ -267,7 +267,7 @@ myRideListTransformer state listRes = filter (\item -> (any (_ == item.status) [
     waitingCharges = 
       if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
           autoWaitingCharges
-      else if rideDetails.vehicleVariant == "BIKE" then 
+      else if rideDetails.vehicleVariant == "BIKE" || rideDetails.vehicleVariant == "DELVIERY_BIKE" then 
           bikeWaitingCharges
       else 
          cabsWaitingCharges

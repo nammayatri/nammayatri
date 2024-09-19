@@ -361,12 +361,10 @@ rideSearchBT payload = do
             BackT $ pure GoBack
 
 
-makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Boolean -> Boolean -> String -> Boolean -> SearchReq
-makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMoved destManuallyMoved sessionToken isSpecialLocation = -- check this for rentals
+makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Boolean -> Boolean -> String -> Boolean -> FPT.FareProductType -> SearchReq
+makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMoved destManuallyMoved sessionToken isSpecialLocation searchActionType = -- check this for rentals
     let appConfig = CP.getAppConfig CP.appConfig
-    in  SearchReq 
-        { "contents" : OneWaySearchRequest 
-            ( OneWaySearchReq
+        searchRequest = ( OneWaySearchReq
                 { "startTime" : Just startTime
                 , "destination" : SearchReqLocation 
                     { "gps" : LatLong 
@@ -391,8 +389,16 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMo
                 , "rideRequestAndRideOtpUnifiedFlow" : Just true 
                 }
             )
-        , "fareProductType" : "ONE_WAY"
-        }
+    in case searchActionType of
+        FPT.DELIVERY -> SearchReq 
+            { "contents" : DeliverySearchRequest searchRequest
+            , "fareProductType" : "DELIVERY"
+            }
+        _ -> SearchReq 
+            { "contents" : OneWaySearchRequest searchRequest
+            , "fareProductType" : "ONE_WAY"
+            }
+            
     where 
         validateLocationAddress :: Number -> Number -> LocationAddress -> LocationAddress
         validateLocationAddress lat long address = 
@@ -483,13 +489,14 @@ selectEstimate payload estimateId = do
     where
         unwrapResponse (x) = x
 
-makeEstimateSelectReq :: Boolean -> Maybe Int -> Array String -> Boolean -> DEstimateSelect
-makeEstimateSelectReq isAutoAssigned tipForDriver otherSelectedEstimates isAdvancedBookingEnabled = DEstimateSelect {
+makeEstimateSelectReq :: Boolean -> Maybe Int -> Array String -> Boolean -> Maybe DeliveryDetails -> DEstimateSelect
+makeEstimateSelectReq isAutoAssigned tipForDriver otherSelectedEstimates isAdvancedBookingEnabled deliveryDetails = DEstimateSelect {
       "customerExtraFee": tipForDriver,
       "autoAssignEnabled": isAutoAssigned,
       "autoAssignEnabledV2": isAutoAssigned,
       "otherSelectedEstimates": otherSelectedEstimates,
-      "isAdvancedBookingEnabled": isAdvancedBookingEnabled
+      "isAdvancedBookingEnabled": isAdvancedBookingEnabled,
+      "deliveryDetails": deliveryDetails
     }
 
 ------------------------------------------------------------------------ SelectList Function ------------------------------------------------------------------------------------------
@@ -1466,3 +1473,22 @@ makeEditLocationResultRequest bookingUpdateRequestId = GetEditLocResultReq booki
 
 makeEditLocResultConfirmReq :: String -> EditLocResultConfirmReq
 makeEditLocResultConfirmReq bookingUpdateRequestId = EditLocResultConfirmReq bookingUpdateRequestId
+----------------------------------------------------------------------------- MultiChat ----------------------------------------------------------------------------------------
+
+
+----------------------------------------- DELiVERY FLOW ----------------------------------------------
+
+getDeliveryImage :: String -> Flow GlobalState (Either ErrorResponse GetDeliveryImageResponse)
+getDeliveryImage rideId = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.getDeliveryImage rideId) unwrapResponse $ callAPI headers (GetDeliveryImageReq rideId)
+    where
+        unwrapResponse (x) = x
+
+getDeliveryImageBT :: String -> FlowBT String GetDeliveryImageResponse
+getDeliveryImageBT rideId = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getDeliveryImage rideId) identity errorHandler (lift $ lift $ callAPI headers (GetDeliveryImageReq rideId))
+    where
+    errorHandler errorPayload = do
+        BackT $ pure GoBack

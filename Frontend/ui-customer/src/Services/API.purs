@@ -466,7 +466,7 @@ newtype SearchReq = SearchReq {
   fareProductType :: String
 }
 
-data ContentType = OneWaySearchRequest OneWaySearchReq | RentalSearchRequest RentalSearchReq
+data ContentType = OneWaySearchRequest OneWaySearchReq | RentalSearchRequest RentalSearchReq | DeliverySearchRequest OneWaySearchReq
 
 newtype OneWaySearchReq = OneWaySearchReq {
   origin :: SearchReqLocation,
@@ -525,13 +525,15 @@ derive instance genericContentType :: Generic ContentType _
 instance standardEncodeContentType :: StandardEncode ContentType where
   standardEncode (OneWaySearchRequest body) = standardEncode body
   standardEncode (RentalSearchRequest body) = standardEncode body
+  standardEncode (DeliverySearchRequest body) = standardEncode body
 instance showContentType :: Show ContentType where show = genericShow
 instance decodeContentType :: Decode ContentType
   where
-    decode body = (OneWaySearchRequest <$> decode body) <|> (RentalSearchRequest <$> decode body) <|> (fail $ ForeignError "Unknown response")
+    decode body = (OneWaySearchRequest <$> decode body) <|> (RentalSearchRequest <$> decode body) <|> (DeliverySearchRequest <$> decode body) <|> (fail $ ForeignError "Unknown response")
 instance encodeContentType  :: Encode ContentType where
   encode (OneWaySearchRequest body) = encode body
   encode (RentalSearchRequest body) = encode body
+  encode (DeliverySearchRequest body) = encode body
 
 derive instance genericRentalSearchReq :: Generic RentalSearchReq _
 derive instance newtypeRentalSearchReq :: Newtype RentalSearchReq _
@@ -674,6 +676,7 @@ data QuoteAPIContents
   | DRIVER_OFFER DriverOfferAPIEntity
   | SPECIAL_ZONE SpecialZoneQuoteAPIDetails
   | INTER_CITY IntercityQuoteAPIDetails
+  | DELIVERY DriverOfferAPIEntity
 
 newtype OneWayQuoteAPIDetails = OneWayQuoteAPIDetails {
   distanceToNearestDriver :: String
@@ -853,6 +856,7 @@ instance standardEncodeQuoteAPIContents :: StandardEncode QuoteAPIContents where
   standardEncode (SPECIAL_ZONE body) = standardEncode body
   standardEncode (RENTAL body) = standardEncode body
   standardEncode (INTER_CITY body) = standardEncode body
+  standardEncode (DELIVERY body) = standardEncode body
 instance showQuoteAPIContents :: Show QuoteAPIContents where show = genericShow
 instance decodeQuoteAPIContents :: Decode QuoteAPIContents
   where
@@ -863,6 +867,7 @@ instance encodeQuoteAPIContents  :: Encode QuoteAPIContents where
   encode (SPECIAL_ZONE body) = encode body
   encode (RENTAL body) = encode body
   encode (INTER_CITY body) = encode body
+  encode (DELIVERY body) = encode body
 
 
 derive instance genericQuoteAPIEntity :: Generic QuoteAPIEntity _
@@ -1014,9 +1019,21 @@ newtype RideBookingStatusRes = RideBookingStatusRes {
   id :: String,
   isBookingUpdated :: Boolean,
   bookingStatus :: String,
-  rideStatus :: Maybe String
-  
+  rideStatus :: Maybe String,
+  estimatedEndTimeRange :: Maybe EstimatedTimeToDestination
 }
+
+newtype EstimatedTimeToDestination = EstimatedTimeToDestination {
+  end :: String,
+  start :: String
+}
+
+derive instance genericEstimatedTimeToDestination :: Generic EstimatedTimeToDestination _
+derive instance newtypeEstimatedTimeToDestination :: Newtype EstimatedTimeToDestination _
+instance standardEncodeEstimatedTimeToDestination :: StandardEncode EstimatedTimeToDestination where standardEncode (EstimatedTimeToDestination body) = standardEncode body
+instance showEstimatedTimeToDestination :: Show EstimatedTimeToDestination where show = genericShow
+instance decodeEstimatedTimeToDestination :: Decode EstimatedTimeToDestination where decode = defaultDecode
+instance encodeEstimatedTimeToDestination  :: Encode EstimatedTimeToDestination where encode = defaultEncode
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {
   amount :: Number,
@@ -1045,6 +1062,7 @@ newtype RideAPIEntity = RideAPIEntity {
   rideEndTime:: Maybe String,
   rideRating :: Maybe Int,
   driverArrivalTime :: Maybe String,
+  destinationReachedAt :: Maybe String,
   bppRideId :: String,
   endOtp :: Maybe String,
   startOdometerReading :: Maybe Number,
@@ -1063,13 +1081,30 @@ data FareProductType =  ONE_WAY_FARE_PRODUCT
                       | RENTAL_FARE_PRODUCT
                       | DRIVER_OFFER_FARE_PRODUCT
                       | OneWaySpecialZoneAPIDetails_FARE_PRODUCT
+                      | DELIVERY_FARE_PRODUCT
 
 newtype RideBookingDetails = RideBookingDetails {
   toLocation :: Maybe BookingLocationAPIEntity,
   estimatedDistance :: Maybe Int,
   otpCode :: Maybe String,
-  stopLocation :: Maybe BookingLocationAPIEntity
+  stopLocation :: Maybe BookingLocationAPIEntity,
+  senderDetails :: Maybe PersonDetails,
+  receiverDetails :: Maybe PersonDetails
 }
+
+newtype PersonDetails = PersonDetails {
+  name :: String,
+  phoneNumber :: String
+}
+
+
+derive instance genericPersonDetails :: Generic PersonDetails _
+derive instance newtypePersonDetails :: Newtype PersonDetails _
+instance standardEncodePersonDetails :: StandardEncode PersonDetails where standardEncode (PersonDetails body) = standardEncode body
+instance showPersonDetails :: Show PersonDetails where show = genericShow
+instance decodePersonDetails :: Decode PersonDetails where decode = defaultDecode
+instance encodePersonDetails  :: Encode PersonDetails where encode = defaultEncode
+
 
 newtype BookingLocationAPIEntity = BookingLocationAPIEntity {
   area :: Maybe String,
@@ -1083,7 +1118,9 @@ newtype BookingLocationAPIEntity = BookingLocationAPIEntity {
   areaCode :: Maybe String,
   lon :: Number,
   ward :: Maybe String,
-  placeId :: Maybe String
+  placeId :: Maybe String,
+  extras ::  Maybe String,
+  instructions :: Maybe String
 }
 
 instance makeRideBooking :: RestEndpoint RideBookingReq  where
@@ -1152,6 +1189,7 @@ instance decodeFareProductType :: Decode FareProductType
                     "RENTAL"                      -> except $ Right RENTAL_FARE_PRODUCT
                     "DRIVER_OFFER"                -> except $ Right DRIVER_OFFER_FARE_PRODUCT
                     "OneWaySpecialZoneAPIDetails" -> except $ Right OneWaySpecialZoneAPIDetails_FARE_PRODUCT
+                    "DELIVERY"                    -> except $ Right DELIVERY_FARE_PRODUCT
                     _                             -> fail $ ForeignError "Unknown response"
 instance encodeFareProductType :: Encode FareProductType
   where
@@ -1160,6 +1198,7 @@ instance encodeFareProductType :: Encode FareProductType
     encode RENTAL_FARE_PRODUCT = encode "RENTAL"
     encode DRIVER_OFFER_FARE_PRODUCT = encode "DRIVER_OFFER"
     encode OneWaySpecialZoneAPIDetails_FARE_PRODUCT = encode "OneWaySpecialZoneAPIDetails"
+    encode DELIVERY_FARE_PRODUCT = encode "DELIVERY"
 instance standardEncodeFareProductType :: StandardEncode FareProductType
   where
     standardEncode ONE_WAY_FARE_PRODUCT = standardEncode "ONE_WAY"
@@ -1167,6 +1206,7 @@ instance standardEncodeFareProductType :: StandardEncode FareProductType
     standardEncode RENTAL_FARE_PRODUCT = standardEncode "RENTAL"
     standardEncode DRIVER_OFFER_FARE_PRODUCT = standardEncode "DRIVER_OFFER"
     standardEncode OneWaySpecialZoneAPIDetails_FARE_PRODUCT = standardEncode "OneWaySpecialZoneAPIDetails"
+    standardEncode DELIVERY_FARE_PRODUCT = standardEncode "DELIVERY"
 
 derive instance genericRideBookingDetails :: Generic RideBookingDetails _
 derive instance newtypeRideBookingDetails :: Newtype RideBookingDetails _
@@ -1193,8 +1233,72 @@ newtype DEstimateSelect = DEstimateSelect
     autoAssignEnabled :: Boolean,
     autoAssignEnabledV2 :: Boolean,
     otherSelectedEstimates :: Array String,
-    isAdvancedBookingEnabled :: Boolean
+    isAdvancedBookingEnabled :: Boolean,
+    deliveryDetails :: Maybe DeliveryDetails
   }
+
+data DeliveryDetails = DeliveryDetails
+  {
+    senderDetails :: PersonLocationAndInstruction,
+    receiverDetails :: PersonLocationAndInstruction,
+    initiatedAs :: InitiatedAs
+  }
+
+derive instance genericDeliveryDetails :: Generic DeliveryDetails _
+instance standardEncodeDeliveryDetails :: StandardEncode DeliveryDetails where standardEncode (DeliveryDetails body) = standardEncode body 
+instance showDeliveryDetails :: Show DeliveryDetails where show = genericShow
+instance decodeDeliveryDetails :: Decode DeliveryDetails where decode = defaultDecode
+instance encodeDeliveryDetails  :: Encode DeliveryDetails where encode = defaultEncode
+
+data PersonLocationAndInstruction = PersonLocationAndInstruction
+  {
+    name :: String,
+    phoneNumber :: String,
+    address :: InstructionAndAddress
+  }
+
+derive instance genericPersonLocationAndInstruction :: Generic PersonLocationAndInstruction _
+-- derive instance newtypePersonLocationAndInstruction :: Newtype PersonLocationAndInstruction _
+instance standardEncodePersonLocationAndInstruction :: StandardEncode PersonLocationAndInstruction where standardEncode (PersonLocationAndInstruction body) = standardEncode body
+instance showPersonLocationAndInstruction :: Show PersonLocationAndInstruction where show = genericShow
+instance decodePersonLocationAndInstruction :: Decode PersonLocationAndInstruction where decode = defaultDecode
+instance encodePersonLocationAndInstruction  :: Encode PersonLocationAndInstruction where encode = defaultEncode
+
+data InstructionAndAddress = InstructionAndAddress
+  {
+    instructions :: Maybe String,
+    extras :: String
+  }
+
+derive instance genericInstructionAndAddress :: Generic InstructionAndAddress _
+-- derive instance newtypeInstructionAndAddress :: Newtype InstructionAndAddress _
+instance standardEncodeInstructionAndAddress :: StandardEncode InstructionAndAddress where standardEncode (InstructionAndAddress body) = standardEncode body
+instance showInstructionAndAddress :: Show InstructionAndAddress where show = genericShow
+instance decodeInstructionAndAddress :: Decode InstructionAndAddress where decode = defaultDecode
+instance encodeInstructionAndAddress  :: Encode InstructionAndAddress where encode = defaultEncode
+
+data InitiatedAs =  Sender | Receiver | SomeoneElse
+
+derive instance genericInitiatedAs :: Generic InitiatedAs _
+instance showInitiatedAs :: Show InitiatedAs where show = genericShow
+instance decodeInitiatedAs :: Decode InitiatedAs 
+  where 
+    decode body = case unsafeFromForeign body of
+                    "Sender" -> except $ Right Sender
+                    "Receiver" -> except $ Right Receiver
+                    "SomeoneElse" -> except $ Right SomeoneElse
+                    _ -> fail $ ForeignError "Unknown response"
+instance encodeInitiatedAs :: Encode InitiatedAs 
+  where
+    encode Sender = encode "Sender"
+    encode Receiver = encode "Receiver"
+    encode SomeoneElse = encode "SomeoneElse"
+instance eqInitiatedAs :: Eq InitiatedAs where eq = genericEq
+instance standardEncodeInitiatedAs :: StandardEncode InitiatedAs
+  where
+    standardEncode Sender = standardEncode "Sender"
+    standardEncode Receiver = standardEncode "Receiver"
+    standardEncode SomeoneElse = standardEncode "SomeoneElse"
 
 
 instance makeSelectEstimateReq :: RestEndpoint SelectEstimateReq  where
@@ -3849,3 +3953,26 @@ instance showMessageSource :: Show MessageSource where show = genericShow
 instance decodeMessageSource :: Decode MessageSource where decode = defaultDecode
 instance encodeMessageSource  :: Encode MessageSource where encode = defaultEnumEncode
 instance eqMessageSource :: Eq MessageSource where eq = genericEq
+
+----------------------------- DELIVERY -----------------------------------------------------
+
+data GetDeliveryImageReq = GetDeliveryImageReq String
+
+newtype GetDeliveryImageResponse = GetDeliveryImageResponse String
+
+instance makeGetDeliveryImageReq :: RestEndpoint GetDeliveryImageReq where
+ makeRequest reqBody@(GetDeliveryImageReq bookingId) headers = defaultMakeRequest GET (EP.getDeliveryImage bookingId) headers reqBody Nothing
+ encodeRequest req = defaultEncode req
+ 
+derive instance genericGetDeliveryImageReq :: Generic GetDeliveryImageReq _
+instance standardEncodeGetDeliveryImageReq :: StandardEncode GetDeliveryImageReq where standardEncode (GetDeliveryImageReq resp) = standardEncode resp
+instance showGetDeliveryImageReq :: Show GetDeliveryImageReq where show = genericShow
+instance decodeGetDeliveryImageReq :: Decode GetDeliveryImageReq where decode = defaultDecode
+instance encodeGetDeliveryImageReq :: Encode GetDeliveryImageReq where encode = defaultEncode
+
+derive instance genericGetDeliveryImageResponse :: Generic GetDeliveryImageResponse _
+derive instance newtypeGetDeliveryImageResponse :: Newtype GetDeliveryImageResponse _
+instance standardEncodeGetDeliveryImageResponse :: StandardEncode GetDeliveryImageResponse where standardEncode (GetDeliveryImageResponse resp) = standardEncode resp
+instance showGetDeliveryImageResponse :: Show GetDeliveryImageResponse where show = genericShow
+instance decodeGetDeliveryImageResponse :: Decode GetDeliveryImageResponse where decode = defaultDecode
+instance encodeGetDeliveryImageResponse :: Encode GetDeliveryImageResponse where encode = defaultEncode

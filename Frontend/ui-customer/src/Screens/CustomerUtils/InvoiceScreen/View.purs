@@ -30,7 +30,7 @@ import Resources.Constants as Constants
 import Font.Style as FontStyle
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (&&), (/=), (-), (<$>), (>>=), (=<<), (*), (>))
+import Prelude (Unit, const, map, not, show, ($), (<<<), (<>), (==), (&&), (/=), (-), (<$>), (>>=), (=<<), (*), (>), (||))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Screen, afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, accessibilityHint, accessibility, onClick)
 import Screens.CustomerUtils.InvoiceScreen.ComponentConfig (genericHeaderConfig, primaryButtonConfig)
 import Screens.InvoiceScreen.Controller (Action(..), ScreenOutput, eval)
@@ -125,7 +125,7 @@ referenceList state =
       waitingCharges = 
         if state.data.selectedItem.vehicleVariant == Just VV.AUTO_RICKSHAW then
             autoWaitingCharges
-        else if state.data.selectedItem.vehicleVariant == Just VV.BIKE then
+        else if state.data.selectedItem.vehicleVariant == Just VV.BIKE || state.data.selectedItem.vehicleVariant == Just VV.DELIVERY_BIKE then
             bikeWaitingCharges
         else 
             cabsWaitingCharges

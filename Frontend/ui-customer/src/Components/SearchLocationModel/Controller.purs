@@ -22,7 +22,7 @@ import Data.Maybe (Maybe(..))
 import Prelude (show)
 import Effect (Effect)
 import PrestoDOM (Visibility(..), Padding(..), Gravity(..), Prop)
-import Screens.Types (SearchLocationModelType, LocationListItemState, LocItemType(..))
+import Screens.Types (SearchLocationModelType, LocationListItemState, LocItemType(..), FareProductType(..))
 import MerchantConfig.Types (AppConfig)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
@@ -73,6 +73,7 @@ type SearchLocationModelState = {
   , suffixButton :: ButtonLayoutConfig
   , headerVisibility :: Boolean
   , headerText :: String
+  , fareProductType :: FareProductType
 }
 
 type ButtonLayoutConfig = 

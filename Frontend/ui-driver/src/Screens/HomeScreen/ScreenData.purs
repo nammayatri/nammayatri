@@ -243,6 +243,8 @@ initData =
       , showAddUPIPopUp : false 
       , showVerifyUPIPopUp : false
       , chatServiceKilled : false
+      , isSourceDetailsExpanded : false
+      , showDeliveryCallPopup : false
       }
   }
 
@@ -316,6 +318,14 @@ dummyRideData = {
       , bapName : ""
       , bookingFromOtherPlatform : false
       , parkingCharge : 0.0
+      , extraFromLocationInfo : Nothing
+      , extraToLocationInfo : Nothing
+      , senderInstructions : Nothing
+      , receiverInstructions : Nothing
+      , senderPersonDetails : Nothing
+      , receiverPersonDetails : Nothing
+      , deliveryInitiatedAs : Nothing
+      , notifiedReachedDestination : false
       }
 
 initialParkingData :: ParkingData

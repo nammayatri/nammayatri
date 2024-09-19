@@ -124,7 +124,7 @@ myRideListTransformer isSrcServiceable listRes config mbSelectedCategory = mapMa
               waitingCharges = 
                 if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
                     autoWaitingCharges
-                else if rideDetails.vehicleVariant == "BIKE" then
+                else if rideDetails.vehicleVariant == "BIKE" || rideDetails.vehicleVariant == "DELIVERY_BIKE" then
                     bikeWaitingCharges
                 else 
                     cabsWaitingCharges

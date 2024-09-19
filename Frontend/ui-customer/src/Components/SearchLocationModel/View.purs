@@ -49,7 +49,7 @@ import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/
 import PrestoDOM (Accessiblity(..), InputType(..),  Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, inputType, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, selectAllOnFocus, singleLine, stroke, text, textSize, textView, visibility, weight, width, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
-import Screens.Types (SearchLocationModelType(..), LocationListItemState)
+import Screens.Types (SearchLocationModelType(..), LocationListItemState, FareProductType(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Data.Array (any)
@@ -331,7 +331,7 @@ sourceDestinationEditTextView state push =
               , color if state.isSource == Just true then state.appConfig.searchLocationConfig.editTextDefaultColor else state.appConfig.searchLocationConfig.editTextColor
               , stroke $ "0," <> Color.black
               , padding (Padding 8 7 4 7)
-              , hint (getString WHERE_TO)
+              , hint (if state.fareProductType == DELIVERY then getString DROP else getString WHERE_TO)
               , hintColor state.appConfig.searchLocationConfig.hintColor
               , singleLine true
               , ellipsize true
@@ -420,7 +420,7 @@ editableSourceView state push =
         , lineHeight "24"
         , accessibilityHint "Pickup Location Editable field"
         , accessibility ENABLE
-        , hint (getString START_)
+        , hint (if state.fareProductType == DELIVERY then getString PICKUP else getString START_)
         , hintColor state.appConfig.searchLocationConfig.hintColor
         , id $ getNewIDWithTag "SourceEditText"
         , afterRender (\_ -> do

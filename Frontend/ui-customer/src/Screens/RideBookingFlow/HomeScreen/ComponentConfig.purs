@@ -43,6 +43,7 @@ import Components.MessagingView.Controller (ChatContacts(..))
 import Components.PopUpModal as PopUpModal
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import Components.PrimaryButton as PrimaryButton
+import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.QuoteListModel as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
@@ -53,6 +54,7 @@ import Components.SearchLocationModel as SearchLocationModel
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.ServiceTierCard.View as ServiceTierCard
 import Components.SourceToDestination as SourceToDestination
+import Components.DeliveryParcelImageAndOtp as DeliveryParcelImageAndOtp
 import Control.Monad.Except (runExcept)
 import Data.Array ((!!), sortBy, mapWithIndex, elem, length, any)
 import Data.Array as DA
@@ -399,7 +401,7 @@ primaryButtonConfirmPickupConfig state =
     primaryButtonConfig' =
       config
         { textConfig
-          { text = (getString CONFIRM_LOCATION)
+          { text = if state.data.fareProductType == FPT.DELIVERY then (if state.props.isConfirmSourceCurrentLocation then getString CONFIRM_PICKUP else getString CONFIRM_DROP) else getString CONFIRM_LOCATION
           , color = state.data.config.primaryTextColor
           , accessibilityHint = "Confirm PickUp Location : Button"
           }
@@ -995,6 +997,7 @@ getVehicleTitle vehicle =
       "AUTO_RICKSHAW" -> (getString AUTO_RICKSHAW)
       "BIKE" -> "Bike Taxi"
       "SUV_PLUS" -> "XL Plus"
+      "DELIVERY_BIKE" -> "2 Wheeler"
       _ -> ""
   )
     <> " - "
@@ -1038,7 +1041,7 @@ driverInfoCardViewState state = { props:
                                   , merchantCity : state.props.city
                                   , showBanner : state.props.currentStage == RideStarted
                                   , isRateCardAvailable : (isJust state.data.rateCardCache) &&  (state.data.fareProductType /= FPT.INTER_CITY) && (state.data.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE)
-                                  , isChatWithEMEnabled : state.props.isChatWithEMEnabled || state.data.fareProductType == FPT.RENTAL
+                                  , isChatWithEMEnabled : state.props.isChatWithEMEnabled || state.data.fareProductType == FPT.RENTAL || state.data.fareProductType == FPT.DELIVERY
                                   , rideDurationTimer : state.props.rideDurationTimer
                                   , rideDurationTimerId : state.props.rideDurationTimerId
                                   , endOTPShown : state.props.showEndOTP
@@ -1146,6 +1149,7 @@ driverInfoTransformer state =
     , driverArrived : cardState.driverArrived
     , estimatedDistance : cardState.estimatedDistance
     , driverArrivalTime : cardState.driverArrivalTime
+    , destinationReachedAt : cardState.destinationReachedAt
     , estimatedDropTime : ""
     , isSpecialZone : state.props.isSpecialZone
     , isLocationTracking : state.props.isLocationTracking
@@ -1170,6 +1174,9 @@ driverInfoTransformer state =
     , spLocationName : cardState.spLocationName
     , addressWard : cardState.addressWard
     , hasToll : cardState.hasToll
+    , senderDetails : cardState.senderDetails
+    , receiverDetails : cardState.receiverDetails
+    , estimatedTimeToReachDestination : cardState.estimatedTimeToReachDestination
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -1190,7 +1197,7 @@ ratingCardViewState state =
         { rating = state.data.ratingViewState.selectedRating
         , feedbackList = state.data.rideRatingState.feedbackList
         }
-  , feedbackPillData: customerFeedbackPillData state
+  , feedbackPillData: if state.data.fareProductType == FPT.DELIVERY then parcelFeedbackPillData state else customerFeedbackPillData state
   , primaryButtonConfig:
       PrimaryButton.config
         { textConfig
@@ -1208,7 +1215,7 @@ ratingCardViewState state =
         , rippleColor = Color.rippleShade
         }
   , showProfileImg: true
-  , title: getRateYourRideString (getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName
+  , title: getRateYourRideString (if state.data.fareProductType == FPT.DELIVERY then getString RATE_YOUR_DELIVERY_WITH else getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName
   , feedbackPlaceHolder : getString ANYTHING_THAT_YOU_WOULD_LIKE_TO_TELL_US
   , showFeedbackPill: true
   , overallFeedbackArray: [ (getString TERRIBLE_EXPERIENCE), (getString POOR_EXPERIENCE), (getString NEEDS_IMPROVEMENT), (getString ALMOST_PERFECT), (getString AMAZING) ]
@@ -1262,6 +1269,7 @@ searchLocationModelViewState state =
     , currentLocationText: state.props.currentLocation.place
     , isEditDestination : false
     , isDestViewEditable : true
+    , fareProductType : state.data.fareProductType
     }
   where
   formatDate :: String -> String
@@ -1303,6 +1311,7 @@ editDestSearchLocationModelViewState state = { isSearchLocation: if state.props.
                                         }
                                     , headerText: getString TRIP_DETAILS_
                                     , isDestViewEditable : state.props.currentStage == EditingDestinationLoc
+                                    , fareProductType : state.data.fareProductType
                                     }
 
 quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelState
@@ -1766,7 +1775,7 @@ rideCompletedCardConfig state =
         contactSupportPopUpConfig = CommonComponentConfig.contactSupportPopUpConfig state.data.config
 
       , topCard {
-          title =  getString RIDE_COMPLETED,
+          title = if state.data.fareProductType == FPT.DELIVERY then getString DELIVERY_COMPLETED else getString RIDE_COMPLETED,
           titleColor = topCardConfig.titleColor,
           finalAmount = state.data.finalAmount,
           initialAmount = state.data.driverInfoCardState.price,
@@ -1780,7 +1789,7 @@ rideCompletedCardConfig state =
             imageVis = VISIBLE,
             visible = if state.data.finalAmount == state.data.driverInfoCardState.price || state.props.estimatedDistance == Nothing then GONE else VISIBLE
           },
-          bottomText =  getString RIDE_DETAILS,
+          bottomText = if state.data.fareProductType == FPT.DELIVERY then getString DELIVERY_DETAILS else getString RIDE_DETAILS,
           horizontalLineColor = topCardConfig.horizontalLineColor
         },
         customerBottomCard {
@@ -2093,7 +2102,8 @@ locationTagBarConfig state =
         ( [ { image: "ny_ic_instant", text: (getString INSTANT), id: "INSTANT", background: Color.lightMintGreen, showBanner: GONE }
           , { image: "ny_ic_rental", text: (getString RENTALS_), id: "RENTALS", background: Color.moonCreme, showBanner: GONE }
           ]
-            <> if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else []
+            <> (if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else [])
+            <> ([{image: "ny_ic_delivery", text: (getString DELIVERY_STR), id: "DELIVERY", background: Color.seashell, showBanner: GONE }])
         )
   in
     { tagList: locTagList }
@@ -2527,7 +2537,7 @@ getAllServices dummy =
   , {type: RemoteConfig.TRANSIT, image: fetchImage COMMON_ASSET "ny_ic_transit", name: TRANSIT, backgroundColor: "#faeeee"}
   , {type: RemoteConfig.INTERCITY, image: fetchImage COMMON_ASSET "ny_ic_intercity_service", name: INTERCITY_STR, backgroundColor: "#f1f8fe"}
   , {type: RemoteConfig.RENTAL, image: fetchImage COMMON_ASSET "ny_ic_rental_service", name: RENTAL_STR, backgroundColor: "#fef9eb"}
-  , {type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY, backgroundColor: "#fef9eb"}
+  , {type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY_STR, backgroundColor: "#fef9eb"}
   , {type: RemoteConfig.INTERCITY_BUS, image: fetchImage COMMON_ASSET "ny_ic_intercity_bus_service", name: INTERCITY_BUS, backgroundColor: "#fdf3ec"}
   ]
 
@@ -2565,3 +2575,73 @@ getChatDetails state contacts =
         else [createContact Nothing]
 
   in multiChatContacts <> driverChatContact
+  
+deliveryParcelImageAndOtpConfig :: ST.HomeScreenState -> DeliveryParcelImageAndOtp.Config
+deliveryParcelImageAndOtpConfig state =
+  let
+    config = DeliveryParcelImageAndOtp.config
+
+    deliveryParcelImageAndOtpConfig' =
+      config
+        { image = fromMaybe "" state.data.deliveryImage
+        , imageVisibility = isJust state.data.deliveryImage
+        , otp = state.data.driverInfoCardState.otp
+        , rideStarted = state.props.currentStage == ST.RideStarted
+        , refreshAnimation = state.props.loadingDeliveryImage
+        }
+  in
+    deliveryParcelImageAndOtpConfig'
+
+parcelFeedbackPillData :: ST.HomeScreenState -> Array ( Array (Array RatingCard.FeedbackItem))
+parcelFeedbackPillData state = [ parcelFeedbackPillDataWithRating1 state, parcelFeedbackPillDataWithRating2 state, parcelFeedbackPillDataWithRating3 state, parcelFeedbackPillDataWithRating4 state, parcelFeedbackPillDataWithRating5 state ]
+
+parcelFeedbackPillDataWithRating1 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+parcelFeedbackPillDataWithRating1 state =
+  [ [ { id: "6", text: getString RUDE_BEHAVIOUR }
+    , { id: "1", text: getString TOO_MANY_CALLS }
+    ]
+  , [ { id: "6", text: getString RECKLESS_HANDLING }
+    , { id: "6", text: getString ASKED_FOR_EXTRA_FARE }
+    ]
+  , ( [ { id: "15", text: getString DELIVERY_DELAYED } 
+      , { id: "15", text: getString ITEMS_MISSING } ]
+    )
+  ]
+
+parcelFeedbackPillDataWithRating2 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+parcelFeedbackPillDataWithRating2 state = parcelFeedbackPillDataWithRating1 state
+
+parcelFeedbackPillDataWithRating3 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+parcelFeedbackPillDataWithRating3 state =
+  [ [ { id: "8", text: getString UNPROFESSIONAL_DRIVER }]
+  , [ { id: "8", text: getString ASKED_FOR_EXTRA_FARE }
+    , { id: "11", text: getString TOO_MANY_CALLS}
+    ]
+  , [ { id: "3", text: getString DELIVERY_DELAYED }
+    , { id: "3", text: getString RUDE_BEHAVIOUR }
+    ]
+  ]
+
+parcelFeedbackPillDataWithRating4 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+parcelFeedbackPillDataWithRating4 state =
+  [ [ { id: "9", text: getString POLITE_ATTITUDE }
+    , { id: "9", text: getString SMOOTH_EXPERIENCE }
+    ]
+  , [ { id: "9", text: getString SECURE_DELIVERY }
+    , { id: "11", text: getString ASKED_FOR_EXTRA_FARE}
+    ]
+  , [ { id: "4", text: getString DELIVERY_DELAYED }
+    , { id: "4", text: getString TOO_MANY_CALLS }
+    ]
+  ]
+
+parcelFeedbackPillDataWithRating5 :: ST.HomeScreenState -> Array (Array RatingCard.FeedbackItem)
+parcelFeedbackPillDataWithRating5 state =
+  [ [ { id: "10", text: getString POLITE_ATTITUDE }
+    , { id: "5", text: getString SMOOTH_EXPERIENCE }
+    ]
+  , [ { id: "12", text: getString ON_TIME }
+    , { id: "10", text: getString MINIMAL_CALLING }
+    ]
+  , [ { id: "10", text: getString SECURE_DELIVERY }]
+  ]

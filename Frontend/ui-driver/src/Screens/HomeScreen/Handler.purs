@@ -192,3 +192,9 @@ homeScreen = do
     VerifyManualUPI updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ VERIFY_MANUAL_UPI updatedState)
+    UploadParcelImage updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_UPLOAD_PARCEL_IMAGE updatedState)
+    NotifyDriverReachedDestination updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ NOTIFY_DRIVER_REACHED_DESTINATION updatedState)

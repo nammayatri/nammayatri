@@ -152,6 +152,8 @@ data KeyStore = USER_NAME
                 | VERIFY_UPI_LAST_SHOWN
                 | GULLAK_TOKEN
                 | DONT_CALL_REFRESH
+                | PARCEL_IMAGE_UPLOADED
+                | DESTINATION_REACHED_WAITING_TIME_STATUS
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

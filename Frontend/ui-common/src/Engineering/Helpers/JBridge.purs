@@ -95,7 +95,7 @@ foreign import setFCMTokenWithTimeOut :: EffectFn2 Int (String -> Effect Unit) U
 -- foreign import getNearbyPlaces :: forall action. (action -> Effect Unit) -> (Place -> action) -> Effect Unit
 -- foreign import isNetworkAvailable :: Unit -> Boolean
 foreign import openUrlInApp  :: String -> Effect Unit
-foreign import renderCameraProfilePicture :: String -> Effect Unit
+foreign import renderCameraPicture :: String -> String -> Effect Boolean
 foreign import openUrlInMailApp  :: String -> Effect Unit
 foreign import showMarkerImpl :: EffectFn1 ShowMarkerConfig Boolean
 foreign import fadeInFadeOutMarker :: Fn3 String String String Unit
@@ -306,7 +306,9 @@ foreign import fetchFilesFromFolderPath :: String -> Array String
 foreign import isPackageInstalled :: String -> Boolean
 foreign import requestUninstallPackage :: String -> Boolean
 foreign import storeOnPauseCallback :: forall action. Fn2 (action -> Effect Unit) action Unit
-
+foreign import getMedianUTCTime :: Fn2 String String String
+foreign import storeCallBackPickContact :: forall action. EffectFn2 (action -> Effect Unit)  (String -> String -> action) Unit
+foreign import pickContact :: EffectFn1 String Boolean
 type SliderConfig = { 
   id :: String,
   sliderConversionRate :: Number,
@@ -486,7 +488,7 @@ removeAllPolylines str = removeAllPolylinesImpl markersToRemove
     removeAllPolylinesImpl mrkrToRemove = runFn2 removeAllPolylinesAndMarkers mrkrToRemove unit
     
     markersToRemove :: Array String   
-    markersToRemove = ["ic_auto_nav_on_map" , "ny_ic_vehicle_nav_on_map" , "ny_ic_black_yellow_auto" , "ny_ic_koc_auto_on_map", "ny_ic_src_marker", "ny_ic_dest_marker", "ny_ic_suv_nav_on_map", "ny_ic_hatchback_nav_on_map", "ny_ic_blue_marker","ny_ic_drop_loc_marker", "ny_ic_bike_nav_on_map","ny_ic_bike_pickup_nav_on_map", "", "ny_ic_suv_plus_nav_on_map"]
+    markersToRemove = ["ic_auto_nav_on_map" , "ny_ic_vehicle_nav_on_map" , "ny_ic_black_yellow_auto" , "ny_ic_koc_auto_on_map", "ny_ic_src_marker", "ny_ic_dest_marker", "ny_ic_suv_nav_on_map", "ny_ic_hatchback_nav_on_map", "ny_ic_blue_marker","ny_ic_drop_loc_marker", "ny_ic_bike_nav_on_map","ny_ic_bike_pickup_nav_on_map", "", "ny_ic_suv_plus_nav_on_map", "ny_ic_bike_delivery_nav_on_map"]
 
 
 setKeyInSharedPrefKeys :: forall st. String -> String -> Flow st Unit

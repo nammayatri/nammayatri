@@ -70,7 +70,7 @@ import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (flowRunner)
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion, getExpiryTime,liftFlow)
 import Engineering.Helpers.Commons as EHC
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer, locateOnMapConfig, getKeyInSharedPrefKeys, defaultMarkerConfig)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer, locateOnMapConfig, getKeyInSharedPrefKeys, defaultMarkerConfig, renderBase64Image)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, chatSuggestion)
 import Engineering.Helpers.Utils (saveObject)
@@ -93,7 +93,7 @@ import Resource.Constants (decodeAddress, getLocationInfoFromStopLocation, rideT
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..), StopLocation(..),DriverProfileStatsResp(..), BookingTypes(..))
-import Services.Accessor (_lat, _lon, _area)
+import Services.Accessor (_lat, _lon, _area, _extras, _instructions)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
@@ -126,6 +126,7 @@ import Timers as TF
 import Data.Ord (abs)
 import DecodeUtil
 import LocalStorage.Cache (getValueFromCache, setValueToCache)
+import Debug(spy)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -304,6 +305,8 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | BenefitsScreen ST.HomeScreenState
                     | GotoAddUPIScreen ST.HomeScreenState
                     | VerifyManualUPI ST.HomeScreenState
+                    | UploadParcelImage ST.HomeScreenState
+                    | NotifyDriverReachedDestination ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -389,7 +392,7 @@ data Action = NoAction
             | AddLocation PrimaryButtonController.Action
             | ConfirmDisableGoto PopUpModal.Action
             | AccountBlockedAC PopUpModal.Action
-            | UpdateAndNotify
+            | UpdateAndNotify Boolean
             | UpdateWaitTime ST.TimerStatus
             | NotifyAPI
             | IsMockLocation String
@@ -437,6 +440,9 @@ data Action = NoAction
             | UpdateSpecialZoneList
             | ReferralPopUpAction ST.HomeScreenPopUpTypes (Maybe KeyStore) PopUpModal.Action
             | AddAlternateNumberAction
+            | CloseDeliveryCallPopup
+            | DeliveryCall ST.DeliverCallType
+            | NotifyReachedDestination
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -660,6 +666,8 @@ eval (Notification notificationType) state = do
     let newState = state{props{showAccessbilityPopup = isJust state.data.activeRide.disabilityTag, safetyAudioAutoPlay = false}}
     void $ pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP "true"
     continueWithCmd newState [ pure if (not state.data.activeRide.notifiedCustomer) then NotifyAPI else AfterRender]
+  else if (checkNotificationType notificationType ST.DRIVER_REACHED_DESTINATION) then do
+    continueWithCmd state [pure if (not state.data.activeRide.notifiedReachedDestination) then NotifyReachedDestination else AfterRender]
   else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED, show ST.TRIP_STARTED, show ST.EDIT_LOCATION]) then do
       exit $ FcmNotification notificationType state{ props { specialZoneProps{ currentGeoHash = "" }} }
   else continue state
@@ -880,6 +888,9 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone otp)) state = do
         else
           updateAndExit newState $ StartRide newState
 
+eval (InAppKeyboardModalAction (InAppKeyboardModal.RetakeParcelImage)) state = do
+  exit $ UploadParcelImage state
+
 eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.BackPressed)) state = do
   continue $ state { props = state.props { enterOtpModal = state.props.enterOdometerReadingModal, enterOdometerReadingModal = false,endRideOtpModal = state.props.endRideOdometerReadingModal,endRideOdometerReadingModal = false} }
 
@@ -929,11 +940,15 @@ eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnSelection key index
 
 eval (RideActionModalAction (RideActionModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
 eval (RideActionModalAction (RideActionModal.StartRide)) state = do
-  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, enterOdometerFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false, arrivedAtStop = isNothing state.data.activeRide.nextStopAddress } }
+  if state.data.activeRide.tripType == ST.Delivery && getValueToLocalStore PARCEL_IMAGE_UPLOADED /= "true" then do
+    exit $ UploadParcelImage state 
+  else
+    continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, enterOdometerFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false, arrivedAtStop = isNothing state.data.activeRide.nextStopAddress } }
+
 eval (RideActionModalAction (RideActionModal.EndRide)) state = do
-  if state.data.activeRide.tripType == ST.Rental then continue state{props{endRideOtpModal = true,enterOtpFocusIndex = 0, enterOdometerFocusIndex = 0, otpIncorrect = false, rideOtp="",odometerValue=""}, data{route = []}}
-  else if state.data.activeRide.tripType == ST.Intercity then continue state { props{ endRideOtpModal = true, enterOtpFocusIndex = 0, otpIncorrect = false, rideOtp = "" } }
-  else continue $ (state {props {endRidePopUp = true}, data {route = []}})
+  if Array.any (_ == state.data.activeRide.tripType) [ST.Rental, ST.Intercity, ST.Delivery] then 
+    continue state{props{endRideOtpModal = true,enterOtpFocusIndex = 0, enterOdometerFocusIndex = 0, otpIncorrect = false, rideOtp="",odometerValue=""}, data{route = []}}
+  else continue state {props {endRidePopUp = true}, data {route = []}}
 
 eval (RideActionModalAction (RideActionModal.ArrivedAtStop)) state = do
   exit $ ArrivedAtStop state
@@ -970,16 +985,22 @@ eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
 eval (RideActionModalAction (RideActionModal.CancelRide)) state = do
   continue state{ data {cancelRideConfirmationPopUp{delayInSeconds = 5,  continueEnabled=false}}, props{cancelConfirmationPopup = true}}
 eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
-  let exophoneNumber = if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone
-  updateWithCmdAndExit state [ do
-    void $ pure $ showDialer exophoneNumber false -- TODO: FIX_DIALER
-    _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
-    pure NoAction
-    ] $ CallCustomer state exophoneNumber
+  if state.data.activeRide.tripType == ST.Delivery && state.props.currentStage == ST.RideStarted then
+    continue state{props{showDeliveryCallPopup = true}}
+  else do
+    let exoPhoneNo = if state.data.activeRide.tripType == ST.Delivery then maybe "0000" (\(API.PersonDetails det) -> det.primaryExophone) state.data.activeRide.senderPersonDetails else state.data.activeRide.exoPhone
+    let exophoneNumber = if (take 1 exoPhoneNo) == "0" then exoPhoneNo else "0" <> exoPhoneNo
+    updateWithCmdAndExit state [ do
+      void $ pure $ showDialer exophoneNumber false
+      _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
+      pure NoAction
+      ] $ CallCustomer state exophoneNumber
 
 eval (RideActionModalAction (RideActionModal.SecondaryTextClick popUpType)) state = do
   let updatedState = if popUpType == RideActionModal.RentalInfo then state{props{rentalInfoPopUp = true, safetyAudioAutoPlay = false}}else state{props{showAccessbilityPopup = true, safetyAudioAutoPlay = false}}
   continue updatedState
+eval (RideActionModalAction (RideActionModal.MoreDetails)) state = do
+  continue state { props { isSourceDetailsExpanded = not state.props.isSourceDetailsExpanded } }
 
 eval (MakePaymentModalAC (MakePaymentModal.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = updateAndExit state $ OpenPaymentPage state
 
@@ -989,6 +1010,20 @@ eval (MakePaymentModalAC (MakePaymentModal.Info)) state = continue state{data { 
 
 eval (RateCardAC (RateCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = continue state{data { paymentState {showRateCard = false}}}
 
+eval (CloseDeliveryCallPopup) state = continue state{props{showDeliveryCallPopup = false}}
+
+eval (DeliveryCall item) state =  do
+  let exoPhoneNo = case item of
+        ST.SENDER -> maybe "0000" (\(API.PersonDetails det) -> det.primaryExophone) state.data.activeRide.senderPersonDetails
+        ST.RECEIVER -> maybe "0000" (\(API.PersonDetails det) -> det.primaryExophone) state.data.activeRide.receiverPersonDetails
+  let exoPhoneNumber = if (take 1 exoPhoneNo) == "0" then exoPhoneNo else "0" <> exoPhoneNo
+  let newState = state { props { showDeliveryCallPopup = false } }
+  updateWithCmdAndExit newState [ do
+    void $ pure $ showDialer exoPhoneNumber false 
+    _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
+    pure NoAction
+    ] $ CallCustomer newState exoPhoneNumber
+  
 ------------------------------- ChatService - Start --------------------------
 
 eval (OpenChatScreen) state = do
@@ -1203,12 +1238,16 @@ eval (TimeUpdate time lat lng) state = do
           _ <- pure $ JB.exitLocateOnMap ""
           checkPermissionAndUpdateDriverMarker newState true
     else pure unit
-    case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, isJust state.data.advancedRideData, waitTimeEnabledForCity of
-      true, ST.RideAccepted, false, false, true -> do
+    case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, isJust state.data.advancedRideData, waitTimeEnabledForCity, state.data.activeRide.tripType, state.data.config.destinationReachedWaitTimeConfig.enableWaitTime of
+      true, ST.RideAccepted, false, false, true, _, _ -> do
         let dist = getDistanceBwCordinates driverLat driverLong state.data.activeRide.src_lat state.data.activeRide.src_lon
             insideThreshold = dist <= state.data.config.waitTimeConfig.thresholdDist
-        pure $ if insideThreshold then UpdateAndNotify else (UpdateLastLoc driverLat driverLong insideThreshold)
-      _, _, _, _, _ -> pure $ UpdateLastLoc driverLat driverLong false
+        pure $ if insideThreshold then UpdateAndNotify true else (UpdateLastLoc driverLat driverLong insideThreshold)
+      _, ST.RideStarted, _, _, _, ST.Delivery, true -> do
+        let dist = getDistanceBwCordinates driverLat driverLong state.data.activeRide.dest_lat state.data.activeRide.dest_lon
+            insideThreshold = dist <= state.data.config.destinationReachedWaitTimeConfig.thresholdDist
+        pure $ if insideThreshold then UpdateAndNotify false else (UpdateLastLoc driverLat driverLong insideThreshold)
+      _, _, _, _, _, _, _ -> pure $ UpdateLastLoc driverLat driverLong false
     ]
 
 eval (OnMarkerClickCallBack tag lat lon) state = do
@@ -1231,26 +1270,37 @@ eval (OnMarkerClickCallBack tag lat lon) state = do
 
 eval (UpdateLastLoc lat lon val) state = continue state {data { prevLatLon = Just {lat : lat, lon : lon, place : "", driverInsideThreshold : false}}}
   
-eval (UpdateAndNotify) state =
+eval (UpdateAndNotify atSource) state =
   continueWithCmd state
         [ do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
               $ do
                   push <- liftFlowBT $ getPushFn Nothing "HomeScreen"
-                  GetRouteResp routeApiResponse <- Remote.getRouteBT (Remote.makeGetRouteReq state.data.currentDriverLat state.data.currentDriverLon state.data.activeRide.src_lat state.data.activeRide.src_lon) "pickup"
+                  GetRouteResp routeApiResponse <- case atSource of
+                    true -> Remote.getRouteBT (Remote.makeGetRouteReq state.data.currentDriverLat state.data.currentDriverLon state.data.activeRide.src_lat state.data.activeRide.src_lon) "pickup"
+                    false -> Remote.getRouteBT (Remote.makeGetRouteReq state.data.currentDriverLat state.data.currentDriverLon state.data.activeRide.dest_lat state.data.activeRide.dest_lon) "trip"
                   let shortRoute = (routeApiResponse Array.!! 0)
                   liftFlowBT $ push $ case shortRoute of
                       Just (Route route) -> do
-                          if route.distance <= state.data.config.waitTimeConfig.routeDistance then NotifyAPI 
-                          else do
-                            let dist = getDistanceBwCordinates state.data.currentDriverLat state.data.currentDriverLon state.data.activeRide.src_lat state.data.activeRide.src_lon
-                            if dist <= state.data.config.waitTimeConfig.straightLineDist then NotifyAPI else UpdateLastLoc state.data.currentDriverLat state.data.currentDriverLon false
+                        case atSource of
+                          true -> do
+                            if route.distance <= state.data.config.waitTimeConfig.routeDistance then NotifyAPI 
+                            else do
+                              let dist = getDistanceBwCordinates state.data.currentDriverLat state.data.currentDriverLon state.data.activeRide.src_lat state.data.activeRide.src_lon
+                              if dist <= state.data.config.waitTimeConfig.straightLineDist then NotifyAPI else UpdateLastLoc state.data.currentDriverLat state.data.currentDriverLon false
+                          false -> do
+                            if route.distance <= state.data.config.destinationReachedWaitTimeConfig.routeDistance then NotifyReachedDestination
+                            else do
+                              let dist = getDistanceBwCordinates state.data.currentDriverLat state.data.currentDriverLon state.data.activeRide.dest_lat state.data.activeRide.dest_lon
+                              if dist <= state.data.config.destinationReachedWaitTimeConfig.straightLineDist then NotifyReachedDestination else UpdateLastLoc state.data.currentDriverLat state.data.currentDriverLon false
                       _ -> NoAction
                   pure unit
             pure NoAction
         ]
 
 eval NotifyAPI state = updateAndExit state $ NotifyDriverArrived state 
+
+eval NotifyReachedDestination state = updateAndExit state $ NotifyDriverReachedDestination state
 
 eval (RideActiveAction activeRide mbAdvancedRide) state = do
   let currActiveRideDetails = activeRideDetail state activeRide
@@ -1552,6 +1602,7 @@ eval (SwitchBookingStage stage) state = do
       props {bookingStage = stage, currentStage = fetchStageFromRideStatus activeRideData}
     }
 
+
 eval _ state = continue state
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Boolean -> Effect Unit
@@ -1629,7 +1680,7 @@ activeRideDetail state (RidesInfo ride) =
   actualRideDuration : ride.actualDuration,
   riderName : fromMaybe "" ride.riderName,
   estimatedFare : ride.driverSelectedFare + ride.estimatedBaseFare,
-  notifiedCustomer : Array.any (_ == getValueToLocalStore WAITING_TIME_STATUS) [(show ST.PostTriggered), (show ST.Triggered), (show ST.Scheduled)],
+  notifiedCustomer : Array.any (_ == getValueToLocalStore WAITING_TIME_STATUS) [(show ST.PostTriggered), (show ST.Triggered), (show ST.Scheduled), (show ST.NotTriggered)],
   exoPhone : ride.exoPhone,
   waitTimeSeconds :if ride.status == "INPROGRESS" && isTimerValid then waitTime else -1,
   rideCreatedAt : ride.createdAt,
@@ -1674,8 +1725,16 @@ activeRideDetail state (RidesInfo ride) =
   estimatedTollCharges :  fromMaybe 0.0 ride.estimatedTollCharges,
   acRide : ride.isVehicleAirConditioned,
   bapName : transformBapName $ fromMaybe "" ride.bapName,
-  bookingFromOtherPlatform : not ride.isValueAddNP
-, parkingCharge : fromMaybe 0.0 ride.parkingCharge
+  bookingFromOtherPlatform : not ride.isValueAddNP,
+  parkingCharge : fromMaybe 0.0 ride.parkingCharge,
+  extraFromLocationInfo : (ride.fromLocation) ^. _extras,
+  extraToLocationInfo : ride.toLocation >>= (\toLocation -> (toLocation ^. _extras)),
+  senderInstructions : (ride.fromLocation) ^. _instructions,
+  receiverInstructions : ride.toLocation >>= (\toLocation -> toLocation ^. _instructions),
+  notifiedReachedDestination : Array.any (_ == getValueToLocalStore DESTINATION_REACHED_WAITING_TIME_STATUS) [(show ST.PostTriggered), (show ST.Triggered), (show ST.Scheduled), (show ST.NotTriggered)],
+  senderPersonDetails : ride.senderDetails,
+  receiverPersonDetails : ride.receiverDetails,
+  deliveryInitiatedAs : Nothing
 }
   where 
     getAddressFromStopLocation :: Maybe API.StopLocation -> Maybe String

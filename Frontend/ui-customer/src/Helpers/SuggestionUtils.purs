@@ -386,6 +386,7 @@ correctServiceTierName serviceTierName =
     Just "SEDAN" -> Just "Sedan"
     Just "AUTO_RICKSHAW" -> Just "Auto"
     Just "HATCHBACK" -> Just "Hatchback"
+    Just "DELIVERY_BIKE" -> Just "Bike Parcel"
     _ -> serviceTierName
 
 removeDuplicateTrips :: Array Trip -> Int -> Array Trip
@@ -503,6 +504,7 @@ getVariant serviceTier variant =
     Just "Non-AC Mini" -> Just "TAXI"
     Just "Bike Taxi" -> Just "BIKE"
     Just "XL Plus" -> Just "SUV_PLUS"
+    Just "2 Wheeler" -> Just "DELIVERY_BIKE"
     _ -> variant
 
 fetchFamousDestinations :: LazyCheck -> Array LocationListItemState

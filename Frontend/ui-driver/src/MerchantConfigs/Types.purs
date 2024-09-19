@@ -23,6 +23,7 @@ type AppConfigDriver a =
     purpleRideConfig :: PurpleRideConfig,
     mapConfig :: MapConfig,
     waitTimeConfig :: WaitTimeConfig,
+    destinationReachedWaitTimeConfig :: WaitTimeConfig,
     cityConfig :: Array CityConfig,
     unserviceableThreshold :: Number,
     enableMockLocation :: Boolean,

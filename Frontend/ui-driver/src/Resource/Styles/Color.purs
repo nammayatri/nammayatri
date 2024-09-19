@@ -435,3 +435,6 @@ lightGray = "#A7A7A7"
 
 turquoiseBlue :: Color
 turquoiseBlue = "#42B8BA"
+
+seaGreen :: Color
+seaGreen = "#288B43"

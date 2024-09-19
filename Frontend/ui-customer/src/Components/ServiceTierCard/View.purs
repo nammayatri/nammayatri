@@ -57,9 +57,9 @@ view config = let
     , textView
         $ [ height WRAP_CONTENT
           , width WRAP_CONTENT
-          , text $ if config.showACPill 
-                      then parseName config.name
-                      else config.name
+          , text $ mapDeliveryServiceTier $ if config.showACPill 
+              then parseName config.name
+              else config.name
           , color Color.black700
           , padding $ PaddingBottom if EHC.os == "IOS" then 0 else 2
           , margin $ MarginLeft 4
@@ -117,13 +117,14 @@ view config = let
     ]
   where
     bluePillPadding = if EHC.os == "IOS" then 3 else 2
+    mapDeliveryServiceTier name = if name == "Delivery Bike" then "2W Parcel" else name
 
 
 showACDetails :: String -> Maybe Boolean -> Boolean
 showACDetails name isAc =
     case isAc of
         Just val -> val
-        Nothing -> (not DS.contains (DS.Pattern "Non-AC") name) && Array.notElem name ["Auto", "Taxi", "AUTO_RICKSHAW", "Eco", "Bike Taxi"]
+        Nothing -> (not DS.contains (DS.Pattern "Non-AC") name) && Array.notElem name ["Auto", "Taxi", "AUTO_RICKSHAW", "Eco", "Bike Taxi", "Delivery Bike"]
 
 type Config
   = { name :: String
@@ -148,3 +149,4 @@ parseFpt fpt =
     ONE_WAY -> "Normal"
     ONE_WAY_SPECIAL_ZONE -> "Special Zone"
     DRIVER_OFFER -> "Normal"
+    DELIVERY -> "Delivery"

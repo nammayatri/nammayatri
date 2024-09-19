@@ -42,6 +42,7 @@ data Action = StartRide
             | VisuallyImpairedCustomer
             | NoAction
             | ArrivedAtStop
+            | MoreDetails
 
 type Config = { 
   startRideActive :: Boolean,
@@ -82,8 +83,25 @@ type Config = {
   bookingFromOtherPlatform :: Boolean,
   bapName :: String,
   isOdometerReadingsRequired :: Boolean,
-  distance ::  Int
-, parkingCharge :: Number
+  distance ::  Int,
+  parkingCharge :: Number,
+  isDelivery :: Boolean,
+  delivery :: Mb.Maybe DeliveryDetails,
+  isSourceDetailsExpanded :: Boolean,
+  isDestinationDetailsExpanded :: Boolean
+}
+
+type DeliveryDetails = {
+  sender :: PersonAndDeliveryInfo,
+  receiver :: PersonAndDeliveryInfo
+}
+
+type PersonAndDeliveryInfo = {
+  name :: String,
+  premises :: Maybe String,
+  phoneNumber :: String,
+  exophoneNumber :: Maybe String,
+  instructions :: Maybe String
 }
 
 type AddressConfig = {
@@ -142,6 +160,10 @@ config = {
   bookingFromOtherPlatform : false,
   bapName : "",
   isOdometerReadingsRequired : false,
-  distance : 0
-, parkingCharge : 0.0
+  distance : 0,
+  parkingCharge : 0.0,
+  isDelivery : false,
+  delivery : Nothing,
+  isSourceDetailsExpanded : false,
+  isDestinationDetailsExpanded : false
 }

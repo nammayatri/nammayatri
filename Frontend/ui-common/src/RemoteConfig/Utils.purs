@@ -193,6 +193,7 @@ tipConfigData city variant = do
         "BIKE" -> config.bike
         "BOOK_ANY" -> config.bookAny
         "SUV_PLUS" -> config.suv
+        "DELIVERY_BIKE" -> config.deliveryBike
         _ -> config.default
 
 defaultTipsConfig :: TipsConfig
@@ -205,6 +206,7 @@ defaultTipsConfig =
   , taxiPlus: Nothing
   , bike : Nothing
   , bookAny: Nothing
+  , deliveryBike: Nothing
   , default: Nothing
   }
 
@@ -218,6 +220,7 @@ defaultSubscriptionsConfigVariantLevel =
   , taxi: Nothing
   , taxiPlus: Nothing
   , bookAny: Nothing
+  , deliveryBike: Nothing
   , default: Nothing
   }
 
@@ -256,6 +259,7 @@ subscriptionsConfigVariantLevel city variant = do
         "TAXI" -> config.taxi
         "TAXI_PLUS" -> config.taxiPlus
         "BOOK_ANY" -> config.bookAny
+        "DELIVERY_BIKE" -> config.deliveryBike
         _ -> config.default
 
 defaultGullakConfig :: GullakConfig

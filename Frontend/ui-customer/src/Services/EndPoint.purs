@@ -72,7 +72,7 @@ selectList estimateId = (getBaseUrl "15") <> "/estimate/"<> estimateId <> "/resu
 rideBookingList :: String -> String -> String -> Maybe String -> Maybe String -> String
 rideBookingList limit offset isActive status clientId = 
   maybe 
-    ((getBaseUrl "16") <> "/rideBooking/list?limit="<> limit <>"&offset="<> offset <>"&onlyActive=" <> isActive)
+    ((getBaseUrl "16") <> "/rideBooking/list?limit/="<> limit <>"&offset="<> offset <>"&onlyActive=" <> isActive)
     (\rideStatus ->
       let clientIdStr = (fromMaybe "" clientId)
       in
@@ -309,3 +309,6 @@ getManuallySharedRideDetails rideId = (getBaseUrl "60") <> "/followRide/" <> rid
 
 multiChat :: String -> String 
 multiChat _ = (getBaseUrl "61") <> "/triggerFCM/message"
+
+getDeliveryImage :: String -> String
+getDeliveryImage rideId = (getBaseUrl "61") <> "/ride/" <> rideId <> "/deliveryImage"

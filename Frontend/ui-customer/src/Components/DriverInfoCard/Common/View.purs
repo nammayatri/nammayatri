@@ -31,7 +31,7 @@ import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margi
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (rippleColor, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (Stage(..), ZoneType(..), SheetState(..),City(..))
+import Screens.Types (Stage(..), ZoneType(..), SheetState(..),City(..),PersonDeliveryDetails(..))
 import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
@@ -153,7 +153,7 @@ driverDetailsView config uid nid =
                 ][ linearLayout
                   [ height $ V 38
                   , width WRAP_CONTENT
-                  , background if config.vehicleVariant == "BIKE" then "#FFFFFF" else config.config.driverInfoConfig.numberPlateBackground
+                  , background if config.vehicleVariant == "BIKE" || config.vehicleVariant == "DELIVERY_BIKE" then "#FFFFFF" else config.config.driverInfoConfig.numberPlateBackground
                   , cornerRadius 4.0
                   , orientation HORIZONTAL
                   , margin $ MarginRight 2
@@ -201,7 +201,7 @@ driverDetailsView config uid nid =
         vehicleMargin = do 
           let width = (runFn1 getLayoutBounds $ getNewIDWithTag nid).width
           if width > 125 then ((width - 125)/2) else 0
-
+        
         serviceTierConfig name = {
           name : name,
           capacity : fromString $ getVehicleCapacity config.vehicleVariant,
@@ -258,6 +258,7 @@ getVehicleImage variant vehicleDetail city = do
                           "TAXI"      -> "ic_white_taxi"
                           "TAXI_PLUS" -> "ny_ic_sedan_concept"
                           "BIKE"      -> "ny_ic_bike_concept"
+                          "DELIVERY_BIKE" -> "ny_ic_bike_delivery_concept"
                           "SUV_PLUS"  -> "ny_ic_suv_plus_concept"
                           _           -> "ny_ic_sedan_concept"
           _          -> case variant of
@@ -270,6 +271,7 @@ getVehicleImage variant vehicleDetail city = do
                           "COMFY"     -> "ny_ic_sedan_concept"
                           "BIKE"      -> "ny_ic_bike_concept"
                           "SUV_PLUS"  -> "ny_ic_suv_plus_concept"
+                          "DELIVERY_BIKE" -> "ny_ic_bike_delivery_concept"
                           _           -> "ny_ic_sedan_concept"              
     where 
       mkAutoImage :: City -> String
@@ -318,7 +320,8 @@ sourceDestinationView push config =
       ][linearLayout
         [ orientation HORIZONTAL
         , gravity CENTER
-        ][imageView
+        ] $
+        [imageView
           [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
           , height $ V 8
           , width $ V 8
@@ -338,7 +341,9 @@ sourceDestinationView push config =
           , gravity LEFT
           , color Color.black900
           , margin $ MarginTop 3
-          ] <> FontStyle.body1 TypoGraphy
+          , visibility $ boolToVisibility $ config.fareProductType /= FPT.DELIVERY
+          ] <> FontStyle.body1 TypoGraphy,
+        personNamePhone config.senderDetails pickupLocationTextWidth
         ]
       , textView $ 
         [ width WRAP_CONTENT
@@ -353,6 +358,7 @@ sourceDestinationView push config =
         , accessibility DISABLE
         ] <> FontStyle.body1 TypoGraphy
       ]
+        , sourceDestinationAddressView config.senderDetails config.source
         , separator (MarginVertical 12 12) (V 1) Color.ghostWhite isNotRentalRide
         , linearLayout
         [
@@ -393,7 +399,9 @@ sourceDestinationView push config =
               , gravity LEFT
               , margin $ MarginTop 3
               , color Color.black900
+              , visibility  $ boolToVisibility $ config.fareProductType /= FPT.DELIVERY
               ] <> FontStyle.body1 TypoGraphy
+            , personNamePhone config.receiverDetails dropLocationTextWidth
           ]
             , textView $
               [
@@ -407,7 +415,8 @@ sourceDestinationView push config =
                 , onClick push $ const config.editingDestinationLoc
                 , rippleColor Color.rippleShade
               ] <> FontStyle.body1 TypoGraphy
-      ] 
+      ],
+      sourceDestinationAddressView config.receiverDetails config.destination
     ]
 
 separator :: forall w. Margin -> Length -> String -> Boolean -> PrestoDOM (Effect Unit) w
@@ -544,3 +553,101 @@ sfl height' width' radius' =
     , background Color.grey900
     ][]
   ]
+
+personNamePhone :: forall w. Maybe PersonDeliveryDetails -> Length -> PrestoDOM (Effect Unit) w
+personNamePhone details' textWidth =
+  case details' of
+    Just details -> 
+      linearLayout[
+        width MATCH_PARENT,
+        height WRAP_CONTENT,
+        orientation VERTICAL
+      ]
+      [
+        textView $
+        [ text details.name
+        , singleLine true
+        , ellipsize true
+        , width $ textWidth
+        , height MATCH_PARENT
+        , gravity LEFT
+        , color Color.black800
+        , margin $ MarginTop 3
+        ] <> FontStyle.body1 TypoGraphy,
+        textView $
+        [
+          text details.phone,
+          ellipsize true,
+          singleLine true,
+          width $ textWidth,
+          height WRAP_CONTENT,
+          gravity LEFT,
+          color Color.black800,
+          margin $ MarginTop 2
+        ] <> FontStyle.tags TypoGraphy
+      ]
+    Nothing -> linearLayout[][]
+
+sourceDestinationAddressView :: forall w. Maybe PersonDeliveryDetails -> String -> PrestoDOM (Effect Unit) w
+sourceDestinationAddressView details' address =
+  case details' of
+    Nothing -> linearLayout[][]
+    Just details ->
+      linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , margin $ MarginTop 8
+        , background Color.blue600
+        , cornerRadius 8.0
+        , padding $ Padding 12 8 12 8
+        ]
+        [ linearLayout
+          [ orientation HORIZONTAL
+          , height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity CENTER
+          ]
+          [ linearLayout
+            [ orientation VERTICAL
+            , height WRAP_CONTENT
+            , width MATCH_PARENT
+            , gravity LEFT
+            , accessibility ENABLE
+            , weight 1.0
+            ]
+            [ linearLayout
+              [ width MATCH_PARENT
+              , orientation HORIZONTAL
+              ]
+              [ linearLayout
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , orientation VERTICAL
+                ]
+                [ textView $
+                  [ text $ details.extras
+                  , maxLines 1
+                  , ellipsize true
+                  , gravity LEFT
+                  , color Color.black800
+                  , margin $ MarginBottom 2
+                  ] <> FontStyle.tags TypoGraphy
+                , textView $
+                  [ text address
+                  , color Color.black700
+                  , maxLines $ if isJust details.instructions then 1 else 2
+                  , ellipsize true
+                  , margin $ MarginBottom 2
+                  ] <> FontStyle.body3 TypoGraphy
+                , textView $
+                  [ textFromHtml $ "<em>Pickup Instruction: " <> fromMaybe "" details.instructions <> "</em>"
+                  , color Color.black700
+                  , fontStyle $ FontStyle.italic
+                  , visibility $ boolToVisibility $ isJust details.instructions
+                  ] <> FontStyle.body3 TypoGraphy
+                ]
+              ]
+            ]  
+          ]
+        ]

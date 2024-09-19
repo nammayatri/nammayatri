@@ -61,6 +61,53 @@ getTips arr = mapWithIndex (\index item -> if item == 0 then (getString NO_TIP)
                                            else "₹" <> show item <> " " <> fromMaybe "🤩" (emoji !! index)) arr
   where
     emoji = [(getString NO_TIP), "🙂", "😀", "😃", "😁", "🤩"]
+      
+bangaloreConfig :: String -> TipConfig
+bangaloreConfig variant = 
+  case variant of
+    "SEDAN" -> mkTipConfig [0, 20, 30, 50]
+    "SUV" -> mkTipConfig [0, 20, 30, 50]
+    "HATCHBACK" -> mkTipConfig [0, 20, 30, 50]
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
+    "TAXI" -> mkTipConfig [0, 20, 30, 50]
+    "TAXI_PLUS" -> mkTipConfig [0, 20, 30, 50]
+    _ -> mkTipConfig [0, 20, 30, 50]
+
+hyderabadConfig :: String -> TipConfig
+hyderabadConfig variant = 
+  case variant of
+    "SEDAN" -> mkTipConfig []
+    "SUV" -> mkTipConfig []
+    "HATCHBACK" -> mkTipConfig []
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
+    "TAXI" -> mkTipConfig []
+    "TAXI_PLUS" -> mkTipConfig []
+    _ -> mkTipConfig []
+
+chennaiConfig :: String -> TipConfig
+chennaiConfig variant = 
+  case variant of
+    "BOOK_ANY" -> mkTipConfig []
+    _ -> mkTipConfig [0, 10, 20, 30]
+
+delhiConfig :: String -> TipConfig
+delhiConfig variant =
+  case variant of
+    "BOOK_ANY" -> mkTipConfig []
+    _ -> mkTipConfig [0, 10, 20, 30]
+
+defaultTipConfig :: String -> TipConfig
+defaultTipConfig variant = 
+  case variant of
+    "SEDAN" -> mkTipConfig []
+    "SUV" -> mkTipConfig []
+    "HATCHBACK" -> mkTipConfig []
+    "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
+    "TAXI" -> mkTipConfig []
+    "TAXI_PLUS" -> mkTipConfig []
+    "BIKE" -> mkTipConfig []
+    "DELIVERY_BIKE" -> mkTipConfig []
+    _ -> mkTipConfig []
 
 yatriSathiConfig :: String -> TipConfig
 yatriSathiConfig variant = 

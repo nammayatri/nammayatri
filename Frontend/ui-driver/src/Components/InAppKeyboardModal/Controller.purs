@@ -35,6 +35,7 @@ data Action = OnSelection String Int
             | OnClickTextCross
             | NoAction
             | OnTextViewClick String 
+            | RetakeParcelImage
 
 ----------------------------------------------- InAppKeyboardModalState ---------------------------------------------
 type InAppKeyboardModalState = {
@@ -54,6 +55,7 @@ type InAppKeyboardModalState = {
     , enableDeviceKeyboard :: Boolean
     , confirmBtnColor :: String
     , isDismissable :: Boolean
+    , showRetakeParcelImage :: Boolean
 }
 
 type TextBoxConfig = {
@@ -228,4 +230,5 @@ config = {
   , isDismissable : true
   , confirmBtnColor : Color.darkMint
   , enableDeviceKeyboard : false
+  , showRetakeParcelImage : false
   }

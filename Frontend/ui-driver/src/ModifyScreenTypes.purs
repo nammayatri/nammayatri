@@ -78,6 +78,7 @@ modifyScreenState st =
     RateCardScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rateCardScreen = a state.rateCardScreen})
     CustomerReferralTrackerScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {customerReferralTrackerScreen = a state.customerReferralTrackerScreen})
     CancellationRateScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {cancellationRateScreen = a state.cancellationRateScreen})
+    UploadParcelImageScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {uploadParcelImageScreen = a state.uploadParcelImageScreen})
 
 updateStage :: ScreenStage -> FlowBT String Unit
 updateStage stage = do

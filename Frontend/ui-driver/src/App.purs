@@ -58,6 +58,7 @@ import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
+import Screens.UploadParcelImageScreen.ScreenData as UploadParcelImageScreenData
 import Screens.Types 
 import Screens.UploadAdhaarScreen.ScreenData as UploadAdhaarScreenData
 import Screens.UploadDrivingLicenseScreen.ScreenData as UploadDrivingLicenseScreenData
@@ -132,6 +133,7 @@ newtype GlobalState = GlobalState {
   , rateCardScreen :: RateCardScreenState
   , customerReferralTrackerScreen :: CustomerReferralScreenTypes.CustomerReferralTrackerScreenState
   , cancellationRateScreen :: CancellationRateScreenState
+  , uploadParcelImageScreen :: UploadParcelImageScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -187,6 +189,7 @@ defaultGlobalState = GlobalState {
 , rateCardScreen : RateCardScreenData.initData
 , customerReferralTrackerScreen : CustomerReferralTrackerScreenData.initData
 , cancellationRateScreen : CancellationRateScreenData.initData
+, uploadParcelImageScreen : UploadParcelImageScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -252,6 +255,7 @@ data ScreenType =
   | RateCardScreenStateType (RateCardScreenState -> RateCardScreenState)
   | CustomerReferralTrackerScreenStateType (CustomerReferralScreenTypes.CustomerReferralTrackerScreenState -> CustomerReferralScreenTypes.CustomerReferralTrackerScreenState)
   | CancellationRateScreenStateType (CancellationRateScreenState -> CancellationRateScreenState)
+  | UploadParcelImageScreenStateType (UploadParcelImageScreenState -> UploadParcelImageScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -434,6 +438,8 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | GO_TO_BENEFITS_SCREEN_FROM_HOME
                           | GO_TO_ADD_UPI_SCREEN
                           | VERIFY_MANUAL_UPI HomeScreenState
+                          | GO_TO_UPLOAD_PARCEL_IMAGE HomeScreenState
+                          | NOTIFY_DRIVER_REACHED_DESTINATION HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
@@ -555,3 +561,5 @@ data CUSTOMER_REFERRAL_TRACKER_SCREEN_OUTPUT = ADD_UPI_FLOW CustomerReferralScre
                                                | DELETE_UPI_FLOW CustomerReferralScreenTypes.CustomerReferralTrackerScreenState
                                                | REFRESH_ORDER_STATUS CustomerReferralScreenTypes.CustomerReferralTrackerScreenState
                                                | HOME_SCREEN_FROM_REFERRAL_TRACKER
+
+data UPLOAD_PARCEL_IMAGE_SCREEN_OUTPUT = GOTO_HOME_SCREEN | UPLOAD_IMAGE UploadParcelImageScreenState

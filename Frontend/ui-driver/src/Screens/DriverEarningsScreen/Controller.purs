@@ -762,9 +762,10 @@ dummyRideHistoryItem = RidesInfo {
       tollConfidence : Nothing,
       bookingType : Nothing,
       bapName : Nothing,
-      isValueAddNP : false
-    , parkingCharge : Nothing
- , coinsEarned : []   
+      isValueAddNP : false,
+      parkingCharge : Nothing,
+      senderDetails : Nothing,
+      receiverDetails : Nothing
 }
 
 dummyLocationInfo :: LocationInfo
@@ -778,5 +779,7 @@ dummyLocationInfo = LocationInfo {
       lat : 0.0,
       city : Nothing,
       areaCode : Nothing,
-      lon : 0.0
+      lon : 0.0,
+      instructions : Nothing,
+      extras : Nothing
   }

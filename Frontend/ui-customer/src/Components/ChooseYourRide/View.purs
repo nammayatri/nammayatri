@@ -48,10 +48,12 @@ import Data.Tuple (Tuple(..))
 import RemoteConfig as RC
 import Storage as ST
 import Components.ChooseVehicle.Controller as CCC
+import Debug (spy)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
-  relativeLayout
+  let _ = spy "ChooseYourRideView" config
+  in relativeLayout
     [ width MATCH_PARENT
     , height $ V $ EHC.screenHeight unit
     , clipChildren false
@@ -93,7 +95,7 @@ view push config =
       let variantBasedList = filterVariantAndEstimate config.quoteList
           topProviderList = filter (\element -> element.providerType == ONUS) config.quoteList
           currentPeekHeight = getQuoteListViewHeight config $ length if config.showMultiProvider then variantBasedList else topProviderList 
-      in (if currentPeekHeight == 0 then 470 else currentPeekHeight) + (if config.enableTips then 36 else 0)
+      in (if currentPeekHeight == 0 then 470 else currentPeekHeight) + (if config.enableTips then 36 else 0) + (if config.fareProductType == DELIVERY then 130 + (if config.tipViewProps.stage == TIP_AMOUNT_SELECTED then 40 else 0) else 0)
 
 addTipView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 addTipView push state = 
@@ -136,7 +138,9 @@ bottomLayoutView push config visibility' id' =
   , afterRender push $ const $ NoAction
   , padding $ Padding 16 (if config.showPreferences then 16 else 0) 16 16
   , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5 
-  ][ addTipView push config
+  ][ 
+    deliveryPaymentAtReceivingEndLayout push config
+   , addTipView push config
    , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config "PrimaryButtomConfirm") 
    ]
   
@@ -499,10 +503,7 @@ chooseYourRideView push config =
                   ][]
                 ] 
               , textView (
-                [ text 
-                    if length config.quoteList > 1 
-                    then (getString CHOOSE_YOUR_RIDE)
-                    else (getString CONFIRM_YOUR_RIDE)
+                [ text headerText
                 , color Color.black800
                 , gravity CENTER_HORIZONTAL
                 , height WRAP_CONTENT
@@ -536,7 +537,7 @@ chooseYourRideView push config =
   ]
   where 
     selectedVehicle = fromMaybe ChooseVehicle.config $ config.quoteList !! config.activeIndex 
-
+    headerText = if config.fareProductType == DELIVERY then getString CONFIRM_YOUR_DELIVERY else if length config.quoteList > 1 then getString CHOOSE_YOUR_RIDE else getString CONFIRM_YOUR_RIDE
     extraChargesView = 
       linearLayout [
         width MATCH_PARENT
@@ -681,6 +682,7 @@ quoteListView push config =
                         ) topProviderList)
            , if EHC.os /= "IOS" then bottomLayoutViewKeyed push config "BottomLayoutView" else Tuple "EmptyLL" $ linearLayout[][]-- TODO:: Temporary fix, should make scrollable list better
           ]
+        
       ]
     -- , linearLayout -- TODO:: Temporary removing gradient for estimates
     --   [ height $ WRAP_CONTENT
@@ -723,7 +725,9 @@ quoteListView push config =
       , afterRender push $ const $ NoAction
       , padding $ Padding 16 (if config.showPreferences then 16 else 0) 16 16
       , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5 
-      ][ addTipView push config
+      ][ 
+      deliveryPaymentAtReceivingEndLayout push config
+      , addTipView push config
       , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig config "KeyedButtonPrimary") 
       ]
 
@@ -778,10 +782,10 @@ getQuoteListViewHeight config len =
 
 getScrollViewHeight :: Config -> Int -> Int
 getScrollViewHeight config len = 
-   let quoteHeight = HU.getDefaultPixelSize $ config.selectedEstimateHeight
-       height = if quoteHeight == 0 then 84 else quoteHeight
-       rideHeaderLayout = HU.getDefaultPixelSize (runFn1 getLayoutBounds $ EHC.getNewIDWithTag "rideEstimateHeaderLayout").height
-       rideHeaderHeight = if rideHeaderLayout == 0 then 81 else rideHeaderLayout
+  let quoteHeight = HU.getDefaultPixelSize $ config.selectedEstimateHeight
+      height = if quoteHeight == 0 then 84 else quoteHeight
+      rideHeaderLayout = HU.getDefaultPixelSize (runFn1 getLayoutBounds $ EHC.getNewIDWithTag "rideEstimateHeaderLayout").height
+      rideHeaderHeight = if rideHeaderLayout == 0 then 81 else rideHeaderLayout
   in  if len >= 4 then 
         if EHC.os == "IOS" then 
           (getHeightFromPercent 73) - rideHeaderHeight
@@ -830,3 +834,44 @@ filterVariantAndEstimate configArray = fromMaybe [] $ do
       case minPriceItem.minPrice, maxPriceItem.maxPrice of 
         Just minP, Just maxP -> pure $ first { showInfo = false, price = if minP == maxP then currencySymbol <> show minP else currencySymbol <> show minP <> " - " <> currencySymbol <> show maxP }
         _ , _ -> pure $ first { showInfo = false, price = if minBPItem.basePrice == maxBPItem.basePrice then  currencySymbol <> show minBPItem.basePrice else  currencySymbol <> show minBPItem.basePrice <> " - " <> currencySymbol <>  show maxBPItem.basePrice }
+
+
+deliveryPaymentAtReceivingEndLayout :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+deliveryPaymentAtReceivingEndLayout push config = 
+      linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation HORIZONTAL
+      , padding $ Padding 8 12 8 12
+      , background Color.blue600
+      , cornerRadius 12.0
+      , margin $ MarginTop 16
+      , gravity CENTER_VERTICAL
+      , visibility $ boolToVisibility $ config.fareProductType == DELIVERY
+      ]
+      [ imageView[
+            height $ V 20
+          , width $ V 20
+          , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_wallet_outline"
+          , margin $ MarginRight 12
+          ]
+      , linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        ]
+        [ textView $
+          [ text $ getString PAYMENT_AT_RECEIVING_END
+          , color Color.black800
+          , width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , margin $ MarginBottom 2
+          ] <> FontStyle.tags LanguageStyle
+        , textView $
+          [ text $ getString PAYMENT_AT_RECEIVING_END_DESC
+          , color Color.black700
+          , width WRAP_CONTENT
+          , height WRAP_CONTENT
+          ] <> FontStyle.body3 LanguageStyle
+      ]
+      ]
