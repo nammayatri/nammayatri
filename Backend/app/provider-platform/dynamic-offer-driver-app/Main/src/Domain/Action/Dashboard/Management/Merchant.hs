@@ -1199,7 +1199,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                               [] -> distanceBuffers
                               _ -> distanceBuffers <> NE.fromList (concat remainingRentalDistanceBuffer)
                       let distanceBuffersDuplicateRemoved = NE.nubBy (\a b -> a.rideDuration == b.rideDuration) distanceBuffers'
-                      let pricingSlabsDuplicateRemoved = NE.nubBy (\a b -> a.timePercentage == b.timePercentage) pricingSlabs'
+                      let pricingSlabsDuplicateRemoved = NE.nubBy (\a b -> a.timePercentage == b.timePercentage && a.distancePercentage == b.distancePercentage) pricingSlabs'
                       return $ FarePolicy.RentalDetails FarePolicy.FPRentalDetails {distanceBuffers = distanceBuffersDuplicateRemoved, pricingSlabs = pricingSlabsDuplicateRemoved, ..}
                     FarePolicy.InterCityDetails FarePolicy.FPInterCityDetails {currency = _currency', ..} -> do
                       remainingPricingSlabs <-
@@ -1215,7 +1215,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                               [] -> pricingSlabs
                               _ -> pricingSlabs <> NE.fromList (concat remainingPricingSlabs)
 
-                      let pricingSlabsDuplicateRemoved = NE.nubBy (\a b -> a.timePercentage == b.timePercentage) pricingSlabs'
+                      let pricingSlabsDuplicateRemoved = NE.nubBy (\a b -> a.timePercentage == b.timePercentage && a.distancePercentage == b.distancePercentage) pricingSlabs'
                       return $ FarePolicy.InterCityDetails FarePolicy.FPInterCityDetails {pricingSlabs = pricingSlabsDuplicateRemoved, ..}
                     _ -> return farePolicyDetails
                 return $ FarePolicy.FarePolicy {id = newId, driverExtraFeeBounds = driverExtraFeeBoundsDuplicateRemoved, farePolicyDetails = farePolicyDetails', ..}
@@ -1413,10 +1413,10 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
           FarePolicy.Rental -> do
             baseFare :: HighPrecMoney <- readCSVField idx row.baseFare "Base Fare"
             deadKmFare :: HighPrecMoney <- readCSVField idx row.deadKmFare "Dead Km Fare"
-            perHourCharge :: HighPrecMoney <- readCSVField idx row.deadKmFare "Per Hour Charge Amount"
-            perExtraMinRate :: HighPrecMoney <- readCSVField idx row.extraKmRateStartDistance "Per Extra Min Rate"
+            perHourCharge :: HighPrecMoney <- readCSVField idx row.perHourCharge "Per Hour Charge"
+            perExtraMinRate :: HighPrecMoney <- readCSVField idx row.perExtraMinRate "Per Extra Min Rate"
             perExtraKmRate :: HighPrecMoney <- readCSVField idx row.perExtraKmRate "Per Extra Km Rate"
-            includedKmPerHr :: Kilometers <- readCSVField idx row.perExtraKmRate "Included Km Per Hour"
+            includedKmPerHr :: Kilometers <- readCSVField idx row.includedKmPerHr "Included Km Per Hour"
             plannedPerKmRate :: HighPrecMoney <- readCSVField idx row.plannedPerKmRate "Planned Per Km Rate"
             maxAdditionalKmsLimit :: Kilometers <- readCSVField idx row.maxAdditionalKmsLimit "Max Additional Kms Limit"
             totalAdditionalKmsLimit :: Kilometers <- readCSVField idx row.totalAdditionalKmsLimit "Total Additional Kms Limit"
@@ -1445,8 +1445,8 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
           FarePolicy.InterCity -> do
             baseFare :: HighPrecMoney <- readCSVField idx row.baseFare "Base Fare"
             deadKmFare :: HighPrecMoney <- readCSVField idx row.deadKmFare "Dead Km Fare"
-            perHourCharge :: HighPrecMoney <- readCSVField idx row.deadKmFare "Per Hour Charge Amount"
-            perExtraMinRate :: HighPrecMoney <- readCSVField idx row.extraKmRateStartDistance "Per Extra Min Rate"
+            perHourCharge :: HighPrecMoney <- readCSVField idx row.perHourCharge "Per Hour Charge Amount"
+            perExtraMinRate :: HighPrecMoney <- readCSVField idx row.perExtraMinRate "Per Extra Min Rate"
             perExtraKmRate :: HighPrecMoney <- readCSVField idx row.perExtraKmRate "Per Extra Km Rate"
             perKmRateOneWay :: HighPrecMoney <- readCSVField idx row.perKmRateOneWay "Per Km Rate One Way"
             kmPerPlannedExtraHour :: Kilometers <- readCSVField idx row.kmPerPlannedExtraHour "Km Per Planned Extra Hour"
