@@ -667,9 +667,10 @@ tipsViewConfig state = let
 
 parseConerRadius :: Corners -> Number
 parseConerRadius corners =
-  case corners of
-    Corners radius _ _ _ _ -> radius
-    Corner radius -> radius
+    let rd = case corners of
+                Corners radius _ _ _ _ -> radius
+                Corner radius -> radius
+    in spy "rd" rd 
 
 upiView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 upiView push state = 

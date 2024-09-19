@@ -66,7 +66,6 @@ import Resource.Constants as RC
 import SessionCache
 import Helpers.API (getDeviceDetails)
 
-
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders dummy isGzipCompressionEnabled = do
     _ <- pure $ printLog "dummy" dummy
@@ -1694,18 +1693,3 @@ makeAadhaarCardReq aadhaarBackImageId aadhaarFrontImageId address consent consen
        "validationStatus" : validationStatus,
        "transactionId" : transactionId
     }
-
-
---------------------------------- getCoinInfo ---------------------------------------------------------------------------------------------------
-
-getCoinInfo :: String -> Flow GlobalState (Either ErrorResponse CoinInfoRes)
-getCoinInfo lazy = do
-    headers <- getHeaders "" false
-    withAPIResult (EP.getCoinInfo "") identity $ callAPI headers CoinInfoReq
-
-getCoinInfoBT :: String -> FlowBT String CoinInfoRes
-getCoinInfoBT lazy = do
-  headers <- getHeaders' "" false
-  withAPIResultBT (EP.getCoinInfo "") identity errorHandler (lift $ lift $ callAPI headers CoinInfoReq)
-  where
-    errorHandler (ErrorPayload errorPayload) =  BackT $ pure GoBack

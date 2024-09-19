@@ -1609,5 +1609,3 @@ getKN stringKey =
         TO_GET_MONEY -> "ಹಣ ಪಡೆಯಲು"
         TILL date -> date <> " ರವರೆಗೆ"
         REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK -> "ರೆಫರಲ್ ಬೋನಸ್ ಅನ್ನು ನಿಮ್ಮ ಬ್ಯಾಂಕ್ ಖಾತೆಗೆ ಜಮಾ ಮಾಡಲಾಗುತ್ತದೆ"
-        POINTS_EARNED_ points -> points <> " ಅಂಕ ಗಳಿಸಿದೆ ✨"
-        FOR_METRO_RIDE -> "ಮೆಟ್ರೋ ಸವಾರಿಗಾಗಿ"

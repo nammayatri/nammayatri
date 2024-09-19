@@ -49,7 +49,7 @@ import Data.Ord (compare)
 import Data.Semigroup ((<>))
 import Data.Set (toggle)
 import Data.String (Pattern(..), split, toUpper, drop, indexOf, toLower, take)
-import Data.String as DS
+import Data.String as STR
 import Data.String.CodeUnits (splitAt)
 import Data.String.Common (joinWith, split, toUpper, trim)
 import Data.Time.Duration (Milliseconds(..))
@@ -787,7 +787,7 @@ onBoardingFlow = do
             then if isJust detail.errorCode then void $ pure $ JB.toast $ getHvErrorMsg detail.errorCode else pure unit
           else pure unit
           let panNum = fromMaybe "" detail.pan
-          if DS.null panNum
+          if STR.null panNum
             then do
               if result.status /= (Just "auto_declined") then void $ pure $ toast (getString CANNOT_DETECT_PAN_CARD) else pure unit
               void $ lift $ lift $ delay $ Milliseconds 100.0 -- This delay is added for toggleloader to work.
@@ -809,7 +809,7 @@ onBoardingFlow = do
             then if isJust detail.errorCode then void $ pure $ JB.toast $ getHvErrorMsg detail.errorCode else pure unit
           else pure unit
           let aadhaarNum = fromMaybe "" detail.idNumber
-          if DS.null aadhaarNum || detail.errorCode == Just "113" -- or condition added to make sure both sides are detected
+          if STR.null aadhaarNum || detail.errorCode == Just "113" -- or condition added to make sure both sides are detected
             then do
               if result.status /= (Just "auto_declined") then void $ pure $ toast (getString CANNOT_DETECT_AADHAAR) else pure unit
               void $ lift $ lift $ delay $ Milliseconds 100.0 -- This delay is added for toggleloader to work.
@@ -2087,7 +2087,7 @@ issueReportChatScreenFlow = do
       (PostIssueRes postIssueRes) <- Remote.postIssueBT postIssueReq
       (IssueInfoRes issueInfoRes) <- Remote.issueInfoBT postIssueRes.issueReportId
       void $ pure $ hideKeyboardOnNavigation true
-      let showDescription = DS.length (trim issueInfoRes.description) > 0
+      let showDescription = STR.length (trim issueInfoRes.description) > 0
           descMessages = if showDescription then snoc state.data.chatConfig.messages (makeChatComponent' issueInfoRes.description Nothing Nothing "Driver" (getCurrentUTC "") "Text" 500) else state.data.chatConfig.messages
           mediaMessages' = mapWithIndex (\index media -> makeChatComponent' media.url Nothing Nothing "Driver" (getCurrentUTC "") media._type ((index + if showDescription then 2 else 1) * 500)) issueInfoRes.mediaFiles
       if state.props.isReversedFlow
@@ -2606,8 +2606,7 @@ homeScreenFlow = do
                         payerVpa = payerVpa, 
                         specialZonePickup = if isSpecialPickUpZone then Just true else Nothing,
                         capacity = response.vehicleCapacity,
-                        serviceTier = response.vehicleServiceTierName,
-                        specialLocationTag = response.specialLocationTag
+                        serviceTier = response.vehicleServiceTierName
                       }
                     , parking {
                         estimatedCharge = response.parkingCharge
@@ -2617,7 +2616,6 @@ homeScreenFlow = do
                       , finalCharge = fromMaybe 0.0 response.tollCharges
                       , estimatedCharge = fromMaybe 0.0 response.estimatedTollCharges
                       }
-                    , coinsEarned = response.coinsEarned
                     },
                     props {
                       isFreeRide = fromMaybe false response.isFreeRide
@@ -3893,7 +3891,7 @@ benefitsScreenFlow = do
       let cachedSelectedLanguage = (getValueToLocalStore LMS_SELECTED_LANGUAGE_CACHE)
           cityConfig = (getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION))
           selectedLanguage = if (cachedSelectedLanguage == "__failed" || cachedSelectedLanguage == "null" || cachedSelectedLanguage == "") 
-                              then if (DS.null cityConfig.languageKey) then (getLanguageLocale languageKey) else cityConfig.languageKey
+                              then if (STR.null cityConfig.languageKey) then (getLanguageLocale languageKey) else cityConfig.languageKey
                               else cachedSelectedLanguage
       modifyScreenState $ LmsVideoScreenStateType (\lmsVideoScreen -> lmsVideoScreen { props {selectedLanguage = selectedLanguage, selectedModule = state.props.selectedModule}})
       lmsVideoScreenFlow
@@ -4175,7 +4173,7 @@ driverEarningsFlow = do
       sourceMod <- translateString selectedCard.source 400
       destinationMod <- if selectedCard.tripType == ST.Rental then pure "" else translateString selectedCard.destination 400
       modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {
-        "data" {
+        data {
           tripId = selectedCard.id,
           date = selectedCard.date,
           time = selectedCard.time,
@@ -4209,36 +4207,12 @@ driverEarningsFlow = do
     LOAD_MORE_HISTORY state -> do
       modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{props{offsetValue = state.props.offsetValue + 10}})
       driverEarningsFlow
-    GOTO_COINS_EARNING_INFO _ -> do 
-      (API.CoinInfoRes resp) <- Remote.getCoinInfoBT "lazy"
-      let 
-        filteredResp = filter (\(API.CoinInfo coinInfo) -> checkCoinsInfoConditions coinInfo) resp
-        sortedResp = sortBy (\(API.CoinInfo coinInfo1) (API.CoinInfo coinInfo2) -> compare coinInfo2.coins coinInfo1.coins) filteredResp
-      modifyScreenState $ DriverEarningsScreenStateType (\state -> state{data{coinInfoRes = Just $ [tableTitle] <> sortedResp}})
-      driverEarningsFlow 
   where 
     updateDriverStats state flow = do
       when (state.props.subView == ST.YATRI_COINS_VIEW) $ do
         modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverRideStats = (<$>) (\(DriverProfileStatsResp stats) -> DriverProfileStatsResp stats{ coinBalance = state.data.coinBalance }) globalProps.driverRideStats}
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{coinBalance = state.data.coinBalance}})
       flow
-    
-    checkCoinsInfoConditions :: API.CoinInfoType -> Boolean
-    checkCoinsInfoConditions coinInfo = 
-      let 
-        cond1 = not $ startsWith "BulkUploadEvent" coinInfo.key
-        cond2 = not $ DS.null coinInfo.title
-        cond3 = coinInfo.coins /= 0
-      in 
-        cond1 && cond2 && cond3
-
-    tableTitle :: API.CoinInfo
-    tableTitle = API.CoinInfo {
-      coins : 0
-    , title : getString TASK_COMPLETED
-    , description : ""
-    , key : "TABLE_TITILE"
-    }
       
 activateReferralCode :: ST.RegistrationScreenState -> String -> FlowBT String Unit
 activateReferralCode state code = do

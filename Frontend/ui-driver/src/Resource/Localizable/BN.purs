@@ -1611,5 +1611,3 @@ getBN stringKey =
         TO_GET_MONEY -> "টাকা পেতে"
         TILL date -> date <> " পর্যন্ত"
         REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK -> "রেফারেল বোনাস আপনার ব্যাঙ্ক অ্যাকাউন্টে জমা হবে"
-        POINTS_EARNED_ points -> points <> " পয়েন্ট অর্জিত ✨"
-        FOR_METRO_RIDE -> "মেট্রো যাত্রার জন্য"

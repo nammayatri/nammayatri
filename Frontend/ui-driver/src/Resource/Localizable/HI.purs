@@ -1610,5 +1610,3 @@ getHI stringKey =
         TO_GET_MONEY -> "धन प्राप्ति के लिए"
         TILL date -> date <> " तक"
         REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK -> "रेफरल बोनस आपके बैंक खाते में जमा किया जाएगा"
-        POINTS_EARNED_ points -> points <> " अंक अर्जित किये गये ✨"
-        FOR_METRO_RIDE -> "मेट्रो सवारी के लिए"

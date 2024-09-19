@@ -121,7 +121,6 @@ initData =
           , tollAmbigous : false
           , tripStartTime : Nothing
           , tripEndTime : Nothing
-          , specialLocationTag : Nothing
           }
       , driverGotoState:
           { gotoCount: 0
@@ -158,7 +157,6 @@ initData =
       , payoutRewardAmount : Nothing
       , payoutVpaBankAccount : Nothing
       , cancellationRate : 10
-      , coinsEarned : []
     }
   , props:
       { isFreeRide: false

@@ -1610,5 +1610,3 @@ getML stringKey =
         TO_GET_MONEY -> "പണം ലഭിക്കാൻ"
         TILL date -> date <> " വരെ"
         REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK -> "റഫറൽ ബോണസ് നിങ്ങളുടെ ബാങ്ക് അക്കൗണ്ടിലേക്ക് ക്രെഡിറ്റ് ചെയ്യപ്പെടും" 
-        POINTS_EARNED_ points -> points <> " പോയിൻ്റ് നേടി ✨"
-        FOR_METRO_RIDE -> "ಮೆಟ್ರೋ ಸವಾರಿಗಾಗಿ"

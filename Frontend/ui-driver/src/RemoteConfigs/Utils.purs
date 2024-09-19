@@ -23,7 +23,7 @@ import Foreign (Foreign)
 import Foreign.Index (readProp)
 import Data.Newtype (class Newtype)
 import Presto.Core.Utils.Encoding (defaultDecode)
-import RemoteConfig.Types (RCSubscription, ReelItem, ReelButtonConfig, HVConfigs, ReferralPopUpDelays, CancellationRateConfig, CancellationRateEntity(..), CancellationThresholdConfig, MetroCoinsEvent)
+import RemoteConfig.Types (RCSubscription, ReelItem, ReelButtonConfig, HVConfigs, ReferralPopUpDelays, CancellationRateConfig, CancellationRateEntity(..), CancellationThresholdConfig)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
 import Common.RemoteConfig.Utils
@@ -132,15 +132,3 @@ getReferralBonusVideo city =
   let config = fetchRemoteConfigString "referral_bonus_videos"
       value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig ""
   in getCityBasedConfig value city
-
-getMetroCoinsEvent ::  String -> MetroCoinsEvent 
-getMetroCoinsEvent city = do
-    let config = fetchRemoteConfigString "metro_coins_event"
-        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig defaultMetroCoinsEvent
-    getCityBasedConfig value $ toLower city 
-
-defaultMetroCoinsEvent :: MetroCoinsEvent
-defaultMetroCoinsEvent = {
-  coins : 0,
-  minDistance : 0
-}
