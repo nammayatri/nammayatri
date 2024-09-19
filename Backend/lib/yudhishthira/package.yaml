@@ -159,6 +159,7 @@ library:
   dependencies:
     - mobility-core
     - haskell-cac
+    - beckn-spec
     - sessionizer-metrics
   extra-libraries:
     - cac_client

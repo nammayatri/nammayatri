@@ -71,6 +71,7 @@ data TransporterConfigT f = TransporterConfigT
     demandHotspotsConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     dlNumberVerification :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    dpGeoHashPercision :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     driverAutoPayExecutionTime :: B.C f Kernel.Types.Common.Seconds,
     driverAutoPayExecutionTimeFallBack :: B.C f Kernel.Types.Common.Seconds,
     driverAutoPayNotificationTime :: B.C f Kernel.Types.Common.Seconds,

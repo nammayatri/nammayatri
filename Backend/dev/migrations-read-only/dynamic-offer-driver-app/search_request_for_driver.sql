@@ -98,3 +98,9 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN updated_
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN responded_at timestamp with time zone ;
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN rendered_at timestamp with time zone ;
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN from_loc_geohash text ;
+
+
+------- SQL updates -------
+

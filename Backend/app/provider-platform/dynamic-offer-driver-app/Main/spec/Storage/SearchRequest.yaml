@@ -18,7 +18,7 @@ imports:
   TripCategory: Domain.Types.Trip
 
 SearchRequest:
-  derives: Generic,Show,ToJSON
+  derives: Generic,Show,ToJSON,FromJSON
 
   fields:
     id: Id SearchRequest
@@ -28,6 +28,8 @@ SearchRequest:
     merchantOperatingCityId: Id MerchantOperatingCity
     riderId: Maybe (Id RiderDetails)
     fromLocation: Location
+    fromLocGeohash: Maybe Text
+    dpVersion : Maybe Text
     area: Maybe Area
     bapId: Text
     bapUri: BaseUrl
@@ -168,6 +170,10 @@ SearchRequest:
     updateIsReallocationEnabled:
       kvFunction: updateWithKV
       params: [isReallocationEnabled]
+      where: id
+    updateDPVersion :
+      kvFunction: updateWithKV
+      params: [dpVersion]
       where: id
     updateSearchTags:
       kvFunction: updateWithKV

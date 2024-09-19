@@ -694,6 +694,7 @@ TransporterConfig:
     mediaFileUrlPattern: Text
     mediaFileSizeUpperLimit: Int
     referralLinkPassword: Text
+    dpGeoHashPercision: Maybe Int
     fcmConfig: Kernel.External.Notification.FCM.Types.FCMConfig
     onboardingTryLimit: Int
     onboardingRetryTimeInHours: Int
@@ -1045,6 +1046,7 @@ TransporterConfig:
     upwardsRecomputeBuffer: "2000"
     approxRideDistanceDiffThreshold: "1200"
     includeDriverCurrentlyOnRide: "true"
+    dpGeoHashPercision: "5"
     minLocationAccuracy: "50"
     driverPaymentCycleDuration: "86400"
     driverPaymentCycleStartTime: "36000"
@@ -1202,6 +1204,7 @@ TransporterConfig:
         - orderAndNotificationStatusCheckTimeLimit
         - snapToRoadConfidenceThreshold
         - useWithSnapToRoadFallback
+        - dpGeoHashPercision
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId

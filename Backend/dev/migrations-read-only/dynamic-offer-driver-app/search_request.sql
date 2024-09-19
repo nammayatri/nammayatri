@@ -64,3 +64,38 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN customer_namma_tags
 
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN search_tags text[] ;
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN trip_category text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN from_loc_geo_hash text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN surge_pricing_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN dp_version text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN from_loc_geohash text ;
+
+
+------- SQL updates -------
+

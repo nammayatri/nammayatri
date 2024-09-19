@@ -39,6 +39,7 @@ import Lib.Scheduler
 data AllocatorJobType
   = SendSearchRequestToDriver
   | UnblockDriver
+  | SupplyDemand
   | SendPDNNotificationToDriver
   | MandateExecution
   | CalculateDriverFees
@@ -60,6 +61,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo :: Sing (e :: AllocatorJobType) -> Text -> Maybe (AnyJobInfo AllocatorJobType)
   restoreAnyJobInfo SSendSearchRequestToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendSearchRequestToDriver jobData
   restoreAnyJobInfo SUnblockDriver jobData = AnyJobInfo <$> restoreJobInfo SUnblockDriver jobData
+  restoreAnyJobInfo SSupplyDemand jobData = AnyJobInfo <$> restoreJobInfo SSupplyDemand jobData
   restoreAnyJobInfo SSendPDNNotificationToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendPDNNotificationToDriver jobData
   restoreAnyJobInfo SMandateExecution jobData = AnyJobInfo <$> restoreJobInfo SMandateExecution jobData
   restoreAnyJobInfo SCalculateDriverFees jobData = AnyJobInfo <$> restoreJobInfo SCalculateDriverFees jobData
@@ -91,6 +93,13 @@ newtype UnblockDriverRequestJobData = UnblockDriverRequestJobData
 instance JobInfoProcessor 'UnblockDriver
 
 type instance JobContent 'UnblockDriver = UnblockDriverRequestJobData
+
+data SupplyDemandRequestJobData = SupplyDemandRequestJobData
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SupplyDemand
+
+type instance JobContent 'SupplyDemand = SupplyDemandRequestJobData
 
 type instance JobContent 'SendSearchRequestToDriver = SendSearchRequestToDriverJobData
 

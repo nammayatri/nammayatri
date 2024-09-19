@@ -35,6 +35,7 @@ import Lib.Yudhishthira.Types.AppDynamicLogic
 import qualified Lib.Yudhishthira.Types.ChakraQueries
 import Servant hiding (throwError)
 import SharedLogic.DriverPool.Types
+import SharedLogic.DynamicPricing
 import SharedLogic.Merchant
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -59,6 +60,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
         driversData <- mapM createPoolingLogicData req.inputData
         let logicData = TaggedDriverPoolInput driversData False
         YudhishthiraFlow.verifyDynamicLogic req.rules logicData
+      Lib.Yudhishthira.Types.DYNAMIC_PRICING _ -> do
+        logicData <- mapM createDynamicPricingData (req.inputData)
+        YudhishthiraFlow.verifyDynamicLogic req.rules logicData
       _ -> throwError $ InvalidRequest "Logic Domain not supported"
   isRuleUpdated <-
     if fromMaybe False req.shouldUpdateRule
@@ -76,6 +80,14 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let defaultValue = A.toJSON (def :: DriverPoolWithActualDistResult)
           finalValue = deepMerge defaultValue inputValue
       case A.fromJSON finalValue :: A.Result DriverPoolWithActualDistResult of
+        A.Success a -> pure a
+        A.Error err -> throwError $ InvalidRequest ("Not able to merge input data into default value. Getting error: " <> show err)
+
+    createDynamicPricingData :: A.Value -> Environment.Flow DynamicPricingData
+    createDynamicPricingData inputValue = do
+      let defaultValue = A.toJSON (def :: DynamicPricingData)
+          finalValue = deepMerge defaultValue inputValue
+      case A.fromJSON finalValue :: A.Result DynamicPricingData of
         A.Success a -> pure a
         A.Error err -> throwError $ InvalidRequest ("Not able to merge input data into default value. Getting error: " <> show err)
 

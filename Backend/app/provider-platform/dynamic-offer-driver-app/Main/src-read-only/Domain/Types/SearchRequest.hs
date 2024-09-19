@@ -33,9 +33,11 @@ data SearchRequest = SearchRequest
     device :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
+    dpVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverDefaultExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    fromLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromLocation :: Domain.Types.Location.Location,
     id :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     isAdvanceBookingEnabled :: Kernel.Prelude.Bool,
@@ -61,4 +63,4 @@ data SearchRequest = SearchRequest
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory,
     validTill :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show, ToJSON)
+  deriving (Generic, Show, ToJSON, FromJSON)

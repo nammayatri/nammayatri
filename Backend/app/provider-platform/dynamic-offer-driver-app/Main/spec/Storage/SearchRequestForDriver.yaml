@@ -43,6 +43,7 @@ SearchRequestForDriver:
     searchRequestValidTill : UTCTime
     vehicleAge : Maybe Months
     driverId : Id Person
+    fromLocGeohash : Maybe Text
     actualDistanceToPickup : Meters
     straightLineDistanceToPickup : Meters
     durationToPickup : Seconds

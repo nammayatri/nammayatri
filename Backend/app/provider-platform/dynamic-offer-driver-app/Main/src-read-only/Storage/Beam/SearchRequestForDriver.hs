@@ -54,6 +54,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     driverStepFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     durationToPickup :: B.C f Kernel.Types.Common.Seconds,
     estimateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fromLocGeohash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     goHomeRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     isForwardRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

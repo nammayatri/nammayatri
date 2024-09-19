@@ -11,6 +11,7 @@
 module SharedLogic.FarePolicy where
 
 import BecknV2.OnDemand.Tags as Tags
+import Data.Aeson as A
 import Data.Coerce (coerce)
 import qualified Data.Geohash as Geohash
 import qualified Data.List as List
@@ -26,16 +27,23 @@ import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FareProduct as FareProduct
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import GHC.Float (int2Double)
 import Kernel.Prelude
+import Kernel.Randomizer
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.SpecialLocation as DSpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import qualified Lib.Yudhishthira.Types as LYT
+import SharedLogic.DynamicPricing
 import qualified SharedLogic.FareProduct as FareProduct
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.FarePolicy as QFP
 import qualified Storage.CachedQueries.CancellationFarePolicy as QCCFP
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
@@ -147,7 +155,9 @@ getFullFarePolicy sourceLatLong txnId mbBookingStartTime fareProduct = do
   let updatedCongestionChargeMultiplier =
         case congestionChargeMultiplierFromModel of
           Just congestionChargeMultiplier -> Just $ FarePolicyD.BaseFareAndExtraDistanceFare congestionChargeMultiplier
-          Nothing -> farePolicy'.congestionChargeMultiplier
+          Nothing -> do
+            -- void $ QSR.updateDPVersion (Just "Static") (Id "")
+            farePolicy'.congestionChargeMultiplier
   let farePolicy = updateCongestionChargeMultiplier farePolicy' updatedCongestionChargeMultiplier
   cancellationFarePolicy <- maybe (return Nothing) QCCFP.findById farePolicy.cancellationFarePolicyId
   return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy farePolicy
@@ -603,6 +613,47 @@ localTimeToDayOfWeekAndHour localTime =
       dayWeek = toEnum dayOfWeekNum :: DayOfWeek
       hourOfDay = todHour $ localTimeOfDay localTime
    in (dayWeek, hourOfDay)
+
+getCongestionChargeMultiplierFromModel' ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r
+  ) =>
+  Seconds ->
+  Maybe Text ->
+  ServiceTierType ->
+  Maybe Meters ->
+  Maybe Seconds ->
+  Id DMOC.MerchantOperatingCity ->
+  m (Maybe Centesimal)
+getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just geohash) serviceTier (Just (Meters distance)) (Just (Seconds duration)) merchantOperatingCityId = do
+  localTime <- getLocalCurrentTime timeDiffFromUtc
+  let distanceInKm = (int2Double distance) / 1000.0
+  let estimatedDurationInH = (int2Double duration) / 3600.0
+  let speedKmh = distanceInKm / estimatedDurationInH
+  toss <- getRandomInRange (1, 100 :: Int)
+  mbSupplyDemandRatio <- Hedis.get $ "SupplyDemadRatio" <> geohash
+  appDynamicLogics <- LYTU.getAppDynamicLogic (cast merchantOperatingCityId) (LYT.DYNAMIC_PRICING serviceTier) localTime
+  let allLogics = appDynamicLogics <&> (.logic)
+  let dynamicPricingData = DynamicPricingData {speedKmh, distanceInKm, supplyDemandRatio = fromMaybe 0.0 mbSupplyDemandRatio, toss}
+  resp <- LYTU.runLogics allLogics dynamicPricingData
+  case (A.fromJSON resp.result :: Result DynamicPricingResult) of
+    A.Success result -> return result.congestionFeePerMin
+    A.Error err -> do
+      logError $ "Error in parsing DynamicPricingResult - " <> show err
+      return Nothing
+-- QSR.update
+-- return resp.congestionFeePerMin
+getCongestionChargeMultiplierFromModel' _ _ _ _ _ _ = pure Nothing
+
+-- let (dayWeek, hourOfDay) = localTimeToDayOfWeekAndHour localTime
+-- let mbSourceHash = Geohash.encode 5 (sourceLatLong.lat, sourceLatLong.lon)
+-- case mbSourceHash of
+--   Nothing -> pure Nothing
+--   Just sourceHash -> do
+--     surgePrice <- SurgePricing.findByHexDayHourAndVehicleServiceTier (T.pack sourceHash) (T.pack . show $ dayWeek) hourOfDay serviceTier
+--     return $ surgePrice <&> (.surgeMultiplier)
 
 getCongestionChargeMultiplierFromModel ::
   ( MonadFlow m,

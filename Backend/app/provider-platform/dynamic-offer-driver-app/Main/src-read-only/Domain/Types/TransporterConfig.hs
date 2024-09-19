@@ -74,6 +74,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     demandHotspotsConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DemandHotspotsConfig,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     dlNumberVerification :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    dpGeoHashPercision :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     driverAutoPayExecutionTime :: Kernel.Prelude.NominalDiffTime,
     driverAutoPayExecutionTimeFallBack :: Kernel.Prelude.NominalDiffTime,
     driverAutoPayNotificationTime :: Kernel.Prelude.NominalDiffTime,
