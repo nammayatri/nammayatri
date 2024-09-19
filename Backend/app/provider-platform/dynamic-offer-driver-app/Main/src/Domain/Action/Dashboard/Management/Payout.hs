@@ -351,6 +351,7 @@ castFlagReasonToCommon flag = case flag of
   DR.ExceededMaxReferral -> DTP.ExceededMaxReferral
   DR.MinRideDistanceInvalid -> DTP.MinRideDistanceInvalid
   DR.MinPickupDistanceInvalid -> DTP.MinPickupDistanceInvalid
+  DR.RideConstraintInvalid -> DTP.RideConstraintInvalid
   DR.CustomerExistAsDriver -> DTP.CustomerExistAsDriver
   DR.MultipleDeviceIdExists -> DTP.MultipleDeviceIdExists
 

@@ -4,6 +4,7 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as A
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DB
+import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.TransporterConfig as DTConf
 import Kernel.External.Maps.HasCoordinates (getCoordinates)
 import Kernel.External.Maps.Types
@@ -27,3 +28,6 @@ isDropInsideThreshold booking thresholdConfig currLoation = do
   let dropLocThreshold = metersToHighPrecMeters thresholdConfig.dropLocThreshold
       locationDiff = maybe 0 (\toLocation -> abs $ distanceBetweenInMeters (getCoordinates toLocation) currLoation) booking.toLocation
    in locationDiff <= dropLocThreshold
+
+isValidRide :: DR.Ride -> Bool
+isValidRide ride = maybe True (elem "ValidRide#Yes") ride.rideTags -- TODO: How to remove hardcode string

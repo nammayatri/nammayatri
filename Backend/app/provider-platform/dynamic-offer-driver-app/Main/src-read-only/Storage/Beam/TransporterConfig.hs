@@ -129,8 +129,6 @@ data TransporterConfigT f = TransporterConfigT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     minLocationAccuracy :: B.C f Kernel.Prelude.Double,
-    minPickupDistanceThresholdForReferralPayout :: B.C f Kernel.Types.Common.Meters,
-    minRideDistanceThresholdForReferralPayout :: B.C f Kernel.Types.Common.HighPrecMeters,
     minRidesForCancellationScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     minRidesToUnlist :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     minmRentalAndScheduledBookingLeadTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

@@ -111,6 +111,7 @@ Ride:
     passedThroughDestination: Maybe Bool
     deliveryFileIds: Maybe [Id MediaFile]
     estimatedEndTimeRange: Maybe EstimatedEndTimeRange
+    rideTags: Maybe [Text]
 
   sqlType:
     id: character(36)
@@ -128,6 +129,7 @@ Ride:
     startOdometerReadingFileId: character varying(36)
     endOdometerReadingFileId: character varying(36)
     deliveryFileIds: "text[]"
+    rideTags: "text[]"
 
   default:
     traveledDistance: '0'

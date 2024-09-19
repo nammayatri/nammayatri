@@ -27,7 +27,6 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
     fromAndToLocation' <- Storage.Queries.Transformers.Booking.fromAndToLocation mappings tripCategory id fromLocationId toLocationId providerId merchantOperatingCityId
     merchant <- Storage.CachedQueries.Merchant.findById (Kernel.Types.Id.Id providerId) >>= fromMaybeM (Kernel.Types.Error.MerchantNotFound providerId)
     senderAndReceiverDetails <- Storage.Queries.Transformers.Booking.getSenderAndReceiverDetails tripCategory senderId senderName senderPrimaryExophone receiverId receiverName receiverPrimaryExophone
-    bapUri' <- Kernel.Prelude.parseBaseUrl bapUri
     fareParams' <- Storage.Queries.FareParameters.findById (Kernel.Types.Id.Id fareParametersId) >>= fromMaybeM (Kernel.Types.Error.InternalError ("FareParameters not found for booking: " <> show id))
     merchantOperatingCityId' <- Storage.CachedQueries.Merchant.MerchantOperatingCity.getMerchantOpCityId (Kernel.Types.Id.Id <$> merchantOperatingCityId) merchant bapCity
     pure $
@@ -37,7 +36,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             bapCity = bapCity,
             bapCountry = bapCountry,
             bapId = bapId,
-            bapUri = bapUri',
+            bapUri = bapUri,
             createdAt = createdAt,
             currency = fromMaybe Kernel.Types.Common.INR currency,
             disabilityTag = disabilityTag,
@@ -91,7 +90,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.bapCity = bapCity,
         Beam.bapCountry = bapCountry,
         Beam.bapId = bapId,
-        Beam.bapUri = Kernel.Prelude.showBaseUrl bapUri,
+        Beam.bapUri = bapUri,
         Beam.createdAt = createdAt,
         Beam.currency = Just currency,
         Beam.disabilityTag = disabilityTag,

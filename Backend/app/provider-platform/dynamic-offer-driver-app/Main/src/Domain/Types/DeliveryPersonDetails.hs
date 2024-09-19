@@ -26,4 +26,4 @@ data DeliveryPersonDetails = DeliveryPersonDetails
     name :: Text,
     primaryExophone :: Text
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)

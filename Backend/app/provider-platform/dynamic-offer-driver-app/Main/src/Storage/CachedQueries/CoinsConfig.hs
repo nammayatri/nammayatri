@@ -22,7 +22,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.DriverCoins.Types as DCT (DriverCoinsEventType (..))
+import qualified Lib.DriverCoins.Types as DCT
 import qualified Storage.Queries.Coins.CoinsConfig as Queries
 
 fetchFunctionsOnEventbasis :: (CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m [CoinsConfig]
@@ -38,13 +38,4 @@ cacheCoinConfig eventType merchantOpCityId coinsConfig = do
 
 makeCoinConfigKey :: DCT.DriverCoinsEventType -> Id DMOC.MerchantOperatingCity -> Text
 makeCoinConfigKey eventType merchantOpCityId =
-  "CQ:CC:MOCId-" <> merchantOpCityId.getId <> "-EventType-"
-    <> case eventType of
-      DCT.Rating {} -> "Rating"
-      DCT.EndRide {} -> "EndRide"
-      DCT.Cancellation {} -> "Cancellation"
-      DCT.DriverToCustomerReferral {} -> "DriverToCustomerReferral"
-      DCT.CustomerToDriverReferral {} -> "CustomerToDriverReferral"
-      DCT.LeaderBoard -> "LeaderBoard"
-      DCT.Training -> "Training"
-      DCT.BulkUploadEvent -> "BulkUploadEvent"
+  "CQ:CC:MOCId-" <> merchantOpCityId.getId <> "-EventType-" <> DCT.getEventName eventType

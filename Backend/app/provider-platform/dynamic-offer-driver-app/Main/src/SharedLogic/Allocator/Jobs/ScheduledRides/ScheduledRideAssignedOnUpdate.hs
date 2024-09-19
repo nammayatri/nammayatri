@@ -73,7 +73,6 @@ sendScheduledRideAssignedOnUpdate ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisFlow m r,
     EventStreamFlow m r,
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     Metrics.HasCoreMetrics r
   ) =>
   Job 'ScheduledRideAssignedOnUpdate ->
@@ -250,7 +249,6 @@ cancelOrReallocate ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisFlow m r,
     EventStreamFlow m r,
-    HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     Metrics.HasCoreMetrics r
   ) =>
   DRide.Ride ->

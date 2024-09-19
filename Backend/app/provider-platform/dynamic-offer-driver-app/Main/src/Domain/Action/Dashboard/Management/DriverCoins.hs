@@ -60,11 +60,7 @@ bulkUpdateByDriverId ::
   ( MonadFlow m,
     MonadReader r m,
     EsqDBFlow m r,
-    CacheFlow m r,
-    HasField
-      "minTripDistanceForReferralCfg"
-      r
-      (Maybe HighPrecMeters)
+    CacheFlow m r
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -122,11 +118,7 @@ bulkUpdateByDriverIdV2 ::
   ( MonadFlow m,
     MonadReader r m,
     EsqDBFlow m r,
-    CacheFlow m r,
-    HasField
-      "minTripDistanceForReferralCfg"
-      r
-      (Maybe HighPrecMeters)
+    CacheFlow m r
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->

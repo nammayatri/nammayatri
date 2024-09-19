@@ -336,7 +336,6 @@ in  { esqDBCfg
     , snapToRoadSnippetThreshold = +300
     , droppedPointsThreshold = +2000
     , osrmMatchThreshold = +1500
-    , minTripDistanceForReferralCfg = Some +1000
     , maxShards = +5
     , maxNotificationShards = +128
     , enableRedisLatencyLogging = False

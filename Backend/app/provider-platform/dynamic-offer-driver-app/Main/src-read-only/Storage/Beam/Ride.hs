@@ -73,6 +73,7 @@ data RideT f = RideT
     previousRideTripEndLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     previousRideTripEndTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     rideEndedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy),
+    rideTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     safetyAlertTriggered :: B.C f Kernel.Prelude.Bool,
     shortId :: B.C f Kernel.Prelude.Text,
     startOdometerReadingFileId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

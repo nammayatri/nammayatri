@@ -122,13 +122,13 @@ handler merchantId req ride = do
       newRating <- buildRating ride.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance req.shouldFavDriver mediaId
       QRating.create newRating
       logDebug "Driver Rating Coin Event"
-      fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride.chargeableDistance) (Just ride.id.getId)
+      fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride) (Just ride.id.getId)
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
       QRating.updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver mediaId rideRating.id driverId
       logDebug "Driver Rating Coin Event"
-      fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride.chargeableDistance) (Just ride.id.getId)
+      fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride) (Just ride.id.getId)
   calculateAverageRating driverId merchant.minimumDriverRatesCount ratingValue ratingCount ratingsSum
 
 calculateAverageRating ::

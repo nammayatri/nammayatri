@@ -29,7 +29,7 @@ data Booking = Booking
     bapCity :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City,
     bapCountry :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.Country,
     bapId :: Kernel.Prelude.Text,
-    bapUri :: Kernel.Types.Common.BaseUrl,
+    bapUri :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Utils.Common.Currency,
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -75,7 +75,7 @@ data Booking = Booking
     vehicleServiceTierName :: Kernel.Prelude.Text,
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
-  deriving (Generic)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data BookingStatus = NEW | TRIP_ASSIGNED | COMPLETED | CANCELLED | REALLOCATED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 

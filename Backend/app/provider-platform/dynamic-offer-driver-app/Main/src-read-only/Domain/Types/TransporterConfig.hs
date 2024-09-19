@@ -130,8 +130,6 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     minLocationAccuracy :: Kernel.Prelude.Double,
-    minPickupDistanceThresholdForReferralPayout :: Kernel.Types.Common.Meters,
-    minRideDistanceThresholdForReferralPayout :: Kernel.Types.Common.HighPrecMeters,
     minRidesForCancellationScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minRidesToUnlist :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minmRentalAndScheduledBookingLeadTimeHours :: Kernel.Types.Common.Hours,

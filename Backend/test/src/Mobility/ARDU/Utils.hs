@@ -53,7 +53,7 @@ import Mobility.ARDU.Fixtures as Fixtures
 import Mobility.ARDU.Queries as Queries
 import Mobility.AppBackend.APICalls as BapAPI
 import Mobility.AppBackend.Fixtures
-import Servant.Client
+import Servant.Client hiding (parseBaseUrl)
 import qualified "dynamic-offer-driver-app" Storage.CachedQueries.Merchant.MerchantServiceConfig as TCQMSC
 import qualified "dynamic-offer-driver-app" Storage.Queries.Booking as TQRB
 import qualified "rider-app" Storage.Queries.Booking as BQRB
@@ -375,4 +375,5 @@ withFakeBapUrl booking action = do
   liftIO $
     runARDUFlow "update bap url" $ do
       -- Esq.runTransaction $
-      Queries.updateBapUrl booking.bapUri booking.id
+      bapUri <- parseBaseUrl booking.bapUri
+      Queries.updateBapUrl bapUri booking.id

@@ -68,15 +68,12 @@ getTopDriversByIdleTime :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Int ->
 getTopDriversByIdleTime count_ ids = findAllWithOptionsDb [Se.Is BeamDS.driverId $ Se.In (getId <$> ids)] (Se.Asc BeamDS.idleSince) (Just count_) Nothing <&> (Domain.driverId <$>)
 
 updateIdleTime :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m ()
-updateIdleTime driverId = updateIdleTimes [driverId]
-
-updateIdleTimes :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Driver] -> m ()
-updateIdleTimes driverIds = do
+updateIdleTime (Id driverId) = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamDS.idleSince now
     ]
-    [Se.Is BeamDS.driverId (Se.In (getId <$> driverIds))]
+    [Se.Is BeamDS.driverId (Se.Eq driverId)]
 
 fetchAll :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [DriverStats]
 fetchAll = findAllWithKV [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
@@ -84,13 +81,14 @@ fetchAll = findAllWithKV [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
 findAllByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Driver] -> m [DriverStats]
 findAllByDriverIds person = findAllWithKV [Se.Is BeamDS.driverId $ Se.In (getId <$> (person <&> (.id)))]
 
-incrementTotalRidesAndTotalDist :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) => Id Driver -> Meters -> m ()
-incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
+incrementTotalRidesAndTotalDistAndIdleTime :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) => Id Driver -> Meters -> m ()
+incrementTotalRidesAndTotalDistAndIdleTime (Id driverId') rideDist = do
   now <- getCurrentTime
   findTotalRides (Id driverId') >>= \(rides, distance) -> do
     updateOneWithKV
       [ Se.Set (\BeamDS.DriverStatsT {..} -> totalRides) (rides + 1),
         Se.Set BeamDS.totalDistance $ (\(Meters m) -> int2Double m) (rideDist + distance),
+        Se.Set BeamDS.idleSince now,
         Se.Set BeamDS.updatedAt now
       ]
       [Se.Is BeamDS.driverId (Se.Eq driverId')]
