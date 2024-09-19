@@ -623,15 +623,7 @@ newtype RidesInfo = RidesInfo
       bapName :: Maybe String,
       isValueAddNP :: Boolean,
       parkingCharge :: Maybe Number
-, coinsEarned :: Array CoinsEarned  
-}
-
-newtype CoinsEarned = CoinsEarned CoinsEarnedType
-
-type CoinsEarnedType = {
-  coins :: Int,
-  eventType :: String
-}
+  }
 
 newtype OdometerReading = OdometerReading
   {
@@ -788,14 +780,6 @@ instance standardEncodeStatus :: StandardEncode Status
  standardEncode (COMPLETED) = standardEncode {}
  standardEncode (CANCELLED) = standardEncode {}
  standardEncode (NOTHING) = standardEncode {}
-
-derive instance genericCoinsEarned :: Generic CoinsEarned _
-derive instance newtypeCoinsEarned :: Newtype CoinsEarned _
-instance standardEncodeCoinsEarned :: StandardEncode CoinsEarned where standardEncode (CoinsEarned req) = standardEncode req
-instance showCoinsEarned :: Show CoinsEarned where show = genericShow
-instance decodeCoinsEarned :: Decode CoinsEarned where decode = defaultDecode
-instance encodeCoinsEarned :: Encode CoinsEarned where encode = defaultEncode
-
 ---------------------------------GET RIDES HISTORY WITHIN DATES---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 data GetRidesSummaryListReq = GetRidesSummaryListReq (Array String)
@@ -4765,42 +4749,3 @@ instance standardEncodeDriverAadhaarResp :: StandardEncode DriverAadhaarResp whe
 instance showDriverAadhaarResp :: Show DriverAadhaarResp where show = genericShow
 instance decodeDriverAadhaarResp:: Decode DriverAadhaarResp where decode = defaultDecode
 instance encodeDriverAadhaarResp  :: Encode DriverAadhaarResp where encode = defaultEncode
-
-
-
-data CoinInfoReq = CoinInfoReq 
-
-newtype CoinInfoRes = CoinInfoRes (Array CoinInfo)
-
-newtype CoinInfo = CoinInfo CoinInfoType
-
-type CoinInfoType = {
-  coins :: Int,
-  key :: String,
-  title :: String,
-  description :: String
-}
-
-instance makeCoinInfoReq  :: RestEndpoint CoinInfoReq where
-    makeRequest reqBody headers = defaultMakeRequest GET (EP.getCoinInfo "") headers reqBody Nothing
-    encodeRequest req = defaultEncode req
-
-derive instance genericCoinInfoReq :: Generic CoinInfoReq _
-instance showCoinInfoReq :: Show CoinInfoReq where show = genericShow
-instance standardEncodeCoinInfoReq :: StandardEncode CoinInfoReq where standardEncode _ = standardEncode{}
-instance decodeCoinInfoReq :: Decode CoinInfoReq where decode = defaultDecode
-instance encodeCoinInfoReq :: Encode CoinInfoReq where encode = defaultEncode
-
-derive instance genericCoinInfoRes :: Generic CoinInfoRes _
-derive instance newtypeCoinInfoRes :: Newtype CoinInfoRes _
-instance standardEncodeCoinInfoRes :: StandardEncode CoinInfoRes where standardEncode (CoinInfoRes rsp) = standardEncode rsp
-instance showCoinInfoRes :: Show CoinInfoRes where show = genericShow
-instance decodeCoinInfoRes :: Decode CoinInfoRes where decode = defaultDecode
-instance encodeCoinInfoRes :: Encode CoinInfoRes where encode = defaultEncode
-
-
-derive instance genericCoinInfo :: Generic CoinInfo _
-instance showCoinInfo :: Show CoinInfo where show = genericShow
-instance standardEncodeCoinInfo :: StandardEncode CoinInfo where standardEncode _ = standardEncode{}
-instance decodeCoinInfo :: Decode CoinInfo where decode = defaultDecode
-instance encodeCoinInfo :: Encode CoinInfo where encode = defaultEncode

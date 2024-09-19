@@ -61,7 +61,7 @@ import PrestoDOM.Types.DomAttributes as PTD
 import Resource.Constants as Const
 import Screens.Types (AutoPayStatus(..), SubscriptionBannerType(..), SubscriptionPopupType(..), GoToPopUpType(..))
 import Screens.Types as ST
-import Services.API as API
+import Services.API as SA
 import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..), BookingTypes(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import Mobility.Prelude (boolToVisibility)
@@ -84,7 +84,6 @@ import Resource.Constants as RC
 import ConfigProvider 
 import Data.Int 
 import Styles.Types (Color(..))
-import RemoteConfig as RemoteConfig
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -145,7 +144,7 @@ rideActionModalConfig state =
     bookingFromOtherPlatform = state.data.activeRide.bookingFromOtherPlatform,
     bapName = state.data.activeRide.bapName,
     distance = case state.data.route DA.!! 0 of
-                  Just (API.Route obj) ->  obj.distance
+                  Just (SA.Route obj) ->  obj.distance
                   Nothing -> 0
   , parkingCharge = state.data.activeRide.parkingCharge
   }
@@ -946,7 +945,7 @@ waitTimeInfoCardConfig state =
         padding = PaddingVertical 16 20
       }
     }
-    where rideInProgress = state.data.activeRide.status == API.INPROGRESS
+    where rideInProgress = state.data.activeRide.status == SA.INPROGRESS
           chargesOb = HU.getChargesOb state.data.activeRide.tripType state.data.cityConfig state.data.activeRide.driverVehicle
           maxWaitTimeInMinutes = Int.floor $ Int.toNumber chargesOb.freeSeconds / 60.0
 
@@ -1491,7 +1490,8 @@ getAccessibilityHeaderText state =
               Nothing -> config {primaryText = getString CUSTOMER_HAS_DISABILITY, secondaryText = getString PLEASE_HELP_THEM_AS_YOU_CAN, imageUrl = fetchImage FF_ASSET "ny_ic_disability_purple"}
 
 getRideCompletedConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
-getRideCompletedConfig state = let
+getRideCompletedConfig state = let 
+  
   isRentalRide = state.data.activeRide.tripType == ST.Rental
   config = RideCompletedCard.config
   autoPayBanner = state.props.autoPayBanner
@@ -1502,8 +1502,7 @@ getRideCompletedConfig state = let
   specialZonePickup = isJust $ state.data.endRideData.specialZonePickup
   topPillConfig = constructTopPillConfig disability specialZonePickup
   showDriverBottomCard = state.data.config.rideCompletedCardConfig.showSavedCommission || isJust state.data.endRideData.tip
-  viewOrderConfig = [ {condition : isJust metroRideCoins, elementView :  RideCompletedCard.COINS_EARNED_VIEW },
-                      {condition : (not isRentalRide) && (autoPayBanner == DUE_LIMIT_WARNING_BANNER), elementView :  RideCompletedCard.BANNER },
+  viewOrderConfig = [ {condition : (not isRentalRide) && (autoPayBanner == DUE_LIMIT_WARNING_BANNER), elementView :  RideCompletedCard.BANNER },
                       {condition : (not isRentalRide) && (autoPayStatus == ACTIVE_AUTOPAY && payerVpa /= ""), elementView :  RideCompletedCard.QR_VIEW },
                       {condition : (not isRentalRide) && not (autoPayStatus == ACTIVE_AUTOPAY) && state.data.config.subscriptionConfig.enableSubscriptionPopups && (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true"), elementView :  RideCompletedCard.NO_VPA_VIEW },
                       {condition : (not isRentalRide) &&  (autoPayBanner /= DUE_LIMIT_WARNING_BANNER), elementView :  RideCompletedCard.BANNER },
@@ -1617,10 +1616,6 @@ getRideCompletedConfig state = let
       url = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/end_ride_qr_anim.json"
     }
   , additionalCharges = additionalCharges
-  , coinsEarned  {
-      title = maybe "" (\coins -> getString $ POINTS_EARNED_ $ show coins) metroRideCoins
-    , subTitle = if isJust metroRideCoins then getString FOR_METRO_RIDE else ""
-    }
   }
   in config'
 
@@ -1639,22 +1634,6 @@ getRideCompletedConfig state = let
       , textColor : Color.blue800
       }
     ]
-
-    metroRideCoins :: Maybe Int
-    metroRideCoins = 
-      case DA.find (\(API.CoinsEarned item) -> item.eventType == "MetroRideCompleted") state.data.coinsEarned of 
-        Just (API.CoinsEarned item) -> Just item.coins
-        Nothing -> 
-          let 
-            city = getValueToLocalStore DRIVER_LOCATION
-            metroRideCoinConfig = RemoteConfig.getMetroCoinsEvent city
-          in 
-            if fromMaybe 0 state.data.endRideData.actualRideDistance >= metroRideCoinConfig.minDistance && 
-              state.data.endRideData.serviceTier == "Auto" && 
-              DA.any (\tag -> DS.contains(DS.Pattern(tag)) (fromMaybe "" state.data.endRideData.specialLocationTag)) ["SureMetro", "SureWarriorMetro"] && 
-              metroRideCoinConfig.coins > 0 then 
-                Just metroRideCoinConfig.coins
-            else Nothing
 
 type TopPillConfig = {
   visible :: Boolean,

@@ -20,7 +20,6 @@ import Engineering.Helpers.Commons (getCurrentUTC)
 import Data.Maybe (Maybe(..))
 import MerchantConfig.DefaultConfig as DC
 import Foreign.Object (empty)
-import Screens.Types as ST
 
 initData :: DriverEarningsScreenState
 initData =
@@ -85,7 +84,6 @@ initData =
         , parkingCharge : 0.0
         }
       , logField : empty
-      , coinInfoRes : Nothing
       }
   , props:
       { subView: EARNINGS_VIEW
@@ -126,7 +124,6 @@ initData =
           , videoLink: Nothing
           , answer: []
           , showTable: false
-          , tag : ST.NothingCoinsQuestionTag
           }
       }
   }
