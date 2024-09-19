@@ -51,13 +51,15 @@ data Ride = Ride
     createdAt :: UTCTime,
     counterPartyRideId :: Maybe Text,
     merchantId :: Id Merchant,
-    driverId :: Id Person
+    driverId :: Maybe (Id Person)
   }
 
 data Booking = Booking
   { id :: Id Booking,
-    bapId :: Text,
-    bapUri :: BaseUrl,
+    bapId :: Maybe Text,
+    bapUri :: Maybe BaseUrl,
+    bppId :: Maybe Text,
+    bppUri :: Maybe BaseUrl,
     quoteId :: Maybe (Id Quote),
     providerId :: Id Merchant,
     merchantOperatingCityId :: Id MerchantOperatingCity

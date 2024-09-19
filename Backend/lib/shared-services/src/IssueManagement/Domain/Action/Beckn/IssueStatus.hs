@@ -71,9 +71,10 @@ validateRequest ::
   m ValidatedDIssueStatus
 validateRequest DIssueStatus {..} iHandle = do
   issue <- QIGM.findByPrimaryKey (Id issueId) >>= fromMaybeM (InvalidRequest "Issue not found")
-  merchant <- iHandle.findByMerchantId issue.merchantId >>= fromMaybeM (MerchantNotFound issue.merchantId.getId)
   booking <- iHandle.findByBookingId (Id issue.bookingId) >>= fromMaybeM (BookingDoesNotExist issue.bookingId)
-  igmConfig <- QIGMConfig.findByMerchantId issue.merchantId >>= fromMaybeM (InternalError $ "IGMConfig not found " <> show issue.merchantId)
+  let merchantId = fromMaybe booking.providerId issue.merchantId
+  merchant <- iHandle.findByMerchantId merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  igmConfig <- QIGMConfig.findByMerchantId merchantId >>= fromMaybeM (InternalError $ "IGMConfig not found " <> show merchantId)
   merchantOperatingCity <- iHandle.findMOCityById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
   pure ValidatedDIssueStatus {..}
 

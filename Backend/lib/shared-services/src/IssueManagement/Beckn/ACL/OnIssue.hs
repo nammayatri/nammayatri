@@ -1,26 +1,18 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
+module IssueManagement.Beckn.ACL.OnIssue where
 
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
-
-module Beckn.ACL.IGM.OnIssue where
-
-import qualified Domain.Action.Beckn.IGM.OnIssue as DOnIssue
+-- import qualified BecknV2.IGM.APIs as Spec
 import qualified IGM.Enums as Spec
 import qualified IGM.Types as Spec
+-- import Environment
+-- import qualified IGM.Types as Spec
 import qualified IGM.Utils as Utils
+import qualified IssueManagement.Domain.Action.Beckn.OnIssue as DOnIssue
 import Kernel.Prelude
+-- import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Utils.Common
+
+-- import Kernel.Utils.Servant.SignatureAuth
 
 buildOnIssueReq ::
   MonadFlow m =>

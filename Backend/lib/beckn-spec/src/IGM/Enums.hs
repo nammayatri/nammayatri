@@ -26,7 +26,7 @@ import Prelude (show)
 data Domain
   = ON_DEMAND
   | PUBLIC_TRANSPORT
-  deriving (Eq, Generic, Read, FromDhall, ToSchema)
+  deriving (Eq, Generic, Read, FromDhall, ToSchema, Ord)
   deriving (PrettyShow) via Showable Domain
 
 instance Show Domain where
@@ -273,4 +273,15 @@ data IssueSubCategory
   | PMT117 -- "Driver asked to pay for toll separately while it was already computed in the initial fare"
   | PMT118 -- "Driver refused to take the toll road despite the toll fee already being paid"
   | PMT119 -- "Delayed payment by collector entity and concerns on delayed interest"
+  | ORD101 -- "Ticket not generated post payment completion"
+  | FLM101 -- "Generated ticket not working at the ticketing gate/validation error"
+  | FLM102 -- "Cancellation of the generated ticket not working"
+  | FLM103 -- "Change of entry/exit station details"
+  | FLM104 -- "Origin & Destination mismatch"
+  | PMT101 -- "Refund to buyer not processed for cancellation (/partial) & payment failure scenarios"
+  | PMT102 -- "Amount deducted from Buyer but payment failed status"
+  | PMT103 -- "Collector entity overpays receiver entity"
+  | PMT104 -- "Settlement to receiver account not done as per settlement period"
+  | PMT105 -- "Partial payment done to receiver entity"
+  | PMT106 -- "delayed payment by collector entity and concerns on delayed interest"
   deriving (Eq, Generic, ToJSON, FromJSON, Show)

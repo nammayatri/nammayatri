@@ -27,13 +27,13 @@ callOnIssue ::
   BaseUrl ->
   Common.Merchant ->
   m ()
-callOnIssue req bap_uri merchant = do
+callOnIssue req domainUri merchant = do
   let bppSubscriberId = getShortId $ merchant.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   void $
     withShortRetry $
-      Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Spec.ON_ISSUE) API.onIssueAPI bap_uri internalEndPointHashMap req
+      Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Spec.ON_ISSUE) API.onIssueAPI domainUri internalEndPointHashMap req
 
 callOnIssueStatus ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
@@ -48,10 +48,10 @@ callOnIssueStatus ::
   BaseUrl ->
   Merchant ->
   m ()
-callOnIssueStatus req bap_uri merchant = do
+callOnIssueStatus req domainUri merchant = do
   let bppSubscriberId = getShortId merchant.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   void $
     withShortRetry $
-      Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Spec.ON_ISSUE_STATUS) API.onIssueStatusAPI bap_uri internalEndPointHashMap req
+      Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Spec.ON_ISSUE_STATUS) API.onIssueStatusAPI domainUri internalEndPointHashMap req

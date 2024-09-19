@@ -18,7 +18,6 @@ module Beckn.ACL.IGM.Utils where
 import Control.Lens ((%~))
 import Data.Aeson as A
 import qualified Data.Text as T
-import qualified Domain.Types.IGMIssue as DIGM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMop
 import Domain.Types.Person
@@ -26,6 +25,7 @@ import qualified Domain.Types.Ride as Ride
 import qualified IGM.Enums as Spec
 import qualified IGM.Types as Spec
 import qualified IssueManagement.Common.UI.Issue as Common
+import qualified IssueManagement.Domain.Types.Issue.IGMIssue as IGMIssueCommon
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
@@ -94,56 +94,63 @@ mapBecknIssueStatus mbResp =
     Just resp | resp == Common.ACCEPT -> Just $ show Spec.CLOSED
     _ -> Just $ show Spec.OPEN
 
-mapBecknIssueType :: Maybe Common.CustomerResponse -> Maybe DIGM.IssueType -> Maybe Text
+mapBecknIssueType :: Maybe Common.CustomerResponse -> Maybe IGMIssueCommon.IssueType -> Maybe Text
 mapBecknIssueType Nothing (Just _) = Nothing -- this case should never happen
 mapBecknIssueType Nothing _ = Just $ show Spec.TYPE_ISSUE
-mapBecknIssueType (Just Common.ACCEPT) (Just DIGM.ISSUE) = Just $ show Spec.TYPE_ISSUE
+mapBecknIssueType (Just Common.ACCEPT) (Just IGMIssueCommon.ISSUE) = Just $ show Spec.TYPE_ISSUE
 mapBecknIssueType _ Nothing = Nothing -- this case should never happen as code will already throw error if issue doesnot exist
 mapBecknIssueType _ _ = Just $ show Spec.GRIEVANCE
 
-mapDomainIssueStatus :: Maybe Common.CustomerResponse -> DIGM.Status
+mapDomainIssueStatus :: Maybe Common.CustomerResponse -> IGMIssueCommon.Status
 mapDomainIssueStatus mbResp =
   case mbResp of
-    Just resp | resp == Common.ACCEPT -> DIGM.CLOSED
-    Just resp | resp == Common.ESCALATE -> DIGM.ESCALATED
-    _ -> DIGM.OPEN
+    Just resp | resp == Common.ACCEPT -> IGMIssueCommon.CLOSED
+    Just resp | resp == Common.ESCALATE -> IGMIssueCommon.ESCALATED
+    _ -> IGMIssueCommon.OPEN
 
-mapDomainIssueType :: Maybe Common.CustomerResponse -> DIGM.IssueType -> DIGM.IssueType
-mapDomainIssueType Nothing DIGM.ISSUE = DIGM.ISSUE
-mapDomainIssueType (Just Common.ACCEPT) DIGM.ISSUE = DIGM.ISSUE
-mapDomainIssueType _ _ = DIGM.GRIEVANCE
+mapDomainIssueType :: Maybe Common.CustomerResponse -> IGMIssueCommon.IssueType -> IGMIssueCommon.IssueType
+mapDomainIssueType Nothing IGMIssueCommon.ISSUE = IGMIssueCommon.ISSUE
+mapDomainIssueType (Just Common.ACCEPT) IGMIssueCommon.ISSUE = IGMIssueCommon.ISSUE
+mapDomainIssueType _ _ = IGMIssueCommon.GRIEVANCE
 
 timeToText :: UTCTime -> Text
 timeToText = T.pack . show
 
-buildIGMIssue :: UTCTimeRFC3339 -> Text -> RideBooking -> Person -> Text -> DIGM.IGMIssue
-buildIGMIssue now issueId booking rider transactionId = do
-  DIGM.IGMIssue
+buildIGMIssue :: UTCTimeRFC3339 -> Text -> RideBooking -> Person -> Text -> Spec.Domain -> IGMIssueCommon.IGMIssue
+buildIGMIssue now issueId booking rider transactionId domain = do
+  IGMIssueCommon.IGMIssue
     { createdAt = convertRFC3339ToUTC now,
-      riderId = rider.id,
+      riderId = cast <$> (Just rider.id),
       id = Id issueId,
-      issueStatus = DIGM.OPEN,
-      issueType = DIGM.ISSUE,
+      issueStatus = IGMIssueCommon.OPEN,
+      issueType = IGMIssueCommon.ISSUE,
       respondentAction = Nothing,
       respondentEmail = Nothing,
       respondentName = Nothing,
       respondentPhone = Nothing,
-      respondingMerchantId = booking.providerId,
+      respondingMerchantId = Just booking.providerId,
       respondentEntityType = Nothing,
       transactionId = transactionId,
-      merchantOperatingCityId = booking.merchantOperatingCityId,
+      domain = domain,
+      merchantOperatingCityId = cast <$> (Just booking.merchantOperatingCityId),
       bookingId = booking.bookingId,
-      updatedAt = convertRFC3339ToUTC now
+      updatedAt = convertRFC3339ToUTC now,
+      customerEmail = Nothing,
+      customerName = Nothing,
+      customerPhone = Nothing,
+      issueRaisedByMerchant = Nothing,
+      merchantId = Nothing,
+      resolutionAction = Nothing
     }
 
-updateIGMIssue :: Maybe DIGM.IGMIssue -> Maybe Common.CustomerResponse -> UTCTime -> Maybe DIGM.IGMIssue
+updateIGMIssue :: Maybe IGMIssueCommon.IGMIssue -> Maybe Common.CustomerResponse -> UTCTime -> Maybe IGMIssueCommon.IGMIssue
 updateIGMIssue Nothing _ _ = Nothing
 updateIGMIssue (Just igmIssue) mbResponse now = do
   let updatedIssue =
         igmIssue
-          { DIGM.issueType = mapDomainIssueType mbResponse igmIssue.issueType,
-            DIGM.issueStatus = mapDomainIssueStatus mbResponse,
-            DIGM.updatedAt = now
+          { IGMIssueCommon.issueType = mapDomainIssueType mbResponse igmIssue.issueType,
+            IGMIssueCommon.issueStatus = mapDomainIssueStatus mbResponse,
+            IGMIssueCommon.updatedAt = now
           }
   Just updatedIssue
 
@@ -174,5 +181,6 @@ data RideBooking = RideBooking
     bppBookingId :: Maybe Text,
     status :: Maybe Text,
     contactPhone :: Maybe Text,
-    igmCategory :: Spec.Domain
+    domain :: Spec.Domain,
+    quantity :: Maybe Int
   }

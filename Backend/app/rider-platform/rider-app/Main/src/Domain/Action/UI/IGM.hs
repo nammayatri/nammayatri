@@ -15,6 +15,7 @@
 module Domain.Action.UI.IGM where
 
 import Domain.Types.Booking
+import qualified Domain.Types.FRFSTicketBooking as FRFSTicketBooking
 import Domain.Types.Ride
 import qualified IssueManagement.Common.UI.Issue as Common
 import Kernel.Prelude
@@ -23,21 +24,30 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.FRFSTicketBooking as QFTB
 import Storage.Queries.Ride as QRide
+import Tools.Error
 
 data IGMIssueReq = IGMIssueReq
-  { isValueAddNP :: Bool,
-    ride :: Ride,
+  { ride :: Ride,
     booking :: Booking
   }
   deriving (Generic)
 
-buildIGMIssueReq :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Maybe (Id Common.Ride) -> m (Maybe IGMIssueReq)
-buildIGMIssueReq mbRideId =
-  case mbRideId of
-    Just rideId -> do
-      ride <- QRide.findById (cast rideId) >>= fromMaybeM (RideNotFound rideId.getId)
-      booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-      isValueAddNP <- CQVAN.isValueAddNP booking.providerId
-      return $ Just IGMIssueReq {isValueAddNP, ride, booking}
-    Nothing -> return Nothing
+newtype FRFSIGMIssueReq = FRFSIGMIssueReq
+  { ticketBooking :: FRFSTicketBooking.FRFSTicketBooking
+  }
+  deriving (Generic)
+
+buildIGMIssueReq :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Maybe (Id Common.Ride) -> Maybe (Id Common.TicketBooking) -> m (Maybe (Either FRFSIGMIssueReq IGMIssueReq))
+buildIGMIssueReq mbRideId mbTicketBookingId = case (mbRideId, mbTicketBookingId) of
+  (Just rideId, _) -> do
+    ride <- QRide.findById (cast rideId) >>= fromMaybeM (RideNotFound rideId.getId)
+    booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+    CQVAN.isValueAddNP booking.providerId >>= \case
+      True -> pure Nothing
+      False -> pure $ Just $ Right $ IGMIssueReq {ride, booking}
+  (_, Just ticketBookingId) -> do
+    ticketBooking <- QFTB.findById (cast ticketBookingId) >>= fromMaybeM (TicketBookingNotFound ticketBookingId.getId)
+    pure $ Just $ Left $ FRFSIGMIssueReq {ticketBooking = ticketBooking}
+  _ -> pure Nothing

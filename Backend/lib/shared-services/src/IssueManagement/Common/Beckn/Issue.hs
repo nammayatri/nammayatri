@@ -3,32 +3,42 @@ module IssueManagement.Common.Beckn.Issue where
 -- import qualified IssueManagement.Beckn.ACL.Issue as ACL
 -- import qualified Beckn.ACL.IGM.OnIssue as ACL
 import qualified BecknV2.IGM.APIs as Spec
--- import qualified IssueManagement.Domain.Action.Beckn.Issue as DIssue
--- import Kernel.Types.Common
--- import Environment
--- import qualified IGM.Types as Spec
--- import qualified IGM.Utils as Utils
--- import Kernel.Prelude
--- import qualified Kernel.Storage.Hedis as Redis
-
--- import Kernel.Types.Error
-
--- import Kernel.Utils.Common
-
 import IssueManagement.Common
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Servant.SignatureAuth
-import Servant hiding (throwError)
+import Servant hiding (Unauthorized, throwError)
 
--- import qualified IssueManagement.SharedLogic.CallIGMAPI as CallBAP
+type OnDemandAPI =
+  OnDemandBAPFlowAPI
+    :<|> OnDemandBPPFlowAPI
 
-type IssueAPI =
-  Capture "merchantId" (Id Merchant)
+type OnDemandBAPFlowAPI =
+  "beckn" :> "cab" :> "v1"
+    :> Capture "merchantId" (Id Merchant)
     :> SignatureAuth 'Domain.MOBILITY "Authorization"
-    :> Spec.IssueAPI
+    :> ( Spec.OnIssueAPI
+           :<|> Spec.OnIssueStatusAPI
+       )
 
-type IssueStatusAPI =
-  Capture "merchantId" (Id Merchant)
+type OnDemandBPPFlowAPI =
+  "beckn"
+    :> Capture "merchantId" (Id Merchant)
     :> SignatureAuth 'Domain.MOBILITY "Authorization"
-    :> Spec.IssueStatusAPI
+    :> ( Spec.IssueAPI
+           :<|> Spec.IssueStatusAPI
+       )
+
+type PublicTransportAPI =
+  "beckn" :> "frfs" :> "v1"
+    :> Capture "merchantId" (Id Merchant)
+    :> SignatureAuth 'Domain.PUBLIC_TRANSPORT "Authorization"
+    :> ( Spec.OnIssueAPI
+           :<|> Spec.OnIssueStatusAPI
+       )
+
+type OnIssueAPI = Spec.OnIssueAPI
+
+type IssueStatusAPI = Spec.IssueStatusAPI
+
+type OnIssueStatusAPI = Spec.OnIssueStatusAPI

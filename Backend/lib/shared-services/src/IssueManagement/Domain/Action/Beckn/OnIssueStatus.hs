@@ -1,28 +1,16 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
-
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
-
-module Domain.Action.Beckn.IGM.OnIssueStatus where
+module IssueManagement.Domain.Action.Beckn.OnIssueStatus where
 
 import Control.Applicative
-import qualified Domain.Types.IGMIssue as DIGM
-import Environment
+import qualified IssueManagement.Domain.Types.Issue.IGMIssue as DIGM
+import IssueManagement.Storage.BeamFlow
+import qualified IssueManagement.Storage.Queries.Issue.IGMIssue as QIGM
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
-import qualified Storage.Queries.IGMIssue as QIGM
 
 data DOnIssueStatus = DOnIssueStatus
   { id :: Text,
@@ -35,10 +23,23 @@ data DOnIssueStatus = DOnIssueStatus
     updatedAt :: UTCTimeRFC3339
   }
 
-validateRequest :: DOnIssueStatus -> Flow (DIGM.IGMIssue)
+validateRequest ::
+  ( BeamFlow m r,
+    EsqDBReplicaFlow m r,
+    CoreMetrics m
+  ) =>
+  DOnIssueStatus ->
+  m (DIGM.IGMIssue)
 validateRequest req = QIGM.findByPrimaryKey (Id $ req.id) >>= fromMaybeM (InvalidRequest "Issue not found")
 
-onIssueStatus :: DOnIssueStatus -> DIGM.IGMIssue -> Flow ()
+onIssueStatus ::
+  ( BeamFlow m r,
+    EsqDBReplicaFlow m r,
+    CoreMetrics m
+  ) =>
+  DOnIssueStatus ->
+  DIGM.IGMIssue ->
+  m ()
 onIssueStatus req issue = do
   let updatedIssue =
         issue
