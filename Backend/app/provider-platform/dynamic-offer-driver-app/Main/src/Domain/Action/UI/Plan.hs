@@ -324,7 +324,9 @@ getSubsriptionConfigAndPlanSubscription ::
 getSubsriptionConfigAndPlanSubscription serviceName (driverId, _, merchantOpCityId) mbDPlan = do
   subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
   vehicleCategory <- getVehicleCategory driverId subscriptionConfig
-  plans <- QPD.findByMerchantOpCityIdTypeServiceNameVehicle merchantOpCityId (maybe AUTOPAY (.planType) mbDPlan) serviceName vehicleCategory False
+  let isVehicleChanged = (mbDPlan >>= (.vehicleCategory)) /= vehicleCategory && isJust mbDPlan
+  let planModeToList = if isVehicleChanged then AUTOPAY else (maybe AUTOPAY (.planType) mbDPlan)
+  plans <- QPD.findByMerchantOpCityIdTypeServiceNameVehicle merchantOpCityId planModeToList serviceName vehicleCategory False
   return (subscriptionConfig, plans)
 
 -- This API is for listing all the AUTO PAY plans
