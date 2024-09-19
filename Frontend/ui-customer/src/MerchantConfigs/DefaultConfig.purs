@@ -397,11 +397,6 @@ config =
   }
   , countryCodeConfig : [
       {
-        countryName : "US" 
-      , countryCode  : "+1" 
-      , countryShortCode : "US"
-      },
-      {
         countryName : "India" 
       , countryCode  : "+91" 
       , countryShortCode : "IN"
