@@ -1263,6 +1263,7 @@ getTE stringKey =
     SERVICES -> "సేవలు"
     YOU_HAVE_UPCOMING_RENTAL_BOOKING bookingTime -> "మీకు <b>" <> bookingTime <>  "</b>కి రాబోయే అద్దె బుకింగ్ ఉంది"
     YOU_HAVE_UPCOMING_INTERCITY_BOOKING bookingTime -> "మీకు <b>" <> bookingTime <>  "</b>కి రాబోయే అంతరనగర బుకింగ్ ఉంది"
+    YOU_HAVE_AN_UPCOMING_BOOKING bookingTime -> "మీకు రాబోయే బుకింగ్ <b> " <> bookingTime <> "</b> న ఉంది."
     SCHEDULED -> "షెడ్యూల్ చేయబడింది"
     UPCOMING_BOOKINGS -> "మీకు అనుకూలంగా బుకింగ్‌లు ఉన్నాయి"
     RENTALS_ -> "రెంటల్స్"
@@ -1543,3 +1544,7 @@ getTE stringKey =
     TOLL_AND_STATE_PERMIT -> "టోల్ మరియు రాష్ట్ర అనుమతి చార్జీలు చేర్చబడలేదు మరియు డ్రైవర్‌కు వేరుగా చెల్లించాలి."
     TRIP_EXCLUSION -> "ప్రయాణం మినహాయింపులు"
     CONFIRM -> "నిర్ధారించు"
+    YOU_HAVE_AN_RIDE_FROM_WITHOUT_TO -> "మీకు {} వద్ద {} నుండి ఒక {} రైడ్ ఉంది, ఇది {} నుండి {} వరకు షెడ్యూల్ చేయబడింది. మీరు సాధారణ రైడ్‌లు తీసుకోవచ్చు లేదా మరొక రైడ్‌ను షెడ్యూల్ చేయవచ్చు, అయితే ఇది ఇప్పటికే షెడ్యూల్ చేసిన రైడ్ సమయంతో ఒప్పుకోకూడదు."
+    FOR_EVERY_EXTRA_HOUR_YOU_ADD -> "మీరు జోడించిన ప్రతి అదనపు గంటకు, మీ ప్యాకేజీలో అదనంగా 10 కిలోమీటర్లు కేటాయించబడతాయి."
+    BY_DEFAULT_ONE_HOUR -> "డిఫాల్ట్‌గా, అంచనా ప్రయాణ వ్యవధికి అదనంగా మీ బుకింగ్‌లో 1 గంట చేర్చబడుతుంది."
+

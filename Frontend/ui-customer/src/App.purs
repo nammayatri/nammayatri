@@ -384,7 +384,7 @@ data PICKUP_INSTRUCTIONS_SCREEN_OP = GO_TO_HOME_SCREEN_FROM_PICKUP_INSTRUCTIONS
 data RIDE_SUMMARY_SCREEN_OUTPUT =     GO_TO_RIDE_REQUEST
                                     | ACCEPT_SCHEDULED_RIDE String String
                                     | RIDE_CONFIRMED String String (Maybe String)
-                                    | CANCEL_INTERCITY_RIDE String
+                                    | CANCEL_SCHEDULED_RIDE String
                                     | NOTIFICATION_LISTENER String NotificationBody
                                     | CALL_DRIVER RideSummaryScreenData.RideSummaryScreenState CallType String
 

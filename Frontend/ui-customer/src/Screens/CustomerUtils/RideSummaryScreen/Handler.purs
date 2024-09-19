@@ -19,7 +19,7 @@ rideSummaryScreen = do
     (AcceptScheduleRide bookingId startTimeUTC)-> App.BackT $ App.BackPoint <$> pure (ACCEPT_SCHEDULED_RIDE bookingId startTimeUTC)
     GoBack -> App.BackT $ App.BackPoint <$> pure (GO_TO_RIDE_REQUEST)
     (GoToHomeScreen startTimeUTC bookingId fromScreen) ->  App.BackT $ App.BackPoint <$> pure (RIDE_CONFIRMED startTimeUTC fromScreen (bookingId))
-    (CancelScheduledRide bookingId)->  App.BackT $ App.BackPoint <$> pure (CANCEL_INTERCITY_RIDE bookingId)
+    (CancelScheduledRide bookingId)->  App.BackT $ App.BackPoint <$> pure (CANCEL_SCHEDULED_RIDE bookingId)
     (NotificationListenerSO notificationType notificationBody) -> App.BackT $ App.BackPoint <$> pure (NOTIFICATION_LISTENER notificationType notificationBody)
     CallDriverSO updatedState callType exophoneNumber -> do
         modifyScreenState $ RideSummaryScreenStateType (\_ -> updatedState)

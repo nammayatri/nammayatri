@@ -2599,12 +2599,14 @@ scheduledRideExistsPopUpConfig state =
                               "INTER_CITY" -> "intercity"
                               "RENTAL" -> "rental"
                               _ -> "one way"
+          destinationNotGiven =  (details.fareProductType == "RENTAL" && (isNothing contents.stopLocation))
           rideScheduledTime = fromMaybe "" overLappingBooking.rideScheduledTime
           rideEndTime = HU.calculateBookingEndTime (API.RideBookingRes overLappingBooking)--fromMaybe "" overLappingBooking.rideEndTime
           fromLocation = fetchAddressDetails details.fareProductType overLappingBooking.fromLocation
           toLocation = fetchAddressDetails details.fareProductType (fromMaybe dummyBookingDetails contents.toLocation)
         in
-          getVarString YOU_HAVE_AN_RIDE_FROM_TO_SCHEDULED_FROM_TILL [ rideType, fromLocation, toLocation, formatDateInHHMM rideScheduledTime,formatDateInHHMM rideEndTime ]
+          if destinationNotGiven then getVarString YOU_HAVE_AN_RIDE_FROM_TO_SCHEDULED_FROM_TILL [ rideType, fromLocation, toLocation, formatDateInHHMM rideScheduledTime,formatDateInHHMM rideEndTime ]
+                                 else getVarString YOU_HAVE_AN_RIDE_FROM_WITHOUT_TO [rideType , fromLocation , formatDateInHHMM rideScheduledTime , formatDateInHHMM rideEndTime]
       Nothing -> ""
 
   fetchAddressDetails :: String -> API.BookingLocationAPIEntity -> String

@@ -1616,7 +1616,6 @@ homeScreenFlow = do
               , { key: "Night Ride", value: unsafeToForeign state.data.rateCard.isNightShift }
               , { key: "BookingId", value: unsafeToForeign state.props.bookingId }
               ]
-          -- response <- FlowCache.fetchAndUpdateScheduledRides true
           updateScheduledRides true false
           -- setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ filter (\item -> item.bookingId /= state.props.bookingId) $ decodeBookingTimeList FunctionCall
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { autoScroll = false, isCancelRide = false, currentStage = HomeScreen, rideRequestFlow = false, isSearchLocation = NoView } })
@@ -4810,9 +4809,7 @@ rideScheduledFlow = do
       resp <- lift $ lift $ Remote.cancelRide (Remote.makeCancelRequest state.props.cancelDescription state.props.cancelReasonCode) (state.data.bookingId)
       case resp of
         Right resp -> do
-          -- response <- FlowCache.fetchAndUpdateScheduledRides true
           updateScheduledRides true false
-          -- setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ filter (\item -> item.bookingId /= state.data.bookingId) $ decodeBookingTimeList FunctionCall
           homeScreenFlow
         Left _ -> do
           void $ pure $ toast "Failed To Cancel Ride"
@@ -6090,9 +6087,7 @@ rentalScreenFlow = do
             setValueToLocalStore CONFIRM_QUOTES_POLLING "false"
             enterRentalRideSearchFlow resp.bookingId
           else do
-            -- response <- FlowCache.fetchAndUpdateScheduledRides true
             updateScheduledRides true false
-            -- setValueToLocalStore BOOKING_TIME_LIST $ encodeBookingTimeList $ Arr.sortWith (_.rideStartTime) $ (decodeBookingTimeList FunctionCall) <> [ { bookingId: resp.bookingId, rideStartTime: updatedState.data.startTimeUTC, estimatedDuration: (updatedState.data.rentalBookingData.baseDuration * 60) } ]
             modifyScreenState $ RideScheduledScreenStateType (\rideScheduledScreen -> rideScheduledScreen{ data { bookingId = resp.bookingId } })
             rideScheduledFlow
         Left err -> do
@@ -6245,10 +6240,9 @@ fetchSrcAndDestLoc state = do
 updateRideScheduledTime :: String -> FlowBT String Unit
 updateRideScheduledTime _ = do
   (GlobalState globalState) <- getState
-  let 
-    rideBookingListResponse = globalState.homeScreen.data.latestScheduledRides 
+  rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "2" "0" "true"
   case rideBookingListResponse of
-    Just (RideBookingListRes listResp) -> do
+    Right (RideBookingListRes listResp) -> do
       let
         filteredList = filter (\item -> (any (_ == item ^. _status) ["CONFIRMED" , "TRIP_ASSIGNED"]) && item ^._isScheduled)  listResp.list
         multipleScheduled = length filteredList > 1
@@ -6267,7 +6261,7 @@ updateRideScheduledTime _ = do
         Nothing -> do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { rentalsInfo = Nothing } })
           pure unit
-    Nothing -> pure unit
+    Left _ -> pure unit
   pure unit
 
 enterRentalRideSearchFlow :: String -> FlowBT String Unit
@@ -6658,19 +6652,16 @@ rideSummaryScreenFlow = do
             bookingId = fromMaybe "" booking
             _ = runFn2 EHC.updatePushInIdMap "EstimatePolling" true
             state = newState.homeScreen
-          if isNow && isJust booking && not (fromScreen == Screen.getScreen Screen.HOME_SCREEN) then do
+          if isNow && isJust booking && not (any (_ == fromScreen) [Screen.getScreen Screen.HOME_SCREEN , Screen.getScreen Screen.MY_RIDES_SCREEN]) then do
             enterRentalRideSearchFlow bookingId
           else do
             when (not (fromScreen == (Screen.getScreen Screen.HOME_SCREEN))) ( do 
-              -- void $ FlowCache.fetchAndUpdateScheduledRides true
               void $ updateScheduledRides true false
               pure unit)
             modifyScreenState $ RideSummaryScreenStateType (\rideSummaryScreen -> RideSummaryScreenData.initData)
-            checkRideStatus false false
-            updateLocalStage HomeScreen
-            updateUserInfoToState state
-            homeScreenFlow
-    CANCEL_INTERCITY_RIDE bookingId-> do
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { settingSideBar { opened = SettingSideBarController.CLOSED } } })
+            currentFlowStatus false
+    CANCEL_SCHEDULED_RIDE bookingId-> do
       resp <- lift $ lift $ Remote.cancelRide (Remote.makeCancelRequest  "Cancelling Intercity Ride" "Cancel Intercity Ride") (bookingId)
       case resp of
         Right resp -> do

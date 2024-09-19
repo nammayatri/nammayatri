@@ -2271,7 +2271,6 @@ eval (ContinueWithoutOffers (SelectListRes resp)) state = do
 
 eval (GetRideConfirmation (RideBookingRes response)) state = do
   logStatus "confirming_ride" response
-  void $ pure $ FlowCache.fetchAndUpdateScheduledRides true
   let (RideBookingAPIDetails bookingDetails) = response.bookingDetails
       (RideBookingDetails contents) = bookingDetails.contents
       otpCode = contents.otpCode

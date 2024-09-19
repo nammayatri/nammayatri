@@ -1730,16 +1730,16 @@ topLeftIconView state push =
 
 upcomingRideBanner push rideDetails = 
   linearLayout
-        [ height $ V 45
+        [ height $ WRAP_CONTENT
         , width MATCH_PARENT
-        , background Color.black
+        , background Color.blueGreen
         , margin $ Margin 16 16 16 0 
         , cornerRadius 8.0
         , gravity CENTER
-        ][  textView[
-            text $ " Your upcoming Ride start at" <> rideDetails.rideScheduledAt
-          , color Color.white900
-        ]]
+        ][  textView $ 
+            [ text $ getString $ YOU_HAVE_AN_UPCOMING_BOOKING (rideDetails.rideScheduledAt)
+              , color Color.white900
+            ] <> FontStyle.tags TypoGraphy ]
 ----------- estimatedFareView ----------------
 estimatedFareView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 estimatedFareView push state =
@@ -5256,7 +5256,7 @@ rideInfoCardConfig state = let
       padding = Padding 0 2 2 0,
       visibility = VISIBLE
     }
-  , bulletPoints = ["By default, 1hr is added to your booking in addition to the estimated travel duration.","For every extra hour you add, you will be allocated 10 extra kilometers of distance in your package."]
+  , bulletPoints = [ getString FOR_EVERY_EXTRA_HOUR_YOU_ADD , getString BY_DEFAULT_ONE_HOUR ]
   , buttonConfig {
       text = getString GOT_IT,
       padding = PaddingVertical 16 20,
