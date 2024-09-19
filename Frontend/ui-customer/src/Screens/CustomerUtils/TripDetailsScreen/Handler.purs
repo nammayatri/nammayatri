@@ -31,10 +31,10 @@ tripDetailsScreen = do
     (GlobalState state) <- getState
     act <- lift $ lift $ runScreen $ TripDetailsScreen.screen state.tripDetailsScreen
     case act of
-        GoBack fromMyRides -> do
+        GoBack fromMyRides updatedState -> do
           modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{issueReported = false, reportIssue = false}})
           case fromMyRides of 
-            Home -> App.BackT $ pure App.GoBack
+            Home -> App.BackT $ App.NoBack <$> (pure $ GO_TO_HOME updatedState)
             MyRides -> App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDES)
             HelpAndSupport -> App.BackT $ App.NoBack <$> (pure $ GO_TO_HELPSCREEN)
             ReportIssueChat -> App.BackT $ App.NoBack <$> (pure $ GO_TO_REPORT_ISSUE_CHAT_SCREEN)

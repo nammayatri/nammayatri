@@ -3012,7 +3012,6 @@ tripDetailsScreenFlow = do
       invoiceScreenFlow
     GO_TO_HOME state -> do
       if state.props.fromMyRides == Home then do
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
         updateLocalStage HomeScreen
       else
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { settingSideBar { opened = SettingSideBarController.CLOSED } } })

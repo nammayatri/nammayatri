@@ -385,7 +385,10 @@ gotoTripDetailsScreenHandler updatedState = do
     { fromMyRides = backPointForTripDetails
     }
   })
-  App.BackT $ App.BackPoint <$> (pure TripDetailsScreenFlow)
+  if updatedState.data.entryPoint == TripDetailsScreenEntry then
+    App.BackT $ App.NoBack <$> (pure $ TripDetailsScreenFlow)
+  else 
+    App.BackT $ App.BackPoint <$> (pure TripDetailsScreenFlow)
 
 goToFaqScreenHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
 goToFaqScreenHandler updatedState = do
