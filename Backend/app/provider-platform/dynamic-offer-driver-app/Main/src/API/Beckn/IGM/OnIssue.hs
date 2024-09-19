@@ -1,35 +1,32 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
-
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
-
 module API.Beckn.IGM.OnIssue where
 
-import qualified Beckn.ACL.IGM.OnIssue as ACL
-import qualified BecknV2.IGM.APIs as Spec
-import qualified Domain.Action.Beckn.IGM.OnIssue as DOnIssue
+-- import qualified IssueManagement.Beckn.ACL.Issue as ACL
+-- import API.UI.Issue (driverIssueHandle)
+-- import qualified BecknV2.IGM.APIs as Spec
+
+-- import qualified Domain.Types.Merchant as DM
 import Environment
 import qualified IGM.Types as Spec
 import qualified IGM.Utils as Utils
+-- import qualified Kernel.Types.Beckn.Domain as Domain
+
+-- import Servant hiding (throwError)
+
+-- import qualified IssueManagement.API.Beckn.Issue as BI
+import qualified IssueManagement.Beckn.ACL.OnIssue as ACL
+-- import qualified IssueManagement.Common as Common
+-- import qualified IssueManagement.Domain.Action.Beckn.Issue as DIssue
+
+-- import Kernel.Types.Id
+
+-- import qualified SharedLogic.CallIGMBAP as CallBAP
+import qualified IssueManagement.Domain.Action.Beckn.OnIssue as DOnIssue
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
-
-type API = Spec.OnIssueAPI
-
-handler :: SignatureAuthResult -> FlowServer API
-handler = onIssue
+import Storage.Beam.IssueManagement ()
 
 onIssue ::
   SignatureAuthResult ->

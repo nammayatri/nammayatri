@@ -17,13 +17,10 @@ module API.IGM where
 import qualified API.Beckn.IGM.Issue as Issue
 -- import qualified API.Beckn.IGM.IssueStatus as IssueStatus
 import Environment
-import Servant hiding (throwError)
 
-type API =
-  "beckn"
-    :> ( Issue.API
-    --  :<|> IssueStatus.API
-       )
+type API = Issue.API
+
+--  :<|> IssueStatus.API
 
 handler :: FlowServer API
 handler =

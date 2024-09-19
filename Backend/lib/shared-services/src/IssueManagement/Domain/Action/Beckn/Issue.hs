@@ -30,6 +30,7 @@ import qualified IssueManagement.Storage.Queries.Issue.IGMIssue as QIGM
 import qualified IssueManagement.Storage.Queries.Issue.IssueCategory as QIC
 import qualified IssueManagement.Storage.Queries.Issue.IssueOption as QIO
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
+-- import IssueManagement.Storage.BeamFlow
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -124,6 +125,7 @@ handler ValidatedDIssue {..} iHandle = do
     DIGM.OPEN -> openBecknIssue ValidatedDIssue {..} iHandle
     DIGM.ESCALATED -> escalateBecknIssue ValidatedDIssue {..} now
     DIGM.CLOSED -> closeBecknIssue ValidatedDIssue {..} now iHandle
+    DIGM.RESOLVED -> throwError $ InvalidRequest "Issue already resolved"
 
 openBecknIssue ::
   ( EsqDBReplicaFlow m r,
@@ -135,7 +137,8 @@ openBecknIssue ::
   ServiceHandle m ->
   m IssueRes
 openBecknIssue dIssue@ValidatedDIssue {..} iHandle = do
-  ride <- iHandle.findOneByBookingId booking.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
+  ride <- iHandle.findOneByBookingId booking.id merchant.id >>= fromMaybeM (RideDoesNotExist booking.id.getId)
+  transactionId <- generateGUID
   -- riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id") -- shrey00 : incorporate it back?
   let igmIssue =
         DIGM.IGMIssue
@@ -143,15 +146,24 @@ openBecknIssue dIssue@ValidatedDIssue {..} iHandle = do
             DIGM.customerEmail = customerEmail,
             DIGM.customerName = customerName,
             DIGM.customerPhone = customerPhone,
+            DIGM.riderId = Nothing,
+            DIGM.respondingMerchantId = Nothing,
+            DIGM.respondentEntityType = Nothing,
+            DIGM.transactionId = transactionId,
+            DIGM.merchantOperatingCityId = Nothing,
             DIGM.id = Id issueId,
             DIGM.bookingId = getId booking.id,
-            DIGM.issueRaisedByMerchant = bapId,
+            DIGM.issueRaisedByMerchant = Just bapId,
             DIGM.issueStatus = issueStatus,
+            DIGM.domain = Spec.PUBLIC_TRANSPORT,
             DIGM.issueType = issueType,
             DIGM.respondentAction = Nothing,
             DIGM.resolutionAction = Nothing,
+            DIGM.respondentName = Nothing,
+            DIGM.respondentEmail = Nothing,
+            DIGM.respondentPhone = Nothing,
             DIGM.updatedAt = convertRFC3339ToUTC createdAt,
-            DIGM.merchantId = booking.providerId
+            DIGM.merchantId = Just booking.providerId
           }
   category <- QIC.findByIGMIssueCategory issueCategory >>= fromMaybeM (InvalidRequest "Issue Category not found or unsupported")
   QIGM.create igmIssue
@@ -159,7 +171,8 @@ openBecknIssue dIssue@ValidatedDIssue {..} iHandle = do
   let optionId = mbOption <&> (.id)
       description = maybe "No description provided" (.option) mbOption
   let issueReport = Common.IssueReportReq (Just $ cast ride.id) [] optionId category.id description Nothing (Just True) Nothing -- insert ticketbookingId, which is given by UI
-  void $ Common.createIssueReport (cast ride.driverId, cast dIssue.merchant.id) Nothing issueReport iHandle Common.DRIVER (Just issueId)
+  driverId <- fromMaybeM (RideFieldNotPresent "Driver not found") $ ride.driverId
+  void $ Common.createIssueReport (cast driverId, cast dIssue.merchant.id) Nothing issueReport iHandle Common.DRIVER (Just issueId)
   pure $
     IssueRes
       { issueId = issueId,

@@ -1,27 +1,21 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
+module IssueManagement.Domain.Action.Beckn.OnIssue where
 
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
-
-module Domain.Action.Beckn.IGM.OnIssue where
-
-import qualified Domain.Types.IGMIssue as DIGM
-import Environment
+import qualified IssueManagement.Domain.Types.Issue.IGMIssue as DIGM
+-- import Kernel.Tools.Metrics.CoreMetrics
+-- import Kernel.Types.Error
+-- import Kernel.Types.Id
+-- import Kernel.Types.TimeRFC339
+import IssueManagement.Storage.BeamFlow
+import qualified IssueManagement.Storage.Queries.Issue.IGMIssue as QIGM
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
-import qualified Storage.Queries.IGMIssue as QIGM
+
+-- import Kernel.Utils.Common
 
 data DOnIssue = DOnIssue
   { id :: Text,
@@ -36,13 +30,23 @@ data DOnIssue = DOnIssue
     updatedAt :: Maybe UTCTimeRFC3339
   }
 
-validateRequest :: DOnIssue -> Flow DIGM.IGMIssue
+validateRequest ::
+  ( BeamFlow m r,
+    EsqDBReplicaFlow m r,
+    CoreMetrics m
+  ) =>
+  DOnIssue ->
+  m DIGM.IGMIssue
 validateRequest igmIssue = QIGM.findByPrimaryKey (Id igmIssue.id) >>= fromMaybeM (InvalidRequest "Issue not found")
 
 handler ::
+  ( BeamFlow m r,
+    EsqDBReplicaFlow m r,
+    CoreMetrics m
+  ) =>
   DOnIssue ->
   DIGM.IGMIssue ->
-  Flow ()
+  m ()
 handler onIssueReq issue = do
   now <- UTCTimeRFC3339 <$> getCurrentTime
   let issueStatus = mapActionToStatus onIssueReq.respondentAction & fromMaybe issue.issueStatus

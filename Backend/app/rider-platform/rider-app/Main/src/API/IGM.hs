@@ -14,31 +14,25 @@
 
 module API.IGM where
 
-import qualified API.Beckn.IGM.OnIssue as OnIssue
-import qualified API.Beckn.IGM.OnIssueStatus as OnIssueStatus
-import qualified Domain.Types.Merchant as DM
+import qualified API.Beckn.IGM.Issue as Issue
+-- import qualified API.Beckn.IGM.OnIssueStatus as OnIssueStatus
 import Environment
-import qualified Kernel.Types.Beckn.Domain as Domain
-import Kernel.Types.Id
-import Kernel.Utils.Servant.SignatureAuth
-import Servant hiding (throwError)
 
-type API =
-  "beckn" :> "cab" :> "v1"
-    :> SignatureAuth 'Domain.MOBILITY "Authorization"
-    :> ( OnIssue.API
-           :<|> OnIssueStatus.API
-       )
+-- type API =
+--   "beckn" :> "cab" :> "v1"
+--     :> SignatureAuth 'Domain.MOBILITY "Authorization"
+--     :> ( OnIssue.API
+--            :<|> OnIssueStatus.API
+--        )
 
-type APIM =
-  "beckn" :> "cab" :> "v1"
-    :> Capture "merchantId" (Id DM.Merchant)
-    :> SignatureAuth 'Domain.MOBILITY "Authorization"
-    :> ( OnIssue.API
-           :<|> OnIssueStatus.API
-       )
+-- type APIM =
+--   "beckn" :> "cab" :> "v1"
+--     :> Capture "merchantId" (Id DM.Merchant)
+--     :> SignatureAuth 'Domain.MOBILITY "Authorization"
+--     :> ( OnIssue.API
+--            :<|> OnIssueStatus.API
+--        )
+type IGMAPI = Issue.API
 
-handler :: FlowServer API
-handler auth =
-  OnIssue.handler auth
-    :<|> OnIssueStatus.handler auth
+handler :: FlowServer IGMAPI
+handler = Issue.handler

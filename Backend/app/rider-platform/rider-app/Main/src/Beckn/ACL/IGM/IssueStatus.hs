@@ -15,7 +15,6 @@
 module Beckn.ACL.IGM.IssueStatus (buildIssueStatusReq) where
 
 import qualified Beckn.ACL.IGM.Utils as Utils
-import Domain.Types.Booking
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity
 import qualified IGM.Enums as Spec
@@ -28,7 +27,7 @@ buildIssueStatusReq ::
   (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   DM.Merchant ->
   MerchantOperatingCity ->
-  Booking ->
+  Utils.RideBooking ->
   Text ->
   Text ->
   m Spec.IssueStatusReq

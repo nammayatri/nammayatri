@@ -1,3 +1,4 @@
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -7,6 +8,7 @@ module IssueManagement.Storage.Beam.Issue.IGMIssue where
 
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified IGM.Enums as Spec
 import qualified IssueManagement.Domain.Types.Issue.IGMIssue as IC
 import IssueManagement.Tools.UtilsTH hiding (label)
 
@@ -15,13 +17,22 @@ data IGMIssueT f = IGMIssueT
     createdAt :: B.C f UTCTime,
     customerEmail :: B.C f (Maybe Text),
     customerName :: B.C f (Maybe Text),
+    riderId :: B.C f (Maybe Text),
+    respondingMerchantId :: B.C f (Maybe Text),
+    respondentEntityType :: B.C f (Maybe Text),
+    transactionId :: B.C f Text,
+    domain :: B.C f Spec.Domain,
+    merchantOperatingCityId :: B.C f (Maybe Text),
     customerPhone :: B.C f (Maybe Text),
     id :: B.C f Text,
-    issueRaisedByMerchant :: B.C f Text,
+    issueRaisedByMerchant :: B.C f (Maybe Text),
     issueStatus :: B.C f IC.Status,
     issueType :: B.C f IC.IssueType,
-    merchantId :: B.C f Text,
+    merchantId :: B.C f (Maybe Text),
     resolutionAction :: B.C f (Maybe Text),
+    respondentName :: B.C f (Maybe Text),
+    respondentEmail :: B.C f (Maybe Text),
+    respondentPhone :: B.C f (Maybe Text),
     respondentAction :: B.C f (Maybe Text),
     updatedAt :: B.C f UTCTime
   }

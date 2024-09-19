@@ -32,12 +32,16 @@ library
       IssueManagement.Beckn.ACL.IGM.Utils
       IssueManagement.Beckn.ACL.Issue
       IssueManagement.Beckn.ACL.IssueStatus
+      IssueManagement.Beckn.ACL.OnIssue
+      IssueManagement.Beckn.ACL.OnIssueStatus
       IssueManagement.Common
       IssueManagement.Common.Beckn.Issue
       IssueManagement.Common.Dashboard.Issue
       IssueManagement.Common.UI.Issue
       IssueManagement.Domain.Action.Beckn.Issue
       IssueManagement.Domain.Action.Beckn.IssueStatus
+      IssueManagement.Domain.Action.Beckn.OnIssue
+      IssueManagement.Domain.Action.Beckn.OnIssueStatus
       IssueManagement.Domain.Action.Dashboard.Issue
       IssueManagement.Domain.Action.UI.Issue
       IssueManagement.Domain.Types.Issue.Comment

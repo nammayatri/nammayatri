@@ -15,59 +15,47 @@
 module API.Beckn.IGM.Issue where
 
 -- import qualified IssueManagement.Beckn.ACL.Issue as ACL
-import API.UI.Issue (driverIssueHandle)
 -- import qualified BecknV2.IGM.APIs as Spec
 
 -- import qualified Domain.Types.Merchant as DM
-import Environment
-import qualified IGM.Types as Spec
-import qualified IGM.Utils as Utils
+
 -- import qualified Kernel.Types.Beckn.Domain as Domain
 
--- import Servant hiding (throwError)
-
+import qualified API.UI.Issue as AUI
+import Environment
+import qualified IGM.Types as Spec
 import qualified IssueManagement.API.Beckn.Issue as BI
-import qualified IssueManagement.Beckn.ACL.Issue as ACL
 import qualified IssueManagement.Common as Common
-import qualified IssueManagement.Domain.Action.Beckn.Issue as DIssue
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
-import qualified SharedLogic.CallIGMBAP as CallBAP
+import Servant hiding (throwError)
 
 type API = BI.IssueAPI
 
 handler :: FlowServer API
-handler = issue
+handler = onDemandHandler :<|> publicTransportHandler
+  where
+    onDemandHandler = onDemandBAPHandler :<|> onDemandBPPHandler
 
-issue ::
-  Id Common.Merchant ->
-  SignatureAuthResult ->
-  Spec.IssueReq ->
-  FlowHandler Spec.AckResponse
-issue merchantId _ req = withFlowHandlerAPI $ do
-  transaction_id <- req.context.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
-  message_id <- req.context.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
-  bap_id <- req.context.contextBapId & fromMaybeM (InvalidRequest "BapId not found")
-  bap_uri <- req.context.contextBapUri & fromMaybeM (InvalidRequest "BapUri not found")
-  logDebug $ "Received Issue request" <> encodeToText req
-  withTransactionIdLogTag' transaction_id $ do
-    issueReq <- ACL.buildIssueReq req
-    Redis.whenWithLockRedis (issueLockKey message_id) 60 $ do
-      validatedIssueReq <- DIssue.validateRequest merchantId issueReq driverIssueHandle
-      fork "IGM issue processing" $ do
-        Redis.whenWithLockRedis (issueProcessingLockKey message_id) 60 $ do
-          dIssueRes <- DIssue.handler validatedIssueReq driverIssueHandle
-          becknOnIssueReq <- ACL.buildOnIssueReq transaction_id message_id bap_id bap_uri dIssueRes
-          bapUrl <- parseBaseUrl bap_uri
-          void $ CallBAP.callOnIssue becknOnIssueReq bapUrl dIssueRes.merchant
-  pure Utils.ack
+    onDemandBAPHandler merchantId sigAuth =
+      onIssue merchantId sigAuth :<|> onIssueStatus merchantId sigAuth
 
-issueLockKey :: Text -> Text
-issueLockKey message_id = "IGM:Issue:MessageId" <> message_id
+    onDemandBPPHandler merchantId sigAuth =
+      issue merchantId sigAuth :<|> issueStatus merchantId sigAuth
 
-issueProcessingLockKey :: Text -> Text
-issueProcessingLockKey id = "IGM:OnIssue:Processing:MessageId-" <> id
+    publicTransportHandler merchantId sigAuth =
+      onIssue merchantId sigAuth :<|> onIssueStatus merchantId sigAuth
+
+issue :: Id Common.Merchant -> SignatureAuthResult -> Spec.IssueReq -> FlowHandler Spec.AckResponse
+issue merchantId _ issueReq = withFlowHandlerAPI $ BI.issue (cast merchantId) issueReq AUI.customerIssueHandle Common.CUSTOMER
+
+onIssue :: Id Common.Merchant -> SignatureAuthResult -> Spec.OnIssueReq -> FlowHandler Spec.AckResponse
+onIssue merchantId _ onIssueReq = withFlowHandlerAPI $ BI.onIssue (cast merchantId) onIssueReq AUI.customerIssueHandle Common.CUSTOMER
+
+issueStatus :: Id Common.Merchant -> SignatureAuthResult -> Spec.IssueStatusReq -> FlowHandler Spec.AckResponse
+issueStatus merchantId _ issueStatusReq = withFlowHandlerAPI $ BI.issueStatus (cast merchantId) issueStatusReq AUI.customerIssueHandle Common.CUSTOMER
+
+onIssueStatus :: Id Common.Merchant -> SignatureAuthResult -> Spec.OnIssueStatusReq -> FlowHandler Spec.AckResponse
+onIssueStatus merchantId _ onIssueStatusReq = withFlowHandlerAPI $ BI.onIssueStatus (cast merchantId) onIssueStatusReq AUI.customerIssueHandle Common.CUSTOMER
