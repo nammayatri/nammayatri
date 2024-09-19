@@ -623,7 +623,7 @@ newtype RidesInfo = RidesInfo
       bapName :: Maybe String,
       isValueAddNP :: Boolean,
       parkingCharge :: Maybe Number
-, coinsEarned :: Array CoinsEarned  
+, coinsEarned :: Maybe (Array CoinsEarned)  
 }
 
 newtype CoinsEarned = CoinsEarned CoinsEarnedType

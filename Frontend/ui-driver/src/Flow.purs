@@ -2617,7 +2617,7 @@ homeScreenFlow = do
                       , finalCharge = fromMaybe 0.0 response.tollCharges
                       , estimatedCharge = fromMaybe 0.0 response.estimatedTollCharges
                       }
-                    , coinsEarned = response.coinsEarned
+                    , coinsEarned = fromMaybe [] response.coinsEarned
                     },
                     props {
                       isFreeRide = fromMaybe false response.isFreeRide
