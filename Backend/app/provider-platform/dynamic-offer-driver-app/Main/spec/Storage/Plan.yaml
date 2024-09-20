@@ -55,7 +55,7 @@ Plan:
     basedOnEntity : BasedOnEntity
     serviceName : ServiceNames
     vehicleVariant : Maybe VehicleVariant|NoRelation
-    vehicleCategory : Maybe VehicleCategory|NoRelation
+    vehicleCategory : VehicleCategory|NoRelation
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentMode>
@@ -138,6 +138,13 @@ Plan:
     serviceName: "'YATRI_SUBSCRIPTION'"
     basedOnEntity: "'RIDE'"
 
+  fromTType:
+    vehicleCategory: Storage.Queries.Transformers.Plan.getCategoryFromSubscriptionConfig vehicleCategory merchantOpCityId serviceName|EM
+  toTType:
+    vehicleCategory: Kernel.Prelude.Just|I
+
+  beamType:
+    vehicleCategory: Maybe VehicleCategory
 
   extraOperations:
     - EXTRA_QUERY_FILE

@@ -31,25 +31,36 @@ SubscriptionConfig:
     payoutServiceName: Maybe Domain.Types.MerchantServiceConfig.ServiceName
     isTriggeredAtEndRide: Bool
     allowDriverFeeCalcSchedule: Bool
-    defaultCityVehicleCategory: Maybe VehicleCategory
+    defaultCityVehicleCategory: VehicleCategory|NoRelation
     numberOfFreeTrialRides: Maybe Int
     subscriptionEnabledForVehicleCategories: Maybe [VehicleCategory]
     freeTrialRidesApplicable: Bool
     executionEnabledForVehicleCategories: Maybe [VehicleCategory]
+    isSubscriptionEnabledAtCategoryLevel: Bool
+    enableCityBasedFeeSwitch: Bool
 
   fromTType:
     genericJobRescheduleTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
     paymentLinkJobTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
     freeTrialRidesApplicable: Kernel.Prelude.fromMaybe False|I
+    isSubscriptionEnabledAtCategoryLevel : Kernel.Prelude.fromMaybe False|I
+    defaultCityVehicleCategory : Kernel.Prelude.fromMaybe Domain.Types.VehicleCategory.AUTO_CATEGORY|I
+    enableCityBasedFeeSwitch: Kernel.Prelude.fromMaybe False|I
   toTType:
     genericJobRescheduleTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     paymentLinkJobTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     freeTrialRidesApplicable: Kernel.Prelude.Just|I
+    isSubscriptionEnabledAtCategoryLevel : Kernel.Prelude.Just|I
+    defaultCityVehicleCategory : Kernel.Prelude.Just|I
+    enableCityBasedFeeSwitch: Kernel.Prelude.Just|I
 
   beamType:
     genericJobRescheduleTime: Seconds
     paymentLinkJobTime: Seconds
     freeTrialRidesApplicable: Maybe Bool
+    isSubscriptionEnabledAtCategoryLevel: Maybe Bool
+    defaultCityVehicleCategory : Maybe VehicleCategory
+    enableCityBasedFeeSwitch : Maybe Bool
 
   constraints:
     serviceName: PrimaryKey

@@ -7,6 +7,7 @@ module Storage.Queries.SubscriptionConfig where
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Plan
 import qualified Domain.Types.SubscriptionConfig
+import qualified Domain.Types.VehicleCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -55,11 +56,13 @@ updateByPrimaryKey (Domain.Types.SubscriptionConfig.SubscriptionConfig {..}) = d
       Se.Set Beam.allowManualPaymentLinks allowManualPaymentLinks,
       Se.Set Beam.cgstPercentageOneTimeSecurityDeposit cgstPercentageOneTimeSecurityDeposit,
       Se.Set Beam.deepLinkExpiryTimeInMinutes deepLinkExpiryTimeInMinutes,
-      Se.Set Beam.defaultCityVehicleCategory defaultCityVehicleCategory,
+      Se.Set Beam.defaultCityVehicleCategory (Kernel.Prelude.Just defaultCityVehicleCategory),
+      Se.Set Beam.enableCityBasedFeeSwitch (Kernel.Prelude.Just enableCityBasedFeeSwitch),
       Se.Set Beam.executionEnabledForVehicleCategories executionEnabledForVehicleCategories,
       Se.Set Beam.freeTrialRidesApplicable (Kernel.Prelude.Just freeTrialRidesApplicable),
       Se.Set Beam.genericBatchSizeForJobs genericBatchSizeForJobs,
       Se.Set Beam.genericJobRescheduleTime (Kernel.Utils.Common.nominalDiffTimeToSeconds genericJobRescheduleTime),
+      Se.Set Beam.isSubscriptionEnabledAtCategoryLevel (Kernel.Prelude.Just isSubscriptionEnabledAtCategoryLevel),
       Se.Set Beam.isTriggeredAtEndRide isTriggeredAtEndRide,
       Se.Set Beam.maxRetryCount maxRetryCount,
       Se.Set Beam.numberOfFreeTrialRides numberOfFreeTrialRides,
@@ -88,11 +91,13 @@ instance FromTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subs
             allowManualPaymentLinks = allowManualPaymentLinks,
             cgstPercentageOneTimeSecurityDeposit = cgstPercentageOneTimeSecurityDeposit,
             deepLinkExpiryTimeInMinutes = deepLinkExpiryTimeInMinutes,
-            defaultCityVehicleCategory = defaultCityVehicleCategory,
+            defaultCityVehicleCategory = Kernel.Prelude.fromMaybe Domain.Types.VehicleCategory.AUTO_CATEGORY defaultCityVehicleCategory,
+            enableCityBasedFeeSwitch = Kernel.Prelude.fromMaybe False enableCityBasedFeeSwitch,
             executionEnabledForVehicleCategories = executionEnabledForVehicleCategories,
             freeTrialRidesApplicable = Kernel.Prelude.fromMaybe False freeTrialRidesApplicable,
             genericBatchSizeForJobs = genericBatchSizeForJobs,
             genericJobRescheduleTime = Kernel.Utils.Common.secondsToNominalDiffTime genericJobRescheduleTime,
+            isSubscriptionEnabledAtCategoryLevel = Kernel.Prelude.fromMaybe False isSubscriptionEnabledAtCategoryLevel,
             isTriggeredAtEndRide = isTriggeredAtEndRide,
             maxRetryCount = maxRetryCount,
             numberOfFreeTrialRides = numberOfFreeTrialRides,
@@ -120,11 +125,13 @@ instance ToTType' Beam.SubscriptionConfig Domain.Types.SubscriptionConfig.Subscr
         Beam.allowManualPaymentLinks = allowManualPaymentLinks,
         Beam.cgstPercentageOneTimeSecurityDeposit = cgstPercentageOneTimeSecurityDeposit,
         Beam.deepLinkExpiryTimeInMinutes = deepLinkExpiryTimeInMinutes,
-        Beam.defaultCityVehicleCategory = defaultCityVehicleCategory,
+        Beam.defaultCityVehicleCategory = Kernel.Prelude.Just defaultCityVehicleCategory,
+        Beam.enableCityBasedFeeSwitch = Kernel.Prelude.Just enableCityBasedFeeSwitch,
         Beam.executionEnabledForVehicleCategories = executionEnabledForVehicleCategories,
         Beam.freeTrialRidesApplicable = Kernel.Prelude.Just freeTrialRidesApplicable,
         Beam.genericBatchSizeForJobs = genericBatchSizeForJobs,
         Beam.genericJobRescheduleTime = Kernel.Utils.Common.nominalDiffTimeToSeconds genericJobRescheduleTime,
+        Beam.isSubscriptionEnabledAtCategoryLevel = Kernel.Prelude.Just isSubscriptionEnabledAtCategoryLevel,
         Beam.isTriggeredAtEndRide = isTriggeredAtEndRide,
         Beam.maxRetryCount = maxRetryCount,
         Beam.numberOfFreeTrialRides = numberOfFreeTrialRides,

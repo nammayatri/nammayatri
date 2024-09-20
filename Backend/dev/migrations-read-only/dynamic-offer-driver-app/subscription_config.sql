@@ -42,3 +42,13 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN subscription_e
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN number_of_free_trial_rides integer ;
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN free_trial_rides_applicable boolean ;
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN execution_enabled_for_vehicle_categories text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN is_subscription_enabled_at_category_level boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN enable_city_based_fee_switch boolean ;

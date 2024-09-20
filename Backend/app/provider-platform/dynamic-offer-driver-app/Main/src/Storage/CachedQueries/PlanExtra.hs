@@ -145,5 +145,5 @@ makeMerchantIdAndPaymentModeAndVariantKey merchantOpCityId paymentMode serviceNa
     <> ":IsDeprecated-"
     <> show mbIsDeprecated
 
-makeIdKey :: Id DMOC.MerchantOperatingCity -> PaymentMode -> ServiceNames -> Maybe DVC.VehicleCategory -> Bool -> Text
+makeIdKey :: Id DMOC.MerchantOperatingCity -> PaymentMode -> ServiceNames -> DVC.VehicleCategory -> Bool -> Text
 makeIdKey merchantOpCityId planMode serviceName vehicleCategory isDeprecated = "driver-offer:CachedQueries:Plan:MerchantOperatingCityId-" <> merchantOpCityId.getId <> ":PlanMode-" <> show planMode <> ":ServiceName-" <> show serviceName <> ":IsDeprecated-" <> show isDeprecated <> ":VehicleCategory-" <> show vehicleCategory

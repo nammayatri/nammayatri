@@ -62,7 +62,7 @@ data DriverFee = DriverFee
     status :: Domain.Types.DriverFee.DriverFeeStatus,
     totalEarnings :: Kernel.Types.Common.HighPrecMoney,
     updatedAt :: Kernel.Prelude.UTCTime,
-    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
+    vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
     vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, Show, Eq)

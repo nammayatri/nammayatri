@@ -42,7 +42,7 @@ data Plan = Plan
     serviceName :: Domain.Types.Plan.ServiceNames,
     sgstPercentage :: Kernel.Types.Common.HighPrecMoney,
     subscribedFlagToggleAllowed :: Kernel.Prelude.Bool,
-    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
+    vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
     vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

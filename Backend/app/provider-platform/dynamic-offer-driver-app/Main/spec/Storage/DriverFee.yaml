@@ -85,7 +85,7 @@ DriverFee:
     refundedAt : Maybe UTCTime
     refundedAmount : Maybe HighPrecMoney
     currency : Currency
-    vehicleCategory : Maybe VehicleCategory
+    vehicleCategory : VehicleCategory|NoRelation
     siblingFeeId : Maybe (Id DriverFee)
     hasSibling : Maybe Bool
     splitOfDriverFeeId : Maybe (Id DriverFee)
@@ -104,6 +104,7 @@ DriverFee:
   beamType:
     merchantOperatingCityId: Maybe Text
     serviceName: Maybe ServiceNames
+    vehicleCategory: Maybe VehicleCategory
 
   beamFields:
     platformFee:
@@ -129,6 +130,7 @@ DriverFee:
     govtCharges: Kernel.Types.Common.mkAmountWithDefault govtChargesAmount govtCharges|E
     totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
     currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+    vehicleCategory : Storage.Queries.Transformers.DriverFee.getCategoryFromPlanOrSubscriptionConfig vehicleCategory planId planMode merchantOperatingCityId serviceName id driverId|EM
 
   toTType:
     platformFee: ((.fee) platformFee)|E
@@ -136,7 +138,7 @@ DriverFee:
     sgst: ((.sgst) platformFee)|E
     serviceName: (Just serviceName)|E
     merchantOperatingCityId: (Just (Kernel.Types.Id.getId merchantOperatingCityId))|E
-
+    vehicleCategory : Kernel.Prelude.Just|I
     govtCharges: Kernel.Prelude.roundToIntegral|I
     totalEarnings: Kernel.Prelude.roundToIntegral|I
     govtChargesAmount:  Kernel.Prelude.Just|I

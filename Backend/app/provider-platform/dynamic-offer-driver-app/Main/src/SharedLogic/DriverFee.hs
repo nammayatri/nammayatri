@@ -243,4 +243,4 @@ mkCachedKeyTotalRidesByDriverId :: Id Person -> Text
 mkCachedKeyTotalRidesByDriverId driverId = "TRIDES:DId:" <> driverId.getId
 
 getPaymentModeAndVehicleCategoryKey :: Plan.Plan -> Text
-getPaymentModeAndVehicleCategoryKey Plan.Plan {..} = (show paymentMode) <> maybe "" (\vc -> "_" <> show vc) vehicleCategory
+getPaymentModeAndVehicleCategoryKey Plan.Plan {..} = show paymentMode <> "_" <> show vehicleCategory

@@ -241,6 +241,7 @@ import qualified Storage.Queries.DriverFeeExtra as QDFE
 import qualified Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverInformation as QDriverInformation
+import qualified Storage.Queries.DriverPlan as QDriverPlan
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -328,7 +329,9 @@ data DriverInformationRes = DriverInformationRes
     isSubscriptionCityChanged :: Bool,
     freeTrialDays :: Int,
     freeTrialRides :: Int,
-    totalRidesTaken :: Maybe Int
+    totalRidesTaken :: Maybe Int,
+    subscriptionEnabledForVehicleCategory :: Bool,
+    isSubscriptionEnabledAtCategoryLevel :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -378,7 +381,9 @@ data DriverEntityRes = DriverEntityRes
     isSubscriptionCityChanged :: Bool,
     freeTrialDays :: Int,
     freeTrialRides :: Int,
-    totalRidesTaken :: Maybe Int
+    totalRidesTaken :: Maybe Int,
+    subscriptionEnabledForVehicleCategory :: Bool,
+    isSubscriptionEnabledAtCategoryLevel :: Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -446,7 +451,11 @@ data BookingAPIEntity = BookingAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-data UpdateProfileInfoPoints = UpdateProfileInfoPoints {isAdvancedBookingEnabled :: Maybe Bool, isInteroperable :: Maybe Bool}
+data UpdateProfileInfoPoints = UpdateProfileInfoPoints
+  { isAdvancedBookingEnabled :: Maybe Bool,
+    isInteroperable :: Maybe Bool,
+    isCategoryLevelSubscriptionEnabled :: Maybe Bool
+  }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 validateUpdateDriverReq :: Validate UpdateDriverReq
@@ -619,6 +628,8 @@ getInformationV2 (personId, merchantId, merchantOpCityId) toss tenant' context r
     QDriverInformation.updateForwardBatchingEnabled isAdvancedBookingEnabled personId
   whenJust req.isInteroperable $ \isInteroperable ->
     QDriverInformation.updateIsInteroperable isInteroperable personId
+  whenJust req.isCategoryLevelSubscriptionEnabled $ \isCategoryLevelSubscriptionEnabled ->
+    QDriverPlan.updateIsSubscriptionEnabledAtCategoryLevel personId YATRI_SUBSCRIPTION isCategoryLevelSubscriptionEnabled
   getInformation (personId, merchantId, merchantOpCityId) toss tenant' context
 
 getInformation ::
@@ -666,9 +677,18 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
     driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
     mbVehicle <- QVehicle.findById personId
     DriverSpecificSubscriptionData {..} <- getDriverSpecificSubscriptionDataWithSubsConfig (personId, merchantId, merchantOpCityId) transporterConfig driverInfo mbVehicle
-    let commonSubscriptionChecks = not isOnFreeTrial && not transporterConfig.allowDefaultPlanAllocation && isEnableForCategory
-    let planBasedChecks = planMandatoryForCategory && isNothing autoPayStatus && commonSubscriptionChecks
-    let changeBasedChecks = (isSubscriptionVehicleCategoryChanged || isSubscriptionCityChanged) && commonSubscriptionChecks
+    let commonSubscriptionChecks = not isOnFreeTrial && not transporterConfig.allowDefaultPlanAllocation
+    (planBasedChecks, changeBasedChecks) <- do
+      if isSubscriptionEnabledAtCategoryLevel
+        then do
+          let planBasedChecks' = planMandatoryForCategory && isNothing autoPayStatus && commonSubscriptionChecks && isEnabledForCategory
+          let isSubscriptionEnabledAtCategoryLevelUI = (mbDriverPlan >>= (.isCategoryLevelSubscriptionEnabled)) == Just True
+          let changeBasedChecks' = (isSubscriptionVehicleCategoryChanged || isSubscriptionCityChanged) && commonSubscriptionChecks && isEnabledForCategory && isSubscriptionEnabledAtCategoryLevelUI
+          pure (planBasedChecks', changeBasedChecks')
+        else do
+          let isEnableForVariant = maybe False (`elem` transporterConfig.variantsToEnableForSubscription) (mbVehicle <&> (.variant))
+          let planBasedChecks' = transporterConfig.isPlanMandatory && isNothing autoPayStatus && commonSubscriptionChecks && isEnableForVariant
+          pure (planBasedChecks', False)
     when (planBasedChecks || changeBasedChecks) $ throwError (NoPlanSelected personId.getId)
     when merchant.onlinePayment $ do
       driverBankAccount <- QDBA.findByPrimaryKey driverId >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
@@ -880,6 +900,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
         payoutVpa = driverInfo.payoutVpa,
         payoutVpaStatus = driverInfo.payoutVpaStatus,
         payoutVpaBankAccount = driverInfo.payoutVpaBankAccount,
+        subscriptionEnabledForVehicleCategory = isEnabledForCategory,
         ..
       }
 
@@ -2191,12 +2212,13 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
           cgst' = fromMaybe (calcPercentage cgstPercentage) mbCgst
       return (sgst', cgst')
     Nothing -> return (0.0, 0.0)
-
+  mbVehicle <- runInReplica $ QVehicle.findById personId
+  let vehicleCategory = fromMaybe subscriptionConfig.defaultCityVehicleCategory (mbVehicle >>= (.category))
   let fee = fee' - if isJust mbSgst && isJust mbCgst then 0.0 else sgst + cgst
   driverFee <-
     case dueDriverFee of
       [] -> do
-        driverFee' <- mkDriverFee fee cgst sgst
+        driverFee' <- mkDriverFee fee cgst sgst vehicleCategory
         QDF.create driverFee'
         pure [driverFee']
       dfee -> pure dfee
@@ -2232,7 +2254,7 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
         else do
           QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE invoice.id
           return (Nothing, driverFeeIds, [])
-    mkDriverFee fee cgst sgst = do
+    mkDriverFee fee cgst sgst vehicleCategory = do
       id <- generateGUID
       now <- getCurrentTime
       return $
@@ -2279,7 +2301,7 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
             hasSibling = Nothing,
             siblingFeeId = Nothing,
             splitOfDriverFeeId = Nothing,
-            vehicleCategory = Nothing,
+            vehicleCategory = vehicleCategory,
             currency
           }
     mkClearDuesResp (orderResp, orderId) = ClearDuesRes {orderId = orderId, orderResp}
@@ -2472,9 +2494,10 @@ data DriverSpecificSubscriptionData = DriverSpecificSubscriptionData
     freeTrialDaysLeft :: Int,
     mbDriverPlan :: Maybe DPlan.DriverPlan,
     autoPayStatus :: Maybe DriverInfo.DriverAutoPayStatus,
-    isEnableForCategory :: Bool,
+    isEnabledForCategory :: Bool,
     isSubscriptionVehicleCategoryChanged :: Bool,
     isSubscriptionCityChanged :: Bool,
+    isSubscriptionEnabledAtCategoryLevel :: Bool,
     freeTrialDays :: Int,
     freeTrialRides :: Int,
     totalRidesTaken :: Maybe Int
@@ -2494,12 +2517,13 @@ getDriverSpecificSubscriptionDataWithSubsConfig (personId, _, opCityId) transpor
   (autoPayStatus, mbDriverPlan) <- DAPlan.getSubcriptionStatusWithPlan Plan.YATRI_SUBSCRIPTION personId
   freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
   let freeTrialDays = transporterConfig.freeTrialDays
-  let freeTrialRides = fromMaybe 0 $ subscriptionConfig >>= (.numberOfFreeTrialRides)
-  let (isSubscriptionVehicleCategoryChanged, isSubscriptionCityChanged) = isPlanVehCategoryOrCityChanged opCityId mbDriverPlan mbVehicle
+      freeTrialRides = fromMaybe 0 $ subscriptionConfig >>= (.numberOfFreeTrialRides)
+      isSubscriptionEnabledAtCategoryLevel = fromMaybe False $ subscriptionConfig <&> (.isSubscriptionEnabledAtCategoryLevel)
+      (isSubscriptionVehicleCategoryChanged, isSubscriptionCityChanged) = isPlanVehCategoryOrCityChanged opCityId mbDriverPlan mbVehicle
   (isOnFreeTrial, totalRidesTaken) <- do
     case subscriptionConfig of
       Just subsConfig -> DAPlan.isOnFreeTrial personId subsConfig freeTrialDaysLeft mbDriverPlan
       Nothing -> return (True, Nothing)
   let planMandatoryForCategory = maybe False (\vcList -> isJust $ DL.find (\enabledVc -> maybe False (enabledVc ==) mbVehicleCategory) vcList) (subscriptionConfig >>= (.executionEnabledForVehicleCategories))
-  let isEnableForCategory = maybe False (\vcList -> isJust $ DL.find (\enabledVc -> maybe False (enabledVc ==) mbVehicleCategory) vcList) (subscriptionConfig >>= (.subscriptionEnabledForVehicleCategories))
+      isEnabledForCategory = maybe False (\vcList -> isJust $ DL.find (\enabledVc -> maybe False (enabledVc ==) mbVehicleCategory) vcList) (subscriptionConfig >>= (.subscriptionEnabledForVehicleCategories))
   return $ DriverSpecificSubscriptionData {..}

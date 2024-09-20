@@ -135,6 +135,7 @@ updateByPrimaryKey (Domain.Types.DriverPlan.DriverPlan {..}) = do
       Se.Set Beam.coinCovertedToCashLeft coinCovertedToCashLeft,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.enableServiceUsageCharge (Kernel.Prelude.Just enableServiceUsageCharge),
+      Se.Set Beam.isCategoryLevelSubscriptionEnabled isCategoryLevelSubscriptionEnabled,
       Se.Set Beam.isOnFreeTrial (Kernel.Prelude.Just isOnFreeTrial),
       Se.Set Beam.lastPaymentLinkSentAtIstDate lastPaymentLinkSentAtIstDate,
       Se.Set Beam.mandateId (Kernel.Types.Id.getId <$> mandateId),
