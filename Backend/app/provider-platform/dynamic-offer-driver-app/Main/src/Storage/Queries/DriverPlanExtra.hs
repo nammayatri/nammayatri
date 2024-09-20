@@ -179,3 +179,21 @@ updatePlanIdByDriverIdAndServiceName (Id driverId) (Id planId) serviceName mbVeh
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
         ]
     ]
+
+updateIsSubscriptionEnabledAtCategoryLevel ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Person ->
+  DPlan.ServiceNames ->
+  Bool ->
+  m ()
+updateIsSubscriptionEnabledAtCategoryLevel driverId serviceName isSubscriptionEnabled = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDF.isCategoryLevelSubscriptionEnabled (Just isSubscriptionEnabled),
+      Se.Set BeamDF.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamDF.driverId $ Se.Eq (getId driverId),
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
+        ]
+    ]

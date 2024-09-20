@@ -64,14 +64,14 @@ findByMerchantOpCityIdAndTypeWithServiceNameAndVariant merchantOpCityId paymentM
 
 findByMerchantOpCityIdTypeServiceNameVehicle ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PaymentMode -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m [Domain.Types.Plan.Plan])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PaymentMode -> Domain.Types.Plan.ServiceNames -> Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m [Domain.Types.Plan.Plan])
 findByMerchantOpCityIdTypeServiceNameVehicle merchantOpCityId paymentMode serviceName vehicleCategory isDeprecated = do
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantOpCityId $ Se.Eq (Kernel.Types.Id.getId merchantOpCityId),
           Se.Is Beam.paymentMode $ Se.Eq paymentMode,
           Se.Is Beam.serviceName $ Se.Eq serviceName,
-          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory,
+          Se.Is Beam.vehicleCategory $ Se.Eq (Kernel.Prelude.Just vehicleCategory),
           Se.Is Beam.isDeprecated $ Se.Eq isDeprecated
         ]
     ]
@@ -114,7 +114,7 @@ updateByPrimaryKey (Domain.Types.Plan.Plan {..}) = do
       Se.Set Beam.serviceName serviceName,
       Se.Set Beam.sgstPercentage sgstPercentage,
       Se.Set Beam.subscribedFlagToggleAllowed subscribedFlagToggleAllowed,
-      Se.Set Beam.vehicleCategory vehicleCategory,
+      Se.Set Beam.vehicleCategory (Kernel.Prelude.Just vehicleCategory),
       Se.Set Beam.vehicleVariant vehicleVariant
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

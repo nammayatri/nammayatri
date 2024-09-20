@@ -17,6 +17,7 @@ import qualified Storage.Queries.Transformers.DriverPlan
 
 instance FromTType' Beam.DriverPlan Domain.Types.DriverPlan.DriverPlan where
   fromTType' (Beam.DriverPlanT {..}) = do
+    isCategoryLevelSubscriptionEnabled' <- Storage.Queries.Transformers.DriverPlan.backfillIsSubscriptionEnabledAtCategory isCategoryLevelSubscriptionEnabled driverId serviceName
     merchantId' <- Storage.Queries.Transformers.DriverPlan.getMerchantId merchantId driverId serviceName
     merchantOpCityId' <- Storage.Queries.Transformers.DriverPlan.getMerchantOpCityId merchantOpCityId driverId serviceName
     subscriptionServiceRelatedData' <- Storage.Queries.Transformers.DriverPlan.getSubscriptionServiceRelatedData rentedVehicleNumber
@@ -29,6 +30,7 @@ instance FromTType' Beam.DriverPlan Domain.Types.DriverPlan.DriverPlan where
             createdAt = createdAt,
             driverId = Kernel.Types.Id.Id driverId,
             enableServiceUsageCharge = Kernel.Prelude.fromMaybe False enableServiceUsageCharge,
+            isCategoryLevelSubscriptionEnabled = isCategoryLevelSubscriptionEnabled',
             isOnFreeTrial = Kernel.Prelude.fromMaybe True isOnFreeTrial,
             lastPaymentLinkSentAtIstDate = lastPaymentLinkSentAtIstDate,
             mandateId = Kernel.Types.Id.Id <$> mandateId,
@@ -53,6 +55,7 @@ instance ToTType' Beam.DriverPlan Domain.Types.DriverPlan.DriverPlan where
         Beam.createdAt = createdAt,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.enableServiceUsageCharge = Kernel.Prelude.Just enableServiceUsageCharge,
+        Beam.isCategoryLevelSubscriptionEnabled = isCategoryLevelSubscriptionEnabled,
         Beam.isOnFreeTrial = Kernel.Prelude.Just isOnFreeTrial,
         Beam.lastPaymentLinkSentAtIstDate = lastPaymentLinkSentAtIstDate,
         Beam.mandateId = Kernel.Types.Id.getId <$> mandateId,

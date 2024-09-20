@@ -117,7 +117,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
     for_ driverFeesToProccess $ \driverFee -> do
       mbDriverPlan <- findByDriverIdWithServiceName (cast driverFee.driverId) serviceName
       mbPlanFromDPlan <- getPlan mbDriverPlan serviceName merchantOpCityId (Just recalculateManualReview)
-      let useDriverPlan = ((mbPlanFromDPlan <&> (.merchantOpCityId)) == Just driverFee.merchantOperatingCityId) && ((mbPlanFromDPlan >>= (.vehicleCategory)) == driverFee.vehicleCategory)
+      let useDriverPlan = ((mbPlanFromDPlan <&> (.merchantOpCityId)) == Just driverFee.merchantOperatingCityId) && ((mbPlanFromDPlan <&> (.vehicleCategory)) == Just driverFee.vehicleCategory)
       mbPlan <- if useDriverPlan then pure mbPlanFromDPlan else maybe (pure Nothing) (\planId' -> CQP.findByIdAndPaymentModeWithServiceName planId' (fromMaybe MANUAL $ mbDriverPlan <&> (.planType)) serviceName) driverFee.planId
       mbDriverStat <- QDS.findById (cast driverFee.driverId)
       case mbPlan of
@@ -397,7 +397,7 @@ getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merch
   case serviceName of
     YATRI_SUBSCRIPTION -> do
       driverFeeElderSiblings <- QDF.findAllFeesInRangeWithStatusAndServiceName (Just merchantId) merchantOperatingCityId startTime endTime statusToCheck transporterConfig.driverFeeCalculatorBatchSize serviceName
-      driverFeeRestSiblings <- QDF.findAllChildsOFDriverFee merchantOperatingCityId startTime endTime statusToCheck serviceName $ map (.id) $ filter (\dfee -> dfee.hasSibling == Just True) driverFeeElderSiblings
+      driverFeeRestSiblings <- QDF.findAllChildsOFDriverFee merchantOperatingCityId startTime endTime statusToCheck serviceName (map (.id) $ filter (\dfee -> dfee.hasSibling == Just True) driverFeeElderSiblings) True --- here we are only finding siblings of that particular city
       return $ filter (\dfee -> dfee.merchantOperatingCityId == merchantOperatingCityId) $ driverFeeElderSiblings <> driverFeeRestSiblings
     YATRI_RENTAL -> do
       when (startTime >= endTime) $ throwError (InternalError "Invalid time range for driver fee calculation")

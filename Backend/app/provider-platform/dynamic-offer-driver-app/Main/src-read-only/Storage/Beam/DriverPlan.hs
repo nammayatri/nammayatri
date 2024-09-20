@@ -22,6 +22,7 @@ data DriverPlanT f = DriverPlanT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     driverId :: B.C f Kernel.Prelude.Text,
     enableServiceUsageCharge :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isCategoryLevelSubscriptionEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isOnFreeTrial :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     lastPaymentLinkSentAtIstDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     mandateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

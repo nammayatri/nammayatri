@@ -17,12 +17,12 @@ import qualified Storage.Queries.Plan as Queries
 
 deletePlansKeys ::
   CacheFlow m r =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PaymentMode -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m ())
-deletePlansKeys merchantOpCityId paymentMode serviceName vehicleCategory isDeprecated = do (Hedis.del $ makeIdKey merchantOpCityId paymentMode serviceName vehicleCategory isDeprecated)
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PaymentMode -> Domain.Types.Plan.ServiceNames -> Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m ())
+deletePlansKeys merchantOpCityId paymentMode serviceName vehicleCategory isDeprecated = do Hedis.del $ makeIdKey merchantOpCityId paymentMode serviceName vehicleCategory isDeprecated
 
 findByMerchantOpCityIdTypeServiceNameVehicle ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PaymentMode -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m ([Domain.Types.Plan.Plan]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PaymentMode -> Domain.Types.Plan.ServiceNames -> Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m [Domain.Types.Plan.Plan])
 findByMerchantOpCityIdTypeServiceNameVehicle merchantOpCityId paymentMode serviceName vehicleCategory isDeprecated = do
   (Hedis.safeGet $ makeIdKey merchantOpCityId paymentMode serviceName vehicleCategory isDeprecated)
     >>= ( \case

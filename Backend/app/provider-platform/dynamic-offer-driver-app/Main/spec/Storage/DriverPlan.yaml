@@ -34,6 +34,7 @@ DriverPlan:
     subscriptionServiceRelatedData : SubscriptionServiceRelatedData
     vehicleCategory : Maybe VehicleCategory|NoRelation
     isOnFreeTrial : Bool
+    isCategoryLevelSubscriptionEnabled : Maybe Bool
 
   beamFields:
     subscriptionServiceRelatedData:
@@ -45,6 +46,7 @@ DriverPlan:
     merchantOpCityId: Maybe Text
     serviceName: Maybe ServiceNames
     isOnFreeTrial : Maybe Bool
+    isCategoryLevelSubscriptionEnabled : Maybe Bool
 
   fromTType:
     enableServiceUsageCharge: Kernel.Prelude.fromMaybe False enableServiceUsageCharge|E
@@ -54,6 +56,7 @@ DriverPlan:
     merchantOpCityId: Storage.Queries.Transformers.DriverPlan.getMerchantOpCityId merchantOpCityId driverId serviceName|EM
     merchantId: Storage.Queries.Transformers.DriverPlan.getMerchantId merchantId driverId serviceName|EM
     vehicleCategory: Storage.Queries.Transformers.DriverPlan.backfillVehicleCategoryByDriverIdAndServiceName vehicleCategory driverId serviceName planType planId|EM
+    isCategoryLevelSubscriptionEnabled: Storage.Queries.Transformers.DriverPlan.backfillIsSubscriptionEnabledAtCategory isCategoryLevelSubscriptionEnabled driverId serviceName| EM
   toTType:
     enableServiceUsageCharge: Kernel.Prelude.Just|I
     isOnFreeTrial : Kernel.Prelude.Just|I

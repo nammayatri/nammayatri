@@ -79,20 +79,26 @@ findLatestFeeByDriverIdAndServiceName ::
   Id MerchantOperatingCity ->
   UTCTime ->
   UTCTime ->
+  Bool ->
   m (Maybe DriverFee)
-findLatestFeeByDriverIdAndServiceName (Id driverId) serviceName merchantOperatingCityId startTime endTime = do
-  findOneWithKV
+findLatestFeeByDriverIdAndServiceName (Id driverId) serviceName merchantOperatingCityId startTime endTime enableCityBasedFeeSwitch = do
+  findAllWithOptionsKV
     [ Se.And
-        [ Se.Is BeamDF.driverId (Se.Eq driverId),
-          Se.Is BeamDF.feeType $ Se.Not $ Se.In [MANDATE_REGISTRATION, PAYOUT_REGISTRATION, ONE_TIME_SECURITY_DEPOSIT],
-          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
-          Se.Is BeamDF.status (Se.Eq ONGOING),
-          Se.Is BeamDF.siblingFeeId $ Se.Eq Nothing,
-          Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
-          Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
-          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime
-        ]
+        ( [ Se.Is BeamDF.driverId (Se.Eq driverId),
+            Se.Is BeamDF.feeType $ Se.Not $ Se.In [MANDATE_REGISTRATION, PAYOUT_REGISTRATION, ONE_TIME_SECURITY_DEPOSIT],
+            Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+            Se.Is BeamDF.status (Se.Eq ONGOING),
+            Se.Is BeamDF.siblingFeeId $ Se.Eq Nothing,
+            Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
+            Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime
+          ]
+            <> [Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId) | enableCityBasedFeeSwitch]
+        )
     ]
+    (Se.Desc BeamDF.createdAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe
 
 findLatestRegisterationFeeByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> ServiceNames -> m (Maybe DriverFee)
 findLatestRegisterationFeeByDriverIdAndServiceName (Id driverId) serviceName =
@@ -725,18 +731,20 @@ findAllChildsOFDriverFee ::
   DriverFeeStatus ->
   ServiceNames ->
   [Id DriverFee] ->
+  Bool ->
   m [DriverFee]
-findAllChildsOFDriverFee merchantOperatingCityId startTime endTime status serviceName driverFeeIds = do
+findAllChildsOFDriverFee merchantOperatingCityId startTime endTime status serviceName driverFeeIds enableCityBasedFeeSwitch = do
   findAllWithKV
-    [ Se.And $
-        [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
-          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
-          Se.Is BeamDF.status $ Se.Eq status,
-          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
-          Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
-          Se.Is BeamDF.feeType $ Se.In [RECURRING_EXECUTION_INVOICE, RECURRING_INVOICE],
-          Se.Is BeamDF.siblingFeeId $ Se.In (map Just $ getId <$> driverFeeIds)
-        ]
+    [ Se.And
+        ( [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
+            Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
+            Se.Is BeamDF.status $ Se.Eq status,
+            Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+            Se.Is BeamDF.feeType $ Se.In [RECURRING_EXECUTION_INVOICE, RECURRING_INVOICE],
+            Se.Is BeamDF.siblingFeeId $ Se.In (map Just $ getId <$> driverFeeIds)
+          ]
+            <> [Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId) | enableCityBasedFeeSwitch]
+        )
     ]
 
 updateDfeeByOperatingCityAndVehicleCategory ::
@@ -748,21 +756,23 @@ updateDfeeByOperatingCityAndVehicleCategory ::
   UTCTime ->
   DVC.VehicleCategory ->
   Text ->
+  Bool ->
   m ()
-updateDfeeByOperatingCityAndVehicleCategory merchantOperatingCityId serviceName status from to vehicleCategory planId = do
+updateDfeeByOperatingCityAndVehicleCategory merchantOperatingCityId serviceName status from to vehicleCategory planId isSubscriptionEnabledAtCategoryLevel = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamDF.planId (Just planId),
       Se.Set BeamDF.updatedAt now
     ]
     [ Se.And
-        [ Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
-          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
-          Se.Is BeamDF.status $ Se.Eq status,
-          Se.Is BeamDF.startTime $ Se.GreaterThanOrEq from,
-          Se.Is BeamDF.endTime $ Se.LessThanOrEq to,
-          Se.Is BeamDF.vehicleCategory $ Se.Eq (Just vehicleCategory)
-        ]
+        ( [ Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+            Se.Is BeamDF.status $ Se.Eq status,
+            Se.Is BeamDF.startTime $ Se.GreaterThanOrEq from,
+            Se.Is BeamDF.endTime $ Se.LessThanOrEq to,
+            Se.Is BeamDF.vehicleCategory $ Se.Eq (Just vehicleCategory)
+          ]
+            <> [Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId) | isSubscriptionEnabledAtCategoryLevel]
+        )
     ]
 
 updateHasSiblingInDriverFee :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m ()

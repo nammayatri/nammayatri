@@ -28,3 +28,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN vehicle_category text 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN is_on_free_trial boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_plan ADD COLUMN is_category_level_subscription_enabled boolean ;

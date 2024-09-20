@@ -562,6 +562,7 @@ library
       Storage.Queries.Transformers.MessageReport
       Storage.Queries.Transformers.Notification
       Storage.Queries.Transformers.Person
+      Storage.Queries.Transformers.Plan
       Storage.Queries.Transformers.QuestionInformation
       Storage.Queries.Transformers.ReelsData
       Storage.Queries.Transformers.RegistrationToken

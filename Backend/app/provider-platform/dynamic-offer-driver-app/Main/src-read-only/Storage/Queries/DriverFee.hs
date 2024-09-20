@@ -126,7 +126,7 @@ updateByPrimaryKey (Domain.Types.DriverFee.DriverFee {..}) = do
       Se.Set Beam.totalEarnings (Kernel.Prelude.roundToIntegral totalEarnings),
       Se.Set Beam.totalEarningsAmount (Kernel.Prelude.Just totalEarnings),
       Se.Set Beam.updatedAt _now,
-      Se.Set Beam.vehicleCategory vehicleCategory,
+      Se.Set Beam.vehicleCategory (Kernel.Prelude.Just vehicleCategory),
       Se.Set Beam.vehicleNumber vehicleNumber
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

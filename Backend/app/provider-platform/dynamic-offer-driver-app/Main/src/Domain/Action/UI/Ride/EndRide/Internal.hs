@@ -528,16 +528,17 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
     subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
     let isPlanMandatoryForVariant = maybe False (\vcList -> isJust $ DL.find (\enabledVc -> maybe False (enabledVc ==) currentVehicleCategory) vcList) (subscriptionConfig >>= (.executionEnabledForVehicleCategories))
     (mbDriverPlan, isOnFreeTrial) <- getPlanAndPushToDefualtIfEligible transporterConfig subscriptionConfig freeTrialDaysLeft' isSpecialZoneCharge isPlanMandatoryForVariant
+    let enableCityBasedFeeSwitch = fromMaybe False $ subscriptionConfig <&> (.enableCityBasedFeeSwitch)
     driverFee <- mkDriverFee serviceName now Nothing Nothing merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig (Just booking) isSpecialZoneCharge currentVehicleCategory subscriptionConfig
-    lastElderSiblingDriverFee <- QDF.findLatestFeeByDriverIdAndServiceName driverId serviceName merchantOpCityId driverFee.startTime driverFee.endTime
+    lastElderSiblingDriverFee <- QDF.findLatestFeeByDriverIdAndServiceName driverId serviceName merchantOpCityId driverFee.startTime driverFee.endTime enableCityBasedFeeSwitch
     restSiblingDriverFee <- do
       case lastElderSiblingDriverFee of
         Just lESDriverFee -> do
           if lESDriverFee.hasSibling == Just True
-            then QDF.findAllChildsOFDriverFee merchantOpCityId driverFee.startTime driverFee.endTime DF.ONGOING serviceName [lESDriverFee.id]
+            then QDF.findAllChildsOFDriverFee merchantOpCityId driverFee.startTime driverFee.endTime DF.ONGOING serviceName [lESDriverFee.id] enableCityBasedFeeSwitch
             else return []
         Nothing -> return []
-    let lastDriverFee = DL.find (\dfee -> dfee.vehicleCategory == currentVehicleCategory) (restSiblingDriverFee <> catMaybes [lastElderSiblingDriverFee])
+    let lastDriverFee = DL.find (\dfee -> (Just dfee.vehicleCategory) == currentVehicleCategory) (restSiblingDriverFee <> catMaybes [lastElderSiblingDriverFee])
     let isEnableForVariant = maybe False (\vcList -> isJust $ DL.find (\enabledVc -> maybe False (enabledVc ==) currentVehicleCategory) vcList) (subscriptionConfig >>= (.executionEnabledForVehicleCategories))
     let toUpdateOrCreateDriverfee = (totalDriverFee > 0 || (totalDriverFee <= 0 && isPlanMandatoryForVariant && isJust mbDriverPlan)) && isEnableForVariant
     when (toUpdateOrCreateDriverfee && isEligibleForCharge transporterConfig isOnFreeTrial isSpecialZoneCharge) $ do
@@ -705,7 +706,7 @@ mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare gov
         refundedAmount = Nothing,
         refundedAt = Nothing,
         refundedBy = Nothing,
-        vehicleCategory = currentVehicleCategory,
+        vehicleCategory = fromMaybe DVC.AUTO_CATEGORY currentVehicleCategory,
         hasSibling = Just False,
         siblingFeeId = Nothing,
         splitOfDriverFeeId = Nothing,

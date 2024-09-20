@@ -107,11 +107,33 @@ backfillVehicleCategoryByDriverIdAndServiceName mbVehicleCategory driverId mbSer
     Nothing -> do
       plan <- CQP.findByIdAndPaymentModeWithServiceName (Id planId) planType serviceName
       updateOneWithKV
-        [Se.Set BeamDF.vehicleCategory $ plan >>= (.vehicleCategory), Se.Set BeamDF.updatedAt now]
+        [Se.Set BeamDF.vehicleCategory $ plan <&> (.vehicleCategory), Se.Set BeamDF.updatedAt now]
         [ Se.And
             [ Se.Is BeamDF.driverId (Se.Eq driverId),
               Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
             ]
         ]
-      return $ plan >>= (.vehicleCategory)
+      return $ plan <&> (.vehicleCategory)
     Just vehicleCategory' -> return $ Just vehicleCategory'
+
+backfillIsSubscriptionEnabledAtCategory :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Bool -> Text -> Maybe DPlan.ServiceNames -> m (Maybe Bool)
+backfillIsSubscriptionEnabledAtCategory mbIsSubscriptionEnabledAtCategory driverId mbServiceName = do
+  now <- getCurrentTime
+  case mbIsSubscriptionEnabledAtCategory of
+    Nothing -> do
+      isEnabledForCategory <- do
+        case mbServiceName of
+          Nothing -> return False
+          Just DPlan.YATRI_RENTAL -> return True
+          Just DPlan.YATRI_SUBSCRIPTION -> return False
+      whenJust mbServiceName $ \serviceName' -> do
+        updateOneWithKV
+          [Se.Set BeamDF.isCategoryLevelSubscriptionEnabled (Just isEnabledForCategory), Se.Set BeamDF.updatedAt now]
+          [ Se.And
+              [ Se.Is BeamDF.driverId (Se.Eq driverId),
+                Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName'),
+                Se.Is BeamDF.isCategoryLevelSubscriptionEnabled $ Se.Not $ Se.Eq (Just True)
+              ]
+          ]
+      return $ Just isEnabledForCategory
+    Just isEnabledForCategory' -> return $ Just isEnabledForCategory'

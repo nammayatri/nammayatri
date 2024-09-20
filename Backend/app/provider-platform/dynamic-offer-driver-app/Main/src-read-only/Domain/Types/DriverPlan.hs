@@ -26,6 +26,7 @@ data DriverPlan = DriverPlan
     createdAt :: Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     enableServiceUsageCharge :: Kernel.Prelude.Bool,
+    isCategoryLevelSubscriptionEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isOnFreeTrial :: Kernel.Prelude.Bool,
     lastPaymentLinkSentAtIstDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     mandateId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Mandate.Mandate),
