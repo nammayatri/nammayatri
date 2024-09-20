@@ -6,50 +6,50 @@
     </declare-styleable>
 
     <declare-styleable name="ny_CropImageView">
-        <attr name="cropGuidelines">
+        <attr name="ny_cropGuidelines">
             <enum name="off" value="0"/>
             <enum name="onTouch" value="1"/>
             <enum name="on" value="2"/>
         </attr>
-        <attr name="cropScaleType">
+        <attr name="ny_cropScaleType">
             <enum name="fitCenter" value="0"/>
             <enum name="center" value="1"/>
             <enum name="centerCrop" value="2"/>
             <enum name="centerInside" value="3"/>
         </attr>
-        <attr name="cropShape">
+        <attr name="ny_cropShape">
             <enum name="rectangle" value="0"/>
             <enum name="oval" value="1"/>
         </attr>
-        <attr name="cropAutoZoomEnabled" format="boolean"/>
-        <attr name="cropMaxZoom" format="integer"/>
-        <attr name="cropMultiTouchEnabled" format="boolean"/>
-        <attr name="cropFixAspectRatio" format="boolean"/>
-        <attr name="cropAspectRatioX" format="integer"/>
-        <attr name="cropAspectRatioY" format="integer"/>
-        <attr name="cropInitialCropWindowPaddingRatio" format="float"/>
-        <attr name="cropBorderLineThickness" format="dimension"/>
-        <attr name="cropBorderLineColor" format="color"/>
-        <attr name="cropBorderCornerThickness" format="dimension"/>
-        <attr name="cropBorderCornerOffset" format="dimension"/>
-        <attr name="cropBorderCornerLength" format="dimension"/>
-        <attr name="cropBorderCornerColor" format="color"/>
-        <attr name="cropGuidelinesThickness" format="dimension"/>
-        <attr name="cropGuidelinesColor" format="color"/>
-        <attr name="cropBackgroundColor" format="color"/>
-        <attr name="cropSnapRadius" format="dimension"/>
-        <attr name="cropTouchRadius" format="dimension"/>
-        <attr name="cropSaveBitmapToInstanceState" format="boolean"/>
-        <attr name="cropShowCropOverlay" format="boolean"/>
-        <attr name="cropShowProgressBar" format="boolean"/>
-        <attr name="cropMinCropWindowWidth" format="dimension"/>
-        <attr name="cropMinCropWindowHeight" format="dimension"/>
-        <attr name="cropMinCropResultWidthPX" format="float"/>
-        <attr name="cropMinCropResultHeightPX" format="float"/>
-        <attr name="cropMaxCropResultWidthPX" format="float"/>
-        <attr name="cropMaxCropResultHeightPX" format="float"/>
-        <attr name="cropFlipHorizontally" format="boolean"/>
-        <attr name="cropFlipVertically" format="boolean"/>
+        <attr name="ny_cropAutoZoomEnabled" format="boolean"/>
+        <attr name="ny_cropMaxZoom" format="integer"/>
+        <attr name="ny_cropMultiTouchEnabled" format="boolean"/>
+        <attr name="ny_cropFixAspectRatio" format="boolean"/>
+        <attr name="ny_cropAspectRatioX" format="integer"/>
+        <attr name="ny_cropAspectRatioY" format="integer"/>
+        <attr name="ny_cropInitialCropWindowPaddingRatio" format="float"/>
+        <attr name="ny_cropBorderLineThickness" format="dimension"/>
+        <attr name="ny_cropBorderLineColor" format="color"/>
+        <attr name="ny_cropBorderCornerThickness" format="dimension"/>
+        <attr name="ny_cropBorderCornerOffset" format="dimension"/>
+        <attr name="ny_cropBorderCornerLength" format="dimension"/>
+        <attr name="ny_cropBorderCornerColor" format="color"/>
+        <attr name="ny_cropGuidelinesThickness" format="dimension"/>
+        <attr name="ny_cropGuidelinesColor" format="color"/>
+        <attr name="ny_cropBackgroundColor" format="color"/>
+        <attr name="ny_cropSnapRadius" format="dimension"/>
+        <attr name="ny_cropTouchRadius" format="dimension"/>
+        <attr name="ny_cropSaveBitmapToInstanceState" format="boolean"/>
+        <attr name="ny_cropShowCropOverlay" format="boolean"/>
+        <attr name="ny_cropShowProgressBar" format="boolean"/>
+        <attr name="ny_cropMinCropWindowWidth" format="dimension"/>
+        <attr name="ny_cropMinCropWindowHeight" format="dimension"/>
+        <attr name="ny_cropMinCropResultWidthPX" format="float"/>
+        <attr name="ny_cropMinCropResultHeightPX" format="float"/>
+        <attr name="ny_cropMaxCropResultWidthPX" format="float"/>
+        <attr name="ny_cropMaxCropResultHeightPX" format="float"/>
+        <attr name="ny_cropFlipHorizontally" format="boolean"/>
+        <attr name="ny_cropFlipVertically" format="boolean"/>
     </declare-styleable>
 
 </resources>
