@@ -32,6 +32,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -63,9 +64,12 @@ onConfirm _ req = withFlowHandlerAPI $ do
           Redis.whenWithLockRedis (onConfirmProcessingLockKey onConfirmReq.bppOrderId) 60 $
             DOnConfirm.onConfirm merchant booking onConfirmReq
       else do
+        frfsConfig <-
+          CQFRFSConfig.findByMerchantOperatingCityId ticketBooking.merchantOperatingCityId
+            >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show ticketBooking.merchantOperatingCityId)
         void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED (Id bookingId)
         void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING (Id bookingId)
-        void $ DACFOC.callBPPCancel ticketBooking bapConfig Spec.CONFIRM_CANCEL ticketBooking.merchantId
+        void $ DACFOC.callBPPCancel ticketBooking bapConfig frfsConfig Spec.CONFIRM_CANCEL ticketBooking.merchantId
 
   pure Utils.ack
 

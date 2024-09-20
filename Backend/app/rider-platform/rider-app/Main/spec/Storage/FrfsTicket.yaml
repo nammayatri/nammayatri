@@ -470,6 +470,7 @@ FRFSConfig:
     maxFreeTicketCashback: Maybe Int
     customDates: '[Text]'
     customEndTime: Text
+    cancellationReasonId: Maybe Text
 
   queries:
     findByMerchantOperatingCityId:
@@ -483,3 +484,4 @@ FRFSConfig:
     isEventOngoing: "false"
     freeTicketInterval: "9999"
     maxFreeTicketCashback: "0"
+

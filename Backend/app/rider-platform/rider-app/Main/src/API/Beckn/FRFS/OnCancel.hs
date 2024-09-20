@@ -42,13 +42,13 @@ onCancel ::
 onCancel _ req = withFlowHandlerAPI $ do
   transaction_id <- req.onCancelReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   message_id <- req.onCancelReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
-  ticketBooking <- runInReplica $ QTBooking.findBySearchId (Id transaction_id) >>= fromMaybeM (BookingDoesNotExist message_id)
-  case req.onCancelReqError of
-    Just err -> whenJust err.errorCode $ \errorCode -> do
-      when (errorCode == "50001") $ QTBooking.updateIsBookingCancellableByBookingId (Just False) (Id message_id) -- TODO: Add Error Code Properly
-    Nothing -> do
-      logDebug $ "Received OnCancel request" <> encodeToText req
-      withTransactionIdLogTag' transaction_id $ do
+  withTransactionIdLogTag' transaction_id $ do
+    ticketBooking <- runInReplica $ QTBooking.findBySearchId (Id transaction_id) >>= fromMaybeM (BookingDoesNotExist message_id)
+    logDebug $ "Received OnCancel request" <> encodeToText req
+    case req.onCancelReqError of
+      Just err -> whenJust err.errorCode $ \errorCode -> do
+        when (errorCode == "50001") $ QTBooking.updateIsBookingCancellableByBookingId (Just False) ticketBooking.id -- TODO: Add Error Code Properly
+      Nothing -> do
         dOnCancelReq <- ACL.buildOnCancelReq req
         if isJust dOnCancelReq
           then do
@@ -60,7 +60,7 @@ onCancel _ req = withFlowHandlerAPI $ do
                   DOnCancel.onCancel merchant booking onCancelReq
           else do
             void $ Redis.del (DOnCancel.makecancelledTtlKey ticketBooking.id)
-  pure Utils.ack
+    pure Utils.ack
 
 onCancelLockKey :: Text -> Text
 onCancelLockKey id = "FRFS:OnCancel:bppOrderId-" <> id

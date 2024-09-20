@@ -14,6 +14,7 @@ import qualified Tools.Beam.UtilsTH
 data FRFSConfig = FRFSConfig
   { bookingEndTime :: Kernel.Prelude.UTCTime,
     bookingStartTime :: Kernel.Prelude.UTCTime,
+    cancellationReasonId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     customDates :: [Kernel.Prelude.Text],
     customEndTime :: Kernel.Prelude.Text,
     discount :: Kernel.Prelude.Int,
