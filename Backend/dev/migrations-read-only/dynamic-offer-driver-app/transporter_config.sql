@@ -267,3 +267,5 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dp_geo_hash_per
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN demand_hotspots_config json ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dp_white_listed_geohash text[]  default ARRAY[]:: text[] ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dp_black_listed_geohash text[]  default ARRAY[]:: text[];
