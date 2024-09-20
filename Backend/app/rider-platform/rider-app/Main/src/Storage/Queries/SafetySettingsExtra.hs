@@ -29,14 +29,13 @@ data UpdateEmergencyInfo = UpdateEmergencyInfo
     notifySafetyTeamForSafetyCheckFailure :: Maybe Bool,
     notifySosWithEmergencyContacts :: Maybe Bool,
     shakeToActivate :: Maybe Bool,
-    safetyCenterDisabledOnDate :: Maybe UTCTime,
     enableOtpLessRide :: Maybe Bool,
     aggregatedRideShare :: Maybe RideShareOptions
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 emptyUpdateEmergencyInfo :: UpdateEmergencyInfo
-emptyUpdateEmergencyInfo = UpdateEmergencyInfo Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+emptyUpdateEmergencyInfo = UpdateEmergencyInfo Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 -- Extra code goes here --
 upsert ::
@@ -54,14 +53,13 @@ upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = Hedis.withLockRe
             <> [Se.Set BeamP.autoCallDefaultContact (fromJust autoCallDefaultContact) | isJust autoCallDefaultContact]
             <> [Se.Set BeamP.enablePostRideSafetyCheck (fromJust enablePostRideSafetyCheck) | isJust enablePostRideSafetyCheck]
             <> [Se.Set BeamP.enableUnexpectedEventsCheck (fromJust enableUnexpectedEventsCheck) | isJust enableUnexpectedEventsCheck]
-            <> [Se.Set BeamP.hasCompletedMockSafetyDrill hasCompletedMockSafetyDrill]
+            <> [Se.Set BeamP.hasCompletedMockSafetyDrill hasCompletedMockSafetyDrill | isJust hasCompletedMockSafetyDrill]
             <> [Se.Set BeamP.hasCompletedSafetySetup (fromJust hasCompletedSafetySetup) | isJust hasCompletedSafetySetup && hasCompletedSafetySetup == Just True]
             <> [Se.Set BeamP.informPoliceSos (fromJust informPoliceSos) | isJust informPoliceSos]
             <> [Se.Set BeamP.nightSafetyChecks (fromJust nightSafetyChecks) | isJust nightSafetyChecks]
             <> [Se.Set BeamP.notifySafetyTeamForSafetyCheckFailure (fromJust notifySafetyTeamForSafetyCheckFailure) | isJust notifySafetyTeamForSafetyCheckFailure]
             <> [Se.Set BeamP.notifySosWithEmergencyContacts (fromJust notifySosWithEmergencyContacts) | isJust notifySosWithEmergencyContacts]
             <> [Se.Set BeamP.shakeToActivate (fromJust shakeToActivate) | isJust shakeToActivate]
-            <> [Se.Set BeamP.safetyCenterDisabledOnDate safetyCenterDisabledOnDate]
             <> [Se.Set BeamP.enableOtpLessRide enableOtpLessRide | isJust enableOtpLessRide]
             <> [Se.Set BeamP.aggregatedRideShareSetting aggregatedRideShare | isJust aggregatedRideShare]
         )
@@ -82,7 +80,7 @@ upsert (Kernel.Types.Id.Id personId) UpdateEmergencyInfo {..} = Hedis.withLockRe
                 notifySafetyTeamForSafetyCheckFailure = fromMaybe False notifySafetyTeamForSafetyCheckFailure,
                 notifySosWithEmergencyContacts = fromMaybe person.shareEmergencyContacts notifySosWithEmergencyContacts,
                 personId = Kernel.Types.Id.Id personId,
-                safetyCenterDisabledOnDate = bool person.safetyCenterDisabledOnDate safetyCenterDisabledOnDate (isJust safetyCenterDisabledOnDate),
+                safetyCenterDisabledOnDate = person.safetyCenterDisabledOnDate,
                 shakeToActivate = fromMaybe False shakeToActivate,
                 updatedAt = now,
                 enableOtpLessRide = enableOtpLessRide <|> person.enableOtpLessRide,
