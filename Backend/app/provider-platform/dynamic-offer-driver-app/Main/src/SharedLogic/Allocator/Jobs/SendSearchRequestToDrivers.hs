@@ -155,8 +155,6 @@ sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput go
           getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig driverSearchBatchInput.searchReq searchTry driverSearchBatchInput.tripQuoteDetails,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.searchReq searchTry driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
-          setBatchDurationLock = I.setBatchDurationLock searchTry.id driverPoolConfig.singleBatchProcessTime,
-          createRescheduleTime = I.createRescheduleTime driverPoolConfig.singleBatchProcessTime,
           metrics =
             MetricsHandle
               { incrementTaskCounter = Metrics.incrementTaskCounter driverSearchBatchInput.merchant.name,
