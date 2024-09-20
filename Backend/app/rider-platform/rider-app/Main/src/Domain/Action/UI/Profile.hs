@@ -366,7 +366,12 @@ updateDefaultEmergencyNumbers personId merchantId req = do
   runRequestValidation (validateUpdateProfileDefaultEmergencyNumbersReq maxEmergencyNumberCount) req
   now <- getCurrentTime
   let uniqueRecords = getUniquePersonByMobileNumber req
-  newPersonDENList <- buildPersonDefaultEmergencyNumber now `mapM` uniqueRecords
+  shareTripOptionDefault <- case any (\x -> isNothing x.shareTripWithEmergencyContactOption) req.defaultEmergencyNumbers of
+    True -> do
+      person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      return person.shareTripWithEmergencyContactOption
+    False -> pure Nothing
+  newPersonDENList <- buildPersonDefaultEmergencyNumber now shareTripOptionDefault `mapM` uniqueRecords
   let updatedWithAggregatedRideShareSetting = QSafety.emptyUpdateEmergencyInfo {QSafety.aggregatedRideShare = Just $ getAggregatedRideShareSetting req.defaultEmergencyNumbers}
   void $ QSafety.upsert personId updatedWithAggregatedRideShareSetting
   fork "Send Emergency Contact Added Message" $ do
@@ -374,10 +379,16 @@ updateDefaultEmergencyNumbers personId merchantId req = do
   QPersonDEN.replaceAll personId newPersonDENList
   pure APISuccess.Success
   where
-    buildPersonDefaultEmergencyNumber now defEmNum = do
+    buildPersonDefaultEmergencyNumber now shareTripOptionDefault defEmNum = do
       encMobNum <- encrypt defEmNum.mobileNumber
       dbHash <- getDbHash defEmNum.mobileNumber
       mbEmNumPerson <- QPerson.findByMobileNumberAndMerchantId defEmNum.mobileCountryCode dbHash merchantId
+      let shareTripWithEmergencyContactOption = case defEmNum.shareTripWithEmergencyContactOption of
+            Just x -> Just x
+            Nothing ->
+              if defEmNum.enableForFollowing == Just True
+                then shareTripOptionDefault
+                else Just Person.NEVER_SHARE
       return $
         DPDEN.PersonDefaultEmergencyNumber
           { mobileNumber = encMobNum,
@@ -389,7 +400,6 @@ updateDefaultEmergencyNumbers personId merchantId req = do
             enableForShareRide = False,
             priority = fromMaybe 1 defEmNum.priority,
             merchantId = Just merchantId,
-            shareTripWithEmergencyContactOption = defEmNum.shareTripWithEmergencyContactOption,
             ..
           }
 
