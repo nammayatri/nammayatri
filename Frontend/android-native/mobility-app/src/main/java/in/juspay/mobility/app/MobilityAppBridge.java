@@ -128,6 +128,8 @@ public class MobilityAppBridge extends HyperBridge {
     public static YouTubePlayer youtubePlayer;
     public static String youtubeVideoStatus;
     public static float videoDuration = 0;
+    private VPAdapter vpAdapter;
+    private BridgeComponents bridgeComponents;
 
     CameraUtils cameraUtils;
 
@@ -139,13 +141,77 @@ public class MobilityAppBridge extends HyperBridge {
     private HashMap<String, SliderComponent> sliderComponentHashMap = new HashMap<>();
     public MobilityAppBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
+        this.bridgeComponents = bridgeComponents;
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(bridgeComponents.getContext());
         traceElements = new HashMap<>();
         clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(bridgeComponents.getContext());
         remoteConfigs = new MobilityRemoteConfigs(false, false);
         registerCallBacks();
+        createVPAdapter();
         String mapConfig = remoteConfigs.getString("map_config");
         KeyValueStore.write(bridgeComponents.getContext(), bridgeComponents.getSdkName(), "MAP_REMOTE_CONFIG", mapConfig);
+    }
+
+    private void createVPAdapter() {
+        vpAdapter = new VPAdapter(viewPagerItemArrayList, bridgeComponents.getContext(), new VPAdapter.VPAdapterListener(){
+
+            @Override
+            public void onViewHolderBind(VPAdapter.ViewHolder holder, int position, Context context) {
+                ViewPagerItem viewPagerItem = viewPagerItemArrayList.get(position);
+                JSONObject margin = viewPagerItem.getDescriptionMargin();
+                JSONObject titleMargin = viewPagerItem.getTitleMargin();
+                String titleGravity = viewPagerItem.getTitleGravity();
+                int carouselGravity = viewPagerItem.getCarouselGravity();
+                String descriptionGravity = viewPagerItem.getDescriptionGravity();
+
+                float density = (Resources.getSystem().getDisplayMetrics().density);
+                // imageView Config ------------------------------------------
+                if ((viewPagerItem.getContentType()).equals("IMAGE")){
+                    if (viewPagerItem.isImageUrl())
+                        Glide.with(context)
+                                .load(viewPagerItem.getImage())
+                                .into(holder.imageView);
+                    else
+                        holder.imageView.setImageResource(viewPagerItem.getImageID());
+                    holder.imageView.getLayoutParams().height = (int) (viewPagerItem.getImageHeight() * density);
+                    GradientDrawable gradientDrawable = new GradientDrawable();
+                    gradientDrawable.setShape(GradientDrawable.RECTANGLE);
+                    holder.imageView.setVisibility(View.VISIBLE);
+                    gradientDrawable.setCornerRadii(new float[] {20, 20, 20, 20, 0,0,0,0});
+                    gradientDrawable.setColor(Color.parseColor(viewPagerItem.getImageBgColor()));
+                    holder.imageView.setBackground(gradientDrawable);
+                    holder.video.setVisibility(View.GONE);
+                }
+                else {
+                    vpAdapter.embedYoutubeVideo(context, (viewPagerItem.getVideoData()).toString(), "PLAY", holder.video);
+                    holder.video.setVisibility(View.VISIBLE);
+                    holder.imageView.setVisibility(View.GONE);
+                }
+
+                // Heading text Config ------------------------------------------
+                holder.tvHeading.setTextSize(viewPagerItem.getTitleTextSize());
+                holder.tvHeading.setTextColor(Color.parseColor(viewPagerItem.getTitleColor()));
+                holder.tvHeading.setText(viewPagerItem.getTitleText());
+                ViewGroup.MarginLayoutParams titleLayoutParams = (ViewGroup.MarginLayoutParams) holder.tvHeading.getLayoutParams();
+                titleLayoutParams.setMargins(titleMargin.optInt("left", 0), titleMargin.optInt("top", 0), titleMargin.optInt("right", 0), titleMargin.optInt("bottom", 0));
+                holder.tvHeading.setLayoutParams(titleLayoutParams);
+                holder.tvHeading.setGravity(Utils.getGravity(titleGravity));
+
+                // Description text Config ---------------------------------------
+                holder.tvDesc.setText(Html.fromHtml(viewPagerItem.getDescriptionText()));
+                if(viewPagerItem.getDescriptionText().equals(""))
+                {
+                    holder.tvDesc.setVisibility(View.GONE);
+                }
+                holder.tvDesc.setTextSize(viewPagerItem.getDescriptionTextSize());
+                holder.tvDesc.setTextColor(Color.parseColor(viewPagerItem.getDescriptionColor()));
+                ViewGroup.MarginLayoutParams descLayoutParams = (ViewGroup.MarginLayoutParams) holder.tvDesc.getLayoutParams();
+                descLayoutParams.setMargins(margin.optInt("left", 0) * 2, margin.optInt("top", 0), margin.optInt("right", 0), margin.optInt("bottom", 0));
+                holder.tvDesc.setLayoutParams(descLayoutParams);
+                holder.tvDesc.setGravity(Utils.getGravity(descriptionGravity));
+                holder.parentLinearLayout.setGravity(carouselGravity);
+            }
+        });
     }
 
     @JavascriptInterface
@@ -899,67 +965,6 @@ public class MobilityAppBridge extends HyperBridge {
         if(youtubePlayer != null)
             youtubePlayer.loadVideo(videoId, 0);
     }
-
-
-    private final VPAdapter vpAdapter = new VPAdapter(viewPagerItemArrayList, bridgeComponents.getContext(), new VPAdapter.VPAdapterListener(){
-
-        @Override
-        public void onViewHolderBind(VPAdapter.ViewHolder holder, int position, Context context) {
-            ViewPagerItem viewPagerItem = viewPagerItemArrayList.get(position);
-            JSONObject margin = viewPagerItem.getDescriptionMargin();
-            JSONObject titleMargin = viewPagerItem.getTitleMargin();
-            String titleGravity = viewPagerItem.getTitleGravity();
-            int carouselGravity = viewPagerItem.getCarouselGravity();
-            String descriptionGravity = viewPagerItem.getDescriptionGravity();
-
-            float density = (Resources.getSystem().getDisplayMetrics().density);
-            // imageView Config ------------------------------------------
-            if ((viewPagerItem.getContentType()).equals("IMAGE")){
-                if (viewPagerItem.isImageUrl())
-                    Glide.with(context)
-                            .load(viewPagerItem.getImage())
-                            .into(holder.imageView);
-                else
-                    holder.imageView.setImageResource(viewPagerItem.getImageID());
-                holder.imageView.getLayoutParams().height = (int) (viewPagerItem.getImageHeight() * density);
-                GradientDrawable gradientDrawable = new GradientDrawable();
-                gradientDrawable.setShape(GradientDrawable.RECTANGLE);
-                holder.imageView.setVisibility(View.VISIBLE);
-                gradientDrawable.setCornerRadii(new float[] {20, 20, 20, 20, 0,0,0,0});
-                gradientDrawable.setColor(Color.parseColor(viewPagerItem.getImageBgColor()));
-                holder.imageView.setBackground(gradientDrawable);
-                holder.video.setVisibility(View.GONE);
-            }
-            else {
-                vpAdapter.embedYoutubeVideo(context, (viewPagerItem.getVideoData()).toString(), "PLAY", holder.video);
-                holder.video.setVisibility(View.VISIBLE);
-                holder.imageView.setVisibility(View.GONE);
-            }
-
-            // Heading text Config ------------------------------------------
-            holder.tvHeading.setTextSize(viewPagerItem.getTitleTextSize());
-            holder.tvHeading.setTextColor(Color.parseColor(viewPagerItem.getTitleColor()));
-            holder.tvHeading.setText(viewPagerItem.getTitleText());
-            ViewGroup.MarginLayoutParams titleLayoutParams = (ViewGroup.MarginLayoutParams) holder.tvHeading.getLayoutParams();
-            titleLayoutParams.setMargins(titleMargin.optInt("left", 0), titleMargin.optInt("top", 0), titleMargin.optInt("right", 0), titleMargin.optInt("bottom", 0));
-            holder.tvHeading.setLayoutParams(titleLayoutParams);
-            holder.tvHeading.setGravity(Utils.getGravity(titleGravity));
-
-            // Description text Config ---------------------------------------
-            holder.tvDesc.setText(Html.fromHtml(viewPagerItem.getDescriptionText()));
-            if(viewPagerItem.getDescriptionText().equals(""))
-            {
-                holder.tvDesc.setVisibility(View.GONE);
-            }
-            holder.tvDesc.setTextSize(viewPagerItem.getDescriptionTextSize());
-            holder.tvDesc.setTextColor(Color.parseColor(viewPagerItem.getDescriptionColor()));
-            ViewGroup.MarginLayoutParams descLayoutParams = (ViewGroup.MarginLayoutParams) holder.tvDesc.getLayoutParams();
-            descLayoutParams.setMargins(margin.optInt("left", 0) * 2, margin.optInt("top", 0), margin.optInt("right", 0), margin.optInt("bottom", 0));
-            holder.tvDesc.setLayoutParams(descLayoutParams);
-            holder.tvDesc.setGravity(Utils.getGravity(descriptionGravity));
-            holder.parentLinearLayout.setGravity(carouselGravity);
-                    }
-                });
                 
     @JavascriptInterface
     public void pauseYoutubeVideo() {
