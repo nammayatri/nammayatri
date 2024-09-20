@@ -78,7 +78,6 @@ import Storage.Cac.DriverPoolConfig as CDP
 import Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.CachedQueries.InterCityTravelCities as CQITC
-import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantState as CQMS
@@ -620,11 +619,9 @@ buildEstimate merchantOpCityId currency distanceUnit mbSearchReq startTime isSch
         ..
       }
 
-validateRequest :: Id DM.Merchant -> DSearchReq -> Flow ValidatedDSearchReq
-validateRequest merchantId sReq = do
+validateRequest :: DM.Merchant -> DSearchReq -> Flow ValidatedDSearchReq
+validateRequest merchant sReq = do
   isValueAddNP <- CQVAN.isValueAddNP sReq.bapId
-  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
-  unless merchant.enabled $ throwError (AgencyDisabled merchantId.getId)
   -- This checks for origin serviceability too
   NearestOperatingAndSourceCity {nearestOperatingCity, sourceCity} <- getNearestOperatingAndSourceCity merchant sReq.pickupLocation
   let bapCity = nearestOperatingCity.city

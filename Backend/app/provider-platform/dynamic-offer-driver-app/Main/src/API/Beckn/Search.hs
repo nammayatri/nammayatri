@@ -39,6 +39,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as VNP
 import TransactionLogs.PushLogs
@@ -65,6 +66,8 @@ search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandle
     let context = reqV2.searchReqContext
         txnId = Just transactionId
     city <- Utils.getContextCity context
+    merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
+    unless merchant.enabled $ throwError (AgencyDisabled transporterId.getId)
     moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InternalError $ "Operating City" <> show city <> "not supported or not found ")
     void $ Utils.validateSearchContext context transporterId moc.id
     dSearchReq <- ACL.buildSearchReqV2 subscriber reqV2
@@ -73,7 +76,7 @@ search transporterId (SignatureAuthResult _ subscriber) _ reqV2 = withFlowHandle
     country <- Utils.getContextCountry context
 
     Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $ do
-      validatedSReq <- DSearch.validateRequest transporterId dSearchReq
+      validatedSReq <- DSearch.validateRequest merchant dSearchReq
       fork "search received pushing ondc logs" do
         void $ pushLogs "search" (toJSON reqV2) validatedSReq.merchant.id.getId
       let bppId = validatedSReq.merchant.subscriberId.getShortId
