@@ -35,6 +35,7 @@ updateByPrimaryKey (Domain.Types.FRFSConfig.FRFSConfig {..}) = do
   updateWithKV
     [ Se.Set Beam.bookingEndTime bookingEndTime,
       Se.Set Beam.bookingStartTime bookingStartTime,
+      Se.Set Beam.cancellationReasonId cancellationReasonId,
       Se.Set Beam.customDates customDates,
       Se.Set Beam.customEndTime customEndTime,
       Se.Set Beam.discount discount,
@@ -57,6 +58,7 @@ instance FromTType' Beam.FRFSConfig Domain.Types.FRFSConfig.FRFSConfig where
         Domain.Types.FRFSConfig.FRFSConfig
           { bookingEndTime = bookingEndTime,
             bookingStartTime = bookingStartTime,
+            cancellationReasonId = cancellationReasonId,
             customDates = customDates,
             customEndTime = customEndTime,
             discount = discount,
@@ -77,6 +79,7 @@ instance ToTType' Beam.FRFSConfig Domain.Types.FRFSConfig.FRFSConfig where
     Beam.FRFSConfigT
       { Beam.bookingEndTime = bookingEndTime,
         Beam.bookingStartTime = bookingStartTime,
+        Beam.cancellationReasonId = cancellationReasonId,
         Beam.customDates = customDates,
         Beam.customEndTime = customEndTime,
         Beam.discount = discount,

@@ -20,3 +20,8 @@ ALTER TABLE atlas_app.frfs_config ADD PRIMARY KEY ( merchant_operating_city_id);
 ALTER TABLE atlas_app.frfs_config ADD COLUMN max_free_ticket_cashback integer  default 0;
 ALTER TABLE atlas_app.frfs_config ADD COLUMN is_event_ongoing boolean  default false;
 ALTER TABLE atlas_app.frfs_config ADD COLUMN free_ticket_interval integer  default 9999;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_config ADD COLUMN cancellation_reason_id text ;
