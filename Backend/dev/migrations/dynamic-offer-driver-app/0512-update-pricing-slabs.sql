@@ -1,0 +1,2 @@
+update atlas_driver_offer_bpp.fare_policy_inter_city_details_pricing_slabs set time_percentage = 5 where time_percentage = 2;
+update atlas_driver_offer_bpp.fare_policy_rental_details_pricing_slabs set time_percentage = 5 where time_percentage = 2;
