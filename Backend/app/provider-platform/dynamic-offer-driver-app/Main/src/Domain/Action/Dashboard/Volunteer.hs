@@ -84,6 +84,7 @@ bookingInfo merchantShortId opCity otpCode = do
     convertVehicleVariant DVST.AMBULANCE_AC_OXY = Common.AMBULANCE_AC_OXY
     convertVehicleVariant DVST.AMBULANCE_VENTILATOR = Common.AMBULANCE_VENTILATOR
     convertVehicleVariant DVST.SUV_PLUS = Common.SUV_PLUS
+    convertVehicleVariant DVST.DELIVERY_LIGHT_GOODS_VEHICLE = Common.DELIVERY_LIGHT_GOODS_VEHICLE
 
     buildBookingLocation Domain.Location {..} =
       Common.Location

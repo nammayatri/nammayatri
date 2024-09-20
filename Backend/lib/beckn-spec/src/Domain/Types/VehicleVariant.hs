@@ -44,6 +44,7 @@ data VehicleVariant
   | AMBULANCE_VENTILATOR
   | SUV_PLUS
   | DELIVERY_BIKE
+  | DELIVERY_LIGHT_GOODS_VEHICLE
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 $(mkHttpInstancesForEnum ''VehicleVariant)
@@ -70,6 +71,7 @@ castServiceTierToVariant = \case
   DVST.AMBULANCE_VENTILATOR -> AMBULANCE_VENTILATOR
   DVST.SUV_PLUS -> SUV_PLUS
   DVST.DELIVERY_BIKE -> DELIVERY_BIKE
+  DVST.DELIVERY_LIGHT_GOODS_VEHICLE -> DELIVERY_LIGHT_GOODS_VEHICLE
 
 castVariantToServiceTier :: VehicleVariant -> DVST.ServiceTierType
 castVariantToServiceTier = \case
@@ -90,6 +92,7 @@ castVariantToServiceTier = \case
   AMBULANCE_VENTILATOR -> DVST.AMBULANCE_VENTILATOR
   SUV_PLUS -> DVST.SUV_PLUS
   DELIVERY_BIKE -> DVST.DELIVERY_BIKE
+  DELIVERY_LIGHT_GOODS_VEHICLE -> DVST.DELIVERY_LIGHT_GOODS_VEHICLE
 
 castVehicleVariantToVehicleCategory :: VehicleVariant -> DVC.VehicleCategory
 castVehicleVariantToVehicleCategory = \case
@@ -110,6 +113,7 @@ castVehicleVariantToVehicleCategory = \case
   AMBULANCE_VENTILATOR -> DVC.AMBULANCE
   SUV_PLUS -> DVC.CAR
   DELIVERY_BIKE -> DVC.MOTORCYCLE
+  DELIVERY_LIGHT_GOODS_VEHICLE -> DVC.TRUCK
 
 getVehicleCategory :: Maybe DVC.VehicleCategory -> VehicleVariant -> Maybe DVC.VehicleCategory
 getVehicleCategory mbVehicleCategory variant = mbVehicleCategory <|> (Just $ castVehicleVariantToVehicleCategory variant)

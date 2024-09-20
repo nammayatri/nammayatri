@@ -206,6 +206,7 @@ castVehicleVariant = \case
   VehVar.AMBULANCE_AC_OXY -> (show Enums.AMBULANCE, "AMBULANCE_AC_OXY")
   VehVar.AMBULANCE_VENTILATOR -> (show Enums.AMBULANCE, "AMBULANCE_VENTILATOR")
   VehVar.SUV_PLUS -> (show Enums.CAB, "SUV_PLUS")
+  VehVar.DELIVERY_LIGHT_GOODS_VEHICLE -> (show Enums.TRUCK, "DELIVERY_LIGHT_GOODS_VEHICLE")
 
 parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.VehicleVariant
 parseVehicleVariant mbCategory mbVariant =
