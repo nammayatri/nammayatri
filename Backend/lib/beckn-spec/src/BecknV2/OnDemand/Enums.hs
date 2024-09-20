@@ -37,6 +37,7 @@ data VehicleCategory
   | METRO
   | AMBULANCE
   | TWO_WHEELER
+  | TRUCK
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON, Read, ToSchema)
 
 $(mkHttpInstancesForEnum ''VehicleCategory)

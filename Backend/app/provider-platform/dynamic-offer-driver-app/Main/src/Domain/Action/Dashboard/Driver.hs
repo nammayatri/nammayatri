@@ -1463,6 +1463,8 @@ castVehicleVariantDashboard = \case
   Just DV.AMBULANCE_AC_OXY -> Just Common.AMBULANCE_AC_OXY
   Just DV.AMBULANCE_VENTILATOR -> Just Common.AMBULANCE_VENTILATOR
   Just DV.SUV_PLUS -> Just Common.SUV_PLUS
+  Just DV.DELIVERY_BIKE -> Just Common.DELIVERY_BIKE
+  Just DV.DELIVERY_LIGHT_GOODS_VEHICLE -> Just Common.DELIVERY_LIGHT_GOODS_VEHICLE
   _ -> Nothing
 
 ---------------------------------------------------------------------

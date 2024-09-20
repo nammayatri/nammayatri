@@ -82,6 +82,7 @@ mapVariantToVehicle = \case
   DTV.AMBULANCE_VENTILATOR -> Enums.AMBULANCE
   DTV.SUV_PLUS -> Enums.CAB
   DTV.DELIVERY_BIKE -> Enums.MOTORCYCLE
+  DTV.DELIVERY_LIGHT_GOODS_VEHICLE -> Enums.TRUCK
 
 mapServiceTierToCategory :: ServiceTierType -> Enums.VehicleCategory
 mapServiceTierToCategory = \case
@@ -105,6 +106,7 @@ mapServiceTierToCategory = \case
   AMBULANCE_VENTILATOR -> Enums.AMBULANCE
   SUV_PLUS -> Enums.CAB
   DELIVERY_BIKE -> Enums.MOTORCYCLE
+  DELIVERY_LIGHT_GOODS_VEHICLE -> Enums.TRUCK
 
 getListOfServiceTireTypes :: Enums.VehicleCategory -> [DVST.ServiceTierType]
 getListOfServiceTireTypes Enums.CAB = [DVST.SEDAN, DVST.SUV, DVST.HATCHBACK, DVST.TAXI, DVST.TAXI_PLUS, DVST.ECO, DVST.COMFY, DVST.PREMIUM, DVST.PREMIUM_SEDAN, DVST.BLACK, DVST.BLACK_XL, DVST.SUV_PLUS]
@@ -113,6 +115,7 @@ getListOfServiceTireTypes Enums.MOTORCYCLE = [DVST.BIKE]
 getListOfServiceTireTypes Enums.TWO_WHEELER = [DVST.BIKE, DVST.DELIVERY_BIKE]
 getListOfServiceTireTypes Enums.AMBULANCE = [DVST.AMBULANCE_TAXI, DVST.AMBULANCE_TAXI_OXY, DVST.AMBULANCE_AC, DVST.AMBULANCE_AC_OXY, DVST.AMBULANCE_VENTILATOR]
 getListOfServiceTireTypes Enums.METRO = []
+getListOfServiceTireTypes Enums.TRUCK = [DVST.DELIVERY_LIGHT_GOODS_VEHICLE]
 
 tripCategoryToFulfillmentType :: TripCategory -> Text
 tripCategoryToFulfillmentType = \case

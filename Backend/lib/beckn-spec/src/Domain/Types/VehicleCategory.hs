@@ -14,6 +14,7 @@ data VehicleCategory
   | FLIGHT
   | AUTO_CATEGORY
   | AMBULANCE
+  | TRUCK
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''VehicleCategory)

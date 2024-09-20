@@ -836,6 +836,7 @@ getVehicleAvgSpeed variant avgSpeedOfVehicle = case variant of
   DVeh.AMBULANCE_AC_OXY -> avgSpeedOfVehicle.ambulance
   DVeh.AMBULANCE_VENTILATOR -> avgSpeedOfVehicle.ambulance
   DVeh.SUV_PLUS -> avgSpeedOfVehicle.suvplus
+  DVeh.DELIVERY_LIGHT_GOODS_VEHICLE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle
 
 calculateDriverPoolCurrentlyOnRide ::
   ( EncFlow m r,

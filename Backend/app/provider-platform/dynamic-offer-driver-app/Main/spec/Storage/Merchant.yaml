@@ -651,6 +651,7 @@ TransporterConfig:
       black: Kilometers
       blackxl: Kilometers
       suvplus: Kilometers
+      deliveryLightGoodsVehicle : Kilometers
       derive': Generic, Show, ToJSON, FromJSON, Read
     DashboardMediaSendingLimit:
       sms: Int
@@ -672,6 +673,7 @@ TransporterConfig:
       black: Maybe Seconds
       blackxl: Maybe Seconds
       suvplus: Maybe Seconds
+      deliveryLightGoodsVehicle : Maybe Seconds
       derive': Generic, Show, ToJSON, FromJSON, Read
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")]
