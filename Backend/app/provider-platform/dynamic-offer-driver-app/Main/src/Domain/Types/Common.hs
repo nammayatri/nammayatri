@@ -9,9 +9,13 @@ module Domain.Types.Common
 where
 
 import qualified BecknV2.OnDemand.Enums as Enums
+import Data.Aeson
 import Domain.Types
 import qualified Domain.Types.VehicleCategory as DTVC
 import qualified Domain.Types.VehicleVariant as DTVV
+import Kernel.Prelude
+import qualified Kernel.Storage.ClickhouseV2 as CH
+import Kernel.Utils.TH
 import Tools.Beam.UtilsTH
 
 $(mkBeamInstancesForEnumAndList ''ServiceTierType)
@@ -20,3 +24,12 @@ $(mkBeamInstancesForEnumAndList ''DTVC.VehicleCategory)
 $(mkBeamInstancesForEnumAndList ''Enums.VehicleCategory)
 $(mkBeamInstancesForEnum ''TripCategory)
 $(mkBeamInstancesForEnum ''TripParty)
+
+data DriverMode = ONLINE | OFFLINE | SILENT
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+instance CH.ClickhouseValue DriverMode
+
+$(mkHttpInstancesForEnum ''DriverMode)
+
+$(mkBeamInstancesForEnumAndList ''DriverMode)

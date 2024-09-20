@@ -57,11 +57,11 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   resp <-
     case req.domain of
       Lib.Yudhishthira.Types.POOLING -> do
-        driversData <- mapM createPoolingLogicData req.inputData
+        driversData :: [DriverPoolWithActualDistResult] <- mapM (createLogicData def) req.inputData
         let logicData = TaggedDriverPoolInput driversData False
         YudhishthiraFlow.verifyDynamicLogic req.rules logicData
       Lib.Yudhishthira.Types.DYNAMIC_PRICING _ -> do
-        logicData <- mapM createDynamicPricingData (req.inputData)
+        logicData :: [DynamicPricingData] <- mapM (createLogicData def) (req.inputData)
         YudhishthiraFlow.verifyDynamicLogic req.rules logicData
       _ -> throwError $ InvalidRequest "Logic Domain not supported"
   isRuleUpdated <-
@@ -75,19 +75,11 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       else return False
   return $ Lib.Yudhishthira.Types.AppDynamicLogicResp resp.result isRuleUpdated resp.errors
   where
-    createPoolingLogicData :: A.Value -> Environment.Flow DriverPoolWithActualDistResult
-    createPoolingLogicData inputValue = do
-      let defaultValue = A.toJSON (def :: DriverPoolWithActualDistResult)
+    createLogicData :: (FromJSON a, ToJSON a) => a -> A.Value -> Environment.Flow a
+    createLogicData defaultVal inputValue = do
+      let defaultValue = A.toJSON defaultVal
           finalValue = deepMerge defaultValue inputValue
-      case A.fromJSON finalValue :: A.Result DriverPoolWithActualDistResult of
-        A.Success a -> pure a
-        A.Error err -> throwError $ InvalidRequest ("Not able to merge input data into default value. Getting error: " <> show err)
-
-    createDynamicPricingData :: A.Value -> Environment.Flow DynamicPricingData
-    createDynamicPricingData inputValue = do
-      let defaultValue = A.toJSON (def :: DynamicPricingData)
-          finalValue = deepMerge defaultValue inputValue
-      case A.fromJSON finalValue :: A.Result DynamicPricingData of
+      case A.fromJSON finalValue of
         A.Success a -> pure a
         A.Error err -> throwError $ InvalidRequest ("Not able to merge input data into default value. Getting error: " <> show err)
 

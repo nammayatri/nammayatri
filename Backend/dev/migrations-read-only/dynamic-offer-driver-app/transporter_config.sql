@@ -261,9 +261,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN arrival_time_bu
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN upwards_recompute_buffer_percentage integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dp_geo_hash_percision integer  default 5;
 
 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN demand_hotspots_config json ;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dp_geo_hash_percision integer  default 5;

@@ -5,7 +5,7 @@ module Storage.Queries.FleetDriverAssociationExtra where
 
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
-import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.Common as DI
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.Person
 import qualified EulerHS.Language as L

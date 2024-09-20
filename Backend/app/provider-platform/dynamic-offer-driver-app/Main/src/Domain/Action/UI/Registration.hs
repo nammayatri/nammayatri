@@ -31,6 +31,7 @@ where
 import Data.OpenApi hiding (email, info, name, url)
 import Domain.Action.UI.DriverReferral
 import qualified Domain.Action.UI.Person as SP
+import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.MerchantOperatingCity as DMOC

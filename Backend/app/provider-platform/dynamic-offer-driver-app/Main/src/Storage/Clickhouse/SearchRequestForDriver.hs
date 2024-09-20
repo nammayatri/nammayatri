@@ -14,7 +14,7 @@
 
 module Storage.Clickhouse.SearchRequestForDriver where
 
-import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.Common as DI
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchRequest as DSR
@@ -60,19 +60,19 @@ $(TH.mkClickhouseInstances ''SearchRequestForDriverT)
 -- instance ClickhouseValue DI.DriverMode
 -- instance ClickhouseValue DServiceTierType.ServiceTierType
 
-calulateSupplyDemandByGeohash ::
+calulateSupplyDemandByGeohashAndServiceTier ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   UTCTime ->
   UTCTime ->
-  m [(Maybe Text, Int, Int)]
-calulateSupplyDemandByGeohash from to = do
+  m [(Maybe Text, Int, Int, DServiceTierType.ServiceTierType)]
+calulateSupplyDemandByGeohashAndServiceTier from to = do
   CH.findAll $
     CH.select_
       ( \srfd -> do
           let supplyCount = CH.count_ (CH.distinct srfd.driverId)
           let demandCount = CH.count_ (CH.distinct srfd.requestId)
-          CH.groupBy srfd.fromLocGeohash $ \fromLocGeohash -> do
-            (fromLocGeohash, supplyCount, demandCount)
+          CH.groupBy (srfd.fromLocGeohash, srfd.vehicleServiceTier) $ \(fromLocGeohash, vehicleServiceTier) -> do
+            (fromLocGeohash, supplyCount, demandCount, vehicleServiceTier)
       )
       $ CH.filter_
         ( \srfd _ ->
@@ -80,24 +80,11 @@ calulateSupplyDemandByGeohash from to = do
             srfd.createdAt >=. from
               CH.&&. srfd.createdAt <=. to
               CH.&&. srfd.mode CH.==. Just DI.ONLINE
-              CH.&&. CH.not_ (srfd.vehicleServiceTier `in_` [DServiceTierType.AUTO_RICKSHAW, DServiceTierType.BIKE, DServiceTierType.AMBULANCE_TAXI, DServiceTierType.AMBULANCE_TAXI_OXY, DServiceTierType.AMBULANCE_AC, DServiceTierType.AMBULANCE_AC_OXY, DServiceTierType.AMBULANCE_VENTILATOR, DServiceTierType.DELIVERY_BIKE])
+              CH.&&. CH.isNotNull srfd.fromLocGeohash
+              --   CH.&&. CH.not_ (srfd.vehicleServiceTier `in_` [DServiceTierType.AUTO_RICKSHAW, DServiceTierType.BIKE, DServiceTierType.AMBULANCE_TAXI, DServiceTierType.AMBULANCE_TAXI_OXY, DServiceTierType.AMBULANCE_AC, DServiceTierType.AMBULANCE_AC_OXY, DServiceTierType.AMBULANCE_VENTILATOR, DServiceTierType.DELIVERY_BIKE])
         )
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
 
--- COMFY
---   | ECO
---   | PREMIUM
---   | SUV
--- --   | AUTO_RICKSHAW
---   | HATCHBACK
---   | SEDAN
---   | TAXI
---   | TAXI_PLUS
---   | PREMIUM_SEDAN
---   | BLACK
---   | BLACK_XL
---   | SUV_PLUS
---   | DELIVERY_BIKE
 --   res <-
 --     CH.findAll $
 --       CH.select_

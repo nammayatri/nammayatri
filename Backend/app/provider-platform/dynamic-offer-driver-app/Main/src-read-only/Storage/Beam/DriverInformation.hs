@@ -7,6 +7,7 @@ module Storage.Beam.DriverInformation where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.Common
 import qualified Domain.Types.DriverInformation
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -44,7 +45,7 @@ data DriverInformationT f = DriverInformationT
     latestScheduledBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     latestScheduledPickupLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     latestScheduledPickupLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
-    mode :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverMode),
+    mode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.DriverMode),
     numOfLocks :: B.C f Kernel.Prelude.Int,
     onRide :: B.C f Kernel.Prelude.Bool,
     payerVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

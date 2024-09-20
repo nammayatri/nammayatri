@@ -5,7 +5,7 @@ import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
 import qualified Data.Text as T
 import Domain.Types
-import Domain.Types.DriverInformation as DriverInfo
+import qualified Domain.Types.Common as DriverInfo
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.VehicleServiceTier as DVST

@@ -95,6 +95,10 @@ instance JobInfoProcessor 'UnblockDriver
 type instance JobContent 'UnblockDriver = UnblockDriverRequestJobData
 
 data SupplyDemandRequestJobData = SupplyDemandRequestJobData
+  { scheduleTimeIntervalInMin :: Int,
+    supplyDemandRatioTTLInSec :: Int,
+    calculationDataIntervalInMin :: Int
+  }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
 instance JobInfoProcessor 'SupplyDemand

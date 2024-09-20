@@ -5,12 +5,12 @@
 module Domain.Types.DriverInformation where
 
 import Data.Aeson
+import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Kernel.External.Maps
 import Kernel.Prelude
-import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
@@ -46,7 +46,7 @@ data DriverInformation = DriverInformation
     lastEnabledOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     latestScheduledBooking :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     latestScheduledPickup :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
-    mode :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverMode,
+    mode :: Kernel.Prelude.Maybe Domain.Types.Common.DriverMode,
     numOfLocks :: Kernel.Prelude.Int,
     onRide :: Kernel.Prelude.Bool,
     payerVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -93,10 +93,6 @@ data DriverMissedOpp = DriverMissedOpp
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data DriverMode = ONLINE | OFFLINE | SILENT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
-instance CH.ClickhouseValue DriverMode
-
 data DriverSummary = DriverSummary
   { bonusEarned :: Kernel.Types.Common.Money,
     bonusEarnedWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
@@ -115,9 +111,5 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AirConditionedRestrictionTy
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverAutoPayStatus)
 
 $(mkHttpInstancesForEnum ''DriverAutoPayStatus)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverMode)
-
-$(mkHttpInstancesForEnum ''DriverMode)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutVpaStatus)

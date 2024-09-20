@@ -17,6 +17,7 @@ module SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
   )
 where
 
+import qualified Domain.Types.ServiceTierType as DServiceTierType
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
@@ -24,7 +25,7 @@ import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Utils.Common
 import Lib.Scheduler
-import SharedLogic.Allocator (AllocatorJobType (..))
+import SharedLogic.Allocator (AllocatorJobType (..), SupplyDemandRequestJobData (..))
 import SharedLogic.DynamicPricing (mkSupplyDemandRatioKeyWithGeohash)
 import qualified Storage.Clickhouse.SearchRequestForDriver as SRFD
 
@@ -39,16 +40,11 @@ calculateSupplyDemand ::
   m ExecutionResult
 calculateSupplyDemand Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   now <- getCurrentTime
-  let from = addUTCTime (-15 * 60) now
-  let nextScheduleT = addUTCTime (15 * 60) now
-  let _jobData = jobInfo.jobData
-  --   maxShards <- asks (.maxShards)
-  --   let supplyDemandJobTs = secondsToNominalDiffTime 15 * 60
-  queryResult <- SRFD.calulateSupplyDemandByGeohash from now
-  mapM_ updateSupplyDemandRatio queryResult
-  --   JC.createJobIn @_ @'SupplyDemand supplyDemandJobTs maxShards SupplyDemandRequestJobData
-  --   let driverId = jobData.driverId
-  --   QDriverInfo.updateBlockedState (cast driverId) False (Just "AUTOMATICALLY_UNBLOCKED")
+  let SupplyDemandRequestJobData {..} = jobInfo.jobData
+  let from = addUTCTime (intToNominalDiffTime (calculationDataIntervalInMin * (-60))) now -----------multiply by -60 to take past timing
+  let nextScheduleT = addUTCTime (intToNominalDiffTime (scheduleTimeIntervalInMin * 60)) now
+  queryResult <- SRFD.calulateSupplyDemandByGeohashAndServiceTier from now
+  mapM_ (updateSupplyDemandRatio supplyDemandRatioTTLInSec) queryResult
   return (ReSchedule nextScheduleT)
 
 updateSupplyDemandRatio ::
@@ -57,10 +53,11 @@ updateSupplyDemandRatio ::
     CacheFlow m r,
     EsqDBFlow m r
   ) =>
-  (Maybe Text, Int, Int) ->
+  Int ->
+  (Maybe Text, Int, Int, DServiceTierType.ServiceTierType) ->
   m ()
-updateSupplyDemandRatio (geohash', supplyCount, demandCount) = do
+updateSupplyDemandRatio supplyDemandRatioTTLInSec (geohash', supplyCount, demandCount, vehicleServiceTier) = do
   let geohash = fromMaybe "" geohash'
-      key = mkSupplyDemandRatioKeyWithGeohash geohash
+      key = mkSupplyDemandRatioKeyWithGeohash geohash vehicleServiceTier
       value :: Double = fromIntegral supplyCount / fromIntegral demandCount
-  Hedis.setExp key value 900
+  Hedis.withCrossAppRedis $ Hedis.setExp key value supplyDemandRatioTTLInSec

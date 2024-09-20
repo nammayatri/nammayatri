@@ -30,8 +30,8 @@ import qualified Data.List as DL
 import qualified Data.Map as Map
 import qualified Domain.Types as DVST
 import Domain.Types.Common
+import qualified Domain.Types.Common as DriverInfo
 import Domain.Types.DriverGoHomeRequest as DDGR
-import qualified Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverIntelligentPoolConfig
 import Domain.Types.DriverPoolConfig
 import Domain.Types.GoHomeConfig (GoHomeConfig)

@@ -5,15 +5,13 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   UTCTime: Kernel.Prelude
   LatLong: Kernel.External.Maps
+  DriverMode: Domain.Types.Common
 
 DriverInformation:
   tableName: driver_information
   types:
     AirConditionedRestrictionType:
       enum: "NoRestriction, ToggleAllowed, ToggleNotAllowed"
-    DriverMode:
-      enum: "ONLINE,OFFLINE,SILENT"
-      derive: "HttpInstance"
     DriverAutoPayStatus:
       enum: "PENDING,ACTIVE,SUSPENDED,PAUSED_PSP,CANCELLED_PSP,MANDATE_FAILED,MANDATE_EXPIRED"
       derive: "HttpInstance"

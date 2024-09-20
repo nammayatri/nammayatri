@@ -694,6 +694,8 @@ TransporterConfig:
     mediaFileUrlPattern: Text
     mediaFileSizeUpperLimit: Int
     referralLinkPassword: Text
+    dpWhiteListedGeohash : Maybe [Text]
+    dpBlackListedGeohash : Maybe [Text]
     dpGeoHashPercision: Maybe Int
     fcmConfig: Kernel.External.Notification.FCM.Types.FCMConfig
     onboardingTryLimit: Int
@@ -1047,6 +1049,8 @@ TransporterConfig:
     approxRideDistanceDiffThreshold: "1200"
     includeDriverCurrentlyOnRide: "true"
     dpGeoHashPercision: "5"
+    dpWhiteListedGeohash : "ARRAY[]"
+    dpBlackListedGeohash : "ARRAY[]"
     minLocationAccuracy: "50"
     driverPaymentCycleDuration: "86400"
     driverPaymentCycleStartTime: "36000"
