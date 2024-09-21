@@ -1613,3 +1613,5 @@ getEN stringKey =
         CONTACT_SUPPORT_FOR_HELP -> "Contact support for help"
         YOU_HAVE_SWITCHED_CITY_OR_VEHICLE -> "You have switched your vehicle or city. Please select a plan to get rides"
         XL_PLUS -> "XL Plus"
+        TRUCK -> "Truck"
+        REGISTER_YOUR_TRUCK -> "Register your Truck"

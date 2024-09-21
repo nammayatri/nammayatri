@@ -1615,3 +1615,5 @@ getKN stringKey =
         CONTACT_SUPPORT_FOR_HELP -> "ಸಹಾಯಕ್ಕಾಗಿ ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿ"
         YOU_HAVE_SWITCHED_CITY_OR_VEHICLE -> "ನೀವು ನಿಮ್ಮ ವಾಹನ ಅಥವಾ ನಗರವನ್ನು ಬದಲಾಯಿಸಿದ್ದೀರಿ. ಸವಾರಿ ಪಡೆಯಲು ಯೋಜನೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ"
         XL_PLUS -> "XL ಪ್ಲಸ್"
+        TRUCK -> "ಟ್ರಕ್"
+        REGISTER_YOUR_TRUCK -> "ನಿಮ್ಮ ಟ್ರಕ್ ನೋಂದಣಿಯನ್ನು ಮಾಡಿ"
