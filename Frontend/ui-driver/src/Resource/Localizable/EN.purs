@@ -1551,8 +1551,8 @@ getEN stringKey =
         DB_CHECK_AND_NAME_MATCH_FAILED -> "Pan verification failed"
         ADDITIONAL_CHARGES_WILL_BE_APPLICABLE -> "Additional charges may be applicable when driver is near pickup location."        
         MANAGE_VEHICLE -> "Manage Vehicles"
-        AMBULANCE_IS_NOT_SUPPORTED_YET -> "Ambulance is not supported yet"
-        WE_WILL_NOFITY_YOU_WHEN_IT_IS_AVAILABLE -> "We will notify you when ambulance support is available in your city" 
+        IS_NOT_SUPPORTED_YET -> " is not supported yet"
+        WE_WILL_NOFITY_YOU_WHEN_IT_IS_AVAILABLE vehicle -> "We will notify you when " <> vehicle <> " support is available in your city" 
         CANNOT_DETECT_PAN_CARD -> "Cannot detect PAN card. Please Try Again."
         CANNOT_DETECT_AADHAAR -> "Cannot detect Aadhaar Card. Please Try Again."
         DOCUMENT_ALREADY_VALIDATED -> "Document already Validated."
@@ -1612,3 +1612,4 @@ getEN stringKey =
         CONTINUE_WITH text -> "Continue with " <> text
         CONTACT_SUPPORT_FOR_HELP -> "Contact support for help"
         YOU_HAVE_SWITCHED_CITY_OR_VEHICLE -> "You have switched your vehicle or city. Please select a plan to get rides"
+        XL_PLUS -> "XL Plus"
