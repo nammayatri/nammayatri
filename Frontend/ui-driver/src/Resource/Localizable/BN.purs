@@ -1555,8 +1555,8 @@ getBN stringKey =
         INCLUDED -> "অন্তর্ভুক্ত"
         DB_CHECK_AND_NAME_MATCH_FAILED -> "প্যান যাচাই ব্যর্থ হয়েছে।"
         MANAGE_VEHICLE -> "গাড়ি পরিচালনা করুন"
-        AMBULANCE_IS_NOT_SUPPORTED_YET -> "অ্যাম্বুলেন্স এখনো সমর্থিত নয়"
-        WE_WILL_NOFITY_YOU_WHEN_IT_IS_AVAILABLE -> "আপনার শহরে এম্বুলেন্স সমর্থন উপলব্ধ হলে আমরা আপনাকে জানাবো"
+        IS_NOT_SUPPORTED_YET -> " এখনো সমর্থিত নয়"
+        WE_WILL_NOFITY_YOU_WHEN_IT_IS_AVAILABLE vehicle-> "আপনার শহরে " <> vehicle <>" এম্বুলেন্স সমর্থন উপলব্ধ হলে আমরা আপনাকে জানাবো"
         CANNOT_DETECT_PAN_CARD -> "প্যান কার্ড সনাক্ত করা যায় নি। দয়া করে আবার চেষ্টা করুন।"
         CANNOT_DETECT_AADHAAR -> "আধার কার্ড সনাক্ত করা যায় নি। দয়া করে আবার চেষ্টা করুন।"
         DOCUMENT_UNDER_MANUAL_REVIEW -> "ম্যানুয়াল পর্যালোচনা অধীনে নথি।"
@@ -1616,3 +1616,4 @@ getBN stringKey =
         CONTINUE_WITH text -> "এর সাথে চালিয়ে যান " <> text
         CONTACT_SUPPORT_FOR_HELP -> "সহায়তার জন্য সমর্থনের সাথে যোগাযোগ করুন"
         YOU_HAVE_SWITCHED_CITY_OR_VEHICLE -> "আপনি আপনার গাড়ি বা শহর পরিবর্তন করেছেন। রাইড পেতে একটি পরিকল্পনা নির্বাচন করুন"
+        XL_PLUS -> "XL প্লাস"
