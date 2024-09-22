@@ -124,7 +124,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       isRepeatSearch <- checkIfRepeatSearch searchTry ride.driverArrivalTime searchReq.isReallocationEnabled now booking.isScheduled transporterConfig
 
       if isRepeatSearch || isForceReallocation
-        then performStaticOfferReallocation quote searchReq searchTry transporterConfig now
+        then performStaticOfferReallocation quote searchReq searchTry transporterConfig now isRepeatSearch
         else cancelRideTransactionForNonReallocation Nothing Nothing
 
     performDynamicOfferReallocation driverQuote searchReq searchTry = do
@@ -138,11 +138,11 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 tripQuoteDetails = tripQuoteDetails,
                 customerExtraFee = Nothing,
                 messageId = booking.id.getId,
-                isRepeatSearch = False
+                isRepeatSearch = True
               }
       handleDriverSearchBatch driverSearchBatchInput booking searchTry.estimateId False
 
-    performStaticOfferReallocation quote searchReq searchTry transporterConfig now = do
+    performStaticOfferReallocation quote searchReq searchTry transporterConfig now isRepeatSearch = do
       DP.addDriverToSearchCancelledList searchReq.id ride.driverId
       (newBooking, newQuote) <- createNewBookingAndQuote quote transporterConfig now searchReq
       let mbDriverExtraFeeBounds = ((,) <$> searchReq.estimatedDistance <*> ((.driverExtraFeeBounds) =<< (quote.farePolicy))) <&> uncurry DFP.findDriverExtraFeeBoundsByDistance
@@ -160,7 +160,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 tripQuoteDetails = [tripQuoteDetail],
                 customerExtraFee = Nothing,
                 messageId = booking.id.getId,
-                isRepeatSearch = False
+                isRepeatSearch
               }
       handleDriverSearchBatch driverSearchBatchInput newBooking searchTry.estimateId True
 
