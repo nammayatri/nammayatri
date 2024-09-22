@@ -59,6 +59,7 @@ DriverPoolConfig:
     actualDistanceThresholdOnRide: Maybe Meters
     currentRideTripCategoryValidForForwardBatching : "[Text]"
     distanceUnit: DistanceUnit
+    enableUnifiedPooling: Maybe Bool
 
   beamFields:
     distanceUnit:

@@ -580,6 +580,7 @@ types:
     - driverToDestinationDistanceThresholdWithUnit: Maybe Distance
     - driverToDestinationDuration: Seconds
     - derive: "'HideSecrets"
+    - enableUnifiedPooling: Maybe Bool
   OnRideRadiusConfig:
     - onRideRadius: Meters
     - onRideRadiusWithUnit: Maybe Distance

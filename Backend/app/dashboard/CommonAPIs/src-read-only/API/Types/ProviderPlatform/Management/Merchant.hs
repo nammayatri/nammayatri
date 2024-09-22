@@ -201,7 +201,8 @@ data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
     driverToDestinationDistanceThreshold :: Kernel.Types.Common.Meters,
     radiusShrinkValueForDriversOnRideWithUnit :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     driverToDestinationDistanceThresholdWithUnit :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
-    driverToDestinationDuration :: Kernel.Types.Common.Seconds
+    driverToDestinationDuration :: Kernel.Types.Common.Seconds,
+    enableUnifiedPooling :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -15,8 +15,21 @@
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool
   ( isBatchNumExceedLimit,
     getNextDriverPoolBatch,
+    incrementBatchNum,
     getPoolBatchNum,
     module Reexport,
+    PrepareDriverPoolBatchEntity (..),
+    incrementPoolRadiusStep,
+    incrementDriverRequestCount,
+    getPoolRadiusStep,
+    previouslyAttemptedDrivers,
+    checkRequestCount,
+    isBookAny,
+    makeTaggedDriverPool,
+    sortWithDriverScore,
+    splitSilentDriversAndSortWithDistance,
+    randomizeAndLimitSelection,
+    previouslyAttemptedDriversKey,
   )
 where
 
@@ -237,8 +250,8 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
           (driversFromGate, restDrivers) <- splitDriverFromGateAndRest pool
           pure $ restDrivers <> addSpecialZoneInfo searchReq.driverDefaultExtraFee driversFromGate
 
-        addSpecialZoneInfo driverDefaultExtraFee pool = map (\driverWithDistance -> driverWithDistance {pickupZone = True, specialZoneExtraTip = driverDefaultExtraFee}) pool
-        addKeepHiddenInSeconds keepHiddenFor pool = map (\driverWithDistance -> driverWithDistance {keepHiddenForSeconds = keepHiddenFor}) pool
+        addSpecialZoneInfo driverDefaultExtraFee = map (\driverWithDistance -> driverWithDistance {pickupZone = True, specialZoneExtraTip = driverDefaultExtraFee})
+        addKeepHiddenInSeconds keepHiddenFor = map (\driverWithDistance -> driverWithDistance {keepHiddenForSeconds = keepHiddenFor})
         splitDriverFromGateAndRest pool =
           case searchReq.pickupZoneGateId of
             Just pickupZoneGateId ->
@@ -425,8 +438,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                   merchantId = searchReq.providerId
                   isRental = isRentalTrip searchTry.tripCategory
                   isInterCity = isInterCityTrip searchTry.tripCategory
-              res <- filterM (scheduledRideFilter currentSearchInfo merchantId opCityId isRental isInterCity transporterConfig) res'
-              return res
+              filterM (scheduledRideFilter currentSearchInfo merchantId opCityId isRental isInterCity transporterConfig) res'
             _ -> return []
 
         calcDriverPool poolType radiusStep merchantOpCityId transporterConfig = do

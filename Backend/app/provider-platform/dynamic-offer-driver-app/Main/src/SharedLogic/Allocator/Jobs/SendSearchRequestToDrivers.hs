@@ -36,6 +36,8 @@ import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle (Handle (..), MetricsHandle (..), handler)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal as I
+import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPoolConfig
+import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPoolUnified as UI
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool hiding (getDriverPoolConfig)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -152,7 +154,7 @@ sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput go
       Handle
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
-          getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig driverSearchBatchInput.searchReq searchTry driverSearchBatchInput.tripQuoteDetails,
+          getNextDriverPoolBatch = (if driverPoolConfig.poolSortingType == DriverPoolConfig.Tagged && driverPoolConfig.enableUnifiedPooling == Just True then UI.getNextDriverPoolBatch else I.getNextDriverPoolBatch) driverPoolConfig driverSearchBatchInput.searchReq searchTry driverSearchBatchInput.tripQuoteDetails,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.searchReq searchTry driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
           metrics =

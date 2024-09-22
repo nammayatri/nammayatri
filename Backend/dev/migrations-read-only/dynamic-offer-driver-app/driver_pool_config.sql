@@ -62,3 +62,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN distance_unit c
 
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN use_one_to_one_osrm_mapping boolean ;
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN batch_size_on_ride_with_straight_line_distance integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN enable_unified_pooling boolean ;
