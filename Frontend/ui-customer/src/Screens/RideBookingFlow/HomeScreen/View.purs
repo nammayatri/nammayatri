@@ -3289,8 +3289,14 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
         updatedResp <- rideBooking respBooking.id
         either (const $ pure unit) handleRideBookingResp updatedResp
       else do
+        let waitTimeStartTime = fromMaybe "" respBooking.driverArrivalTime
+        if (respBooking.driverArrivalTime /= Nothing && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" ) then 
+          doAff do liftEffect $ push $ driverArrivedAction waitTimeStartTime
+        else do
+          pure unit
         case respBooking.rideStatus of
           Just rideStatus -> do
+            void $ modifyState \(GlobalState globalState) -> GlobalState $ globalState { homeScreen {data{driverInfoCardState { driversPreviousRideDropLocLat = respBooking.driversPreviousRideDropLocLat, driversPreviousRideDropLocLon = respBooking.driversPreviousRideDropLocLon } } }, followRideScreen { data { sosStatus = respBooking.sosStatus } } }
             doAff do liftEffect $ push $ UpdateCurrentStageStatus rideStatus ( RideBookingStatusRes respBooking)
           Nothing -> pure unit
 
