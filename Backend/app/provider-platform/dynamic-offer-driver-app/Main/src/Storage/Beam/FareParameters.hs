@@ -46,6 +46,7 @@ data FareParametersT f = FareParametersT
     customerCancellationDues :: B.C f (Maybe HighPrecMoney),
     tollCharges :: B.C f (Maybe HighPrecMoney),
     congestionCharge :: B.C f (Maybe Money),
+    congestionChargeViaDP :: B.C f (Maybe HighPrecMoney),
     congestionChargeAmount :: B.C f (Maybe HighPrecMoney),
     insuranceCharge :: B.C f (Maybe HighPrecMoney),
     cardChargeOnFare :: B.C f (Maybe HighPrecMoney),

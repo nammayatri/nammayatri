@@ -288,13 +288,13 @@ calculateFareParameters params = do
         fp.congestionChargePerMin >>= \congestionChargePerMin ->
           let duration = params.actualRideDuration <|> params.estimatedRideDuration
            in duration >>= \dur -> Just $ HighPrecMoney (realToFrac (fromIntegral dur / 60 * congestionChargePerMin))
-      congestionChargeResult = congestionChargeByPerMin <|> congestionChargeByMultiplier
+      -- congestionChargeResult = congestionChargeByPerMin <|> congestionChargeByMultiplier
       insuranceChargeResult = countInsuranceChargeForDistance fp.distanceUnit params.actualDistance fp.perDistanceUnitInsuranceCharge
       fullRideCostN {-without govtCharges, platformFee, cardChargeOnFare and fixedCharge-} =
         fullRideCost
           + fromMaybe 0.0 resultNightShiftCharge
           + fromMaybe 0.0 resultWaitingCharge
-          + fromMaybe 0.0 congestionChargeResult
+          + fromMaybe 0.0 congestionChargeByMultiplier ----------Needs to be changed to congestionChargeResult
           + fromMaybe 0.0 fp.serviceCharge
           + fromMaybe 0.0 insuranceChargeResult
           + notPartOfNightShiftCharge
@@ -313,7 +313,8 @@ calculateFareParameters params = do
             customerExtraFee = params.customerExtraFee,
             serviceCharge = fp.serviceCharge,
             parkingCharge = fp.parkingCharge,
-            congestionCharge = congestionChargeResult,
+            congestionCharge = congestionChargeByMultiplier, ----------Needs to be changed to congestionChargeResult
+            congestionChargeViaDP = congestionChargeByPerMin,
             waitingCharge = resultWaitingCharge,
             nightShiftCharge = resultNightShiftCharge,
             rideExtraTimeFare = extraTimeFareInfo,

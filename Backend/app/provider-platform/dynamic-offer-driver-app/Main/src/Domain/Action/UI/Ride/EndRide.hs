@@ -464,9 +464,11 @@ checkSplLocation mbSplLocTag splLocation = do
 
 recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> DTConf.TransporterConfig -> Bool -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
 recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thresholdConfig recomputeWithLatestPricing tripEndPoint = do
+  now <- getCurrentTime
   let merchantId = booking.providerId
       oldDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix later with rentals
   passedThroughDrop <- LocUpd.isPassedThroughDrop ride.driverId
+  let duration = ride.tripStartTime <&> \startTime -> roundToIntegral $ diffUTCTime now startTime
   pickupDropOutsideOfThreshold <- isDropOutsideOfThreshold booking tripEndPoint thresholdConfig
   QRide.updatePassedThroughDestination ride.id passedThroughDrop
   searchReq <- SQSR.findByTransactionIdAndMerchantId booking.transactionId merchantId >>= fromMaybeM (SearchRequestDoesNotExist booking.transactionId)
@@ -481,9 +483,9 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
       else pure Nothing
   tripEndTime <- getCurrentTime
   farePolicy <-
-    if recomputeWithLatestPricing --------------RITIKA ---------FIX
-      then getFarePolicyOnEndRide (Just $ getCoordinates booking.fromLocation) searchReq.fromLocGeohash (Just recalcDistance) Nothing (getCoordinates tripEndPoint) booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) (Just (TransactionId (Id booking.transactionId)))
-      else getFarePolicyByEstOrQuoteId (Just $ getCoordinates booking.fromLocation) searchReq.fromLocGeohash (Just recalcDistance) Nothing booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) (Just (TransactionId (Id booking.transactionId)))
+    if recomputeWithLatestPricing
+      then getFarePolicyOnEndRide (Just $ getCoordinates booking.fromLocation) searchReq.fromLocGeohash (Just recalcDistance) duration (getCoordinates tripEndPoint) booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) (Just (TransactionId (Id booking.transactionId)))
+      else getFarePolicyByEstOrQuoteId (Just $ getCoordinates booking.fromLocation) searchReq.fromLocGeohash (Just recalcDistance) duration booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) (Just (TransactionId (Id booking.transactionId)))
   fareParams <-
     calculateFareParameters
       Fare.CalculateFareParametersParams

@@ -20,6 +20,7 @@ import qualified Domain.Types.Person as DPerson
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import JsonLogic
+import qualified Kernel.Prelude as Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
@@ -57,11 +58,11 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   resp <-
     case req.domain of
       Lib.Yudhishthira.Types.POOLING -> do
-        driversData :: [DriverPoolWithActualDistResult] <- mapM (createLogicData def) req.inputData
+        driversData :: [DriverPoolWithActualDistResult] <- mapM (createLogicData def . Just) req.inputData
         let logicData = TaggedDriverPoolInput driversData False
         YudhishthiraFlow.verifyDynamicLogic req.rules logicData
       Lib.Yudhishthira.Types.DYNAMIC_PRICING _ -> do
-        logicData :: [DynamicPricingData] <- mapM (createLogicData def) (req.inputData)
+        logicData :: DynamicPricingData <- createLogicData def (Prelude.listToMaybe req.inputData)
         YudhishthiraFlow.verifyDynamicLogic req.rules logicData
       _ -> throwError $ InvalidRequest "Logic Domain not supported"
   isRuleUpdated <-
@@ -75,12 +76,13 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       else return False
   return $ Lib.Yudhishthira.Types.AppDynamicLogicResp resp.result isRuleUpdated resp.errors
   where
-    createLogicData :: (FromJSON a, ToJSON a) => a -> A.Value -> Environment.Flow a
-    createLogicData defaultVal inputValue = do
+    createLogicData :: (FromJSON a, ToJSON a) => a -> Maybe A.Value -> Environment.Flow a
+    createLogicData defaultVal Nothing = return defaultVal
+    createLogicData defaultVal (Just inputValue) = do
       let defaultValue = A.toJSON defaultVal
           finalValue = deepMerge defaultValue inputValue
       case A.fromJSON finalValue of
-        A.Success a -> pure a
+        A.Success a -> return a
         A.Error err -> throwError $ InvalidRequest ("Not able to merge input data into default value. Getting error: " <> show err)
 
     verifyPassword :: Maybe Text -> Text -> Environment.Flow ()

@@ -159,7 +159,7 @@ getFullFarePolicy mbGeohash mbDistance mbDuration txnId mbBookingStartTime fareP
   farePolicy' <- QFP.findById txnId fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
   let (updatedCongestionChargePerMin, updatedCongestionChargeMultiplier) =
         case congestionChargeMultiplierFromModel of
-          Just congestionChargePerMin -> (Just congestionChargePerMin, Nothing)
+          Just congestionChargePerMin -> (Just congestionChargePerMin, farePolicy'.congestionChargeMultiplier) -----------Need to send Nothing here
           Nothing -> (Nothing, farePolicy'.congestionChargeMultiplier)
   let farePolicy = updateCongestionChargeMultiplier farePolicy' updatedCongestionChargeMultiplier updatedCongestionChargePerMin
   cancellationFarePolicy <- maybe (return Nothing) QCCFP.findById farePolicy.cancellationFarePolicyId
@@ -645,12 +645,18 @@ getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just geohash) serviceTi
   appDynamicLogics <- LYTU.getAppDynamicLogic (cast merchantOperatingCityId) (LYT.DYNAMIC_PRICING serviceTier) localTime
   let allLogics = appDynamicLogics <&> (.logic)
   let dynamicPricingData = DynamicPricingData {speedKmh, distanceInKm, supplyDemandRatio = fromMaybe 0.0 mbSupplyDemandRatio, toss}
-  resp <- LYTU.runLogics allLogics dynamicPricingData
-  case (A.fromJSON resp.result :: Result DynamicPricingResult) of
-    A.Success result -> return result.congestionFeePerMin
-    A.Error err -> do
-      logError $ "Error in parsing DynamicPricingResult - " <> show err
+  logInfo $ "DynamicPricing Req Logics : " <> show allLogics <> " and data is : " <> show dynamicPricingData
+  response <- try @_ @SomeException $ LYTU.runLogics allLogics dynamicPricingData
+  case response of
+    Left e -> do
+      logError $ "Error in running DynamicPricingLogics - " <> show e <> " - " <> show dynamicPricingData <> " - " <> show allLogics
       return Nothing
+    Right resp -> do
+      case (A.fromJSON resp.result :: Result DynamicPricingResult) of
+        A.Success result -> return result.congestionFeePerMin
+        A.Error err -> do
+          logError $ "Error in parsing DynamicPricingResult - " <> show err
+          return Nothing
 getCongestionChargeMultiplierFromModel' _ _ _ _ _ _ = pure Nothing
 
 getCongestionChargeMultiplierFromModel ::
