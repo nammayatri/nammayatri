@@ -242,6 +242,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
   case req of
     DriverReq driverReq -> do
       let requestor = driverReq.requestor
+      when (driverReq.point == LatLong 0 0) $ throwError (InternalError "Invalid Lat Long. Please try again.") -- should we fallback to estimated distance in case of repetition?
       when (DTC.isEndOtpRequired booking.tripCategory) $ do
         case driverReq.endRideOtp of
           Just endRideOtp -> do
@@ -253,8 +254,10 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
         DP.DRIVER -> unless (requestor.id == driverId) $ throwError NotAnExecutor
         _ -> throwError AccessDenied
     DashboardReq dashboardReq -> do
+      when (dashboardReq.point == Just (LatLong 0 0)) $ throwError (InternalError "Invalid Lat Long. Please try again.")
       unless (booking.providerId == dashboardReq.merchantId && booking.merchantOperatingCityId == dashboardReq.merchantOperatingCityId) $ throwError (RideDoesNotExist rideOld.id.getId)
     CronJobReq cronJobReq -> do
+      when (cronJobReq.point == Just (LatLong 0 0)) $ throwError (InternalError "Invalid Lat Long. Please try again.")
       unless (booking.providerId == cronJobReq.merchantId) $ throwError (RideDoesNotExist rideOld.id.getId)
     CallBasedReq callBasedEndRideReq -> do
       let requestor = callBasedEndRideReq.requestor
