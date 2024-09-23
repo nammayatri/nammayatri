@@ -5,6 +5,7 @@ import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Components.GenericHeader.Controller as GenericHeaderController
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ScreenData
 import Components.PrimaryButton.Controller as PrimaryButtonController
+import Data.String.CodeUnits (slice)
 import Components.ParcelDeliveryInstruction.Controller as ParcelDeliveryInstructionController
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.PopUpModal.Controller as PopUpModalController
@@ -55,6 +56,9 @@ data Action
   | ChooseVehicleAC ChooseVehicleController.Action
   | PickContactCallBack String String
   | RateCardAction RateCard.Action
+  | UpdateNameAndNumber String String Boolean
+  | ValidateInputFields
+  | Refresh
 
 data ScreenOutput
   = GoToHomeScreen ST.ParcelDeliveryScreenState
@@ -65,7 +69,7 @@ data ScreenOutput
 
 eval :: Action -> ST.ParcelDeliveryScreenState -> Eval Action ScreenOutput ST.ParcelDeliveryScreenState
 
-eval GoBack state = exit $ GoToHomeScreen state
+eval GoBack state = updateAndExit state $ GoToChooseYourRide state
 
 eval (MapViewLoaded _ _ _) state =
   continueWithCmd state [do
@@ -121,12 +125,15 @@ eval (ParcelDeliveryInstructionAC (ParcelDeliveryInstructionController.Back)) st
 
 eval (DeliveryDetailAction (PopUpModalController.PersonMobile (PrimaryEditTextController.TextChanged valId newVal))) state =
   let isSender = state.data.currentStage == ST.SENDER_DETAILS
-  in update $ state { props { editDetails { phone =  newVal }}, data {senderDetails { phone = if isSender then newVal else state.data.senderDetails.phone }, receiverDetails { phone = if isSender then state.data.receiverDetails.phone else newVal }} }
+  in continue $ state { props { editDetails { phone =  newVal }}}
 
 
 eval (DeliveryDetailAction (PopUpModalController.PersonName (PrimaryEditTextController.TextChanged valId newVal))) state =
   let isSender = state.data.currentStage == ST.SENDER_DETAILS
-  in update $ state { props { editDetails  { name = newVal }}, data { senderDetails { name = if isSender then newVal else state.data.senderDetails.name }, receiverDetails { name = if isSender then state.data.receiverDetails.name else newVal } }}
+  in continue $ state { props { editDetails { name = newVal }}}
+
+-- eval (DeliveryDetailAction (PopUpModalController.PersonName (PrimaryEditTextController.FocusChanged flag))) state = do
+--   continue $ state { props { focusField = if flag then "NAME" else "" } }
 
 eval (DeliveryDetailAction (PopUpModalController.PersonName PrimaryEditTextController.TextImageClicked)) state = do
   continueWithCmd state $ [do
@@ -148,11 +155,20 @@ eval (DeliveryDetailAction (PopUpModalController.PersonMobile PrimaryEditTextCon
     pure NoAction
   ]
 
+-- eval (DeliveryDetailAction (PopUpModalController.PersonMobile (PrimaryEditTextController.FocusChanged flag))) state = do
+--   continue $ state { props { focusField = if flag then "MOBILE" else "" } }
+
 eval (DeliveryDetailAction (PopUpModalController.PersonAddress (PrimaryEditTextController.TextChanged valId newVal))) state = do
   continue $ state { props { editDetails { extras = newVal } } }
 
+-- eval (DeliveryDetailAction (PopUpModalController.PersonAddress (PrimaryEditTextController.FocusChanged flag))) state = do
+--   continue $ state { props { focusField = if flag then "ADDRESS" else "" } }
+
 eval (DeliveryDetailAction (PopUpModalController.PersonInstruction (PrimaryEditTextController.TextChanged valId newVal))) state = do
   continue $ state { props { editDetails { instructions = if newVal == "" then Nothing else Just newVal } } }
+
+-- eval (DeliveryDetailAction (PopUpModalController.PersonInstruction (PrimaryEditTextController.FocusChanged flag))) state = do
+--   continue $ state { props { focusField = if flag then "INSTRUCTION" else "" } }
 
 eval (DeliveryDetailAction (PopUpModalController.CheckBoxClick)) state = do
   let userName = getValueToLocalStore USER_NAME
@@ -160,15 +176,15 @@ eval (DeliveryDetailAction (PopUpModalController.CheckBoxClick)) state = do
 
   if state.data.currentStage == ST.SENDER_DETAILS then
     if state.data.initiatedAs == API.Sender then
-      continue $ state {data { initiatedAs = API.SomeoneElse }}
+      continue state {data { initiatedAs = API.SomeoneElse}}
     else 
-      let newState = state { props { editDetails { name = userName, phone =  mobileNumber} }, data { initiatedAs = API.Sender, senderDetails { name = userName, phone =  mobileNumber } } }
-      in continue newState
+      let newState = state { props { editDetails { name = userName, phone =  mobileNumber} }, data { initiatedAs = API.Sender, senderDetails {name = "", phone = ""}} }
+      in continueWithCmd newState $ [do pure $ UpdateNameAndNumber userName mobileNumber true]
   else if state.data.initiatedAs == API.Receiver then
-    continue $ state { data {initiatedAs = API.SomeoneElse}}
+    continue state { data {initiatedAs = API.SomeoneElse}}
   else
-    let newState = state {  props { editDetails{ name = userName, phone =  mobileNumber} }, data { initiatedAs = API.Receiver, receiverDetails { name = userName, phone =  mobileNumber } } }
-    in continue newState
+    let newState = state {  props { editDetails{ name = userName, phone =  mobileNumber} }, data { initiatedAs = API.Receiver } }
+    in continueWithCmd newState $ [do pure $ UpdateNameAndNumber userName mobileNumber false]
 
 eval (DeliveryDetailAction (PopUpModalController.OnButton1Click)) state = do
   if state.data.currentStage == ST.SENDER_DETAILS then do
@@ -181,13 +197,15 @@ eval (DeliveryDetailAction (PopUpModalController.OnButton1Click)) state = do
     
 
 eval (DeliveryDetailAction (PopUpModalController.OnButton2Click)) state = do
-  if state.data.currentStage == ST.SENDER_DETAILS then do
+  if not $ validateInput state then
+    continue state
+  else if state.data.currentStage == ST.SENDER_DETAILS then do
     let nextStage = if state.props.isEditModal then ST.FINAL_DETAILS else ST.RECEIVER_DETAILS 
-        newState = state { props { editDetails = state.data.receiverDetails, isEditModal = false}, data { currentStage = nextStage, senderDetails = state.props.editDetails } }
-    updateAndExit newState $ RefreshScreen newState
+        newState = state { props { editDetails = state.data.receiverDetails, isEditModal = false}, data { currentStage = nextStage, senderDetails = state.props.editDetails, receiverDetails { instructions = if state.data.receiverDetails.instructions == Nothing then Just " " else state.data.receiverDetails.instructions } }}
+    continueWithCmd newState $ [do pure Refresh] 
   else do
     let newState = state { data { currentStage = ST.FINAL_DETAILS, receiverDetails = state.props.editDetails } }
-    updateAndExit newState $ RefreshScreen newState
+    continue newState
 
 eval (PickContactCallBack userName contactNo) state = do
   let eiRegexPattern = regex "\\D" global
@@ -196,9 +214,11 @@ eval (PickContactCallBack userName contactNo) state = do
         Left _ -> contactNo
 
   if state.data.currentStage == ST.SENDER_DETAILS then
-    continue $ state { props { editDetails { name = userName, phone =  formattedNumber} }, data { senderDetails { name = userName, phone =  formattedNumber } } }
+    let newState = state { props { editDetails { name = userName, phone =  formattedNumber} }, data { senderDetails { name = "", phone =  "" } } }
+    in continueWithCmd newState $ [do pure $ UpdateNameAndNumber userName formattedNumber true]
   else
-    continue $ state {  props { editDetails { name = userName, phone =  formattedNumber} }, data { receiverDetails { name = userName, phone =  formattedNumber } } }
+    let newState = state {  props { editDetails { name = userName, phone =  formattedNumber} }, data { receiverDetails { name = "", phone =  "" } } }
+    in continueWithCmd newState $ [do pure $ UpdateNameAndNumber userName formattedNumber false]
 
 eval (ChooseVehicleAC (ChooseVehicleController.ShowRateCard config)) state = do
   continue state{ props { showRateCard = true }
@@ -230,6 +250,12 @@ eval (RateCardAction RateCard.GoToWaitingCharges) state = continue state { data{
 
 eval (RateCardAction RateCard.GoToTollOrParkingCharges) state = continue state { data{rateCard{currentRateCardType = App.TollOrParkingCharges,onFirstPage = true}}}
 
+eval (UpdateNameAndNumber name number isSender) state = 
+  if isSender then continue state { data { senderDetails { name = name, phone = number } } }
+  else continue state { data { receiverDetails { name = name, phone = number } } }
+
+eval Refresh state = exit $ RefreshScreen state { data { receiverDetails { name = if state.data.receiverDetails.name == " " then "" else state.data.receiverDetails.name, phone = if state.data.receiverDetails.phone == " " then "" else state.data.receiverDetails.phone, extras = if state.data.receiverDetails.extras == " " then "" else state.data.receiverDetails.extras, instructions = if state.data.receiverDetails.instructions == Just " " then Nothing else state.data.receiverDetails.instructions } } }
+
 eval _ state = update state
 
 specialLocationConfig :: String -> String -> Boolean -> App.PolylineAnimationConfig -> JB.MapRouteConfig
@@ -242,3 +268,13 @@ specialLocationConfig srcIcon destIcon isAnim animConfig =
     , autoZoom = true
     , polylineAnimationConfig = animConfig
     }
+
+validateInput :: ST.ParcelDeliveryScreenState -> Boolean
+validateInput state = 
+  let
+    details = state.props.editDetails
+    firstLetter = slice 0 1 details.phone
+    isValidNumber = firstLetter >= "6" && firstLetter <= "9"
+    isValidInputs = DS.length details.name > 2 && DS.length details.phone == 10 && isValidNumber && DS.length details.extras > 2
+  in
+    isValidInputs

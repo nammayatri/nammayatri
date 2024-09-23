@@ -25,7 +25,7 @@ initData =
       , route : Nothing
       , parcelQuoteList : ChooseVehicleController.config
       , senderDetails : dummyPersonDeliveryDetails
-      , receiverDetails : dummyPersonDeliveryDetails
+      , receiverDetails : dummyPersonDeliveryDetails { name = " ", phone = " ", extras = " ", instructions = Just " " }
       , initiatedAs : API.SomeoneElse
       , selectedQuote : Nothing
       , rateCard : {
@@ -44,11 +44,15 @@ initData =
         waitingTimeInfo : { freeMinutes: "", charge: "" }
         }
       , config : getAppConfig appConfig
+      , tipForDriver : Nothing
       },
       props : {
         editDetails : dummyPersonDeliveryDetails,
         showRateCard : false,
-        isEditModal : false
+        isEditModal : false,
+        focusField : "",
+        isValidInputs : false,
+        showUserNameAndNumber : false
       }
     }
 

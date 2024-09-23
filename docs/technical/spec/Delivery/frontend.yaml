@@ -1,0 +1,109 @@
+user:
+  flow:
+    SELECT_ESTIMATE_AND_QUOTES:
+      if fareProductType == Delivery then send deliveryDetails in selectEstimate then FindingQuotes
+    API:
+      rideBookingList:
+        bookingDetails:
+          fareProductType: DELIVERY
+          contents:
+            - senderDetails: maybe PersonDetails
+            - receiverDetails: maybe PersonDetails
+
+    type:
+      Location:
+        extras: string
+        Instructions: string
+
+      PersonDetails:
+        - name
+        - phoneNumber
+      fareProductType: DELIVERY
+      parcelDeliveryScreen:
+        - data:
+          - currentStage # to distinguish between sender, receiver and delivery details
+          - sendersDetails
+          - receiverDetails
+          - chooseVehicleConfig
+      homeScreen:
+        - props:
+          - isConfirmingSourceLocation # to distinguish between source and destination in confirm location
+    component:
+      SearchLocationModel:
+        type:
+          - fareProductType #to distinguish between delivery and other ride
+      ConfirmPickUpLocationModel:
+        type:
+          - fareProductType #to distinguish between delivery and other ride
+      ChooseYourRide:
+        - view: payment at receiver's end
+        - onClick: goToParcelDeliveryScreen {currentStage = SENDER_DETAILS}
+      DriverInfoCardView:
+        - view:
+          - senderDetails: 
+            - view: PersonAndLocationDetails
+          - receiverDetails:
+            - view: PersonAndLocationDetails
+        - onClick:
+          - delivery Image and Otp: open DeliveryImageAndOtpPopUP  
+      DeliveryImageAndOtpPopup:
+        - view:
+          - image: 
+          - otp: 
+        - onClick:
+          - refresh: 
+            - re-fetch image
+    screen:
+      homeScreen:
+        view: 
+          service:
+            - parcel
+            - onclick: ServicesOnClick 
+          ConfirmDeliveryRide:
+            -action: ConfirmDeliveryRide
+        controller:
+          - ConfirmDeliveryRide: SelectEstimateAndQuotes
+          - ServicesOnClick: # if firstTimeUser then parcelDeliveryScreen {currentStage = INSTRUCTION} else OpenSearchLocation {fareProductType = DELIVERY}
+              - parcelDeliveryScreen: 
+                  - currentStage: INSTRUCTION
+                  - fareProductType: DELIVERY
+              - OpenSearchLocation:
+                  - fareProductType: DELIVERY  
+          - ToggleCurrentPickupDropCurrentLocation: # to change the source and destination confirming location
+      parcelDeliveryScreen:
+        view:
+          - PopUp:
+            - SenderDetails: 
+                input: PersonAndLocationDetails
+            - ReceiverDetails:
+                input: PersonAndLocationDetails
+        controller:
+          - senderDetails:
+             - onNext:
+                - goToReceiverDetails
+          - receiverDetails:
+             - onNext:
+                - goToDeliveryDetails
+          - deliveryDetails:
+            - mapViewLayout: for route
+            - VehicleAndEstimate: selected Estimate view
+            - onConfirm: 
+                GoToConfirmgDelivery:
+                  
+driver:
+  flow:
+    screens:
+      bookingOptions:
+        - enableBookingPreference: currently disabled for bike
+    component:
+      rideActionModal:
+        - view:
+          - senderDetails: 
+            - view: PersonAndLocationDetails
+          - receiverDetails:
+            - view: PersonAndLocationDetails
+          - call:
+            - sender: exoPhone
+            - receiver: exoPhone
+      
+      

@@ -1535,4 +1535,5 @@ getKN stringKey =
         ITEMS_SHOULD_FIT_IN_BACKPACK -> "ಐಟಂಗಳು ಬ್ಯಾಕ್ಪ್ಯಾಕ್‌ನಲ್ಲಿ ಹೊಂದಿಕೊಳ್ಳಬೇಕು (ಗರಿಷ್ಠ: 5 ಕೆಜಿ)"
         AVOID_SENDING_HIGH_VALUE_ITEMS -> "ಹೆಚ್ಚಿನ ಮೌಲ್ಯವುಳ್ಳ / ನಾಜೂಕಾದ ಐಟಂಗಳನ್ನು ಕಳುಹಿಸುವುದನ್ನು ತಡೆಯಿರಿ"
         ILLEGAL_ITEMS_PROHIBITED -> "ಅಕ್ರಮ ಐಟಂಗಳನ್ನು ನಿಷೇಧಿಸಲಾಗಿದೆ"
-        
+        PICKUP_INSTRUCTION -> "ಪಿಕಪ್ ಸೂಚನೆ"
+        DROP_INSTRUCTION -> "ಡ್ರಾಪ್ ಸೂಚನೆ"

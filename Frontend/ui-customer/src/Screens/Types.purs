@@ -2904,6 +2904,7 @@ type ParcelDeliveryScreenData = {
   , parcelQuoteList :: ChooseVehicle.Config
   , rateCard :: CTA.RateCard
   , config :: AppConfig
+  , tipForDriver :: Maybe Int
   -- parcelBookingData :: CTA.ParcelBookingConfig,
   -- selectedQuote :: Maybe QuotesList,
   -- bookingId :: String,
@@ -2912,7 +2913,10 @@ type ParcelDeliveryScreenData = {
 type ParcelDeliveryScreenProps = {
   editDetails :: PersonDeliveryDetails,
   showRateCard :: Boolean,
-  isEditModal :: Boolean
+  isEditModal :: Boolean,
+  focusField :: String,
+  isValidInputs :: Boolean,
+  showUserNameAndNumber :: Boolean
 }
 
 type PersonDeliveryDetails = {

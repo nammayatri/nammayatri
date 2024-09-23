@@ -554,8 +554,6 @@
       "ny_ic_referral_already_applied" : true,
       "ny_ic_referral_invalid" : true,
       "ny_ic_referral_related_faq" : true,
-      "ny_ic_refresh" : true,
-      "ny_ic_refresh_outline" : true,
       "ny_ic_rental" : true,
       "ny_ic_rental_banner" : true,
       "ny_ic_rental_bg_blue" : true,
@@ -752,6 +750,8 @@
       "tip_banner_rectangle" : true,
       "widget_close_gradient" : true,
       "ys_ic_driver_message" : true,
-      "zone_curve" : true
+      "zone_curve" : true,
+      "ny_ic_wallet_outline": true,
+      "ny_ic_refresh_outline" : true
    }
 }

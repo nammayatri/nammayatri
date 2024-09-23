@@ -950,7 +950,7 @@ cancelRideLayout push state =
   , onAnimationEnd push $ const $ NoAction
   , margin $ if state.data.config.showPickUpandDrop then MarginTop 0 else MarginTop 12
   , padding $ PaddingBottom if os == "IOS" then if safeMarginBottom == 0 then 24 else safeMarginBottom else 0
-  , visibility $ boolToVisibility $ rideNotStarted state
+  , visibility $ boolToVisibility $ showCancelRideCTA state
   ][ linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
@@ -1816,3 +1816,6 @@ rideInfoPill state rideData =
 
 isOtpRideFlow :: DriverInfoCardState -> Boolean
 isOtpRideFlow state = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || (state.props.isOtpRideFlow && state.props.currentStage == RideAccepted)
+
+showCancelRideCTA :: DriverInfoCardState -> Boolean
+showCancelRideCTA state = rideNotStarted state

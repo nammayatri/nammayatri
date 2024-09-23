@@ -1531,3 +1531,5 @@ getML stringKey =
         ITEMS_SHOULD_FIT_IN_BACKPACK -> "വസ്തുക്കൾ ഒരു ബാക്ക്പാക്കിൽ ഫിറ്റ് ആകണം (പരമാവധി: 5 കിലോ)"
         AVOID_SENDING_HIGH_VALUE_ITEMS -> "ഉയർന്ന മൂല്യമുള്ള/നിശ്ചിത വസ്തുക്കൾ അയയ്ക്കുന്നത് ഒഴിവാക്കുക"
         ILLEGAL_ITEMS_PROHIBITED -> "നിയമവിരുദ്ധ വസ്തുക്കൾ നിരോധിച്ചിരിക്കുന്നു"
+        PICKUP_INSTRUCTION -> "പിക്കപ്പ് നിർദേശം"
+        DROP_INSTRUCTION -> "ഡ്രോപ്പ് നിർദേശം"

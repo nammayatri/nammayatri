@@ -239,6 +239,8 @@ public class MobilityCommonBridge extends HyperBridge {
     protected static final int LOCATION_RESOLUTION_REQUEST_CODE = 21345;
     private static final int DATEPICKER_SPINNER_COUNT = 3;
     private static final int REQUEST_CODE_NOTIFICATION_PERMISSION = 10;
+    private static final int PICK_CONTACT_REQUEST_CODE = 191;
+    private static final int PICK_CONTACT_PERMISSION_REQUEST_CODE = 1993;
     //Maps
     protected HashMap <String, Marker> markers = new HashMap <>();
     protected GoogleMap googleMap;
@@ -253,6 +255,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected String storeDashboardCallBack = null;
     private String storeImageUploadCallBack = null;
     private String storeUploadMultiPartCallBack = null;
+    private String storePickContactCallBack = null;
     protected Marker userPositionMarker;
     private final UICallBacks callBack;
     private final FusedLocationProviderClient client;
@@ -3399,6 +3402,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 removeMarker("ic_auto_nav_on_map");
                 removeMarker("ny_ic_vehicle_nav_on_map");
                 removeMarker("ny_ic_black_yellow_auto");
+                removeMarker("ny_ic_bike_delivery_nav_on_map");
                 removeMarker("ny_ic_src_marker");
                 removeMarker("ny_ic_dest_marker");
                 removeMarker("ny_ic_blue_marker");
@@ -5249,11 +5253,36 @@ public class MobilityCommonBridge extends HyperBridge {
                 break;
             case CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE:
                 if (resultCode == RESULT_OK) {
-                    new Thread(() -> encodeImageToBase64(data, bridgeComponents.getContext(), null)).start();
+                    new Thread(() -> encodeImageToBase64(data, bridgeComponents.getContext(), null, null)).start();
                 } else if (resultCode == CropImage.CROP_IMAGE_ACTIVITY_RESULT_ERROR_CODE) {
                     CropImage.ActivityResult result = CropImage.getActivityResult(data);
                     Log.e(OVERRIDE, result.getError().toString());
                 }
+                break;
+            case PICK_CONTACT_REQUEST_CODE:
+                if (resultCode == RESULT_OK) {
+                    Uri contactUri = data.getData();
+
+                    // Query the contact's name and phone number
+                    String[] projection = new String[]{
+                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                        ContactsContract.CommonDataKinds.Phone.NUMBER
+                    };
+
+                    // Perform the query to get the contact's details
+                    try (Cursor cursor = bridgeComponents.getContext().getContentResolver().query(contactUri, projection, null, null, null)) {
+                        if (cursor != null && cursor.moveToFirst()) {
+                            // Get the contact's name
+                            String name = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
+                            // Get the contact's phone number
+                            String phoneNumber = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER));
+
+                            // Use the contact's name and phone number
+                            Log.d("Contact Info", "Name: " + name + ", Phone Number: " + phoneNumber);
+                            callPickContactCallBack(name, phoneNumber);
+                        }
+                    }
+                    }
                 break;
         }
         return super.onActivityResult(requestCode, resultCode, data);
@@ -5305,6 +5334,10 @@ public class MobilityCommonBridge extends HyperBridge {
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
+                break;
+            case PICK_CONTACT_PERMISSION_REQUEST_CODE:
+                Intent contactPickerIntent = new Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI);
+                bridgeComponents.getActivity().startActivityForResult(contactPickerIntent, PICK_CONTACT_REQUEST_CODE, null);
                 break;
             default:
                 break;
@@ -5452,5 +5485,36 @@ public class MobilityCommonBridge extends HyperBridge {
         List<List<LatLng>> polygonCoordinates = getPolygonCoordinates(geoJson);
         Boolean res = pointInsidePolygon(polygonCoordinates, latitude, longitude);
         return res;
+    }
+
+
+    @JavascriptInterface
+    public void storeCallBackPickContact(String callback){
+        storePickContactCallBack = callback;
+    }
+
+    public void callPickContactCallBack(String name, String phoneNumber) {
+        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
+                storePickContactCallBack, name, phoneNumber);
+        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+    }
+
+    @JavascriptInterface
+    public void pickContact()
+    {
+        if (ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+            if (bridgeComponents.getActivity() != null) {
+                ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.READ_CONTACTS}, PICK_CONTACT_PERMISSION_REQUEST_CODE);
+            }
+        } else {
+            ExecutorManager.runOnMainThread(() -> {
+                try {
+                    Intent contactPickerIntent = new Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI);
+                    bridgeComponents.getActivity().startActivityForResult(contactPickerIntent, PICK_CONTACT_REQUEST_CODE, null);
+                } catch (Exception e) {
+                    Log.e(UTILS, "Exception in Contact Permission" + e);
+                }
+            });
+        }
     }
 }

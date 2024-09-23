@@ -333,6 +333,13 @@ window.getMerchantConfig = function () {
   , "waitTimeConfig" : {
     "enableWaitTime" : true
   }
+  , "destinationReachedWaitTimeConfig" : {
+    "enableWaitTime" : true,
+    "thresholdDist" : 0.03,
+    "routeDistance" : 30,
+    "diffBtwTwoHeartBeats" : 10,
+    "straightLineDist" : 0.015
+  }
   , "coinsConfig" : {
     "minCoinSliderValue" : 200,
     "stepFunctionForCoinConversion" : 200,

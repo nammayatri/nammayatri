@@ -1531,3 +1531,5 @@ getBN stringKey =
         ITEMS_SHOULD_FIT_IN_BACKPACK -> "আইটেমগুলি ব্যাকপ্যাকে ফিট করা উচিত (সর্বাধিক: ৫ কেজি)"
         AVOID_SENDING_HIGH_VALUE_ITEMS -> "উচ্চ-মূল্য / ভঙ্গুর আইটেম পাঠানো এড়িয়ে চলুন"
         ILLEGAL_ITEMS_PROHIBITED -> "অবৈধ আইটেম নিষিদ্ধ"
+        PICKUP_INSTRUCTION -> "পিকআপ নির্দেশাবলী"
+        DROP_INSTRUCTION -> "ড্রপ নির্দেশাবলী"

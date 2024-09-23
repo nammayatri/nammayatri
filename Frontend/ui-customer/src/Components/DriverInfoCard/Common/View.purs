@@ -358,7 +358,7 @@ sourceDestinationView push config =
         , accessibility DISABLE
         ] <> FontStyle.body1 TypoGraphy
       ]
-        , sourceDestinationAddressView config.senderDetails config.source
+        , sourceDestinationAddressView config.senderDetails config.source true
         , separator (MarginVertical 12 12) (V 1) Color.ghostWhite isNotRentalRide
         , linearLayout
         [
@@ -416,7 +416,7 @@ sourceDestinationView push config =
                 , rippleColor Color.rippleShade
               ] <> FontStyle.body1 TypoGraphy
       ],
-      sourceDestinationAddressView config.receiverDetails config.destination
+      sourceDestinationAddressView config.receiverDetails config.destination false
     ]
 
 separator :: forall w. Margin -> Length -> String -> Boolean -> PrestoDOM (Effect Unit) w
@@ -588,8 +588,8 @@ personNamePhone details' textWidth =
       ]
     Nothing -> linearLayout[][]
 
-sourceDestinationAddressView :: forall w. Maybe PersonDeliveryDetails -> String -> PrestoDOM (Effect Unit) w
-sourceDestinationAddressView details' address =
+sourceDestinationAddressView :: forall w. Maybe PersonDeliveryDetails -> String -> Boolean -> PrestoDOM (Effect Unit) w
+sourceDestinationAddressView details' address isSource =
   case details' of
     Nothing -> linearLayout[][]
     Just details ->
@@ -641,7 +641,7 @@ sourceDestinationAddressView details' address =
                   , margin $ MarginBottom 2
                   ] <> FontStyle.body3 TypoGraphy
                 , textView $
-                  [ textFromHtml $ "<em>Pickup Instruction: " <> fromMaybe "" details.instructions <> "</em>"
+                  [ textFromHtml $ "<em>" <> (if isSource then getString PICKUP_INSTRUCTION else  getString DROP_INSTRUCTION) <> ": " <> fromMaybe "" details.instructions <> "</em>"
                   , color Color.black700
                   , fontStyle $ FontStyle.italic
                   , visibility $ boolToVisibility $ isJust details.instructions

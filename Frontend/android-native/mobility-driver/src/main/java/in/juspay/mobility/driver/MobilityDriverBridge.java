@@ -14,6 +14,7 @@ import static android.content.Context.WINDOW_SERVICE;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import androidx.annotation.Nullable;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
@@ -26,6 +27,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
@@ -59,6 +61,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -86,6 +89,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.HashMap;
@@ -667,6 +671,15 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                     Utils.checkPermissionRationale(permissions[0], bridgeComponents.getContext(), bridgeComponents.getActivity());
                 }
                 break;
+            case IMAGE_PERMISSION_REQ_CODE_PROFILE:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    if (cameraPermissionCallback != null) {
+                        cameraPermissionCallback.run();
+                    }
+                } else {
+                    Toast.makeText(bridgeComponents.getContext(), "Permission Denied", Toast.LENGTH_SHORT).show();
+                }
+                break;
         }
         return super.onRequestPermissionResult(requestCode, permissions, grantResults);
     }
@@ -684,12 +697,12 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
     @SuppressLint("RestrictedApi")
-    private void startCameraX(ProcessCameraProvider cameraProvider) {
+    private void startCameraX(ProcessCameraProvider cameraProvider, @Nullable String lenFacingType) {
         if (bridgeComponents.getActivity() != null) {
             cameraProvider.unbindAll();
             CameraSelector cameraSelector = new CameraSelector.Builder()
 //                .requireLensFacing(CameraSelector.LENS_FACING_BACK)
-                    .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
+                    .requireLensFacing(lenFacingType != null && lenFacingType == "PARCEL_PICTURE" ? CameraSelector.LENS_FACING_BACK : CameraSelector.LENS_FACING_FRONT)
                     .build();
             Preview preview = new Preview.Builder()
                     .build();
@@ -705,23 +718,45 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         }
     }
 
+    @SuppressLint("RestrictedApi")
+    public void stopCamera() {
+        Activity activity = bridgeComponents.getActivity();
+        if (activity == null) return;
+
+        ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(activity);
+        cameraProviderFuture.addListener(() -> {
+            try {
+                ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+                cameraProvider.unbindAll();
+            } catch (ExecutionException | InterruptedException e) {
+                e.printStackTrace();
+            }
+        }, ContextCompat.getMainExecutor(activity));
+    }
 
     @JavascriptInterface
-    public void renderCameraProfilePicture(String id) {
+    public void renderCameraPicture(String id, String layoutViewType) {
         Activity activity = bridgeComponents.getActivity();
         Context context = bridgeComponents.getContext();
         if (activity != null) {
             activity.runOnUiThread(() -> {
                 if (isCameraPermissionGranted()) {
-                    View profilePictureLayout = LayoutInflater.from(context).inflate(in.juspay.mobility.driver.R.layout.validate_documents_preview, null, false);
-                    previewView = profilePictureLayout.findViewById(in.juspay.mobility.driver.R.id.previewView);
-                    bCapture = profilePictureLayout.findViewById(in.juspay.mobility.driver.R.id.bCapture);
+                    View pictureLayout;
+                    switch (layoutViewType) {
+                        case "PROFILE_PICTURE":
+                            pictureLayout = LayoutInflater.from(context).inflate(in.juspay.mobility.driver.R.layout.validate_documents_preview, null);
+                            break;
+                        default:
+                            pictureLayout = LayoutInflater.from(context).inflate(in.juspay.mobility.driver.R.layout.capture_parcel_preview, null);
+                    }
+                    previewView = pictureLayout.findViewById(in.juspay.mobility.driver.R.id.previewView);
+                    bCapture = pictureLayout.findViewById(in.juspay.mobility.driver.R.id.bCapture);
                     bCapture.setOnClickListener(view -> capturePhoto());
                     ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(context);
                     cameraProviderFuture.addListener(() -> {
                         try {
                             ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-                            startCameraX(cameraProvider);
+                            startCameraX(cameraProvider,layoutViewType);
                         } catch (ExecutionException | InterruptedException e) {
                             e.printStackTrace();
                             return;
@@ -729,9 +764,9 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                     }, ContextCompat.getMainExecutor(activity));
                     LinearLayout layout = activity.findViewById(Integer.parseInt(id));
                     layout.removeAllViews();
-                    layout.addView(profilePictureLayout);
+                    layout.addView(pictureLayout);
                 } else {
-                    requestCameraPermission(() -> renderCameraProfilePicture(id));
+                    requestCameraPermission(() -> renderCameraPicture(id,layoutViewType));
                 }
             });
         }
@@ -742,16 +777,27 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         ContentValues contentValues = new ContentValues();
         contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, timestamp);
         contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg");
+        contentValues.put(MediaStore.Images.Media.DATE_TAKEN, timestamp);
+        contentValues.put(MediaStore.Images.Media.RELATIVE_PATH,
+                    Environment.DIRECTORY_PICTURES + "/");
+        String path = Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES) + "/" + timestamp+".jpg";
+        Context context = bridgeComponents.getContext();
+        contentValues.put(MediaStore.Images.Media.DATA, path);
+        File photoFile = new File(context.getFilesDir(), "IMG_" + timestamp + ".jpg");
+
+        Uri photoUri = FileProvider.getUriForFile(context, context.getPackageName() + ".provider", photoFile);
         if (imageCapture == null)
             return;
         imageCapture.takePicture(
-                new ImageCapture.OutputFileOptions.Builder(bridgeComponents.getContext().getContentResolver(), MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues).build(),
+                new ImageCapture.OutputFileOptions.Builder(photoFile).build(),
                 ContextCompat.getMainExecutor(bridgeComponents.getContext()),
                 new ImageCapture.OnImageSavedCallback() {
                     @Override
                     public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
                         Uri imageUri = outputFileResults.getSavedUri();
-                        Utils.encodeImageToBase64(null, bridgeComponents.getContext(), imageUri);
+                        Utils.encodeImageToBase64(null, bridgeComponents.getContext(), photoUri, photoFile);
+                        stopCamera();
                     }
 
                     @Override

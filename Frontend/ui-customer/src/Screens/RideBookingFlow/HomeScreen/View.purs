@@ -680,6 +680,7 @@ view push state =
                         && ((isAcRide && acPopupConfig.enableAcPopup) || (not isAcRide && acPopupConfig.enableNonAcPopup))
                         && state.data.driverInfoCardState.serviceTierName /= Just "Auto"
                         && state.data.currentCityConfig.enableAcViews
+                        && state.data.fareProductType /= FPT.DELIVERY
 
     showSafetyAlertPopup = Arr.notElem (getValueToLocalNativeStore SAFETY_ALERT_TYPE) ["__failed", "false", "(null)"]
     onUsRide = state.data.driverInfoCardState.providerType == CTP.ONUS
@@ -688,7 +689,7 @@ view push state =
     locateOnMapPinImage = 
       let confirmingLocOrEditPickupStage = any (_ == state.props.currentStage) [ConfirmingLocation, EditPickUpLocation]
       in case state.data.fareProductType of 
-            FPT.DELIVERY -> if state.props.isConfirmSourceCurrentLocation then "ny_ic_src_marker" else "ny_ic_dest_marker"
+            FPT.DELIVERY -> if state.props.isSource == Just true then "ny_ic_src_marker" else "ny_ic_dest_marker"
             _ -> case confirmingLocOrEditPickupStage || state.props.isSource == (Just true) of
                         true  -> "ny_ic_src_marker"
                         false -> "ny_ic_dest_marker"
@@ -5191,7 +5192,12 @@ deliveryParcelImageAndOtpView push state =
     [
       height MATCH_PARENT
     , width MATCH_PARENT
-    ] [DeliveryParcelImageAndOtp.view (push <<< DeliveryParcelImageOtpAction) (deliveryParcelImageAndOtpConfig state)]
+    ] [
+        PrestoAnim.animationSet
+        [
+          Anim.fadeInWithDelay 2 true
+        ] $ DeliveryParcelImageAndOtp.view (push <<< DeliveryParcelImageOtpAction) (deliveryParcelImageAndOtpConfig state)
+      ]
 
 fetchEmergencySettings :: (Action -> Effect Unit) -> HomeScreenState -> Flow GlobalState (Maybe GetEmergencySettingsRes)
 fetchEmergencySettings push state = do
@@ -5233,7 +5239,7 @@ deliveryPickupLocationConfig state =
   {
     isClickable: true, 
     click: ToggleCurrentPickupDropCurrentLocation true, 
-    border: "1," <> (if state.props.isConfirmSourceCurrentLocation then Color.blue800 else Color.grey900),
+    border: "1," <> (if state.props.isSource == Just true then Color.blue800 else Color.grey900),
     image: "ny_ic_source_dot",
     accessibilityText:  "Pickup Location is " <>  (DS.replaceAll (DS.Pattern ",") (DS.Replacement " ") state.data.source),
     text: state.data.source,
@@ -5246,13 +5252,13 @@ deliveryDropLocationConfig state =
   {
     isClickable: true, 
     click: ToggleCurrentPickupDropCurrentLocation false, 
-    border: "1," <> (if not state.props.isConfirmSourceCurrentLocation then Color.blue800 else Color.grey900), 
+    border: "1," <> (if (state.props.isSource /= Just true) then Color.blue800 else Color.grey900), 
     image: "ny_ic_dest_dot",
     accessibilityText:  "Destination Location is " <>  (DS.replaceAll (DS.Pattern ",") (DS.Replacement " ") state.data.destination),
     text: state.data.destination,
     visibility: state.data.fareProductType == FPT.DELIVERY,
-    alpha: if state.props.isConfirmSourceCurrentLocation then 0.3 else 1.0
-   }
+    alpha: if state.props.isSource == Just true then 0.3 else 1.0
+   } 
 
 type CurrentLocationConfig = { isClickable :: Boolean, click :: Action, border :: String, image :: String, accessibilityText :: String, text :: String, visibility :: Boolean, alpha :: Number }
 

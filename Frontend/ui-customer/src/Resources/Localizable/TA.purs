@@ -1549,3 +1549,5 @@ getTA stringKey =
     ITEMS_SHOULD_FIT_IN_BACKPACK -> "பொருட்கள் ஒரு பின்னணிப் பையில் பொருந்த வேண்டும் (அதிகபட்சம்: 5 கிலோ)"
     AVOID_SENDING_HIGH_VALUE_ITEMS -> "அதிக மதிப்புள்ள / நொய்யான பொருட்களை அனுப்புவதை தவிர்க்கவும்"
     ILLEGAL_ITEMS_PROHIBITED -> "சட்டவிரோதமான பொருட்கள் தடைசெய்யப்பட்டுள்ளன"
+    PICKUP_INSTRUCTION -> "பிக்அப் வழிமுறை"
+    DROP_INSTRUCTION -> "டிராப் வழிமுறை"

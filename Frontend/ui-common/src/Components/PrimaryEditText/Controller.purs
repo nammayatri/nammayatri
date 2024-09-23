@@ -176,8 +176,8 @@ config = {
   , margin : Margin 10 0 0 0
   }
   , textImage : {
-      height : V 10
-    , width : V 10
+      height : V 24
+    , width : V 24
     , imageUrl : "ny_ic_id_filled"
     , margin : (Margin 16 0 16 0)
     , padding : (Padding 0 0 0 0)

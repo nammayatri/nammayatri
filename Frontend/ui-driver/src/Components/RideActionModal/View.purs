@@ -1205,7 +1205,7 @@ separatorConfig config =
   , color : Color.black500
   }
   where
-    deliveryHasSourceInstruction config = maybe false (\delivery -> isJust delivery.receiver.instructions) config.delivery
+    deliveryHasSourceInstruction config = maybe false (\delivery -> isJust delivery.sender.instructions) config.delivery
 
 showTag :: Config -> Boolean
 showTag config = ((Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag config.specialLocationTag)) || config.bookingFromOtherPlatform || config.rideType == ST.Rental

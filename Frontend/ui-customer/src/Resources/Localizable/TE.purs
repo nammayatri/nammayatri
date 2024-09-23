@@ -1545,3 +1545,5 @@ getTE stringKey =
     ITEMS_SHOULD_FIT_IN_BACKPACK -> "వస్తువులు బ్యాక్‌ప్యాక్‌లో సరిపోవాలి (గరిష్టం: 5 కేజీ)"
     AVOID_SENDING_HIGH_VALUE_ITEMS -> "అధిక విలువ/సున్నితమైన వస్తువులు పంపించకండి"
     ILLEGAL_ITEMS_PROHIBITED -> "అన్యాయ వస్తువులు నిషేధించబడ్డాయి"
+    PICKUP_INSTRUCTION -> "పికప్ సూచన"
+    DROP_INSTRUCTION -> "డ్రాప్ సూచన"

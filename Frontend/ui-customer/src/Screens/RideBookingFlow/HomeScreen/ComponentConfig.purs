@@ -401,7 +401,7 @@ primaryButtonConfirmPickupConfig state =
     primaryButtonConfig' =
       config
         { textConfig
-          { text = if state.data.fareProductType == FPT.DELIVERY then (if state.props.isConfirmSourceCurrentLocation then getString CONFIRM_PICKUP else getString CONFIRM_DROP) else getString CONFIRM_LOCATION
+          { text = if state.data.fareProductType == FPT.DELIVERY then (if state.props.isSource == Just true then getString CONFIRM_PICKUP else getString CONFIRM_DROP) else getString CONFIRM_LOCATION
           , color = state.data.config.primaryTextColor
           , accessibilityHint = "Confirm PickUp Location : Button"
           }

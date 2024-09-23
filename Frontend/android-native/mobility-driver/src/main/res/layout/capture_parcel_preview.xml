@@ -19,7 +19,7 @@
 
         <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="450dp"
+            android:layout_height="400dp"
             android:layout_gravity="center"
             android:background="#000000"
             android:layout_marginBottom="100px"
@@ -41,7 +41,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
-            android:text="take_clear_photo_of_package"
+            android:text="@string/take_clear_photo_of_package"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
             android:textStyle="bold"

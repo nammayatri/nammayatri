@@ -1532,3 +1532,5 @@ getHI stringKey =
         ITEMS_SHOULD_FIT_IN_BACKPACK -> "सामान एक बैकपैक में फिट होना चाहिए (अधिकतम: 5 किलो)"
         AVOID_SENDING_HIGH_VALUE_ITEMS -> "उच्च-मूल्य / नाजुक सामान भेजने से बचें"
         ILLEGAL_ITEMS_PROHIBITED -> "अवैध सामान निषिद्ध है"
+        PICKUP_INSTRUCTION -> "पिकअप निर्देश"
+        DROP_INSTRUCTION -> "ड्रॉप निर्देश"

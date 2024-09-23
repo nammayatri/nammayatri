@@ -7,8 +7,13 @@ import Data.String as DS
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.GenericHeader.Controller as GenericHeader
 import Components.PrimaryButton.Controller as PrimaryButton
+import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.Controller (Action(..), ScreenOutput, eval, validateInput)
+import Storage (getValueToLocalStore, KeyStore(..))
 import Common.Types.App as App
 import Components.SeparatorView.View as SeparatorView
+import Components.PrimaryEditText as PrimaryEditText
+import Font.Style as FontStyle
+import Engineering.Helpers.Commons as EHC
 import Components.SourceToDestination.Controller as SourceToDestination
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.PopUpModal as PopUpModal
@@ -20,7 +25,7 @@ import Font.Style (Style(..))
 import Helpers.Utils as HU
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), fontStyle)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types as ST
 import Services.API as API
@@ -38,7 +43,7 @@ primaryButtonConfig state =
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-          { text = "Book For " <> state.data.parcelQuoteList.price
+          { text = (getString BOOK_FOR) <> " " <> state.data.parcelQuoteList.price
           , color = Color.yellow900
           , height = V 40
           }
@@ -68,7 +73,7 @@ genericHeaderConfig _state = let
       , margin = (Margin 12 12 12 12)
       }
     , textConfig {
-        text = "Delivery Details"
+        text = getString DELIVERY_DETAILS
       , color = Color.black800
       }
     , suffixImageConfig {
@@ -87,9 +92,10 @@ deliveryPickupDetialsModalConfig state =
       details = if isSenderModal then state.data.senderDetails else state.data.receiverDetails
       isSelected = if isSenderModal then state.data.initiatedAs == API.Sender else state.data.initiatedAs == API.Receiver
       checkBoxDetailsText = if isSenderModal then getString I_AM_THE_SENDER else getString I_AM_THE_RECEIVER
-      isClickable = validateInput state.props.editDetails
+      isClickable = validateInput state
       address = decodeAddress' $ if isSenderModal then state.data.sourceAddress else state.data.destinationAddress
       addressArea = fromMaybe (fromMaybe "" ((DS.split (DS.Pattern ",") (address)) DA.!! 0)) $ if isSenderModal then state.data.sourceAddress.area else state.data.destinationAddress.area
+      showUserNameAndNumber = state.props.showUserNameAndNumber
       popUpConfig' =
         config'
           { primaryText { 
@@ -135,8 +141,8 @@ deliveryPickupDetialsModalConfig state =
             visibility = VISIBLE,
             margin  = Margin 0 20 0 0,
             isSource = isSenderModal,
-            personNameDetails = personNameDetailsConfig details isSenderModal,
-            mobileNumberDetails = mobileNumberDetailsConfig details isSenderModal,
+            personNameDetails = personNameDetailsConfig details isSenderModal showUserNameAndNumber,
+            mobileNumberDetails = mobileNumberDetailsConfig details isSenderModal showUserNameAndNumber,
             addressDetails = addressDetailsConfig details isSenderModal,
             instructionDetails = instructionDetailsConfig details isSenderModal,
             checkBoxDetails = {text : checkBoxDetailsText , isSelected : isSelected, visibility : ((isSenderModal && state.data.initiatedAs == API.Sender) || (state.data.currentStage == ST.RECEIVER_DETAILS && state.data.initiatedAs == API.Receiver) || state.data.initiatedAs == API.SomeoneElse)},
@@ -144,35 +150,34 @@ deliveryPickupDetialsModalConfig state =
             locationDetails = address
             }
           }
-      _ = spy "deliveryPickupDetialsModalConfig" popUpConfig'
     in
       popUpConfig'
   where
-    validateInput :: ST.PersonDeliveryDetails -> Boolean
-    validateInput details = 
-      let
-        firstLetter = slice 0 1 details.phone
-        isValidNumber = firstLetter >= "6" && firstLetter <= "9"
-      in
-        DS.length details.name > 2 && DS.length details.phone == 10 && isValidNumber && DS.length details.extras > 2
-    personNameDetailsConfig :: ST.PersonDeliveryDetails -> Boolean -> PrimaryEditTextController.Config
-    personNameDetailsConfig details isSender = 
+    personNameDetailsConfig :: ST.PersonDeliveryDetails -> Boolean -> Boolean -> PrimaryEditTextController.Config
+    personNameDetailsConfig details isSender showUserNameAndNumber = 
       let config = PopUpModal.dummyDeliveryPrimaryText
+          userName = getValueToLocalStore USER_NAME
       in
         config {
-          editText { text = details.name, placeholder = "Name", pattern = Just "[^\n]*,40" },
+          editText { text = if showUserNameAndNumber then userName else details.name, placeholder = "Name", pattern = Just "[A-Za-z ]*,30" },
           topLabel { text = if isSender then getString SENDER_NAME else getString RECEIVER_NAME },
           textImage { visibility = VISIBLE },
-          margin = Margin 0 0 0 8
+          margin = Margin 0 0 0 8,
+          id = (EHC.getNewIDWithTag $ "personName"),
+          errorLabel { text = "Please enter a valid name" }
         }
-    mobileNumberDetailsConfig :: ST.PersonDeliveryDetails -> Boolean  -> PrimaryEditTextController.Config
-    mobileNumberDetailsConfig details isSender = 
+    mobileNumberDetailsConfig :: ST.PersonDeliveryDetails -> Boolean -> Boolean -> PrimaryEditTextController.Config
+    mobileNumberDetailsConfig details isSender showUserNameAndNumber = 
       let config = PopUpModal.dummyDeliveryPrimaryText
+          phoneNo = getValueToLocalStore MOBILE_NUMBER
       in
         config {
-          editText { text = details.phone, placeholder = "9999999999", pattern = Just ("[0-9]*,10") },
+          editText { text = if showUserNameAndNumber then phoneNo else details.phone, placeholder = "9999999999", pattern = Just ("[0-9]*,10") },
           topLabel { text = if isSender then getString SENDER_PHONE else getString RECEIVER_PHONE },
-          textImage { visibility = VISIBLE } 
+          textImage { visibility = VISIBLE } ,
+          id = (EHC.getNewIDWithTag $ "mobileNumber")
+          ,type = "number"
+          , errorLabel { text = "Please enter a valid mobile number" }
         }
     addressDetailsConfig :: ST.PersonDeliveryDetails -> Boolean  -> PrimaryEditTextController.Config
     addressDetailsConfig details isSender = 
@@ -180,7 +185,9 @@ deliveryPickupDetialsModalConfig state =
       in
         config {
           editText { text = details.extras, placeholder = "Apt #1, 1st Block, Locality", pattern = Just "[^\n]*,50" },
-          topLabel { text = if isSender then getString SENDERS_BUILDING_FLAT else getString RECEIVERS_BUILDING_FLAT }
+          topLabel { text = if isSender then getString SENDERS_BUILDING_FLAT else getString RECEIVERS_BUILDING_FLAT },
+          id = (EHC.getNewIDWithTag $ "addressDetails" ),
+          errorLabel { text = "Please enter a valid address" }
         }
     instructionDetailsConfig :: ST.PersonDeliveryDetails -> Boolean  -> PrimaryEditTextController.Config
     instructionDetailsConfig details isSender = 
@@ -188,8 +195,10 @@ deliveryPickupDetialsModalConfig state =
       in
         config {
           height = (V 90),
+          margin = MarginVertical 20 20,
           editText { text = fromMaybe "" details.instructions, placeholder = "Instruction", singleLine = false, pattern = Just "[^\n]*,100" },
-          topLabel { text = if isSender then getString PICKUP_INSTRUCTIONS else getString DROP_INSTRUCTIONS }
+          topLabel { text = if isSender then getString PICKUP_INSTRUCTIONS else getString DROP_INSTRUCTIONS },
+          id = (EHC.getNewIDWithTag "instructionDetails")
         }
         
 chooseVehicleConfig :: ST.ParcelDeliveryScreenState -> ChooseVehicle.Config

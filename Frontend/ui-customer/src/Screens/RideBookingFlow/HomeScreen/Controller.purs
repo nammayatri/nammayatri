@@ -1137,7 +1137,7 @@ eval (ToggleCurrentPickupDropCurrentLocation isSource) state = do
   let config = if isSource then
       locateOnMapConfig { lat = state.props.sourceLat , lon = state.props.sourceLong}
     else locateOnMapConfig { lat = state.props.destinationLat , lon = state.props.destinationLong}
-  let newState = state { props { isConfirmSourceCurrentLocation = isSource } }
+  let newState = state { props { isSource = Just isSource } }
   continueWithCmd newState [do
     void $ pure $ removeAllPolylines ""
     void $ animateCamera config.lat config.lon zoomLevel "ZOOM"
@@ -1381,7 +1381,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState 
           void $ pure $ updateLocalStage SearchLocationModel
           exit $ UpdateSavedLocation state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}, data{source= state.data.source}}
       ConfirmingLocation -> do
-        if state.data.fareProductType == FPT.DELIVERY && state.props.isConfirmSourceCurrentLocation then
+        if state.data.fareProductType == FPT.DELIVERY && state.props.isSource == Just true then
           continueWithCmd state [pure $ ToggleCurrentPickupDropCurrentLocation false]
         else do
           void $ pure $ performHapticFeedback unit
@@ -1723,7 +1723,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
 eval (SearchLocationModelActionController (SearchLocationModelController.EditTextFocusChanged textType)) state = do
   _ <- pure $ spy "searchLocationModal" textType
   if textType == "D" then
-    continue state { props { isSource = Just false, searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}, data {source = if state.data.source == "" then state.data.searchLocationModelData.prevLocation else state.data.source, locationList = if state.props.isSource == Just false then state.data.locationList else state.data.destinationSuggestions } }
+    continue state { props { isSource = if state.props.currentStage == ConfirmingLocation && state.data.fareProductType == FPT.DELIVERY && state.props.isSource == Just true then Just true else Just false, searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}, data {source = if state.data.source == "" then state.data.searchLocationModelData.prevLocation else state.data.source, locationList = if state.props.isSource == Just false then state.data.locationList else state.data.destinationSuggestions } }
   else
     continue state { props { isSource = Just true, searchLocationModelProps{crossBtnSrcVisibility = (STR.length state.data.source) > 2}} , data{ locationList = if state.props.isSource == Just true then state.data.locationList else state.data.recentSearchs.predictionArray } }
 
@@ -2899,7 +2899,7 @@ eval (EditDestSearchLocationModelActionController (SearchLocationModelController
 eval (EditDestSearchLocationModelActionController (SearchLocationModelController.EditTextFocusChanged textType)) state = do
   _ <- pure $ spy "searchLocationModal" textType
   if textType == "D" then
-    continue state { props { isSource = Just false, searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}, data {source = if state.data.source == "" then state.data.searchLocationModelData.prevLocation else state.data.source, locationList = if state.props.isSource == Just false then state.data.locationList else state.data.destinationSuggestions } }
+    continue state { props { isSource = if state.props.currentStage == ConfirmingLocation && state.data.fareProductType == FPT.DELIVERY && state.props.isSource == Just true then Just true else Just false, searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}, data {source = if state.data.source == "" then state.data.searchLocationModelData.prevLocation else state.data.source, locationList = if state.props.isSource == Just false then state.data.locationList else state.data.destinationSuggestions } }
   else
     continue state { props { isSource = Just true, searchLocationModelProps{crossBtnSrcVisibility = (STR.length state.data.source) > 2}} , data{ locationList = if state.props.isSource == Just true then state.data.locationList else state.data.recentSearchs.predictionArray } }
 

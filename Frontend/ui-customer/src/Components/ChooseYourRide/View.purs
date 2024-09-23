@@ -95,7 +95,7 @@ view push config =
       let variantBasedList = filterVariantAndEstimate config.quoteList
           topProviderList = filter (\element -> element.providerType == ONUS) config.quoteList
           currentPeekHeight = getQuoteListViewHeight config $ length if config.showMultiProvider then variantBasedList else topProviderList 
-      in (if currentPeekHeight == 0 then 470 else currentPeekHeight) + (if config.enableTips then 36 else 0) + (if config.fareProductType == DELIVERY then 130 + (if config.tipViewProps.stage == TIP_AMOUNT_SELECTED then 40 else 0) else 0)
+      in (if currentPeekHeight == 0 then 470 else currentPeekHeight) + (if config.enableTips then 36 else 0) + (if config.fareProductType == DELIVERY then 100 + (if config.tipViewProps.stage == TIP_AMOUNT_SELECTED then 40 else 0) else 0)
 
 addTipView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 addTipView push state = 
@@ -615,6 +615,7 @@ quoteListView push config =
   let variantBasedList = filterVariantAndEstimate config.quoteList
       topProviderList = filter (\element -> element.providerType == ONUS) config.quoteList
       viewHeight = getScrollViewHeight config $ length if config.showMultiProvider then variantBasedList else topProviderList
+      _ = spy "viewHeight" viewHeight
       selectedEstimatedConfig = fromMaybe ChooseVehicle.config $ config.quoteList !! config.activeIndex 
   in 
   frameLayout
@@ -791,6 +792,8 @@ getScrollViewHeight config len =
           (getHeightFromPercent 73) - rideHeaderHeight
         else 
           min (HU.getDefaultPixelSize ((getHeightFromPercent 100) - rideHeaderHeight)) (((length (filterVariantAndEstimate config.quoteList)) + 2)* height)
+      else if (len == 1)
+        then 5 * height
       else (len+3) * height --((getHeightFromPercent (if EHC.os == "IOS" then 73 else 85)) - rideHeaderHeight)
 
 primaryButtonRequestRideConfig :: Config -> String -> PrimaryButton.Config

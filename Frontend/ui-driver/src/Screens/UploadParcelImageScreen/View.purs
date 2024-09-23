@@ -111,6 +111,11 @@ headerLayout push state =
 
 captureParcelImageView :: forall w. (Action -> Effect Unit) -> ST.UploadParcelImageScreenState -> PrestoDOM (Effect Unit) w
 captureParcelImageView push state =
+    scrollView
+    [ width MATCH_PARENT
+    , height $ V (EHC.screenHeight unit - 100) 
+    , visibility $ boolToVisibility $ not state.props.showConfirmAndUploadButton
+    ][
     linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -121,9 +126,15 @@ captureParcelImageView push state =
     ]
     [ 
     ]
+    ]
 
 confirmAndUploadButton :: forall w. (Action -> Effect Unit) -> ST.UploadParcelImageScreenState -> PrestoDOM (Effect Unit) w
 confirmAndUploadButton push state =
+    scrollView
+    [ width MATCH_PARENT
+    , height $ V (EHC.screenHeight unit - 100) 
+    , visibility $ boolToInvisibility $ state.props.showConfirmAndUploadButton
+    ][
     linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -131,11 +142,12 @@ confirmAndUploadButton push state =
     , layoutGravity "center"
     , gravity CENTER
     , margin (Margin 0 50 0 50)
+    , weight 1.0
     , visibility $ boolToInvisibility $ state.props.showConfirmAndUploadButton
     ]
     [   linearLayout
         [ width MATCH_PARENT
-        , height (V 450)
+        , height (V 400)
         , orientation VERTICAL
         , layoutGravity "center"
         , id (EHC.getNewIDWithTag "confirmImageView")
@@ -152,4 +164,5 @@ confirmAndUploadButton push state =
         , visibility $ boolToVisibility $ state.props.isStartRideActive
         ] <> FontStyle.body1 TypoGraphy
     ,   PrimaryButton.view (push <<< ConfirmAndUpload) (confirmAndUploadButtonConfig state)
+    ]
     ]

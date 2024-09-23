@@ -1240,7 +1240,7 @@ homeScreenFlow = do
                           Nothing
                       }
                     , showShimmer = false
-                    , isConfirmSourceCurrentLocation = true
+                    , isSource = if bothLocationChangedState.data.fareProductType == FPT.DELIVERY then Just true else bothLocationChangedState.props.isSource
                     }
                   }
             )
@@ -2012,28 +2012,11 @@ homeScreenFlow = do
         distanceBetweenLatLong = getDistanceBwCordinates lat lon state.props.locateOnMapLocation.sourceLat state.props.locateOnMapLocation.sourceLng
 
         isMoreThan20Meters = distanceBetweenLatLong > (state.data.config.mapConfig.locateOnMapConfig.apiTriggerRadius / 1000.0)
-        sourceLat = if state.props.isConfirmSourceCurrentLocation then lat else state.props.sourceLat
-        sourceLong = if state.props.isConfirmSourceCurrentLocation then lon else state.props.sourceLong
-        destLat = if state.props.isConfirmSourceCurrentLocation then state.props.destinationLat else lat
-        destLong = if state.props.isConfirmSourceCurrentLocation then state.props.destinationLong else lon
-      modifyScreenState
-        $ HomeScreenStateType
-            ( \homeScreen ->
-                homeScreen
-                  { props
-                    { sourceLat = sourceLat
-                    , sourceLong = sourceLong
-                    , destinationLat = destLat
-                    , destinationLong = destLong
-                    , editedPickUpLocation {gps = LatLong {lat : lat
-                                                    , lon : lon 
-                                                    }  
-                                  }
-                    , confirmLocationCategory = getZoneType srcSpecialLocation.category
-                    , city = cityName
-                    }
-                  }
-            )
+      case state.data.fareProductType of
+        FPT.DELIVERY -> do
+          updateLatLonForDelivery lat lon srcSpecialLocation cityName
+        _ -> do
+          updateSourceLatLon lat lon srcSpecialLocation cityName
       if isMoreThan20Meters || isJust gateAddress.address || state.data.fareProductType == FPT.DELIVERY then do
         fullAddress <- getPlaceName lat lon gateAddress true
         case fullAddress of
@@ -2044,10 +2027,10 @@ homeScreenFlow = do
                   ( \homeScreen ->
                       homeScreen
                         { data
-                          { source =  if state.props.isConfirmSourceCurrentLocation then address.formattedAddress else state.data.source
-                          , sourceAddress = if state.props.isConfirmSourceCurrentLocation then encodeAddress address.formattedAddress address.addressComponents Nothing lat lon else state.data.sourceAddress
-                          , destination = if state.props.isConfirmSourceCurrentLocation then state.data.destination else address.formattedAddress
-                          , destinationAddress = if state.props.isConfirmSourceCurrentLocation then state.data.destinationAddress else encodeAddress address.formattedAddress address.addressComponents Nothing lat lon 
+                          { source =  if state.props.isSource == Just true then address.formattedAddress else state.data.source
+                          , sourceAddress = if state.props.isSource == Just true then encodeAddress address.formattedAddress address.addressComponents Nothing lat lon else state.data.sourceAddress
+                          , destination = if state.props.isSource == Just true then state.data.destination else address.formattedAddress
+                          , destinationAddress = if state.props.isSource == Just true then state.data.destinationAddress else encodeAddress address.formattedAddress address.addressComponents Nothing lat lon 
                           }
                         , props
                           { editedPickUpLocation {address = encodeAddress address.formattedAddress address.addressComponents Nothing lat lon }
@@ -2073,6 +2056,49 @@ homeScreenFlow = do
       let
         _ = spy "UPDATE_PICKUP_LOCATION_NAME" "UPDATE_PICKUP_LOCATION_NAME"
       homeScreenFlow
+      where
+        updateSourceLatLon lat lon srcSpecialLocation cityName = do
+          modifyScreenState
+          $ HomeScreenStateType
+              ( \homeScreen ->
+                  homeScreen
+                    { props
+                      { sourceLat = lat
+                      , sourceLong = lon
+                      , editedPickUpLocation {gps = LatLong {lat : lat
+                                                      , lon : lon 
+                                                      }  
+                                    }
+                      , confirmLocationCategory = getZoneType srcSpecialLocation.category
+                      , city = cityName
+                      }
+                    }
+              )
+        updateLatLonForDelivery lat lon srcSpecialLocation cityName = do
+          let sourceLat = if state.props.isSource == Just true then lat else state.props.sourceLat
+              sourceLong = if state.props.isSource == Just true then lon else state.props.sourceLong
+              destLat = if state.props.isSource == Just true then state.props.destinationLat else lat
+              destLong = if state.props.isSource == Just true then state.props.destinationLong else lon
+        
+          modifyScreenState
+            $ HomeScreenStateType
+                ( \homeScreen ->
+                    homeScreen
+                      { props
+                        { sourceLat = sourceLat
+                        , sourceLong = sourceLong
+                        , destinationLat = destLat
+                        , destinationLong = destLong
+                        , editedPickUpLocation {gps = LatLong {lat : lat
+                                                        , lon : lon 
+                                                        }  
+                                      }
+                        , confirmLocationCategory = getZoneType srcSpecialLocation.category
+                        , city = cityName
+                        }
+                      }
+                )
+
     GO_TO_FAVOURITES_ -> do
       void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_addresses"
       savedLocationFlow HomeScreenFlow
@@ -2453,7 +2479,7 @@ homeScreenFlow = do
         findEstimates state
     GOTO_CONFIRMING_LOCATION_STAGE finalState -> do
       liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig { lat = finalState.props.sourceLat, lon = finalState.props.sourceLong, geoJson = finalState.data.polygonCoordinates, points = finalState.data.nearByPickUpPoints, labelId = getNewIDWithTag "LocateOnMapPin", zoomLevel = zoomLevel, locationName = fromMaybe "" finalState.props.locateOnMapProps.sourceLocationName, specialZoneMarkerConfig { labelImage = zoneLabelIcon finalState.props.confirmLocationCategory, labelMaxWidth = locateOnMapLabelMaxWidth} }
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = ConfirmingLocation, rideRequestFlow = true, locateOnMapLocation { sourceLat = finalState.props.sourceLat, sourceLng = finalState.props.sourceLong, source = finalState.data.source, sourceAddress = finalState.data.sourceAddress }, locateOnMapProps { cameraAnimatedToSource = false } } })
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = ConfirmingLocation, rideRequestFlow = true, locateOnMapLocation { sourceLat = finalState.props.sourceLat, sourceLng = finalState.props.sourceLong, source = finalState.data.source, sourceAddress = finalState.data.sourceAddress }, locateOnMapProps { cameraAnimatedToSource = false }, isSource = if finalState.data.fareProductType == FPT.DELIVERY then Just true else finalState.props.isSource } })
       void $ pure $ updateLocalStage ConfirmingLocation
       void $ lift $ lift $ toggleLoader false
       homeScreenFlow
@@ -2568,7 +2594,7 @@ homeScreenFlow = do
       res <- lift $ lift $ Remote.getDeliveryImage updatedState.data.driverInfoCardState.rideId
       case res of
         Right (API.GetDeliveryImageResponse resp) -> do
-          let isNotValidImage = resp == "" || DS.contains (DS.Pattern "error") resp
+          let isNotValidImage = resp == "" || DS.contains (DS.Pattern "error") resp || DS.length resp < 100
           if isNotValidImage then do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState { data { deliveryImage = Nothing }})
             void $ pure $ toast $ "Image Not Uploaded, please try again"
@@ -2579,8 +2605,7 @@ homeScreenFlow = do
       homeScreenFlow
     GO_TO_DELIVERY_DETAILS updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState)
-      
-      modifyScreenState $ ParcelDeliveryScreenStateType (\parcelDeliveryScreen -> parcelDeliveryScreen { props { isEditModal = false}, data { parcelQuoteList = updatedState.data.selectedEstimatesObject, sourceAddress = updatedState.data.sourceAddress, destinationAddress = updatedState.data.destinationAddress, route = updatedState.data.route, sourceLat = updatedState.props.sourceLat, sourceLong = updatedState.props.sourceLong, destinationLat = updatedState.props.destinationLat, destinationLong = updatedState.props.destinationLong, rateCard = updatedState.data.rateCard}})
+      modifyScreenState $ ParcelDeliveryScreenStateType (\parcelDeliveryScreen -> parcelDeliveryScreen { props { isEditModal = false}, data { tipForDriver = if updatedState.data.config.tipsEnabled && updatedState.props.customerTip.tipForDriver /= 0 then Just updatedState.props.customerTip.tipForDriver else Nothing, parcelQuoteList = updatedState.data.selectedEstimatesObject, sourceAddress = updatedState.data.sourceAddress, destinationAddress = updatedState.data.destinationAddress, route = updatedState.data.route, sourceLat = updatedState.props.sourceLat, sourceLong = updatedState.props.sourceLong, destinationLat = updatedState.props.destinationLat, destinationLong = updatedState.props.destinationLong, rateCard = updatedState.data.rateCard}})
       parcelDeliveryFlow
     _ -> homeScreenFlow
 
@@ -2699,7 +2724,7 @@ findEstimates updatedState = do
             , sourceGates: if null state.data.nearByPickUpPoints then Nothing else Just $ state.data.nearByPickUpPoints
             }
         )
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { searchId = rideSearchRes.searchId, currentStage = FindingEstimate, rideRequestFlow = true, selectedQuote = Nothing, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, findingQuotesProgress = 0.0 }, data { nearByDrivers = Nothing } })
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { searchId = rideSearchRes.searchId, currentStage = FindingEstimate, rideRequestFlow = true, selectedQuote = Nothing, isSearchLocation = SearchLocation, sourcePlaceId = Nothing, destinationPlaceId = Nothing, findingQuotesProgress = 0.0 }, data { nearByDrivers = Nothing, route = if state.data.fareProductType == FPT.DELIVERY then rideSearchRes.routeInfo else Nothing } })
   updateLocalStage FindingEstimate
   homeScreenFlow
 
@@ -6569,7 +6594,7 @@ fcmHandler notification state = do
       updateFollower true false Nothing
     "SAFETY_ALERT_DEVIATION" -> do
       logStatus "safety_alert_deviation_notification" ""
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetyAlertType = Just ST.DEVIATION } })
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetyAlertType = if state.data.fareProductType == FPT.DELIVERY then Nothing else Just ST.DEVIATION } })
       homeScreenFlow
     "STOP_REACHED" -> do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { driverInfoCardState {destination = "" , destinationLat = 0.0, destinationLng =0.0, destinationAddress = getAddressFromBooking dummyBookingDetails} } }) 
@@ -6579,7 +6604,7 @@ fcmHandler notification state = do
         res <- lift $ lift $ Remote.getDeliveryImage state.data.driverInfoCardState.rideId
         case res of
           Right (API.GetDeliveryImageResponse resp) -> do
-            let isNotValidImage = resp == "" || DS.contains (DS.Pattern "error") resp
+            let isNotValidImage = resp == "" || DS.contains (DS.Pattern "error") resp || DS.length resp < 100
             if isNotValidImage then do
               void $ pure $ toast $ "Image Not Uploaded, please try again"
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { deliveryImage = Nothing }})
@@ -6621,6 +6646,7 @@ parcelDeliveryFlow = do
       homeScreenFlow
     ParcelDeliveryScreenController.GoToChooseYourRide state -> do
       (GlobalState globalState) <- getState
+      modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> state)
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { fromDeliveryScreen = true}})
       findEstimates globalState.homeScreen
     ParcelDeliveryScreenController.GoToConfirmgDelivery state -> do

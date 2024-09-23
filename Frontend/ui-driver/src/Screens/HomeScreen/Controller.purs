@@ -889,6 +889,7 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone otp)) state = do
           updateAndExit newState $ StartRide newState
 
 eval (InAppKeyboardModalAction (InAppKeyboardModal.RetakeParcelImage)) state = do
+  void $ pure $ hideKeyboardOnNavigation true
   exit $ UploadParcelImage state
 
 eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.BackPressed)) state = do

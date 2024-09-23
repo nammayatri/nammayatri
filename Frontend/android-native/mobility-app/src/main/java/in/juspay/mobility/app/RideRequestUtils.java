@@ -604,11 +604,14 @@ public class RideRequestUtils {
     }
 
     public static void updateTierAndAC(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
+        
+        boolean isDeliveryRR = model.getRideProductType() != null ? (model.getRideProductType()).equals(NotificationUtils.DELIVERY) : false;
         boolean showTier = model.getVehicleServiceTier() != null;
         int airConditioned = model.isAirConditioned();
         boolean ventilator = model.getRequestedVehicleVariant().equals("AMBULANCE_VENTILATOR");
-        boolean showAC = airConditioned == 1 && showAcConfig(context);
-        boolean showNonAC = airConditioned == 0 && showAcConfig(context);
+        boolean showAC = airConditioned == 1 && showAcConfig(context) && !isDeliveryRR;
+        boolean showNonAC = airConditioned == 0 && showAcConfig(context) && !isDeliveryRR;
+        System.out.println("isDeliveryRR"+isDeliveryRR);
         if (ventilator) {
             holder.ventilator.setVisibility(View.VISIBLE);
         }
@@ -620,10 +623,14 @@ public class RideRequestUtils {
             holder.acView.setVisibility(View.GONE);
             holder.nonAcView.setVisibility(View.GONE);
         }
+        
+        if(isDeliveryRR)
+            holder.vcTierAndACView.setRadius(dpToPx(8,context));
+
         holder.vcTierAndACView.setVisibility((showTier || showAC || showNonAC) ? View.VISIBLE : View.GONE);
-        holder.vcTierAndACView.setCardBackgroundColor(Color.parseColor(showNonAC ? "#F4F7FF" : "#1A0066FF"));
-        holder.vehicleServiceTier.setText(model.getVehicleServiceTier() != null ? getSTMapping (model.getVehicleServiceTier(), context) : "");
-        holder.vehicleServiceTier.setTextColor(context.getColor(showNonAC ? R.color.black650 : R.color.blue800));
+        holder.vcTierAndACView.setCardBackgroundColor(Color.parseColor(isDeliveryRR ? "#FEEBB9" : showNonAC ? "#F4F7FF" : "#1A0066FF"));
+        holder.vehicleServiceTier.setText(model.getVehicleServiceTier() != null ? isDeliveryRR ? "Delivery" : getSTMapping (model.getVehicleServiceTier(), context) : "");
+        holder.vehicleServiceTier.setTextColor(context.getColor(isDeliveryRR ? R.color.Black800 : showNonAC ? R.color.black650 : R.color.blue800));
         holder.vehicleServiceTier.setVisibility(showTier ? View.VISIBLE : View.GONE);
         holder.acNonAcView.setVisibility( showAC || showNonAC ? View.VISIBLE : View.GONE);
     }

@@ -25,6 +25,8 @@ import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>), Unit)
 import Data.Maybe as Mb
+import Font.Style as FontStyle
+import Engineering.Helpers.Commons as EHC
 import Components.TipsView as TipsView
 import JBridge
 import Effect (Effect)
@@ -744,24 +746,28 @@ dummyDeliveryDetailsConfig =
 
 dummyDeliveryPrimaryText :: PrimaryEditTextController.Config
 dummyDeliveryPrimaryText = 
-  let config = PrimaryEditTextController.config
-  in config
-        {
-          margin = Margin 0 20 0 0,
-          -- cornerRadius = 8.0,
-          editText {
-            text = "",
-            textStyle = SubHeading3,
-            padding = Padding 16 16 16 16,
-            margin = Margin 0 0 0 0
-          },
-          textImage {
-            height = V 24
-            , width = V 24
-            , imageUrl = "ny_ic_id_filled"
-            , margin = (Margin 16 0 16 0)
-            , padding = (Padding 0 0 0 0)
-            , visibility = GONE
-          },
-          topLabel { margin = Margin 0 0 0 8, color = Color.black800 }
+  let
+      config = PrimaryEditTextController.config
+      primaryEditTextConfig' = config
+        { editText
+          { color = Color.black800
+          , singleLine = true
+          , placeholder = "9999......"
+          , textStyle = FontStyle.SubHeading3
+          }
+        , background = Color.white900
+        , topLabel
+          { text = "Enter Number"
+          , color = Color.black800
+          , textStyle = FontStyle.Body3
+          }
+        , stroke = ("1,"<> Color.black500)
+        , margin = (Margin 0 8 0 0)
+        , errorLabel
+          { text = ""
+          , margin = (MarginTop 1)
+          }
+        , showErrorLabel = false
+        , width = MATCH_PARENT
         }
+      in primaryEditTextConfig'

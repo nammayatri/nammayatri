@@ -746,7 +746,7 @@ deliveryView push state =
 deliveryDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 deliveryDetailsView push state =    
     scrollView
-        [ height WRAP_CONTENT
+        [ height $ V (screenHeight unit - 400)
         , width MATCH_PARENT
         ]
         [

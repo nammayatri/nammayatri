@@ -41,7 +41,7 @@ import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants
 import Resources.Localizable.EN (getEN)
-import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.Controller (Action(..), ScreenOutput, eval, validateInput)
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ComponentConfig (chooseVehicleConfig, deliveryPickupDetialsModalConfig, genericHeaderConfig, primaryButtonConfig, rateCardConfig)
 import Components.ParcelDeliveryInstruction as ParcelDeliveryInstruction
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
@@ -131,10 +131,13 @@ deliveryDetailsView push state =
       , cornerRadii (Corners 16.0 true true false false)
       ]
       [ ChooseVehicle.view (push <<< ChooseVehicleAC) $ chooseVehicleConfig state
+      , tipView push state
       , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
       ],
-      (if state.data.currentStage == ST.SENDER_DETAILS then deliveryDetailPopupView push state else emptyTextView),
-      (if state.data.currentStage == ST.RECEIVER_DETAILS then deliveryDetailPopupView push state else emptyTextView),
+      (case state.data.currentStage of
+        ST.SENDER_DETAILS -> deliveryDetailPopupView push state 
+        ST.RECEIVER_DETAILS -> deliveryDetailPopupView push state 
+        _ -> emptyTextView),
       (if state.props.showRateCard then (rateCardView push state) else emptyTextView)
     ]
     
@@ -221,7 +224,7 @@ pickupDropItemView push state isSource =
           , color Color.black800
           ] <> FontStyle.body1 TypoGraphy
         , textView $
-          [ text personDetails.phone
+          [ text $ "+91 " <>  personDetails.phone
           , color Color.black800
           ] <> FontStyle.body1 TypoGraphy
         ]
@@ -290,7 +293,7 @@ sourceDestinationAddressView push state isSource =
               , margin $ MarginBottom 2
               ] <> FontStyle.body3 TypoGraphy
             , textView $
-              [ textFromHtml $ "<em>Pickup Instruction: " <> fromMaybe "" personDetails.instructions <> "</em>"
+              [ textFromHtml $ "<em>" <> (if isSource then getString PICKUP_INSTRUCTION else  getString DROP_INSTRUCTION) <> ": " <> fromMaybe "" personDetails.instructions <> "</em>"
               , color Color.black700
               , visibility $ boolToVisibility $ isJust personDetails.instructions
               ] <> FontStyle.body3 TypoGraphy
@@ -306,7 +309,7 @@ deliveryGuidelinesView push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , margin $ Margin 0 20 0 70
+  , margin $ Margin 0 20 0 120
   ]
   [ linearLayout
     [ width MATCH_PARENT
@@ -443,3 +446,30 @@ rateCardView push state =
         , width MATCH_PARENT
         ]
         [ RateCard.view (push <<< RateCardAction) (rateCardConfig state) ]
+
+tipView :: forall w. (Action -> Effect Unit) -> ST.ParcelDeliveryScreenState -> PrestoDOM (Effect Unit) w
+tipView push state = 
+  linearLayout
+  [
+     height WRAP_CONTENT
+    , width MATCH_PARENT
+    , background Color.white900
+  ][
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , background Color.ivory
+    , cornerRadius 12.0
+    , padding $ Padding 20 8 20 8
+    , margin $ Margin 16 0 16 16
+    , gravity CENTER
+    , visibility $ boolToVisibility $ isJust state.data.tipForDriver
+    ][
+      textView $ 
+      [ text $ "₹" <> (show $ fromMaybe 0 state.data.tipForDriver) <> " " <> getString TIP_ADDED
+      , color Color.black900
+      , width WRAP_CONTENT
+      , height WRAP_CONTENT
+      ] <> FontStyle.body4 LanguageStyle
+    ]
+  ]
