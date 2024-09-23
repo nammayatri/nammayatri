@@ -1,6 +1,7 @@
 #!/bin/bash
 
 branch_name=$1
+new_branch_name="nammayatri-$branch_name"
 
 files_to_be_added=();
 
@@ -33,15 +34,15 @@ add_file_for_commit() { #dir , sub_dir, asset_type, asset_name, source_path
 # Function to create a Pull Request
 create_pull_request() {
     local target_repo_name="asset-store"
-    if [ -z "$branch_name" ]; then
+    if [ -z "$new_branch_name" ]; then
         echo "Error: Branch name not provided"
         return 1
     fi
 
-    git checkout $BRANCH_NAME
+    git checkout $new_branch_name
 
     # Fetch the changes
-    git fetch origin $BRANCH_NAME
+    git fetch origin $new_branch_name
     declare -a staged_files_array
     for file in ${ALL_CHANGED_FILES[@]}; do
         staged_files_array+=("$file")
@@ -53,8 +54,8 @@ create_pull_request() {
     cd "$target_repo_name" || { echo "Error: Directory $target_repo_name does not exist after cloning"; return 1; }
     git checkout main
     git pull origin --rebase main || { echo "Error: Failed to pull latest changes"; return 1; }
-    git branch -D "$branch_name" >/dev/null 2>&1 || true
-    git checkout -b "$branch_name" || { echo "Error: Failed to create or checkout branch $branch_name"; return 1; }
+    git branch -D "$new_branch_name" >/dev/null 2>&1 || true
+    git checkout -b "$new_branch_name" || { echo "Error: Failed to create or checkout branch $new_branch_name"; return 1; }
     git pull origin --rebase main || { echo "Error: Failed to pull latest changes"; return 1; }
 
 
@@ -125,14 +126,11 @@ create_pull_request() {
     done
 
     git add .
-    git pull origin --rebase "$branch_name"
-    git push -f origin "$branch_name"
-    git commit -m "[GITHUB-ACTION]Added new asset from NammaYatri/NammaYatri branch : $branch_name"
-    git push --set-upstream origin "$branch_name"
+    git pull origin --rebase "$new_branch_name"
+    git push -f origin "$new_branch_name"
+    git commit -m "[GITHUB-ACTION]Added new asset from NammaYatri/NammaYatri branch : $new_branch_name"
+    git push --set-upstream origin "$new_branch_name"
     git push 
-    curl -X POST -H "Authorization: token $PAT_TOKEN" \
-        https://api.github.com/repos/nammayatri/asset-store/dispatches \
-        -d '{"event_type": "trigger_workflow",  "client_payload": {"branch": "'$branch_name'" , "ref" : "main"}}'
 
     cd ..
     rm -rf "$target_repo_name" 
