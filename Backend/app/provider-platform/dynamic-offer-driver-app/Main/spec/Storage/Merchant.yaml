@@ -1401,6 +1401,9 @@ PayoutConfig:
     merchantOperatingCityId: PrimaryKey
     vehicleCategory: PrimaryKey
   queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
     findByMerchantOpCityIdAndIsPayoutEnabled:
       kvFunction: findAllWithKV
       where:

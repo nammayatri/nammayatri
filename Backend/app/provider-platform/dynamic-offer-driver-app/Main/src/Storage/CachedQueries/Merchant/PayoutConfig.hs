@@ -15,6 +15,7 @@
 
 module Storage.CachedQueries.Merchant.PayoutConfig
   ( create,
+    findAllByMerchantOpCityId,
     findByPrimaryKey,
     findByMerchantOpCityIdAndIsPayoutEnabled,
     clearCache,
@@ -32,6 +33,12 @@ import qualified Storage.Queries.PayoutConfig as Queries
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => PayoutConfig -> m ()
 create = Queries.create
+
+findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [PayoutConfig]
+findAllByMerchantOpCityId cityId =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeCityIdKey cityId) >>= \case
+    Just a -> return a
+    Nothing -> cachePayoutConfigForCity' cityId /=<< Queries.findAllByMerchantOpCityId cityId
 
 findByPrimaryKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> VehicleCategory -> m (Maybe PayoutConfig)
 findByPrimaryKey id vehicleCategory =
@@ -57,11 +64,20 @@ cachePayoutConfigForCity id isPayoutEnabled cfg = do
   let idKey = makeMerchantOpCityIdKey id isPayoutEnabled
   Hedis.setExp idKey cfg expTime
 
+cachePayoutConfigForCity' :: CacheFlow m r => Id MerchantOperatingCity -> [PayoutConfig] -> m ()
+cachePayoutConfigForCity' id config = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  let idKey = makeCityIdKey id
+  Hedis.setExp idKey config expTime
+
 makeMerchantOpCityIdKeyAndCategory :: Id MerchantOperatingCity -> VehicleCategory -> Text
 makeMerchantOpCityIdKeyAndCategory id vehicleCategory = "driver-offer:CachedQueries:MerchantPayoutConfig:MerchantOperatingCityId-" <> id.getId <> ":Category-" <> show vehicleCategory
 
 makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Bool -> Text
 makeMerchantOpCityIdKey id isPayoutEnabled = "driver-offer:CachedQueries:MerchantPayoutConfig:MerchantOperatingCityId-" <> id.getId <> "isPayoutEnabled:" <> show isPayoutEnabled
+
+makeCityIdKey :: Id MerchantOperatingCity -> Text
+makeCityIdKey id = "driver-offer:CachedQueries:MerchantPayoutConfig:CityId-" <> id.getId
 
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> Bool -> m ()

@@ -87,6 +87,7 @@ DriverInformation:
     dailyCancellationRateBlockingCooldown: Maybe UTCTime
     weeklyCancellationRateBlockingCooldown: Maybe UTCTime
     blockReasonFlag: Maybe BlockReasonFlag
+    payoutRegAmountRefunded: Maybe HighPrecMoney
 
   default:
     active: "false"
@@ -254,4 +255,8 @@ DriverInformation:
     updateDailyAndWeeklyCancellationRateBlockingCooldown:
       kvFunction: updateOneWithKV
       params: [dailyCancellationRateBlockingCooldown, weeklyCancellationRateBlockingCooldown]
+      where: driverId    updatePayoutRegAmountRefunded:
+      kvFunction: updateOneWithKV
+      params: [payoutRegAmountRefunded]
       where: driverId
+

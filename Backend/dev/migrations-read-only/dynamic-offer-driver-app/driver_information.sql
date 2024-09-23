@@ -134,3 +134,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN daily_cancellat
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN block_reason_flag text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN payout_reg_amount_refunded double precision ;

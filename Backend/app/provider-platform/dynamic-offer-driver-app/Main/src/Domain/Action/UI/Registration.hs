@@ -266,6 +266,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             latestScheduledBooking = Nothing,
             payoutVpaStatus = Nothing,
             payoutVpaBankAccount = Nothing,
+            payoutRegAmountRefunded = Nothing,
             dailyCancellationRateBlockingCooldown = Nothing,
             weeklyCancellationRateBlockingCooldown = Nothing,
             blockReasonFlag = Nothing

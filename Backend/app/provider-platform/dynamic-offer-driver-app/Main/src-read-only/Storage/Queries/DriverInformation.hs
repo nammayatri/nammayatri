@@ -12,6 +12,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -180,6 +181,11 @@ updateOnRideAndLatestScheduledBookingAndPickup onRide latestScheduledBooking lat
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updatePayoutRegAmountRefunded :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updatePayoutRegAmountRefunded payoutRegAmountRefunded driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.payoutRegAmountRefunded payoutRegAmountRefunded, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updatePayoutRegistrationOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updatePayoutRegistrationOrderId payoutRegistrationOrderId driverId = do
   _now <- getCurrentTime
@@ -270,6 +276,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.onRide onRide,
       Se.Set Beam.payerVpa payerVpa,
       Se.Set Beam.paymentPending paymentPending,
+      Se.Set Beam.payoutRegAmountRefunded payoutRegAmountRefunded,
       Se.Set Beam.payoutRegistrationOrderId payoutRegistrationOrderId,
       Se.Set Beam.payoutVpa payoutVpa,
       Se.Set Beam.payoutVpaBankAccount payoutVpaBankAccount,

@@ -324,3 +324,13 @@ updateHasAdvancedRide (Id driverId) isOnAdvancedRide = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
+
+updatePayoutVpaAndStatusByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe PayoutVpaStatus -> [Id Person.Driver] -> m ()
+updatePayoutVpaAndStatusByDriverIds payoutVpa payoutVpaStatus driverIds = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamDI.payoutVpaStatus payoutVpaStatus,
+      Se.Set BeamDI.payoutVpa payoutVpa,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.In (getId <$> driverIds))]
