@@ -149,7 +149,8 @@ type SubscriptionConfigVariantLevelEntity = {
    earnUptoAmout :: Maybe Int,
    yatriPlansPlaylist :: Maybe String,
    enableSubscriptionSupportPopup :: Maybe Boolean,
-   offerBannerConfig :: Maybe OfferBanner
+   offerBannerConfig :: Maybe OfferBanner,
+   enableSubsV2 :: Maybe Boolean
 }
 
 type OfferBanner = {

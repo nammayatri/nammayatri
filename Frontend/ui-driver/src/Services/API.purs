@@ -406,7 +406,8 @@ newtype GetDriverInfoReq = GetDriverInfoReq {
 
 newtype DriverInfoReq = DriverInfoReq {
   isAdvancedBookingEnabled :: Maybe Boolean,
-  isInteroperable :: Maybe Boolean
+  isInteroperable :: Maybe Boolean,
+  isCategoryLevelSubscriptionEnabled :: Maybe Boolean
  }
 
 newtype GetDriverInfoResp = GetDriverInfoResp
@@ -467,6 +468,8 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , freeTrialDays :: Maybe Int
     , freeTrialRides :: Maybe Int
     , totalRidesTaken :: Maybe Int
+    , subscriptionEnabledForVehicleCategory :: Maybe Boolean
+    , isSubscriptionEnabledAtCategoryLevel :: Maybe Boolean
     }
 
 

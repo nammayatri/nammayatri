@@ -88,15 +88,16 @@ import Resource.Constants as RSC
 import Screens.Types as ST
 
 screen :: SubscriptionScreenState -> GlobalState -> Screen Action SubscriptionScreenState ScreenOutput
-screen initialState globalState =
+screen initialState (GlobalState globalState) =
   { initialState
   , view
   , name: "SubscriptionScreen"
   , globalEvents: [(\push -> do
-      let showSubscriptions = getValueToLocalStore SHOW_SUBSCRIPTIONS == "true"
       void $ launchAff $ flowRunner defaultGlobalState $ do
-        if showSubscriptions then
-          loadData push LoadPlans LoadAlternatePlans LoadMyPlans LoadHelpCentre OnCityOrVehicleChange ShowError initialState globalState
+        let globalProp = globalState.globalProps
+        (GetDriverInfoResp driverInfo) <- getDriverInfoDataFromCache globalProp.driverInformation
+        if showSubscriptions driverInfo then
+          loadData push LoadPlans LoadAlternatePlans LoadMyPlans LoadHelpCentre OnCityOrVehicleChange ShowError initialState (GetDriverInfoResp driverInfo)
         else 
           liftFlow $ push $ EnableIntroductoryView
       case initialState.data.orderId of 
@@ -111,12 +112,17 @@ screen initialState globalState =
           eval state action
       )
   }
+  where 
+    showSubscriptions driverInfo = do
+      let subscriptionEnabledFE = getValueToLocalStore SHOW_SUBSCRIPTIONS == "true"
+      case driverInfo.isSubscriptionEnabledAtCategoryLevel, driverInfo.subscriptionEnabledForVehicleCategory of
+            Just f1, Just f2 -> f1 && f2 && subscriptionEnabledFE
+            _ , _ -> subscriptionEnabledFE
 
-loadData :: forall action. (action -> Effect Unit) ->  (UiPlansResp -> action) -> (UiPlansResp -> action) -> (GetCurrentPlanResp -> action) -> (Number -> Number -> Array KioskLocationRes -> action) -> (APITypes.UiPlansResp -> action) -> (ErrorResponse -> action) -> SubscriptionScreenState -> GlobalState -> Flow GlobalState Unit
-loadData push loadPlans loadAlternatePlans loadMyPlans loadHelpCentre onCityOrVehicleChangeAC errorAction state (GlobalState globalState) = do
+          
+loadData :: forall action. (action -> Effect Unit) ->  (UiPlansResp -> action) -> (UiPlansResp -> action) -> (GetCurrentPlanResp -> action) -> (Number -> Number -> Array KioskLocationRes -> action) -> (APITypes.UiPlansResp -> action) -> (ErrorResponse -> action) -> SubscriptionScreenState -> GetDriverInfoResp -> Flow GlobalState Unit
+loadData push loadPlans loadAlternatePlans loadMyPlans loadHelpCentre onCityOrVehicleChangeAC errorAction state (GetDriverInfoResp driverInfo) = do
   if any ( _ == state.props.subView )[JoinPlan, MyPlan, NoSubView] then do
-    let globalProp = globalState.globalProps
-    (GetDriverInfoResp driverInfo) <- getDriverInfoDataFromCache globalProp.driverInformation
     if isJust driverInfo.autoPayStatus then do 
       currentPlan <- Remote.getCurrentPlan ""
       _ <- pure $ setValueToLocalStore TIMES_OPENED_NEW_SUBSCRIPTION "5"
@@ -154,7 +160,7 @@ loadData push loadPlans loadAlternatePlans loadMyPlans loadHelpCentre onCityOrVe
                   else doAff do liftEffect $ push $ loadHelpCentre state.props.currentLat state.props.currentLon []
   else pure unit
   where 
-    cityOrVehicleChangedCondition resp = isJust resp.autoPayStatus && (resp.askForPlanSwitchByCity == Just true || resp.askForPlanSwitchByVehicle == Just true)
+    cityOrVehicleChangedCondition resp = isJust resp.autoPayStatus && driverInfo.isSubscriptionEnabledAtCategoryLevel == Just true && driverInfo.subscriptionEnabledForVehicleCategory == Just true && (resp.askForPlanSwitchByCity == Just true || resp.askForPlanSwitchByVehicle == Just true)
 
 onCityOrVehicleChange :: forall action. (action -> Effect Unit) ->  (APITypes.UiPlansResp -> action) -> Flow GlobalState Unit
 onCityOrVehicleChange push action = do
