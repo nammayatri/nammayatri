@@ -1014,8 +1014,12 @@ newtype RideBookingStatusRes = RideBookingStatusRes {
   id :: String,
   isBookingUpdated :: Boolean,
   bookingStatus :: String,
-  rideStatus :: Maybe String
-  
+  rideStatus :: Maybe String,
+  estimatedEndTimeRange :: Maybe String,
+  driverArrivalTime :: Maybe String,
+  sosStatus :: Maybe CTA.SosStatus,
+  driversPreviousRideDropLocLat :: Maybe Number,
+  driversPreviousRideDropLocLon :: Maybe Number
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {
