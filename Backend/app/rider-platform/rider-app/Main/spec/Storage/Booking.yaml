@@ -388,6 +388,13 @@ Booking:
     quoteId: "!SecondaryKey" # forcing to be a secondary key
     riderTransactionId: "!SecondaryKey" # forcing to be a secondary key
 
+  queries:
+    updateIsBookingUpdated:
+      kvFunction: updateWithKV
+      params:
+        - isBookingUpdated
+      where: id
+
 BookingPartiesLink:
   fields:
     id: Id BookingPartiesLink

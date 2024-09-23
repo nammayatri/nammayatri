@@ -472,7 +472,7 @@ onUpdate = \case
       createJobIn @_ @'SafetyIVR scheduleAfter maxShards (safetyIvrJobData :: SafetyIVRJobData)
     Notify.notifySafetyAlert booking code
   OUValidatedStopArrivedReq ValidatedStopArrivedReq {..} -> do
-    QRB.updateStop booking Nothing
+    QRB.updateStop booking Nothing Nothing
     Notify.notifyOnStopReached booking ride
   OUValidatedEditDestSoftUpdateReq ValidatedEditDestSoftUpdateReq {..} -> do
     let currentPointLat = (.lat) <$> currentPoint

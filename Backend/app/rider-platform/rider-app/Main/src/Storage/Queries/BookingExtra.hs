@@ -243,8 +243,8 @@ updatePaymentStatus rbId paymentStatus = do
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
 -- THIS IS TEMPORARY UNTIL WE HAVE PROPER ADD STOP FEATURE
-updateStop :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> Maybe DL.Location -> m ()
-updateStop booking mbStopLoc = do
+updateStop :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> Maybe DL.Location -> Maybe Bool -> m ()
+updateStop booking mbStopLoc isBookingUpdated = do
   now <- getCurrentTime
   -- whenJust mbStopLoc $ \stopLoc -> do
   --   void $ whenNothingM_ (QL.findById stopLoc.id) $ QL.create stopLoc
@@ -252,9 +252,11 @@ updateStop booking mbStopLoc = do
   -- QLM.create locationMapping
 
   updateOneWithKV
-    [ Se.Set BeamB.stopLocationId (getId . (.id) <$> mbStopLoc),
-      Se.Set BeamB.updatedAt now
-    ]
+    ( [ Se.Set BeamB.stopLocationId (getId . (.id) <$> mbStopLoc),
+        Se.Set BeamB.updatedAt now
+      ]
+        <> [Se.Set BeamB.isBookingUpdated isBookingUpdated | isJust isBookingUpdated]
+    )
     [Se.Is BeamB.id (Se.Eq $ getId booking.id)]
 
 findAllByPersonIdLimitOffset :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> m [Booking]
