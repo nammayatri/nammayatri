@@ -65,6 +65,8 @@ import Screens.Types as ST
 import Resource.Constants as RC
 import SessionCache
 import Helpers.API (getDeviceDetails)
+import MerchantConfig.Types as MCT
+import Common.RemoteConfig.Utils as CommonRC
 
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
@@ -391,7 +393,7 @@ getDriverInfoBT dummy = do
          cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
      if (not cityConfig.callDriverInfoPost)
         then getDriverInfoBTGet
-        else getDriverInfoBTPost cityConfig.enableAdvancedBooking
+        else getDriverInfoBTPost cityConfig
    
 getDriverInfoBTGet :: FlowBT String GetDriverInfoResp
 getDriverInfoBTGet = do
@@ -401,11 +403,13 @@ getDriverInfoBTGet = do
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
 
-getDriverInfoBTPost :: Boolean -> FlowBT String GetDriverInfoResp
-getDriverInfoBTPost enabled = do
+getDriverInfoBTPost :: MCT.CityConfig -> FlowBT String GetDriverInfoResp
+getDriverInfoBTPost cityConfig = do
     headers <- getHeaders' "" true
     let config = getAppConfig appConfig
-    (UpdateFeatureInDInfoResp resp1) <- withAPIResultBT ((EP.getDriverInfoV2 "" )) identity errorHandler (lift $ lift $ callAPI headers  (DriverInfoReq {isAdvancedBookingEnabled : Just enabled, isInteroperable: Just config.feature.enableInterOperability}))
+        isAdvancedBookingEnabled = cityConfig.enableAdvancedBooking
+        subsEnabledForCityUI = checkSubsV2EnabledForCity cityConfig
+    (UpdateFeatureInDInfoResp resp1) <- withAPIResultBT ((EP.getDriverInfoV2 "" )) identity errorHandler (lift $ lift $ callAPI headers  (DriverInfoReq {isAdvancedBookingEnabled : Just isAdvancedBookingEnabled, isInteroperable: Just config.feature.enableInterOperability, isCategoryLevelSubscriptionEnabled : subsEnabledForCityUI}))
     pure (resp1)
     where
         errorHandler (ErrorPayload errorPayload) =  do
@@ -425,7 +429,14 @@ getDriverInfoApi dummy = do
     --  _ <- pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) after effetct" (liftEffect $ (getValueToLocalStoreNew REGISTERATION_TOKEN))
      if (not cityConfig.callDriverInfoPost)
         then getDriverInfoApiGet
-        else getDriverInfoApiPost cityConfig.enableAdvancedBooking
+        else getDriverInfoApiPost cityConfig
+
+checkSubsV2EnabledForCity :: MCT.CityConfig -> Maybe Boolean 
+checkSubsV2EnabledForCity cityConfig =
+    let driverVehicle = getValueToLocalStore VEHICLE_VARIANT
+        driverCity = cityConfig.cityName
+        vehicleAndCityConfig = CommonRC.subscriptionsConfigVariantLevel driverCity driverVehicle
+    in vehicleAndCityConfig.enableSubsV2
 
 getDriverInfoApiGet :: Flow GlobalState (Either ErrorResponse GetDriverInfoResp)
 getDriverInfoApiGet = do
@@ -434,11 +445,13 @@ getDriverInfoApiGet = do
     where
         unwrapResponse (x) = x
 
-getDriverInfoApiPost :: Boolean -> Flow GlobalState (Either ErrorResponse GetDriverInfoResp)
-getDriverInfoApiPost enableAdvancedBooking = do
+getDriverInfoApiPost :: MCT.CityConfig -> Flow GlobalState (Either ErrorResponse GetDriverInfoResp)
+getDriverInfoApiPost cityConfig = do
     headers <- getHeaders "" true
     let config = getAppConfig appConfig
-    resp1 <- withAPIResult ((EP.getDriverInfoV2 "" )) unwrapResponse $ callAPI headers  (DriverInfoReq {isAdvancedBookingEnabled : Just enableAdvancedBooking, isInteroperable: Just config.feature.enableInterOperability})
+        enableAdvancedBooking = cityConfig.enableAdvancedBooking
+        subsEnabledForCityUI = checkSubsV2EnabledForCity cityConfig
+    resp1 <- withAPIResult ((EP.getDriverInfoV2 "" )) unwrapResponse $ callAPI headers  (DriverInfoReq {isAdvancedBookingEnabled : Just enableAdvancedBooking, isInteroperable: Just config.feature.enableInterOperability, isCategoryLevelSubscriptionEnabled : subsEnabledForCityUI})
     case resp1 of
         Right (UpdateFeatureInDInfoResp resp1) -> do
             let (GetDriverInfoResp resp ) = resp1

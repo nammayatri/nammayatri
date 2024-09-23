@@ -3694,7 +3694,8 @@ checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) =
       notOnRide = not getDriverInfoResp.onRide
       onlineMode = any ( _ == getDriverInfoResp.mode) [Just "ONLINE", Just "SILENT"]
       joinPlanBlockerConditions = (isNothing getDriverInfoResp.autoPayStatus && not isOnFreeTrial FunctionCall && getValueToLocalStore SHOW_SUBSCRIPTIONS == "true") || not getDriverInfoResp.subscribed
-      driverCityOrVehicleChanged = isJust getDriverInfoResp.autoPayStatus && (getDriverInfoResp.isSubscriptionVehicleCategoryChanged == Just true || getDriverInfoResp.isSubscriptionCityChanged == Just true)
+      justTrue flag = flag == Just true
+      driverCityOrVehicleChanged = isJust getDriverInfoResp.autoPayStatus && justTrue getDriverInfoResp.isSubscriptionEnabledAtCategoryLevel && justTrue getDriverInfoResp.subscriptionEnabledForVehicleCategory && (justTrue getDriverInfoResp.isSubscriptionVehicleCategoryChanged || justTrue getDriverInfoResp.isSubscriptionCityChanged)
       mkDriverOffline =
         when (notOnRide && onlineMode) do
           changeDriverStatus Offline

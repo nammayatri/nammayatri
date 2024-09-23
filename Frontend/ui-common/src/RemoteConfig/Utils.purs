@@ -232,7 +232,8 @@ defaultSubscriptionsConfigVariantLevelEntity =
     earnUptoAmout : Just 5000,
     yatriPlansPlaylist : Just "https://www.youtube.com/playlist?list=PL4AEiRR3V7kHcg2-fgzvDXDqWihZD9mTK",
     enableSubscriptionSupportPopup : Just false,
-    offerBannerConfig : Just defaultOfferBannerConfig
+    offerBannerConfig : Just defaultOfferBannerConfig,
+    enableSubsV2 : Just false
   }
 
 subscriptionsConfigVariantLevel :: String -> String -> SubscriptionConfigVariantLevelEntity

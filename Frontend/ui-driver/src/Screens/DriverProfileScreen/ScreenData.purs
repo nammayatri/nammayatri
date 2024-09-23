@@ -239,6 +239,8 @@ dummyDriverInfo = GetDriverInfoResp {
     , freeTrialDays : Nothing
     , freeTrialRides : Nothing
     , totalRidesTaken : Nothing
+    , subscriptionEnabledForVehicleCategory : Nothing
+    , isSubscriptionEnabledAtCategoryLevel : Nothing
 }
 
 organizationInfo :: OrganizationInfo
