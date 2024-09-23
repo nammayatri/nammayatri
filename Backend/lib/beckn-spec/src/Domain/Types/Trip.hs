@@ -48,6 +48,15 @@ data TripCategory
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (ToSchema)
 
+data PartyRole
+  = Initiator
+  | DeliveryRoleSender
+  | DeliveryRoleReceiver
+  deriving (Eq, Ord, Show, FromJSON, Generic, ToSchema)
+
+instance ToJSON PartyRole where
+  toJSON r = String (show r)
+
 data TripParty
   = DeliveryParty DeliveryParties
   deriving stock (Eq, Ord, Generic)

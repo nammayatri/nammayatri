@@ -27,6 +27,7 @@ import Domain.Types.Person
 import Domain.Types.Ride
 import qualified Domain.Types.RideRoute as RI
 import Domain.Types.TransporterConfig
+import qualified Domain.Types.Trip as Trip
 import Environment
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Maps
@@ -232,6 +233,9 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
           then TMaps.snapToRoadWithFallback shouldRectifyDistantPointsFailure merchantId merchantOpCityId
           else snapToRoadWithService
       enableNightSafety = not isEndRide
+      enableSafetyCheckWrtTripCategory = \case
+        Trip.Delivery _ -> False
+        _ -> True
   return $
     mkRideInterpolationHandler
       isEndRide
@@ -239,7 +243,8 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
       (\driverId tollCharges tollNames -> void (QRide.updateTollChargesAndNames driverId tollCharges tollNames))
       ( \driverId batchWaypoints -> do
           ride <- QRide.getActiveByDriverId driverId
-          routeDeviation <- updateDeviation transportConfig enableNightSafety ride batchWaypoints
+          let isSafetyCheckEnabledForTripCategory = maybe True (enableSafetyCheckWrtTripCategory . (.tripCategory)) ride
+          routeDeviation <- updateDeviation transportConfig (enableNightSafety && isSafetyCheckEnabledForTripCategory) ride batchWaypoints
           (tollRouteDeviation, isTollPresentOnCurrentRoute) <- updateTollRouteDeviation merchantOpCityId driverId ride batchWaypoints
           return (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute)
       )
