@@ -58,7 +58,9 @@ import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverFee as QDF
+import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.Invoice as QI
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
@@ -106,6 +108,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
         when (isSuccessStatus payoutStatus) do
           driverStats <- QDriverStats.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
           QDriverStats.updateTotalPayoutAmountPaid (driverStats.totalPayoutAmountPaid <&> (+ amount)) (Id payoutOrder.customerId)
+          updateDFeeStatusForPayoutRegistrationRefund payoutOrder.customerId
         case payoutOrder.entityName of
           Just DPayment.DRIVER_DAILY_STATS -> do
             forM_ (listToMaybe =<< payoutOrder.entityIds) $ \dailyStatsId -> do
@@ -159,6 +162,14 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
   where
     isSuccessStatus payoutStatus = payoutStatus `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]
 
+    updateDFeeStatusForPayoutRegistrationRefund driverId = do
+      driverInfo <- QDriverInfo.findById (Id driverId) >>= fromMaybeM DriverInfoNotFound
+      whenJust driverInfo.payoutRegistrationOrderId $ \orderId -> do
+        mbInvoice <- listToMaybe <$> QI.findById (Id orderId)
+        whenJust mbInvoice $ \invoice -> do
+          now <- getCurrentTime
+          QDF.updateStatus DDF.REFUNDED invoice.driverFeeId now
+
     callPayoutService driverId payoutConfig payoutOrderId = do
       driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrderId, mbExpand = payoutConfig.expand}
@@ -210,9 +221,9 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
   mbVehicle <- QV.findById personId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   payoutConfig <- CPC.findByPrimaryKey merchOpCity vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")
-  when payoutConfig.isPayoutEnabled $ do
-    redisLockDriverId <- Redis.tryLockRedis lockKey 10800
-    dailyStats_ <- if not redisLockDriverId then pure [] else QDailyStats.findAllByPayoutStatusAndReferralEarningsAndDriver DS.PendingForVpa personId
+  redisLockDriverId <- Redis.tryLockRedis lockKey 10800
+  when (payoutConfig.isPayoutEnabled && redisLockDriverId) do
+    dailyStats_ <- QDailyStats.findAllByPayoutStatusAndReferralEarningsAndDriver DS.PendingForVpa personId
     transporterConfig <- SCTC.findByMerchantOpCityId merchOpCity (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchOpCity.getId)
     localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
     let dailyStats = filter (\ds -> (ds.activatedValidRides <= transporterConfig.maxPayoutReferralForADay) && ds.merchantLocalDate /= (utctDay localTime)) dailyStats_ -- filter out the flagged payouts and current day payout earning
