@@ -106,7 +106,8 @@ data BookingAPIEntity = BookingAPIEntity
     isScheduled :: Bool,
     isAlreadyFav :: Maybe Bool,
     favCount :: Maybe Int,
-    cancellationReason :: Maybe BookingCancellationReasonAPIEntity
+    cancellationReason :: Maybe BookingCancellationReasonAPIEntity,
+    estimatedEndTimeRange :: Maybe DRide.EstimatedEndTimeRange
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -123,7 +124,11 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     isBookingUpdated :: Bool,
     bookingStatus :: BookingStatus,
     rideStatus :: Maybe DRide.RideStatus,
-    estimatedEndTimeRange :: Maybe DRide.EstimatedEndTimeRange
+    estimatedEndTimeRange :: Maybe DRide.EstimatedEndTimeRange,
+    driverArrivalTime :: Maybe UTCTime,
+    sosStatus :: Maybe DSos.SosStatus,
+    driversPreviousRideDropLocLat :: Maybe Double,
+    driversPreviousRideDropLocLon :: Maybe Double
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -279,7 +284,8 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
         cancellationReason = mbCancellationReason,
         isAlreadyFav = activeRide >>= (.isAlreadyFav),
         favCount = activeRide >>= (.favCount),
-        tripCategory = booking.tripCategory
+        tripCategory = booking.tripCategory,
+        estimatedEndTimeRange = activeRide >>= (.estimatedEndTimeRange)
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
@@ -409,12 +415,18 @@ buildBookingAPIEntity booking personId = do
     makeCancellationReasonAPIEntity :: BookingCancellationReason -> BookingCancellationReasonAPIEntity
     makeCancellationReasonAPIEntity BookingCancellationReason {..} = BookingCancellationReasonAPIEntity {..}
 
+--Note :- if you are adding and extra field in BookingStatusAPIEntity then add it in BookingAPIEntity as well
 buildBookingStatusAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m BookingStatusAPIEntity
 buildBookingStatusAPIEntity booking = do
   mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
-  rideStatus <- maybe (pure Nothing) (\ride -> pure $ Just ride.status) mbActiveRide
-  estimatedEndTimeRange <- maybe (pure Nothing) (\ride -> pure $ ride.estimatedEndTimeRange) mbActiveRide
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus estimatedEndTimeRange
+  let showPrevDropLocationLatLon = maybe False (.showDriversPreviousRideDropLoc) mbActiveRide
+      driversPreviousRideDropLocLat = if showPrevDropLocationLatLon then fmap (.lat) (mbActiveRide >>= (.driversPreviousRideDropLoc)) else Nothing
+      driversPreviousRideDropLocLon = if showPrevDropLocationLatLon then fmap (.lon) (mbActiveRide >>= (.driversPreviousRideDropLoc)) else Nothing
+      rideStatus = fmap (.status) mbActiveRide
+      estimatedEndTimeRange = mbActiveRide >>= (.estimatedEndTimeRange)
+      driverArrivalTime = mbActiveRide >>= (.driverArrivalTime)
+  sosStatus <- getActiveSos mbActiveRide booking.riderId
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus estimatedEndTimeRange driverArrivalTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
