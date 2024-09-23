@@ -1,23 +1,19 @@
 name: CI
 
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
     branches: ["main"]
   pull_request:
     branches: ["main"]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build:
     runs-on: x86_64-linux
-
+    outputs:
+      docker-image-name: ${{ steps.docker.outputs.image_name }}
     steps:
       - uses: actions/checkout@v4
-
       - uses: cachix/cachix-action@v15
         with:
           name: nammayatri
@@ -26,3 +22,35 @@ jobs:
 
       - name: Build all flake outputs
         run: om ci
+
+      - name: Docker tasks
+        id: docker
+        if: github.ref == 'refs/heads/main'
+        run: |
+          nix build .#dockerImage -o docker-image.tgz
+          echo "image_name=$(nix eval --raw .#dockerImage.imageName):$(nix eval --raw .#dockerImage.imageTag)" >> $GITHUB_OUTPUT
+
+      - name: Upload Docker image tarball
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: docker-image.tgz
+
+  push-docker:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Download Docker image tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+      - name: Load and push Docker image
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GITHUB_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker load < docker-image.tgz
+          docker push ${{ needs.build.outputs.docker-image-name }}
+          docker logout ghcr.io
