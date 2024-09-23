@@ -122,6 +122,7 @@ initData =
           , tripStartTime : Nothing
           , tripEndTime : Nothing
           , specialLocationTag : Nothing
+          , showMetroCoinEarnedBanner : false
           }
       , driverGotoState:
           { gotoCount: 0

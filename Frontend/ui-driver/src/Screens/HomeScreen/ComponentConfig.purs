@@ -1648,19 +1648,11 @@ getRideCompletedConfig state = let
 
     metroRideCoins :: Maybe Int
     metroRideCoins = 
-      case DA.find (\(API.CoinsEarned item) -> item.eventType == "MetroRideCompleted") state.data.coinsEarned of 
-        Just (API.CoinsEarned item) -> Just item.coins
-        Nothing -> 
-          let 
-            city = getValueToLocalStore DRIVER_LOCATION
-            metroRideCoinConfig = RemoteConfig.getMetroCoinsEvent city
-          in 
-            if fromMaybe 0 state.data.endRideData.actualRideDistance >= metroRideCoinConfig.minDistance && 
-              state.data.endRideData.serviceTier == "Auto" && 
-              DA.any (\tag -> DS.contains(DS.Pattern(tag)) (fromMaybe "" state.data.endRideData.specialLocationTag)) ["SureMetro", "SureWarriorMetro"] && 
-              metroRideCoinConfig.coins > 0 then 
-                Just metroRideCoinConfig.coins
-            else Nothing
+      let 
+        city = getValueToLocalStore DRIVER_LOCATION
+        metroRideCoinConfig = RemoteConfig.getMetroCoinsEvent city
+      in 
+        if state.data.endRideData.showMetroCoinEarnedBanner  &&  metroRideCoinConfig.coins > 0 then Just metroRideCoinConfig.coins else Nothing
 
 type TopPillConfig = {
   visible :: Boolean,

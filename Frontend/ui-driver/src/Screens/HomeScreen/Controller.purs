@@ -669,6 +669,8 @@ eval (Notification notificationType) state = do
     continueWithCmd newState [ pure if (not state.data.activeRide.notifiedCustomer) then NotifyAPI else AfterRender]
   else if (Array.any ( _ == notificationType) [show ST.CANCELLED_PRODUCT, show ST.DRIVER_ASSIGNMENT, show ST.RIDE_REQUESTED, show ST.DRIVER_REACHED, show ST.TRIP_STARTED, show ST.EDIT_LOCATION]) then do
       exit $ FcmNotification notificationType state{ props { specialZoneProps{ currentGeoHash = "" }} }
+  else if notificationType == show ST.METRO_COIN_SUCCESS && state.props.currentStage == ST.RideCompleted then 
+    continue state {data {endRideData {showMetroCoinEarnedBanner = true}}}
   else continue state
 
 eval CancelGoOffline state = do
