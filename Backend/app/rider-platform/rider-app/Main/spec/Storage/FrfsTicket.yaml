@@ -23,7 +23,7 @@ imports:
   City: Kernel.Types.Beckn.Context
   PartnerOrganization: Domain.Types.PartnerOrganization
   PartnerOrgTransaction: Domain.Types.PartnerOrganization
-  JourneySearchData: Lib.JourneyPlanner.Types
+  JourneySearchData: Lib.JourneyPlannerTypes
 
 FRFSSearch:
   tableName: frfs_search
@@ -51,7 +51,7 @@ FRFSSearch:
 
   toTType:
     journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
-    journeyId: Kernel.Prelude.fmap (Kernel.Types.Id.getId . (.journeyId))|I
+    journeyId: Kernel.Prelude.fmap (.journeyId)|I
     agency: (journeyLegInfo >>= (.agency))|E
     skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
@@ -504,3 +504,4 @@ FRFSConfig:
     isEventOngoing: "false"
     freeTicketInterval: "9999"
     maxFreeTicketCashback: "0"
+

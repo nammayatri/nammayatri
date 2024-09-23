@@ -30,7 +30,7 @@ findByStationCode code = do findOneWithKV [Se.Is Beam.code $ Se.Eq code]
 
 getTicketPlacesByMerchantOperatingCityIdAndVehicleType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Station.FRFSVehicleType -> m [Domain.Types.Station.Station])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Station.FRFSVehicleType -> m ([Domain.Types.Station.Station]))
 getTicketPlacesByMerchantOperatingCityIdAndVehicleType merchantOperatingCityId vehicleType = do
   findAllWithKV
     [ Se.And
@@ -39,7 +39,7 @@ getTicketPlacesByMerchantOperatingCityIdAndVehicleType merchantOperatingCityId v
         ]
     ]
 
-getTicketPlacesByVehicleType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Station.FRFSVehicleType -> m [Domain.Types.Station.Station])
+getTicketPlacesByVehicleType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Station.FRFSVehicleType -> m ([Domain.Types.Station.Station]))
 getTicketPlacesByVehicleType vehicleType = do findAllWithKV [Se.Is Beam.vehicleType $ Se.Eq vehicleType]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe Domain.Types.Station.Station))

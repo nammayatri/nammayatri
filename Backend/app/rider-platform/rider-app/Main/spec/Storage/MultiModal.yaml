@@ -6,6 +6,9 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   EncryptedHashedField: Kernel.External.Encryption
   Currency: Kernel.Types.Common
+  Location: Domain.Types.Location
+  Person: Domain.Types.Person
+  JourneySearchData: Lib.JourneyPlannerTypes
 
 # add journeyLegId (Maybe (Id JourneyLeg)) in SearchRequest
 Journey:
@@ -20,6 +23,8 @@ Journey:
     estimatedDuration: Maybe Seconds
     modes: "[TravelMode]"
     convenienceCost: Int
+    totalLegs: Int
+    legsDone: Int
 
   beamFields:
     fare:
@@ -47,6 +52,16 @@ Journey:
   constraints:
     id: PrimaryKey
     searchRequestId: "!SecondaryKey"
+
+  queries:
+    updateEstimatedFare:
+      kvFunction: updateWithKV
+      params: [estimatedFare]
+      where: id
+    updateNumberOfLegs:
+      kvFunction: updateWithKV
+      params: [legsDone]
+      where: id
 
 #passenger details
 JourneyBooking:
@@ -98,3 +113,63 @@ PassengerDetails:
     firstName: Text
     lastName: Maybe Text
     age: Maybe Int
+
+WalkLegMultimodal:
+  tableName: walk_leg_multimodal
+
+  derives: "Generic, Show"
+
+  fields:
+    id: Id WalkLegMultimodal
+    startTime: UTCTime
+    # validTill: UTCTime
+    riderId: Id Person
+    fromLocation: Location
+    toLocation: Maybe Location
+    estimatedDistance: Distance
+    estimatedDuration: Maybe Seconds
+    # clientDevice: Maybe Device
+    journeyLegInfo: Maybe JourneySearchData
+
+  sqlType:
+    toLocationId : character varying(36)
+    fromLocationId: character varying(36)
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+  beamFields:
+    estimatedDistance:
+      estimatedDistance: HighPrecDistance
+      distanceUnit: DistanceUnit
+    fromLocation:
+      fromLocationId: Maybe Text
+    toLocation:
+      toLocationId: Maybe Text
+    journeyLegInfo:
+      journeyLegOrder: Maybe Int
+      journeyId: Maybe Text
+      agency: Maybe Text
+      skipBooking: Maybe Bool
+      convenienceCost: Maybe Int
+
+  fromTType:
+    estimatedDistance: (Kernel.Types.Common.Distance estimatedDistance distanceUnit)|E
+    fromLocation: Storage.Queries.Transformers.MultiModal.getFromLocation id|EM
+    toLocation: Storage.Queries.Transformers.MultiModal.getToLocation id|EM
+    journeyLegInfo: Storage.Queries.Transformers.MultiModal.mkJourneyLegInfo
+
+  toTType:
+    estimatedDistance: ((.value))|I
+    distanceUnit: ((.unit))|I
+    fromLocationId: (Just $ Kernel.Types.Id.getId ((.id) fromLocation))|E
+    toLocationId: (Kernel.Types.Id.getId <$> (toLocation <&> (.id)))|E
+    journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
+    journeyId: Kernel.Prelude.fmap (.journeyId)|I
+    agency: (journeyLegInfo >>= (.agency))|E
+    skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
+    convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
+
+

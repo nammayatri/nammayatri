@@ -29,6 +29,6 @@ data Station = Station
 
 data FRFSVehicleType = METRO | BUS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSVehicleType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSVehicleType))
 
-$(mkHttpInstancesForEnum ''FRFSVehicleType)
+$(mkHttpInstancesForEnum (''FRFSVehicleType))

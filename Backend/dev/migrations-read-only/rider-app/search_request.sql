@@ -111,3 +111,28 @@ ALTER TABLE atlas_app.search_request ADD COLUMN journey_leg_order integer ;
 ALTER TABLE atlas_app.search_request ADD COLUMN journey_id text ;
 ALTER TABLE atlas_app.search_request ADD COLUMN convenience_cost integer ;
 ALTER TABLE atlas_app.search_request ADD COLUMN agency text ;
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

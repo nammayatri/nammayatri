@@ -14,17 +14,17 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data StationT f = StationT
-  { address :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    code :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
-    lat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
-    lon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    name :: B.C f Kernel.Prelude.Text,
-    vehicleType :: B.C f Domain.Types.Station.FRFSVehicleType,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { address :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    code :: (B.C f Kernel.Prelude.Text),
+    id :: (B.C f Kernel.Prelude.Text),
+    lat :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
+    lon :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    name :: (B.C f Kernel.Prelude.Text),
+    vehicleType :: (B.C f Domain.Types.Station.FRFSVehicleType),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -34,6 +34,6 @@ instance B.Table StationT where
 
 type Station = StationT Identity
 
-$(enableKVPG ''StationT ['id] [['code]])
+$(enableKVPG (''StationT) [('id)] [[('code)]])
 
-$(mkTableInstances ''StationT "station")
+$(mkTableInstances (''StationT) "station")

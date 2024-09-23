@@ -49,6 +49,7 @@ import Kernel.Types.Error (MerchantError (MerchantOperatingCityNotFound))
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (mkPrice)
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
+import qualified Lib.JourneyPlannerTypes as JPT
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
@@ -57,6 +58,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import Servant hiding (throwError)
 import qualified SharedLogic.CallFRFSBPP as CallBPP
+import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified SharedLogic.FRFSUtils as Utils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
@@ -72,6 +74,7 @@ import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Station as QStation
 import Tools.Auth
@@ -127,7 +130,7 @@ postFrfsSearchHandler (mbPersonId, merchantId) vehicleType_ FRFSSearchAPIReq {..
             riderId = personId,
             partnerOrgTransactionId = mbPOrgTxnId,
             partnerOrgId = mbPOrgId,
-            journeyLegInfo = Nothing,
+            journeyLegInfo = journeySearchData,
             ..
           }
   QFRFSSearch.create searchReq
@@ -144,6 +147,9 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
   search <- QFRFSSearch.findById searchId_ >>= fromMaybeM (InvalidRequest "Invalid search id")
   unless (personId == search.riderId) $ throwError AccessDenied
   (quotes :: [DFRFSQuote.FRFSQuote]) <- B.runInReplica $ QFRFSQuote.findAllBySearchId searchId_
+
+  let requiredQuote = filterQuotes quotes
+  SLCF.createFares search.journeyLegInfo requiredQuote.price
 
   mapM
     ( \quote -> do
@@ -163,6 +169,9 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
             }
     )
     quotes
+
+filterQuotes :: [DFRFSQuote.FRFSQuote] -> DFRFSQuote.FRFSQuote
+filterQuotes quotes = head quotes
 
 -- /{jouneryId}/confirm
 -- => create JourneyBooking

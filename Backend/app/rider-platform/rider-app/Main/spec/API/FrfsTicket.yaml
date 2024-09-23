@@ -19,6 +19,7 @@ imports:
   City: Kernel.Types.Beckn.Context
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  JourneySearchData: Lib.JourneyPlannerTypes
 
 module: FRFSTicketService
 types:
@@ -26,6 +27,7 @@ types:
     fromStationCode: Text
     toStationCode: Text
     quantity: Int
+    journeySearchData: Maybe JourneySearchData
 
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch
