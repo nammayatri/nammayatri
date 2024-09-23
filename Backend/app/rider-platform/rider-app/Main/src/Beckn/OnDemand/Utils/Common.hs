@@ -354,6 +354,7 @@ mapTextToVehicle = \case
   "TWO_WHEELER" -> Just Enums.MOTORCYCLE
   "MOTORCYCLE" -> Just Enums.MOTORCYCLE
   "AMBULANCE" -> Just Enums.AMBULANCE
+  "TRUCK" -> Just Enums.TRUCK
   _ -> Nothing
 
 getServiceTierType :: Spec.Item -> Maybe DVST.ServiceTierType
