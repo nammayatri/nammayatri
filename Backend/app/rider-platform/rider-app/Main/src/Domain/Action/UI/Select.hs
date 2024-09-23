@@ -28,6 +28,7 @@ module Domain.Action.UI.Select
 where
 
 import Control.Applicative ((<|>))
+import Control.Monad.Extra (anyM)
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
@@ -199,13 +200,13 @@ select2 personId estimateId req@DSelectReq {..} = do
     throwError SearchRequestExpired
   when (maybe False Trip.isDeliveryTrip (DEstimate.tripCategory estimate)) $ do
     validDeliveryDetails <- deliveryDetails & fromMaybeM (InvalidRequest "Delivery details not found for trip category Delivery")
+    makeDeliverySearchParties searchRequestId searchRequest.merchantId validDeliveryDetails
     let senderLocationId = searchRequest.fromLocation.id
     receiverLocationId <- (searchRequest.toLocation <&> (.id)) & fromMaybeM (InvalidRequest "Receiver location not found for trip category Delivery")
     let senderLocationAddress = validDeliveryDetails.senderDetails.address
         receiverLocationAddress = validDeliveryDetails.receiverDetails.address
     QLoc.updateInstructionsAndExtrasById senderLocationAddress.instructions senderLocationAddress.extras senderLocationId
     QLoc.updateInstructionsAndExtrasById receiverLocationAddress.instructions receiverLocationAddress.extras receiverLocationId
-    makeDeliverySearchParties searchRequestId searchRequest.merchantId validDeliveryDetails
     QSearchRequest.updateInitiatedBy (Just $ Trip.DeliveryParty validDeliveryDetails.initiatedAs) searchRequestId
 
   QSearchRequest.updateAutoAssign searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2)
@@ -278,6 +279,9 @@ makeDeliverySearchParties :: Id DSearchReq.SearchRequest -> Id DM.Merchant -> DT
 makeDeliverySearchParties searchRequestId merchantId deliveryDetails = do
   senderPartyId <- Reg.createPersonWithPhoneNumber merchantId (deliveryDetails.senderDetails.phoneNumber) (deliveryDetails.senderDetails.countryCode)
   receiverPartyId <- Reg.createPersonWithPhoneNumber merchantId (deliveryDetails.receiverDetails.phoneNumber) (deliveryDetails.receiverDetails.countryCode)
+  -- restrict here only as why send request to driver and restrict later during booking
+  isActiveBookingPresentForAnyParty <- anyM (\partyId -> isJust <$> QBooking.findLatestSelfAndPartyBookingByRiderId partyId) [senderPartyId, receiverPartyId]
+  when isActiveBookingPresentForAnyParty $ throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT_FOR_OTHER_INVOLVED_PARTIES"
   senderSpId <- Id <$> generateGUID
   receiverSpId <- Id <$> generateGUID
   now <- getCurrentTime

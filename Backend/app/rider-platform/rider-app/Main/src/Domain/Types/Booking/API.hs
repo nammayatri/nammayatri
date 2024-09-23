@@ -203,7 +203,8 @@ data DeliveryBookingAPIDetails = DeliveryBookingAPIDetails
     estimatedDistance :: HighPrecMeters,
     estimatedDistanceWithUnit :: Distance,
     senderDetails :: DeliveryPersonDetailsAPIEntity,
-    receiverDetails :: DeliveryPersonDetailsAPIEntity
+    receiverDetails :: DeliveryPersonDetailsAPIEntity,
+    requestorPartyRoles :: [Trip.PartyRole]
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -215,6 +216,7 @@ data DeliveryPersonDetailsAPIEntity = DeliveryPersonDetailsAPIEntity
 
 makeBookingAPIEntity ::
   (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) =>
+  Id Person.Person ->
   Booking ->
   Maybe DRide.Ride ->
   [DRide.Ride] ->
@@ -230,8 +232,8 @@ makeBookingAPIEntity ::
   Bool ->
   Maybe BookingCancellationReasonAPIEntity ->
   m BookingAPIEntity
-makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone paymentMethodId hasDisability hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon mbCancellationReason = do
-  bookingDetails <- mkBookingAPIDetails booking
+makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone paymentMethodId hasDisability hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon mbCancellationReason = do
+  bookingDetails <- mkBookingAPIDetails booking requesterId
   let providerNum = fromMaybe "+91" bppDetails.supportNumber
   return $
     BookingAPIEntity
@@ -295,15 +297,15 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
       endTime <- ride.rideEndTime
       return $ nominalDiffTimeToSeconds $ diffUTCTime endTime startTime
 
-mkBookingAPIDetails :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Booking -> m BookingAPIDetails
-mkBookingAPIDetails booking = case booking.bookingDetails of
+mkBookingAPIDetails :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Booking -> Id Person.Person -> m BookingAPIDetails
+mkBookingAPIDetails booking requesterId = case booking.bookingDetails of
   OneWayDetails details -> return $ OneWayAPIDetails . mkOneWayAPIDetails $ details
   RentalDetails details -> return $ RentalAPIDetails . mkRentalAPIDetails $ details
   DriverOfferDetails details -> return $ DriverOfferAPIDetails . mkOneWayAPIDetails $ details
   OneWaySpecialZoneDetails details -> return $ OneWaySpecialZoneAPIDetails . mkOneWaySpecialZoneAPIDetails $ details
   InterCityDetails details -> return $ InterCityAPIDetails . mkInterCityAPIDetails $ details
   AmbulanceDetails details -> return $ AmbulanceAPIDetails . mkAmbulanceAPIDetails $ details
-  DeliveryDetails details -> DeliveryAPIDetails <$> (mkDeliveryAPIDetails booking.id details)
+  DeliveryDetails details -> DeliveryAPIDetails <$> mkDeliveryAPIDetails details
   where
     mkOneWayAPIDetails OneWayBookingDetails {..} =
       OneWayBookingAPIDetails
@@ -337,9 +339,9 @@ mkBookingAPIDetails booking = case booking.bookingDetails of
           estimatedDistanceWithUnit = distance
         }
     -- check later if sender info required --
-    mkDeliveryAPIDetails :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Id Booking -> DeliveryBookingDetails -> m DeliveryBookingAPIDetails
-    mkDeliveryAPIDetails bookingId (DeliveryBookingDetails {..}) = do
-      allBookingParties <- QBPL.findAllByBookingId bookingId
+    mkDeliveryAPIDetails :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => DeliveryBookingDetails -> m DeliveryBookingAPIDetails
+    mkDeliveryAPIDetails (DeliveryBookingDetails {..}) = do
+      allBookingParties <- QBPL.findAllByBookingId booking.id
       senderParty <- fromMaybeM (InternalError "No sender party found") $ find (\party -> party.partyType == Trip.DeliveryParty Trip.Sender) allBookingParties
       receiverParty <- fromMaybeM (InternalError "No receiver party found") $ find (\party -> party.partyType == Trip.DeliveryParty Trip.Receiver) allBookingParties
       senderPerson <- QP.findById senderParty.partyId >>= fromMaybeM (InternalError "No sender person found for delivery")
@@ -348,6 +350,11 @@ mkBookingAPIDetails booking = case booking.bookingDetails of
       encReceiverPhoneNumber <- fromMaybeM (InternalError "No receiver phone number found") receiverPerson.mobileNumber
       decSenderPhoneNumber <- decrypt encSenderPhoneNumber
       decReceiverPhoneNumber <- decrypt encReceiverPhoneNumber
+      -- accumulate all the party roles for this requestorId --
+      let requestorPartyRoles =
+            [Trip.Initiator | requesterId == booking.riderId]
+              ++ [Trip.DeliveryRoleSender | requesterId == senderParty.partyId]
+              ++ [Trip.DeliveryRoleReceiver | requesterId == receiverParty.partyId]
       return $
         DeliveryBookingAPIDetails
           { toLocation = SLoc.makeLocationAPIEntity toLocation,
@@ -410,7 +417,7 @@ buildBookingAPIEntity booking personId = do
     if booking.status == CANCELLED
       then QBCR.findByRideBookingId booking.id
       else return Nothing
-  makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId person.hasDisability False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon (makeCancellationReasonAPIEntity <$> mbCancellationReason)
+  makeBookingAPIEntity personId booking mbActiveRide (maybeToList mbRide) estimatedFareBreakups fareBreakups mbExoPhone booking.paymentMethodId person.hasDisability False mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon (makeCancellationReasonAPIEntity <$> mbCancellationReason)
   where
     makeCancellationReasonAPIEntity :: BookingCancellationReason -> BookingCancellationReasonAPIEntity
     makeCancellationReasonAPIEntity BookingCancellationReason {..} = BookingCancellationReasonAPIEntity {..}

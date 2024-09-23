@@ -142,6 +142,8 @@ confirm DConfirmReq {..} = do
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
   (booking, bookingParties) <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled
+  -- check also for the booking parties
+  checkIfActiveRidePresentForParties bookingParties
   when isScheduled $ do
     let scheduledRideReminderTime = addUTCTime (- (merchant.scheduleRideBufferTime + 10 * 60)) booking.startTime
     let scheduleAfter = diffUTCTime scheduledRideReminderTime now
@@ -199,6 +201,12 @@ confirm DConfirmReq {..} = do
       when (UEstimate.isCancelled estimate.status) $ throwError $ EstimateCancelled estimate.id.getId
       when (driverOffer.validTill < now) $ throwError $ QuoteExpired quote.id.getId
       pure driverOffer.bppQuoteId
+
+    checkIfActiveRidePresentForParties :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [DBPL.BookingPartiesLink] -> m ()
+    checkIfActiveRidePresentForParties bookingParties = do
+      let partyIds = map (.partyId) bookingParties
+      isActiveBookingPresentForAnyParty <- anyM (\partyId -> isJust <$> QRideB.findLatestSelfAndPartyBookingByRiderId partyId) partyIds
+      when isActiveBookingPresentForAnyParty $ throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT_FOR_OTHER_INVOLVED_PARTIES"
 
     makeDeliveryDetails :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => DRB.Booking -> [DBPL.BookingPartiesLink] -> m DConfirmResDetails
     makeDeliveryDetails booking bookingParties = do
