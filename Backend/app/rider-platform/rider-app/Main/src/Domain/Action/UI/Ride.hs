@@ -349,6 +349,7 @@ editLocation rideId (personId, merchantId) req = do
               }
       becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
       void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
+      QRB.updateIsBookingUpdated True booking.id
       pure $ EditLocationResp (Just bookingUpdateReq.id) "Success"
     (_, _) -> throwError PickupOrDropLocationNotFound
 

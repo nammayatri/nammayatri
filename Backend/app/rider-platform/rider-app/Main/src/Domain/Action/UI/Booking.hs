@@ -188,7 +188,7 @@ processStop bookingId loc merchantId isEdit = do
   locationMapping <- buildLocationMapping location.id booking.id.getId isEdit (Just booking.merchantId) (Just booking.merchantOperatingCityId) prevOrder
   QL.create location
   QLM.create locationMapping
-  QRB.updateStop booking (Just location)
+  QRB.updateStop booking (Just location) (Just True)
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   let details =
         if isEdit
