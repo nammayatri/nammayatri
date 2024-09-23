@@ -17,9 +17,11 @@ module SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout where
 import Data.Time (addDays, utctDay)
 import qualified Domain.Action.UI.Payout as DAP
 import qualified Domain.Types.DailyStats as DS
+import Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import Domain.Types.PayoutConfig
+import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payout.Interface as Juspay
@@ -44,6 +46,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DailyStatsExtra as QDSE
+import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QV
@@ -148,11 +151,15 @@ callPayout DS.DailyStats {..} payoutVpa payoutConfigList statusForRetry = do
             QDailyStats.updatePayoutStatusById DS.Processing id
             QDailyStats.updatePayoutOrderId (Just uid) id
           phoneNo <- mapM decrypt person.mobileNumber
+          mbDriverFee <- QDF.findLatestByFeeTypeAndStatusWithServiceName DF.PAYOUT_REGISTRATION [DF.CLEARED] driverId DPlan.YATRI_SUBSCRIPTION
           let entityName = DLP.DRIVER_DAILY_STATS
+              registrationFee = mbDriverFee <&> (.platformFee)
+              registrationAmount = sum $ catMaybes [registrationFee <&> (.cgst), registrationFee <&> (.sgst), registrationFee <&> (.fee)]
+              refundRegistrationAmt = if ((.status) <$> mbDriverFee) == Just DF.CLEARED then registrationAmount else 0
               createPayoutOrderReq =
                 Juspay.CreatePayoutOrderReq
                   { orderId = uid,
-                    amount = referralEarnings,
+                    amount = referralEarnings + refundRegistrationAmt,
                     customerPhone = fromMaybe "6666666666" phoneNo, -- dummy no.
                     customerEmail = fromMaybe "dummymail@gmail.com" person.email, -- dummy mail
                     customerId = driverId.getId,
@@ -163,6 +170,9 @@ callPayout DS.DailyStats {..} payoutVpa payoutConfigList statusForRetry = do
                   }
           if referralEarnings <= payoutConfig.thresholdPayoutAmountPerPerson
             then do
+              whenJust mbDriverFee $ \driverFee -> do
+                now <- getCurrentTime
+                QDF.updateStatus DF.REFUND_PENDING driverFee.id now
               logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show referralEarnings <> " | orderId: " <> show uid
               let serviceName = DEMSC.PayoutService PT.Juspay
                   createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId serviceName
