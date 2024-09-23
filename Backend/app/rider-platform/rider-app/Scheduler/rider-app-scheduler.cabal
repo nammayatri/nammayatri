@@ -96,6 +96,7 @@ library
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , sessionizer-metrics
     , singletons
     , stm
     , string-conversions

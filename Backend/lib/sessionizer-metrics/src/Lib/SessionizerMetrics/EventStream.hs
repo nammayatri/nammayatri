@@ -40,7 +40,8 @@ triggerEvent event = do
         let merchantId = event.merchantId
         let eventType = show event.eventType
         let deploymentVersion = event.deploymentVersion
-        fork "updating in prometheus" $ incrementCounter merchantId eventType deploymentVersion
+        fork "updating in prometheus" $
+          incrementEventRequestCounter (eventRequestCounter . (.eventCounterMetrics)) merchantId eventType deploymentVersion
       _ -> logDebug "Default stream"
 
 createEvent :: (MonadReader r1 m, MonadGuid m, MonadTime m, HasField "getDeploymentVersion" r2 Text, HasField "version" r1 r2) => Maybe Text -> Text -> EventType -> Service -> EventTriggeredBy -> Maybe p -> Maybe Text -> Maybe Text -> m (Event p)

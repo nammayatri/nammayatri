@@ -19,10 +19,13 @@ import Domain.Types.CallStatus as DCallStatus hiding (rideId)
 import qualified Domain.Types.Ride as Ride
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics (DeploymentVersion)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
+import Lib.SessionizerMetrics.Prometheus.Internal
+import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.JobScheduler hiding (ScheduledRideNotificationsToRiderJobData (..))
 import qualified Storage.CachedQueries.Merchant as SMerchant
@@ -36,6 +39,8 @@ checkExotelCallStatusAndNotifyBPP ::
     EsqDBFlow m r,
     SchedulerFlow r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["version" ::: DeploymentVersion],
+    EventStreamFlow m r,
     CoreMetrics m
   ) =>
   Job 'CheckExotelCallStatusAndNotifyBPP ->
@@ -47,16 +52,18 @@ checkExotelCallStatusAndNotifyBPP Job {id, jobInfo} = withLogTag ("JobId-" <> id
   let merchantId = jobData.merchantId
   callStatus <- QCallStatus.findOneByRideId (Just $ getId rideId) >>= fromMaybeM CallStatusDoesNotExist
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  handleCallStatus callStatus bppRideId merchant.driverOfferApiKey merchant.driverOfferBaseUrl
+  handleCallStatus callStatus bppRideId merchant.driverOfferApiKey merchant.driverOfferBaseUrl (show merchant.id)
 
 handleCallStatus ::
-  (EncFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], MonadFlow m, CoreMetrics m) =>
+  (EncFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], MonadFlow m, CoreMetrics m, EventStreamFlow m r) =>
   DCallStatus.CallStatus ->
   Id Ride.BPPRide ->
   Text ->
   BaseUrl ->
+  Text ->
   m ExecutionResult
-handleCallStatus callStatus bppRideId driverOfferApiKey driverOfferBaseUrl = do
+handleCallStatus callStatus bppRideId driverOfferApiKey driverOfferBaseUrl merchantId = do
+  deploymentVersion <- asks (.version)
   case callStatus.callAttempt of
     Just DCallStatus.Resolved ->
       return Complete
@@ -64,6 +71,7 @@ handleCallStatus callStatus bppRideId driverOfferApiKey driverOfferBaseUrl = do
       return Complete
     Just DCallStatus.Attempted -> do
       -- attempted to call or unregistered Call Stuck
+      fork "updating in prometheus" $ incrementCallAttemptCounter (callAttemptCounter . (.eventCounterMetrics)) merchantId "call_attempt" deploymentVersion.getDeploymentVersion
       void $ CallBPPInternal.callCustomerFCM driverOfferApiKey driverOfferBaseUrl (getId bppRideId)
       return Complete
     Just DCallStatus.Pending -> do

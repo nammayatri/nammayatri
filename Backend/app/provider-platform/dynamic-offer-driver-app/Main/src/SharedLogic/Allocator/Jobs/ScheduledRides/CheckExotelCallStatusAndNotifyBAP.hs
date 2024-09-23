@@ -23,10 +23,13 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (runInReplica)
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Tools.Metrics.CoreMetrics (DeploymentVersion)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
+import Lib.SessionizerMetrics.Prometheus.Internal
+import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import SharedLogic.Allocator
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified Storage.Queries.Booking as QBooking
@@ -47,7 +50,9 @@ checkExotelCallStatusAndNotifyBAP ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     EsqDBReplicaFlow m r,
-    HasField "esqDBReplicaEnv" r EsqDBEnv
+    HasField "esqDBReplicaEnv" r EsqDBEnv,
+    HasFlowEnv m r '["version" ::: DeploymentVersion],
+    EventStreamFlow m r
   ) =>
   Job 'CheckExotelCallStatusAndNotifyBAP ->
   m ExecutionResult
@@ -69,12 +74,14 @@ handleCallStatus ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     EsqDBReplicaFlow m r,
-    HasField "esqDBReplicaEnv" r EsqDBEnv
+    HasField "esqDBReplicaEnv" r EsqDBEnv,
+    EventStreamFlow m r
   ) =>
   DCallStatus.CallStatus ->
   Id DRide.Ride ->
   m ExecutionResult
 handleCallStatus callStatus rideId = do
+  deploymentVersion <- asks (.version)
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound $ getId rideId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound $ getId ride.bookingId)
   case callStatus.callAttempt of
@@ -83,6 +90,7 @@ handleCallStatus callStatus rideId = do
     Just DCallStatus.Failed -> do
       return Complete
     Just DCallStatus.Attempted -> do
+      fork "updating in prometheus" $ incrementCallAttemptCounter (callAttemptCounter . (.eventCounterMetrics)) (show booking.providerId) "call_attempt" deploymentVersion.getDeploymentVersion
       -- attempted to call or unregistered Call Stuck
       CallBAP.sendPhoneCallRequestUpdateToBAP booking ride
       return Complete

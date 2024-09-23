@@ -205,7 +205,7 @@ data AppEnv = AppEnv
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
-    eventRequestCounter :: EventCounterMetric,
+    eventCounterMetrics :: EventCountersContainer,
     incomingAPIResponseTimeout :: Int,
     maxShards :: Int,
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
@@ -238,7 +238,7 @@ buildAppEnv cfg@AppCfg {..} = do
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
-  eventRequestCounter <- registerEventRequestCounterMetric
+  eventCounterMetrics <- registerEventRequestCounterMetric
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
