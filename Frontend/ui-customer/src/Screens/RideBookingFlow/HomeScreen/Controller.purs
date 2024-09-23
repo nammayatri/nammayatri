@@ -1474,7 +1474,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.OnNavigate mode l
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ShowDirections lat lon)) state = 
   case state.props.zoneType.sourceTag , state.data.driverInfoCardState.addressWard, state.data.driverInfoCardState.spLocationName of 
-        ST.AIRPORT, Just ward, Just spLocationName -> exit $ ExitToPickupInstructions state lat lon ward spLocationName
+        _ , Just ward, Just spLocationName | elem state.props.zoneType.sourceTag [ST.AIRPORT, ST.SPECIAL_PICKUP] -> exit $ ExitToPickupInstructions state lat lon ward spLocationName
         _ , _, _ -> continueWithCmd state [pure $ DriverInfoCardActionController (DriverInfoCardController.OnNavigate ST.WALK lat lon)]
   
 eval (ZoneTimerExpired (PopUpModal.OnButton2Click)) state = continue state{props{zoneOtpExpired = false}}
@@ -2165,6 +2165,7 @@ eval (GetRideConfirmation (RideBookingRes response)) state = do
                                 , isInApp = true
                                 , isSpecialZone = isSpecialZoneOtpRide
                                 , isOtpRideFlow = isJust otpCode
+                                , zoneType = getSpecialTag response.specialLocationTag
                                 }
                         , data { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.fareProductType == ST.ONE_WAY_SPECIAL_ZONE || isJust otpCode) state.data.driverInfoCardState }
                         }
