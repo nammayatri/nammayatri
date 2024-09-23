@@ -19,7 +19,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import Kernel.Utils.TH
-import qualified Lib.JourneyPlanner.Types
+import qualified Lib.JourneyPlannerTypes
 import qualified Tools.Beam.UtilsTH
 
 data SearchRequest = SearchRequest
@@ -46,7 +46,7 @@ data SearchRequest = SearchRequest
     initiatedBy :: Kernel.Prelude.Maybe Domain.Types.Trip.TripParty,
     isAdvanceBookingEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDashboardRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    journeyLegInfo :: Kernel.Prelude.Maybe Lib.JourneyPlanner.Types.JourneySearchData,
+    journeyLegInfo :: Kernel.Prelude.Maybe Lib.JourneyPlannerTypes.JourneySearchData,
     language :: Kernel.Prelude.Maybe Kernel.External.Maps.Language,
     maxDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -62,16 +62,16 @@ data SearchRequest = SearchRequest
     totalRidesCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     validTill :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
 
 data RiderPreferredOption = Rental | OneWay | InterCity | Ambulance | Delivery deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RiderPreferredOption)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RiderPreferredOption))
 
-$(mkHttpInstancesForEnum ''RiderPreferredOption)
+$(mkHttpInstancesForEnum (''RiderPreferredOption))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchRequestStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SearchRequestStatus))
 
-$(mkHttpInstancesForEnum ''SearchRequestStatus)
+$(mkHttpInstancesForEnum (''SearchRequestStatus))

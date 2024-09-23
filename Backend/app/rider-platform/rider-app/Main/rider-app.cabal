@@ -238,12 +238,14 @@ library
       Domain.Types.LocationAddress
       Domain.Types.UtilsTH
       Environment
+      Lib.JourneyPlannerTypes
       Lib.Mesh
       SharedLogic.Cac
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
       SharedLogic.CallFRFSBPP
       SharedLogic.Confirm
+      SharedLogic.CreateFareForMultiModal
       SharedLogic.FRFSUtils
       SharedLogic.GoogleTranslate
       SharedLogic.JobScheduler
@@ -369,6 +371,7 @@ library
       Storage.Queries.Transformers.MerchantMessage
       Storage.Queries.Transformers.MerchantPaymentMethod
       Storage.Queries.Transformers.MerchantServiceConfig
+      Storage.Queries.Transformers.MultiModal
       Storage.Queries.Transformers.PartnerOrgConfig
       Storage.Queries.Transformers.Person
       Storage.Queries.Transformers.Quote
@@ -484,8 +487,8 @@ library
       Domain.Types.PartnerOrganization
       Domain.Types.PartnerOrgConfig
       Domain.Types.PartnerOrgStation
-      Domain.Types.PayoutConfig
       Domain.Types.PassengerDetails
+      Domain.Types.PayoutConfig
       Domain.Types.Person
       Domain.Types.PersonDefaultEmergencyNumber
       Domain.Types.PersonDisability
@@ -524,6 +527,7 @@ library
       Domain.Types.TripTerms
       Domain.Types.ValueAddNP
       Domain.Types.VehicleConfig
+      Domain.Types.WalkLegMultimodal
       Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
@@ -580,8 +584,8 @@ library
       Storage.Beam.PartnerOrganization
       Storage.Beam.PartnerOrgConfig
       Storage.Beam.PartnerOrgStation
-      Storage.Beam.PayoutConfig
       Storage.Beam.PassengerDetails
+      Storage.Beam.PayoutConfig
       Storage.Beam.Person
       Storage.Beam.PersonDefaultEmergencyNumber
       Storage.Beam.PersonDisability
@@ -619,6 +623,7 @@ library
       Storage.Beam.TripTerms
       Storage.Beam.ValueAddNP
       Storage.Beam.VehicleConfig
+      Storage.Beam.WalkLegMultimodal
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.SavedReqLocation
@@ -714,8 +719,8 @@ library
       Storage.Queries.PartnerOrganization
       Storage.Queries.PartnerOrgConfig
       Storage.Queries.PartnerOrgStation
-      Storage.Queries.PayoutConfig
       Storage.Queries.PassengerDetails
+      Storage.Queries.PayoutConfig
       Storage.Queries.Person
       Storage.Queries.PersonDefaultEmergencyNumber
       Storage.Queries.PersonDisability
@@ -753,6 +758,7 @@ library
       Storage.Queries.TripTerms
       Storage.Queries.ValueAddNP
       Storage.Queries.VehicleConfig
+      Storage.Queries.WalkLegMultimodal
       Storage.Queries.WhiteListOrg
   other-modules:
       Paths_rider_app

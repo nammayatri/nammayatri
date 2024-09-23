@@ -15,20 +15,22 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data JourneyT f = JourneyT
-  { convenienceCost :: (B.C f Kernel.Prelude.Int),
-    distanceUnit :: (B.C f Kernel.Types.Common.DistanceUnit),
-    estimatedDistance :: (B.C f Kernel.Types.Common.HighPrecDistance),
-    estimatedDuration :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds)),
-    estimatedFare :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency)),
-    fare :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    id :: (B.C f Kernel.Prelude.Text),
-    modes :: (B.C f [Domain.Types.Common.TravelMode]),
-    searchRequestId :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { convenienceCost :: B.C f Kernel.Prelude.Int,
+    distanceUnit :: B.C f Kernel.Types.Common.DistanceUnit,
+    estimatedDistance :: B.C f Kernel.Types.Common.HighPrecDistance,
+    estimatedDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    estimatedFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    fare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    id :: B.C f Kernel.Prelude.Text,
+    legsDone :: B.C f Kernel.Prelude.Int,
+    modes :: B.C f [Domain.Types.Common.TravelMode],
+    searchRequestId :: B.C f Kernel.Prelude.Text,
+    totalLegs :: B.C f Kernel.Prelude.Int,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -38,6 +40,6 @@ instance B.Table JourneyT where
 
 type Journey = JourneyT Identity
 
-$(enableKVPG (''JourneyT) [('id)] [[('searchRequestId)]])
+$(enableKVPG ''JourneyT ['id] [['searchRequestId]])
 
-$(mkTableInstances (''JourneyT) "journey")
+$(mkTableInstances ''JourneyT "journey")

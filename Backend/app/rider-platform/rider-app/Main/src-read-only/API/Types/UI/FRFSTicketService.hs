@@ -18,6 +18,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Lib.JourneyPlannerTypes
 import Servant
 import Tools.Auth
 
@@ -79,7 +80,7 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSSearchAPIReq = FRFSSearchAPIReq {fromStationCode :: Data.Text.Text, quantity :: Kernel.Prelude.Int, toStationCode :: Data.Text.Text}
+data FRFSSearchAPIReq = FRFSSearchAPIReq {fromStationCode :: Data.Text.Text, journeySearchData :: Data.Maybe.Maybe Lib.JourneyPlannerTypes.JourneySearchData, quantity :: Kernel.Prelude.Int, toStationCode :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

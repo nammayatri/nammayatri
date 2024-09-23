@@ -25,7 +25,7 @@ imports:
   PartnerOrgTransaction: Domain.Types.PartnerOrganization
   TimeBound: Kernel.Types.TimeBound
   LatLong: Kernel.External.Maps.Types
-  JourneySearchData: Lib.JourneyPlanner.Types
+  JourneySearchData: Lib.JourneyPlannerTypes
 
 FRFSSearch:
   tableName: frfs_search
@@ -53,7 +53,7 @@ FRFSSearch:
 
   toTType:
     journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
-    journeyId: Kernel.Prelude.fmap (Kernel.Types.Id.getId . (.journeyId))|I
+    journeyId: Kernel.Prelude.fmap (.journeyId)|I
     agency: (journeyLegInfo >>= (.agency))|E
     skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I

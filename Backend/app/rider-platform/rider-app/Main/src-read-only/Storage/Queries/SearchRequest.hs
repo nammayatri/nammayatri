@@ -17,7 +17,6 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchRequest as Beam
 import Storage.Queries.SearchRequestExtra as ReExport
-import Storage.Queries.Transformers.SearchRequest
 
 updateAdvancedBookingEnabled :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updateAdvancedBookingEnabled isAdvanceBookingEnabled id = do updateOneWithKV [Se.Set Beam.isAdvanceBookingEnabled isAdvanceBookingEnabled] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

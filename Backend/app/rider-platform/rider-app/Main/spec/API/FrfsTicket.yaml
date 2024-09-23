@@ -20,6 +20,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Meters: Kernel.Types.Common
   LatLong: Kernel.External.Maps.Types
+  JourneySearchData: Lib.JourneyPlannerTypes
 
 module: FRFSTicketService
 types:
@@ -27,6 +28,7 @@ types:
     fromStationCode: Text
     toStationCode: Text
     quantity: Int
+    journeySearchData: Maybe JourneySearchData
 
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch

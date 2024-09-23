@@ -64,6 +64,7 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails
 import qualified Storage.CachedQueries.Merchant as QMerch
@@ -255,19 +256,13 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       pure ()
     else do
       deploymentVersion <- asks (.version)
-      -- TODO(MultiModal)
-      {-
-      case searchRequest.parentSearchId of
-        Just parentSearchId -> do
-          parentEstimates <- getEstimates parentSearchId -- getEstimates using parent searchId and check if multimodal estimate if available
-          if null parentEstimates
-            then do
-              create estimate with parent searchId and check if allroutes estimates came if yes then mark estimate as done else mark with ongoing
-            else do
-              update estimates price with new estimate price
-              check if allroutes estimates came if yes then mark estimate as done else mark with ongoing
+
+      let requiredEstimate = find (\est -> est.vehicleVariant == DV.AUTO_RICKSHAW) estimatesInfo -- hardcoded for now, we can set a default vehicle in config
+      case requiredEstimate of
+        Just requiredEst -> do
+          SLCF.createFares searchRequest.journeyLegInfo requiredEst.estimatedTotalFare
         Nothing -> pure ()
-      -}
+
       estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion) (filterEstimtesByPrefference estimatesInfo blackListedVehicles)
       quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo blackListedVehicles)
       forM_ estimates $ \est -> do

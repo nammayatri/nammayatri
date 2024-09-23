@@ -38,6 +38,6 @@ instance B.Table FRFSConfigT where
 
 type FRFSConfig = FRFSConfigT Identity
 
-$(enableKVPG ''FRFSConfigT ['merchantOperatingCityId] [])
+$(enableKVPG (''FRFSConfigT) [('merchantOperatingCityId)] [])
 
-$(mkTableInstances ''FRFSConfigT "frfs_config")
+$(mkTableInstances (''FRFSConfigT) "frfs_config")

@@ -24,7 +24,7 @@ imports:
   DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
   DbHash: Kernel.External.Encryption
   TripParty: Domain.Types.Trip
-  JourneySearchData: Lib.JourneyPlanner.Types
+  JourneySearchData: Lib.JourneyPlannerTypes
 
 SearchRequest:
   tableName: search_request
@@ -150,7 +150,7 @@ SearchRequest:
     backendConfigVersion: Kernel.Utils.Version.versionToText <$> backendConfigVersion|E
     distanceUnit: Kernel.Prelude.Just|I
     journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
-    journeyId: Kernel.Prelude.fmap (Kernel.Types.Id.getId . (.journeyId))|I
+    journeyId: Kernel.Prelude.fmap (.journeyId)|I
     agency: (journeyLegInfo >>= (.agency))|E
     skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
