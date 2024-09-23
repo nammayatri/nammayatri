@@ -58,12 +58,17 @@ getFamousDestinations city = do
         config = if not $ DS.null langConfig
                    then langConfig 
                    else fetchRemoteConfigString "famous_destinations_en"
-        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
-    getCityBasedConfig value city
+        value = decodeConfig config
+        famousDestinationsBasedOnLanguage = getCityBasedConfig value city
+    case famousDestinationsBasedOnLanguage of
+        [] -> getCityBasedConfig defaultConfigInEnglish city
+        _ -> famousDestinationsBasedOnLanguage
   where
     getLanguage lang = 
       let language = DS.toLower $ DS.take 2 lang
       in if not (DS.null language) then "_" <> language else "_en"
+    decodeConfig config = decodeForeignObject (parseJSON config) $ defaultRemoteConfig []
+    defaultConfigInEnglish = decodeConfig (fetchRemoteConfigString "famous_destinations_en")
 
 getEstimatesOrder :: String -> Array String
 getEstimatesOrder city = do

@@ -186,11 +186,19 @@ export const storeCallBackContacts = function (cb) {
       try {
         const callback = callbackMapper.map(function (contact) {
           const json = JSON.parse(contact.toString().replace(/\s/g, " "));
-          console.log("storeCallBackContacts js " + json);
+          if (window.__OS == "IOS") {
+            json.forEach((object) => {
+              let base64regex = /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
+              if (base64regex.test(object.name)) {
+                object.name = new TextDecoder('utf-8').decode(Uint8Array.from(atob(object.name), c => c.charCodeAt(0)));
+              }
+            });
+          }
+          console.log("storeCallBackContacts js " , json);
           cb(action(json))();
         });
 
-        console.log("In storeCallBackContacts ---------- + " + action);
+        console.log("In storeCallBackContacts ---------- + " , action);
         return window.JBridge.storeCallBackContacts(callback);
       } catch (err) {
         console.log("storeCallBackContacts error " + err);

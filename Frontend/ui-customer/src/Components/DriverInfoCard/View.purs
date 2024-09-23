@@ -656,7 +656,7 @@ driverInfoView push state =
       rideStarted = not $ rideNotStarted state
       currentCityConfig = HU.getCityConfig  state.data.config.cityConfig (show state.props.merchantCity)
       brandingBannerViewVis = if currentCityConfig.iopConfig.enable then INVISIBLE else GONE
-      airportZone = state.props.zoneType.sourceTag == AIRPORT && isJust state.data.addressWard
+      airportZone = (state.props.zoneType.sourceTag == AIRPORT || state.props.zoneType.sourceTag == SPECIAL_PICKUP) && isJust state.data.addressWard
   in
   linearLayout
   [ width MATCH_PARENT

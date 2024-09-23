@@ -1253,7 +1253,8 @@ type EmergencyContactsScreenProps = {
   appName :: String,
   showDropDown :: Boolean,
   getDefaultContacts :: Boolean,
-  saveEmergencyContacts :: Boolean
+  saveEmergencyContacts :: Boolean,
+  isKeyBoardOpen :: Boolean
 }
 
 type ContactDetail = {

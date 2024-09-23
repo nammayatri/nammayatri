@@ -65,6 +65,7 @@ initData =
       , getDefaultContacts: false
       , showDropDown: false
       , appName: ""
+      , isKeyBoardOpen : false
       }
   }
 

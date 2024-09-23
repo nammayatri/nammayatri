@@ -380,7 +380,7 @@ chatFooterView config push =
           ][ if length config.contactList > 1 then callActionView config 48 20 push else noView] 
        ,  linearLayout
           [ height $ V 48
-          , width MATCH_PARENT
+          , weight 1.0
           , margin $ MarginLeft 16
           , padding (PaddingHorizontal 16 8)
           , cornerRadius 24.0

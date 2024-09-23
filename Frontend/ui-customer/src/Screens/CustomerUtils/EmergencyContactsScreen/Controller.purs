@@ -104,6 +104,7 @@ data Action
   | TrustedNamePET PrimaryEditText.Action
   | ShowAddContactsOptions
   | HideAddContactsOptions
+  | KeyboardCallback String
 
 data ScreenOutput
   = GoToSafetyScreen EmergencyContactsScreenState
@@ -351,6 +352,13 @@ eval (ContactListAction (ContactsList.ContactCardClicked index)) state = do
   continue state { data { emergencyContactsList = newContactsList } }
 
 eval (ContactListAction (ContactsList.AddContacts)) state = continueWithCmd state [ pure AddContacts ]
+
+eval (KeyboardCallback keyBoardState) state = do 
+  let isOpen = case keyBoardState of
+                    "onKeyboardOpen" -> true
+                    "onKeyboardClose" -> false
+                    _ -> false 
+  continue state{props{isKeyBoardOpen = isOpen}}
 
 eval _ state = update state
 
