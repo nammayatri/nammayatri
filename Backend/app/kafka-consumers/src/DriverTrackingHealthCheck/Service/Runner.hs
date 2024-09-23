@@ -23,7 +23,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.Text.Encoding as T
 import Data.Time.Clock.POSIX hiding (getCurrentTime)
-import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as DriverInfo
+import qualified "dynamic-offer-driver-app" Domain.Types.Common as DriverInfo
 import qualified "dynamic-offer-driver-app" Domain.Types.Person as DP
 import qualified DriverTrackingHealthCheck.API as HC
 import Environment (Flow, HealthCheckAppCfg)

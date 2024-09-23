@@ -38,6 +38,7 @@ data FareParameters = FareParameters
     customerCancellationDues :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
     congestionCharge :: Maybe HighPrecMoney,
+    congestionChargeViaDp :: Maybe HighPrecMoney,
     insuranceCharge :: Maybe HighPrecMoney,
     cardCharge :: Maybe CardCharge,
     platformFee :: Maybe HighPrecMoney,

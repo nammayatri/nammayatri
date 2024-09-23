@@ -5,7 +5,7 @@ module Storage.Queries.FleetDriverAssociationExtra where
 
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
-import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.Common as DI
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.Person
 import qualified EulerHS.Language as L
@@ -81,7 +81,7 @@ findAllDriversByFleetOwnerIdByMode fleetOwnerId mode mbIsActive limitVal offsetV
               B.orderBy_ (\(rc', _) -> B.desc_ rc'.createdAt) $
                 B.filter_'
                   ( \(fleetDriverAssociation, driverInformation) ->
-                      fleetDriverAssociation.fleetOwnerId B.==?. (B.val_ fleetOwnerId)
+                      fleetDriverAssociation.fleetOwnerId B.==?. B.val_ fleetOwnerId
                         B.&&?. driverInformation.mode B.==?. B.val_ (Just mode)
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\isActive -> fleetDriverAssociation.isActive B.==?. B.val_ isActive) mbIsActive
                   )

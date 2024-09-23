@@ -91,3 +91,13 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN initiated_as text ;
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN sender_primary_exophone text ;
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN receiver_primary_exophone text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN from_loc_geohash text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN to_loc_geohash text ;

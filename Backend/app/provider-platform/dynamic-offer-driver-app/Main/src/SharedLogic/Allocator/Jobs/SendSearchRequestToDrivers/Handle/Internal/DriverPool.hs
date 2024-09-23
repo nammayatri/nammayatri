@@ -30,8 +30,8 @@ import qualified Data.List as DL
 import qualified Data.Map as Map
 import qualified Domain.Types as DVST
 import Domain.Types.Common
+import qualified Domain.Types.Common as DriverInfo
 import Domain.Types.DriverGoHomeRequest as DDGR
-import qualified Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverIntelligentPoolConfig
 import Domain.Types.DriverPoolConfig
 import Domain.Types.GoHomeConfig (GoHomeConfig)
@@ -335,7 +335,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
             insertOrUpdate result currentMap =
               let driver = result.driverPoolResult
                   key = driver.driverId.getId
-               in Map.insertWith (minByDowngradeLevel) key result currentMap
+               in Map.insertWith minByDowngradeLevel key result currentMap
 
             minByDowngradeLevel :: DriverPoolWithActualDistResult -> DriverPoolWithActualDistResult -> DriverPoolWithActualDistResult
             minByDowngradeLevel new old =
@@ -779,7 +779,7 @@ incrementPoolRadiusStep searchTryId = do
   return ()
 
 isBookAny :: [DVST.ServiceTierType] -> Bool
-isBookAny vehicleServiceTiers = (length vehicleServiceTiers) > 1
+isBookAny vehicleServiceTiers = length vehicleServiceTiers > 1
 
 driverRequestCountKey :: Id DST.SearchTry -> Id Driver -> DVST.ServiceTierType -> Text
 driverRequestCountKey searchTryId driverId vehicleServiceTier = "Driver-Request-Count-Key:SearchTryId-" <> searchTryId.getId <> ":DriverId-" <> driverId.getId <> ":ServiceTier-" <> show vehicleServiceTier

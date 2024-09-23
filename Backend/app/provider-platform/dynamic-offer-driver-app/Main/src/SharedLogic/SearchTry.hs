@@ -67,7 +67,7 @@ getNextScheduleTime driverPoolConfig searchRequest = do
   let scheduleTryTimes =
         case mbScheduleTryTimes of
           Just scheduleTryTimes' -> scheduleTryTimes'
-          Nothing -> (secondsToNominalDiffTime . Seconds) <$> driverPoolConfig.scheduleTryTimes
+          Nothing -> secondsToNominalDiffTime . Seconds <$> driverPoolConfig.scheduleTryTimes
   case scheduleTryTimes of
     [] -> return Nothing
     (scheduleTryTime : rest) -> do
@@ -247,7 +247,7 @@ buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceT
     case (mbDriverParkingCharge, mDriverPickUpCharge, mbDriverMinFee, mbDriverMaxFee, mbStepFee, mbDefaultStepFee) of
       (Just parkingCharge, Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee) -> return (Just parkingCharge, Just charge, Just minFee, Just maxFee, Just stepFee, Just defaultStepFee)
       _ -> do
-        farePolicy <- getFarePolicyByEstOrQuoteId (Just $ getCoordinates searchReq.fromLocation) searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId Nothing isDashboardRequest (Just (TransactionId (Id searchReq.transactionId)))
+        farePolicy <- getFarePolicyByEstOrQuoteId (Just $ getCoordinates searchReq.fromLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripCategory vehicleServiceTier searchReq.area estimateOrQuoteId Nothing isDashboardRequest (Just (TransactionId (Id searchReq.transactionId)))
         let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
         return $
           ( farePolicy.parkingCharge,

@@ -219,6 +219,8 @@ handler merchantId req validatedReq = do
             estimateId = Just $ Id req.estimateId,
             paymentId = Nothing,
             isDashboardRequest = searchRequest.isDashboardRequest,
+            fromLocGeohash = searchRequest.fromLocGeohash,
+            toLocGeohash = searchRequest.toLocGeohash,
             ..
           }
     makeBookingDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DSR.SearchRequest -> DTDD.DeliveryDetails -> Id DM.Merchant -> m (Maybe TripParty, Maybe DTDPD.DeliveryPersonDetails, Maybe DTDPD.DeliveryPersonDetails)

@@ -192,9 +192,9 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
     getRateCardForServiceTier mbDistance mbDuration transporterConfig tripCategory distanceUnit serviceTierType = do
       now <- getCurrentTime
       eitherFullFarePolicy <-
-        try @_ @SomeException (getFarePolicy Nothing merchantOperatingCityId False (OneWay OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing Nothing)
+        try @_ @SomeException (getFarePolicy Nothing Nothing Nothing Nothing Nothing merchantOperatingCityId False (OneWay OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing Nothing)
           >>= \case
-            Left _ -> try @_ @SomeException $ getFarePolicy Nothing merchantOperatingCityId False (Delivery OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing Nothing
+            Left _ -> try @_ @SomeException $ getFarePolicy Nothing Nothing Nothing Nothing Nothing merchantOperatingCityId False (Delivery OneWayOnDemandDynamicOffer) serviceTierType Nothing Nothing Nothing
             Right farePolicy -> return $ Right farePolicy
       case eitherFullFarePolicy of
         Left _ -> return Nothing
@@ -558,7 +558,7 @@ postDriverRegisterPancard (mbPersonId, merchantId, merchantOpCityId) req = do
           when (panNumber /= panNum) $ void $ Image.throwValidationError (Just imageId1) Nothing Nothing
           when (nameOnCard /= name) $ void $ Image.throwValidationError (Just imageId1) Nothing Nothing
           when (isJust dateOfBirth && (formatUTCToDateString <$> dateOfBirth) /= (T.unpack <$> dob)) $ do
-            logDebug $ "date of Birth and dob is : " <> show ((formatUTCToDateString <$> dateOfBirth)) <> " " <> show dob
+            logDebug $ "date of Birth and dob is : " <> show (formatUTCToDateString <$> dateOfBirth) <> " " <> show dob
             void $ Image.throwValidationError (Just imageId1) Nothing Nothing
         _ -> void $ Image.throwValidationError (Just imageId1) Nothing Nothing
       where
@@ -650,7 +650,7 @@ postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) 
       when (respTxnId /= aadhaarReq.transactionId) $ void $ Image.throwValidationError aadhaarReq.aadhaarBackImageId aadhaarReq.aadhaarFrontImageId Nothing
       when (Image.convertHVStatusToValidationStatus respStatus /= aadhaarReq.validationStatus) $ void $ Image.throwValidationError aadhaarReq.aadhaarBackImageId aadhaarReq.aadhaarFrontImageId Nothing
       case respUserDetails of
-        VI.HVAadhaarFlow (hvRespDetails) -> do
+        VI.HVAadhaarFlow hvRespDetails -> do
           when (aadhaarReq.maskedAadhaarNumber /= hvRespDetails.idNumber) $ void $ Image.throwValidationError aadhaarReq.aadhaarBackImageId aadhaarReq.aadhaarFrontImageId Nothing
           when (aadhaarReq.nameOnCard /= hvRespDetails.fullName) $ void $ Image.throwValidationError aadhaarReq.aadhaarBackImageId aadhaarReq.aadhaarFrontImageId Nothing
           when (aadhaarReq.dateOfBirth /= hvRespDetails.dob) $ void $ Image.throwValidationError aadhaarReq.aadhaarBackImageId aadhaarReq.aadhaarFrontImageId Nothing

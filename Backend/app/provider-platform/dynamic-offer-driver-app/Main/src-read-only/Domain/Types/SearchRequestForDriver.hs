@@ -7,7 +7,6 @@ module Domain.Types.SearchRequestForDriver where
 import Data.Aeson
 import qualified Domain.Types.Common
 import qualified Domain.Types.DriverGoHomeRequest
-import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -47,6 +46,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     driverStepFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     durationToPickup :: Kernel.Types.Common.Seconds,
     estimateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fromLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     goHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest),
     id :: Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver,
     isForwardRequest :: Kernel.Prelude.Bool,
@@ -56,7 +56,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
-    mode :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverMode,
+    mode :: Kernel.Prelude.Maybe Domain.Types.Common.DriverMode,
     notificationSource :: Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource,
     parallelSearchRequestCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     pickupZone :: Kernel.Prelude.Bool,

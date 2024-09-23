@@ -10,7 +10,7 @@ imports:
   Version: Kernel.Types.Version
   Device: Kernel.Types.Version
   Person: Domain.Types.Person
-  DriverMode: Domain.Types.DriverInformation
+  DriverMode: Domain.Types.Common
   DeviceType: Kernel.Types.Version
   LocalTime: Data.Time
   Months: Kernel.Types.Time
@@ -43,6 +43,7 @@ SearchRequestForDriver:
     searchRequestValidTill : UTCTime
     vehicleAge : Maybe Months
     driverId : Id Person
+    fromLocGeohash : Maybe Text
     actualDistanceToPickup : Meters
     straightLineDistanceToPickup : Meters
     durationToPickup : Seconds

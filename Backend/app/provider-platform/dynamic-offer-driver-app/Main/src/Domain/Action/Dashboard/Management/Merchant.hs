@@ -1134,13 +1134,13 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
     processFarePolicyGroup _ _ [] = throwError $ InvalidRequest "Empty Fare Policy Group"
     processFarePolicyGroup merchantOpCity (errors, boundedAlreadyDeletedMap) (x : xs) = do
       let (city, vehicleServiceTier, tripCategory, area, timeBounds, searchSource, firstFarePolicy) = x
-      if (city /= opCity)
+      if city /= opCity
         then return $ (errors <> ["Can't process fare policy for different city: " <> show city <> ", please login with this city in dashboard"], boundedAlreadyDeletedMap)
         else do
           let mergeFarePolicy newId FarePolicy.FarePolicy {..} = do
                 let remainingfarePolicies = map (\(_, _, _, _, _, _, fp) -> fp) xs
-                let driverExtraFeeBounds' = NE.nonEmpty $ (maybe [] NE.toList driverExtraFeeBounds) <> concatMap ((maybe [] NE.toList) . (.driverExtraFeeBounds)) remainingfarePolicies
-                let driverExtraFeeBoundsDuplicateRemoved = (NE.nubBy (\a b -> a.startDistance == b.startDistance)) <$> driverExtraFeeBounds'
+                let driverExtraFeeBounds' = NE.nonEmpty $ maybe [] NE.toList driverExtraFeeBounds <> concatMap (maybe [] NE.toList . (.driverExtraFeeBounds)) remainingfarePolicies
+                let driverExtraFeeBoundsDuplicateRemoved = NE.nubBy (\a b -> a.startDistance == b.startDistance) <$> driverExtraFeeBounds'
                 farePolicyDetails' <-
                   case farePolicyDetails of
                     FarePolicy.ProgressiveDetails FarePolicy.FPProgressiveDetails {currency = _currency', distanceUnit = _distanceUnit', ..} -> do
@@ -1477,7 +1477,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             defaultStepFee :: HighPrecMoney <- readCSVField idx row.defaultStepFee "Default Step Fee"
             return $ NE.nonEmpty [DFPEFB.DriverExtraFeeBounds {..}]
 
-      return $ (city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, ..})
+      return (city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, congestionChargePerMin = Nothing, dpVersion = Nothing, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, ..})
 
     makeKey :: Id DMOC.MerchantOperatingCity -> ServiceTierType -> TripCategory -> SL.Area -> DFareProduct.SearchSource -> Text
     makeKey cityId vehicleServiceTier tripCategory area searchSource =
@@ -1673,7 +1673,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
   where
     updateGeoRestriction = \case
       Unrestricted -> Unrestricted
-      Regions regions -> Regions $ regions <> [(show req.city)]
+      Regions regions -> Regions $ regions <> [show req.city]
 
     buildGeometry = do
       id <- generateGUID

@@ -117,6 +117,7 @@ import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Client as DC
+import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverBankAccount as DOBA
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
@@ -1105,7 +1106,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       searchRequest <- runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id searchRequest.bapId) Domain.MOBILITY
       isValueAddNP <- CQVAN.isValueAddNP searchRequest.bapId
-      farePolicy <- getFarePolicyByEstOrQuoteId (Just $ Maps.getCoordinates searchRequest.fromLocation) searchRequest.merchantOperatingCityId searchTry.tripCategory nearbyReq.vehicleServiceTier searchRequest.area (fromMaybe searchTry.estimateId nearbyReq.estimateId) Nothing Nothing (Just (TransactionId (Id searchRequest.transactionId)))
+      farePolicy <- getFarePolicyByEstOrQuoteId (Just $ Maps.getCoordinates searchRequest.fromLocation) searchRequest.fromLocGeohash searchRequest.toLocGeohash searchRequest.estimatedDistance searchRequest.estimatedDuration searchRequest.merchantOperatingCityId searchTry.tripCategory nearbyReq.vehicleServiceTier searchRequest.area (fromMaybe searchTry.estimateId nearbyReq.estimateId) Nothing Nothing (Just (TransactionId (Id searchRequest.transactionId)))
       popupDelaySeconds <- DP.getPopupDelay merchantOpCityId (cast driverId) cancellationRatio cancellationScoreRelatedConfig transporterConfig.defaultPopupDelay
       let useSilentFCMForForwardBatch = transporterConfig.useSilentFCMForForwardBatch
       let driverPickUpCharges = USRD.extractDriverPickupCharges farePolicy.farePolicyDetails
@@ -1279,7 +1280,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
       driverStats <- runInReplica $ QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound
       when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
-      farePolicy <- getFarePolicyByEstOrQuoteId (Just $ Maps.getCoordinates searchReq.fromLocation) merchantOpCityId searchTry.tripCategory sReqFD.vehicleServiceTier searchReq.area estimateId Nothing Nothing (Just (TransactionId (Id searchReq.transactionId)))
+      farePolicy <- getFarePolicyByEstOrQuoteId (Just $ Maps.getCoordinates searchReq.fromLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration merchantOpCityId searchTry.tripCategory sReqFD.vehicleServiceTier searchReq.area estimateId Nothing Nothing (Just (TransactionId (Id searchReq.transactionId)))
       let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
       whenJust reqOfferedValue $ \off ->
         whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
@@ -1306,9 +1307,9 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               nightShiftCharge = Nothing,
               customerCancellationDues = searchReq.customerCancellationDues,
               tollCharges = searchReq.tollCharges,
-              estimatedRideDuration = Nothing,
+              estimatedRideDuration = searchReq.estimatedDuration,
               nightShiftOverlapChecking = DTC.isFixedNightCharge searchTry.tripCategory,
-              estimatedDistance = Nothing,
+              estimatedDistance = searchReq.estimatedDistance,
               timeDiffFromUtc = Nothing,
               currency = searchReq.currency,
               distanceUnit = searchReq.distanceUnit,

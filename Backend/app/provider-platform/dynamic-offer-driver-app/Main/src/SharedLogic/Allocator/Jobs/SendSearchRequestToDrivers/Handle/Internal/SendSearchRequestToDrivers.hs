@@ -187,7 +187,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
       parallelSearchRequestCount <- Just <$> SDP.getValidSearchRequestCount searchReq.providerId dpRes.driverId now
       baseFare <- case tripQuoteDetail.tripCategory of
         DTC.Ambulance _ -> do
-          farePolicy <- getFarePolicyByEstOrQuoteId (Just $ EMaps.getCoordinates searchReq.fromLocation) searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory dpRes.serviceTier searchReq.area searchTry.estimateId Nothing Nothing (Just (TransactionId (Id searchReq.transactionId)))
+          farePolicy <- getFarePolicyByEstOrQuoteId (Just $ EMaps.getCoordinates searchReq.fromLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory dpRes.serviceTier searchReq.area searchTry.estimateId Nothing Nothing (Just (TransactionId (Id searchReq.transactionId)))
           getBaseFare farePolicy dpRes.vehicleAge tripQuoteDetail transporterConfig
         _ -> pure tripQuoteDetail.baseFare
       deploymentVersion <- asks (.version)
@@ -199,6 +199,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 estimateId = Just tripQuoteDetail.estimateOrQuoteId,
                 startTime = searchTry.startTime,
                 merchantId = Just searchReq.providerId,
+                fromLocGeohash = searchReq.fromLocGeohash,
                 vehicleAge = dpRes.vehicleAge,
                 merchantOperatingCityId = searchReq.merchantOperatingCityId,
                 searchRequestValidTill = if dpwRes.pickupZone then addUTCTime (fromIntegral dpwRes.keepHiddenForSeconds) defaultValidTill else defaultValidTill,

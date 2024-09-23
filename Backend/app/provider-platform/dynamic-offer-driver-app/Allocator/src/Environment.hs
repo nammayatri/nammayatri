@@ -31,6 +31,7 @@ import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
 import Kernel.Streaming.Kafka.Producer.Types
@@ -65,6 +66,7 @@ data HandlerEnv = HandlerEnv
     httpClientOptions :: HttpClientOptions,
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
+    serviceClickhouseEnv :: ClickhouseEnv,
     loggerEnv :: LoggerEnv,
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
@@ -120,9 +122,10 @@ buildHandlerEnv HandlerCfg {..} = do
   eventRequestCounter <- registerEventRequestCounterMetric
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
-  passettoContext <- (uncurry mkDefPassettoContext) encTools.service
+  passettoContext <- uncurry mkDefPassettoContext encTools.service
   hedisEnv <- connectHedis appCfg.hedisCfg ("dynamic-offer-driver-app:" <>)
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>)
+  serviceClickhouseEnv <- createConn driverClickhouseCfg
   let internalEndPointHashMap = HMS.fromList $ MS.toList internalEndPointMap
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"

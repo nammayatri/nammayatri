@@ -118,6 +118,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Status as St
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
+import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DocumentVerificationConfig as DomainDVC
 import qualified Domain.Types.DriverBlockReason as DBR
 import Domain.Types.DriverFee as DDF
@@ -2162,7 +2163,7 @@ setServiceChargeEligibleFlagInDriverPlan merchantShortId opCity driverId req = d
   driverPlan <- QDP.findByDriverIdWithServiceName personId serviceName
   case (driverPlan, req.planId) of
     (Just dp, Just planId) -> do
-      if dp.planId == (Id planId)
+      if dp.planId == Id planId
         then do
           void $ toggleDriverSubscriptionByService (driver.id, driver.merchantId, driver.merchantOperatingCityId) serviceName (Id <$> req.planId) req.serviceChargeEligibility req.vehicleId
         else do

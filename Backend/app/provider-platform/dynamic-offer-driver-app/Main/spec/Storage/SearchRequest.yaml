@@ -18,7 +18,7 @@ imports:
   TripCategory: Domain.Types.Trip
 
 SearchRequest:
-  derives: Generic,Show,ToJSON
+  derives: Generic,Show,ToJSON,FromJSON
 
   fields:
     id: Id SearchRequest
@@ -28,6 +28,8 @@ SearchRequest:
     merchantOperatingCityId: Id MerchantOperatingCity
     riderId: Maybe (Id RiderDetails)
     fromLocation: Location
+    fromLocGeohash: Maybe Text
+    toLocGeohash: Maybe Text
     area: Maybe Area
     bapId: Text
     bapUri: BaseUrl

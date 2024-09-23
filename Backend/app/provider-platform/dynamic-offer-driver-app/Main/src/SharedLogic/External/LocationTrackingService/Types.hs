@@ -14,7 +14,7 @@
 
 module SharedLogic.External.LocationTrackingService.Types where
 
-import qualified Domain.Types.DriverInformation as DI
+import Domain.Types.Common (DriverMode)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
@@ -66,7 +66,7 @@ data EndRideRes = EndRideRes
 
 data DriverDetailsReq = DriverDetailsReq
   { driverId :: Id DP.Person,
-    driverMode :: DI.DriverMode
+    driverMode :: DriverMode
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 

@@ -21,7 +21,7 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Ri
 import qualified Domain.Action.UI.Ride.CancelRide as DCR
 import qualified Domain.Action.UI.Ride.EndRide as DER
 import qualified "dynamic-offer-driver-app" Domain.Types.Client as DC
-import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as TDI
+import qualified "dynamic-offer-driver-app" Domain.Types.Common as TDI
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as TDM
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as TRide
 import qualified "dynamic-offer-driver-app" Domain.Types.SearchTry as DTST

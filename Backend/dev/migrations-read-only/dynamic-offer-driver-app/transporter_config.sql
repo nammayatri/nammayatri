@@ -262,10 +262,14 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN arrival_time_bu
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN upwards_recompute_buffer_percentage integer ;
 
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN demand_hotspots_config json ;
 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN demand_hotspots_config json ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dp_geo_hash_percision integer  default 5;
 
 
 ------- SQL updates -------
@@ -276,3 +280,5 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN min_ride_distance_threshold_for_referral_payout DROP NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN min_pickup_distance_threshold_for_referral_payout DROP NOT NULL;
 --- Drop section ends. Please check before running ---
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN dp_white_listed_geohash SET DEFAULT ARRAY[]::TEXT[];
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN dp_black_listed_geohash SET DEFAULT ARRAY[]::TEXT[];
