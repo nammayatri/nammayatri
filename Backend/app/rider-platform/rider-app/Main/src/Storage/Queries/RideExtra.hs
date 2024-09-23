@@ -305,7 +305,7 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
               <> ([Se.Is BeamB.clientId $ Se.Eq (getId <$> mbClientId) | isJust mbClientId])
           )
       ]
-      (if isOnlyActive then (Se.Asc BeamB.startTime) else (Se.Desc BeamB.startTime))
+      (Se.Desc BeamB.startTime)
       (Just limit')
       (Just offset')
   otherActivePartyBooking <-
