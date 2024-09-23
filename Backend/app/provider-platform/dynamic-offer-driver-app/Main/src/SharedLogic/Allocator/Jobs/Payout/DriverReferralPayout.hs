@@ -107,7 +107,7 @@ sendDriverReferralPayoutJobData Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
     else do
       for_ dailyStatsWithVpaList $ \executionData -> do
         fork ("processing Payout for DriverId : " <> executionData.dailyStats.driverId.getId) $ do
-          callPayout executionData.dailyStats executionData.payoutVpa payoutConfigList statusForRetry
+          callPayout executionData.dailyStats executionData.dInfo executionData.payoutVpa payoutConfigList statusForRetry
 
       ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
   where
@@ -132,11 +132,12 @@ callPayout ::
     SchedulerFlow r
   ) =>
   DS.DailyStats ->
+  DI.DriverInformation ->
   Maybe Text ->
   [PayoutConfig] ->
   DS.PayoutStatus ->
   m ()
-callPayout DS.DailyStats {..} payoutVpa payoutConfigList statusForRetry = do
+callPayout DS.DailyStats {..} driverInfo payoutVpa payoutConfigList statusForRetry = do
   mbVehicle <- QV.findById driverId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   let payoutConfig' = find (\payoutConfig -> payoutConfig.vehicleCategory == vehicleCategory) payoutConfigList
@@ -151,11 +152,21 @@ callPayout DS.DailyStats {..} payoutVpa payoutConfigList statusForRetry = do
             QDailyStats.updatePayoutStatusById DS.Processing id
             QDailyStats.updatePayoutOrderId (Just uid) id
           phoneNo <- mapM decrypt person.mobileNumber
-          mbDriverFee <- QDF.findLatestByFeeTypeAndStatusWithServiceName DF.PAYOUT_REGISTRATION [DF.CLEARED] driverId DPlan.YATRI_SUBSCRIPTION
+          refundRegistrationAmt <-
+            if driverInfo.payoutVpaStatus == Just DI.VIA_WEBHOOK && isNothing driverInfo.payoutRegAmountRefunded
+              then do
+                mbDriverFee <- QDF.findLatestByFeeTypeAndStatusWithServiceName DF.PAYOUT_REGISTRATION [DF.CLEARED] driverId DPlan.YATRI_SUBSCRIPTION
+                case mbDriverFee of
+                  Just driverFee -> do
+                    now <- getCurrentTime
+                    let registrationFee = driverFee.platformFee
+                        registrationAmount = sum [registrationFee.cgst, registrationFee.sgst, registrationFee.fee]
+                    QDF.updateStatus DF.REFUND_PENDING driverFee.id now
+                    QDI.updatePayoutRegAmountRefunded (Just registrationAmount) driverId
+                    pure registrationAmount
+                  _ -> pure 0.0
+              else pure 0.0
           let entityName = DLP.DRIVER_DAILY_STATS
-              registrationFee = mbDriverFee <&> (.platformFee)
-              registrationAmount = sum $ catMaybes [registrationFee <&> (.cgst), registrationFee <&> (.sgst), registrationFee <&> (.fee)]
-              refundRegistrationAmt = if ((.status) <$> mbDriverFee) == Just DF.CLEARED then registrationAmount else 0
               createPayoutOrderReq =
                 Juspay.CreatePayoutOrderReq
                   { orderId = uid,
@@ -170,9 +181,6 @@ callPayout DS.DailyStats {..} payoutVpa payoutConfigList statusForRetry = do
                   }
           if referralEarnings <= payoutConfig.thresholdPayoutAmountPerPerson
             then do
-              whenJust mbDriverFee $ \driverFee -> do
-                now <- getCurrentTime
-                QDF.updateStatus DF.REFUND_PENDING driverFee.id now
               logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show referralEarnings <> " | orderId: " <> show uid
               let serviceName = DEMSC.PayoutService PT.Juspay
                   createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId serviceName

@@ -12,6 +12,7 @@ import qualified Domain.Types.DriverInformation
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 import qualified Tools.Error
 
@@ -53,6 +54,7 @@ data DriverInformationT f = DriverInformationT
     onRide :: B.C f Kernel.Prelude.Bool,
     payerVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentPending :: B.C f Kernel.Prelude.Bool,
+    payoutRegAmountRefunded :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     payoutRegistrationOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payoutVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     payoutVpaBankAccount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

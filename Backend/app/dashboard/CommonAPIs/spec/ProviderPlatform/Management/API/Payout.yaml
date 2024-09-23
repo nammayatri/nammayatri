@@ -78,6 +78,16 @@ apis:
       migrate:
         endpointV2:
 
+  - POST: # delete incorrect vpa's
+      endpoint: payout/deleteVPA
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
+      request:
+        type: DeleteVpaReq
+      response:
+        type: APISuccess
+      migrate:
+        endpointV2:
+
 types:
 
   PayoutReferralHistoryRes:
@@ -129,4 +139,7 @@ types:
     - derive: "'HideSecrets"
   PendingPayoutReq:
    - personId : Id Driver
+   - derive: "'HideSecrets"
+  DeleteVpaReq:
+   - driverIds: [Id Driver]
    - derive: "'HideSecrets"

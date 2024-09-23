@@ -58,9 +58,7 @@ import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverFee as QDF
-import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.Invoice as QI
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
@@ -163,12 +161,10 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
     isSuccessStatus payoutStatus = payoutStatus `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]
 
     updateDFeeStatusForPayoutRegistrationRefund driverId = do
-      driverInfo <- QDriverInfo.findById (Id driverId) >>= fromMaybeM DriverInfoNotFound
-      whenJust driverInfo.payoutRegistrationOrderId $ \orderId -> do
-        mbInvoice <- listToMaybe <$> QI.findById (Id orderId)
-        whenJust mbInvoice $ \invoice -> do
-          now <- getCurrentTime
-          QDF.updateStatus DDF.REFUNDED invoice.driverFeeId now
+      mbDriverFee <- QDF.findLatestByFeeTypeAndStatusWithServiceName DDF.PAYOUT_REGISTRATION [DDF.CLEARED] (Id driverId) DP.YATRI_SUBSCRIPTION
+      whenJust mbDriverFee $ \driverFee -> do
+        now <- getCurrentTime
+        QDF.updateStatus DDF.REFUNDED driverFee.id now
 
     callPayoutService driverId payoutConfig payoutOrderId = do
       driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)

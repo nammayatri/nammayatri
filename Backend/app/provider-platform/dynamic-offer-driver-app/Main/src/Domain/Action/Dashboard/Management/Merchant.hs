@@ -83,6 +83,7 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.Overlay as DMO
+import qualified Domain.Types.PayoutConfig as DPC
 import qualified Domain.Types.Plan as Plan
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
@@ -142,6 +143,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.Overlay as CQMO
 import qualified Storage.CachedQueries.Plan as CQPlan
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.CancellationFarePolicy as QCFP
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
@@ -1658,6 +1660,10 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
   documentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId baseOperatingCityId
   let newDocumentVerificationConfigs = map (buildNewDocumentVerificationConfig newOperatingCity.id now) documentVerificationConfigs
 
+  -- payout config
+  payoutConfigs <- CPC.findAllByMerchantOpCityId baseOperatingCityId
+  newPayoutConfigs <- mapM (buildPayoutConfig newOperatingCity.id merchant.id) payoutConfigs
+
   -- transporter config
   transporterConfig <- CTC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Transporter Config not found")
   let newTransporterConfig = buildTransporterConfig newOperatingCity.id now transporterConfig
@@ -1686,6 +1692,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
   CQMSUC.create newMerchantServiceUsageConfig
   mapM_ CQMSC.create newMerchantServiceConfigs
   mapM_ CQDVC.create newDocumentVerificationConfigs
+  mapM_ CPC.create newPayoutConfigs
   CQTC.create newTransporterConfig
   whenJust (find (\exophone -> exophone.exophoneType == DExophone.CALL_RIDE) exophones) $ \exophone -> do
     exophone' <- buildNewExophone newOperatingCity.id now exophone
@@ -1853,6 +1860,18 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           updatedAt = currentTime,
           ..
         }
+
+    buildPayoutConfig newCityId mId DPC.PayoutConfig {..} = do
+      now <- getCurrentTime
+      return $
+        DPC.PayoutConfig
+          { merchantOperatingCityId = newCityId,
+            isPayoutEnabled = False,
+            merchantId = mId,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }
 
     buildTransporterConfig newCityId currentTime DTC.TransporterConfig {..} =
       DTC.TransporterConfig

@@ -8,6 +8,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption (DbHash)
 import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 import Kernel.Prelude
+import Kernel.Types.Beckn.Context (City)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Payment.Domain.Types.Common
@@ -41,8 +42,8 @@ updateLastCheckedOn payoutOrderIds = do
     ]
     [Se.Is Beam.orderId (Se.In payoutOrderIds)]
 
-findAllWithOptions :: BeamFlow m r => Int -> Int -> Maybe Text -> Maybe DbHash -> Maybe UTCTime -> Maybe UTCTime -> Bool -> m [PayoutOrder]
-findAllWithOptions limit offset mbDriverId mbMobileNumberHash mbFrom mbTo isFailedOnly = do
+findAllWithOptions :: BeamFlow m r => Int -> Int -> Maybe Text -> Maybe DbHash -> Maybe UTCTime -> Maybe UTCTime -> Bool -> City -> m [PayoutOrder]
+findAllWithOptions limit offset mbDriverId mbMobileNumberHash mbFrom mbTo isFailedOnly city = do
   findAllWithOptionsKV
     [ Se.And
         ( [Se.Is Beam.createdAt $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
@@ -50,6 +51,7 @@ findAllWithOptions limit offset mbDriverId mbMobileNumberHash mbFrom mbTo isFail
             <> [Se.Is Beam.mobileNoHash $ Se.Eq (fromJust mbMobileNumberHash) | isJust mbMobileNumberHash]
             <> [Se.Is Beam.customerId $ Se.Eq (fromJust mbDriverId) | isJust mbDriverId]
             <> [Se.Is Beam.status $ Se.Eq Payout.FULFILLMENTS_FAILURE | isFailedOnly]
+            <> [Se.Is Beam.city $ Se.Eq (show city)]
         )
     ]
     (Se.Desc Beam.createdAt)

@@ -8,6 +8,7 @@ module Domain.Action.ProviderPlatform.Management.Payout
     postPayoutPayoutRetryFailed,
     postPayoutPayoutRetryAllWithStatus,
     postPayoutPayoutPendingPayout,
+    postPayoutPayoutDeleteVPA,
   )
 where
 
@@ -78,3 +79,10 @@ postPayoutPayoutPendingPayout merchantShortId opCity apiTokenInfo req = do
   transaction <- buildPayoutManagementServerTransaction API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutPendingPayoutEndpoint apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ do
     ProviderPlatformClient.DynamicOfferDriver.Operations.callDriverOfferBPPOperations checkedMerchantId opCity (.payoutDSL.postPayoutPayoutPendingPayout) req
+
+postPayoutPayoutDeleteVPA :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Payout.DeleteVpaReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postPayoutPayoutDeleteVPA merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildPayoutManagementServerTransaction API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutDeleteVPAEndpoint apiTokenInfo Nothing (Just req)
+  T.withTransactionStoring transaction $ do
+    ProviderPlatformClient.DynamicOfferDriver.Operations.callDriverOfferBPPOperations checkedMerchantId opCity (.payoutDSL.postPayoutPayoutDeleteVPA) req

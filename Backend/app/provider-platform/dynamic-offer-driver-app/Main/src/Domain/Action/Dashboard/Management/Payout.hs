@@ -8,6 +8,7 @@ module Domain.Action.Dashboard.Management.Payout
     postPayoutPayoutRetryFailed,
     postPayoutPayoutRetryAllWithStatus,
     postPayoutPayoutPendingPayout,
+    postPayoutPayoutDeleteVPA,
   )
 where
 
@@ -130,11 +131,6 @@ getPayoutPayoutReferralHistory merchantShortId opCity areActivatedRidesOnly_ mbC
 utcToIst :: Minutes -> Maybe Kernel.Prelude.UTCTime -> Maybe LocalTime
 utcToIst timeZoneDiff = fmap $ utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinutes)
 
-data PayoutHistoryWithCity = PayoutHistoryWithCity
-  { historyItem :: DTP.PayoutHistoryItem,
-    cityId :: Text
-  }
-
 getPayoutPayoutHistory :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow DTP.PayoutHistoryRes
 getPayoutPayoutHistory merchantShortId opCity mbDriverId mbDriverPhoneNo mbFrom mbIsFailedOnly mbLimit mbOffset mbTo = do
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
@@ -143,13 +139,11 @@ getPayoutPayoutHistory merchantShortId opCity mbDriverId mbDriverPhoneNo mbFrom 
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   mbMobileNumberHash <- mapM getDbHash mbDriverPhoneNo
-  payoutOrders <- runInReplica $ QPayoutOrder.findAllWithOptions limit offset (mbDriverId <&> (.getId)) mbMobileNumberHash mbFrom mbTo isFailedOnly
+  payoutOrders <- runInReplica $ QPayoutOrder.findAllWithOptions limit offset (mbDriverId <&> (.getId)) mbMobileNumberHash mbFrom mbTo isFailedOnly merchantOpCity.city
   history <- mapM (getPayoutPayoutHistoryItem merchantOpCity) payoutOrders
-  let historyList_ = filter (\item -> item.cityId == merchantOpCity.id.getId) history
-      historyList = map (.historyItem) historyList_
-      count = length historyList
+  let count = length history
       summary = Dashboard.Common.Summary {totalCount = 1000, count}
-  pure DTP.PayoutHistoryRes {history = historyList, summary}
+  pure DTP.PayoutHistoryRes {history = history, summary}
   where
     maxLimit = 20
     defaultLimit = 10
@@ -158,20 +152,19 @@ getPayoutPayoutHistory merchantShortId opCity mbDriverId mbDriverPhoneNo mbFrom 
       phoneNo <- decrypt payoutOrder.mobileNo
       transporterConfig <- CTC.findByMerchantOpCityId merchantOpCity.id (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCity.id.getId)
       let timeZoneDiff = secondsToMinutes transporterConfig.timeDiffFromUtc
-      let item =
-            DTP.PayoutHistoryItem
-              { driverName = person.firstName,
-                driverPhoneNo = phoneNo,
-                driverId = Id payoutOrder.customerId,
-                payoutAmount = payoutOrder.amount.amount,
-                payoutStatus = show payoutOrder.status,
-                payoutTime = utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinutes) payoutOrder.createdAt,
-                payoutEntity = castPayoutEntityName <$> payoutOrder.entityName,
-                payoutOrderId = payoutOrder.orderId,
-                responseMessage = payoutOrder.responseMessage,
-                responseCode = payoutOrder.responseCode
-              }
-      pure $ PayoutHistoryWithCity {historyItem = item, cityId = person.merchantOperatingCityId.getId}
+      pure $
+        DTP.PayoutHistoryItem
+          { driverName = person.firstName,
+            driverPhoneNo = phoneNo,
+            driverId = Id payoutOrder.customerId,
+            payoutAmount = payoutOrder.amount.amount,
+            payoutStatus = show payoutOrder.status,
+            payoutTime = utcToLocalTime (minutesToTimeZone timeZoneDiff.getMinutes) payoutOrder.createdAt,
+            payoutEntity = castPayoutEntityName <$> payoutOrder.entityName,
+            payoutOrderId = payoutOrder.orderId,
+            responseMessage = payoutOrder.responseMessage,
+            responseCode = payoutOrder.responseCode
+          }
 
 postPayoutPayoutVerifyFraudStatus :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DTP.UpdateFraudStatusReq -> Environment.Flow APISuccess
 postPayoutPayoutVerifyFraudStatus merchantShortId opCity req = do
@@ -288,6 +281,12 @@ postPayoutPayoutPendingPayout _merchantShortId _opCity req = do
   when (isNothing dInfo.payoutVpa) $ throwError $ InvalidRequest $ "Vpa is not available for person: " <> personId.getId
   when payoutConfig.isPayoutEnabled $ do
     Payout.processPreviousPayoutAmount (cast personId) dInfo.payoutVpa person.merchantOperatingCityId
+  pure Success
+
+postPayoutPayoutDeleteVPA :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DTP.DeleteVpaReq -> Environment.Flow APISuccess
+postPayoutPayoutDeleteVPA _merchantShortId _opCity req = do
+  let driverIds = map cast req.driverIds
+  void $ QDI.updatePayoutVpaAndStatusByDriverIds Nothing Nothing driverIds
   pure Success
 
 callPayoutAndUpdateDailyStats :: Domain.Types.Merchant.Merchant -> DMOC.MerchantOperatingCity -> PO.PayoutOrder -> Environment.Flow ()
