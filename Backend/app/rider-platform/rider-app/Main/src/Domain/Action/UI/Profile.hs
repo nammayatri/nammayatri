@@ -356,7 +356,7 @@ validateRefferalCode personId refCode = do
               person.deviceId
           case (person.mobileNumber, person.mobileCountryCode) of
             (Just mobileNumber, Just countryCode) -> do
-              void $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode isMultipleDeviceIdExist
+              void $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode isMultipleDeviceIdExist (Just False) (Just False)
               return $ Just refCode
             _ -> throwError (PersonMobileNumberIsNULL person.id.getId)
 
