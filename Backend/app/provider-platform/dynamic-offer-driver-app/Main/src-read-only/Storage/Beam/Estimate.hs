@@ -18,6 +18,7 @@ data EstimateT f = EstimateT
   { createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
+    dpVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     fareParamsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     farePolicyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

@@ -22,6 +22,7 @@ module Domain.Types.ServiceTierType where
 import Data.Aeson
 import Data.OpenApi hiding (name)
 import EulerHS.Prelude hiding (length, map, readMaybe)
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 
 data ServiceTierType
@@ -49,6 +50,8 @@ data ServiceTierType
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, EulerHS.Prelude.Hashable, Enum, Bounded)
 
 $(mkHttpInstancesForEnum ''ServiceTierType)
+
+instance CH.ClickhouseValue ServiceTierType
 
 offUsVariants :: [ServiceTierType]
 offUsVariants = [AUTO_RICKSHAW, SEDAN, HATCHBACK, SUV]

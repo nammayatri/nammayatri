@@ -111,6 +111,7 @@ library
     , beam-mysql
     , beam-postgres
     , beckn-services
+    , beckn-spec
     , bytestring
     , casing
     , cassava

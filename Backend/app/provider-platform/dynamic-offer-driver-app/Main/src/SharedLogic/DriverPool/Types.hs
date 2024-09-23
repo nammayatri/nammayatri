@@ -20,8 +20,8 @@ import qualified Data.Aeson.Types as A
 import Data.Default.Class
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
+import Domain.Types.Common as DI (DriverMode (..))
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
-import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (..))
 import Domain.Types.DriverPoolConfig (DriverPoolConfig)
 import Domain.Types.GoHomeConfig (GoHomeConfig)
@@ -84,7 +84,7 @@ data DriverPoolResult = DriverPoolResult
     isAirConditioned :: Maybe Bool,
     lat :: Double,
     lon :: Double,
-    mode :: Maybe DI.DriverMode,
+    mode :: Maybe DriverMode,
     vehicleAge :: Maybe Months,
     clientSdkVersion :: Maybe Version,
     clientBundleVersion :: Maybe Version,
@@ -141,7 +141,7 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     previousRideDropLon :: Double,
     distanceToPickup :: Meters,
     distanceFromDriverToDestination :: Meters,
-    mode :: Maybe DI.DriverMode,
+    mode :: Maybe DriverMode,
     clientSdkVersion :: Maybe Version,
     clientBundleVersion :: Maybe Version,
     vehicleAge :: Maybe Months,

@@ -41,9 +41,9 @@ import qualified Domain.Action.UI.Driver as DDriver
 import Domain.Types
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Client as DC
+import Domain.Types.Common as DI
 import Domain.Types.DriverFee (DriverFeeStatus)
 import qualified Domain.Types.DriverHomeLocation as DDHL
-import Domain.Types.DriverInformation as DI
 import Domain.Types.Invoice (InvoicePaymentMode)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC

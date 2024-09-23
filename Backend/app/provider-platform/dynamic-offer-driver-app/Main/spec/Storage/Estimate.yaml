@@ -22,6 +22,7 @@ Estimate:
       tripCategory: TripCategory
       minFare: HighPrecMoney
       maxFare: HighPrecMoney
+      dpVersion : Maybe Text
       currency: Currency
       estimatedDistance: Maybe Meters
       distanceUnit: DistanceUnit

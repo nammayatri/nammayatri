@@ -20,6 +20,7 @@ import qualified Domain.Types.Person as DPerson
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import JsonLogic
+import qualified Kernel.Prelude as Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
@@ -35,6 +36,7 @@ import Lib.Yudhishthira.Types.AppDynamicLogic
 import qualified Lib.Yudhishthira.Types.ChakraQueries
 import Servant hiding (throwError)
 import SharedLogic.DriverPool.Types
+import SharedLogic.DynamicPricing
 import SharedLogic.Merchant
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -56,8 +58,11 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   resp <-
     case req.domain of
       Lib.Yudhishthira.Types.POOLING -> do
-        driversData <- mapM createPoolingLogicData req.inputData
+        driversData :: [DriverPoolWithActualDistResult] <- mapM (createLogicData def . Just) req.inputData
         let logicData = TaggedDriverPoolInput driversData False
+        YudhishthiraFlow.verifyDynamicLogic req.rules logicData
+      Lib.Yudhishthira.Types.DYNAMIC_PRICING _ -> do
+        logicData :: DynamicPricingData <- createLogicData def (Prelude.listToMaybe req.inputData)
         YudhishthiraFlow.verifyDynamicLogic req.rules logicData
       _ -> throwError $ InvalidRequest "Logic Domain not supported"
   isRuleUpdated <-
@@ -71,12 +76,13 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       else return False
   return $ Lib.Yudhishthira.Types.AppDynamicLogicResp resp.result isRuleUpdated resp.errors
   where
-    createPoolingLogicData :: A.Value -> Environment.Flow DriverPoolWithActualDistResult
-    createPoolingLogicData inputValue = do
-      let defaultValue = A.toJSON (def :: DriverPoolWithActualDistResult)
+    createLogicData :: (FromJSON a, ToJSON a) => a -> Maybe A.Value -> Environment.Flow a
+    createLogicData defaultVal Nothing = return defaultVal
+    createLogicData defaultVal (Just inputValue) = do
+      let defaultValue = A.toJSON defaultVal
           finalValue = deepMerge defaultValue inputValue
-      case A.fromJSON finalValue :: A.Result DriverPoolWithActualDistResult of
-        A.Success a -> pure a
+      case A.fromJSON finalValue of
+        A.Success a -> return a
         A.Error err -> throwError $ InvalidRequest ("Not able to merge input data into default value. Getting error: " <> show err)
 
     verifyPassword :: Maybe Text -> Text -> Environment.Flow ()
@@ -88,7 +94,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     updateDynamicLogic merchantOpCityId rules domain mbTimeBounds = do
       let timeBounds = fromMaybe Unbounded mbTimeBounds
       now <- getCurrentTime
-      let appDynamicLogics = (zip rules [0 ..]) <&> (\(rule, order) -> mkAppDynamicLogic timeBounds rule order now)
+      let appDynamicLogics = zip rules [0 ..] <&> (\(rule, order) -> mkAppDynamicLogic timeBounds rule order now)
       CADL.delete (cast merchantOpCityId) domain timeBounds
       CADL.createMany appDynamicLogics
       CADL.clearCache (cast merchantOpCityId) domain
@@ -98,7 +104,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
         mkAppDynamicLogic timeBounds logic order now =
           AppDynamicLogic
             { description = "Rule for " <> show domain <> " order " <> show order,
-              merchantOperatingCityId = (cast merchantOpCityId),
+              merchantOperatingCityId = cast merchantOpCityId,
               name = "Rule" <> show order,
               createdAt = now,
               updatedAt = now,

@@ -17,7 +17,7 @@ module Service.Runner where
 import qualified API as HC
 import Data.Either
 import Data.List.NonEmpty (nonEmpty)
-import Domain.Types.DriverInformation (DriverMode (..))
+import Domain.Types.Common (DriverMode (..))
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Person as SP
 import Environment (Flow)

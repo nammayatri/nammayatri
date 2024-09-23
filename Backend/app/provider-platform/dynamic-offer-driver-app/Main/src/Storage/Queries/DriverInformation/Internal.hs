@@ -14,6 +14,7 @@
 
 module Storage.Queries.DriverInformation.Internal where
 
+import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions (findAllWithKV)

@@ -9,7 +9,6 @@ import qualified Data.Time
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
-import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
@@ -54,6 +53,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     driverStepFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     durationToPickup :: B.C f Kernel.Types.Common.Seconds,
     estimateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fromLocGeohash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     goHomeRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     isForwardRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -63,7 +63,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     lon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    mode :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverMode),
+    mode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.DriverMode),
     notificationSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource),
     parallelSearchRequestCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     pickupZone :: B.C f Kernel.Prelude.Bool,

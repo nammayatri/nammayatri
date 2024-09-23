@@ -38,6 +38,8 @@ Booking:
     area: Maybe Area
     providerId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    fromLocGeohash : Maybe Text
+    toLocGeohash: Maybe Text
     primaryExophone: Text
     bapId: Text
     bapUri: Text
