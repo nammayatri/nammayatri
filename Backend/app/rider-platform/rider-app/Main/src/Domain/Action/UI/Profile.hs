@@ -104,6 +104,7 @@ data ProfileRes = ProfileRes
     hasTakenValidCabRide :: Bool,
     hasTakenValidBikeRide :: Bool,
     hasTakenValidAmbulanceRide :: Bool,
+    hasTakenValidTruckRide :: Bool,
     referralCode :: Maybe Text,
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
     language :: Maybe Maps.Language,
@@ -212,6 +213,7 @@ getPersonDetails (personId, _) toss tenant' context = do
       hasTakenValidFirstAutoRide = validRideCount hasTakenValidRide BecknEnums.AUTO_RICKSHAW
       hasTakenValidFirstBikeRide = validRideCount hasTakenValidRide BecknEnums.MOTORCYCLE
       hasTakenValidAmbulanceRide = validRideCount hasTakenValidRide BecknEnums.AMBULANCE
+      hasTakenValidTruckRide = validRideCount hasTakenValidRide BecknEnums.TRUCK
   newCustomerReferralCode <-
     if isNothing person.customerReferralCode
       then do
@@ -223,9 +225,9 @@ getPersonDetails (personId, _) toss tenant' context = do
             pure $ Just newCustomerReferralCode
           else pure Nothing
       else pure person.customerReferralCode
-  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide safetySettings
+  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide safetySettings
   where
-    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide safetySettings = do
+    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide safetySettings = do
       ProfileRes
         { maskedMobileNumber = maskText <$> mobileNumber,
           maskedDeviceToken = maskText <$> deviceToken,
@@ -235,6 +237,7 @@ getPersonDetails (personId, _) toss tenant' context = do
           hasTakenValidCabRide = hasTakenCabRide,
           hasTakenValidBikeRide = hasTakenValidFirstBikeRide,
           hasTakenValidAmbulanceRide = hasTakenValidAmbulanceRide,
+          hasTakenValidTruckRide = hasTakenValidTruckRide,
           isSafetyCenterDisabled = isSafetyCenterDisabled_,
           customerReferralCode = newCustomerReferralCode,
           bundleVersion = clientBundleVersion,
