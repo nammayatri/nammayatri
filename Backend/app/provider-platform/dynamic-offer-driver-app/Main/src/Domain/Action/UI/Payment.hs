@@ -80,6 +80,7 @@ import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Notification as QNTF
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.VendorFeeExtra as QVF
 import Tools.Error
 import Tools.Notifications
 import qualified Tools.Payment as Payment
@@ -97,7 +98,8 @@ createOrder (driverId, merchantId, opCityId) invoiceId = do
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
   let paymentServiceName = subscriptionConfig.paymentServiceName
-  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId, opCityId) paymentServiceName (catMaybes driverFees, []) Nothing INV.MANUAL_INVOICE (getIdAndShortId <$> listToMaybe invoices) Nothing
+  vendorFees <- if subscriptionConfig.isVendorSplitEnabled == Just True then concat <$> mapM (QVF.findAllByDriverFeeId . Domain.Types.DriverFee.id) (catMaybes driverFees) else pure []
+  (createOrderResp, _) <- SPayment.createOrder (driverId, merchantId, opCityId) paymentServiceName (catMaybes driverFees, []) Nothing INV.MANUAL_INVOICE (getIdAndShortId <$> listToMaybe invoices) vendorFees Nothing
   return createOrderResp
   where
     getIdAndShortId inv = (inv.id, inv.invoiceShortId)

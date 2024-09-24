@@ -260,6 +260,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.Vehicle as QVehicle
+import qualified Storage.Queries.VendorFee as QVF
 import qualified Tools.Auth as Auth
 import Tools.Error
 import Tools.Event
@@ -1785,15 +1786,16 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
   invoices <- mapM (\fee -> runInReplica (QINV.findActiveManualInvoiceByFeeId fee.id Domain.MANUAL_INVOICE Domain.ACTIVE_INVOICE)) dueDriverFees
   let paymentService = subscriptionConfig.paymentServiceName
   let sortedInvoices = mergeSortAndRemoveDuplicate invoices
+  vendorFees <- if subscriptionConfig.isVendorSplitEnabled == Just True then concat <$> mapM (QVF.findAllByDriverFeeId . DDF.id) dueDriverFees else pure []
   clearDueResp <- do
     case sortedInvoices of
-      [] -> mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (dueDriverFees, []) Nothing INV.MANUAL_INVOICE Nothing mbDeepLinkData
+      [] -> mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (dueDriverFees, []) Nothing INV.MANUAL_INVOICE Nothing vendorFees mbDeepLinkData
       (invoice_ : restinvoices) -> do
         mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) restinvoices
         (invoice, currentDuesForExistingInvoice, newDues) <- validateExistingInvoice invoice_ dueDriverFees
         let driverFeeForCurrentInvoice = filter (\dfee -> dfee.id.getId `elem` currentDuesForExistingInvoice) dueDriverFees
         let driverFeeToBeAddedOnExpiry = filter (\dfee -> dfee.id.getId `elem` newDues) dueDriverFees
-        mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing INV.MANUAL_INVOICE invoice mbDeepLinkData
+        mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing INV.MANUAL_INVOICE invoice vendorFees mbDeepLinkData
   let mbPaymentLink = clearDueResp.orderResp.payment_links
       payload = clearDueResp.orderResp.sdk_payload.payload
       mbAmount = readMaybe (T.unpack payload.amount) :: Maybe HighPrecMoney
@@ -2287,15 +2289,16 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
   invoices <- mapM (\fee_ -> runInReplica (QINV.findActiveManualInvoiceByFeeId fee_.id (feeTypeToInvoicetype feeType) Domain.ACTIVE_INVOICE)) driverFee
   let paymentService = subscriptionConfig.paymentServiceName
   let sortedInvoices = mergeSortAndRemoveDuplicate invoices
+  vendorFees <- if subscriptionConfig.isVendorSplitEnabled == Just True then concat <$> mapM (QVF.findAllByDriverFeeId . DDF.id) driverFee else pure []
   resp <- do
     case sortedInvoices of
-      [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFee, []) Nothing (feeTypeToInvoicetype feeType) Nothing mbDeepLinkData
+      [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFee, []) Nothing (feeTypeToInvoicetype feeType) Nothing vendorFees mbDeepLinkData
       (invoice_ : restinvoices) -> do
         mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) restinvoices
         (invoice, currentDuesForExistingInvoice, newDues) <- validateExistingInvoice invoice_ driverFee
         let driverFeeForCurrentInvoice = filter (\dfee -> dfee.id.getId `elem` currentDuesForExistingInvoice) driverFee
         let driverFeeToBeAddedOnExpiry = filter (\dfee -> dfee.id.getId `elem` newDues) driverFee
-        mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing (feeTypeToInvoicetype feeType) invoice mbDeepLinkData
+        mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing (feeTypeToInvoicetype feeType) invoice vendorFees mbDeepLinkData
   let mbPaymentLink = resp.orderResp.payment_links
       payload = resp.orderResp.sdk_payload.payload
       mbAmount = readMaybe (T.unpack payload.amount) :: Maybe HighPrecMoney

@@ -599,6 +599,7 @@ library
       Storage.Queries.VehicleExtra
       Storage.Queries.VehicleInsuranceExtra
       Storage.Queries.VehicleRegistrationCertificateExtra
+      Storage.Queries.VendorFeeExtra
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
       Tools.Auth
@@ -785,6 +786,8 @@ library
       Domain.Types.VehiclePUC
       Domain.Types.VehicleRegistrationCertificate
       Domain.Types.VehicleServiceTier
+      Domain.Types.VendorFee
+      Domain.Types.VendorSplitDetails
       Domain.Types.Volunteer
       Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarCard
@@ -902,6 +905,8 @@ library
       Storage.Beam.VehiclePUC
       Storage.Beam.VehicleRegistrationCertificate
       Storage.Beam.VehicleServiceTier
+      Storage.Beam.VendorFee
+      Storage.Beam.VendorSplitDetails
       Storage.Beam.Volunteer
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.CancellationFarePolicy
@@ -1043,6 +1048,8 @@ library
       Storage.Queries.OrphanInstances.VehicleDetails
       Storage.Queries.OrphanInstances.VehicleInsurance
       Storage.Queries.OrphanInstances.VehicleRegistrationCertificate
+      Storage.Queries.OrphanInstances.VendorFee
+      Storage.Queries.OrphanInstances.VendorSplitDetails
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.Overlay
       Storage.Queries.PayoutConfig
@@ -1081,6 +1088,8 @@ library
       Storage.Queries.VehiclePUC
       Storage.Queries.VehicleRegistrationCertificate
       Storage.Queries.VehicleServiceTier
+      Storage.Queries.VendorFee
+      Storage.Queries.VendorSplitDetails
       Storage.Queries.Volunteer
       Storage.Queries.WhiteListOrg
   other-modules:
