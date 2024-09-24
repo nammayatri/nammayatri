@@ -52,15 +52,6 @@ type PlanData = {
     description :: String
 }
 
-getMultiLanguagePlanData :: Boolean -> PlanData -> PlanData
-getMultiLanguagePlanData isLocalized planData = do
-    let dailyUnlimited = getString DAILY_UNLIMITED
-    if isLocalized then planData
-    else do
-        if planData.title ==  dailyUnlimited 
-            then {title : getString DAILY_UNLIMITED, description : getString DAILY_UNLIMITED_PLAN_DESC}
-            else {title : getString DAILY_PER_RIDE, description : getString $ DAILY_PER_RIDE_PLAN_DESC "35"} 
-
 getPromoConfig :: Array OfferEntity -> Array GradientConfig -> Array PromoConfig
 getPromoConfig offerEntityArr gradientConfig =
     (map (\ (OfferEntity item) ->  do
@@ -212,7 +203,7 @@ getSelectedPlan (UiPlansResp planResp) config = do
 
 getPlanCardConfig :: PlanEntity -> Boolean -> Boolean -> SubscriptionConfig -> PlanCardConfig
 getPlanCardConfig (PlanEntity planEntity) isLocalized isIntroductory  config = 
-    let planData = getMultiLanguagePlanData isLocalized {title : planEntity.name, description : planEntity.description}
+    let planData = {title : planEntity.name, description : planEntity.description}
     in  {
             id : planEntity.id ,
             title : planData.title ,
