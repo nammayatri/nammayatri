@@ -156,3 +156,21 @@ frfsVehicleCategoryToBecknVehicleCategory :: Spec.VehicleCategory -> BecknSpec.V
 frfsVehicleCategoryToBecknVehicleCategory = \case
   Spec.BUS -> BecknSpec.BUS
   Spec.METRO -> BecknSpec.METRO
+
+getAndValidateCancellationParams :: [Spec.QuotationBreakupInner] -> Spec.OrderStatus -> Either Text (HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney)
+getAndValidateCancellationParams quoteBreakup orderStatus = do
+  baseFare <- findCancellationParams Spec.BASE_FARE & maybe (Left "CancellationParams baseFare not found") Right
+  let refundAmount = findCancellationParams Spec.REFUND
+      cancellationCharges = findCancellationParams Spec.CANCELLATION_CHARGES
+  when
+    ( (isNothing refundAmount || isNothing cancellationCharges)
+        && (orderStatus == Spec.CANCELLED || orderStatus == Spec.SOFT_CANCELLED)
+    )
+    $ Left "Missing cancellation params refundAmount or cancellationChargs"
+  Right (baseFare, refundAmount, cancellationCharges)
+  where
+    findCancellationParams :: Spec.CancellationParams -> Maybe HighPrecMoney
+    findCancellationParams titleToFind =
+      case find (\qb -> qb.quotationBreakupInnerTitle == Just (show titleToFind)) quoteBreakup of
+        Just qb -> qb.quotationBreakupInnerPrice >>= parseMoney
+        Nothing -> Nothing

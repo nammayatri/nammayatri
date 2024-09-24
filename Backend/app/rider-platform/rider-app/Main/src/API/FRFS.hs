@@ -19,6 +19,7 @@ import qualified API.Beckn.FRFS.OnConfirm as OnConfirm
 import qualified API.Beckn.FRFS.OnInit as OnInit
 import qualified API.Beckn.FRFS.OnSearch as OnSearch
 import qualified API.Beckn.FRFS.OnStatus as OnStatus
+import qualified API.Beckn.FRFS.OnUpdate as OnUpdate
 import qualified Domain.Types.Merchant as DM
 import Environment
 import qualified Kernel.Types.Beckn.Domain as Domain
@@ -34,6 +35,7 @@ type API =
            :<|> OnConfirm.API
            :<|> OnStatus.API
            :<|> OnCancel.API
+           :<|> OnUpdate.API
        )
 
 type APIM =
@@ -45,6 +47,7 @@ type APIM =
            :<|> OnConfirm.API
            :<|> OnStatus.API
            :<|> OnCancel.API
+           :<|> OnUpdate.API
        )
 
 handler :: FlowServer API
@@ -54,3 +57,4 @@ handler auth =
     :<|> OnConfirm.handler auth
     :<|> OnStatus.handler auth
     :<|> OnCancel.handler auth
+    :<|> OnUpdate.handler auth
