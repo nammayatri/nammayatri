@@ -810,7 +810,7 @@ myPlanBodyview push state =
       ]
     , lottieView state "lottieSubscriptionScreen2" (Margin 16 0 16 16) (Padding 0 0 0 0) false
     , PlanCard.view (push <<< TogglePlanAction) (planCardConfig state.data.myPlanData.planEntity true (not isFreezed) state.props.isSelectedLangTamil false true true Nothing false [] mbCoinDiscountUpto)  -- Always expended
-    , offerCardBannerView push true (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && (any (_ == state.data.myPlanData.planEntity.id) state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans)) false state.props.offerBannerProps isFreezed
+    , offerCardBannerView push true (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY && (any (_ == state.data.myPlanData.planEntity.id) state.props.offerBannerProps.offerBannerPlans)) false state.props.offerBannerProps isFreezed
     , alertView push (getImageURL "ny_ic_about") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_MODE_CHANGED_TO_MANUAL_DESC) "" NoAction (state.data.myPlanData.autoPayStatus == PAUSED_PSP) state.props.isSelectedLangTamil true isFreezed
     , alertView push (getImageURL "ny_ic_about") Color.black800 (getString PAYMENT_MODE_CHANGED_TO_MANUAL) (getString PAYMENT_CANCELLED) "" NoAction (any (_ == state.data.myPlanData.autoPayStatus) [CANCELLED_PSP, SUSPENDED]) state.props.isSelectedLangTamil false isFreezed
     , alertView push (getImageURL "ny_ic_warning_red") Color.red (getString LOW_ACCOUNT_BALANCE) (DS.replace (DS.Pattern "<X>") (DS.Replacement $ getFixedTwoDecimals $ fromMaybe 0.0 state.data.myPlanData.lowAccountBalance) (getString LOW_ACCOUNT_BALANCE_DESC)) "" NoAction (Mb.isJust state.data.myPlanData.lowAccountBalance) state.props.isSelectedLangTamil false isFreezed
@@ -1177,7 +1177,7 @@ managePlanBodyView push state =
           , color Color.black700
           , margin $ MarginBottom 12
           ] <> if state.props.isSelectedLangTamil then FontStyle.body17 TypoGraphy else FontStyle.body9 TypoGraphy
-        , PlanCard.view (push <<< SelectPlanAction) (planCardConfig state.data.managePlanData.currentPlan (state.data.managePlanData.currentPlan.id == state.props.managePlanProps.selectedPlanItem.id) true state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false true (Just state.props.offerBannerProps) false state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans Nothing)
+        , PlanCard.view (push <<< SelectPlanAction) (planCardConfig state.data.managePlanData.currentPlan (state.data.managePlanData.currentPlan.id == state.props.managePlanProps.selectedPlanItem.id) true state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false true (Just state.props.offerBannerProps) false state.props.offerBannerProps.offerBannerPlans Nothing)
         , textView $
           [ text (getString ALTERNATE_PLAN)
           , color Color.black700
@@ -1188,7 +1188,7 @@ managePlanBodyView push state =
           , width MATCH_PARENT
           , orientation VERTICAL
           ](map(
-              (\item -> PlanCard.view (push <<< SelectPlanAction) (planCardConfig item (item.id == state.props.managePlanProps.selectedPlanItem.id) true state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false false (Just state.props.offerBannerProps) false state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans Nothing))
+              (\item -> PlanCard.view (push <<< SelectPlanAction) (planCardConfig item (item.id == state.props.managePlanProps.selectedPlanItem.id) true state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false false (Just state.props.offerBannerProps) false state.props.offerBannerProps.offerBannerPlans Nothing))
               ) state.data.managePlanData.alternatePlans)
         , PrimaryButton.view (push <<< SwitchPlan) (switchPlanButtonConfig state)
       ]
