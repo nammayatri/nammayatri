@@ -330,6 +330,7 @@ data DriverInformationRes = DriverInformationRes
     freeTrialDays :: Int,
     freeTrialRides :: Int,
     totalRidesTaken :: Maybe Int,
+    favCount :: Maybe Int,
     subscriptionEnabledForVehicleCategory :: Bool,
     isSubscriptionEnabledAtCategoryLevel :: Bool
   }
@@ -1074,6 +1075,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referral
           cancelledRidesCountInWindow = cancellationRateData.cancelledCount,
           assignedRidesCountInWindow = cancellationRateData.assignedCount,
           windowSize = cancellationRateData.windowSize,
+          favCount = Just driverStats.favRiderCount,
           ..
         }
 

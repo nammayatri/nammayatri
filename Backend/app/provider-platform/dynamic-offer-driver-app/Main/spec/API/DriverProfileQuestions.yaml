@@ -32,5 +32,7 @@ apis:
   - GET:
       endpoint: /DriverProfileQues
       auth: TokenAuth PROVIDER_TYPE
+      query:
+        - isImages: Bool
       response:
         type: DriverProfileQuesRes
