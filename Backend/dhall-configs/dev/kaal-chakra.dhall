@@ -87,7 +87,7 @@ let schedulerConfig =
       , hedisPrefix = "kaal-chakra"
       , port = +8059
       , loopIntervalSec = +5
-      , expirationTime = +60
+      , expirationTime = +86400
       , waitBeforeRetry = +1
       , tasksPerIteration = +20
       , graceTerminationPeriod = +10
@@ -115,7 +115,20 @@ let jobInfoMapx =
 
 let cacheConfig = { configsExpTime = +86400 }
 
+let DayOfWeek =
+      < Monday | Tuesday | Wednesday | Thursday | Friday | Saturday | Sunday >
+
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
+
+let dailySchedulerTime = { hours = +10, minutes = +28 }
+
+let weeklySchedulerTime =
+      { dayOfWeek = DayOfWeek.Wednesday, hours = +10, minutes = +27 }
+
+let monthlySchedulerTime = { dayOfMonth = +18, hours = +10, minutes = +26 }
+
+let quarterlySchedulerTime =
+      { monthOfQuarter = +3, dayOfMonth = +18, hours = +10, minutes = +25 }
 
 in  { esqDBReplicaCfg
     , schedulerConfig
@@ -135,6 +148,18 @@ in  { esqDBReplicaCfg
     , httpClientOptions = common.httpClientOptions
     , encTools
     , maxShards = +5
-    , shouldCreateJobs = True
-    , shouldCompleteOldJobs = True
+    , shouldCreateJobs = False
+    , shouldCompleteOldJobs = False
+    , updateUserTags = False
+    , parseQueryResults = False
+    , usersInBatch = +100
+    , maxBatches = +5
+    , shouldCreateDailyJob = True
+    , shouldCreateWeeklyJob = True
+    , shouldCreateMonthlyJob = True
+    , shouldCreateQuarterlyJob = True
+    , dailySchedulerTime
+    , weeklySchedulerTime
+    , monthlySchedulerTime
+    , quarterlySchedulerTime
     }

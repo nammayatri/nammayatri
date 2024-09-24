@@ -15,7 +15,7 @@ import Tools.Beam.UtilsTH
 data ChakraQueriesT f = ChakraQueriesT
   { chakra :: B.C f Lib.Yudhishthira.Types.Chakra,
     queryName :: B.C f Kernel.Prelude.Text,
-    queryResults :: B.C f [Kernel.Prelude.Text],
+    queryResults :: B.C f [Lib.Yudhishthira.Types.QueryResult],
     queryText :: B.C f Kernel.Prelude.Text,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

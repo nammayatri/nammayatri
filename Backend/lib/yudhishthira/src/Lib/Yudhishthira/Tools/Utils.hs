@@ -15,7 +15,6 @@ import Kernel.Types.TimeBound
 import Kernel.Utils.Common
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogic as DAL
-import Lib.Yudhishthira.Storage.Queries.ChakraQueries as SQCQ
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.AppDynamicLogic
 
@@ -25,10 +24,8 @@ mandatoryChakraFields = [userIdField]
 userIdField :: Text
 userIdField = "userId"
 
-getChakraQueryFields :: BeamFlow m r => LYT.Chakra -> m [Text]
-getChakraQueryFields chakra = do
-  queries <- SQCQ.findAllByChakra chakra
-  return $ filter (\field -> field `notElem` mandatoryChakraFields) $ concatMap (.queryResults) queries
+getUserIdsQueryName :: Text
+getUserIdsQueryName = "getUserIds"
 
 decodeTextToValue :: Text -> Either String Value
 decodeTextToValue text =

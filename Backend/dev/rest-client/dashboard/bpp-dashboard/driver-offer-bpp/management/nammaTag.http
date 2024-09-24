@@ -10,12 +10,6 @@ GET {{bpp-dashboard-host}}
 
 ###
 
-# @name dailyRidesQueryCreate
-
-POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/nammaTag/query/create
-token: {{customer_service}}
-content-type: application/json
-
 # FIXME use templates:
 # SELECT driver_id as userId, count(id) as totalRides, sum(chargeable_distance) as totalDistance, sum(fare) as totalFare
 #   FROM atlas_driver_offer_bpp.ride
@@ -24,11 +18,55 @@ content-type: application/json
 #   LIMIT {limit}
 #   OFFSET {offset}
 
+
+# @name dailyRidesQueryCreate
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/nammaTag/query/create
+token: {{customer_service}}
+content-type: application/json
+
 {
     "chakra": "Daily",
     "queryName" : "dailyRides",
-    "queryResults": ["userId", "totalRides", "totalDistance", "totalFare"],
-    "queryText": "SELECT driver_id as userId, count(id) :: int as totalRides, sum(chargeable_distance) :: int as totalDistance, sum(fare) :: int as totalFare FROM atlas_driver_offer_bpp.ride WHERE created_at > '2024-01-01 00:00:00' GROUP BY driver_id"
+    "queryResults":
+    [
+      { "resultName" : "userId",
+        "resultDefault" : {
+          "tag" : "TEXT",
+          "contents" : "NotFound"
+        }
+      },
+      { "resultName" : "totalRides",
+        "resultDefault" : {
+          "tag" : "INT",
+          "contents" : 0
+        }
+      },
+      { "resultName" : "totalDistance",
+        "resultDefault" : {
+          "tag" : "DOUBLE",
+          "contents" : 0
+        }
+      },
+      { "resultName" : "totalFare",
+        "resultDefault" : {
+          "tag" : "DOUBLE",
+          "contents" : 0
+        }
+      }
+      ],
+    "queryText":
+      "SELECT\n
+          driver_id as userId,\n
+          count(id) as totalRides,\n
+          sum(chargeable_distance) as totalDistance,\n
+          sum(fare) as totalFare\n
+        FROM atlas_driver_offer_bpp.ride\n
+        WHERE created_at >= date_sub (day, 365, toStartOfDay (now ()))\n
+          AND created_at < toStartOfDay (now ())\n
+          AND {usersSetCondition}\n
+        GROUP BY driver_id\n
+        ORDER BY driver_id ASC LIMIT {limit} OFFSET {offset}"
 }
 
 ###
@@ -42,8 +80,32 @@ content-type: application/json
 {
     "chakra": "Daily",
     "queryName" : "dailyCancellations",
-    "queryResults": ["userId", "cancellationsCount"],
-    "queryText": "SELECT driver_id as userId, count(id) :: int as cancellationsCount FROM atlas_driver_offer_bpp.ride WHERE created_at > '2024-01-01 00:00:00' AND status = 'CANCELLED' GROUP BY driver_id"
+    "queryResults":
+    [
+      { "resultName" : "userId",
+        "resultDefault" : {
+          "tag" : "TEXT",
+          "contents" : "NotFound"
+        }
+      },
+      { "resultName" : "cancellationsCount",
+        "resultDefault" : {
+          "tag" : "INT",
+          "contents" : 0
+        }
+      }
+      ],
+    "queryText":
+      "SELECT driver_id as userId, count(id) as cancellationsCount\n
+        FROM atlas_driver_offer_bpp.ride\n
+        WHERE status = 'CANCELLED'\n
+          AND created_at >= date_sub (day, 365, toStartOfDay (now ()))\n
+          AND created_at < toStartOfDay (now ())\n
+          AND {usersSetCondition}\n
+        GROUP BY driver_id\n
+        ORDER BY driver_id ASC\n
+        LIMIT {limit}\n
+        OFFSET {offset}"
 }
 
 ###
@@ -111,12 +173,40 @@ content-type: application/json
 
 ###
 
-# @name runKaalChakraJob
+# @name runKaalChakraJobSingleUser
 
 POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/nammaTag/runJob
 token: {{customer_service}}
 content-type: application/json
 
 {
-    "chakra": "Daily"
+    "chakra": "Daily",
+    "updateUserTags": false,
+    "parseQueryResults": false,
+    "usersSet":
+      { "tag": "SINGLE_USER",
+        "contents" : "favorit-auto1-0000000000000000000000"
+      },
+    "usersInBatch": 1,
+    "maxBatches" : 5
+}
+
+###
+
+# @name runKaalChakraJobUserList
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/nammaTag/runJob
+token: {{customer_service}}
+content-type: application/json
+
+{
+    "chakra": "Daily",
+    "updateUserTags": true,
+    "parseQueryResults": true,
+    "usersSet":
+      { "tag": "LIST_USERS",
+        "contents" : ["favorit-auto1-0000000000000000000000", "favorit-bike-00000000000000000000000"]
+      },
+    "usersInBatch": 1,
+    "maxBatches" : 5
 }

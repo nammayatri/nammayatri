@@ -11,6 +11,13 @@ module Lib.Yudhishthira.Types
     AppDynamicLogicResp (..),
     RunLogicResp (..),
     RunKaalChakraJobReq (..),
+    RunKaalChakraJobRes (..),
+    RunKaalChakraJobResForUser (..),
+    TagAPIEntity (..),
+    UsersSet (..),
+    QueryResult (..),
+    QueryResultDefault (..),
+    -- DynamicPricingResult (..),
   )
 where
 
@@ -18,6 +25,7 @@ import Data.Aeson
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.HideSecrets
+import Kernel.Types.Id
 import Kernel.Types.TimeBound
 import Kernel.Utils.TH
 import Lib.Yudhishthira.Types.Application as Reexport
@@ -45,10 +53,21 @@ instance HideSecrets CreateNammaTagRequest where
 data ChakraQueriesAPIEntity = ChakraQueriesAPIEntity
   { chakra :: Chakra,
     queryName :: Text,
-    queryResults :: [Text],
+    queryResults :: [QueryResult],
     queryText :: Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data QueryResult = QueryResult
+  { resultName :: Text,
+    resultDefault :: QueryResultDefault
+  }
+  deriving (Generic, Show, Eq, Ord, Read, ToJSON, FromJSON, ToSchema)
+
+data QueryResultDefault = BOOL Bool | INT Int | DOUBLE Double | TEXT Text
+  deriving (Generic, Show, Eq, Ord, Read, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnumAndList ''QueryResult)
 
 instance HideSecrets ChakraQueriesAPIEntity where
   hideSecrets = identity
@@ -98,10 +117,45 @@ data RunLogicResp = RunLogicResp
 instance HideSecrets AppDynamicLogicReq where
   hideSecrets = identity
 
-newtype RunKaalChakraJobReq = RunKaalChakraJobReq
-  { chakra :: Chakra
+data RunKaalChakraJobReq = RunKaalChakraJobReq
+  { chakra :: Chakra,
+    updateUserTags :: Bool,
+    parseQueryResults :: Bool,
+    usersSet :: UsersSet,
+    usersInBatch :: Int,
+    maxBatches :: Int -- we need to avoid endless loops in case of any query is wrong
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data UsersSet = SINGLE_USER (Id User) | LIST_USERS [Id User] | ALL_USERS
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data RunKaalChakraJobRes = RunKaalChakraJobRes
+  { eventId :: Id Event,
+    tags :: Maybe [TagAPIEntity],
+    users :: Maybe [RunKaalChakraJobResForUser]
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data TagAPIEntity = TagAPIEntity
+  { name :: Text,
+    possibleValues :: TagValues,
+    rule :: TagRule,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data RunKaalChakraJobResForUser = RunKaalChakraJobResForUser
+  { userId :: Id User,
+    userDataValue :: Value, -- final result with default values
+    userOldTags :: Maybe [Text], -- tagName#TAG_VALUE format
+    userUpdatedTags :: Maybe [Text] -- tagName#TAG_VALUE format
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets RunKaalChakraJobReq where
+  hideSecrets = identity
+
+instance HideSecrets RunKaalChakraJobRes where
   hideSecrets = identity

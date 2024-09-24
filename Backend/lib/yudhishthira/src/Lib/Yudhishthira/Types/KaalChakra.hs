@@ -59,12 +59,6 @@ type instance JobContent 'Monthly = EmptyData
 
 type instance JobContent 'Quarterly = EmptyData
 
-data ChakraQuery = ChakraQuery
-  { query :: Text,
-    queryResults :: [ChakraQueryResult]
-  }
-  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+newtype QLimit = QLimit {getQLimit :: Int}
 
-data ChakraQueryResultType = DOUBLE | BOOL | STRING deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-type ChakraQueryResult = (Text, ChakraQueryResultType)
+newtype QOffset = QOffset {getQOffset :: Int}

@@ -28,9 +28,10 @@ library
   exposed-modules:
       Lib.Yudhishthira.Event
       Lib.Yudhishthira.Event.KaalChakra
+      Lib.Yudhishthira.Event.KaalChakra.Parse
+      Lib.Yudhishthira.Event.KaalChakra.Template
       Lib.Yudhishthira.Flow.Dashboard
       Lib.Yudhishthira.Storage.Beam.BeamFlow
-      Lib.Yudhishthira.Storage.Beam.SystemConfigs
       Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogic
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicExtra
       Lib.Yudhishthira.Storage.Queries.NammaTagExtra

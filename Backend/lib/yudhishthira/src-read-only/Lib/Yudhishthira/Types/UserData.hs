@@ -12,7 +12,9 @@ import qualified Lib.Yudhishthira.Types.Common
 import qualified Tools.Beam.UtilsTH
 
 data UserData = UserData
-  { chakra :: Lib.Yudhishthira.Types.Chakra,
+  { batchNumber :: Kernel.Prelude.Int,
+    chakra :: Lib.Yudhishthira.Types.Chakra,
+    eventId :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.Event,
     id :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.UserData.UserData,
     userDataValue :: Data.Aeson.Value,
     userId :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.Common.User,
