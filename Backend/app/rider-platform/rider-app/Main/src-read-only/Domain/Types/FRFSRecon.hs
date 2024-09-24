@@ -9,7 +9,8 @@ import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import Kernel.Prelude
+import Kernel.Prelude hiding (sequence)
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH

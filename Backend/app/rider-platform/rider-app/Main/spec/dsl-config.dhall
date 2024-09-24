@@ -153,13 +153,14 @@ let defaultImports =
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.DOMAIN_HANDLER
         }
-      , { _simpleImports = [ "Data.Aeson" ] : List Text
+      , { _simpleImports =
+            [ "Data.Aeson", "Kernel.Prelude hiding (sequence)" ] : List Text
         , _qualifiedImports = [ "!Tools.Beam.UtilsTH" ]
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.DOMAIN_TYPE
         }
       , { _simpleImports =
-          [ "Kernel.Prelude"
+          [ "Kernel.Prelude hiding (sequence)"
           , "Tools.Beam.UtilsTH"
           , "Kernel.External.Encryption"
           , "Domain.Types.Common ()"
@@ -170,7 +171,7 @@ let defaultImports =
         }
       , { _simpleImports =
           [ "Kernel.Beam.Functions"
-          , "Kernel.Prelude"
+          , "Kernel.Prelude hiding (sequence)"
           , "Kernel.External.Encryption"
           , "Kernel.Utils.Common (MonadFlow, CacheFlow, EsqDBFlow, getCurrentTime, fromMaybeM)"
           , "Kernel.Types.Error"
@@ -179,7 +180,8 @@ let defaultImports =
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.BEAM_QUERIES
         }
-      , { _simpleImports = [ "Kernel.Prelude", "Kernel.Utils.Common" ]
+      , { _simpleImports =
+          [ "Kernel.Prelude hiding (sequence)", "Kernel.Utils.Common" ]
         , _qualifiedImports = [ "!Kernel.Storage.Hedis as Hedis" ]
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.CACHED_QUERIES

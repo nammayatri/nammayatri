@@ -11,7 +11,7 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Station
 import Kernel.External.Encryption
-import Kernel.Prelude
+import Kernel.Prelude hiding (sequence)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH

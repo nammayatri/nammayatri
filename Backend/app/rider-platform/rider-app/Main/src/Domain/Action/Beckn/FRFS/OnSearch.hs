@@ -157,5 +157,6 @@ castStationToAPI DStation {..} =
       API.lon = stationLon,
       API.name = stationName,
       API.stationType = Just stationType,
-      API.sequenceNum = stopSequence
+      API.sequenceNum = stopSequence,
+      API.distance = Nothing
     }

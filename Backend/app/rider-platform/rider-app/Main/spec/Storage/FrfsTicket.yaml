@@ -1,5 +1,4 @@
 imports:
-  UTCTime: Kernel.Prelude
   HighPrecMoney: Kernel.Types.Common
   Currency: Kernel.Types.Common
   Price: Kernel.Types.Common
@@ -22,6 +21,8 @@ imports:
   City: Kernel.Types.Beckn.Context
   PartnerOrganization: Domain.Types.PartnerOrganization
   PartnerOrgTransaction: Domain.Types.PartnerOrganization
+  TimeBound: Kernel.Types.TimeBound
+  LatLong: Kernel.External.Maps.Types
 
 FRFSSearch:
   tableName: frfs_search
@@ -485,3 +486,59 @@ FRFSConfig:
     freeTicketInterval: "9999"
     maxFreeTicketCashback: "0"
 
+Route:
+  tableName: route
+  derives: "Generic,Show,FromJSON,ToJSON"
+  fields:
+    routeId: Text
+    shortName: Text
+    longName: Text
+    startPoint: LatLong
+    endPoint: LatLong
+    vehicleType: FRFSVehicleType
+    timeBounds: TimeBound
+  default:
+    timeBounds: "'Unbounded'"
+  sqlType:
+    lat: double precision
+    lon: double precision
+  beamFields:
+    startPoint:
+      startLat: Double
+      startLon: Double
+    endPoint:
+      endLat: Double
+      endLon: Double
+  toTType:
+    startLat: (.lat) startPoint|E
+    startLon: (.lon) startPoint|E
+    endLat: (.lat) endPoint|E
+    endLon: (.lon) endPoint|E
+  fromTType:
+    startPoint: Kernel.External.Maps.Types.LatLong startLat startLon|E
+    endPoint: Kernel.External.Maps.Types.LatLong endLat endLon|E
+
+  constraints:
+    routeId: PrimaryKey
+  queries:
+    findAll:
+      kvFunction: findAllWithKV
+      where: routeId
+    findById:
+      kvFunction: findOneWithKV
+      where: routeId
+
+RouteStopMapping:
+  tableName: route_stop_mapping
+  fields:
+    id: Id RouteStopMapping
+    routeId: Id Route
+    stopId: Id Station
+    sequence: Int
+    vehicleType: FRFSVehicleType
+    timeBounds: TimeBound
+  default:
+    timeBounds: "'Unbounded'"
+  constraints:
+    id: PrimaryKey
+    routeId: "!SecondaryKey"

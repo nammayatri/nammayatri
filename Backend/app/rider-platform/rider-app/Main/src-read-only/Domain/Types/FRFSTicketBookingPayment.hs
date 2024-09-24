@@ -8,7 +8,8 @@ import Data.Aeson
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import Kernel.Prelude
+import Kernel.Prelude hiding (sequence)
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Tools.Beam.UtilsTH

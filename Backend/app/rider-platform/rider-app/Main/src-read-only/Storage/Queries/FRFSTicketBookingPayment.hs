@@ -8,7 +8,7 @@ import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingPayment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.Prelude
+import Kernel.Prelude hiding (sequence)
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
