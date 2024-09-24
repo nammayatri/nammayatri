@@ -130,6 +130,6 @@ postNammaTagRunJob ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Lib.Yudhishthira.Types.RunKaalChakraJobReq ->
-  Environment.Flow Kernel.Types.APISuccess.APISuccess
+  Environment.Flow Lib.Yudhishthira.Types.RunKaalChakraJobRes
 postNammaTagRunJob _merchantShortId _opCity req = do
   YudhishthiraFlow.postRunKaalChakraJob kaalChakraHandle req

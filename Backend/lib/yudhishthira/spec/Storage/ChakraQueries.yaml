@@ -1,5 +1,6 @@
 imports:
   Chakra: Lib.Yudhishthira.Types
+  QueryResult: Lib.Yudhishthira.Types
 
 ChakraQueries:
   tableName: chakra_queries
@@ -8,7 +9,7 @@ ChakraQueries:
     chakra: Chakra
     queryName: Text
     queryText: Text
-    queryResults: '[Text]'
+    queryResults: '[QueryResult]'
 
   constraints:
     chakra: PrimaryKey

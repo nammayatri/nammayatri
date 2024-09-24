@@ -30,6 +30,7 @@ import Kernel.Exit
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Migration
 import Kernel.Storage.Queries.SystemConfigs as QSystemConfigs
+import Kernel.Types.Error
 import Kernel.Types.Flow (runFlowR)
 import Kernel.Utils.App (getPodName, handleLeft)
 import Kernel.Utils.Common
@@ -41,6 +42,7 @@ import Lib.Yudhishthira.Types
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.SystemConfigs ()
 import Storage.Beam.Yudhishthira ()
+import qualified Utils.Time as Time
 
 allocatorHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle Chakra
 allocatorHandle flowRt env =
@@ -118,18 +120,37 @@ runKaalChakra configModifier = do
           allJobs :: [AnyJob Chakra] <- QAllJ.findAll
           forM_ allJobs $ \(AnyJob job) -> do
             let jobType = fromSing $ job.jobInfo.jobType
-            QAllJ.markAsComplete (show jobType) job.id
-            logInfo $ "Completed old " <> show jobType <> " job: " <> show job.id
+            when (jobType `elem` [Daily, Weekly, Monthly, Quarterly]) $ do
+              QAllJ.markAsComplete (show jobType) job.id
+              logInfo $ "Completed old " <> show jobType <> " job: " <> show job.id
 
         shouldCreateJobs <- asks (.shouldCreateJobs)
         when shouldCreateJobs $ do
           maxShards <- asks (.maxShards)
-          -- FIXME its better to schedule jobs on particular time
-          QAllJ.createJobIn @_ @'Daily 0 maxShards EmptyData
-          QAllJ.createJobIn @_ @'Weekly 60 maxShards EmptyData
-          QAllJ.createJobIn @_ @'Monthly 120 maxShards EmptyData
-          QAllJ.createJobIn @_ @'Quarterly 180 maxShards EmptyData
-          logInfo "Scheduled new Daily, Weekly, Monthly, Quarterly jobs"
+          shouldCreateDailyJob <- asks (.shouldCreateDailyJob)
+          shouldCreateWeeklyJob <- asks (.shouldCreateWeeklyJob)
+          shouldCreateMonthlyJob <- asks (.shouldCreateMonthlyJob)
+          shouldCreateQuarterlyJob <- asks (.shouldCreateQuarterlyJob)
+          unless (or [shouldCreateDailyJob, shouldCreateWeeklyJob, shouldCreateMonthlyJob, shouldCreateQuarterlyJob]) $ do
+            throwError $ InternalError "No jobs enabled"
+
+          dailyJobTime <- asks (.dailySchedulerTime) >>= Time.getCurrentDailyJobTime
+          weeklyJobTime <- asks (.weeklySchedulerTime) >>= Time.getCurrentWeeklyJobTime
+          monthlyJobTime <- asks (.monthlySchedulerTime) >>= Time.getCurrentMonthlyJobTime
+          quarterlyJobTime <- asks (.quarterlySchedulerTime) >>= Time.getCurrentQuarterlyJobTime
+
+          when shouldCreateDailyJob $ do
+            QAllJ.createJobByTime @_ @'Daily dailyJobTime maxShards EmptyData
+            logInfo "Scheduled new Daily job"
+          when shouldCreateWeeklyJob $ do
+            QAllJ.createJobByTime @_ @'Weekly weeklyJobTime maxShards EmptyData
+            logInfo "Scheduled new Weekly job"
+          when shouldCreateMonthlyJob $ do
+            QAllJ.createJobByTime @_ @'Monthly monthlyJobTime maxShards EmptyData
+            logInfo "Scheduled new Monthly job"
+          when shouldCreateQuarterlyJob $ do
+            QAllJ.createJobByTime @_ @'Quarterly quarterlyJobTime maxShards EmptyData
+            logInfo "Scheduled new Quarterly job"
 
         logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))
         pure flowRt

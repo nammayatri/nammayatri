@@ -28,11 +28,13 @@ library
   exposed-modules:
       App
       Environment
+      Jobs.Common
       Jobs.Daily
       Jobs.Monthly
       Jobs.Quarterly
       Jobs.Weekly
       Storage.Beam.SchedulerJob
+      Utils.Time
   other-modules:
       Paths_kaal_chakra
   hs-source-dirs:
