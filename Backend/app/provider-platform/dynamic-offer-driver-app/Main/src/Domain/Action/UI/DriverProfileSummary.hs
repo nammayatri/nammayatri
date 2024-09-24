@@ -143,10 +143,10 @@ getDriverProfileSummary (driverId, _, mocId) = do
         feedbackBadges = generateFeedbackBadge feedbackBadgeList,
         languagesSpoken = person.languagesSpoken,
         hometown = person.hometown,
-        cancellationRateInWindow = cancellationRateData.cancellationRate,
-        cancelledRidesCountInWindow = cancellationRateData.cancelledCount,
-        assignedRidesCountInWindow = cancellationRateData.assignedCount,
-        windowSize = cancellationRateData.windowSize,
+        cancellationRateInWindow = (.cancellationRate) <$> cancellationRateData,
+        cancelledRidesCountInWindow = (.cancelledCount) <$> cancellationRateData,
+        assignedRidesCountInWindow = (.assignedCount) <$> cancellationRateData,
+        windowSize = (.windowSize) <$> cancellationRateData,
         ..
       }
   where

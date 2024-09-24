@@ -32,11 +32,13 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Id (Id, cast)
-import Kernel.Utils.Common (CacheFlow, Currency, DistanceUnit, Forkable (fork), HighPrecMoney, MonadGuid (generateGUIDText), diffUTCTime, fromMaybeM, getCurrentTime, getLocalCurrentTime, highPrecMetersToMeters, logDebug)
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Lib.DriverScore.Types as DST
+import Lib.Scheduler.Environment
 import qualified SharedLogic.CancellationRate as SCR
 import qualified SharedLogic.DriverPool as DP
+import SharedLogic.External.LocationTrackingService.Types
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.Booking as BQ
 import qualified Storage.Queries.BookingCancellationReason as BCRQ
@@ -47,14 +49,14 @@ import qualified Storage.Queries.FareParameters as FPQ
 import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as FPPDQ
 import qualified Storage.Queries.Ride as RQ
 import Tools.Error
+import Tools.Metrics (CoreMetrics)
 import Utils.Common.Cac.KeyNameConstants
 
-driverScoreEventHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
+driverScoreEventHandler :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasLocationService m r, JobCreator r m) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
 driverScoreEventHandler merchantOpCityId payload = fork "DRIVER_SCORE_EVENT_HANDLER" do
-  logDebug $ "driverScoreEventHandler with payload: " <> show payload
   eventPayloadHandler merchantOpCityId payload
 
-eventPayloadHandler :: (Redis.HedisFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
+eventPayloadHandler :: (Redis.HedisFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, CoreMetrics m, HasLocationService m r, MonadFlow m, JobCreator r m) => Id DMOC.MerchantOperatingCity -> DST.DriverRideRequest -> m ()
 eventPayloadHandler merchantOpCityId DST.OnDriverAcceptingSearchRequest {..} = do
   DP.removeSearchReqIdFromMap merchantId driverId searchTryId
   case response of
@@ -77,9 +79,13 @@ eventPayloadHandler merchantOpCityId DST.OnNewRideAssigned {..} = do
 eventPayloadHandler merchantOpCityId DST.OnNewSearchRequestForDrivers {..} =
   forM_ driverPool $ \dPoolRes -> DP.incrementTotalQuotesCount searchReq.providerId merchantOpCityId (cast dPoolRes.driverPoolResult.driverId) searchReq validTill batchProcessTime
 eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
+  let driverId = driver.id
   merchantConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let windowSize = toInteger $ fromMaybe 7 merchantConfig.cancellationRateWindow
   void $ SCR.incrementCancelledCount driverId windowSize
+  driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
+  when (doCancellationRateBasedBlocking == Just True) $
+    SCR.nudgeOrBlockDriver merchantConfig driver driverInfo
   mbDriverStats <- B.runInReplica $ DSQ.findById (cast driverId)
   -- mbDriverStats <- DSQ.findById (cast driverId)
   driverStats <- getDriverStats currency distanceUnit mbDriverStats driverId rideFare

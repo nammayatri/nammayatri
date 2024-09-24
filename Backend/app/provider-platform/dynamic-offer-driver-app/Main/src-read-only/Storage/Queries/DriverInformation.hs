@@ -87,6 +87,23 @@ updateCompAadhaarImagePath compAadhaarImagePath driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.compAadhaarImagePath compAadhaarImagePath, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateDailyAndWeeklyCancellationRateBlockingCooldown ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateDailyAndWeeklyCancellationRateBlockingCooldown dailyCancellationRateBlockingCooldown weeklyCancellationRateBlockingCooldown driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.dailyCancellationRateBlockingCooldown dailyCancellationRateBlockingCooldown,
+      Se.Set Beam.weeklyCancellationRateBlockingCooldown weeklyCancellationRateBlockingCooldown,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+updateDailyCancellationRateBlockingCooldown :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateDailyCancellationRateBlockingCooldown dailyCancellationRateBlockingCooldown driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.dailyCancellationRateBlockingCooldown dailyCancellationRateBlockingCooldown, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateDriverDob :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateDriverDob driverDob driverId = do
   _now <- getCurrentTime
@@ -205,6 +222,11 @@ updateTollRelatedIssueCount tollRelatedIssueCount driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.tollRelatedIssueCount tollRelatedIssueCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateWeeklyCancellationRateBlockingCooldown :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateWeeklyCancellationRateBlockingCooldown weeklyCancellationRateBlockingCooldown driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.weeklyCancellationRateBlockingCooldown weeklyCancellationRateBlockingCooldown, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverInformation.DriverInformation))
 findByPrimaryKey driverId = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
 
@@ -221,6 +243,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.autoPayStatus autoPayStatus,
       Se.Set Beam.availableUpiApps availableUpiApps,
       Se.Set Beam.blockExpiryTime blockExpiryTime,
+      Se.Set Beam.blockReasonFlag blockReasonFlag,
       Se.Set Beam.blockStateModifier blockStateModifier,
       Se.Set Beam.blocked blocked,
       Se.Set Beam.blockedReason blockedReason,
@@ -230,6 +253,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.canSwitchToInterCity (Kernel.Prelude.Just canSwitchToInterCity),
       Se.Set Beam.canSwitchToRental (Kernel.Prelude.Just canSwitchToRental),
       Se.Set Beam.compAadhaarImagePath compAadhaarImagePath,
+      Se.Set Beam.dailyCancellationRateBlockingCooldown dailyCancellationRateBlockingCooldown,
       Se.Set Beam.driverDob driverDob,
       Se.Set Beam.enabled enabled,
       Se.Set Beam.enabledAt enabledAt,
@@ -256,6 +280,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.tollRelatedIssueCount tollRelatedIssueCount,
       Se.Set Beam.totalReferred totalReferred,
       Se.Set Beam.verified verified,
+      Se.Set Beam.weeklyCancellationRateBlockingCooldown weeklyCancellationRateBlockingCooldown,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,

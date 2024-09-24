@@ -284,3 +284,16 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN min_pickup_di
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dp_white_listed_geohash text[]  default ARRAY[]::TEXT[];
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dp_black_listed_geohash text[]  default ARRAY[]::TEXT[];
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN weekly_offence_suspension_time_hours integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN weekly_min_rides_for_nudging integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN weekly_min_rides_for_blocking integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN daily_offence_suspension_time_hours integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN daily_min_rides_for_nudging integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN daily_min_rides_for_blocking integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_rate_threshold_weekly integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_rate_threshold_daily integer ;

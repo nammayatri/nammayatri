@@ -343,10 +343,24 @@ type PostDriverBlock = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.
 
 type GetDriverBlockReasonList = ("blockReasonList" :> Get '[JSON] [API.Types.ProviderPlatform.Management.Driver.BlockReason])
 
-type PostDriverUnblock = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "unblock" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverUnblock =
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "unblock"
+      :> QueryParam
+           "preventWeeklyCancellationRateBlockingTill"
+           Kernel.Prelude.UTCTime
+      :> QueryParam "preventDailyCancellationRateBlockingTill" Kernel.Prelude.UTCTime
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
 
 type PostDriverUnblockHelper =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "unblock" :> Capture "dashboardUserName" Kernel.Prelude.Text
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "unblock"
+      :> Capture
+           "dashboardUserName"
+           Kernel.Prelude.Text
+      :> QueryParam "preventWeeklyCancellationRateBlockingTill" Kernel.Prelude.UTCTime
+      :> QueryParam
+           "preventDailyCancellationRateBlockingTill"
+           Kernel.Prelude.UTCTime
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
@@ -509,7 +523,7 @@ data DriverAPIs = DriverAPIs
     postDriverBlockWithReason :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Management.Driver.BlockDriverWithReasonReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverBlock :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverBlockReasonList :: EulerHS.Types.EulerClient [API.Types.ProviderPlatform.Management.Driver.BlockReason],
-    postDriverUnblock :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverUnblock :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverLocation :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Dashboard.Common.Driver.DriverIds -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Driver.DriverLocationRes,
     deleteDriverPermanentlyDelete :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverUnlinkDL :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

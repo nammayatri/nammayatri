@@ -265,7 +265,10 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             latestScheduledPickup = Nothing,
             latestScheduledBooking = Nothing,
             payoutVpaStatus = Nothing,
-            payoutVpaBankAccount = Nothing
+            payoutVpaBankAccount = Nothing,
+            dailyCancellationRateBlockingCooldown = Nothing,
+            weeklyCancellationRateBlockingCooldown = Nothing,
+            blockReasonFlag = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo

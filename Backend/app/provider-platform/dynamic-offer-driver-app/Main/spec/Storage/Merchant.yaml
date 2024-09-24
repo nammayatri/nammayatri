@@ -642,6 +642,15 @@ DriverIntelligentPoolConfig:
 TransporterConfig:
   derives: Generic,Show,'UsageSafety
   types:
+    CancellationRateBasedNudgingAndBlockingConfig:
+      cancellationRateThresholdDaily: Int
+      cancellationRateThresholdWeekly: Int
+      dailyMinRidesforBlocking: Int
+      weeklyMinRidesforBlocking: Int
+      dailyMinRidesforNudging: Int
+      weeklyMinRidesforNudging: Int
+      dailyOffenceSuspensionTimeHours: Int
+      weeklyOffenceSuspensionTimeHours: Int
     DemandHotspotsConfig:
       enableDemandHotspots: Bool
       precisionOfGeohash: Int
@@ -859,6 +868,14 @@ TransporterConfig:
     cancellationRateCalculationThreshold: Maybe Int
     arrivalTimeBufferOfVehicle: Maybe ArrivalTimeBufferOfVehicle
     demandHotspotsConfig: Maybe DemandHotspotsConfig
+    cancellationRateThresholdDaily: Maybe Int
+    cancellationRateThresholdWeekly: Maybe Int
+    dailyMinRidesForBlocking: Maybe Int
+    weeklyMinRidesForBlocking: Maybe Int
+    dailyMinRidesForNudging: Maybe Int
+    weeklyMinRidesForNudging: Maybe Int
+    dailyOffenceSuspensionTimeHours: Maybe Int
+    weeklyOffenceSuspensionTimeHours: Maybe Int
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit

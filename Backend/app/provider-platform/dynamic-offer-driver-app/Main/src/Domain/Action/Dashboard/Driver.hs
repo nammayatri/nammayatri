@@ -174,6 +174,7 @@ import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.EventTracking as SEVT
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -518,7 +519,7 @@ blockDriverWithReason merchantShortId opCity reqDriverId dashboardUserName req =
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
   when (driverInf.blocked) $ throwError DriverAccountAlreadyBlocked
-  QDriverInfo.updateDynamicBlockedState driverId req.blockReason req.blockTimeInHours dashboardUserName merchantId req.reasonCode driver.merchantOperatingCityId DTDBT.Dashboard True
+  QDriverInfo.updateDynamicBlockedStateWithActivity driverId req.blockReason req.blockTimeInHours dashboardUserName merchantId req.reasonCode driver.merchantOperatingCityId DTDBT.Dashboard True Nothing Nothing ByDashboard
   maxShards <- asks (.maxShards)
   case req.blockTimeInHours of
     Just hrs -> do
@@ -652,8 +653,8 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
           }
 
 ---------------------------------------------------------------------
-unblockDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Flow APISuccess
-unblockDriver merchantShortId opCity reqDriverId dashboardUserName = do
+unblockDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Maybe UTCTime -> Maybe UTCTime -> Flow APISuccess
+unblockDriver merchantShortId opCity reqDriverId dashboardUserName preventWeeklyCancellationRateBlockingTill preventDailyCancellationRateBlockingTill = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
@@ -666,7 +667,18 @@ unblockDriver merchantShortId opCity reqDriverId dashboardUserName = do
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   driverInf <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
-  when driverInf.blocked (void $ QDriverInfo.updateBlockedState driverId False (Just dashboardUserName) merchantId driver.merchantOperatingCityId DTDBT.Dashboard)
+  when driverInf.blocked $ do
+    QDriverInfo.updateBlockedState driverId False (Just dashboardUserName) merchantId driver.merchantOperatingCityId DTDBT.Dashboard
+    now <- getCurrentTime
+    void $ LTS.blockDriverLocationsTill (driver.merchantId) (driver.id) now -- this will eventually unblock driver locations as block till is set to now
+    case (preventDailyCancellationRateBlockingTill, preventWeeklyCancellationRateBlockingTill) of
+      (Just _, Just _) -> do
+        QDriverInfo.updateDailyAndWeeklyCancellationRateBlockingCooldown preventDailyCancellationRateBlockingTill preventWeeklyCancellationRateBlockingTill driver.id
+      (Just _, Nothing) -> do
+        QDriverInfo.updateDailyCancellationRateBlockingCooldown preventDailyCancellationRateBlockingTill driver.id
+      (Nothing, Just _) -> do
+        QDriverInfo.updateWeeklyCancellationRateBlockingCooldown preventWeeklyCancellationRateBlockingTill driver.id
+      _ -> pure ()
   logTagInfo "dashboard -> unblockDriver : " (show personId)
   pure Success
 
@@ -835,10 +847,10 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         lastACStatusCheckedAt = info.lastACStatusCheckedAt,
         currentACStatus = isACAllowedForDriver && isVehicleACWorking,
         downgradeReason = vehicle >>= (.downgradeReason),
-        assignedCount = cancellationData.assignedCount,
-        cancelledCount = cancellationData.cancelledCount,
-        cancellationRate = cancellationData.cancellationRate,
-        windowSize = cancellationData.windowSize,
+        assignedCount = (.assignedCount) <$> cancellationData,
+        cancelledCount = (.cancelledCount) <$> cancellationData,
+        cancellationRate = (.cancellationRate) <$> cancellationData,
+        windowSize = (.windowSize) <$> cancellationData,
         blockedDueToRiderComplains = not isACAllowedForDriver,
         driverTag = person.driverTag,
         blockedInfo = blockDetails,

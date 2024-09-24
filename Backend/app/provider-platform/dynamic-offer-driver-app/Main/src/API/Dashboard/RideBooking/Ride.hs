@@ -86,7 +86,8 @@ rideCancel merchantShortId opCity reqRideId Common.CancelRideReq {reasonCode, ad
   let dashboardReq =
         CHandler.CancelRideReq
           { reasonCode = coerce @Common.CancellationReasonCode @DCReason.CancellationReasonCode reasonCode,
-            additionalInfo
+            additionalInfo,
+            doCancellationRateBasedBlocking = Nothing
           }
   CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id merchantOpCityId rideId dashboardReq
 

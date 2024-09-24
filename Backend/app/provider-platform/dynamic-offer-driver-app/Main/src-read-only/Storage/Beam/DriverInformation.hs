@@ -13,6 +13,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
+import qualified Tools.Error
 
 data DriverInformationT f = DriverInformationT
   { aadhaarVerified :: B.C f Kernel.Prelude.Bool,
@@ -24,6 +25,7 @@ data DriverInformationT f = DriverInformationT
     autoPayStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverAutoPayStatus),
     availableUpiApps :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     blockExpiryTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    blockReasonFlag :: B.C f (Kernel.Prelude.Maybe Tools.Error.BlockReasonFlag),
     blockStateModifier :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     blocked :: B.C f Kernel.Prelude.Bool,
     blockedReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -33,6 +35,7 @@ data DriverInformationT f = DriverInformationT
     canSwitchToInterCity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     canSwitchToRental :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     compAadhaarImagePath :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    dailyCancellationRateBlockingCooldown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     driverDob :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     driverId :: B.C f Kernel.Prelude.Text,
     enabled :: B.C f Kernel.Prelude.Bool,
@@ -60,6 +63,7 @@ data DriverInformationT f = DriverInformationT
     tollRelatedIssueCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalReferred :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     verified :: B.C f Kernel.Prelude.Bool,
+    weeklyCancellationRateBlockingCooldown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

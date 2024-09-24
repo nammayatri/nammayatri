@@ -79,6 +79,12 @@ data EditPickupLocationReq = EditPickupLocationReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
+data CancellationRateBaseNudgeData = CancellationRateBaseNudgeData
+  { driverId :: Text,
+    driverCancellationRate :: Int
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
 -- FIXME is it correct?
 data UpdateLocationNotificationReq = UpdateLocationNotificationReq
   { rideId :: Id DRide.Ride,
@@ -863,6 +869,34 @@ sendPickupLocationChangedOverlay person req entityData = do
           fcmNotificationId = Nothing
         }
     notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title -- if nothing then anyways fcmShowNotification is false
+    body = FCMNotificationBody $ fromMaybe "Description" req.description
+
+sendCancellationRateNudgeOverlay ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Person ->
+  FCM.FCMNotificationType ->
+  FCM.FCMOverlayReq ->
+  CancellationRateBaseNudgeData ->
+  m ()
+sendCancellationRateNudgeOverlay mOpCityId person fcmType req entityData = do
+  transporterConfig <- findByMerchantOpCityId mOpCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) (clearDeviceToken person.id) notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
+  where
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = fcmType,
+          fcmShowNotification = FCM.DO_NOT_SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = entityData.driverId,
+          fcmEntityData = Just entityData,
+          fcmNotificationJSON = FCM.createAndroidNotification notifTitle body fcmType Nothing,
+          fcmOverlayNotificationJSON = Just $ FCM.createAndroidOverlayNotification req,
+          fcmNotificationId = Nothing
+        }
+    notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title
     body = FCMNotificationBody $ fromMaybe "Description" req.description
 
 mkOverlayReq :: DTMO.Overlay -> FCM.FCMOverlayReq -- handle mod Title

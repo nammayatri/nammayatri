@@ -54,6 +54,8 @@ data TransporterConfigT f = TransporterConfigT
     cancellationFee :: B.C f Kernel.Types.Common.HighPrecMoney,
     cancellationFeeDisputeLimit :: B.C f Kernel.Prelude.Int,
     cancellationRateCalculationThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    cancellationRateThresholdDaily :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    cancellationRateThresholdWeekly :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationRateWindow :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationTimeDiff :: B.C f Kernel.Types.Common.Seconds,
     checkImageExtractionForDashboard :: B.C f Kernel.Prelude.Bool,
@@ -67,6 +69,9 @@ data TransporterConfigT f = TransporterConfigT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     crossTravelCities :: B.C f [Kernel.Types.Beckn.City.City],
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    dailyMinRidesForBlocking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    dailyMinRidesForNudging :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    dailyOffenceSuspensionTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     defaultPopupDelay :: B.C f Kernel.Types.Common.Seconds,
     demandHotspotsConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
@@ -188,7 +193,10 @@ data TransporterConfigT f = TransporterConfigT
     useSilentFCMForForwardBatch :: B.C f Kernel.Prelude.Bool,
     useWithSnapToRoadFallback :: B.C f Kernel.Prelude.Bool,
     variantsToEnableForSubscription :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
-    volunteerSmsSendingLimit :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)
+    volunteerSmsSendingLimit :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    weeklyMinRidesForBlocking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    weeklyMinRidesForNudging :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    weeklyOffenceSuspensionTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)
   }
   deriving (Generic, B.Beamable)
 

@@ -123,3 +123,14 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN payout_vpa_stat
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN payout_vpa_bank_account text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN weekly_cancellation_rate_blocking_cooldown timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN daily_cancellation_rate_blocking_cooldown timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN block_reason_flag text ;

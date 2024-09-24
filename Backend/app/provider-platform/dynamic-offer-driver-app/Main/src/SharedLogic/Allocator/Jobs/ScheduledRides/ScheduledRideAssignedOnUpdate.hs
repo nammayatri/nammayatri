@@ -260,7 +260,8 @@ cancelOrReallocate ride cReason isForceReallocation req = do
   let cancelReq =
         RideCancel.CancelRideReq
           { reasonCode = DCR.CancellationReasonCode cReason,
-            additionalInfo = Nothing
+            additionalInfo = Nothing,
+            doCancellationRateBasedBlocking = Nothing
           }
   (_cancellationCnt, _isGoToDisabled) <- RideCancel.cancelRideImpl RideCancel.cancelRideHandle req ride.id cancelReq isForceReallocation
   pure ()

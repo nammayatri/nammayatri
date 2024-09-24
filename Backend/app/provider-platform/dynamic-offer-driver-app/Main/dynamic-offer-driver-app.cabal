@@ -335,6 +335,7 @@ library
       SharedLogic.DriverPool.Types
       SharedLogic.DynamicPricing
       SharedLogic.EventTracking
+      SharedLogic.External.LocationTrackingService.API.DriverBlockTill
       SharedLogic.External.LocationTrackingService.API.DriverLocation
       SharedLogic.External.LocationTrackingService.API.DriversLocation
       SharedLogic.External.LocationTrackingService.API.EndRide

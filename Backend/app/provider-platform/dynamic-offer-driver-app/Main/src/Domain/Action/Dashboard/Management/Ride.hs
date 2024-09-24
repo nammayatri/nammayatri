@@ -91,7 +91,8 @@ postRideCancelMultiple merchantShortId opCity req = do
       let dashboardReq =
             CHandler.CancelRideReq
               { reasonCode = coerce @Common.CancellationReasonCode @DCReason.CancellationReasonCode reqItem.reasonCode,
-                additionalInfo = reqItem.additionalInfo
+                additionalInfo = reqItem.additionalInfo,
+                doCancellationRateBasedBlocking = Nothing
               }
       Success <- CHandler.dashboardCancelRideHandler CHandler.cancelRideHandle merchant.id merchantOpCityId rideId dashboardReq
       pure Common.SuccessItem
