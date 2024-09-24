@@ -272,7 +272,7 @@ window.getMerchantConfig = function () {
         "enableAdvancedBooking" : false,
         "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "" ,
-      "callDriverInfoPost": false, // Dummy link need to change
+        "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 17.402113,
         "cityLong" : 78.499827,
         "supportNumber" : "+918069724900",
@@ -281,7 +281,7 @@ window.getMerchantConfig = function () {
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
-        "vehicleNSImg" : "ny_ic_auto_image_old",
+        "vehicleNSImg" : "ny_ic_bike_not_supported",
         "registration" : {
             "supportWAN" : "919392636637",
             "callSupport" : true,

@@ -287,7 +287,7 @@ window.getMerchantConfig = function () {
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
-        "vehicleNSImg" : "ny_ic_auto_image_old",
+        "vehicleNSImg" : "ny_ic_bike_not_supported",
         "registration" : {
             "supportWAN" : "919392636637",
             "callSupport" : true,
