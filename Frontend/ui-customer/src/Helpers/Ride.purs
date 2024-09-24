@@ -72,6 +72,7 @@ checkRideStatus rideAssigned = do
             rideScheduledAt = if bookingStatus == "CONFIRMED" then fromMaybe "" resp.rideScheduledTime else ""
             dropLocation = if (fareProductType == FPT.RENTAL) then _stopLocation else _toLocation
             stopLocationDetails = (resp.bookingDetails ^._contents^._stopLocation)
+            requestorPartyRoles = (resp.bookingDetails ^._contents^._requestorPartyRoles)
             newState = 
               state
                 { data
@@ -95,6 +96,7 @@ checkRideStatus rideAssigned = do
                         estimatedCharges = getFareFromArray resp.estimatedFareBreakup "TOLL_CHARGES"
                       , showIncludedPopUp = rideStatus == RideAccepted && (getFareFromArray resp.estimatedFareBreakup "TOLL_CHARGES" > 0.0)
                       }
+                    , requestorPartyRoles = requestorPartyRoles
                       },
                   props
                     { currentStage = rideStatus
@@ -262,6 +264,7 @@ checkRideStatus rideAssigned = do
                             confidence = ride.tollConfidence
                           , showAmbiguousPopUp = ride.tollConfidence == Just CTA.Unsure
                           }
+                        , requestorPartyRoles = contents.requestorPartyRoles
                         }
                       }
                     )

@@ -1089,6 +1089,7 @@ newtype RideBookingDetails = RideBookingDetails {
   otpCode :: Maybe String,
   stopLocation :: Maybe BookingLocationAPIEntity,
   senderDetails :: Maybe PersonDetails,
+  requestorPartyRoles :: Maybe (Array String),
   receiverDetails :: Maybe PersonDetails
 }
 

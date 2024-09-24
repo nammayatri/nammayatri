@@ -358,3 +358,6 @@ _start = lens (unwrap >>> _.start) (\oldRec newVal -> wrap ((unwrap oldRec) { st
 
 _end :: forall a b c. Newtype a { end :: b | c } => Lens' a b
 _end = lens (unwrap >>> _.end) (\oldRec newVal -> wrap ((unwrap oldRec) { end = newVal }))
+
+_requestorPartyRoles :: forall a b c. Newtype a { requestorPartyRoles :: b | c } => Lens' a b
+_requestorPartyRoles = lens (unwrap >>> _.requestorPartyRoles) (\oldRec newVal -> wrap ((unwrap oldRec) { requestorPartyRoles = newVal }))

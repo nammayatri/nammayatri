@@ -1204,3 +1204,7 @@ disableChatForDelivery fareProductType =
   case fareProductType of
     DELIVERY -> false
     _ -> true
+
+isDeliveryInitiator :: Maybe (Array String) -> Boolean
+isDeliveryInitiator maybeTags = 
+  maybe true (\tags -> elem "Initiator" tags) maybeTags

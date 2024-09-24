@@ -1023,7 +1023,7 @@ type UpdateSliderConfig = {
 }
 
 
-data RouteKeysType  = DEFAULT | RENTAL | ADVANCED
+data RouteKeysType  = DEFAULT | RENTAL | ADVANCED | DELIVERY_DESTINATION
 
 derive instance genericRouteKeysType :: Generic RouteKeysType _
 instance showRouteKeysType :: Show RouteKeysType where show = genericShow

@@ -1818,4 +1818,4 @@ isOtpRideFlow :: DriverInfoCardState -> Boolean
 isOtpRideFlow state = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || (state.props.isOtpRideFlow && state.props.currentStage == RideAccepted)
 
 showCancelRideCTA :: DriverInfoCardState -> Boolean
-showCancelRideCTA state = rideNotStarted state
+showCancelRideCTA state = rideNotStarted state && HU.isDeliveryInitiator state.data.requestorPartyRoles

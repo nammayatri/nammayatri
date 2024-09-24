@@ -693,6 +693,7 @@ type HomeScreenStateData =
   , suggestedVehicalVarient :: Array (Maybe String)
   , deliveryImage :: Maybe String
   , deliveryDetailsInfo :: Maybe API.DeliveryDetails
+  , requestorPartyRoles :: Maybe (Array String)
 }
 
 type TollData = {

@@ -2540,20 +2540,17 @@ callCardView push state item =
     ]
 
 customerDeliveryCallPopUpData :: HomeScreenState -> Array { text :: String, imageWithFallback :: String, type :: ST.DeliverCallType, data :: String }
-customerDeliveryCallPopUpData state =
-  (
-    if state.props.currentStage /= RideStarted then 
-     [ { text: (getString CALL_SENDER)
-      , imageWithFallback: HU.fetchImage HU.COMMON_ASSET "ic_phone_filled_green"
-      , type: ST.SENDER
-      , data: (maybe "" (\(PersonDetails det) -> det.name) state.data.activeRide.senderPersonDetails)
-      }]
-    else []
-  )
-  <>
-   [{ text: (getString CALL_RECEIVER)
+customerDeliveryCallPopUpData state = 
+   [
+    { text: (getString CALL_RECEIVER)
     , imageWithFallback: HU.fetchImage HU.COMMON_ASSET "ic_phone_filled_red"
     , type: ST.RECEIVER
     , data: (maybe "" (\(PersonDetails det) -> det.name) state.data.activeRide.receiverPersonDetails)
-    }]
+    },
+    { text: (getString CALL_SENDER)
+    , imageWithFallback: HU.fetchImage HU.COMMON_ASSET "ic_phone_filled_green"
+    , type: ST.SENDER
+    , data: (maybe "" (\(PersonDetails det) -> det.name) state.data.activeRide.senderPersonDetails)
+    }
+    ]
   

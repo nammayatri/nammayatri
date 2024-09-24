@@ -6446,7 +6446,7 @@ fcmHandler notification state = do
 
         destSpecialTagIcon = zoneLabelIcon state.props.zoneType.destinationTag
         userPhoneNo = getValueToLocalStore MOBILE_NUMBER
-        isParcelSenderOrReceiver = if state.data.fareProductType == FPT.DELIVERY then (maybe false (\details -> details.phone == userPhoneNo) state.data.driverInfoCardState.senderDetails) || (maybe false (\details -> details.phone == userPhoneNo) state.data.driverInfoCardState.receiverDetails) else false
+        isPersonDeliveryInitiator = HU.isDeliveryInitiator state.data.requestorPartyRoles 
       
       void $ pure $ metaLogEvent "ny_user_ride_completed"
       void $ updateLocalStage HomeScreen
@@ -6454,7 +6454,7 @@ fcmHandler notification state = do
       deleteValueFromLocalStore SELECTED_VARIANT
       removeChatService ""
       modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { sosId = "" } })
-      if (state.props.bookingId /= "" && not isParcelSenderOrReceiver) then do
+      if (state.props.bookingId /= "" && isPersonDeliveryInitiator) then do
         (RideBookingRes resp) <- Remote.rideBookingBT (state.props.bookingId)
         let
           (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
@@ -6529,7 +6529,7 @@ fcmHandler notification state = do
                     }
               )
         homeScreenFlow
-      else if (isParcelSenderOrReceiver) then do
+      else if (not isPersonDeliveryInitiator) then do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
         homeScreenFlow
       else
@@ -6652,6 +6652,7 @@ parcelDeliveryFlow = do
     ParcelDeliveryScreenController.GoToConfirmgDelivery state -> do
       let deliveryDetailsInfo = API.DeliveryDetails { senderDetails : mkPersonLocation state.data.senderDetails, receiverDetails : mkPersonLocation state.data.receiverDetails, initiatedAs : state.data.initiatedAs }
       updateLocalStage GoToConfirmgDelivery
+      modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> state)
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = GoToConfirmgDelivery, fromDeliveryScreen = true }, data { deliveryDetailsInfo = Just deliveryDetailsInfo } })
       homeScreenFlow
       where

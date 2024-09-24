@@ -194,6 +194,7 @@ initData = let
     , toll : initialTollData
     , deliveryImage : Nothing
     , deliveryDetailsInfo : Nothing
+    , requestorPartyRoles : Nothing
     },
     props: {
       rideRequestFlow : false
@@ -650,7 +651,8 @@ dummyRideBookingDetails = RideBookingDetails {
   otpCode : Nothing,
   stopLocation : Nothing,
   senderDetails : Nothing,
-  receiverDetails : Nothing
+  receiverDetails : Nothing,
+  requestorPartyRoles : Nothing
 }
 
 

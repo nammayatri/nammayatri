@@ -33,7 +33,7 @@ import Data.Tuple
 import Debug (spy)
 import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag, convertUTCtoISC)
+import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag, convertUTCtoISC, os)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getRideLabelData, getRequiredTag, getCurrentUTC, fetchImage, FetchImageFrom(..), dummyLabelConfig)
@@ -48,7 +48,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Mobility.Prelude (boolToVisibility, boolToInvisibility)
 import Prelude ((<>), div, mod, Unit, bind, when, const, not, discard, pure, show, unit, void, ($), (<), (/=), (<>), (&&), (==), (-), (>), (||), (/), (*), (+), negate, (<$>), (>>=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fillViewport, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, pivotY, relativeLayout, rippleColor, scrollBarX, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, alignParentBottom)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fillViewport, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, pivotY, relativeLayout, rippleColor, scrollBarX, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, alignParentBottom, nestedScrollView, scrollBarY)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -287,6 +287,14 @@ rideTypeView push config =
 
 rideActionView :: forall w . Margin -> (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 rideActionView layoutMargin push config =
+  
+  (if os == "IOS" then linearLayout else scrollView)
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , nestedScrollView true
+  , scrollBarY false
+  ]
+  [
   Keyed.linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -296,7 +304,7 @@ rideActionView layoutMargin push config =
   , padding $ PaddingTop 6
   , gravity CENTER
   , margin layoutMargin
-    , stroke $ "1," <> Color.grey800
+  , stroke $ "1," <> Color.grey800
   ][ Tuple "rideActionView_Child_1" $ linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -320,7 +328,7 @@ rideActionView layoutMargin push config =
                 else if(config.rideType == ST.Rental && Maybe.isJust config.stopAddress) then arrivedStopView push config else endRide push config ]
         ])
     , Tuple "rideActionView_Child_2" $ cancelRide push config
-  ]
+  ]]
 
 openGoogleMap :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 openGoogleMap push config =

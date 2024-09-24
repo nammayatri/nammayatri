@@ -1150,7 +1150,7 @@ sosView push state =
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , gravity CENTER
-    , visibility $ boolToVisibility $ Arr.elem state.props.currentStage [RideAccepted, RideStarted] && state.data.config.feature.enableSafetyFlow
+    , visibility $ boolToVisibility $ Arr.elem state.props.currentStage [RideAccepted, RideStarted] && state.data.config.feature.enableSafetyFlow && (state.data.fareProductType /= FPT.DELIVERY || (state.props.currentStage == RideStarted && state.data.driverInfoCardState.driverArrived) || state.data.driverInfoCardState.destinationReached )
     , margin $ MarginRight 16
     ]
     [ linearLayout
@@ -5264,6 +5264,7 @@ type CurrentLocationConfig = { isClickable :: Boolean, click :: Action, border :
 
 deliveryDestRouteConfig :: HomeScreenState -> Array JB.RouteConfig
 deliveryDestRouteConfig state =
+
   if state.data.fareProductType == FPT.DELIVERY && state.props.currentStage == RideAccepted then
     let srcMarkerConfig = JB.defaultMarkerConfig{ markerId = "", pointerIcon = "" }
         destMarkerConfig = JB.defaultMarkerConfig{ markerId = "ny_ic_dest_marker", pointerIcon = "ny_ic_dest_marker", primaryText = "", anchorU = 0.5, anchorV = 1.0}
@@ -5271,6 +5272,7 @@ deliveryDestRouteConfig state =
         srcLon = state.data.driverInfoCardState.sourceLng
         dstLat = state.data.driverInfoCardState.destinationLat
         dstLon = state.data.driverInfoCardState.destinationLng
-        routeConfig = mkRouteConfig (walkCoordinate srcLat srcLon dstLat dstLon) srcMarkerConfig destMarkerConfig Nothing "NORMAL_ROUTE" "DOT" false JB.DEFAULT $ specialLocationConfig "" "" false getPolylineAnimationConfig
+        routeConfig = mkRouteConfig (walkCoordinate srcLat srcLon dstLat dstLon) srcMarkerConfig destMarkerConfig Nothing "NORMAL_ROUTE" "DOT" false JB.DELIVERY_DESTINATION $ specialLocationConfig "" "" false getPolylineAnimationConfig
+        _ = spy " routeCOnfig inside the deliveryDestRouteConfig" routeConfig
     in [routeConfig]
   else []

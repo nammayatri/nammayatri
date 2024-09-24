@@ -135,6 +135,7 @@ type DriverInfoCardData =
   , senderDetails :: Maybe PersonDeliveryDetails
   , receiverDetails :: Maybe PersonDeliveryDetails
   , estimatedTimeToReachDestination :: Maybe String
+  , requestorPartyRoles :: Maybe (Array String)
   }
 
 data LocationType = SOURCE | DESTINATION

@@ -1177,6 +1177,7 @@ driverInfoTransformer state =
     , senderDetails : cardState.senderDetails
     , receiverDetails : cardState.receiverDetails
     , estimatedTimeToReachDestination : cardState.estimatedTimeToReachDestination
+    , requestorPartyRoles : state.data.requestorPartyRoles
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
