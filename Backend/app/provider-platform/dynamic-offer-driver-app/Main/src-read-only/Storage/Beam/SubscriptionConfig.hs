@@ -28,6 +28,7 @@ data SubscriptionConfigT f = SubscriptionConfigT
     executionEnabledForVehicleCategories :: B.C f (Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory]),
     freeTrialRidesApplicable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     genericBatchSizeForJobs :: B.C f Kernel.Prelude.Int,
+    isVendorSplitEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     genericJobRescheduleTime :: B.C f Kernel.Types.Common.Seconds,
     isSubscriptionEnabledAtCategoryLevel :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isTriggeredAtEndRide :: B.C f Kernel.Prelude.Bool,

@@ -1,0 +1,35 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+  Area: Lib.Types.SpecialLocation
+  VehicleCategory: Domain.Types.VehicleCategory
+
+VendorSplitDetails:
+  tableName: vendor_split_details
+
+  types:
+    SplitType:
+      enum: "FIXED" # add PERCENTAGE later
+
+  fields:
+    merchantOperatingCityId : Id MerchantOperatingCity
+    area : Area
+    vendorId : Text
+    vehicleCategory : VehicleCategory|NoRelation
+    splitType : SplitType
+    splitValue : Double
+
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    area: PrimaryKey
+    vehicleCategory: PrimaryKey
+    vendorId: PrimaryKey
+
+  excludedFields: [merchantId]
+
+  queries:
+    findAllByAreaCityAndCategory:
+      kvFunction: findAllWithKV
+      where:
+        and: [area, merchantOperatingCityId, vehicleCategory]

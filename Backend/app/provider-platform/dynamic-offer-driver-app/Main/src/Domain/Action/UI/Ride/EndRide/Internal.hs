@@ -39,6 +39,7 @@ module Domain.Action.UI.Ride.EndRide.Internal
   )
 where
 
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Data.List as DL
 import qualified Data.Map as M
 import qualified Data.Text as T
@@ -65,7 +66,8 @@ import qualified Domain.Types.RiderDetails as RD
 import Domain.Types.SubscriptionConfig
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.VehicleCategory as DVC
-import EulerHS.Prelude hiding (elem, foldr, id, length, mapM_, null)
+import qualified Domain.Types.VendorFee as DVF
+import EulerHS.Prelude hiding (elem, foldr, id, length, map, mapM_, null)
 import GHC.Float (double2Int)
 import GHC.Num.Integer (integerFromInt, integerToInt)
 import Kernel.External.Maps
@@ -86,6 +88,7 @@ import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
+import Lib.Types.SpecialLocation
 import SharedLogic.Allocator
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -115,6 +118,8 @@ import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.Vehicle as QV
+import qualified Storage.Queries.VendorFee as QVF
+import qualified Storage.Queries.VendorSplitDetails as QVSD
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
@@ -589,10 +594,23 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
         Nothing -> do
           createWithMbSibling driverFee lastElderSiblingDriverFee driverFee
           return 1
+      fork "Updating vendor fees" $
+        when (fromMaybe False (subscriptionConfig >>= (.isVendorSplitEnabled))) $ do
+          let vehicleCategory = Utils.mapServiceTierToCategory booking.vehicleServiceTier
+          vendorSplitDetails <- QVSD.findAllByAreaCityAndCategory (fromMaybe Default booking.area) merchantOpCityId (Utils.castVehicleCategoryToDomain vehicleCategory)
+          let vendorAmounts = DL.map (\vendor -> (vendor.vendorId, toRational vendor.splitValue)) vendorSplitDetails
+              vendorFees = DL.map (mkVendorFee (maybe driverFee.id (.id) lastDriverFee) now) vendorAmounts
+
+          case lastDriverFee of
+            Just ldFee | now >= ldFee.startTime && now < ldFee.endTime -> QVF.updateManyVendorFee vendorFees
+            _ -> QVF.createMany vendorFees
+
       plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing
       fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName
       scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards now
   where
+    mkVendorFee driverFeeId now vendorAmount = DVF.VendorFee {amount = HighPrecMoney (snd vendorAmount), driverFeeId = driverFeeId, vendorId = fst vendorAmount, createdAt = now, updatedAt = now}
+
     isEligibleForCharge transporterConfig isOnFreeTrial isSpecialZoneCharge = do
       let notOnFreeTrial = not isOnFreeTrial
       if isSpecialZoneCharge

@@ -16,6 +16,7 @@
 module Lib.Payment.Domain.Types.PaymentTransaction where
 
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payment.Interface.Types as KPayment
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -49,6 +50,7 @@ data PaymentTransaction = PaymentTransaction
     bankErrorCode :: Maybe Text,
     mandateFrequency :: Maybe Payment.MandateFrequency,
     mandateMaxAmount :: Maybe HighPrecMoney,
+    splitSettlementResponse :: Maybe KPayment.SplitSettlementResponse,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
