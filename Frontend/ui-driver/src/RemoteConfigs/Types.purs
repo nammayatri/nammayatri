@@ -66,3 +66,7 @@ type MetroCoinsEvent = {
   coins :: Int,
   minDistance :: Int
 }
+
+type EnableOtpRideConfig = {
+    enableOtpRide :: Boolean
+}
