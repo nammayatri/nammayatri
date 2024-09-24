@@ -98,6 +98,7 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
+import qualified Kernel.Types.Registry.Subscriber as BecknSub
 import Kernel.Types.TimeBound
 import Kernel.Types.Value (MandatoryValue, OptionalValue)
 import Kernel.Utils.Common
@@ -109,6 +110,8 @@ import qualified Lib.Queries.SpecialLocationGeom as QSLG
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Registry.Beckn.Interface as RegistryIF
+import qualified Registry.Beckn.Interface.Types as RegistryT
 import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, DriverReferralPayoutJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DriverFee as SDF
@@ -1643,6 +1646,8 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- call ride exophone
   exophones <- CQExophone.findAllCallExophoneByMerchantOpCityId baseOperatingCityId
+
+  void . RegistryIF.updateSubscriber =<< RegistryT.buildAddCityNyReq (req.city :| []) merchant.uniqueKeyId merchant.subscriberId.getShortId BecknSub.BPP Context.MOBILITY
 
   QGEO.create geometry
   CQMOC.create newOperatingCity

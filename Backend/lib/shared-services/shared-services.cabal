@@ -65,6 +65,11 @@ library
       IssueManagement.Storage.Queries.MediaFile
       IssueManagement.Tools.Error
       IssueManagement.Tools.UtilsTH
+      Registry.Beckn.Interface
+      Registry.Beckn.Interface.Nammayatri
+      Registry.Beckn.Interface.Types
+      Registry.Beckn.Nammayatri.Flow
+      Registry.Beckn.Nammayatri.Types
       UrlShortner.Common
   other-modules:
       Paths_shared_services
@@ -131,6 +136,7 @@ library
     , lens
     , location-updates
     , mobility-core
+    , mock-registry
     , openapi3
     , persistent
     , postgresql-simple

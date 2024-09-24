@@ -60,6 +60,7 @@ import Lib.Scheduler.Types
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import Passetto.Client
+import qualified Registry.Beckn.Nammayatri.Types as NyRegistry
 import SharedLogic.GoogleTranslate
 import SharedLogic.JobScheduler
 import Storage.CachedQueries.Merchant as CM
@@ -140,7 +141,8 @@ data AppCfg = AppCfg
     iosValidateEnpoint :: Text,
     isMetroTestTransaction :: Bool,
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
-    sosAlertsTopicARN :: Text
+    sosAlertsTopicARN :: Text,
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig
   }
   deriving (Generic, FromDhall)
 
@@ -223,7 +225,8 @@ data AppEnv = AppEnv
     isMetroTestTransaction :: Bool,
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
     passettoContext :: PassettoContext,
-    sosAlertsTopicARN :: Text
+    sosAlertsTopicARN :: Text,
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig
   }
   deriving (Generic)
 

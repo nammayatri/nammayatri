@@ -113,6 +113,7 @@ dependencies:
   - regex-compat
   - regex-tdfa
   - external
+  - mock-registry
 
 ghc-options:
   - -fwrite-ide-info
@@ -147,3 +148,4 @@ library:
     - beckn-spec
     - location-updates
     - special-zone
+    - mock-registry

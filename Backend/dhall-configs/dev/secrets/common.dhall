@@ -21,4 +21,5 @@ in  { smsUserName = "xxxxxxx"
     , slackToken = "xxxxxxx"
     , InfoBIPConfig
     , urlShortnerApiKey = "some-internal-api-key"
+    , nammayatriRegistryApiKey = "some-secret-api-key"
     }

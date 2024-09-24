@@ -51,6 +51,7 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
+import qualified Kernel.Types.Registry.Subscriber as BecknSub
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
 import qualified Lib.Queries.GateInfo as QGI
@@ -59,6 +60,8 @@ import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Queries.SpecialLocationGeom as QSLG
 import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Registry.Beckn.Interface as RegistryIF
+import qualified Registry.Beckn.Interface.Types as RegistryT
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -385,6 +388,8 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- exophone
   exophones <- CQExophone.findAllByMerchantOperatingCityId baseOperatingCityId
+
+  void . RegistryIF.updateSubscriber =<< RegistryT.buildAddCityNyReq (req.city :| []) merchant.bapUniqueKeyId merchant.bapId BecknSub.BAP Context.MOBILITY
 
   QGEO.create geometry
   CQMOC.create newOperatingCity

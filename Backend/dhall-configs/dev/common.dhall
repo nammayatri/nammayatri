@@ -2,7 +2,10 @@ let sec = ./secrets/common.dhall
 
 let globalCommon = ../generic/common.dhall
 
-let mockRegistryUrl = "http://localhost:8020/"
+let nammayatriRegistryUrl = "http://localhost:8020/"
+
+let nammayatriRegistryConfig =
+      { apiKey = sec.nammayatriRegistryApiKey, url = nammayatriRegistryUrl }
 
 let nsdlRegistryUrl = "https://pilot-gateway-1.beckn.nsdl.co.in/"
 
@@ -72,7 +75,7 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , mockGoogleCfg
     , googleTranslateUrl = "https://www.googleapis.com/"
     , googleTranslateKey = sec.googleTranslateKey
-    , registryUrl = mockRegistryUrl
+    , nammayatriRegistryConfig
     , authServiceUrl = "http://localhost:8013/"
     , consumerType = globalCommon.consumerType
     , schedulerType = SchedulerType

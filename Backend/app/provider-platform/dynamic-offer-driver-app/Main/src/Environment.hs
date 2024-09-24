@@ -49,6 +49,7 @@ import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import Passetto.Client
+import qualified Registry.Beckn.Nammayatri.Types as NyRegistry
 import SharedLogic.Allocator (AllocatorJobType)
 import SharedLogic.CallBAPInternal
 import SharedLogic.External.LocationTrackingService.Types
@@ -135,7 +136,8 @@ data AppCfg = AppCfg
     ondcTokenMap :: M.Map KeyConfig TokenConfig,
     iosValidateEnpoint :: Text,
     quoteRespondCoolDown :: Int,
-    sosAlertsTopicARN :: Text
+    sosAlertsTopicARN :: Text,
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig
   }
   deriving (Generic, FromDhall)
 
@@ -224,7 +226,8 @@ data AppEnv = AppEnv
     iosValidateEnpoint :: Text,
     passettoContext :: PassettoContext,
     quoteRespondCoolDown :: Int,
-    sosAlertsTopicARN :: Text
+    sosAlertsTopicARN :: Text,
+    nammayatriRegistryConfig :: NyRegistry.RegistryConfig
   }
   deriving (Generic)
 

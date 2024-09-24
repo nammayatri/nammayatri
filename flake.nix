@@ -23,7 +23,7 @@
     };
 
     beckn-gateway = {
-      url = "github:nammayatri/beckn-gateway";
+      url = "github:nammayatri/beckn-gateway/fix/remove-city-enum-usage";
       inputs = {
         common.follows = "common";
         haskell-flake.follows = "haskell-flake";
