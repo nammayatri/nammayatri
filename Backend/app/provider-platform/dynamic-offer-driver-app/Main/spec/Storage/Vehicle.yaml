@@ -82,7 +82,7 @@ Vehicle:
       where: driverId
     updateVehicleVariant:
       kvFunction: updateWithKV
-      params: [variant]
+      params: [variant, category]
       where: driverId
     updateSelectedServiceTiers:
       kvFunction: updateOneWithKV
@@ -90,7 +90,7 @@ Vehicle:
       where: driverId
     updateVariantAndServiceTiers:
       kvFunction: updateOneWithKV
-      params: [variant, selectedServiceTiers]
+      params: [variant, selectedServiceTiers, category]
       where: driverId
     updateAirConditioned:
       kvFunction: updateWithKV
