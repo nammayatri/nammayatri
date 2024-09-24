@@ -29,6 +29,7 @@ import Data.Maybe (listToMaybe)
 import Domain.Action.UI.Ride.CancelRide (driverDistanceToPickup)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequestForDriver as Domain
@@ -105,8 +106,9 @@ cancel req merchant booking mbActiveSearchTry = do
       QRide.updateStatus ride.id SRide.CANCELLED
       when (booking.isScheduled) $ QDI.updateLatestScheduledBookingAndPickup Nothing Nothing ride.driverId
 
-    disToPickup <- getDistanceToPickup booking mbRide
-    bookingCR <- buildBookingCancellationReason disToPickup
+    (disToPickup, mbLocation) <- getDistanceToPickup booking mbRide
+    let currentLocation = getCoordinates <$> mbLocation
+    bookingCR <- buildBookingCancellationReason disToPickup currentLocation
     QBCR.upsert bookingCR
     QRB.updateStatus booking.id SRB.CANCELLED
 
@@ -154,7 +156,7 @@ cancel req merchant booking mbActiveSearchTry = do
 
     return (isReallocated, cancellationCharge)
   where
-    buildBookingCancellationReason disToPickup = do
+    buildBookingCancellationReason disToPickup currentLocation = do
       return $
         DBCR.BookingCancellationReason
           { bookingId = req.bookingId,
@@ -164,13 +166,13 @@ cancel req merchant booking mbActiveSearchTry = do
             reasonCode = Nothing,
             driverId = Nothing,
             additionalInfo = Nothing,
-            driverCancellationLocation = Nothing,
+            driverCancellationLocation = currentLocation,
             driverDistToPickup = disToPickup,
             distanceUnit = booking.distanceUnit,
             ..
           }
 
-getDistanceToPickup :: SRB.Booking -> Maybe SRide.Ride -> Flow (Maybe Meters)
+getDistanceToPickup :: SRB.Booking -> Maybe SRide.Ride -> Flow (Maybe Meters, Maybe DriverLocation)
 getDistanceToPickup booking mbRide = do
   case mbRide of
     Just ride -> do
@@ -181,9 +183,12 @@ getDistanceToPickup booking mbRide = do
             logError ("Failed to fetch Driver Location with error : " <> show err)
             return Nothing
           Right locations -> return $ listToMaybe locations
-      forM mbLocation $ \location -> do
-        driverDistanceToPickup booking (getCoordinates location) (getCoordinates booking.fromLocation)
-    _ -> return Nothing
+      case mbLocation of
+        Just location -> do
+          distance <- driverDistanceToPickup booking (getCoordinates location) (getCoordinates booking.fromLocation)
+          return (Just distance, Just location)
+        Nothing -> return (Nothing, Nothing)
+    _ -> return (Nothing, Nothing)
 
 getCancellationCharges :: SRB.Booking -> Flow (Maybe PriceAPIEntity)
 getCancellationCharges booking = do
@@ -191,7 +196,7 @@ getCancellationCharges booking = do
   if transporterConfig.canAddCancellationFee
     then do
       mbRide <- QRide.findActiveByRBId booking.id
-      distanceToPickup <- getDistanceToPickup booking mbRide
+      (distanceToPickup, _) <- getDistanceToPickup booking mbRide
       customerCancellationChargesCalculation booking mbRide distanceToPickup
     else return Nothing
 
