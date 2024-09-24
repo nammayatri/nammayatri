@@ -86,6 +86,7 @@ import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.Ride (multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
@@ -131,7 +132,8 @@ endRideTransaction ::
     EventStreamFlow m r,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
-    HasField "jobInfoMap" r (M.Map Text Bool)
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    LT.HasLocationService m r
   ) =>
   Id DP.Driver ->
   SRB.Booking ->

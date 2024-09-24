@@ -14,6 +14,7 @@
 
 module Tools.Error (module Tools.Error) where
 
+import Data.Aeson (Value (Null), object, (.=))
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Error as Tools.Error hiding (PersonError)
@@ -173,11 +174,28 @@ instance IsBaseError ShardMappingError where
 
 instanceExceptionWithParent 'BaseException ''ShardMappingError
 
+data BlockReasonFlag = CancellationRate | ByDashboard deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnum ''BlockReasonFlag)
+
+data BlockErrorPayload = BlockErrorPayload
+  { blockExpiryTime :: Maybe UTCTime,
+    blockReason :: Maybe BlockReasonFlag
+  }
+  deriving (Eq, Show, IsBecknAPIError)
+
+instance ToJSON BlockErrorPayload where
+  toJSON (BlockErrorPayload expiryTime reason) =
+    object
+      [ "blockExpiryTime" .= expiryTime,
+        "blockReason" .= reason
+      ]
+
 data DriverError
   = DriverAccountDisabled
   | DriverWithoutVehicle Text
   | NoPlanSelected Text
-  | DriverAccountBlocked
+  | DriverAccountBlocked BlockErrorPayload
   | DriverAccountAlreadyBlocked
   | DriverUnsubscribed
   | DriverNotFound Text
@@ -196,7 +214,7 @@ instance IsBaseError DriverError where
   toMessage DriverAccountDisabled = Just "Driver account has been disabled. He can't go online and receive ride offers in this state."
   toMessage (DriverWithoutVehicle personId) = Just $ "Driver with id = " <> personId <> " has no linked vehicle"
   toMessage (NoPlanSelected personId) = Just $ "Driver with id = " <> personId <> " has not selected any plan"
-  toMessage DriverAccountBlocked = Just "Driver account has been blocked."
+  toMessage (DriverAccountBlocked _) = Just "Driver account has been blocked."
   toMessage DriverAccountAlreadyBlocked = Just "Driver account has been already blocked."
   toMessage DriverUnsubscribed = Just "Driver has been unsubscibed from platform. Pay pending amount to subscribe back."
   toMessage (DriverNotFound phoneNo) = Just $ "No Driver is found Registered  with this phone number = " <> phoneNo
@@ -213,7 +231,7 @@ instance IsHTTPError DriverError where
     DriverAccountDisabled -> "DRIVER_ACCOUNT_DISABLED"
     DriverWithoutVehicle _ -> "DRIVER_WITHOUT_VEHICLE"
     NoPlanSelected _ -> "NO_PLAN_SELECTED"
-    DriverAccountBlocked -> "DRIVER_ACCOUNT_BLOCKED"
+    DriverAccountBlocked _ -> "DRIVER_ACCOUNT_BLOCKED"
     DriverAccountAlreadyBlocked -> "DRIVER_ACCOUNT_ALREADY_BLOCKED"
     DriverUnsubscribed -> "DRIVER_UNSUBSCRIBED"
     DriverNotFound _ -> "DRIVER_NOT_FOUND"
@@ -228,7 +246,7 @@ instance IsHTTPError DriverError where
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E400
     NoPlanSelected _ -> E400
-    DriverAccountBlocked -> E403
+    DriverAccountBlocked _ -> E403
     DriverAccountAlreadyBlocked -> E403
     DriverUnsubscribed -> E403
     DriverNotFound _ -> E403
@@ -240,7 +258,9 @@ instance IsHTTPError DriverError where
     FleetOwnerAccountBlocked -> E403
     AccountBlocked -> E403
 
-instance IsAPIError DriverError
+instance IsAPIError DriverError where
+  toPayload (DriverAccountBlocked errorPayload) = toJSON errorPayload
+  toPayload _ = Null
 
 data AadhaarError
   = AadhaarAlreadyVerified

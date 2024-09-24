@@ -26,8 +26,7 @@ import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as SRD
 import qualified Domain.Types.SearchTry as DST
-import EulerHS.Prelude hiding (Show)
-import Kernel.Prelude (Show)
+import EulerHS.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id (Id)
@@ -57,10 +56,11 @@ data DriverRideRequest
       }
   | OnDriverCancellation
       { merchantId :: Id DM.Merchant,
-        driverId :: Id DP.Person,
+        driver :: DP.Person,
         rideFare :: Maybe HighPrecMoney,
         currency :: Currency,
-        distanceUnit :: DistanceUnit
+        distanceUnit :: DistanceUnit,
+        doCancellationRateBasedBlocking :: Maybe Bool
       }
   | OnRideCompletion
       { merchantId :: Id DM.Merchant,
@@ -68,4 +68,3 @@ data DriverRideRequest
         ride :: DR.Ride,
         fareParameter :: Maybe FareParameters
       }
-  deriving (Show)

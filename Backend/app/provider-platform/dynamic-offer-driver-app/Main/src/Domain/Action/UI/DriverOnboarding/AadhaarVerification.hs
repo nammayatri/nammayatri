@@ -80,7 +80,7 @@ generateAadhaarOtp ::
 generateAadhaarOtp isDashboard mbMerchant personId merchantOpCityId req = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  when driverInfo.blocked $ throwError DriverAccountBlocked
+  when driverInfo.blocked $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   when (driverInfo.aadhaarVerified) $ throwError AadhaarAlreadyVerified
   aadhaarHash <- getDbHash req.aadhaarNumber
   checkForDuplicacy aadhaarHash
@@ -116,7 +116,7 @@ verifyAadhaarOtp ::
 verifyAadhaarOtp mbMerchant personId merchantOpCityId req = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound (getId personId))
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound (getId personId))
-  when (driverInfo.blocked) $ throwError DriverAccountBlocked
+  when (driverInfo.blocked) $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   when (driverInfo.aadhaarVerified) $ throwError AadhaarAlreadyVerified
   whenJust mbMerchant $ \merchant -> do
     -- merchant access checking

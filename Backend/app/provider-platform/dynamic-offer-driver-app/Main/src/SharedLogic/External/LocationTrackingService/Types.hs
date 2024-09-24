@@ -97,3 +97,10 @@ newtype DriverLocationResp = DriverLocationResp
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 type HasLocationService m r = (HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig])
+
+data DriverBlockTillReq = DriverBlockTillReq
+  { merchantId :: Id DM.Merchant,
+    driverId :: Id DP.Person,
+    blockTill :: UTCTime
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)

@@ -44,8 +44,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import Lib.Scheduler.Environment
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
 import qualified SharedLogic.DriverPool as SDP
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate
@@ -69,7 +71,9 @@ sendSearchRequestToDrivers ::
     TranslateFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int, "version" ::: DeploymentVersion]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int, "version" ::: DeploymentVersion],
+    LT.HasLocationService m r,
+    JobCreator r m
   ) =>
   [SDP.TripQuoteDetail] ->
   DSR.SearchRequest ->

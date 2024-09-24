@@ -90,8 +90,9 @@ cancelRideImpl ::
   DRide.RideEndedBy ->
   SBCR.BookingCancellationReason ->
   Bool ->
+  Maybe Bool ->
   m ()
-cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation = do
+cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellationRateBasedBlocking = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
@@ -109,7 +110,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation = do
     triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
     triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
     when (bookingCReason.source == SBCR.ByDriver) $
-      DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {merchantId = merchantId, driverId = driver.id, rideFare = Just booking.estimatedFare, currency = booking.currency, distanceUnit = booking.distanceUnit}
+      DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {merchantId = merchantId, driver = driver, rideFare = Just booking.estimatedFare, currency = booking.currency, distanceUnit = booking.distanceUnit, doCancellationRateBasedBlocking}
     Notify.notifyOnCancel ride.merchantOperatingCityId booking driver bookingCReason.source
   fork "cancelRide/ReAllocate - Notify BAP" $ do
     isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation

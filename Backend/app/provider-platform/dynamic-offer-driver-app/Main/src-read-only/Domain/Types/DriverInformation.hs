@@ -15,6 +15,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
+import qualified Tools.Error
 
 data DriverInformation = DriverInformation
   { aadhaarVerified :: Kernel.Prelude.Bool,
@@ -26,6 +27,7 @@ data DriverInformation = DriverInformation
     autoPayStatus :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverAutoPayStatus,
     availableUpiApps :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blockExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    blockReasonFlag :: Kernel.Prelude.Maybe Tools.Error.BlockReasonFlag,
     blockStateModifier :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     blocked :: Kernel.Prelude.Bool,
     blockedReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -35,6 +37,7 @@ data DriverInformation = DriverInformation
     canSwitchToInterCity :: Kernel.Prelude.Bool,
     canSwitchToRental :: Kernel.Prelude.Bool,
     compAadhaarImagePath :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dailyCancellationRateBlockingCooldown :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     enabled :: Kernel.Prelude.Bool,
@@ -61,6 +64,7 @@ data DriverInformation = DriverInformation
     tollRelatedIssueCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalReferred :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     verified :: Kernel.Prelude.Bool,
+    weeklyCancellationRateBlockingCooldown :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

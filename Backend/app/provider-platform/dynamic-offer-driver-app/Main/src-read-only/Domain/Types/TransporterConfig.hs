@@ -57,6 +57,8 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     cancellationFee :: Kernel.Types.Common.HighPrecMoney,
     cancellationFeeDisputeLimit :: Kernel.Prelude.Int,
     cancellationRateCalculationThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    cancellationRateThresholdDaily :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    cancellationRateThresholdWeekly :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationRateWindow :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationTimeDiff :: Kernel.Prelude.NominalDiffTime,
     checkImageExtractionForDashboard :: Kernel.Prelude.Bool,
@@ -70,6 +72,9 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     createdAt :: Kernel.Prelude.UTCTime,
     crossTravelCities :: [Kernel.Types.Beckn.City.City],
     currency :: Kernel.Types.Common.Currency,
+    dailyMinRidesForBlocking :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    dailyMinRidesForNudging :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    dailyOffenceSuspensionTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     defaultPopupDelay :: Kernel.Types.Common.Seconds,
     demandHotspotsConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DemandHotspotsConfig,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
@@ -189,7 +194,10 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     useSilentFCMForForwardBatch :: Kernel.Prelude.Bool,
     useWithSnapToRoadFallback :: Kernel.Prelude.Bool,
     variantsToEnableForSubscription :: [Domain.Types.VehicleVariant.VehicleVariant],
-    volunteerSmsSendingLimit :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DashboardMediaSendingLimit
+    volunteerSmsSendingLimit :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DashboardMediaSendingLimit,
+    weeklyMinRidesForBlocking :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    weeklyMinRidesForNudging :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    weeklyOffenceSuspensionTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving (Generic, Show)
 
@@ -229,6 +237,18 @@ data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
     taxiplus :: Kernel.Types.Common.Kilometers
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read)
+
+data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgingAndBlockingConfig
+  { cancellationRateThresholdDaily :: Kernel.Prelude.Int,
+    cancellationRateThresholdWeekly :: Kernel.Prelude.Int,
+    dailyMinRidesforBlocking :: Kernel.Prelude.Int,
+    dailyMinRidesforNudging :: Kernel.Prelude.Int,
+    dailyOffenceSuspensionTimeHours :: Kernel.Prelude.Int,
+    weeklyMinRidesforBlocking :: Kernel.Prelude.Int,
+    weeklyMinRidesforNudging :: Kernel.Prelude.Int,
+    weeklyOffenceSuspensionTimeHours :: Kernel.Prelude.Int
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data DashboardMediaSendingLimit = DashboardMediaSendingLimit {alert :: Kernel.Prelude.Int, overlay :: Kernel.Prelude.Int, sms :: Kernel.Prelude.Int, whatsapp :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, Read)

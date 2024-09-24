@@ -151,6 +151,9 @@ apis:
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UNBLOCK
       params:
         driverId: Id Driver
+      query:
+        - preventWeeklyCancellationRateBlockingTill: UTCTime
+        - preventDailyCancellationRateBlockingTill: UTCTime
       response:
         type: APISuccess
       helperApi:
@@ -160,6 +163,9 @@ apis:
             params:
               driverId: Id Driver
               dashboardUserName: Text
+            query:
+              - preventWeeklyCancellationRateBlockingTill: UTCTime
+              - preventDailyCancellationRateBlockingTill: UTCTime
             response:
               type: APISuccess
       migrate:

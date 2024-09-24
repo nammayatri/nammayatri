@@ -58,6 +58,8 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             cancellationFee = cancellationFee,
             cancellationFeeDisputeLimit = cancellationFeeDisputeLimit,
             cancellationRateCalculationThreshold = cancellationRateCalculationThreshold,
+            cancellationRateThresholdDaily = cancellationRateThresholdDaily,
+            cancellationRateThresholdWeekly = cancellationRateThresholdWeekly,
             cancellationRateWindow = cancellationRateWindow,
             cancellationTimeDiff = Kernel.Utils.Common.secondsToNominalDiffTime cancellationTimeDiff,
             checkImageExtractionForDashboard = checkImageExtractionForDashboard,
@@ -71,6 +73,9 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             createdAt = createdAt,
             crossTravelCities = crossTravelCities,
             currency = fromMaybe Kernel.Types.Common.INR currency,
+            dailyMinRidesForBlocking = dailyMinRidesForBlocking,
+            dailyMinRidesForNudging = dailyMinRidesForNudging,
+            dailyOffenceSuspensionTimeHours = dailyOffenceSuspensionTimeHours,
             defaultPopupDelay = defaultPopupDelay,
             demandHotspotsConfig = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< demandHotspotsConfig,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
@@ -190,7 +195,10 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             useSilentFCMForForwardBatch = useSilentFCMForForwardBatch,
             useWithSnapToRoadFallback = useWithSnapToRoadFallback,
             variantsToEnableForSubscription = variantsToEnableForSubscription,
-            volunteerSmsSendingLimit = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< volunteerSmsSendingLimit
+            volunteerSmsSendingLimit = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< volunteerSmsSendingLimit,
+            weeklyMinRidesForBlocking = weeklyMinRidesForBlocking,
+            weeklyMinRidesForNudging = weeklyMinRidesForNudging,
+            weeklyOffenceSuspensionTimeHours = weeklyOffenceSuspensionTimeHours
           }
 
 instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.TransporterConfig where
@@ -229,6 +237,8 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.cancellationFee = cancellationFee,
         Beam.cancellationFeeDisputeLimit = cancellationFeeDisputeLimit,
         Beam.cancellationRateCalculationThreshold = cancellationRateCalculationThreshold,
+        Beam.cancellationRateThresholdDaily = cancellationRateThresholdDaily,
+        Beam.cancellationRateThresholdWeekly = cancellationRateThresholdWeekly,
         Beam.cancellationRateWindow = cancellationRateWindow,
         Beam.cancellationTimeDiff = Kernel.Utils.Common.nominalDiffTimeToSeconds cancellationTimeDiff,
         Beam.checkImageExtractionForDashboard = checkImageExtractionForDashboard,
@@ -242,6 +252,9 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.createdAt = createdAt,
         Beam.crossTravelCities = crossTravelCities,
         Beam.currency = Just currency,
+        Beam.dailyMinRidesForBlocking = dailyMinRidesForBlocking,
+        Beam.dailyMinRidesForNudging = dailyMinRidesForNudging,
+        Beam.dailyOffenceSuspensionTimeHours = dailyOffenceSuspensionTimeHours,
         Beam.defaultPopupDelay = defaultPopupDelay,
         Beam.demandHotspotsConfig = Kernel.Prelude.toJSON <$> demandHotspotsConfig,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
@@ -363,5 +376,8 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.useSilentFCMForForwardBatch = useSilentFCMForForwardBatch,
         Beam.useWithSnapToRoadFallback = useWithSnapToRoadFallback,
         Beam.variantsToEnableForSubscription = variantsToEnableForSubscription,
-        Beam.volunteerSmsSendingLimit = Kernel.Prelude.toJSON <$> volunteerSmsSendingLimit
+        Beam.volunteerSmsSendingLimit = Kernel.Prelude.toJSON <$> volunteerSmsSendingLimit,
+        Beam.weeklyMinRidesForBlocking = weeklyMinRidesForBlocking,
+        Beam.weeklyMinRidesForNudging = weeklyMinRidesForNudging,
+        Beam.weeklyOffenceSuspensionTimeHours = weeklyOffenceSuspensionTimeHours
       }

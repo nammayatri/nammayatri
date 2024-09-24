@@ -6,6 +6,7 @@ module Storage.Queries.DriverInformationExtra where
 import qualified Data.Either as Either
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
+import qualified Domain.Types.Common as Common
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation as DriverLocation
@@ -13,6 +14,7 @@ import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
 import qualified EulerHS.Language as L
+import EulerHS.Prelude hiding (find, foldl, foldl', id, map)
 import Kernel.Beam.Functions
 import Kernel.Beam.Functions as BF
 import Kernel.External.Encryption
@@ -30,6 +32,7 @@ import qualified Storage.Queries.DriverBlockTransactions as QDBT
 import Storage.Queries.OrphanInstances.DriverInformation
 import qualified Storage.Queries.Person as QPerson
 import Storage.Queries.PersonExtra (findAllPersonWithDriverInfos)
+import Tools.Error
 
 -- Extra code goes here --
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
@@ -129,11 +132,11 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateDynamicBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Id Merchant -> Text -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> Bool -> m ()
-updateDynamicBlockedState driverId blockedReason blockedExpiryTime dashboardUserName merchantId reasonCode merchantOperatingCityId blockedBy isBlocked = do
+updateDynamicBlockedStateWithActivity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Id Merchant -> Text -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> Bool -> Maybe Bool -> Maybe Common.DriverMode -> BlockReasonFlag -> m ()
+updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime dashboardUserName merchantId reasonCode merchantOperatingCityId blockedBy isBlocked mbActive mbMode blockReasonFlag = do
   now <- getCurrentTime
   driverInfo <- findById driverId
-  let expiryTime = (\secs -> addUTCTime (fromIntegral secs * 3600) now) <$> blockedExpiryTime
+  let expiryTime = (\hrs -> addUTCTime (fromIntegral hrs * 3600) now) <$> blockedExpiryTime
 
   uid <- generateGUID
   let driverBlockDetails =
@@ -157,11 +160,16 @@ updateDynamicBlockedState driverId blockedReason blockedExpiryTime dashboardUser
   let numOfLocks' = case driverInfo of
         Just driverInfoResult -> driverInfoResult.numOfLocks
         Nothing -> 0
+  let activeState = (.active) <$> driverInfo
+  let modeState = driverInfo >>= mode
   updateOneWithKV
     ( [ Se.Set BeamDI.blocked isBlocked,
         Se.Set BeamDI.blockedReason blockedReason,
         Se.Set BeamDI.blockExpiryTime expiryTime,
         Se.Set BeamDI.blockStateModifier (Just dashboardUserName),
+        Se.Set BeamDI.active $ fromMaybe True (mbActive <|> activeState),
+        Se.Set BeamDI.mode $ mbMode <|> modeState,
+        Se.Set BeamDI.blockReasonFlag (Just blockReasonFlag),
         Se.Set BeamDI.updatedAt now
       ]
         <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])

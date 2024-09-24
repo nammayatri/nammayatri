@@ -144,14 +144,14 @@ getDriverBlockReasonList merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.getDriverBlockReasonList)
 
-postDriverUnblock :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
-postDriverUnblock merchantShortId opCity apiTokenInfo driverId = do
+postDriverUnblock :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe UTCTime -> Maybe UTCTime -> Flow APISuccess
+postDriverUnblock merchantShortId opCity apiTokenInfo driverId preventWeeklyCancellationRateBlockingTill preventDailyCancellationRateBlockingTill = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   person <- QP.findById apiTokenInfo.personId >>= fromMaybeM (PersonNotFound apiTokenInfo.personId.getId)
   let dashboardUserName = person.firstName <> " " <> person.lastName
   transaction <- buildTransaction Common.PostDriverUnblockEndpoint apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.postDriverUnblock) driverId dashboardUserName
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.postDriverUnblock) driverId dashboardUserName preventWeeklyCancellationRateBlockingTill preventDailyCancellationRateBlockingTill
 
 getDriverLocation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Common.DriverIds -> Flow Common.DriverLocationRes
 getDriverLocation merchantShortId opCity apiTokenInfo mbLimit mbOffset req = do

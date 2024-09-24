@@ -61,8 +61,8 @@ postDriverBlock a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Manageme
 getDriverBlockReasonList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.Driver.BlockReason])
 getDriverBlockReasonList a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Management.Driver.getDriverBlockReasonList a2 a1
 
-postDriverUnblock :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postDriverUnblock a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Management.Driver.postDriverUnblock a4 a3 a2 a1
+postDriverUnblock :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postDriverUnblock a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Management.Driver.postDriverUnblock a6 a5 a4 a3 a2 a1
 
 getDriverLocation :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Dashboard.Common.Driver.DriverIds -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Driver.DriverLocationRes)
 getDriverLocation a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Management.Driver.getDriverLocation a5 a4 a3 a2 a1

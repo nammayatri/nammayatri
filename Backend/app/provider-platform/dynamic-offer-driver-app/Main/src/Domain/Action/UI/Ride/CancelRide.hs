@@ -71,7 +71,7 @@ import Utils.Common.Cac.KeyNameConstants
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findById :: Id DP.Person -> m (Maybe DP.Person),
-    cancelRide :: Id DRide.Ride -> DRide.RideEndedBy -> DBCR.BookingCancellationReason -> Bool -> m (),
+    cancelRide :: Id DRide.Ride -> DRide.RideEndedBy -> DBCR.BookingCancellationReason -> Bool -> Maybe Bool -> m (),
     findBookingByIdInReplica :: Id SRB.Booking -> m (Maybe SRB.Booking),
     pickUpDistance :: SRB.Booking -> LatLong -> LatLong -> m Meters
   }
@@ -116,7 +116,8 @@ cancelRideHandle =
 
 data CancelRideReq = CancelRideReq
   { reasonCode :: CancellationReasonCode,
-    additionalInfo :: Maybe Text
+    additionalInfo :: Maybe Text,
+    doCancellationRateBasedBlocking :: Maybe Bool
   }
 
 data CancelRideResp = CancelRideResp
@@ -241,7 +242,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
       logTagInfo "Allocator : ByMerchant -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
       buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, DRide.Allocator)
 
-  cancelRide rideId rideEndedBy rideCancelationReason isForceReallocation
+  cancelRide rideId rideEndedBy rideCancelationReason isForceReallocation req.doCancellationRateBasedBlocking
   pure (cancellationCnt, isGoToDisabled)
   where
     isValidRide ride = ride.status `elem` [DRide.NEW, DRide.UPCOMING]

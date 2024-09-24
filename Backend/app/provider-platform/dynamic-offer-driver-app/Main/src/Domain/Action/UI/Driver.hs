@@ -119,6 +119,7 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverBankAccount as DOBA
+import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverHomeLocation as DDHL
@@ -283,6 +284,7 @@ data DriverInformationRes = DriverInformationRes
     verified :: Bool,
     enabled :: Bool,
     blocked :: Bool,
+    blockExpiryTime :: Maybe UTCTime,
     subscribed :: Bool,
     paymentPending :: Bool,
     referralCode :: Maybe Text,
@@ -350,6 +352,7 @@ data DriverEntityRes = DriverEntityRes
     onRide :: Bool,
     enabled :: Bool,
     blocked :: Bool,
+    blockExpiryTime :: Maybe UTCTime,
     subscribed :: Bool,
     paymentPending :: Bool,
     verified :: Bool,
@@ -704,7 +707,15 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
       unless driverBankAccount.chargesEnabled $ throwError (DriverChargesDisabled driverId.getId)
     unless (driverInfo.enabled) $ throwError DriverAccountDisabled
     unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
-    unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
+    when driverInfo.blocked $ do
+      case driverInfo.blockExpiryTime of
+        Just expiryTime -> do
+          now <- getCurrentTime
+          if now > expiryTime
+            then do
+              QDriverInformation.updateBlockedState driverId False (Just "AUTOMATICALLY_UNBLOCKED") merchantId merchantOpCityId DTDBT.Application
+            else throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
+        Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   void $ QDriverInformation.updateActivity isActive (mode <|> Just DriverInfo.OFFLINE) driverId
   pure APISuccess.Success
 
@@ -715,7 +726,7 @@ activateGoHomeFeature (driverId, merchantId, merchantOpCityId) driverHomeLocatio
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
-  when (driverInfo.blocked) $ throwError DriverAccountBlocked
+  when (driverInfo.blocked) $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   let currPos = LatLong {lat = driverLocation.lat, lon = driverLocation.lon}
   driverHomeLocation <- QDHL.findById driverHomeLocationId >>= fromMaybeM (DriverHomeLocationDoesNotExist driverHomeLocationId.getId)
   when (driverHomeLocation.driverId /= driverId) $ throwError DriverHomeLocationDoesNotBelongToDriver
@@ -738,7 +749,7 @@ deactivateGoHomeFeature (personId, _, merchantOpCityId) = do
   let driverId = cast personId
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
-  when (driverInfo.blocked) $ throwError DriverAccountBlocked
+  when (driverInfo.blocked) $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   ghInfo <- getDriverGoHomeRequestInfo driverId merchantOpCityId (Just goHomeConfig)
   ghrId <- fromMaybeM DriverGoHomeRequestNotPresent ghInfo.driverGoHomeRequestId
   succRide <- Ride.findCompletedRideByGHRId ghrId
@@ -753,7 +764,7 @@ addHomeLocation (driverId, merchantId, merchantOpCityId) req = do
   unless (cfg.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
-  when (driverInfo.blocked) $ throwError DriverAccountBlocked
+  when (driverInfo.blocked) $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   unlessM (rideServiceable merchant.geofencingConfig QGeometry.someGeometriesContain req.position Nothing) $ throwError DriverHomeLocationOutsideServiceArea
   oldHomeLocations <- QDHL.findAllByDriverId driverId
@@ -783,7 +794,7 @@ updateHomeLocation (driverId, merchantId, merchantOpCityId) homeLocationId req =
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
-  unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
+  unless (not driverInfo.blocked) $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantOpCityId (Just goHomeConfig)
   when (dghInfo.status == Just DDGR.ACTIVE) $ throwError DriverHomeLocationUpdateWhileActiveError
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -808,7 +819,7 @@ getHomeLocations :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merch
 getHomeLocations (driverId, _, _) = do
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
-  unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
+  unless (not driverInfo.blocked) $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   driverHomeLocations <- QDHL.findAllByDriverId driverId
   return . GetHomeLocationsRes $ DDHL.makeDriverHomeLocationAPIEntity <$> driverHomeLocations
 
@@ -818,7 +829,7 @@ deleteHomeLocation (driverId, _, merchantOpCityId) driverHomeLocationId = do
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
-  unless (not driverInfo.blocked) $ throwError DriverAccountBlocked
+  unless (not driverInfo.blocked) $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantOpCityId (Just goHomeConfig)
   when (dghInfo.status == Just DDGR.ACTIVE) $ throwError DriverHomeLocationDeleteWhileActiveError
   QDHL.deleteById driverHomeLocationId
@@ -882,6 +893,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
         onRide = onRideFlag,
         enabled = driverInfo.enabled,
         blocked = driverInfo.blocked,
+        blockExpiryTime = driverInfo.blockExpiryTime,
         verified = driverInfo.verified,
         subscribed = driverInfo.subscribed,
         paymentPending = driverInfo.paymentPending,
@@ -1079,10 +1091,10 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referral
           payoutVpaStatus = payoutVpaStatus,
           payoutRewardAmount = mbPayoutConfig <&> (.referralRewardAmountPerRide),
           payoutVpaBankAccount = payoutVpaBankAccount,
-          cancellationRateInWindow = cancellationRateData.cancellationRate,
-          cancelledRidesCountInWindow = cancellationRateData.cancelledCount,
-          assignedRidesCountInWindow = cancellationRateData.assignedCount,
-          windowSize = cancellationRateData.windowSize,
+          cancellationRateInWindow = (.cancellationRate) <$> cancellationRateData,
+          cancelledRidesCountInWindow = (.cancelledCount) <$> cancellationRateData,
+          assignedRidesCountInWindow = (.assignedCount) <$> cancellationRateData,
+          windowSize = (.windowSize) <$> cancellationRateData,
           favCount = Just driverStats.favRiderCount,
           ..
         }

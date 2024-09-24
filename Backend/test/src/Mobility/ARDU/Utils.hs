@@ -276,7 +276,7 @@ cancelRideByDriver :: DriverTestData -> Id AppRB.Booking -> TRide.Ride -> Client
 cancelRideByDriver driver bapBookingId tRide = do
   void . callBPP $
     API.ui.ride.rideCancel driver.token tRide.id $
-      RideAPI.CancelRideReq (SCR.CancellationReasonCode "OTHER") Nothing
+      RideAPI.CancelRideReq (SCR.CancellationReasonCode "OTHER") Nothing (Just True)
   cancellationChecks bapBookingId driver
 
 cancelRideByApp :: Text -> DriverTestData -> Id AppRB.Booking -> ClientsM ()
@@ -296,7 +296,7 @@ badCancelRideByDriver driver SearchConfirmResult {..} = do
   withFakeBapUrl bppBooking $
     void . callBPP $
       API.ui.ride.rideCancel driver.token ride.id $
-        RideAPI.CancelRideReq (SCR.CancellationReasonCode "OTHER") Nothing
+        RideAPI.CancelRideReq (SCR.CancellationReasonCode "OTHER") Nothing (Just True)
   badCancellationChecks bapBookingId driver
 
 badCancellationChecks :: Id AppRB.Booking -> DriverTestData -> ClientsM ()

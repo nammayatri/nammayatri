@@ -14,8 +14,14 @@
 
 module SharedLogic.CancellationRate where
 
+import qualified Domain.Types.Common as DriverInfo
+import qualified Domain.Types.DriverBlockTransactions as DTDBT
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import Domain.Types.TransporterConfig
+import qualified Kernel.External.Notification.FCM.Types as FCM
+import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
@@ -23,13 +29,23 @@ import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
+import Lib.Scheduler.Environment
+import Lib.Scheduler.JobStorageType.SchedulerType as JC
+import SharedLogic.Allocator
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
+import SharedLogic.External.LocationTrackingService.Types
 import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.CachedQueries.Merchant.Overlay as CMP
+import qualified Storage.Queries.DriverInformation as QDriverInformation
+import Tools.Error
+import Tools.Metrics (CoreMetrics)
+import Tools.Notifications as Notify
 
 data CancellationRateData = CancellationRateData
-  { assignedCount :: Maybe Int,
-    cancelledCount :: Maybe Int,
-    cancellationRate :: Maybe Int,
-    windowSize :: Maybe Int
+  { assignedCount :: Int,
+    cancelledCount :: Int,
+    cancellationRate :: Int,
+    windowSize :: Int
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
@@ -88,20 +104,104 @@ getCancellationRateData ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
-  m CancellationRateData
+  m (Maybe CancellationRateData)
 getCancellationRateData mocId driverId = do
   merchantConfig <- CTC.findByMerchantOpCityId mocId Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
   let minimumRides = findMinimumRides merchantConfig
-  (assignedCount, cancelledCount, cancellationRate, windowSize) <- do
-    let windowSize = findWindowSize merchantConfig
-    assignedCount <- getAssignedCount windowSize driverId
-    if (isJust merchantConfig.cancellationRateWindow) && (assignedCount > minimumRides)
-      then do
-        cancelledCount <- getCancellationCount windowSize driverId
-        let cancellationRate = (cancelledCount * 100) `div` max 1 assignedCount
-        pure (Just $ fromInteger assignedCount, Just $ fromInteger cancelledCount, Just $ fromInteger cancellationRate, merchantConfig.cancellationRateWindow)
-      else pure (Nothing, Nothing, Nothing, Nothing)
-  pure $ CancellationRateData assignedCount cancelledCount cancellationRate windowSize
+  let windowSize = findWindowSize merchantConfig
+  assignedCount <- getAssignedCount windowSize driverId
+  if (isJust merchantConfig.cancellationRateWindow) && (assignedCount > minimumRides)
+    then do
+      cancelledCount <- getCancellationCount windowSize driverId
+      let cancellationRate = (cancelledCount * 100) `div` max 1 assignedCount
+      pure $
+        Just $
+          CancellationRateData
+            { assignedCount = fromInteger assignedCount,
+              cancelledCount = fromInteger cancelledCount,
+              cancellationRate = fromInteger cancellationRate,
+              windowSize = fromMaybe 7 merchantConfig.cancellationRateWindow
+            }
+    else pure Nothing
   where
     findWindowSize merchantConfig = toInteger $ fromMaybe 7 merchantConfig.cancellationRateWindow
     findMinimumRides merchantConfig = toInteger $ fromMaybe 5 merchantConfig.cancellationRateCalculationThreshold
+
+nudgeOrBlockDriver ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m) =>
+  TransporterConfig ->
+  DP.Person ->
+  DI.DriverInformation ->
+  m ()
+nudgeOrBlockDriver transporterConfig driver driverInfo = do
+  let config = buildConfig
+  now <- getCurrentTime
+  case (transporterConfig.cancellationRateWindow, config) of
+    (Just windowSize, Just CancellationRateBasedNudgingAndBlockingConfig {..}) -> do
+      (dailyCancellationRate, dailyAssignedCount) <- getCancellationRateOfDays 1 windowSize
+      (weeklyCancellationRate, weeklyAssignedCount) <- getCancellationRateOfDays 7 windowSize
+      let cooldDownWeekly = driverInfo.weeklyCancellationRateBlockingCooldown
+      blockedOnWeekly <- blockDriverCondition cancellationRateThresholdWeekly weeklyMinRidesforBlocking weeklyCancellationRate weeklyAssignedCount weeklyOffenceSuspensionTimeHours cooldDownWeekly now
+      if blockedOnWeekly
+        then do
+          let cooldownTime = addUTCTime (secondsToNominalDiffTime $ 7 * 24 * 60 * 60) now -- one week
+          QDriverInformation.updateWeeklyCancellationRateBlockingCooldown (Just cooldownTime) driver.id
+        else do
+          let cooldDownDaily = driverInfo.dailyCancellationRateBlockingCooldown
+          blockedOnDaily <- blockDriverCondition cancellationRateThresholdDaily dailyMinRidesforBlocking dailyCancellationRate dailyAssignedCount dailyOffenceSuspensionTimeHours cooldDownDaily now
+          if blockedOnDaily
+            then do
+              let cooldownTime = addUTCTime (secondsToNominalDiffTime $ 24 * 60 * 60) now -- one day
+              QDriverInformation.updateDailyAndWeeklyCancellationRateBlockingCooldown (Just cooldownTime) (Just cooldownTime) driver.id
+            else do
+              nudgeDriverCondition cancellationRateThresholdWeekly weeklyMinRidesforNudging weeklyMinRidesforBlocking weeklyCancellationRate weeklyAssignedCount FCM.CANCELLATION_RATE_NUDGE_WEEKLY "CANCELLATION_RATE_NUDGE_WEEKLY"
+              nudgeDriverCondition cancellationRateThresholdDaily dailyMinRidesforNudging dailyMinRidesforBlocking dailyCancellationRate dailyAssignedCount FCM.CANCELLATION_RATE_NUDGE_DAILY "CANCELLATION_RATE_NUDGE_DAILY"
+    _ -> logInfo "cancellationRateWindow or cancellationRateBasedNudgingAndBlockingConfig not found in transporter config"
+  where
+    getCancellationRateOfDays period windowSize = do
+      let windowInt = toInteger windowSize
+      cancelledCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideCancelledKey driver.id.getId) (SWC.SlidingWindowOptions windowInt SWC.Days)
+      assignedCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideAssignedKey driver.id.getId) (SWC.SlidingWindowOptions windowInt SWC.Days)
+      let cancellationRate = (cancelledCount * 100) `div` max 1 assignedCount
+      return (cancellationRate, assignedCount)
+
+    blockDriverCondition :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m) => Int -> Int -> Int -> Int -> Int -> Maybe UTCTime -> UTCTime -> m Bool
+    blockDriverCondition cancellationRateThreshold rideAssignedThreshold cancellationRate assignedCount blockTimeInHours mbCooldown now = do
+      let rule = (cancellationRate > cancellationRateThreshold) && (assignedCount > rideAssignedThreshold)
+      canApplyBlock <- case mbCooldown of
+        Just cooldown -> return $ rule && (cooldown <= now)
+        Nothing -> return rule
+      if canApplyBlock
+        then do
+          logInfo $ "Blocking driver based on cancellation rate, driverId: " <> driver.id.getId
+          QDriverInformation.updateDynamicBlockedStateWithActivity driver.id (Just "BLOCKED_BASED_ON_CANCELLATION_RATE") (Just blockTimeInHours) "AUTOMATICALLY_BLOCKED_BY_APP" driver.merchantId "AUTOMATICALLY_BLOCKED_BY_APP" driver.merchantOperatingCityId DTDBT.Application True (Just False) (Just DriverInfo.OFFLINE) CancellationRate
+          let expiryTime = addUTCTime (fromIntegral blockTimeInHours * 60 * 60) now
+          void $ LTS.blockDriverLocationsTill (driver.merchantId) (driver.id) expiryTime
+          maxShards <- asks (.maxShards)
+          let unblockDriverJobTs = secondsToNominalDiffTime (fromIntegral blockTimeInHours) * 60 * 60
+          JC.createJobIn @_ @'UnblockDriver unblockDriverJobTs maxShards $
+            UnblockDriverRequestJobData
+              { driverId = driver.id
+              }
+          return True
+        else return False
+
+    nudgeDriverCondition cancellationRateThreshold minAssignedRides maxAssignedRides cancellationRate rideAssignedCount fcmType pnKey = do
+      let condition = (cancellationRate > cancellationRateThreshold) && (rideAssignedCount > minAssignedRides && rideAssignedCount < maxAssignedRides)
+      when condition $ do
+        overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf driver.merchantOperatingCityId pnKey (fromMaybe ENGLISH driver.language) Nothing >>= fromMaybeM (InternalError $ "Overlay not found for " <> pnKey)
+        let fcmOverlayReq = Notify.mkOverlayReq overlay
+        let entityData = Notify.CancellationRateBaseNudgeData {driverId = driver.id.getId, driverCancellationRate = cancellationRate}
+        Notify.sendCancellationRateNudgeOverlay driver.merchantOperatingCityId driver fcmType fcmOverlayReq entityData
+
+    buildConfig :: Maybe CancellationRateBasedNudgingAndBlockingConfig
+    buildConfig = do
+      cancellationRateThresholdDaily <- transporterConfig.cancellationRateThresholdDaily
+      cancellationRateThresholdWeekly <- transporterConfig.cancellationRateThresholdWeekly
+      dailyMinRidesforBlocking <- transporterConfig.dailyMinRidesForBlocking
+      weeklyMinRidesforBlocking <- transporterConfig.weeklyMinRidesForBlocking
+      dailyMinRidesforNudging <- transporterConfig.dailyMinRidesForNudging
+      weeklyMinRidesforNudging <- transporterConfig.weeklyMinRidesForNudging
+      dailyOffenceSuspensionTimeHours <- transporterConfig.dailyOffenceSuspensionTimeHours
+      weeklyOffenceSuspensionTimeHours <- transporterConfig.weeklyOffenceSuspensionTimeHours
+      return CancellationRateBasedNudgingAndBlockingConfig {..}

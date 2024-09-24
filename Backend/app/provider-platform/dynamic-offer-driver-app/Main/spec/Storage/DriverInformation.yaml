@@ -6,6 +6,7 @@ imports:
   UTCTime: Kernel.Prelude
   LatLong: Kernel.External.Maps
   DriverMode: Domain.Types.Common
+  BlockReasonFlag: Tools.Error
 
 DriverInformation:
   tableName: driver_information
@@ -83,6 +84,9 @@ DriverInformation:
     latestScheduledBooking : Maybe UTCTime
     payoutVpaStatus: Maybe PayoutVpaStatus
     payoutVpaBankAccount: Maybe Text
+    dailyCancellationRateBlockingCooldown: Maybe UTCTime
+    weeklyCancellationRateBlockingCooldown: Maybe UTCTime
+    blockReasonFlag: Maybe BlockReasonFlag
 
   default:
     active: "false"
@@ -239,4 +243,15 @@ DriverInformation:
       kvFunction: updateOneWithKV
       params: [payoutVpaStatus]
       where: driverId
-
+    updateDailyCancellationRateBlockingCooldown:
+      kvFunction: updateOneWithKV
+      params: [dailyCancellationRateBlockingCooldown]
+      where: driverId
+    updateWeeklyCancellationRateBlockingCooldown:
+      kvFunction: updateOneWithKV
+      params: [weeklyCancellationRateBlockingCooldown]
+      where: driverId
+    updateDailyAndWeeklyCancellationRateBlockingCooldown:
+      kvFunction: updateOneWithKV
+      params: [dailyCancellationRateBlockingCooldown, weeklyCancellationRateBlockingCooldown]
+      where: driverId

@@ -94,7 +94,7 @@ postDriverBlock = DDriver.blockDriver
 getDriverBlockReasonList :: ShortId DM.Merchant -> Context.City -> Flow [Common.BlockReason]
 getDriverBlockReasonList _ _ = DDriver.blockReasonList
 
-postDriverUnblock :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Flow APISuccess
+postDriverUnblock :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Maybe UTCTime -> Maybe UTCTime -> Flow APISuccess
 postDriverUnblock = DDriver.unblockDriver
 
 getDriverLocation :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Common.DriverIds -> Flow Common.DriverLocationRes

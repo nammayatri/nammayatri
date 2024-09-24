@@ -156,7 +156,8 @@ data EndRideReq = EndRideReq
 
 data CancelRideReq = CancelRideReq
   { reasonCode :: CancellationReasonCode,
-    additionalInfo :: Maybe Text
+    additionalInfo :: Maybe Text,
+    doCancellationRateBasedBlocking :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -210,8 +211,8 @@ endRide (requestorId, merchantId, merchantOpCityId) rideId EndRideReq {..} = wit
   withTimeAPI "endRide" "driverEndRide" $ RideEnd.driverEndRide shandle rideId driverReq
 
 cancelRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> CancelRideReq -> FlowHandler RideCancel.CancelRideResp
-cancelRide (personId, _, _) rideId CancelRideReq {reasonCode, additionalInfo} = withFlowHandlerAPI $ do
-  let driverReq = RideCancel.CancelRideReq {reasonCode, additionalInfo}
+cancelRide (personId, _, _) rideId CancelRideReq {reasonCode, additionalInfo, doCancellationRateBasedBlocking} = withFlowHandlerAPI $ do
+  let driverReq = RideCancel.CancelRideReq {reasonCode, additionalInfo, doCancellationRateBasedBlocking}
   RideCancel.driverCancelRideHandler RideCancel.cancelRideHandle personId rideId driverReq
 
 listDriverRides ::

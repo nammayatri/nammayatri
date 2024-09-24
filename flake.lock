@@ -1894,11 +1894,11 @@
         "treefmt-nix": "treefmt-nix_3"
       },
       "locked": {
-        "lastModified": 1726147107,
-        "narHash": "sha256-NGwnHgpYe6c1yFiTGyPnN1Q/9v+ZgVpO5gWazOW0HSo=",
+        "lastModified": 1726900569,
+        "narHash": "sha256-n2yf2gXaGoANwHZpgz6/5kiQw+EOtyg3Xu52AiMkDN0=",
         "owner": "nammayatri",
         "repo": "location-tracking-service",
-        "rev": "0ce2ab02e5f027328aefe3cbc0da4590177ec3e3",
+        "rev": "6c605ebfd7d90f567df8a9d16e5a8c5444355783",
         "type": "github"
       },
       "original": {
