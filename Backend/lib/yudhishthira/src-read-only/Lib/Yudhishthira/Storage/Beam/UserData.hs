@@ -14,7 +14,9 @@ import qualified Lib.Yudhishthira.Types
 import Tools.Beam.UtilsTH
 
 data UserDataT f = UserDataT
-  { chakra :: B.C f Lib.Yudhishthira.Types.Chakra,
+  { batchNumber :: B.C f Kernel.Prelude.Int,
+    chakra :: B.C f Lib.Yudhishthira.Types.Chakra,
+    eventId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     userDataValue :: B.C f Data.Aeson.Value,
     userId :: B.C f Kernel.Prelude.Text,

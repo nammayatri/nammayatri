@@ -12,7 +12,7 @@ import qualified Tools.Beam.UtilsTH
 data ChakraQueries = ChakraQueries
   { chakra :: Lib.Yudhishthira.Types.Chakra,
     queryName :: Kernel.Prelude.Text,
-    queryResults :: [Kernel.Prelude.Text],
+    queryResults :: [Lib.Yudhishthira.Types.QueryResult],
     queryText :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

@@ -33,7 +33,7 @@ import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Flow
 import Kernel.Utils.App (lookupDeploymentVersion)
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (Hours, Minutes)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Lib.Scheduler (SchedulerType)
@@ -41,6 +41,7 @@ import Lib.Scheduler.Environment
 import Lib.Yudhishthira.Types
 import Passetto.Client
 import System.Environment (lookupEnv)
+import qualified Utils.Time as Time
 
 data HandlerCfg = HandlerCfg
   { schedulerConfig :: SchedulerConfig,
@@ -56,7 +57,19 @@ data HandlerCfg = HandlerCfg
     encTools :: EncTools,
     maxShards :: Int,
     shouldCreateJobs :: Bool,
-    shouldCompleteOldJobs :: Bool
+    shouldCompleteOldJobs :: Bool,
+    updateUserTags :: Bool,
+    parseQueryResults :: Bool,
+    usersInBatch :: Int,
+    maxBatches :: Int,
+    shouldCreateDailyJob :: Bool,
+    shouldCreateWeeklyJob :: Bool,
+    shouldCreateMonthlyJob :: Bool,
+    shouldCreateQuarterlyJob :: Bool,
+    dailySchedulerTime :: Time.DailySchedulerTime,
+    weeklySchedulerTime :: Time.WeeklySchedulerTime,
+    monthlySchedulerTime :: Time.MonthlySchedulerTime,
+    quarterlySchedulerTime :: Time.QuarterlySchedulerTime
   }
   deriving (Generic, FromDhall)
 
@@ -92,7 +105,19 @@ data HandlerEnv = HandlerEnv
     groupName :: Text,
     streamName :: Text,
     shouldCreateJobs :: Bool,
-    shouldCompleteOldJobs :: Bool
+    shouldCompleteOldJobs :: Bool,
+    updateUserTags :: Bool,
+    parseQueryResults :: Bool,
+    usersInBatch :: Int,
+    maxBatches :: Int,
+    shouldCreateDailyJob :: Bool,
+    shouldCreateWeeklyJob :: Bool,
+    shouldCreateMonthlyJob :: Bool,
+    shouldCreateQuarterlyJob :: Bool,
+    dailySchedulerTime :: Time.DailySchedulerTime,
+    weeklySchedulerTime :: Time.WeeklySchedulerTime,
+    monthlySchedulerTime :: Time.MonthlySchedulerTime,
+    quarterlySchedulerTime :: Time.QuarterlySchedulerTime
   }
   deriving (Generic)
 

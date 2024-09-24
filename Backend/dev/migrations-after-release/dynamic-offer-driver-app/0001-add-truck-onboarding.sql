@@ -47,7 +47,7 @@ SELECT
 FROM
     atlas_driver_offer_bpp.document_verification_config
 WHERE
-    vehicle_category = 'CAR' AND merchant_id = (select merchant_id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Kolkata');
+    vehicle_category = 'CAR' AND merchant_id = (select merchant_id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Kolkata')
 ON CONFLICT DO NOTHING;
 
 -- RUN IN MASTER

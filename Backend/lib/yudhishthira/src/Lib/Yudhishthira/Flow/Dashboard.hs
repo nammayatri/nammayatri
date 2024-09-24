@@ -1,7 +1,6 @@
 module Lib.Yudhishthira.Flow.Dashboard where
 
 import qualified Data.Aeson as A
-import qualified Data.List as DL
 import qualified Data.Text as T
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
@@ -74,16 +73,21 @@ postQueryCreate ::
   Lib.Yudhishthira.Types.ChakraQueriesAPIEntity ->
   m Kernel.Types.APISuccess.APISuccess
 postQueryCreate queryRequest = do
-  existingQueryFields <- getChakraQueryFields queryRequest.chakra
-  checkIfMandtoryFieldsArePresent queryRequest.queryResults
-  checkIfFieldsAreNotRepeated queryRequest.queryResults existingQueryFields
+  checkIfMandatoryFieldsArePresent queryRequest.queryResults
+  checkIfFieldsAreNotRepeated (queryRequest.queryResults <&> (.resultName))
   existingChakraQuery <- SQCQ.findByPrimaryKey queryRequest.chakra queryRequest.queryName
   whenJust existingChakraQuery $ \_ -> do
     throwError $ InvalidRequest "Chakra query with this name already exists"
   chakraQuery <- buildQuery
 
   -- TODO find a better way to validate query than run it
-  void $ KaalChakraEvent.runQueryRequest chakraQuery
+  let template =
+        KaalChakraEvent.Template
+          { limit = Lib.Yudhishthira.Types.QLimit 10,
+            offset = Lib.Yudhishthira.Types.QOffset 0,
+            usersSet = Lib.Yudhishthira.Types.ALL_USERS
+          }
+  void $ KaalChakraEvent.runQueryRequestTemplate chakraQuery template
   SQCQ.create chakraQuery
 
   pure Kernel.Types.APISuccess.Success
@@ -93,12 +97,12 @@ postQueryCreate queryRequest = do
       let Lib.Yudhishthira.Types.ChakraQueriesAPIEntity {..} = queryRequest
       return $ Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries {createdAt = now, updatedAt = now, ..}
 
-    checkIfMandtoryFieldsArePresent newQueryFields = do
-      let missingFields = filter (\field -> field `notElem` newQueryFields) mandatoryChakraFields
+    checkIfMandatoryFieldsArePresent newQueryFields = do
+      let missingFields = filter (\field -> field `notElem` (newQueryFields <&> (.resultName))) mandatoryChakraFields
       unless (null missingFields) $ throwError (MissingQueryFields missingFields)
 
-    checkIfFieldsAreNotRepeated newQueryFields existingQueryFields = do
-      let repeatedFields = newQueryFields `DL.intersect` existingQueryFields
+    checkIfFieldsAreNotRepeated newQueryFieldNames = do
+      let repeatedFields = filter (\f -> length (filter (== f) newQueryFieldNames) > 1) newQueryFieldNames
       unless (null repeatedFields) $ throwError (RepeatedQueryFields repeatedFields)
 
 verifyDynamicLogic :: (BeamFlow m r, ToJSON a) => [Value] -> a -> m Lib.Yudhishthira.Types.RunLogicResp
@@ -127,7 +131,8 @@ postRunKaalChakraJob ::
   (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
   Handle m ->
   Lib.Yudhishthira.Types.RunKaalChakraJobReq ->
-  m APISuccess
-postRunKaalChakraJob h req = do
-  kaalChakraEvent h req.chakra
-  pure Success
+  m Lib.Yudhishthira.Types.RunKaalChakraJobRes
+postRunKaalChakraJob h req =
+  case req.usersSet of
+    Lib.Yudhishthira.Types.ALL_USERS -> throwError (InvalidRequest "ALL_USERS option available only from kaal-chakra scheduler")
+    _ -> kaalChakraEvent h req

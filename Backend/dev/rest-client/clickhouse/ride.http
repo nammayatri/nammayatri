@@ -55,7 +55,7 @@ POST {{clickhouse-driver-offer-bpp}}
 Authorization: Basic default:{{clickhouse-password}}
 content-type: text/html
 
-SELECT driver_id as userId, count(id) :: int as totalRides, sum(chargeable_distance) :: int as totalDistance, sum(fare) :: int as totalFare FROM atlas_driver_offer_bpp.ride WHERE created_at > '2024-01-01 00:00:00' GROUP BY driver_id
+SELECT driver_id as userId, count(id) :: int as totalRides, sum(chargeable_distance) :: int as totalDistance, sum(fare) :: int as totalFare FROM atlas_driver_offer_bpp.ride WHERE created_at > '2024-01-01 00:00:00' GROUP BY driver_id ORDER BY driver_id ASC
 FORMAT JSON
 
 ###
@@ -66,7 +66,7 @@ POST {{clickhouse-driver-offer-bpp}}
 Authorization: Basic default:{{clickhouse-password}}
 content-type: text/html
 
-SELECT driver_id as userId, count(id) as totalRides, sum(chargeable_distance) as totalDistance, sum(fare) as totalFare FROM atlas_driver_offer_bpp.ride WHERE created_at > '2024-01-01 00:00:00' GROUP BY driver_id
+SELECT driver_id as userId, count(id) as totalRides, sum(chargeable_distance) as totalDistance, sum(fare) as totalFare FROM atlas_driver_offer_bpp.ride WHERE created_at > '2024-01-01 00:00:00' GROUP BY driver_id ORDER BY driver_id ASC
 FORMAT JSON
 
 ###
@@ -89,4 +89,15 @@ Authorization: Basic default:{{clickhouse-password}}
 content-type: text/html
 
 SELECT driver_id as userId, count(id) as cancellationsCount FROM atlas_driver_offer_bpp.ride WHERE created_at > '2024-01-01 00:00:00' AND status = 'CANCELLED' GROUP BY driver_id
+FORMAT JSON
+
+###
+
+# @name dateTest
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT date_sub (day, 365, toStartOfDay (now ())) as yearAgo
 FORMAT JSON

@@ -13,6 +13,8 @@ data MerchantOperatingCity
 
 data User
 
+data Event
+
 data TagRule
   = RuleEngine Value
   | LLM LLMContext
