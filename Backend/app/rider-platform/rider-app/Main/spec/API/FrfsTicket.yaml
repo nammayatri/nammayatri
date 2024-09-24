@@ -11,7 +11,6 @@ imports:
   FRFSTicketStatus: Domain.Types.FRFSTicket
   HighPrecMoney: Kernel.Types.Common
   PriceAPIEntity: Kernel.Types.Common
-  UTCTime: Kernel.Prelude
   FRFSTrip: Domain.Types.FRFSTrip
   FRFSSearch: Domain.Types.FRFSSearch
   FRFSVehicleType: Domain.Types.Station
@@ -19,6 +18,8 @@ imports:
   City: Kernel.Types.Beckn.Context
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Meters: Kernel.Types.Common
+  LatLong: Kernel.External.Maps.Types
 
 module: FRFSTicketService
 types:
@@ -82,6 +83,7 @@ types:
     address: Maybe Text
     stationType: Maybe StationType
     color: Maybe Text
+    distance: Maybe Meters
     sequenceNum: Maybe Int
     derive: "Show"
 
@@ -112,6 +114,13 @@ types:
     ticketsBookedInEvent: Int
     derive: "Show"
 
+  RoutesAPIRes:
+    code: Text
+    shortName: Text
+    longName: Text
+    startCoordinates: LatLong
+    endCoordinates: LatLong
+
 apis:
   # GET metro stops for the merchant city
   - GET:
@@ -121,6 +130,7 @@ apis:
         vehicleType: FRFSVehicleType
       query:
         city: City
+        routeId: Text
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
 
@@ -224,3 +234,14 @@ apis:
       response:
         type: API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
 
+  # Fetch list of routes filtered by serviceable time and also if stopId provided, provide routes corresponding to it
+  - GET:
+      endpoint: /routes
+      auth: TokenAuth
+      mandatoryQuery:
+        city: City
+      query:
+        vehicleType: FRFSVehicleType
+        stopId: Text
+      response:
+        type: "[API.Types.UI.FRFSTicketService.RoutesAPIRes]"

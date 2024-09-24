@@ -6,7 +6,7 @@ module Storage.Queries.OrphanInstances.FRFSTicketBooking where
 import qualified Domain.Types.FRFSTicketBooking
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.Prelude
+import Kernel.Prelude hiding (sequence)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error

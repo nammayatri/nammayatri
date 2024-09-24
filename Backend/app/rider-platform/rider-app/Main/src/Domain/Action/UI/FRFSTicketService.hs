@@ -38,6 +38,7 @@ import qualified Environment
 import EulerHS.Prelude hiding (all, and, id, map, readMaybe, whenJust)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
+import Kernel.External.Maps.Types
 import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude hiding (whenJust)
@@ -47,6 +48,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Error (MerchantError (MerchantOperatingCityNotFound))
 import Kernel.Types.Id
+import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common hiding (mkPrice)
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -73,14 +75,15 @@ import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Route as QR
 import qualified Storage.Queries.Station as QStation
 import Tools.Auth
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Payment as Payment
 
-getFrfsStations :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Station.FRFSVehicleType -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSStationAPI]
-getFrfsStations (_personId, mId) mbCity vehicleType_ = do
+getFrfsStations :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Kernel.Prelude.Maybe Text -> Station.FRFSVehicleType -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSStationAPI]
+getFrfsStations (_personId, mId) mbCity _ vehicleType_ = do
   merchantOpCity <-
     case mbCity of
       Nothing -> CQMOC.findById (Id "407c445a-2200-c45f-8d67-6f6dbfa28e73") >>= fromMaybeM (MerchantOperatingCityNotFound "merchantOpCityId-407c445a-2200-c45f-8d67-6f6dbfa28e73")
@@ -93,6 +96,7 @@ getFrfsStations (_personId, mId) mbCity vehicleType_ = do
             { color = Nothing,
               stationType = Nothing,
               sequenceNum = Nothing,
+              distance = Nothing,
               ..
             }
       )
@@ -575,3 +579,30 @@ getFrfsConfig (pId, mId) opCity = do
   let isEventOngoing' = fromMaybe False isEventOngoing
       ticketsBookedInEvent = fromMaybe 0 ((.ticketsBookedInEvent) =<< stats)
   return FRFSTicketService.FRFSConfigAPIRes {isEventOngoing = isEventOngoing', ..}
+
+getRoutes :: -- dummy handler
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Prelude.Maybe Text ->
+  Kernel.Prelude.Maybe Station.FRFSVehicleType ->
+  Context.City ->
+  Environment.Flow [API.Types.UI.FRFSTicketService.RoutesAPIRes]
+getRoutes (_personId, _merchantId) _mbStopId _mbVehicleType _city = do
+  -- Implementation when personId is present
+  return
+    [ API.Types.UI.FRFSTicketService.RoutesAPIRes
+        { code = "dummy-route-1",
+          shortName = "R1",
+          longName = "Dummy Route 1",
+          startCoordinates = LatLong 0 0,
+          endCoordinates = LatLong 1 1
+        },
+      API.Types.UI.FRFSTicketService.RoutesAPIRes
+        { code = "dummy-route-2",
+          shortName = "R2",
+          longName = "Dummy Route 2",
+          startCoordinates = LatLong 2 2,
+          endCoordinates = LatLong 3 3
+        }
+    ]

@@ -8,7 +8,7 @@ import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.Prelude
+import Kernel.Prelude hiding (sequence)
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)

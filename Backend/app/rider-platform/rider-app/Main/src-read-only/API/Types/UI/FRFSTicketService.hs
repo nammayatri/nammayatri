@@ -12,6 +12,7 @@ import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Station
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Payment.Juspay.Types.CreateOrder
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
@@ -90,6 +91,7 @@ data FRFSStationAPI = FRFSStationAPI
   { address :: Data.Maybe.Maybe Data.Text.Text,
     code :: Data.Text.Text,
     color :: Data.Maybe.Maybe Data.Text.Text,
+    distance :: Data.Maybe.Maybe Kernel.Types.Common.Meters,
     lat :: Data.Maybe.Maybe Kernel.Prelude.Double,
     lon :: Data.Maybe.Maybe Kernel.Prelude.Double,
     name :: Data.Text.Text,
@@ -120,6 +122,16 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: Domain.Types.Station.FRFSVehicleType
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RoutesAPIRes = RoutesAPIRes
+  { code :: Data.Text.Text,
+    endCoordinates :: Kernel.External.Maps.Types.LatLong,
+    longName :: Data.Text.Text,
+    shortName :: Data.Text.Text,
+    startCoordinates :: Kernel.External.Maps.Types.LatLong
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
