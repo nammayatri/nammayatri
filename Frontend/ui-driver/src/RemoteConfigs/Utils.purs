@@ -23,12 +23,13 @@ import Foreign (Foreign)
 import Foreign.Index (readProp)
 import Data.Newtype (class Newtype)
 import Presto.Core.Utils.Encoding (defaultDecode)
-import RemoteConfig.Types (RCSubscription, ReelItem, ReelButtonConfig, HVConfigs, ReferralPopUpDelays, CancellationRateConfig, CancellationRateEntity(..), CancellationThresholdConfig, MetroCoinsEvent)
+import RemoteConfig.Types (RCSubscription, ReelItem, ReelButtonConfig, HVConfigs, ReferralPopUpDelays, CancellationRateConfig, CancellationRateEntity(..), CancellationThresholdConfig, MetroCoinsEvent, EnableOtpRideConfig)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
 import Common.RemoteConfig.Utils
 import Screens.Types as ST
 import Resource.Constants (oneDayInMS)
+import Debug(spy)
 
 foreign import getSubsRemoteConfig :: String -> Foreign
 foreign import getHVRemoteConfig :: String -> Foreign
@@ -138,6 +139,20 @@ getMetroCoinsEvent city = do
     let config = fetchRemoteConfigString "metro_coins_event"
         value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig defaultMetroCoinsEvent
     getCityBasedConfig value $ toLower city 
+
+defaultEnableOtpRideConfig :: EnableOtpRideConfig
+defaultEnableOtpRideConfig = {
+   enableOtpRide : false
+}
+
+getEnableOtpRideConfigData :: String -> EnableOtpRideConfig
+getEnableOtpRideConfigData city = do
+    let config = fetchRemoteConfigString "enable_otp_ride_config"
+    if config == "" then defaultEnableOtpRideConfig
+    else do
+      let value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig defaultEnableOtpRideConfig
+          cityValue = getCityBasedConfig value $ toLower city
+      getCityBasedConfig value $ toLower city
 
 defaultMetroCoinsEvent :: MetroCoinsEvent
 defaultMetroCoinsEvent = {
