@@ -41,6 +41,8 @@ import Debug (spy)
 import Storage (isLocalStageOn)
 import Engineering.Helpers.Utils (terminateLoader)
 import Mobility.Prelude (boolToInvisibility, boolToVisibility)
+import JBridge as JB
+import Effect.Uncurried (runEffectFn2)
 
 screen :: EmergencyContactsScreenState -> PrestoList.ListItem -> Screen Action EmergencyContactsScreenState ScreenOutput
 screen initialState listItemm =
@@ -51,6 +53,7 @@ screen initialState listItemm =
       [ globalOnScroll "EmergencyContactsScreen"
       , ( \push -> do
             void $ storeCallBackContacts push ContactsCallback
+            void $ runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
             pure (pure unit)
         )
       ]
@@ -72,7 +75,7 @@ view listItemm push state =
         , orientation VERTICAL
         , onBackPressed push (const BackPressed)
         , background Color.white900
-        , padding if os == "IOS" then (Padding 0 safeMarginTop 0 marginBottom) else (Padding 0 0 0 0)
+        , padding if os == "IOS" then (Padding 0 safeMarginTop 0 paddingBottom) else (Padding 0 0 0 0)
         , afterRender push $ const NoAction
         ]
         ( [ linearLayout
@@ -118,6 +121,8 @@ view listItemm push state =
     else
       safeMarginBottom
 
+  paddingBottom = if state.props.isKeyBoardOpen then 0 else marginBottom
+
 addContactsOptionView :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
 addContactsOptionView push state =
   linearLayout
@@ -127,6 +132,7 @@ addContactsOptionView push state =
     , background Color.black9000
     , onClick push $ const HideAddContactsOptions
     , gravity BOTTOM
+    , adjustViewWithKeyboard "true"
     ]
     [ linearLayout
         [ height WRAP_CONTENT

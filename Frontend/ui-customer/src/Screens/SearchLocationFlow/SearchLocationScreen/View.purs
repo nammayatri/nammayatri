@@ -507,8 +507,10 @@ locUnserviceableView push state =
 locateOnMapFooterView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
 locateOnMapFooterView push state = let 
   viewVisibility = boolToVisibility $ currentStageOn state PredictionsStage
-  
-  in PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true ] $ linearLayout
+  animationSet' = if EHC.os == "IOS" then [] else [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true ]
+  in 
+  PrestoAnim.animationSet animationSet' $ 
+    linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , alignParentBottom "true,-1"

@@ -756,7 +756,8 @@ getTripDetailsState (RideBookingRes ride) state = do
                         <> (if ((isHaveFare "WAITING_CHARGES" updatedFareList || isHaveFare "WAITING_OR_PICKUP_CHARGES" updatedFareList) && (bookingDetails.fareProductType /= "OneWaySpecialZoneAPIDetails")) then "\n\n" <> if cityConfig.enableWaitingConfig then ( getVarString WAITING_CHARGE_DESCRIPTION [show waitingCharges.freeMinutes, show waitingCharges.perMinCharges] ) else (getString ADDITIONAL_CHARGES_WILL_BE_APPLICABLE) else "")
                         <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" (updatedFareList)) then "\n\n" <> (getEN EARLY_END_RIDE_CHARGES_DESCRIPTION) else "")
                         <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" ((updatedFareList))) then "\n\n" <> (getEN CUSTOMER_TIP_DESCRIPTION) else "")
-                        <> (if isHaveFare "TOLL_CHARGES" updatedFareList then "\n\n" <> "⁺" <> (getEN TOLL_CHARGES_DESC) else ""),
+                        <> (if isHaveFare "TOLL_CHARGES" updatedFareList then "\n\n" <> "⁺" <> (getEN TOLL_CHARGES_DESC) else "")
+                        <> (if (isHaveFare "PARKING_CHARGE" updatedFareList) then  "\n\n" <> "⁺" <> (getString PARKING_CHARGES_DESC)  else ""),
         merchantExoPhone = ride.merchantExoPhone,
         serviceTierName = ride.serviceTierName,
         totalTime = show (runFn2 differenceBetweenTwoUTCInMinutes endTime startTime) <> " min",

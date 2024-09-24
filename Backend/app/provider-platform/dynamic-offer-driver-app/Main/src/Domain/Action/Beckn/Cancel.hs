@@ -105,11 +105,10 @@ cancel req merchant booking mbActiveSearchTry = do
       QRide.updateStatus ride.id SRide.CANCELLED
       when (booking.isScheduled) $ QDI.updateLatestScheduledBookingAndPickup Nothing Nothing ride.driverId
 
-    bookingCR <- buildBookingCancellationReason
+    disToPickup <- getDistanceToPickup booking mbRide
+    bookingCR <- buildBookingCancellationReason disToPickup
     QBCR.upsert bookingCR
     QRB.updateStatus booking.id SRB.CANCELLED
-
-    disToPickup <- getDistanceToPickup booking mbRide
 
     fork "DriverRideCancelledCoin" $ do
       whenJust mbRide $ \ride -> do
@@ -155,7 +154,7 @@ cancel req merchant booking mbActiveSearchTry = do
 
     return (isReallocated, cancellationCharge)
   where
-    buildBookingCancellationReason = do
+    buildBookingCancellationReason disToPickup = do
       return $
         DBCR.BookingCancellationReason
           { bookingId = req.bookingId,
@@ -166,7 +165,7 @@ cancel req merchant booking mbActiveSearchTry = do
             driverId = Nothing,
             additionalInfo = Nothing,
             driverCancellationLocation = Nothing,
-            driverDistToPickup = Nothing,
+            driverDistToPickup = disToPickup,
             distanceUnit = booking.distanceUnit,
             ..
           }
