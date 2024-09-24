@@ -100,9 +100,10 @@ getDriverProfileQues ::
       Id DM.Merchant,
       Id DMOC.MerchantOperatingCity
     ) ->
+    Maybe Bool ->
     Flow API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
   )
-getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) =
+getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages =
   mbPersonId & fromMaybeM (PersonNotFound "No person id passed")
     >>= DPQ.findByPersonId
     >>= \case
@@ -116,7 +117,7 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) =
                   pledges = res.pledges,
                   drivingSince = res.drivingSince,
                   vehicleTags = fromMaybe [] res.vehicleTags,
-                  otherImages = images, -- fromMaybe [] res.images
+                  otherImages = if isImages == Just True then images else [], -- fromMaybe [] res.images
                   profileImage = Nothing,
                   otherImageIds = fromMaybe [] res.imageIds
                 }
