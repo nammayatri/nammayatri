@@ -48,7 +48,7 @@ buildOnCancelReq onCancelReq = do
         return $ Just dOnCancel
       Left err -> throwError $ InvalidBecknSchema $ "on_cancel error:-" <> show err
   where
-    parseData :: Spec.ConfirmReqMessage -> Either Text (Text, HighPrecMoney, Text, Text, Text, Text, HighPrecMoney, HighPrecMoney, HighPrecMoney, Spec.OrderStatus)
+    parseData :: Spec.ConfirmReqMessage -> Either Text (Text, HighPrecMoney, Text, Text, Text, Text, Maybe HighPrecMoney, Maybe HighPrecMoney, HighPrecMoney, Spec.OrderStatus)
     parseData message = do
       transactionId <- onCancelReq.onCancelReqContext.contextTransactionId & maybe (Left "TransactionId not found") Right
       messageId <- onCancelReq.onCancelReqContext.contextMessageId & maybe (Left "MessageId not found") Right
@@ -64,8 +64,8 @@ buildOnCancelReq onCancelReq = do
       quoteBreakup <- quotation.quotationBreakup & maybe (Left "QuotationBreakup not found") Right
       totalPrice <- quotation.quotationPrice >>= Utils.parseMoney & maybe (Left "Invalid quotationPrice") Right
 
-      refundAmount <- getCancellationParams quoteBreakup Spec.REFUND & maybe (Left "CancellationParams Refund Amount not found") Right
-      cancellationCharges <- getCancellationParams quoteBreakup Spec.CANCELLATION_CHARGES & maybe (Left "CancellationParams cancellationCharges not found") Right
+      let refundAmount = getCancellationParams quoteBreakup Spec.REFUND
+          cancellationCharges = getCancellationParams quoteBreakup Spec.CANCELLATION_CHARGES
       baseFare <- getCancellationParams quoteBreakup Spec.BASE_FARE & maybe (Left "CancellationParams baseFare not found") Right
 
       orderStatus_ <- order.orderStatus & maybe (Left "Order Status not found") Right

@@ -398,6 +398,9 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
     DFRFSTicketBooking.COUNTER_CANCELLED -> do
       updateTotalOrderValueAndSettlementAmount booking bapConfig
       buildFRFSTicketBookingStatusAPIRes booking Nothing
+    DFRFSTicketBooking.CANCEL_INITIATED -> do
+      updateTotalOrderValueAndSettlementAmount booking bapConfig
+      buildFRFSTicketBookingStatusAPIRes booking Nothing
   where
     paymentSuccess =
       Just $
