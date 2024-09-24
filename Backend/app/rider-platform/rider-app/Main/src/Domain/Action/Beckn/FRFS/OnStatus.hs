@@ -43,8 +43,10 @@ onStatus :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> Flow ()
 onStatus _merchant booking dOrder = do
   statuses <- traverse (Utils.getTicketStatus booking) dOrder.tickets
   whenJust dOrder.orderStatus $ \status ->
-    when (status == Spec.ON_CANCEL_CANCELLED && not booking.customerCancelled) $
-      QTBooking.updateStatusById Booking.COUNTER_CANCELLED booking.id
+    case status of
+      Spec.COMPLETE | booking.status == Booking.CANCEL_INITIATED -> QTBooking.updateStatusById Booking.TECHNICAL_CANCEL_REJECTED booking.id
+      Spec.CANCELLED | not booking.customerCancelled -> QTBooking.updateStatusById Booking.COUNTER_CANCELLED booking.id
+      _ -> pure ()
   traverse_ updateTicket statuses
   where
     updateTicket (ticketNumber, status) =

@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# OPTIONS_GHC -fno-warn-unused-binds -fno-warn-unused-imports #-}
 
@@ -40,6 +41,8 @@ module BecknV2.FRFS.Types
     OnSearchReq (..),
     OnSearchReqMessage (..),
     OnStatusReq (..),
+    OnUpdateReq (..),
+    OnUpdateReqMessage (..),
     Option (..),
     Order (..),
     Payment (..),
@@ -105,7 +108,7 @@ optionsAck =
       ]
 
 -- |
-data AckMessage = AckMessage
+newtype AckMessage = AckMessage
   { -- |
     ackMessageAck :: Ack
   }
@@ -225,7 +228,7 @@ data CancelReq = CancelReq
     -- |
     cancelReqMessage :: CancelReqMessage
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, Data)
 
 instance FromJSON CancelReq where
   parseJSON = genericParseJSON optionsCancelReq
@@ -252,7 +255,7 @@ data CancelReqMessage = CancelReqMessage
     cancelReqMessageCancellationReasonId :: Maybe Text,
     -- |
     cancelReqMessageDescriptor :: Maybe Descriptor,
-    -- |
+    -- | Human-readable ID of the order. This is generated at the BPP layer. The BPP can either generate order id within its system or forward the order ID created at the provider level.
     cancelReqMessageOrderId :: Text
   }
   deriving (Show, Eq, Generic, Data)
@@ -304,7 +307,7 @@ optionsCancellation =
       ]
 
 -- | Describes the cancellation terms of an item or an order. This can be referenced at an item or order level. Item-level cancellation terms can override the terms at the order level.
-data CancellationTerm = CancellationTerm
+newtype CancellationTerm = CancellationTerm
   { -- |
     cancellationTermExternalRef :: Maybe MediaFile
   }
@@ -415,7 +418,7 @@ data ConfirmReq = ConfirmReq
     -- |
     confirmReqMessage :: ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, Data)
 
 instance FromJSON ConfirmReq where
   parseJSON = genericParseJSON optionsConfirmReq
@@ -437,7 +440,7 @@ optionsConfirmReq =
 
 -- |
 -- |
-data ConfirmReqMessage = ConfirmReqMessage
+newtype ConfirmReqMessage = ConfirmReqMessage
   { -- |
     confirmReqMessageOrder :: Order
   }
@@ -468,15 +471,15 @@ data Context = Context
     contextBapId :: Maybe Text,
     -- | The callback URL of the Subscriber. This should necessarily contain the same domain name as set in `subscriber_id``.
     contextBapUri :: Maybe Text,
-    -- |
+    -- | Subscriber ID of the BPP
     contextBppId :: Maybe Text,
-    -- |
+    -- | Subscriber URL of the BPP for accepting calls from BAPs.
     contextBppUri :: Maybe Text,
-    -- |
+    -- | Standard code representing the domain. The standard is usually published as part of the network policy. Furthermore, the network facilitator should also provide a mechanism to provide the supported domains of a network.
     contextDomain :: Maybe Text,
     -- | The encryption public key of the sender
     contextKey :: Maybe Text,
-    -- |
+    -- | The location where the transaction is intended to be fulfilled.
     contextLocation :: Maybe Location,
     -- | This is a unique value which persists during a request / callback cycle. Since beckn protocol APIs are asynchronous, BAPs need a common value to match an incoming callback from a BPP to an earlier call. This value can also be used to ignore duplicate messages coming from the BPP. It is recommended to generate a fresh message_id for every new interaction. When sending unsolicited callbacks, BPPs must generate a new message_id.
     contextMessageId :: Maybe Text,
@@ -489,7 +492,7 @@ data Context = Context
     -- | Version of transaction protocol being used by the sender.
     contextVersion :: Maybe Text
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, Data)
 
 instance FromJSON Context where
   parseJSON = genericParseJSON optionsContext
@@ -578,7 +581,7 @@ optionsDescriptor =
       ]
 
 -- | Described the industry sector or sub-sector. The network policy should contain codes for all the industry sectors supported by the network. Domains can be created in varying levels of granularity. The granularity of a domain can be decided by the participants of the network. Too broad domains will result in irrelevant search broadcast calls to BPPs that don&#39;t have services supporting the domain. Too narrow domains will result in a large number of registry entries for each BPP. It is recommended that network facilitators actively collaborate with various working groups and network participants to carefully choose domain codes keeping in mind relevance, performance, and opportunity cost. It is recommended that networks choose broad domains like mobility, logistics, healthcare etc, and progressively granularize them as and when the number of network participants for each domain grows large.
-data Domain = Domain
+newtype Domain = Domain
   { -- | Standard code representing the domain. The standard is usually published as part of the network policy. Furthermore, the network facilitator should also provide a mechanism to provide the supported domains of a network.
     domainCode :: Maybe Value
   }
@@ -668,7 +671,7 @@ optionsFulfillment =
       ]
 
 -- | Describes an image
-data Image = Image
+newtype Image = Image
   { -- | URL to the image. This can be a data url or an remote url
     imageUrl :: Maybe Text
   }
@@ -698,7 +701,7 @@ data InitReq = InitReq
     -- |
     initReqMessage :: ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, Data)
 
 instance FromJSON InitReq where
   parseJSON = genericParseJSON optionsInitReq
@@ -721,9 +724,9 @@ optionsInitReq =
 -- |
 -- | The intent to buy or avail a product or a service. The BAP can declare the intent of the consumer containing &lt;ul&gt;&lt;li&gt;What they want (A product, service, offer)&lt;/li&gt;&lt;li&gt;Who they want (A seller, service provider, agent etc)&lt;/li&gt;&lt;li&gt;Where they want it and where they want it from&lt;/li&gt;&lt;li&gt;When they want it (start and end time of fulfillment&lt;/li&gt;&lt;li&gt;How they want to pay for it&lt;/li&gt;&lt;/ul&gt;&lt;br&gt;This has properties like descriptor,provider,fulfillment,payment,category,offer,item,tags&lt;br&gt;This is typically used by the BAP to send the purpose of the user&#39;s search to the BPP. This will be used by the BPP to find products or services it offers that may match the user&#39;s intent.&lt;br&gt;For example, in Mobility, the mobility consumer declares a mobility intent. In this case, the mobility consumer declares information that describes various aspects of their journey like,&lt;ul&gt;&lt;li&gt;Where would they like to begin their journey (intent.fulfillment.start.location)&lt;/li&gt;&lt;li&gt;Where would they like to end their journey (intent.fulfillment.end.location)&lt;/li&gt;&lt;li&gt;When would they like to begin their journey (intent.fulfillment.start.time)&lt;/li&gt;&lt;li&gt;When would they like to end their journey (intent.fulfillment.end.time)&lt;/li&gt;&lt;li&gt;Who is the transport service provider they would like to avail services from (intent.provider)&lt;/li&gt;&lt;li&gt;Who is traveling (This is not recommended in public networks) (intent.fulfillment.customer)&lt;/li&gt;&lt;li&gt;What kind of fare product would they like to purchase (intent.item)&lt;/li&gt;&lt;li&gt;What add-on services would they like to avail&lt;/li&gt;&lt;li&gt;What offers would they like to apply on their booking (intent.offer)&lt;/li&gt;&lt;li&gt;What category of services would they like to avail (intent.category)&lt;/li&gt;&lt;li&gt;What additional luggage are they carrying&lt;/li&gt;&lt;li&gt;How would they like to pay for their journey (intent.payment)&lt;/li&gt;&lt;/ul&gt;&lt;br&gt;For example, in health domain, a consumer declares the intent for a lab booking the describes various aspects of their booking like,&lt;ul&gt;&lt;li&gt;Where would they like to get their scan/test done (intent.fulfillment.start.location)&lt;/li&gt;&lt;li&gt;When would they like to get their scan/test done (intent.fulfillment.start.time)&lt;/li&gt;&lt;li&gt;When would they like to get the results of their test/scan (intent.fulfillment.end.time)&lt;/li&gt;&lt;li&gt;Who is the service provider they would like to avail services from (intent.provider)&lt;/li&gt;&lt;li&gt;Who is getting the test/scan (intent.fulfillment.customer)&lt;/li&gt;&lt;li&gt;What kind of test/scan would they like to purchase (intent.item)&lt;/li&gt;&lt;li&gt;What category of services would they like to avail (intent.category)&lt;/li&gt;&lt;li&gt;How would they like to pay for their journey (intent.payment)&lt;/li&gt;&lt;/ul&gt;
 data Intent = Intent
-  { -- |
+  { -- | Details on how the customer wants their order fulfilled
     intentFulfillment :: Maybe Fulfillment,
-    -- |
+    -- | Details on how the customer wants to pay for the order
     intentPayment :: Maybe Payment
   }
   deriving (Show, Eq, Generic, Data)
@@ -750,17 +753,17 @@ optionsIntent =
 data Item = Item
   { -- | Categories this item can be listed under
     itemCategoryIds :: Maybe [Text],
-    -- |
+    -- | Physical description of the item
     itemDescriptor :: Maybe Descriptor,
     -- | Modes through which this item can be fulfilled
     itemFulfillmentIds :: Maybe [Text],
     -- | ID of the item.
     itemId :: Maybe Text,
-    -- |
+    -- | The price of this item, if it has intrinsic value
     itemPrice :: Maybe Price,
-    -- |
+    -- | The selling quantity of the item
     itemQuantity :: Maybe ItemQuantity,
-    -- |
+    -- | Temporal attributes of this item. This property is used when the item exists on the catalog only for a limited period of time.
     itemTime :: Maybe Time
   }
   deriving (Show, Eq, Generic, Data)
@@ -819,7 +822,7 @@ optionsItemQuantity =
       ]
 
 -- | This represents the maximum quantity allowed for purchase of the item
-data ItemQuantityMaximum = ItemQuantityMaximum
+newtype ItemQuantityMaximum = ItemQuantityMaximum
   { -- |
     itemQuantityMaximumCount :: Maybe Int
   }
@@ -843,7 +846,7 @@ optionsItemQuantityMaximum =
       ]
 
 -- | This represents the minimum quantity allowed for purchase of the item
-data ItemQuantityMinimum = ItemQuantityMinimum
+newtype ItemQuantityMinimum = ItemQuantityMinimum
   { -- |
     itemQuantityMinimumCount :: Maybe Int
   }
@@ -867,7 +870,7 @@ optionsItemQuantityMinimum =
       ]
 
 -- | This represents the quantity selected for purchase of the item
-data ItemQuantitySelected = ItemQuantitySelected
+newtype ItemQuantitySelected = ItemQuantitySelected
   { -- |
     itemQuantitySelectedCount :: Maybe Int
   }
@@ -892,13 +895,13 @@ optionsItemQuantitySelected =
 
 -- | The physical location of something
 data Location = Location
-  { -- |
+  { -- | The city this location is, or is located within
     locationCity :: Maybe City,
-    -- |
+    -- | The country this location is, or is located within
     locationCountry :: Maybe Country,
     -- |
     locationDescriptor :: Maybe Descriptor,
-    -- | Describes a GPS coordinate
+    -- | The GPS co-ordinates of this location.
     locationGps :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data)
@@ -959,7 +962,7 @@ data OnCancelReq = OnCancelReq
     -- |
     onCancelReqMessage :: Maybe ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, Data)
 
 instance FromJSON OnCancelReq where
   parseJSON = genericParseJSON optionsOnCancelReq
@@ -990,7 +993,7 @@ data OnConfirmReq = OnConfirmReq
     -- |
     onConfirmReqMessage :: Maybe ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, Data)
 
 instance FromJSON OnConfirmReq where
   parseJSON = genericParseJSON optionsOnConfirmReq
@@ -1021,7 +1024,7 @@ data OnInitReq = OnInitReq
     -- |
     onInitReqMessage :: Maybe ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, Data)
 
 instance FromJSON OnInitReq where
   parseJSON = genericParseJSON optionsOnInitReq
@@ -1052,7 +1055,7 @@ data OnSearchReq = OnSearchReq
     -- |
     onSearchReqMessage :: Maybe OnSearchReqMessage
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, Data)
 
 instance FromJSON OnSearchReq where
   parseJSON = genericParseJSON optionsOnSearchReq
@@ -1075,7 +1078,7 @@ optionsOnSearchReq =
 
 -- |
 -- |
-data OnSearchReqMessage = OnSearchReqMessage
+newtype OnSearchReqMessage = OnSearchReqMessage
   { -- |
     onSearchReqMessageCatalog :: Catalog
   }
@@ -1107,7 +1110,7 @@ data OnStatusReq = OnStatusReq
     -- |
     onStatusReqMessage :: Maybe ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, Data)
 
 instance FromJSON OnStatusReq where
   parseJSON = genericParseJSON optionsOnStatusReq
@@ -1129,8 +1132,63 @@ optionsOnStatusReq =
       ]
 
 -- |
+-- |
+data OnUpdateReq = OnUpdateReq
+  { -- |
+    onUpdateReqContext :: Context,
+    -- |
+    onUpdateReqError :: Maybe Error,
+    -- |
+    onUpdateReqMessage :: Maybe ConfirmReqMessage
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON OnUpdateReq where
+  parseJSON = genericParseJSON optionsOnUpdateReq
+
+instance ToJSON OnUpdateReq where
+  toJSON = genericToJSON optionsOnUpdateReq
+
+optionsOnUpdateReq :: Options
+optionsOnUpdateReq =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("onUpdateReqContext", "context"),
+        ("onUpdateReqError", "error"),
+        ("onUpdateReqMessage", "message")
+      ]
+
+-- |
+-- |
+newtype OnUpdateReqMessage = OnUpdateReqMessage
+  { -- |
+    onUpdateReqMessageOrder :: Order
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON OnUpdateReqMessage where
+  parseJSON = genericParseJSON optionsOnUpdateReqMessage
+
+instance ToJSON OnUpdateReqMessage where
+  toJSON = genericToJSON optionsOnUpdateReqMessage
+
+optionsOnUpdateReqMessage :: Options
+optionsOnUpdateReqMessage =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("onUpdateReqMessageOrder", "order")
+      ]
+
 -- | Describes a selectable option
-data Option = Option
+newtype Option = Option
   { -- |
     optionId :: Maybe Text
   }
@@ -1155,9 +1213,9 @@ optionsOption =
 
 -- | Describes a legal purchase order. It contains the complete details of the legal contract created between the buyer and the seller.
 data Order = Order
-  { -- |
+  { -- | The billing details of this order
     orderBilling :: Maybe Billing,
-    -- |
+    -- | The cancellation details of this order
     orderCancellation :: Maybe Cancellation,
     -- | Cancellation terms of this item
     orderCancellationTerms :: Maybe [CancellationTerm],
@@ -1171,9 +1229,9 @@ data Order = Order
     orderItems :: Maybe [Item],
     -- | The terms of settlement for this order
     orderPayments :: Maybe [Payment],
-    -- |
+    -- | Details of the provider whose catalog items have been selected.
     orderProvider :: Maybe Provider,
-    -- |
+    -- | The mutually agreed upon quotation for this order.
     orderQuote :: Maybe Quotation,
     -- | Status of the order. Allowed values can be defined by the network policy
     orderStatus :: Maybe Text,
@@ -1367,7 +1425,7 @@ optionsProvider =
 data Quotation = Quotation
   { -- | the breakup of the total quoted price
     quotationBreakup :: Maybe [QuotationBreakupInner],
-    -- |
+    -- | The total quoted price
     quotationPrice :: Maybe Price
   }
   deriving (Show, Eq, Generic, Data)
@@ -1427,7 +1485,7 @@ data SearchReq = SearchReq
     -- |
     searchReqMessage :: SearchReqMessage
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, Data)
 
 instance FromJSON SearchReq where
   parseJSON = genericParseJSON optionsSearchReq
@@ -1449,7 +1507,7 @@ optionsSearchReq =
 
 -- |
 -- |
-data SearchReqMessage = SearchReqMessage
+newtype SearchReqMessage = SearchReqMessage
   { -- |
     searchReqMessageIntent :: Maybe Intent
   }
@@ -1479,7 +1537,7 @@ data StatusReq = StatusReq
     -- |
     statusReqMessage :: StatusReqMessage
   }
-  deriving (Show, Eq, Generic)
+  deriving (Show, Eq, Generic, Data)
 
 instance FromJSON StatusReq where
   parseJSON = genericParseJSON optionsStatusReq
@@ -1501,8 +1559,8 @@ optionsStatusReq =
 
 -- |
 -- |
-data StatusReqMessage = StatusReqMessage
-  { -- |
+newtype StatusReqMessage = StatusReqMessage
+  { -- | Human-readable ID of the order. This is generated at the BPP layer. The BPP can either generate order id within its system or forward the order ID created at the provider level.
     statusReqMessageOrderId :: Text
   }
   deriving (Show, Eq, Generic, Data)
@@ -1530,9 +1588,9 @@ data Stop = Stop
     stopAuthorization :: Maybe Authorization,
     -- |
     stopId :: Maybe Text,
-    -- |
+    -- | Instructions that need to be followed at the stop
     stopInstructions :: Maybe Descriptor,
-    -- |
+    -- | Location of the stop
     stopLocation :: Maybe Location,
     -- |
     stopParentStopId :: Maybe Text,
@@ -1565,7 +1623,7 @@ optionsStop =
 
 -- | Describes a tag. This is used to contain extended metadata. This object can be added as a property to any schema to describe extended attributes. For BAPs, tags can be sent during search to optimize and filter search results. BPPs can use tags to index their catalog to allow better search functionality. Tags are sent by the BPP as part of the catalog response in the &#x60;on_search&#x60; callback. Tags are also meant for display purposes. Upon receiving a tag, BAPs are meant to render them as name-value pairs. This is particularly useful when rendering tabular information about a product or service.
 data Tag = Tag
-  { -- |
+  { -- | Description of the Tag, can be used to store detailed information.
     tagDescriptor :: Maybe Descriptor,
     -- | The value of the tag. This set by the BPP and rendered as-is by the BAP.
     tagValue :: Maybe Text
@@ -1592,7 +1650,7 @@ optionsTag =
 
 -- | A collection of tag objects with group level attributes. For detailed documentation on the Tags and Tag Groups schema go to https://github.com/beckn/protocol-specifications/discussions/316
 data TagGroup = TagGroup
-  { -- |
+  { -- | Description of the TagGroup, can be used to store detailed information.
     tagGroupDescriptor :: Maybe Descriptor,
     -- | Indicates the display properties of the tag group. If display is set to false, then the group will not be displayed. If it is set to true, it should be displayed. However, group-level display properties can be overriden by individual tag-level display property. As this schema is purely for catalog display purposes, it is not recommended to send this value during search.
     tagGroupDisplay :: Maybe Bool,
@@ -1678,7 +1736,7 @@ optionsTimeRange =
       ]
 
 -- | Describes a vehicle is a device that is designed or used to transport people or cargo over land, water, air, or through space.&lt;br&gt;This has properties like category, capacity, make, model, size,variant,color,energy_type,registration
-data Vehicle = Vehicle
+newtype Vehicle = Vehicle
   { -- |
     vehicleCategory :: Maybe Text
   }

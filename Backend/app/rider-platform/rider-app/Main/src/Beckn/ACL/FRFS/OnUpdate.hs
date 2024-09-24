@@ -12,28 +12,28 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.FRFS.OnCancel (buildOnCancelReq) where
+module Beckn.ACL.FRFS.OnUpdate (buildOnUpdateReq) where
 
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Data.Aeson as A
-import qualified Domain.Action.Beckn.FRFS.OnCancel as DOnCancel
+import qualified Domain.Action.Beckn.FRFS.OnUpdate as DOnUpdate
 import Kernel.Prelude
 import Kernel.Utils.Common
 import Tools.Error
 
-buildOnCancelReq ::
+buildOnUpdateReq ::
   (MonadFlow m) =>
-  Spec.OnCancelReq ->
-  m (Maybe DOnCancel.DOnCancel)
-buildOnCancelReq onCancelReq = do
-  Utils.validateContext Spec.ON_CANCEL onCancelReq.onCancelReqContext
-  handleError onCancelReq $ \message -> do
+  Spec.OnUpdateReq ->
+  m (Maybe DOnUpdate.DOnUpdate)
+buildOnUpdateReq onUpdateReq = do
+  Utils.validateContext Spec.ON_UPDATE onUpdateReq.onUpdateReqContext
+  handleError onUpdateReq $ \message -> do
     case parseData message of
       Right (providerId, totalPrice, bppItemId, transactionId, bppOrderId, messageId, refundAmount, cancellationCharges, baseFare, orderStatus) -> do
-        let dOnCancel =
-              DOnCancel.DOnCancel
+        let dOnUpdate =
+              DOnUpdate.DOnUpdate
                 { providerId,
                   totalPrice,
                   bppItemId,
@@ -45,13 +45,13 @@ buildOnCancelReq onCancelReq = do
                   baseFare,
                   orderStatus
                 }
-        return $ Just dOnCancel
-      Left err -> throwError $ InvalidBecknSchema $ "on_cancel error:-" <> show err
+        return $ Just dOnUpdate
+      Left err -> throwError $ InvalidBecknSchema $ "on_update error:-" <> show err
   where
     parseData :: Spec.ConfirmReqMessage -> Either Text (Text, HighPrecMoney, Text, Text, Text, Text, Maybe HighPrecMoney, Maybe HighPrecMoney, HighPrecMoney, Spec.OrderStatus)
     parseData message = do
-      transactionId <- onCancelReq.onCancelReqContext.contextTransactionId & maybe (Left "TransactionId not found") Right
-      messageId <- onCancelReq.onCancelReqContext.contextMessageId & maybe (Left "MessageId not found") Right
+      transactionId <- onUpdateReq.onUpdateReqContext.contextTransactionId & maybe (Left "TransactionId not found") Right
+      messageId <- onUpdateReq.onUpdateReqContext.contextMessageId & maybe (Left "MessageId not found") Right
 
       let order = message.confirmReqMessageOrder
       providerId <- order.orderProvider >>= (.providerId) & maybe (Left "Provider not found") Right
@@ -65,7 +65,7 @@ buildOnCancelReq onCancelReq = do
       totalPrice <- quotation.quotationPrice >>= Utils.parseMoney & maybe (Left "Invalid quotationPrice") Right
 
       orderStatus_ <- order.orderStatus & maybe (Left "Order Status not found") Right
-      orderStatus <- (A.decode $ A.encode orderStatus_ :: Maybe Spec.OrderStatus) & maybe (Left "Failed to parse orderStatus in onCancel Req") Right
+      orderStatus <- (A.decode $ A.encode orderStatus_ :: Maybe Spec.OrderStatus) & maybe (Left "Failed to parse orderStatus in onUpdate Req") Right
 
       (baseFare, refundAmount, cancellationCharges) <- Utils.getAndValidateCancellationParams quoteBreakup orderStatus
 
@@ -73,12 +73,12 @@ buildOnCancelReq onCancelReq = do
 
 handleError ::
   (MonadFlow m) =>
-  Spec.OnCancelReq ->
-  (Spec.ConfirmReqMessage -> m (Maybe DOnCancel.DOnCancel)) ->
-  m (Maybe DOnCancel.DOnCancel)
+  Spec.OnUpdateReq ->
+  (Spec.ConfirmReqMessage -> m (Maybe DOnUpdate.DOnUpdate)) ->
+  m (Maybe DOnUpdate.DOnUpdate)
 handleError req action = do
-  case req.onCancelReqError of
-    Nothing -> req.onCancelReqMessage & maybe (pure Nothing) action
+  case req.onUpdateReqError of
+    Nothing -> req.onUpdateReqMessage & maybe (pure Nothing) action
     Just err -> do
-      logTagError "on_cancel req" $ "on_cancel error:-" <> show err
+      logTagError "on_update req" $ "on_update error:-" <> show err
       pure Nothing

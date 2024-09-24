@@ -109,19 +109,21 @@ data CancellationType = SOFT_CANCEL | CONFIRM_CANCEL
 data CancellationParams = REFUND | CANCELLATION_CHARGES | BASE_FARE
   deriving (Eq, Ord, Show, Read, Generic)
 
-data OrderStatus = ON_CANCEL_SOFT_CANCEL | ON_CANCEL_CANCELLED | ACTIVE | COMPLETE
+data OrderStatus = SOFT_CANCELLED | CANCELLED | CANCEL_INITIATED | ACTIVE | COMPLETE
   deriving (Eq, Ord, Show, Read, Generic)
 
 instance FromJSON OrderStatus where
-  parseJSON (String "SOFT_CANCEL") = pure ON_CANCEL_SOFT_CANCEL
-  parseJSON (String "CANCELLED") = pure ON_CANCEL_CANCELLED
+  parseJSON (String "SOFT_CANCEL") = pure SOFT_CANCELLED
+  parseJSON (String "CANCELLED") = pure CANCELLED
+  parseJSON (String "CANCEL_INITIATED") = pure CANCEL_INITIATED
   parseJSON (String "ACTIVE") = pure ACTIVE
   parseJSON (String "COMPLETE") = pure COMPLETE
   parseJSON (String _) = parseFail "Invalid OnCancel Order Status"
   parseJSON e = typeMismatch "String" e
 
 instance ToJSON OrderStatus where
-  toJSON ON_CANCEL_SOFT_CANCEL = String "SOFT_CANCEL"
-  toJSON ON_CANCEL_CANCELLED = String "CANCELLED"
+  toJSON SOFT_CANCELLED = String "SOFT_CANCEL"
+  toJSON CANCELLED = String "CANCELLED"
+  toJSON CANCEL_INITIATED = String "CANCEL_INITIATED"
   toJSON ACTIVE = String "ACTIVE"
   toJSON COMPLETE = String "COMPLETE"

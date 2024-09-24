@@ -693,6 +693,10 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
     DFRFSTicketBooking.COUNTER_CANCELLED -> do
       updateTotalOrderValueAndSettlementAmount booking bapConfig
       buildFRFSTicketBookingStatusAPIRes booking Nothing
+    DFRFSTicketBooking.CANCEL_INITIATED -> do
+      buildFRFSTicketBookingStatusAPIRes booking Nothing
+    DFRFSTicketBooking.TECHNICAL_CANCEL_REJECTED -> do
+      buildFRFSTicketBookingStatusAPIRes booking Nothing
   where
     paymentSuccess =
       Just $
@@ -821,7 +825,7 @@ makeTicketBookingPaymentAPIStatus COD_INITIATED = FRFSTicketService.REFUNDED
 makeTicketBookingPaymentAPIStatus STARTED = FRFSTicketService.PENDING
 makeTicketBookingPaymentAPIStatus AUTO_REFUNDED = FRFSTicketService.REFUNDED
 makeTicketBookingPaymentAPIStatus CLIENT_AUTH_TOKEN_EXPIRED = FRFSTicketService.FAILURE
-makeTicketBookingPaymentAPIStatus CANCELLED = FRFSTicketService.FAILURE
+makeTicketBookingPaymentAPIStatus Payment.CANCELLED = FRFSTicketService.FAILURE
 
 cancelFRFSTicketBooking :: DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow ()
 cancelFRFSTicketBooking booking = do
