@@ -116,3 +116,11 @@ update atlas_driver_offer_bpp.vehicle_service_tier
 set default_for_vehicle_variant = '{}',
     auto_selected_vehicle_variant = '{BIKE,DELIVERY_BIKE}'
 where service_tier_type = 'BIKE';
+
+-- RUN IN MASTER ONLY .... ONLY IN MASTER ... ONLY IN MASTER
+UPDATE atlas_driver_offer_bpp.beckn_config
+SET On_Search_Ttl_Sec = 300
+WHERE Vehicle_Category = 'AUTO_RICKSHAW';
+
+-- RUN IN MASTER and PROD
+update atlas_driver_offer_bpp.vehicle_service_tier set short_description = 'Up to 5Kg' where service_tier_type = 'DELIVERY_BIKE';
