@@ -339,6 +339,36 @@ notifyDriverWithProviders merchantOpCityId category title body driver mbDeviceTo
           sound = Nothing
         }
 
+driverScheduledRideAcceptanceAlert ::
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Notification.Category ->
+  Text ->
+  Text ->
+  Person ->
+  Maybe FCM.FCMRecipientToken ->
+  m ()
+driverScheduledRideAcceptanceAlert merchantOpCityId category title body driver mbDeviceToken = runWithServiceConfigForProviders merchantOpCityId notificationData EulerHS.Prelude.id (clearDeviceToken driver.id)
+  where
+    notificationData =
+      Notification.NotificationReq
+        { category = category,
+          subCategory = Nothing,
+          showNotification = Notification.SHOW,
+          messagePriority = Just Notification.HIGH,
+          entity = Notification.Entity Notification.Merchant merchantOpCityId.getId EmptyDynamicParam,
+          dynamicParams = EmptyDynamicParam,
+          body = body,
+          title = title,
+          auth = Notification.Auth driver.id.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
+          ttl = Nothing,
+          sound = Nothing
+        }
+
 -- Send notification to device, i.e. notifications that should not be shown to the user,
 -- but contains payload used by the app
 notifyDevice ::
