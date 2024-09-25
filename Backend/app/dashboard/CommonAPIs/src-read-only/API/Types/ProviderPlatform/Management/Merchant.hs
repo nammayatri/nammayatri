@@ -280,6 +280,7 @@ data JobName
   | DriverFeeCalculationTrigger
   | SendManualPaymentLinkTrigger
   | ReferralPayoutTrigger
+  | SupplyDemandCalculation
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

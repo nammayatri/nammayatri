@@ -72,8 +72,8 @@ calulateSupplyDemandByGeohashAndServiceTier from to = do
       )
       $ CH.filter_
         ( \srfd _ ->
-            srfd.createdAt >=. (CH.DateTime from)
-              CH.&&. srfd.createdAt <=. (CH.DateTime to)
+            srfd.createdAt >=. CH.DateTime from
+              CH.&&. srfd.createdAt <=. CH.DateTime to
               CH.&&. srfd.mode CH.==. Just DI.ONLINE
               CH.&&. CH.isNotNull srfd.fromLocGeohash
               --   CH.&&. CH.not_ (srfd.vehicleServiceTier `in_` [DServiceTierType.AUTO_RICKSHAW, DServiceTierType.BIKE, DServiceTierType.AMBULANCE_TAXI, DServiceTierType.AMBULANCE_TAXI_OXY, DServiceTierType.AMBULANCE_AC, DServiceTierType.AMBULANCE_AC_OXY, DServiceTierType.AMBULANCE_VENTILATOR, DServiceTierType.DELIVERY_BIKE])
