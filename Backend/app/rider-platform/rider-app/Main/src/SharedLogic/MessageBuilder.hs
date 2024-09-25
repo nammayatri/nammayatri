@@ -213,7 +213,8 @@ buildFRFSTicketBookedMessage pOrgId req = do
               { baseUrl,
                 customShortCode = Nothing,
                 shortCodeLength = Nothing,
-                expiryInHours = Nothing
+                expiryInHours = Nothing,
+                urlCategory = UrlShortner.METRO_TICKET_BOOKING
               }
       res <- UrlShortner.generateShortUrl shortUrlReq
       let url = res.shortUrl
@@ -230,7 +231,8 @@ shortenTrackingUrl url = do
           { baseUrl = url,
             customShortCode = Nothing,
             shortCodeLength = Nothing,
-            expiryInHours = Just 24
+            expiryInHours = Just 24,
+            urlCategory = UrlShortner.RIDE_TRACKING
           }
   res <- UrlShortner.generateShortUrl shortUrlReq
   return res.shortUrl

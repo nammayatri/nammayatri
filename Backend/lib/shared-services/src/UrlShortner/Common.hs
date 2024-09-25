@@ -9,7 +9,8 @@
 {-# LANGUAGE DerivingStrategies #-}
 
 module UrlShortner.Common
-  ( GenerateShortUrlReq (..),
+  ( UrlCategory (..),
+    GenerateShortUrlReq (..),
     GenerateShortUrlRes (..),
     UrlShortnerConfig (..),
     generateShortUrl,
@@ -22,9 +23,8 @@ import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
-import Kernel.Utils.Dhall (FromDhall)
-import Kernel.Utils.JSON
 import Servant hiding (throwError)
+import UrlShortner.Types
 
 type GenerateShortUrlAPI =
   "internal" :> "generateShortUrl"
@@ -37,38 +37,6 @@ generateShortUrlAPI = Proxy
 
 generateShortUrlClient :: Maybe Text -> GenerateShortUrlReq -> ET.EulerClient GenerateShortUrlRes
 generateShortUrlClient = ET.client generateShortUrlAPI
-
-data GenerateShortUrlReq = GenerateShortUrlReq
-  { baseUrl :: Text,
-    customShortCode :: Maybe Text,
-    shortCodeLength :: Maybe Int,
-    expiryInHours :: Maybe Int
-  }
-  deriving (Generic, Read, Show)
-
-instance FromJSON GenerateShortUrlReq where
-  parseJSON = genericParseJSON removeNullFields
-
-instance ToJSON GenerateShortUrlReq where
-  toJSON = genericToJSON removeNullFields
-
-data GenerateShortUrlRes = GenerateShortUrlRes
-  { shortUrl :: Text,
-    urlExpiry :: UTCTime
-  }
-  deriving (Generic, Read, Show)
-
-instance FromJSON GenerateShortUrlRes where
-  parseJSON = genericParseJSON removeNullFields
-
-instance ToJSON GenerateShortUrlRes where
-  toJSON = genericToJSON removeNullFields
-
-data UrlShortnerConfig = UrlShortnerConfig
-  { url :: BaseUrl,
-    apiKey :: Text
-  }
-  deriving (Generic, Show, FromDhall, FromJSON, ToJSON)
 
 generateShortUrl ::
   ( MonadFlow m,
