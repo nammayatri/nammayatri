@@ -72,7 +72,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
           then do
             verifyPassword req.updatePassword transporterConfig.referralLinkPassword -- Using referralLinkPassword as updatePassword, could be changed to a new field in future
             updateDynamicLogic merchantOpCityId req.rules req.domain req.timeBounds
-          else throwError $ InvalidRequest "Errors found in the rules"
+          else throwError $ InvalidRequest $ "Errors found in the rules" <> show resp.errors
       else return False
   return $ Lib.Yudhishthira.Types.AppDynamicLogicResp resp.result isRuleUpdated resp.errors
   where

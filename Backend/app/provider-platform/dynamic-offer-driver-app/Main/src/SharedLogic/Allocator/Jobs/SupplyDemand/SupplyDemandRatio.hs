@@ -44,6 +44,7 @@ calculateSupplyDemand Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let from = addUTCTime (intToNominalDiffTime (calculationDataIntervalInMin * (-60))) now -----------multiply by -60 to take past timing
   let nextScheduleT = addUTCTime (intToNominalDiffTime (scheduleTimeIntervalInMin * 60)) now
   queryResult <- SRFD.calulateSupplyDemandByGeohashAndServiceTier from now
+  logInfo $ "SupplyDemandRatio clickhouse result : -" <> show queryResult
   mapM_ (updateSupplyDemandRatio supplyDemandRatioTTLInSec) queryResult
   return (ReSchedule nextScheduleT)
 
