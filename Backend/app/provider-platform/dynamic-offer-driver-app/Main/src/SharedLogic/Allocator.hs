@@ -36,6 +36,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
 
+data EmptyData = EmptyData deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data AllocatorJobType
   = SendSearchRequestToDriver
   | UnblockDriver
@@ -52,6 +54,10 @@ data AllocatorJobType
   | DriverReferralPayout
   | ScheduledRideAssignedOnUpdate
   | CheckExotelCallStatusAndNotifyBAP
+  | Daily
+  | Weekly
+  | Monthly
+  | Quarterly
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -74,6 +80,26 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SDriverReferralPayout jobData = AnyJobInfo <$> restoreJobInfo SDriverReferralPayout jobData
   restoreAnyJobInfo SScheduledRideAssignedOnUpdate jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideAssignedOnUpdate jobData
   restoreAnyJobInfo SCheckExotelCallStatusAndNotifyBAP jobData = AnyJobInfo <$> restoreJobInfo SCheckExotelCallStatusAndNotifyBAP jobData
+  restoreAnyJobInfo SDaily jobData = AnyJobInfo <$> restoreJobInfo SDaily jobData
+  restoreAnyJobInfo SWeekly jobData = AnyJobInfo <$> restoreJobInfo SWeekly jobData
+  restoreAnyJobInfo SMonthly jobData = AnyJobInfo <$> restoreJobInfo SMonthly jobData
+  restoreAnyJobInfo SQuarterly jobData = AnyJobInfo <$> restoreJobInfo SQuarterly jobData
+
+instance JobInfoProcessor 'Daily
+
+instance JobInfoProcessor 'Weekly
+
+instance JobInfoProcessor 'Monthly
+
+instance JobInfoProcessor 'Quarterly
+
+type instance JobContent 'Daily = EmptyData
+
+type instance JobContent 'Weekly = EmptyData
+
+type instance JobContent 'Monthly = EmptyData
+
+type instance JobContent 'Quarterly = EmptyData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,

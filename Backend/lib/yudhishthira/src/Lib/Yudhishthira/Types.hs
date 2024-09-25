@@ -167,7 +167,8 @@ data RunKaalChakraJobReq = RunKaalChakraJobReq
     parseQueryResults :: Bool,
     usersSet :: UsersSet,
     usersInBatch :: Int,
-    maxBatches :: Int -- we need to avoid endless loops in case of any query is wrong
+    maxBatches :: Int, -- we need to avoid endless loops in case of any query is wrong
+    batchDelayInSec :: Int
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

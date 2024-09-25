@@ -88,7 +88,7 @@ kaalChakraEventInternal h eventId req = withLogTag ("EventId-" <> eventId.getId)
       logError $ "LLM is not implemented: tag: " <> tag.name <> "; skipping."
       pure False
 
-  loopData <- loopM (LoopData 0 S.empty) $ fetchUserDataBatch req eventId chakraQueries
+  loopData <- loopM (LoopData 0 S.empty req.batchDelayInSec) $ fetchUserDataBatch req eventId chakraQueries
   let batchesNumber = loopData.batchNumber - 1
   let usersNumber = length loopData.userIds
   logInfo $ "User data fetched successfully: batches number: " <> show batchesNumber <> "; users number: " <> show usersNumber
@@ -121,7 +121,8 @@ loopM seed action = do
 
 data LoopData = LoopData
   { batchNumber :: Int,
-    userIds :: S.Set (Id Yudhishthira.User)
+    userIds :: S.Set (Id Yudhishthira.User),
+    batchDelayInSec :: Int
   }
 
 fetchUserDataBatch ::
@@ -131,7 +132,7 @@ fetchUserDataBatch ::
   [Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries] ->
   LoopData ->
   m (Loop LoopData LoopData)
-fetchUserDataBatch req eventId chakraQueries (LoopData batchNumber oldUserIds) = do
+fetchUserDataBatch req eventId chakraQueries (LoopData batchNumber oldUserIds batchDelayInSec) = do
   logInfo $ "Running batch: " <> show batchNumber
   when (req.usersInBatch < 1) $ throwError (InvalidRequest "Quantity of users in batch should be more than 0")
   let limit = Yudhishthira.QLimit req.usersInBatch
@@ -148,7 +149,7 @@ fetchUserDataBatch req eventId chakraQueries (LoopData batchNumber oldUserIds) =
 
   let notEmptyResults = filter (\res -> not (null res.queryResultObjects)) chakraQueriesResults
   case notEmptyResults of
-    [] -> pure $ Abort $ LoopData (batchNumber + 1) oldUserIds
+    [] -> pure $ Abort $ LoopData (batchNumber + 1) oldUserIds batchDelayInSec
     _ -> do
       when (batchNumber + 1 > req.maxBatches) $ do
         forM_ notEmptyResults $ \res -> do
@@ -158,8 +159,8 @@ fetchUserDataBatch req eventId chakraQueries (LoopData batchNumber oldUserIds) =
       userDataList <- buildUserDataList req.chakra eventId batchNumber notEmptyResults
       QUserData.createMany userDataList
       let newUserIds = S.fromList $ userDataList <&> (.userId)
-
-      pure $ Continue $ LoopData (batchNumber + 1) $ S.union oldUserIds newUserIds
+      threadDelaySec $ Seconds batchDelayInSec
+      pure $ Continue $ LoopData (batchNumber + 1) (S.union oldUserIds newUserIds) batchDelayInSec
 
 kaalChakraEventUser ::
   (BeamFlow m r, Monad m, Log m) =>

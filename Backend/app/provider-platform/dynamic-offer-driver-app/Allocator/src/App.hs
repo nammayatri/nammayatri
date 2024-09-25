@@ -54,6 +54,7 @@ import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDri
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
 import SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
 import SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
+import SharedLogic.KaalChakra.Chakras
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
 
@@ -105,6 +106,10 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRideNotificationsToDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendScheduledRideAssignedOnUpdate)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . checkExotelCallStatusAndNotifyBAP)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runDailyJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runWeeklyJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runMonthlyJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyJob)
     }
 
 runDriverOfferAllocator ::
