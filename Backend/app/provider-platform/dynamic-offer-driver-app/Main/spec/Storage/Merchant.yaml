@@ -1266,6 +1266,8 @@ MerchantPushNotification:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     tripCategory: Maybe TripCategory
+  default:
+    id: "md5(random()::text || clock_timestamp()::text)::uuid"
   constraints:
     id: PrimaryKey
     # key: PrimaryKey

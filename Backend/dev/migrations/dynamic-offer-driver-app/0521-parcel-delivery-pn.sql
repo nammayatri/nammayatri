@@ -1,10 +1,9 @@
 
 -- NEW_RIDE_AVAILABLE --
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'NEW_RIDE_AVAILABLE',
     'NEW_RIDE_AVAILABLE',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -21,10 +20,9 @@ FROM
 
 -- NOTIFY_DRIVER_ON_CANCEL --
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, fcm_sub_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, fcm_sub_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'CANCELLED_PRODUCT',
     'NOTIFY_DRIVER_ON_CANCEL',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -47,10 +45,9 @@ CROSS JOIN LATERAL unnest(array['ByUser', 'ByMerchant', 'ByDriver', 'ByApplicati
 
 -- ALLOCATION_REQUEST --
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'ALLOCATION_REQUEST',
     'ALLOCATION_REQUEST',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -66,10 +63,9 @@ FROM
 
 -- CANCELLED_SEARCH_REQUEST --
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'CANCELLED_SEARCH_REQUEST',
     'CANCELLED_SEARCH_REQUEST',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -86,10 +82,9 @@ FROM
 
 -- RIDE_STARTED --
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'TRIP_STARTED',
     'RIDE_STARTED',
     'Delivery_OneWayOnDemandDynamicOffer',

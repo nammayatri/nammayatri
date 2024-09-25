@@ -1,10 +1,9 @@
 
 -- NEW_RIDE_AVAILABLE --
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'NEW_RIDE_AVAILABLE',
     'NEW_RIDE_AVAILABLE',
     moc.merchant_id,
@@ -20,10 +19,9 @@ FROM
 
 -- NOTIFY_DRIVER_ON_CANCEL --
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, fcm_sub_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, fcm_sub_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'CANCELLED_PRODUCT',
     'NOTIFY_DRIVER_ON_CANCEL',
     s.subcategory,
@@ -46,10 +44,9 @@ CROSS JOIN LATERAL unnest(array['ByUser', 'ByMerchant', 'ByDriver', 'ByApplicati
 
 -- REGISTRATION_APPROVED --
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'REGISTRATION_APPROVED',
     'REGISTRATION_APPROVED',
     moc.merchant_id,
@@ -65,10 +62,9 @@ FROM
 
 -- ALLOCATION_REQUEST --
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'ALLOCATION_REQUEST',
     'ALLOCATION_REQUEST',
     moc.merchant_id,
@@ -84,10 +80,9 @@ FROM
 
 -- CLEARED_FARE --
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'CLEARED_FARE',
     'CLEARED_FARE',
     moc.merchant_id,
@@ -103,10 +98,9 @@ FROM
 
 -- CANCELLED_SEARCH_REQUEST --
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'CANCELLED_SEARCH_REQUEST',
     'CANCELLED_SEARCH_REQUEST',
     moc.merchant_id,
@@ -122,10 +116,9 @@ FROM
 
 -- PAYMENT_FAILED --
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'PAYMENT_FAILED',
     'PAYMENT_FAILED',
     moc.merchant_id,
@@ -142,10 +135,9 @@ FROM
 -- PAYMENT_PENDING --
 
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'PAYMENT_PENDING',
     'PAYMENT_PENDING',
     moc.merchant_id,
@@ -161,10 +153,9 @@ FROM
 
 -- PAYMENT_SUCCESS --
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'PAYMENT_SUCCESS',
     'PAYMENT_SUCCESS',
     moc.merchant_id,
@@ -181,10 +172,9 @@ FROM
 
 -- PAYMENT_MODE_MANUAL_ON_CANCEL --
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'PAYMENT_MODE_MANUAL',
     'PAYMENT_MODE_MANUAL_ON_CANCEL',
     moc.merchant_id,
@@ -200,10 +190,9 @@ FROM
 
 -- PAYMENT_MODE_MANUAL_ON_PAUSE --
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'PAYMENT_MODE_MANUAL',
     'PAYMENT_MODE_MANUAL_ON_PAUSE',
     moc.merchant_id,
@@ -218,10 +207,9 @@ FROM
 
 -- PAYMENT_MODE_MANUAL_ON_SUSPEND --
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'PAYMENT_MODE_MANUAL',
     'PAYMENT_MODE_MANUAL_ON_SUSPEND',
     moc.merchant_id,
@@ -236,10 +224,9 @@ FROM
 
 -- EDIT_STOP/ADD_STOP --
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     nt.key,
     nt.key,
     moc.merchant_id,
@@ -266,10 +253,9 @@ CROSS JOIN LATERAL unnest(array['EDIT_STOP', 'ADD_STOP']) AS nt(key);
 -- 1. AC_RIDE_STARTED --
 -- 2. RIDE_STARTED --
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'TRIP_STARTED',
     nt.key,
     moc.merchant_id,

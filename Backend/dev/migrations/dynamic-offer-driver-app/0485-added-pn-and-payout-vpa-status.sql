@@ -1,10 +1,9 @@
 UPDATE atlas_driver_offer_bpp.driver_information SET payout_vpa_status = 'VIA_WEBHOOK' where payout_vpa is not null;
 
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'PAYOUT_VPA_REMINDER',
     'PAYOUT_VPA_ALERT',
     moc.merchant_id,
@@ -18,10 +17,9 @@ FROM
     atlas_driver_offer_bpp.merchant_operating_city moc;
 
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'PAYOUT_REWARD',
     'PAYOUT_REFERRAL_REWARD',
     moc.merchant_id,

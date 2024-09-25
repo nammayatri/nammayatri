@@ -3,7 +3,7 @@ CREATE TABLE atlas_app.merchant_push_notification ();
 ALTER TABLE atlas_app.merchant_push_notification ADD COLUMN body text NOT NULL;
 ALTER TABLE atlas_app.merchant_push_notification ADD COLUMN fcm_notification_type text NOT NULL;
 ALTER TABLE atlas_app.merchant_push_notification ADD COLUMN fcm_sub_category text ;
-ALTER TABLE atlas_app.merchant_push_notification ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.merchant_push_notification ADD COLUMN id character varying(36) NOT NULL default md5(random()::text || clock_timestamp()::text)::uuid;
 ALTER TABLE atlas_app.merchant_push_notification ADD COLUMN key text NOT NULL;
 ALTER TABLE atlas_app.merchant_push_notification ADD COLUMN language text NOT NULL;
 ALTER TABLE atlas_app.merchant_push_notification ADD COLUMN merchant_id character varying(36) NOT NULL;

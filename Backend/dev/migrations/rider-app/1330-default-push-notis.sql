@@ -2,10 +2,9 @@
 
 -- DRIVER_QUOTE_INCOMING --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'DRIVER_QUOTE_INCOMING',
     'DRIVER_QUOTE_INCOMING',
     moc.merchant_id,
@@ -21,10 +20,9 @@ ON CONFLICT DO NOTHING;
 
 -- DRIVER_ASSIGNMENT --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'DRIVER_ASSIGNMENT',
     'DRIVER_ASSIGNMENT',
     moc.merchant_id,
@@ -40,10 +38,9 @@ ON CONFLICT DO NOTHING;
 
 -- TRIP_STARTED --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'TRIP_STARTED',
     'TRIP_STARTED',
     moc.merchant_id,
@@ -59,10 +56,9 @@ ON CONFLICT DO NOTHING;
 
 -- TRIP_FINISHED --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'TRIP_FINISHED',
     'TRIP_FINISHED',
     moc.merchant_id,
@@ -78,10 +74,9 @@ ON CONFLICT DO NOTHING;
 
 -- EXPIRED_CASE --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'EXPIRED_CASE',
     'EXPIRED_CASE',
     moc.merchant_id,
@@ -97,10 +92,9 @@ ON CONFLICT DO NOTHING;
 
 -- REGISTRATION_APPROVED --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'REGISTRATION_APPROVED',
     'REGISTRATION_APPROVED',
     moc.merchant_id,
@@ -117,10 +111,9 @@ ON CONFLICT DO NOTHING;
 
 -- BOOKING_CANCEL --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, fcm_sub_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, fcm_sub_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'CANCELLED_PRODUCT',
     k.key,
     s.subcategory,
@@ -155,10 +148,9 @@ ON CONFLICT DO NOTHING;
 
 -- BOOKING REALLOCATED --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'REALLOCATE_PRODUCT',
     'BOOKING_REALLOCATED',
     moc.merchant_id,
@@ -174,10 +166,9 @@ ON CONFLICT DO NOTHING;
 
 -- EST_OR_QUOTE_REALLOCATED --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, fcm_sub_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, fcm_sub_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'REALLOCATE_PRODUCT',
     'EST_OR_QUOTE_REALLOCATED',
     s.subcategory,
@@ -203,10 +194,9 @@ ON CONFLICT DO NOTHING;
 
 -- ON_QUOTE_RECEIVED --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'QUOTE_RECEIVED',
     'QUOTE_RECEIVED',
     moc.merchant_id,
@@ -222,10 +212,9 @@ FROM
 
 -- DRIVER_ON_THE_WAY --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'DRIVER_ON_THE_WAY',
     'DRIVER_ON_THE_WAY',
     moc.merchant_id,
@@ -240,10 +229,9 @@ FROM
 
 -- DRIVER_HAS_REACHED --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'DRIVER_HAS_REACHED',
     'DRIVER_HAS_REACHED',
     moc.merchant_id,
@@ -259,10 +247,9 @@ FROM
 
 -- DRIVER_REACHING --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'DRIVER_REACHING',
     'DRIVER_REACHING',
     moc.merchant_id,
@@ -277,10 +264,9 @@ FROM
 
 -- SAFETY_ALERT_DEVIATION --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'SAFETY_ALERT_DEVIATION',
     'SAFETY_ALERT_DEVIATION',
     moc.merchant_id,
@@ -296,10 +282,9 @@ FROM
 
 -- DRIVER_BIRTHDAY --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'DRIVER_BIRTHDAY',
     'DRIVER_BIRTHDAY',
     moc.merchant_id,
@@ -315,10 +300,9 @@ FROM
 
 -- FOLLOW RIDE --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'FOLLOW_RIDE',
     'FOLLOW_RIDE',
     moc.merchant_id,
@@ -334,10 +318,9 @@ FROM
 
 -- STOP_REACHED --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'STOP_REACHED',
     'STOP_REACHED',
     moc.merchant_id,
@@ -353,10 +336,9 @@ FROM
 
 -- TICKET_CANCELLED --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'CANCELLED_PRODUCT',
     'TICKET_CANCELLED',
     moc.merchant_id,
@@ -372,10 +354,9 @@ FROM
 
 -- FIRST_RIDE_EVENT --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'FIRST_RIDE_EVENT',
     'FIRST_RIDE_EVENT',
     moc.merchant_id,
@@ -391,10 +372,9 @@ ON CONFLICT DO NOTHING;
 
 -- TRIP_UPDATED --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'TRIP_UPDATED',
     'TRIP_UPDATED',
     moc.merchant_id,

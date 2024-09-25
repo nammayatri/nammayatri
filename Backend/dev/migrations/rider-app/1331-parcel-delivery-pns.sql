@@ -2,10 +2,9 @@
 
 -- DRIVER_QUOTE_INCOMING --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'DRIVER_QUOTE_INCOMING',
     'DRIVER_QUOTE_INCOMING',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -21,10 +20,9 @@ FROM
 
 -- DRIVER_ASSIGNMENT --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'DRIVER_ASSIGNMENT',
     'DRIVER_ASSIGNMENT',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -40,10 +38,9 @@ FROM
 
 -- TRIP_STARTED --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'TRIP_STARTED',
     'TRIP_STARTED',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -59,10 +56,9 @@ FROM
 
 -- TRIP_FINISHED --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'TRIP_FINISHED',
     'TRIP_FINISHED',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -78,10 +74,9 @@ FROM
 
 -- EXPIRED_CASE --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'EXPIRED_CASE',
     'EXPIRED_CASE',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -97,10 +92,9 @@ FROM
 
 -- BOOKING_CANCEL --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, fcm_sub_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, fcm_sub_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'CANCELLED_PRODUCT',
     k.key,
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -135,10 +129,9 @@ CROSS JOIN LATERAL unnest(array['ByUser', 'ByMerchant', 'ByDriver', 'ByAllocator
 
 -- BOOKING REALLOCATED --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'REALLOCATE_PRODUCT',
     'BOOKING_REALLOCATED',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -154,10 +147,9 @@ FROM
 
 -- EST_OR_QUOTE_REALLOCATED --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, fcm_sub_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, fcm_sub_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'REALLOCATE_PRODUCT',
     'EST_OR_QUOTE_REALLOCATED',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -183,10 +175,9 @@ CROSS JOIN LATERAL unnest(array['ByUser', 'ByMerchant', 'ByDriver', 'ByAllocator
 
 -- ON_QUOTE_RECEIVED --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'QUOTE_RECEIVED',
     'QUOTE_RECEIVED',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -203,10 +194,9 @@ FROM
 
 -- DRIVER_ON_THE_WAY --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'DRIVER_ON_THE_WAY',
     'DRIVER_ON_THE_WAY',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -222,10 +212,9 @@ FROM
 
 -- DRIVER_HAS_REACHED --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'DRIVER_HAS_REACHED',
     'DRIVER_HAS_REACHED',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -253,10 +242,9 @@ FROM atlas_app.merchant_operating_city AS city;
 
 -- DRIVER_HAS_REACHED --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'DRIVER_HAS_REACHED_DESTINATION',
     'DRIVER_HAS_REACHED_DESTINATION',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -273,10 +261,9 @@ FROM
 
 -- DRIVER_REACHING --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'DRIVER_REACHING',
     'DRIVER_REACHING',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -292,10 +279,9 @@ FROM
 
 -- SAFETY_ALERT_DEVIATION --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'SAFETY_ALERT_DEVIATION',
     'SAFETY_ALERT_DEVIATION',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -312,10 +298,9 @@ FROM
 
 -- DRIVER_BIRTHDAY --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'DRIVER_BIRTHDAY',
     'DRIVER_BIRTHDAY',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -332,10 +317,9 @@ FROM
 
 -- FOLLOW RIDE --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'FOLLOW_RIDE',
     'FOLLOW_RIDE',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -351,10 +335,9 @@ FROM
 
 -- FIRST_RIDE_EVENT --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'FIRST_RIDE_EVENT',
     'FIRST_RIDE_EVENT',
     'Delivery_OneWayOnDemandDynamicOffer',
@@ -382,10 +365,9 @@ FROM atlas_app.merchant_operating_city AS city;
 
 -- PARCEL_IMAGE_UPLOADED --
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, trip_category, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'FILE_UPLOADED',
     'PARCEL_IMAGE_UPLOADED',
     'Delivery_OneWayOnDemandDynamicOffer',

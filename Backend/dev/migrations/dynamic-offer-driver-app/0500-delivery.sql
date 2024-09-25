@@ -115,7 +115,12 @@ VALUES
 update atlas_driver_offer_bpp.vehicle_service_tier
 set default_for_vehicle_variant = '{}',
     auto_selected_vehicle_variant = '{BIKE,DELIVERY_BIKE}'
-where service_tier_type = 'BIKE';
+where service_tier_type = 'BIKE'
+and merchant_operating_city_id IN (
+    select id
+    from atlas_driver_offer_bpp.merchant_operating_city
+    WHERE city = 'Kolkata'
+);
 
 -- RUN IN MASTER ONLY .... ONLY IN MASTER ... ONLY IN MASTER
 UPDATE atlas_driver_offer_bpp.beckn_config

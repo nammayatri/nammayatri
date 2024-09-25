@@ -104,7 +104,7 @@ data FCMReq = FCMReq
     entityType :: FCM.FCMEntityType,
     sound :: Maybe Text,
     overlayReq :: Maybe FCM.FCMOverlayReq,
-    priority :: FCM.FCMAndroidMessagePriority
+    priority :: Maybe FCM.FCMAndroidMessagePriority
   }
 
 instance Default FCMReq where
@@ -117,11 +117,11 @@ instance Default FCMReq where
         entityType = FCM.Product,
         sound = Nothing,
         overlayReq = Nothing,
-        priority = FCM.HIGH
+        priority = Just FCM.HIGH
       }
 
-defaultFCMReq :: FCMReq
-defaultFCMReq = def
+createFCMReq :: Text -> Text -> FCM.FCMEntityType -> (FCMReq -> FCMReq) -> FCMReq
+createFCMReq notificationKey entityId entityType modifier = modifier $ def {entityId = entityId, notificationKey = notificationKey, entityType = entityType}
 
 dynamicFCMNotifyPerson ::
   ( CacheFlow m r,
@@ -141,7 +141,7 @@ dynamicFCMNotifyPerson ::
 dynamicFCMNotifyPerson merchantOpCityId personId mbDeviceToken lang tripCategory fcmReq entityData dynamicParams = do
   transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId fcmReq.notificationKey tripCategory fcmReq.subCategory (Just lang)
-  --when (isNothing mbMerchantPN) $ logDebug $ "MISSED_FCM - " <> fcmReq.notificationKey
+  when (isNothing mbMerchantPN) $ logDebug $ "MISSED_FCM - " <> fcmReq.notificationKey
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = FCMNotificationTitle $ buildTemplate dynamicParams merchantPN.title
         body = FCMNotificationBody $ buildTemplate dynamicParams merchantPN.body
@@ -156,8 +156,7 @@ dynamicFCMNotifyPerson merchantOpCityId personId mbDeviceToken lang tripCategory
               fcmOverlayNotificationJSON = FCM.createAndroidOverlayNotification <$> fcmReq.overlayReq,
               fcmNotificationId = Nothing
             }
-    --logDebug $ "DFCM - " <> show fcmReq.notificationKey <> " Title -> " <> show title <> " body - " <> show body
-    FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just fcmReq.priority) (clearDeviceToken personId) notificationData (FCMNotificationRecipient personId.getId mbDeviceToken) EulerHS.Prelude.id
+    FCM.notifyPersonWithPriority transporterConfig.fcmConfig fcmReq.priority (clearDeviceToken personId) notificationData (FCMNotificationRecipient personId.getId mbDeviceToken) EulerHS.Prelude.id
 
 notifyOnNewSearchRequestAvailable ::
   ( CacheFlow m r,
@@ -176,7 +175,7 @@ notifyOnNewSearchRequestAvailable merchantOpCityId personId mbDeviceToken langua
     mbDeviceToken
     language
     (Just entityData.tripCategory)
-    defaultFCMReq {notificationKey = "NEW_RIDE_AVAILABLE", entityId = entityData.searchTryId.getId, entityType = FCM.SearchRequest}
+    (createFCMReq "NEW_RIDE_AVAILABLE" entityData.searchTryId.getId FCM.SearchRequest identity)
     (Just entityData)
     [ ("startTime", showTimeIst entityData.startTime),
       ("distanceToPickup", distanceToText entityData.distanceToPickupWithUnit),
@@ -225,7 +224,7 @@ notifyOnCancel merchantOpCityId booking person cancellationSource = do
     person.deviceToken
     (fromMaybe ENGLISH person.language)
     (Just booking.tripCategory)
-    defaultFCMReq {notificationKey = "NOTIFY_DRIVER_ON_CANCEL", entityId = getId booking.id, entityType = FCM.Product, subCategory = Just subCategory}
+    (createFCMReq "NOTIFY_DRIVER_ON_CANCEL" booking.id.getId FCM.Product (\r -> r {subCategory = Just subCategory, priority = Nothing}))
     (Just ())
     [ ("startTime", showTimeIst (booking.startTime))
     ]
@@ -285,7 +284,7 @@ notifyOnRegistration merchantOpCityId regToken personId lang mbToken = do
     mbToken
     lang
     Nothing
-    defaultFCMReq {notificationKey = "REGISTRATION_APPROVED", entityId = getId tokenId, entityType = FCM.Merchant}
+    (createFCMReq "REGISTRATION_APPROVED" (getId tokenId) FCM.Merchant (\r -> r {priority = Nothing}))
     (Just ())
     []
 
@@ -438,7 +437,7 @@ notifyDriverNewAllocation merchantOpCityId booking personId lang mbToken = do
     mbToken
     lang
     (Just booking.tripCategory)
-    defaultFCMReq {notificationKey = "ALLOCATION_REQUEST", entityId = getId booking.id, entityType = FCM.Product}
+    (createFCMReq "ALLOCATION_REQUEST" (getId booking.id) FCM.Product identity)
     (Just ())
     []
 
@@ -528,7 +527,7 @@ notifyDriverClearedFare merchantOpCityId driver sReqId fare = do
     driver.deviceToken
     (fromMaybe ENGLISH driver.language)
     Nothing
-    defaultFCMReq {notificationKey = "CLEARED_FARE", entityId = getId sReqId, entityType = FCM.SearchRequest, showType = FCM.DO_NOT_SHOW}
+    (createFCMReq "CLEARED_FARE" (getId sReqId) FCM.SearchRequest (\r -> r {showType = FCM.DO_NOT_SHOW}))
     (Just ())
     [ ("amount", show fare.amount),
       ("currency", show fare.currency)
@@ -559,7 +558,7 @@ notifyOnCancelSearchRequest merchantOpCityId person searchTryId tripCategory = d
     person.deviceToken
     (fromMaybe ENGLISH person.language)
     (Just tripCategory)
-    defaultFCMReq {notificationKey = "CANCELLED_SEARCH_REQUEST", entityId = searchTryId.getId, entityType = FCM.SearchRequest, showType = FCM.DO_NOT_SHOW}
+    (createFCMReq "CANCELLED_SEARCH_REQUEST" searchTryId.getId FCM.SearchRequest (\r -> r {showType = FCM.DO_NOT_SHOW}))
     (pure ())
     []
 
@@ -587,7 +586,7 @@ notifyPaymentFailed merchantOpCityId person mbDeviceToken orderId = do
     mbDeviceToken
     (fromMaybe ENGLISH person.language)
     Nothing
-    defaultFCMReq {notificationKey = "PAYMENT_FAILED", entityId = orderId.getId, entityType = FCM.PaymentOrder}
+    (createFCMReq "PAYMENT_FAILED" orderId.getId FCM.PaymentOrder identity)
     (pure ())
     []
 
@@ -615,7 +614,7 @@ notifyPaymentPending merchantOpCityId person mbDeviceToken orderId = do
     mbDeviceToken
     (fromMaybe ENGLISH person.language)
     Nothing
-    defaultFCMReq {notificationKey = "PAYMENT_PENDING", entityId = orderId.getId, entityType = FCM.PaymentOrder}
+    (createFCMReq "PAYMENT_PENDING" orderId.getId FCM.PaymentOrder identity)
     (pure ())
     []
 
@@ -643,7 +642,7 @@ notifyPaymentSuccess merchantOpCityId person orderId = do
     person.deviceToken
     (fromMaybe ENGLISH person.language)
     Nothing
-    defaultFCMReq {notificationKey = "PAYMENT_SUCCESS", entityId = orderId.getId, entityType = FCM.PaymentOrder}
+    (createFCMReq "PAYMENT_SUCCESS" orderId.getId FCM.PaymentOrder identity)
     (pure ())
     []
 
@@ -682,11 +681,7 @@ notifyPaymentModeManualOnCancel merchantOpCityId personId lang mbDeviceToken = d
     mbDeviceToken
     lang
     Nothing
-    defaultFCMReq
-      { notificationKey = "PAYMENT_MODE_MANUAL_ON_CANCEL",
-        entityId = personId.getId,
-        entityType = FCM.Person
-      }
+    (createFCMReq "PAYMENT_MODE_MANUAL_ON_CANCEL" personId.getId FCM.Person identity)
     (pure ())
     []
 
@@ -715,11 +710,7 @@ notifyPaymentModeManualOnPause merchantOpCityId personId lang mbDeviceToken = do
     mbDeviceToken
     lang
     Nothing
-    defaultFCMReq
-      { notificationKey = "PAYMENT_MODE_MANUAL_ON_PAUSE",
-        entityId = personId.getId,
-        entityType = FCM.Person
-      }
+    (createFCMReq "PAYMENT_MODE_MANUAL_ON_PAUSE" personId.getId FCM.Person identity)
     (pure ())
     []
 
@@ -747,11 +738,7 @@ notifyPaymentModeManualOnSuspend merchantOpCityId person = do
     person.deviceToken
     (fromMaybe ENGLISH person.language)
     Nothing
-    defaultFCMReq
-      { notificationKey = "PAYMENT_MODE_MANUAL_ON_SUSPEND",
-        entityId = person.id.getId,
-        entityType = FCM.Person
-      }
+    (createFCMReq "PAYMENT_MODE_MANUAL_ON_SUSPEND" person.id.getId FCM.Person identity)
     (pure ())
     []
 
@@ -940,17 +927,14 @@ notifyStopModification ::
   m ()
 notifyStopModification person entityData tripCategory = do
   let newCityId = cityFallback person.clientBundleVersion person.merchantOperatingCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
+      notificationKey = if entityData.isEdit then "EDIT_STOP" else "ADD_STOP"
   dynamicFCMNotifyPerson
     newCityId
     person.id
     person.deviceToken
     (fromMaybe ENGLISH person.language)
     (Just tripCategory)
-    defaultFCMReq
-      { notificationKey = if entityData.isEdit then "EDIT_STOP" else "ADD_STOP",
-        entityId = entityData.bookingId.getId,
-        entityType = FCM.Person
-      }
+    (createFCMReq notificationKey entityData.bookingId.getId FCM.Person identity)
     (Just entityData)
     []
 
@@ -982,7 +966,6 @@ notifyOnRideStarted ride = do
   let dynamicParams = [("offerAdjective", offerAdjective)]
   let title = buildTemplate dynamicParams mbMerchantPN.title
       body = buildTemplate dynamicParams mbMerchantPN.body
-  --logDebug $ "DFCM - " <> notificationKey <> "Title -> " <> show title <> " body - " <> show body
   notifyDriverWithProviders merchantOperatingCityId Notification.TRIP_STARTED title body person person.deviceToken
 
 ----------------- we have to remove this once YATRI_PARTNER is migrated to new version ------------------

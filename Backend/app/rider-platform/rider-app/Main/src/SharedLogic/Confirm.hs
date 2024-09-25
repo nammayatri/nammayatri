@@ -14,6 +14,7 @@
 
 module SharedLogic.Confirm where
 
+import Control.Monad.Extra (anyM)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
 import qualified Domain.Action.UI.Estimate as UEstimate

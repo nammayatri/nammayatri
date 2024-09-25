@@ -72,8 +72,8 @@ import qualified UrlShortner.Common as UrlShortner
 templateText :: Text -> Text
 templateText txt = "{#" <> txt <> "#}"
 
-defaultNotification :: NotificationRequest
-defaultNotification = def
+createNotificationReq :: Text -> (NotificationRequest -> NotificationRequest) -> NotificationRequest
+createNotificationReq key modifier = modifier $ def {notificationKey = key}
 
 data EmptyDynamicParam = EmptyDynamicParam
 
@@ -197,7 +197,8 @@ notifyOnDriverOfferIncoming ::
 notifyOnDriverOfferIncoming estimateId tripCategory quotes person bppDetailList = do
   isValueAddNPList <- Prelude.for bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.id.getId
   let entity = Notification.Entity Notification.Product estimateId.getId $ UQuote.mkQAPIEntityList quotes bppDetailList isValueAddNPList
-  dynamicNotifyPerson person defaultNotification {notificationKey = "DRIVER_QUOTE_INCOMING"} EmptyDynamicParam entity tripCategory mempty
+      notiReq = createNotificationReq "DRIVER_QUOTE_INCOMING" identity
+  dynamicNotifyPerson person notiReq EmptyDynamicParam entity tripCategory mempty
 
 -- title = "New driver offers incoming!"
 -- body = "There are new driver offers! Check the app for details"
@@ -222,9 +223,10 @@ notifyOnRideAssigned booking ride = do
   tag <- getDisabilityTag person.hasDisability personId
   let entity = Notification.Entity Notification.Product rideId.getId (RideAssignedParam driverName booking.startTime booking.id)
       dynamicParams = RideAssignedParam driverName booking.startTime booking.id
+      notiReq = createNotificationReq "DRIVER_ASSIGNMENT" (\r -> r {soundTag = tag})
   dynamicNotifyPerson
     person
-    defaultNotification {notificationKey = "DRIVER_ASSIGNMENT", soundTag = tag}
+    notiReq
     dynamicParams
     entity
     booking.tripCategory
@@ -294,7 +296,7 @@ notifyOnRideStarted booking ride = do
   forM_ (person : allOtherBookingPartyPersons) $ \person' -> do
     dynamicNotifyPerson
       person'
-      defaultNotification {notificationKey = "TRIP_STARTED", soundTag = tag}
+      (createNotificationReq "TRIP_STARTED" (\r -> r {soundTag = tag}))
       dynamicParams
       entity
       booking.tripCategory
@@ -332,7 +334,7 @@ notifyOnRideCompleted booking ride = do
   forM_ (person : allOtherBookingPartyPersons) $ \person' ->
     dynamicNotifyPerson
       person'
-      defaultNotification {notificationKey = "TRIP_FINISHED", soundTag = tag}
+      (createNotificationReq "TRIP_FINISHED" (\r -> r {soundTag = tag}))
       dynamicParams
       entity
       booking.tripCategory
@@ -380,7 +382,7 @@ notifyOnExpiration searchReq = do
           dynamicParams = EmptyDynamicParam
       dynamicNotifyPerson
         p
-        defaultNotification {notificationKey = "EXPIRED_CASE"}
+        (createNotificationReq "EXPIRED_CASE" identity)
         dynamicParams
         entity
         tripCategory
@@ -406,7 +408,7 @@ notifyOnRegistration regToken person mbDeviceToken = do
       auth = Just $ Notification.Auth person.id.getId mbDeviceToken person.notificationToken
   dynamicNotifyPerson
     person
-    defaultNotification {notificationKey = "REGISTRATION_APPROVED", auth = auth}
+    (createNotificationReq "REGISTRATION_APPROVED" (\r -> r {auth = auth}))
     EmptyDynamicParam
     entity
     Nothing
@@ -452,12 +454,16 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide = do
       dynamicParams = RideCancelParam booking.startTime booking.id
   dynamicNotifyPerson
     person
-    defaultNotification
-      { notificationKey = notiKey,
-        notificationTypeForSound = Just notificationSoundType,
-        subCategory = Just $ cancellationSourceToSubCategory cancellationSource,
-        soundTag = tag
-      }
+    ( createNotificationReq
+        notiKey
+        ( \r ->
+            r
+              { notificationTypeForSound = Just notificationSoundType,
+                subCategory = Just $ cancellationSourceToSubCategory cancellationSource,
+                soundTag = tag
+              }
+        )
+    )
     dynamicParams
     entity
     booking.tripCategory
@@ -548,7 +554,7 @@ notifyOnBookingReallocated booking = do
   tag <- getDisabilityTag person.hasDisability person.id
   dynamicNotifyPerson
     person
-    defaultNotification {notificationKey = "BOOKING_REALLOCATED", soundTag = tag}
+    (createNotificationReq "BOOKING_REALLOCATED" (\r -> r {soundTag = tag}))
     dynamicParams
     entity
     booking.tripCategory
@@ -575,7 +581,7 @@ notifyOnEstOrQuoteReallocated cancellationSource booking estOrQuoteId = do
       subCategory = cancellationSourceToSubCategory cancellationSource
   dynamicNotifyPerson
     person
-    defaultNotification {notificationKey = "EST_OR_QUOTE_REALLOCATED", soundTag = tag, subCategory = Just subCategory}
+    (createNotificationReq "EST_OR_QUOTE_REALLOCATED" (\r -> r {soundTag = tag, subCategory = Just subCategory}))
     EmptyDynamicParam
     entity
     booking.tripCategory
@@ -629,7 +635,7 @@ notifyOnQuoteReceived quote = do
         _ -> Nothing
   dynamicNotifyPerson
     person
-    defaultNotification {notificationKey = "QUOTE_RECEIVED"}
+    (createNotificationReq "QUOTE_RECEIVED" identity)
     dynamicParams
     entity
     tripCategory
@@ -652,7 +658,7 @@ notifyDriverOnTheWay personId tripCategory = do
   let entity = Notification.Entity Notification.Product personId.getId ()
   dynamicNotifyPerson
     person
-    defaultNotification {notificationKey = "DRIVER_ON_THE_WAY"}
+    (createNotificationReq "DRIVER_ON_THE_WAY" identity)
     EmptyDynamicParam
     entity
     tripCategory
@@ -683,7 +689,7 @@ notifyDriverHasReached personId tripCategory otp vehicleNumber = do
       dynamicParams = DriverReachedParam vehicleNumber otp
   dynamicNotifyPerson
     person
-    defaultNotification {notificationKey = "DRIVER_HAS_REACHED"}
+    (createNotificationReq "DRIVER_HAS_REACHED" identity)
     dynamicParams
     entity
     tripCategory
@@ -710,7 +716,7 @@ notifyDriverReaching personId tripCategory otp vehicleNumber = do
       dynamicParams = DriverReachedParam vehicleNumber otp
   dynamicNotifyPerson
     person
-    defaultNotification {notificationKey = "DRIVER_REACHING"}
+    (createNotificationReq "DRIVER_REACHING" identity)
     dynamicParams
     entity
     tripCategory
@@ -766,7 +772,7 @@ notifySafetyAlert booking _ = do
   let entity = Notification.Entity Notification.Product person.id.getId ()
   dynamicNotifyPerson
     person
-    defaultNotification {notificationKey = "SAFETY_ALERT_DEVIATION"}
+    (createNotificationReq "SAFETY_ALERT_DEVIATION" identity)
     EmptyDynamicParam
     entity
     booking.tripCategory
@@ -786,7 +792,7 @@ notifyDriverBirthDay personId tripCategory driverName = do
   let entity = Notification.Entity Notification.Product personId.getId ()
   dynamicNotifyPerson
     person
-    defaultNotification {notificationKey = "DRIVER_BIRTHDAY"}
+    (createNotificationReq "DRIVER_BIRTHDAY" identity)
     EmptyDynamicParam
     entity
     tripCategory
@@ -828,7 +834,7 @@ notifyRideStartToEmergencyContacts booking ride = do
             let entity = Notification.Entity Notification.Product personId.getId ()
             dynamicNotifyPerson
               person
-              defaultNotification {notificationKey = "FOLLOW_RIDE"}
+              (createNotificationReq "FOLLOW_RIDE" identity)
               EmptyDynamicParam
               entity
               booking.tripCategory
@@ -882,7 +888,7 @@ notifyOnStopReached booking ride = do
   let entity = Notification.Entity Notification.Product rideId.getId ()
   dynamicNotifyPerson
     person
-    defaultNotification {notificationKey = "STOP_REACHED"}
+    (createNotificationReq "STOP_REACHED" identity)
     EmptyDynamicParam
     entity
     booking.tripCategory
@@ -949,7 +955,7 @@ notifyTicketCancelled ticketBookingId ticketBookingCategoryName person = do
   let entity = Notification.Entity Notification.Product person.id.getId ()
   dynamicNotifyPerson
     person
-    defaultNotification {notificationKey = "TICKET_CANCELLED"}
+    (createNotificationReq "TICKET_CANCELLED" identity)
     EmptyDynamicParam
     entity
     Nothing
@@ -976,7 +982,7 @@ notifyFirstRideEvent personId vehicleCategory tripCategory = do
   let entity = Notification.Entity Notification.Product person.id.getId (FirstRideEvent vehicleCategory True)
   dynamicNotifyPerson
     person
-    defaultNotification {notificationKey = "FIRST_RIDE_EVENT"}
+    (createNotificationReq "FIRST_RIDE_EVENT" identity)
     EmptyDynamicParam
     entity
     tripCategory
@@ -992,7 +998,7 @@ notifyToAllBookingParties persons tripCategory notikey =
       let entity = Notification.Entity Notification.Product person.id.getId ()
       dynamicNotifyPerson
         person
-        defaultNotification {notificationKey = notikey}
+        (createNotificationReq notikey identity)
         EmptyDynamicParam
         entity
         tripCategory
@@ -1031,6 +1037,7 @@ notifyOnTripUpdate booking ride err = do
             sound = notificationSound
           }
   notifyPerson person.merchantId merchantOperatingCityId person.id notificationData
+
 --"Destination and Fare Updated" "Your edit request was accepted by your driver!"
 
 notifyAboutScheduledRide :: (ServiceFlow m r) => SRB.Booking -> Text -> Text -> m ()
@@ -1053,7 +1060,6 @@ notifyAboutScheduledRide booking title body = do
             sound = notificationSound
           }
   notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData
-
 
 getAllOtherRelatedPartyPersons :: ServiceFlow m r => SRB.Booking -> m [Person]
 getAllOtherRelatedPartyPersons booking = do

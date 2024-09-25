@@ -4,10 +4,9 @@ DELETE FROM atlas_app.merchant_push_notification WHERE key = 'TOLL_CROSSED' AND 
 
 -- QUERY FOR PROD
 INSERT INTO atlas_app.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_app.uuid_generate_v4(),
     'TOLL_CROSSED',
     'TOLL_CROSSED',
     moc.merchant_id,
