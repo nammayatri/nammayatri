@@ -68,7 +68,7 @@ driverDevicePingService :: Text -> Int -> Flow (Maybe Text)
 driverDevicePingService driverId fcmNofificationSendCount = do
   log INFO "Ping driver"
   SQP.findById (Id driverId) >>= \case
-    Nothing -> log ERROR ("Driver not found: " <> driverId) >> pure Nothing
+    Nothing -> log ERROR ("Driver not found: " <> driverId) >> pure (Just $ T.decodeUtf8 $ BSL.toStrict $ A.encode driverId)
     Just driver ->
       Redis.safeGet (redisKey driverId) >>= \case
         Just count | count > fcmNofificationSendCount -> do

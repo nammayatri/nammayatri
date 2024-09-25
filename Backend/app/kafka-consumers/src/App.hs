@@ -62,14 +62,16 @@ startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
     let flowRt = flowRt' {L._httpClientManagers = managers}
     runFlow
       flowRt
-      ( prepareConnectionRider
-          ( ConnectionConfigRider
-              { esqDBCfg = appCfg.esqDBCfg,
-                esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
-                hedisClusterCfg = appCfg.hedisClusterCfg
-              }
-          )
-          appCfg.kvConfigUpdateFrequency
+      ( ( prepareConnectionRider
+            ( ConnectionConfigRider
+                { esqDBCfg = appCfg.esqDBCfg,
+                  esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
+                  hedisClusterCfg = appCfg.hedisClusterCfg
+                }
+            )
+            appCfg.kvConfigUpdateFrequency
+        )
+          >> L.setOption KBT.KafkaConn appEnv.kafkaProducerTools
       )
     flowRt'' <- runFlowR flowRt appEnv $ do
       fork
