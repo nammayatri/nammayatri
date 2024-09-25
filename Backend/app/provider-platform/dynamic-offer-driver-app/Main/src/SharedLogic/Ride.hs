@@ -107,7 +107,9 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id booking.distanceUnit
 
-  Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken
+  if booking.isScheduled
+    then Notify.driverScheduledRideAcceptanceAlert booking.merchantOperatingCityId Notification.SCHEDULED_RIDE_NOTIFICATION notificationTitle (messageForScheduled booking) driver driver.deviceToken
+    else Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken
 
   fork "DriverScoreEventHandler OnNewRideAssigned" $
     DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency, distanceUnit = booking.distanceUnit}
@@ -123,6 +125,13 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
       cs $
         unwords
           [ "You have been assigned a ride for",
+            cs (showTimeIst uBooking.startTime) <> ".",
+            "Check the app for more details."
+          ]
+    messageForScheduled uBooking =
+      cs $
+        unwords
+          [ "You have been assigned a scheduled ride for",
             cs (showTimeIst uBooking.startTime) <> ".",
             "Check the app for more details."
           ]
