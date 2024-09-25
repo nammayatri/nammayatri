@@ -159,6 +159,7 @@ import Services.Config as SC
 import Presto.Core.Types.Language.Flow (await)
 import Resource.Constants (hvSdkTokenExp)
 import Common.RemoteConfig.Utils as CommonRC
+import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenInitData
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -3266,6 +3267,7 @@ subScriptionFlow = do
           { reelsData = transformReelsRespToReelsData reelsRespData
           , vehicleAndCityConfig = vehicleAndCityConfig
           , linkedVehicleVariant = linkedVehicle.variant
+          , switchPlanModalState = SubscriptionScreenInitData.initData.data.switchPlanModalState
           }
       , props
           { offerBannerProps = fromMaybe CommonRC.defaultOfferBannerConfig vehicleAndCityConfig.offerBannerConfig

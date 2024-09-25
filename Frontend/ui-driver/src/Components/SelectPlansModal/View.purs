@@ -131,4 +131,6 @@ buttonsView push state =
                 , height = V 54
                 , width = MATCH_PARENT
                 , id = "SelectPlansModalPrimaryButton"
+                , isClickable = isJust state.selectedPlan
+                , alpha = if isJust state.selectedPlan then 1.0 else 0.5
                 }
