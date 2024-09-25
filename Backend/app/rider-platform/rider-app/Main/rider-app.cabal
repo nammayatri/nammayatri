@@ -503,8 +503,6 @@ library
       Domain.Types.FRFSVehicleServiceTier
       Domain.Types.HotSpotConfig
       Domain.Types.IntegratedBPPConfig
-      Domain.Types.IGMConfig
-      Domain.Types.IGMIssue
       Domain.Types.InterCityDetails
       Domain.Types.Issue
       Domain.Types.Journey
@@ -605,8 +603,6 @@ library
       Storage.Beam.FRFSVehicleServiceTier
       Storage.Beam.HotSpotConfig
       Storage.Beam.IntegratedBPPConfig
-      Storage.Beam.IGMConfig
-      Storage.Beam.IGMIssue
       Storage.Beam.InterCityDetails
       Storage.Beam.Issue
       Storage.Beam.Journey
@@ -708,8 +704,6 @@ library
       Storage.Queries.FRFSVehicleServiceTier
       Storage.Queries.HotSpotConfig
       Storage.Queries.IntegratedBPPConfig
-      Storage.Queries.IGMConfig
-      Storage.Queries.IGMIssue
       Storage.Queries.InterCityDetails
       Storage.Queries.Issue
       Storage.Queries.Journey

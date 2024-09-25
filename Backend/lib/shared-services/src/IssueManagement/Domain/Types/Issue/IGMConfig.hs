@@ -1,11 +1,8 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module IssueManagement.Domain.Types.Issue.IGMConfig where
 
 import Data.OpenApi
 import EulerHS.Prelude hiding (id)
 import IssueManagement.Common
--- import Kernel.Beam.Lib.UtilsTH
 import Kernel.Types.Id
 import Kernel.Utils.Common
 

@@ -195,7 +195,8 @@ feedback request personId = do
           classification = Ticket.CUSTOMER,
           rideDescription = Just info,
           disposition,
-          queue
+          queue,
+          becknIssueId = Nothing
         }
 
     generateSlackMessage :: Person.Person -> DRide.Ride -> Maybe Text -> Text -> Int -> Maybe Text -> Flow Text

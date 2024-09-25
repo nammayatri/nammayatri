@@ -14,13 +14,6 @@
 
 module API.Beckn.IGM.Issue where
 
--- import qualified IssueManagement.Beckn.ACL.Issue as ACL
--- import qualified BecknV2.IGM.APIs as Spec
-
--- import qualified Domain.Types.Merchant as DM
-
--- import qualified Kernel.Types.Beckn.Domain as Domain
-
 import qualified API.UI.Issue as AUI
 import Environment
 import qualified IGM.Types as Spec

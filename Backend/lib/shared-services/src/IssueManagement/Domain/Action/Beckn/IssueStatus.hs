@@ -49,7 +49,6 @@ data IssueStatusRes = IssueStatusRes
   { issueId :: Id DIGM.IGMIssue,
     issueStatus :: DIGM.Status,
     respondentAction :: Text,
-    resolutionAction :: Maybe Text,
     groName :: Text,
     groPhone :: Text,
     groEmail :: Text,
@@ -95,5 +94,4 @@ handler ValidatedDIssueStatus {..} = do
       groEmail = igmConfig.groEmail
       createdAt = UTCTimeRFC3339 issue.createdAt
       updatedAt = UTCTimeRFC3339 now
-      resolutionAction = issue.resolutionAction
   pure IssueStatusRes {..}

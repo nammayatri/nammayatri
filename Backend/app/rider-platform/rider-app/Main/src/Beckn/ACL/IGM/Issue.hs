@@ -77,7 +77,7 @@ tfIssueReqMessage category option description now issueId merchant ridebookingIn
 tfIssue :: Common.IssueCategory -> Maybe Common.IssueOption -> Text -> UTCTimeRFC3339 -> Text -> DM.Merchant -> RideBooking -> Person -> IGMConfig -> Maybe Common.CustomerResponse -> Maybe Common.CustomerRating -> Maybe IssueType -> Spec.Issue
 tfIssue category option description now issueId merchant ridebookingInfo rider igmConfig mbCustomerAction mbCustomerRating mbType = do
   let issueCategory = category.igmCategory
-      issueSubCategory = option >>= (.igmSubCategory)
+      issueSubCategory = show <$> (option >>= (.igmSubCategory))
       issueType = Utils.mapBecknIssueType mbCustomerAction mbType
       issueStatus = Utils.mapBecknIssueStatus mbCustomerAction
   Spec.Issue
@@ -101,7 +101,14 @@ tfIssue category option description now issueId merchant ridebookingInfo rider i
     }
 
 tfDescription :: Text -> Maybe Spec.IssueDescription
-tfDescription description = Just $ Spec.IssueDescription (Just description) (Just description)
+tfDescription description = do
+  let desc = Just description
+  let additionalDesc = tfAdditionalDescription (Just "false") (Just "text/plain")
+  Just $ Spec.IssueDescription desc desc additionalDesc
+
+tfAdditionalDescription :: Maybe Text -> Maybe Text -> Maybe Spec.IssueDescriptionAdditionalDesc
+tfAdditionalDescription url contentType = do
+  Just $ Spec.IssueDescriptionAdditionalDesc url contentType
 
 tfIssueActions :: DM.Merchant -> UTCTimeRFC3339 -> IGMConfig -> Text -> Maybe Common.CustomerResponse -> RideBooking -> Maybe Spec.IssueActions
 tfIssueActions merchant now igmConfig description mbCustomerAction ridebookingInfo =
@@ -136,19 +143,19 @@ tfOrderDetails ridebookingInfo =
   Just $
     Spec.OrderDetails
       { orderDetailsFulfillments = tfFulfillments ridebookingInfo,
-        orderDetailsId = ridebookingInfo.bppBookingId,
+        orderDetailsId = ridebookingInfo.bppOrderId <> ridebookingInfo.bppBookingId,
         orderDetailsItems = tfItems ridebookingInfo,
         orderDetailsProviderId = Just $ ridebookingInfo.providerId,
-        orderDetailsState = Just $ show ridebookingInfo.status,
-        orderMerchantId = Just $ ridebookingInfo.merchantId.getId
+        orderDetailsState = ridebookingInfo.status,
+        orderMerchantId = Nothing
       }
 
 tfFulfillments :: RideBooking -> Maybe [Spec.Fulfillment]
 tfFulfillments ridebookingInfo =
   Just
     [ Spec.Fulfillment
-        { fulfillmentId = Nothing,
-          fulfillmentState = Just $ show ridebookingInfo.status
+        { fulfillmentId = Just ridebookingInfo.bppItemId,
+          fulfillmentState = ridebookingInfo.status
         }
     ]
 
@@ -181,7 +188,7 @@ tfComplainantContact :: RideBooking -> Maybe Spec.Contact
 tfComplainantContact ridebookingInfo =
   Just $
     Spec.Contact
-      { contactEmail = Nothing,
+      { contactEmail = Just "support@nammayatri.in",
         contactPhone = ridebookingInfo.contactPhone
       }
 

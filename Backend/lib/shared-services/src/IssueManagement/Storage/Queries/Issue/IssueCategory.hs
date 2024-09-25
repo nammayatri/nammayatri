@@ -28,6 +28,7 @@ updateByPrimaryKey IssueCategory {..} =
       Set BeamIC.maxAllowedRideAge maxAllowedRideAge,
       Set BeamIC.allowedRideStatuses allowedRideStatuses,
       Set BeamIC.label label,
+      Set BeamIC.igmCategory igmCategory,
       Set BeamIC.createdAt createdAt,
       Set BeamIC.updatedAt updatedAt
     ]

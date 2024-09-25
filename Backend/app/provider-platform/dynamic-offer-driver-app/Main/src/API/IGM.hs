@@ -15,15 +15,10 @@
 module API.IGM where
 
 import qualified API.Beckn.IGM.Issue as Issue
--- import qualified API.Beckn.IGM.IssueStatus as IssueStatus
 import Environment
 
 type API = Issue.API
 
---  :<|> IssueStatus.API
-
 handler :: FlowServer API
 handler =
   Issue.handler
-
--- :<|> IssueStatus.handler

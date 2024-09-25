@@ -1,10 +1,8 @@
 module IssueManagement.Domain.Action.Beckn.OnIssue where
 
+import Data.Aeson
+import IGM.Enums
 import qualified IssueManagement.Domain.Types.Issue.IGMIssue as DIGM
--- import Kernel.Tools.Metrics.CoreMetrics
--- import Kernel.Types.Error
--- import Kernel.Types.Id
--- import Kernel.Types.TimeRFC339
 import IssueManagement.Storage.BeamFlow
 import qualified IssueManagement.Storage.Queries.Issue.IGMIssue as QIGM
 import Kernel.Prelude
@@ -14,8 +12,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
-
--- import Kernel.Utils.Common
 
 data DOnIssue = DOnIssue
   { id :: Text,
@@ -49,7 +45,10 @@ handler ::
   m ()
 handler onIssueReq issue = do
   now <- UTCTimeRFC3339 <$> getCurrentTime
-  let issueStatus = mapActionToStatus onIssueReq.respondentAction & fromMaybe issue.issueStatus
+  let issueStatus = fromMaybe issue.issueStatus $ do
+        respondentAction <- onIssueReq.respondentAction
+        respondentAction' <- decode (encode respondentAction)
+        mapActionToStatus respondentAction'
   let updatedIssue =
         issue
           { DIGM.respondentName = onIssueReq.respondentName,
@@ -63,6 +62,7 @@ handler onIssueReq issue = do
   QIGM.updateByPrimaryKey updatedIssue
   pure ()
 
-mapActionToStatus :: Maybe Text -> Maybe DIGM.Status
-mapActionToStatus (Just "RESOLVED") = Just DIGM.RESOLVED
+mapActionToStatus :: Maybe ResolutionAction -> Maybe DIGM.Status
+mapActionToStatus (Just RESOLVE) = Just DIGM.RESOLVED
+mapActionToStatus (Just REJECT) = Just DIGM.CLOSED
 mapActionToStatus _ = Nothing

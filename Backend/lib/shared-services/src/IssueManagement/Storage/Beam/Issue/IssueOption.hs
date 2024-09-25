@@ -12,12 +12,16 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module IssueManagement.Storage.Beam.Issue.IssueOption where
 
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
+import qualified IGM.Enums as Spec
 import qualified IssueManagement.Common as Common
 import IssueManagement.Tools.UtilsTH hiding (label)
 
@@ -36,7 +40,7 @@ data IssueOptionT f = IssueOptionT
     showOnlyWhenUserBlocked :: B.C f Bool,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
-    igmSubCategory :: B.C f (Maybe Text)
+    igmSubCategory :: B.C f (Maybe Spec.IssueSubCategory)
   }
   deriving (Generic, B.Beamable)
 

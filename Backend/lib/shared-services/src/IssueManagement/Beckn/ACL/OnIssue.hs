@@ -1,18 +1,14 @@
 module IssueManagement.Beckn.ACL.OnIssue where
 
--- import qualified BecknV2.IGM.APIs as Spec
+import Data.List (sortBy)
+import Data.Ord (Down (..), comparing)
 import qualified IGM.Enums as Spec
 import qualified IGM.Types as Spec
--- import Environment
--- import qualified IGM.Types as Spec
 import qualified IGM.Utils as Utils
 import qualified IssueManagement.Domain.Action.Beckn.OnIssue as DOnIssue
 import Kernel.Prelude
--- import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Utils.Common
-
--- import Kernel.Utils.Servant.SignatureAuth
 
 buildOnIssueReq ::
   MonadFlow m =>
@@ -27,7 +23,7 @@ buildOnIssueReq req = do
   bppSubscriberUrl <- context.contextBppUri & fromMaybeM (InvalidRequest "BppSubscriberUrl not found")
   message <- req.onIssueReqMessage & fromMaybeM (InvalidRequest "Message not found")
   let issue = message.onIssueReqMessageIssue
-  respondentAction <- issue.issueIssueActions >>= (.issueActionsRespondentActions) >>= listToMaybe & fromMaybeM (InvalidRequest "RespondentActions Missing")
+  respondentAction <- fromMaybeM (InvalidRequest "RespondentActions Missing") $ listToMaybe <$> sortBy (comparing (Down . (.respondentActionUpdatedAt))) =<< (.issueActionsRespondentActions) =<< issue.issueIssueActions
   respondentInfo <- respondentAction.respondentActionUpdatedBy & fromMaybeM (InvalidRequest "RespondentActionUpdatedBy Missing")
   let respondentContact = respondentInfo.organizationContact
       respondentPerson = respondentInfo.organizationPerson
@@ -39,8 +35,8 @@ buildOnIssueReq req = do
         respondentName = respondentPerson >>= (.complainantPersonName),
         respondentEmail = respondentContact >>= (.gROContactEmail),
         respondentPhone = respondentContact >>= (.gROContactPhone),
-        respondentAction = respondentAction.respondentActionRespondentAction,
         transactionId = transactionId,
+        respondentAction = respondentAction.respondentActionRespondentAction,
         createdAt = issue.issueCreatedAt,
         updatedAt = respondentAction.respondentActionUpdatedAt
       }

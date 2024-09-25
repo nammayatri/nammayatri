@@ -1,11 +1,8 @@
 module IssueManagement.Beckn.ACL.Issue where
 
+import Data.Aeson
 import qualified IGM.Enums as Spec
-import qualified IGM.Types as Spec
--- import Kernel.Prelude
-
--- import qualified IGM.Enums as Spec
--- import qualified IGM.Types as Spec
+import qualified IGM.Types as Spec hiding (IssueSubCategory)
 import IGM.Utils (mkOrgName)
 import qualified IGM.Utils as Utils
 import qualified IssueManagement.Beckn.ACL.IGM.Utils as Utils
@@ -27,11 +24,11 @@ buildIssueReq req = do
   bookingId <- req.issueReqMessage.issueReqMessageIssue.issueOrderDetails >>= (.orderDetailsId) & fromMaybeM (InvalidRequest "BookingId not found")
   bapId <- req.context.contextBapId & fromMaybeM (InvalidRequest "BapId not found")
   let issueRaisedBy = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= listToMaybe >>= (.complainantActionUpdatedBy) >>= (.organizationOrg) >>= (.organizationOrgName)
-      issueSubCategory = req.issueReqMessage.issueReqMessageIssue.issueSubCategory
       issueId = req.issueReqMessage.issueReqMessageIssue.issueId
       customerContact = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= listToMaybe >>= (.complainantActionUpdatedBy) >>= (.organizationContact)
       customerName = req.issueReqMessage.issueReqMessageIssue.issueIssueActions >>= (.issueActionsComplainantActions) >>= listToMaybe >>= (.complainantActionUpdatedBy) >>= (.organizationPerson) >>= (.complainantPersonName)
       createdAt = req.issueReqMessage.issueReqMessageIssue.issueCreatedAt
+  issueSubCategory <- maybe (throwError $ InvalidRequest "Invalid IssueSubCategory") pure $ decode $ encode req.issueReqMessage.issueReqMessageIssue.issueSubCategory
   pure $
     DIssue.DIssue
       { customerEmail = customerContact >>= (.gROContactEmail),

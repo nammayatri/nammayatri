@@ -126,10 +126,10 @@ tfOrganizationPerson res =
       }
 
 tfIssueResolution :: DIssueStatus.IssueStatusRes -> Maybe Spec.IssueResolution
-tfIssueResolution res =
+tfIssueResolution _res =
   Just $
     Spec.IssueResolution
-      { issueResolutionAction = res.resolutionAction,
+      { issueResolutionAction = Nothing,
         issueResolutionActionTriggered = show Spec.REFUND,
         issueResolutionGroRemarks = Nothing,
         issueResolutionLongDesc = Nothing,

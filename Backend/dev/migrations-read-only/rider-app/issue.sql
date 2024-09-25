@@ -13,23 +13,6 @@ ALTER TABLE atlas_app.issue ADD COLUMN ticket_id text ;
 ALTER TABLE atlas_app.issue ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.issue ADD PRIMARY KEY ( id);
 
-
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.issue ADD COLUMN merchant_id character varying(36) ;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.issue ADD COLUMN backn_issue_id text ;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.issue ADD COLUMN beckn_issue_id text ;
-ALTER TABLE atlas_app.issue DROP COLUMN backn_issue_id;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.issue DROP COLUMN beckn_issue_id;

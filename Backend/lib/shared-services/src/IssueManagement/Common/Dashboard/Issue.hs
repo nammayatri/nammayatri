@@ -13,6 +13,7 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DTE
 import Data.Time
+import qualified IGM.Enums as Spec
 import IssueManagement.Common
 import IssueManagement.Domain.Types.Issue.IssueCategory
 import IssueManagement.Domain.Types.Issue.IssueMessage
@@ -339,8 +340,7 @@ data CreateIssueOptionReq = CreateIssueOptionReq
     restrictedVariants :: Maybe [VehicleVariant],
     restrictedRideStatuses :: Maybe [RideStatus],
     showOnlyWhenUserBlocked :: Maybe Bool,
-    showOnlyWhenUserBlocked :: Maybe Bool,
-    igmSubCategory :: Maybe Text
+    igmSubCategory :: Maybe Spec.IssueSubCategory
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -373,7 +373,8 @@ data UpdateIssueCategoryReq = UpdateIssueCategoryReq
     allowedRideStatuses :: Maybe [RideStatus],
     isActive :: Maybe Bool,
     translations :: [Translation],
-    label :: Maybe Text
+    label :: Maybe Text,
+    igmCategory :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -421,7 +422,8 @@ data UpdateIssueOptionReq = UpdateIssueOptionReq
     translations :: [Translation],
     restrictedVariants :: Maybe [VehicleVariant],
     restrictedRideStatuses :: Maybe [RideStatus],
-    showOnlyWhenUserBlocked :: Maybe Bool
+    showOnlyWhenUserBlocked :: Maybe Bool,
+    igmCategory :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

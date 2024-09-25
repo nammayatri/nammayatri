@@ -15,8 +15,9 @@
 module IGM.Utils where
 
 import BecknV2.Utils as Utils
+import Control.Monad.Extra (anyM)
 import qualified Data.Aeson as A
-import Data.Text as T
+import qualified Data.Text as T
 import Data.Time
 import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified IGM.Enums as Spec
@@ -28,15 +29,16 @@ import Kernel.Utils.Error
 
 validateContext :: MonadFlow m => Spec.Action -> Spec.Context -> m ()
 validateContext action context = do
-  validateDomain Spec.ON_DEMAND context
+  isValidDomain <- anyM (`validateDomain` context) [Spec.ON_DEMAND, Spec.PUBLIC_TRANSPORT]
+  unless isValidDomain $
+    throwError Error.InvalidDomain
   validateContextCommons action context
 
-validateDomain :: MonadFlow m => Spec.Domain -> Spec.Context -> m ()
+validateDomain :: MonadFlow m => Spec.Domain -> Spec.Context -> m Bool
 validateDomain expectedDomain context = do
   domainText <- context.contextDomain & fromMaybeM (Error.InvalidRequest "Missing contextDomain")
   domain <- A.decode (A.encode domainText) & fromMaybeM (Error.InvalidRequest $ "Error in parsing contextDomain: " <> domainText)
-  unless (domain == expectedDomain) $
-    throwError Error.InvalidDomain
+  pure $ domain == expectedDomain
 
 validateContextCommons :: MonadFlow m => Spec.Action -> Spec.Context -> m ()
 validateContextCommons expectedAction context = do

@@ -307,4 +307,4 @@ instance Cache Subscriber Flow where
   delKey = Redis.del . ("taxi-bap:registry:" <>) . lookupRequestToRedisKey
 
 instance CacheEx Subscriber Flow where
-  setKeyEx ttl = (\k v -> Redis.setExp k v ttl.getSeconds) . ("taxi-bap:registry:" <>) . lookupRequestToRedisKey
+  setKeyEx ttls = (\k v -> Redis.setExp k v ttls.getSeconds) . ("taxi-bap:registry:" <>) . lookupRequestToRedisKey
