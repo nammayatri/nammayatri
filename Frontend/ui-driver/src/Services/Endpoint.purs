@@ -17,8 +17,7 @@ module Services.EndPoints where
 
 import Data.Maybe (Maybe(..))
 import Prelude (show, unit, (<>), (==), (*))
-import Services.Config (getBaseUrl, getSpecialZoneBaseUrl)
-import ConfigProvider (isDebugBuild)
+import Services.Config (getBaseUrl)
 
 triggerOTP :: String -> String
 triggerOTP  dummy = (getBaseUrl "" ) <> "/auth"
@@ -325,7 +324,7 @@ dummyRideRequest :: String -> String
 dummyRideRequest _ =  (getBaseUrl "") <> "/driver/getDummyRideRequest"
 
 specialLocationList :: String -> String
-specialLocationList _ = (if isDebugBuild unit then (getBaseUrl "") else (getSpecialZoneBaseUrl "")) <> "/specialLocation/list"
+specialLocationList _ = (getBaseUrl "") <> "/specialLocation/list"
 
 onBoardingConfigs :: Boolean -> Boolean -> String
 onBoardingConfigs showAadhaarProfilePan onlyVehicle = (getBaseUrl "") <> "/onboarding/configs?makeSelfieAadhaarPanMandatory=" <> show showAadhaarProfilePan <> "&onlyVehicle=" <> show onlyVehicle
