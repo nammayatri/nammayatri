@@ -31,6 +31,7 @@
       ];
 
       haskellProjects.default = {
+        defaults.settings.default = { libraryProfiling = lib.mkForce true; };
         projectRoot = ./.;
         imports = [
           inputs.beckn-gateway.haskellFlakeProjectModules.output
@@ -84,7 +85,7 @@
           kaal-chakra-exe.custom = cacConfig;
 
 
-          namma-dsl.libraryProfiling = false;
+          namma-dsl.libraryProfiling = true;
           location-updates.check = false;
           beckn-test.check = false;
           singletons-th.jailbreak = true;

@@ -56,7 +56,7 @@ runProducer = do
   Hedis.whenWithLockRedis (getShardedKey producerLockKey myShardId) 10 $ do
     someErr <-
       try @_ @SomeException $ do
-        (_, diff) <- withTimeGeneric "producer" $ do
+        (res, diff) <- withTimeGeneric "producer" $ do
           producerTimestampKeyPrefix <- asks (.producerTimestampKey)
           let producerTimestampKey = getShardedKey producerTimestampKeyPrefix myShardId
           startTime <- getTime producerTimestampKey
@@ -71,6 +71,7 @@ runProducer = do
           Hedis.withNonCriticalCrossAppRedis $ Hedis.zRemRangeByScore myShardSetKey startTime endTime
         waitTimeMilliSec <- asks (.waitTimeMilliSec)
         threadDelayMilliSec . Milliseconds $ max 0 (fromEnum (waitTimeMilliSec - fromIntegral diff) :: Int)
+        print res
     case someErr of
       Left err -> logError $ show err
       Right _ -> pure ()

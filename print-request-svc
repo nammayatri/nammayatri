@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: "2024-09-24T13:05:33Z"
+  name: print-request-svc
+  namespace: cumta-apps
+  resourceVersion: "1312891"
+  uid: bd81dacb-fa67-437e-9a55-4433b3d20c28
+spec:
+  clusterIP: 172.20.216.136
+  clusterIPs:
+  - 172.20.216.136
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - name: nossl
+    port: 80
+    protocol: TCP
+    targetPort: 3000
+  - name: ssl
+    port: 443
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    app: print-request
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}

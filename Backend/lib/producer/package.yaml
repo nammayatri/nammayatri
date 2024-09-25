@@ -98,6 +98,9 @@ ghc-options:
   - -fplugin=RecordDotPreprocessor
   - -fwrite-ide-info
   - -hiedir=.hie
+  - -fprof-auto
+  - -fprof-late
+  - -prof
 
 library:
   source-dirs: src
@@ -127,6 +130,9 @@ executables:
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
       - -Wincomplete-uni-patterns
+      - -fprof-auto
+      - -fprof-late
+      - -prof
     when:
     - condition: flag(Local)
       then:

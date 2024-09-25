@@ -4,10 +4,11 @@ from datetime import datetime
 import time
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
-BASE_URL_DRIVER_LOCATION = os.getenv('BASE_URL_DRIVER_LOCATION')
-BASE_URL_DRIVER = os.getenv('BASE_URL_DRIVER')
+BASE_URL_DRIVER_LOCATION = os.getenv('BASE_URL_DRIVER_LOCATION') or ""
+BASE_URL_DRIVER = os.getenv('BASE_URL_DRIVER') or ""
 MerchantId = "favorit0-0000-0000-0000-00000favorit"
 VehicleVariant = "SUV"
 
