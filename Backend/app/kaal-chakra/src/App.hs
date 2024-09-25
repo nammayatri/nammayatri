@@ -15,7 +15,7 @@
 module App where
 
 import Data.Singletons
-import Environment (HandlerCfg, HandlerEnv, buildHandlerEnv)
+import Environment (Flow, HandlerCfg, HandlerEnv, buildHandlerEnv)
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as R
@@ -30,8 +30,8 @@ import Kernel.Exit
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Migration
 import Kernel.Storage.Queries.SystemConfigs as QSystemConfigs
-import Kernel.Types.Error
 import Kernel.Types.Flow (runFlowR)
+import Kernel.Types.Id
 import Kernel.Utils.App (getPodName, handleLeft)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall
@@ -114,44 +114,69 @@ runKaalChakra configModifier = do
         L.setOption KBT.Tables $ fromMaybe emptyKVConfigs mbKvConfigs
         kafkaProducerTools <- asks (.kafkaProducerTools)
         L.setOption KBT.KafkaConn kafkaProducerTools
-
-        shouldCompleteOldJobs <- asks (.shouldCompleteOldJobs)
-        when shouldCompleteOldJobs $ do
+        let allChakras = [Daily, Weekly, Monthly, Quarterly]
+        shouldCreateAnyJob <- or <$> forM allChakras shouldCreateJob
+        when shouldCreateAnyJob $ do
           allJobs :: [AnyJob Chakra] <- QAllJ.findAll
-          forM_ allJobs $ \(AnyJob job) -> do
-            let jobType = fromSing $ job.jobInfo.jobType
-            when (jobType `elem` [Daily, Weekly, Monthly, Quarterly]) $ do
-              QAllJ.markAsComplete (show jobType) job.id
-              logInfo $ "Completed old " <> show jobType <> " job: " <> show job.id
-
-        shouldCreateJobs <- asks (.shouldCreateJobs)
-        when shouldCreateJobs $ do
-          maxShards <- asks (.maxShards)
-          shouldCreateDailyJob <- asks (.shouldCreateDailyJob)
-          shouldCreateWeeklyJob <- asks (.shouldCreateWeeklyJob)
-          shouldCreateMonthlyJob <- asks (.shouldCreateMonthlyJob)
-          shouldCreateQuarterlyJob <- asks (.shouldCreateQuarterlyJob)
-          unless (or [shouldCreateDailyJob, shouldCreateWeeklyJob, shouldCreateMonthlyJob, shouldCreateQuarterlyJob]) $ do
-            throwError $ InternalError "No jobs enabled"
-
-          dailyJobTime <- asks (.dailySchedulerTime) >>= Time.getCurrentDailyJobTime
-          weeklyJobTime <- asks (.weeklySchedulerTime) >>= Time.getCurrentWeeklyJobTime
-          monthlyJobTime <- asks (.monthlySchedulerTime) >>= Time.getCurrentMonthlyJobTime
-          quarterlyJobTime <- asks (.quarterlySchedulerTime) >>= Time.getCurrentQuarterlyJobTime
-
-          when shouldCreateDailyJob $ do
-            QAllJ.createJobByTime @_ @'Daily dailyJobTime maxShards EmptyData
-            logInfo "Scheduled new Daily job"
-          when shouldCreateWeeklyJob $ do
-            QAllJ.createJobByTime @_ @'Weekly weeklyJobTime maxShards EmptyData
-            logInfo "Scheduled new Weekly job"
-          when shouldCreateMonthlyJob $ do
-            QAllJ.createJobByTime @_ @'Monthly monthlyJobTime maxShards EmptyData
-            logInfo "Scheduled new Monthly job"
-          when shouldCreateQuarterlyJob $ do
-            QAllJ.createJobByTime @_ @'Quarterly quarterlyJobTime maxShards EmptyData
-            logInfo "Scheduled new Quarterly job"
-
+          forM_ allChakras $ updateJobsByChakra allJobs
         logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))
         pure flowRt
     runSchedulerService handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.kvConfigUpdateFrequency handlerEnv.maxShards $ allocatorHandle flowRt' handlerEnv
+
+updateJobsByChakra :: [AnyJob Chakra] -> Chakra -> Flow ()
+updateJobsByChakra allJobs chakra = do
+  shouldCreateJob' <- shouldCreateJob chakra
+  when shouldCreateJob' $ do
+    configuredTime <- getConfiguredTime chakra
+    let pendingJobs = filter (isPendingJob chakra) allJobs
+    let mbScheduledJob = find (jobAlreadyScheduled configuredTime) pendingJobs
+    case mbScheduledJob of
+      Just scheduledJob -> do
+        -- complete all jobs except this one
+        forM_ pendingJobs $ \job -> do
+          when (getJobId job /= getJobId scheduledJob) $ do
+            completeJob job
+      Nothing -> do
+        -- complete all jobs and create new one
+        forM_ pendingJobs completeJob
+        createJob chakra configuredTime
+
+shouldCreateJob :: Chakra -> Flow Bool
+shouldCreateJob Daily = asks (.shouldCreateDailyJob)
+shouldCreateJob Weekly = asks (.shouldCreateWeeklyJob)
+shouldCreateJob Monthly = asks (.shouldCreateMonthlyJob)
+shouldCreateJob Quarterly = asks (.shouldCreateQuarterlyJob)
+
+getConfiguredTime :: Chakra -> Flow UTCTime
+getConfiguredTime Daily = asks (.dailySchedulerTime) >>= Time.getCurrentDailyJobTime
+getConfiguredTime Weekly = asks (.weeklySchedulerTime) >>= Time.getCurrentWeeklyJobTime
+getConfiguredTime Monthly = asks (.monthlySchedulerTime) >>= Time.getCurrentMonthlyJobTime
+getConfiguredTime Quarterly = asks (.quarterlySchedulerTime) >>= Time.getCurrentQuarterlyJobTime
+
+isPendingJob :: Chakra -> AnyJob Chakra -> Bool
+isPendingJob chakra (AnyJob job) = do
+  let jobType = fromSing $ job.jobInfo.jobType
+  jobType == chakra && job.status == Pending
+
+jobAlreadyScheduled :: UTCTime -> AnyJob Chakra -> Bool
+jobAlreadyScheduled configuredTime (AnyJob job) =
+  abs (diffUTCTime configuredTime job.scheduledAt) < 30 -- 30 secs in case of any rounding issues
+
+getJobId :: AnyJob Chakra -> Id AnyJob
+getJobId (AnyJob job) = job.id
+
+completeJob :: AnyJob Chakra -> Flow ()
+completeJob (AnyJob job) = do
+  let jobType = fromSing $ job.jobInfo.jobType
+  QAllJ.markAsComplete (show jobType) job.id
+  logInfo $ "Completed old " <> show jobType <> " job: " <> show job.id
+
+createJob :: Chakra -> UTCTime -> Flow ()
+createJob chakra configuredTime = do
+  maxShards <- asks (.maxShards)
+  case chakra of
+    Daily -> QAllJ.createJobByTime @_ @'Daily configuredTime maxShards EmptyData
+    Weekly -> QAllJ.createJobByTime @_ @'Weekly configuredTime maxShards EmptyData
+    Monthly -> QAllJ.createJobByTime @_ @'Monthly configuredTime maxShards EmptyData
+    Quarterly -> QAllJ.createJobByTime @_ @'Quarterly configuredTime maxShards EmptyData
+  logInfo $ "Scheduled new " <> show chakra <> " job"

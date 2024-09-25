@@ -148,8 +148,6 @@ in  { esqDBReplicaCfg
     , httpClientOptions = common.httpClientOptions
     , encTools
     , maxShards = +5
-    , shouldCreateJobs = False
-    , shouldCompleteOldJobs = False
     , updateUserTags = False
     , parseQueryResults = False
     , usersInBatch = +100

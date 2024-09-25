@@ -23,7 +23,7 @@ where
 
 import Control.Lens.Operators hiding ((.=))
 import Data.Aeson
-import Data.OpenApi as OpenApi hiding (tags)
+import Data.OpenApi as OpenApi hiding (name, tags)
 import qualified Data.Text as T
 import Domain.Types.ServiceTierType as DST
 import Kernel.Beam.Lib.UtilsTH
