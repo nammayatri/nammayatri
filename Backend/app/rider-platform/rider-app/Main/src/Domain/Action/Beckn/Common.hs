@@ -339,6 +339,9 @@ rideAssignedReqHandler req = do
   let booking = req.booking {DRB.bppBookingId = Just bppBookingId}
   mbMerchant <- CQM.findById booking.merchantId
   now <- getCurrentTime
+  let status = case mbMerchant of
+        Nothing -> if (diffUTCTime booking.startTime now > 1800) then DRide.UPCOMING else DRide.NEW
+        Just merchant -> if (diffUTCTime booking.startTime now > merchant.scheduleRideBufferTime) then DRide.UPCOMING else DRide.NEW
   if booking.isScheduled
     then do
       mbRide <- QRide.findByBPPRideId bppRideId
@@ -351,7 +354,7 @@ rideAssignedReqHandler req = do
               Notify.notifyDriverBirthDay booking.riderId booking.tripCategory driverName
           withLongRetry $ CallBPP.callTrack booking ride
         Nothing -> do
-          assignRideUpdate req mbMerchant booking DRide.UPCOMING now
+          assignRideUpdate req mbMerchant booking status now
     else do
       assignRideUpdate req mbMerchant booking DRide.NEW now
   where

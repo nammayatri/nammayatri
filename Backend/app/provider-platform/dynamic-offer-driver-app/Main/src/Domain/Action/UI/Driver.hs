@@ -1331,8 +1331,10 @@ acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Ma
 acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue merchant clientId = do
   whenJust reqOfferedValue $ \_ -> throwError (InvalidRequest "Driver can't offer rental fare")
   quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
-  booking <- QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)
-  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  now <- getCurrentTime
+  oldBooking <- QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId oldBooking.merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound oldBooking.merchantOperatingCityId.getId)
+  let booking = oldBooking{isScheduled = diffUTCTime oldBooking.startTime now > transporterConfig.scheduleRideBufferTime}
   isBookingAssignmentInprogress' <- CS.isBookingAssignmentInprogress booking.id
   when isBookingAssignmentInprogress' $ throwError RideRequestAlreadyAccepted
   isBookingCancelled' <- CS.isBookingCancelled booking.id
@@ -1347,8 +1349,7 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
       Nothing -> pure []
   uBooking <- QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
   handle (errHandler uBooking) $ sendRideAssignedUpdateToBAP uBooking ride driver vehicle False
-  when uBooking.isScheduled $ do
-    now <- getCurrentTime
+  when booking.isScheduled $ do
     let scheduledPickup = uBooking.fromLocation
         scheduledTime = uBooking.startTime
         pickupPos = LatLong {lat = scheduledPickup.lat, lon = scheduledPickup.lon}
