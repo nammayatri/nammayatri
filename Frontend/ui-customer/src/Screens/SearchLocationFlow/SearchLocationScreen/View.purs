@@ -122,15 +122,13 @@ searchLocationScreen initialState globalProps =
 
 view :: forall w. GlobalProps -> (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w 
 view globalProps push state = 
+  screenAnimation $
   relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , padding $ PaddingBottom EHC.safeMarginBottom
     , background Color.white900
-    ][  (if currentStageOn state ChooseYourRide then screenAnimation 
-          else PrestoAnim.animationSet
-                [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true] ) $ 
-        relativeLayout
+    ][ relativeLayout
           [ height MATCH_PARENT
           , width MATCH_PARENT
           , onBackPressed push $ const BackpressAction

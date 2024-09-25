@@ -1804,7 +1804,7 @@ eval (QuoteListModelActionController (QuoteListModelController.QuoteListItemActi
     _ <- pure $ clearTimerWithId id
     let
       autoSelecting = (getValueToLocalStore AUTO_SELECTING) == id
-    if (id == fromMaybe "" state.props.selectedQuote && autoSelecting && state.props.currentStage == QuoteList || state.props.currentStage == FindingQuotes ) then do
+    if (id == fromMaybe "" state.props.selectedQuote && autoSelecting && (state.props.currentStage == QuoteList || state.props.currentStage == FindingQuotes) ) then do
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_auto_assign"
       continueWithCmd state [ pure $ (QuoteListModelActionController (QuoteListModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) ]
     else do
