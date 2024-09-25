@@ -500,7 +500,7 @@ planSwitchGeneric serviceName planId (driverId, _, merchantOpCityId) = do
     when plan.subscribedFlagToggleAllowed $ DI.updateSubscription (currentDues < plan.maxCreditLimit) driverId
   (from, to) <- getStartTimeAndEndTimeRange merchantOpCityId driverId Nothing
   fork "update driver fee in plan switch" $ do
-    QDF.updateDfeeByOperatingCityAndVehicleCategory merchantOpCityId serviceName DF.ONGOING from to plan.vehicleCategory plan.id.getId isSubscriptionEnabledAtCategoryLevel
+    QDF.updateDfeeByOperatingCityAndVehicleCategory merchantOpCityId driverId serviceName DF.ONGOING from to plan.vehicleCategory plan.id.getId isSubscriptionEnabledAtCategoryLevel
   return Success
   where
     getDriverPaymentMode = \case
