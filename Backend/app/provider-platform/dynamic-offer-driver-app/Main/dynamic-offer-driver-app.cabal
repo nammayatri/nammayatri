@@ -342,6 +342,8 @@ library
       SharedLogic.FareProduct
       SharedLogic.GoogleMaps
       SharedLogic.GoogleTranslate
+      SharedLogic.KaalChakra.Chakras
+      SharedLogic.KaalChakra.Utils
       SharedLogic.LocationMapping
       SharedLogic.Merchant
       SharedLogic.MerchantPaymentMethod
