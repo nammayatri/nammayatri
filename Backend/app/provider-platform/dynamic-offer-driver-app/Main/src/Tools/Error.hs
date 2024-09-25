@@ -1217,6 +1217,8 @@ data DriverOnboardingError
   | NotValidatedUisngFrontendSDK
   | InvalidDocumentType Text
   | DriverOnboardingVehicleCategoryNotFound
+  | HyperVergeWebhookPayloadRecordNotFound
+  | DupilicateWebhookRecieved
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instance IsBaseError DriverOnboardingError where
@@ -1267,6 +1269,8 @@ instance IsBaseError DriverOnboardingError where
     NotValidatedUisngFrontendSDK -> Just "Document not validated using frontend SDK"
     InvalidDocumentType docType -> Just $ "Document type send in the query is invalid or not supported!!!! query = " <> docType
     DriverOnboardingVehicleCategoryNotFound -> Just $ "Driver Onboarding Vehicle Catgeory Not Found"
+    HyperVergeWebhookPayloadRecordNotFound -> Just "Request id in Hyperverge webhook does not match any request id in HypervergeVerification table."
+    DupilicateWebhookRecieved -> Just "Multiple webhooks received for same request id."
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -1316,6 +1320,8 @@ instance IsHTTPError DriverOnboardingError where
     NotValidatedUisngFrontendSDK -> "DOCUMENT_NOT_VALIDATED_USING_FRONTEND_SDK"
     InvalidDocumentType _ -> "INAVLID_DOCUMENT_TYPE"
     DriverOnboardingVehicleCategoryNotFound -> "DRIVER_ONBOARDING_VEHICLE_CATEGORY_NOT_FOUND"
+    HyperVergeWebhookPayloadRecordNotFound -> "HYPERVERGE_WEBHOOK_PAYLOAD_RECORD_NOT_FOUND"
+    DupilicateWebhookRecieved -> "DUPLICATE_WEBHOOK_RECEIVED"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -1363,6 +1369,8 @@ instance IsHTTPError DriverOnboardingError where
     NotValidatedUisngFrontendSDK -> E400
     InvalidDocumentType _ -> E400
     DriverOnboardingVehicleCategoryNotFound -> E500
+    HyperVergeWebhookPayloadRecordNotFound -> E400
+    DupilicateWebhookRecieved -> E400
 
 instance IsAPIError DriverOnboardingError
 
