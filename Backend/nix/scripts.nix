@@ -79,11 +79,22 @@ _:
           # Automatically applies Redundant bracket hint
           applyHintArg=false
           allArg=false
+          pathArg=""
           for arg in "$@"; do
+            argName=$(echo "$arg" | cut -d "=" -f 1)
+            argValue=$(echo "$arg" | cut -d "=" -f 2)
             if [[ "$arg" == "--apply-hint" ]];
             then applyHintArg=true
             elif [[ "$arg" == "--all" ]];
             then allArg=true
+            elif [[ "$argName" == "--path" ]];
+            then
+              if [[ "$applyHintArg" == false ]]
+              then
+                echo "path arg works only with applyHint arg"
+                exit 1
+              else pathArg=$argValue
+              fi
             fi
           done
 
@@ -114,14 +125,19 @@ _:
 
           if "$applyHintArg"
           then
-            applyHint "''${FLAKE_ROOT}/Backend/app/rider-platform/rider-app/Main/src-read-only" "$allArg"
-            applyHint "''${FLAKE_ROOT}/Backend/app/provider-platform/dynamic-offer-driver-app/Main/src-read-only" "$allArg"
-            applyHint "''${FLAKE_ROOT}/Backend/lib/yudhishthira/src-read-only" "$allArg"
-            applyHint "''${FLAKE_ROOT}/Backend/lib/payment/src-read-only" "$allArg"
-            applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/provider-dashboard/src-read-only" "$allArg"
-            applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/rider-dashboard/src-read-only" "$allArg"
-            applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/CommonAPIs/src-read-only" "$allArg"
-            applyHint "''${FLAKE_ROOT}/Backend/app/safety-dashboard/src-read-only" "$allArg"
+            if  [[ "$pathArg" == "" ]]
+            then
+              applyHint "''${FLAKE_ROOT}/Backend/app/rider-platform/rider-app/Main/src-read-only" "$allArg"
+              applyHint "''${FLAKE_ROOT}/Backend/app/provider-platform/dynamic-offer-driver-app/Main/src-read-only" "$allArg"
+              applyHint "''${FLAKE_ROOT}/Backend/lib/yudhishthira/src-read-only" "$allArg"
+              applyHint "''${FLAKE_ROOT}/Backend/lib/payment/src-read-only" "$allArg"
+              applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/provider-dashboard/src-read-only" "$allArg"
+              applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/rider-dashboard/src-read-only" "$allArg"
+              applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/CommonAPIs/src-read-only" "$allArg"
+              applyHint "''${FLAKE_ROOT}/Backend/app/safety-dashboard/src-read-only" "$allArg"
+            else
+              applyHint "''${FLAKE_ROOT}/''${pathArg}" true
+            fi
           else
             echo "No hints applied"
           fi
