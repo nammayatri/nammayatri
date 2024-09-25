@@ -129,7 +129,7 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateDynamicBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Id Merchant -> Text -> (Id DMOC.MerchantOperatingCity) -> DTDBT.BlockedBy -> Bool -> m ()
+updateDynamicBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Id Merchant -> Text -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> Bool -> m ()
 updateDynamicBlockedState driverId blockedReason blockedExpiryTime dashboardUserName merchantId reasonCode merchantOperatingCityId blockedBy isBlocked = do
   now <- getCurrentTime
   driverInfo <- findById driverId
@@ -138,7 +138,7 @@ updateDynamicBlockedState driverId blockedReason blockedExpiryTime dashboardUser
   uid <- generateGUID
   let driverBlockDetails =
         DTDBT.DriverBlockTransactions
-          { blockLiftTime = blockedExpiryTime <&> (\blockedTime -> addUTCTime (60 * 60 * fromIntegral blockedTime) now),
+          { blockLiftTime = expiryTime,
             blockReason = blockedReason,
             blockTimeInHours = blockedExpiryTime,
             driverId = driverId,
@@ -168,7 +168,7 @@ updateDynamicBlockedState driverId blockedReason blockedExpiryTime dashboardUser
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
 
-updateBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe Text -> Id Merchant -> (Id DMOC.MerchantOperatingCity) -> DTDBT.BlockedBy -> m ()
+updateBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe Text -> Id Merchant -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> m ()
 updateBlockedState driverId isBlocked blockStateModifier merchantId merchantOperatingCityId blockedBy = do
   now <- getCurrentTime
   driverInfo <- findById driverId
