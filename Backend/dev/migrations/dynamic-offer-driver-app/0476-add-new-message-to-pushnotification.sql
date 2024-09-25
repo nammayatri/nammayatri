@@ -2,10 +2,9 @@
 
 
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'FCM_CHAT_MESSAGE',
     'FCM_CHAT_MESSAGE',
     moc.merchant_id,
@@ -20,10 +19,9 @@ FROM
 
 
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'FCM_CHAT_MESSAGE',
     'FCM_CHAT_MESSAGE',
     moc.merchant_id,
@@ -38,10 +36,9 @@ FROM
 
 
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'FCM_CHAT_MESSAGE',
     'FCM_CHAT_MESSAGE',
     moc.merchant_id,
@@ -55,10 +52,9 @@ FROM
     atlas_driver_offer_bpp.merchant_operating_city moc;
 
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'FCM_CHAT_MESSAGE',
     'FCM_CHAT_MESSAGE',
     moc.merchant_id,
@@ -72,10 +68,9 @@ FROM
     atlas_driver_offer_bpp.merchant_operating_city moc;
 
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'FCM_CHAT_MESSAGE',
     'FCM_CHAT_MESSAGE',
     moc.merchant_id,
@@ -89,10 +84,9 @@ FROM
     atlas_driver_offer_bpp.merchant_operating_city moc;
 
 INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
-    id, fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
 )
 SELECT
-    atlas_driver_offer_bpp.uuid_generate_v4(),
     'FCM_CHAT_MESSAGE',
     'FCM_CHAT_MESSAGE',
     moc.merchant_id,

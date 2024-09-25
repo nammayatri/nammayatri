@@ -364,61 +364,6 @@ ALTER TABLE atlas_app.person
 ADD COLUMN udf2 character varying(255);
 
 
--- NOT FOR LOCAL HENCE COMMENTED --
--- FOR MASTER AND PROD ------------
--- CREATE TABLE atlas_app.merchant_push_notification_new (
---     body text NOT NULL,
---     fcm_notification_type text NOT NULL,
---     fcm_sub_category text,
---     id character varying(36) NOT NULL,
---     key text NOT NULL,
---     language text NOT NULL,
---     merchant_id character varying(36) NOT NULL,
---     merchant_operating_city_id character varying(36) NOT NULL,
---     title text NOT NULL,
---     trip_category text,
---     created_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
---     updated_at timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
--- 	PRIMARY KEY (id)
--- );
-
--- INSERT INTO atlas_app.merchant_push_notification_new
--- (
--- 	body,
--- 	fcm_notification_type,
--- 	id,
--- 	key,
--- 	language,
--- 	merchant_id,
--- 	merchant_operating_city_id,
--- 	title,
--- 	created_at,
--- 	updated_at
--- )
--- SELECT
--- 	body,
--- 	fcm_notification_type,
--- 	atlas_app.uuid_generate_v4() as id,
--- 	key,
--- 	language,
--- 	merchant_id,
--- 	merchant_operating_city_id,
--- 	title,
--- 	created_at,
--- 	updated_at
--- FROM atlas_app.merchant_push_notification;
-
--- ALTER TABLE atlas_app.merchant_push_notification RENAME TO merchant_push_notification_backup;
--- ALTER TABLE atlas_app.merchant_push_notification_new RENAME TO merchant_push_notification;
-
--- ALTER TABLE atlas_app.merchant_push_notification_backup
--- RENAME CONSTRAINT merchant_push_notification_pkey TO merchant_push_notification_pkey_bak;
-
--- ALTER TABLE atlas_app.merchant_push_notification
--- RENAME CONSTRAINT merchant_push_notification_new_pkey TO merchant_push_notification_pkey;
-
-
--- [NOTE:] PLEASE RUN THE ABOVE COMMENTED QUERIES BEFORE THESE UNIQUE updates --
 -- Ensure uniqueness when both trip_category and fcm_sub_category are not null
 CREATE UNIQUE INDEX unique_combination_dne_not_null
 ON atlas_app.merchant_push_notification (
@@ -431,6 +376,12 @@ ON atlas_app.merchant_push_notification (
     fcm_sub_category
 )
 WHERE trip_category IS NOT NULL AND fcm_sub_category IS NOT NULL;
+
+-- In master and prod drop existing pkeys and make id pkey
+-- Please drop all existing pkeys
+ALTER TABLE atlas_app.merchant_push_notification DROP CONSTRAINT merchant_push_notification_pkey;
+ALTER TABLE atlas_app.merchant_push_notification ADD PRIMARY KEY ( id);
+
 
 -- Ensure uniqueness when trip_category is null and fcm_sub_category is not null
 CREATE UNIQUE INDEX unique_combination_trip_null_fcm_sub_not_null

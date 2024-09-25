@@ -278,6 +278,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN scheduled_ride_
 --- Now DSL don't allow dropping tables instead we will drop not null constraint if any .Please be careful while running ---
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN min_ride_distance_threshold_for_referral_payout DROP NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN min_pickup_distance_threshold_for_referral_payout DROP NOT NULL;
---- Drop section ends. Please check before running ---
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN dp_white_listed_geohash SET DEFAULT ARRAY[]::TEXT[];
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN dp_black_listed_geohash SET DEFAULT ARRAY[]::TEXT[];
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dp_white_listed_geohash text[]  default ARRAY[]::TEXT[];
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dp_black_listed_geohash text[]  default ARRAY[]::TEXT[];
