@@ -36,12 +36,12 @@ import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Storage.Hedis as Redis
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Clickhouse.Booking as CHB
+import qualified Storage.Clickhouse.Person as CHP
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as RT
 import Tools.Auth (authTokenCacheKey)
@@ -94,10 +94,9 @@ getTotalRidesCount :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFl
 getTotalRidesCount riderId mSearchReq =
   case mSearchReq >>= DSR.totalRidesCount of
     Nothing -> do
-      person <- QP.findById riderId >>= fromMaybeM (PersonNotFound ("Person not found with id: " <> riderId.getId))
-      totalRidesCount <- CHB.findCountByRiderIdAndStatus riderId BT.COMPLETED person.createdAt
-      QP.updateTotalRidesCount riderId (Just totalRidesCount)
-      pure totalRidesCount
+      totalRidesCount <- CHP.findTotalRidesCountByPersonId riderId
+      QP.updateTotalRidesCount riderId totalRidesCount
+      pure $ fromMaybe 0 totalRidesCount
     Just totalCount -> pure totalCount
 
 getRidesCountInWindow ::
