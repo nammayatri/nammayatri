@@ -373,7 +373,7 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
   let isEligibleForCharge = mDriverPlan <&> (.enableServiceUsageCharge)
   latestManualPayment <- QDF.findLatestByFeeTypeAndStatusWithServiceName DF.RECURRING_INVOICE [DF.CLEARED, DF.COLLECTED_CASH] driverId serviceName
   latestAutopayPayment <- QDF.findLatestByFeeTypeAndStatusWithServiceName DF.RECURRING_EXECUTION_INVOICE [DF.CLEARED] driverId serviceName
-
+  vehicleCategory <- QVehicle.findById driverId
   now <- getCurrentTime
   let mbMandateSetupDate = mDriverPlan >>= (.mandateSetupDate)
   let mandateSetupDate = maybe now (\date -> if checkIFActiveStatus autoPayStatus then date else now) mbMandateSetupDate
@@ -385,8 +385,8 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
         mbOrder <- if invoice.invoiceStatus == INV.ACTIVE_INVOICE then SOrder.findById (cast invoice.id) else return Nothing
         maybe (pure (Nothing, Nothing)) orderBasedCheck mbOrder
       Nothing -> return (Nothing, Nothing)
-  let askForPlanSwitchByCity = (mPlan <&> (.merchantOpCityId)) /= Just merchantOperatingCityId
-  let askForPlanSwitchByVehicle = (mPlan <&> (.vehicleCategory)) /= (mDriverPlan >>= (.vehicleCategory))
+  let askForPlanSwitchByCity = maybe False (merchantOperatingCityId /=) (mDriverPlan <&> (.merchantOpCityId))
+  let askForPlanSwitchByVehicle = (vehicleCategory >>= (.category)) /= (mDriverPlan >>= (.vehicleCategory)) && isJust mDriverPlan
   return $
     CurrentPlanRes
       { currentPlanDetails = currentPlanEntity,
@@ -499,7 +499,8 @@ planSwitchGeneric serviceName planId (driverId, _, merchantOpCityId) = do
     let currentDues = calculateDues driverManualDuesFees
     when plan.subscribedFlagToggleAllowed $ DI.updateSubscription (currentDues < plan.maxCreditLimit) driverId
   (from, to) <- getStartTimeAndEndTimeRange merchantOpCityId driverId Nothing
-  QDF.updateDfeeByOperatingCityAndVehicleCategory merchantOpCityId serviceName DF.ONGOING from to plan.vehicleCategory plan.id.getId isSubscriptionEnabledAtCategoryLevel
+  fork "update driver fee in plan switch" $ do
+    QDF.updateDfeeByOperatingCityAndVehicleCategory merchantOpCityId driverId serviceName DF.ONGOING from to plan.vehicleCategory plan.id.getId isSubscriptionEnabledAtCategoryLevel
   return Success
   where
     getDriverPaymentMode = \case

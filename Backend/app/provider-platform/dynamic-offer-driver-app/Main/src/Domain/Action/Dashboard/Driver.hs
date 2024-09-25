@@ -142,6 +142,7 @@ import Domain.Types.Plan
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.Vehicle as DVeh
+import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DV
@@ -2216,7 +2217,7 @@ updateVehicleVariant _ _ req = do
   rcNumber <- decrypt vehicleRC.certificateNumber
   mVehicle <- QVehicle.findByRegistrationNo rcNumber
   RCQuery.updateVehicleVariant vehicleRC.id (Just req.vehicleVariant) Nothing Nothing
-  whenJust mVehicle $ \vehicle -> updateVehicleVariantAndServiceTier req.vehicleVariant vehicle
+  whenJust mVehicle $ \vehicle -> updateVehicleVariantAndServiceTier req.vehicleVariant vehicle $ DV.castVehicleVariantToVehicleCategory req.vehicleVariant
   pure Success
 
 bulkReviewRCVariant :: ShortId DM.Merchant -> Context.City -> [Common.ReviewRCVariantReq] -> Flow [Common.ReviewRCVariantRes]
@@ -2236,16 +2237,16 @@ bulkReviewRCVariant _ _ req = do
       mVehicle <- QVehicle.findByRegistrationNo rcNumber
       RCQuery.updateVehicleVariant vehicleRC.id rcReq.vehicleVariant rcReq.markReviewed (not <$> rcReq.markReviewed)
       whenJust mVehicle $ \vehicle -> do
-        whenJust rcReq.vehicleVariant $ \variant -> updateVehicleVariantAndServiceTier variant vehicle
+        whenJust rcReq.vehicleVariant $ \variant -> updateVehicleVariantAndServiceTier variant vehicle $ DV.castVehicleVariantToVehicleCategory variant
 
-updateVehicleVariantAndServiceTier :: DV.VehicleVariant -> DVeh.Vehicle -> Flow ()
-updateVehicleVariantAndServiceTier variant vehicle = do
+updateVehicleVariantAndServiceTier :: DV.VehicleVariant -> DVeh.Vehicle -> DVC.VehicleCategory -> Flow ()
+updateVehicleVariantAndServiceTier variant vehicle vehicleCategory = do
   driver <- B.runInReplica $ QPerson.findById vehicle.driverId >>= fromMaybeM (PersonDoesNotExist vehicle.driverId.getId)
   driverInfo' <- QDriverInfo.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
   -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
   vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId
   let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction True driverInfo' vehicle vehicleServiceTiers
-  QVehicle.updateVariantAndServiceTiers variant availableServiceTiersForDriver vehicle.driverId
+  QVehicle.updateVariantAndServiceTiers variant availableServiceTiersForDriver (Just vehicleCategory) vehicle.driverId
 
 updateDriverTag :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateDriverTagReq -> Flow APISuccess
 updateDriverTag merchantShortId opCity driverId req = do

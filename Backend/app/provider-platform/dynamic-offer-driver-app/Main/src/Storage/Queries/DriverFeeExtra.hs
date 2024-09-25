@@ -750,6 +750,7 @@ findAllChildsOFDriverFee merchantOperatingCityId startTime endTime status servic
 updateDfeeByOperatingCityAndVehicleCategory ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id MerchantOperatingCity ->
+  Id Person ->
   ServiceNames ->
   DriverFeeStatus ->
   UTCTime ->
@@ -758,7 +759,7 @@ updateDfeeByOperatingCityAndVehicleCategory ::
   Text ->
   Bool ->
   m ()
-updateDfeeByOperatingCityAndVehicleCategory merchantOperatingCityId serviceName status from to vehicleCategory planId isSubscriptionEnabledAtCategoryLevel = do
+updateDfeeByOperatingCityAndVehicleCategory merchantOperatingCityId driverId serviceName status from to vehicleCategory planId isSubscriptionEnabledAtCategoryLevel = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamDF.planId (Just planId),
@@ -769,7 +770,8 @@ updateDfeeByOperatingCityAndVehicleCategory merchantOperatingCityId serviceName 
             Se.Is BeamDF.status $ Se.Eq status,
             Se.Is BeamDF.startTime $ Se.GreaterThanOrEq from,
             Se.Is BeamDF.endTime $ Se.LessThanOrEq to,
-            Se.Is BeamDF.vehicleCategory $ Se.Eq (Just vehicleCategory)
+            Se.Is BeamDF.vehicleCategory $ Se.Eq (Just vehicleCategory),
+            Se.Is BeamDF.driverId $ Se.Eq (getId driverId)
           ]
             <> [Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId) | isSubscriptionEnabledAtCategoryLevel]
         )
