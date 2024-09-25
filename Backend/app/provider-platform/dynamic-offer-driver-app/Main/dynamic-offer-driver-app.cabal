@@ -219,6 +219,7 @@ library
       Domain.Action.UI.Person
       Domain.Action.UI.PlaceNameCache
       Domain.Action.UI.Plan
+      Domain.Action.UI.PriceBreakup
       Domain.Action.UI.Rating
       Domain.Action.UI.Reels
       Domain.Action.UI.ReferralPayout
@@ -634,6 +635,7 @@ library
       API.Action.UI.EditBooking
       API.Action.UI.FareCalculator
       API.Action.UI.LmsModule
+      API.Action.UI.PriceBreakup
       API.Action.UI.Reels
       API.Action.UI.ReferralPayout
       API.Action.UI.SocialLogin
