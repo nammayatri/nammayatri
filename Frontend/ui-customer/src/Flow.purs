@@ -1292,15 +1292,12 @@ homeScreenFlow = do
               )
       rideSearchFlow "NORMAL_FLOW"
     SEARCH_LOCATION input state -> do
-      let
-        cityConfig = case state.props.isSource of
-          Just false ->
-            let
-              config = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
-            in
-              config { geoCodeConfig { strictBounds = true } }
-          _ -> defaultCityConfig
-
+      let 
+        config = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
+        cityConfig = 
+          case state.props.isSource of
+            Just true -> config { geoCodeConfig { strictBounds = false } }
+            _ -> config
         event = case state.props.isSource of
           Just true -> "ny_user_auto_complete_api_trigger_src"
           Just false -> "ny_user_auto_complete_api_trigger_dst"
@@ -5272,14 +5269,10 @@ searchLocationFlow = do
       { currentLat, currentLng } = { currentLat: fromMaybe 0.0 state.data.currentLoc.lat, currentLng: fromMaybe 0.0 state.data.currentLoc.lon }
 
       { lat, lng } = maybe { lat: currentLat, lng: currentLng } (\loc -> { lat: fromMaybe 0.0 loc.lat, lng: fromMaybe 0.0 loc.lon }) $ maybe Nothing (\currField -> if currField == SearchLocPickup then (state.data.srcLoc) else (state.data.destLoc)) $ state.props.focussedTextField
-
+      config = getCityConfig state.appConfig.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
       cityConfig = case state.props.focussedTextField of
-        Just SearchLocDrop ->
-          let
-            config = getCityConfig state.appConfig.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
-          in
-            config { geoCodeConfig { strictBounds = true } }
-        _ -> defaultCityConfig
+        Just SearchLocPickup -> config { geoCodeConfig { strictBounds = false } }
+        _ -> config
     (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq searchString lat lng (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey) "" cityConfig.geoCodeConfig Nothing "")
     let
       sortedByDistanceList = sortPredictionByDistance searchLocationResp.predictions
