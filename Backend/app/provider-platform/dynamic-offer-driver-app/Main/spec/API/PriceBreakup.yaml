@@ -1,0 +1,14 @@
+imports:
+  Ride: Domain.Types.Ride
+  RateCardItem: API.Types.UI.DriverOnboardingV2
+
+module: PriceBreakup
+types: {}
+apis:
+  - GET:
+      endpoint: /priceBreakup
+      mandatoryQuery:
+        rideId: Id Ride
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: "[RateCardItem]"
