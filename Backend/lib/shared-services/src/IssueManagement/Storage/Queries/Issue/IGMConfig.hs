@@ -6,7 +6,6 @@ module IssueManagement.Storage.Queries.Issue.IGMConfig where
 
 import qualified Data.Time as T
 import IssueManagement.Common
-import IssueManagement.Domain.Types.Issue.IGMConfig
 import IssueManagement.Domain.Types.Issue.IGMConfig as DIGMConfig
 import qualified IssueManagement.Storage.Beam.Issue.IGMConfig as Beam
 import IssueManagement.Storage.BeamFlow
@@ -19,7 +18,7 @@ create = createWithKV
 createMany :: BeamFlow m r => ([IGMConfig] -> m ())
 createMany = traverse_ create
 
-findByMerchantId :: BeamFlow m r => (Kernel.Types.Id.Id Merchant) -> m (Maybe IGMConfig)
+findByMerchantId :: BeamFlow m r => Kernel.Types.Id.Id Merchant -> m (Maybe IGMConfig)
 findByMerchantId (Kernel.Types.Id.Id merchantId) = do findOneWithKV [Is Beam.merchantId $ Eq merchantId]
 
 findByPrimaryKey :: BeamFlow m r => (Kernel.Types.Id.Id IGMConfig -> m (Maybe IGMConfig))

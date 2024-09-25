@@ -26,7 +26,6 @@ data IGMIssue = IGMIssue
     respondentName :: Maybe Text,
     respondentEmail :: Maybe Text,
     respondentPhone :: Maybe Text,
-    resolutionAction :: Maybe Text,
     respondentAction :: Maybe Text,
     respondingMerchantId :: Maybe Text,
     respondentEntityType :: Maybe Text,
@@ -45,4 +44,9 @@ $(mkBeamInstancesForEnumAndList ''IssueType)
 
 $(mkBeamInstancesForEnumAndList ''Status)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''Spec.Domain)
+$(mkBeamInstancesForEnumAndList ''Spec.Domain)
+
+mkStringToDomainType :: Text -> Spec.Domain
+mkStringToDomainType "ONDC:TRV10" = Spec.ON_DEMAND
+mkStringToDomainType "ONDC:TRV11" = Spec.PUBLIC_TRANSPORT
+mkStringToDomainType _ = error "Invalid Domain"

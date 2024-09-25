@@ -1,5 +1,7 @@
 module IssueManagement.Beckn.ACL.OnIssueStatus where
 
+import Data.List (sortBy)
+import Data.Ord (Down (..), comparing)
 import qualified IGM.Enums as Spec
 import qualified IGM.Types as Spec
 import qualified IGM.Utils as Utils
@@ -25,6 +27,7 @@ buildOnIssueStatusReq req = do
       gro = issue.issueResolutionProvider >>= (.resolutionProviderRespondentInfo.resolutionProviderRespondentInfoResolutionSupport) >>= (.resolutionSupportGros) >>= listToMaybe
       groContact = gro >>= (.gROContact)
       groPerson = gro >>= (.gROPerson)
+  respondentAction <- fromMaybeM (InvalidRequest "RespondentActions Missing") $ listToMaybe <$> sortBy (comparing (Down . (.respondentActionUpdatedAt))) =<< (.issueActionsRespondentActions) =<< issue.issueIssueActions
   pure $
     DOnIssueStatus.DOnIssueStatus
       { id = issue.issueId,
@@ -32,7 +35,7 @@ buildOnIssueStatusReq req = do
         respondentName = groPerson >>= (.complainantPersonName),
         respondentEmail = groContact >>= (.gROContactEmail),
         respondentPhone = groContact >>= (.gROContactPhone),
-        respondentAction = mbResolution >>= (.issueResolutionAction),
+        respondentAction = respondentAction.respondentActionRespondentAction,
         resolutionActionTriggered = mbResolution <&> (.issueResolutionActionTriggered),
         updatedAt = issue.issueUpdatedAt
       }

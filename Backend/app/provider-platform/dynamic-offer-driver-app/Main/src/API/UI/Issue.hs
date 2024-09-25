@@ -55,7 +55,6 @@ handler = externalHandler
         :<|> deleteIssue (personId, merchantId, merchantOpCityId)
         :<|> updateIssueStatus (personId, merchantId, merchantOpCityId)
         :<|> igmIssueStatus (personId, merchantId, merchantOpCityId)
-        :<|> resolveIGMIssue (personId, merchantId)
 
 driverIssueHandle :: Common.ServiceHandle Flow
 driverIssueHandle =
@@ -98,10 +97,10 @@ castPersonById driverId = do
 castRideById :: Id Common.Ride -> Id Common.Merchant -> Flow (Maybe Common.Ride)
 castRideById rideId merchantId = do
   ride <- runInReplica $ QR.findById (cast rideId)
-  return $ fmap castRideMapping ride
+  return $ fmap castRide ride
   where
     castRide ride =
-      Common.Ride (cast ride.id) (ShortId ride.shortId.getShortId) (cast ride.merchantOperatingCityId) ride.createdAt Nothing (maybe merchantId cast ride.merchantId)  (cast <$> (Just ride.driverId))
+      Common.Ride (cast ride.id) (ShortId ride.shortId.getShortId) (cast ride.merchantOperatingCityId) ride.createdAt Nothing (maybe merchantId cast ride.merchantId) (cast <$> (Just ride.driverId))
 
 castMOCityById :: Id Common.MerchantOperatingCity -> Flow (Maybe Common.MerchantOperatingCity)
 castMOCityById moCityId = do
@@ -122,15 +121,16 @@ castMOCity moCity =
     }
 
 castBookingById :: Id Common.Booking -> Flow (Maybe Common.Booking)
-castBookingById bookingId = do
-  booking <- runInReplica $ QB.findById (cast bookingId)
-  return $ fmap castBooking booking
+castBookingById bookingId =
+  runInReplica (QB.findById $ cast bookingId) >>= \case
+    Nothing -> pure Nothing
+    Just booking -> Just . castBooking booking <$> parseBaseUrl booking.bapUri
   where
-    castBooking booking =
+    castBooking booking bapUri =
       Common.Booking
         { id = cast booking.id,
           bapId = Just booking.bapId,
-          bapUri = Just booking.bapUri,
+          bapUri = Just bapUri,
           bppId = Nothing,
           bppUri = Nothing,
           quoteId = Nothing,
@@ -139,12 +139,12 @@ castBookingById bookingId = do
         }
 
 castRideByBookingId :: Id Common.Booking -> Id Common.Merchant -> Flow (Maybe Common.Ride)
-castRideByBookingId bookingId _ = do
+castRideByBookingId bookingId merchantId = do
   ride <- runInReplica $ QR.findOneByBookingId (cast bookingId)
   return $ fmap castRideMapping ride
   where
     castRideMapping ride =
-      Common.Ride (cast ride.id) (ShortId ride.shortId.getShortId) (cast ride.merchantOperatingCityId) ride.createdAt Nothing (cast <$> (Just ride.driverId))
+      Common.Ride (cast ride.id) (ShortId ride.shortId.getShortId) (cast ride.merchantOperatingCityId) ride.createdAt Nothing (maybe merchantId cast ride.merchantId) (cast <$> (Just ride.driverId))
 
 castMerchantById :: Id Common.Merchant -> Flow (Maybe Common.Merchant)
 castMerchantById merchantId = do
@@ -282,11 +282,8 @@ getIssueCategory (driverId, merchantId, merchantOperatingCityId) language = with
 getIssueOption :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id Domain.IssueCategory -> Maybe (Id Domain.IssueOption) -> Maybe (Id Domain.IssueReport) -> Maybe (Id Common.Ride) -> Maybe Language -> FlowHandler Common.IssueOptionListRes
 getIssueOption (driverId, merchantId, merchantOpCityId) issueCategoryId issueOptionId issueReportId mbRideId language = withFlowHandlerAPI $ Common.getIssueOption (cast driverId, cast merchantId, cast merchantOpCityId) issueCategoryId issueOptionId issueReportId mbRideId language driverIssueHandle Common.DRIVER
 
-updateIssueStatus :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id Domain.IssueReport -> Maybe Language -> Common.IssueStatusUpdateReq -> FlowHandler Common.IssueStatusUpdateRes
-updateIssueStatus (driverId, merchantId, merchantOpCityId) issueReportId language req = withFlowHandlerAPI $ Common.updateIssueStatus (cast driverId, cast merchantId, cast merchantOpCityId) issueReportId language req driverIssueHandle Common.DRIVER
-
 igmIssueStatus :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
 igmIssueStatus _ = withFlowHandlerAPI $ throwError $ InvalidRequest "IGM Issue Status should not be called by BPP"
 
-resolveIGMIssue :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueReport -> Common.CustomerResponse -> Common.CustomerRating -> FlowHandler APISuccess
-resolveIGMIssue _ _ _ _ = withFlowHandlerAPI $ throwError $ InvalidRequest "IGM Resolve Issue should not be called by BPP"
+updateIssueStatus :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id Domain.IssueReport -> Maybe Language -> Common.IssueStatusUpdateReq -> FlowHandler Common.IssueStatusUpdateRes
+updateIssueStatus (driverId, merchantId, merchantOpCityId) issueReportId language req = withFlowHandlerAPI $ Common.updateIssueStatus (cast driverId, cast merchantId, cast merchantOpCityId) issueReportId language req driverIssueHandle Common.DRIVER

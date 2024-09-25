@@ -1,6 +1,8 @@
 module IssueManagement.Domain.Action.Beckn.OnIssueStatus where
 
 import Control.Applicative
+import Data.Aeson
+import IGM.Enums
 import qualified IssueManagement.Domain.Types.Issue.IGMIssue as DIGM
 import IssueManagement.Storage.BeamFlow
 import qualified IssueManagement.Storage.Queries.Issue.IGMIssue as QIGM
@@ -29,7 +31,7 @@ validateRequest ::
     CoreMetrics m
   ) =>
   DOnIssueStatus ->
-  m (DIGM.IGMIssue)
+  m DIGM.IGMIssue
 validateRequest req = QIGM.findByPrimaryKey (Id $ req.id) >>= fromMaybeM (InvalidRequest "Issue not found")
 
 onIssueStatus ::
@@ -41,20 +43,25 @@ onIssueStatus ::
   DIGM.IGMIssue ->
   m ()
 onIssueStatus req issue = do
+  let issueStatus = fromMaybe issue.issueStatus $ do
+        respondentAction <- req.respondentAction
+        respondentAction' <- decode (encode respondentAction)
+        mapActionToStatus respondentAction'
   let updatedIssue =
         issue
           { DIGM.respondentName = req.respondentName <|> issue.respondentName,
             DIGM.respondentEmail = req.respondentEmail <|> issue.respondentEmail,
             DIGM.respondentPhone = req.respondentPhone <|> issue.respondentPhone,
             DIGM.respondentAction = req.respondentAction <|> issue.respondentAction,
-            DIGM.issueStatus = mapActionToStatus req.respondentAction & fromMaybe issue.issueStatus,
+            DIGM.issueStatus = issueStatus,
             DIGM.updatedAt = convertRFC3339ToUTC req.updatedAt
           }
   QIGM.updateByPrimaryKey updatedIssue
   pure ()
 
-mapActionToStatus :: Maybe Text -> Maybe DIGM.Status
-mapActionToStatus (Just "RESOLVED") = Just DIGM.RESOLVED
+mapActionToStatus :: Maybe ResolutionAction -> Maybe DIGM.Status
+mapActionToStatus (Just RESOLVE) = Just DIGM.RESOLVED
+mapActionToStatus (Just REJECT) = Just DIGM.CLOSED
 mapActionToStatus _ = Nothing
 
 -- shrey00 : add rating option when accepting/escalating issue

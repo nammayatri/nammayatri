@@ -31,7 +31,6 @@ library
       API.Beckn.Cancel
       API.Beckn.Confirm
       API.Beckn.IGM.Issue
-      API.Beckn.IGM.OnIssue
       API.Beckn.Init
       API.Beckn.Rating
       API.Beckn.Search

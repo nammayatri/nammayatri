@@ -21,16 +21,12 @@ import IssueManagement.Domain.Action.UI.Issue
 import qualified IssueManagement.Domain.Action.UI.Issue as Common
 import IssueManagement.Domain.Types.Issue.IGMConfig
 import qualified IssueManagement.Domain.Types.Issue.IGMIssue as DIGM
--- import Kernel.Prelude
--- import EulerHS.Prelude (withFile)
-
 import IssueManagement.Storage.BeamFlow
 import qualified IssueManagement.Storage.Queries.Issue.IGMConfig as QIGMConfig
 import qualified IssueManagement.Storage.Queries.Issue.IGMIssue as QIGM
 import qualified IssueManagement.Storage.Queries.Issue.IssueCategory as QIC
 import qualified IssueManagement.Storage.Queries.Issue.IssueOption as QIO
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
--- import IssueManagement.Storage.BeamFlow
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -43,7 +39,7 @@ import Kernel.Utils.Common
 data DIssue = DIssue
   { issueId :: Text,
     issueCategory :: Text,
-    issueSubCategory :: Maybe Text,
+    issueSubCategory :: Maybe Spec.IssueSubCategory,
     issueTypeText :: Text,
     issueStatusText :: Text,
     bookingId :: Text,
@@ -74,7 +70,7 @@ data IssueRes = IssueRes
 data ValidatedDIssue = ValidatedDIssue
   { issueId :: Text,
     issueCategory :: Text,
-    issueSubCategory :: Maybe Text,
+    issueSubCategory :: Maybe Spec.IssueSubCategory,
     issueType :: DIGM.IssueType,
     issueStatus :: DIGM.Status,
     booking :: Booking,
@@ -158,7 +154,6 @@ openBecknIssue dIssue@ValidatedDIssue {..} iHandle = do
             DIGM.domain = Spec.PUBLIC_TRANSPORT,
             DIGM.issueType = issueType,
             DIGM.respondentAction = Nothing,
-            DIGM.resolutionAction = Nothing,
             DIGM.respondentName = Nothing,
             DIGM.respondentEmail = Nothing,
             DIGM.respondentPhone = Nothing,

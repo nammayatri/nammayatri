@@ -20,16 +20,13 @@ create = createWithKV
 createMany :: BeamFlow m r => ([DIGMIssue.IGMIssue] -> m ())
 createMany = traverse_ create
 
-findByinternalIssueId :: BeamFlow m r => (Id DIGMIssue.IGMIssue -> m (Maybe DIGMIssue.IGMIssue))
-findByinternalIssueId (Id id) = do findOneWithKV [Is Beam.id $ Eq id]
-
 findByPrimaryKey :: BeamFlow m r => (Id DIGMIssue.IGMIssue -> m (Maybe DIGMIssue.IGMIssue))
 findByPrimaryKey (Id id) = do findOneWithKV [And [Is Beam.id $ Eq id]]
 
-findAllByRiderIdandStatus :: BeamFlow m r => (Maybe (Id Person) -> DIGMIssue.Status -> m ([DIGMIssue.IGMIssue]))
+findAllByRiderIdandStatus :: BeamFlow m r => (Maybe (Id Person) -> DIGMIssue.Status -> m [DIGMIssue.IGMIssue])
 findAllByRiderIdandStatus riderId issueStatus = do findAllWithKV [And [Is Beam.riderId $ Eq (getId <$> riderId), Is Beam.issueStatus $ Eq issueStatus]]
 
-findAllByStatus :: BeamFlow m r => (DIGMIssue.Status -> m ([DIGMIssue.IGMIssue]))
+findAllByStatus :: BeamFlow m r => (DIGMIssue.Status -> m [DIGMIssue.IGMIssue])
 findAllByStatus issueStatus = do findAllWithKV [Is Beam.issueStatus $ Eq issueStatus]
 
 findByTransactionId :: BeamFlow m r => (Data.Text.Text -> m (Maybe DIGMIssue.IGMIssue))
@@ -48,7 +45,6 @@ updateByPrimaryKey (DIGMIssue.IGMIssue {..}) = do
       Set Beam.issueStatus issueStatus,
       Set Beam.issueType issueType,
       Set Beam.merchantId (getId <$> merchantId),
-      Set Beam.resolutionAction resolutionAction,
       Set Beam.respondentAction respondentAction,
       Set Beam.updatedAt _now
     ]
@@ -66,7 +62,7 @@ instance FromTType' Beam.IGMIssue DIGMIssue.IGMIssue where
             respondingMerchantId = respondingMerchantId,
             respondentEntityType = respondentEntityType,
             transactionId = transactionId,
-            domain = domain,
+            domain = mkStringToDomainType domain,
             merchantOperatingCityId = Id <$> merchantOperatingCityId,
             customerName = customerName,
             customerPhone = customerPhone,
@@ -75,7 +71,6 @@ instance FromTType' Beam.IGMIssue DIGMIssue.IGMIssue where
             issueStatus = issueStatus,
             issueType = issueType,
             merchantId = Id <$> merchantId,
-            resolutionAction = resolutionAction,
             respondentName = respondentName,
             respondentEmail = respondentEmail,
             respondentPhone = respondentPhone,
@@ -93,7 +88,7 @@ instance ToTType' Beam.IGMIssue DIGMIssue.IGMIssue where
         Beam.respondingMerchantId = respondingMerchantId,
         Beam.respondentEntityType = respondentEntityType,
         Beam.transactionId = transactionId,
-        Beam.domain = domain,
+        Beam.domain = show domain,
         Beam.merchantOperatingCityId = getId <$> merchantOperatingCityId,
         Beam.customerName = customerName,
         Beam.customerPhone = customerPhone,
@@ -102,7 +97,6 @@ instance ToTType' Beam.IGMIssue DIGMIssue.IGMIssue where
         Beam.issueStatus = issueStatus,
         Beam.issueType = issueType,
         Beam.merchantId = getId <$> merchantId,
-        Beam.resolutionAction = resolutionAction,
         Beam.respondentEmail = respondentEmail,
         Beam.respondentPhone = respondentPhone,
         Beam.respondentName = respondentName,

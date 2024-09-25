@@ -128,10 +128,6 @@ data Driver
 
 data User
 
-newtype Booking = Booking
-  { id :: Id Booking
-  }
-
 data LocationAPIEntity = LocationAPIEntity
   { lat :: Double,
     lon :: Double,

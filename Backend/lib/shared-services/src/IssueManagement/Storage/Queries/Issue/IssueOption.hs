@@ -3,6 +3,7 @@
 module IssueManagement.Storage.Queries.Issue.IssueOption where
 
 import Database.Beam.Postgres (Postgres)
+import qualified IGM.Enums as Spec
 import IssueManagement.Domain.Types.Issue.IssueCategory
 import IssueManagement.Domain.Types.Issue.IssueMessage
 import IssueManagement.Domain.Types.Issue.IssueOption as DomainIO
@@ -31,6 +32,7 @@ updateByPrimaryKey IssueOption {..} =
       Set BeamIO.restrictedVariants restrictedVariants,
       Set BeamIO.restrictedRideStatuses restrictedRideStatuses,
       Set BeamIO.showOnlyWhenUserBlocked showOnlyWhenUserBlocked,
+      Set BeamIO.igmSubCategory igmSubCategory,
       Set BeamIO.createdAt createdAt,
       Set BeamIO.updatedAt updatedAt
     ]
@@ -80,9 +82,8 @@ findByIdAndLanguage issueOptionId language = do
 findById :: BeamFlow m r => Id IssueOption -> m (Maybe IssueOption)
 findById (Id issueOptionId) = findOneWithKV [Is BeamIO.id $ Eq issueOptionId]
 
-findByIGMIssueSubCategory :: BeamFlow m r => Maybe Text -> m (Maybe IssueOption)
-findByIGMIssueSubCategory (Just igmSubCategory) = findOneWithKV [Is BeamIO.igmSubCategory $ Eq $ Just igmSubCategory]
-findByIGMIssueSubCategory Nothing = pure Nothing
+findByIGMIssueSubCategory :: BeamFlow m r => Maybe Spec.IssueSubCategory -> m (Maybe IssueOption)
+findByIGMIssueSubCategory igmSubCategory = findOneWithKV [Is BeamIO.igmSubCategory $ Eq igmSubCategory]
 
 updatePriority :: BeamFlow m r => Id IssueOption -> Int -> m ()
 updatePriority issueOptionId priority =

@@ -22,6 +22,7 @@ module IGM.Types
     IssueActions (..),
     IssueCategory (..),
     IssueDescription (..),
+    IssueDescriptionAdditionalDesc (..),
     IssueExpectedResolutionTime (..),
     IssuePost200Response (..),
     IssuePost200ResponseError (..),
@@ -639,7 +640,9 @@ data IssueDescription = IssueDescription
   { -- |
     issueDescriptionLongDesc :: Maybe Text,
     -- |
-    issueDescriptionShortDesc :: Maybe Text
+    issueDescriptionShortDesc :: Maybe Text,
+    -- |
+    issueDescriptionAdditionalDesc :: Maybe IssueDescriptionAdditionalDesc
   }
   deriving (Show, Eq, Generic, Data)
 
@@ -658,7 +661,35 @@ optionsIssueDescription =
   where
     table =
       [ ("issueDescriptionLongDesc", "long_desc"),
-        ("issueDescriptionShortDesc", "short_desc")
+        ("issueDescriptionShortDesc", "short_desc"),
+        ("issueDescriptionAdditionalDesc", "additional_desc")
+        -- ("issueDescriptionImage", "image")
+      ]
+
+data IssueDescriptionAdditionalDesc = IssueDescriptionAdditionalDesc
+  { -- |
+    issueDescriptionAdditionalDescUrl :: Maybe Text,
+    -- |
+    issueDescriptionAdditionalDescContentType :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON IssueDescriptionAdditionalDesc where
+  parseJSON = genericParseJSON optionsIssueDescriptionAdditionalDesc
+
+instance ToJSON IssueDescriptionAdditionalDesc where
+  toJSON = genericToJSON optionsIssueDescriptionAdditionalDesc
+
+optionsIssueDescriptionAdditionalDesc :: Options
+optionsIssueDescriptionAdditionalDesc =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("issueDescriptionAdditionalDescUrl", "url"),
+        ("issueDescriptionAdditionalDescContentType", "content_type")
       ]
 
 -- | Describes time in its various forms. It can be a single point in time; duration; or a structured timetable of operations

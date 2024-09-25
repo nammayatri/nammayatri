@@ -12,11 +12,16 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module IGM.Enums where
 
 import Data.Aeson
 import Data.Aeson.Types (parseFail, typeMismatch)
+import Data.Set (Set)
+import qualified Data.Set as Set
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.GenericPretty
@@ -284,4 +289,42 @@ data IssueSubCategory
   | PMT104 -- "Settlement to receiver account not done as per settlement period"
   | PMT105 -- "Partial payment done to receiver entity"
   | PMT106 -- "delayed payment by collector entity and concerns on delayed interest"
-  deriving (Eq, Generic, ToJSON, FromJSON, Show)
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(mkBeamInstancesForEnumAndList ''IssueSubCategory)
+
+metroSubcategories :: Set IssueSubCategory
+metroSubcategories =
+  Set.fromList
+    [ ORD101,
+      FLM101,
+      FLM102,
+      FLM103,
+      FLM104,
+      PMT101,
+      PMT102,
+      PMT103,
+      PMT104,
+      PMT105,
+      PMT106
+    ]
+
+onDemandSubcategories :: Set IssueSubCategory
+onDemandSubcategories =
+  Set.fromList
+    [ FLM111,
+      FLM112,
+      FLM113,
+      FLM114,
+      FLM115,
+      ORD111,
+      PMT111,
+      PMT112,
+      PMT113,
+      PMT114,
+      PMT115,
+      PMT116,
+      PMT117,
+      PMT118,
+      PMT119
+    ]

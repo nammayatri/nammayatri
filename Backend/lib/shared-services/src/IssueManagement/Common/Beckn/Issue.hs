@@ -1,7 +1,5 @@
 module IssueManagement.Common.Beckn.Issue where
 
--- import qualified IssueManagement.Beckn.ACL.Issue as ACL
--- import qualified Beckn.ACL.IGM.OnIssue as ACL
 import qualified BecknV2.IGM.APIs as Spec
 import IssueManagement.Common
 import qualified Kernel.Types.Beckn.Domain as Domain

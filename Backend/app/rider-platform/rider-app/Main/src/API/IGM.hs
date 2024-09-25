@@ -15,23 +15,8 @@
 module API.IGM where
 
 import qualified API.Beckn.IGM.Issue as Issue
--- import qualified API.Beckn.IGM.OnIssueStatus as OnIssueStatus
 import Environment
 
--- type API =
---   "beckn" :> "cab" :> "v1"
---     :> SignatureAuth 'Domain.MOBILITY "Authorization"
---     :> ( OnIssue.API
---            :<|> OnIssueStatus.API
---        )
-
--- type APIM =
---   "beckn" :> "cab" :> "v1"
---     :> Capture "merchantId" (Id DM.Merchant)
---     :> SignatureAuth 'Domain.MOBILITY "Authorization"
---     :> ( OnIssue.API
---            :<|> OnIssueStatus.API
---        )
 type IGMAPI = Issue.API
 
 handler :: FlowServer IGMAPI

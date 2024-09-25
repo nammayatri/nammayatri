@@ -28,26 +28,30 @@ import qualified Storage.Queries.FRFSTicketBooking as QFTB
 import Storage.Queries.Ride as QRide
 import Tools.Error
 
-data IGMIssueReq = IGMIssueReq
+data OnDemandIGMIssueReqData = OnDemandIGMIssueReqData
   { ride :: Ride,
-    booking :: Booking
+    booking :: Booking,
+    isValueAddNP :: Bool
   }
   deriving (Generic)
 
-newtype FRFSIGMIssueReq = FRFSIGMIssueReq
+newtype FRFSIGMIssueReqData = FRFSIGMIssueReqData
   { ticketBooking :: FRFSTicketBooking.FRFSTicketBooking
   }
   deriving (Generic)
 
-buildIGMIssueReq :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Maybe (Id Common.Ride) -> Maybe (Id Common.TicketBooking) -> m (Maybe (Either FRFSIGMIssueReq IGMIssueReq))
-buildIGMIssueReq mbRideId mbTicketBookingId = case (mbRideId, mbTicketBookingId) of
-  (Just rideId, _) -> do
-    ride <- QRide.findById (cast rideId) >>= fromMaybeM (RideNotFound rideId.getId)
-    booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-    CQVAN.isValueAddNP booking.providerId >>= \case
-      True -> pure Nothing
-      False -> pure $ Just $ Right $ IGMIssueReq {ride, booking}
-  (_, Just ticketBookingId) -> do
-    ticketBooking <- QFTB.findById (cast ticketBookingId) >>= fromMaybeM (TicketBookingNotFound ticketBookingId.getId)
-    pure $ Just $ Left $ FRFSIGMIssueReq {ticketBooking = ticketBooking}
-  _ -> pure Nothing
+data IGMIssueReq = FRFSIGMIssueReq FRFSIGMIssueReqData | OnDemandIGMIssueReq OnDemandIGMIssueReqData
+  deriving (Generic)
+
+buildOnDemandIGMIssueReq :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Id Common.Ride -> m (Maybe IGMIssueReq)
+buildOnDemandIGMIssueReq rideId = do
+  ride <- QRide.findById (cast rideId) >>= fromMaybeM (RideNotFound rideId.getId)
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  CQVAN.isValueAddNP booking.providerId >>= \case
+    True -> pure Nothing
+    False -> pure $ Just $ OnDemandIGMIssueReq OnDemandIGMIssueReqData {ride, booking, isValueAddNP = False}
+
+buildFRFSIGMIssueReq :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Id Common.TicketBooking -> m (Maybe IGMIssueReq)
+buildFRFSIGMIssueReq ticketBookingId = do
+  ticketBooking <- QFTB.findById (cast ticketBookingId) >>= fromMaybeM (TicketBookingNotFound ticketBookingId.getId)
+  pure $ Just $ FRFSIGMIssueReq FRFSIGMIssueReqData {ticketBooking = ticketBooking}

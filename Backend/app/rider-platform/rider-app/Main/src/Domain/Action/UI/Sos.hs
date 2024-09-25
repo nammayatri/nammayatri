@@ -484,24 +484,3 @@ sendUnattendedSosTicketAlert ticketId = do
 
     mkUnattendedSosAlertKey :: Text
     mkUnattendedSosAlertKey = "Unattended:SOS:Alert:TicketId-" <> ticketId
-mkTicket :: Person.Person -> Maybe Text -> [Text] -> Ticket.RideInfo -> DSos.SosType -> Text -> Text -> Ticket.CreateTicketReq
-mkTicket person phoneNumber mediaLinks info flow disposition queue = do
-  Ticket.CreateTicketReq
-    { category = "Code Red",
-      subCategory = Just "SOS Alert (follow-back)",
-      issueId = Nothing,
-      issueDescription,
-      mediaFiles = Just mediaLinks,
-      name = Just $ SLP.getName person,
-      phoneNo = phoneNumber,
-      personId = person.id.getId,
-      classification = Ticket.CUSTOMER,
-      rideDescription = Just info,
-      disposition,
-      queue,
-      becknIssueId = Nothing
-    }
-  where
-    issueDescription = case flow of
-      DSos.Police -> "112 called"
-      _ -> "SOS activated"

@@ -21,7 +21,6 @@ import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMop
 import Domain.Types.Person
-import qualified Domain.Types.Ride as Ride
 import qualified IGM.Enums as Spec
 import qualified IGM.Types as Spec
 import qualified IssueManagement.Common.UI.Issue as Common
@@ -139,8 +138,7 @@ buildIGMIssue now issueId booking rider transactionId domain = do
       customerName = Nothing,
       customerPhone = Nothing,
       issueRaisedByMerchant = Nothing,
-      merchantId = Nothing,
-      resolutionAction = Nothing
+      merchantId = Nothing
     }
 
 updateIGMIssue :: Maybe IGMIssueCommon.IGMIssue -> Maybe Common.CustomerResponse -> UTCTime -> Maybe IGMIssueCommon.IGMIssue
@@ -177,10 +175,10 @@ data RideBooking = RideBooking
     merchantOperatingCityId :: Id DMop.MerchantOperatingCity,
     merchantId :: Id DM.Merchant,
     bppItemId :: Text,
-    ride :: Maybe Ride.Ride,
     bppBookingId :: Maybe Text,
     status :: Maybe Text,
     contactPhone :: Maybe Text,
     domain :: Spec.Domain,
-    quantity :: Maybe Int
+    quantity :: Maybe Int,
+    bppOrderId :: Maybe Text
   }

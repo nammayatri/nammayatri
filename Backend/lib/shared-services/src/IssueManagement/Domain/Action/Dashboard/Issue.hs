@@ -17,6 +17,7 @@ import qualified IssueManagement.Domain.Action.UI.Issue as UIR
 import qualified IssueManagement.Domain.Types.Issue.Comment as DC
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as DIC
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage as DIM
+import IssueManagement.Domain.Types.Issue.IssueOption
 import qualified IssueManagement.Domain.Types.Issue.IssueOption as DIO
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as DIR
 import qualified IssueManagement.Domain.Types.Issue.IssueTranslation as DIT
@@ -579,6 +580,7 @@ createIssueOption merchantShortId city mbMerchantOpCity issueCategoryId issueMes
             showOnlyWhenUserBlocked = fromMaybe False showOnlyWhenUserBlocked,
             merchantId = merchantOperatingCity.merchantId,
             merchantOperatingCityId = merchantOperatingCity.id,
+            igmSubCategory = igmSubCategory,
             ..
           }
 

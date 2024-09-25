@@ -1,26 +1,5 @@
 module IssueManagement.API.Beckn.Issue where
 
--- import qualified BecknV2.IGM.APIs as Spec
-
--- import qualified Kernel.Types.Beckn.Domain as Domain
-
--- import Servant hiding (throwError)
-
--- import qualified IssueManagement.Beckn.ACL.OnIssueStatus as ACL
-
--- import qualified Domain.Action.Beckn.IGM.IssueStatus as DIssueStatus
--- import Environment
--- import qualified IGM.Types as Spec
--- import qualified IGM.Utils as Utils
--- import Kernel.Prelude
--- import qualified Kernel.Storage.Hedis as Redis
-
--- import Kernel.Types.Error
-
--- import Kernel.Utils.Common
-
------
-
 import qualified Data.HashMap.Strict as HMS
 import qualified IGM.Types as Spec
 import qualified IGM.Utils as Utils
@@ -156,10 +135,6 @@ issueStatus _merchantId req issueHandle identifier = do
         Redis.whenWithLockRedis (issueStatusProcessingLockKey message_id) 60 $ do
           dIssueStatusRes <- DIssueStatus.handler validatedIssueStatusReq
           let (domainId, domainUri) = if identifier == DRIVER then (bap_id, bap_uri) else (bpp_id, bpp_uri)
-          logDebug $ "identifier---------------------------------------->" <> show identifier
-          logDebug $ "domainId---------------------------------------->" <> show domainId
-          logDebug $ "domainUri---------------------------------------->" <> show domainUri
-          logDebug $ "dIssueRes---------------------------------------->" <> show (bap_id, bap_uri, bpp_id, bpp_uri)
           becknOnIssueReq <- ISACL.buildOnIssueStatusReq transaction_id message_id domainId domainUri dIssueStatusRes
           domainBaseUrl <- parseBaseUrl domainUri
           void $ CallAPI.callOnIssueStatus becknOnIssueReq domainBaseUrl dIssueStatusRes.merchant

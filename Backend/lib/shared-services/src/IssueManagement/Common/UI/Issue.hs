@@ -227,8 +227,10 @@ type IssueStatusUpdateAPI =
     :> ReqBody '[JSON] IssueStatusUpdateReq
     :> Put '[JSON] IssueStatusUpdateRes
 
-newtype IssueStatusUpdateReq = IssueStatusUpdateReq
-  { status :: IssueStatus
+data IssueStatusUpdateReq = IssueStatusUpdateReq
+  { status :: IssueStatus,
+    customerResponse :: Maybe CustomerResponse,
+    customerRating :: Maybe CustomerRating
   }
   deriving (Generic, Show, ToJSON, ToSchema, Eq, FromJSON)
 
@@ -243,11 +245,6 @@ type IgmStatusAPI =
   Post '[JSON] APISuccess
 
 -------------------------------------------------------------------------
-
-type ResolveIgmIssueAPI =
-  MandatoryQueryParam "response" CustomerResponse
-    :> MandatoryQueryParam "rating" CustomerRating
-    :> Post '[JSON] APISuccess
 
 data CustomerResponse
   = ACCEPT
