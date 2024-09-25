@@ -358,6 +358,7 @@ rideSearchBT payload = do
             pure $ toast message
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = HomeScreen}})
             void $ pure $ setValueToLocalStore LOCAL_STAGE "HomeScreen"
+            void $ lift $ lift $ EHU.toggleLoader false
             BackT $ pure GoBack
 
 
