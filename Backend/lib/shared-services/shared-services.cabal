@@ -66,6 +66,7 @@ library
       IssueManagement.Tools.Error
       IssueManagement.Tools.UtilsTH
       UrlShortner.Common
+      UrlShortner.Types
   other-modules:
       Paths_shared_services
   hs-source-dirs:
