@@ -9,13 +9,14 @@ module Domain.Action.Dashboard.Management.NammaTag
     postNammaTagAppDynamicLogicVerify,
     getNammaTagAppDynamicLogic,
     postNammaTagRunJob,
-    kaalChakraHandle,
+    Handle.kaalChakraHandle,
   )
 where
 
 import qualified Data.Aeson as A
 import Data.Default.Class (Default (..))
 import Data.OpenApi (ToSchema)
+import qualified Domain.Action.Dashboard.Management.NammaTag.Handle as Handle
 import qualified Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as DPerson
@@ -128,15 +129,6 @@ getNammaTagAppDynamicLogic merchantShortId opCity domain = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   CADL.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
 
-kaalChakraHandle :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => KaalChakra.Handle m
-kaalChakraHandle =
-  KaalChakra.Handle
-    { getUserTags = \userId -> do
-        mbDriver <- QPerson.findById $ cast @Lib.Yudhishthira.Types.User @DPerson.Person userId
-        pure $ mbDriver <&> (\driver -> fromMaybe [] driver.driverTag),
-      updateUserTags = \userId driverTags -> QPerson.updateDriverTag (Just driverTags) (cast @Lib.Yudhishthira.Types.User @DPerson.Person userId)
-    }
-
 postNammaTagRunJob ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
@@ -144,7 +136,7 @@ postNammaTagRunJob ::
   Environment.Flow Lib.Yudhishthira.Types.RunKaalChakraJobRes
 postNammaTagRunJob _merchantShortId _opCity req = do
   case req.action of
-    Lib.Yudhishthira.Types.RUN -> YudhishthiraFlow.postRunKaalChakraJob kaalChakraHandle req
+    Lib.Yudhishthira.Types.RUN -> YudhishthiraFlow.postRunKaalChakraJob Handle.kaalChakraHandle req
     Lib.Yudhishthira.Types.SCHEDULE scheduledTime -> do
       now <- getCurrentTime
       when (scheduledTime <= now) $
