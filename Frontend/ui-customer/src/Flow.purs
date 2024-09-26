@@ -2024,7 +2024,7 @@ homeScreenFlow = do
                     }
                   }
             )
-      if isMoreThan20Meters || isJust gateAddress.address then do
+      if isMoreThan20Meters || isJust gateAddress.address || DS.null state.props.locateOnMapLocation.source then do
         fullAddress <- getPlaceName lat lon gateAddress true
         case fullAddress of
           Just (PlaceName address) -> do

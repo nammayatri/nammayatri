@@ -11,7 +11,7 @@ import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppS
 import Screens (ScreenName(..), getScreen)
 import JBridge (toast, hideKeyboardOnNavigation)
 import Screens.Types (Contacts, EmergencyContactsScreenState, NewContacts, NewContactsProp)
-import Data.Array (catMaybes, delete, dropEnd, elem, filter, head, last, length, mapWithIndex, nubByEq, null, slice, snoc, sortBy, tail, updateAt, (!!))
+import Data.Array (catMaybes, delete, dropEnd, elem, filter, head, last, length, mapWithIndex, nubByEq, null, slice, snoc, sortBy, tail, updateAt, (!!), mapMaybe)
 import Helpers.Utils (contactPermission, setEnabled, setRefreshing, setText)
 import Screens.EmergencyContactsScreen.Transformer (getContactList)
 import Language.Strings (getString)
@@ -221,14 +221,18 @@ eval (ContactsCallback allContacts) state = do
     removeLoader
   else do
     let
+      userMobileNumber = getValueToLocalStore MOBILE_NUMBER
+      isUserMobileNumberNotPresent = elem userMobileNumber ["", "(null)", "__failed"]
       filteredContacts =
-        map
+        mapMaybe
           ( \contactItem -> do
-              let
-                formattedContact = getFormattedContact contactItem
-              case getContactFromEMList formattedContact state.data.emergencyContactsList of
-                Nothing -> formattedContact
-                Just contact -> formattedContact { isSelected = true, priority = contact.priority, enableForFollowing = contact.enableForFollowing }
+              let formattedContact = getFormattedContact contactItem
+              if formattedContact.number /= userMobileNumber || isUserMobileNumberNotPresent
+                then do 
+                  Just $ case getContactFromEMList formattedContact state.data.emergencyContactsList of
+                    Nothing -> formattedContact
+                    Just contact -> formattedContact { isSelected = true, priority = contact.priority, enableForFollowing = contact.enableForFollowing }
+                else Nothing
           )
           $ getContactList updatedContactList
 

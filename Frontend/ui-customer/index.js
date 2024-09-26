@@ -182,6 +182,9 @@ window.onMerchantEvent = function (_event, globalPayload) {
   window.__payload = JSON.parse(globalPayload);
   const clientPaylod = window.__payload.payload;
   const appName = clientPaylod.appName;
+  if (clientPaylod.notification_type == "TRIGGER_FCM" && window.__OS == "IOS") {
+    clientPaylod["chatMessageData"] = JSON.parse(clientPaylod?.fullNotificationBody?.data?.entity_data);
+  }
   window.appName = appName;
   if (_event == "initiate") {
     console.log(
