@@ -43,6 +43,7 @@ mkRunKaalChakraJobReq ::
   LYT.RunKaalChakraJobReq
 mkRunKaalChakraJobReq chakra LYT.KaalChakraJobData {..} = do
   let action = LYT.RUN -- no matter for job handler
+  let completeOldJob = Nothing -- no matter for job handler
   LYT.RunKaalChakraJobReq {usersSet = LYT.ALL_USERS, ..}
 
 runDailyJob ::
