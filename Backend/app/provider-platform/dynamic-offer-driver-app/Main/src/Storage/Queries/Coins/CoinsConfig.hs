@@ -37,7 +37,7 @@ fetchCoins eventFunction (Id merchantId) =
 
 fetchFunctionsOnEventbasis :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m [CoinsConfig]
 fetchFunctionsOnEventbasis eventType (Id merchantId) (Id merchantOptCityId) = do
-  let dbEventName = DCT.getEventName eventType
+  let dbEventName = show eventType
   findAllWithKV
     [ Se.And
         [ Se.Is BeamDC.eventName $ Se.Eq dbEventName,

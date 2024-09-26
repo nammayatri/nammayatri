@@ -125,53 +125,50 @@ handleRating driverId merchantId merchantOpCityId ratingValue ride eventFunction
     _ -> pure 0
 
 handleEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> DR.Ride -> Bool -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> m Int
-handleEndRide driverId merchantId merchantOpCityId isDisabled ride metroRide eventFunction mbexpirationTime numCoins _ entityId = do
+handleEndRide driverId merchantId merchantOpCityId isDisabled _ride metroRide eventFunction mbexpirationTime numCoins _ entityId = do
   logDebug $ "Driver Coins Handle EndRide Event Triggered - " <> show eventFunction
-  let validRideTaken = isValidRide ride
   case eventFunction of
     DCT.RideCompleted -> do
-      runActionWhenValidConditions
-        [ pure validRideTaken
-        ]
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId
+      runActionWhenValidConditions [] $
+        updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId
     DCT.TwoRidesCompleted -> do
       validRideCount <- fromMaybe 0 <$> getValidRideCountByDriverIdKey driverId
       runActionWhenValidConditions
-        [ pure (validRideCount == 2),
-          pure validRideTaken
+        [ pure (validRideCount == 2)
         ]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId
     DCT.FiveRidesCompleted -> do
       validRideCount <- fromMaybe 0 <$> getValidRideCountByDriverIdKey driverId
       runActionWhenValidConditions
-        [ pure (validRideCount == 5),
-          pure validRideTaken
+        [ pure (validRideCount == 5)
         ]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId
     DCT.EightPlusRidesInOneDay -> do
       validRideCount <- fromMaybe 0 <$> getValidRideCountByDriverIdKey driverId
       runActionWhenValidConditions
-        [ pure (validRideCount == 8),
-          pure validRideTaken
+        [ pure (validRideCount == 8)
         ]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId
     DCT.TenRidesCompleted -> do
       validRideCount <- fromMaybe 0 <$> getValidRideCountByDriverIdKey driverId
       runActionWhenValidConditions
-        [ pure (validRideCount == 10),
-          pure validRideTaken
+        [ pure (validRideCount == 10)
+        ]
+        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId
+    DCT.RidesCompleted a -> do
+      validRideCount <- fromMaybe 0 <$> getValidRideCountByDriverIdKey driverId
+      runActionWhenValidConditions
+        [ pure (validRideCount == a)
         ]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId
     DCT.PurpleRideCompleted ->
       runActionWhenValidConditions
-        [ pure isDisabled,
-          pure validRideTaken
+        [ pure isDisabled
         ]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId
     DCT.MetroRideCompleted ->
       runActionWhenValidConditions
-        [ pure metroRide,
-          pure validRideTaken
+        [ pure metroRide
         ]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId
     _ -> pure 0

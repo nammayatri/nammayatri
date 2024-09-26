@@ -15,6 +15,7 @@
 
 module Storage.CachedQueries.CoinsConfig where
 
+import Data.Text (pack)
 import Domain.Types.Coins.CoinsConfig
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -38,4 +39,4 @@ cacheCoinConfig eventType merchantOpCityId coinsConfig = do
 
 makeCoinConfigKey :: DCT.DriverCoinsEventType -> Id DMOC.MerchantOperatingCity -> Text
 makeCoinConfigKey eventType merchantOpCityId =
-  "CQ:CC:MOCId-" <> merchantOpCityId.getId <> "-EventType-" <> DCT.getEventName eventType
+  "CQ:CC:MOCId-" <> merchantOpCityId.getId <> "-EventType-" <> pack (show eventType)
