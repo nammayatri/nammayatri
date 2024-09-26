@@ -275,3 +275,13 @@ clearDeviceTokenByPersonId personId = do
     ]
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
+
+updateTotalRidesCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Maybe Int -> m ()
+updateTotalRidesCount personId totalRidesCount = do
+  whenJust totalRidesCount \totalRidesCount' -> do
+    now <- getCurrentTime
+    updateWithKV
+      [ Se.Set BeamP.totalRidesCount (Just totalRidesCount'),
+        Se.Set BeamP.updatedAt now
+      ]
+      [Se.Is BeamP.id (Se.Eq (getId personId))]
