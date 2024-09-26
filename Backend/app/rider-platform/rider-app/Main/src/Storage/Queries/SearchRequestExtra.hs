@@ -65,3 +65,12 @@ updateAutoAssign (Id searchRequestId) autoAssignedEnabled autoAssignedEnabledV2 
       Se.Set BeamSR.autoAssignEnabledV2 $ Just autoAssignedEnabledV2
     ]
     [Se.Is BeamSR.id (Se.Eq searchRequestId)]
+
+updateMultipleByRequestId :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Bool -> Bool -> Maybe Bool -> m ()
+updateMultipleByRequestId (Id searchRequestId) autoAssignedEnabled autoAssignedEnabledV2 isAdvanceBookingEnabled = do
+  updateOneWithKV
+    [ Se.Set BeamSR.autoAssignEnabled $ Just autoAssignedEnabled,
+      Se.Set BeamSR.autoAssignEnabledV2 $ Just autoAssignedEnabledV2,
+      Se.Set BeamSR.isAdvanceBookingEnabled isAdvanceBookingEnabled
+    ]
+    [Se.Is BeamSR.id (Se.Eq searchRequestId)]

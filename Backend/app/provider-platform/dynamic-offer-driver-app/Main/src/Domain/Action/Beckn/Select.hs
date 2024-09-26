@@ -64,7 +64,6 @@ handler merchant sReq searchReq estimates = do
     Just number -> do
       (riderDetails, isNewRider) <- SRD.getRiderDetails searchReq.currency merchant.id (fromMaybe "+91" merchant.mobileCountryCode) number now False
       when isNewRider $ QRD.create riderDetails
-      QSR.updateRiderId searchReq.id riderDetails.id
       when sReq.toUpdateDeviceIdInfo do
         let mbFlag = mbGetPayoutFlag sReq.isMultipleOrNoDeviceIdExist
         when (riderDetails.payoutFlagReason /= mbFlag) $ QRD.updateFlagReasonAndIsDeviceIdExists mbFlag (Just $ isJust sReq.isMultipleOrNoDeviceIdExist) riderDetails.id
@@ -72,8 +71,7 @@ handler merchant sReq searchReq estimates = do
     Nothing -> do
       logWarning "Failed to get rider details as BAP Phone Number is NULL"
       return Nothing
-  when sReq.autoAssignEnabled $ QSR.updateAutoAssign searchReq.id sReq.autoAssignEnabled
-  when sReq.isAdvancedBookingEnabled $ QSR.updateIsAdvancedBookingEnabled sReq.isAdvancedBookingEnabled searchReq.id
+  QSR.updateMultipleByRequestId searchReq.id sReq.autoAssignEnabled sReq.isAdvancedBookingEnabled riderId
   tripQuoteDetails <-
     estimates `forM` \estimate -> do
       QDQ.setInactiveAllDQByEstId estimate.id now
