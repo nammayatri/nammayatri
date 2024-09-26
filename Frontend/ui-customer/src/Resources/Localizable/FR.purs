@@ -1563,6 +1563,7 @@ getFR stringKey =
         AVOID_SENDING_HIGH_VALUE_ITEMS -> "Évitez d'envoyer des articles de grande valeur / fragiles"
         ILLEGAL_ITEMS_PROHIBITED -> "Les articles illégaux sont interdits"
         PICKUP_INSTRUCTION -> "Instruction de ramassage"
+        EDIT_YOUR_PICKUP_LOCATION_INSTEAD -> ""
         ROUND_TRIP_INVALID_MESSAGE -> "Le voyage aller-retour ne peut pas être programmé en dessous du temps de trajet estimé"
         PICKUP_TIME_NOT_SELECTED -> "Veuillez sélectionner l'heure de ramassage"
         BOOKING_DURATION_INVALID -> "La réservation est autorisée uniquement jusqu'à deux jours à partir de la date de début."

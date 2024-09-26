@@ -1093,6 +1093,7 @@ type HomeScreenStateProps =
   , isOtpRideFlow :: Boolean
   , safetySettings :: Maybe API.GetEmergencySettingsRes
   , editedPickUpLocation :: EditedLocation
+  , showEditPickupPopupOnCancel :: Boolean
   , isIntercityFlow :: Boolean 
   , isTripSchedulable :: Boolean
   }

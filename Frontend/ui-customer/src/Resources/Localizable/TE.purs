@@ -1574,6 +1574,7 @@ getTE stringKey =
     AVOID_SENDING_HIGH_VALUE_ITEMS -> "అధిక విలువ/సున్నితమైన వస్తువులు పంపించకండి"
     ILLEGAL_ITEMS_PROHIBITED -> "అన్యాయ వస్తువులు నిషేధించబడ్డాయి"
     PICKUP_INSTRUCTION -> "పికప్ సూచన"
+    EDIT_YOUR_PICKUP_LOCATION_INSTEAD -> "మీ రైడ్‌ని రద్దు చేయడానికి బదులుగా మీ పికప్ స్థానాన్ని సవరించండి"
     ROUND_TRIP_INVALID_MESSAGE -> "రౌండ్ ట్రిప్ అంచనా వేయబడిన ప్రయాణ సమయం కన్నా తక్కువగా నిర్ణయించబడదు"
     PICKUP_TIME_NOT_SELECTED -> "దయచేసి పికప్ సమయం ఎంచుకోండి"
     BOOKING_DURATION_INVALID -> "బుకింగ్ ప్రారంభ తేదీ నుండి రెండు రోజుల వరకు మాత్రమే అనుమతించబడుతుంది."

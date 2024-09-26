@@ -337,6 +337,7 @@ data Action = NoAction
   | UpdateSafetySettings GetEmergencySettingsRes
   | ServicesOnClick RemoteConfig.Service
   | EnableShareRideForContact String 
+  | EditPickupPopupOnCancelAC PopUpModal.Action
   | DateSelectAction String String Int Int Int String Int Int
 
 instance showAction :: Show Action where show _ = ""

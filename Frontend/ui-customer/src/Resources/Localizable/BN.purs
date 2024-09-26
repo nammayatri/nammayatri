@@ -1560,6 +1560,7 @@ getBN stringKey =
         AVOID_SENDING_HIGH_VALUE_ITEMS -> "উচ্চ-মূল্য / ভঙ্গুর আইটেম পাঠানো এড়িয়ে চলুন"
         ILLEGAL_ITEMS_PROHIBITED -> "অবৈধ আইটেম নিষিদ্ধ"
         PICKUP_INSTRUCTION -> "পিকআপ নির্দেশনা"
+        EDIT_YOUR_PICKUP_LOCATION_INSTEAD -> "আপনার রাইড বাতিল করার পরিবর্তে আপনার পিকআপ অবস্থান সম্পাদনা করুন"
         ROUND_TRIP_INVALID_MESSAGE -> "রাউন্ড ট্রিপ আনুমানিক যাত্রার সময়ের নিচে নির্ধারণ করা যাবে না"
         PICKUP_TIME_NOT_SELECTED -> "দয়া করে পিকআপ সময় নির্বাচন করুন"
         BOOKING_DURATION_INVALID -> "বুকিং শুধুমাত্র শুরুর তারিখ থেকে দুই দিন পর্যন্ত অনুমোদিত।"

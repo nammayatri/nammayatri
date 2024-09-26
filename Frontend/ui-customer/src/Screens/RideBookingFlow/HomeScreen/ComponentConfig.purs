@@ -2474,6 +2474,50 @@ getChatDetails state contacts =
 
   in multiChatContacts <> driverChatContact
 
+editPickupPopupOnCancel :: ST.HomeScreenState -> PopUpModal.Config
+editPickupPopupOnCancel state = do
+  let config = PopUpModal.config
+      popUpConfig' = config {
+        gravity = BOTTOM
+      , cornerRadius = Corners 20.0 true true true true
+      , backgroundColor =  Color.black9000
+      , backgroundClickable = true
+      , dismissPopup = true
+      , padding = Padding 16 16 16 0
+      , optionButtonOrientation = "VERTICAL"
+      , primaryText {
+          text = getString EDIT_YOUR_PICKUP_LOCATION_INSTEAD
+        , margin = (Margin 10 20 10 10)
+        , gravity = CENTER
+        }
+      , secondaryText {visibility = GONE}
+      , option1 {
+          text = getString CHANGE_PICKUP_LOCATION
+        , color = Color.yellow900
+        , background = Color.black
+        , enableRipple = true
+        , rippleColor = Color.rippleShade
+        , width = MATCH_PARENT
+        }
+      , option2 {
+          text = getString CANCEL_RIDE
+        , color = Color.black700
+        , background = Color.white900
+        , enableRipple = true
+        , rippleColor = Color.rippleShade
+        , width = MATCH_PARENT
+        , margin = (MarginTop 12)
+        }
+      , coverImageConfig {
+          imageUrl = fetchImage FF_ASSET "ny_ic_edit_pickup"
+        , visibility = VISIBLE
+        , height = V 225
+        , width = MATCH_PARENT
+      }
+      }
+  popUpConfig'
+
+
 pickupConfig :: ST.HomeScreenState -> DateSelectorController.DateSelectorConfig
 pickupConfig state = 
   let pickupConfig' =  {
