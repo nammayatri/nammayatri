@@ -65,3 +65,19 @@ updateRiderId searchRequestId riderId =
   updateOneWithKV
     [Se.Set BeamSR.riderId $ Just $ getId riderId]
     [Se.Is BeamSR.id (Se.Eq $ getId searchRequestId)]
+
+updateMultipleByRequestId ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id SearchRequest ->
+  Bool ->
+  Bool ->
+  Maybe (Id RD.RiderDetails) ->
+  m ()
+updateMultipleByRequestId searchRequestId autoAssignEnabled isAdvancedBookingEnabled riderId = do
+  updateOneWithKV
+    ( [ Se.Set BeamSR.riderId $ getId <$> riderId
+      ]
+        <> [Se.Set BeamSR.autoAssignEnabled $ Just autoAssignEnabled | autoAssignEnabled]
+        <> [Se.Set BeamSR.isAdvanceBookingEnabled $ Just isAdvancedBookingEnabled | isAdvancedBookingEnabled]
+    )
+    [Se.Is BeamSR.id (Se.Eq $ getId searchRequestId)]
