@@ -386,7 +386,6 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
         then return $ Just driverServiceTier
         else return Nothing
   let selectedServiceTierTypes = map (.serviceTierType) $ catMaybes mbSelectedServiceTiers
-  when (null selectedServiceTierTypes) $ throwError $ InvalidRequest "Atleast one service tier should be selected"
   QVehicle.updateSelectedServiceTiers selectedServiceTierTypes personId
 
   {- Atleast one intercity/rental non usage resctricted service tier should be selected for getting intercity/rental rides -}
