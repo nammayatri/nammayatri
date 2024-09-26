@@ -183,5 +183,5 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
                 backendAppVersion = person.backendAppVersion,
                 latestScheduledBooking = info.latestScheduledBooking,
                 latestScheduledPickup = info.latestScheduledPickup,
-                driverTags = TU.convertTags $ "OnRideDriver#True" : fromMaybe [] person.driverTag
+                driverTags = TU.convertTags $ "OnRideDriver#true" : fromMaybe [] person.driverTag
               }
