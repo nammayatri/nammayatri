@@ -24,6 +24,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
     clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
     clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     fromLocation' <- Storage.Queries.Extra.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId
+    stops' <- Storage.Queries.Extra.Transformers.Ride.getStops id
     toLocation' <- Storage.Queries.Extra.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId
     trackingUrl' <- Kernel.Prelude.mapM Kernel.Prelude.parseBaseUrl trackingUrl
     pure $
@@ -80,6 +81,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             startOdometerReading = startOdometerReading,
             status = status,
             tipAmount = fmap (Kernel.Types.Common.mkPrice currency) tipAmount,
+            stops = stops',
             toLocation = toLocation',
             tollConfidence = tollConfidence,
             totalFare = fmap (Kernel.Types.Common.mkPrice currency) totalFare,

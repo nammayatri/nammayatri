@@ -66,6 +66,7 @@ library
       API.Internal.Cac
       API.Internal.FRFS
       API.Internal.Rating
+      API.Internal.StopEvents
       API.UI
       API.UI.AadhaarVerification
       API.UI.AppInstalls
@@ -163,6 +164,7 @@ library
       Domain.Action.Internal.FRFS
       Domain.Action.Internal.Payout
       Domain.Action.Internal.Rating
+      Domain.Action.Internal.StopEvents
       Domain.Action.UI.AadhaarVerification
       Domain.Action.UI.AppInstalls
       Domain.Action.UI.Booking
@@ -523,6 +525,7 @@ library
       Domain.Types.SpecialOccasion
       Domain.Types.SpecialZoneQuote
       Domain.Types.Station
+      Domain.Types.StopInformation
       Domain.Types.TicketBooking
       Domain.Types.TicketBookingPeopleCategory
       Domain.Types.TicketBookingService
@@ -615,6 +618,7 @@ library
       Storage.Beam.SpecialOccasion
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.Station
+      Storage.Beam.StopInformation
       Storage.Beam.TicketBooking
       Storage.Beam.TicketBookingPeopleCategory
       Storage.Beam.TicketBookingService
@@ -746,6 +750,7 @@ library
       Storage.Queries.SpecialOccasion
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.Station
+      Storage.Queries.StopInformation
       Storage.Queries.TicketBooking
       Storage.Queries.TicketBookingPeopleCategory
       Storage.Queries.TicketBookingService

@@ -29,6 +29,7 @@ Location:
       areaCode: Maybe Text
       area: Maybe Text
       ward: Maybe Text
+      id: Id Location
       placeId: Maybe Text
       instructions: Maybe Text
       extras: Maybe Text

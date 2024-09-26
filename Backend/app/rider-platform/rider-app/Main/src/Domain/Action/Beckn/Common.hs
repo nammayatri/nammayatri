@@ -249,14 +249,14 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
   driverPhoneNumber <- mapM encrypt (Just bookingDetails.driverMobileNumber)
   driverAlternateNumber <- mapM encrypt bookingDetails.driverAlternatePhoneNumber
   let fromLocation = booking.fromLocation
-      toLocation = case booking.bookingDetails of
-        DRB.OneWayDetails details -> Just details.toLocation
-        DRB.RentalDetails _ -> Nothing
-        DRB.DriverOfferDetails details -> Just details.toLocation
-        DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
-        DRB.InterCityDetails details -> Just details.toLocation
-        DRB.AmbulanceDetails details -> Just details.toLocation
-        DRB.DeliveryDetails details -> Just details.toLocation
+      (toLocation, stops) = case booking.bookingDetails of
+        DRB.OneWayDetails details -> (Just details.toLocation, details.stops)
+        DRB.RentalDetails _ -> (Nothing, [])
+        DRB.DriverOfferDetails details -> (Just details.toLocation, details.stops)
+        DRB.OneWaySpecialZoneDetails details -> (Just details.toLocation, details.stops)
+        DRB.InterCityDetails details -> (Just details.toLocation, [])
+        DRB.AmbulanceDetails details -> (Just details.toLocation, [])
+        DRB.DeliveryDetails details -> (Just details.toLocation, [])
       allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
       allowedEditPickupLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
       onlinePayment = maybe False (.onlinePayment) mbMerchant

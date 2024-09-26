@@ -8,6 +8,7 @@ module Domain.Types.Extra.Ride where
 import Data.Aeson
 import qualified Domain.Types.Ride
 import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -30,6 +31,7 @@ data RideAPIEntity = RideAPIEntity
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverName :: Kernel.Prelude.Text,
+    stopsInfo :: [DSI.StopInformation],
     driverNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverRatings :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     driverRegisteredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

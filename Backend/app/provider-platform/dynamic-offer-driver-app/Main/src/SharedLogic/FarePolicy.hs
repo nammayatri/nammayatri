@@ -192,6 +192,9 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
       parkingChargeCaption = show Tags.PARKING_CHARGE
       parkingChargeItem = mkBreakupItem parkingChargeCaption . (mkValue . show) <$> farePolicy.parkingCharge
 
+      perStopChargesCaption = show Tags.PER_STOP_CHARGES
+      perStopChargeItem = mkBreakupItem perStopChargesCaption . (mkValue . show) <$> farePolicy.perStopCharge
+
       serviceChargeCaption = show Tags.SERVICE_CHARGE
       serviceChargeItem = mkBreakupItem serviceChargeCaption . (mkValue . highPrecMoneyToText) <$> farePolicy.serviceCharge
 
@@ -248,7 +251,8 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
       congestionChargePercentageItem,
       insuranceChargeItem,
       cardChargePercentageItem,
-      fixedCardChargeItem
+      fixedCardChargeItem,
+      perStopChargeItem
     ]
     <> additionalDetailsBreakups
     <> driverExtraFeeBoundsMinFeeItems

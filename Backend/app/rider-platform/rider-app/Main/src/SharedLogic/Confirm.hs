@@ -79,6 +79,7 @@ data DConfirmRes = DConfirmRes
     itemId :: Text,
     fromLoc :: DL.Location,
     toLoc :: Maybe DL.Location,
+    stops :: [DL.Location],
     vehicleVariant :: DV.VehicleVariant,
     bppQuoteId :: Text,
     booking :: DRB.Booking,
@@ -138,6 +139,7 @@ confirm DConfirmReq {..} = do
   unless (searchRequest.riderId == personId) $ throwError AccessDenied
   let fromLocation = searchRequest.fromLocation
       mbToLocation = searchRequest.toLocation
+      stops = searchRequest.stops
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
@@ -344,6 +346,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
       -- we need to throw errors here because of some redundancy of our domain model
       toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
+      let stops = searchRequest.stops
       pure DRB.OneWayBookingDetails {..}
     buildAmbulanceDetails = do
       -- we need to throw errors here because of some redundancy of our domain model
@@ -353,6 +356,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
     buildOneWaySpecialZoneDetails = do
       -- we need to throw errors here because of some redundancy of our domain model
       toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
+      let stops = searchRequest.stops
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
       pure DRB.OneWaySpecialZoneBookingDetails {..}
     buildDeliveryDetails = do

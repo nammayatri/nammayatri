@@ -963,6 +963,7 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     congestionChargeMultiplier :: Text,
     congestionChargeMultiplierIncludeBaseFare :: Text,
     parkingCharge :: Text,
+    perStopCharge :: Text,
     currency :: Text,
     baseDistance :: Text,
     baseFare :: Text,
@@ -1042,6 +1043,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "congestion_charge_multiplier"
       <*> r .: "congestion_charge_multiplier_include_base_fare"
       <*> r .: "parking_charge"
+      <*> r .: "per_stop_charge"
       <*> r .: "currency"
       <*> r .: "base_distance"
       <*> r .: "base_fare"
@@ -1320,6 +1322,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                   then Just $ FarePolicy.BaseFareAndExtraDistanceFare congestionChargeMultiplierValue
                   else Just $ FarePolicy.ExtraDistanceFare congestionChargeMultiplierValue
       let parkingCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.parkingCharge "Parking Charge"
+      let perStopCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perStopCharge "Per Stop Charge"
       currency :: Currency <- readCSVField idx row.currency "Currency"
 
       (freeWatingTime, waitingCharges, mbNightCharges) <- do

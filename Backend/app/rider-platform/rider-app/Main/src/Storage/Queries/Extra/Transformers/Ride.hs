@@ -41,6 +41,16 @@ getFromLocation id bookingId merchantId merchantOperatingCityId = do
       else QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
   QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
 
+getStops :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [Location]
+getStops id = do
+  stopsLocationMapping <- QLM.getLatestStopsByEntityId id
+  mapM
+    ( \stopLocationMapping ->
+        QL.findById stopLocationMapping.locationId
+          >>= fromMaybeM (StopsLocationNotFound stopLocationMapping.locationId.getId)
+    )
+    stopsLocationMapping
+
 mkLatLong :: Maybe Double -> Maybe Double -> Maybe LatLong
 mkLatLong lat lon = LatLong <$> lat <*> lon
 

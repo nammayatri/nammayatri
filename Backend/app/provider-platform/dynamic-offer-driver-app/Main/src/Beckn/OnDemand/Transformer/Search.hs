@@ -17,10 +17,12 @@
 module Beckn.OnDemand.Transformer.Search where
 
 import qualified Beckn.OnDemand.Utils.Common
+import qualified Beckn.OnDemand.Utils.Common as Common
 import qualified Beckn.OnDemand.Utils.Search
 import qualified Beckn.Types.Core.Taxi.API.Search
 import qualified Beckn.Types.Core.Taxi.Common.Address
 import qualified BecknV2.OnDemand.Types
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common
 import qualified Data.List as L
 import qualified Data.Text
@@ -60,6 +62,8 @@ buildSearchReq messageId subscriber req context = do
   bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
   dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddress
   dropLocation_ <- tfLatLong `mapM` Beckn.OnDemand.Utils.Search.getDropOffLocationGps req
+  stopLocations <- Beckn.OnDemand.Utils.Search.getIntermediateStopLocations req
+  stops <- buildLocation `mapM` stopLocations
   pickupAddress_ <- Beckn.OnDemand.Utils.Search.getPickUpLocation req >>= (tfAddress . Just)
   pickupLocation_ <- Beckn.OnDemand.Utils.Search.getPickUpLocationGps req >>= tfLatLong
   transactionId_ <- BecknV2.OnDemand.Utils.Common.getTransactionId context
@@ -87,6 +91,7 @@ buildSearchReq messageId subscriber req context = do
         routeDuration = routeDuration_,
         routePoints = routePoints_,
         transactionId = transactionId_,
+        stops,
         ..
       }
 
@@ -106,3 +111,14 @@ tfLatLong locationGps = do
   lat_ <- Beckn.OnDemand.Utils.Common.parseLatLong locationGps
   lon_ <- Beckn.OnDemand.Utils.Common.parseLatLong locationGps
   pure $ Kernel.External.Maps.LatLong {lat = Kernel.External.Maps.lat lat_, lon = Kernel.External.Maps.lon lon_}
+
+buildLocation :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Spec.Location -> m Domain.Action.Beckn.Search.DSearchReqLocation
+buildLocation location = do
+  address <- tfAddress (Just location)
+  locationGpsText <- location.locationGps & fromMaybeM (InvalidRequest "Missing Pickup Location")
+  latLong <- tfLatLong locationGpsText
+  pure $
+    Domain.Action.Beckn.Search.DSearchReqLocation
+      { address,
+        gps = latLong
+      }

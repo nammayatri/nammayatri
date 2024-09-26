@@ -88,7 +88,7 @@ mkFulfillmentV2 :: DOnSelectReq -> DQuote.DriverQuote -> Bool -> Spec.Fulfillmen
 mkFulfillmentV2 dReq quote isValueAddNP = do
   Spec.Fulfillment
     { fulfillmentId = Just quote.id.getId,
-      fulfillmentStops = Utils.mkStops' dReq.searchRequest.fromLocation dReq.searchRequest.toLocation Nothing,
+      fulfillmentStops = Utils.mkStops' dReq.searchRequest.fromLocation dReq.searchRequest.toLocation dReq.searchRequest.stops Nothing,
       fulfillmentVehicle = Just $ mkVehicleV2 quote,
       fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType quote.tripCategory,
       fulfillmentAgent = Just $ mkAgentV2 quote isValueAddNP,

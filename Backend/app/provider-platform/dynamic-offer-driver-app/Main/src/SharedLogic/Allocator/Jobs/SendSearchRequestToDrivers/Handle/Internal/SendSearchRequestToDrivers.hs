@@ -144,6 +144,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
               roundTrip = fromMaybe False searchReq.roundTrip,
               waitingTime = Nothing,
               actualRideDuration = Nothing,
+              noOfStops = length searchReq.stops,
               estimatedRideDuration = searchReq.estimatedDuration,
               avgSpeedOfVehicle = transporterConfig.avgSpeedOfVehicle,
               driverSelectedFare = Nothing,

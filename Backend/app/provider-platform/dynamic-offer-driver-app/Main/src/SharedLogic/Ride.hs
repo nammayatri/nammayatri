@@ -219,6 +219,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId previo
         endOdometerReading = Nothing,
         fromLocation = booking.fromLocation, --check if correct
         toLocation = booking.toLocation, --check if correct
+        stops = booking.stops,
         fareParametersId = Nothing,
         distanceCalculationFailed = Nothing,
         createdAt = now,

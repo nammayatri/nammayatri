@@ -33,7 +33,8 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.Sos as DSos
 import qualified Domain.Types.Trip as Trip
-import EulerHS.Prelude hiding (elem, find, id, length, null)
+-- import qualified Domain.Types.StopInformation as DSI
+import EulerHS.Prelude hiding (elem, find, id, length, map, null)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface as Payment
@@ -53,6 +54,7 @@ import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.StopInformation as QSI
 import Tools.Error
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
@@ -171,6 +173,7 @@ data RentalBookingAPIDetails = RentalBookingAPIDetails
 
 data OneWayBookingAPIDetails = OneWayBookingAPIDetails
   { toLocation :: LocationAPIEntity,
+    stops :: [LocationAPIEntity],
     estimatedDistance :: HighPrecMeters,
     estimatedDistanceWithUnit :: Distance
   }
@@ -193,6 +196,7 @@ data AmbulanceBookingAPIDetails = AmbulanceBookingAPIDetails
 
 data OneWaySpecialZoneBookingAPIDetails = OneWaySpecialZoneBookingAPIDetails
   { toLocation :: LocationAPIEntity,
+    stops :: [LocationAPIEntity],
     estimatedDistance :: HighPrecMeters,
     estimatedDistanceWithUnit :: Distance,
     otpCode :: Maybe Text
@@ -235,6 +239,7 @@ makeBookingAPIEntity ::
   m BookingAPIEntity
 makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreakups fareBreakups mbExophone paymentMethodId hasDisability hasNightIssue mbSosStatus bppDetails isValueAddNP showPrevDropLocationLatLon mbCancellationReason = do
   bookingDetails <- mkBookingAPIDetails booking requesterId
+  rides <- mapM buildRideAPIEntity allRides
   let providerNum = fromMaybe "+91" bppDetails.supportNumber
   return $
     BookingAPIEntity
@@ -250,7 +255,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         estimatedTotalFareWithCurrency = mkPriceAPIEntity booking.estimatedTotalFare,
         fromLocation = SLoc.makeLocationAPIEntity booking.fromLocation,
         initialPickupLocation = SLoc.makeLocationAPIEntity booking.initialPickupLocation,
-        rideList = allRides <&> makeRideAPIEntity,
+        rideList = rides,
         hasNightIssue = hasNightIssue,
         tripTerms = fromMaybe [] $ booking.tripTerms <&> (.descriptions),
         estimatedFareBreakup = DAFareBreakup.mkFareBreakupAPIEntity <$> estimatedFareBreakups,
@@ -312,7 +317,8 @@ mkBookingAPIDetails booking requesterId = case booking.bookingDetails of
       OneWayBookingAPIDetails
         { toLocation = SLoc.makeLocationAPIEntity toLocation,
           estimatedDistance = distanceToHighPrecMeters distance,
-          estimatedDistanceWithUnit = distance
+          estimatedDistanceWithUnit = distance,
+          stops = map SLoc.makeLocationAPIEntity stops
         }
     mkRentalAPIDetails RentalBookingDetails {..} =
       RentalBookingAPIDetails
@@ -324,6 +330,7 @@ mkBookingAPIDetails booking requesterId = case booking.bookingDetails of
         { toLocation = SLoc.makeLocationAPIEntity toLocation,
           estimatedDistance = distanceToHighPrecMeters distance,
           estimatedDistanceWithUnit = distance,
+          stops = map SLoc.makeLocationAPIEntity stops,
           ..
         }
     mkInterCityAPIDetails InterCityBookingDetails {..} =
@@ -452,26 +459,28 @@ favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
 
 -- TODO move to Domain.Types.Ride.Extra
-makeRideAPIEntity :: DRide.Ride -> RideAPIEntity
-makeRideAPIEntity DRide.Ride {..} =
+buildRideAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => DRide.Ride -> m RideAPIEntity
+buildRideAPIEntity DRide.Ride {..} = do
+  stopsInfo <- QSI.findAllByRideId id
   let driverMobileNumber' = if status `elem` [DRide.UPCOMING, DRide.NEW, DRide.INPROGRESS] then Just driverMobileNumber else Just "xxxx"
       oneYearAgo = - (365 * 24 * 60 * 60)
       driverRegisteredAt' = fromMaybe (addUTCTime oneYearAgo createdAt) driverRegisteredAt
       driverRating' = driverRating <|> Just (toCentesimal 500) -- TODO::remove this default value
       vehicleColor' = fromMaybe "NA" vehicleColor -- TODO::remove this default value
-   in RideAPIEntity
-        { shortRideId = shortId,
-          driverNumber = driverMobileNumber',
-          driverRatings = driverRating',
-          driverRegisteredAt = Just driverRegisteredAt',
-          rideOtp = otp,
-          computedPrice = totalFare <&> (.amountInt),
-          computedPriceWithCurrency = mkPriceAPIEntity <$> totalFare,
-          chargeableRideDistance = distanceToHighPrecMeters <$> chargeableDistance,
-          chargeableRideDistanceWithUnit = chargeableDistance,
-          traveledRideDistance = traveledDistance,
-          vehicleColor = vehicleColor',
-          allowedEditLocationAttempts = fromMaybe 0 allowedEditLocationAttempts,
-          allowedEditPickupLocationAttempts = fromMaybe 0 allowedEditPickupLocationAttempts,
-          ..
-        }
+  return $
+    RideAPIEntity
+      { shortRideId = shortId,
+        driverNumber = driverMobileNumber',
+        driverRatings = driverRating',
+        driverRegisteredAt = Just driverRegisteredAt',
+        rideOtp = otp,
+        computedPrice = totalFare <&> (.amountInt),
+        computedPriceWithCurrency = mkPriceAPIEntity <$> totalFare,
+        chargeableRideDistance = distanceToHighPrecMeters <$> chargeableDistance,
+        chargeableRideDistanceWithUnit = chargeableDistance,
+        traveledRideDistance = traveledDistance,
+        vehicleColor = vehicleColor',
+        allowedEditLocationAttempts = fromMaybe 0 allowedEditLocationAttempts,
+        allowedEditPickupLocationAttempts = fromMaybe 0 allowedEditPickupLocationAttempts,
+        ..
+      }

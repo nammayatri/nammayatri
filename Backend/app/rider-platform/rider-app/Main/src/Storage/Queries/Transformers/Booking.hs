@@ -119,26 +119,35 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
       bookingDetails <- case mbTripCategory of
         Just tripCategory ->
           case tripCategory of
-            OneWay OneWayRideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
-            CrossCity OneWayRideOtp _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
-            RideShare RideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
+            OneWay OneWayRideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId []
+            CrossCity OneWayRideOtp _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId []
+            RideShare RideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId []
             Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
             InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocationId
             Ambulance _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocationId
             Delivery _ -> DRB.DeliveryDetails <$> buildDeliveryDetails toLocationId
-            _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocationId
+            _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocationId []
         Nothing ->
           case fareProductType of
-            ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId
+            ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocationId []
             RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
-            ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
+            ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId []
             INTER_CITY -> DRB.InterCityDetails <$> buildInterCityDetails toLocationId
             AMBULANCE -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocationId
-            _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocationId
+            _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocationId []
       return (pickupLoc, bookingDetails)
     else do
       fromLocationMapping <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
       fl <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
+
+      stopsLocationMapping <- QLM.getLatestStopsByEntityId id
+      stops <-
+        mapM
+          ( \stopLocationMapping ->
+              QL.findById stopLocationMapping.locationId
+                >>= fromMaybeM (StopsLocationNotFound stopLocationMapping.locationId.getId)
+          )
+          stopsLocationMapping
 
       mbToLocationMapping <- QLM.getLatestEndByEntityId id
       let toLocId = (.locationId.getId) <$> mbToLocationMapping
@@ -149,32 +158,33 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
       bookingDetails <- case mbTripCategory of
         Just tripCategory ->
           case tripCategory of
-            OneWay OneWayRideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId
-            CrossCity OneWayRideOtp _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId
-            RideShare RideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId
+            OneWay OneWayRideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId stops
+            CrossCity OneWayRideOtp _ -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId stops
+            RideShare RideOtp -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId stops
             Rental _ -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
             InterCity _ _ -> DRB.InterCityDetails <$> buildInterCityDetails toLocId
             Ambulance _ -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocId
             Delivery _ -> DRB.DeliveryDetails <$> buildDeliveryDetails toLocId
-            _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocId
+            _ -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocId stops
         Nothing ->
           case fareProductType of
-            ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocId
+            ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocId stops
             RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
-            DRIVER_OFFER -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocId
-            ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId
+            DRIVER_OFFER -> DRB.DriverOfferDetails <$> buildOneWayDetails toLocId stops
+            ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId stops
             INTER_CITY -> DRB.InterCityDetails <$> buildInterCityDetails toLocId
             AMBULANCE -> DRB.AmbulanceDetails <$> buildAmbulanceDetails toLocId
       return (fl, bookingDetails)
   where
-    buildOneWayDetails mbToLocid = do
+    buildOneWayDetails mbToLocid stops = do
       toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)
       toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for one way booking")
       distance' <- (mkDistanceWithDefault distanceUnit distanceValue <$> distance) & fromMaybeM (InternalError "distance is null for one way booking")
       pure
         DRB.OneWayBookingDetails
           { toLocation = toLocation,
-            distance = distance'
+            distance = distance',
+            stops = stops
           }
     buildInterCityDetails mbToLocid = do
       toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)
@@ -186,7 +196,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
             distance = distance',
             ..
           }
-    buildOneWaySpecialZoneDetails mbToLocid = do
+    buildOneWaySpecialZoneDetails mbToLocid stops = do
       toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)
       toLocation <- maybe (pure Nothing) (QL.findById . Id) (Just toLocid) >>= fromMaybeM (InternalError "toLocation is null for one way special zone booking")
       distance' <- (mkDistanceWithDefault distanceUnit distanceValue <$> distance) & fromMaybeM (InternalError "distance is null for one way booking")

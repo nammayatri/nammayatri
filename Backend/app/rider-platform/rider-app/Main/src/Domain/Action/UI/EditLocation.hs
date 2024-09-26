@@ -74,7 +74,8 @@ postEditResultConfirm (mbPersonId, merchantId) bookingUpdateReqId = do
                   { bppRideId = ride.bppRideId,
                     origin = Nothing,
                     status = ACL.CONFIRM_UPDATE,
-                    destination = Just destination'
+                    destination = Just destination',
+                    stops = Nothing
                   },
             ..
           }

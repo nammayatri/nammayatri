@@ -54,6 +54,23 @@ getDropOffLocation req = do
     >>= lastStop
     >>= (.stopLocation)
 
+getIntermediateStops :: Spec.SearchReqMessage -> Maybe [Spec.Stop]
+getIntermediateStops req = do
+  req.searchReqMessageIntent
+    >>= (.intentFulfillment)
+    >>= (.fulfillmentStops)
+    >>= (Just . intermediateStops)
+
+getIntermediateStopLocations :: MonadFlow m => Spec.SearchReqMessage -> m [Spec.Location]
+getIntermediateStopLocations req = do
+  case getIntermediateStops req of
+    Nothing -> return []
+    Just stops -> do
+      traverse getIntermediateStopLocation (sequenceStops stops)
+  where
+    getIntermediateStopLocation :: MonadFlow m => Spec.Stop -> m Spec.Location
+    getIntermediateStopLocation stop = stop.stopLocation & fromMaybeM (InvalidRequest ("Missing Stop Location" <> show stop))
+
 getPickUpLocationGps :: MonadFlow m => Spec.SearchReqMessage -> m Text
 getPickUpLocationGps req =
   req.searchReqMessageIntent
@@ -148,3 +165,27 @@ firstStop = find (\stop -> Spec.stopType stop == Just (show Enums.START))
 
 lastStop :: [Spec.Stop] -> Maybe Spec.Stop
 lastStop = find (\stop -> Spec.stopType stop == Just (show Enums.END))
+
+intermediateStops :: [Spec.Stop] -> [Spec.Stop]
+intermediateStops = filter (\stop -> Spec.stopType stop == Just (show Enums.INTERMEDIATE_STOP))
+
+sequenceStops :: [Spec.Stop] -> [Spec.Stop]
+sequenceStops stops = go Nothing []
+  where
+    go _ [] =
+      case firstStop stops of
+        Just firstStop' -> go (Just firstStop') [firstStop']
+        Nothing -> []
+    go mPrevStop acc =
+      case mPrevStop of
+        Nothing -> acc -- shouldn't happen
+        Just prevStop ->
+          case findNextStop prevStop of
+            Just nextStop -> go (Just nextStop) (acc ++ [nextStop])
+            Nothing -> acc
+
+    -- findFirstStop :: Maybe Spec.Stop
+    -- findFirstStop = stops & find (\stop -> stop.stopParentStopId == Nothing)
+
+    findNextStop :: Spec.Stop -> Maybe Spec.Stop
+    findNextStop prevStop = stops & find (\stop -> stop.stopParentStopId == prevStop.stopId)
