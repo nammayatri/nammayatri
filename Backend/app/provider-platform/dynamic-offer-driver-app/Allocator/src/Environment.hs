@@ -31,6 +31,7 @@ import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
 import Kernel.Streaming.Kafka.Producer.Types
@@ -107,7 +108,8 @@ data HandlerEnv = HandlerEnv
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     searchRequestExpirationSeconds :: NominalDiffTime,
     s3Env :: S3Env Flow,
-    passettoContext :: PassettoContext
+    passettoContext :: PassettoContext,
+    serviceClickhouseEnv :: ClickhouseEnv
   }
   deriving (Generic)
 
@@ -123,6 +125,7 @@ buildHandlerEnv HandlerCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
   passettoContext <- (uncurry mkDefPassettoContext) encTools.service
   hedisEnv <- connectHedis appCfg.hedisCfg ("dynamic-offer-driver-app:" <>)
+  serviceClickhouseEnv <- createConn driverClickhouseCfg
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>)
   let internalEndPointHashMap = HMS.fromList $ MS.toList internalEndPointMap
   let requestId = Nothing
