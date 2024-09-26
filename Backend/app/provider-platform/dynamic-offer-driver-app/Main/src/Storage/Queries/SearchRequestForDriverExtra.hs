@@ -115,6 +115,18 @@ findByDriver (Id driverId) = do
     else do
       findAllWithOptionsKV [Se.And [Se.Is BeamSRFD.driverId $ Se.Eq driverId, Se.Is BeamSRFD.status $ Se.Eq Domain.Active, Se.Is BeamSRFD.searchRequestValidTill $ Se.GreaterThan (T.utcToLocalTime T.utc now)]] (Se.Desc BeamSRFD.searchRequestValidTill) Nothing Nothing
 
+findByDriverForLastXMinute :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Int -> m [SearchRequestForDriver]
+findByDriverForLastXMinute (Id driverId) xMin = do
+  now <- getCurrentTime
+  let startTime = T.addUTCTime (-60 * fromIntegral xMin) now
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamSRFD.driverId $ Se.Eq driverId,
+          Se.Is BeamSRFD.status $ Se.Eq Domain.Active,
+          Se.Is BeamSRFD.createdAt $ Se.GreaterThan (T.utcToLocalTime T.utc startTime)
+        ]
+    ]
+
 findByDriverAndSearchTryId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id SearchTry -> m (Maybe SearchRequestForDriver)
 findByDriverAndSearchTryId (Id driverId) (Id searchTryId) =
   findOneWithKV

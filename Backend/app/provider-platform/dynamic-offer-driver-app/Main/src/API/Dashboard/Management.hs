@@ -27,6 +27,7 @@ import qualified API.Action.Dashboard.Management.Payout as PayoutDSL
 import qualified API.Action.Dashboard.Management.Revenue as RevenueDSL
 import qualified API.Action.Dashboard.Management.Ride as RideDSL
 import qualified API.Action.Dashboard.Management.System as SystemDSL
+import qualified API.Action.Dashboard.Management.TicketService as TicketServiceDSL
 import qualified API.Dashboard.Management.Issue as Issue
 import qualified API.Dashboard.Management.Overlay as Overlay
 import qualified API.Dashboard.Management.Subscription as Subscription
@@ -55,6 +56,7 @@ type API =
            :<|> BookingDSL.API
            :<|> PayoutDSL.API
            :<|> SystemDSL.API
+           :<|> TicketServiceDSL.API
        )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
@@ -75,3 +77,4 @@ handler merchantId city _ =
     :<|> BookingDSL.handler merchantId city
     :<|> PayoutDSL.handler merchantId city
     :<|> SystemDSL.handler merchantId city
+    :<|> TicketServiceDSL.handler merchantId city

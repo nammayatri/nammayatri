@@ -69,6 +69,14 @@ data DriverGoHomeRequest
 
 data Document
 
+data Merchant
+
+data MerchantOperatingCity
+
+data SearchTry
+
+data SearchRequest
+
 data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

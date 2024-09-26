@@ -11,7 +11,7 @@ imports:
   VerificationStatus: Dashboard.Common
   DriverDocumentsInfoRes: Dashboard.Common.Driver
   DriverActivityRes: Dashboard.Common.Driver
-  DriverLicense: Dashboard.Common.Driver
+  DriverLicenseD: Dashboard.Common.Driver
   VehicleRegistrationCertificate: Dashboard.Common.Driver
   ReasonForDisablingServiceCharge: Dashboard.Common.Driver
   ServiceNames: Dashboard.Common.Driver
@@ -25,6 +25,15 @@ imports:
   PersonRes: Dashboard.Common
   MandatoryQueryParam: Kernel.Utils.Common
   DriverFeeStatus:  Dashboard.Common.Driver
+  Merchant: Dashboard.Common
+  MerchantOperatingCity: Dashboard.Common
+  SearchRequest: Dashboard.Common
+  SearchTry: Dashboard.Common
+  Device: Kernel.Types.Version
+  Months : Kernel.Types.Time
+  DriverMode: Dashboard.ProviderPlatform.Fleet.Driver
+  importPackageOverrides:
+    Domain.Types.ServiceTierType : beckn-spec
 
 module: Driver
 
@@ -408,6 +417,27 @@ apis:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SECURITY_DEPOSIT_STATUS
       response:
         type: ([SecurityDepositDfStatusRes])
+  - GET:
+      endpoint: /{driverId}/DriverLicenseDetails
+      params:
+        driverId: Id Driver
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_LICENSE_DETAILS
+      response:
+        type: DriverLicenseD
+      migrate:
+        endpointV2:
+  - GET:
+      endpoint: /{driverId}/{xMin}/searchRequests
+      params:
+        driverId: Id Driver
+        xMin: Int
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SEARCH_REQUESTS
+      response:
+        type: ([SearchRequestForDriver])
+      migrate:
+        endpointV2:
 types:
   DriverListRes:
     - totalItems: Int # for backward compatibility
@@ -577,3 +607,68 @@ types:
     - driverFeeType : DriverFeeType
     - refundAmountSegregation : Maybe Text
     - derive: "'HideSecrets"
+  NotificationSource:
+    - enum: "FCM, GRPC"
+    - derive: "Read, Kernel.Prelude.ToParamSchema"
+  SearchRequestForDriverResponse:
+    - enum: "Accept, Reject, Pulled"
+    - derive: "Read, Kernel.Prelude.ToParamSchema"
+  SearchRequestForDriver:
+    - acceptanceRatio: Maybe Double
+    - actualDistanceToPickup: Meters
+    - airConditioned: Maybe Bool
+    - backendAppVersion: Maybe Text
+    - backendConfigVersion: Maybe Version
+    - baseFare: Maybe HighPrecMoney
+    - batchNumber: Int
+    - cancellationRatio: Maybe Double
+    - clientBundleVersion: Maybe Version
+    - clientConfigVersion: Maybe Version
+    - clientDevice: Maybe Device
+    - clientSdkVersion: Maybe Version
+    - createdAt: UTCTime
+    - currency: Currency
+    - customerCancellationDues: HighPrecMoney
+    - distanceUnit: DistanceUnit
+    - driverAvailableTime: Maybe Double
+    - driverDefaultStepFee: Maybe HighPrecMoney
+    - driverId: Id Driver
+    - driverMaxExtraFee: Maybe HighPrecMoney
+    - driverMinExtraFee: Maybe HighPrecMoney
+    - driverSpeed: Maybe Double
+    - driverStepFee: Maybe HighPrecMoney
+    - durationToPickup: Seconds
+    - estimateId: Maybe Text
+    - goHomeRequestId: Maybe (Id DriverGoHomeRequest)
+    - id: Id SearchRequestForDriver
+    - isForwardRequest: Bool
+    - isPartOfIntelligentPool: Bool
+    - keepHiddenForSeconds: Seconds
+    - lat: Maybe Double
+    - lon: Maybe Double
+    - merchantId: Maybe (Id Merchant)
+    - merchantOperatingCityId: Id MerchantOperatingCity
+    - mode: Maybe DriverMode
+    - notificationSource: Maybe NotificationSource
+    - parallelSearchRequestCount: Maybe Int
+    - pickupZone: Bool
+    - previousDropGeoHash: Maybe Text
+    - renderedAt: Maybe UTCTime
+    - requestId: Id SearchRequest
+    - respondedAt: Maybe UTCTime
+    - response: Maybe SearchRequestForDriverResponse
+    - rideFrequencyScore: Maybe Double
+    - rideRequestPopupDelayDuration: Seconds
+    - searchRequestValidTill: UTCTime
+    - searchTryId: Id SearchTry
+    - startTime: UTCTime
+    - status: Text
+    - straightLineDistanceToPickup: Meters
+    - totalRides: Int
+    - updatedAt: Maybe UTCTime
+    - vehicleAge: Maybe Months
+    - vehicleServiceTier: Domain.Types.ServiceTierType.ServiceTierType
+    - vehicleServiceTierName: Maybe Text
+    - vehicleVariant: VehicleVariant
+    - derive: "Show, 'HideSecrets"
+

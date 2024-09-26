@@ -49,11 +49,14 @@ module Domain.Action.ProviderPlatform.Management.Driver
     postDriverUpdateVehicleManufacturing,
     postDriverRefundByPayout,
     getDriverSecurityDepositStatus,
+    getDriverDriverLicenseDetails,
+    getDriverSearchRequests,
   )
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as Common
+import qualified Dashboard.Common.Driver
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
@@ -315,3 +318,13 @@ getDriverSecurityDepositStatus :: (ShortId DM.Merchant -> City.City -> ApiTokenI
 getDriverSecurityDepositStatus merchantShortId opCity apiTokenInfo driverId mbServiceName = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.getDriverSecurityDepositStatus) driverId mbServiceName
+
+getDriverDriverLicenseDetails :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Environment.Flow Dashboard.Common.Driver.DriverLicenseD)
+getDriverDriverLicenseDetails merchantShortId opCity apiTokenInfo driverId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.getDriverDriverLicenseDetails) driverId
+
+getDriverSearchRequests :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Types.Id.Id Common.Driver -> Int -> Environment.Flow [Common.SearchRequestForDriver])
+getDriverSearchRequests merchantShortId opCity apiTokenInfo driverId xMin = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.getDriverSearchRequests) driverId xMin

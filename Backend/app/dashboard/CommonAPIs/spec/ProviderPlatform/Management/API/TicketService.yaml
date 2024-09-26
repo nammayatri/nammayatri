@@ -1,0 +1,19 @@
+imports:
+  CreateTicketReq: Kernel.External.Ticket.Interface.Types
+  CreateTicketResp: Kernel.External.Ticket.Kapture.Types
+  Classification: Kernel.External.Ticket.Interface.Types
+
+module: TicketService
+
+apis:
+  - POST:
+      endpoint: /createKaptureTicket
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS TICKET_SERVICE
+      request:
+        type: CreateTicketReq
+      response:
+        type: CreateTicketResp
+      migrate:
+        endpointV2:
+
+types: {}

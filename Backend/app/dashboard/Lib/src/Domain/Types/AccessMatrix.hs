@@ -272,6 +272,9 @@ data UserActionType
   | SECURITY_DEPOSIT_STATUS
   | CLEAR_CACHE_SUBSCRIPTION
   | RUN_QUERY
+  | TICKET_SERVICE
+  | DRIVER_LICENSE_DETAILS
+  | SEARCH_REQUESTS
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)

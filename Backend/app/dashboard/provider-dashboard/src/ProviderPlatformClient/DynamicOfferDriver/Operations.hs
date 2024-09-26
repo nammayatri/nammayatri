@@ -33,6 +33,7 @@ import qualified API.Types.ProviderPlatform.Management.Payout as PayoutDSL
 import qualified API.Types.ProviderPlatform.Management.Revenue as RevenueDSL
 import qualified API.Types.ProviderPlatform.Management.Ride as RideDSL
 import qualified API.Types.ProviderPlatform.Management.System as SystemDSL
+import qualified API.Types.ProviderPlatform.Management.TicketService as TicketServiceDSL
 import qualified Dashboard.ProviderPlatform.Management.Driver as Driver
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
@@ -77,6 +78,7 @@ data DriverOperationAPIs = DriverOperationAPIs
     bookingDSL :: BookingDSL.BookingAPIs,
     payoutDSL :: PayoutDSL.PayoutAPIs,
     systemDSL :: SystemDSL.SystemAPIs
+    ticketServiceDSL :: TicketServiceDSL.TicketServiceAPIs
   }
 
 data OverlayAPIs = OverlayAPIs
@@ -142,6 +144,7 @@ mkDriverOperationAPIs merchantId city token = do
   let bookingDSL = BookingDSL.mkBookingAPIs bookingClientDSL
   let payoutDSL = PayoutDSL.mkPayoutAPIs payoutClientDSL
   let systemDSL = SystemDSL.mkSystemAPIs systemClientDSL
+  let ticketServiceDSL = TicketServiceDSL.mkTicketServiceAPIs ticketServiceClientDSL
   DriverOperationAPIs {..}
   where
     subscriptionClient
@@ -160,6 +163,7 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> bookingClientDSL
       :<|> payoutClientDSL
       :<|> systemClientDSL = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
+      :<|> ticketServiceClientDSL = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
 
     planListV2
       :<|> planSelectV2

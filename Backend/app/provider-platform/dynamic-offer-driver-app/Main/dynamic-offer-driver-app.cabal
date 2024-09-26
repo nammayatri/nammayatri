@@ -156,6 +156,7 @@ library
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
       Domain.Action.Dashboard.Management.System
+      Domain.Action.Dashboard.Management.TicketService
       Domain.Action.Dashboard.Overlay
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.RideBooking.Driver
@@ -627,6 +628,7 @@ library
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.System
+      API.Action.Dashboard.Management.TicketService
       API.Action.Dashboard.RideBooking.Driver
       API.Action.UI.Cac
       API.Action.UI.DemandHotspots

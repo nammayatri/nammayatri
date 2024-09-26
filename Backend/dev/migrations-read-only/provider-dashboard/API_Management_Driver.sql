@@ -6,7 +6,7 @@ UPDATE atlas_bpp_dashboard.transaction
 -- {"api":"PostDriverPersonId","migration":"endpointV2","param":null,"schema":"atlas_bpp_dashboard"}
 UPDATE atlas_bpp_dashboard.transaction
   SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_PERSON_ID'
-  WHERE endpoint = 'DriverAPI PostDriverpersonIdEndpoint';
+  WHERE endpoint = 'DriverAPI PostDriverPersonIdEndpoint';
 
 -- {"api":"PostDriverDisable","migration":"endpoint","param":"DriverAPI DisableDriverEndpoint","schema":"atlas_bpp_dashboard"}
 UPDATE atlas_bpp_dashboard.transaction
@@ -197,3 +197,16 @@ UPDATE atlas_bpp_dashboard.transaction
 UPDATE atlas_bpp_dashboard.transaction
   SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_SYNC_DOC_AADHAR_PAN'
   WHERE endpoint = 'DriverAPI PostDriverSyncDocAadharPanEndpoint';
+
+
+------- SQL updates -------
+
+-- {"api":"GetDriverDriverLicenseDetails","migration":"endpointV2","param":null,"schema":"atlas_bpp_dashboard"}
+UPDATE atlas_bpp_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_DRIVER_LICENSE_DETAILS'
+  WHERE endpoint = 'DriverAPI GetDriverDriverLicenseDetailsEndpoint';
+
+-- {"api":"GetDriverSearchRequests","migration":"endpointV2","param":null,"schema":"atlas_bpp_dashboard"}
+UPDATE atlas_bpp_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_SEARCH_REQUESTS'
+  WHERE endpoint = 'DriverAPI GetDriverSearchRequestsEndpoint';

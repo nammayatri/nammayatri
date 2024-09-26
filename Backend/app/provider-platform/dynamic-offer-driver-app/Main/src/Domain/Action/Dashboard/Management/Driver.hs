@@ -49,19 +49,32 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverUpdateVehicleManufacturing,
     postDriverRefundByPayout,
     getDriverSecurityDepositStatus,
+    getDriverDriverLicenseDetails,
+    getDriverSearchRequests,
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
+import qualified API.Types.ProviderPlatform.Management.Driver as Common
+import "dashboard-helper-api" Dashboard.Common.Driver (DriverLicenseD (..))
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as Common
 import qualified Domain.Action.Dashboard.Driver as DDriver
 import qualified Domain.Action.Dashboard.Driver.Notification as DDN
+import qualified Domain.Types.Common as DrInfo
+import qualified Domain.Types.DriverLicense as DL
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.SearchRequestForDriver as SR
 import Environment
+import Kernel.Beam.Functions as B
+import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Queries.DriverLicense as QDL
+import qualified Storage.Queries.SearchRequestForDriver as QR
+import Tools.Error
 
 -- TODO move handlers from Domain.Action.Dashboard.Driver
 getDriverDocumentsInfo :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverDocumentsInfoRes
@@ -171,3 +184,77 @@ postDriverRefundByPayout = DDriver.postDriverRefundByPayout
 
 getDriverSecurityDepositStatus :: (ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Common.ServiceNames -> Flow [Common.SecurityDepositDfStatusRes])
 getDriverSecurityDepositStatus = DDriver.getDriverSecurityDepositStatus
+
+getDriverDriverLicenseDetails :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow DriverLicenseD
+getDriverDriverLicenseDetails _ _ dId = do
+  mbDriverLicense <- B.runInReplica $ QDL.findByDriverId (cast dId)
+  case mbDriverLicense of
+    Just DL.DriverLicense {..} -> do
+      licenseNo <- decrypt licenseNumber
+      pure
+        DriverLicenseD
+          { documentImageId1 = cast documentImageId1,
+            documentImageId2 = case documentImageId2 of
+              Just docId -> Just $ cast docId
+              Nothing -> Nothing,
+            driverId = cast driverId,
+            id = cast id,
+            licenseNumber = licenseNo,
+            merchantId = case merchantId of
+              Just mId -> Just $ cast mId
+              Nothing -> Nothing,
+            ..
+          }
+    Nothing -> throwError (InvalidRequest "Driver license not found")
+
+getDriverSearchRequests :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Int -> Flow [Common.SearchRequestForDriver]
+getDriverSearchRequests _ _ driverId xMin = do
+  when (xMin > 180) $ throwError (InvalidRequest "xMin should be less than 180")
+  searchReqs <- B.runInReplica $ QR.findByDriverForLastXMinute (cast driverId) xMin
+  pure $ map buildSearchRequestForDriver searchReqs
+
+buildSearchRequestForDriver :: SR.SearchRequestForDriver -> Common.SearchRequestForDriver
+buildSearchRequestForDriver SR.SearchRequestForDriver {..} =
+  Common.SearchRequestForDriver
+    { id = cast id,
+      driverId = cast driverId,
+      goHomeRequestId = case goHomeRequestId of
+        Just ghId -> Just $ cast ghId
+        Nothing -> Nothing,
+      merchantId = case merchantId of
+        Just mId -> Just $ cast mId
+        Nothing -> Nothing,
+      merchantOperatingCityId = cast merchantOperatingCityId,
+      mode = Just $ castDriverStatus mode,
+      notificationSource = Just $ castNotificationSource notificationSource,
+      requestId = cast requestId,
+      response = Just $ castSearchRequestForDriverResponse response,
+      searchTryId = cast searchTryId,
+      status = castDriverSearchRequestStatus status,
+      ..
+    }
+
+castDriverStatus :: Maybe DrInfo.DriverMode -> Common.DriverMode
+castDriverStatus = \case
+  Just DrInfo.ONLINE -> Common.ONLINE
+  Just DrInfo.OFFLINE -> Common.OFFLINE
+  Just DrInfo.SILENT -> Common.SILENT
+  Nothing -> Common.OFFLINE
+
+castNotificationSource :: Maybe SR.NotificationSource -> Common.NotificationSource
+castNotificationSource = \case
+  Just SR.FCM -> Common.FCM
+  Just SR.GRPC -> Common.GRPC
+  Nothing -> Common.FCM
+
+castSearchRequestForDriverResponse :: Maybe SR.SearchRequestForDriverResponse -> Common.SearchRequestForDriverResponse
+castSearchRequestForDriverResponse = \case
+  Just SR.Accept -> Common.Accept
+  Just SR.Reject -> Common.Reject
+  Just SR.Pulled -> Common.Pulled
+  Nothing -> Common.Reject
+
+castDriverSearchRequestStatus :: SR.DriverSearchRequestStatus -> Text
+castDriverSearchRequestStatus = \case
+  SR.Active -> "Active"
+  SR.Inactive -> "Inactive"
