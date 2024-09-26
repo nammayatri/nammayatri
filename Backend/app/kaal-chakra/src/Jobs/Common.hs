@@ -12,4 +12,5 @@ buildRunKaalChakraJobReq chakra = do
   usersInBatch <- asks (.usersInBatch)
   maxBatches <- asks (.maxBatches)
   parseQueryResults <- asks (.parseQueryResults)
+  let batchDelayInSec = 2 -- FIXME
   pure Lib.Yudhishthira.Types.RunKaalChakraJobReq {usersSet = Lib.Yudhishthira.Types.ALL_USERS, ..}

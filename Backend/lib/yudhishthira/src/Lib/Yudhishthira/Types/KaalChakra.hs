@@ -9,6 +9,7 @@ import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Utils.Dhall (FromDhall)
+import Lib.Scheduler
 import Lib.Yudhishthira.Types.Common
 
 data NammaTagChakra = NammaTagChakra
@@ -34,6 +35,29 @@ data Chakra
 $(mkBeamInstancesForEnum ''Chakra)
 genSingletons [''Chakra]
 showSingInstance ''Chakra
+
+instance JobProcessor Chakra where
+  restoreAnyJobInfo :: Sing (e :: Chakra) -> Text -> Maybe (AnyJobInfo Chakra)
+  restoreAnyJobInfo SDaily jobData = AnyJobInfo <$> restoreJobInfo SDaily jobData
+  restoreAnyJobInfo SWeekly jobData = AnyJobInfo <$> restoreJobInfo SWeekly jobData
+  restoreAnyJobInfo SMonthly jobData = AnyJobInfo <$> restoreJobInfo SMonthly jobData
+  restoreAnyJobInfo SQuarterly jobData = AnyJobInfo <$> restoreJobInfo SQuarterly jobData
+
+instance JobInfoProcessor 'Daily
+
+instance JobInfoProcessor 'Weekly
+
+instance JobInfoProcessor 'Monthly
+
+instance JobInfoProcessor 'Quarterly
+
+type instance JobContent 'Daily = EmptyData
+
+type instance JobContent 'Weekly = EmptyData
+
+type instance JobContent 'Monthly = EmptyData
+
+type instance JobContent 'Quarterly = EmptyData
 
 newtype QLimit = QLimit {getQLimit :: Int}
 

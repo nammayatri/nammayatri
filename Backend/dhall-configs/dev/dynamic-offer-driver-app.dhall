@@ -209,6 +209,10 @@ let AllocatorJobType =
       | ScheduledRideNotificationsToDriver
       | DriverReferralPayout
       | ScheduledRideAssignedOnUpdate
+      | Daily
+      | Weekly
+      | Monthly
+      | Quarterly
       >
 
 let jobInfoMapx =
@@ -238,6 +242,10 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.DriverReferralPayout, mapValue = True }
+      , { mapKey = AllocatorJobType.Daily, mapValue = True }
+      , { mapKey = AllocatorJobType.Weekly, mapValue = True }
+      , { mapKey = AllocatorJobType.Monthly, mapValue = True }
+      , { mapKey = AllocatorJobType.Quarterly, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
