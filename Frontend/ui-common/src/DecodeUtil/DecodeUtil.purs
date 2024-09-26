@@ -78,3 +78,19 @@ handleForeignError error object defaultObject mbKey = case error of
           runFn3 unsafeSetForeign key object value
         else
           unsafeToForeign $ defaultObject
+
+
+setKeyInWindow :: forall a. String -> a -> Unit
+setKeyInWindow key val = 
+  let
+    _ =  runFn2 setAnyInWindow key val 
+  in unit
+
+getKeyFromWindow :: forall a. String -> Maybe a 
+getKeyFromWindow key = runFn3 getAnyFromWindow key Nothing Just
+
+getKeyWithDefaultFromWindow :: forall a. String -> a -> a 
+getKeyWithDefaultFromWindow key defaultVal = 
+  case getKeyFromWindow key of
+    Just val -> val
+    Nothing -> defaultVal

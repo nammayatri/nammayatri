@@ -220,9 +220,13 @@ import Data.Tuple
 import Screens.HomeScreen.Controllers.Types
 import Components.MessagingView.Controller as CMC
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.Controller as ParcelDeliveryScreenController
+import DecodeUtil
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
+  when callInitUI $ lift $ lift $ initUI 
+  if callInitUI then toggleSetupSplash true else pure unit
+  let _ = setKeyInWindow "forceAppToNoInternetScreen" true
   lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "v1-assets_downloader.jsa" "https://assets.moving.tech/beckn/bundles/mobility-core/0.0.6/v1-assets_downloader.jsa" (cb <<< Right) $> nonCanceler
   liftFlowBT $ markPerformance "BASE_APP_FLOW"
   -- checkVersion
@@ -232,8 +236,6 @@ baseAppFlow gPayload callInitUI = do
   liftFlowBT $ resetAllTimers
   let
     showSplashScreen = fromMaybe false $ gPayload ^. _payload ^. _show_splash
-  when callInitUI $ lift $ lift $ initUI -- TODO:: Can we move this to Main
-  when showSplashScreen $ toggleSplash true
   tokenValidity <- validateToken signatureAuthData
   lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
   if tokenValidity then
@@ -501,14 +503,15 @@ hideSplashAndCallFlow flow = do
 
 hideLoaderFlow :: FlowBT String Unit
 hideLoaderFlow = do
-  toggleSplash false
+  toggleSetupSplash false
   void $ lift $ lift $ toggleLoader false
-  liftFlowBT $ hideLoader
+  liftFlowBT $ hideLoader ""
 
-toggleSplash :: Boolean -> FlowBT String Unit
-toggleSplash =
-  if _ then
+toggleSetupSplash :: Boolean -> FlowBT String Unit
+toggleSetupSplash =
+  if _ then do
     UI.splashScreen
+    liftFlowBT $ hideLoader ""
   else do
     state <- getState
     void $ liftFlowBT $ launchAff $ flowRunner state $ runExceptT $ runBackT
@@ -758,6 +761,7 @@ currentFlowStatus = do
 
 enterMobileNumberScreenFlow :: FlowBT String Unit
 enterMobileNumberScreenFlow = do
+  let _ = setKeyInWindow "forceAppToNoInternetScreen" false
   config <- getAppConfigFlowBT appConfig
   let currentCityConfig = getCityConfig config.cityConfig $ getValueToLocalStore CUSTOMER_LOCATION
   hideLoaderFlow -- Removed initial choose langauge screen
@@ -3327,17 +3331,19 @@ permissionScreenFlow = do
       else do
         setValueToLocalStore PERMISSION_POPUP_TIRGGERED "true"
         currentFlowStatus
-    TURN_ON_INTERNET -> case (getValueToLocalStore USER_NAME == "__failed") of
-      true -> pure unit
-      _ ->
+    TURN_ON_INTERNET -> 
         if os == "IOS" && not permissionConditionB then do
           modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen { stage = LOCATION_DENIED })
           permissionScreenFlow
         else if not (permissionConditionA && permissionConditionB) then do
           modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen { stage = LOCATION_DISABLED })
           permissionScreenFlow
-        else
-          currentFlowStatus
+        else do
+          case getGlobalPayload Constants.globalPayload of
+            Just payload -> do  
+              liftFlowBT $ terminateUI $ Just "PermissionScreen"
+              baseAppFlow payload false
+            Nothing -> permissionScreenFlow
 
 myProfileScreenFlow :: FlowBT String Unit
 myProfileScreenFlow = do
@@ -4287,7 +4293,7 @@ placeDetailsFlow :: FlowBT String Unit
 placeDetailsFlow = do
   (GlobalState currentState) <- getState
   void $ pure $ spy "ZOO TICKET PLACE DETAILS CALLED" currentState
-  liftFlowBT $ hideLoader
+  liftFlowBT $ hideLoader ""
   modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen 
   { data 
       { dateOfVisit = if DS.null ticketBookingScreen.data.dateOfVisit 
@@ -4334,7 +4340,7 @@ ticketStatusFlow :: FlowBT String Unit
 ticketStatusFlow = do
   (GlobalState currentState) <- getState
   void $ pure $ spy "ZOO TICKET STATUS CALLED" currentState
-  liftFlowBT $ hideLoader
+  liftFlowBT $ hideLoader ""
   modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { data { dateOfVisit = (getNextDateV2 "") } })
   flow <- UI.ticketStatusScreen
   case flow of
@@ -4545,7 +4551,7 @@ ticketListFlow :: FlowBT String Unit
 ticketListFlow = do
   (GlobalState currentState) <- getState
   void $ pure $ spy "ZOO TICKET TICKET LIST CALLED" currentState
-  liftFlowBT $ hideLoader
+  liftFlowBT $ hideLoader ""
   modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { data { dateOfVisit = (getNextDateV2 "") } })
   flow <- UI.ticketListScreen
   case flow of

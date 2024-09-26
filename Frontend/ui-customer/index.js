@@ -233,7 +233,6 @@ window.onMerchantEvent = function (_event, globalPayload) {
   } else if (_event == "process") {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
     console.warn("Process called");
-    window.__payload.sdkVersion = "2.0.1"
     try {
       const clientPaylod = window.__payload.payload;
       if (

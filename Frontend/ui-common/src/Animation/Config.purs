@@ -66,3 +66,22 @@ estimateExpandingAnimationConfig fromY' fromScaleY' isAnim = animConfig
   , ifAnim = isAnim
   , duration = 100
 }
+
+
+expandWithDuration :: Int -> Boolean -> PrestoAnim.Animation
+expandWithDuration duration isAnim = 
+  PrestoAnim.Animation
+    [ PrestoAnim.duration duration
+    , PrestoAnim.fromScaleY 0.0
+    , PrestoAnim.toScaleY 1.0
+    ]
+    isAnim
+
+collapseWithDuration :: Int -> Boolean -> PrestoAnim.Animation   
+collapseWithDuration duration isAnim = 
+  PrestoAnim.Animation
+    [ PrestoAnim.duration duration
+    , PrestoAnim.toScaleY 0.0
+    , PrestoAnim.fromScaleY 1.0
+    ]
+    isAnim

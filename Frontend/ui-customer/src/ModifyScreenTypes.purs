@@ -18,16 +18,21 @@ module ModifyScreenState where
 import Accessor (_lat, _lon)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..))
-import Engineering.Helpers.BackTrack (modifyState, getState)
-import Prelude (Unit, bind, ($), (==))
+import Engineering.Helpers.BackTrack (getState)
+import Presto.Core.Types.Language.Flow (Flow(..), modifyState)
+import Prelude
 import Resources.Constants (encodeAddress, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (initData) as HomeScreen
 import Screens.Types (MyRidesScreenState, Stage(..), Trip(..), LocationSelectType(..), HomeScreenState)
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Common.Types.App as CTA
+import Control.Monad.Trans.Class (lift)
 
 modifyScreenState :: ScreenType -> FlowBT String Unit
-modifyScreenState st =
+modifyScreenState st = void $ lift $ lift $ modifyScreenStateFlow st
+
+modifyScreenStateFlow :: ScreenType -> Flow GlobalState GlobalState
+modifyScreenStateFlow st =
   case st of
     TicketingScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state{ ticketingScreen = a state.ticketingScreen}) 
     ChooseLanguageScreenStateType a -> modifyState (\(GlobalState  state) -> GlobalState  $ state { chooseLanguageScreen = a state.chooseLanguageScreen})

@@ -183,8 +183,8 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
                       bufferCardData = myRideListTransformer state (rideList  ^. _list)
                       loaderBtnDisabled = if(length (rideList ^. _list )== 0) then true else false
                   _ <- pure $ setRefreshing "2000031" false
-                  continue $ state {shimmerLoader = AnimatedOut ,prestoListArrayItems = union (state.prestoListArrayItems) (bufferCardDataPrestoList), itemsRides = unionBy matchRidebyId (state.itemsRides) (bufferCardData),props{loadMoreDisabled = loaderBtnDisabled, receivedResponse = true ,refreshLoader = false}}
-    "listCompleted" -> continue state {data{loadMoreText = false},props  {refreshLoader = false}}
+                  continue $ state {shimmerLoader = AnimatedOut ,prestoListArrayItems = union (state.prestoListArrayItems) (bufferCardDataPrestoList), itemsRides = unionBy matchRidebyId (state.itemsRides) (bufferCardData),props{loadMoreDisabled = loaderBtnDisabled, receivedResponse = true ,refreshLoader = false, apiFailure = false}}
+    "listCompleted" -> continue state {data{loadMoreText = false},props  {refreshLoader = false, apiFailure = false}}
     _ -> continue state{props{receivedResponse = true, apiFailure = true, loadMoreDisabled = true}}
 
 eval Refresh state = updateAndExit state{props{ receivedResponse = false, loaderButtonVisibility = false ,refreshLoader = true}} $  MyRidesScreen state

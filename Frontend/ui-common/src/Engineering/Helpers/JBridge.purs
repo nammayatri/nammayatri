@@ -250,7 +250,7 @@ foreign import extractReferrerUrl :: Unit -> Effect Unit
 foreign import launchDateSettings :: String -> Unit
 foreign import startLottieProcess :: LottieAnimationConfig -> Unit
 foreign import methodArgumentCount :: String -> Int
-foreign import hideLoader :: Effect Unit
+foreign import hideLoader ::String -> Effect Unit
 foreign import emitJOSEvent :: Fn3 String String Foreign Unit
 foreign import getLayoutBounds :: Fn1 String LayoutBound
 foreign import horizontalScrollToPos :: EffectFn3 String String Int Unit
@@ -1053,3 +1053,6 @@ handleLocateOnMapCallback screenName = (\push key lat lon -> do
     isActive <- isScreenActive "default" screenName
     when isActive $ do push key lat lon
     pure isActive
+
+
+foreign import triggerReloadApp :: String ->Effect Unit

@@ -21,8 +21,8 @@ import Services.API
 import Accessor (_deviceToken)
 import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck(..), FeedbackAnswer)
 import ConfigProvider as CP
-import Control.Monad.Except.Trans (lift)
-import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
+import Control.Monad.Except.Trans (lift, runExceptT)
+import Control.Transformers.Back.Trans (BackT(..), FailBack(..), runBackT)
 import Data.Array ((!!), catMaybes, concat, take, any, singleton, find, filter, length, null, mapMaybe)
 import Data.Either (Either(..), either)
 import Data.Lens ((^.))
@@ -31,7 +31,7 @@ import Data.String as DS
 import Data.Foldable (or)
 import Resources.Constants as Constants
 import Engineering.Helpers.Events as Events
-import Engineering.Helpers.Commons (liftFlow, os, convertUTCtoISC, isPreviousVersion, isInvalidUrl, getNewIDWithTag)
+import Engineering.Helpers.Commons (liftFlow, os, convertUTCtoISC, isPreviousVersion, isInvalidUrl, getNewIDWithTag, flowRunner)
 import Engineering.Helpers.Utils as EHU
 import Engineering.Helpers.Commons as EHC
 import Foreign.Generic (encode)
@@ -44,9 +44,9 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import ModifyScreenState (modifyScreenState)
-import Prelude (not, Unit, bind, discard, map, pure, unit, void, identity, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when, (<$>))
+import Prelude
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
-import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS)
+import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS, fork)
 import Screens.Types (TicketServiceData, AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), City(..), AutoCompleteReqType(..))
 import Services.Config as SC
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
@@ -68,8 +68,13 @@ import Mobility.Prelude as MP
 import SessionCache
 import LocalStorage.Cache (removeValueFromCache)
 import Helpers.API (callApiBT, getDeviceDetails)
-import Screens.Types (FareProductType(..)) as FPT
 import Services.API (ServiceabilityType(..)) as ServiceabilityType
+import Screens.PermissionScreen.Handler as PermissionScreen
+import Screens.Types as ST
+import Engineering.Helpers.BackTrack
+import Effect.Aff
+import Helpers.API (noInternetScreen)
+import DecodeUtil
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -113,16 +118,19 @@ withAPIResult url f flow = do
     let start = getTime unit
     resp <- Events.measureDurationFlow ("CallAPI." <> DS.replace (DS.Pattern $ SC.getBaseUrl "") (DS.Replacement "") url) $ either (pure <<< Left) (pure <<< Right <<< f <<< _.response) =<< flow    
     let end = getTime unit
-    _ <- pure $ printLog "withAPIResult url" url
+    void $ pure $ printLog "withAPIResult url" url
     case resp of
-        Right res -> void $ pure $ printLog "success resp" res
+        Right res -> do
+            let _ = setKeyInWindow "noInternetCount" 0 
+            void $ pure $ printLog "success resp" res
         Left (err) -> do
             _ <- pure $ toggleBtnLoader "" false
             let errResp = err.response
             _ <- pure $ printLog "error resp" errResp
             let userMessage = decodeError errResp.errorMessage "errorMessage"
             let codeMessage = decodeError errResp.errorMessage "errorCode"
-            if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
+            if err.code == -1 then do noInternetScreen "lazy"
+            else if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
                 _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
                 _ <- pure $ deleteValueFromLocalStore REGISTRATION_APPROVED
                 _ <- liftFlow $ stopChatListenerService
@@ -140,6 +148,7 @@ withAPIResultBT url f errorHandler flow = do
     _ <- pure $ printLog "withAPIResultBT url" url
     case resp of
         Right res -> do
+            let _ = setKeyInWindow "noInternetCount" 0
             pure res
         Left err -> do
             _ <- pure $ toggleBtnLoader "" false
@@ -147,7 +156,8 @@ withAPIResultBT url f errorHandler flow = do
             let userMessage = decodeError errResp.errorMessage "errorMessage"
             let codeMessage = decodeError errResp.errorMessage "errorCode"
             _ <- pure $ printLog "error resp" errResp
-            if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
+            if err.code == -1 then do lift $ lift $ noInternetScreen "lazy"
+            else if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
                 deleteValueFromLocalStore REGISTERATION_TOKEN
                 deleteValueFromLocalStore REGISTRATION_APPROVED
                 lift $ lift $ liftFlow $ stopChatListenerService

@@ -19,13 +19,15 @@ import Control.Monad.Trans.Class (lift)
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Prelude (Unit, bind, discard, void, ($))
-import PrestoDOM.Core.Types.Language.Flow (initUIWithNameSpace, showScreenWithNameSpace)
+import PrestoDOM.Core.Types.Language.Flow (initUIWithNameSpace, showScreenWithNameSpace, runScreen, runScreenWithNameSpace)
 import Screens.SplashScreen.View as SplashScreen
 import Types.App (GlobalState(..), FlowBT)
-
+import Presto.Core.Types.Language.Flow
+import Engineering.Helpers.Commons
 
 splashScreen :: FlowBT String Unit
 splashScreen = do
   (GlobalState globalState) <- getState
-  void $ liftFlowBT $ initUIWithNameSpace "SplashScreen" Nothing
-  void $ lift $ lift $ showScreenWithNameSpace $ SplashScreen.screen globalState.splashScreen
+  void $ lift $ lift $ fork $ do 
+    void $ liftFlow $ initUIWithNameSpace "SplashScreen" Nothing
+    void $ runScreenWithNameSpace $ SplashScreen.screen globalState.splashScreen

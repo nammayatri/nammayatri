@@ -72,6 +72,7 @@ onEvent event = do
   case event of 
     "onBackPressed" -> do
       PrestoDom.processEvent "onBackPressedEvent" unit
+    "onReloadApp" -> main {type : "", data : ""} false
     _ -> pure unit
 
 onConnectivityEvent :: String -> Effect Unit
@@ -85,9 +86,7 @@ onConnectivityEvent triggertype = do
                   "LOCATION_DISABLED" -> do
                     modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DISABLED})
                     Flow.permissionScreenFlow
-                  "INTERNET_ACTION" -> do
-                    modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
-                    Flow.permissionScreenFlow
+                  "INTERNET_ACTION" -> pure unit 
                   "REFRESH" -> Flow.baseAppFlow payload' false
                   _ -> Flow.baseAppFlow payload' false
                 pure unit
