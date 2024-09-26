@@ -17,13 +17,13 @@ module Lib.DriverCoins.Types
   ( DriverCoinsEventType (..),
     DriverCoinsFunctionType (..),
     CoinMessage (..),
-    getEventName,
   )
 where
 
 import Domain.Types.Ride
 import Kernel.Prelude
 import Kernel.Types.Common (Meters)
+import qualified Text.Show (show)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data DriverCoinsFunctionType
@@ -36,6 +36,7 @@ data DriverCoinsFunctionType
   | TwoRidesCompleted
   | FiveRidesCompleted
   | TenRidesCompleted
+  | RidesCompleted Int
   | EightPlusRidesInOneDay
   | PurpleRideCompleted
   | LeaderBoardTopFiveHundred
@@ -54,20 +55,21 @@ data DriverCoinsEventType
   | LeaderBoard
   | Training
   | BulkUploadEvent
-  deriving (Show)
+  deriving (Generic)
 
--- TODO: Find a better way to get the event name, maybe show instance
-getEventName :: DriverCoinsEventType -> Text
-getEventName eventType =
-  case eventType of
-    Rating {} -> "Rating"
-    EndRide {} -> "EndRide"
-    Cancellation {} -> "Cancellation"
-    DriverToCustomerReferral {} -> "DriverToCustomerReferral"
-    CustomerToDriverReferral {} -> "CustomerToDriverReferral"
-    LeaderBoard -> "LeaderBoard"
-    Training -> "Training"
-    BulkUploadEvent -> "BulkUploadEvent"
+driverCoinsEventTypeToString :: DriverCoinsEventType -> String
+driverCoinsEventTypeToString = \case
+  Rating {} -> "Rating"
+  EndRide {} -> "EndRide"
+  Cancellation {} -> "Cancellation"
+  DriverToCustomerReferral {} -> "DriverToCustomerReferral"
+  CustomerToDriverReferral {} -> "CustomerToDriverReferral"
+  LeaderBoard -> "LeaderBoard"
+  Training -> "Training"
+  BulkUploadEvent -> "BulkUploadEvent"
+
+instance Show DriverCoinsEventType where
+  show = driverCoinsEventTypeToString
 
 data CoinMessage
   = CoinAdded

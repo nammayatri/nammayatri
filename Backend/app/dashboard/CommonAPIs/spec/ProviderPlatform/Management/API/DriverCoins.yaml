@@ -83,7 +83,7 @@ types:
     - enum: "Used, Remaining"
     - derive: "Read"
   DriverCoinsFunctionType:
-    - enum: "OneOrTwoStarRating, RideCompleted, FiveStarRating, BookingCancellation, CustomerReferral, DriverReferral, TwoRidesCompleted, FiveRidesCompleted, TenRidesCompleted, EightPlusRidesInOneDay, PurpleRideCompleted, LeaderBoardTopFiveHundred, TrainingCompleted, BulkUploadFunction, BulkUploadFunctionV2 CoinMessage, MetroRideCompleted"
+    - enum: "OneOrTwoStarRating, RideCompleted, FiveStarRating, BookingCancellation, CustomerReferral, DriverReferral, TwoRidesCompleted, FiveRidesCompleted, TenRidesCompleted, EightPlusRidesInOneDay, PurpleRideCompleted, LeaderBoardTopFiveHundred, TrainingCompleted, BulkUploadFunction, BulkUploadFunctionV2 CoinMessage, MetroRideCompleted, RidesCompleted Int"
     - derive: "Show, Read"
   CoinMessage:
     - enum: "CoinAdded, CoinSubtracted, FareRecomputation"

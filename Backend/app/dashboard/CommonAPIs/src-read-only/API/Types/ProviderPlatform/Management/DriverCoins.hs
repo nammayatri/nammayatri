@@ -93,9 +93,10 @@ data DriverCoinsFunctionType
   | PurpleRideCompleted
   | LeaderBoardTopFiveHundred
   | TrainingCompleted
-  | MetroRideCompleted
   | BulkUploadFunction
   | BulkUploadFunctionV2 API.Types.ProviderPlatform.Management.DriverCoins.CoinMessage
+  | MetroRideCompleted
+  | RidesCompleted Kernel.Prelude.Int
   deriving stock (Generic, Show, Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
