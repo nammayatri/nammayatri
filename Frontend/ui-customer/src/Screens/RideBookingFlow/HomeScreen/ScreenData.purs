@@ -347,6 +347,7 @@ initData = let
       },
       address : dummyAddress
     }
+    , showEditPickupPopupOnCancel : false
     , enableChatWidget : false
     , sosBannerType : Nothing
     , showShareRide : false

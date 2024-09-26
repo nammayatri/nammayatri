@@ -1564,6 +1564,7 @@ getKN stringKey =
         AVOID_SENDING_HIGH_VALUE_ITEMS -> "ಹೆಚ್ಚಿನ ಮೌಲ್ಯವುಳ್ಳ / ನಾಜೂಕಾದ ಐಟಂಗಳನ್ನು ಕಳುಹಿಸುವುದನ್ನು ತಡೆಯಿರಿ"
         ILLEGAL_ITEMS_PROHIBITED -> "ಅಕ್ರಮ ಐಟಂಗಳನ್ನು ನಿಷೇಧಿಸಲಾಗಿದೆ"
         PICKUP_INSTRUCTION -> "ಪಿಕಪ್ ಸೂಚನೆ"
+        EDIT_YOUR_PICKUP_LOCATION_INSTEAD -> "ನಿಮ್ಮ ಸವಾರಿಯನ್ನು ರದ್ದುಗೊಳಿಸುವ ಬದಲು ನಿಮ್ಮ ಪಿಕಪ್ ಸ್ಥಳವನ್ನು ಎಡಿಟ್ ಮಾಡಿ"
         ROUND_TRIP_INVALID_MESSAGE -> "ರೌಂಡ್ ಟ್ರಿಪ್ ಅನ್ನು ಅಂದಾಜು ಮಾಡಿದ ಪ್ರಯಾಣ ಸಮಯಕ್ಕಿಂತ ಕಡಿಮೆ ವೇಳೆಗೆ ನಿಗದಿ ಮಾಡಲಾಗುವುದಿಲ್ಲ"
         PICKUP_TIME_NOT_SELECTED -> "ದಯವಿಟ್ಟು ಪಿಕಪ್ ಸಮಯವನ್ನು ಆಯ್ಕೆಮಾಡಿ"
         BOOKING_DURATION_INVALID -> "ಬುಕಿಂಗ್ ಪ್ರಾರಂಭದ ದಿನಾಂಕದಿಂದ ಮಾತ್ರ ಎರಡು ದಿನಗಳವರೆಗೆ ಅನುಮತಿಸಲಾಗಿದೆ."

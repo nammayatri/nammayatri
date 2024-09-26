@@ -644,6 +644,7 @@ view push state =
             , if state.props.showScheduledRideExistsPopUp then scheduledRideExistsPopUpView push state else emptyTextView state
             , if state.data.toll.showAmbiguousPopUp then PopUpModal.view (push <<< TollChargeAmbigousPopUpAction) (PopUpConfigs.finalFareExcludesToll state) else emptyTextView state
             , if state.data.toll.showIncludedPopUp then PopUpModal.view (push <<< TollChargeIncludedPopUpAction) (PopUpConfigs.tollChargesIncluded state) else emptyTextView state
+            , if state.props.showEditPickupPopupOnCancel then PopUpModal.view (push <<< EditPickupPopupOnCancelAC) (editPickupPopupOnCancel state) else emptyTextView state
             , if state.props.searchLocationModelProps.showRideInfo then rideInfoCardView push state  else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout

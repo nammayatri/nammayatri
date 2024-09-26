@@ -1565,6 +1565,7 @@ getEN stringKey =
         AVOID_SENDING_HIGH_VALUE_ITEMS -> "Avoid sending high-value / fragile items"
         ILLEGAL_ITEMS_PROHIBITED -> "Illegal items are prohibited"
         PICKUP_INSTRUCTION -> "Pickup Instruction"
+        EDIT_YOUR_PICKUP_LOCATION_INSTEAD -> "Edit your pickup location instead of cancelling your ride"
         ROUND_TRIP_INVALID_MESSAGE -> "Round Trip cannot be scheduled below estimated trip time"
         PICKUP_TIME_NOT_SELECTED -> "Please Select Pickup Time"
         BOOKING_DURATION_INVALID -> "booking allowed only upto two days from start date." 

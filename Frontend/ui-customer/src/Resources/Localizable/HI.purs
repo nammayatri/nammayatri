@@ -1561,6 +1561,7 @@ getHI stringKey =
         AVOID_SENDING_HIGH_VALUE_ITEMS -> "उच्च-मूल्य / नाजुक सामान भेजने से बचें"
         ILLEGAL_ITEMS_PROHIBITED -> "अवैध सामान निषिद्ध है"
         PICKUP_INSTRUCTION -> "पिकअप निर्देश"
+        EDIT_YOUR_PICKUP_LOCATION_INSTEAD -> "अपनी सवारी रद्द करने के बजाय अपना पिकअप स्थान संपादित करें"
         ROUND_TRIP_INVALID_MESSAGE -> "राउंड ट्रिप को अनुमानित यात्रा समय से नीचे निर्धारित नहीं किया जा सकता"
         PICKUP_TIME_NOT_SELECTED -> "कृपया पिकअप समय चुनें"
         BOOKING_DURATION_INVALID -> "बुकिंग केवल प्रारंभ तिथि से दो दिन तक ही अनुमत है।"

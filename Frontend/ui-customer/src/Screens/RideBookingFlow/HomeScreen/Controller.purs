@@ -987,6 +987,7 @@ eval BackPressed state = do
                           else if state.props.cancelSearchCallDriver then continue state{props{cancelSearchCallDriver = false}}
                           else if state.props.showCallPopUp then continue state{props{showCallPopUp = false}}
                           else if state.props.isCancelRide then continue state{props{isCancelRide = false}}
+                          else if state.props.showEditPickupPopupOnCancel then continue state{props{showEditPickupPopupOnCancel = false}}
                           else if state.props.isSaveFavourite then continueWithCmd state [pure $ SaveFavouriteCardAction SaveFavouriteCardController.OnClose]
                           else if state.props.showShareAppPopUp then continue state{props{showShareAppPopUp=false}}
                           else if state.props.showMultipleRideInfo then continue state{props{showMultipleRideInfo=false}}
@@ -1558,8 +1559,15 @@ eval (CancelRidePopUpAction (CancelRidePopUp.Button2 PrimaryButtonController.OnC
     void $ pure $ performHapticFeedback unit
     case state.props.cancelRideActiveIndex of
       Just index -> if ( (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "OTHER" || (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "TECHNICAL_GLITCH" ) then exit $ CancelRide state{props{cancelDescription = if (state.props.cancelDescription == "") then (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description else state.props.cancelDescription }} NORMAL_RIDE_CANCEL
+                      else if (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode == "WRONG_PICKUP_LOCATION" then continue state{props{cancelDescription = (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description , cancelReasonCode = (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode, showEditPickupPopupOnCancel = true, isCancelRide = false }}
                       else exit $ CancelRide state{props{cancelDescription = (fromMaybe dummyCancelReason (state.props.cancellationReasons !!index)).description , cancelReasonCode = (fromMaybe dummyCancelReason (state.props.cancellationReasons !! index)).reasonCode }} NORMAL_RIDE_CANCEL
       Nothing    -> continue state
+
+eval (EditPickupPopupOnCancelAC (PopUpModal.OnButton2Click)) state = exit $ CancelRide state NORMAL_RIDE_CANCEL
+
+eval (EditPickupPopupOnCancelAC (PopUpModal.OnButton1Click)) state = continueWithCmd state{ props { showEditPickupPopupOnCancel = false}} [pure $ EditLocation DriverInfoCardController.SOURCE]
+
+eval (EditPickupPopupOnCancelAC (PopUpModal.DismissPopup)) state = continue state { props {showEditPickupPopupOnCancel = false } }
 
 eval (PredictionClickedAction (LocationListItemController.OnClick item)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_prediction_list_item"
