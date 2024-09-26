@@ -227,7 +227,7 @@ baseAppFlow gPayload callInitUI = do
   when callInitUI $ lift $ lift $ initUI 
   if callInitUI then toggleSetupSplash true else pure unit
   let _ = setKeyInWindow "forceAppToNoInternetScreen" true
-  lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "v1-assets_downloader.jsa" "https://assets.moving.tech/beckn/bundles/mobility-core/0.0.6/v1-assets_downloader.jsa" (cb <<< Right) $> nonCanceler
+  lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "v1-assets_downloader.jsa" "https://assets.moving.tech/beckn/bundles/mobility-core/0.0.8/v1-assets_downloader.jsa" (cb <<< Right) $> nonCanceler
   liftFlowBT $ markPerformance "BASE_APP_FLOW"
   -- checkVersion
   baseAppStorage -- TODO:: Restructure the files and names
