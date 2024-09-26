@@ -110,18 +110,6 @@ VALUES
 --     from atlas_driver_offer_bpp.merchant_operating_city as m where merchant_id = '96dd7f78-787e-4a0b-8675-e9e6fe93bb8f');
 
 
-
--- for making bike not as default --
-update atlas_driver_offer_bpp.vehicle_service_tier
-set default_for_vehicle_variant = '{}',
-    auto_selected_vehicle_variant = '{BIKE,DELIVERY_BIKE}'
-where service_tier_type = 'BIKE'
-and merchant_operating_city_id IN (
-    select id
-    from atlas_driver_offer_bpp.merchant_operating_city
-    WHERE city = 'Kolkata'
-);
-
 -- RUN IN MASTER ONLY .... ONLY IN MASTER ... ONLY IN MASTER
 UPDATE atlas_driver_offer_bpp.beckn_config
 SET On_Search_Ttl_Sec = 300
