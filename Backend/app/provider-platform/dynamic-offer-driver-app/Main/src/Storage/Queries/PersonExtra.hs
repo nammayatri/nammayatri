@@ -12,6 +12,7 @@ where
 import Control.Applicative ((<|>))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import qualified Data.HashMap.Strict as HashMap
+import Data.List (or)
 import Data.Maybe (catMaybes)
 import qualified Database.Beam as B
 import Database.Beam.Postgres hiding ((++.))
@@ -365,32 +366,42 @@ updatePersonRec (Id personId) person = do
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updatePersonVersions :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Person -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> m ()
-updatePersonVersions person mbBundleVersion mbClientVersion mbConfigVersion mbDevice' mbBackendApp = do
+updatePersonVersionsAndMerchantOperatingCity ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Person ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  Maybe Text ->
+  Id DMOC.MerchantOperatingCity ->
+  m ()
+updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbConfigVersion mbDevice' mbBackendApp city = do
   let mbDevice = getDeviceFromText mbDevice'
-  when
-    ((isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice' || isJust mbConfigVersion) && (person.clientBundleVersion /= mbBundleVersion || person.clientSdkVersion /= mbClientVersion || person.clientConfigVersion /= mbConfigVersion || person.clientDevice /= mbDevice || person.backendAppVersion /= mbBackendApp))
-    do
-      now <- getCurrentTime
-      let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.clientBundleVersion)
-          mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientSdkVersion)
-          mbConfigVersionText = versionToText <$> (mbConfigVersion <|> person.clientConfigVersion)
-          mbOsVersion = deviceVersion <$> (mbDevice <|> person.clientDevice)
-          mbOsType = deviceType <$> (mbDevice <|> person.clientDevice)
-          mbModelName = deviceModel <$> (mbDevice <|> person.clientDevice)
-          mbManufacturer = deviceManufacturer =<< (mbDevice <|> person.clientDevice)
-      updateOneWithKV
-        [ Se.Set BeamP.clientSdkVersion mbClientVersionText,
-          Se.Set BeamP.clientBundleVersion mbBundleVersionText,
-          Se.Set BeamP.clientConfigVersion mbConfigVersionText,
-          Se.Set BeamP.clientOsVersion mbOsVersion,
-          Se.Set BeamP.clientOsType mbOsType,
-          Se.Set BeamP.clientModelName mbModelName,
-          Se.Set BeamP.clientManufacturer mbManufacturer,
-          Se.Set BeamP.backendAppVersion mbBackendApp,
-          Se.Set BeamP.updatedAt now
-        ]
-        [Se.Is BeamP.id (Se.Eq $ getId person.id)]
+  let isBundleDataPresent = isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice' || isJust mbConfigVersion
+  let isAnyMismatchPresent = or [person.clientBundleVersion /= mbBundleVersion, person.clientSdkVersion /= mbClientVersion, person.clientConfigVersion /= mbConfigVersion, person.clientDevice /= mbDevice, person.backendAppVersion /= mbBackendApp, person.merchantOperatingCityId /= city]
+  when (isBundleDataPresent && isAnyMismatchPresent) $ do
+    now <- getCurrentTime
+    let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.clientBundleVersion)
+        mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientSdkVersion)
+        mbConfigVersionText = versionToText <$> (mbConfigVersion <|> person.clientConfigVersion)
+        mbOsVersion = deviceVersion <$> (mbDevice <|> person.clientDevice)
+        mbOsType = deviceType <$> (mbDevice <|> person.clientDevice)
+        mbModelName = deviceModel <$> (mbDevice <|> person.clientDevice)
+        mbManufacturer = deviceManufacturer =<< (mbDevice <|> person.clientDevice)
+    updateOneWithKV
+      [ Se.Set BeamP.clientSdkVersion mbClientVersionText,
+        Se.Set BeamP.clientBundleVersion mbBundleVersionText,
+        Se.Set BeamP.clientConfigVersion mbConfigVersionText,
+        Se.Set BeamP.clientOsVersion mbOsVersion,
+        Se.Set BeamP.clientOsType mbOsType,
+        Se.Set BeamP.clientModelName mbModelName,
+        Se.Set BeamP.clientManufacturer mbManufacturer,
+        Se.Set BeamP.backendAppVersion mbBackendApp,
+        Se.Set BeamP.updatedAt now,
+        Se.Set BeamP.merchantOperatingCityId $ Just city.getId
+      ]
+      [Se.Is BeamP.id (Se.Eq $ getId person.id)]
 
 updateAlternateMobileNumberAndCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Person -> m ()
 updateAlternateMobileNumberAndCode person = do
@@ -494,4 +505,16 @@ clearDeviceTokenByPersonId personId = do
       Se.Set BeamP.updatedAt now
     ]
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
+
+updatePersonMobileByFleetRole :: (MonadFlow m, EsqDBFlow m r) => Text -> EncryptedHashed Text -> m ()
+updatePersonMobileByFleetRole personId encMobileNumber = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.mobileNumberEncrypted $ Just $ unEncrypted encMobileNumber.encrypted,
+      Se.Set BeamP.mobileNumberHash $ Just encMobileNumber.hash,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq personId,
+      Se.Is BeamP.role $ Se.Eq Person.FLEET_OWNER
     ]
