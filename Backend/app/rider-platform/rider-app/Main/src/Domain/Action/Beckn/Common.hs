@@ -632,6 +632,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
   when shouldUpdateRideComplete $ void $ QP.updateHasTakenValidRide booking.riderId
+  otherParties <- Notify.getAllOtherRelatedPartyPersons booking
   unless (booking.status == DRB.COMPLETED) $
     void $ do
       sendRideEndMessage booking
@@ -664,7 +665,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   --   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
   --   void . withShortRetry $ CallBPP.update booking.providerUrl becknUpdateReq
   unless isInitiatedByCronJob $
-    Notify.notifyOnRideCompleted booking updRide
+    Notify.notifyOnRideCompleted booking updRide otherParties
   where
     buildFareBreakup :: MonadFlow m => Id DRide.Ride -> DFareBreakup -> m DFareBreakup.FareBreakup
     buildFareBreakup rideId DFareBreakup {..} = do
