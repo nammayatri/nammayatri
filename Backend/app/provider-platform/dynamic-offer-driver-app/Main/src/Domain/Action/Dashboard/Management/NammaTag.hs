@@ -16,6 +16,7 @@ where
 import qualified Data.Aeson as A
 import Data.Default.Class (Default (..))
 import Data.OpenApi (ToSchema)
+import Data.Singletons
 import qualified Domain.Action.Dashboard.Management.NammaTag.Handle as Handle
 import qualified Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -31,7 +32,9 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Id
 import Kernel.Types.TimeBound
 import Kernel.Utils.Common
+import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
+import Lib.Scheduler.Types (AnyJob (..), Job (..))
 import qualified Lib.Yudhishthira.Event.KaalChakra as KaalChakra
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogic as CADL
@@ -135,6 +138,17 @@ postNammaTagRunJob ::
   Lib.Yudhishthira.Types.RunKaalChakraJobReq ->
   Environment.Flow Lib.Yudhishthira.Types.RunKaalChakraJobRes
 postNammaTagRunJob _merchantShortId _opCity req = do
+  -- Logic for complete old jobs works only for DbBased jobs
+  whenJust req.completeOldJob $ \oldJobId -> do
+    mbOldJob :: Maybe (AnyJob AllocatorJobType) <- QDBJ.findById oldJobId
+    case mbOldJob of
+      Nothing -> throwError (InvalidRequest "Job not found")
+      Just (AnyJob oldJob) -> do
+        let jobType = fromSing $ oldJob.jobInfo.jobType
+        unless (castChakra jobType == Just req.chakra) do
+          throwError (InvalidRequest "Invalid job type")
+        QDBJ.markAsComplete oldJobId
+
   case req.action of
     Lib.Yudhishthira.Types.RUN -> YudhishthiraFlow.postRunKaalChakraJob Handle.kaalChakraHandle req
     Lib.Yudhishthira.Types.SCHEDULE scheduledTime -> do
@@ -154,3 +168,10 @@ postNammaTagRunJob _merchantShortId _opCity req = do
 
       logInfo $ "Scheduled new " <> show req.chakra <> " job"
       pure $ Lib.Yudhishthira.Types.RunKaalChakraJobRes {eventId = Nothing, tags = Nothing, users = Nothing}
+
+castChakra :: AllocatorJobType -> Maybe Lib.Yudhishthira.Types.Chakra
+castChakra Daily = Just Lib.Yudhishthira.Types.Daily
+castChakra Weekly = Just Lib.Yudhishthira.Types.Weekly
+castChakra Monthly = Just Lib.Yudhishthira.Types.Monthly
+castChakra Quarterly = Just Lib.Yudhishthira.Types.Quarterly
+castChakra _ = Nothing

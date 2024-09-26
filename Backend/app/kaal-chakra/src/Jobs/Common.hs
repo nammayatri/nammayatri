@@ -14,4 +14,5 @@ buildRunKaalChakraJobReq chakra = do
   parseQueryResults <- asks (.parseQueryResults)
   let batchDelayInSec = 2 -- FIXME
   let action = Lib.Yudhishthira.Types.RUN -- no matter for job handler
+  let completeOldJob = Nothing -- no matter for job handler
   pure Lib.Yudhishthira.Types.RunKaalChakraJobReq {usersSet = Lib.Yudhishthira.Types.ALL_USERS, ..}

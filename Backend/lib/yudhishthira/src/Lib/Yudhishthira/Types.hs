@@ -37,6 +37,7 @@ import Kernel.Types.Id
 import Kernel.Types.TimeBound
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
+import Lib.Scheduler.Types (AnyJob)
 import Lib.Yudhishthira.Types.Application as Reexport
 import Lib.Yudhishthira.Types.Common as Reexport
 import Lib.Yudhishthira.Types.KaalChakra as Reexport
@@ -189,7 +190,8 @@ data RunKaalChakraJobReq = RunKaalChakraJobReq
     usersSet :: UsersSet,
     usersInBatch :: Int,
     maxBatches :: Int, -- we need to avoid endless loops in case of any query is wrong
-    batchDelayInSec :: Int
+    batchDelayInSec :: Int,
+    completeOldJob :: Maybe (Id AnyJob)
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

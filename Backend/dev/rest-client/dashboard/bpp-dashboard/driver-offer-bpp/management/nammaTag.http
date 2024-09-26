@@ -181,6 +181,7 @@ content-type: application/json
 
 {
     "chakra": "Daily",
+    "action": {"tag": "RUN"},
     "updateUserTags": false,
     "parseQueryResults": false,
     "usersSet":
@@ -188,7 +189,8 @@ content-type: application/json
         "contents" : "favorit-auto1-0000000000000000000000"
       },
     "usersInBatch": 1,
-    "maxBatches" : 5
+    "maxBatches" : 5,
+    "batchDelayInSec" : 2
 }
 
 ###
@@ -209,4 +211,29 @@ content-type: application/json
       },
     "usersInBatch": 1,
     "maxBatches" : 5
+}
+
+###
+
+# @name scheduleKaalChakraJob
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/nammaTag/runJob
+token: {{customer_service}}
+content-type: application/json
+
+{
+    "chakra": "Daily",
+    "action":
+      { "tag": "SCHEDULE",
+        "contents": "2024-09-26 16:56:00Z"
+      },
+    "updateUserTags": false,
+    "parseQueryResults": false,
+    "usersSet":
+      { "tag": "ALL_USERS"
+      },
+    "usersInBatch": 1,
+    "maxBatches" : 5,
+    "batchDelayInSec" : 2,
+    "completeOldJob" : "cdc5c06a-6de2-44c0-bc39-892bba2bb9dd"
 }
