@@ -180,7 +180,7 @@ auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDe
   let mkId = getId merchantId
   token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId
   _ <- QR.create token
-  QP.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion)
+  QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchantOpCityId
   whenNothing_ useFakeOtpM $ do
     let otpHash = smsCfg.credConfig.otpHash
     let otpCode = SR.authValueHash token
