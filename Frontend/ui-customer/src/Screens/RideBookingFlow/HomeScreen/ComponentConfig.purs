@@ -2025,8 +2025,7 @@ getChatSuggestions state = do
 
     isAtPickup = (metersToKm state.data.driverInfoCardState.distance (state.props.currentStage == RideStarted)) == getString AT_PICKUP
   if (DA.null state.data.chatSuggestionsList) && canShowSuggestions && state.props.canSendSuggestion then
-    if state.data.fareProductType ==  FPT.RENTAL && state.props.stageBeforeChatScreen == RideStarted then getSuggestionsfromKey chatSuggestion "csRentalInitial"
-    else if state.props.isChatWithEMEnabled then do
+    if state.props.isChatWithEMEnabled then do
       let
         hideInitial = not $ DA.null state.data.messages
       if didReceiverMessage && hideInitial then
@@ -2035,6 +2034,7 @@ getChatSuggestions state = do
         state.data.chatSuggestionsList
       else
         getSuggestionsfromKey emChatSuggestion emergencyContactInitialChatSuggestionId
+    else if state.data.fareProductType ==  FPT.RENTAL && state.props.stageBeforeChatScreen == RideStarted then getSuggestionsfromKey chatSuggestion "csRentalInitial"
     else if didReceiverMessage && (not $ DA.null state.data.messages) then
       if isAtPickup then getSuggestionsfromKey chatSuggestion "customerDefaultAP" else getSuggestionsfromKey chatSuggestion "customerDefaultBP"
     else if isAtPickup then

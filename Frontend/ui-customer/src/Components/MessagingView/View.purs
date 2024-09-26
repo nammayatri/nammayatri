@@ -377,6 +377,7 @@ chatFooterView config push =
      ]  [ linearLayout 
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
+          , visibility $ boolToVisibility $ length config.contactList > 1
           ][ if length config.contactList > 1 then callActionView config 48 20 push else noView] 
        ,  linearLayout
           [ height $ V 48
