@@ -1812,9 +1812,9 @@ getBannerConfigs state =
     then [autpPayBannerCarousel state BannerCarousal] 
     else [])
   -- <> (if getValueToLocalStore IS_BANNER_ACTIVE == "True" then [genderBannerConfig state BannerCarousal] else []) NOTE::- Deprecated the complete profile banner for now
-  <> (if state.props.currentStage == ST.HomeScreen && HU.shouldShowPurpleVideos state then [accessbilityBannerConfig state BannerCarousal] else [])
-  <> (if state.data.cityConfig.enableAdvancedBooking && (not DS.null state.data.cityConfig.advancedRidePopUpYoutubeLink) then [advancedRideBannerCarousel state BannerCarousal] else [])
+  -- <> (if state.props.currentStage == ST.HomeScreen && HU.shouldShowPurpleVideos state then [accessbilityBannerConfig state BannerCarousal] else [])
   <> getRemoteBannerConfigs
+  <> (if state.data.cityConfig.enableAdvancedBooking && (not DS.null state.data.cityConfig.advancedRidePopUpYoutubeLink) then [advancedRideBannerCarousel state BannerCarousal] else [])
   where 
     getRemoteBannerConfigs :: Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
     getRemoteBannerConfigs = do 
