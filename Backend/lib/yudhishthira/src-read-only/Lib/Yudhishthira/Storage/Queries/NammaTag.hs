@@ -24,6 +24,9 @@ create = createWithKV
 createMany :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Yudhishthira.Types.NammaTag.NammaTag] -> m ())
 createMany = traverse_ create
 
+deleteByPrimaryKey :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m ())
+deleteByPrimaryKey name = do deleteWithKV [Se.Is Beam.name $ Se.Eq name]
+
 findByPrimaryKey :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m (Maybe Lib.Yudhishthira.Types.NammaTag.NammaTag))
 findByPrimaryKey name = do findOneWithKV [Se.And [Se.Is Beam.name $ Se.Eq name]]
 

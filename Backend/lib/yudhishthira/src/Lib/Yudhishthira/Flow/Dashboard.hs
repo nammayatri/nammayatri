@@ -1,5 +1,6 @@
 module Lib.Yudhishthira.Flow.Dashboard where
 
+import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import Kernel.Prelude
@@ -67,6 +68,37 @@ postTagCreate tagRequest = do
                 createdAt = now,
                 updatedAt = now
               }
+
+postTagUpdate :: BeamFlow m r => Lib.Yudhishthira.Types.UpdateNammaTagRequest -> m Kernel.Types.APISuccess.APISuccess
+postTagUpdate tagRequest = do
+  tag <- QNT.findByPrimaryKey tagRequest.tagName >>= fromMaybeM (InvalidRequest "Tag not found in the system, please create the tag")
+  updatedTag <- buildUpdateNammaTagEntity tag
+  QNT.updateByPrimaryKey updatedTag
+  return Kernel.Types.APISuccess.Success
+  where
+    buildUpdateNammaTagEntity tag = do
+      now <- getCurrentTime
+      return $
+        DNT.NammaTag
+          { category = fromMaybe tag.category tagRequest.tagCategory,
+            info = buildTagInfo tag,
+            name = tag.name,
+            possibleValues = fromMaybe tag.possibleValues tagRequest.tagPossibleValues,
+            rule = fromMaybe tag.rule tagRequest.tagRule,
+            description = tagRequest.description <|> tag.description,
+            createdAt = tag.createdAt,
+            updatedAt = now
+          }
+    buildTagInfo tag = do
+      case tag.info of
+        DNT.Application (DNT.ApplicationTagInfo tagStage) -> DNT.Application (DNT.ApplicationTagInfo (fromMaybe tagStage tagRequest.tagStage))
+        DNT.KaalChakra (DNT.KaalChakraTagInfo tagChakra tagValidity) -> DNT.KaalChakra (DNT.KaalChakraTagInfo (fromMaybe tagChakra tagRequest.tagChakra) (tagRequest.tagValidity <|> tagValidity))
+        DNT.Manual -> DNT.Manual
+
+deleteTag :: BeamFlow m r => T.Text -> m Kernel.Types.APISuccess.APISuccess
+deleteTag tagName = do
+  QNT.deleteByPrimaryKey tagName
+  return Kernel.Types.APISuccess.Success
 
 postQueryCreate ::
   (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>

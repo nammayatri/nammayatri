@@ -17,13 +17,14 @@ module Lib.Yudhishthira.Types
     UsersSet (..),
     QueryResult (..),
     QueryResultDefault (..),
+    UpdateNammaTagRequest (..),
     -- DynamicPricingResult (..),
   )
 where
 
 import Control.Lens.Operators hiding ((.=))
 import Data.Aeson
-import Data.OpenApi as OpenApi hiding (name, tags)
+import Data.OpenApi as OpenApi hiding (description, name, tags)
 import qualified Data.Text as T
 import Domain.Types.ServiceTierType as DST
 import Kernel.Beam.Lib.UtilsTH
@@ -31,6 +32,7 @@ import Kernel.Prelude
 import Kernel.Types.HideSecrets
 import Kernel.Types.Id
 import Kernel.Types.TimeBound
+import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Lib.Yudhishthira.Types.Application as Reexport
 import Lib.Yudhishthira.Types.Common as Reexport
@@ -53,6 +55,21 @@ data CreateNammaTagRequest
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets CreateNammaTagRequest where
+  hideSecrets = identity
+
+data UpdateNammaTagRequest = UpdateNammaTagRequest
+  { tagCategory :: Maybe Text,
+    tagName :: Text,
+    description :: Maybe Text,
+    tagPossibleValues :: Maybe TagValues,
+    tagChakra :: Maybe Chakra,
+    tagValidity :: Maybe Hours,
+    tagStage :: Maybe ApplicationEvent,
+    tagRule :: Maybe TagRule
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpdateNammaTagRequest where
   hideSecrets = identity
 
 data ChakraQueriesAPIEntity = ChakraQueriesAPIEntity

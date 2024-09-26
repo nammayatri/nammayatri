@@ -1,5 +1,6 @@
 imports:
   CreateNammaTagRequest: Lib.Yudhishthira.Types
+  UpdateNammaTagRequest: Lib.Yudhishthira.Types
   APISuccess: Kernel.Types.APISuccess
   ChakraQueriesAPIEntity: Lib.Yudhishthira.Types
   AppDynamicLogicReq: Lib.Yudhishthira.Types
@@ -23,6 +24,20 @@ apis:
         type: APISuccess
       migrate:
         endpointV2:
+  - POST:
+      endpoint: /tag/update
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
+      request:
+        type: UpdateNammaTagRequest
+      response:
+        type: APISuccess
+  - DELETE:
+      endpoint: /tag/delete
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
+      mandatoryQuery:
+        tagName: Text
+      response:
+        type: APISuccess
   - POST:
       endpoint: /query/create
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_CHAKRA_QUERY

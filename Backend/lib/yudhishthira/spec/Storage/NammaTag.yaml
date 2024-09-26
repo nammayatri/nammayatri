@@ -63,6 +63,11 @@ NammaTag:
     ruleEngine: getRuleEngine
     llmContext: getLlmContext
 
+  queries:
+    deleteByPrimaryKey:
+      kvFunction: deleteWithKV
+      where: name
+
   sqlType:
     ruleEngine: json
 
