@@ -31,8 +31,6 @@ data PersonT f = PersonT
     totalRidesCount :: C f (Maybe Int),
     merchantId :: C f (Id DM.Merchant),
     merchantOperatingCityId :: C f (Maybe (Id DMC.MerchantOperatingCity)),
-    blocked :: C f (Maybe Bool),
-    blockedAt :: C f (Maybe UTCTime),
     createdAt :: C f UTCTime,
     updatedAt :: C f UTCTime
   }
@@ -49,10 +47,8 @@ personTTable =
       totalRidesCount = "total_rides_count",
       merchantId = "merchant_id",
       merchantOperatingCityId = "merchant_operating_city_id",
-      blocked = "blocked",
       createdAt = "created_at",
-      updatedAt = "updated_at",
-      blockedAt = "blocked_at"
+      updatedAt = "updated_at"
     }
 
 type Person = PersonT Identity
