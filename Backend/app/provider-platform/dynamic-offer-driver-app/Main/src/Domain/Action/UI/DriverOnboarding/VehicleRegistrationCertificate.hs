@@ -285,7 +285,7 @@ onVerifyRC person mbVerificationReq rcVerificationResponse = do
           mbAirConditioned = mbVerificationReq >>= (.airConditioned)
           mbOxygen = mbVerificationReq >>= (.oxygen)
           mbVentilator = mbVerificationReq >>= (.ventilator)
-      void $ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned (maybe "" (.documentImageId1) mbVerificationReq) Nothing Nothing Nothing Nothing Nothing mbOxygen mbVentilator
+      void $ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirConditioned (maybe "" (.documentImageId1) mbVerificationReq) Nothing Nothing Nothing (convertTextToUTC rcVerificationResponse.registrationDate) Nothing mbOxygen mbVentilator
       return Ack
 
 onVerifyRCHandler :: Person.Person -> VT.RCVerificationResponse -> Maybe DVC.VehicleCategory -> Maybe Bool -> Id Image.Image -> Maybe DV.VehicleVariant -> Maybe Int -> Maybe Int -> Maybe UTCTime -> Maybe Int -> Maybe Bool -> Maybe Bool -> Flow ()

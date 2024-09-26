@@ -105,6 +105,7 @@ updateByPrimaryKey (Domain.Types.Vehicle.Vehicle {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.model model,
       Se.Set Beam.oxygen oxygen,
+      Se.Set Beam.registeredAt registeredAt,
       Se.Set Beam.registrationCategory registrationCategory,
       Se.Set Beam.registrationNo registrationNo,
       Se.Set Beam.selectedServiceTiers selectedServiceTiers,
