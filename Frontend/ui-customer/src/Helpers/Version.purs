@@ -56,7 +56,7 @@ checkVersion = do
 
   if androidUpdateRequired versionCodeAndroid 
     then do
-      liftFlowBT $ JB.hideLoader
+      liftFlowBT $ JB.hideLoader ""
       modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppVersion}) --TODO:: Make update popUp screen generic if it's used for other purposes also
       appUpdatedFlow <- UI.handleAppUpdatePopUp
       case appUpdatedFlow of
@@ -69,7 +69,7 @@ checkVersion = do
         all (_ /= -1) [majorUpdateIndex, minorUpdateIndex, patchUpdateIndex]
         && forceIOSupdate majorUpdateIndex minorUpdateIndex patchUpdateIndex updatedIOSversion
       ) $ do
-          liftFlowBT $ JB.hideLoader
+          liftFlowBT $ JB.hideLoader ""
           modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppVersion})
           void $ UI.handleAppUpdatePopUp
           checkVersion

@@ -75,7 +75,7 @@ callApiBTWithOptions :: forall a b e.
 callApiBTWithOptions payload headers errorHandler = do
   regToken <- lift $ lift $ loadS $ show REGISTERATION_TOKEN
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
-  API.callApiBT payload headers' errorHandler
+  API.callApiBT payload headers' errorHandler (pure unit)
 
 callApiWithOptions :: forall a b.
   StandardEncode a =>
@@ -87,7 +87,7 @@ callApiWithOptions :: forall a b.
 callApiWithOptions payload headers = do
   regToken <- loadS $ show REGISTERATION_TOKEN
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
-  API.callApi payload headers'
+  API.callApi payload headers' (pure unit)
 
 callApi :: forall a b.
   StandardEncode a =>
@@ -108,7 +108,7 @@ callGzipApiWithOptions :: forall a b.
 callGzipApiWithOptions payload headers = do
   regToken <- loadS $ show REGISTERATION_TOKEN
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
-  API.callGzipApi payload headers'
+  API.callGzipApi payload headers' (pure unit)
 
 callGzipApi :: forall a b.
   StandardEncode a =>
@@ -140,7 +140,7 @@ callGzipApiBTWithOptions :: forall a b e.
 callGzipApiBTWithOptions payload headers errorHandler = do
   regToken <- lift $ lift $ loadS $ show REGISTERATION_TOKEN
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
-  API.callGzipApiBT payload headers' errorHandler
+  API.callGzipApiBT payload headers' errorHandler (pure unit)
 
 callGzipApiBT :: forall a b.
   StandardEncode a =>

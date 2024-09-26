@@ -52,6 +52,7 @@ import Data.Array as DA
 import Screens.Types as ST
 import Engineering.Helpers.Commons as EHC
 import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
+import DecodeUtil
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
@@ -62,6 +63,7 @@ checkRideStatus rideAssigned = do
   case rideBookingListResponse of
     Right (RideBookingListRes listResp) -> do
       if not (null listResp.list) then do
+        let _ = setKeyInWindow "forceAppToNoInternetScreen" false
         let multipleScheduled = length listResp.list > 1
             (RideBookingRes resp) = (fromMaybe HSD.dummyRideBooking (head listResp.list))
             status = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._status
@@ -160,6 +162,7 @@ checkRideStatus rideAssigned = do
         rideBookingListResponse <- lift $ lift $ Remote.rideBookingListWithStatus "1" "0" "COMPLETED" Nothing
         case rideBookingListResponse of
           Right (RideBookingListRes listResp) -> do
+            let _ = setKeyInWindow "forceAppToNoInternetScreen" false
             let (RideBookingRes resp) = fromMaybe HSD.dummyRideBooking $ head listResp.list
                 (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
                 (RideBookingDetails contents) = bookingDetails.contents

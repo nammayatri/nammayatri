@@ -1755,7 +1755,11 @@ export const storeOnPauseCallback = function (cb, action) {
 export const storeCallBackInternetAction = (cb, action, screenName) => {
   try {
     const callback = callbackMapper.map(isNetworkOn => {
-      Object.values(window.internetListeners).forEach(listener => listener(isNetworkOn));
+      try {
+        Object.values(window.internetListeners).forEach(listener => listener(isNetworkOn));
+      }catch(e){
+        console.log("Error in storeCallBackInternetAction : ", e);
+      }
     });
 
     console.log(`In storeCallBackInternetAction ---------- + ${action}`);
@@ -2386,9 +2390,11 @@ export const getLatLonFromAddress = function (address) {
 };
 
 export const hideLoader = function () {
-  JOS.emitEvent("java")("onEvent")(JSON.stringify({
-    event: "hide_loader"
-  }))()()
+  return function () {
+    JOS.emitEvent("java")("onEvent")(JSON.stringify({
+      event: "hide_loader"
+    }))()()
+  }
 };
 
 export const getLayoutBounds = function (id) {
@@ -2921,4 +2927,11 @@ export const emitJOSEventWithCb = function (eventName, innerPayload, cb, action)
     cb(action(stringifyPayload))();
   });
   return window.JOS.emitEvent("java")("onEvent")(JSON.stringify({ event: eventName, action: callback, innerPayload: JSON.stringify(innerPayload)}))()();
+}
+
+
+export const triggerReloadApp = function (lazy){
+  return function () {
+    window["onEvent'"]("onReloadApp", {});
+  }
 }

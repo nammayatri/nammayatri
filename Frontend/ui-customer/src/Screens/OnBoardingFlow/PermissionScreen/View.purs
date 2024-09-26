@@ -31,13 +31,14 @@ import Data.Maybe (fromMaybe, Maybe(..))
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, (<<<), ($), (==), (<>), (/=),(&&))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, orientation, padding, text, textSize, textView, width,visibility, id, accessibilityHint, accessibility)
+import PrestoDOM 
 import Screens.OnBoardingFlow.PermissionScreen.ComponentConfig (errorModalConfig, primaryButtonConfig, getLocationBlockerPopUpConfig)
 import Screens.PermissionScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Effect.Uncurried (runEffectFn3)
+import Debug
 
 screen :: ST.PermissionScreenState -> Screen Action ST.PermissionScreenState ScreenOutput
 screen initialState  = 
@@ -53,7 +54,10 @@ screen initialState  =
       _ <- runEffectFn3 JB.storeCallBackInternetAction push InternetCallBackCustomer "PermissionScreen"
       pure $ pure unit
   )]
-  , eval
+  , eval : (\action state -> do
+      let _ = spy "PermissionScreen state -----" state
+      let _ = spy "PermissionScreen action -----" action
+      eval action state)
   }
 
 view :: forall w . (Action -> Effect Unit) -> ST.PermissionScreenState -> PrestoDOM (Effect Unit) w 

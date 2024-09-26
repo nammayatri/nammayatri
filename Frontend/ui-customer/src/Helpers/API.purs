@@ -24,12 +24,15 @@ import Foreign.Generic (class Decode)
 import Types.App (FlowBT, GlobalState)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore, getValueToLocalNativeStore)
 import Control.Monad.Trans.Class (lift)
-import Presto.Core.Types.Language.Flow (loadS, APIResult(..), Flow)
+import Presto.Core.Types.Language.Flow (loadS, APIResult(..), Flow, fork)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Array (singleton)
 import Data.Maybe (maybe, Maybe(..))
 import Data.Either (Either(..))
 import Data.String as DS
+import JBridge as JB
+import Screens.PermissionScreen.Handler as PermissionScreen
+import Engineering.Helpers.Utils (checkConditionToShowInternetScreen)
 
 data CustomerDefaultErrorHandler = CustomerDefaultErrorHandler
 instance defaultApiErrorHandler :: ApiErrorHandler CustomerDefaultErrorHandler GlobalState where
@@ -76,7 +79,7 @@ callApiBTWithOptions :: forall a b e.
 callApiBTWithOptions payload headers errorHandler = do
   regToken <- lift $ lift $ loadS $ show REGISTERATION_TOKEN
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
-  API.callApiBT payload headers' errorHandler
+  API.callApiBT payload headers' errorHandler $ noInternetScreen "lazy"
 
 callApiWithOptions :: forall a b.
   StandardEncode a =>
@@ -88,7 +91,7 @@ callApiWithOptions :: forall a b.
 callApiWithOptions payload headers = do
   regToken <- loadS $ show REGISTERATION_TOKEN
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
-  API.callApi payload headers'
+  API.callApi payload headers' $ noInternetScreen "lazy"
 
 callApi :: forall a b.
   StandardEncode a =>
@@ -109,7 +112,7 @@ callGzipApiWithOptions :: forall a b.
 callGzipApiWithOptions payload headers = do
   regToken <- loadS $ show REGISTERATION_TOKEN
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
-  API.callGzipApi payload headers'
+  API.callGzipApi payload headers' $ noInternetScreen "lazy"
 
 callGzipApi :: forall a b.
   StandardEncode a =>
@@ -141,7 +144,7 @@ callGzipApiBTWithOptions :: forall a b e.
 callGzipApiBTWithOptions payload headers errorHandler = do
   regToken <- lift $ lift $ loadS $ show REGISTERATION_TOKEN
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
-  API.callGzipApiBT payload headers' errorHandler
+  API.callGzipApiBT payload headers' errorHandler $ noInternetScreen "lazy"
 
 callGzipApiBT :: forall a b.
   StandardEncode a =>
@@ -151,3 +154,13 @@ callGzipApiBT :: forall a b.
   FlowBT String b
 callGzipApiBT payload =
   callGzipApiBTWithOptions payload [] CustomerDefaultErrorHandler
+
+
+noInternetScreen :: String -> Flow GlobalState Unit
+noInternetScreen lazy = 
+  if checkConditionToShowInternetScreen lazy then do
+    void $ fork $ do  
+      void $ pure $ JB.hideKeyboardOnNavigation true
+      void $ PermissionScreen.noInternetScreen
+  else 
+    pure unit
