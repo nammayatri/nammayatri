@@ -123,6 +123,7 @@ runKaalChakra configModifier = do
         pure flowRt
     runSchedulerService handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.kvConfigUpdateFrequency handlerEnv.maxShards $ allocatorHandle flowRt' handlerEnv
 
+-- TODO This code can be removed now, because we use bpp schema and can create dashboard api instead
 updateJobsByChakra :: [AnyJob Chakra] -> Chakra -> Flow ()
 updateJobsByChakra allJobs chakra = do
   shouldCreateJob' <- shouldCreateJob chakra
