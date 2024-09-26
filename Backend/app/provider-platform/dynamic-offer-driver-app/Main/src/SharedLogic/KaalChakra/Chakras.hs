@@ -37,25 +37,21 @@ type ChakraJobs m r c =
     Metrics.HasCoreMetrics r
   )
 
-buildRunKaalChakraJobReq ::
-  ChakraJobs m r c =>
+mkRunKaalChakraJobReq ::
   LYT.Chakra ->
-  m LYT.RunKaalChakraJobReq
-buildRunKaalChakraJobReq chakra = do
-  let updateUserTags = True
-      usersInBatch = 100
-      maxBatches = 10000
-      parseQueryResults = True
-      batchDelayInSec = 2
-  pure LYT.RunKaalChakraJobReq {usersSet = LYT.ALL_USERS, ..}
+  LYT.KaalChakraJobData ->
+  LYT.RunKaalChakraJobReq
+mkRunKaalChakraJobReq chakra LYT.KaalChakraJobData {..} = do
+  let action = LYT.RUN -- no matter for job handler
+  LYT.RunKaalChakraJobReq {usersSet = LYT.ALL_USERS, ..}
 
 runDailyJob ::
   ChakraJobs m r c =>
   Job 'Daily ->
   m ExecutionResult
-runDailyJob Job {id, scheduledAt} = withLogTag ("JobId-" <> id.getId) do
+runDailyJob Job {id, jobInfo, scheduledAt} = withLogTag ("JobId-" <> id.getId) do
   logInfo "Running Daily Job"
-  req <- buildRunKaalChakraJobReq LYT.Daily
+  let req = mkRunKaalChakraJobReq LYT.Daily jobInfo.jobData
   void $ Event.kaalChakraEvent kaalChakraHandle req
   pure $ ReSchedule $ Time.incrementDay scheduledAt
 
@@ -63,9 +59,9 @@ runWeeklyJob ::
   ChakraJobs m r c =>
   Job 'Weekly ->
   m ExecutionResult
-runWeeklyJob Job {id, scheduledAt} = withLogTag ("JobId-" <> id.getId) do
+runWeeklyJob Job {id, jobInfo, scheduledAt} = withLogTag ("JobId-" <> id.getId) do
   logInfo "Running Weekly Job"
-  req <- buildRunKaalChakraJobReq LYT.Weekly
+  let req = mkRunKaalChakraJobReq LYT.Weekly jobInfo.jobData
   void $ Event.kaalChakraEvent kaalChakraHandle req
   pure $ ReSchedule $ Time.incrementWeek scheduledAt
 
@@ -73,9 +69,9 @@ runQuarterlyJob ::
   ChakraJobs m r c =>
   Job 'Quarterly ->
   m ExecutionResult
-runQuarterlyJob Job {id, scheduledAt} = withLogTag ("JobId-" <> id.getId) do
+runQuarterlyJob Job {id, jobInfo, scheduledAt} = withLogTag ("JobId-" <> id.getId) do
   logInfo "Running Quarterly Job"
-  req <- buildRunKaalChakraJobReq LYT.Quarterly
+  let req = mkRunKaalChakraJobReq LYT.Quarterly jobInfo.jobData
   void $ Event.kaalChakraEvent kaalChakraHandle req
   pure $ ReSchedule $ Time.incrementQuarter scheduledAt
 
@@ -83,8 +79,8 @@ runMonthlyJob ::
   ChakraJobs m r c =>
   Job 'Monthly ->
   m ExecutionResult
-runMonthlyJob Job {id, scheduledAt} = withLogTag ("JobId-" <> id.getId) do
+runMonthlyJob Job {id, jobInfo, scheduledAt} = withLogTag ("JobId-" <> id.getId) do
   logInfo "Running Monthly Job"
-  req <- buildRunKaalChakraJobReq LYT.Monthly
+  let req = mkRunKaalChakraJobReq LYT.Monthly jobInfo.jobData
   void $ Event.kaalChakraEvent kaalChakraHandle req
   pure $ ReSchedule $ Time.incrementMonth scheduledAt

@@ -99,12 +99,12 @@ kaalChakraEventInternal h eventId req = withLogTag ("EventId-" <> eventId.getId)
     Yudhishthira.ALL_USERS -> do
       forM_ loopData.userIds $
         kaalChakraEventUser h filteredTags eventId defaultUserDataMap
-      pure $ Yudhishthira.RunKaalChakraJobRes {eventId, tags = Nothing, users = Nothing}
+      pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing}
     _ -> do
       usersAPIEntity <- forM (S.toList loopData.userIds) $ \userId -> do
         kaalChakraEventUser h filteredTags eventId defaultUserDataMap userId
       let tagsAPIEntity = mkTagAPIEntity <$> filteredTags
-      pure $ Yudhishthira.RunKaalChakraJobRes {eventId, tags = Just tagsAPIEntity, users = Just usersAPIEntity}
+      pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Just tagsAPIEntity, users = Just usersAPIEntity}
   endTime <- getCurrentTime
   let durationInSeconds = Time.nominalDiffTimeToSeconds $ diffUTCTime endTime startTime
   logInfo $ "User tags updated successfully in " <> show durationInSeconds <> " seconds; batches number: " <> show batchesNumber <> "; users number: " <> show usersNumber
