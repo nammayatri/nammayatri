@@ -42,12 +42,14 @@ import Environment
 import qualified Environment as App
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.Person as SLP
+import qualified SharedLogic.Scheduler.Jobs.SafetyCSAlert as SIVR
 import qualified Slack.AWS.Flow as Slack
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -60,6 +62,7 @@ import qualified Storage.Queries.Issue as QIssue
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import qualified Tools.Ticket as Ticket
 
 data FeedbackReq = FeedbackReq
   { rideId :: Id DRide.Ride,
@@ -126,9 +129,16 @@ feedback request personId = do
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
   let sensitiveWords = fromMaybe [] riderConfig.sensitiveWords
-  let isLOFeedback = maybe False (checkSensitiveWords sensitiveWords) feedbackDetails
+      isLOFeedback = maybe False (checkSensitiveWords sensitiveWords) feedbackDetails
   when isLOFeedback $
-    fork "notify on slack" $ do
+    fork "Creating ticket and notifying on slack" $ do
+      phoneNumber <- mapM decrypt person.mobileNumber
+      let rideInfo = SIVR.buildRideInfo ride person phoneNumber
+          ticketReq = mkTicket person phoneNumber rideInfo filePath riderConfig.kaptureConfig.disposition riderConfig.kaptureConfig.queue
+      createTicketResp <- try @_ @SomeException $ Ticket.createTicket merchant.id merchantOperatingCityId ticketReq
+      case createTicketResp of
+        Left err -> logTagError "Create Ticket API failed - " $ show err
+        Right resp -> logTagInfo "Created Ticket for Customer L0 Feedback : TicketId - " resp.ticketId
       sosAlertsTopicARN <- asks (.sosAlertsTopicARN)
       desc <- generateSlackMessage person ride unencryptedMobileNumber (T.pack $ show city) request.rating feedbackDetails
       let message = createJsonMessage desc
@@ -170,6 +180,23 @@ feedback request personId = do
                     ]
               ]
        in TL.toStrict $ TLE.decodeUtf8 $ A.encode jsonValue
+
+    mkTicket :: Person.Person -> Maybe Text -> Ticket.RideInfo -> Maybe Text -> Text -> Text -> Ticket.CreateTicketReq
+    mkTicket person phoneNumber info mediaFileUrl disposition queue = do
+      Ticket.CreateTicketReq
+        { category = "Customer Feedback",
+          subCategory = Just "L0 Feedback",
+          issueId = Nothing,
+          issueDescription = fromMaybe "" request.feedbackDetails,
+          mediaFiles = mediaFileUrl <&> (: []),
+          name = Just $ SLP.getName person,
+          phoneNo = phoneNumber,
+          personId = person.id.getId,
+          classification = Ticket.CUSTOMER,
+          rideDescription = Just info,
+          disposition,
+          queue
+        }
 
     generateSlackMessage :: Person.Person -> DRide.Ride -> Maybe Text -> Text -> Int -> Maybe Text -> Flow Text
     generateSlackMessage person ride mbCustomerPhone city rating feedbackDetails = do
