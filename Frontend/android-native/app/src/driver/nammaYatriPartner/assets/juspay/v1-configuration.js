@@ -194,7 +194,7 @@ window.getMerchantConfig = function () {
         "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 12.971599,
         "cityLong" : 77.594566,
-        "supportNumber" : "",
+        "supportNumber" : "08069724919",
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
         "showCustomerReferral" : true,
@@ -367,7 +367,7 @@ window.getMerchantConfig = function () {
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 12.295810,
         "cityLong" : 76.639381,
-        "supportNumber" : "",
+        "supportNumber" : "08069724919",
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
         "showCustomerReferral" : true,
@@ -763,7 +763,7 @@ window.getMerchantConfig = function () {
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 15.32383804957557,
         "cityLong" : 75.88071672412116,
-        "supportNumber" : "",
+        "supportNumber" : "08069724919",
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
         "showCustomerReferral" : true,
@@ -1815,7 +1815,7 @@ window.getMerchantConfig = function () {
         "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 14.4519495,
         "cityLong" : 75.9236604,
-        "supportNumber" : "",
+        "supportNumber" : "08069724919",
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
         "showCustomerReferral" : true,
@@ -1889,7 +1889,7 @@ window.getMerchantConfig = function () {
         "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 13.9342598,
         "cityLong" : 75.5664889,
-        "supportNumber" : "",
+        "supportNumber" : "08069724919",
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
         "showCustomerReferral" : true,
@@ -1963,7 +1963,7 @@ window.getMerchantConfig = function () {
         "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 23.68946891656628,
         "cityLong" : 86.96920957618282,
-        "supportNumber" : "",
+        "supportNumber" : "08069724919",
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
         "showCustomerReferral" : true,
@@ -2037,7 +2037,7 @@ window.getMerchantConfig = function () {
         "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 12.9139747,
         "cityLong" : 74.8561126,
-        "supportNumber" : "",
+        "supportNumber" : "08069724919",
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
         "showCustomerReferral" : true,
@@ -2111,7 +2111,7 @@ window.getMerchantConfig = function () {
         "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 17.3237322,
         "cityLong" : 76.8354076,
-        "supportNumber" : "",
+        "supportNumber" : "08069724919",
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
         "showCustomerReferral" : true,
@@ -2185,7 +2185,7 @@ window.getMerchantConfig = function () {
         "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 13.3407096,
         "cityLong" : 74.7421016,
-        "supportNumber" : "",
+        "supportNumber" : "08069724919",
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
         "showCustomerReferral" : true,
