@@ -11,6 +11,9 @@ module Lib.Yudhishthira.Types
     AppDynamicLogicResp (..),
     RunLogicResp (..),
     RunKaalChakraJobReq (..),
+    KaalChakraAction (..),
+    KaalChakraJobData (..),
+    mkKaalChakraJobData,
     RunKaalChakraJobRes (..),
     RunKaalChakraJobResForUser (..),
     TagAPIEntity (..),
@@ -180,6 +183,7 @@ instance HideSecrets AppDynamicLogicReq where
 
 data RunKaalChakraJobReq = RunKaalChakraJobReq
   { chakra :: Chakra,
+    action :: KaalChakraAction,
     updateUserTags :: Bool,
     parseQueryResults :: Bool,
     usersSet :: UsersSet,
@@ -189,11 +193,26 @@ data RunKaalChakraJobReq = RunKaalChakraJobReq
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data KaalChakraJobData = KaalChakraJobData
+  { updateUserTags :: Bool,
+    parseQueryResults :: Bool,
+    usersInBatch :: Int,
+    maxBatches :: Int,
+    batchDelayInSec :: Int
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+mkKaalChakraJobData :: RunKaalChakraJobReq -> KaalChakraJobData
+mkKaalChakraJobData RunKaalChakraJobReq {..} = KaalChakraJobData {..}
+
+data KaalChakraAction = RUN | SCHEDULE UTCTime
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data UsersSet = SINGLE_USER (Id User) | LIST_USERS [Id User] | ALL_USERS
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data RunKaalChakraJobRes = RunKaalChakraJobRes
-  { eventId :: Id Event,
+  { eventId :: Maybe (Id Event),
     tags :: Maybe [TagAPIEntity],
     users :: Maybe [RunKaalChakraJobResForUser]
   }

@@ -35,8 +35,7 @@ import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
-
-data EmptyData = EmptyData deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+import qualified Lib.Yudhishthira.Types as LYT
 
 data AllocatorJobType
   = SendSearchRequestToDriver
@@ -93,13 +92,13 @@ instance JobInfoProcessor 'Monthly
 
 instance JobInfoProcessor 'Quarterly
 
-type instance JobContent 'Daily = EmptyData
+type instance JobContent 'Daily = LYT.KaalChakraJobData
 
-type instance JobContent 'Weekly = EmptyData
+type instance JobContent 'Weekly = LYT.KaalChakraJobData
 
-type instance JobContent 'Monthly = EmptyData
+type instance JobContent 'Monthly = LYT.KaalChakraJobData
 
-type instance JobContent 'Quarterly = EmptyData
+type instance JobContent 'Quarterly = LYT.KaalChakraJobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,

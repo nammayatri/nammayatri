@@ -30,6 +30,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Id
 import Kernel.Types.TimeBound
 import Kernel.Utils.Common
+import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import qualified Lib.Yudhishthira.Event.KaalChakra as KaalChakra
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogic as CADL
@@ -37,9 +38,11 @@ import qualified Lib.Yudhishthira.Types
 import Lib.Yudhishthira.Types.AppDynamicLogic
 import qualified Lib.Yudhishthira.Types.ChakraQueries
 import Servant hiding (throwError)
+import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.DriverPool.Types
 import SharedLogic.DynamicPricing
 import SharedLogic.Merchant
+import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -140,4 +143,22 @@ postNammaTagRunJob ::
   Lib.Yudhishthira.Types.RunKaalChakraJobReq ->
   Environment.Flow Lib.Yudhishthira.Types.RunKaalChakraJobRes
 postNammaTagRunJob _merchantShortId _opCity req = do
-  YudhishthiraFlow.postRunKaalChakraJob kaalChakraHandle req
+  case req.action of
+    Lib.Yudhishthira.Types.RUN -> YudhishthiraFlow.postRunKaalChakraJob kaalChakraHandle req
+    Lib.Yudhishthira.Types.SCHEDULE scheduledTime -> do
+      now <- getCurrentTime
+      when (scheduledTime <= now) $
+        throwError (InvalidRequest "Schedule job available only for future")
+      case req.usersSet of
+        Lib.Yudhishthira.Types.ALL_USERS -> pure ()
+        _ -> throwError (InvalidRequest "Schedule job available only for all users")
+      let jobData = Lib.Yudhishthira.Types.mkKaalChakraJobData req
+      maxShards <- asks (.maxShards)
+      case req.chakra of
+        Lib.Yudhishthira.Types.Daily -> QAllJ.createJobByTime @_ @'Daily scheduledTime maxShards jobData
+        Lib.Yudhishthira.Types.Weekly -> QAllJ.createJobByTime @_ @'Weekly scheduledTime maxShards jobData
+        Lib.Yudhishthira.Types.Monthly -> QAllJ.createJobByTime @_ @'Monthly scheduledTime maxShards jobData
+        Lib.Yudhishthira.Types.Quarterly -> QAllJ.createJobByTime @_ @'Quarterly scheduledTime maxShards jobData
+
+      logInfo $ "Scheduled new " <> show req.chakra <> " job"
+      pure $ Lib.Yudhishthira.Types.RunKaalChakraJobRes {eventId = Nothing, tags = Nothing, users = Nothing}
