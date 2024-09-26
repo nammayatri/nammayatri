@@ -300,10 +300,6 @@ Person:
       kvFunction: updateWithKV
       params: [defaultPaymentMethodId]
       where: id
-    updateTotalRidesCount:
-      kvFunction: updateOneWithKV
-      params: [id, totalRidesCount]
-      where: id
 
     findAllByDeviceId:
       kvFunction: findAllWithKV
