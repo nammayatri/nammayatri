@@ -220,17 +220,18 @@ notifyOnRideAssigned booking ride = do
       rideId = ride.id
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  tag <- getDisabilityTag person.hasDisability personId
   let entity = Notification.Entity Notification.Product rideId.getId (RideAssignedParam driverName booking.startTime booking.id)
       dynamicParams = RideAssignedParam driverName booking.startTime booking.id
-      notiReq = createNotificationReq "DRIVER_ASSIGNMENT" (\r -> r {soundTag = tag})
-  dynamicNotifyPerson
-    person
-    notiReq
-    dynamicParams
-    entity
-    booking.tripCategory
-    [("driverName", driverName)]
+  allOtherBookingPartyPersons <- getAllOtherRelatedPartyPersons booking
+  forM_ (person : allOtherBookingPartyPersons) $ \person' -> do
+    tag <- getDisabilityTag person.hasDisability person'.id
+    dynamicNotifyPerson
+      person'
+      (createNotificationReq "DRIVER_ASSIGNMENT" (\r -> r {soundTag = tag}))
+      dynamicParams
+      entity
+      booking.tripCategory
+      [("driverName", driverName)]
 
 -- title = "Driver assigned!"
 -- body = " {#driverName#} will be your driver for this trip."
@@ -288,12 +289,12 @@ notifyOnRideStarted booking ride = do
       driverName = ride.driverName
       serviceTierName = fromMaybe (show booking.vehicleServiceTierType) booking.serviceTierName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  tag <- getDisabilityTag person.hasDisability personId
   let entity = Notification.Entity Notification.Product rideId.getId ()
       dynamicParams = RideStartedParam driverName
   -- finding other booking parties for delivery --
   allOtherBookingPartyPersons <- getAllOtherRelatedPartyPersons booking
   forM_ (person : allOtherBookingPartyPersons) $ \person' -> do
+    tag <- getDisabilityTag person.hasDisability person'.id
     dynamicNotifyPerson
       person'
       (createNotificationReq "TRIP_STARTED" (\r -> r {soundTag = tag}))
@@ -317,21 +318,21 @@ notifyOnRideCompleted ::
   ServiceFlow m r =>
   SRB.Booking ->
   SRide.Ride ->
+  [Person.Person] ->
   m ()
-notifyOnRideCompleted booking ride = do
+notifyOnRideCompleted booking ride otherParties = do
   let personId = booking.riderId
       rideId = ride.id
       driverName = ride.driverName
       mbTotalFare = ride.totalFare
       totalFare = fromMaybe booking.estimatedFare mbTotalFare
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  tag <- getDisabilityTag person.hasDisability personId
   let entity = Notification.Entity Notification.Product rideId.getId ()
       dynamicParams = RideCompleteParam driverName $ show totalFare.amountInt
   disableFollowRide personId
   Redis.del $ CQSos.mockSosKey personId
-  allOtherBookingPartyPersons <- getAllOtherRelatedPartyPersons booking
-  forM_ (person : allOtherBookingPartyPersons) $ \person' ->
+  forM_ (person : otherParties) $ \person' -> do
+    tag <- getDisabilityTag person.hasDisability person'.id
     dynamicNotifyPerson
       person'
       (createNotificationReq "TRIP_FINISHED" (\r -> r {soundTag = tag}))
@@ -436,7 +437,6 @@ notifyOnBookingCancelled ::
   m ()
 notifyOnBookingCancelled booking cancellationSource bppDetails mbRide = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  tag <- getDisabilityTag person.hasDisability person.id
   let notificationSoundType = case cancellationSource of
         SBCR.ByDriver -> do
           case mbRide of
@@ -452,24 +452,27 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide = do
         Nothing -> "BOOKING_CANCEL_WITH_NO_RIDE"
       entity = Notification.Entity Notification.Product booking.id.getId (RideCancelParam booking.startTime booking.id)
       dynamicParams = RideCancelParam booking.startTime booking.id
-  dynamicNotifyPerson
-    person
-    ( createNotificationReq
-        notiKey
-        ( \r ->
-            r
-              { notificationTypeForSound = Just notificationSoundType,
-                subCategory = Just $ cancellationSourceToSubCategory cancellationSource,
-                soundTag = tag
-              }
-        )
-    )
-    dynamicParams
-    entity
-    booking.tripCategory
-    [ ("bookingStartTime", showTimeIst (booking.startTime)),
-      ("orgName", bppDetails.name)
-    ]
+  allOtherBookingPartyPersons <- getAllOtherRelatedPartyPersons booking
+  forM_ (person : allOtherBookingPartyPersons) $ \person' -> do
+    tag <- getDisabilityTag person.hasDisability person'.id
+    dynamicNotifyPerson
+      person'
+      ( createNotificationReq
+          notiKey
+          ( \r ->
+              r
+                { notificationTypeForSound = Just notificationSoundType,
+                  subCategory = Just $ cancellationSourceToSubCategory cancellationSource,
+                  soundTag = tag
+                }
+          )
+      )
+      dynamicParams
+      entity
+      booking.tripCategory
+      [ ("bookingStartTime", showTimeIst (booking.startTime)),
+        ("orgName", bppDetails.name)
+      ]
 
 cancellationSourceToSubCategory :: SBCR.CancellationSource -> Notification.SubCategory
 cancellationSourceToSubCategory = \case
@@ -551,14 +554,16 @@ notifyOnBookingReallocated booking = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let entity = Notification.Entity Notification.Product booking.id.getId ()
       dynamicParams = BookingReallocatedParam booking.startTime booking.id
-  tag <- getDisabilityTag person.hasDisability person.id
-  dynamicNotifyPerson
-    person
-    (createNotificationReq "BOOKING_REALLOCATED" (\r -> r {soundTag = tag}))
-    dynamicParams
-    entity
-    booking.tripCategory
-    [("bookingStartTime", showTimeIst (booking.startTime))]
+  allOtherBookingPartyPersons <- getAllOtherRelatedPartyPersons booking
+  forM_ (person : allOtherBookingPartyPersons) $ \person' -> do
+    tag <- getDisabilityTag person.hasDisability person'.id
+    dynamicNotifyPerson
+      person'
+      (createNotificationReq "BOOKING_REALLOCATED" (\r -> r {soundTag = tag}))
+      dynamicParams
+      entity
+      booking.tripCategory
+      [("bookingStartTime", showTimeIst (booking.startTime))]
 
 -- title = T.pack "Ride cancelled! We are allocating another driver"
 -- body =
