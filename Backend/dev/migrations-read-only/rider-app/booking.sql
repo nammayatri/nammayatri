@@ -134,3 +134,6 @@ ALTER TABLE atlas_app.booking ADD COLUMN initiated_by text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN estimated_static_duration integer ;
+
+
+------- SQL updates -------

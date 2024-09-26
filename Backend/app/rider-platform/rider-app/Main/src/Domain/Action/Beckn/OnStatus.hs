@@ -286,14 +286,14 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
   shortId <- generateShortId
   now <- getCurrentTime
   let fromLocation = booking.fromLocation
-      toLocation = case booking.bookingDetails of
-        DB.OneWayDetails details -> Just details.toLocation
-        DB.RentalDetails _ -> Nothing
-        DB.DriverOfferDetails details -> Just details.toLocation
-        DB.OneWaySpecialZoneDetails details -> Just details.toLocation
-        DB.InterCityDetails details -> Just details.toLocation
-        DB.AmbulanceDetails details -> Just details.toLocation
-        DB.DeliveryDetails details -> Just details.toLocation
+      (toLocation, stops) = case booking.bookingDetails of
+        DB.OneWayDetails details -> (Just details.toLocation, details.stops)
+        DB.RentalDetails _ -> (Nothing, [])
+        DB.DriverOfferDetails details -> (Just details.toLocation, details.stops)
+        DB.OneWaySpecialZoneDetails details -> (Just details.toLocation, details.stops)
+        DB.InterCityDetails details -> (Just details.toLocation, [])
+        DB.AmbulanceDetails details -> (Just details.toLocation, [])
+        DB.DeliveryDetails details -> (Just details.toLocation, [])
   let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditLocationAttemptsThreshold) mbMerchant
   let allowedEditPickupLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
   driverPhoneNumber' <- encrypt driverMobileNumber

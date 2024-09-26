@@ -131,6 +131,7 @@ Booking:
       enum: OneWayDetails OneWayBookingDetails,RentalDetails RentalBookingDetails,DriverOfferDetails OneWayBookingDetails,OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails,InterCityDetails InterCityBookingDetails, AmbulanceDetails AmbulanceBookingDetails, DeliveryDetails DeliveryBookingDetails
       derive': Show
     OneWayBookingDetails:
+      stops: "[Location]"
       toLocation: Location
       distance: Distance
       derive': Show
@@ -140,6 +141,7 @@ Booking:
       derive': Show
     OneWaySpecialZoneBookingDetails:
       toLocation: Location
+      stops: "[Location]"
       distance: Distance
       otpCode: Maybe Text
       derive': Show
@@ -229,6 +231,7 @@ Booking:
       distance: Maybe HighPrecMeters
       stopLocationId: Maybe Text
       otpCode: Maybe Text
+      stops: {}
     fromLocation:
       fromLocationId: Maybe Text
     tripTerms:

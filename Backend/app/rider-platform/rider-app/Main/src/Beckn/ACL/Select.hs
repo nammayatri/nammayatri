@@ -48,6 +48,7 @@ buildSelectReqV2 dSelectRes = do
   moc <- CQMOC.findByMerchantIdAndCity dSelectRes.merchant.id dSelectRes.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> dSelectRes.merchant.id.getId <> "-city-" <> show dSelectRes.city)
   bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId dSelectRes.merchant.id "MOBILITY" moc.id
   bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show dSelectRes.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
+  -- stops <- dSelectRes.searchRequest.stops
   messageId <- generateGUID
   let message = buildSelectReqMessage dSelectRes endLoc dSelectRes.isValueAddNP bapConfig
       transactionId = dSelectRes.searchRequest.id.getId
@@ -74,7 +75,7 @@ tfOrder res endLoc isValueAddNP bapConfig =
       orderStatus = Nothing
       startLoc = res.searchRequest.fromLocation
       orderItem = tfOrderItem res isValueAddNP
-      orderFulfillment = tfFulfillment res startLoc endLoc isValueAddNP
+      orderFulfillment = tfFulfillment res startLoc endLoc isValueAddNP res.searchRequest.stops
       orderCreatedAt = Nothing
       orderUpdatedAt = Nothing
    in Spec.Order
@@ -83,15 +84,15 @@ tfOrder res endLoc isValueAddNP bapConfig =
           ..
         }
 
-tfFulfillment :: DSelect.DSelectRes -> Location.Location -> Location.Location -> Bool -> Spec.Fulfillment
-tfFulfillment res startLoc endLoc isValueAddNP =
+tfFulfillment :: DSelect.DSelectRes -> Location.Location -> Location.Location -> Bool -> [Location.Location] -> Spec.Fulfillment
+tfFulfillment res startLoc endLoc isValueAddNP stops =
   let fulfillmentAgent = Nothing
       fulfillmentTags = Nothing
       fulfillmentState = Nothing
       fulfillmentCustomer = if isValueAddNP then tfCustomer res.phoneNumber else Nothing
       fulfillmentId = Just res.estimate.bppEstimateId.getId
       fulfillmentType = UCommonV2.tripCategoryToFulfillmentType <$> res.tripCategory
-      fulfillmentStops = UCommon.mkStops' (Just startLoc) (Just endLoc)
+      fulfillmentStops = UCommon.mkStops' (Just startLoc) stops (Just endLoc)
       fulfillmentVehicle = tfVehicle res
    in Spec.Fulfillment
         { fulfillmentStops = fulfillmentStops,

@@ -513,6 +513,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
           tollCharges = ride.tollCharges,
           vehicleAge = vehicleAge,
           currency = booking.currency,
+          noOfStops = length ride.stops,
           distanceUnit = booking.distanceUnit
         }
   let finalFare = Fare.fareSum fareParams

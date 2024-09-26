@@ -145,7 +145,7 @@ tfOrder booking cancelStatus cancellationSource cancellationFee merchant driverN
 
 tfFulfillments :: DRB.Booking -> Maybe Text -> Text -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe Text -> Maybe [Spec.Fulfillment]
 tfFulfillments booking driverName customerPhoneNo rideStatus mbVehicle driverPhone = do
-  let stops = BUtils.mkStops' booking.fromLocation booking.toLocation booking.specialZoneOtpCode
+  let stops = BUtils.mkStops' booking.fromLocation booking.toLocation booking.stops booking.specialZoneOtpCode
   Just
     [ Spec.Fulfillment
         { fulfillmentId = Just booking.quoteId,

@@ -29,6 +29,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
     senderAndReceiverDetails <- Storage.Queries.Transformers.Booking.getSenderAndReceiverDetails tripCategory senderId senderName senderPrimaryExophone receiverId receiverName receiverPrimaryExophone
     fareParams' <- Storage.Queries.FareParameters.findById (Kernel.Types.Id.Id fareParametersId) >>= fromMaybeM (Kernel.Types.Error.InternalError ("FareParameters not found for booking: " <> show id))
     merchantOperatingCityId' <- Storage.CachedQueries.Merchant.MerchantOperatingCity.getMerchantOpCityId (Kernel.Types.Id.Id <$> merchantOperatingCityId) merchant bapCity
+    stops' <- Storage.Queries.Transformers.Booking.getStops id
     pure $
       Just
         Domain.Types.Booking.Booking
@@ -74,6 +75,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             status = status,
             stopLocationId = Kernel.Types.Id.Id <$> stopLocationId,
             toLocGeohash = toLocGeohash,
+            stops = stops',
             toLocation = snd fromAndToLocation',
             tollNames = tollNames,
             transactionId = transactionId,

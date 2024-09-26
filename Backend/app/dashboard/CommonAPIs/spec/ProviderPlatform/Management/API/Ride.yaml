@@ -224,6 +224,7 @@ types:
     - building: Maybe Text
     - areaCode: Maybe Text
     - area: Maybe Text
+    - id: Text
   CancellationSource:
     - enum: "ByUser, ByDriver, ByMerchant, ByAllocator, ByApplication"
   RideSyncRes:

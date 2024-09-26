@@ -35,6 +35,7 @@ import qualified Domain.Action.UI.Ride.EndRide as RideEnd
 import qualified Domain.Action.UI.Ride.StartRide as RideStart
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import qualified Domain.Types.Client as DC
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
@@ -120,6 +121,20 @@ type API =
                     :> "destination"
                     :> ReqBody '[JSON] LatLong
                     :> Post '[JSON] APISuccess
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
+                    :> "arrived"
+                    :> Capture "stopId" (Id DL.Location)
+                    :> "stop"
+                    :> ReqBody '[JSON] LatLong
+                    :> Post '[JSON] APISuccess
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
+                    :> "departed"
+                    :> Capture "stopId" (Id DL.Location)
+                    :> "stop"
+                    :> ReqBody '[JSON] LatLong
+                    :> Post '[JSON] APISuccess
                 )
          )
 
@@ -157,6 +172,8 @@ handler =
              :<|> uploadOdometerReading
              :<|> uploadDeliveryImage
              :<|> arrivedAtDestination
+             :<|> arrivedStop
+             :<|> departedStop
          )
 
 startRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> StartRideReq -> FlowHandler APISuccess
@@ -213,6 +230,12 @@ arrivedAtPickup (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtPicku
 
 arrivedAtStop :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
 arrivedAtStop (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtStop rideId req
+
+arrivedStop :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> Id DL.Location -> LatLong -> FlowHandler APISuccess
+arrivedStop (_, _, _) rideId stopId req = withFlowHandlerAPI $ DRide.stopAction rideId req stopId DRide.ARRIVE
+
+departedStop :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> Id DL.Location -> LatLong -> FlowHandler APISuccess
+departedStop (_, _, _) rideId stopId req = withFlowHandlerAPI $ DRide.stopAction rideId req stopId DRide.DEPART
 
 uploadOdometerReading :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> DRide.UploadOdometerReq -> FlowHandler DRide.UploadOdometerResp
 uploadOdometerReading (_, _, cityId) rideId req = withFlowHandlerAPI $ DRide.uploadOdometerReading cityId rideId req

@@ -57,6 +57,7 @@ data SearchRequest = SearchRequest
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.UTCTime,
     toLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    stops :: [Domain.Types.Location.Location],
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],

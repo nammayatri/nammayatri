@@ -214,6 +214,7 @@ pureFareSum fareParams = do
     + fromMaybe 0.0 fareParams.nightShiftCharge
     + fromMaybe 0.0 fareParams.rideExtraTimeFare
     + fromMaybe 0.0 fareParams.congestionCharge
+    + fromMaybe 0.0 fareParams.stopCharges
     + partOfNightShiftCharge
     + notPartOfNightShiftCharge
     + platformFee
@@ -257,6 +258,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     estimatedDistance :: Maybe Meters,
     timeDiffFromUtc :: Maybe Seconds,
     tollCharges :: Maybe HighPrecMoney,
+    noOfStops :: Int,
     currency :: Currency,
     distanceUnit :: DistanceUnit
   }
@@ -300,6 +302,8 @@ calculateFareParameters params = do
           + notPartOfNightShiftCharge
       govtCharges =
         HighPrecMoney . (fullRideCostN.getHighPrecMoney *) . toRational <$> fp.govtCharges
+      stopCharges =
+        HighPrecMoney . ((toRational params.noOfStops) *) . toRational <$> fp.perStopCharge
       extraTimeFareInfo = calculateExtraTimeFare (fromMaybe 0 params.actualDistance) fp.perMinuteRideExtraTimeCharge params.actualRideDuration fp.vehicleServiceTier =<< params.avgSpeedOfVehicle -- todo tp transporter_config
       fullCompleteRideCost =
         {- without platformFee -}
@@ -315,6 +319,7 @@ calculateFareParameters params = do
             parkingCharge = fp.parkingCharge,
             congestionCharge = congestionChargeByMultiplier, ----------Needs to be changed to congestionChargeResult
             congestionChargeViaDp = congestionChargeByPerMin,
+            stopCharges = stopCharges, --(\charges -> Just $ HighPrecMoney (toRational params.noOfStops * charges))=<< fp.perStopCharge,
             waitingCharge = resultWaitingCharge,
             nightShiftCharge = resultNightShiftCharge,
             rideExtraTimeFare = extraTimeFareInfo,

@@ -100,3 +100,10 @@ ALTER TABLE atlas_app.search_request ADD COLUMN estimated_ride_static_duration i
 
 ALTER TABLE atlas_app.search_request ADD COLUMN place_name_source text ;
 ALTER TABLE atlas_app.search_request ADD COLUMN initiated_by text ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN stops text ;
+
+------- SQL updates -------
+

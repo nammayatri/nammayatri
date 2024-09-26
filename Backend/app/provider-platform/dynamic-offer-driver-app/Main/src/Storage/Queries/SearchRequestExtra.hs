@@ -3,6 +3,7 @@
 
 module Storage.Queries.SearchRequestExtra where
 
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.RiderDetails as RD
@@ -39,12 +40,18 @@ createDSReq :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequest -> m
 createDSReq searchRequest = do
   fromLocationMap <- SLM.buildPickUpLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.providerId) (Just searchRequest.merchantOperatingCityId)
   QLM.create fromLocationMap
+  void $ createStopsLocation searchRequest.stops
+  stopsLocMapping <- SLM.buildStopsLocationMapping searchRequest.stops searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.providerId) (Just searchRequest.merchantOperatingCityId)
+  void $ QLM.createMany stopsLocMapping
   case searchRequest.toLocation of
     Just toLocation -> do
       toLocationMap <- SLM.buildDropLocationMapping toLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.providerId) (Just searchRequest.merchantOperatingCityId)
       QLM.create toLocationMap
     _ -> return ()
   create searchRequest
+
+createStopsLocation :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [DL.Location] -> m ()
+createStopsLocation = QL.createMany
 
 updateAutoAssign ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
