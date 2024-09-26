@@ -105,11 +105,6 @@ updateSafetyDrillStatus hasCompletedMockSafetyDrill id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.hasCompletedMockSafetyDrill hasCompletedMockSafetyDrill, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateTotalRidesCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m ())
-updateTotalRidesCount id totalRidesCount = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.id (Kernel.Types.Id.getId id), Se.Set Beam.totalRidesCount totalRidesCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
 updateWhatsappNotificationEnrollStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.External.Whatsapp.Interface.Types.OptApiMethods -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
