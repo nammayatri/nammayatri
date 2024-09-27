@@ -24,10 +24,12 @@ import Screens.SplashScreen.View as SplashScreen
 import Types.App (GlobalState(..), FlowBT)
 import Presto.Core.Types.Language.Flow
 import Engineering.Helpers.Commons
+import JBridge as JB
 
 splashScreen :: FlowBT String Unit
 splashScreen = do
   (GlobalState globalState) <- getState
-  void $ lift $ lift $ fork $ do 
-    void $ liftFlow $ initUIWithNameSpace "SplashScreen" Nothing
+  void $ liftFlowBT $ initUIWithNameSpace "SplashScreen" Nothing
+  void $ lift $ lift  $ do 
     void $ runScreenWithNameSpace $ SplashScreen.screen globalState.splashScreen
+    liftFlow $ JB.hideLoader ""

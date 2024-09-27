@@ -511,7 +511,6 @@ toggleSetupSplash :: Boolean -> FlowBT String Unit
 toggleSetupSplash =
   if _ then do
     UI.splashScreen
-    liftFlowBT $ hideLoader ""
   else do
     state <- getState
     void $ liftFlowBT $ launchAff $ flowRunner state $ runExceptT $ runBackT
@@ -6532,3 +6531,5 @@ parcelDeliveryFlow = do
     ParcelDeliveryScreenController.GoToConfirmgDelivery state -> do
       homeScreenFlow
     _ -> pure unit
+
+

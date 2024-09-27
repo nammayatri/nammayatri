@@ -34,7 +34,7 @@ screen initialState =
   { initialState
   , view
   , name: "SplashScreen"
-  , globalEvents: []
+  , globalEvents: [(\push -> pure $ push AfterRender)]
   , eval
   , parent : Just "SplashScreen"
   }
