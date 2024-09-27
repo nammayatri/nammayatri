@@ -141,7 +141,7 @@ dynamicFCMNotifyPerson ::
 dynamicFCMNotifyPerson merchantOpCityId personId mbDeviceToken lang tripCategory fcmReq entityData dynamicParams = do
   transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId fcmReq.notificationKey tripCategory fcmReq.subCategory (Just lang)
-  when (isNothing mbMerchantPN) $ logDebug $ "MISSED_FCM - " <> fcmReq.notificationKey
+  when (isNothing mbMerchantPN) $ logError $ "MISSED_FCM - " <> fcmReq.notificationKey
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = FCMNotificationTitle $ buildTemplate dynamicParams merchantPN.title
         body = FCMNotificationBody $ buildTemplate dynamicParams merchantPN.body
