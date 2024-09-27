@@ -196,11 +196,6 @@ instance Show ReasonForDisablingServiceCharge where
   show NOTIFIED_LEAVE = "notified leave"
   show OTHER = "miscellaneous"
 
-data ServiceNames = YATRI_SUBSCRIPTION | YATRI_RENTAL
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
-
-$(mkHttpInstancesForEnum ''ServiceNames)
-
 $(mkHttpInstancesForEnum ''ReasonForDisablingServiceCharge)
 
 data DriverFeeStatus

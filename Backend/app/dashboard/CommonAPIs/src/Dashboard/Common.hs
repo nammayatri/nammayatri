@@ -36,6 +36,7 @@ import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Types.HideSecrets
 import Kernel.Types.HideSecrets as Reexport
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Text.Casing
 
 data Customer
@@ -192,3 +193,8 @@ stripSuffix suffix str =
   if suffix `isSuffixOf` str
     then take (length str - length suffix) str
     else str
+
+data ServiceNames = YATRI_SUBSCRIPTION | YATRI_RENTAL
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''ServiceNames)

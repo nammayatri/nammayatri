@@ -42,3 +42,12 @@ findByMerchantOpCityIdAndPaymentModeWithServiceName (Id merchantOpCityId) paymen
 
 fetchAllPlan :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [Plan]
 fetchAllPlan = findAllWithKV [Se.Is BeamP.id $ Se.Not $ Se.Eq $ getId ""]
+
+fetchAllPlanByMerchantOperatingCityMbServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe ServiceNames -> m [Plan]
+fetchAllPlanByMerchantOperatingCityMbServiceName merchantOpCityId mbServiceName = do
+  findAllWithKV
+    ( [ Se.Is BeamP.id $ Se.Not $ Se.Eq $ getId "",
+        Se.Is BeamP.merchantOpCityId $ Se.Eq merchantOpCityId.getId
+      ]
+        <> maybe [] (\serviceName -> [Se.Is BeamP.serviceName $ Se.Eq serviceName]) mbServiceName
+    )

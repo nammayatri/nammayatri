@@ -42,6 +42,7 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     deleteMerchantSpecialLocationDelete,
     postMerchantSpecialLocationGatesUpsert,
     deleteMerchantSpecialLocationGatesDelete,
+    postMerchantConfigClearCacheSubscription,
   )
 where
 
@@ -389,3 +390,9 @@ mkGeom :: FilePath -> Flow (Maybe Text)
 mkGeom kmlFile = do
   result <- getGeomFromKML kmlFile >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom.")
   return $ Just $ T.pack result
+
+postMerchantConfigClearCacheSubscription :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.ClearCacheSubscriptionReq -> Flow APISuccess
+postMerchantConfigClearCacheSubscription merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.PostMerchantConfigClearCacheSubscriptionEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchantDSL.postMerchantConfigClearCacheSubscription) req

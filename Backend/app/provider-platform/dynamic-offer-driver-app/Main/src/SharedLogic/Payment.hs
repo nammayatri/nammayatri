@@ -156,8 +156,17 @@ offerListCache merchantId merchantOpCityId serviceName req = do
 
 cacheOfferListResponse :: (MonadFlow m, CacheFlow m r) => Bool -> Payment.OfferListReq -> Payment.OfferListResp -> m ()
 cacheOfferListResponse includeDriverId req resp = do
-  key <- makeOfferListCacheKey includeDriverId req
+  version <- getVersionKey
+  key <- makeOfferListCacheKey includeDriverId req <&> (<> ":V-" <> version)
   Hedis.setExp key resp 86400
+  where
+    getVersionKey = do
+      Hedis.get makeOfferListCacheVersionKey >>= \case
+        Just a -> return a
+        Nothing -> do
+          versionId <- generateShortId
+          Hedis.setExp makeOfferListCacheVersionKey versionId.getShortId (23 * 60 * 60)
+          return versionId.getShortId
 
 makeOfferListCacheKey :: (MonadFlow m, CacheFlow m r) => Bool -> Payment.OfferListReq -> m Text
 makeOfferListCacheKey includeDriverId req = do
@@ -185,6 +194,9 @@ makeOfferListCacheKey includeDriverId req = do
       case offerListingMetric' of
         LIST_BASED_ON_DATE listingDates -> show $ UTCTime (utctDay listingDates) (secondsToDiffTime 0)
         _ -> show offerListingMetric'
+
+makeOfferListCacheVersionKey :: Text
+makeOfferListCacheVersionKey = "OfferList:Version"
 
 sendLinkTroughChannelProvided ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasField "smsCfg" r SmsConfig) =>
