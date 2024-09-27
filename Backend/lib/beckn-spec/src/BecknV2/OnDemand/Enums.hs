@@ -34,6 +34,7 @@ data VehicleCategory
   | CAB
   | MOTORCYCLE
   | METRO
+  | BUS
   | AMBULANCE
   | TWO_WHEELER
   | TRUCK

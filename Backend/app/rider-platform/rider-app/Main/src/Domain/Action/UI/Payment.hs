@@ -167,7 +167,8 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
   paymentServiceConfig <- do
     case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig'.serviceConfig of
       Just (DMSC.PaymentServiceConfig vsc) -> pure vsc
-      Just (DMSC.MetroPaymentServiceConfig psc) -> pure psc
+      Just (DMSC.MetroPaymentServiceConfig vsc) -> pure vsc
+      Just (DMSC.BusPaymentServiceConfig vsc) -> pure vsc
       _ -> throwError $ InternalError "Unknown Service Config"
   orderWebhookResponse <- Juspay.orderStatusWebhook paymentServiceConfig DPayment.juspayWebhookService authData value
   osr <- case orderWebhookResponse of
@@ -178,12 +179,14 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
   Redis.whenWithLockRedis (mkOrderStatusCheckKey orderShortId status) 60 $ do
     case mbServiceType of
       Just Payment.FRFSBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId
+      Just Payment.FRFSBusBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId
       _ -> pure ()
   pure Ack
   where
     getPaymentServiceByType = \case
       Just Payment.Normal -> DMSC.PaymentService Payment.Juspay
       Just Payment.FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
+      Just Payment.FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
       Nothing -> DMSC.PaymentService Payment.Juspay
     getOrderData osr = case osr of
       Payment.OrderStatusResp {..} -> pure (orderShortId, transactionStatus)

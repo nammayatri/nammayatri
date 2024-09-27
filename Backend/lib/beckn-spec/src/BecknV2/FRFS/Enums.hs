@@ -22,6 +22,7 @@ import Kernel.Prelude
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.JSON (constructorsToLowerOptions, constructorsWithHyphens)
+import Kernel.Utils.TH
 
 data Domain
   = FRFS
@@ -68,8 +69,10 @@ instance FromJSON Action where
 instance ToJSON Action where
   toJSON = genericToJSON constructorsToLowerOptions
 
-data VehicleCategory = METRO
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
+data VehicleCategory = METRO | BUS
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''VehicleCategory)
 
 data StopType = START | END | INTERMEDIATE_STOP
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)

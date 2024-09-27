@@ -80,3 +80,8 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN discounted_tickets integer 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN payer_vpa text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN cashback_status text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN cashback_payout_order_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN route_id character varying(36) ;

@@ -8,6 +8,7 @@ module Domain.Types.Common
   )
 where
 
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
 import Domain.Types
 import qualified Domain.Types.VehicleCategory as DTVC
@@ -21,3 +22,4 @@ $(mkBeamInstancesForEnumAndList ''DTVC.VehicleCategory)
 $(mkBeamInstancesForEnumAndList ''Enums.VehicleCategory)
 $(mkBeamInstancesForEnum ''TripCategory)
 $(mkBeamInstancesForEnum ''TripParty)
+$(mkBeamInstancesForEnumAndList ''Spec.VehicleCategory)

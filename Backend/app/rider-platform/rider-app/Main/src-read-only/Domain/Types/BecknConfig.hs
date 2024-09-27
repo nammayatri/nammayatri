@@ -17,7 +17,7 @@ data BecknConfig = BecknConfig
   { bapIFSC :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     buyerFinderFee :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancelTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    collectedBy :: Domain.Types.BecknConfig.PaymentCollectedBy,
+    collectedBy :: Domain.Types.BecknConfig.Network,
     confirmBufferTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     confirmTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     domain :: Kernel.Prelude.Text,
@@ -25,6 +25,7 @@ data BecknConfig = BecknConfig
     id :: Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig,
     initTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     paymentParamsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    provider :: Domain.Types.BecknConfig.Provider,
     ratingTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     registryUrl :: Servant.Client.Core.BaseUrl,
     searchTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -38,6 +39,7 @@ data BecknConfig = BecknConfig
     trackTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     uniqueKeyId :: Kernel.Prelude.Text,
     vehicleCategory :: BecknV2.OnDemand.Enums.VehicleCategory,
+    verifiedBy :: Domain.Types.BecknConfig.Network,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
@@ -45,6 +47,10 @@ data BecknConfig = BecknConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data PaymentCollectedBy = BAP | BPP deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data Network = BAP | BPP deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentCollectedBy)
+data Provider = ONDC | EBIX deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Network)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Provider)

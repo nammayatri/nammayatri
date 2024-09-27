@@ -8,8 +8,7 @@ import Data.Aeson
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import Kernel.Prelude hiding (sequence)
-import qualified Kernel.Prelude
+import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Tools.Beam.UtilsTH
@@ -28,4 +27,4 @@ data FRFSTicketBookingPayment = FRFSTicketBookingPayment
 
 data FRFSTicketBookingPaymentStatus = PENDING | SUCCESS | FAILED | REFUND_PENDING | REFUNDED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketBookingPaymentStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSTicketBookingPaymentStatus))

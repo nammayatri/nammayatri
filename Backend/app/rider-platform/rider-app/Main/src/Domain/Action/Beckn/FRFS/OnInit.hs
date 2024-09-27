@@ -14,6 +14,7 @@
 
 module Domain.Action.Beckn.FRFS.OnInit where
 
+import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Action.Beckn.FRFS.Common (DFareBreakUp)
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
@@ -114,7 +115,7 @@ onInit onInitReq merchant booking_ = do
   let mocId = booking.merchantOperatingCityId
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchant.id
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
-      createOrderCall = Payment.createOrder merchant.id mocId Nothing Payment.FRFSBooking
+      createOrderCall = Payment.createOrder merchant.id mocId Nothing (getPaymentType booking.vehicleType)
   mCreateOrderRes <- DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
   case mCreateOrderRes of
     Just _ -> do
@@ -124,3 +125,7 @@ onInit onInitReq merchant booking_ = do
     Nothing -> do
       void $ QFRFSTicketBooking.updateStatusById FTBooking.FAILED booking.id
       throwError $ InternalError "Failed to create order with Euler after on_int in FRFS"
+  where
+    getPaymentType = \case
+      Spec.METRO -> Payment.FRFSBooking
+      Spec.BUS -> Payment.FRFSBusBooking

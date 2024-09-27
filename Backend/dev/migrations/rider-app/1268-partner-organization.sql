@@ -46,6 +46,3 @@ SELECT org_id as partner_org_id, TSCfg.config_type as config_type, TSCfg.config_
 WITH BPPStCallCfg AS (SELECT 'BPP_STATUS_CALL' as config_type, '{ "intervalInSec": 10 }'::json as config_json)
 INSERT INTO atlas_app.partner_org_config (partner_org_id, config_type, config_json)
 SELECT org_id as partner_org_id, BPPStCallCfg.config_type as config_type, BPPStCallCfg.config_json as config_json FROM atlas_app.partner_organization CROSS JOIN BPPStCallCfg;
-
--- DROP QUERY, can be run before release as well, as table is not used anywhere in old / new version.
-DROP TABLE atlas_app.frfs_trip;

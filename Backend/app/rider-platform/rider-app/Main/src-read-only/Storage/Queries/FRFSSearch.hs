@@ -8,7 +8,7 @@ import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.Prelude hiding (sequence)
+import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -41,6 +41,7 @@ updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
       Se.Set Beam.quantity quantity,
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
+      Se.Set Beam.routeId (Kernel.Types.Id.getId <$> routeId),
       Se.Set Beam.toStationId (Kernel.Types.Id.getId toStationId),
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.createdAt createdAt,
@@ -61,6 +62,7 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
             partnerOrgTransactionId = Kernel.Types.Id.Id <$> partnerOrgTransactionId,
             quantity = quantity,
             riderId = Kernel.Types.Id.Id riderId,
+            routeId = Kernel.Types.Id.Id <$> routeId,
             toStationId = Kernel.Types.Id.Id toStationId,
             vehicleType = vehicleType,
             createdAt = createdAt,
@@ -78,6 +80,7 @@ instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
         Beam.partnerOrgTransactionId = Kernel.Types.Id.getId <$> partnerOrgTransactionId,
         Beam.quantity = quantity,
         Beam.riderId = Kernel.Types.Id.getId riderId,
+        Beam.routeId = Kernel.Types.Id.getId <$> routeId,
         Beam.toStationId = Kernel.Types.Id.getId toStationId,
         Beam.vehicleType = vehicleType,
         Beam.createdAt = createdAt,

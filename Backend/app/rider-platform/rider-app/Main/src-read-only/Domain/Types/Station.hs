@@ -4,13 +4,12 @@
 
 module Domain.Types.Station where
 
+import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import Kernel.Prelude hiding (sequence)
-import qualified Kernel.Prelude
+import Kernel.Prelude
 import qualified Kernel.Types.Id
-import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data Station = Station
@@ -22,14 +21,8 @@ data Station = Station
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     name :: Kernel.Prelude.Text,
-    vehicleType :: Domain.Types.Station.FRFSVehicleType,
+    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-data FRFSVehicleType = METRO | BUS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSVehicleType)
-
-$(mkHttpInstancesForEnum ''FRFSVehicleType)

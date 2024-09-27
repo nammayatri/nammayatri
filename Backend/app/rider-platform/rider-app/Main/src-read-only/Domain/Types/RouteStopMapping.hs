@@ -4,26 +4,26 @@
 
 module Domain.Types.RouteStopMapping where
 
+import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.Route
-import qualified Domain.Types.Station
-import Kernel.Prelude hiding (sequence)
-import qualified Kernel.Prelude
+import qualified Kernel.External.Maps.Types
+import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound
 import qualified Tools.Beam.UtilsTH
 
 data RouteStopMapping = RouteStopMapping
-  { id :: Kernel.Types.Id.Id Domain.Types.RouteStopMapping.RouteStopMapping,
-    routeId :: Kernel.Types.Id.Id Domain.Types.Route.Route,
-    sequence :: Kernel.Prelude.Int,
-    stopId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
+  { merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    routeCode :: Kernel.Prelude.Text,
+    sequenceNum :: Kernel.Prelude.Int,
+    stopCode :: Kernel.Prelude.Text,
+    stopName :: Kernel.Prelude.Text,
+    stopPoint :: Kernel.External.Maps.Types.LatLong,
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
-    vehicleType :: Domain.Types.Station.FRFSVehicleType,
-    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

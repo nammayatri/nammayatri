@@ -380,9 +380,41 @@ instance IsHTTPError PartnerOrgConfigError where
 
 instance IsAPIError PartnerOrgConfigError
 
+data RouteError
+  = RouteNotFound Text
+  | RouteDoesNotExist Text
+  | RouteFareNotFound Text Text Text
+  | RouteMappingNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RouteError
+
+instance IsBaseError RouteError where
+  toMessage = \case
+    RouteNotFound msg -> Just $ "Route Not Found:-" <> msg
+    RouteDoesNotExist msg -> Just $ "Route Does Not Exist:-" <> msg
+    RouteMappingNotFound msg -> Just $ "Route Mapping Not Found:-" <> msg
+    RouteFareNotFound routeCode startStop endStop -> Just $ "Route Fare Not Found:-" <> routeCode <> ", " <> startStop <> ", " <> endStop
+
+instance IsHTTPError RouteError where
+  toErrorCode = \case
+    RouteNotFound _ -> "ROUTE_NOT_FOUND"
+    RouteDoesNotExist _ -> "ROUTE_DOES_NOT_EXIST"
+    RouteMappingNotFound _ -> "ROUTE_MAPPING_NOT_FOUND"
+    RouteFareNotFound _ _ _ -> "ROUTE_FARE_NOT_FOUND"
+
+  toHttpCode = \case
+    RouteNotFound _ -> E500
+    RouteDoesNotExist _ -> E400
+    RouteFareNotFound _ _ _ -> E500
+    RouteMappingNotFound _ -> E500
+
+instance IsAPIError RouteError
+
 data StationError
   = StationNotFound Text
   | StationDoesNotExist Text
+  | StationsNotFound Text Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''StationError
@@ -391,15 +423,18 @@ instance IsBaseError StationError where
   toMessage = \case
     StationNotFound msg -> Just $ "Station Not Found:-" <> msg
     StationDoesNotExist msg -> Just $ "Station Does Not Exist:-" <> msg
+    StationsNotFound start end -> Just $ "Station Not Found:-" <> start <> ", " <> end
 
 instance IsHTTPError StationError where
   toErrorCode = \case
     StationNotFound _ -> "STATION_NOT_FOUND"
     StationDoesNotExist _ -> "STATION_DOES_NOT_EXIST"
+    StationsNotFound _ _ -> "STATIONS_NOT_FOUND"
 
   toHttpCode = \case
     StationNotFound _ -> E500
     StationDoesNotExist _ -> E400
+    StationsNotFound _ _ -> E500
 
 instance IsAPIError StationError
 
@@ -635,3 +670,22 @@ instance IsHTTPError SafetyError where
     PoliceCallNotAllowed _ -> E400
 
 instance IsAPIError SafetyError
+
+data CancellationError
+  = CancellationNotSupported
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''CancellationError
+
+instance IsBaseError CancellationError where
+  toMessage = \case
+    CancellationNotSupported -> Just $ "Cancellation Not Allowed"
+
+instance IsHTTPError CancellationError where
+  toErrorCode = \case
+    CancellationNotSupported -> "CANCELLATION_NOT_SUPPORTED"
+
+  toHttpCode = \case
+    CancellationNotSupported -> E500
+
+instance IsAPIError CancellationError

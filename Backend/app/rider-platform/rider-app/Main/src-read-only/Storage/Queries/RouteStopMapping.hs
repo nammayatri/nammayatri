@@ -7,7 +7,9 @@ module Storage.Queries.RouteStopMapping where
 import qualified Domain.Types.RouteStopMapping
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.Prelude hiding (sequence)
+import qualified Kernel.External.Maps.Types
+import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -20,38 +22,43 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RouteStopMapping.RouteStopMapping] -> m ())
 createMany = traverse_ create
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RouteStopMapping.RouteStopMapping -> m (Maybe Domain.Types.RouteStopMapping.RouteStopMapping))
-findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
+findByRouteCode routeCode = do findAllWithKV [Se.Is Beam.routeCode $ Se.Eq routeCode]
+
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.RouteStopMapping.RouteStopMapping))
+findByPrimaryKey routeCode stopCode = do findOneWithKV [Se.And [Se.Is Beam.routeCode $ Se.Eq routeCode, Se.Is Beam.stopCode $ Se.Eq stopCode]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RouteStopMapping.RouteStopMapping -> m ())
 updateByPrimaryKey (Domain.Types.RouteStopMapping.RouteStopMapping {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.routeId (Kernel.Types.Id.getId routeId),
-      Se.Set Beam.sequence sequence,
-      Se.Set Beam.stopId (Kernel.Types.Id.getId stopId),
+    [ Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.sequenceNum sequenceNum,
+      Se.Set Beam.stopName stopName,
+      Se.Set Beam.stopLat ((.lat) stopPoint),
+      Se.Set Beam.stopLon ((.lon) stopPoint),
       Se.Set Beam.timeBounds timeBounds,
       Se.Set Beam.vehicleType vehicleType,
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
-    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+    [Se.And [Se.Is Beam.routeCode $ Se.Eq routeCode, Se.Is Beam.stopCode $ Se.Eq stopCode]]
 
 instance FromTType' Beam.RouteStopMapping Domain.Types.RouteStopMapping.RouteStopMapping where
   fromTType' (Beam.RouteStopMappingT {..}) = do
     pure $
       Just
         Domain.Types.RouteStopMapping.RouteStopMapping
-          { id = Kernel.Types.Id.Id id,
-            routeId = Kernel.Types.Id.Id routeId,
-            sequence = sequence,
-            stopId = Kernel.Types.Id.Id stopId,
+          { merchantId = Kernel.Types.Id.Id merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            routeCode = routeCode,
+            sequenceNum = sequenceNum,
+            stopCode = stopCode,
+            stopName = stopName,
+            stopPoint = Kernel.External.Maps.Types.LatLong stopLat stopLon,
             timeBounds = timeBounds,
             vehicleType = vehicleType,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -59,14 +66,16 @@ instance FromTType' Beam.RouteStopMapping Domain.Types.RouteStopMapping.RouteSto
 instance ToTType' Beam.RouteStopMapping Domain.Types.RouteStopMapping.RouteStopMapping where
   toTType' (Domain.Types.RouteStopMapping.RouteStopMapping {..}) = do
     Beam.RouteStopMappingT
-      { Beam.id = Kernel.Types.Id.getId id,
-        Beam.routeId = Kernel.Types.Id.getId routeId,
-        Beam.sequence = sequence,
-        Beam.stopId = Kernel.Types.Id.getId stopId,
+      { Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.routeCode = routeCode,
+        Beam.sequenceNum = sequenceNum,
+        Beam.stopCode = stopCode,
+        Beam.stopName = stopName,
+        Beam.stopLat = (.lat) stopPoint,
+        Beam.stopLon = (.lon) stopPoint,
         Beam.timeBounds = timeBounds,
         Beam.vehicleType = vehicleType,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

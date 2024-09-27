@@ -8,7 +8,7 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.Prelude hiding (sequence)
+import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
@@ -54,6 +54,7 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.providerName providerName,
       Se.Set Beam.quantity quantity,
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
+      Se.Set Beam.routeId (Kernel.Types.Id.getId <$> routeId),
       Se.Set Beam.searchId (Kernel.Types.Id.getId searchId),
       Se.Set Beam.stationsJson stationsJson,
       Se.Set Beam.toStationId (Kernel.Types.Id.getId toStationId),
@@ -87,6 +88,7 @@ instance FromTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
             providerName = providerName,
             quantity = quantity,
             riderId = Kernel.Types.Id.Id riderId,
+            routeId = Kernel.Types.Id.Id <$> routeId,
             searchId = Kernel.Types.Id.Id searchId,
             stationsJson = stationsJson,
             toStationId = Kernel.Types.Id.Id toStationId,
@@ -118,6 +120,7 @@ instance ToTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
         Beam.providerName = providerName,
         Beam.quantity = quantity,
         Beam.riderId = Kernel.Types.Id.getId riderId,
+        Beam.routeId = Kernel.Types.Id.getId <$> routeId,
         Beam.searchId = Kernel.Types.Id.getId searchId,
         Beam.stationsJson = stationsJson,
         Beam.toStationId = Kernel.Types.Id.getId toStationId,

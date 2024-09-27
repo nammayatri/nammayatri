@@ -2,10 +2,11 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   Currency: Kernel.Types.Common
   Price: Kernel.Types.Common
+  Seconds: Kernel.Types.Time
   ShortId: Kernel.Types.Id
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  FRFSVehicleType: Domain.Types.Station
+  VehicleCategory: BecknV2.FRFS.Enums
   FRFSSearch: Domain.Types.FRFSSearch
   FRFSQuote: Domain.Types.FRFSQuote
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
@@ -15,7 +16,6 @@ imports:
   FRFSQuoteType: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBooking
   FRFSTicketStatus: Domain.Types.FRFSTicket
-  # Gps: Kernel.Types.Common
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   Person: Domain.Types.Person
   City: Kernel.Types.Beckn.Context
@@ -31,8 +31,9 @@ FRFSSearch:
     id: Id FRFSSearch
     fromStationId: Id Station
     toStationId: Id Station
+    routeId: Maybe (Id Route)
     quantity: Int
-    vehicleType: FRFSVehicleType
+    vehicleType: VehicleCategory
     riderId: Id Person
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -55,7 +56,7 @@ Station:
 
   fields:
     id: Id Station
-    vehicleType: FRFSVehicleType
+    vehicleType: VehicleCategory
     name: Text
     code: Text
     lat: Maybe Double
@@ -63,11 +64,6 @@ Station:
     address: Maybe Text
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-
-  types:
-    FRFSVehicleType:
-      enum: "METRO, BUS"
-      derive: HttpInstance
 
   constraints:
     id: PrimaryKey
@@ -78,9 +74,6 @@ Station:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, vehicleType]
-    getTicketPlacesByVehicleType:
-      kvFunction: findAllWithKV
-      where: vehicleType
     findById:
       kvFunction: findOneWithKV
       where: id
@@ -98,9 +91,10 @@ FRFSQuote:
     _type: FRFSQuoteType
     fromStationId: Id Station
     toStationId: Id Station
+    routeId: Maybe (Id Route)
     quantity: Int
     stationsJson: Text
-    vehicleType: FRFSVehicleType
+    vehicleType: VehicleCategory
     bppSubscriberId: Text
     bppSubscriberUrl: Text
     providerId: Text
@@ -160,8 +154,9 @@ FRFSTicketBooking:
     _type: FRFSQuoteType
     fromStationId: Id Station
     toStationId: Id Station
+    routeId: Maybe (Id Route)
     quantity: Int
-    vehicleType: FRFSVehicleType
+    vehicleType: VehicleCategory
     bppSubscriberId: Text
     bppSubscriberUrl: Text
     providerId: Text
@@ -465,13 +460,19 @@ FRFSConfig:
     roundTripTicketLimit: Int
     oneWayTicketLimit: Int
     metroStationTtl: Int
+    busStationTtl: Seconds
     discount: Int
     isEventOngoing: Maybe Bool
+    isCancellationAllowed: Bool
     freeTicketInterval: Maybe Int
     maxFreeTicketCashback: Maybe Int
     customDates: '[Text]'
     customEndTime: Text
     cancellationReasonId: Maybe Text
+
+  beamType:
+    isCancellationAllowed: Maybe Bool
+    busStationTtl: Maybe Seconds
 
   queries:
     findByMerchantOperatingCityId:
@@ -483,20 +484,33 @@ FRFSConfig:
 
   default:
     isEventOngoing: "false"
+    isCancellationAllowed: "true"
     freeTicketInterval: "9999"
     maxFreeTicketCashback: "0"
+    busStationTtl: "1800"
+
+  fromTType:
+    isCancellationAllowed: Kernel.Prelude.fromMaybe True|I
+    busStationTtl: Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 1800)|I
+
+  toTType:
+    isCancellationAllowed: Kernel.Prelude.Just|I
+    busStationTtl: Kernel.Prelude.Just|I
 
 Route:
   tableName: route
   derives: "Generic,Show,FromJSON,ToJSON"
   fields:
-    routeId: Text
+    id: Id Route
+    code: Text
     shortName: Text
     longName: Text
     startPoint: LatLong
     endPoint: LatLong
-    vehicleType: FRFSVehicleType
+    vehicleType: VehicleCategory
     timeBounds: TimeBound
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
   default:
     timeBounds: "'Unbounded'"
   sqlType:
@@ -517,28 +531,72 @@ Route:
   fromTType:
     startPoint: Kernel.External.Maps.Types.LatLong startLat startLon|E
     endPoint: Kernel.External.Maps.Types.LatLong endLat endLon|E
-
   constraints:
-    routeId: PrimaryKey
+    id: PrimaryKey
+    code: SecondaryKey
   queries:
-    findAll:
-      kvFunction: findAllWithKV
-      where: routeId
-    findById:
+    findByRouteCode:
       kvFunction: findOneWithKV
-      where: routeId
+      where: code
+    findByRouteId:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByMerchantOperatingCityAndVehicleType:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleType]
 
 RouteStopMapping:
   tableName: route_stop_mapping
   fields:
-    id: Id RouteStopMapping
-    routeId: Id Route
-    stopId: Id Station
-    sequence: Int
-    vehicleType: FRFSVehicleType
+    routeCode: Text
+    stopCode: Text
+    stopName: Text
+    stopPoint: LatLong
+    sequenceNum: Int
+    vehicleType: VehicleCategory
     timeBounds: TimeBound
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  beamFields:
+    stopPoint:
+      stopLat: Double
+      stopLon: Double
+  toTType:
+    stopLat: (.lat)|I
+    stopLon: (.lon)|I
+  fromTType:
+    stopPoint: Kernel.External.Maps.Types.LatLong stopLat stopLon|E
   default:
     timeBounds: "'Unbounded'"
   constraints:
-    id: PrimaryKey
-    routeId: "!SecondaryKey"
+    routeCode: PrimaryKey
+    stopCode: PrimaryKey
+  queries:
+    findByRouteCode:
+      kvFunction: findAllWithKV
+      where: routeCode
+
+RouteStopFare:
+  tableName: route_stop_fare
+  fields:
+    routeCode: Text
+    startStopCode: Text
+    endStopCode: Text
+    amount: HighPrecMoney
+    vehicleType: VehicleCategory
+    currency: Currency
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  default:
+    timeBounds: "'Unbounded'"
+    currency: "'INR'"
+  constraints:
+    routeCode: PrimaryKey
+    startStopCode: PrimaryKey
+    endStopCode: PrimaryKey
+  queries:
+    findByRouteStartAndStopCode:
+      kvFunction: findOneWithKV
+      where:
+        and: [routeCode, startStopCode, endStopCode]
