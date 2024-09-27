@@ -31,7 +31,7 @@ estimateBreakupTTable =
 
 type EstimateBreakup = EstimateBreakupT Identity
 
-$(TH.mkClickhouseInstances ''EstimateBreakupT)
+$(TH.mkClickhouseInstances ''EstimateBreakupT 'SELECT_FINAL_MODIFIER)
 
 addMinutesToUTCTime :: Int -> UTCTime -> UTCTime
 addMinutesToUTCTime minutes = addUTCTime (fromIntegral $ minutes * 60)
