@@ -165,6 +165,8 @@ Now, if you run `nix build` or any of the other nix commands, it will use the lo
 
 #### Visual Studio Code
 
+Also see: https://nixos.asia/en/vscode
+
 Once you have cloned the repo and have been successfully able to build the project using `cabal build all`, you can use [Visual Studio Code](https://code.visualstudio.com/) to develop the project.
 
 - Launch [VSCode](https://code.visualstudio.com/), and open the `git clone`’ed project directory [as single-folder workspace](https://code.visualstudio.com/docs/editor/workspaces#_singlefolder-workspaces)
