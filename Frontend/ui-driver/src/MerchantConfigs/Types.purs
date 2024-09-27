@@ -49,13 +49,18 @@ type AppConfigDriver a =
     rcLimit :: Int,
     acExplanation :: Boolean,
     showMonthlyLeaderBoard :: Boolean,
-    rentalRideVideoConfig :: RentalRideVideoConfig
+    rentalRideVideoConfig :: RentalRideVideoConfig,
+    scheduledRideConfig :: ScheduledRideConfig
     | a
   } 
 
 type RentalRideVideoConfig = {
   auto :: String,
   cab :: String
+}
+
+type ScheduledRideConfig = {
+  scheduledBannerTimerValue :: Int
 }
 
 type PurpleRideConfig = {
@@ -260,7 +265,8 @@ type CityConfig = {
   enableHvSdk :: Boolean,
   enableGullak :: Boolean,
   purpleRideConfig :: PurpleRideConfigForVehicle,
-  rideStartAudio :: RideStartAudio
+  rideStartAudio :: RideStartAudio,
+  showScheduledRides :: Boolean
 }
 
 type CoinsConfig = {

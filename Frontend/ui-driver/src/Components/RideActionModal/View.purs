@@ -30,7 +30,6 @@ import Data.Int as Int
 import Data.Maybe as Maybe
 import Data.Ord (abs)
 import Data.Tuple
-import Debug (spy)
 import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag, convertUTCtoISC)
@@ -67,6 +66,7 @@ import Data.String as DS
 import JBridge (fromMetersToKm)
 import Data.Maybe
 import Data.Int
+import Components.RateCard.Controller 
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = do
@@ -178,10 +178,20 @@ rideActionViewWithLabel push config =
                         secondaryText = getString LEARN_MORE,
                         imageUrl = fetchImage FF_ASSET "ny_ic_clock_unfilled"
                       }
-                  else 
+                  else if config.rideType == ST.Intercity then 
+                    dummyLabelConfig
+                      { label = "Intercity Ride ",
+                        backgroundColor = Color.blue800,
+                        text = getString  INTERCITY_RIDE,
+                        secondaryText = getString LEARN_MORE,
+                        imageUrl = fetchImage FF_ASSET "ny_ic_clock_unfilled"
+                      }
+
+                    else 
                     getRideLabelData config.specialLocationTag
       popupType = if config.bookingFromOtherPlatform then NoInfo
                   else if config.rideType == ST.Rental then RentalInfo
+                  else if config.rideType == ST.Intercity then IntercityInfo
                   else AccessibilityInfo
   in
   linearLayout
@@ -214,7 +224,7 @@ rideActionViewWithLabel push config =
         , linearLayout
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , visibility if (Maybe.isJust config.accessibilityTag || config.rideType == ST.Rental) && not (DS.null tagConfig.secondaryText) then VISIBLE else GONE
+          , visibility $ if (Maybe.isJust config.accessibilityTag || config.rideType == ST.Rental ||  config.rideType == ST.Intercity ) && not (DS.null tagConfig.secondaryText) then VISIBLE else GONE
           ][  textView $ 
               [ width WRAP_CONTENT
               , height MATCH_PARENT
@@ -704,7 +714,12 @@ estimatedFareView push config =
     , gravity LEFT
     , orientation VERTICAL
     , weight 1.0
-    ][ textView $
+    ][ linearLayout [
+        height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , orientation HORIZONTAL
+    ][
+       textView $
        [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , text if config.rideType == ST.Rental then (getString RENTAL_FARE) else (getString RIDE_FARE)
@@ -712,6 +727,7 @@ estimatedFareView push config =
         , ellipsize true
         , singleLine true
         ] <> FontStyle.body1 TypoGraphy
+    ]
       , linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
@@ -924,6 +940,21 @@ rideTierAndCapacity push config =
       , cornerRadius 4.0
       , margin $ MarginRight 6
       , visibility $ boolToVisibility $ Maybe.isJust config.capacity
+      ][]
+    , textView
+      [ height $ V 18
+      , width WRAP_CONTENT
+      , text $ show config.rideType
+      , margin $ MarginRight 6
+      , visibility $ boolToVisibility $  config.rideType == ST.Intercity
+      ]
+    , linearLayout
+      [ width $ V 5
+      , height $ V 5
+      , background Color.black700
+      , cornerRadius 4.0
+      , margin $ MarginRight 6
+      , visibility $ boolToVisibility $  config.rideType == ST.Intercity
       ][]
     , imageView
       [ height $ V 16
@@ -1194,7 +1225,7 @@ separatorConfig =
   }
 
 showTag :: Config -> Boolean
-showTag config = ((Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag config.specialLocationTag)) || config.bookingFromOtherPlatform || config.rideType == ST.Rental
+showTag config = ((Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag config.specialLocationTag)) || config.bookingFromOtherPlatform || config.rideType == ST.Rental || config.rideType == ST.Intercity
 
 getAnimationDelay :: Config -> Int
 getAnimationDelay config = 50

@@ -1020,6 +1020,7 @@ rateCardState state =
   in
     rateCardConfig'
 
+
 getChargesBreakup :: Array PaymentBreakUp -> Array CommonTypes.FareList
 getChargesBreakup paymentBreakUpArr = map (\(PaymentBreakUp item) -> {val : "₹" <>  (show item.amount),
   key : case item.component of
@@ -1149,6 +1150,9 @@ rentalInfoPopUpConfig state =
     tripDuration = (fromMaybe 0 state.data.activeRide.tripDuration) / 3600
     tripDistance = fromMaybe 0 $ Int.fromNumber $ state.data.activeRide.distance / 1000.0
     rideInfo = (show tripDuration) <> "h / " <> (show tripDistance) <> "km"
+    tripType = state.data.activeRide.tripType
+    destinationCity = fromMaybe "" $state.data.activeRide.destinationCity
+    text  = if tripType == ST.Rental then (getString $ THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE rideInfo) else (getString PLEASE_ENSURE_THAT_YOUR_VEHICLE_IS_READY_FOR_INTERCITY_TRIP <> destinationCity) <>"<br></br><span style='color:#2194FF'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>"
     config' = config
       {
         gravity = CENTER,
@@ -1161,11 +1165,11 @@ rentalInfoPopUpConfig state =
         , visibility = VISIBLE
         },
         primaryText {
-          text = (getString RENTAL_RIDE_ACCEPTED) <> "!"
+          text = if tripType == ST.Rental then (getString RENTAL_RIDE_ACCEPTED)  else (getString INTERCITY_RIDE_ACCEPTED)<> "!"
         , visibility = VISIBLE
         , margin = Margin 16 24 16 4 },
         secondaryText {
-          text = (getString $ THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE rideInfo) <>"<br></br><span style='color:#2194FF'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>"
+          text = text
         , visibility = VISIBLE
         , textStyle = SubHeading2
         , margin = MarginBottom 24
@@ -1181,7 +1185,7 @@ rentalInfoPopUpConfig state =
         backgroundClickable = false,
         cornerRadius = (PTD.Corners 15.0 true true true true),
         coverImageConfig {
-          imageUrl = fetchImage FF_ASSET "ny_ic_rental_info"
+          imageUrl =  if tripType == ST.Rental then fetchImage FF_ASSET "ny_ic_rental_info" else fetchImage FF_ASSET "ny_ic_intercity_info"
         , visibility = VISIBLE
         , height = V 160
         , width = MATCH_PARENT
@@ -1627,6 +1631,11 @@ getRideCompletedConfig state = let
       title = maybe "" (\coins -> getString $ POINTS_EARNED_ $ show coins) metroRideCoins
     , subTitle = if isJust metroRideCoins then getString FOR_METRO_RIDE else ""
     }
+  , showIntercityDetails  = state.data.activeRide.tripType == ST.Intercity
+  , parkingCharges {
+    parkingChargesTitle = getString PLEASE_COLLECT_PARKING_CHARGES,
+    parkingChargesDescription = getString INCURRED_DURING_TRIP
+  }
   }
   in config'
 

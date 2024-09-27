@@ -13,6 +13,10 @@ import Common.Types.App
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import Mobility.Prelude (boolToVisibility)
 import Debug (spy)
+import PrestoDOM.Animation as PrestoAnim
+import Animation as Anim
+import Engineering.Helpers.Commons(os)
+import Common.Animation.Config (estimateExpandingAnimationConfig)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = 
@@ -36,7 +40,11 @@ view push config =
 
 cardHeadingLayout :: Config -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 cardHeadingLayout config push = 
-  linearLayout
+    PrestoAnim.animationSet
+    ([ Anim.fadeInWithDuration 200 true ] <>
+    (if os == "IOS" then []
+    else [ Anim.listExpandingAnimation $ estimateExpandingAnimationConfig (0) (0.0) true ]))
+  $linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation HORIZONTAL

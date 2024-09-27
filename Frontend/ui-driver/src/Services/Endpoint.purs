@@ -380,3 +380,8 @@ verifyUPI dummy = (getBaseUrl "") <> "/driver/profile/verify/vpaStatus"
 
 getCoinInfo :: String -> String
 getCoinInfo _ = (getBaseUrl "") <> "/coins/info"
+getScheduledBookingList :: String -> String -> String -> String ->String -> String
+getScheduledBookingList limit offset from to  tripCategory=  (getBaseUrl "") <> "/driver/scheduledBooking/list?limit="<>limit<>"&offset="<>offset<> (if from == "null" then "" else "&from=" <> from) <> (if to == "null" then "" else "&to=" <> to) 
+
+scheduleBookingAccept :: String -> String
+scheduleBookingAccept bookingId = (getBaseUrl "") <> "/driver/accept/scheduledBooking?bookingId="<>bookingId

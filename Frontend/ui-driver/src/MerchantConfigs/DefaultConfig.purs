@@ -148,6 +148,7 @@ config =
               cityLong : 77.594566,
               supportNumber : "",
               languageKey : "KN_IN",
+              showScheduledRides : true,
               showDriverReferral : true,
               showCustomerReferral : false,
               uploadRCandDL : true,
@@ -228,6 +229,7 @@ config =
               cityLong : 78.491684,
               supportNumber : "+918069724900",
               languageKey : "TE_IN",
+              showScheduledRides : false,
               showDriverReferral : true,
               showCustomerReferral : false,
               uploadRCandDL : true,
@@ -303,6 +305,7 @@ config =
               cityLong : 76.639381,
               supportNumber : "",
               languageKey : "KN_IN",
+              showScheduledRides : false,
               showDriverReferral : true,
               showCustomerReferral : false,
               uploadRCandDL : true,
@@ -373,6 +376,7 @@ config =
               cityLong : 77.216721,
               supportNumber : "+918069724848",
               languageKey : "HI_IN",
+              showScheduledRides : false,
               showDriverReferral : true,
               showCustomerReferral : false,
               uploadRCandDL : true,
@@ -443,6 +447,7 @@ config =
               cityLong : 80.237617,
               supportNumber : "08069724899",
               languageKey : "TA_IN",
+              showScheduledRides : false,
               showDriverReferral : true,
               showCustomerReferral : false,
               uploadRCandDL : false,
@@ -513,6 +518,7 @@ config =
               cityLong : 76.961632,
               supportNumber : "",
               languageKey : "TA_IN",
+              showScheduledRides : false,
               showDriverReferral : true,
               showCustomerReferral : false,
               uploadRCandDL : true,
@@ -583,6 +589,7 @@ config =
               cityLong : 79.808292,
               supportNumber : "08069724899",
               languageKey : "TA_IN",
+              showScheduledRides : false,
               showDriverReferral : true,
               showCustomerReferral : false,
               uploadRCandDL : true,
@@ -653,6 +660,7 @@ config =
               cityLong : 77.026344,
               supportNumber : "",
               languageKey : "HI_IN",
+              showScheduledRides : false,
               showDriverReferral : true,
               showCustomerReferral : true,
               uploadRCandDL : true,
@@ -723,6 +731,7 @@ config =
               cityLong : 77.391029,
               supportNumber : "",
               languageKey : "HI_IN",
+              showScheduledRides : false,
               showDriverReferral : true,
               showCustomerReferral : true,
               uploadRCandDL : true,
@@ -793,6 +802,7 @@ config =
               cityLong : 78.6569,
               supportNumber : "08069724899",
               languageKey : "TA_IN",
+              showScheduledRides : false,
               showDriverReferral : true,
               showCustomerReferral : true,
               uploadRCandDL : false,
@@ -863,6 +873,7 @@ config =
               cityLong : 88.2649516,
               supportNumber : "",
               languageKey : "BN_IN",
+              showScheduledRides : false,
               showDriverReferral : true,
               showCustomerReferral : true,
               uploadRCandDL : true, 
@@ -946,6 +957,7 @@ config =
               callDriverInfoPost: false,
               supportNumber : "",
               languageKey : "ML_IN",
+              showScheduledRides : false,
               showDriverReferral : true,
               showCustomerReferral : true,
               uploadRCandDL : true,
@@ -1142,6 +1154,9 @@ config =
       auto : "https://www.youtube.com/watch?v=nwXV-vT_X_8",
       cab : "https://www.youtube.com/watch?v=aKGPp5A2M0E"
   }
+  , scheduledRideConfig : {
+    scheduledBannerTimerValue : 1800
+  }
 }
 
 registrationConfig :: RegistrationConfig
@@ -1216,6 +1231,7 @@ allCitiesDefaultCityConfig = {
   cityLong : 0.0,
   supportNumber : "",
   languageKey : "",
+  showScheduledRides : false,
   enableYatriCoins : false,
   showDriverReferral : false,
   showCustomerReferral : false,
@@ -1320,6 +1336,7 @@ ysDefaultCityConfig =
     , enableAdvancedBooking = true
     , supportNumber = "+918069724949"
     , languageKey = "BN_IN"
+    , showScheduledRides = false
     , showDriverReferral = true
     , showCustomerReferral = true
     , vehicleNSImg = "ny_ic_location_unserviceable" -- Unserviceable Image when Driver Not able to go online (isVehicleSupported false in driver/profile resp)

@@ -39,7 +39,7 @@ import Engineering.Helpers.Commons (getCurrentUTC, getFutureDate, getDayName, co
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (initializeCalendar, saveObject, getCurrentDay)
 import Foreign.Generic (decodeJSON)
-import Helpers.Utils (checkSpecialPickupZone, isYesterday, getcurrentdate, getDayOfWeek, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag, transformBapName)
+import Helpers.Utils (checkSpecialPickupZone, isYesterday, getcurrentdate, getDayOfWeek, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag, transformBapName ,dummyLocationInfo )
 import JBridge (pauseYoutubeVideo)
 import Language.Strings (getString)
 import Language.Types
@@ -762,21 +762,9 @@ dummyRideHistoryItem = RidesInfo {
       tollConfidence : Nothing,
       bookingType : Nothing,
       bapName : Nothing,
-      isValueAddNP : false
+      isValueAddNP : false,
+      roundTrip : false,
+      returnTime : Nothing
     , parkingCharge : Nothing
  , coinsEarned : Nothing  
 }
-
-dummyLocationInfo :: LocationInfo
-dummyLocationInfo = LocationInfo {
-      area : Nothing,
-      state : Nothing,
-      country : Nothing,
-      building : Nothing,
-      door : Nothing,
-      street : Nothing,
-      lat : 0.0,
-      city : Nothing,
-      areaCode : Nothing,
-      lon : 0.0
-  }

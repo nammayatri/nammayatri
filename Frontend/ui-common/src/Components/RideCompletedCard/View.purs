@@ -753,7 +753,9 @@ driverUpiQrCodeView config push =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  ][ if config.lottieQRAnim.visible then lottieQRView config push else dummyTextView
+  ][ if config.showIntercityDetails then intercityRideInfoView  push config else  dummyTextView
+  ,  if config.showIntercityDetails then parkingChargesTextView push config else dummyTextView
+  ,  if config.lottieQRAnim.visible then lottieQRView config push else dummyTextView
   , linearLayout 
     [
       height WRAP_CONTENT
@@ -1201,7 +1203,53 @@ rentalRideInfoView push config =
             , infoCardView config (if config.isDriver then "VERTICAL" else "HORIZONTAL") $ getRentalRideInfoCardOdometerView config "RideCompletedCardImage4" config.rentalRideConfig.endRideOdometerImage (config.rentalRideTextConfig.rideEnd) "" (config.rentalRideTextConfig.rideEndedAt) (config.rentalRideConfig.rideEndODOReading)
           ]]
       else [])
-    
+
+
+intercityRideInfoView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+intercityRideInfoView push config = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL 
+  , cornerRadius 8.0
+  , padding $ Padding 16 16 16 16
+  , margin $ MarginVertical 14 24
+  , background Color.white900
+  , stroke $ "2," <> Color.grey800
+  
+  ][  
+    linearLayout 
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation   VERTICAL 
+      ][  infoCardView config ("HORIZONTAL") $ getRentalRideInfoCardView config "RideCompletedCardImage1" config.rentalRideTextConfig.rideTime "" config.rentalRideConfig.actualRideDuration config.rentalRideConfig.baseRideDuration
+        , infoCardView config ("HORIZONTAL") $ getRentalRideInfoCardView config "RideCompletedCardImage2" config.rentalRideTextConfig.rideDistance "" config.rentalRideConfig.actualRideDistance config.rentalRideConfig.baseRideDistance
+      ]
+  ]
+
+parkingChargesTextView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+parkingChargesTextView  push config = 
+ linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL 
+  , cornerRadius 8.0
+  , padding $ Padding 16 16 16 16
+  , margin $ MarginVertical 14 24
+  , background Color.white900
+  , stroke $ "2," <> Color.grey800
+  ][  
+    textView [
+      height WRAP_CONTENT
+     ,width WRAP_CONTENT
+     ,text $ config.parkingCharges.parkingChargesTitle
+    ]
+   ,textView [
+      height WRAP_CONTENT
+     ,width WRAP_CONTENT
+     ,text $ config.parkingCharges.parkingChargesDescription
+    ]
+  ]
 
 getRentalRideInfoCardOdometerView :: forall w. Config -> String -> String -> String -> String -> String -> String -> (InfoCardConfig)
 getRentalRideInfoCardOdometerView config image renderImage heading headingInfo' heading' subHeading1  = 

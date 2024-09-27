@@ -190,7 +190,9 @@ eval (PopUpModalAction (PopUpModal.OnSecondaryTextClick)) state = do
     else pure unit
    continue state {props{startTimerforDummyRides = false}, data {timerId = ""}}
   
+  
 eval _ state = update state
+
 
 getIssueTitle :: IssueOptions -> String
 getIssueTitle menuOption =

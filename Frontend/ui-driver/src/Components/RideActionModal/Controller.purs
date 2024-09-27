@@ -42,6 +42,7 @@ data Action = StartRide
             | VisuallyImpairedCustomer
             | NoAction
             | ArrivedAtStop
+            | GetFare
 
 type Config = { 
   startRideActive :: Boolean,
@@ -91,7 +92,7 @@ type AddressConfig = {
   detailText :: String
 }
 
-data LearnMorePopUp = AccessibilityInfo | RentalInfo | NoInfo
+data LearnMorePopUp = AccessibilityInfo | RentalInfo | NoInfo | IntercityInfo
 
 derive instance genericLearnMorePopUp :: Generic LearnMorePopUp _
 instance eqLearnMorePopUp :: Eq LearnMorePopUp where eq = genericEq
