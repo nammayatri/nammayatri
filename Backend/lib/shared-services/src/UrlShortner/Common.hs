@@ -47,10 +47,5 @@ generateShortUrl ::
   m GenerateShortUrlRes
 generateShortUrl req = do
   cfg <- asks (.urlShortnerConfig)
-  res <-
-    callAPI cfg.url (generateShortUrlClient (Just cfg.apiKey) req) "generateShortUrl" generateShortUrlAPI
-      >>= fromEitherM (ExternalAPICallError (Just "CALL_TO_URL_SHORTNER_FAILED") cfg.url)
-  validateUrl res.shortUrl
-  return res
-  where
-    validateUrl = void . parseBaseUrl
+  callAPI cfg.url (generateShortUrlClient (Just cfg.apiKey) req) "generateShortUrl" generateShortUrlAPI
+    >>= fromEitherM (ExternalAPICallError (Just "CALL_TO_URL_SHORTNER_FAILED") cfg.url)
