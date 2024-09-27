@@ -405,25 +405,26 @@ transformQuote quote index =
     }
 
 
-getEstimateList :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Int -> Array ChooseVehicle.Config
-getEstimateList estimates estimateAndQuoteConfig activeIndex = 
+getEstimateList :: HomeScreenState -> Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Int -> Array ChooseVehicle.Config
+getEstimateList state estimates estimateAndQuoteConfig activeIndex = 
   let estimatesWithOrWithoutBookAny = (createEstimateForBookAny estimates) <> estimates
-      filteredWithVariantAndFare = filterWithFareAndVariant estimatesWithOrWithoutBookAny estimateAndQuoteConfig
+      filteredWithVariantAndFare = filterWithFareAndVariant state estimatesWithOrWithoutBookAny estimateAndQuoteConfig
       estimatesConfig = mapWithIndex (\index item -> getEstimates item filteredWithVariantAndFare index activeIndex) filteredWithVariantAndFare
   in
     updateBookAnyEstimate estimatesConfig 
 
-filterWithFareAndVariant :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Array EstimateAPIEntity
-filterWithFareAndVariant estimates estimateAndQuoteConfig =
+filterWithFareAndVariant :: HomeScreenState -> Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Array EstimateAPIEntity
+filterWithFareAndVariant state estimates estimateAndQuoteConfig =
   let
     estimatesOrder = RC.getEstimatesOrder $ toLower $ getValueToLocalStore CUSTOMER_LOCATION
+    finalEstimatesOrder = DA.nub $ (if state.data.clickedLocationTagBar == Just "BIKE_TAXI" then ["BIKE"] else []) <> estimatesOrder
     filteredEstimate = 
       case (getMerchant FunctionCall) of
         YATRISATHI -> DA.concat (map (\variant -> filterEstimateByVariants variant estimates) (estimateAndQuoteConfig.variantTypes :: Array (Array String)))
         _ -> estimates
     sortWithFare = DA.sortWith (\(EstimateAPIEntity estimate) -> getFareFromEstimate (EstimateAPIEntity estimate)) filteredEstimate
   in
-    sortEstimateWithVariantOrder sortWithFare estimatesOrder
+    sortEstimateWithVariantOrder sortWithFare finalEstimatesOrder
   where
   sortEstimateWithVariantOrder :: Array EstimateAPIEntity -> Array String -> Array EstimateAPIEntity
   sortEstimateWithVariantOrder estimates orderList =

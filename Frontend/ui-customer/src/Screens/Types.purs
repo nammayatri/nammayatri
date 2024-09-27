@@ -674,6 +674,7 @@ type HomeScreenStateData =
   , famousDestinations :: Array LocationListItemState
 , parking :: ParkingData
 , toll :: TollData
+, clickedLocationTagBar :: Maybe String
 }
 
 type TollData = {

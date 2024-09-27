@@ -2034,6 +2034,7 @@ getChatSuggestions state = do
 locationTagBarConfig :: ST.HomeScreenState -> LocationTagBar.LocationTagBarConfig
 locationTagBarConfig state =
   let
+    isTwoWheelerEnabled = (show ST.BIKE) `DA.elem` state.data.config.estimateAndQuoteConfig.variantOrder
     locTagList =
       map
         ( \item ->
@@ -2070,10 +2071,9 @@ locationTagBarConfig state =
             , id: item.id
             }
         )
-        ( [ -- { image: "ny_ic_instant", text: (getString INSTANT), id: "INSTANT", background: Color.lightMintGreen, showBanner: GONE }
-            { image: "ny_ic_rental", text: (getString RENTALS_), id: "RENTALS", background: Color.moonCreme, showBanner: GONE }
-          ]
-            <> if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else []
+        ( [ { image: "ny_ic_bike_taxi_pill", text: ("Bike Taxi"), id: "BIKE_TAXI", background: "#F0FAF0", showBanner: GONE }
+          , { image: "ny_ic_rental", text: (getString RENTALS_), id: "RENTALS", background: Color.moonCreme, showBanner: GONE }
+          , { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE }] 
         )
   in
     { tagList: locTagList }
