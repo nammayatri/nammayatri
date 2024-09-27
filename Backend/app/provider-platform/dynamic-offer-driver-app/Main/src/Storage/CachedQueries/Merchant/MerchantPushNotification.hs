@@ -52,19 +52,22 @@ makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:MerchantPushNotification:MerchantOperatingCityId-" <> id.getId
 
 findMatchingMerchantPN :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> Maybe Notification.SubCategory -> Maybe Language -> m (Maybe MerchantPushNotification)
-findMatchingMerchantPN id messageKey tripCategory subCategory personLanguage = do
+findMatchingMerchantPN merchantOperatingCityId messageKey tripCategory subCategory personLanguage = do
   merchantPNs <-
-    Hedis.safeGet (makeMerchantOpCityIdAndMessageKeyAndTripCategory id messageKey tripCategory) >>= \case
+    Hedis.safeGet (makeMerchantOpCityIdAndMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory) >>= \case
       Just a -> return a
       Nothing -> do
-        pns <- Queries.findAllByMerchantOpCityIdAndMessageKeyAndTripCategory id messageKey tripCategory
+        pns <- Queries.findAllByMerchantOpCityIdAndMessageKeyAndTripCategory merchantOperatingCityId messageKey tripCategory
         if null pns
           then do
-            pnsWithOutTripCategory <- Queries.findAllByMerchantOpCityIdAndMessageKeyAndTripCategory id messageKey Nothing
-            cacheMerchantPushNotification id messageKey Nothing pnsWithOutTripCategory
-            return pnsWithOutTripCategory
+            Hedis.safeGet (makeMerchantOpCityIdAndMessageKeyAndTripCategory merchantOperatingCityId messageKey Nothing) >>= \case
+              Just a' -> return a'
+              Nothing -> do
+                pnsWithOutTripCategory <- Queries.findAllByMerchantOpCityIdAndMessageKeyAndTripCategory merchantOperatingCityId messageKey Nothing
+                cacheMerchantPushNotification merchantOperatingCityId messageKey Nothing pnsWithOutTripCategory
+                return pnsWithOutTripCategory
           else do
-            cacheMerchantPushNotification id messageKey tripCategory pns
+            cacheMerchantPushNotification merchantOperatingCityId messageKey tripCategory pns
             return pns
   let matchingPN =
         find (\pn -> Just pn.language == personLanguage && pn.fcmSubCategory == subCategory) merchantPNs
