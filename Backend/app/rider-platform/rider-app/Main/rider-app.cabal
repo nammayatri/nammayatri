@@ -193,6 +193,7 @@ library
       Domain.Action.UI.MerchantPaymentMethod
       Domain.Action.UI.MultiModal
       Domain.Action.UI.MultimodalConfirm
+      Domain.Action.UI.MultimodalSwitchTaxi
       Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Payment
       Domain.Action.UI.Person
@@ -418,6 +419,7 @@ library
       API.Action.UI.Invoice
       API.Action.UI.MultiModal
       API.Action.UI.MultimodalConfirm
+      API.Action.UI.MultimodalSwitchTaxi
       API.Action.UI.RidePayment
       API.Action.UI.SocialLogin
       API.Action.UI.Sos

@@ -1,0 +1,17 @@
+imports:
+  Journey: Domain.Types.Journey
+  SearchRequest: Domain.Types.SearchRequest
+  Estimate: Domain.Types.Estimate
+
+module: MultimodalSwitchTaxi
+
+types: {}
+
+apis:
+  - GET:
+      endpoint: /multimodal/{searchRequestId}/switch/{estimateId}/taxi
+      params:
+        searchRequestId: Id SearchRequest
+        estimateId: Id Estimate
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
