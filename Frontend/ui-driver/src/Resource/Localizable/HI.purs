@@ -1616,3 +1616,5 @@ getHI stringKey =
         CONTACT_SUPPORT_FOR_HELP -> "सहायता के लिए समर्थन से संपर्क करें"
         YOU_HAVE_SWITCHED_CITY_OR_VEHICLE -> "आपने अपना वाहन या शहर बदल लिया है। राइड्स प्राप्त करने के लिए एक योजना चुनें"
         XL_PLUS -> "XL प्लस"
+        TRUCK -> "ट्रक"
+        REGISTER_YOUR_TRUCK -> "रेअपने ट्रक को रजिस्टर करें"
