@@ -42,6 +42,7 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantConfigFarePolicyPerExtraKmRateUpdate,
     postMerchantConfigFarePolicyUpdate,
     postMerchantSchedulerTrigger,
+    postMerchantConfigClearCacheSubscription,
   )
 where
 
@@ -94,6 +95,7 @@ import qualified Kernel.External.SMS as SMS
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runTransaction)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
@@ -114,6 +116,7 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.In
 import qualified SharedLogic.DriverFee as SDF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
+import qualified SharedLogic.Payment as SPayment
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIPC
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CQDIPC
 import qualified Storage.Cac.DriverPoolConfig as CQDPC
@@ -133,12 +136,14 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.Overlay as CQMO
+import qualified Storage.CachedQueries.Plan as CQPlan
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.CancellationFarePolicy as QCFP
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFPPDEKM
 import qualified Storage.Queries.Geometry as QGEO
+import qualified Storage.Queries.Plan as QPlan
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -1931,3 +1936,34 @@ postMerchantUpdateOnboardingVehicleVariantMapping merchantShortId opCity req = d
             priority = cleanField row.priority >>= readMaybe . T.unpack,
             bodyType = Nothing
           }
+
+postMerchantConfigClearCacheSubscription :: ShortId DM.Merchant -> Context.City -> Common.ClearCacheSubscriptionReq -> Flow APISuccess
+postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  plans <- QPlan.fetchAllPlanByMerchantOperatingCityMbServiceName merchantOpCity.id (castServiceName <$> req.serviceName)
+  let plansToClearCache = filter (filterCriteriaPlan req.serviceName (Id <$> req.planId)) plans
+  forM_ plansToClearCache $ \plan -> do
+    let keysToClear =
+          [ CQPlan.makeAllPlanKey,
+            CQPlan.makePlanIdAndPaymentModeKey plan.id plan.paymentMode plan.serviceName,
+            CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName (Just plan.isDeprecated),
+            CQPlan.makeMerchantIdAndPaymentModeKey plan.merchantOpCityId plan.paymentMode plan.serviceName Nothing,
+            CQPlan.makeMerchantIdAndTypeKey plan.merchantOpCityId plan.planType plan.serviceName,
+            CQPlan.makeMerchantIdKey plan.merchantOpCityId plan.serviceName,
+            CQPlan.makeMerchantIdAndPaymentModeAndVariantKey plan.merchantOpCityId plan.paymentMode plan.serviceName plan.vehicleVariant (Just plan.isDeprecated),
+            CQPlan.makeIdKey plan.merchantOpCityId plan.paymentMode plan.serviceName plan.vehicleCategory plan.isDeprecated,
+            SPayment.makeOfferListCacheVersionKey
+          ]
+    forM_ keysToClear $ \key -> Hedis.del key
+  return Success
+  where
+    filterCriteriaPlan mbServiceName mbPlanId =
+      case (mbServiceName, mbPlanId) of
+        (Just serviceName, Just planId) -> \plan -> plan.serviceName == (castServiceName serviceName) && plan.id == planId
+        (Just serviceName, Nothing) -> \plan -> plan.serviceName == (castServiceName serviceName)
+        (Nothing, Just planId) -> \plan -> plan.id == planId
+        (Nothing, Nothing) -> \_ -> True
+    castServiceName = \case
+      Common.YATRI_RENTAL -> Plan.YATRI_RENTAL
+      Common.YATRI_SUBSCRIPTION -> Plan.YATRI_SUBSCRIPTION

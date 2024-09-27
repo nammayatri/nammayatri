@@ -269,6 +269,7 @@ data UserActionType
   | UPDATE_VEHICLE_MANUFACTURING
   | REFUND_BY_PAYOUT
   | SECURITY_DEPOSIT_STATUS
+  | CLEAR_CACHE_SUBSCRIPTION
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)
