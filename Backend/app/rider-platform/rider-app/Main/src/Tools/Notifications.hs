@@ -160,7 +160,7 @@ dynamicNotifyPerson ::
 dynamicNotifyPerson person notiData dynamicParams entity tripCategory dynamicTemplateParams = do
   let merchantOperatingCityId = person.merchantOperatingCityId
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId notiData.notificationKey tripCategory notiData.subCategory person.language
-  --when (EulerHS.Prelude.isNothing mbMerchantPN) $ logDebug $ "MISSED_FCM - " <> notiData.notificationKey
+  when (EulerHS.Prelude.isNothing mbMerchantPN) $ logError $ "MISSED_FCM - " <> notiData.notificationKey
   whenJust mbMerchantPN \merchantPN -> do
     let soundNotificationType = fromMaybe (merchantPN.fcmNotificationType) notiData.notificationTypeForSound
     notificationSoundFromConfig <- SQNSC.findByNotificationType soundNotificationType merchantOperatingCityId
