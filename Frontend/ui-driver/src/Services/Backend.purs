@@ -615,6 +615,13 @@ getRouteBT body routeType = do
     where
     errorHandler errorPayload = BackT $ pure GoBack
 
+getRoute :: GetRouteReq -> String -> Flow GlobalState (Either ErrorResponse GetRouteResp)
+getRoute body routeType = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.getRoute routeType) unwrapResponse $  callAPI headers (RouteReq routeType body)
+   where
+    unwrapResponse (x) = x
+
 makeGetRouteReq :: Number -> Number -> Number -> Number -> GetRouteReq
 makeGetRouteReq slat slng dlat dlng = GetRouteReq {
     "waypoints": [
@@ -626,6 +633,13 @@ makeGetRouteReq slat slng dlat dlng = GetRouteReq {
           "lon": dlng,
           "lat": dlat
       }],
+    "mode": Just "CAR",
+    "calcPoints": true
+}
+
+makeGetRouteReqArray :: Array LatLong -> GetRouteReq
+makeGetRouteReqArray points = GetRouteReq {
+    "waypoints": points,
     "mode": Just "CAR",
     "calcPoints": true
 }
@@ -1643,6 +1657,28 @@ payoutRegistration dummy = do
     withAPIResult (EP.registerPayout dummy) unwrapResponse $ callAPI headers (PayoutRegisterReq dummy)
     where
         unwrapResponse (x) = x
+
+rideBooking :: String -> String -> String -> String -> String -> Flow GlobalState (Either ErrorResponse ScheduledBookingListResponse)
+rideBooking limit offset from to  tripCategory = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.getScheduledBookingList limit offset from to  tripCategory) unwrapResponse $ callAPI headers (ScheduledBookingListRequest limit offset  from to  tripCategory)
+    where
+        unwrapResponse (x) = x
+
+rideBookingBT :: String -> String -> String -> String -> String -> FlowBT String ScheduledBookingListResponse
+rideBookingBT limit offset  from to  tripCategory= do
+        headers <- lift $ lift $ getHeaders "" true
+        withAPIResultBT (EP.getScheduledBookingList limit offset from to  tripCategory) identity errorHandler (lift $ lift $ callAPI headers (ScheduledBookingListRequest limit offset from to tripCategory))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        BackT $ pure GoBack
+
+scheduleBookingAccept :: String -> Flow GlobalState (Either ErrorResponse ScheduleBookingAcceptRes)
+scheduleBookingAccept bookingId = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.scheduleBookingAccept bookingId) unwrapResponse $  callAPI headers (ScheduleBookingAcceptReq bookingId)
+   where
+    unwrapResponse (x) = x
 
 ------------------------------------------------------------------------ Get Sdk Token -------------------------------------------------------------------------------
 getSdkTokenBT :: String -> ServiceName -> FlowBT String GetSdkTokenResp

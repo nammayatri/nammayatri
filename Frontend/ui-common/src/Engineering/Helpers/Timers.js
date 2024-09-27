@@ -68,11 +68,7 @@ export const clearTimerWithId = function (id) {
   });
 }
 
-export const clearTimerWithIdEffect = function (id) {
-  return function () {
-    clearTimerWithId(id);
-  }
-}
+export const clearTimerWithIdEffect = clearTimerWithId;
 
 function getTwoDigitsNumber(number) {
   return number >= 10 ? number : "0" + number.toString();

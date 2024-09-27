@@ -15,15 +15,18 @@
 
 module Screens.HomeScreen.View where
 
+import Data.Tuple
+import Debug
 import Mobility.Prelude
 import PrestoDOM.List
 import Screens.HomeScreen.ComponentConfig
 import Timers
-
+import Prelude (div,mod,unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*), negate, otherwise, (+),(<$>))
 import Animation as Anim
 import Animation.Config as AnimConfig
-import CarouselHolder as CarouselHolder
+import Common.Resources.Constants (chatService)
 import Common.Types.App (LazyCheck(..), Paths(..))
+import Components.BannerCarousel as BannerCarousel
 import Components.BannerCarousel as BannerCarousel
 import Components.BottomNavBar as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
@@ -40,6 +43,8 @@ import Components.RequestInfoCard as RequestInfoCard
 import Components.RideActionModal as RideActionModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SelectListModal as SelectListModal
+import Constants (defaultDensity)
+import Control.Alt ((<|>))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
@@ -48,7 +53,6 @@ import Data.Either (Either(..))
 import Data.Foldable (for_)
 import Data.Function.Uncurried (runFn1, runFn2)
 import Data.Function.Uncurried (runFn3)
-import Data.Tuple 
 import Data.Int (ceil, toNumber, fromString)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe, isNothing)
@@ -57,10 +61,11 @@ import Data.Time.Duration (Milliseconds(..))
 import Debug (spy)
 import Domain.Payments (APIPaymentStatus(..))
 import Effect (Effect)
+import Effect.Aff (launchAff, makeAff, nonCanceler)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2, runEffectFn3)
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Engineering.Helpers.Commons (flowRunner, getCurrentUTC, getNewIDWithTag, formatCurrencyWithCommas, liftFlow)
+import Engineering.Helpers.Commons (flowRunner, getCurrentUTC, getNewIDWithTag, formatCurrencyWithCommas, liftFlow, getFutureDate, convertUTCtoISC)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Events as Events
 import Engineering.Helpers.Utils (toggleLoader)
@@ -77,26 +82,24 @@ import MerchantConfig.Types (RideStartAudio(..), StartAudioUrls(..))
 import PaymentPage (consumeBP)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), ($>), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, shadow, clipChildren, textFromHtml)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, shadow, clipChildren, textFromHtml, shimmerFrameLayout)
 import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
-import Resource.Constants (constructLocationInfo, getLocationInfoFromStopLocation)
-import Resource.Constants as RC
 import Screens as ScreenNames
 import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval, getPeekHeight, getBannerConfigs)
+import Screens.HomeScreen.PopUpConfig as PopUpConfig
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), DriverStatus(..), DriverStatusResult(..), PillButtonState(..), TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..))
 import Screens.Types as ST
-import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..), DriverProfileStatsReq(..), DriverInfoReq(..), BookingTypes(..), RidesInfo(..), StopLocation(..), LocationInfo(..))
+import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..), DriverProfileStatsReq(..), DriverInfoReq(..), BookingTypes(..), RidesInfo(..), StopLocation(..), LocationInfo(..), ScheduledBookingListResponse(..))
 import Services.Accessor (_lat, _lon)
 import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
 import Constants (defaultDensity)
-import Resource.Constants (constructLocationInfo,getLocationInfoFromStopLocation)
 import Components.ErrorModal as ErrorModal
 import Timers
 import Components.BannerCarousel as BannerCarousel
@@ -104,7 +107,6 @@ import CarouselHolder as CarouselHolder
 import PrestoDOM.List
 import Mobility.Prelude
 import Resource.Constants as RC
-import Data.Function.Uncurried (runFn3)
 import Screens.HomeScreen.PopUpConfig as PopUpConfig
 import Data.List (elem)
 import Control.Alt ((<|>))
@@ -114,6 +116,7 @@ import DecodeUtil as DU
 import RemoteConfig.Utils (cancellationThresholds)
 import Components.SelectPlansModal as SelectPlansModal
 import Services.API as APITypes
+import Resource.Constants
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -130,10 +133,9 @@ screen initialState (GlobalState globalState) =
           when initialState.data.config.enableMockLocation $ JB.isMockLocation push IsMockLocation
           when (initialState.data.activeRide.tripType == ST.Rental) $ void $ JB.storeCallBackImageUpload push CallBackImageUpload
           when (initialState.data.activeRide.tripType == ST.Rental) $ void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
-                    
-          when (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) do
-            let _ = spy "global event rideActive" "true"
-            void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do              
+
+          if  (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) then  do
+            void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do  
               (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
               case (activeRideResponse.list DA.!! 0) of
                 Just ride -> do
@@ -142,6 +144,17 @@ screen initialState (GlobalState globalState) =
                 Nothing -> do
                            setValueToLocalStore IS_RIDE_ACTIVE "false"
                            void $ pure $ JB.setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "No"}]
+          else pure unit 
+          
+          if  initialState.props.checkUpcomingRide then do  
+             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do  
+              (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "2" "0" "false" "UPCOMING" "null"
+              case (activeRideResponse.list DA.!! 0) of
+                Just ride -> do
+                  liftFlowBT $ triggerHomeScreenBannerTimer push ride
+                  liftFlowBT $ push $ UpComingRideDetails (Just ride)
+                Nothing -> lift $ lift $ doAff do liftEffect $ push $ UpComingRideDetails Nothing
+           else  pure unit 
           if getValueToLocalNativeStore IS_DRIVER_STATS_CALLED == "false"
             then do
               void $ pure $ setValueToLocalStore IS_DRIVER_STATS_CALLED "true"
@@ -150,7 +163,7 @@ screen initialState (GlobalState globalState) =
                 case driverStatsResp of
                   Right driverStats -> liftFlow $ push $ DriverStats driverStats
                   Left _ -> void $ pure $ setValueToLocalStore IS_DRIVER_STATS_CALLED "false"
-            else pure unit
+             else pure unit
           let localStage = getValueToLocalNativeStore LOCAL_STAGE
           if (localStage /= "RideAccepted" && localStage /= "ChatWithCustomer" && initialState.data.activeRide.waitTimerId /= "") then do
             void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
@@ -165,6 +178,7 @@ screen initialState (GlobalState globalState) =
             else pure unit
           when (isNothing initialState.data.bannerData.bannerItem) $ void $ launchAff $ EHC.flowRunner defaultGlobalState $ computeListItem push
           void $ launchAff $ flowRunner defaultGlobalState $ checkBgLocation push BgLocationAC initialState globalState.globalProps.bgLocPopupShown
+          void $ triggerOnRideBannerTimer push initialState 
           case localStage of
             "RideRequested"  -> do
                                 if (getValueToLocalStore RIDE_STATUS_POLLING) == "False" then do
@@ -286,7 +300,7 @@ screen initialState (GlobalState globalState) =
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification initialState
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.invoiceId 4 5000.0 initialState push PaymentStatusAction
                                 when initialState.data.plansState.cityOrVehicleChanged $ void $ launchAff $ EHC.flowRunner defaultGlobalState $ getPlansList push PlanListResponse
-                                
+
                                 pure unit
           runEffectFn1 consumeBP unit
           pure $ pure unit
@@ -355,7 +369,7 @@ view push state =
       , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
       , if state.data.activeRide.waitTimeInfo then waitTimeInfoPopUp push state else dummyTextView
       , if state.props.showAccessbilityPopup then accessibilityPopUpView push state else dummyTextView
-      , if state.props.rentalInfoPopUp then rentalInfoPopUp push state else dummyTextView
+      , if state.props.rentalInfoPopUp || state.props.intercityInfoPopUp then rentalInfoPopUp push state else dummyTextView
       , if state.data.paymentState.showRateCard then rateCardView push state else dummyTextView
       , if (state.props.showlinkAadhaarPopup && state.props.showAadharPopUp) then linkAadhaarPopup push state else dummyTextView
       , if state.props.showAdvancedRidePopUp then advancedRidePopUpView push state else dummyTextView
@@ -548,7 +562,10 @@ driverMapsHeaderView push state =
                       ]
                   ]
                 , offlineNavigationLinks push state
-              ] <> [gotoRecenterAndSupport state push]
+              ] <> [gotoRecenterAndSupport state push,
+                    scheduledRideBannerView state push,
+                    onRideScreenBannerView state push 
+                   ]
                 <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
             , linearLayout
               [ width MATCH_PARENT
@@ -729,6 +746,7 @@ gotoRecenterAndSupport state push =
         ][ locationUpdateView push state
           , if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto 
             then gotoButton push state else linearLayout[][]
+          , rideRequestButton  push state
           , helpAndSupportBtnView push showReportText
           , recenterBtnView state push
         ]
@@ -763,6 +781,15 @@ rateCardView push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   ][ RateCard.view (push <<< RateCardAC) (rateCardState state) ]
+
+-- intercityInfoRateCard :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+-- intercityInfoRateCard push state = 
+--   PrestoAnim.animationSet [ Anim.fadeIn true ] $
+--   linearLayout
+--   [ height MATCH_PARENT
+--   , width MATCH_PARENT
+--   ][ RateCard.view (push <<< RateCardAC) (interCityRateCard state) ]
+
 
 
 addAadhaarOrOTPView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -1613,6 +1640,99 @@ gotoListView push state =
       ]
    ]
 
+rideRequestButton :: forall w .(Action -> Effect Unit) -> HomeScreenState ->  PrestoDOM (Effect Unit) w
+rideRequestButton push state =
+  frameLayout
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , orientation VERTICAL
+    , margin $ MarginTop 3
+    , visibility $ boolToVisibility $ state.data.cityConfig.showScheduledRides
+    ] 
+    [ pillView state push
+    , pillShimmer state push
+    ]
+pillView :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+pillView state push =
+    linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , margin $ MarginVertical 5 10
+    , cornerRadius 22.0
+    , gravity CENTER
+    , visibility  $ boolToVisibility $ not state.props.rideRequestPill.pillShimmerVisibility 
+    ][linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , margin $ MarginLeft 12
+    , cornerRadius 22.0
+    , onClick push $ const RideRequestsList
+    , clickable $ state.data.upcomingRide == Nothing 
+    , alpha $ if isNothing state.data.upcomingRide then 1.0 else 0.5
+    , background Color.white900
+    , padding $ Padding 16 12 16 12
+    , gravity CENTER
+    , stroke $ "1,"<> Color.grey900
+    , rippleColor Color.rippleShade
+    ][ imageView
+    [ width $ V 15
+    , height $ V 15
+    , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_location"
+    ]
+    , textView $
+    [ weight 1.0
+    , text $ getString RIDE_REQUESTS
+    , gravity CENTER 
+    , margin $ MarginLeft 10
+    , color Color.black800
+    ] <> FontStyle.tags TypoGraphy  
+    ]]
+
+    --This code is for the badge. Might be required for future 
+
+    -- infoView :: HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+    -- infoView state push = 
+    -- linearLayout
+    -- [ height WRAP_CONTENT
+    --  , width MATCH_PARENT
+    --  , layoutGravity "right"
+    --  ][ textView $
+    --  [ height $ V 20
+    --  , width $ V 20
+    --  , cornerRadius 37.0
+    --  , text $ show (state.data.scheduledRideListResponse)
+    --  , visibility $ boolToVisibility  (state.data.scheduledRideListResponse /=0)
+    --  , color Color.black900
+    --  , gravity CENTER
+    --  , background Color.yellow900 
+    --  ] <> FontStyle.body9 TypoGraphy
+    --  ]
+  -- linearLayout
+  -- [ width WRAP_CONTENT
+  -- , height WRAP_CONTENT
+  -- , orientation HORIZONTAL
+  -- , margin $ MarginLeft 12
+  -- , cornerRadius 22.0
+  -- , onClick push $ const RideRequestsList
+  -- , background Color.white900
+  -- , padding $ Padding 16 12 16 12
+  -- , gravity CENTER
+  -- , stroke $ "1,"<> Color.grey900
+  -- , rippleColor Color.rippleShade
+  -- ][ imageView
+  --    [ width $ V 15
+  --    , height $ V 15
+  --    , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_location"
+  --    ]
+  --  , textView $
+  --    [ weight 1.0
+  --    , text  "Riderequest"
+  --    , gravity CENTER 
+  --    , margin $ MarginLeft 10
+  --    , color Color.black800
+  --    ] <> FontStyle.tags TypoGraphy  
+  -- ]
 
 
 noGoToLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -2028,6 +2148,8 @@ offlineNavigationLinks push state =
             , onClick push $ const item.action
             , visibility $ itemVisibility item.action
             , rippleColor Color.rippleShade
+            , alpha $ itemAlpha item.action
+            , clickable $ itemClickable item.action
             ][  imageView
                 [ width $ V 16
                 , height $ V 16
@@ -2042,12 +2164,13 @@ offlineNavigationLinks push state =
                 , color Color.black900
                 , padding $ PaddingBottom 1
                 ] <> FontStyle.tags TypoGraphy
-            ]
+            ] 
           ) navLinksArray)
     ]
     where
       navLinksArray = [ {title : getString if showAddGoto then ADD_GOTO else GOTO_LOCS , icon : "ny_ic_loc_goto", action : AddGotoAC},
                         {title : getString ADD_ALTERNATE_NUMBER, icon : "ic_call_plus", action : AddAlternateNumberAction},
+                        {title : getString RIDE_REQUESTS, icon : "ny_ic_location", action : RideRequestsList},
                         {title : getString REPORT_ISSUE, icon : "ny_ic_vector_black", action : HelpAndSupportScreen},
                         {title : getString ENTER_AADHAAR_DETAILS, icon : "ny_ic_aadhaar_logo", action : LinkAadhaarAC}
                       ]
@@ -2055,7 +2178,14 @@ offlineNavigationLinks push state =
                         AddAlternateNumberAction -> if isNothing state.data.driverAlternateMobile then VISIBLE else GONE
                         LinkAadhaarAC -> if state.props.showlinkAadhaarPopup then VISIBLE else GONE
                         AddGotoAC -> if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto then VISIBLE else GONE
+                        RideRequestsList -> if state.data.cityConfig.showScheduledRides then VISIBLE else GONE
                         _ -> VISIBLE
+      itemAlpha action = case action of 
+                    RideRequestsList -> if isNothing state.data.upcomingRide then 1.0 else 0.5
+                    _ -> 1.0
+      itemClickable action = case action of 
+                    RideRequestsList ->  isNothing state.data.upcomingRide 
+                    _ -> true
       showAddGoto = state.data.driverGotoState.savedLocationCount < state.data.config.gotoConfig.maxGotoLocations
 
 locationLastUpdatedTextAndTimeView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -2273,7 +2403,7 @@ rentalRideStatusPolling pollingId duration state push action = do
               pure unit
           _ ->
             for_ (rideList.list) \(RidesInfo {nextStopLocation,lastStopLocation}) -> do
-              if not (checkNextStopLocationIsSame nextStopLocation (constructLocationInfo state.data.activeRide.nextStopLat state.data.activeRide.nextStopLon)) then do
+              if not (checkNextStopLocationIsSame nextStopLocation (RC.constructLocationInfo state.data.activeRide.nextStopLat state.data.activeRide.nextStopLon)) then do
                 currentLocation <- doAff do liftEffect JB.getCurrentLatLong 
                 doAff do liftEffect $ push $ action currentLocation nextStopLocation lastStopLocation
               else do pure unit
@@ -2431,3 +2561,264 @@ getPlansList push action = do
     Right plansResp -> doAff do liftEffect $ push $ action plansResp
     Left err -> pure unit
   pure unit
+
+
+scheduledRideBannerView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
+scheduledRideBannerView state push  = 
+  let vehicleVariant =  maybe "" (\x -> fromMaybe "" x.requestedVehicleVariant) state.data.upcomingRide
+      vehicle =  HU.getVehicleVariantImage vehicleVariant
+           
+in
+  linearLayout[
+    height WRAP_CONTENT
+    ,width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity CENTER
+    , margin $ MarginHorizontal 30 30 
+    , cornerRadius 12.0
+    , background Color.blue800
+    , visibility $ boolToVisibility $ state.props.homeScreenBannerVisibility && state.data.upcomingRide /= Nothing && state.props.currentStage == HomeScreen
+    , onClick push $ const ScheduledRideBannerClick
+
+  ][
+    linearLayout [
+      height WRAP_CONTENT 
+     , width MATCH_PARENT
+     , orientation HORIZONTAL
+     , gravity CENTER
+     , color $ Color.blue600
+     , stroke ("1," <> Color.borderColorLight)
+     , cornerRadius 12.0
+     , background Color.blue600
+    ][ infoView state push
+       ,linearLayout[
+        weight 1.0
+       ][]
+
+      ,relativeLayout[
+        height  MATCH_PARENT
+       ,width WRAP_CONTENT
+       ][
+        imageView[
+          width $ V 76
+       , height $ V 46
+       , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_banner_background"
+        ]
+        ,imageView[
+          width $ V 76
+       , height $ V 56
+       , margin $ MarginVertical 4 0 
+       , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET vehicle
+        ]
+       ]
+      
+    ] 
+    , bannerTimerView state push 
+
+  ]
+
+infoView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w 
+infoView state push = 
+  let date  = convertUTCtoISC ( maybe "" (\x -> fromMaybe "" x.tripScheduledAt) state.data.upcomingRide) "DD MMM YYYY"
+      time  = convertUTCtoISC ( maybe "" (\x -> fromMaybe "" x.tripScheduledAt) state.data.upcomingRide) "HH:mm"
+      tripType  =  (maybe "" (\x-> show $ x.tripType) state.data.upcomingRide)
+
+  in 
+   linearLayout [
+    height WRAP_CONTENT
+   ,width WRAP_CONTENT 
+   ,orientation VERTICAL
+   ,margin $ Margin 15 3 3 3
+   ][
+    textView $ [
+      height WRAP_CONTENT
+      ,width WRAP_CONTENT
+      ,gravity CENTER_VERTICAL
+      ,text $  getString YOU_HAVE_AN_UPCOMING <>" "<> tripType <>" "<> getString BOOKING
+      ,color $ Color.blue800
+    ]<>FontStyle.tags TypoGraphy
+    ,linearLayout [
+      height WRAP_CONTENT
+      ,width WRAP_CONTENT
+      ,orientation HORIZONTAL
+    ]
+    [ textView $ [
+       height WRAP_CONTENT
+      ,width WRAP_CONTENT
+      ,color $ Color.blue800
+      ,gravity CENTER_VERTICAL
+      ,text $ date <> ", "
+      ,textSize  $ FontSize.a_14
+    ]<>FontStyle.h3 TypoGraphy
+    , textView $ [
+       height WRAP_CONTENT
+      ,width WRAP_CONTENT
+      ,color $ Color.blue800
+      ,gravity CENTER_VERTICAL
+      ,margin $ MarginLeft 4
+      ,text $ time
+      ,textSize  $ FontSize.a_14
+    ]<>FontStyle.h3 TypoGraphy
+   ]
+   ]
+
+bannerTimerView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w 
+bannerTimerView state push  = 
+  let getTime = formatSecondsToNormalTime state
+      differenceBetween2UTCs = getTime.difference
+  in
+   PrestoAnim.animationSet [ Anim.fadeIn true ] $
+   linearLayout[
+    width $ V 338
+     , PP.cornerRadii $ PTD.Corners 15.0 false false true true 
+     , gravity CENTER
+     , visibility $ boolToVisibility $ differenceBetween2UTCs <= twoHrsInSec
+   ][
+    textView $[
+     gravity CENTER
+     , padding $ Padding 4 4 4 4
+     , color Color.white900
+     , text $ getString YOUR_RIDE_STARTS_IN <>" "<>if state.data.homeScreenBannerTimer ==0 then "--:--:--"  else  show (getTime.hours) <> ":" <>  show(getTime.minutes)  <> ":"  <> show (getTime.seconds)
+    ]<>FontStyle.tags TypoGraphy
+   ]
+
+pillShimmer :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+pillShimmer state push = 
+  shimmerFrameLayout [
+    height WRAP_CONTENT
+   , width WRAP_CONTENT
+   , visibility  $ boolToVisibility state.props.rideRequestPill.pillShimmerVisibility
+  ]
+    [ frameLayout 
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT 
+        , orientation VERTICAL
+        , margin $ Margin 8  4  0 10
+        
+        ] 
+        [ linearLayout 
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , margin $ MarginVertical 5 10
+            , cornerRadius 22.0
+            , gravity CENTER
+            , background Color.white900
+            , padding $ Padding 16 12 16 12
+            , gravity CENTER
+            , stroke $ "1," <> Color.grey900
+            ] 
+            [ imageView 
+                [ width $ V 15
+                , height $ V 15
+                , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_location"
+                ]
+            , textView 
+                [ height $ V 10 
+                , width $ V 80
+                , text ""
+                , gravity CENTER 
+                , margin $ MarginLeft 10
+                , color Color.black800
+                ] 
+            ]
+               ]
+    ]
+
+onRideScreenBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+onRideScreenBannerView state push  = 
+  let getTime = formatSecondsToNormalTime state
+      timeValue = if state.data.onRideBannerTimer ==0 then "<b>--:--:--</b>"  else  show (getTime.hours) <> "<b>:</b>" <>  show(getTime.minutes)  <> "<b>:</b>"  <> show (getTime.seconds)
+      differenceBetween2UTCs = getTime.difference
+      tripType  =  (maybe "" (\x-> show $ x.tripType) state.data.upcomingRide)
+  in 
+  linearLayout[
+    height WRAP_CONTENT
+  , width MATCH_PARENT
+  , margin $ Margin 20 10 20 0  
+  , visibility $ boolToVisibility $ differenceBetween2UTCs <= twoHrsInSec && checkOnRideStage state && state.data.upcomingRide /= Nothing
+  ][
+    linearLayout[
+      height WRAP_CONTENT
+     ,width MATCH_PARENT
+     ,background Color.blue600
+     ,padding $ Padding 12 10 12 10
+    , cornerRadius  25.0
+    , orientation HORIZONTAL
+    , gravity CENTER_VERTICAL
+    , stroke $ "1," <> Color.blue800
+    ][
+      imageView[
+        height $ V 30
+      , width $ V 30
+      , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_intercity_blue"
+      ]
+    ,linearLayout[
+      height WRAP_CONTENT
+     ,width WRAP_CONTENT
+     ,orientation VERTICAL
+    ]
+     [
+      textView $ [
+       height WRAP_CONTENT
+      ,width WRAP_CONTENT
+      , margin $ MarginHorizontal 8 0 
+      ,color $ Color.blue800
+      ,gravity CENTER_VERTICAL
+      , textSize FontSize.a_16
+      ,textFromHtml $ getString UPCOMING_RIDE <>" "<>tripType<>" "<> getString RIDE
+    ]
+    , textView $ [
+       height WRAP_CONTENT
+      ,width WRAP_CONTENT
+      , margin $ MarginHorizontal 8 0 
+      ,color $ Color.blue800
+      ,gravity CENTER_VERTICAL
+      , textSize FontSize.a_16
+     , textFromHtml $  getString YOUR_RIDE_STARTS_IN <>" "<>timeValue
+    ]
+     ]
+    
+  ]
+]
+
+checkOnRideStage ::  HomeScreenState -> Boolean
+checkOnRideStage state = DA.elem state.props.currentStage [RideAccepted , RideStarted ,ChatWithCustomer ]
+
+triggerOnRideBannerTimer :: forall w . (Action -> Effect Unit) -> HomeScreenState ->  Effect Unit
+triggerOnRideBannerTimer push state = do 
+  if checkOnRideStage state then do
+      pushOnRideBannerTimer <- runEffectFn1 EHC.getValueFromIdMap "onRideBannerTimer"
+      let 
+        ridestartTime  = ( maybe "" (\x -> fromMaybe "" x.tripScheduledAt) state.data.upcomingRide  )
+        currentTime = HU.getCurrentUTC ""
+        difference  =  (runFn2 JB.differenceBetweenTwoUTC ridestartTime currentTime)
+      if (pushOnRideBannerTimer.shouldPush && difference > 0 && difference <= twoHrsInSec && state.data.upcomingRide /= Nothing && (checkOnRideStage state) ) then do 
+        startTimer difference  "onRideBannerTimer" "1" push OnRideBannerCountDownTimer 
+      else
+        pure unit
+  else pure unit
+
+
+triggerHomeScreenBannerTimer :: forall w . (Action -> Effect Unit) -> RidesInfo ->  Effect Unit
+triggerHomeScreenBannerTimer push (RidesInfo ride)  = do 
+  pushTimer <- runEffectFn1 EHC.getValueFromIdMap "bannerTimer"
+  let 
+    ridestartTime  = fromMaybe "" ride.tripScheduledAt
+    currentTime = HU.getCurrentUTC ""
+    difference  = (runFn2 JB.differenceBetweenTwoUTC ridestartTime currentTime)
+  if (pushTimer.shouldPush  && difference <=  twoHrsInSec) then do 
+    startTimer difference  "bannerTimer" "1" push HomeScreenBannerCountDownTimer 
+  else pure unit
+
+
+formatSecondsToNormalTime :: HomeScreenState -> {seconds :: Int, hours :: Int, minutes:: Int , difference :: Int }
+formatSecondsToNormalTime state = 
+  let ridestartTime  = ( maybe "" (\x -> fromMaybe "" x.tripScheduledAt) state.data.upcomingRide  )
+      currentTime = HU.getCurrentUTC ""
+      difference  =  (runFn2 JB.differenceBetweenTwoUTC ridestartTime currentTime)
+      hours = difference `div` 3600
+      remainingSecondsAfterHours = difference `mod` 3600
+      minutes = remainingSecondsAfterHours `div` 60
+      seconds = remainingSecondsAfterHours `mod` 60
+    in {seconds : seconds , hours : hours , minutes: minutes , difference : difference }
+  

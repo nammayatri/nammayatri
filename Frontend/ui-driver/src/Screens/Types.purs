@@ -21,13 +21,10 @@ module Screens.Types
 import Common.Types.Config
 
 import Common.Types.App as Common
-import Domain.Payments as PP
 import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
 import Components.GoToLocationModal.Controller as GoToModal
 import Components.PaymentHistoryListItem.Controller as PaymentHistoryListItem
-import Components.RecordAudioModel.Controller as RecordAudioModel
-import Components.RecordAudioModel.Controller as RecordAudioModel
 import Components.RecordAudioModel.Controller as RecordAudioModel
 import Data.Eq.Generic (genericEq)
 import Data.Either as Either
@@ -35,6 +32,8 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
+import Domain.Payments as PP
+import Foreign (Foreign)
 import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
@@ -46,11 +45,15 @@ import Prelude (class Eq, class Show, ($), (<$>))
 import Foreign.Index (readProp)
 import Foreign.Generic (class Decode, decode)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
-import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
-import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
+import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode,defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
 import PrestoDOM.List (ListItem)
+import Prim.TypeError as String
+import RemoteConfig.Types as RC
+import Screens (ScreenName)
+import Services.API (LmsTranslatedModuleInfoRes(..), QuizQuestion(..), QuizOptions(..), LmsQuizHistory(..), LmsQuestionRes(..), LmsModuleRes(..), LmsVideoRes(..), LmsEntityCompletionStatus(..), LmsBonus(..), LmsReward(..), LmsCategory(..), ModuleCompletionStatus(..), AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..), GetAllRcDataResp(..), GetAllRcDataRecords(..), TripCategory(..), QuestionConfirmRes(..), ServiceTierType(..))
 import Services.API (QuestionConfirmRes(..), GetDriverInfoResp(..), Route, Status, MediaType, PaymentBreakUp, BookingTypes(..))
+import Services.API as API
 import Styles.Types (FontSize)
 import Control.Monad.Except (runExcept)
 import Components.ChatView.Controller as ChatView
@@ -1049,10 +1052,16 @@ type HomeScreenData =  {
   payoutVpaStatus :: Maybe PayoutVpaStatus,
   isPayoutEnabled :: Maybe Boolean,
   payoutRewardAmount :: Maybe Int,
-  cancellationRate :: Int,
-  coinsEarned :: Array API.CoinsEarned,
-  payoutVpaBankAccount :: Maybe String,
-  plansState :: PlansState
+  payoutVpaBankAccount :: Maybe String
+, cancellationRate :: Int
+, coinsEarned :: Array API.CoinsEarned
+, plansState :: PlansState
+, scheduledRideListResponse ::  Int
+, upcomingRide :: Maybe ActiveRide 
+, homeScreenBannerTimerID :: String 
+, homeScreenBannerTimer :: Int
+, onRideBannerTimerID :: String
+, onRideBannerTimer :: Int
 }
 
 type PlansState = {
@@ -1083,7 +1092,6 @@ type PlanCardState = {
     , offerBannerPlans :: Array String
     , mbCoinDiscountUpto :: Maybe Number
 }
-
 type ParkingData = {
   estimatedCharge :: Maybe Number
 , finalCharge :: Maybe Number
@@ -1095,6 +1103,7 @@ type BannerCarousalData = {
   bannerScrollState :: String,
   currentPage :: Int
 }
+
 
 type DriverGoToState = {
   gotoCount :: Int,
@@ -1253,8 +1262,12 @@ type ActiveRide = {
   estimatedTollCharges :: Number,
   acRide :: Maybe Boolean,
   bapName :: String,
-  bookingFromOtherPlatform :: Boolean
-, parkingCharge :: Number
+  bookingFromOtherPlatform :: Boolean,
+  sourceCity :: String,
+  destinationCity :: Maybe String,
+  roundTrip :: Boolean,
+  returnTime :: String,
+  parkingCharge :: Number
 }
 
 type HomeScreenProps =  {
@@ -1339,7 +1352,18 @@ type HomeScreenProps =  {
   showReferNowPopUp :: Boolean,
   showAddUPIPopUp :: Boolean,
   showVerifyUPIPopUp :: Boolean,
-  chatServiceKilled :: Boolean
+  chatServiceKilled :: Boolean,
+  checkUpcomingRide :: Boolean,
+  homeScreenBannerVisibility :: Boolean,
+  rideRequestPill :: RideRequestPill,
+  showIntercityRateCard :: Boolean,
+  intercityInfoPopUp :: Boolean
+ }
+
+type RideRequestPill = {
+  isPillClickable ::  Boolean,
+  pillShimmerVisibility :: Boolean,
+  countVisibility ::Boolean
  }
 
 type TollState = {
@@ -1482,7 +1506,8 @@ type TripDetailsScreenData =
     vehicleModel :: String,
     acRide :: Maybe Boolean,
     vehicleServiceTier :: String,
-    parkingCharge :: Number
+    parkingCharge :: Number,
+    tripType :: TripType
   }
 
 type TripDetailsScreenProps =
@@ -2941,6 +2966,64 @@ type RateCardScreenProps = {
   sliderMaxValue :: Int,
   sliderLoading :: Boolean
 }
+
+
+type RideRequestCardState =
+  {
+    date :: String,
+    time :: String,
+    source :: String,
+    distance :: String,
+    destination :: String,
+    totalAmount :: String,
+    cardVisibility :: String,
+    shimmerVisibility :: String,
+    carImage :: String,
+    rideType :: String,
+    vehicleType :: String,
+    srcLat ::  Number,
+    srcLong :: Number,
+    desLat :: Number,
+    desLong :: Number,
+    id :: String,
+    image ::  String,
+    visible ::  Boolean,
+    pillColor :: String,
+    overlayVisiblity :: String,
+    visiblePill :: String,
+    cornerRadius :: String,
+    imageType :: String,
+    estimatedDuration :: String
+  }
+type RideCardItemState =
+  {
+    date :: PropValue,
+    time :: PropValue,
+    source :: PropValue,
+    distance ::  PropValue,
+    destination :: PropValue,
+    totalAmount :: PropValue,
+    cardVisibility :: PropValue,
+    shimmerVisibility :: PropValue,
+    carImage :: PropValue,
+    rideType :: PropValue,
+    vehicleType :: PropValue,
+    srcLat ::  PropValue,
+    srcLong :: PropValue,
+    desLat :: PropValue,
+    desLong :: PropValue,
+    id :: PropValue,
+    image :: PropValue,
+    visible :: PropValue,
+    pillColor :: PropValue,
+    overlayVisiblity :: PropValue,
+    visiblePill :: PropValue,
+    cornerRadius :: PropValue,
+    imageType :: PropValue,
+    estimatedDuration :: PropValue
+
+
+  }
 -------------------------------------------------- Onboarding LiveSelfie, PAN and Aadhaar Integration ------------------------------------
 data HyperVergeKycResult = HyperVergeKycResult
   { status :: Maybe String,

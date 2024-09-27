@@ -410,7 +410,7 @@ capacityView push config =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    ][ vehicleInfoView "ic_user_filled" config.capacity
+    ][ vehicleInfoView "ny_ic_user_filled" config.capacity
      , descriptionView config.serviceTierShortDesc config.vehicleVariant config.airConditioned
      ]
 

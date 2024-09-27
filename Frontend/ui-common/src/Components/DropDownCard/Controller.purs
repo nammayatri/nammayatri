@@ -1,9 +1,5 @@
-module Components.DropDownCard.Controller
-  ( Action(..)
-  , Config
-  )
-  where
-
+module Components.DropDownCard.Controller where
+ 
 import Prelude
 import Font.Style as FontStyle
 import Styles.Colors as Color 

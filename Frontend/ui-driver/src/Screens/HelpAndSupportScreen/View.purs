@@ -24,7 +24,7 @@ import Effect (Effect)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, unit, ($), (*), (/), (<>),bind,pure,(/=),(<<<),(==), discard, (||), (&&), (>), void, show, not, when)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback, rippleColor, clickable, relativeLayout)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback, rippleColor, clickable, relativeLayout )
 import PrestoDOM.Elements.Elements (scrollView)
 import PrestoDOM.Events (onClick)
 import PrestoDOM.Properties (cornerRadius, fontStyle, gravity, height, imageWithFallback, layoutGravity, margin, padding, scrollBarY, weight)
@@ -119,6 +119,7 @@ view push state =
        ]
    ,  if (state.data.issueListType /= ST.HELP_AND_SUPPORT_SCREEN_MODAL) then issueListModal push state else dummyTextView
    , if state.props.enableDummyPopup then testRideConfirmation push state else linearLayout[][]
+
    ])
 
 
@@ -396,5 +397,3 @@ dummyTextView =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   ]
-
-

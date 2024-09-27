@@ -165,6 +165,12 @@ initData =
         selectedPlan : Nothing,
         cityOrVehicleChanged : false
       }
+      , scheduledRideListResponse : 0
+      , upcomingRide : Nothing
+      , homeScreenBannerTimerID: ""
+      , homeScreenBannerTimer : 0
+      , onRideBannerTimerID :""
+      , onRideBannerTimer : 0
     }
   , props:
       { isFreeRide: false
@@ -249,6 +255,15 @@ initData =
       , showAddUPIPopUp : false 
       , showVerifyUPIPopUp : false
       , chatServiceKilled : false
+      , checkUpcomingRide : true
+      , homeScreenBannerVisibility : false
+      , rideRequestPill :{
+        isPillClickable :  true,
+        pillShimmerVisibility : true,
+        countVisibility : false
+      }
+      , showIntercityRateCard : false
+      , intercityInfoPopUp : false
       }
   }
 
@@ -322,6 +337,11 @@ dummyRideData = {
       , bapName : ""
       , bookingFromOtherPlatform : false
       , parkingCharge : 0.0
+      , sourceCity : ""
+      ,destinationCity : Nothing
+      ,roundTrip : false
+      ,returnTime : ""
+      
       }
 
 initialParkingData :: ParkingData

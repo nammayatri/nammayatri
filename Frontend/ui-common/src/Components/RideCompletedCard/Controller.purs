@@ -86,7 +86,9 @@ type Config = {
   rentalRowDetails :: RentalRowConfig,
   rentalBookingData :: RentalBookingConfig,
   showRentalRideDetails :: Boolean,
-  coinsEarned :: CoinsEarnedConfigType
+  coinsEarned :: CoinsEarnedConfigType,
+  showIntercityDetails :: Boolean ,
+  parkingCharges :: ParkingChargesConfig
 }
 
 data Theme = DARK | LIGHT
@@ -106,6 +108,11 @@ data RentalRowView = RideTime | RideDistance | RideStartedAt | RideEndedAt | Est
 derive instance genericRentalRowView :: Generic RentalRowView _
 instance eqRentalRowView :: Eq RentalRowView where eq = genericEq
 
+
+type ParkingChargesConfig ={
+  parkingChargesTitle :: String,
+  parkingChargesDescription :: String
+} 
 type RentalTextConfig = {
   title :: String,
   subTitle :: String,
@@ -236,7 +243,12 @@ config = {
   rentalRowDetails : dummyRentalRowConfig,
   rentalBookingData : dummyRentalBookingConfig,
   showRentalRideDetails : false,
-  coinsEarned : initialConinsEarnedConfig
+  coinsEarned : initialConinsEarnedConfig,
+  showIntercityDetails : false,
+  parkingCharges : {
+    parkingChargesTitle : "",
+    parkingChargesDescription :""
+  }
 }
 
 type CustomerIssue = {

@@ -51,8 +51,9 @@ initData = {
       tripEndTime : Nothing,
       vehicleModel : "",
       acRide : Nothing,
-      vehicleServiceTier : ""
-    , parkingCharge : 0.0
+      vehicleServiceTier : "",
+      tripType : ST.Rental,
+      parkingCharge : 0.0
   },
   props: {
     rating : 4,

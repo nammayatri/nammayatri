@@ -13,6 +13,7 @@ import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
@@ -114,6 +115,7 @@ public class Utils {
         double strokeWidth = config.optDouble("strokeWidth", defOptions.getStrokeWidth());
         double maxStrokeWidth = config.optDouble("maxStrokeWidth", defOptions.getMaxStrokeWidth());
         String fromStrokeColor = config.optString("fromStrokeColor", defOptions.getFromStrokeColor());
+        String fillColor = config.optString("fillColor", "#000000");
         String toStrokeColor = config.optString("toStrokeColor", fromStrokeColor);
         defOptions.radius((float) radius)
                 .delay(delay)
@@ -124,6 +126,7 @@ public class Utils {
                 .strokeWidth((float) strokeWidth)
                 .maxStrokeWidth((float) maxStrokeWidth)
                 .fromStrokeColor(fromStrokeColor)
+                .fillColor(Color.parseColor(fillColor))
                 .toStrokeColor(toStrokeColor);
         return defOptions;
     }

@@ -113,6 +113,7 @@ import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Data.Function (flip)
 import Data.Ord (compare)
 
+
 type AffSuccess s = (s -> Effect Unit)
 
 foreign import shuffle :: forall a. Array a -> Array a
@@ -605,8 +606,8 @@ getVehicleVariantImage variant =
   in case variant of
       "SEDAN"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
       "SEDAN_TIER" -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
-      "SUV"       -> "ic_suv_ac," <> commonUrl <> "ic_suv_ac.png"
-      "SUV_TIER"  -> "ic_suv_ac," <> commonUrl <> "ic_suv_ac.png"
+      "SUV"       -> "ny_ic_suv_ac," <> commonUrl <> "ny_ic_suv_ac.png"
+      "SUV_TIER"  -> "ny_ic_suv_ac," <> commonUrl <> "ny_ic_suv_ac.png"
       "HATCHBACK" -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
       "HATCHBACK_TIER" -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
       "RENTALS"   -> "ic_rentals," <> commonUrl <> "ic_rentals.png"
@@ -953,6 +954,19 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.BIKE_TIER -> "BIKE"
   SA.SUV_PLUS_TIER -> "SUV_PLUS"
 
+getVehicleServiceTierImage :: SA.ServiceTierType -> String
+getVehicleServiceTierImage vehicleServiceTier = case vehicleServiceTier of
+  SA.AUTO_RICKSHAW -> "ny_ic_auto_side_view"
+  SA.SEDAN_TIER -> "ny_ic_sedan"
+  SA.COMFY -> "ny_ic_sedan_ac"
+  SA.ECO -> "ic_hatchback_ac"
+  SA.PREMIUM -> "ny_ic_sedan"
+  SA.SUV_TIER -> "ny_ic_suv_ac"
+  SA.HATCHBACK_TIER -> "ic_hatchback_ac"
+  SA.TAXI -> "ic_taxi"
+  SA.TAXI_PLUS -> "ny_ic_sedan_ac"
+  _ -> "ny_ic_sedan"
+
 getLatestAndroidVersion :: Merchant -> Int
 getLatestAndroidVersion merchant =
   case merchant of
@@ -1021,3 +1035,40 @@ getAllFareFromArray fares titles = do
   let matchingFares = (DA.filter (\(SA.PaymentBreakUp fare) -> DA.elem fare.component titles) fares)
   let price = (DA.foldl (\acc (SA.PaymentBreakUp fare) -> fare.amount - acc) 0.0 matchingFares)
   price * -1.0
+
+driverVehicleToVechicleServiceTier :: String -> SA.ServiceTierType
+driverVehicleToVechicleServiceTier vehicle = 
+        case vehicle of 
+        "SUV" -> SA.SUV_TIER
+        "Sedan" -> SA.SEDAN_TIER
+        "Non-AC Mini" -> SA.TAXI
+        "AC Mini" -> SA.ECO
+        "AUTO"  ->  SA.AUTO_RICKSHAW
+        "XL Cab" -> SA.SUV_TIER
+        _ -> SA.TAXI
+
+checkNotificationType :: String -> ST.NotificationType -> Boolean
+checkNotificationType currentNotification requiredNotification = (show requiredNotification) == currentNotification
+
+dummyLocationInfo :: SA.LocationInfo
+dummyLocationInfo = SA.LocationInfo {
+      area : Nothing,
+      state : Nothing,
+      country : Nothing,
+      building : Nothing,
+      door : Nothing,
+      street : Nothing,
+      lat : 0.0,
+      city : Nothing,
+      areaCode : Nothing,
+      lon : 0.0
+  }
+
+vehicleVariantImage :: String -> String
+vehicleVariantImage vehicle = 
+    case vehicle of 
+                  "SEDAN" ->  "ny_ic_sedan_left_view"
+                  "AUTO"  ->  "ny_ic_auto_left_view"
+                  "TAXI"  ->  "ny_ic_taxi_left_view"
+                  "SUV" ->     "ny_ic_suv_left_view"
+                  _       ->  "ny_ic_auto_left_view"

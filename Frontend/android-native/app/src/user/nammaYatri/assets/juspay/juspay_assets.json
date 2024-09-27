@@ -481,6 +481,7 @@
       "ny_ic_no_quotes_auto_che_hyd" : true,
       "ny_ic_no_quotes_auto_koc" : true,
       "ny_ic_no_quotes_color" : true,
+      "ny_ic_no_rides" : true,
       "ny_ic_no_saved_address" : true,
       "ny_ic_no_volume" : true,
       "ny_ic_non_ac_ride_popup" : true,

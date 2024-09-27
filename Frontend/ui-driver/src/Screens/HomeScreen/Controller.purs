@@ -22,7 +22,6 @@ import PrestoDOM.Core
 import PrestoDOM.List
 import Screens.HomeScreen.ComponentConfig
 import Screens.SubscriptionScreen.Controller
-
 import Common.Resources.Constants (zoomLevel)
 import Common.Styles.Colors as Color
 import Common.Types.App (OptionButtonList, LazyCheck(..), Paths(..)) as Common
@@ -80,7 +79,7 @@ import Foreign (unsafeToForeign)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
-import Language.Types (STR(..))
+import Language.Types (STR(..)) as LT
 import Log (printLog, trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when, negate, (<<<), (>>=), (<$>))
@@ -92,7 +91,7 @@ import RemoteConfig as RC
 import Resource.Constants (decodeAddress, getLocationInfoFromStopLocation, rideTypeConstructor, getHomeStageFromString)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
-import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..), StopLocation(..),DriverProfileStatsResp(..), BookingTypes(..))
+import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..), StopLocation(..),DriverProfileStatsResp(..), BookingTypes(..) , ScheduledBookingListResponse , ScheduleBooking(..) , BookingAPIEntity(..))
 import Services.Accessor (_lat, _lon, _area)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
@@ -129,6 +128,9 @@ import LocalStorage.Cache (getValueFromCache, setValueToCache)
 import Components.SelectPlansModal as SelectPlansModal
 import Screens.SubscriptionScreen.Transformer as SubscriptionTransformer
 import Components.PlanCard.Controller as PlanCard
+import Screens.RideSummaryScreen.ScreenData as  RSD
+import Screens.HomeScreen.ScreenData as HSD
+import Debug
 
 instance showAction :: Show Action where
   show _ = ""
@@ -302,12 +304,16 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToNewStop ST.HomeScreenState
                     | UpdateAirConditioned ST.HomeScreenState Boolean
                     | GoToBookingPreferences ST.HomeScreenState
+                    | GoToRideReqScreen ST.HomeScreenState
                     | UpdateRouteOnStageSwitch ST.HomeScreenState
                     | CustomerReferralTrackerScreen ST.HomeScreenState
                     | BenefitsScreen ST.HomeScreenState
                     | GotoAddUPIScreen ST.HomeScreenState
                     | VerifyManualUPI ST.HomeScreenState
                     | SwitchPlan ST.PlanCardState ST.HomeScreenState
+                    | GoToRideSummary ST.HomeScreenState
+                    | GoToRideSummaryScreen  ST.HomeScreenState                 
+
 
 data Action = NoAction
             | BackPressed
@@ -435,6 +441,7 @@ data Action = NoAction
             | RideStartRemainingTime Int String String
             | TollChargesPopUpAC PopUpModal.Action
             | TollChargesAmbigousPopUpAC PopUpModal.Action
+            | RideRequestsList
             | SwitchBookingStage BookingTypes
             | AccessibilityHeaderAction
             | PopUpModalInterOperableAction PopUpModal.Action
@@ -443,6 +450,12 @@ data Action = NoAction
             | AddAlternateNumberAction
             | SelectPlansModalAction SelectPlansModal.Action
             | PlanListResponse API.UiPlansResp
+            | RideSummary
+            | UpComingRideDetails (Maybe RidesInfo)
+            | RideDetail
+            | ScheduledRideBannerClick
+            | HomeScreenBannerCountDownTimer Int String String
+            | OnRideBannerCountDownTimer Int String String
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -554,7 +567,7 @@ eval (UpdateGoHomeTimer seconds status timerID) state = do
     continue state { data { driverGotoState { goToPopUpType = ST.VALIDITY_EXPIRED, timerId = "" }}}
     else do
       let timeInMinutes = seconds/60 + 1
-      continue state { data { driverGotoState { timerInMinutes = show timeInMinutes <> " " <>(getString MIN_LEFT), timerId = timerID} } }
+      continue state { data { driverGotoState { timerInMinutes = show timeInMinutes <> " " <>(getString LT.MIN_LEFT), timerId = timerID} } }
 
 eval (CancelBackAC PrimaryButtonController.OnClick) state = continue state { data { driverGotoState { showGoto = false}}}
 
@@ -983,7 +996,9 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
     ] $ CallCustomer state exophoneNumber
 
 eval (RideActionModalAction (RideActionModal.SecondaryTextClick popUpType)) state = do
-  let updatedState = if popUpType == RideActionModal.RentalInfo then state{props{rentalInfoPopUp = true, safetyAudioAutoPlay = false}}else state{props{showAccessbilityPopup = true, safetyAudioAutoPlay = false}}
+  let updatedState = if popUpType == RideActionModal.RentalInfo then state{props{rentalInfoPopUp = true, safetyAudioAutoPlay = false}} 
+    else if popUpType == RideActionModal.IntercityInfo then state{props{intercityInfoPopUp = true, safetyAudioAutoPlay = false}} 
+    else state{props{showAccessbilityPopup = true, safetyAudioAutoPlay = false}}
   continue updatedState
 
 eval (MakePaymentModalAC (MakePaymentModal.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = updateAndExit state $ OpenPaymentPage state
@@ -992,7 +1007,9 @@ eval (MakePaymentModalAC (MakePaymentModal.Cancel)) state = continue state{data 
 
 eval (MakePaymentModalAC (MakePaymentModal.Info)) state = continue state{data { paymentState {showRateCard = true}}}
 
-eval (RateCardAC (RateCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = continue state{data { paymentState {showRateCard = false}}}
+eval (RateCardAC (RateCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = continue state{data { paymentState {showRateCard = false}} , props {showIntercityRateCard = false}}
+
+eval  (RideActionModalAction (RideActionModal.GetFare)) state  = continue state {props {showIntercityRateCard  = true}}
 
 ------------------------------- ChatService - Start --------------------------
 
@@ -1273,12 +1290,12 @@ eval (SwitchDriverStatus status) state =
   else if state.data.paymentState.driverBlocked then continue state { data{paymentState{ showBlockingPopup = true}}}
   else if state.data.plansState.cityOrVehicleChanged then continue state {data { plansState { showSwitchPlanModal = true}}}
   else if not state.props.rcActive then do
-    void $ pure $ toast $ getString PLEASE_ADD_RC
+    void $ pure $ toast $ getString LT.PLEASE_ADD_RC
     exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false , rcDeactivePopup = true }} ST.Offline)
   else if ((getValueToLocalStore IS_DEMOMODE_ENABLED) == "true") then do
     continueWithCmd state [ do
           _ <- pure $ setValueToLocalStore IS_DEMOMODE_ENABLED "false"
-          _ <- pure $ toast (getString DEMO_MODE_DISABLED)
+          _ <- pure $ toast (getString LT.DEMO_MODE_DISABLED)
           _ <- pure $  deleteValueFromLocalStore DEMO_MODE_PASSWORD
           _ <- getCurrentPosition (showDriverMarker state "ny_ic_auto" true) constructLatLong
           pure NoAction
@@ -1307,7 +1324,7 @@ eval AddAlternateNumberAction state = do
   let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
   let time_diff = runFn2 differenceBetweenTwoUTC curr_time last_attempt_time
   if(time_diff <= 600 && time_diff > 0) then do
-    pure $ toast $ getString TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER
+    pure $ toast $ getString LT.TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER
     continue state
   else do
     exit $ AddAlternateNumber state
@@ -1379,7 +1396,7 @@ eval (PopUpModalAccessibilityAction PopUpModal.NoAction) state = continueWithCmd
   pure $ PopUpModalAccessibilityAction PopUpModal.OnButton1Click
 ]
 
-eval (PopUpRentalInfoAction PopUpModal.OnButton1Click) state = continue state{props{rentalInfoPopUp = false}} 
+eval (PopUpRentalInfoAction PopUpModal.OnButton1Click) state = continue state{props{rentalInfoPopUp = false, intercityInfoPopUp = false}} 
 
 eval (PopUpRentalInfoAction PopUpModal.OnSecondaryTextClick) state = do 
   let link = case state.data.linkedVehicleCategory of
@@ -1433,9 +1450,9 @@ eval (PaymentStatusAction status) state =
     _ -> continue state { data { paymentState {
                   paymentStatus = PP.Failed,
                   bannerBG = Color.pearl,
-                  bannerTitle = getString YOUR_PREVIOUS_PAYMENT_IS_PENDING,
+                  bannerTitle = getString LT.YOUR_PREVIOUS_PAYMENT_IS_PENDING,
                   bannerTitleColor = Color.dustyRed,
-                  banneActionText = getString CONTACT_SUPPORT,
+                  banneActionText = getString LT.CONTACT_SUPPORT,
                   bannerImage = "ny_ic_payment_failed_banner," }}}
   
 eval (RideCompletedAC (RideCompletedCard.UpiQrRendered id)) state = do
@@ -1576,7 +1593,35 @@ eval (SelectPlansModalAction (SelectPlansModal.PrimaryButtonAC PrimaryButtonCont
 
 eval (SelectPlansModalAction (SelectPlansModal.PlanCardAction item _)) state = continue state {data {plansState {selectedPlan = Just item}}}
 
-eval _ state = continue state
+eval RideRequestsList state = exit $ GoToRideReqScreen state 
+
+eval (HomeScreenBannerCountDownTimer seconds status timerID) state = do
+  if status == "EXPIRED" then do
+    void $ pure $ TF.clearTimerWithId state.data.homeScreenBannerTimerID
+    continue state {props {homeScreenBannerVisibility  = false}}
+  else if (seconds <= state.data.config.scheduledRideConfig.scheduledBannerTimerValue || Array.elem state.props.currentStage [ST.RideAccepted, ST.RideStarted, ST.ChatWithCustomer])  then do
+    void $ pure  $ TF.clearTimerWithId state.data.homeScreenBannerTimerID
+    continue state
+  else
+    continue $ state { data { homeScreenBannerTimer = (seconds), homeScreenBannerTimerID = timerID } }
+
+eval (OnRideBannerCountDownTimer seconds status onRideBannerTimerID) state = do
+
+  if status == "EXPIRED" || Array.notElem state.props.currentStage [ST.RideAccepted, ST.RideStarted, ST.ChatWithCustomer] then do
+    void $ pure $ TF.clearTimerWithId state.data.onRideBannerTimerID
+    continue state 
+  else
+    continue $ state { data { onRideBannerTimer = (seconds), onRideBannerTimerID = onRideBannerTimerID } }
+
+
+
+eval (UpComingRideDetails  resp) state = do
+   let scheduledRide = activeRideDetail state <$> resp
+   continue state {data {upcomingRide = scheduledRide} , props {checkUpcomingRide = false, homeScreenBannerVisibility = true , rideRequestPill{pillShimmerVisibility = false}}}
+
+eval ScheduledRideBannerClick state  =  exit $ GoToRideSummaryScreen state
+
+eval _ state = update state
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Boolean -> Effect Unit
 checkPermissionAndUpdateDriverMarker state toAnimateCamera = do
@@ -1619,7 +1664,6 @@ constructLatLong lat lon =
   , place : ""
   , driverInsideThreshold : false
   }
-
 activeRideDetail :: ST.HomeScreenState -> RidesInfo -> ST.ActiveRide
 activeRideDetail state (RidesInfo ride) = 
   let waitTimeSeconds = DS.split (DS.Pattern "<$>") (getValueToLocalStore TOTAL_WAITED)
@@ -1628,6 +1672,13 @@ activeRideDetail state (RidesInfo ride) =
       isSafetyRide = isSafetyPeriod state ride.createdAt
       isSpecialPickupZone = checkSpecialPickupZone ride.specialLocationTag
       tripType = rideTypeConstructor ride.tripCategory
+      (LocationInfo sourceAddress) = ride.fromLocation
+      sourceCity =  fromMaybe "" sourceAddress.city
+      (LocationInfo destinationAddress) =  fromMaybe dummyLocationInfo ride.toLocation
+      destinationCity = fromMaybe "" destinationAddress.city
+      roundTrip = ride.roundTrip
+      returnTime  = fromMaybe ""  ride.returnTime
+
       -- _ = setValueToLocalStore HAS
   in 
   {
@@ -1646,6 +1697,7 @@ activeRideDetail state (RidesInfo ride) =
               "INPROGRESS" -> INPROGRESS
               "COMPLETED" -> COMPLETED
               "CANCELLED" -> CANCELLED
+              "UPCOMING"  -> UPCOMING
               _ -> COMPLETED,
   distance : (toNumber ride.estimatedDistance),
   duration : state.data.activeRide.duration,
@@ -1698,8 +1750,12 @@ activeRideDetail state (RidesInfo ride) =
   estimatedTollCharges :  fromMaybe 0.0 ride.estimatedTollCharges,
   acRide : ride.isVehicleAirConditioned,
   bapName : transformBapName $ fromMaybe "" ride.bapName,
-  bookingFromOtherPlatform : not ride.isValueAddNP
-, parkingCharge : fromMaybe 0.0 ride.parkingCharge
+  bookingFromOtherPlatform : not ride.isValueAddNP,
+  sourceCity : sourceCity,
+  destinationCity : Just destinationCity,
+  roundTrip : roundTrip,
+  returnTime : returnTime,
+  parkingCharge : fromMaybe 0.0 ride.parkingCharge
 }
   where 
     getAddressFromStopLocation :: Maybe API.StopLocation -> Maybe String
@@ -1709,37 +1765,37 @@ cancellationReasons :: String -> Array Common.OptionButtonList
 cancellationReasons dummy = [
         {
           reasonCode: "VEHICLE_ISSUE"
-        , description: (getString VEHICLE_ISSUE)
+        , description: (getString LT.VEHICLE_ISSUE)
         , textBoxRequired : false
         , subtext: Nothing
         },
         {
           reasonCode: "PICKUP_TOO_FAR"
-        , description: (getString PICKUP_TOO_FAR)
+        , description: (getString LT.PICKUP_TOO_FAR)
         , textBoxRequired : false
         , subtext: Nothing
         },
         {
           reasonCode: "CUSTOMER_NOT_PICKING_CALL"
-        , description: (getString CUSTOMER_NOT_PICKING_CALL)
+        , description: (getString LT.CUSTOMER_NOT_PICKING_CALL)
         , textBoxRequired : false
         , subtext: Nothing
         },
         {
           reasonCode: "TRAFFIC_JAM"
-        , description: (getString TRAFFIC_JAM)
+        , description: (getString LT.TRAFFIC_JAM)
         , textBoxRequired : false
         , subtext: Nothing
         },
         {
           reasonCode: "CUSTOMER_WAS_RUDE"
-        , description: (getString CUSTOMER_WAS_RUDE)
+        , description: (getString LT.CUSTOMER_WAS_RUDE)
         , textBoxRequired : false
         , subtext: Nothing
         },
         {
           reasonCode: "OTHER"
-        , description: (getString OTHER)
+        , description: (getString LT.OTHER)
         , textBoxRequired : true
         , subtext: Nothing
         }
@@ -1753,8 +1809,6 @@ dummyCancelReason =  {
         , subtext : Nothing
         }
 
-checkNotificationType :: String -> ST.NotificationType -> Boolean
-checkNotificationType currentNotification requiredNotification = (show requiredNotification) == currentNotification
 
 type RideRequestPollingData = {
     duration :: Int ,

@@ -493,6 +493,7 @@ let baseCityConfig = {
   "cityLong" : 0.0,
   "supportNumber" : "08069724949",
   "languageKey" : "BN_IN",
+  "showScheduledRides" : false,
   "showDriverReferral" : true,
   "showCustomerReferral" : true,
   "uploadRCandDL" : true,
