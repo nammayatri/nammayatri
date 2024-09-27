@@ -4435,14 +4435,14 @@ repeatRideCard push state index trip len =
     , accessibilityHint $ (if vehicleVariant /= "" && isJust trip.serviceTierNameV2 then vehicleVariant else "") <>" : trip to " <> getTripTitle trip.destination <> getTripSubTitle trip.destination 
     , rippleColor Color.rippleShade
     ][ frameLayout
-        ([ height $ imageLayoutHeight
+        [ height $ V 45
         , width WRAP_CONTENT
         , margin $ MarginRight 8
         , gravity CENTER
-        ] <> if os == "IOS" then [weight 1.0] else [])
+        ]
         [ linearLayout
             [ height WRAP_CONTENT
-            , width MATCH_PARENT
+            , width WRAP_CONTENT
             , gravity CENTER
             , margin margin'
             ][ imageView
@@ -4524,10 +4524,8 @@ repeatRideCard push state index trip len =
     
     imageDimensions = if isVariantStored
                         then {height : V 33, width : V 50} 
-                        else {height : V 20, width : V 20}
+                        else {height : V 33, width : V 20}
     
-    imageLayoutHeight = if isVariantStored then V 45 else V 20
-    imageTagMargin = if isVariantStored then MarginLeft 15 else MarginLeft 0
     
     isVariantStored = isJust trip.serviceTierNameV2 && isJust trip.vehicleVariant
 
@@ -4535,7 +4533,7 @@ repeatRideCard push state index trip len =
 
     vehicleVariant = fromMaybe "" trip.serviceTierNameV2
 
-    margin' = if not isVariantStored then MarginRight 25 else MarginHorizontal 5 5
+    margin' = if not isVariantStored then Margin 5 6 5 0 else MarginHorizontal 5 5
 
 pillTagView :: forall w. {text :: String, image :: String} -> PrestoDOM (Effect Unit) w
 pillTagView config = 
