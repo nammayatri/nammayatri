@@ -889,7 +889,6 @@ getTa =
     , scheduled_on: "துப்பறியும் தேதி"
     , attempted_on: "முயற்சி தேதி"
     , debited_on: "பற்று தேதி"
-    , free_trial_ending_in_2_days: "இலவச சோதனை 2 நாட்களில் முடிவடைகிறது"
     , free_trial_ending_tomorrow: "இலவச சோதனை நாளை முடிவடைகிறது"
     , free_trial_ends_tonight: "இலவச சோதனை இன்று இரவு முடிவடைகிறது"
     , join_a_plan_to_continue_taking_rides: "தொடர்ந்து சவாரி செய்வதற்கான திட்டத்தில் சேரவும்"
@@ -1720,4 +1719,7 @@ getTa =
     , smooth_driving: "மென்மையான ஓட்டம்"
     , no_cancellation: "ரத்து இல்லை"
     , with_nammayatri_for: (\years -> "நம்மயாத்திரியுடன் "<> years <>"+ ஆண்டுகளாக")
+    , free_trial_ending_in_n_days: (\days -> "இலவச சோதனை "<> days <> " நாட்களில் முடிகிறது")
+    , n_free_rides_completed : (\n -> n <> " இலவச சவாரிகள் முடிந்தன")
+    , n_more_free_rides_left : (\n -> n <> " மேலும் இலவச சவாரிகள் உள்ளன")
     }

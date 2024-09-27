@@ -919,7 +919,6 @@ getTe =
     , due_limit_warning_banner_title: "మీ బకాయి పరిమితి ₹{} త్వరలో చేరుకుంటుంది"
     , scheduled_on: "షెడ్యూల్ చేసిన తేదీ"
     , attempted_on: "ప్రయత్నించిన తేదీ"
-    , free_trial_ending_in_2_days: "ఉచిత ట్రయల్ 2 రోజుల్లో ముగుస్తుంది!"
     , free_trial_ending_tomorrow: "ఉచిత ట్రయల్ రేపటితో ముగుస్తుంది!"
     , free_trial_ends_tonight: "ఉచిత ట్రయల్ ఈ రాత్రికి ముగుస్తుంది!"
     , join_a_plan_to_continue_taking_rides: "రైడ్‌లను కొనసాగించడానికి ప్లాన్‌లో చేరండి"
@@ -1720,4 +1719,7 @@ getTe =
     , smooth_driving: "మృదువైన డ్రైవింగ్"
     , no_cancellation: "రద్దు లేదు"
     , with_nammayatri_for: (\years -> "నమ్మయాత్రి తో "<> years <>"+ సంవత్సరాలు")
+    , free_trial_ending_in_n_days: (\days -> "ఉచిత ప్రయత్నం " <> days <> " రోజుల్లో ముగిస్తుంది")
+    , n_free_rides_completed : (\n -> n <> " ఉచిత రైడ్లను పూర్తిచేసారు")
+    , n_more_free_rides_left : (\n -> n <> " మరిన్ని ఉచిత రైడ్లు ఉన్నాయి")
     }

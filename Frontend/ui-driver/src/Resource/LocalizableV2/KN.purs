@@ -886,7 +886,6 @@ getKn =
     , scheduled_on: "ಕಡಿತ ದಿನಾಂಕ"
     , attempted_on: "ಪ್ರಯತ್ನದ ದಿನಾಂಕ"
     , debited_on: "ಡೆಬಿಟ್ ದಿನಾಂಕ"
-    , free_trial_ending_in_2_days: "ಫ್ರೀ ಅವಧಿಯು 2 ದಿನಗಳಲ್ಲಿ ಕೊನೆಗೊಳ್ಳುತ್ತದೆ!"
     , free_trial_ending_tomorrow: "ಫ್ರೀ ಅವಧಿಯು ನಾಳೆ ಕೊನೆಗೊಳ್ಳಲಿದೆ!"
     , free_trial_ends_tonight: "ಫ್ರೀ ಅವಧಿಯು ಇಂದು ರಾತ್ರಿ ಕೊನೆಗೊಳ್ಳುತ್ತದೆ!"
     , join_a_plan_to_continue_taking_rides: "ಸವಾರಿಗಳನ್ನು ಮುಂದುವರಿಸಲು ಯೋಜನೆಗೆ ಸೇರಿಕೊಳ್ಳಿ"
@@ -1720,4 +1719,7 @@ getKn =
     , smooth_driving: "ನಾದ್ರು ಡ್ರೈವಿಂಗ್"
     , no_cancellation: "ಯಾವುದೇ ರದ್ದುಪಡಿಸಲು ಇಲ್ಲ"
     , with_nammayatri_for: (\years -> "ನಮ್ಮಯಾತ್ರಿಯೊಂದಿಗೆ " <> years <> "+ ವರ್ಷಗಳಿಂದ")
+    , free_trial_ending_in_n_days: (\days -> "ಉಚಿತ ಪ್ರಯೋಗ ಕೊನೆಯಾಗುತ್ತಿದೆ "<> days <>" ದಿನಗಳಲ್ಲಿ!")
+    , n_free_rides_completed : (\n -> n <> " ಉಚಿತ ಸವಾರಿಗಳನ್ನು ಪೂರೈಸಿದ್ದೀರಿ!")
+    , n_more_free_rides_left : (\n -> n <> " ಉಚಿತ ಸವಾರಿಗಳು ಉಳಿದಿವೆ!")
     }

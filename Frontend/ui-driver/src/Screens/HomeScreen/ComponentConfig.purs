@@ -88,6 +88,7 @@ import RemoteConfig as RemoteConfig
 import Components.SelectPlansModal.Controller as SelectPlansModal
 import RemoteConfig.Utils
 import Debug
+import Control.Apply as CA
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -433,6 +434,74 @@ offerPopupConfig isImageUrl  (PromotionPopupConfig ob) =
   }
 }
 
+freeTrialRidesEndingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+freeTrialRidesEndingPopupConfig state = 
+  let autoPayStatus = state.data.paymentState.autoPayStatus
+      freeTrialRidesLeft = fromMaybe 0 $ CA.lift2 (-) state.data.plansState.freeTrialRides state.data.plansState.totalRidesTaken
+      currentFreeRidesTaken = fromMaybe 0 $ state.data.plansState.totalRidesTaken
+  in
+  PopUpModal.config {
+    gravity = CENTER,
+    margin = MarginHorizontal 24 24 ,
+    buttonLayoutMargin = Margin 16 0 16 5 ,
+    primaryText {
+      visibility = GONE
+    , margin = Margin 16 16 16 4 },
+    secondaryText {
+      text = if autoPayStatus == NO_AUTOPAY then getString JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES else getString SETUP_AUTOPAY_FOR_EASY_PAYMENTS
+    , margin = MarginVertical 10 24
+    },
+    option1 {
+      text = if autoPayStatus == NO_AUTOPAY then getString JOIN_NOW else getString SETUP_AUTOPAY
+    , background = Color.black900
+    , color = Color.yellow900
+    , enableRipple = true
+    },
+    option2 {
+      visibility = false
+    },
+    backgroundClickable = true,
+    cornerRadius = (PTD.Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = fetchImage COMMON_ASSET $ case freeTrialRidesLeft of
+        5 -> "ny_5_rides_left"
+        2 -> "ny_2_rides_left"
+        _ -> "ny_"<> show  freeTrialRidesLeft <>"_rides_left"
+    , visibility = VISIBLE
+    , height = V 220
+    , width = V 280
+    , margin = MarginTop 20
+    }
+  , optionWithHtml  {
+    textOpt1 {
+      text = getString NOT_NOW
+    , visibility = VISIBLE
+    , textStyle = FontStyle.SubHeading2
+    , color = Color.black650
+    } 
+    , height = V 24
+    , margin = MarginVertical 0 20
+    , visibility = true
+    , background = Color.white900
+    , strokeColor = Color.white900
+    }
+  , popUpHeaderConfig {
+    gravity = CENTER
+    , visibility = VISIBLE
+    , headingText {
+      text = getString $ N_MORE_FREE_RIDES $ show freeTrialRidesLeft
+      , visibility = VISIBLE
+      , margin = Margin 0 12 0 0
+    }
+    , subHeadingText {
+      text = getString $ N_FREE_RIDES_COMPLETED $ show currentFreeRidesTaken
+      , visibility = VISIBLE
+      , textStyle = SubHeading1
+      , margin = Margin 0 12 0 0
+    }
+  }
+}
+
 freeTrialEndingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
 freeTrialEndingPopupConfig state = 
   let autoPayStatus = state.data.paymentState.autoPayStatus
@@ -444,10 +513,9 @@ freeTrialEndingPopupConfig state =
     buttonLayoutMargin = Margin 16 0 16 5 ,
     primaryText {
       text = case noOfDaysLeft of
-        3 -> getString FREE_TRIAL_ENDING_IN_2_DAYS
         2 -> getString FREE_TRIAL_ENDING_TOMORROW
         1 -> getString FREE_TRIAL_ENDS_TONIGHT
-        _ -> ""
+        _ -> getString $ FREE_TRIAL_ENDING_IN_N_DAYS $ show noOfDaysLeft
     , margin = Margin 16 16 16 4 },
     secondaryText {
       text = if autoPayStatus == NO_AUTOPAY then getString JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES else getString SETUP_AUTOPAY_FOR_EASY_PAYMENTS
@@ -469,7 +537,7 @@ freeTrialEndingPopupConfig state =
         3 -> "ny_ic_2_days_left"
         2 -> "ny_ic_1_days_left"
         1 -> "ny_ic_offer_ends_tonight"
-        _ -> ""
+        _ -> "ny_"<> show noOfDaysLeft <>"_days_left"
     , visibility = VISIBLE
     , height = V 220
     , width = V 280
@@ -1043,8 +1111,6 @@ autopayBannerConfig state configureImage =
     bannerType = state.props.autoPayBanner
     dues = getFixedTwoDecimals state.data.paymentState.totalPendingManualDues
     isVehicleAuto = (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.AutoCategory
-    autopayBannerImg = if isVehicleAuto then "ny_ic_driver_offer" else "ny_ic_driver_offer_cab"
-    duesImg = if isVehicleAuto then "ny_ic_clear_dues" else "ny_ic_clear_dues_cab"
     config' = config
       {
         backgroundColor = case bannerType of
@@ -1074,8 +1140,8 @@ autopayBannerConfig state configureImage =
         },
         imageUrl = fetchImage COMMON_ASSET $ case bannerType of
                       FREE_TRIAL_BANNER -> "ic_free_trial_period" 
-                      SETUP_AUTOPAY_BANNER -> autopayBannerImg
-                      _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> duesImg
+                      SETUP_AUTOPAY_BANNER -> "ny_ic_setup_autopay"
+                      _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> "ny_ic_clear_dues_v2"
                       DUE_LIMIT_WARNING_BANNER -> "ny_ic_due_limit_warning"
                       _ -> "",
         imageHeight = if configureImage then (V 75) else (V 105),

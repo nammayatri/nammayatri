@@ -1032,7 +1032,6 @@ getProxy str = case str of
   DUE_LIMIT_WARNING_BANNER_TITLE -> \a -> a @~ due_limit_warning_banner_title
   SCHEDULED_ON -> \a -> a @~ scheduled_on
   ATTEMPTED_ON -> \a -> a @~ attempted_on
-  FREE_TRIAL_ENDING_IN_2_DAYS -> \a -> a @~ free_trial_ending_in_2_days
   FREE_TRIAL_ENDING_TOMORROW -> \a -> a @~ free_trial_ending_tomorrow
   FREE_TRIAL_ENDS_TONIGHT -> \a -> a @~ free_trial_ends_tonight
   JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES -> \a -> a @~ join_a_plan_to_continue_taking_rides
@@ -1792,3 +1791,6 @@ getProxy str = case str of
   GOOD_SERVICES -> \a -> a @~ good_services
   SMOOTH_DRIVING -> \a -> a @~ smooth_driving
   NO_CANCELLATION -> \a -> a @~ no_cancellation
+  FREE_TRIAL_ENDING_IN_N_DAYS arg1 -> \a -> (a @~ free_trial_ending_in_n_days) arg1
+  N_MORE_FREE_RIDES arg1 -> \a -> (a @~ n_more_free_rides_left) arg1
+  N_FREE_RIDES_COMPLETED arg1 -> \a -> (a @~ n_free_rides_completed) arg1
