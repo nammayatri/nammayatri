@@ -28,7 +28,7 @@ estimateBreakupTTable =
 
 type EstimateBreakup = EstimateBreakupT Identity
 
-$(TH.mkClickhouseInstances ''EstimateBreakupT)
+$(TH.mkClickhouseInstances ''EstimateBreakupT 'SELECT_FINAL_MODIFIER)
 
 findAllByEstimateIdT ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>

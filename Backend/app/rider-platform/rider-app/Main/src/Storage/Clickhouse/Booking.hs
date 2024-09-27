@@ -51,7 +51,7 @@ bookingTTable =
 
 type Booking = BookingT Identity
 
-$(TH.mkClickhouseInstances ''BookingT)
+$(TH.mkClickhouseInstances ''BookingT 'SELECT_FINAL_MODIFIER)
 
 findAllCompletedRiderBookingsByMerchantInRange ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
