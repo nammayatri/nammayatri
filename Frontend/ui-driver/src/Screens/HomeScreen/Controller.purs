@@ -369,6 +369,7 @@ data Action = NoAction
             | KeyboardCallback String
             | OfferPopupAC PopUpModal.Action
             | FreeTrialEndingAC PopUpModal.Action 
+            | FreeTrialRidesEndingAC PopUpModal.Action 
             | GetCurrentDuesAction GetCurrentPlanResp
             | GetCurrentDuesFailed
             | AutoPayBanner Banner.Action
@@ -827,6 +828,13 @@ eval (FreeTrialEndingAC PopUpModal.OnButton1Click) state = do
   exit $ SubscriptionScreen state
 
 eval (FreeTrialEndingAC PopUpModal.OptionWithHtmlClick) state = do
+  _ <- pure $ setValueToLocalStore APP_SESSION_TRACK_COUNT "shown"
+  continue state {props{ subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}}
+
+eval (FreeTrialRidesEndingAC PopUpModal.OnButton1Click) state = do
+  exit $ SubscriptionScreen state
+
+eval (FreeTrialRidesEndingAC PopUpModal.OptionWithHtmlClick) state = do
   _ <- pure $ setValueToLocalStore APP_SESSION_TRACK_COUNT "shown"
   continue state {props{ subscriptionPopupType = ST.NO_SUBSCRIPTION_POPUP}}
 

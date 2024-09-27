@@ -1035,7 +1035,7 @@ type HomeScreenData =  {
   snappedOrigin :: Maybe Location,
   gender :: String,
   coinBalance :: Int,
-  subsRemoteConfig :: RC.RCSubscription,
+  subsRemoteConfig :: CommonRC.RCSubscriptionDues,
   bannerData :: BannerCarousalData,
   prevLatLon :: Maybe Location,
   noOfLocations :: Int,
@@ -1059,7 +1059,9 @@ type PlansState = {
   showSwitchPlanModal :: Boolean,
   plansList :: Array PlanCardState,
   selectedPlan :: Maybe PlanCardState,
-  cityOrVehicleChanged :: Boolean
+  cityOrVehicleChanged :: Boolean,
+  freeTrialRides :: Maybe Int,
+  totalRidesTaken :: Maybe Int
 }
 
 type PlanCardState = {
@@ -1358,7 +1360,7 @@ instance showSubscriptionBannerType :: Show SubscriptionBannerType where show = 
 instance encodeSubscriptionBannerType :: Encode SubscriptionBannerType where encode = defaultEnumEncode
 instance decodeSubscriptionBannerType :: Decode SubscriptionBannerType where decode = defaultEnumDecode
 
-data SubscriptionPopupType = GO_ONLINE_BLOCKER | LOW_DUES_CLEAR_POPUP | SOFT_NUDGE_POPUP | FREE_TRIAL_POPUP | NO_SUBSCRIPTION_POPUP
+data SubscriptionPopupType = GO_ONLINE_BLOCKER | LOW_DUES_CLEAR_POPUP | SOFT_NUDGE_POPUP | FREE_TRIAL_POPUP | NO_SUBSCRIPTION_POPUP | FREE_TRIAL_RIDES_POPUP
 
 derive instance genericSubscriptionPopupType :: Generic SubscriptionPopupType _
 instance eqSubscriptionPopupType :: Eq SubscriptionPopupType where eq = genericEq

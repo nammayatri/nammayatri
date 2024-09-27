@@ -162,6 +162,7 @@ import Common.RemoteConfig.Utils as CommonRC
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenInitData
 import DecodeUtil as DU
 import Helpers.SplashUtils (hideSplashAndCallFlow, toggleSetupSplash)
+import Control.Apply as CA
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -3705,12 +3706,18 @@ updateBannerAndPopupFlags = do
   appConfig <- getAppConfigFlowBT Constants.appConfig
   rideAndEarnPopup <- callGetPastDaysData appConfig allState.homeScreen
   let
-    cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+    cityConfig = getCityConfig appConfig.cityConfig driverCity
+    driverCity = getValueToLocalStore DRIVER_LOCATION
+    driverVehicle = getValueToLocalStore VEHICLE_VARIANT
+    vehicleAndCityConfig = CommonRC.subscriptionsConfigVariantLevel driverCity driverVehicle
+    freeTrialRidesLeft = fromMaybe 0 $ CA.lift2 (-) getDriverInfoResp.freeTrialRides getDriverInfoResp.totalRidesTaken
+    freeTrialPopupDaysList = fromMaybe [] vehicleAndCityConfig.freeTrialPopupDaysList
+    freeTrialPopupOnRidesList = fromMaybe [] vehicleAndCityConfig.freeTrialPopupOnRidesList
     autoPayNotActive = isNothing getDriverInfoResp.autoPayStatus || getDriverInfoResp.autoPayStatus /= Just "ACTIVE"
     pendingTotalManualDues = fromMaybe 0.0 getDriverInfoResp.manualDues
     subscriptionConfig = appConfig.subscriptionConfig
     _ = runFn2 EHC.updatePushInIdMap "bannerCarousel" true
-    subscriptionRemoteConfig = allState.homeScreen.data.subsRemoteConfig
+    subscriptionRemoteConfig = fromMaybe CommonRC.defSubscriptionDues vehicleAndCityConfig.duesConfig
     freeTrialDays = fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft
     shouldShowPopup = getValueToLocalStore APP_SESSION_TRACK_COUNT == "true" 
                       && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" 
@@ -3732,13 +3739,14 @@ updateBannerAndPopupFlags = do
           true, _, _ -> if isNothing getDriverInfoResp.autoPayStatus then NO_SUBSCRIPTION_BANNER else SETUP_AUTOPAY_BANNER
           _, _, _ -> NO_SUBSCRIPTION_BANNER
       else NO_SUBSCRIPTION_BANNER
-
-    subscriptionPopupType = case isOnFreeTrial FunctionCall, autoPayNotActive, shouldShowPopup of
-      true, true , true -> case freeTrialDays of
-        _ | freeTrialDays == 3 || freeTrialDays == 2 || freeTrialDays == 1 -> FREE_TRIAL_POPUP
-        _ -> NO_SUBSCRIPTION_POPUP
-      false, _, true -> if pendingTotalManualDues >= subscriptionRemoteConfig.max_dues_limit then NO_SUBSCRIPTION_POPUP else LOW_DUES_CLEAR_POPUP
-      _, _, _ -> NO_SUBSCRIPTION_POPUP
+    showFreeTrialPopupOnDays = any (_ == freeTrialDays) freeTrialPopupDaysList
+    showFreeTrialPopupOnRides = any (_ == freeTrialRidesLeft) freeTrialPopupOnRidesList
+    subscriptionPopupType = 
+      case isOnFreeTrial FunctionCall, autoPayNotActive, shouldShowPopup of
+        true, true , true | showFreeTrialPopupOnDays -> FREE_TRIAL_POPUP
+        true, true , true | showFreeTrialPopupOnRides -> FREE_TRIAL_RIDES_POPUP
+        false, _, true -> if pendingTotalManualDues >= subscriptionRemoteConfig.max_dues_limit then NO_SUBSCRIPTION_POPUP else LOW_DUES_CLEAR_POPUP
+        _, _, _ -> NO_SUBSCRIPTION_POPUP
 
     shouldMoveDriverOffline = (withinTimeRange "12:00:00" "23:59:59" (convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"))
 
@@ -3810,6 +3818,11 @@ updateBannerAndPopupFlags = do
                 , isVehicleSupported = fromMaybe true getDriverInfoResp.isVehicleSupported
                 , cityConfig = cityConfig
                 , cancellationRate = fromMaybe 0 getDriverInfoResp.cancellationRateInWindow
+                , subsRemoteConfig = subscriptionRemoteConfig
+                , plansState {
+                    freeTrialRides = getDriverInfoResp.freeTrialRides,
+                    totalRidesTaken = getDriverInfoResp.totalRidesTaken
+                }
                 }
               , props
                 { autoPayBanner = autopayBannerType

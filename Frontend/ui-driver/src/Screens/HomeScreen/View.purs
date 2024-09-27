@@ -362,8 +362,10 @@ view push state =
       , if state.props.showAdvancedRidePopUp then advancedRidePopUpView push state else dummyTextView
       , if state.props.rcDeactivePopup then PopUpModal.view (push <<< RCDeactivatedAC) (driverRCPopUpConfig state) else dummyTextView
       , if (state.props.subscriptionPopupType == ST.FREE_TRIAL_POPUP) && state.data.config.subscriptionConfig.enableSubscriptionPopups
-           then PopUpModal.view (push <<< FreeTrialEndingAC) (freeTrialEndingPopupConfig state) 
-           else linearLayout[visibility GONE][]
+            then PopUpModal.view (push <<< FreeTrialEndingAC) (freeTrialEndingPopupConfig state) 
+        else if (state.props.subscriptionPopupType == ST.FREE_TRIAL_RIDES_POPUP) && state.data.config.subscriptionConfig.enableSubscriptionPopups
+            then PopUpModal.view (push <<< FreeTrialRidesEndingAC) (freeTrialRidesEndingPopupConfig state)
+        else linearLayout[visibility GONE][]
       , case HU.getPopupObjectFromSharedPrefs SHOW_JOIN_NAMMAYATRI of
           Just configObject -> if (isLocalStageOn HomeScreen) then PopUpModal.view (push <<< OfferPopupAC) (offerPopupConfig true configObject) else linearLayout[visibility GONE][]
           Nothing -> linearLayout[visibility GONE][]

@@ -23,7 +23,7 @@ import Foreign (Foreign)
 import Foreign.Index (readProp)
 import Data.Newtype (class Newtype)
 import Presto.Core.Utils.Encoding (defaultDecode)
-import RemoteConfig.Types (RCSubscription, ReelItem, ReelButtonConfig, HVConfigs, ReferralPopUpDelays, CancellationRateConfig, CancellationRateEntity(..), CancellationThresholdConfig, MetroCoinsEvent)
+import RemoteConfig.Types (ReelItem, ReelButtonConfig, HVConfigs, ReferralPopUpDelays, CancellationRateConfig, CancellationRateEntity(..), CancellationThresholdConfig, MetroCoinsEvent)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
 import Common.RemoteConfig.Utils
@@ -34,13 +34,6 @@ foreign import getSubsRemoteConfig :: String -> Foreign
 foreign import getHVRemoteConfig :: String -> Foreign
 
 foreign import getReelsData :: String -> Foreign
-
-subscriptionRemoteConfig :: RCSubscription
-subscriptionRemoteConfig = {
-    max_dues_limit : 100.0,
-    low_dues_warning_limit : 25.0,
-    high_due_warning_limit : 75.0
-}
 
 hvConfigs :: String -> HVConfigs
 hvConfigs appName = case appName of
@@ -74,13 +67,6 @@ hvConfigs appName = case appName of
       pan_flow_id : "ny-pan-flow",
       aadhaar_flow_id : "ny-aadhaar-flow"
     }
-
-
-
-subscriptionConfig :: String -> RCSubscription
-subscriptionConfig key = do
-    let conf = getSubsRemoteConfig $ fetchRemoteConfigString key
-    decodeForeignObject conf subscriptionRemoteConfig
 
 reelsData :: String -> Array ReelItem
 reelsData key = 
