@@ -55,17 +55,17 @@ type Person = PersonT Identity
 
 deriving instance Show Person
 
-$(TH.mkClickhouseInstances ''PersonT 'SELECT_FINAL_MODIFIER)
+$(TH.mkClickhouseInstances ''PersonT 'NO_SELECT_MODIFIER)
 
 findTotalRidesCountByPersonId ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Id DP.Person ->
   m (Maybe Int)
 findTotalRidesCountByPersonId personId = do
-  person <-
+  personRideCount <-
     CH.findAll $
-      CH.select $
+      CH.select_ (\person -> CH.notGrouped (person.totalRidesCount)) $
         CH.filter_
           (\person _ -> person.id CH.==. personId)
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE personTTable)
-  return (listToMaybe person >>= (.totalRidesCount))
+  return $ listToMaybe (catMaybes personRideCount)

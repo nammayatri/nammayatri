@@ -36,6 +36,7 @@ import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Storage.Hedis as Redis
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
@@ -81,8 +82,8 @@ updateCustomerFraudCounters riderId merchantConfigs = Redis.withNonCriticalCross
 updateTotalRidesCounters :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Id Person.Person -> m ()
 updateTotalRidesCounters riderId = do
   totalRidesCount <- getTotalRidesCount riderId Nothing
-  let totalRidesCount' = totalRidesCount + 1
-  void $ QP.updateTotalRidesCount riderId (Just totalRidesCount')
+  whenJust totalRidesCount $ \count' -> do
+    QP.updateTotalRidesCount riderId (Just (count' + 1))
 
 updateTotalRidesInWindowCounters :: (CacheFlow m r, MonadFlow m) => Id Person.Person -> [DMC.MerchantConfig] -> m ()
 updateTotalRidesInWindowCounters riderId merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
@@ -90,14 +91,35 @@ updateTotalRidesInWindowCounters riderId merchantConfigs = Redis.withNonCritical
   where
     incrementCount ind = SWC.incrementWindowCount (mkRideWindowCountKey ind riderId.getId)
 
-getTotalRidesCount :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Id Person.Person -> Maybe DSR.SearchRequest -> m Int
-getTotalRidesCount riderId mSearchReq =
-  case mSearchReq >>= DSR.totalRidesCount of
-    Nothing -> do
-      totalRidesCount <- CHP.findTotalRidesCountByPersonId riderId
-      QP.updateTotalRidesCount riderId totalRidesCount
-      pure $ fromMaybe 0 totalRidesCount
-    Just totalCount -> pure totalCount
+mkTotalRidesKey :: Text -> Text
+mkTotalRidesKey idtxt = "Customer:TotalRidesCount:" <> idtxt
+
+getTotalRidesCountAndUpdate :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Id Person.Person -> Maybe DSR.SearchRequest -> m (Maybe Int)
+getTotalRidesCountAndUpdate riderId mSearchReq = do
+  totalRidesCount <- getTotalRidesCount riderId mSearchReq
+  whenJust totalRidesCount $ \count' -> do
+    QP.updateTotalRidesCount riderId (Just count')
+  pure totalRidesCount
+
+getTotalRidesCount ::
+  (CacheFlow m r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) =>
+  Id Person.Person ->
+  Maybe DSR.SearchRequest ->
+  m (Maybe Int)
+getTotalRidesCount riderId mSearchReq
+  | Just searchCount <- mSearchReq >>= DSR.totalRidesCount = pure (Just searchCount)
+  | otherwise = Redis.safeGet key >>= maybe fetchFromDbOrCkh (pure . Just)
+  where
+    key = mkTotalRidesKey riderId.getId
+
+    fetchFromDbOrCkh = do
+      person <- QP.findById riderId >>= fromMaybeM (PersonNotFound $ "Person not found with id: " <> riderId.getId)
+      let totalCount = person.totalRidesCount
+      case totalCount of
+        Just count' -> cacheAndSet count'
+        Nothing -> CHP.findTotalRidesCountByPersonId riderId >>= maybe (pure Nothing) cacheAndSet
+
+    cacheAndSet totalCount = Redis.setExp key totalCount 864000 >> pure (Just totalCount)
 
 getRidesCountInWindow ::
   (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) =>
@@ -134,8 +156,8 @@ checkFraudDetected riderId merchantOperatingCityId factors merchantConfigs mSear
           searchCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkSearchCounterKey mc.id.getId riderId.getId) mc.fraudSearchCountWindow
           pure $ searchCount >= mc.fraudSearchCountThreshold
         TotalRides -> do
-          totalRidesCount :: Int <- getTotalRidesCount riderId mSearchReq
-          pure $ totalRidesCount <= mc.fraudBookingTotalCountThreshold
+          totalRidesCount :: Maybe Int <- getTotalRidesCountAndUpdate riderId mSearchReq
+          pure $ maybe False (<= mc.fraudBookingTotalCountThreshold) totalRidesCount
         TotalRidesInWindow -> do
           windowValueList <- SWC.getCurrentWindowValues (mkRideWindowCountKey mc.id.getId riderId.getId) mc.fraudRideCountWindow
           let timeInterval = SWC.convertPeriodTypeToSeconds mc.fraudRideCountWindow.periodType
