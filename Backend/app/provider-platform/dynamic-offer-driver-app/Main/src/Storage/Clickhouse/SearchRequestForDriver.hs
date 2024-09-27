@@ -54,7 +54,7 @@ searchRequestForDriverTTable =
 
 type SearchRequestForDriver = SearchRequestForDriverT Identity
 
-$(TH.mkClickhouseInstances ''SearchRequestForDriverT)
+$(TH.mkClickhouseInstances ''SearchRequestForDriverT 'SELECT_FINAL_MODIFIER)
 
 calulateSupplyDemandByGeohashAndServiceTier ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
