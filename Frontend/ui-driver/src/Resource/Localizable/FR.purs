@@ -709,7 +709,7 @@ getFR stringKey =
         DUE_LIMIT_WARNING_BANNER_TITLE ->  "Votre limite due de ₹{} sera bientôt atteinte"
         SCHEDULED_ON ->  "date de retenue"
         ATTEMPTED_ON ->  "date de tentative"
-        FREE_TRIAL_ENDING_IN_2_DAYS -> "Essai gratuit se terminant dans 2 jours !"
+        FREE_TRIAL_ENDING_IN_N_DAYS days -> "Essai gratuit se terminant dans "<> days <>" jours !"
         FREE_TRIAL_ENDING_TOMORROW ->  "Essai gratuit se terminant demain !"
         FREE_TRIAL_ENDS_TONIGHT ->  "L'essai gratuit se termine ce soir !"
         JOIN_A_PLAN_TO_CONTINUE_TAKING_RIDES ->  "Rejoignez un plan pour continuer à faire des courses"
