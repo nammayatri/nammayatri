@@ -15,10 +15,10 @@
 module Domain.Action.Beckn.FRFS.OnSearch where
 
 import qualified API.Types.UI.FRFSTicketService as API
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSSearch as Search
 import Domain.Types.Merchant
-import qualified Domain.Types.Station as DStation
 import Environment
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -30,7 +30,9 @@ import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.PersonStats as QPStats
+import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.Station as QStation
+import Tools.Error
 
 data DOnSearch = DOnSearch
   { bppSubscriberId :: Text,
@@ -47,8 +49,9 @@ data DOnSearch = DOnSearch
 data DQuote = DQuote
   { bppItemId :: Text,
     price :: Price,
-    vehicleType :: DStation.FRFSVehicleType,
+    vehicleType :: Spec.VehicleCategory,
     stations :: [DStation],
+    routeCode :: Maybe Text,
     _type :: Quote.FRFSQuoteType
   }
 
@@ -98,7 +101,14 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
 
   startStation <- QStation.findByStationCode dStartStation.stationCode >>= fromMaybeM (InternalError $ "Station not found: " <> dStartStation.stationCode)
   endStation <- QStation.findByStationCode dEndStation.stationCode >>= fromMaybeM (InternalError $ "Station not found: " <> dEndStation.stationCode)
-
+  routeId <-
+    maybe
+      (pure Nothing)
+      ( \rCode -> do
+          route <- QRoute.findByRouteCode rCode >>= fromMaybeM (RouteNotFound rCode)
+          return $ Just route.id
+      )
+      routeCode
   let freeTicketInterval = fromMaybe (maxBound :: Int) mbFreeTicketInterval
   let stationsJSON = stations & map castStationToAPI & encodeToText
   let maxFreeTicketCashback = fromMaybe 0 mbMaxFreeTicketCashback
@@ -130,6 +140,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
         Quote.searchId = search.id,
         Quote.stationsJson = stationsJSON,
         Quote.toStationId = endStation.id,
+        Quote.routeId = routeId,
         Quote.validTill,
         Quote.vehicleType,
         Quote.merchantId = search.merchantId,

@@ -238,6 +238,16 @@ library
       Domain.Types.LocationAddress
       Domain.Types.UtilsTH
       Environment
+      ExternalBPP.CallAPI
+      ExternalBPP.Common.Cancel
+      ExternalBPP.Common.Confirm
+      ExternalBPP.Common.Init
+      ExternalBPP.Common.Search
+      ExternalBPP.Common.Status
+      ExternalBPP.EBIX.ExternalAPI.Order
+      ExternalBPP.EBIX.ExternalAPI.Payment
+      ExternalBPP.EBIX.ExternalAPI.Verification
+      ExternalBPP.EBIX.Flow
       Lib.Mesh
       SharedLogic.Cac
       SharedLogic.CallBPP
@@ -462,7 +472,6 @@ library
       Domain.Types.FRFSTicket
       Domain.Types.FRFSTicketBooking
       Domain.Types.FRFSTicketBookingPayment
-      Domain.Types.FRFSTrip
       Domain.Types.HotSpotConfig
       Domain.Types.InterCityDetails
       Domain.Types.Issue
@@ -499,6 +508,7 @@ library
       Domain.Types.RiderConfig
       Domain.Types.RideRelatedNotificationConfig
       Domain.Types.Route
+      Domain.Types.RouteStopFare
       Domain.Types.RouteStopMapping
       Domain.Types.SafetySettings
       Domain.Types.SavedReqLocation
@@ -555,7 +565,6 @@ library
       Storage.Beam.FRFSTicket
       Storage.Beam.FRFSTicketBooking
       Storage.Beam.FRFSTicketBookingPayment
-      Storage.Beam.FRFSTrip
       Storage.Beam.HotSpotConfig
       Storage.Beam.InterCityDetails
       Storage.Beam.Issue
@@ -591,6 +600,7 @@ library
       Storage.Beam.RiderConfig
       Storage.Beam.RideRelatedNotificationConfig
       Storage.Beam.Route
+      Storage.Beam.RouteStopFare
       Storage.Beam.RouteStopMapping
       Storage.Beam.SafetySettings
       Storage.Beam.SavedReqLocation
@@ -648,7 +658,6 @@ library
       Storage.Queries.FRFSTicket
       Storage.Queries.FRFSTicketBooking
       Storage.Queries.FRFSTicketBookingPayment
-      Storage.Queries.FRFSTrip
       Storage.Queries.HotSpotConfig
       Storage.Queries.InterCityDetails
       Storage.Queries.Issue
@@ -722,6 +731,7 @@ library
       Storage.Queries.RiderConfig
       Storage.Queries.RideRelatedNotificationConfig
       Storage.Queries.Route
+      Storage.Queries.RouteStopFare
       Storage.Queries.RouteStopMapping
       Storage.Queries.SafetySettings
       Storage.Queries.SavedReqLocation

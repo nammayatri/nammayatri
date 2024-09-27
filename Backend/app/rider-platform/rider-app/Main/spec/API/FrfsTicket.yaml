@@ -1,9 +1,7 @@
 imports:
   Text: Data.Text
   Maybe: Data.Maybe
-  # FRFSTicketService: Domain.Types.FRFSTicketService
   Station: Domain.Types.Station
-  StationType: Domain.Types.FRFSTrip
   FRFSQuoteType: Domain.Types.FRFSQuote
   FRFSQuote: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBooking
@@ -11,9 +9,8 @@ imports:
   FRFSTicketStatus: Domain.Types.FRFSTicket
   HighPrecMoney: Kernel.Types.Common
   PriceAPIEntity: Kernel.Types.Common
-  FRFSTrip: Domain.Types.FRFSTrip
   FRFSSearch: Domain.Types.FRFSSearch
-  FRFSVehicleType: Domain.Types.Station
+  VehicleCategory: BecknV2.FRFS.Enums
   CreateOrderResp: Kernel.External.Payment.Juspay.Types.CreateOrder
   City: Kernel.Types.Beckn.Context
   Merchant: Domain.Types.Merchant
@@ -26,6 +23,7 @@ types:
   FRFSSearchAPIReq:
     fromStationCode: Text
     toStationCode: Text
+    routeCode: Maybe Text
     quantity: Int
 
   FRFSSearchAPIRes:
@@ -34,10 +32,11 @@ types:
   FRFSQuoteAPIRes:
     quoteId: Id FRFSQuote
     _type: FRFSQuoteType
-    vehicleType: FRFSVehicleType
+    vehicleType: VehicleCategory
     quantity: Int
     price: HighPrecMoney
     priceWithCurrency: PriceAPIEntity
+    _route: Maybe FRFSRouteAPI
     stations: [FRFSStationAPI]
     validTill: UTCTime
     discountedTickets: Maybe Int
@@ -50,12 +49,13 @@ types:
     updatedAt: UTCTime
     _type: FRFSQuoteType
     quantity: Int
-    vehicleType: FRFSVehicleType
+    vehicleType: VehicleCategory
     price: HighPrecMoney
     priceWithCurrency: PriceAPIEntity
     validTill: UTCTime
     payment: Maybe FRFSBookingPaymentAPI
     tickets: [FRFSTicketAPI]
+    _route: Maybe FRFSRouteAPI
     stations: [FRFSStationAPI]
     createdAt: UTCTime
     discountedTickets: Maybe Int
@@ -109,43 +109,55 @@ types:
     customDates: [Text]
     customEndTime: Text
     isEventOngoing: Bool
+    isCancellationAllowed: Bool
     freeTicketInterval: Maybe Int
     maxFreeTicketCashback: Maybe Int
     ticketsBookedInEvent: Int
     derive: "Show"
 
-  RoutesAPIRes:
+  FRFSRouteAPI:
     code: Text
     shortName: Text
     longName: Text
-    startCoordinates: LatLong
-    endCoordinates: LatLong
+    startPoint: LatLong
+    endPoint: LatLong
+    derive: "Show"
 
 apis:
-  # GET metro stops for the merchant city
+  # GET metro/bus routes for the merchant city
+  - GET:
+      endpoint: /frfs/routes
+      auth: TokenAuth
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+        city: City
+      response:
+        type: "[API.Types.UI.FRFSTicketService.FRFSRouteAPI]"
+
+  # GET metro/bus stops for the merchant city
   - GET:
       endpoint: /frfs/stations
       auth: TokenAuth
       mandatoryQuery:
-        vehicleType: FRFSVehicleType
+        vehicleType: VehicleCategory
       query:
         city: City
-        routeId: Text
+        routeCode: Text
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
 
-  # Initiate search for metro tickets
+  # Initiate search for metro/bus tickets
   - POST:
       endpoint: /frfs/search
       auth: TokenAuth
       mandatoryQuery:
-        vehicleType: FRFSVehicleType
+        vehicleType: VehicleCategory
       request:
         type: API.Types.UI.FRFSTicketService.FRFSSearchAPIReq
       response:
         type: API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
 
-  # Get quotes for metro tickets
+  # Get quotes for metro/bus tickets
   - GET:
       endpoint: /frfs/search/{searchId}/quote
       params:
@@ -154,7 +166,7 @@ apis:
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]"
 
-  # Confirm quote for metro tickets (return PP sdk params)
+  # Confirm quote for metro/bus tickets (return PP sdk params)
   - POST:
       endpoint: /frfs/quote/{quoteId}/confirm
       params:
@@ -181,7 +193,7 @@ apis:
       response:
         type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 
-  # List metro tickets
+  # List metro/bus tickets
   - GET:
       endpoint: /frfs/booking/list
       auth: TokenAuth
@@ -233,15 +245,3 @@ apis:
       auth: TokenAuth
       response:
         type: API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
-
-  # Fetch list of routes filtered by serviceable time and also if stopId provided, provide routes corresponding to it
-  - GET:
-      endpoint: /routes
-      auth: TokenAuth
-      mandatoryQuery:
-        city: City
-      query:
-        vehicleType: FRFSVehicleType
-        stopId: Text
-      response:
-        type: "[API.Types.UI.FRFSTicketService.RoutesAPIRes]"

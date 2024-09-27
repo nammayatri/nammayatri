@@ -15,12 +15,12 @@
 module Beckn.ACL.FRFS.OnSearch where
 
 import API.Types.UI.FRFSTicketService as API
+import qualified BecknV2.FRFS.Enums as Enums
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
 import qualified Domain.Types.FRFSQuote as DQuote
-import qualified Domain.Types.Station as Domain.DStation
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.TimeRFC339
@@ -99,6 +99,7 @@ parseFulfillments item fulfillments fulfillmentId = do
         price,
         vehicleType,
         stations,
+        routeCode = Nothing,
         _type = quoteType
       }
 
@@ -155,10 +156,10 @@ mapWithIndex f xs = go 0 xs
       ys <- go (idx + 1) xs'
       return (y : ys)
 
-castVehicleVariant :: Text -> Maybe Domain.DStation.FRFSVehicleType
+castVehicleVariant :: Text -> Maybe Enums.VehicleCategory
 castVehicleVariant = \case
-  "METRO" -> Just Domain.DStation.METRO
-  "BUS" -> Just Domain.DStation.BUS
+  "METRO" -> Just Enums.METRO
+  "BUS" -> Just Enums.BUS
   _ -> Nothing
 
 castStationType :: Text -> Maybe API.StationType

@@ -4,14 +4,15 @@
 
 module Domain.Types.FRFSSearch where
 
+import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
+import qualified Domain.Types.Route
 import qualified Domain.Types.Station
-import Kernel.Prelude hiding (sequence)
-import qualified Kernel.Prelude
+import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
@@ -24,8 +25,9 @@ data FRFSSearch = FRFSSearch
     partnerOrgTransactionId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrgTransaction),
     quantity :: Kernel.Prelude.Int,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    routeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Route.Route),
     toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
-    vehicleType :: Domain.Types.Station.FRFSVehicleType,
+    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

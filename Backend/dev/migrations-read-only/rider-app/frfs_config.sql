@@ -25,3 +25,10 @@ ALTER TABLE atlas_app.frfs_config ADD COLUMN free_ticket_interval integer  defau
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_config ADD COLUMN cancellation_reason_id text ;
+ALTER TABLE atlas_app.frfs_config ADD COLUMN is_cancellation_allowed boolean  default true;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_config ADD COLUMN bus_station_ttl integer  default 1800;

@@ -6,7 +6,7 @@ module Storage.Queries.OrphanInstances.FRFSTicketBooking where
 import qualified Domain.Types.FRFSTicketBooking
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.Prelude hiding (sequence)
+import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
@@ -51,6 +51,7 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             quoteId = Kernel.Types.Id.Id quoteId,
             refundAmount = refundAmount,
             riderId = Kernel.Types.Id.Id riderId,
+            routeId = Kernel.Types.Id.Id <$> routeId,
             searchId = Kernel.Types.Id.Id searchId,
             stationsJson = stationsJson,
             status = status,
@@ -97,6 +98,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.quoteId = Kernel.Types.Id.getId quoteId,
         Beam.refundAmount = refundAmount,
         Beam.riderId = Kernel.Types.Id.getId riderId,
+        Beam.routeId = Kernel.Types.Id.getId <$> routeId,
         Beam.searchId = Kernel.Types.Id.getId searchId,
         Beam.stationsJson = stationsJson,
         Beam.status = status,

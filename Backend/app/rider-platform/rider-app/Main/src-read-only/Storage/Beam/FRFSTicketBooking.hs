@@ -5,13 +5,13 @@
 
 module Storage.Beam.FRFSTicketBooking where
 
+import qualified BecknV2.FRFS.Enums
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSTicketBooking
-import qualified Domain.Types.Station
 import Kernel.External.Encryption
-import Kernel.Prelude hiding (sequence)
+import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
@@ -50,12 +50,13 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     quoteId :: B.C f Kernel.Prelude.Text,
     refundAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     riderId :: B.C f Kernel.Prelude.Text,
+    routeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     searchId :: B.C f Kernel.Prelude.Text,
     stationsJson :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
     toStationId :: B.C f Kernel.Prelude.Text,
     validTill :: B.C f Kernel.Prelude.UTCTime,
-    vehicleType :: B.C f Domain.Types.Station.FRFSVehicleType,
+    vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

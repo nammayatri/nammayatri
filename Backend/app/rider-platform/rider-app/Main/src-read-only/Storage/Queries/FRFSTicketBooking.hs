@@ -10,7 +10,7 @@ import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.Prelude hiding (sequence)
+import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import Kernel.Types.Error
@@ -159,6 +159,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId),
       Se.Set Beam.refundAmount refundAmount,
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
+      Se.Set Beam.routeId (Kernel.Types.Id.getId <$> routeId),
       Se.Set Beam.searchId (Kernel.Types.Id.getId searchId),
       Se.Set Beam.stationsJson stationsJson,
       Se.Set Beam.status status,

@@ -8,9 +8,11 @@ import qualified Domain.Types.FRFSConfig
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.Prelude hiding (sequence)
+import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Time
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSConfig as Beam
@@ -35,11 +37,13 @@ updateByPrimaryKey (Domain.Types.FRFSConfig.FRFSConfig {..}) = do
   updateWithKV
     [ Se.Set Beam.bookingEndTime bookingEndTime,
       Se.Set Beam.bookingStartTime bookingStartTime,
+      Se.Set Beam.busStationTtl (Kernel.Prelude.Just busStationTtl),
       Se.Set Beam.cancellationReasonId cancellationReasonId,
       Se.Set Beam.customDates customDates,
       Se.Set Beam.customEndTime customEndTime,
       Se.Set Beam.discount discount,
       Se.Set Beam.freeTicketInterval freeTicketInterval,
+      Se.Set Beam.isCancellationAllowed (Kernel.Prelude.Just isCancellationAllowed),
       Se.Set Beam.isEventOngoing isEventOngoing,
       Se.Set Beam.maxFreeTicketCashback maxFreeTicketCashback,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
@@ -58,11 +62,13 @@ instance FromTType' Beam.FRFSConfig Domain.Types.FRFSConfig.FRFSConfig where
         Domain.Types.FRFSConfig.FRFSConfig
           { bookingEndTime = bookingEndTime,
             bookingStartTime = bookingStartTime,
+            busStationTtl = Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 1800) busStationTtl,
             cancellationReasonId = cancellationReasonId,
             customDates = customDates,
             customEndTime = customEndTime,
             discount = discount,
             freeTicketInterval = freeTicketInterval,
+            isCancellationAllowed = Kernel.Prelude.fromMaybe True isCancellationAllowed,
             isEventOngoing = isEventOngoing,
             maxFreeTicketCashback = maxFreeTicketCashback,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -79,11 +85,13 @@ instance ToTType' Beam.FRFSConfig Domain.Types.FRFSConfig.FRFSConfig where
     Beam.FRFSConfigT
       { Beam.bookingEndTime = bookingEndTime,
         Beam.bookingStartTime = bookingStartTime,
+        Beam.busStationTtl = Kernel.Prelude.Just busStationTtl,
         Beam.cancellationReasonId = cancellationReasonId,
         Beam.customDates = customDates,
         Beam.customEndTime = customEndTime,
         Beam.discount = discount,
         Beam.freeTicketInterval = freeTicketInterval,
+        Beam.isCancellationAllowed = Kernel.Prelude.Just isCancellationAllowed,
         Beam.isEventOngoing = isEventOngoing,
         Beam.maxFreeTicketCashback = maxFreeTicketCashback,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,

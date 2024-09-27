@@ -8,18 +8,21 @@ module Storage.Beam.FRFSConfig where
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import Kernel.External.Encryption
-import Kernel.Prelude hiding (sequence)
+import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Time
 import Tools.Beam.UtilsTH
 
 data FRFSConfigT f = FRFSConfigT
   { bookingEndTime :: B.C f Kernel.Prelude.UTCTime,
     bookingStartTime :: B.C f Kernel.Prelude.UTCTime,
+    busStationTtl :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Seconds),
     cancellationReasonId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     customDates :: B.C f [Kernel.Prelude.Text],
     customEndTime :: B.C f Kernel.Prelude.Text,
     discount :: B.C f Kernel.Prelude.Int,
     freeTicketInterval :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    isCancellationAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isEventOngoing :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     maxFreeTicketCashback :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     merchantId :: B.C f Kernel.Prelude.Text,

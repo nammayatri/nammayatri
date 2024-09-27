@@ -20,7 +20,8 @@ BecknConfig:
     settlementType: Maybe Text
     paymentParamsJson: Maybe Text
     vehicleCategory: VehicleCategory|NoRelation
-    collectedBy: PaymentCollectedBy
+    collectedBy: Network
+    verifiedBy: Network
     staticTermsUrl: Maybe BaseUrl
     buyerFinderFee: Maybe Text # becomes redundant
     settlementWindow: Maybe Text
@@ -34,15 +35,19 @@ BecknConfig:
     trackTTLSec: Maybe Int
     ratingTTLSec: Maybe Int
     cancelTTLSec: Maybe Int
+    provider: Provider
 
   types:
-
-    PaymentCollectedBy:
+    Provider:
+      enum: "ONDC, EBIX"
+    Network:
       enum: "BAP, BPP"
 
   default:
     vehicleCategory: "'CAB'"
+    provider: "'ONDC'"
     collectedBy: "'BPP'"
+    verifiedBy: "'BPP'"
 
   queries:
     findByMerchantIdAndDomain:
@@ -65,15 +70,21 @@ BecknConfig:
     gatewayUrl: Text
     registryUrl: Text
     staticTermsUrl: Maybe Text
+    provider: Maybe Provider
+    verifiedBy: Maybe Network
 
   toTType:
     subscriberUrl: showBaseUrl|I
     gatewayUrl: showBaseUrl|I
     registryUrl: showBaseUrl|I
     staticTermsUrl: (Kernel.Prelude.fmap showBaseUrl)|I
+    provider: Kernel.Prelude.Just|I
+    verifiedBy: Kernel.Prelude.Just|I
 
   fromTType:
     subscriberUrl: parseBaseUrl|MI
     gatewayUrl: parseBaseUrl|IM
     registryUrl: parseBaseUrl|MI
+    provider: Kernel.Prelude.fromMaybe Domain.Types.BecknConfig.ONDC|I
+    verifiedBy: Kernel.Prelude.fromMaybe Domain.Types.BecknConfig.BPP|I
     staticTermsUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI

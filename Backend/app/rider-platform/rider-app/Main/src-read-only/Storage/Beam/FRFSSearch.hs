@@ -5,27 +5,28 @@
 
 module Storage.Beam.FRFSSearch where
 
+import qualified BecknV2.FRFS.Enums
 import qualified Database.Beam as B
 import Domain.Types.Common ()
-import qualified Domain.Types.Station
 import Kernel.External.Encryption
-import Kernel.Prelude hiding (sequence)
+import Kernel.Prelude
 import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FRFSSearchT f = FRFSSearchT
-  { fromStationId :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    quantity :: B.C f Kernel.Prelude.Int,
-    riderId :: B.C f Kernel.Prelude.Text,
-    toStationId :: B.C f Kernel.Prelude.Text,
-    vehicleType :: B.C f Domain.Types.Station.FRFSVehicleType,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { fromStationId :: (B.C f Kernel.Prelude.Text),
+    id :: (B.C f Kernel.Prelude.Text),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    partnerOrgId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    partnerOrgTransactionId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    quantity :: (B.C f Kernel.Prelude.Int),
+    riderId :: (B.C f Kernel.Prelude.Text),
+    routeId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    toStationId :: (B.C f Kernel.Prelude.Text),
+    vehicleType :: (B.C f BecknV2.FRFS.Enums.VehicleCategory),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -35,6 +36,6 @@ instance B.Table FRFSSearchT where
 
 type FRFSSearch = FRFSSearchT Identity
 
-$(enableKVPG ''FRFSSearchT ['id] [['riderId]])
+$(enableKVPG (''FRFSSearchT) [('id)] [[('riderId)]])
 
-$(mkTableInstances ''FRFSSearchT "frfs_search")
+$(mkTableInstances (''FRFSSearchT) "frfs_search")

@@ -2,6 +2,7 @@ module BecknV2.FRFS.Utils where
 
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec hiding (Domain)
+import qualified BecknV2.OnDemand.Enums as BecknSpec
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import Data.Time
@@ -150,3 +151,8 @@ validateCoreVersion context = do
   version <- context.contextVersion & fromMaybeM (Error.InvalidRequest "Missing contextVersion")
   unless (version == supportedVersion) $
     throwError Error.UnsupportedCoreVer
+
+frfsVehicleCategoryToBecknVehicleCategory :: Spec.VehicleCategory -> BecknSpec.VehicleCategory
+frfsVehicleCategoryToBecknVehicleCategory = \case
+  Spec.BUS -> BecknSpec.BUS
+  Spec.METRO -> BecknSpec.METRO
