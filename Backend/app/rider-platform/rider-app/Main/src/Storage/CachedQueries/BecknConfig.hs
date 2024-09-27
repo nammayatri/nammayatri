@@ -14,7 +14,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.BecknConfig
-  ( findAll,
+  ( findAllForMetro,
     findByMerchantIdDomainAndVehicle,
   )
 where
@@ -30,8 +30,8 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.BecknConfig as BeamM
 import qualified Storage.Queries.BecknConfig as Queries
 
-findAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [BecknConfig]
-findAll = findAllWithKV [Se.Is BeamM.id $ Se.Not $ Se.Eq $ getId ""]
+findAllForMetro :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => VehicleCategory -> m [BecknConfig]
+findAllForMetro vehicleCategory = findAllWithKV [Se.Is BeamM.vehicleCategory $ Se.Eq vehicleCategory]
 
 findByMerchantIdDomainAndVehicle :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Text -> VehicleCategory -> m (Maybe BecknConfig)
 findByMerchantIdDomainAndVehicle merchantId domain vehicle = do

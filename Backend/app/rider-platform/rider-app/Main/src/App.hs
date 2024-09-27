@@ -18,6 +18,7 @@ import qualified App.Server as App
 import Client.Main as CM
 import qualified Data.Bool as B
 import qualified Data.Text as T
+import qualified Domain.Types.BecknConfig as BecknCfg
 import Environment
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
@@ -122,7 +123,7 @@ runRiderApp' appCfg = do
         _ <- liftIO $ createCAC appCfg
         -- Load FRFS BAPs
         frfsBap <-
-          try QBecknConfig.findAll
+          try (QBecknConfig.findAllForMetro BecknCfg.METRO)
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allFRFSSubIds = map ((.subscriberId) &&& (.uniqueKeyId)) frfsBap
         flowRt' <-
