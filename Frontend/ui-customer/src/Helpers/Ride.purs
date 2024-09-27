@@ -16,6 +16,8 @@
 module Helpers.Ride where
 
 import Prelude
+import Language.Strings (getString)
+import Language.Types as LT
 import Types.App (FlowBT, ScreenType(..))
 import Control.Monad.Except (runExcept)
 import JBridge
@@ -52,7 +54,82 @@ import Data.Array as DA
 import Screens.Types as ST
 import Engineering.Helpers.Commons as EHC
 import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
+import Components.ServiceTierCard.View as ServiceTierCard
+import Helpers.Utils hiding (withinTimeRange)
+import Data.Int as INT
+import Language.Types (STR(..)) as STR
+import Language.Strings (getVarString)
+import PrestoDOM
+import Screens.RideBookingFlow.HomeScreen.Config (getFareUpdatedStr)
 import DecodeUtil
+
+customerFeedbackPillData :: RideBookingRes -> String -> Array (Array (Array ST.FeedbackItem))
+customerFeedbackPillData (RideBookingRes state) vehicalVariant = [ feedbackPillDataWithRating1 (RideBookingRes state), feedbackPillDataWithRating2 (RideBookingRes state), feedbackPillDataWithRating3 vehicalVariant, feedbackPillDataWithRating4 vehicalVariant, feedbackPillDataWithRating5 vehicalVariant ]
+
+feedbackPillDataWithRating1 :: RideBookingRes -> Array (Array ST.FeedbackItem)
+feedbackPillDataWithRating1 (RideBookingRes state) =
+  [ [ { id: "6", text: getString LT.RUDE_DRIVER }
+    , { id: "1", text: getString LT.FELT_UNSAFE }
+    ]
+  , [ { id: "6", text: getString LT.RECKLESS_DRIVING }
+    , { id: "6", text: getString LT.DRIVER_CHARGED_MORE }
+    ]
+  , ( [ { id: "15", text: getString LT.TRIP_DELAYED } ] <> acNotWorkingPill (RideBookingRes state)
+    )
+  ]
+
+acNotWorkingPill :: RideBookingRes -> Array ST.FeedbackItem
+acNotWorkingPill (RideBookingRes state) =
+  ( case state.serviceTierName of
+      Just serviceTierName ->
+        if ServiceTierCard.showACDetails serviceTierName Nothing then
+          [ { id: "14", text: getString LT.AC_TURNED_OFF } ]
+        else
+          []
+      Nothing -> []
+  )
+
+feedbackPillDataWithRating2 :: RideBookingRes -> Array (Array ST.FeedbackItem)
+feedbackPillDataWithRating2 (RideBookingRes state) = feedbackPillDataWithRating1 (RideBookingRes state)
+
+feedbackPillDataWithRating3 :: String -> Array (Array ST.FeedbackItem)
+feedbackPillDataWithRating3 vehicalVariant =
+  [ [ { id: "8", text: getString LT.UNPROFESSIONAL_DRIVER }
+    , { id: "8", text: getString LT.RASH_DRIVING }
+    ]
+  , [ { id: "8", text: getString LT.DRIVER_CHARGED_MORE }
+    , { id: "11", text: if vehicalVariant == "AUTO_RICKSHAW" then getString LT.UNCOMFORTABLE_AUTO else getString LT.UNCOMFORTABLE_CAB }
+    ]
+  , [ { id: "3", text: getString LT.TRIP_GOT_DELAYED }
+    , { id: "3", text: getString LT.FELT_UNSAFE }
+    ]
+  ]
+
+feedbackPillDataWithRating4 :: String -> Array (Array ST.FeedbackItem)
+feedbackPillDataWithRating4 vehicalVariant =
+  [ [ { id: "9", text: getString LT.POLITE_DRIVER }
+    , { id: "9", text: getString LT.EXPERT_DRIVING }
+    ]
+  , [ { id: "9", text: getString LT.ASKED_FOR_EXTRA_FARE }
+    , { id: "11", text: if vehicalVariant == "AUTO_RICKSHAW" then getString LT.UNCOMFORTABLE_AUTO else getString LT.UNCOMFORTABLE_CAB }
+    ]
+  , [ { id: "4", text: getString LT.TRIP_GOT_DELAYED }
+    , { id: "4", text: getString LT.SAFE_RIDE }
+    ]
+  ]
+
+feedbackPillDataWithRating5 :: String -> Array (Array ST.FeedbackItem)
+feedbackPillDataWithRating5 vehicalVariant =
+  [ [ { id: "10", text: getString LT.POLITE_DRIVER }
+    , { id: "5", text: getString LT.EXPERT_DRIVING }
+    ]
+  , [ { id: "12", text: if vehicalVariant == "AUTO_RICKSHAW" then getString LT.CLEAN_AUTO else getString LT.CLEAN_CAB }
+    , { id: "10", text: getString LT.ON_TIME }
+    ]
+  , [ { id: "10", text: getString LT.SKILLED_NAVIGATOR }
+    , { id: "5", text: getString LT.SAFE_RIDE }
+    ]
+  ]
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
@@ -78,7 +155,6 @@ checkRideStatus rideAssigned = do
               state
                 { data
                     { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) (fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || isJust otpCode) state.data.driverInfoCardState
-                    , finalAmount = fromMaybe 0 $ (fromMaybe dummyRideAPIEntity (head resp.rideList) )^. _computedPrice
                     , sourceAddress = getAddressFromBooking resp.fromLocation
                     , destinationAddress = getAddressFromBooking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.dropLocation))
                     , fareProductType = fareProductType
@@ -157,7 +233,7 @@ checkRideStatus rideAssigned = do
                 setValueToLocalStore TRACKING_ENABLED "True"
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true,isInApp = true, isOtpRideFlow = true }}) else
                 pure unit
-      else if ((getValueToLocalStore RATING_SKIPPED) == "false") then do
+      else if ((getValueToLocalStore RATING_SKIPPED) == "false" ) then do
         updateLocalStage HomeScreen
         rideBookingListResponse <- lift $ lift $ Remote.rideBookingListWithStatus "1" "0" "COMPLETED" Nothing
         case rideBookingListResponse of
@@ -195,6 +271,8 @@ checkRideStatus rideAssigned = do
                   postRideCheckCache = SU.getPostRideCheckSettingsFromCache ""
                   hasSafetyIssue' = maybe false (\settings -> SU.showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime settings.safetyCheckStartSeconds settings.safetyCheckEndSeconds settings.enablePostRideSafetyCheck && not isBlindPerson) postRideCheckCache
                   hasTollIssue' =  (any (\(FareBreakupAPIEntity item) -> item.description == "TOLL_CHARGES") resp.estimatedFareBreakup) && not isBlindPerson
+                  waitingChargesApplied = isJust $ DA.find (\entity  -> entity ^._description == "WAITING_OR_PICKUP_CHARGES") ((RideBookingRes resp) ^._fareBreakup)
+                  isRecentRide = EHC.getExpiryTime (fromMaybe "" ((RideBookingRes resp) ^. _rideEndTime)) true / 60 < state.data.config.safety.pastRideInterval
 
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
                     props { currentStage = RideCompleted
@@ -228,7 +306,6 @@ checkRideStatus rideAssigned = do
                                             Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
                                             Nothing        -> ""
                           }
-                          , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
                           , driverInfoCardState {
                             price = resp.estimatedTotalFare,
                             rideId = currRideListItem.id,
@@ -268,6 +345,82 @@ checkRideStatus rideAssigned = do
                         }
                       }
                     )
+
+                modifyScreenState
+                  $ RiderRideCompletedScreenStateType
+                      ( \riderRideCompletedScreen ->
+                          riderRideCompletedScreen
+                            {
+                              topCard {
+                                title = getString LT.RIDE_COMPLETED,
+                                finalAmount = (fromMaybe 0 currRideListItem.computedPrice),
+                                initialAmount = resp.estimatedTotalFare,
+                                fareUpdatedVisiblity = (fromMaybe 0 currRideListItem.computedPrice) /= resp.estimatedTotalFare && contents.estimatedDistance /= Nothing,
+                                infoPill {
+                                  text = getFareUpdatedStr differenceOfDistance waitingChargesApplied,
+                                  imageVis = VISIBLE,
+                                  visible = if (fromMaybe 0 currRideListItem.computedPrice) == resp.estimatedTotalFare || contents.estimatedDistance == Nothing then GONE else VISIBLE
+                                }
+                              }
+                            , driverInfoCardState
+                                {
+                                  driverName =  currRideListItem.driverName,
+                                  isAlreadyFav = resp.isAlreadyFav,
+                                  favCount = resp.favCount
+                                }
+                            , showSafetyCenter = state.data.config.feature.enableSafetyFlow && isRecentRide && not state.props.isSafetyCenterDisabled
+                            , rideDuration = resp.duration
+                            , rentalRowDetails
+                              { rideTime = getString LT.RIDE_TIME
+                              , rideDistance = getString LT.RIDE_DISTANCE
+                              , rideDistanceInfo = "( " <> getString LT.CHARGEABLE <> " / " <> getString LT.BOOKED <> " )"
+                              , rideStartedAt = getString LT.RIDE_STARTED_AT
+                              , rideEndedAt = getString LT.RIDE_ENDED_AT
+                              , estimatedFare = getString LT.ESTIMATED_FARE
+                              , extraTimeFare = getString LT.EXTRA_TIME_FARE
+                              , extraDistanceFare = getString LT.EXTRA_DISTANCE_FARE
+                              , totalFare = getString LT.TOTAL_FARE
+                              , rideDetailsTitle = getString LT.RIDE_DETAILS
+                              , fareUpdateTitle = getString LT.FARE_UPDATE
+                              , surcharges = getString LT.SURCHARGES
+                              }
+                            , rentalBookingData
+                              { baseDuration = (fromMaybe 0 resp.estimatedDuration) / (60*60)
+                              , baseDistance = (fromMaybe 0 resp.estimatedDistance) / 1000
+                              , finalDuration = (fromMaybe 0 resp.duration) / (60)
+                              , finalDistance = (fromMaybe 0 ride.chargeableRideDistance)/1000
+                              , rideStartedAt = case currRideListItem.rideStartTime of
+                                                  Just startTime -> (convertUTCtoISC startTime "h:mm A")
+                                                  Nothing        -> ""
+                              , rideEndedAt = case currRideListItem.rideEndTime of
+                                                Just endTime   -> " " <>(convertUTCtoISC endTime "h:mm A")
+                                                Nothing        -> ""
+                              , extraTimeFare = show $ getFareFromArray fareBreakup "TIME_BASED_FARE"
+                              , extraDistanceFare = show $ getFareFromArray fareBreakup "DIST_BASED_FARE"
+                              }
+                            , showRentalRideDetails = state.data.fareProductType == FPT.RENTAL
+                            , ratingCard
+                              {
+                                feedbackPillData = customerFeedbackPillData (RideBookingRes resp) ride.vehicleVariant
+                              }
+                            , rideRatingState
+                                { driverName = currRideListItem.driverName
+                                , rideId = currRideListItem.id
+                                , distanceDifference = differenceOfDistance
+                                , rideStartTime = case currRideListItem.rideStartTime of
+                                                    Just startTime -> (convertUTCtoISC startTime "h:mm A")
+                                                    Nothing        -> ""
+                                , rideEndTime = case currRideListItem.rideEndTime of
+                                                  Just endTime   -> " " <>(convertUTCtoISC endTime "h:mm A")
+                                                  Nothing        -> ""
+                                }
+                            , ratingViewState
+                                { rideBookingRes = (RideBookingRes resp)
+                                }
+                            , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
+                            , bookingId = resp.id
+                          }
+                      )
                 updateLocalStage RideCompleted
               when (length listResp.list == 0 && not state.props.isSharedLocationFlow) $ do 
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})

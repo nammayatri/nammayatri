@@ -41,9 +41,9 @@ import JBridge (Location)
 import Language.Types (STR(..))
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
-import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
+import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..), Accessiblity(..))
 import RemoteConfig as RC
-import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes, RideShareOptions)
+import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes, RideShareOptions, LocationAPIEntity(..))
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent, ChatContacts)
 import Screens(ScreenName)
@@ -54,10 +54,16 @@ import Data.Map as DM
 import MerchantConfig.Types as MRC
 import Services.API as API
 import Common.RemoteConfig.Types as CRT
+import Common.Types.App (FeedbackAnswer)
 
 type Contacts = {
   name :: String,
   number :: String
+}
+
+type FeedbackItem = { 
+    id :: String
+  , text :: String
 }
 
 type NewContacts = {
@@ -314,7 +320,7 @@ type TripDetailsScreenProps =
     isContactSupportPopUp :: Boolean
   }
 
-data TripDetailsGoBackType = Home | MyRides | HelpAndSupport | ReportIssueChat
+data TripDetailsGoBackType = Home | MyRides | HelpAndSupport | ReportIssueChat | RideCompletedScreen
 derive instance genericTripDetailsGoBackType :: Generic TripDetailsGoBackType _
 instance showTripDetailsGoBackType :: Show TripDetailsGoBackType where show = genericShow
 instance eqTripDetailsGoBackType :: Eq TripDetailsGoBackType where eq = genericEq
@@ -536,6 +542,104 @@ data PermissionScreenStage = NORMAL | LOCATION_DISABLED | INTERNET_ACTION | LOCA
 derive instance genericPermissionScreenStage :: Generic PermissionScreenStage _
 instance eqPermissionScreenStage :: Eq PermissionScreenStage where eq = genericEq
 instance showPermissionScreenStage :: Show PermissionScreenStage where show = genericShow
+
+
+-- ################################################ Rider RideCompletedScreen ##################################################
+
+type RiderRideCompletedScreenState =
+  {
+    topCard :: TopCard
+  , favDriverInfoCard :: Boolean
+  , isFreeRide :: Boolean
+  , accessibility :: Accessiblity
+  , isRatingCard :: Boolean 
+  , ratingCard :: RiderRatingCard
+  , driverInfoCardState :: DriverInfoCard
+  , needHelpText :: String
+  , recordedView :: Boolean
+  , timerId :: String
+  , showSafetyCenter :: Boolean
+  , timerValue :: String
+  , countDownValue :: String
+  , showRentalRideDetails :: Boolean
+  , rentalRowDetails :: RentalRowConfig
+  , rentalBookingData :: CTA.RentalBookingConfig
+  , rideRatingState :: RatingCard
+  , ratingViewState :: RatingViewState
+  , isSafetyCenterDisabled :: Boolean
+  , bookingId :: String
+  , config :: AppConfig
+  , rideDuration :: Maybe Int
+  }
+
+type RentalRowConfig = {
+    rideTime :: String
+  , rideDistance :: String
+  , rideDistanceInfo :: String
+  , rideStartedAt :: String
+  , rideEndedAt :: String
+  , estimatedFare :: String
+  , extraTimeFare :: String
+  , extraDistanceFare :: String
+  , totalFare :: String
+  , rideDetailsTitle :: String
+  , fareUpdateTitle :: String
+  , surcharges :: String
+}
+
+type TopCard = {
+  title :: String,
+  finalAmount :: Int,
+  initialAmount :: Int,
+  fareUpdatedVisiblity :: Boolean,
+  infoPill :: FareUpdatePill
+}
+
+type TopPill = {
+  visible :: Boolean,
+  background :: String,
+  text :: String,
+  textColor :: String,
+  icon :: Maybe String
+}
+
+type RatingState = {
+    rideBookingRes :: RideBookingRes
+}
+
+type FareUpdatePill =
+  {
+    text :: String
+  , imageVis :: Visibility
+  , visible :: Visibility
+  }
+
+type RiderRatingCard =
+  {
+    rating :: Int 
+  , rideId :: String
+  , isRecording :: Boolean
+  , favDriver :: Boolean
+  , distanceDifference :: Int
+  , feedbackList :: Array FeedbackAnswer
+  , feedbackPillData :: Array (Array (Array FeedbackItem)) 
+  , recordAudioState :: RecordAudioState
+  , feedbackText :: String
+  }
+
+type RecordAudioState = {
+    isRecording :: Boolean 
+  , timer :: String
+  , recordingDone :: Boolean
+  , isUploading   :: Boolean
+  , recordedFile  :: Maybe String
+  , openAddAudioModel :: Boolean
+  , uploadedAudioId :: Maybe String
+  , recordedAudioUrl :: Maybe String
+  , isListening :: Boolean
+  , pauseLootie :: Boolean
+}
+
 -- ######################################  HomeScreenState   ######################################
 
 data Stage = HomeScreen
@@ -600,9 +704,6 @@ type HomeScreenStateData =
   {
     suggestedAmount :: Int
   , isBookingUpdated :: Boolean
-  , finalAmount :: Int
-  , startedAt :: String
-  , endedAt :: String
   , source :: String
   , destination :: String
   , eta :: String
@@ -1377,6 +1478,9 @@ type DriverInfoCard =
   , addressWard :: Maybe String
   , currentChatRecipient :: ChatContacts
   , hasToll :: Boolean
+  , isAlreadyFav :: Boolean
+  , favCount :: Int
+  , rideDuration :: Maybe Int
   }
 
 type RatingCard =
@@ -1428,13 +1532,51 @@ type SavedLocationScreenProps =
   , apiRespReceived :: Boolean
   }
 
+type FavouriteDriverTripsState =
+  {
+    data :: FavouriteDriverTripsData
+  }
+
+type FavouriteDriverTripsData =
+  {
+    driverNumber :: String
+  , driverName :: String
+  , driverId :: Maybe String
+  , details :: Array Details 
+  }
+
+type Details =
+  {    
+    rideRating :: Maybe Int
+  , fromLocation :: LocationAPIEntity
+  , toLocation :: Maybe LocationAPIEntity
+  , totalFare :: Maybe Int
+  , startTime :: Maybe String
+  , id :: Maybe String
+  }
+
 type SavedLocationScreenData =
   {
     savedLocations :: Array LocationListItemState
   , deleteTag :: Maybe String
   , config :: AppConfig
   , logField :: Object Foreign
+  , favouriteDriversList :: Array FavouriteDriverListItemState
+  , current :: String 
+  , driverNo :: String
+  , driverName :: String
+  , driverId :: Maybe String
   }
+
+type FavouriteDriverListItemState = {
+    driverName :: String
+  , driverPhone :: String
+  , driverRating :: Number
+  , favCount :: Int
+  , id :: Maybe String
+}
+
+data FavouriteDriverTripsType = SavedLocations
 
 type DistInfo =
   { locationName :: String
@@ -2346,6 +2488,7 @@ type NammaSafetyScreenData =  {
   shareOptionCurrent :: RideShareOptions,
   hasCompletedSafetySetup :: Boolean,
   emergencyContactsList :: Array NewContacts,
+  fromScreen :: String,
   sosId :: String,
   rideId :: String,
   videoPath :: String,

@@ -66,6 +66,7 @@ import MerchantConfig.Types
 import RemoteConfig.Types as RC
 import Services.API as API
 import Styles.Types (FontSize)
+import Common.Types.App (CalendarDate)
 import Common.RemoteConfig.Types as CommonRC
 import Common.RemoteConfig.Types (OfferBanner(..)) as ReExport
 
@@ -473,7 +474,31 @@ type DriverProfileScreenData = {
   cancelledRides :: Int,
   cancellationWindow :: Maybe Int,
   missedEarnings :: Int,
-  driverInfoResponse :: Maybe GetDriverInfoResp
+  driverInfoResponse :: Maybe GetDriverInfoResp,
+  completingProfileRes :: CompletingProfileRes,
+  favCount :: Maybe Int
+}
+
+type CompletingProfileRes = {
+    completed :: Int
+  , pledge :: Array String
+  , vehicalOffer :: Array String
+  , languages :: Array String
+  , aspirations :: Array String
+  , homeTown :: Maybe String
+  , calendarState :: CalendarState
+  , drivingSince :: Maybe Int
+  , viewImageState :: ViewImageState
+  , addImagesState :: {
+    images :: Array Image,
+    stateChanged :: Boolean,
+    isLoading :: Boolean,
+    imageMediaIds :: Array String
+  }
+  , datePickerState :: DatePickersState
+  , uploadedImagesIds :: Array String
+  , addedImages :: Array { image :: String, imageName :: String }
+  , inputTextState :: InputTextState
 }
 
 type RcData = {
@@ -2008,6 +2033,64 @@ type DocumentDetailsScreenData = {
 
 type DocumentDetailsScreenProps = {
 
+}
+
+type DriverCompleteProfileScreenState = {
+  data :: DriverCompleteProfileScreenData,
+  props :: DriverCompleteProfileScreenProps
+}
+
+type DriverCompleteProfileScreenData = {
+    pledge :: Array String
+  , vehicalOffer :: Array String
+  , languages :: Array String
+  , aspirations :: Array String
+  , homeTown :: Maybe String
+  , calendarState :: CalendarState
+  , drivingSince :: Maybe Int
+  , viewImageState :: ViewImageState
+  , addImagesState :: {
+    images :: Array Image,
+    stateChanged :: Boolean,
+    isLoading :: Boolean,
+    imageMediaIds :: Array String
+  }
+  , datePickerState :: DatePickersState
+  , uploadedImagesIds :: Array String
+  , addedImages :: Array { image :: String, imageName :: String }
+  , inputTextState :: InputTextState
+}
+
+data Component = Pledge | Aspirations | Empty
+
+derive instance genericComponent :: Generic Component _
+instance eqComponent :: Eq Component where eq = genericEq
+type InputTextState = {
+  feedback :: String,
+  component :: Component,
+  others :: Others
+}
+
+type Others = {
+  pledge :: String,
+  aspirations :: String
+}
+
+type DriverCompleteProfileScreenProps = {
+  showImageModel :: Boolean,
+  showViewImageModel :: Boolean,
+  showInputTextView :: Boolean
+}
+
+type DatePickersState = {
+    activeIndex :: Int 
+  , dates :: Array CalendarDate
+  , id :: String
+}
+
+type ViewImageState = {
+   image :: String,
+   imageName :: Maybe String
 }
 
 type BookingOptionsScreenState = {

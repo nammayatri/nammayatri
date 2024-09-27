@@ -27,6 +27,7 @@ import DecodeUtil (getAnyFromWindow)
 import Language.Types (STR(..))
 import Screens.EmergencyContactsScreen.ScreenData (neverShareRideOption)
 import Common.Types.App as CTA
+import Screens (ScreenName(..), getScreen)
 
 initData :: NammaSafetyScreenState
 initData =
@@ -46,6 +47,7 @@ initData =
         , updateActionType: ""
         , videoPath: ""
         , emergencyContactsList: []
+        , fromScreen : getScreen HOME_SCREEN
         , removedContactDetail:
             { isSelected: false
             , name: ""

@@ -159,6 +159,7 @@ myRideListTransform state listRes =
                   , faresList: updatedFareList
                   , config: config
                   , email: ""
+                  , fromScreen: state.data.fromScreen
                   , description: ""
                   , accountStatus: ACTIVE
                   , vehicleVariant: fetchVehicleVariant ((fromMaybe dummyRideAPIEntity (ride.rideList !! 0)) ^. _vehicleVariant)

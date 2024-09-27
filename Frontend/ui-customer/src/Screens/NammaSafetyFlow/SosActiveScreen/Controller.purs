@@ -41,6 +41,7 @@ import Data.String as DS
 import Common.Types.App as CTA
 import Components.Safety.SafetyAudioRecording as SafetyAudioRecording
 import Common.Resources.Constants as Constants
+import Data.Function.Uncurried (runFn3, runFn4)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -271,6 +272,6 @@ handleMediaPlayerRestart :: ST.NammaSafetyScreenState -> Eval Action ScreenOutpu
 handleMediaPlayerRestart state = continueWithCmd state { props { triggerSiren = true } }
         [ do
             push <- getPushFn Nothing "SosActiveScreen"
-            void $ pure $ runFn3 JB.startAudioPlayer "ny_ic_sos_danger_full" push OnAudioCompleted
+            void $ pure $ runFn4 JB.startAudioPlayer "ny_ic_sos_danger_full" push OnAudioCompleted "0"
             pure NoAction
         ]

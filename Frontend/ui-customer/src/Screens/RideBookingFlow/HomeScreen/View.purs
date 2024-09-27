@@ -65,7 +65,6 @@ import Components.PricingTutorialModel as PricingTutorialModel
 import Components.PrimaryButton as PrimaryButton
 import Components.QuoteListModel.View as QuoteListModel
 import Components.RateCard as RateCard
-import Components.RatingCard as RatingCard
 import Components.Referral as ReferralComponent
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideCompletedCard as RideCompletedCard
@@ -328,6 +327,7 @@ screen initialState =
               PickUpFarFromCurrentLocation -> 
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
               RideAccepted -> do
+                void $ pure $ setValueToLocalStore RATING_SKIPPED "false"
                 when 
                   (initialState.data.config.notifyRideConfirmationConfig.notify && any (_ == getValueToLocalStore NOTIFIED_CUSTOMER) ["false" , "__failed" , "(null)"])
                     $ startTimer 5 "notifyCustomer" "1" push NotifyDriverStatusCountDown
@@ -627,8 +627,6 @@ view push state =
             , if state.props.showLiveDashboard then showLiveStatsDashboard push state else emptyTextView state
             , if state.props.showCallPopUp then (driverCallPopUp push state) else emptyTextView state
             , if state.props.cancelSearchCallDriver then cancelSearchPopUp push state else emptyTextView state
-            , if state.props.currentStage == RideCompleted || state.props.currentStage == RideRating then rideCompletedCardView push state else emptyTextView state
-            , if state.props.currentStage == RideRating then rideRatingCardView state push else emptyTextView state
             , if state.props.showRateCard then (rateCardView push state) else emptyTextView state
             -- , if state.props.zoneTimerExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
@@ -770,14 +768,6 @@ getCarouselConfig view state banners =
   , layoutHeight : V 137
   , overlayScrollIndicator : false
 }
-
-rideCompletedCardView ::  forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-rideCompletedCardView push state = 
-  linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , accessibility if state.props.currentStage == RideRating then DISABLE_DESCENDANT else DISABLE
-  ][  RideCompletedCard.view (rideCompletedCardConfig state) (push <<< RideCompletedAC)]
 
 disabilityPopUpView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 disabilityPopUpView push state = 
@@ -1630,18 +1620,6 @@ rideRequestFlowView push state =
 
 isStageInList :: Stage -> Array Stage -> Boolean
 isStageInList stage = any (_ == stage)
-
--------------- rideRatingCardView -------------
-rideRatingCardView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-rideRatingCardView state push =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , gravity BOTTOM
-    , background Color.transparent
-    ]
-    [ RatingCard.view (push <<< RatingCardAC) $ ratingCardViewState state
-    ]
 
 commonTextView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> PrestoDOM (Effect Unit) w
 commonTextView state push text' color' fontStyle marginTop =

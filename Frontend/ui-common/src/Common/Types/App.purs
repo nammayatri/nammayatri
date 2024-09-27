@@ -519,6 +519,7 @@ type DisplayBase64ImageConig = {
   , id :: String
   , scaleType :: String
   , inSampleSize :: Int -- reduce image qulaity by this factor (highValue = low quality)
+  , adjustViewBounds :: Boolean  
 }
 
 type CircleRippleConfig = {

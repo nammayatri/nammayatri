@@ -33,7 +33,6 @@ import Components.LocationTagBar as LocationTagBarController
 import Components.LocationTagBarV2 as LocationTagBarV2Controller
 import Components.MenuButton as MenuButton
 import Components.MenuButton as MenuButton
-import Components.RideCompletedCard.Controller as RideCompletedCard
 import Components.MenuButton.Controller (Action(..)) as MenuButtonController
 import Components.PopUpModal.Controller as PopUpModal
 import Components.PricingTutorialModel.Controller as PricingTutorialModelController
@@ -554,121 +553,6 @@ eval OnResumeCallback state =
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 
-------------------------------- Ride Completed Screen - Start --------------------------
-
-eval ( RideCompletedAC (RideCompletedCard.RateClick index)) state = do
-  void $ pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
-  continue
-    state
-      { props { currentStage = if state.data.driverInfoCardState.providerType == CTP.ONUS then RideRating else state.props.currentStage }
-      , data
-        { rideRatingState 
-            { rating = index
-            , feedbackList = state.data.rideRatingState.feedbackList
-            }
-          , ratingViewState { selectedRating = index }
-        }
-      }
-
-eval (RideCompletedAC(RideCompletedCard.BannerChanged idxStr)) state = 
-  case fromString idxStr of 
-    Just idx -> if idx == state.data.rideCompletedData.issueReportData.currentBannerIndex then update state else continue state {data {rideCompletedData { issueReportData {currentBannerIndex = idx}}}} 
-    Nothing -> update state
-
-eval (RideCompletedAC (RideCompletedCard.SelectButton selectedYes pageIndex)) state = do 
-  let 
-    availableBanners = issueReportBannerConfigs state
-    noOfAvailableBanners = length availableBanners 
-    bannerAtIndex = availableBanners !! pageIndex
-  
-  case bannerAtIndex of 
-    Just bannerObj -> do 
-      let 
-        issueType = bannerObj.issueType 
-        issueResponse = find (\obj -> obj.issueType == issueType) state.data.rideCompletedData.issueReportData.customerResponse 
-        issueResponseIndex = findIndex (\obj -> obj.issueType == issueType) state.data.rideCompletedData.issueReportData.customerResponse 
-      case issueResponse , issueResponseIndex of 
-        Just respObj, Just respIdx -> do
-          let 
-            updatedResponse = respObj {selectedYes = Just selectedYes}
-            updatedIssueResponseArr = updateAt respIdx updatedResponse state.data.rideCompletedData.issueReportData.customerResponse
-          case updatedIssueResponseArr of 
-            Just updatedIssueResponseArrObj -> do
-              let 
-                updatedState = state {data {rideCompletedData { issueReportData {customerResponse = updatedIssueResponseArrObj}}}}
-                userRespondedIssues = filter (\issueResp -> issueResp.selectedYes /= Nothing) updatedIssueResponseArrObj
-                userRespondedIssuesCount = length userRespondedIssues
-
-              if noOfAvailableBanners == userRespondedIssuesCount then do
-                continue updatedState{data {rideCompletedData { issueReportData {respondedValidIssues = true}}}}
-              else 
-                continue updatedState{data {rideCompletedData { issueReportData {currentPageIndex = if  (pageIndex + 1) < noOfAvailableBanners then pageIndex + 1 else pageIndex}}}}  
-            Nothing -> update state
-        _ , _ -> update state
-    Nothing -> update state
-
-
-eval (RideCompletedAC RideCompletedCard.Support) state = continue state {props {callSupportPopUp = true}}
-
-eval (RideCompletedAC RideCompletedCard.RideDetails) state = exit $ RideDetailsScreen state 
-
-eval (RideCompletedAC RideCompletedCard.HelpAndSupportAC) state = 
-  if state.data.config.feature.enableHelpAndSupport 
-    then exit $ GoToHelpAndSupport state
-    else continue state {props{isContactSupportPopUp = true}}
-
-eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC (PopUpModal.DismissPopup))) state = continue state{props{isContactSupportPopUp = false}}
-
-eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC (PopUpModal.OnSecondaryTextClick))) state =   
-    continueWithCmd state{props{isContactSupportPopUp = false}} [do
-        void $ openUrlInMailApp $ mailToLink <> (getAppConfig appConfig).appData.supportMail
-        pure NoAction
-    ]
-
-eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC (PopUpModal.OnButton1Click))) state = do
-    void $ pure $ showDialer (getSupportNumber "") false
-    continue state{props{isContactSupportPopUp = false}}
-
-eval (RideCompletedAC (RideCompletedCard.ContactSupportPopUpAC (PopUpModal.OnButton2Click))) state = continue state{props{isContactSupportPopUp = false}}
-
-eval (RideCompletedAC RideCompletedCard.GoToSOS) state = exit $ GoToNammaSafety state true false 
-
-eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = do
-  void $ pure $ toggleBtnLoader "SkipButton" false
-  if state.data.rideCompletedData.issueReportData.respondedValidIssues  && state.data.rideCompletedData.issueReportData.showIssueBanners then do
-    let 
-      negativeResp = filter (\issueResp -> issueResp.selectedYes == Just false) state.data.rideCompletedData.issueReportData.customerResponse
-
-      hasAssistenceIssue = any (\issueResp -> issueResp.issueType == CTP.Accessibility) negativeResp 
-      hasSafetyIssue = any (\issueResp -> issueResp.issueType == CTP.NightSafety) negativeResp
-      hasTollIssue = any (\issueResp -> issueResp.issueType == CTP.TollCharge) negativeResp
-
-      priorityIssue = case hasSafetyIssue, hasTollIssue of
-        true, _ -> CTP.NightSafety
-        false, true -> CTP.TollCharge
-        _, _ -> CTP.NoIssue
-
-      ratingUpdatedState = state {
-        data{
-          rideCompletedData {
-            issueReportData {
-              showIssueBanners = false
-            }
-          }
-        , ratingViewState{
-            wasOfferedAssistance = Just $ not hasAssistenceIssue
-          }
-        }
-      }
-    
-    if priorityIssue == CTP.NoIssue then
-      continue ratingUpdatedState 
-    else 
-      exit $ GoToIssueReportChatScreenWithIssue ratingUpdatedState priorityIssue
-  else do
-    void $ pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
-    if state.data.fareProductType == FPT.RENTAL then continue state{data{fareProductType = FPT.ONE_WAY}} 
-    else updateAndExit state $ SubmitRating state{ data {rideRatingState {rating = state.data.ratingViewState.selectedRating }}}
 
 ------------------------------- Ride Completed Screen - End --------------------------
 
@@ -1244,24 +1128,6 @@ eval (OnIconClick autoAssign) state = do
 eval PreferencesDropDown state = do
   continue state { data { showPreferences = not state.data.showPreferences}}
 
-eval (RatingCardAC (RatingCard.Rating index)) state = do
-  let feedbackListArr = if index == state.data.rideRatingState.rating then state.data.rideRatingState.feedbackList else []
-  continue state { data { rideRatingState { rating = index , feedbackList = feedbackListArr}, ratingViewState { selectedRating = index} } }
-
-eval (RatingCardAC (RatingCard.SelectPill feedbackItem id)) state = do
-  let newFeedbackList = updateFeedback id feedbackItem state.data.rideRatingState.feedbackList
-      filterFeedbackList = filter (\item -> length item.answer > 0) newFeedbackList
-  continue state { data { rideRatingState {  feedbackList = filterFeedbackList} } }
-
-eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.OnClick)) state = updateAndExit state $ SubmitRating state
-
-eval (RatingCardAC (RatingCard.PrimaryButtonAC PrimaryButtonController.NoAction)) state = continue state
-
-eval (RatingCardAC (RatingCard.FeedbackChanged value)) state = continue state { data { rideRatingState { feedback = value } } }
-
-eval (RatingCardAC (RatingCard.BackPressed)) state = do
-  _ <- pure $ updateLocalStage RideCompleted
-  continue state {props {currentStage = RideCompleted}}
 
 eval (SettingSideBarActionController (SettingSideBarController.PastRides)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_myrides_click"
@@ -1453,6 +1319,8 @@ eval (DriverInfoCardActionController (DriverInfoCardController.RideDurationTimer
 
 eval (RideDurationTimer timerID timeInHHMM _) state = 
   continue state{props{rideDurationTimerId = timerID, rideDurationTimer = timeInHHMM}}
+
+eval (DriverInfoCardActionController (DriverInfoCardController.GoToDriverProfile)) state = exit $ GoToDriverProfiles state 
 
 eval (SpecialZoneOTPExpiryAction seconds status timerID) state = do
   if status == "EXPIRED" then do
@@ -2688,7 +2556,7 @@ eval (UpdateBookingDetails (RideBookingRes response)) state = do
   
 eval (DriverInfoCardActionController (DriverInfoCardController.ShowEndOTP)) state = continue state { props { showEndOTP = true } }
 
-eval (ScheduledRideExistsAction (PopUpModal.OnButton2Click)) state = continue state{data{ startedAt = "", invalidBookingId = Nothing, maxEstimatedDuration = 0}, props{showScheduledRideExistsPopUp = false}}
+eval (ScheduledRideExistsAction (PopUpModal.OnButton2Click)) state = continue state{data{ invalidBookingId = Nothing, maxEstimatedDuration = 0}, props{showScheduledRideExistsPopUp = false}}
 
 eval (ReferralComponentAction componentAction) state =
   case componentAction of
@@ -3024,27 +2892,6 @@ checkPermissionAndUpdatePersonMarker state = do
       pure unit
     else pure unit
 
-updateFeedback :: String -> String -> Array FeedbackAnswer -> Array FeedbackAnswer
-updateFeedback feedbackId feedbackItem feedbackList =
-  if hasFeedbackId feedbackId feedbackList
-    then updateFeedbackAnswer feedbackId feedbackItem feedbackList
-    else addFeedbackAnswer feedbackId feedbackItem feedbackList
-  where
-    hasFeedbackId :: String -> Array FeedbackAnswer -> Boolean
-    hasFeedbackId fid list = any (\feedback -> feedback.questionId == fid) list
-
-    updateFeedbackAnswer :: String -> String -> Array FeedbackAnswer -> Array FeedbackAnswer
-    updateFeedbackAnswer fid newItem list =
-      map (\feedback ->
-        if feedback.questionId == fid
-                then feedback { answer = if newItem `elem` (feedback.answer) then filter (\x -> x /= newItem) feedback.answer else feedback.answer <> [newItem] }
-          else feedback
-        ) list
-
-    addFeedbackAnswer :: String -> String -> Array FeedbackAnswer -> Array FeedbackAnswer
-    addFeedbackAnswer fid newItem list = do
-      let config = {questionId : fid, answer : [newItem]}
-      list <> [config]
 
 showPersonMarker :: HomeScreenState -> String -> JB.Location -> Effect Unit
 showPersonMarker state marker location = do

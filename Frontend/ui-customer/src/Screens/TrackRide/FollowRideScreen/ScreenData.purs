@@ -223,4 +223,7 @@ mockDriverInfo =
   , addressWard : Nothing
   , currentChatRecipient : dummyChatRecipient
   , hasToll : false
+  , isAlreadyFav : false
+  , favCount : 0
+  , rideDuration : Just 0
   }

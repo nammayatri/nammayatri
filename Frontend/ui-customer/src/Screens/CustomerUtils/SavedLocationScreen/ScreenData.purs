@@ -27,6 +27,11 @@ initData = {
   , deleteTag : Nothing
   , config : getAppConfig appConfig
   , logField : empty
+  , favouriteDriversList : []
+  , current : "Drivers"
+  , driverNo : ""
+  , driverName : ""
+  , driverId : Nothing
   }
   , props : {
       showDeleteLocationModel : false

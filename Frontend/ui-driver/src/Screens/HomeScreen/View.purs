@@ -52,7 +52,7 @@ import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Foldable (for_)
 import Data.Function.Uncurried (runFn1, runFn2)
-import Data.Function.Uncurried (runFn3)
+import Data.Function.Uncurried (runFn3, runFn4)
 import Data.Int (ceil, toNumber, fromString)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe, isNothing)
@@ -2527,7 +2527,7 @@ playAudioAndLaunchMap push action state audioCompleted acRide requestedVehicleVa
     
   case audioUrl of
     Just url -> 
-      if needToTriggerMaps then void $ pure $ runFn3 JB.startAudioPlayer url push audioCompleted
+      if needToTriggerMaps then void $ pure $ runFn4 JB.startAudioPlayer url push audioCompleted "0"
       else pure unit
     Nothing -> do  
       void $ delay $ Milliseconds 2000.0

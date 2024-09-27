@@ -19,13 +19,13 @@ module Screens.SavedLocationScreen.Controller where
 import Prelude( class Show, pure, unit, bind, map, discard, show, not, void, ($),(==), (&&), (+), (/=), (<>), (||), (>=))
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import PrestoDOM (Eval, update, Visibility(..), continue, exit, continueWithCmd, updateAndExit)
-import Screens.Types(SavedLocationScreenState, SavedLocationData, LocationListItemState, LocationItemType(..))
+import Screens.Types(SavedLocationScreenState, SavedLocationData, LocationListItemState, LocationItemType(..), FavouriteDriverListItemState(..))
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.SavedLocationCard as SavedLocationCardController
 import Components.PrimaryButton as PrimaryButtonController
 import Components.ErrorModal as ErrorModalController
 import Components.PopUpModal as PopUpModal
-import Services.API(SavedReqLocationAPIEntity(..), SavedLocationsListRes)
+import Services.API(SavedReqLocationAPIEntity(..), SavedLocationsListRes, GetFavouriteDriverListRes(..), FavouriteDriverList(..))
 import Data.String (trim, toLower, split, Pattern(..))
 import Data.Array (filter, (!!), length)
 import Data.Maybe (fromMaybe, Maybe(..))
@@ -86,28 +86,43 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "option_with_html_clicked"
       _ -> pure unit
     SavedLocationListAPIResponseAction respList -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "saved_location_list"
+    GetFavouriteDriversListAPIResponseAction respList -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "get_favourite_drivers_list"
+    ChangeView string -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "change_view"
+    ChangeScreen number name id -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "change_screen"
     NoAction -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "no_action"
-
-    
+    Back -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "Go to Back screen when api Fails"
+    GoToDriverProfile id -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "in_screen" "Go to Driver Profile"
 
 data ScreenOutput = EditLocation LocationListItemState
                   | DeleteLocation String
                   | AddLocation SavedLocationScreenState
                   | GoBack
+                  | FavouriteDriverTrips SavedLocationScreenState
+                  | GoToBack SavedLocationScreenState
+                  | DriverProfile SavedLocationScreenState String
 
 data Action = BackPressed Boolean
             | NoAction
             | GenericHeaderAC GenericHeaderController.Action
             | SavedLocationCardAction SavedLocationCardController.Action
             | SavedLocationListAPIResponseAction (SavedLocationsListRes)
+            | GetFavouriteDriversListAPIResponseAction (GetFavouriteDriverListRes)
             | PrimaryButtonAC PrimaryButtonController.Action
             | ErrorModalAC ErrorModalController.Action
             | PopUpModalAction PopUpModal.Action
             | AfterRender
+            | ChangeView String
+            | ChangeScreen String String (Maybe String)
+            | Back
+            | GoToDriverProfile String
 
 eval :: Action -> SavedLocationScreenState -> Eval Action ScreenOutput SavedLocationScreenState
 
 eval (SavedLocationCardAction (SavedLocationCardController.EditLocation cardState)) state = exit $ EditLocation cardState
+
+eval (GoToDriverProfile id) state = exit $ DriverProfile state id
+
+eval (Back) state = exit $ GoToBack state
 
 eval (BackPressed flag) state = do 
   if state.props.showDeleteLocationModel then continue state{props{showDeleteLocationModel = false}, data{deleteTag = Nothing}}
@@ -131,6 +146,14 @@ eval (SavedLocationListAPIResponseAction respList) state = do
   let work = (filter (\x -> (toLower x.tag) == "work") (getSavedLocation (respList ^. _list)))
   let otherLocation = (filter (\x -> not  ((toLower x.tag) == "home" || (toLower x.tag) == "work")) (getSavedLocation (respList ^. _list)))
   continue state{data{savedLocations = home <> work <> otherLocation}, props{apiRespReceived = true}}
+
+eval (GetFavouriteDriversListAPIResponseAction (GetFavouriteDriverListRes respList)) state = do 
+  _ <- pure $ EHU.toggleLoader false
+  continue state{data{favouriteDriversList = getFavouriteDriverList(respList)}}
+
+eval (ChangeView view) state = continue state{data{current = view}} 
+
+eval (ChangeScreen number name id) state = updateAndExit state $ FavouriteDriverTrips  state { data{ driverNo = number , driverName = name, driverId = id} }
 
 eval (PrimaryButtonAC (PrimaryButtonController.OnClick)) state = do 
   if (length state.data.savedLocations >= 20) then do 
@@ -179,6 +202,17 @@ getSavedLocation (savedLocation) = (map (\(SavedReqLocationAPIEntity item) ->
   , recencyDate : Nothing
   , locationScore : Nothing
   , dynamicAction : Nothing
+  }
+  )savedLocation)
+
+getFavouriteDriverList :: (Array FavouriteDriverList) -> Array FavouriteDriverListItemState 
+getFavouriteDriverList (savedLocation) = (map (\(FavouriteDriverList item) -> 
+  { 
+    driverName : item.driverName
+  , driverPhone : item.driverPhone
+  , driverRating : item.driverRating
+  , favCount : item.favCount
+  , id : item.id
   }
   )savedLocation)
 

@@ -81,6 +81,7 @@ type AppConfigCustomer a =
   , enableBookAny :: Boolean
   , acPopupConfig :: AcPopupConfig
   , showCheckoutRentalBanner :: Boolean
+  , riderRideCompletedCard :: RiderRideCompletedCard
   | a
   }
 
@@ -481,4 +482,8 @@ type WaitingChargeConfig = {
 type WaitingCharge = {
   freeMinutes :: Number,
   perMinCharges :: Number
+}
+
+type RiderRideCompletedCard = {
+  showDriverProfile :: Boolean
 }

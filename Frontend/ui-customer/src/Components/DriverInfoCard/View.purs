@@ -234,7 +234,7 @@ driverInfoViewSpecialZone push state =
                  ][]
                ]
               , titleAndETA push state
-              , driverDetailsView (getDriverDetails state) "SpecialDriverDetailsView" "SpecialNumberPlate"
+              , driverDetailsView push (getDriverDetails state) "SpecialDriverDetailsView" "SpecialNumberPlate"
               , navigateView push state
               , paymentMethodView push state (getString FARE_ESTIMATE) true "SpecialPaymentMethodView"
               , sizedBox (V 12) MATCH_PARENT
@@ -746,7 +746,7 @@ driverInfoView push state =
                       , margin $ MarginTop if rideStarted then 12 else 0
                       ][addStopView push state
                       , rentalDetailsView push state
-                      , driverDetailsView (getDriverDetails state) "DriverDetailsView" "NumberPlate"
+                      , driverDetailsView push (getDriverDetails state) "DriverDetailsView" "NumberPlate"
                       , paymentMethodView push state (getString FARE_ESTIMATE) true "PaymentMethodView"
                       , sizedBox (V 12) MATCH_PARENT
                       ]

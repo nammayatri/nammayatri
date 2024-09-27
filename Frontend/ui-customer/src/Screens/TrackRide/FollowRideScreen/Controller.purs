@@ -16,7 +16,7 @@ module Screens.FollowRideScreen.Controller where
 
 import Accessor (_lat, _lon)
 import Data.Array (elem, last, length, filter, delete, notElem, any)
-import Data.Function.Uncurried (runFn3, runFn1)
+import Data.Function.Uncurried (runFn3, runFn1, runFn4)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe, isNothing, maybe)
 import Effect.Unsafe (unsafePerformEffect)
@@ -68,7 +68,7 @@ import Services.API as API
 import Engineering.Helpers.Suggestions(getMessageFromKey, chatSuggestion)
 import Constants (languageKey)
 import Locale.Utils (getLanguageLocale)
-
+import Components.DriverInfoCard.Controller as DriverInfoCardController 
 instance showAction :: Show Action where
   show _ = ""
 
@@ -120,6 +120,7 @@ data Action
   | MessageExpiryTimer Int String String
   | AllChatsLoaded
   | CallSafetyTeam SafetyActionTileView.Action
+  | DriverInfoCardAction DriverInfoCardController.Action
 
 eval :: Action -> FollowRideScreenState -> Eval Action ScreenOutput FollowRideScreenState
 eval action state = case action of
@@ -412,7 +413,7 @@ startAudioPlayerCmd array state = do
             when canStartAudio
               $ do
                   push <- getPushFn Nothing "FollowRideScreen"
-                  void $ pure $ runFn3 startAudioPlayer "ny_ic_sos_danger_full" push OnAudioCompleted
+                  void $ pure $ runFn4 startAudioPlayer "ny_ic_sos_danger_full" push OnAudioCompleted "0"
             pure NoAction
         ] <> array)
 canStartAudioPlayer :: FollowRideScreenState -> Boolean

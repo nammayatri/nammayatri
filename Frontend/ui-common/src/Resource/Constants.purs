@@ -25,3 +25,6 @@ chatService = "in.juspay.mobility.app.ChatService"
 
 locateOnMapLabelMaxWidth :: Int
 locateOnMapLabelMaxWidth = if (os == "IOS") then 140 else 400
+
+maxImageUploadInIssueReporting :: Int  
+maxImageUploadInIssueReporting = 4

@@ -99,7 +99,7 @@ genericHeaderConfig title useLightColor showCrossImage =
     { height = WRAP_CONTENT
     , background = Color.transparent
     , prefixImageConfig
-      { imageUrl = prefixImage
+      { imageUrl = HU.fetchImage HU.FF_ASSET prefixImage
       , visibility = VISIBLE
       , margin = Margin 8 8 8 8
       , layoutMargin = Margin 4 6 4 4

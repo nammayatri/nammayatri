@@ -50,7 +50,6 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleType, parseFloat, getCityConfig)
 import Helpers.Utils as HU
 import JBridge as JB
@@ -60,7 +59,7 @@ import MerchantConfig.Utils as MU
 import MerchantConfig.Types
 import Mobility.Prelude as MP
 import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (>=), (<<<), (>), pure, discard, show, (&&), void, negate, not, (*), otherwise)
-import Presto.Core.Types.Language.Flow (doAff)
+import Presto.Core.Types.Language.Flow (Flow, doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback, onAnimationEnd, rippleColor, fillViewport, rotation)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii, scrollBarY)
@@ -72,16 +71,21 @@ import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, g
 import Screens.DriverProfileScreen.Transformer (fetchVehicles)
 import Screens.Types (MenuOptions(..), AutoPayStatus(..))
 import Screens.Types as ST
-import Services.API (DriverInfoReq(..), GetDriverInfoResp(..), DriverRegistrationStatusReq(..))
+import Services.API (DriverInfoReq(..), GetDriverInfoResp(..), DriverRegistrationStatusReq(..), DriverProfileDataReq(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Mobility.Prelude (boolToVisibility)
+import PrestoDOM (FontWeight(..), fontStyle, lineHeight, textSize, fontWeight)
+import Font.Style (bold, semiBold)
 import RemoteConfig.Utils
 import RemoteConfig.Types
 import Data.Array (filter)
-import Mobility.Prelude (boolToVisibility)
+import Engineering.Helpers.BackTrack (getState, liftFlowBT)
+import Types.App (GlobalState(..), FlowBT)
+import Services.API (DriverProfileDataRes(..))
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -109,6 +113,7 @@ screen initialState =
                         liftFlow $ push $ DriverSummary summaryResp
                         liftFlow $ push $ GetDriverInfoResponse profileResp
                       _, _ -> liftFlow $ push $ BackPressed
+                    getProfileData ProfileDataAPIResponseAction push initialState
                     EHU.toggleLoader false
                     pure unit
             pure $ pure unit
@@ -122,6 +127,15 @@ screen initialState =
           _ = spy "DriverProfileScreen state " state
         eval action state
   }
+
+getProfileData :: forall action. (DriverProfileDataRes -> action) -> (action -> Effect Unit) -> ST.DriverProfileScreenState -> Flow GlobalState Unit
+getProfileData action push state = do
+  driverProfileResp <- Remote.fetchDriverProfile false
+  case driverProfileResp of
+      Right resp -> do
+        liftFlow $ push $ action resp
+      Left _ -> void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+  pure unit
 
 view :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -476,7 +490,13 @@ profileView push state =
                     , padding $ if state.props.screenType == ST.DRIVER_DETAILS then (PaddingVertical 16 24) else (PaddingTop 16)
                     ]
                     [ tabView state push
-                    , tabImageView state push
+                    , relativeLayout[
+                        height WRAP_CONTENT
+                      , width MATCH_PARENT
+                      ][
+                        tabImageView state push
+                      , completedProfile state push 
+                      ]
                     , infoView state push
                     , verifiedVehiclesView state push
                     , pendingVehiclesVerificationList state push
@@ -489,6 +509,63 @@ profileView push state =
             ]
         , if (length state.data.inactiveRCArray < 2) && state.props.screenType == ST.VEHICLE_DETAILS then addRcView state push else dummyTextView
         ]
+
+completedProfile :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+completedProfile state push =
+  linearLayout[
+    height WRAP_CONTENT,
+    width MATCH_PARENT,
+    visibility $ boolToVisibility $ state.props.screenType == ST.DRIVER_DETAILS,
+    gravity CENTER,
+    orientation VERTICAL,
+    margin $ MarginTop $ if (((state.data.completingProfileRes.completed*100)/4) /= 100) then 110 else 135
+  ][
+    linearLayout[
+      height WRAP_CONTENT,
+      width WRAP_CONTENT,
+      margin $ MarginBottom 7,
+      cornerRadius 50.0,
+      background Color.blue900,
+      padding $ Padding 12 2 12 2,
+      visibility $ boolToVisibility $ ((state.data.completingProfileRes.completed*100)/4) /= 100
+    ][
+      textView
+      $ [ text $ show((state.data.completingProfileRes.completed*100)/4)<> "%"
+          , width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , color Color.white900
+          , lineHeight "16"
+          , textSize FontSize.a_15
+          , fontStyle $ semiBold LanguageStyle
+          , fontWeight $ FontWeight 600
+          ]
+    ]
+  , linearLayout[
+      height WRAP_CONTENT,
+      width MATCH_PARENT,
+      margin $ MarginBottom 15,
+      onClick push $ const CompleteProfile,
+      gravity CENTER
+    ][
+      imageView
+        [ width $ V 11
+        , height $ V 11
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_blue_pen"
+        , visibility $ boolToVisibility $ ((state.data.completingProfileRes.completed*100)/4) /= 100
+        ]
+    , textView
+        $ [ text $ getString $ if ((state.data.completingProfileRes.completed*100)/4) == 100 then EDIT_PROFILE else COMPLETE_PROFILE
+            , width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , color Color.blue900
+            , margin $ MarginLeft 5
+            , lineHeight "15"
+            , textSize FontSize.a_14
+            , fontStyle $ semiBold LanguageStyle
+            , fontWeight $ FontWeight 600
+            ]
+    ]
+  ]
 
 getVerifiedVehicleCount :: Array ST.DriverVehicleDetails -> Int
 getVerifiedVehicleCount vehicles = length $ filter (\item -> item.isVerified == true) vehicles
@@ -668,12 +745,13 @@ tabImageView state push =
       "MALE" | vc == ST.AmbulanceCategory -> "ny_ic_new_avatar_profile"
       "FEMALE" -> "ny_ic_profile_female"
       _ -> "ny_ic_generic_mascot"
+    per = (state.data.completingProfileRes.completed*100)/4
   in
     linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , gravity CENTER_HORIZONTAL
-      , padding $ PaddingVertical 32 32
+      , padding $ PaddingVertical 32 $ if state.props.screenType == ST.DRIVER_DETAILS then 12 else 32
       , background Color.blue600
       , orientation HORIZONTAL
       ]
@@ -681,11 +759,56 @@ tabImageView state push =
           [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.DRIVER_DETAILS)) { fromX = -44, toX = 44 }
           , Anim.motionMagnifyAnim $ (scaleDownConfig (state.props.screenType == ST.VEHICLE_DETAILS)) { fromX = 44, toX = -44 }
           ]
-          $ linearLayout
+          $ relativeLayout[
+              height $ V 98
+            , width $ V 108
+            ][
+              linearLayout[
+                height $ V 98,
+                width $ V 108,
+                orientation VERTICAL, 
+                visibility $ boolToVisibility $ state.props.screenType == ST.DRIVER_DETAILS && per < 100
+            ][
+                linearLayout[
+                  height $ V 49,
+                  width $ V 108
+                ][
+                  linearLayout[
+                    height $ V 49,
+                    width $ V 54,
+                    background if per == 100 then Color.white900 else if per >= 50 then Color.blue900 else Color.white900,
+                    cornerRadii $ Corners 100.0 true false false false
+                  ][]
+                , linearLayout[
+                    height $ V 49,
+                    width $ V 54,
+                    background if per == 100 then Color.white900 else if per >= 75 then Color.blue900 else Color.white900,
+                    cornerRadii $ Corners 100.0 false true false false
+                  ][]
+                ]
+                , linearLayout[
+                  height $ V 49,
+                  width $ V 108
+                ][
+                  linearLayout[
+                    height $ V 49,
+                    width $ V 54,
+                    background if per == 100 then Color.white900 else if per >= 25 then Color.blue900 else Color.white900,
+                    cornerRadii $ Corners 80.0 false false false true
+                  ][]
+                , linearLayout[
+                    height $ V 49,
+                    width $ V 54,
+                    background if per == 100 then Color.white900 else if per >= 100 then Color.blue900 else Color.white900,
+                    cornerRadii $ Corners 80.0 false false true false
+                  ][]
+                ]
+            ]
+            , linearLayout
               [ height $ V 88
               , width $ V 88
               , cornerRadius 44.0
-              , margin $ MarginRight 10
+              , margin $ Margin 10 6 0 0
               , onClick push $ const $ ChangeScreen ST.DRIVER_DETAILS
               , alpha if (state.props.screenType == ST.DRIVER_DETAILS) then 1.0 else 0.4
               ]
@@ -705,6 +828,7 @@ tabImageView state push =
                       []
                 )
               ]
+            ]
       , PrestoAnim.animationSet
           [ Anim.motionMagnifyAnim $ (scaleUpConfig (state.props.screenType == ST.VEHICLE_DETAILS)) { fromX = 44, toX = -44 }
           , Anim.motionMagnifyAnim $ (scaleDownConfig (state.props.screenType == ST.DRIVER_DETAILS)) { fromX = -44, toX = 44 }
@@ -876,7 +1000,42 @@ driverAnalyticsView state push =
               , height MATCH_PARENT
               , orientation HORIZONTAL
               ]
-              $ map (\item -> chipRailView item) (getChipRailArray state.data.analyticsData.lateNightTrips state.data.analyticsData.lastRegistered state.data.languagesSpoken state.data.analyticsData.totalDistanceTravelled)
+              $ [
+                linearLayout
+                  [ width WRAP_CONTENT
+                  , height WRAP_CONTENT
+                  , cornerRadius 20.0
+                  , background Color.blue600
+                  , padding $ Padding 12 10 12 10
+                  , margin $ MarginHorizontal 5 5
+                  , gravity CENTER_VERTICAL
+                  ]
+                  [ imageView 
+                    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_blue_heart"
+                    , width $ V 15
+                    , height $ V 15
+                    , margin $ Margin 0 2 4 0
+                    ]
+                  , textView
+                      [ text $ show (fromMaybe 0 state.data.favCount)
+                      , width WRAP_CONTENT
+                      , height WRAP_CONTENT
+                      , textSize FontSize.a_14
+                      , fontStyle $ FontStyle.bold LanguageStyle
+                      , color Color.black900
+                      , margin $ MarginRight 4
+                      ]
+                  , textView
+                      $ [ text $ getString FAVOURITES
+                        , width WRAP_CONTENT
+                        , height WRAP_CONTENT
+                        , textSize FontSize.a_12
+                        , color Color.black700
+                        ]
+                      <> FontStyle.body3 TypoGraphy
+                  ]
+              ]
+              <> map (\item -> chipRailView item) (getChipRailArray state.data.analyticsData.lateNightTrips state.data.analyticsData.lastRegistered state.data.languagesSpoken state.data.analyticsData.totalDistanceTravelled)
           ]
       ]
 
