@@ -44,7 +44,7 @@ fareBreakupTTable =
 
 type FareBreakup = FareBreakupT Identity
 
-$(TH.mkClickhouseInstances ''FareBreakupT)
+$(TH.mkClickhouseInstances ''FareBreakupT 'SELECT_FINAL_MODIFIER)
 
 findFareBreakupByBookingIdAndDescription ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>

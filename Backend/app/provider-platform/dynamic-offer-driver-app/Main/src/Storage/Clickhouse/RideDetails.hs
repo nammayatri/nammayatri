@@ -41,7 +41,7 @@ rideDetailsTTable =
 
 type RideDetails = RideDetailsT Identity
 
-$(TH.mkClickhouseInstances ''RideDetailsT)
+$(TH.mkClickhouseInstances ''RideDetailsT 'SELECT_FINAL_MODIFIER)
 
 findIdsByFleetOwner ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
