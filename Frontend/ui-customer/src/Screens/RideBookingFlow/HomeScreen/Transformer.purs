@@ -235,6 +235,9 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
         , recipient = currentRecipient
         , shareTripWithEmergencyContactOption = prevState.currentChatRecipient.shareTripWithEmergencyContactOption
         }
+      , isAlreadyFav : resp.isAlreadyFav
+      , favCount : resp.favCount
+      , rideDuration : resp.duration
       }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity

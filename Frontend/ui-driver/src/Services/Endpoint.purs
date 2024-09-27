@@ -64,6 +64,9 @@ getRideHistory limit offset isActive status day= do
 getRidesSummaryList :: Array String -> String
 getRidesSummaryList dateList = (getBaseUrl "") <> "/rideSummary/list"
 
+submitDriverProfile :: String -> String 
+submitDriverProfile dummyString = (getBaseUrl "") <> "/DriverProfileQues"
+
 offerRide :: String -> String
 offerRide dummyString = (getBaseUrl "") <> "/driver/searchRequest/quote/offer"
 
@@ -374,6 +377,9 @@ registerPAN _ = (getBaseUrl "") <> "/driver/register/pancard"
 
 registerAadhaar ::  String -> String 
 registerAadhaar _ = (getBaseUrl "") <> "/driver/register/aadhaarCard"
+
+getDriverProfile :: Boolean -> String 
+getDriverProfile isImages = (getBaseUrl "") <> "/DriverProfileQues?isImages=" <> (show isImages)
 
 verifyUPI :: String -> String
 verifyUPI dummy = (getBaseUrl "") <> "/driver/profile/verify/vpaStatus"

@@ -1,0 +1,4 @@
+module Components.FavouriteDriverInfoCard.FavouriteDriverInfoCard (module Reexport) where
+
+import Components.FavouriteDriverInfoCard.View as Reexport
+import Components.FavouriteDriverInfoCard.Controller as Reexport

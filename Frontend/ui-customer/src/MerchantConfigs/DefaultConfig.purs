@@ -166,6 +166,9 @@ config =
   , autoVariantEnabled : true
   , showDisabilityBanner : false
   , showCheckoutRentalBanner : false
+  , riderRideCompletedCard : {
+      showDriverProfile : true
+  }
   , geoCoder: {
       enableLLtoAddress : true
     , enableAddressToLL : false 

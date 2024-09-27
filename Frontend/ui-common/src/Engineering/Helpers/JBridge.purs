@@ -215,7 +215,7 @@ foreign import clearNoInternetAction :: Unit -> Effect Unit
 foreign import openWhatsAppSupport :: String -> Effect Unit
 foreign import generateSessionToken :: String -> String
 foreign import addMediaFile :: EffectFn7 String String String String String String Boolean Unit
-foreign import clearFocus :: EffectFn1 String Unit
+foreign import clearFocusFunction :: String -> Unit
 foreign import removeMediaPlayer :: EffectFn1 String Unit
 foreign import renderBase64ImageFile :: EffectFn4 String String Boolean String Unit
 foreign import saveAudioFile :: EffectFn1 String String
@@ -283,7 +283,7 @@ foreign import stopRecord :: Unit -> Effect Unit
 
 foreign import clearAudioPlayer :: String -> Unit
 foreign import pauseAudioPlayer :: String -> Unit
-foreign import startAudioPlayer :: forall action. Fn3 String (action -> Effect Unit) (String -> action) Unit
+foreign import startAudioPlayer :: forall action. Fn4 String (action -> Effect Unit) (String -> action) String Unit
 foreign import datePickerImpl :: forall action. EffectFn3 (action -> Effect Unit) (String -> Int -> Int -> Int -> action) Int Unit
 foreign import timePickerImpl :: forall action. EffectFn2 (action -> Effect Unit) ( Int -> Int -> String -> action) Unit
 foreign import setMapPaddingImpl :: EffectFn4 Int Int Int Int Unit
@@ -340,8 +340,12 @@ sliderConfig = {
   bgAlpha : 50
 }
 
+clearFocus :: EffectFn1 String Unit
+clearFocus = mkEffectFn1 $ \id -> pure $ clearFocusFunction id
+
 foreign import initHVSdk :: forall action. EffectFn8 String String String Boolean String String (String -> action) (action -> Effect Unit) Unit
 foreign import decodeAndStoreImage :: Fn1 String String
+foreign import convertAudioToBase64 :: Fn1 String String
 foreign import encodeToBase64 :: forall action. EffectFn5 String Int (String -> Maybe String) (Maybe String) (action -> Effect Unit) (Effect String)
 foreign import isSdkTokenExpired :: Fn1 String Boolean
 foreign import makeSdkTokenExpiry :: Fn1 Int String
@@ -921,6 +925,7 @@ displayBase64ImageConfig = {
   , id : ""
   , scaleType : "CENTER_CROP"
   , inSampleSize : 1
+  , adjustViewBounds : true 
 }
 ---------- ################################### DRAW ROUTE CONFIG ################################### ----------
 

@@ -77,6 +77,8 @@ data KeyStore = USER_NAME
                 | SUGGESTIONS_DEFINITIONS
                 | TRIGGER_MAPS
                 | DEVICE_DETAILS
+                | CUSTOMER_CLIENT_ID
+                | REGISTRATION_APPROVED
                 | HAS_TAKEN_FIRST_RIDE
                 | CURRENCY
                 | IS_BANNER_ACTIVE

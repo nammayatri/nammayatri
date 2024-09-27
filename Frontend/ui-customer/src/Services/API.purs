@@ -1006,8 +1006,11 @@ newtype RideBookingRes = RideBookingRes {
   vehicleServiceTierType :: Maybe String,
   tollConfidence :: Maybe CTA.Confidence,
   driversPreviousRideDropLocLat :: Maybe Number,
-  driversPreviousRideDropLocLon :: Maybe Number
-, estimatedFareBreakup :: Array FareBreakupAPIEntity
+  driversPreviousRideDropLocLon :: Maybe Number,
+  estimatedFareBreakup :: Array FareBreakupAPIEntity,
+  isAlreadyFav :: Boolean,
+  favCount :: Int,
+  rideDuration :: Maybe Int
 }
 
 newtype RideBookingStatusRes = RideBookingStatusRes {
@@ -1342,7 +1345,10 @@ newtype FeedbackReq = FeedbackReq
   { rating :: Int
   , rideId :: String
   , feedbackDetails :: String
+  , nightSafety :: Maybe Boolean
   , wasOfferedAssistance :: Maybe Boolean
+  , mbAudio :: Maybe String
+  , shouldFavDriver :: Maybe Boolean
   }
 
 
@@ -3853,3 +3859,137 @@ instance showMessageSource :: Show MessageSource where show = genericShow
 instance decodeMessageSource :: Decode MessageSource where decode = defaultDecode
 instance encodeMessageSource  :: Encode MessageSource where encode = defaultEnumEncode
 instance eqMessageSource :: Eq MessageSource where eq = genericEq
+
+
+
+
+-----------------------------------------------------------------RemoveFavouriteDriver-------------------------------------------
+
+data RemoveFavouriteDriverReq = RemoveFavouriteDriverReq String  
+
+newtype RemoveFavouriteDriverResp = RemoveFavouriteDriverResp {
+  result :: String
+}
+
+derive instance genericRemoveFavouriteDriverReq:: Generic RemoveFavouriteDriverReq _
+instance standardRemoveFavouriteDriverReq :: StandardEncode RemoveFavouriteDriverReq where standardEncode (RemoveFavouriteDriverReq driverId) = standardEncode {}
+instance showRemoveFavouriteDriverReq :: Show RemoveFavouriteDriverReq where show = genericShow
+instance decodeRemoveFavouriteDriverReq :: Decode RemoveFavouriteDriverReq where decode = defaultDecode
+instance encodeRemoveFavouriteDriverReq :: Encode RemoveFavouriteDriverReq where encode = defaultEncode
+
+derive instance genericRemoveFavouriteDriverResp:: Generic RemoveFavouriteDriverResp _
+instance standardRemoveFavouriteDriverResp :: StandardEncode RemoveFavouriteDriverResp where standardEncode (RemoveFavouriteDriverResp body) = standardEncode body
+instance showRemoveFavouriteDriverResp :: Show RemoveFavouriteDriverResp where show = genericShow
+instance decodeRemoveFavouriteDriverResp :: Decode RemoveFavouriteDriverResp where decode = defaultDecode
+instance encodeRemoveFavouriteDriverResp :: Encode RemoveFavouriteDriverResp where encode = defaultEncode
+
+instance makeRemoveFavouriteDriverReq :: RestEndpoint RemoveFavouriteDriverReq where
+ makeRequest reqBody@(RemoveFavouriteDriverReq driverId) headers = defaultMakeRequest POST (EP.removeFavouriteDriver driverId) headers reqBody Nothing
+ encodeRequest req = standardEncode req
+
+------------------------------------------------------------------------------GetFavouriteDriverList---------------------------------------------------
+
+newtype FavouriteDriverList = FavouriteDriverList {
+  driverName :: String,
+  driverPhone :: String,
+  driverRating :: Number,
+  favCount :: Int,
+  id :: Maybe String
+}
+data GetFavouriteDriverListReq = GetFavouriteDriverListReq 
+
+newtype GetFavouriteDriverListRes = GetFavouriteDriverListRes (Array FavouriteDriverList)
+
+derive instance genericGetFavouriteDriverListReq:: Generic GetFavouriteDriverListReq _
+instance standardGetFavouriteDriverListReq :: StandardEncode GetFavouriteDriverListReq where standardEncode (GetFavouriteDriverListReq ) = standardEncode {}
+instance showGetFavouriteDriverListReq :: Show GetFavouriteDriverListReq where show = genericShow
+instance decodeGetFavouriteDriverListReq :: Decode GetFavouriteDriverListReq where decode = defaultDecode
+instance encodeGetFavouriteDriverListReq :: Encode GetFavouriteDriverListReq where encode = defaultEncode
+
+derive instance genericGetFavouriteDriverListRes:: Generic GetFavouriteDriverListRes _
+derive instance newtypeGetFavouriteDriverListRes :: Newtype GetFavouriteDriverListRes _
+instance standardGetFavouriteDriverListRes :: StandardEncode GetFavouriteDriverListRes where standardEncode (GetFavouriteDriverListRes body) = standardEncode body
+instance showGetFavouriteDriverListRes :: Show GetFavouriteDriverListRes where show = genericShow
+instance decodeGetFavouriteDriverListRes :: Decode GetFavouriteDriverListRes where decode = defaultDecode
+instance encodeGetFavouriteDriverListRes :: Encode GetFavouriteDriverListRes where encode = defaultEncode
+
+
+instance makeGetFavouriteDriverListReq :: RestEndpoint GetFavouriteDriverListReq where
+ makeRequest reqBody@(GetFavouriteDriverListReq) headers = defaultMakeRequest GET (EP.getFavouriteDriverList) headers reqBody Nothing
+ encodeRequest req = standardEncode req
+
+derive instance genericFavouriteDriverList :: Generic FavouriteDriverList _
+derive instance newtypeFavouriteDriverList :: Newtype FavouriteDriverList _
+instance standardEncodeFavouriteDriverList :: StandardEncode FavouriteDriverList where standardEncode (FavouriteDriverList body) = standardEncode body
+instance showFavouriteDriverList :: Show FavouriteDriverList where show = genericShow
+instance decodeFavouriteDriverList :: Decode FavouriteDriverList where decode = defaultDecode
+instance encodeFavouriteDriverList  :: Encode FavouriteDriverList where encode = defaultEncode
+
+----------------------------------------------------------------GetFavouriteDriverTrips--------------------------------------------------
+
+data FavouriteDriverTripsReq = FavouriteDriverTripsReq String String String (Maybe String) (Maybe String) FavouriteDriverTripsBody
+
+newtype FavouriteDriverTripsBody = FavouriteDriverTripsBody
+  { 
+    driverNumber :: String
+  }
+
+newtype LocationAPIEntity = LocationAPIEntity
+  { 
+    address :: LocationAddress,
+    createdAt :: String,
+    id :: String,
+    lat :: Number,
+    lon :: Number,
+    updatedAt :: String
+  }
+
+newtype FavouriteDriverRides = FavouriteDriverRides {
+  rideRating :: Maybe Int,
+  fromLocation :: LocationAPIEntity,
+  toLocation :: Maybe LocationAPIEntity,
+  totalFare :: Maybe Int,
+  startTime :: Maybe String,
+  id :: Maybe String
+}
+
+newtype FavouriteDriverTripsResp = FavouriteDriverTripsResp {
+  list :: Array FavouriteDriverRides
+}
+
+instance makeFavouriteDriverTripsReq :: RestEndpoint FavouriteDriverTripsReq where
+  makeRequest reqBody@(FavouriteDriverTripsReq limit offset isActive status clientId (FavouriteDriverTripsBody abcBody)) headers = defaultMakeRequest POST (EP.getFavouriteDriverTrips limit offset isActive status clientId ) headers reqBody Nothing
+  encodeRequest req = standardEncode req
+
+derive instance genericFavouriteDriverTripsReq :: Generic FavouriteDriverTripsReq _
+instance standardFavouriteDriverTripsReq :: StandardEncode FavouriteDriverTripsReq where standardEncode (FavouriteDriverTripsReq limit offset isActive status clientId req) = standardEncode req
+instance decodeFavouriteDriverTripsReq :: Decode FavouriteDriverTripsReq where decode = defaultDecode
+instance encodeFavouriteDriverTripsReq :: Encode FavouriteDriverTripsReq where encode = defaultEncode
+
+derive instance genericFavouriteDriverTripsResp :: Generic FavouriteDriverTripsResp _
+derive instance newtypeFavouriteDriverTripsResp :: Newtype FavouriteDriverTripsResp _
+instance standardEncodeFavouriteDriverTripsResp :: StandardEncode FavouriteDriverTripsResp where standardEncode (FavouriteDriverTripsResp req) = standardEncode req
+instance showFavouriteDriverTripsResp :: Show FavouriteDriverTripsResp where show = genericShow
+instance decodeFavouriteDriverTripsResp :: Decode FavouriteDriverTripsResp where decode = defaultDecode
+instance encodeFavouriteDriverTripsResp :: Encode FavouriteDriverTripsResp where encode = defaultEncode
+
+derive instance genericFavouriteDriverTripsBody :: Generic FavouriteDriverTripsBody _
+derive instance newtypeFavouriteDriverTripsBody :: Newtype FavouriteDriverTripsBody _
+instance standardEncodeFavouriteDriverTripsBody :: StandardEncode FavouriteDriverTripsBody where standardEncode (FavouriteDriverTripsBody req) = standardEncode req
+instance showFavouriteDriverTripsBody :: Show FavouriteDriverTripsBody where show = genericShow
+instance decodeFavouriteDriverTripsBody :: Decode FavouriteDriverTripsBody where decode = defaultDecode
+instance encodeFavouriteDriverTripsBody :: Encode FavouriteDriverTripsBody where encode = defaultEncode
+
+derive instance genericFavouriteDriverRides :: Generic FavouriteDriverRides _
+derive instance newtypeFavouriteDriverRides :: Newtype FavouriteDriverRides _
+instance standardEncodeFavouriteDriverRides :: StandardEncode FavouriteDriverRides where standardEncode (FavouriteDriverRides req) = standardEncode req
+instance showFavouriteDriverRides :: Show FavouriteDriverRides where show = genericShow
+instance decodeFavouriteDriverRides :: Decode FavouriteDriverRides where decode = defaultDecode
+instance encodeFavouriteDriverRides :: Encode FavouriteDriverRides where encode = defaultEncode
+
+derive instance genericLocationAPIEntity :: Generic LocationAPIEntity _
+derive instance newtypeLocationAPIEntity :: Newtype LocationAPIEntity _
+instance standardEncodeLocationAPIEntity :: StandardEncode LocationAPIEntity where standardEncode (LocationAPIEntity req) = standardEncode req
+instance showLocationAPIEntity :: Show LocationAPIEntity where show = genericShow
+instance decodeLocationAPIEntity :: Decode LocationAPIEntity where decode = defaultDecode
+instance encodeLocationAPIEntity :: Encode LocationAPIEntity where encode = defaultEncode

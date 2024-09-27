@@ -1006,7 +1006,7 @@ export const addMediaFile =  (viewID, source,actionButtonID, playIcon,pauseIcon,
 }
 
 
-export const clearFocus = function (id){
+export const clearFocusFunction = function (id){
   if(window.JBridge.clearFocus){
     return JBridge.clearFocus(id)
   }
@@ -2738,12 +2738,17 @@ export const switchYoutubeVideo = function(videoId) {
   }
 }
 
-export const startAudioPlayer = function (fileName, cb, action) {
+export const startAudioPlayer = function (fileName, cb, action, isPath) {
   if (JBridge.startAudioPlayer) {
     const callback = callbackMapper.map(function (mediaStatus) {
       cb(action(mediaStatus))();
     });
-    return JBridge.startAudioPlayer(fileName, callback);
+    if(window.__OS=="IOS"){
+      return JBridge.startAudioPlayer(fileName, callback, isPath);
+    }
+    else{
+      return JBridge.startAudioPlayer(fileName, callback);
+    }
   }
 }
 
@@ -2842,7 +2847,9 @@ export const decodeAndStoreImage = function (base64Image) {
   }
 }
 
-
+export const convertAudioToBase64 = function (base64Image) {
+    return JBridge.convertAudioToBase64(base64Image);
+}
 
 export const encodeToBase64 = function (url, delay, just, nothing, cb) {
   const callbackFallback = function () {

@@ -93,6 +93,7 @@ foreign import camelCaseToSentenceCase :: String -> String
 foreign import getVideoID :: String -> String
 foreign import getImageUrl :: String -> String -> String
 foreign import getPastDays :: Int -> Array CalendarDate
+foreign import getPastYears :: Int -> Array CalendarDate
 foreign import getPastWeeks :: Int -> Array CalendarWeek
 foreign import getPastMonths :: Int -> Array CalendarMonth
 foreign import getDayName :: String -> String
@@ -108,8 +109,8 @@ foreign import toStringJSON :: forall a. a -> String
 foreign import getMarkerCallback :: forall action. Fn2 (action -> Effect Unit) (String -> action) String
 foreign import splitString :: Fn3 String String Int String
 
-foreign import isTrue :: forall a. a -> Boolean
-
+foreign import isTrue :: forall a. a -> Boolean 
+foreign import convertTo2DArray :: forall w. Array String -> Array(Array String)
 foreign import parseSecondsOfDayToUTC :: Int -> String
 foreign import getMidnightUTC :: Unit -> String
 foreign import convertDateTimeConfigToUTCImpl :: EffectFn6 Int Int Int Int Int Int String

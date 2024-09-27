@@ -16,10 +16,10 @@
 module Language.Types where
 
 data STR = LETS_GET_STARTED
-        | LANGUAGE_UPDATED
+        | LANGUAGE_UPDATED 
         | YOUR_APPLICATION_HAS_BEEN_SUBMITTED_SUCCESSFULLY_AND_IS_UNDER_VERIFICATION
         | VIEW_STATUS
-        | GO_HOME
+        | GO_HOME 
         | SELECT_LANGUAGE
         | WHICH_LANGUAGE_DO_YOU_PREFER
         | T_C
@@ -608,7 +608,7 @@ data STR = LETS_GET_STARTED
         | ABOUT_VEHICLE
         | ADD
         | YEARS_OLD
-        | HOMETOWN
+        | FROM_WHERE
         | MISSED_OPPORTUNITY
         | EARNED_ON_APP String
         | TRAVELLED_ON_APP String
@@ -1540,6 +1540,19 @@ data STR = LETS_GET_STARTED
         | NO_ACTIVE_REFERRAL_ON_DATE
         | PAYMENT_IN_PROGRESS
         | REFRESH_PAYMENT
+        | BY
+        | CUSTOMERS 
+        | RATING 
+        | CANCELLATION 
+        | I_SPEAK
+        | WITH_NAMMAYATRI_FOR 
+        | YEARS 
+        | VEHICLE_NUMBER 
+        | WHAT_PEOPLE_SAY
+        | STAR_RATING 
+        | CARD_TEXTS
+        | TRAININGS_I_COMPLETED
+        | I_PLEDGE
         | ONLY_5_MORE_RIDES_FOR_N_POINTS String
         | ONLY_3_MORE_RIDES_FOR_N_POINTS String
         | YOU_GOT_N_POINTS String
@@ -1578,6 +1591,32 @@ data STR = LETS_GET_STARTED
         | PARKING_CHARGES_INCLUDED String
         | INCLUDED
         | DB_CHECK_AND_NAME_MATCH_FAILED
+        | COMPLETE_YOUR_PROFILE
+        | ADD_PHOTOS
+        | ADD_UPTO_FOUR
+        | CARD_TEXT 
+        | PLEDGE 
+        | SAFE_JOURNEY 
+        | CLEAN_CAR 
+        | ON_TIME_PICK_UP 
+        | MAINTENANCE 
+        | VEHICLE_OFFER 
+        | GAS 
+        | RADIO 
+        | ECO_FRIENDLY 
+        | DEVICE_CHARGING 
+        | BOOT_SPACE 
+        | PET_FRIENDLY 
+        | HOMETOWN 
+        | WHY_NY 
+        | NEW_HOME 
+        | KID_EDUCATION 
+        | NEW_VEHICLE
+        | ADD_YOUR_PHOTOS
+        | ADD_PHOTO_CAPTION
+        | COMPLETE_PROFILE
+        | EDIT_PROFILE
+        | SAVE 
         | MANAGE_VEHICLE
         | IS_NOT_SUPPORTED_YET
         | WE_WILL_NOFITY_YOU_WHEN_IT_IS_AVAILABLE String
@@ -1600,6 +1639,9 @@ data STR = LETS_GET_STARTED
         | TOTAL_RIDES_CANCELLED
         | RENTAL_RIDE
         | TOTAL_EARNINGS_MISSED
+        | MORE_ABOUT_ME
+        | DRIVING_SINCE
+        | ERROR_OCCURED_TRY_AGAIN
         | THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE String
         | RENTAL_RIDE_ACCEPTED
         | MY_REFERRAL_BONUS
@@ -1608,6 +1650,27 @@ data STR = LETS_GET_STARTED
         | TO_GET_MONEY
         | TILL String
         | REFERRAL_BONUS_WILL_BE_CREDITED_TO_BANK
+        | EXPERT_DRIVING
+        | CLEAN_VEHICLE
+        | SKILLED_NAVIGATOR 
+        | SAFE_RIDE 
+        | POLITE_DRIVER 
+        | ON_TIME
+        | AC_NOT_TURNED_ON 
+        | LATE_PICK_UP_ARRIVAL
+        | ASKED_FOR_MORE_FARE 
+        | UNHYGIENIC_VEHICLE
+        | RASH_DRIVING
+        | RUDE_DRIVER
+        | TRAINING
+        | FINANCIAL
+        | SAFETY
+        | KIDS_EDUCATION
+        | BUY_NEW_VEHICLE
+        | NOT_AVAILABLE
+        | PLEASE_WRITE_SOMETHING
+        | BUY_NEW_HOME
+        | FAVOURITES
         | POINTS_EARNED_ String
         | FOR_METRO_RIDE 
         | CONTINUE_WITH String
@@ -1657,3 +1720,5 @@ data STR = LETS_GET_STARTED
         | ADD_ON_KM_CHARGE
         | EXTRA_DISTANCE_CHARGES
         | BASE_CHARGE String
+        | CLEAN_AUTO
+        | CLEAN_CAB

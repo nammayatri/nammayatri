@@ -35,7 +35,8 @@ import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (map, show, negate, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/), (*))
 import Resources.Localizable.EN (getEN)
 import Screens.Types as ST
-import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..))
+import Data.String as DS
+import Services.API (LocationAddress(..), AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..), LocationAPIEntity(..))
 
 type Language
   = { name :: String
@@ -60,6 +61,24 @@ getLanguages =
 data DecodeAddress
   = Booking BookingLocationAPIEntity
   | SavedLoc SavedReqLocationAPIEntity
+
+decodeLocationAddress :: Maybe LocationAddress -> String
+decodeLocationAddress (Just (LocationAddress add)) = 
+    if (all isNothing [add.city, add.area, add.country, add.building, add.door, add.street, add.city, add.areaCode, add.ward]) then
+          ""
+        else if (trim (fromMaybe ""  add.city) == "" && trim (fromMaybe ""  add.area) == "" && trim (fromMaybe ""  add.street) == "" && trim (fromMaybe ""  add.door) == "" && trim (fromMaybe ""  add.building) == "") then
+          ((fromMaybe ""  add.state) <> ", " <> (fromMaybe ""  add.country))
+        else if (trim (fromMaybe ""  add.area) == "" && trim (fromMaybe ""  add.street) == "" && trim (fromMaybe ""  add.door) == "" && trim (fromMaybe ""  add.building) == "") then
+          ((fromMaybe ""  add.city) <> ", " <> (fromMaybe ""  add.state) <> ", " <> (fromMaybe ""  add.country))
+        else if (trim (fromMaybe ""  add.street) == "" && trim (fromMaybe ""  add.door) == "" && trim (fromMaybe ""  add.building) == "") then
+          ((fromMaybe ""  add.area) <> ", " <> (fromMaybe ""  add.city) <> ", " <> (fromMaybe ""  add.state) <> ", " <> (fromMaybe ""  add.country))
+        else if (trim (fromMaybe ""  add.door) == "" && trim (fromMaybe ""  add.building) == "") then
+          ((fromMaybe ""  add.street) <> ", " <> (fromMaybe ""  add.area) <> ", " <> (fromMaybe ""  add.city) <> ", " <> (fromMaybe ""  add.state) <> ", " <> (fromMaybe ""  add.country))
+        else if (trim (fromMaybe ""  add.door) == "") then
+          ((fromMaybe ""  add.building) <> ", " <> (fromMaybe ""  add.street) <> ", " <> (fromMaybe ""  add.area) <> ", " <> (fromMaybe ""  add.city) <> ", " <> (fromMaybe ""  add.state) <> ", " <> (fromMaybe ""  add.country))
+        else
+          ((fromMaybe ""  add.door) <> ", " <> (fromMaybe ""  add.building) <> ", " <> (fromMaybe ""  add.street) <> ", " <> (fromMaybe ""  add.area) <> ", " <> (fromMaybe ""  add.city) <> ", " <> (fromMaybe ""  add.state) <> ", " <> (fromMaybe ""  add.country))
+decodeLocationAddress Nothing = ""
 
 decodeAddress :: DecodeAddress -> String
 decodeAddress addressWithCons =

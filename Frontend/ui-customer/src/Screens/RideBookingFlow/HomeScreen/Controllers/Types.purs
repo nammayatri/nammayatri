@@ -12,6 +12,7 @@ import Components.LocationListItem.Controller as LocationListItemController
 import Components.LocationTagBar as LocationTagBarController
 import Components.LocationTagBarV2 as LocationTagBarV2Controller
 import Components.RideCompletedCard.Controller as RideCompletedCard
+import Screens.RideBookingFlow.RiderRideCompletedCard.Controller as RiderRideCompletedCard
 import Components.MenuButton.Controller (Action) as MenuButtonController
 import Components.PopUpModal.Controller as PopUpModal
 import Components.PricingTutorialModel.Controller as PricingTutorialModelController
@@ -73,7 +74,6 @@ data ScreenOutput = LogoutUser
   | UpdatePickupName HomeScreenState Number Number
   | GoToHome HomeScreenState
   | GoToFavourites HomeScreenState
-  | SubmitRating HomeScreenState
   | UpdatedSource HomeScreenState
   | OpenGoogleMaps HomeScreenState
   | InAppTrackStatus HomeScreenState
@@ -93,14 +93,12 @@ data ScreenOutput = LogoutUser
   | CheckFlowStatus HomeScreenState
   | ExitToPermissionFlow PermissionScreenStage
   | RetryFindingQuotes Boolean HomeScreenState
-  | RideDetailsScreen HomeScreenState
   | GoToTicketBookingFlow HomeScreenState
   | GoToMyTickets HomeScreenState
   | RepeatTrip HomeScreenState Trip
   | ExitToTicketing HomeScreenState
   | EditLocationScreenOutput HomeScreenState
   | ConfirmEditedPickup HomeScreenState
-  | GoToHelpAndSupport HomeScreenState
   | ReAllocateRide HomeScreenState
   | GoToRentalsFlow HomeScreenState
   | GoToScheduledRides
@@ -109,7 +107,6 @@ data ScreenOutput = LogoutUser
   | GoToShareRide HomeScreenState
   | GoToNotifyRideShare HomeScreenState
   | ExitToFollowRide HomeScreenState
-  | GoToReportSafetyIssue HomeScreenState
   | GoToMyMetroTickets HomeScreenState
   | GoToMetroTicketBookingFlow HomeScreenState
   | GoToSafetyEducation HomeScreenState
@@ -118,12 +115,12 @@ data ScreenOutput = LogoutUser
   | ExitToConfirmingLocationStage HomeScreenState
   | UpdateReferralCode HomeScreenState String
   | GoToSafetySettingScreen 
+  | GoToDriverProfiles HomeScreenState
   | GoToRideRelatedIssues HomeScreenState
   | Go_To_Search_Location_Flow HomeScreenState Boolean
   | RideSearchSO
   | ConfirmRentalRideSO HomeScreenState
   | StayInHomeScreenSO HomeScreenState
-  | GoToIssueReportChatScreenWithIssue HomeScreenState CTP.CustomerIssueTypes
   | ReloadFlowStatus HomeScreenState
   | ExitToPickupInstructions HomeScreenState Number Number String String
   | EditDestLocSelected HomeScreenState
@@ -245,6 +242,7 @@ data Action = NoAction
   | DisabilityBannerAC Banner.Action
   | DisabilityPopUpAC PopUpModal.Action
   | RideCompletedAC RideCompletedCard.Action
+  | RiderRideCompletedAC RiderRideCompletedCard.Action
   | LoadMessages
   | KeyboardCallback String
   | NotifyDriverStatusCountDown Int String String

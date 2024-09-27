@@ -462,6 +462,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , cancelledRidesCountInWindow :: Maybe Int
     , assignedRidesCountInWindow :: Maybe Int
     , windowSize :: Maybe Int
+    , favCount :: Maybe Int
     , isSubscriptionVehicleCategoryChanged :: Maybe Boolean
     , isOnFreeTrial :: Maybe Boolean
     , planMandatoryForCategory :: Maybe Boolean
@@ -570,6 +571,38 @@ instance standardEncodeGetDriverInfoResp :: StandardEncode GetDriverInfoResp whe
 instance showGetDriverInfoResp :: Show GetDriverInfoResp where show = genericShow
 instance decodeGetDriverInfoResp :: Decode GetDriverInfoResp where decode = defaultDecode
 instance encodeGetDriverInfoResp :: Encode GetDriverInfoResp where encode = defaultEncode
+
+--------------------------------------------------Upload Driver Profile-----------------------------------------------------------------------
+
+data UploadProfileReq = UploadProfileReq GetUploadProfileReq
+
+newtype GetUploadProfileReq = GetUploadProfileReq {
+  pledges :: Array String,
+  vehicleTags :: Array String,
+  languages :: Array String,
+  aspirations :: Array String,
+  drivingSince :: Maybe Int,
+  hometown :: Maybe String,
+  imageIds :: Array String
+}
+
+derive instance genericUploadProfileReq :: Generic UploadProfileReq _
+instance standardEncodeUploadProfileReq :: StandardEncode UploadProfileReq where standardEncode (UploadProfileReq body) = standardEncode body
+instance showUploadProfileReq :: Show UploadProfileReq where show = genericShow
+instance decodeUploadProfileReq :: Decode UploadProfileReq where decode = defaultDecode
+instance encodeUploadProfileReq :: Encode UploadProfileReq where encode = defaultEncode
+
+derive instance genericGetUploadProfileReq :: Generic GetUploadProfileReq _
+derive instance newtypeGetUploadProfileReq :: Newtype GetUploadProfileReq _
+instance standardEncodeGetUploadProfileReq :: StandardEncode GetUploadProfileReq where standardEncode (GetUploadProfileReq body) = standardEncode body
+instance showGetUploadProfileReq :: Show GetUploadProfileReq where show = genericShow
+instance decodeGetUploadProfileReq :: Decode GetUploadProfileReq where decode = defaultDecode
+instance encodeGetUploadProfileReq :: Encode GetUploadProfileReq where encode = defaultEncode
+
+instance makeUploadProfileReq :: RestEndpoint UploadProfileReq where
+    makeRequest reqBody@(UploadProfileReq (GetUploadProfileReq reqB)) headers = defaultMakeRequest POST (EP.submitDriverProfile "") headers reqBody Nothing
+    encodeRequest req = standardEncode req
+
 -----------------------------------------------GET RIDES HISTORY---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 data GetRidesHistoryReq = GetRidesHistoryReq String String String String String
@@ -4785,6 +4818,36 @@ instance showDriverAadhaarResp :: Show DriverAadhaarResp where show = genericSho
 instance decodeDriverAadhaarResp:: Decode DriverAadhaarResp where decode = defaultDecode
 instance encodeDriverAadhaarResp  :: Encode DriverAadhaarResp where encode = defaultEncode
 
+-----------------------------------------------------------Fetching Driver Profile--------------------------------------------------
+data DriverProfileDataReq = DriverProfileDataReq Boolean 
+
+newtype DriverProfileDataRes = DriverProfileDataRes
+  {
+    aspirations :: Array String,
+    drivingSince :: Maybe Int,
+    hometown :: Maybe String,
+    otherImages :: Array String,
+    otherImageIds :: Array String,
+    pledges :: Array String,
+    profileImage :: Maybe String,
+    vehicleTags :: Array String
+  }
+
+instance driverProfileDataReq :: RestEndpoint DriverProfileDataReq  where
+ makeRequest reqBody@(DriverProfileDataReq isImages) headers = defaultMakeRequest GET (EP.getDriverProfile isImages) headers reqBody Nothing
+ encodeRequest req = standardEncode req
+
+derive instance genericDriverProfileDataReq :: Generic DriverProfileDataReq _
+instance standardEncodeDriverProfileDataReq :: StandardEncode DriverProfileDataReq where standardEncode (DriverProfileDataReq _) = standardEncode {}
+instance decodeDriverProfileDataReq :: Decode DriverProfileDataReq where decode = defaultDecode
+instance encodeDriverProfileDataReq :: Encode DriverProfileDataReq where encode = defaultEncode
+
+derive instance genericDriverProfileDataRes:: Generic DriverProfileDataRes _
+derive instance newtypeDriverProfileDataRes :: Newtype DriverProfileDataRes _
+instance standardEncodeDriverProfileDataRes :: StandardEncode DriverProfileDataRes where standardEncode (DriverProfileDataRes id) = standardEncode id
+instance showDriverProfileDataRes:: Show DriverProfileDataRes where show = genericShow
+instance decodeDriverProfileDataRes :: Decode DriverProfileDataRes where decode = defaultDecode
+instance encodeDriverProfileDataRes :: Encode DriverProfileDataRes where encode = defaultEncode
 
 
 data CoinInfoReq = CoinInfoReq 
@@ -4820,7 +4883,7 @@ instance encodeCoinInfoRes :: Encode CoinInfoRes where encode = defaultEncode
 
 derive instance genericCoinInfo :: Generic CoinInfo _
 instance showCoinInfo :: Show CoinInfo where show = genericShow
-instance standardEncodeCoinInfo :: StandardEncode CoinInfo where standardEncode _ = standardEncode{}
+instance standardEncodeCoinInfo :: StandardEncode CoinInfo where standardEncode _ = standardEncode{} 
 instance decodeCoinInfo :: Decode CoinInfo where decode = defaultDecode
 instance encodeCoinInfo :: Encode CoinInfo where encode = defaultEncode
 data ScheduledBookingListRequest = ScheduledBookingListRequest String String String String String

@@ -46,13 +46,10 @@ initData = let
   {
     data: {
       suggestedAmount : 0
-    , finalAmount : 0
     , channelIdFromFCM : ""
     , personIdFromFCM : ""
     , sourceFromFCM : ""
     , isBookingUpdated : false
-    , startedAt : ""
-    , endedAt : ""
     , source : ""
     , destination : ""
     , eta : "2 mins"
@@ -515,6 +512,9 @@ dummyDriverInfo =
   , addressWard : Nothing
   , currentChatRecipient : dummyChatRecipient
   , hasToll : false
+  , isAlreadyFav : false
+  , favCount : 0
+  , rideDuration : Just 0
   }
 
 dummySettingBar :: SettingSideBarState
@@ -622,8 +622,11 @@ dummyRideBooking = RideBookingRes
   tollConfidence : Nothing,
   driversPreviousRideDropLocLat : Nothing,
   driversPreviousRideDropLocLon : Nothing,
-  specialLocationName : Nothing
-, estimatedFareBreakup : []
+  specialLocationName : Nothing,
+  estimatedFareBreakup : [],
+  isAlreadyFav : false,
+  favCount : 0,
+  rideDuration : Just 0
 }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails

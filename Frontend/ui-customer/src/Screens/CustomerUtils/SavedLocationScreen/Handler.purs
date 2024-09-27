@@ -32,6 +32,15 @@ savedLocationScreen = do
   (GlobalState state) <- getState 
   act <- lift $ lift $ runScreen $ SavedLocationScreen.screen state.savedLocationScreen (GlobalState state)
   case act of 
+    DriverProfile updatedState id -> do
+      modifyScreenState $ SavedLocationScreenStateType (\savedLocationScreenState → updatedState)
+      App.BackT $ App.BackPoint <$> ( pure $ GO_TO_FAV_DRIVER_PROFILE id)
+    GoToBack updatedState -> do
+      modifyScreenState $ SavedLocationScreenStateType (\savedLocationScreenState → updatedState)
+      App.BackT $ pure App.GoBack
+    FavouriteDriverTrips updatedState -> do 
+      modifyScreenState $ SavedLocationScreenStateType (\savedLocationScreenState → updatedState)
+      App.BackT $  App.BackPoint <$> ( pure $ GOTO_FAVOURITEDRIVERS_LIST updatedState)
     AddLocation updatedState -> do 
       modifyScreenState $ SavedLocationScreenStateType (\savedLocationScreenState → updatedState)
       App.BackT $  App.BackPoint <$> ( pure $ ADD_NEW_LOCATION updatedState)
