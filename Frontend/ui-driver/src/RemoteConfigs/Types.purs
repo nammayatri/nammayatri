@@ -26,12 +26,6 @@ import Data.Eq.Generic (genericEq)
 import Foreign.Generic (class Decode, class Encode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 
-type RCSubscription = {
-    max_dues_limit :: Number,
-    low_dues_warning_limit :: Number,
-    high_due_warning_limit :: Number
-}
-
 type HVConfigs = {
   selfie_flow_id :: String,
   pan_flow_id :: String,
