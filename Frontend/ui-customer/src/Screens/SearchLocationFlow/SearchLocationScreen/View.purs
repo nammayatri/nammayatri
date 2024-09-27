@@ -105,7 +105,7 @@ searchLocationScreen initialState globalProps =
   }
   where 
     globalEventsFunc push = do
-      void $ storeCallBackCustomer push NotificationListener "SearchLocationScreen"
+      void $ storeCallBackCustomer push NotificationListener "SearchLocationScreen" MB.Just MB.Nothing
       case initialState.props.searchLocStage of 
         LocateOnMapStage -> do
           void $ runEffectFn2 storeCallBackLocateOnMap (\key lat lon -> push $ LocFromMap key lat lon) (handleLocateOnMapCallback "SearchLocationScreen")
@@ -122,14 +122,13 @@ searchLocationScreen initialState globalProps =
 
 view :: forall w. GlobalProps -> (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w 
 view globalProps push state = 
+  screenAnimation $ 
   relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , padding $ PaddingBottom EHC.safeMarginBottom
     , background Color.white900
-    ][  (if currentStageOn state ChooseYourRide then screenAnimation 
-          else PrestoAnim.animationSet
-                [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true] ) $ 
+    ][  
         relativeLayout
           [ height MATCH_PARENT
           , width MATCH_PARENT

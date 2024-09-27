@@ -86,7 +86,9 @@ type Config = {
   rentalRowDetails :: RentalRowConfig,
   rentalBookingData :: RentalBookingConfig,
   showRentalRideDetails :: Boolean,
-  coinsEarned :: CoinsEarnedConfigType
+  coinsEarned :: CoinsEarnedConfigType,
+  showIntercityRideDetails :: Boolean,
+  interCityTextConfig :: IntercityRideTextConfig
 }
 
 data Theme = DARK | LIGHT
@@ -236,7 +238,9 @@ config = {
   rentalRowDetails : dummyRentalRowConfig,
   rentalBookingData : dummyRentalBookingConfig,
   showRentalRideDetails : false,
-  coinsEarned : initialConinsEarnedConfig
+  coinsEarned : initialConinsEarnedConfig,
+  showIntercityRideDetails : false,
+  interCityTextConfig : dummyInterCityRideTextConfig
 }
 
 type CustomerIssue = {
@@ -391,6 +395,11 @@ type AdditionalCharges = {
 , image :: String
 }
 
+type IntercityRideTextConfig ={
+  headerText :: String,
+  bottomText :: String
+}
+
 type RentalRowConfig = {
     rideTime :: String
   , rideDistance :: String
@@ -438,8 +447,11 @@ dummyRentalBookingConfig =
   , extraTimeFare : ""
   }
 
-
-
+dummyInterCityRideTextConfig :: IntercityRideTextConfig
+dummyInterCityRideTextConfig = {
+  headerText : "",
+  bottomText : ""
+}
 
   
 

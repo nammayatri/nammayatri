@@ -111,9 +111,9 @@ homeScreen = do
     UpdatedState screenState saveToCurrLocs -> do
        modifyScreenState $ HomeScreenStateType (\homeScreenState → screenState)
        App.BackT $ App.BackPoint <$> (pure $ RELOAD saveToCurrLocs)
-    NotificationHandler notification updatedState ->  do
+    NotificationHandler notification notificationBody updatedState ->  do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-      App.BackT $ App.NoBack <$> (pure $ FCM_NOTIFICATION notification updatedState)
+      App.BackT $ App.NoBack <$> (pure $ FCM_NOTIFICATION notification notificationBody updatedState)
     RefreshHomeScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ REFRESH_HOME_SCREEN)
@@ -207,7 +207,9 @@ homeScreen = do
     GoToRentalsFlow updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_RENTALS_FLOW updatedState)
-    GoToScheduledRides -> App.BackT $ App.NoBack <$> (pure $ GO_TO_SCHEDULED_RIDES)
+    GoToScheduledRides updatedState bookingId-> do 
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_SCHEDULED_RIDES bookingId)
     Add_Stop updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ ADD_STOP updatedState)
@@ -281,3 +283,9 @@ homeScreen = do
     UpdatePickupName updatedState lat lng -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> pure (UPDATE_PICKUP_NAME updatedState lat lng)
+    GoToTripSelectionScreen state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state) 
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_TRIP_TYPE_SELECTION state)
+    RideSummary state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state) 
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDE_SUMMARY_SCREEN state)

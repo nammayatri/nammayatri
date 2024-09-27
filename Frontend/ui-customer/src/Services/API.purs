@@ -18,15 +18,17 @@ module Services.API where
 import Data.Maybe
 
 import Control.Alt ((<|>))
+import Control.Monad.Except (runExcept,except)
 import Common.Types.App (Version(..), FeedbackAnswer)
 import Common.Types.App as CTA
+import Common.Types.App
 import Data.Either (Either(..))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
-import Foreign (ForeignError(..), fail, unsafeFromForeign)
+import Foreign (ForeignError(..), fail,unsafeFromForeign)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
 import Prelude (class Show, class Eq, show, ($), (<$>), (>>=))
@@ -43,7 +45,8 @@ import PaymentPage (PaymentPagePayload(..))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Data.Lens ((^.))
 import Accessor (_amount)
-
+import DecodeUtil
+import Data.Function.Uncurried (runFn3)
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorPayload
 
@@ -466,7 +469,7 @@ newtype SearchReq = SearchReq {
   fareProductType :: String
 }
 
-data ContentType = OneWaySearchRequest OneWaySearchReq | RentalSearchRequest RentalSearchReq
+data ContentType = OneWaySearchRequest OneWaySearchReq | RentalSearchRequest RentalSearchReq | RoundTripSearchRequest RoundTripSearchReq
 
 newtype OneWaySearchReq = OneWaySearchReq {
   origin :: SearchReqLocation,
@@ -521,17 +524,37 @@ newtype RentalSearchReq = RentalSearchReq {
   rideRequestAndRideOtpUnifiedFlow :: Maybe Boolean
 }
 
+
+newtype RoundTripSearchReq = RoundTripSearchReq {
+  origin :: SearchReqLocation,
+  stops :: Maybe (Array SearchReqLocation),
+  startTime :: String,
+  returnTime :: Maybe String,
+  roundTrip :: Boolean,
+  isReallocationEnabled ::  Maybe Boolean
+}
+
 derive instance genericContentType :: Generic ContentType _
 instance standardEncodeContentType :: StandardEncode ContentType where
   standardEncode (OneWaySearchRequest body) = standardEncode body
   standardEncode (RentalSearchRequest body) = standardEncode body
+  standardEncode (RoundTripSearchRequest body) = standardEncode body
 instance showContentType :: Show ContentType where show = genericShow
 instance decodeContentType :: Decode ContentType
   where
-    decode body = (OneWaySearchRequest <$> decode body) <|> (RentalSearchRequest <$> decode body) <|> (fail $ ForeignError "Unknown response")
+    decode body = (OneWaySearchRequest <$> decode body) <|> (RentalSearchRequest <$> decode body) <|> (RoundTripSearchRequest  <$> decode body) <|> (fail $ ForeignError "Unknown response")
 instance encodeContentType  :: Encode ContentType where
   encode (OneWaySearchRequest body) = encode body
   encode (RentalSearchRequest body) = encode body
+  encode (RoundTripSearchRequest body) = encode body
+
+derive instance genericRoundTripSearchReq :: Generic RoundTripSearchReq _
+derive instance newtypeRoundTripSearchReq :: Newtype RoundTripSearchReq _
+instance standardEncodeRoundTripSearchReq :: StandardEncode RoundTripSearchReq where standardEncode (RoundTripSearchReq body) = standardEncode body
+instance showRoundTripSearchReq :: Show RoundTripSearchReq where show = genericShow
+instance decodeRoundTripSearchReq :: Decode RoundTripSearchReq where decode = defaultDecode
+instance encodeRoundTripSearchReq  :: Encode RoundTripSearchReq where encode = defaultEncode
+
 
 derive instance genericRentalSearchReq :: Generic RentalSearchReq _
 derive instance newtypeRentalSearchReq :: Newtype RentalSearchReq _
@@ -546,6 +569,8 @@ instance standardEncodeLocationAddress :: StandardEncode LocationAddress where s
 instance showLocationAddress :: Show LocationAddress where show = genericShow
 instance decodeLocationAddress :: Decode LocationAddress where decode = defaultDecode
 instance encodeLocationAddress  :: Encode LocationAddress where encode = defaultEncode
+instance eqLocationAddress :: Eq LocationAddress where eq = genericEq
+
 
 instance makeSearchReq :: RestEndpoint SearchReq  where
  makeRequest reqBody headers = defaultMakeRequest POST (EP.searchReq "") headers reqBody Nothing
@@ -680,7 +705,38 @@ newtype OneWayQuoteAPIDetails = OneWayQuoteAPIDetails {
 }
 
 newtype IntercityQuoteAPIDetails = IntercityQuoteAPIDetails {
-  quoteId :: String
+  quoteId :: String,
+  perDayMaxHourAllowance :: Maybe Int,
+  baseFare :: Maybe PriceAPIEntityDecimals ,
+  kmPerPlannedExtraHour :: Maybe DistanceWithUnit ,
+  perExtraKmRate :: Maybe PriceAPIEntityDecimals ,
+  perExtraMinRate :: Maybe PriceAPIEntityDecimals ,
+  perHourCharge :: Maybe PriceAPIEntityDecimals ,
+  plannedPerKmRateOneWay :: Maybe PriceAPIEntityDecimals ,
+  plannedPerKmRateRoundTrip :: Maybe PriceAPIEntityDecimals,
+  tollCharges :: Maybe PriceAPIEntityDecimals ,
+  deadKmFare :: Maybe PriceAPIEntityDecimals ,
+  nightShiftInfo :: Maybe NightShiftInfoAPIEntity
+}
+newtype NightShiftInfoAPIEntity = NightShiftInfoAPIEntity {   
+    nightShiftCharge :: Number,
+    nightShiftChargeWithCurrency :: Maybe PriceAPIEntityDecimals,
+    nightShiftStart :: String,
+    nightShiftEnd :: String
+}
+
+newtype PriceApiEntity = PriceApiEntity {
+  amount :: Int,
+  currency :: String
+}
+newtype PriceAPIEntityDecimals = PriceAPIEntityDecimals {
+  amount :: Number,
+  currency :: String
+}
+
+newtype DistanceWithUnit = DistanceWithUnit {
+  value :: Int,
+  unit :: String
 }
 
 newtype RentalQuoteAPIDetails = RentalQuoteAPIDetails {
@@ -699,7 +755,6 @@ newtype DeadKmFare = DeadKmFare {
   amount :: Int,
   currency :: String
 }
-
 newtype SpecialZoneQuoteAPIDetails = SpecialZoneQuoteAPIDetails {
   quoteId :: String
 }
@@ -853,11 +908,20 @@ instance standardEncodeQuoteAPIContents :: StandardEncode QuoteAPIContents where
   standardEncode (SPECIAL_ZONE body) = standardEncode body
   standardEncode (RENTAL body) = standardEncode body
   standardEncode (INTER_CITY body) = standardEncode body
-instance showQuoteAPIContents :: Show QuoteAPIContents where show = genericShow
-instance decodeQuoteAPIContents :: Decode QuoteAPIContents
-  where
-    decode body = (ONE_WAY <$> decode body) <|> (DRIVER_OFFER <$> decode body) <|> (SPECIAL_ZONE <$> decode body) <|> (RENTAL <$> decode body)<|> (fail $ ForeignError "Unknown response")
-instance encodeQuoteAPIContents  :: Encode QuoteAPIContents where
+instance showQuoteAPIContents :: Show QuoteAPIContents where
+  show = genericShow
+instance decodeQuoteAPIContents :: Decode QuoteAPIContents where
+  decode body =
+    case (runExcept $ (readProp "fareProductType" body) >>= decode) of
+      Right fareProductType -> case fareProductType of
+          "ONE_WAY"                          -> ONE_WAY <$> decode body
+          "DRIVER_OFFER"                     -> DRIVER_OFFER <$> decode body
+          "INTER_CITY"                       -> INTER_CITY <$> decode body
+          "RENTAL"                           -> RENTAL <$> decode body
+          "ONE_WAY_SPECIAL_ZONE"             -> SPECIAL_ZONE <$> decode body
+          _                                  -> (fail $ ForeignError "Unknown response but inside f")
+      Left err -> (fail $ ForeignError "Unknown response but outside fpt")
+instance encodeQuoteAPIContents :: Encode QuoteAPIContents where
   encode (ONE_WAY body) = encode body
   encode (DRIVER_OFFER body) = encode body
   encode (SPECIAL_ZONE body) = encode body
@@ -873,10 +937,19 @@ instance decodeQuoteAPIEntity :: Decode QuoteAPIEntity where decode = defaultDec
 instance encodeQuoteAPIEntity  :: Encode QuoteAPIEntity where encode = defaultEncode
 
 derive instance genericQuoteAPIDetails :: Generic QuoteAPIDetails _
-derive instance newtypeQuoteAPIDetails :: Newtype QuoteAPIDetails _
+derive instance newtypeQuoteAPIDetails :: Newtype QuoteAPIDetails _ 
 instance standardEncodeQuoteAPIDetails :: StandardEncode QuoteAPIDetails where standardEncode (QuoteAPIDetails body) = standardEncode body
-instance showQuoteAPIDetails :: Show QuoteAPIDetails where show = genericShow
-instance decodeQuoteAPIDetails :: Decode QuoteAPIDetails where decode = defaultDecode
+instance showQuoteAPIDetails :: Show QuoteAPIDetails where show = genericShow 
+instance decodeQuoteAPIDetails :: Decode QuoteAPIDetails where
+      decode body = case (runExcept $ (readProp "fareProductType" body)) of
+                      Right fareProductType -> 
+                        case (runExcept $ (readProp "contents" body)) of
+                          Right contents ->
+                            let updatedBody = runFn3 unsafeSetForeign "contents" body $ runFn3 unsafeSetForeign "fareProductType" contents fareProductType
+                            in defaultDecode $ updatedBody
+                          Left err     -> (fail $ ForeignError "Unknown response")
+                      Left err     -> (fail $ ForeignError "Unknown response")
+  
 instance encodeQuoteAPIDetails  :: Encode QuoteAPIDetails where encode = defaultEncode
 
 derive instance genericDriverOfferAPIEntity :: Generic DriverOfferAPIEntity _
@@ -964,6 +1037,43 @@ instance decodeDeadKmFare :: Decode DeadKmFare where decode = defaultDecode
 instance encodeDeadKmFare  :: Encode DeadKmFare where encode = defaultEncode
 
 
+derive instance genericNightShiftInfoAPIEntity :: Generic NightShiftInfoAPIEntity _
+derive instance newtypeNightShiftInfoAPIEntity :: Newtype NightShiftInfoAPIEntity _
+instance standardEncodeNightShiftInfoAPIEntity :: StandardEncode NightShiftInfoAPIEntity where standardEncode (NightShiftInfoAPIEntity body) = standardEncode body
+instance showNightShiftInfoAPIEntity :: Show NightShiftInfoAPIEntity where show = genericShow
+instance decodeNightShiftInfoAPIEntity :: Decode NightShiftInfoAPIEntity where decode = defaultDecode
+instance encodeNightShiftInfoAPIEntity  :: Encode NightShiftInfoAPIEntity where encode = defaultEncode
+
+
+derive instance genericPriceApiEntity :: Generic PriceApiEntity _
+derive instance newtypePriceApiEntity :: Newtype PriceApiEntity _
+instance standardEncodePriceApiEntity :: StandardEncode PriceApiEntity where standardEncode (PriceApiEntity body) = standardEncode body
+instance showPriceApiEntity :: Show PriceApiEntity where show = genericShow
+instance decodePriceApiEntity :: Decode PriceApiEntity where decode = defaultDecode
+instance encodePriceApiEntity  :: Encode PriceApiEntity where encode = defaultEncode
+
+derive instance genericPriceAPIEntityDecimals :: Generic PriceAPIEntityDecimals _
+derive instance newtypePriceAPIEntityDecimals :: Newtype PriceAPIEntityDecimals _
+instance standardEncodePriceAPIEntityDecimals :: StandardEncode PriceAPIEntityDecimals where
+  standardEncode (PriceAPIEntityDecimals body) = standardEncode body
+instance showPriceAPIEntityDecimals :: Show PriceAPIEntityDecimals where
+  show = genericShow
+instance decodePriceAPIEntityDecimals :: Decode PriceAPIEntityDecimals where
+  decode = defaultDecode
+instance encodePriceAPIEntityDecimals :: Encode PriceAPIEntityDecimals where
+  encode = defaultEncode
+
+derive instance genericDistanceWithUnit :: Generic DistanceWithUnit _
+derive instance newtypeDistanceWithUnit :: Newtype DistanceWithUnit _
+instance standardEncodeDistanceWithUnit :: StandardEncode DistanceWithUnit where
+  standardEncode (DistanceWithUnit body) = standardEncode body
+instance showDistanceWithUnit :: Show DistanceWithUnit where
+  show = genericShow
+instance decodeDistanceWithUnit :: Decode DistanceWithUnit where
+  decode = defaultDecode
+instance encodeDistanceWithUnit :: Encode DistanceWithUnit where
+  encode = defaultEncode
+
 ------- rideBooking/{bookingId}
 
 data RideBookingReq = RideBookingReq String
@@ -1006,8 +1116,12 @@ newtype RideBookingRes = RideBookingRes {
   vehicleServiceTierType :: Maybe String,
   tollConfidence :: Maybe CTA.Confidence,
   driversPreviousRideDropLocLat :: Maybe Number,
-  driversPreviousRideDropLocLon :: Maybe Number
-, estimatedFareBreakup :: Array FareBreakupAPIEntity
+  driversPreviousRideDropLocLon :: Maybe Number,
+  isScheduled :: Boolean,
+  estimatedFareBreakup :: Array FareBreakupAPIEntity,
+  vehicleServiceTierSeatingCapacity :: Maybe Int,
+  vehicleServiceTierAirConditioned :: Maybe Number,
+  returnTime :: Maybe String
 }
 
 newtype RideBookingStatusRes = RideBookingStatusRes {
@@ -3818,6 +3932,106 @@ instance decodeGetManuallySharedDetailsRes :: Decode GetManuallySharedDetailsRes
 instance encodeGetManuallySharedDetailsRes :: Encode GetManuallySharedDetailsRes where encode = defaultEncode
 
 
+---- rideSummaryScreen -------
+newtype RateCardItem  = RateCardItem{
+  price :: Int,
+  priceWithCurrency :: CTA.Price,
+  title :: TitleTag
+}
+derive instance genericRateCardItem:: Generic RateCardItem _
+instance standardRateCardItem :: StandardEncode RateCardItem where standardEncode (RateCardItem res) = standardEncode res
+instance showRateCardItem:: Show RateCardItem where show = genericShow
+instance decodeRateCardItem :: Decode RateCardItem where decode = defaultDecode
+instance encodeRateCardItem:: Encode RateCardItem where encode = defaultEncode
+instance eqRateCardItem:: Eq RateCardItem where eq = genericEq
+
+data TitleTag = SERVICE_CHARGE 
+              | GOVERNMENT_CHARGE 
+              | NIGHT_SHIFT_START_TIME_IN_SECONDS 
+              | NIGHT_SHIFT_END_TIME_IN_SECONDS 
+              | MIN_FARE 
+              | PER_HOUR_CHARGE 
+              | PER_MINUTE_CHARGE 
+              | UNPLANNED_PER_KM_CHARGE 
+              | PER_HOUR_DISTANCE_KM 
+              | PLANNED_PER_KM_CHARGE 
+              | DEAD_KILOMETER_FARE 
+              | WAITING_CHARGE_PER_MIN 
+              | FREE_WAITING_TIME_IN_MINUTES 
+              | NIGHT_SHIFT_CHARGE 
+              | CONSTANT_NIGHT_SHIFT_CHARGE
+
+derive instance genericTitleTag :: Generic TitleTag   _
+instance showTitleTag :: Show TitleTag  where show = genericShow
+instance decodeTitleTag :: Decode TitleTag  
+   where decode body = case unsafeFromForeign body of 
+                    "SERVICE_CHARGE"                     ->  except $ Right SERVICE_CHARGE
+                    "GOVERNMENT_CHARGE"                  ->  except $ Right GOVERNMENT_CHARGE
+                    "NIGHT_SHIFT_START_TIME_IN_SECONDS"  ->  except $ Right NIGHT_SHIFT_START_TIME_IN_SECONDS
+                    "NIGHT_SHIFT_END_TIME_IN_SECONDS "   ->  except $ Right NIGHT_SHIFT_END_TIME_IN_SECONDS
+                    "MIN_FARE"                           ->  except $ Right MIN_FARE
+                    "PER_HOUR_CHARGE"                    ->  except $ Right PER_HOUR_CHARGE
+                    "PER_MINUTE_CHARGE"                  ->  except $ Right PER_MINUTE_CHARGE
+                    "UNPLANNED_PER_KM_CHARGE"            ->  except $ Right UNPLANNED_PER_KM_CHARGE
+                    "PER_HOUR_DISTANCE_KM"               ->  except $ Right PER_HOUR_DISTANCE_KM
+                    "PLANNED_PER_KM_CHARGE"              ->  except $ Right PLANNED_PER_KM_CHARGE
+                    "DEAD_KILOMETER_FARE"                ->  except $ Right DEAD_KILOMETER_FARE
+                    "WAITING_CHARGE_PER_MIN"             ->  except $ Right WAITING_CHARGE_PER_MIN
+                    "FREE_WAITING_TIME_IN_MINUTES"       ->  except $ Right FREE_WAITING_TIME_IN_MINUTES
+                    "NIGHT_SHIFT_CHARGE"                 ->  except $ Right NIGHT_SHIFT_CHARGE
+                    "CONSTANT_NIGHT_SHIFT_CHARGE"        ->  except $ Right CONSTANT_NIGHT_SHIFT_CHARGE
+                    _                                    ->  except $ Right SERVICE_CHARGE
+
+instance encodeTitleTag:: Encode TitleTag  where encode = defaultEnumEncode
+instance eqTitleTag :: Eq TitleTag  where eq = genericEq
+instance standardTitleTag :: StandardEncode TitleTag   where standardEncode _ = standardEncode {}
+
+
+data ServiceTierType
+  = COMFY
+  | ECO
+  | PREMIUM
+  | SUV_TIER
+  | AUTO_RICKSHAW
+  | HATCHBACK_TIER
+  | SEDAN_TIER
+  | TAXI
+  | TAXI_PLUS
+  | RENTALS
+  | INTERCITY
+
+
+derive instance genericServiceTierType :: Generic ServiceTierType _
+instance showServiceTierType :: Show ServiceTierType where show = genericShow
+instance decodeServiceTierType :: Decode ServiceTierType
+  where decode body = case unsafeFromForeign body of
+                  "COMFY"        -> except $ Right COMFY
+                  "ECO"          -> except $ Right ECO
+                  "PREMIUM"      -> except $ Right PREMIUM
+                  "SUV"          -> except $ Right SUV_TIER
+                  "AUTO_RICKSHAW"-> except $ Right AUTO_RICKSHAW
+                  "HATCHBACK"    -> except $ Right HATCHBACK_TIER
+                  "SEDAN"        -> except $ Right SEDAN_TIER
+                  "TAXI"         -> except $ Right TAXI
+                  "TAXI_PLUS"    -> except $ Right TAXI_PLUS
+                  "RENTALS"      -> except $ Right RENTALS
+                  "INTERCITY"    -> except $ Right INTERCITY
+                  _              -> except $ Right COMFY
+instance encodeServiceTierType :: Encode ServiceTierType where encode = defaultEnumEncode
+instance eqServiceTierType :: Eq ServiceTierType where eq = genericEq
+instance standardEncodeServiceTierType :: StandardEncode ServiceTierType
+  where
+    standardEncode COMFY = standardEncode "COMFY"
+    standardEncode ECO = standardEncode "ECO"
+    standardEncode PREMIUM = standardEncode "PREMIUM"
+    standardEncode SUV_TIER = standardEncode "SUV"
+    standardEncode AUTO_RICKSHAW = standardEncode "AUTO_RICKSHAW"
+    standardEncode HATCHBACK_TIER = standardEncode "HATCHBACK"
+    standardEncode SEDAN_TIER = standardEncode "SEDAN"
+    standardEncode TAXI = standardEncode "TAXI"
+    standardEncode TAXI_PLUS = standardEncode "TAXI_PLUS"
+    standardEncode RENTALS = standardEncode "RENTALS"
+    standardEncode INTERCITY = standardEncode "INTERCITY"
 ----------------------------------------------------------------- Multichat API ---------------------------------------------------------------------
 
 

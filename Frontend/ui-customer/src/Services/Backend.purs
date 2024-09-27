@@ -358,6 +358,7 @@ rideSearchBT payload = do
             pure $ toast message
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = HomeScreen}})
             void $ pure $ setValueToLocalStore LOCAL_STAGE "HomeScreen"
+            void $ lift $ lift $ EHU.toggleLoader false
             BackT $ pure GoBack
 
 
@@ -1466,3 +1467,32 @@ makeEditLocationResultRequest bookingUpdateRequestId = GetEditLocResultReq booki
 
 makeEditLocResultConfirmReq :: String -> EditLocResultConfirmReq
 makeEditLocResultConfirmReq bookingUpdateRequestId = EditLocResultConfirmReq bookingUpdateRequestId
+
+
+------------------------------------------------------------------------------- Intercity ---------------------------------------------------------------------------------
+makeRoundTripReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Maybe String ->  Boolean -> SearchReq
+makeRoundTripReq slat slong dlat dlong srcAdd desAdd startTime returnTime roundTrip =
+    let appConfig = CP.getAppConfig CP.appConfig
+    in  SearchReq { "contents" : RoundTripSearchRequest (
+                                RoundTripSearchReq {
+                                        "stops" : if dlat == 0.0 then Nothing else 
+                                            (Just [SearchReqLocation {
+                                                    "gps" : LatLong {
+                                                        "lat" : dlat ,
+                                                        "lon" : dlong
+                                                        },
+                                                    "address" : (LocationAddress desAdd)
+                                            }]), 
+                                            "origin" : SearchReqLocation {
+                                            "gps" : LatLong {
+                                                        "lat" : slat ,
+                                                        "lon" : slong
+                                            },"address" : (LocationAddress srcAdd)
+                                            },
+                                            "startTime" : startTime,
+                                            "returnTime" : returnTime,
+                                            "roundTrip" : roundTrip,
+                                            "isReallocationEnabled" : Just appConfig.feature.enableReAllocation
+                                            }),
+                    "fareProductType" : "INTER_CITY"
+                   }

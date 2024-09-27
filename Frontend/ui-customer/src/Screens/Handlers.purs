@@ -65,4 +65,5 @@ import Screens.RentalBookingFlow.RentalScreen.View (rentalScreen) as UI
 import Screens.RideBookingFlow.PickupInstructionsScreen.Handler (pickupInstructionsScreen) as UI
 import Screens.NammaSafetyFlow.Handler (nammaSafetyScreen) as UI
 import Screens.DataExplainWithFetch.Handler (dataFetchScreen) as UI
+import Screens.RideSummaryScreen.Handler (rideSummaryScreen) as UI
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.View (parcelDeliveryScreen) as UI

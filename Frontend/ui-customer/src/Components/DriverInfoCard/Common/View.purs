@@ -286,6 +286,7 @@ getVehicleImage variant vehicleDetail city = do
 sourceDestinationView :: forall action w.(action -> Effect Unit) -> TripDetails action -> PrestoDOM (Effect Unit) w
 sourceDestinationView push config = 
   let isNotRentalRide = (config.fareProductType /= FPT.RENTAL)
+      isNotIntercityRide = config.fareProductType /= FPT.INTER_CITY
       bottomMargin = (if os == "IOS" && config.rideStarted && config.enablePaddingBottom then (safeMarginBottom + 36) else 12)
       locationTextWidthWhenFeatureEnabled = if os == "IOS" then V ((screenWidth unit) / 100 * 80) else V ((screenWidth unit) / 100 * 65)
       locationTextWidthWhenFeatureDisabled = V ((screenWidth unit) / 10 * 8)
@@ -403,7 +404,7 @@ sourceDestinationView push config =
                 , cornerRadius if os == "IOS" then 16.0 else 32.0
                 , stroke $ "1," <> Color.grey900
                 , padding $ Padding 12 8 12 8
-                , visibility $ boolToVisibility $ config.enableEditDestination && isNotRentalRide && (config.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE) && not config.isOtpRideFlow
+                , visibility $ boolToVisibility $ config.enableEditDestination && isNotRentalRide && (config.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE) && not config.isOtpRideFlow && isNotIntercityRide
                 , onClick push $ const config.editingDestinationLoc
                 , rippleColor Color.rippleShade
               ] <> FontStyle.body1 TypoGraphy

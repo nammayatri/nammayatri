@@ -410,6 +410,8 @@ config =
               enableCabBanner = true
             }
             , enableAcViews = true
+            , enableIntercity= true
+            , enableScheduling = true
             , enableCabs = false
             , enableRentals = true
             , estimateAndQuoteConfig {
@@ -772,7 +774,7 @@ allCitiesDefCityConfig =
     estimateAndQuoteConfig : {
           showInfoIcon : true},
     geoCodeConfig :
-      { radius : 50000
+      { radius : 250000
       , strictBounds : false
       },
     enableCabs : false,
@@ -789,6 +791,7 @@ allCitiesDefCityConfig =
     enableAcViews : false,
     enableRentals : false,
     enableIntercity : false, 
+    enableScheduling : false,
     waitingChargeConfig : {
       auto : {
         freeMinutes : 3.0
@@ -831,7 +834,7 @@ allCitiesDefCityConfig =
       , perMinCharges : 2.0
       }
     },
-    enableWaitingConfig : false,
+    enableWaitingConfig : true,
     allowBlockedUserLogin : true
   }
 
@@ -877,7 +880,8 @@ ysDefaultCityConfig = allCitiesDefCityConfig {
         freeMinutes = 5.0
       , perMinCharges = 1.0
       }
-    }
+    },
+    enableWaitingConfig = false
   }
 
 keralaWTC :: WaitingChargeConfig

@@ -69,6 +69,7 @@ modifyScreenState st =
     PickupInstructionsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {pickupInstructionsScreen = a state.pickupInstructionsScreen})
     DataFetchScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {dataExplainWithFetch = a state.dataExplainWithFetch})
     ParcelDeliveryScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {parcelDeliveryScreen = a state.parcelDeliveryScreen})
+    RideSummaryScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideSummaryScreen = a state.rideSummaryScreen})
 
     
 updateRepeatRideDetails :: Trip -> FlowBT String Unit
