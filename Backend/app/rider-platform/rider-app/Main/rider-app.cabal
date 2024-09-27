@@ -192,6 +192,7 @@ library
       Domain.Action.UI.Maps
       Domain.Action.UI.MerchantPaymentMethod
       Domain.Action.UI.MultiModal
+      Domain.Action.UI.MultimodalConfirm
       Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Payment
       Domain.Action.UI.Person
@@ -332,6 +333,7 @@ library
       Storage.Queries.Extra.Transformers.Ride
       Storage.Queries.FareBreakupExtra
       Storage.Queries.FeedbackFormExtra
+      Storage.Queries.FRFSSearchExtra
       Storage.Queries.FRFSTicketBokingPayment
       Storage.Queries.FRFSTicketBookingExtra
       Storage.Queries.Geometry
@@ -415,6 +417,7 @@ library
       API.Action.UI.FRFSTicketService
       API.Action.UI.Invoice
       API.Action.UI.MultiModal
+      API.Action.UI.MultimodalConfirm
       API.Action.UI.RidePayment
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
@@ -428,6 +431,7 @@ library
       API.Types.UI.FRFSTicketService
       API.Types.UI.Invoice
       API.Types.UI.MultiModal
+      API.Types.UI.MultimodalConfirm
       API.Types.UI.RidePayment
       API.Types.UI.SocialLogin
       API.Types.UI.Sos
@@ -690,6 +694,7 @@ library
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.FareBreakup
       Storage.Queries.OrphanInstances.FeedbackForm
+      Storage.Queries.OrphanInstances.FRFSSearch
       Storage.Queries.OrphanInstances.FRFSTicketBooking
       Storage.Queries.OrphanInstances.Issue
       Storage.Queries.OrphanInstances.LocationMapping

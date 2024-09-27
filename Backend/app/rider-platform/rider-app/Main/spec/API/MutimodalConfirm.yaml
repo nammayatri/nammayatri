@@ -1,0 +1,22 @@
+imports:
+  Journey: Domain.Types.Journey
+  # DSelect: Domain.Action.UI.Select
+
+module: MultimodalConfirm
+
+types:
+  JourneyConfirmReq:
+    journeyConfirmReqElements: "[JourneyConfirmReqElement]"
+  JourneyConfirmReqElement:
+    journeyLegOrder: Int
+    skipBooking: Bool
+
+apis:
+  - POST:
+      endpoint: /multimodal/{journeyId}/confirm
+      params:
+        journeyId: Id Journey
+      request:
+        type: JourneyConfirmReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

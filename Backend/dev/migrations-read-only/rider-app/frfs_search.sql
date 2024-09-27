@@ -32,3 +32,12 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN journey_leg_order integer ;
 ALTER TABLE atlas_app.frfs_search ADD COLUMN journey_id text ;
 ALTER TABLE atlas_app.frfs_search ADD COLUMN convenience_cost integer ;
 ALTER TABLE atlas_app.frfs_search ADD COLUMN agency text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_search ADD COLUMN pricing_id text ;
+
+
+------- SQL updates -------
+

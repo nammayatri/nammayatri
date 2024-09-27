@@ -153,7 +153,11 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
   (quotes :: [DFRFSQuote.FRFSQuote]) <- B.runInReplica $ QFRFSQuote.findAllBySearchId searchId_
 
   let requiredQuote = filterQuotes quotes
-  SLCF.createFares search.journeyLegInfo requiredQuote.price
+  case requiredQuote of
+    Just reqQuote -> do
+      QFRFSSearch.updatePricingId searchId_ (Just reqQuote.id.getId)
+      SLCF.createFares search.journeyLegInfo reqQuote.price
+    Nothing -> pure ()
 
   mapM
     ( \quote -> do
@@ -174,8 +178,8 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
     )
     quotes
 
-filterQuotes :: [DFRFSQuote.FRFSQuote] -> DFRFSQuote.FRFSQuote
-filterQuotes quotes = head quotes
+filterQuotes :: [DFRFSQuote.FRFSQuote] -> Maybe DFRFSQuote.FRFSQuote
+filterQuotes quotes = listToMaybe quotes
 
 -- /{jouneryId}/confirm
 -- => create JourneyBooking

@@ -531,7 +531,8 @@ multiModalSearch personId merchantId searchReq bundleVersion clientVersion clien
               journeyLegOrder = journeyPlannerLeg.legOrder,
               agency = Just journeyPlannerLeg.agency,
               skipBooking = False,
-              convenienceCost = 0
+              convenienceCost = 0,
+              pricingId = Nothing
             }
     case mode of
       DTrip.Taxi -> do
@@ -561,9 +562,11 @@ multiModalSearch personId merchantId searchReq bundleVersion clientVersion clien
       DTrip.Metro -> do
         let frfsSearchReq = convertLatLongToFRFSStations (Just journeySearchData)
         void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) DStation.METRO frfsSearchReq
+      -- poll getFrfsSearchQuote from frontend
       DTrip.Bus -> do
         let frfsSearchReq = convertLatLongToFRFSStations (Just journeySearchData)
         void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) DStation.BUS frfsSearchReq
+      -- poll getFrfsSearchQuote from frontend
       DTrip.Walk -> do
         fromLocation_ <- buildSearchReqLoc $ SearchReqLocation {gps = journeyPlannerLeg.originGps, address = journeyPlannerLeg.originAddress}
         toLocation_ <- buildSearchReqLoc $ SearchReqLocation {gps = journeyPlannerLeg.destinationGps, address = journeyPlannerLeg.destinationAddress}

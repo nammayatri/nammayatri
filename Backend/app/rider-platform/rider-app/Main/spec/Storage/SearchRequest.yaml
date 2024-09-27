@@ -126,6 +126,7 @@ SearchRequest:
       agency: Maybe Text
       skipBooking: Maybe Bool
       convenienceCost: Maybe Int
+      pricingId: Maybe Text
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -154,6 +155,7 @@ SearchRequest:
     agency: (journeyLegInfo >>= (.agency))|E
     skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
+    pricingId: (journeyLegInfo >>= (.pricingId))|E
 
   fromTType:
     merchantOperatingCityId: Storage.Queries.Transformers.SearchRequest.backfillMOCId merchantId merchantOperatingCityId|EM
@@ -198,6 +200,7 @@ SearchRequest:
   constraints:
     id: PrimaryKey
     riderId: SecondaryKey
+    journeyId: "!SecondaryKey" # forcing to be a secondary key
 
   extraOperations:
     - EXTRA_QUERY_FILE
