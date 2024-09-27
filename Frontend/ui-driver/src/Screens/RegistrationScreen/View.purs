@@ -54,7 +54,7 @@ import Screens.Types (RegisterationStep(..), StageStatus(..), ValidationStatus(.
 import Screens.Types as ST
 import Services.API as API
 import Storage (KeyStore(..), getValueToLocalNativeStore)
-import Storage (getValueToLocalStore, KeyStore(..))
+import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore)
 import Styles.Colors as Color
 import Screens.RegistrationScreen.ScreenData as SD
 import Resource.Constants as Constant
@@ -62,14 +62,21 @@ import Data.Int (toNumber, floor)
 import Components.OptionsMenu as OptionsMenu
 import Components.BottomDrawerList as BottomDrawerList
 import Helpers.Utils as HU
+import Engineering.Helpers.Events as EHE
 import Effect.Uncurried (runEffectFn2)
+import Engineering.Helpers.Commons (flowRunner)
+import Types.App (GlobalState, defaultGlobalState)
+import Presto.Core.Types.Language.Flow (Flow, delay)
+import Effect.Aff (Milliseconds(..), launchAff)
+import RemoteConfig as RC
+import Log
 
 screen :: ST.RegistrationScreenState -> Screen Action ST.RegistrationScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "RegistrationScreen"
-  , globalEvents : []
+  , globalEvents : [ globalActions ]
   , eval :
       ( \state action -> do
           let _ = spy "RegistrationScreen ----- state" state
@@ -77,6 +84,16 @@ screen initialState =
           eval state action
       )
   }
+  where 
+  globalActions push = do
+    let eventName = if isNothing initialState.data.vehicleCategory then "vehicle_selection_page_loaded" else "vehicle_registration_page_loaded"
+    void $ pure $ EHE.addEvent (EHE.defaultEventObject eventName)
+    if (getValueToLocalStore LOGS_TRACKING == "true" && getValueToLocalStore FUNCTION_EXECUTED_IN_SESSION /= "true") then do
+      void $ launchAff $ flowRunner defaultGlobalState $ runLogTracking push NoAction
+      void $ pure $ setValueToLocalStore FUNCTION_EXECUTED_IN_SESSION "true"
+      pure unit
+    else pure unit
+    pure $ pure unit
 
 view ::
   forall w.
@@ -662,7 +679,7 @@ variantListView push state =
               , stroke stroke'
               , gravity CENTER_VERTICAL
               , margin $ MarginTop 16
-              , onClick push $ const $ ChooseVehicleCategory index
+              , onClick push $ const $ ChooseVehicleCategory index item
               ][  imageView
                   [ width $ V 116
                   , height $ V 80
@@ -717,3 +734,14 @@ compVisibility state item = not item.isHidden && dependentDocAvailable item stat
 
 statusCompOrManual :: ST.StageStatus -> Boolean
 statusCompOrManual status = any (_ == status) [ST.COMPLETED, ST.MANUAL_VERIFICATION_REQUIRED]
+
+runLogTracking :: forall action. (action -> Effect Unit) ->  action -> Flow GlobalState Unit
+runLogTracking push action = do
+  let eventsConfig = RC.eventsConfig "events_config"
+  if (getValueToLocalStore LOGS_TRACKING == "true" && eventsConfig.enabled) then do
+    void $ delay $ Milliseconds eventsConfig.loggingIntervalInMs
+    let _ = printLog "Logging Onboarding Events" ""
+    void $ EHE.pushEvent eventsConfig.pushEventChunkSize
+    runLogTracking push action
+  else 
+    pure unit

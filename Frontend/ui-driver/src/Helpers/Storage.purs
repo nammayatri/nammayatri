@@ -153,6 +153,9 @@ data KeyStore = USER_NAME
                 | GULLAK_TOKEN
                 | DONT_CALL_REFRESH
                 | IS_ON_FREE_TRIAL
+                | LOGS_TRACKING
+                | FUNCTION_EXECUTED_IN_SESSION
+                | EVENT_STORAGE
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

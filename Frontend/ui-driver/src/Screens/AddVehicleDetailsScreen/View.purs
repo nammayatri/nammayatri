@@ -68,6 +68,7 @@ import Data.Array as DA
 import Components.BottomDrawerList as BottomDrawerList
 import Screens.Types as ST
 import Components.RequestInfoCard as RequestInfoCard
+import Engineering.Helpers.Events as EHE
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -77,6 +78,7 @@ screen initialState =
   , globalEvents : [(\push -> do
     _ <- JB.storeCallBackImageUpload push CallBackImageUpload
     _ <- runEffectFn1 consumeBP unit
+    let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getRegisterationStepScreenLoadedEventName ST.VEHICLE_DETAILS_OPTION ) { module = "vehicle_registration_page", source = "RC"}
     if initialState.props.successfulValidation then do
       _ <- launchAff $ flowRunner defaultGlobalState $ redirectScreen push RedirectScreen
       pure unit
