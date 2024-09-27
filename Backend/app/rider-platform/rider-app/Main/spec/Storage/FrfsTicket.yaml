@@ -50,6 +50,7 @@ FRFSSearch:
       agency: Maybe Text
       skipBooking: Maybe Bool
       convenienceCost: Maybe Int
+      pricingId: Maybe Text
 
   toTType:
     journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
@@ -57,6 +58,7 @@ FRFSSearch:
     agency: (journeyLegInfo >>= (.agency))|E
     skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
+    pricingId: (journeyLegInfo >>= (.pricingId))|E
 
   fromTType:
     journeyLegInfo: mkJourneyLegInfo
@@ -71,6 +73,9 @@ FRFSSearch:
     findById:
       kvFunction: findOneWithKV
       where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 Station:
   tableName: station

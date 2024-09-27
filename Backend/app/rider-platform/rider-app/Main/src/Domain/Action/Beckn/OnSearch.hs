@@ -257,14 +257,16 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     else do
       deploymentVersion <- asks (.version)
 
-      let requiredEstimate = find (\est -> est.vehicleVariant == DV.AUTO_RICKSHAW) estimatesInfo -- hardcoded for now, we can set a default vehicle in config
+      estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion) (filterEstimtesByPrefference estimatesInfo blackListedVehicles) -- add to SR
+      quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo blackListedVehicles)
+
+      let requiredEstimate = find (\est -> est.vehicleServiceTierType == DVST.AUTO_RICKSHAW) estimates -- hardcoded for now, we can set a default vehicle in config
       case requiredEstimate of
         Just requiredEst -> do
+          QSearchReq.updatePricingId requestId (Just requiredEst.id.getId)
           SLCF.createFares searchRequest.journeyLegInfo requiredEst.estimatedTotalFare
         Nothing -> pure ()
 
-      estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion) (filterEstimtesByPrefference estimatesInfo blackListedVehicles)
-      quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo blackListedVehicles)
       forM_ estimates $ \est -> do
         triggerEstimateEvent EstimateEventData {estimate = est, personId = searchRequest.riderId, merchantId = searchRequest.merchantId}
       let lockKey = DQ.estimateBuildLockKey searchRequest.id.getId

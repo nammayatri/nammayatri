@@ -154,6 +154,7 @@ WalkLegMultimodal:
       agency: Maybe Text
       skipBooking: Maybe Bool
       convenienceCost: Maybe Int
+      pricingId: Maybe Text
 
   fromTType:
     estimatedDistance: (Kernel.Types.Common.Distance estimatedDistance distanceUnit)|E
@@ -171,5 +172,6 @@ WalkLegMultimodal:
     agency: (journeyLegInfo >>= (.agency))|E
     skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
+    pricingId: (journeyLegInfo >>= (.pricingId))|E
 
 

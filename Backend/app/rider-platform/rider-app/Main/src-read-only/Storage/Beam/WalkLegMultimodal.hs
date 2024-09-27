@@ -23,6 +23,7 @@ data WalkLegMultimodalT f = WalkLegMultimodalT
     convenienceCost :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     journeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     journeyLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    pricingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     skipBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     riderId :: B.C f Kernel.Prelude.Text,
     startTime :: B.C f Kernel.Prelude.UTCTime,
