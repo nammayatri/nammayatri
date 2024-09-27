@@ -183,6 +183,7 @@ initData = let
     , famousDestinations : []
     , parking : initialParkingData
     , toll : initialTollData
+    , clickedLocationTagBar : Nothing
     },
     props: {
       rideRequestFlow : false

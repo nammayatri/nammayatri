@@ -671,6 +671,7 @@
       "ny_ic_suv_plus_side" : true,
       "ny_ic_suv_plus_left_side" : true,
       "ny_ic_suv_plus_concept" : true,
-      "ny_ic_suv_plus_nav_on_map" : true
+      "ny_ic_suv_plus_nav_on_map" : true,
+      "ny_ic_bike_taxi_pill" : true
    }
 }
