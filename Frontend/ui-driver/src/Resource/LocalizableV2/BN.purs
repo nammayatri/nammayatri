@@ -881,7 +881,6 @@ getBn =
     , payment_pending_soft_nudge: "প্রাপ্য সীমা শীঘ্রই পৌঁছে যাবে।নন-স্টপ রাইডগুলি উপভোগ করার জন্য সাফ বকেয়া পরিষ্কার করুন"
     , clear_your_dues_early: "আপনার বকেয়া তাড়াতাড়ি সাফ করুন"
     , due_limit_warning_banner_title: "আপনার যথাসময়ে ₹{} ডলার সীমা শীঘ্রই পৌঁছে যাবে"
-    , free_trial_ending_in_2_days: "বিনামূল্যে ট্রায়াল 2 দিনের মধ্যে শেষ!"
     , free_trial_ending_tomorrow: "বিনামূল্যে ট্রায়াল আগামীকাল শেষ!"
     , free_trial_ends_tonight: "বিনামূল্যে ট্রায়াল আজ রাতে শেষ!"
     , join_a_plan_to_continue_taking_rides: "রাইডগুলি চালিয়ে যাওয়ার পরিকল্পনায় যোগ দিন"
@@ -1720,4 +1719,7 @@ getBn =
     , smooth_driving: "মসৃণ ড্রাইভিং"
     , no_cancellation: "কোন বাতিল নেই"
     , with_nammayatri_for: (\years -> "নম্মা যাত্রীর সাথে " <> years <> "+ বছর")
+    , free_trial_ending_in_n_days : (\days -> "ফ্রি ট্রায়াল শেষ হচ্ছে " <> days <> " দিনে")
+    , n_free_rides_completed : (\n -> n <> " ফ্রি রাইড সম্পন্ন")
+    , n_more_free_rides_left: (\n -> n <> " আরও ফ্রি রাইড বাকি")
     }

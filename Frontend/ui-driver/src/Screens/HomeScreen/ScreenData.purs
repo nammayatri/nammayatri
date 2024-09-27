@@ -24,6 +24,7 @@ import ConfigProvider
 import Screens.Types as ST
 import RemoteConfig.Utils as RU
 import MerchantConfig.DefaultConfig (defaultCityConfig)
+import Common.RemoteConfig.Utils as CommonRC
 
 initData :: HomeScreenState
 initData = 
@@ -37,7 +38,7 @@ initData =
       , profileImg: Nothing
       , driverAlternateMobile: Nothing
       , gender: "UNKNOWN"
-      , subsRemoteConfig: RU.subscriptionConfig "subscription_configs"
+      , subsRemoteConfig: CommonRC.defSubscriptionDues
       , driverStats: false
       , cityConfig : defaultCityConfig
       , activeRide : dummyRideData
@@ -163,7 +164,9 @@ initData =
         showSwitchPlanModal : false,
         plansList : [],
         selectedPlan : Nothing,
-        cityOrVehicleChanged : false
+        cityOrVehicleChanged : false,
+        freeTrialRides : Nothing,
+        totalRidesTaken : Nothing
       }
       , scheduledRideListResponse : 0
       , upcomingRide : Nothing

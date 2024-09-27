@@ -914,7 +914,6 @@ getHi =
     , scheduled_on: "निर्धारित तिथि"
     , attempted_on: "प्रयास की तिथि"
     , debited_on: "डेबिट की तारीख"
-    , free_trial_ending_in_2_days: "2 दिनों में मुफ्त परीक्षण समाप्त हो रहा है!"
     , free_trial_ending_tomorrow: "कल मुफ्त परीक्षण समाप्त हो रहा है!"
     , free_trial_ends_tonight: "आज रात मुफ्त परीक्षण समाप्त होता है!"
     , join_a_plan_to_continue_taking_rides: "सवारी लेना जारी रखने की योजना में शामिल हों"
@@ -1720,4 +1719,7 @@ getHi =
     , smooth_driving: "स्मूद ड्राइविंग"
     , no_cancellation: "कोई रद्द नहीं"
     , with_nammayatri_for: (\years -> "नम्म यात्री के साथ " <> years <> "+ वर्षों से")
+    , free_trial_ending_in_n_days: (\days -> "मुफ्त परीक्षण का समापन " <> days <> " दिनों में!")
+    , n_free_rides_completed: (\n -> n <> " मुफ्त सवारियां पूरी हुईं")
+    , n_more_free_rides_left: (\n -> n <> " और मुफ्त सवारियां बाकी हैं!")
     }

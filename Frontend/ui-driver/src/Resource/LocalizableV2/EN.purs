@@ -918,7 +918,6 @@ getEn =
     , due_limit_warning_banner_title: "Your due limit of ₹{} will be reached soon"
     , scheduled_on: "Scheduled On"
     , attempted_on: "Attempted On"
-    , free_trial_ending_in_2_days: "Free trial ending in 2 days!"
     , free_trial_ending_tomorrow: "Free trial ending tomorrow!"
     , free_trial_ends_tonight: "Free trial ends tonight!"
     , join_a_plan_to_continue_taking_rides: "Join a plan to continue taking rides"
@@ -1720,4 +1719,7 @@ getEn =
     , smooth_driving: "Smooth Driving"
     , no_cancellation: "No Cancellation"
     , with_nammayatri_for: (\years -> "With NammaYatri for " <> years <> "+ years")
+    , free_trial_ending_in_n_days: (\days -> "Free trial ending in " <> days <> " days!")
+    , n_free_rides_completed: (\n -> n <> " free Rides Completed")
+    , n_more_free_rides_left: (\n -> n <> " more free rides left!")
     }

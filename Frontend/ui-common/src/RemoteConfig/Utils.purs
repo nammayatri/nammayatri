@@ -233,7 +233,10 @@ defaultSubscriptionsConfigVariantLevelEntity =
     yatriPlansPlaylist : Just "https://www.youtube.com/playlist?list=PL4AEiRR3V7kHcg2-fgzvDXDqWihZD9mTK",
     enableSubscriptionSupportPopup : Just false,
     offerBannerConfig : Just defaultOfferBannerConfig,
-    enableSubsV2 : Just false
+    enableSubsV2 : Just false,
+    duesConfig : Just defSubscriptionDues,
+    freeTrialPopupDaysList : Just [3,2,1],
+    freeTrialPopupOnRidesList : Just [5,2]
   }
 
 subscriptionsConfigVariantLevel :: String -> String -> SubscriptionConfigVariantLevelEntity
@@ -296,3 +299,10 @@ defaultOfferBannerConfig = {
     offerBannerPlans : ["a35ffc7c-de0d-4dcc-83a8-e36a5a29cc1d"],
     payAmount : "10"
   }
+
+defSubscriptionDues :: Types.RCSubscriptionDues
+defSubscriptionDues = {
+    max_dues_limit : 100.0,
+    low_dues_warning_limit : 25.0,
+    high_due_warning_limit : 75.0
+}

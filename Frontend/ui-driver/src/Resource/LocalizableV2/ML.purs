@@ -850,7 +850,6 @@ getMl =
     , scheduled_on: "ഡിഡക്ഷൻ തീയതി"
     , attempted_on: "ശ്രമിച്ച തീയതി"
     , debited_on: "ഡെബിറ്റ് തീയതി"
-    , free_trial_ending_in_2_days: "സൗജന്യ ട്രയൽ 2 ദിവസത്തിനുള്ളിൽ അവസാനിക്കും"
     , free_trial_ending_tomorrow: "സൗജന്യ ട്രയൽ നാളെ അവസാനിക്കും"
     , free_trial_ends_tonight: "സൗജന്യ ട്രയൽ ഇന്ന് രാത്രി അവസാനിക്കും"
     , join_a_plan_to_continue_taking_rides: "റൈഡുകൾ തുടരാനുള്ള പ്ലാനിൽ ചേരുക"
@@ -1720,4 +1719,7 @@ getMl =
     , smooth_driving: "മൃദുവായ ഡ്രൈവിംഗ്"
     , no_cancellation: "റദ്ദാക്കൽ ഇല്ല"
     , with_nammayatri_for: (\years -> "നമ്മയാത്രിയോടൊപ്പം "<> years <>"+ വർഷങ്ങളായി")
+    , free_trial_ending_in_n_days : (\days -> "സൗജന്യ പരീക്ഷണം അവസാനിക്കുന്നത് "<> days <>" ദിവസങ്ങൾ!")
+    , n_free_rides_completed : (\n -> n <> " റൈഡുകൾ പൂർത്തിയാക്കി")
+    , n_more_free_rides_left : (\n -> n <> " കൂടുതൽ സൗജന്യ റൈഡുകൾ ഉള്ളത്")
     }

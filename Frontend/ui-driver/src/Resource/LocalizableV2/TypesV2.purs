@@ -974,7 +974,6 @@ newtype Keymap
   , due_limit_warning_banner_title :: String
   , scheduled_on :: String
   , attempted_on :: String
-  , free_trial_ending_in_2_days :: String
   , free_trial_ending_tomorrow :: String
   , free_trial_ends_tonight :: String
   , join_a_plan_to_continue_taking_rides :: String
@@ -1734,6 +1733,9 @@ newtype Keymap
   , good_services :: String
   , smooth_driving :: String
   , no_cancellation :: String
+  , free_trial_ending_in_n_days :: String -> String
+  , n_free_rides_completed :: String -> String
+  , n_more_free_rides_left :: String -> String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -4611,9 +4613,6 @@ scheduled_on = a
 attempted_on :: Proxy "attempted_on"
 attempted_on = a
 
-free_trial_ending_in_2_days :: Proxy "free_trial_ending_in_2_days"
-free_trial_ending_in_2_days = a
-
 free_trial_ending_tomorrow :: Proxy "free_trial_ending_tomorrow"
 free_trial_ending_tomorrow = a
 
@@ -6884,3 +6883,12 @@ lets_get_started = a
 
 cab :: Proxy "cab"
 cab = a
+
+free_trial_ending_in_n_days :: Proxy "free_trial_ending_in_n_days"
+free_trial_ending_in_n_days = a
+
+n_free_rides_completed :: Proxy "n_free_rides_completed"
+n_free_rides_completed = a
+
+n_more_free_rides_left :: Proxy "n_more_free_rides_left"
+n_more_free_rides_left = a
