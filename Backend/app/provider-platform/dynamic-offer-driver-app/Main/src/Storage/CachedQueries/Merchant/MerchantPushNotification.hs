@@ -61,7 +61,7 @@ findMatchingMerchantPN id messageKey tripCategory subCategory personLanguage = d
         if null pns
           then do
             pnsWithOutTripCategory <- Queries.findAllByMerchantOpCityIdAndMessageKeyAndTripCategory id messageKey Nothing
-            cacheMerchantPushNotification id messageKey Nothing pns
+            cacheMerchantPushNotification id messageKey Nothing pnsWithOutTripCategory
             return pnsWithOutTripCategory
           else do
             cacheMerchantPushNotification id messageKey tripCategory pns
