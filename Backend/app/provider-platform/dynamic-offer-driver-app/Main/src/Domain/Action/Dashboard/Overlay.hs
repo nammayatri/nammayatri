@@ -22,6 +22,7 @@ import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Overlay as DTMO
+import qualified Domain.Types.VehicleCategory as DVC
 import Environment
 import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types (Language (..))
@@ -202,6 +203,7 @@ data ScheduleOverlay = ScheduleOverlay
     rescheduleInterval :: Maybe Seconds,
     condition :: DTMO.OverlayCondition,
     overlayKey :: Text,
+    vehicleCategory :: Maybe DVC.VehicleCategory,
     udf1 :: Maybe Text
   }
   deriving (Generic, Show, Eq)
@@ -235,6 +237,7 @@ scheduleOverlay merchantShortId opCity req@ScheduleOverlay {..} = do
         overlayBatchSize = transporterConfig.overlayBatchSize,
         serviceName = Nothing,
         merchantOperatingCityId = Just merchantOpCityId,
+        vehicleCategory = vehicleCategory,
         ..
       }
   pure Success

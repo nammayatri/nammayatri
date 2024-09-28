@@ -30,6 +30,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
@@ -211,7 +212,8 @@ data SendOverlayJobData = SendOverlayJobData
     driverFeeOverlaySendingTimeLimitInDays :: Int,
     overlayBatchSize :: Int,
     serviceName :: Maybe Plan.ServiceNames,
-    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    vehicleCategory :: Maybe DVC.VehicleCategory
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

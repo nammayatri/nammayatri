@@ -47,7 +47,7 @@ import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Error
-import Kernel.Types.Id (Id (Id), cast, getShortId)
+import Kernel.Types.Id (Id (Id), cast)
 import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -67,7 +67,6 @@ import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Mandate as QMD
 import qualified Storage.Queries.Person as QP
-import qualified Tools.Payment as TPayment
 
 calculateDriverFeeForDrivers ::
   ( CacheFlow m r,
@@ -90,7 +89,6 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       startTime = jobData.startTime
       endTime = jobData.endTime
       serviceName = fromMaybe YATRI_SUBSCRIPTION jobData.serviceName
-      applyOfferCall = TPayment.offerApply merchantId
       recalculateManualReview = fromMaybe False jobData.recalculateManualReview
   now <- getCurrentTime
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -124,7 +122,6 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
         Nothing -> pure ()
         Just plan -> do
           let (planBaseFrequcency, baseAmount) = getFreqAndBaseAmountcase plan.planBaseAmount
-              dutyDate = driverFee.createdAt
               (mandateSetupDate, mandateId) = case mbDriverPlan of
                 Nothing -> (now, Nothing)
                 Just driverPlan -> (fromMaybe now driverPlan.mandateSetupDate, driverPlan.mandateId)
@@ -147,13 +144,6 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                     planMode = Just plan.paymentMode
                   }
           --------------------------------------------------
-
-          fork "Applying offer" $ do
-            offerTxnId <- getShortId <$> generateShortId
-            let offerApplied = catMaybes [offerId]
-                offerApplyRequest' = mkApplyOfferRequest offerTxnId offerApplied feeWithoutDiscount plan driverFee.driverId dutyDate mandateSetupDate numRidesForPlanCharges
-            maybe (pure ()) (\offerRequest -> do void $ try @_ @SomeException $ withShortRetry (applyOfferCall merchantOpCityId subscriptionConfigs.paymentServiceName offerRequest)) (Just offerApplyRequest')
-
           let paymentMode = maybe MANUAL (.planType) mbDriverPlan
           ------------- process driver fee based on payment mode ----------------
           unless (totalFee == 0) $ do
@@ -194,20 +184,6 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards serviceName subscriptionConfigs jobData
       return Complete
     _ -> ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
-  where
-    mkApplyOfferRequest offerTxnUUID appliedOfferIds due plan driverId dutyDate registrationDate numOfRides =
-      PaymentInterface.OfferApplyReq
-        { txnId = offerTxnUUID,
-          offers = appliedOfferIds,
-          customerId = driverId.getId,
-          amount = due,
-          currency = INR,
-          planId = plan.id.getId,
-          registrationDate,
-          dutyDate = dutyDate,
-          paymentMode = getPaymentModeAndVehicleCategoryKey plan,
-          numOfRides
-        }
 
 processDriverFee ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
@@ -503,7 +479,8 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId max
           driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
           merchantOperatingCityId = Just merchantOpCityId,
           overlayBatchSize = transporterConfig.overlayBatchSize,
-          serviceName = Just serviceName
+          serviceName = Just serviceName,
+          vehicleCategory = Nothing
         }
     createJobIn @_ @'SendOverlay (dfCalculationJobTs + 5400) maxShards $
       SendOverlayJobData
@@ -520,7 +497,8 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId max
           merchantOperatingCityId = Just merchantOpCityId,
           driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
           overlayBatchSize = transporterConfig.overlayBatchSize,
-          serviceName = Just serviceName
+          serviceName = Just serviceName,
+          vehicleCategory = Nothing
         }
   when (subscriptionConfigs.allowManualPaymentLinks && scheduleManualPaymentLink) $ do
     createJobIn @_ @'SendManualPaymentLink paymentLinkSendJobTs maxShards $
