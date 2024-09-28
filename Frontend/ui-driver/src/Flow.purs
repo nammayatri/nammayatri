@@ -3940,27 +3940,23 @@ chooseCityFlow = do
     
     detectCityAPI :: Number -> Number -> ST.ChooseCityScreenState -> FlowBT String Unit
     detectCityAPI lat lon state = do
-      package <- lift $ lift $ liftFlow $ JB.fetchPackageName unit
-      if (has package "manayatri" || has package "movingtech" )
-        then modifyScreenState $ ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { data { locationSelected = Just "Hyderabad" }, props { locationUnserviceable = false, locationDetectionFailed = false }}
-        else do
-          resp <- lift $ lift $ Remote.detectCity lat lon $ if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" )
-          case resp of
-            Right (API.DetectCityResp resp') -> do
-              let unserviceableState = ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { props { locationUnserviceable = true },  data { locationSelected = Nothing }}
-                  compareStrings = on (==) (toLower <<< trim)
-              case resp'.city of
-                Just city -> do
-                  let cityInList = any (\cityOb -> compareStrings cityOb.cityName city) state.data.config.cityConfig
-                      displayCityName = case city of 
-                                          "TamilNaduCities" -> Just "Tamil Nadu"
-                                          _ -> Just city
-                      locationServiceableState = ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { data { locationSelected = displayCityName }, props { locationUnserviceable = false, locationDetectionFailed = false }}
-                  modifyScreenState if cityInList then locationServiceableState else unserviceableState
-                Nothing -> modifyScreenState unserviceableState
-            Left _ -> do
-              liftFlowBT $ firebaseLogEvent "ny_driver_detect_city_fallback"
-              straightLineDist lat lon state
+      resp <- lift $ lift $ Remote.detectCity lat lon $ if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" )
+      case resp of
+        Right (API.DetectCityResp resp') -> do
+          let unserviceableState = ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { props { locationUnserviceable = true },  data { locationSelected = Nothing }}
+              compareStrings = on (==) (toLower <<< trim)
+          case resp'.city of
+            Just city -> do
+              let cityInList = any (\cityOb -> compareStrings cityOb.cityName city) state.data.config.cityConfig
+                  displayCityName = case city of 
+                                      "TamilNaduCities" -> Just "Tamil Nadu"
+                                      _ -> Just city
+                  locationServiceableState = ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { data { locationSelected = displayCityName }, props { locationUnserviceable = false, locationDetectionFailed = false }}
+              modifyScreenState if cityInList then locationServiceableState else unserviceableState
+            Nothing -> modifyScreenState unserviceableState
+        Left _ -> do
+          liftFlowBT $ firebaseLogEvent "ny_driver_detect_city_fallback"
+          straightLineDist lat lon state
 
 welcomeScreenFlow :: FlowBT String Unit
 welcomeScreenFlow = do
