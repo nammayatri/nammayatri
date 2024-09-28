@@ -36,7 +36,7 @@ import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
 import Foreign.Generic.EnumEncoding (genericDecodeEnum, genericEncodeEnum, defaultGenericEnumOptions)
 import Foreign.Index (readProp)
-import Prelude (class Eq, class Show, bind, show, ($), (<$>), (>>=), (==))
+import Prelude (class Eq, class Show, bind, show, ($), (<$>), (>>=), (==), pure, (<>))
 import Presto.Core.Types.API (class RestEndpoint,class StandardEncode, ErrorResponse, Method(..), defaultMakeRequest, standardEncode, defaultDecodeResponse, defaultMakeRequestString)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 import Services.EndPoints as EP
@@ -3393,6 +3393,7 @@ data DriverCoinsFunctionType
   | TrainingCompleted
   | BulkUploadFunction
   | BulkUploadFunctionV2
+  | RidesCompleted Int
 
 instance makeCoinTransactionReq :: RestEndpoint CoinTransactionReq where
     makeRequest reqBody@(CoinTransactionReq date) headers = defaultMakeRequest GET (EP.getCoinTransactions date) headers reqBody Nothing
@@ -3411,16 +3412,54 @@ instance showCoinTransactionRes :: Show CoinTransactionRes where show = genericS
 instance decodeCoinTransactionRes :: Decode CoinTransactionRes where decode = defaultDecode
 instance encodeCoinTransactionRes :: Encode CoinTransactionRes where encode = defaultEncode
 
+fromStringCoinEvent :: String -> Maybe DriverCoinsFunctionType
+fromStringCoinEvent str = case str of
+  "OneOrTwoStarRating" -> Just OneOrTwoStarRating
+  "RideCompleted" -> Just RideCompleted
+  "FiveStarRating" -> Just FiveStarRating
+  "BookingCancellation" -> Just BookingCancellation
+  "CustomerReferral" -> Just CustomerReferral
+  "DriverReferral" -> Just DriverReferral
+  "TwoRidesCompleted" -> Just TwoRidesCompleted
+  "FiveRidesCompleted" -> Just FiveRidesCompleted
+  "TenRidesCompleted" -> Just TenRidesCompleted
+  "EightPlusRidesInOneDay" -> Just EightPlusRidesInOneDay
+  "PurpleRideCompleted" -> Just PurpleRideCompleted
+  "LeaderBoardTopFiveHundred" -> Just LeaderBoardTopFiveHundred
+  "TrainingCompleted" -> Just TrainingCompleted
+  "BulkUploadFunction" -> Just BulkUploadFunction
+  _ -> Nothing
+
 derive instance genericDriverCoinsFunctionType :: Generic DriverCoinsFunctionType _
 instance showDriverCoinsFunctionType :: Show DriverCoinsFunctionType where show = genericShow
-instance decodeDriverCoinsFunctionType :: Decode DriverCoinsFunctionType 
-  where 
-    decode body =
-      case (typeOf body == "object") of
-        true ->  case (runExcept $ (readProp "tag" body)) of
-                    Right functionType -> defaultEnumDecode $ functionType
-                    _ -> defaultEnumDecode body          
-        false -> defaultEnumDecode body
+instance decodeDriverCoinsFunctionType :: Decode DriverCoinsFunctionType where 
+  decode body =
+    case (typeOf body == "object") of
+      true ->
+        case (runExcept $ readProp "tag" body) of
+          Right functionTypeForeign ->
+            case (runExcept $ decode functionTypeForeign) of
+              Right functionType ->
+                case functionType of
+                  "RidesCompleted" -> do
+                    ridesForeign <- readProp "contents" body
+                    rideInt <- decode ridesForeign
+                    pure $ RidesCompleted rideInt
+                  _ -> decodeConstructor functionType
+              Left _ ->  fail $ ForeignError "Could not decode functionTypeForeign"
+          Left _ -> decodeBodyDirectly
+      false -> decodeBodyDirectly
+    where
+      decodeConstructor functionTypeStr =
+        case fromStringCoinEvent functionTypeStr of
+          Just constructor -> pure constructor
+          Nothing -> fail $ ForeignError ("Unknown functionType: " <> functionTypeStr)
+      decodeBodyDirectly =
+        case (runExcept $ decode body) of
+          Right functionTypeStr ->
+            decodeConstructor functionTypeStr
+          Left _ -> fail $ ForeignError "Unknown response"
+
 instance encodeDriverCoinsFunctionType :: Encode DriverCoinsFunctionType where encode = defaultEncode
 instance eqDriverCoinsFunctionType :: Eq DriverCoinsFunctionType where eq = genericEq
 instance standardEncodeDriverCoinsFunctionType :: StandardEncode DriverCoinsFunctionType
