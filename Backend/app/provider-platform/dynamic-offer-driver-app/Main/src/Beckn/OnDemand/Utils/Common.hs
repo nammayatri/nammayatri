@@ -566,19 +566,27 @@ mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccount
           }
 
     driverRatingSingleton
-      | isNothing driverStats.rating = []
-      | otherwise =
-        List.singleton $
+      | Just rating <- driverStats.rating = [createRatingTag (show rating)]
+      | isNothing driverStats.rating && driverStats.isValidRating =
+        case (driverStats.totalRatingScore, driverStats.totalRatings) of
+          (Just totalScore, Just totalRatings)
+            | totalRatings > 0 ->
+              let rating = show (totalScore `div` totalRatings)
+               in [createRatingTag rating]
+          _ -> []
+      | otherwise = []
+      where
+        createRatingTag value =
           Spec.Tag
             { tagDescriptor =
-                Just $
+                Just
                   Spec.Descriptor
                     { descriptorCode = Just $ show Tags.RATING,
                       descriptorName = Just "rating",
                       descriptorShortDesc = Nothing
                     },
               tagDisplay = Just False,
-              tagValue = show <$> driverStats.rating
+              tagValue = Just value
             }
 
     isDriverBirthDaySingleton
