@@ -77,19 +77,20 @@ buildOnConfirmReqV2 req isValueAddNP = do
           let castToBool mbVar = case T.toLower <$> mbVar of
                 Just "true" -> True
                 _ -> False
-          let agentPerson = fulf >>= (.fulfillmentAgent) >>= (.agentPerson)
-          let tagGroups = agentPerson >>= (.personTags)
-          let driverImage = agentPerson >>= (.personImage) >>= (.imageUrl)
+              agentPerson = fulf >>= (.fulfillmentAgent) >>= (.agentPerson)
+              tagGroups = agentPerson >>= (.personTags)
+              tagGroupsFullfillment = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
+              driverImage = agentPerson >>= (.personImage) >>= (.imageUrl)
               driverMobileCountryCode = Just "+91" -- TODO: check how to get countrycode via ONDC
-              driverRating = Nothing
-              driverRegisteredAt = Nothing
-              isDriverBirthDay = False
-              isFreeRide = False
-              previousRideEndPos = Nothing
-              vehicleAge = Nothing
+              driverRating :: Maybe Centesimal = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.RATING tagGroups
+              driverRegisteredAt :: Maybe UTCTime = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.REGISTERED_AT tagGroups
+              isDriverBirthDay = castToBool $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_DRIVER_BIRTHDAY tagGroups
+              isFreeRide = castToBool $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_FREE_RIDE tagGroups
+              previousRideEndPos = getLocationFromTagV2 tagGroupsFullfillment Tag.FORWARD_BATCHING_REQUEST_INFO Tag.PREVIOUS_RIDE_DROP_LOCATION_LAT Tag.PREVIOUS_RIDE_DROP_LOCATION_LON
+              vehicleAge :: Maybe Months = readMaybe . T.unpack =<< getTagV2' Tag.VEHICLE_AGE_INFO Tag.VEHICLE_AGE tagGroupsFullfillment
               driverAlternatePhoneNumber :: Maybe Text = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ALTERNATE_NUMBER tagGroups
-              isAlreadyFav = castToBool $ ACL.getTagV2' Tag.DRIVER_DETAILS Tag.IS_ALREADY_FAVOURITE tagGroups
-              favCount = fromMaybe 0 $ castToInt $ ACL.getTagV2' Tag.DRIVER_DETAILS Tag.FAVOURITE_COUNT tagGroups
+              isAlreadyFav = castToBool $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_ALREADY_FAVOURITE tagGroups
+              favCount = fromMaybe 0 $ castToInt $ getTagV2' Tag.DRIVER_DETAILS Tag.FAVOURITE_COUNT tagGroups
               driverAccountId = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ACCOUNT_ID tagGroups
           rideOtp <- maybe (Left "Missing rideOtp in on_confirm") Right mbRideOtp
           bppRideId <- fulf >>= (.fulfillmentId) & maybe (Left "Missing fulfillmentId") (Right . Id)
