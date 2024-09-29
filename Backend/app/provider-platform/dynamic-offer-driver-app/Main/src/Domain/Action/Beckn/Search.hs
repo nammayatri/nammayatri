@@ -455,6 +455,7 @@ buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverEx
         isAdvanceBookingEnabled = False,
         searchTags = Nothing,
         tripCategory = Nothing,
+        poolingLogicVersion = Nothing,
         ..
       }
 

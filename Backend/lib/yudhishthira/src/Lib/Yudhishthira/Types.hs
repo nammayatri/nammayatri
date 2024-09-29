@@ -21,13 +21,18 @@ module Lib.Yudhishthira.Types
     QueryResult (..),
     QueryResultDefault (..),
     UpdateNammaTagRequest (..),
+    GetLogicsResp (..),
+    LogicRolloutObject (..),
+    RolloutVersion (..),
+    CreateTimeBoundRequest (..),
+    LogicRolloutReq,
     -- DynamicPricingResult (..),
   )
 where
 
 import Control.Lens.Operators hiding ((.=))
 import Data.Aeson
-import Data.OpenApi as OpenApi hiding (description, name, tags)
+import Data.OpenApi as OpenApi hiding (description, name, tags, version)
 import qualified Data.Text as T
 import Domain.Types.ServiceTierType as DST
 import Kernel.Beam.Lib.UtilsTH
@@ -161,7 +166,6 @@ data AppDynamicLogicReq = AppDynamicLogicReq
     inputData :: [Value],
     shouldUpdateRule :: Maybe Bool,
     updatePassword :: Maybe Text,
-    timeBounds :: Maybe TimeBound,
     domain :: LogicDomain
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -169,15 +173,58 @@ data AppDynamicLogicReq = AppDynamicLogicReq
 data AppDynamicLogicResp = AppDynamicLogicResp
   { result :: Value,
     isRuleUpdated :: Bool,
+    domain :: LogicDomain,
+    version :: Maybe Int,
     errors :: [String]
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data GetLogicsResp = GetLogicsResp
+  { domain :: LogicDomain,
+    version :: Int,
+    logics :: [Value]
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data CreateTimeBoundRequest = CreateTimeBoundRequest
+  { timeBoundDomain :: LogicDomain,
+    name :: Text,
+    timeBounds :: TimeBound
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets CreateTimeBoundRequest where
+  hideSecrets = identity
 
 data RunLogicResp = RunLogicResp
   { result :: Value,
     errors :: [String]
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+type LogicRolloutReq = [LogicRolloutObject]
+
+instance HideSecrets LogicRolloutReq where
+  hideSecrets = identity
+
+data LogicRolloutObject = LogicRolloutObject
+  { domain :: LogicDomain,
+    timeBounds :: Text,
+    rollout :: [RolloutVersion]
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets LogicRolloutObject where
+  hideSecrets = identity
+
+data RolloutVersion = RolloutVersion
+  { version :: Int,
+    rolloutPercentage :: Int
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets RolloutVersion where
+  hideSecrets = identity
 
 instance HideSecrets AppDynamicLogicReq where
   hideSecrets = identity

@@ -2,24 +2,21 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Lib.Yudhishthira.Types.AppDynamicLogic where
+module Lib.Yudhishthira.Types.AppDynamicLogicRollout where
 
 import Data.Aeson
 import qualified Data.Text
 import Kernel.Prelude
 import qualified Kernel.Types.Id
-import qualified Kernel.Types.TimeBound
 import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 
-data AppDynamicLogic = AppDynamicLogic
-  { description :: Data.Text.Text,
-    domain :: Lib.Yudhishthira.Types.LogicDomain,
-    logic :: Data.Aeson.Value,
+data AppDynamicLogicRollout = AppDynamicLogicRollout
+  { domain :: Lib.Yudhishthira.Types.LogicDomain,
     merchantOperatingCityId :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity,
-    name :: Data.Text.Text,
-    order :: Kernel.Prelude.Int,
-    timeBounds :: Kernel.Types.TimeBound.TimeBound,
+    percentageRollout :: Kernel.Prelude.Int,
+    timeBounds :: Data.Text.Text,
+    version :: Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

@@ -10,17 +10,24 @@ module Domain.Action.Dashboard.Management.NammaTag
     getNammaTagAppDynamicLogic,
     postNammaTagRunJob,
     Handle.kaalChakraHandle,
+    postNammaTagTimeBoundsCreate,
+    deleteNammaTagTimeBoundsDelete,
+    getNammaTagAppDynamicLogicGetLogicRollout,
+    postNammaTagAppDynamicLogicUpsertLogicRollout,
   )
 where
 
 import qualified Data.Aeson as A
 import Data.Default.Class (Default (..))
+import Data.List (nub)
+import qualified Data.List.NonEmpty as DLNE
 import Data.OpenApi (ToSchema)
 import Data.Singletons
 import qualified Domain.Action.Dashboard.Management.NammaTag.Handle as Handle
 import qualified Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as DPerson
+import Domain.Types.TimeBoundConfig
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import JsonLogic
@@ -37,9 +44,12 @@ import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import Lib.Scheduler.Types (AnyJob (..), Job (..))
 import qualified Lib.Yudhishthira.Event.KaalChakra as KaalChakra
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
-import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogic as CADL
+import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as CADLE
+import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
+import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElement as QADLE
 import qualified Lib.Yudhishthira.Types
-import Lib.Yudhishthira.Types.AppDynamicLogic
+import qualified Lib.Yudhishthira.Types.AppDynamicLogicElement as DTADLE
+import Lib.Yudhishthira.Types.AppDynamicLogicRollout
 import qualified Lib.Yudhishthira.Types.ChakraQueries
 import Servant hiding (throwError)
 import SharedLogic.Allocator (AllocatorJobType (..))
@@ -50,7 +60,9 @@ import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.TimeBoundConfig as CQTBC
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.TimeBoundConfig as QTBC
 import Tools.Auth
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.CreateNammaTagRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
@@ -80,16 +92,16 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
         logicData :: DynamicPricingData <- createLogicData def (Prelude.listToMaybe req.inputData)
         YudhishthiraFlow.verifyDynamicLogic req.rules logicData
       _ -> throwError $ InvalidRequest "Logic Domain not supported"
-  isRuleUpdated <-
+  (isRuleUpdated, version) <-
     if fromMaybe False req.shouldUpdateRule
       then do
         if null resp.errors
           then do
             verifyPassword req.updatePassword transporterConfig.referralLinkPassword -- Using referralLinkPassword as updatePassword, could be changed to a new field in future
-            updateDynamicLogic merchantOpCityId req.rules req.domain req.timeBounds
+            updateDynamicLogic merchantOpCityId req.rules req.domain
           else throwError $ InvalidRequest $ "Errors found in the rules" <> show resp.errors
-      else return False
-  return $ Lib.Yudhishthira.Types.AppDynamicLogicResp resp.result isRuleUpdated resp.errors
+      else return (False, Nothing)
+  return $ Lib.Yudhishthira.Types.AppDynamicLogicResp resp.result isRuleUpdated req.domain version resp.errors
   where
     createLogicData :: (FromJSON a, ToJSON a) => a -> Maybe A.Value -> Environment.Flow a
     createLogicData defaultVal Nothing = return defaultVal
@@ -105,32 +117,51 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     verifyPassword (Just updatePassword) referralLinkPassword =
       unless (updatePassword == referralLinkPassword) $ throwError $ InvalidRequest "Password does not match"
 
-    updateDynamicLogic :: Kernel.Types.Id.Id MerchantOperatingCity -> [A.Value] -> Lib.Yudhishthira.Types.LogicDomain -> Maybe TimeBound -> Environment.Flow Bool
-    updateDynamicLogic merchantOpCityId rules domain mbTimeBounds = do
-      let timeBounds = fromMaybe Unbounded mbTimeBounds
+    updateDynamicLogic :: Kernel.Types.Id.Id MerchantOperatingCity -> [A.Value] -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow (Bool, Maybe Int)
+    updateDynamicLogic _ rules domain = do
       now <- getCurrentTime
-      let appDynamicLogics = zip rules [0 ..] <&> (\(rule, order) -> mkAppDynamicLogic timeBounds rule order now)
-      CADL.delete (cast merchantOpCityId) domain timeBounds
-      CADL.createMany appDynamicLogics
-      CADL.clearCache (cast merchantOpCityId) domain
-      return True
+      latestElement <- QADLE.findLatestVersion (Just 1) Nothing domain
+      let version = maybe 1 ((+ 1) . (.version)) (Prelude.listToMaybe latestElement)
+      let appDynamicLogics = zip rules [0 ..] <&> (\(rule, order) -> mkAppDynamicLogicElement version rule order now)
+      CADLE.createMany appDynamicLogics
+      CADLE.clearCache domain
+      return (True, Just version)
       where
-        mkAppDynamicLogic :: TimeBound -> A.Value -> Int -> UTCTime -> AppDynamicLogic
-        mkAppDynamicLogic timeBounds logic order now =
-          AppDynamicLogic
-            { description = "Rule for " <> show domain <> " order " <> show order,
-              merchantOperatingCityId = cast merchantOpCityId,
-              name = "Rule" <> show order,
-              createdAt = now,
+        mkAppDynamicLogicElement :: Int -> A.Value -> Int -> UTCTime -> DTADLE.AppDynamicLogicElement
+        mkAppDynamicLogicElement version logic order now =
+          DTADLE.AppDynamicLogicElement
+            { createdAt = now,
               updatedAt = now,
               ..
             }
 
-getNammaTagAppDynamicLogic :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow [Lib.Yudhishthira.Types.AppDynamicLogic.AppDynamicLogic]
-getNammaTagAppDynamicLogic merchantShortId opCity domain = do
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  CADL.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
+getNammaTagAppDynamicLogic :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow [Lib.Yudhishthira.Types.GetLogicsResp]
+getNammaTagAppDynamicLogic _merchantShortId _opCity mbVersion domain = do
+  case mbVersion of
+    Just version -> do
+      logicsObject <- CADLE.findByDomainAndVersion domain version
+      let logics = map (.logic) logicsObject
+      return $ [Lib.Yudhishthira.Types.GetLogicsResp domain version logics]
+    Nothing -> do
+      allDomainLogics <- CADLE.findByDomain domain
+      let sortedLogics = sortByOrderAndVersion allDomainLogics
+      let groupedLogics = groupBy ((==) `on` (.version)) sortedLogics
+      let versionWithLogics = mapMaybe combineLogic groupedLogics
+      return $ (versionWithLogics <&> (\(version, logics) -> Lib.Yudhishthira.Types.GetLogicsResp domain version logics))
+  where
+    sortByOrderAndVersion :: [DTADLE.AppDynamicLogicElement] -> [DTADLE.AppDynamicLogicElement]
+    sortByOrderAndVersion = sortBy compareData
+      where
+        compareData a b =
+          case compare b.version a.version of -- Descending for version
+            EQ -> compare a.order b.order -- Ascending for order
+            cmp -> cmp
+
+    combineLogic :: NonEmpty DTADLE.AppDynamicLogicElement -> Maybe (Int, [A.Value])
+    combineLogic arr =
+      let logics = map (.logic) arr -- Combine all logic values into a list
+          firstElement = DLNE.head arr
+       in Just (firstElement.version, DLNE.toList logics)
 
 postNammaTagRunJob ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -175,3 +206,94 @@ castChakra Weekly = Just Lib.Yudhishthira.Types.Weekly
 castChakra Monthly = Just Lib.Yudhishthira.Types.Monthly
 castChakra Quarterly = Just Lib.Yudhishthira.Types.Quarterly
 castChakra _ = Nothing
+
+postNammaTagTimeBoundsCreate :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.CreateTimeBoundRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagTimeBoundsCreate merchantShortId opCity req = do
+  when (req.timeBounds == Unbounded) $ throwError $ InvalidRequest "Unbounded time bounds not allowed"
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  allTimeBounds <- QTBC.findByCityAndDomain merchantOpCityId req.timeBoundDomain
+  forM_ allTimeBounds $ \existingTimeBound -> do
+    when (timeBoundsOverlap existingTimeBound.timeBounds req.timeBounds) $ do
+      throwError (InvalidRequest $ "Time bounds overlap with existing time bound: " <> existingTimeBound.name)
+  now <- getCurrentTime
+  let timeBound = mkTimeBound merchantOpCityId now req
+  QTBC.create timeBound
+  CQTBC.clearCache merchantOpCityId timeBound.timeBoundDomain timeBound.name
+  return Kernel.Types.APISuccess.Success
+  where
+    mkTimeBound :: Id MerchantOperatingCity -> UTCTime -> Lib.Yudhishthira.Types.CreateTimeBoundRequest -> TimeBoundConfig
+    mkTimeBound merchantOperatingCityId now Lib.Yudhishthira.Types.CreateTimeBoundRequest {..} =
+      TimeBoundConfig
+        { createdAt = now,
+          updatedAt = now,
+          ..
+        }
+
+deleteNammaTagTimeBoundsDelete :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.LogicDomain -> Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+deleteNammaTagTimeBoundsDelete merchantShortId opCity domain name = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  CQTBC.delete merchantOpCityId domain name
+  CQTBC.clearCache merchantOpCityId domain name
+  return Kernel.Types.APISuccess.Success
+
+getNammaTagAppDynamicLogicGetLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Text -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow [Lib.Yudhishthira.Types.LogicRolloutObject]
+getNammaTagAppDynamicLogicGetLogicRollout merchantShortId opCity _ domain = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  allDomainRollouts <- CADLR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
+  let sortedDomainRollouts = sortBy (\a b -> compare b.timeBounds a.timeBounds) allDomainRollouts
+  let groupedRollouts = groupBy ((==) `on` (.timeBounds)) sortedDomainRollouts
+  return $ mapMaybe combineRollout groupedRollouts
+  where
+    combineRollout :: NonEmpty AppDynamicLogicRollout -> Maybe Lib.Yudhishthira.Types.LogicRolloutObject
+    combineRollout arr =
+      let rollout = map (\r -> Lib.Yudhishthira.Types.RolloutVersion r.version r.percentageRollout) arr
+          firstElement = DLNE.head arr
+       in Just $ Lib.Yudhishthira.Types.LogicRolloutObject firstElement.domain firstElement.timeBounds (DLNE.toList rollout)
+
+postNammaTagAppDynamicLogicUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> [Lib.Yudhishthira.Types.LogicRolloutObject] -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq = do
+  unless (checkSameDomainDifferentTimeBounds rolloutReq) $ throwError $ InvalidRequest "Only domain and different time bounds are allowed"
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  domain <- getDomain & fromMaybeM (InvalidRequest "Domain not found")
+  now <- getCurrentTime
+  rolloutObjectsArr <- mapM (mkAppDynamicLogicRolloutDomain merchantOpCityId now) rolloutReq
+  let rolloutObjects = concat rolloutObjectsArr
+  CADLR.delete (cast merchantOpCityId) domain
+  CADLR.createMany rolloutObjects
+  CADLR.clearCache (cast merchantOpCityId) domain
+  return Kernel.Types.APISuccess.Success
+  where
+    getDomain :: Maybe Lib.Yudhishthira.Types.LogicDomain
+    getDomain = Prelude.listToMaybe $ map (.domain) rolloutReq
+
+    mkAppDynamicLogicRolloutDomain :: Id MerchantOperatingCity -> UTCTime -> Lib.Yudhishthira.Types.LogicRolloutObject -> Environment.Flow [AppDynamicLogicRollout]
+    mkAppDynamicLogicRolloutDomain merchantOperatingCityId now Lib.Yudhishthira.Types.LogicRolloutObject {..} = do
+      when (timeBounds /= "Unbounded") $
+        void $ CQTBC.findByPrimaryKey merchantOperatingCityId timeBounds domain >>= fromMaybeM (InvalidRequest $ "Time bound not found: " <> timeBounds)
+      let rolloutSum = sum $ map (.rolloutPercentage) rollout
+      when (rolloutSum /= 100) $ throwError $ InvalidRequest "Sum of rollout percentage should be 100"
+      mapM (mkAppDynamicLogicRollout merchantOperatingCityId now domain timeBounds) rollout
+
+    mkAppDynamicLogicRollout :: Id MerchantOperatingCity -> UTCTime -> Lib.Yudhishthira.Types.LogicDomain -> Text -> Lib.Yudhishthira.Types.RolloutVersion -> Environment.Flow AppDynamicLogicRollout
+    mkAppDynamicLogicRollout merchantOperatingCityId now domain timeBounds Lib.Yudhishthira.Types.RolloutVersion {..} = do
+      logicsObject <- CADLE.findByDomainAndVersion domain version
+      when (null logicsObject) $ throwError $ InvalidRequest $ "Logic not found for version: " <> show version
+      return $
+        AppDynamicLogicRollout
+          { createdAt = now,
+            updatedAt = now,
+            percentageRollout = rolloutPercentage,
+            merchantOperatingCityId = cast merchantOperatingCityId,
+            ..
+          }
+
+    checkSameDomainDifferentTimeBounds :: [Lib.Yudhishthira.Types.LogicRolloutObject] -> Bool
+    checkSameDomainDifferentTimeBounds [] = True
+    checkSameDomainDifferentTimeBounds (x : xs) =
+      all (\obj -> obj.domain == x.domain) xs && length timeBoundsList == length (nub timeBoundsList)
+      where
+        timeBoundsList = map (.timeBounds) (x : xs)
