@@ -17,71 +17,61 @@ module Beckn.ACL.OnConfirm (buildOnConfirmMessageV2) where
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import BecknV2.OnDemand.Enums
 import qualified BecknV2.OnDemand.Enums as Enum
-import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
 import BecknV2.OnDemand.Utils.Payment
 import qualified Data.List as L
-import qualified Data.List as List
 import qualified Domain.Action.Beckn.Confirm as DConfirm
-import qualified Domain.Action.UI.Person as SP
 import Domain.Types
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import Kernel.Prelude
 import Kernel.Utils.Common
-import Tools.Error
 
 bookingStatusCode :: DConfirm.ValidatedQuote -> Maybe Enum.FulfillmentState
 bookingStatusCode (DConfirm.DriverQuote _ _) = Just Enum.RIDE_ASSIGNED
 bookingStatusCode _ = Just Enum.NEW
 
-buildOnConfirmMessageV2 :: (MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Bool -> m Spec.ConfirmReqMessage
-buildOnConfirmMessageV2 res pricing becknConfig mbFarePolicy isValueAddNP = do
-  tOrder <- tfOrder res pricing becknConfig mbFarePolicy isValueAddNP
-  pure $
-    Spec.ConfirmReqMessage
-      { confirmReqMessageOrder = tOrder
-      }
+buildOnConfirmMessageV2 :: DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.ConfirmReqMessage
+buildOnConfirmMessageV2 res pricing becknConfig mbFarePolicy =
+  Spec.ConfirmReqMessage
+    { confirmReqMessageOrder = tfOrder res pricing becknConfig mbFarePolicy
+    }
 
-tfOrder :: (MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Bool -> m Spec.Order
-tfOrder res pricing bppConfig mbFarePolicy isValueAddNP = do
-  tFulfillments <- tfFulfillments res isValueAddNP
+tfOrder :: DConfirm.DConfirmResp -> Utils.Pricing -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.Order
+tfOrder res pricing bppConfig mbFarePolicy = do
   let farePolicy = case mbFarePolicy of
         Nothing -> Nothing
         Just fullFarePolicy -> Just $ FarePolicyD.fullFarePolicyToFarePolicy fullFarePolicy
-  pure $
-    Spec.Order
-      { orderBilling = Nothing,
-        orderCancellation = Nothing,
-        orderCancellationTerms = Just $ tfCancellationTerms res,
-        orderFulfillments = tFulfillments,
-        orderId = Just res.booking.id.getId,
-        orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId pricing.estimatedDistance farePolicy res.paymentId,
-        orderPayments = tfPayments res bppConfig,
-        orderProvider = Utils.tfProvider bppConfig,
-        orderQuote = Utils.tfQuotation res.booking,
-        orderStatus = Just "ACTIVE",
-        orderCreatedAt = Just res.booking.createdAt,
-        orderUpdatedAt = Just res.booking.updatedAt
-      }
+  Spec.Order
+    { orderBilling = Nothing,
+      orderCancellation = Nothing,
+      orderCancellationTerms = Just $ tfCancellationTerms res,
+      orderFulfillments = tfFulfillments res,
+      orderId = Just res.booking.id.getId,
+      orderItems = Utils.tfItems res.booking res.transporter.shortId.getShortId pricing.estimatedDistance farePolicy res.paymentId,
+      orderPayments = tfPayments res bppConfig,
+      orderProvider = Utils.tfProvider bppConfig,
+      orderQuote = Utils.tfQuotation res.booking,
+      orderStatus = Just "ACTIVE",
+      orderCreatedAt = Just res.booking.createdAt,
+      orderUpdatedAt = Just res.booking.updatedAt
+    }
 
-tfFulfillments :: (MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => DConfirm.DConfirmResp -> Bool -> m (Maybe [Spec.Fulfillment])
-tfFulfillments res isValueAddNP = do
-  tAgent <- tfAgent res isValueAddNP
-  pure $
-    Just
-      [ Spec.Fulfillment
-          { fulfillmentAgent = tAgent,
-            fulfillmentCustomer = tfCustomer res,
-            fulfillmentId = Just res.booking.quoteId,
-            fulfillmentState = Utils.mkFulfillmentState <$> bookingStatusCode res.quoteType,
-            fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.specialZoneOtpCode,
-            fulfillmentTags = Nothing,
-            fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType res.booking.tripCategory,
-            fulfillmentVehicle = tfVehicle res
-          }
-      ]
+tfFulfillments :: DConfirm.DConfirmResp -> Maybe [Spec.Fulfillment]
+tfFulfillments res =
+  Just
+    [ Spec.Fulfillment
+        { fulfillmentAgent = Nothing,
+          fulfillmentCustomer = tfCustomer res,
+          fulfillmentId = Just res.booking.quoteId,
+          fulfillmentState = Utils.mkFulfillmentState <$> bookingStatusCode res.quoteType,
+          fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.specialZoneOtpCode,
+          fulfillmentTags = Nothing,
+          fulfillmentType = Just $ UtilsV2.tripCategoryToFulfillmentType res.booking.tripCategory,
+          fulfillmentVehicle = tfVehicle res
+        }
+    ]
 
 -- TODO: Discuss payment info transmission with ONDC
 tfPayments :: DConfirm.DConfirmResp -> DBC.BecknConfig -> Maybe [Spec.Payment]
@@ -132,85 +122,3 @@ tfCancellationTerms res =
         cancellationTermFulfillmentState = Utils.mkFulfillmentState <$> bookingStatusCode res.quoteType,
         cancellationTermReasonRequired = Just False -- TODO : Make true if reason parsing is added
       }
-
-tfAgent :: (MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => DConfirm.DConfirmResp -> Bool -> m (Maybe Spec.Agent)
-tfAgent res isValueAddNP = do
-  case res.rideInfo of
-    Just rideInfo -> do
-      let driver = rideInfo.driver
-      let driverName = maybe (Just rideInfo.driver.firstName) (\ln -> Just rideInfo.driver.firstName <> Just " " <> Just ln) rideInfo.driver.lastName
-      mbDInfo <- driverInfo (Just driver)
-      return $
-        Just $
-          Spec.Agent
-            { agentContact = Nothing,
-              agentPerson =
-                Just
-                  Spec.Person
-                    { personId = Nothing,
-                      personImage = Nothing,
-                      personName = driverName,
-                      personTags = mbDInfo >>= (.tags) & (Nothing <>)
-                    }
-            }
-    Nothing -> return Nothing
-  where
-    driverInfo mbDriver = forM mbDriver $ \driver -> do
-      dPhoneNum <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present in OnUpdateBuildReq.")
-      dAlternatePhoneNum <- SP.getPersonAlternateNumber driver
-      dName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
-      let dTags = mkDriverDetailsTags res.isAlreadyFav res.favCount
-      pure $
-        Utils.DriverInfo
-          { mobileNumber = dPhoneNum,
-            alternateMobileNumber = dAlternatePhoneNum,
-            name = dName,
-            tags = if isValueAddNP then dTags else Nothing
-          }
-
-mkDriverDetailsTags :: Maybe Bool -> Maybe Int -> Maybe [Spec.TagGroup]
-mkDriverDetailsTags isAlreadyFav favCount =
-  Just
-    [ Spec.TagGroup
-        { tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.DRIVER_DETAILS,
-                  descriptorName = Just "Driver Details",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupDisplay = Just False,
-          tagGroupList =
-            Just $
-              isAlreadyFavSingleton
-                ++ favCountSingleton
-        }
-    ]
-  where
-    isAlreadyFavSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.IS_ALREADY_FAVOURITE,
-                    descriptorName = Just "Is already favourite",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just $ show isAlreadyFav
-          }
-
-    favCountSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.FAVOURITE_COUNT,
-                    descriptorName = Just "Favourite Count",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just $ show favCount
-          }

@@ -114,7 +114,7 @@ data RideAssignedReq = RideAssignedReq
     driverAccountId :: Maybe Payment.AccountId,
     previousRideEndPos :: Maybe LatLong,
     isAlreadyFav :: Bool,
-    favCount :: Int,
+    favCount :: Maybe Int,
     fareBreakups :: Maybe [DFareBreakup],
     driverTrackingUrl :: Maybe BaseUrl
   }
@@ -138,7 +138,7 @@ data ValidatedRideAssignedReq = ValidatedRideAssignedReq
     fareBreakups :: Maybe [DFareBreakup],
     driverTrackingUrl :: Maybe BaseUrl,
     isAlreadyFav :: Bool,
-    favCount :: Int
+    favCount :: Maybe Int
   }
 
 data RideStartedReq = RideStartedReq
@@ -240,13 +240,14 @@ data ValidatedDriverArrivedReq = ValidatedDriverArrivedReq
     booking :: DRB.Booking
   }
 
-buildRide :: (MonadFlow m, EncFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion]) => ValidatedRideAssignedReq -> Maybe DMerchant.Merchant -> DRB.Booking -> BookingDetails -> Maybe LatLong -> UTCTime -> DRide.RideStatus -> Bool -> Bool -> Int -> m DRide.Ride
-buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now status isFreeRide isAlreadyFav favCount = do
+buildRide :: (MonadFlow m, EncFlow m r, HasFlowEnv m r '["version" ::: DeploymentVersion]) => ValidatedRideAssignedReq -> Maybe DMerchant.Merchant -> UTCTime -> DRide.RideStatus -> m DRide.Ride
+buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
+  let BookingDetails {..} = bookingDetails
   guid <- generateGUID
   shortId <- generateShortId
   deploymentVersion <- asks (.version)
-  driverPhoneNumber <- mapM encrypt (Just driverMobileNumber)
-  driverAlternateNumber' <- mapM encrypt driverAlternatePhoneNumber
+  driverPhoneNumber <- mapM encrypt (Just bookingDetails.driverMobileNumber)
+  driverAlternateNumber <- mapM encrypt bookingDetails.driverAlternatePhoneNumber
   let fromLocation = booking.fromLocation
       toLocation = case booking.bookingDetails of
         DRB.OneWayDetails details -> Just details.toLocation
@@ -256,16 +257,16 @@ buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now stat
         DRB.InterCityDetails details -> Just details.toLocation
         DRB.AmbulanceDetails details -> Just details.toLocation
         DRB.DeliveryDetails details -> Just details.toLocation
-  let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
-  let allowedEditPickupLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
-  let onlinePayment = maybe False (.onlinePayment) mbMerchant
+      allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
+      allowedEditPickupLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
+      onlinePayment = maybe False (.onlinePayment) mbMerchant
   mfuPattern <- fromMaybeM (MerchantDoesNotExist ("BuildRide merchant:" <> booking.merchantId.getId)) (fmap DMerchant.mediaFileUrlPattern mbMerchant)
   let fileUrl =
         ( mfuPattern
             & Text.replace "<DOMAIN>" "driver/photo"
             & flip (Text.replace "<FILE_PATH>")
         )
-          <$> driverImage
+          <$> bookingDetails.driverImage
   return
     DRide.Ride
       { id = guid,
@@ -303,11 +304,9 @@ buildRide req mbMerchant booking BookingDetails {..} previousRideEndPos now stat
         distanceUnit = booking.distanceUnit,
         driverAccountId = req.onlinePaymentParameters <&> (.driverAccountId),
         paymentStatus = DRide.NotInitiated,
-        driverAlternateNumber = driverAlternateNumber',
         vehicleAge = req.vehicleAge,
         cancellationFeeIfCancelled = Nothing,
         isAlreadyFav = Just isAlreadyFav,
-        favCount = Just favCount,
         safetyJourneyStatus = Nothing,
         driverImage = fileUrl,
         destinationReachedAt = Nothing,
@@ -352,9 +351,9 @@ rideAssignedReqHandler req = do
               Notify.notifyDriverBirthDay booking.riderId booking.tripCategory driverName
           withLongRetry $ CallBPP.callTrack booking ride
         Nothing -> do
-          assignRideUpdate req mbMerchant booking DRide.UPCOMING now
+          assignRideUpdate req mbMerchant DRide.UPCOMING now
     else do
-      assignRideUpdate req mbMerchant booking DRide.NEW now
+      assignRideUpdate req mbMerchant DRide.NEW now
   where
     notifyRideRelatedNotificationOnEvent booking ride now timeDiffEvent = do
       rideRelatedNotificationConfigList <- CRRN.findAllByMerchantOperatingCityIdAndTimeDiffEvent booking.merchantOperatingCityId timeDiffEvent
@@ -377,14 +376,13 @@ rideAssignedReqHandler req = do
       ) =>
       ValidatedRideAssignedReq ->
       Maybe DMerchant.Merchant ->
-      DRB.Booking ->
       DRide.RideStatus ->
       UTCTime ->
       m ()
-    assignRideUpdate req' mbMerchant booking rideStatus now = do
+    assignRideUpdate req'@ValidatedRideAssignedReq {..} mbMerchant rideStatus now = do
       let BookingDetails {..} = req'.bookingDetails
       let fareParams = fromMaybe [] req'.fareBreakups
-      ride <- buildRide req' mbMerchant booking req'.bookingDetails req'.previousRideEndPos now rideStatus req'.isFreeRide req'.isAlreadyFav req'.favCount
+      ride <- buildRide req' mbMerchant now rideStatus
       let applicationFeeAmount = applicationFeeAmountForRide fareParams
       whenJust req'.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do
         let createPaymentIntentReq =
@@ -403,8 +401,8 @@ rideAssignedReqHandler req = do
             Just _ -> "specialLocation"
             Nothing -> "normal"
       incrementRideCreatedRequestCount booking.merchantId.getId booking.merchantOperatingCityId.getId category
-      fareBreakups <- traverse (buildFareBreakupV2 req'.booking.id.getId DFareBreakup.BOOKING) fareParams
-      QFareBreakup.createMany fareBreakups
+      rideFareBreakups <- traverse (buildFareBreakupV2 req'.booking.id.getId DFareBreakup.BOOKING) fareParams
+      QFareBreakup.createMany rideFareBreakups
       QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
       QRide.createRide ride
       QPFS.clearCache booking.riderId

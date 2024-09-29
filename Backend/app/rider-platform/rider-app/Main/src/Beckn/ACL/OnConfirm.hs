@@ -55,13 +55,8 @@ buildOnConfirmReqV2 req isValueAddNP = do
         return $ Just dReq
       Left err -> throwError . InvalidBecknSchema $ "on_confirm error:-" <> show err
   where
-    castToInt :: Maybe Text -> Maybe Int
-    castToInt mbVar = case mbVar of
-      Just val -> readMaybe (T.unpack val)
-      _ -> Nothing
-
     parseData :: Spec.ConfirmReqMessage -> Maybe [Common.DFareBreakup] -> Either Text DOnConfirm.OnConfirmReq
-    parseData message mbFareParams = do
+    parseData message fareParams = do
       let order = message.confirmReqMessageOrder
       bppBookingIdText <- order.orderId & maybe (Left "Missing OrderId") Right
       let bppBookingId = Id bppBookingIdText
@@ -74,22 +69,20 @@ buildOnConfirmReqV2 req isValueAddNP = do
 
       if isDriverDetailsPresent
         then do
-          let castToBool mbVar = case T.toLower <$> mbVar of
-                Just "true" -> True
-                _ -> False
           let agentPerson = fulf >>= (.fulfillmentAgent) >>= (.agentPerson)
-          let tagGroups = agentPerson >>= (.personTags)
-          let driverImage = agentPerson >>= (.personImage) >>= (.imageUrl)
+              tagGroups = agentPerson >>= (.personTags)
+              tagGroupsFullfillment = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
+              driverImage = agentPerson >>= (.personImage) >>= (.imageUrl)
               driverMobileCountryCode = Just "+91" -- TODO: check how to get countrycode via ONDC
-              driverRating = Nothing
-              driverRegisteredAt = Nothing
-              isDriverBirthDay = False
-              isFreeRide = False
-              previousRideEndPos = Nothing
-              vehicleAge = Nothing
+              driverRating :: Maybe Centesimal = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.RATING tagGroups
+              driverRegisteredAt :: Maybe UTCTime = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.REGISTERED_AT tagGroups
+              isDriverBirthDay = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_DRIVER_BIRTHDAY tagGroups
+              isFreeRide = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_FREE_RIDE tagGroups
+              previousRideEndPos = getLocationFromTagV2 tagGroupsFullfillment Tag.FORWARD_BATCHING_REQUEST_INFO Tag.PREVIOUS_RIDE_DROP_LOCATION_LAT Tag.PREVIOUS_RIDE_DROP_LOCATION_LON
+              vehicleAge :: Maybe Months = readMaybe . T.unpack =<< getTagV2' Tag.VEHICLE_AGE_INFO Tag.VEHICLE_AGE tagGroupsFullfillment
               driverAlternatePhoneNumber :: Maybe Text = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ALTERNATE_NUMBER tagGroups
-              isAlreadyFav = castToBool $ ACL.getTagV2' Tag.DRIVER_DETAILS Tag.IS_ALREADY_FAVOURITE tagGroups
-              favCount = fromMaybe 0 $ castToInt $ ACL.getTagV2' Tag.DRIVER_DETAILS Tag.FAVOURITE_COUNT tagGroups
+              isAlreadyFav = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_ALREADY_FAVOURITE tagGroups
+              favCount :: Maybe Int = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.FAVOURITE_COUNT tagGroups
               driverAccountId = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ACCOUNT_ID tagGroups
           rideOtp <- maybe (Left "Missing rideOtp in on_confirm") Right mbRideOtp
           bppRideId <- fulf >>= (.fulfillmentId) & maybe (Left "Missing fulfillmentId") (Right . Id)
@@ -98,8 +91,8 @@ buildOnConfirmReqV2 req isValueAddNP = do
           vehicleNumber <- fulf >>= (.fulfillmentVehicle) >>= (.vehicleRegistration) & maybe (Left "Missing fulfillment.vehicle.registration in on_confirm") Right
           let vehicleColor = fulf >>= (.fulfillmentVehicle) >>= (.vehicleColor)
           vehicleModel <- fulf >>= (.fulfillmentVehicle) >>= (.vehicleModel) & maybe (Left "Missing fulfillment.vehicle.model in on_confirm") Right
-          Right $ DOnConfirm.RideAssigned DOnConfirm.RideAssignedInfo {fareParams = mbFareParams, ..}
-        else Right $ DOnConfirm.BookingConfirmed DOnConfirm.BookingConfirmedInfo {fareParams = mbFareParams, bppBookingId, specialZoneOtp = mbRideOtp}
+          Right $ DOnConfirm.RideAssigned DOnConfirm.RideAssignedInfo {..}
+        else Right $ DOnConfirm.BookingConfirmed DOnConfirm.BookingConfirmedInfo {specialZoneOtp = mbRideOtp, ..}
 
 handleErrorV2 ::
   (MonadFlow m) =>
