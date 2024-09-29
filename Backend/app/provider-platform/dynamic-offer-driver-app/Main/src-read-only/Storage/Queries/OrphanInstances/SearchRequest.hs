@@ -31,7 +31,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
     bapUri' <- Kernel.Prelude.parseBaseUrl bapUri
     fromLocation' <- Storage.Queries.Location.findById ((.locationId) fromLocationMapping) >>= fromMaybeM (Tools.Error.FromLocationNotFound ((.getId) $ (.locationId) fromLocationMapping))
     merchantOperatingCityId' <- Storage.CachedQueries.Merchant.MerchantOperatingCity.getMerchantOpCityId (Kernel.Types.Id.Id <$> merchantOperatingCityId) merchant bapCity
-    toLocation' <- maybe (pure Nothing) (Storage.Queries.Location.findById . (.locationId)) mbToLocationMapping
+    toLocation' <- (maybe (pure Nothing) (Storage.Queries.Location.findById . (.locationId)) mbToLocationMapping)
     pure $
       Just
         Domain.Types.SearchRequest.SearchRequest
@@ -64,6 +64,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             merchantOperatingCityId = merchantOperatingCityId',
             messageId = messageId,
             pickupZoneGateId = pickupZoneGateId,
+            poolingLogicVersion = poolingLogicVersion,
             providerId = Kernel.Types.Id.Id providerId,
             returnTime = returnTime,
             riderId = Kernel.Types.Id.Id <$> riderId,
@@ -113,6 +114,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.messageId = messageId,
         Beam.pickupZoneGateId = pickupZoneGateId,
+        Beam.poolingLogicVersion = poolingLogicVersion,
         Beam.providerId = Kernel.Types.Id.getId providerId,
         Beam.returnTime = returnTime,
         Beam.riderId = Kernel.Types.Id.getId <$> riderId,
@@ -121,7 +123,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.specialLocationTag = specialLocationTag,
         Beam.startTime = Just startTime,
         Beam.toLocGeohash = toLocGeohash,
-        Beam.toLocationId = Kernel.Types.Id.getId . (.id) <$> toLocation,
+        Beam.toLocationId = ((Kernel.Types.Id.getId . (.id)) <$> toLocation),
         Beam.tollCharges = tollCharges,
         Beam.tollNames = tollNames,
         Beam.transactionId = transactionId,

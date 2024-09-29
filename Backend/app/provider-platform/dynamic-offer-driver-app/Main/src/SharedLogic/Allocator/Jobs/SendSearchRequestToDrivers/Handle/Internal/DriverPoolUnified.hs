@@ -195,10 +195,10 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               batchEntity <- prepareDriverPoolBatch' previousBatchesDrivers batchNum mOCityId txnId' isValueAddNP
               pure (batchEntity.currentDriverPoolBatch, batchEntity.currentDriverPoolBatchOnRide, Nothing)
             else do
-              normalDriverPoolBatch <- mkDriverPoolBatch mOCityId onlyNewNormalDrivers transporterConfig batchSize False
+              (mbVersion, normalDriverPoolBatch) <- mkDriverPoolBatch mOCityId onlyNewNormalDrivers transporterConfig batchSize False
               if length normalDriverPoolBatch < batchSize
                 then do
-                  filledBatch <- fillBatch transporterConfig normalDriverPool normalDriverPoolBatch
+                  filledBatch <- fillBatch transporterConfig normalDriverPool normalDriverPoolBatch (mbVersion <|> searchReq.poolingLogicVersion)
                   logDebug $ "FilledDriverPoolBatch-" <> show filledBatch
                   pure (filledBatch, [], Just radiusStep)
                 else do
@@ -216,7 +216,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               allNearbyDriversCurrentlyOnRide <- calcDriverCurrentlyOnRidePool poolType radiusStep transporterConfig batchNum
               logDebug $ "NormalDriverPoolBatchOnRideCurrentlyOnRide-" <> show allNearbyDriversCurrentlyOnRide
               onlyNewNormalDriversOnRide <- filtersForNormalBatch mOCityId transporterConfig allNearbyDriversCurrentlyOnRide blockListedDrivers previousDriverOnRide
-              normalDriverPoolBatchOnRide <- mkDriverPoolBatch mOCityId onlyNewNormalDriversOnRide transporterConfig batchSizeOnRide True
+              (_, normalDriverPoolBatchOnRide) <- mkDriverPoolBatch mOCityId onlyNewNormalDriversOnRide transporterConfig batchSizeOnRide True
               validDriversFromPreviousBatch <-
                 filterM
                   ( \dpr -> do
@@ -257,7 +257,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
         mkDriverPoolBatch mOCityId onlyNewDrivers transporterConfig batchSize' isOnRidePool = do
           case sortingType of
-            _ -> SDP.makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags
+            _ -> SDP.makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags searchReq.poolingLogicVersion
 
         addDistanceSplitConfigBasedDelaysForDriversWithinBatch filledPoolBatch =
           fst $
@@ -306,7 +306,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
               calculateDriverCurrentlyOnRideWithActualDist driverPoolReq poolType (toInteger batchNum') currentSearchInfo
             else pure []
 
-        fillBatch transporterConfig allNearbyDrivers batch = do
+        fillBatch transporterConfig allNearbyDrivers batch mbVersion = do
           let batchDriverIds = batch <&> (.driverPoolResult.driverId)
           let driversNotInBatch = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` batchDriverIds) allNearbyDrivers
           driversWithValidReqAmount <- filterM (\dpr -> SDP.checkRequestCount searchTry.id (SDP.isBookAny $ tripQuoteDetails <&> (.vehicleServiceTier)) dpr.driverPoolResult.driverId dpr.driverPoolResult.serviceTier dpr.driverPoolResult.serviceTierDowngradeLevel driverPoolCfg) driversNotInBatch
@@ -318,7 +318,9 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
           let fillSize = batchSize - length batch
           (batch <>)
             <$> case sortingType of
-              _ -> SDP.makeTaggedDriverPool merchantOpCityId transporterConfig.timeDiffFromUtc searchReq nonGoHomeNormalDriversWithValidReqCountWithServiceTier fillSize False searchReq.customerNammaTags -- TODO: Fix isOnRidePool flag
+              _ -> do
+                (_, taggedPool) <- SDP.makeTaggedDriverPool merchantOpCityId transporterConfig.timeDiffFromUtc searchReq nonGoHomeNormalDriversWithValidReqCountWithServiceTier fillSize False searchReq.customerNammaTags mbVersion -- TODO: Fix isOnRidePool flag
+                return taggedPool
         cacheBatch batch consideOnRideDrivers = do
           logDebug $ "Caching batch-" <> show batch
           batches <- SDP.previouslyAttemptedDrivers searchTry.id consideOnRideDrivers

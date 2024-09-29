@@ -4,49 +4,73 @@ imports:
   MerchantOperatingCity: Lib.Yudhishthira.Types
   LogicDomain: Lib.Yudhishthira.Types
 
-AppDynamicLogic:
-  tableName: app_dynamic_logic
+AppDynamicLogicElement:
+  tableName: app_dynamic_logic_element
 
   fields:
-    name: Text
-    description: Text
     domain: LogicDomain
-    logic: Data.Aeson.Value
-    merchantOperatingCityId: Id MerchantOperatingCity
-    timeBounds: TimeBound|NoRelation
+    version: Int
     order: Int
+    logic: Data.Aeson.Value
 
   constraints:
-    merchantOperatingCityId: PrimaryKey
     domain: PrimaryKey
-    name: PrimaryKey
+    version: PrimaryKey
+    order: PrimaryKey
 
   queries:
-    findByMerchantOpCityAndDomain:
+    findByDomainAndVersion:
       kvFunction: findAllWithOptionsKV
       orderBy:
         field: order
         order: asc
       where:
-        and: [merchantOperatingCityId, domain]
-
-  sqlType:
-    timeBounds: text
+        and: [domain, version]
+    findLatestVersion:
+      kvFunction: findAllWithOptionsKV
+      orderBy:
+        field: version
+        order: desc
+      where: domain
+    findByDomain:
+      kvFunction: findAllWithKV
+      where: domain
 
   beamType:
     logic: Text
-    timeBounds: Maybe TimeBound
 
   toTType:
     logic: (Data.String.Conversions.cs . Data.Aeson.encode)|I
-    timeBounds: Kernel.Prelude.Just|I
 
   fromTType:
     logic: (Kernel.Prelude.fromMaybe Data.Aeson.Null . Data.Aeson.decode . Data.String.Conversions.cs)|I
-    timeBounds: (Kernel.Prelude.fromMaybe Kernel.Types.TimeBound.Unbounded)|I
 
-  default:
-    timeBounds: "'Unbounded'"
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"
+
+  excludedFields: [merchantId]
+
+AppDynamicLogicRollout:
+  tableName: app_dynamic_logic_rollout
+
+  fields:
+    merchantOperatingCityId: Id MerchantOperatingCity
+    domain: LogicDomain
+    timeBounds: Text
+    version: Int
+    percentageRollout: Int
+
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    domain: PrimaryKey
+    timeBounds: PrimaryKey
+    version: PrimaryKey
+
+  queries:
+    findByMerchantOpCityAndDomain:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, domain]
 
   extraOperations:
     - EXTRA_QUERY_FILE

@@ -32,8 +32,9 @@ library
       Lib.Yudhishthira.Event.KaalChakra.Template
       Lib.Yudhishthira.Flow.Dashboard
       Lib.Yudhishthira.Storage.Beam.BeamFlow
-      Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogic
-      Lib.Yudhishthira.Storage.Queries.AppDynamicLogicExtra
+      Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement
+      Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout
+      Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRolloutExtra
       Lib.Yudhishthira.Storage.Queries.NammaTagExtra
       Lib.Yudhishthira.Storage.Queries.Transformers.NammaTag
       Lib.Yudhishthira.Tools.Error
@@ -45,17 +46,20 @@ library
       Lib.Yudhishthira.Types.Manual
       Lib.Yudhishthira.Types.Tag
       Tools.Beam.UtilsTH
-      Lib.Yudhishthira.Storage.Beam.AppDynamicLogic
+      Lib.Yudhishthira.Storage.Beam.AppDynamicLogicElement
+      Lib.Yudhishthira.Storage.Beam.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.Beam.ChakraQueries
       Lib.Yudhishthira.Storage.Beam.NammaTag
       Lib.Yudhishthira.Storage.Beam.UserData
-      Lib.Yudhishthira.Storage.Queries.AppDynamicLogic
+      Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElement
+      Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.Queries.ChakraQueries
       Lib.Yudhishthira.Storage.Queries.NammaTag
-      Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogic
+      Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.NammaTag
       Lib.Yudhishthira.Storage.Queries.UserData
-      Lib.Yudhishthira.Types.AppDynamicLogic
+      Lib.Yudhishthira.Types.AppDynamicLogicElement
+      Lib.Yudhishthira.Types.AppDynamicLogicRollout
       Lib.Yudhishthira.Types.ChakraQueries
       Lib.Yudhishthira.Types.NammaTag
       Lib.Yudhishthira.Types.UserData

@@ -9,6 +9,10 @@ imports:
   AppDynamicLogic: Lib.Yudhishthira.Types.AppDynamicLogic
   RunKaalChakraJobReq: Lib.Yudhishthira.Types
   RunKaalChakraJobRes: Lib.Yudhishthira.Types
+  GetLogicsResp: Lib.Yudhishthira.Types
+  CreateTimeBoundRequest: Lib.Yudhishthira.Types
+  LogicRolloutObject: Lib.Yudhishthira.Types
+  LogicRolloutReq: Lib.Yudhishthira.Types
 
 module: NammaTag
 
@@ -61,8 +65,10 @@ apis:
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
       mandatoryQuery:
         domain: LogicDomain
+      query:
+        version: Int
       response:
-        type: "[AppDynamicLogic]"
+        type: "[GetLogicsResp]"
   - POST:
       endpoint: /runJob
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG RUN_KAAL_CHAKRA_JOB
@@ -70,3 +76,34 @@ apis:
         type: RunKaalChakraJobReq
       response:
         type: RunKaalChakraJobRes
+  - POST:
+      endpoint: /timeBounds/create
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG TIME_BOUNDS
+      request:
+        type: CreateTimeBoundRequest
+      response:
+        type: APISuccess
+  - DELETE:
+      endpoint: /timeBounds/delete
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG TIME_BOUNDS
+      mandatoryQuery:
+        domain: LogicDomain
+        name: Text
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /appDynamicLogic/getLogicRollout
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+      mandatoryQuery:
+        domain: LogicDomain
+      query:
+        timeBound: Text
+      response:
+        type: "[LogicRolloutObject]"
+  - POST:
+      endpoint: /appDynamicLogic/upsertLogicRollout
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+      request:
+        type: LogicRolloutReq
+      response:
+        type: APISuccess

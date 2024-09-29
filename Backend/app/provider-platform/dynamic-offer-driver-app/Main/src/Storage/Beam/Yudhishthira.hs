@@ -16,13 +16,17 @@
 module Storage.Beam.Yudhishthira (module Reexport) where
 
 import qualified Data.Text as T
-import Lib.Yudhishthira.Storage.Beam.AppDynamicLogic as Reexport
+import Lib.Yudhishthira.Storage.Beam.AppDynamicLogicElement as Reexport
+import Lib.Yudhishthira.Storage.Beam.AppDynamicLogicRollout as Reexport
 import Lib.Yudhishthira.Storage.Beam.ChakraQueries as Reexport
 import Lib.Yudhishthira.Storage.Beam.NammaTag as Reexport
 import Lib.Yudhishthira.Storage.Beam.UserData as Reexport
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 
-instance HasSchemaName AppDynamicLogicT where
+instance HasSchemaName AppDynamicLogicElementT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName AppDynamicLogicRolloutT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName NammaTagT where

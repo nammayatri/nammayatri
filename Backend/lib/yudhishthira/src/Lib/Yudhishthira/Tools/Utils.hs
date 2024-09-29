@@ -10,13 +10,8 @@ import qualified Data.Text.Lazy.Encoding as DTLE
 import JsonLogic
 import Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Types.Id
-import Kernel.Types.TimeBound
 import Kernel.Utils.Common
-import Lib.Yudhishthira.Storage.Beam.BeamFlow
-import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogic as DAL
 import qualified Lib.Yudhishthira.Types as LYT
-import Lib.Yudhishthira.Types.AppDynamicLogic
 
 mandatoryChakraFields :: [Text]
 mandatoryChakraFields = [userIdField]
@@ -31,18 +26,6 @@ decodeTextToValue :: Text -> Either String Value
 decodeTextToValue text =
   let byteString = DTLE.encodeUtf8 $ DTE.fromStrict text
    in A.eitherDecode byteString
-
-getAppDynamicLogic ::
-  BeamFlow m r =>
-  Id LYT.MerchantOperatingCity ->
-  LYT.LogicDomain ->
-  UTCTime ->
-  m [AppDynamicLogic]
-getAppDynamicLogic merchantOpCityId domain localTime = do
-  mbConfigs <- DAL.findByMerchantOpCityAndDomain merchantOpCityId domain
-  configs <- if null mbConfigs then DAL.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
-  let boundedConfigs = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded) configs) localTime
-  return $ if null boundedConfigs then filter (\cfg -> cfg.timeBounds == Unbounded) configs else boundedConfigs
 
 runJsonLogic :: (MonadFlow m) => Value -> Text -> m A.Value
 runJsonLogic data' ruleText = do

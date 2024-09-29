@@ -71,3 +71,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN trip_category text 
 
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN to_loc_geohash text ;
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN from_loc_geohash text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN pooling_logic_version integer ;

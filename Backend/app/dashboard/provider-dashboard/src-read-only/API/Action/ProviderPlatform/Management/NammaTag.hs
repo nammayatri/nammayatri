@@ -18,15 +18,14 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import qualified Lib.Yudhishthira.Types
-import qualified Lib.Yudhishthira.Types.AppDynamicLogic
 import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("nammaTag" :> (PostNammaTagTagCreate :<|> PostNammaTagTagUpdate :<|> DeleteNammaTagTagDelete :<|> PostNammaTagQueryCreate :<|> PostNammaTagAppDynamicLogicVerify :<|> GetNammaTagAppDynamicLogic :<|> PostNammaTagRunJob))
+type API = ("nammaTag" :> (PostNammaTagTagCreate :<|> PostNammaTagTagUpdate :<|> DeleteNammaTagTagDelete :<|> PostNammaTagQueryCreate :<|> PostNammaTagAppDynamicLogicVerify :<|> GetNammaTagAppDynamicLogic :<|> PostNammaTagRunJob :<|> PostNammaTagTimeBoundsCreate :<|> DeleteNammaTagTimeBoundsDelete :<|> GetNammaTagAppDynamicLogicGetLogicRollout :<|> PostNammaTagAppDynamicLogicUpsertLogicRollout))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = postNammaTagTagCreate merchantId city :<|> postNammaTagTagUpdate merchantId city :<|> deleteNammaTagTagDelete merchantId city :<|> postNammaTagQueryCreate merchantId city :<|> postNammaTagAppDynamicLogicVerify merchantId city :<|> getNammaTagAppDynamicLogic merchantId city :<|> postNammaTagRunJob merchantId city
+handler merchantId city = postNammaTagTagCreate merchantId city :<|> postNammaTagTagUpdate merchantId city :<|> deleteNammaTagTagDelete merchantId city :<|> postNammaTagQueryCreate merchantId city :<|> postNammaTagAppDynamicLogicVerify merchantId city :<|> getNammaTagAppDynamicLogic merchantId city :<|> postNammaTagRunJob merchantId city :<|> postNammaTagTimeBoundsCreate merchantId city :<|> deleteNammaTagTimeBoundsDelete merchantId city :<|> getNammaTagAppDynamicLogicGetLogicRollout merchantId city :<|> postNammaTagAppDynamicLogicUpsertLogicRollout merchantId city
 
 type PostNammaTagTagCreate = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'NAMMA_TAG 'CREATE_NAMMA_TAG :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagTagCreate)
 
@@ -48,6 +47,26 @@ type GetNammaTagAppDynamicLogic = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'NAMMA_T
 
 type PostNammaTagRunJob = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'NAMMA_TAG 'RUN_KAAL_CHAKRA_JOB :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagRunJob)
 
+type PostNammaTagTimeBoundsCreate = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'NAMMA_TAG 'TIME_BOUNDS :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagTimeBoundsCreate)
+
+type DeleteNammaTagTimeBoundsDelete = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'NAMMA_TAG 'TIME_BOUNDS :> API.Types.ProviderPlatform.Management.NammaTag.DeleteNammaTagTimeBoundsDelete)
+
+type GetNammaTagAppDynamicLogicGetLogicRollout =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'NAMMA_TAG
+      'APP_DYNAMIC_LOGIC_VERIFY
+      :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagAppDynamicLogicGetLogicRollout
+  )
+
+type PostNammaTagAppDynamicLogicUpsertLogicRollout =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'NAMMA_TAG
+      'APP_DYNAMIC_LOGIC_VERIFY
+      :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagAppDynamicLogicUpsertLogicRollout
+  )
+
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.CreateNammaTagRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postNammaTagTagCreate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.NammaTag.postNammaTagTagCreate merchantShortId opCity apiTokenInfo req
 
@@ -63,8 +82,20 @@ postNammaTagQueryCreate merchantShortId opCity apiTokenInfo req = withFlowHandle
 postNammaTagAppDynamicLogicVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.AppDynamicLogicReq -> Environment.FlowHandler Lib.Yudhishthira.Types.AppDynamicLogicResp)
 postNammaTagAppDynamicLogicVerify merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.NammaTag.postNammaTagAppDynamicLogicVerify merchantShortId opCity apiTokenInfo req
 
-getNammaTagAppDynamicLogic :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.LogicDomain -> Environment.FlowHandler [Lib.Yudhishthira.Types.AppDynamicLogic.AppDynamicLogic])
-getNammaTagAppDynamicLogic merchantShortId opCity apiTokenInfo domain = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.NammaTag.getNammaTagAppDynamicLogic merchantShortId opCity apiTokenInfo domain
+getNammaTagAppDynamicLogic :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Lib.Yudhishthira.Types.LogicDomain -> Environment.FlowHandler [Lib.Yudhishthira.Types.GetLogicsResp])
+getNammaTagAppDynamicLogic merchantShortId opCity apiTokenInfo version domain = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.NammaTag.getNammaTagAppDynamicLogic merchantShortId opCity apiTokenInfo version domain
 
 postNammaTagRunJob :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.RunKaalChakraJobReq -> Environment.FlowHandler Lib.Yudhishthira.Types.RunKaalChakraJobRes)
 postNammaTagRunJob merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.NammaTag.postNammaTagRunJob merchantShortId opCity apiTokenInfo req
+
+postNammaTagTimeBoundsCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.CreateTimeBoundRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postNammaTagTimeBoundsCreate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.NammaTag.postNammaTagTimeBoundsCreate merchantShortId opCity apiTokenInfo req
+
+deleteNammaTagTimeBoundsDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.LogicDomain -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+deleteNammaTagTimeBoundsDelete merchantShortId opCity apiTokenInfo domain name = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.NammaTag.deleteNammaTagTimeBoundsDelete merchantShortId opCity apiTokenInfo domain name
+
+getNammaTagAppDynamicLogicGetLogicRollout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Lib.Yudhishthira.Types.LogicDomain -> Environment.FlowHandler [Lib.Yudhishthira.Types.LogicRolloutObject])
+getNammaTagAppDynamicLogicGetLogicRollout merchantShortId opCity apiTokenInfo timeBound domain = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.NammaTag.getNammaTagAppDynamicLogicGetLogicRollout merchantShortId opCity apiTokenInfo timeBound domain
+
+postNammaTagAppDynamicLogicUpsertLogicRollout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.LogicRolloutReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.NammaTag.postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity apiTokenInfo req
