@@ -32,7 +32,7 @@ import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 import Debug (spy)
-import Foreign (ForeignError(..), fail, unsafeFromForeign, typeOf)
+import Foreign (ForeignError(..), fail, unsafeFromForeign, typeOf, unsafeToForeign)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
 import Foreign.Generic.EnumEncoding (genericDecodeEnum, genericEncodeEnum, defaultGenericEnumOptions)
@@ -3401,6 +3401,7 @@ data DriverCoinsFunctionType
   | TrainingCompleted
   | BulkUploadFunction
   | BulkUploadFunctionV2
+  | RidesCompleted Int
 
 instance makeCoinTransactionReq :: RestEndpoint CoinTransactionReq where
     makeRequest reqBody@(CoinTransactionReq date) headers = defaultMakeRequest GET (EP.getCoinTransactions date) headers reqBody Nothing
@@ -3421,14 +3422,12 @@ instance encodeCoinTransactionRes :: Encode CoinTransactionRes where encode = de
 
 derive instance genericDriverCoinsFunctionType :: Generic DriverCoinsFunctionType _
 instance showDriverCoinsFunctionType :: Show DriverCoinsFunctionType where show = genericShow
-instance decodeDriverCoinsFunctionType :: Decode DriverCoinsFunctionType 
-  where 
-    decode body =
-      case (typeOf body == "object") of
-        true ->  case (runExcept $ (readProp "tag" body)) of
-                    Right functionType -> defaultEnumDecode $ functionType
-                    _ -> defaultEnumDecode body          
-        false -> defaultEnumDecode body
+instance decodeDriverCoinsFunctionType :: Decode DriverCoinsFunctionType where 
+  decode body = 
+    case (typeOf body == "object") of
+      true -> defaultDecode body
+      false -> defaultDecode $ unsafeToForeign {tag : body}
+
 instance encodeDriverCoinsFunctionType :: Encode DriverCoinsFunctionType where encode = defaultEncode
 instance eqDriverCoinsFunctionType :: Eq DriverCoinsFunctionType where eq = genericEq
 instance standardEncodeDriverCoinsFunctionType :: StandardEncode DriverCoinsFunctionType
