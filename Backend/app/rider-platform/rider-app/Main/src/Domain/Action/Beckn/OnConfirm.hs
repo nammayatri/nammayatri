@@ -83,7 +83,7 @@ data RideAssignedInfo = RideAssignedInfo
     vehicleModel :: Text,
     fareParams :: Maybe [DCommon.DFareBreakup],
     isAlreadyFav :: Bool,
-    favCount :: Int,
+    favCount :: Maybe Int,
     driverAccountId :: Maybe Payment.AccountId
   }
 

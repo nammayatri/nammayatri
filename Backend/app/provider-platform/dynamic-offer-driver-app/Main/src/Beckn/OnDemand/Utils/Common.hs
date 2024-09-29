@@ -629,19 +629,21 @@ mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccount
               tagValue = Just $ show isFreeRide
             }
 
-    isAlreadyFavSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.IS_ALREADY_FAVOURITE,
-                    descriptorName = Just "Is already favourite",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just $ show isAlreadyFav
-          }
+    isAlreadyFavSingleton
+      | not isAlreadyFav = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.IS_ALREADY_FAVOURITE,
+                      descriptorName = Just "Is already favourite",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = Just $ show isAlreadyFav
+            }
 
     favCountSingleton =
       List.singleton $
