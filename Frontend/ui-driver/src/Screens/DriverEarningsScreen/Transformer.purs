@@ -34,6 +34,7 @@ import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 
 getEventName :: DriverEarningsScreenState -> API.DriverCoinsFunctionType -> Maybe API.BulkCoinTitleTranslations -> String
 getEventName state event bulkUploadTitle = case event of
+  API.RidesCompleted n -> show n <> " " <> getString RIDE_COMPLETED
   API.OneOrTwoStarRating -> getString BAD_RATING_BY_CUSTOMER
   API.RideCompleted -> getString RIDE_COMPLETED
   API.FiveStarRating -> getString GOOD_RATING_BY_CUSTOMER
