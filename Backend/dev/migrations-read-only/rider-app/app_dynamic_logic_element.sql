@@ -7,3 +7,8 @@ ALTER TABLE atlas_app.app_dynamic_logic_element ADD COLUMN version integer NOT N
 ALTER TABLE atlas_app.app_dynamic_logic_element ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.app_dynamic_logic_element ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.app_dynamic_logic_element ADD PRIMARY KEY ( domain, order, version);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.app_dynamic_logic_element ADD COLUMN description text ;

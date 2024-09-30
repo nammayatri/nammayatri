@@ -14,6 +14,7 @@ module Domain.Action.Dashboard.Management.NammaTag
     deleteNammaTagTimeBoundsDelete,
     getNammaTagAppDynamicLogicGetLogicRollout,
     postNammaTagAppDynamicLogicUpsertLogicRollout,
+    getNammaTagTimeBounds,
   )
 where
 
@@ -132,6 +133,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
           DTADLE.AppDynamicLogicElement
             { createdAt = now,
               updatedAt = now,
+              description = req.description,
               ..
             }
 
@@ -141,13 +143,14 @@ getNammaTagAppDynamicLogic _merchantShortId _opCity mbVersion domain = do
     Just version -> do
       logicsObject <- CADLE.findByDomainAndVersion domain version
       let logics = map (.logic) logicsObject
-      return $ [Lib.Yudhishthira.Types.GetLogicsResp domain version logics]
+      let description = (Prelude.listToMaybe logicsObject) >>= (.description)
+      return $ [Lib.Yudhishthira.Types.GetLogicsResp domain version description logics]
     Nothing -> do
       allDomainLogics <- CADLE.findByDomain domain
       let sortedLogics = sortByOrderAndVersion allDomainLogics
       let groupedLogics = groupBy ((==) `on` (.version)) sortedLogics
       let versionWithLogics = mapMaybe combineLogic groupedLogics
-      return $ (versionWithLogics <&> (\(version, logics) -> Lib.Yudhishthira.Types.GetLogicsResp domain version logics))
+      return $ (versionWithLogics <&> (\(version, description, logics) -> Lib.Yudhishthira.Types.GetLogicsResp domain version description logics))
   where
     sortByOrderAndVersion :: [DTADLE.AppDynamicLogicElement] -> [DTADLE.AppDynamicLogicElement]
     sortByOrderAndVersion = sortBy compareData
@@ -157,11 +160,11 @@ getNammaTagAppDynamicLogic _merchantShortId _opCity mbVersion domain = do
             EQ -> compare a.order b.order -- Ascending for order
             cmp -> cmp
 
-    combineLogic :: NonEmpty DTADLE.AppDynamicLogicElement -> Maybe (Int, [A.Value])
+    combineLogic :: NonEmpty DTADLE.AppDynamicLogicElement -> Maybe (Int, Maybe Text, [A.Value])
     combineLogic arr =
       let logics = map (.logic) arr -- Combine all logic values into a list
           firstElement = DLNE.head arr
-       in Just (firstElement.version, DLNE.toList logics)
+       in Just (firstElement.version, firstElement.description, DLNE.toList logics)
 
 postNammaTagRunJob ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -207,6 +210,13 @@ castChakra Monthly = Just Lib.Yudhishthira.Types.Monthly
 castChakra Quarterly = Just Lib.Yudhishthira.Types.Quarterly
 castChakra _ = Nothing
 
+getNammaTagTimeBounds :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow Lib.Yudhishthira.Types.TimeBoundResp
+getNammaTagTimeBounds merchantShortId opCity domain = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  allTimeBounds <- QTBC.findByCityAndDomain merchantOpCityId domain
+  return $ (\TimeBoundConfig {..} -> Lib.Yudhishthira.Types.CreateTimeBoundRequest {..}) <$> allTimeBounds
+
 postNammaTagTimeBoundsCreate :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.CreateTimeBoundRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagTimeBoundsCreate merchantShortId opCity req = do
   when (req.timeBounds == Unbounded) $ throwError $ InvalidRequest "Unbounded time bounds not allowed"
@@ -249,7 +259,7 @@ getNammaTagAppDynamicLogicGetLogicRollout merchantShortId opCity _ domain = do
   where
     combineRollout :: NonEmpty AppDynamicLogicRollout -> Maybe Lib.Yudhishthira.Types.LogicRolloutObject
     combineRollout arr =
-      let rollout = map (\r -> Lib.Yudhishthira.Types.RolloutVersion r.version r.percentageRollout) arr
+      let rollout = map (\r -> Lib.Yudhishthira.Types.RolloutVersion r.version r.percentageRollout r.versionDescription) arr
           firstElement = DLNE.head arr
        in Just $ Lib.Yudhishthira.Types.LogicRolloutObject firstElement.domain firstElement.timeBounds (DLNE.toList rollout)
 
@@ -281,6 +291,7 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq 
     mkAppDynamicLogicRollout :: Id MerchantOperatingCity -> UTCTime -> Lib.Yudhishthira.Types.LogicDomain -> Text -> Lib.Yudhishthira.Types.RolloutVersion -> Environment.Flow AppDynamicLogicRollout
     mkAppDynamicLogicRollout merchantOperatingCityId now domain timeBounds Lib.Yudhishthira.Types.RolloutVersion {..} = do
       logicsObject <- CADLE.findByDomainAndVersion domain version
+      let _versionDescription = (Prelude.listToMaybe logicsObject) >>= (.description)
       when (null logicsObject) $ throwError $ InvalidRequest $ "Logic not found for version: " <> show version
       return $
         AppDynamicLogicRollout
@@ -288,6 +299,7 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq 
             updatedAt = now,
             percentageRollout = rolloutPercentage,
             merchantOperatingCityId = cast merchantOperatingCityId,
+            versionDescription = versionDescription <|> _versionDescription,
             ..
           }
 

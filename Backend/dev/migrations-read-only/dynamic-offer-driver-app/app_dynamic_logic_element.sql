@@ -7,3 +7,8 @@ ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_element ADD COLUMN version 
 ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_element ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_element ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_element ADD PRIMARY KEY ( domain, order, version);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_element ADD COLUMN description text ;
