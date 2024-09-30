@@ -286,8 +286,8 @@ handler ValidatedDSearchReq {..} sReq = do
         }
 
     processPolicy ::
-      (Bool -> Maybe DVST.VehicleServiceTier -> DFP.FullFarePolicy -> Flow DEst.Estimate) ->
-      (Bool -> Maybe DVST.VehicleServiceTier -> DFP.FullFarePolicy -> Flow DQuote.Quote) ->
+      (Bool -> DVST.VehicleServiceTier -> DFP.FullFarePolicy -> Flow DEst.Estimate) ->
+      (Bool -> DVST.VehicleServiceTier -> DFP.FullFarePolicy -> Flow DQuote.Quote) ->
       DFP.FullFarePolicy ->
       ([DEst.Estimate], [DQuote.Quote]) ->
       Flow ([DEst.Estimate], [DQuote.Quote])
@@ -296,8 +296,8 @@ handler ValidatedDSearchReq {..} sReq = do
       case mbVehicleServiceTierItem of
         Just vehicleServiceTierItem ->
           case tripCategoryToPricingPolicy fp.tripCategory of
-            EstimateBased {..} -> buildEstimateHelper nightShiftOverlapChecking (Just vehicleServiceTierItem) fp >>= \est -> pure (est : estimates, quotes)
-            QuoteBased {..} -> buildQuoteHelper nightShiftOverlapChecking (Just vehicleServiceTierItem) fp >>= \quote -> pure (estimates, quote : quotes)
+            EstimateBased {..} -> buildEstimateHelper nightShiftOverlapChecking vehicleServiceTierItem fp >>= \est -> pure (est : estimates, quotes)
+            QuoteBased {..} -> buildQuoteHelper nightShiftOverlapChecking vehicleServiceTierItem fp >>= \quote -> pure (estimates, quote : quotes)
         Nothing -> do
           logError $ "Vehicle service tier not found for " <> show fp.vehicleServiceTier
           pure (estimates, quotes)
@@ -501,7 +501,7 @@ buildQuote ::
   Maybe Bool ->
   Maybe Bool ->
   Bool ->
-  Maybe DVST.VehicleServiceTier ->
+  DVST.VehicleServiceTier ->
   DFP.FullFarePolicy ->
   m DQuote.Quote
 buildQuote _ searchRequest transporterId pickupTime isScheduled returnTime roundTrip mbDistance mbDuration specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy = do
@@ -547,7 +547,7 @@ buildQuote _ searchRequest transporterId pickupTime isScheduled returnTime round
         providerId = transporterId,
         distance = mbDistance,
         vehicleServiceTier = fullFarePolicy.vehicleServiceTier,
-        vehicleServiceTierName = (.name) <$> vehicleServiceTierItem,
+        vehicleServiceTierName = Just vehicleServiceTierItem.name,
         tripCategory = fullFarePolicy.tripCategory,
         farePolicy = Just $ DFP.fullFarePolicyToFarePolicy fullFarePolicy,
         tollNames = if isTollApplicable then tollNames else Nothing,
@@ -577,7 +577,7 @@ buildEstimate ::
   Int ->
   Maybe Seconds ->
   Bool ->
-  Maybe DVST.VehicleServiceTier ->
+  DVST.VehicleServiceTier ->
   DFP.FullFarePolicy ->
   m DEst.Estimate
 buildEstimate _ currency distanceUnit mbSearchReq startTime isScheduled returnTime roundTrip mbDistance specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute noOfStops mbEstimatedDuration nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy = do
@@ -645,7 +645,7 @@ buildEstimate _ currency distanceUnit mbSearchReq startTime isScheduled returnTi
       { id = estimateId,
         requestId = maybe (Id "") (.id) mbSearchReq,
         vehicleServiceTier = fullFarePolicy.vehicleServiceTier,
-        vehicleServiceTierName = (.name) <$> vehicleServiceTierItem,
+        vehicleServiceTierName = Just vehicleServiceTierItem.name,
         tripCategory = fullFarePolicy.tripCategory,
         estimatedDistance = mbDistance,
         currency,
