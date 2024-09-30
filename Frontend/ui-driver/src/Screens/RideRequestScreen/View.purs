@@ -131,7 +131,7 @@ listLayout push state listItm =
           , gravity CENTER_HORIZONTAL
           , background Color.grey700
           , orientation VERTICAL
-          , visibility  (boolToVisibility $ (state.props.receivedResponse  && (DA.null state.data.filteredArr )))
+          , visibility  $ boolToVisibility $ (state.props.receivedResponse  && (DA.null state.data.filteredArr ))
         ][
           imageView [
             width $ V 140
@@ -160,7 +160,7 @@ listLayout push state listItm =
         ,Tuple "LOADER"
         $ PrestoAnim.animationSet
           [ PrestoAnim.Animation
-            [ PrestoAnim.duration 1000
+            [ PrestoAnim.duration 100
             , PrestoAnim.toAlpha $
                 case state.data.shimmerLoader of
                   loader | loader `DA.elem` [ST.AnimatingIn, ST.AnimatedIn] -> 1.0

@@ -396,7 +396,7 @@ data ADD_VEHICLE_DETAILS_SCREENOUTPUT = VALIDATE_DETAILS AddVehicleDetailsScreen
                                         | RC_ACTIVATION AddVehicleDetailsScreenState
                                         | CHANGE_VEHICLE_FROM_RC_SCREEN
                                         | CHANGE_LANG_FROM_RC_SCREEN
-data RIDE_REQUEST_SCREEN_OUTPUT  = GOTO_HOME
+data RIDE_REQUEST_SCREEN_OUTPUT  = GOTO_HOME RideRequestScreenData.RideRequestScreenState
                                   | GOTO_RIDE_SUMMARY RideRequestScreenData.RideRequestScreenState
                                   | RIDE_REQUEST_REFRESH_SCREEN RideRequestScreenData.RideRequestScreenState
                                   | LOADER__OUTPUT RideRequestScreenData.RideRequestScreenState

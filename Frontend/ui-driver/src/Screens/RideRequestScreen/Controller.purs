@@ -46,7 +46,7 @@ instance loggableAction :: Loggable Action where
   performLog = defaultPerformLog
 
 data ScreenOutput
-  = GoBack
+  = GoBack RideRequestScreenState
   | LoaderOutput RideRequestScreenState
   | RefreshScreen RideRequestScreenState
   | GoToRideSummary RideRequestScreenState
@@ -73,7 +73,7 @@ data Action
 
 
 eval :: Action -> RideRequestScreenState -> Eval Action ScreenOutput RideRequestScreenState
-eval BackPressed state = exit GoBack
+eval BackPressed state = exit $ GoBack state
 
 eval (SelectDay index) state = do
   let
@@ -85,7 +85,9 @@ eval (SelectDay index) state = do
 
 eval NoAction state = continue state
 
-eval Refresh state =  updateAndExit state {data {refreshLoader = true , shimmerLoader = ST.AnimatingIn}} $ RefreshScreen state
+eval Refresh state = 
+  let newState = state {data {refreshLoader = true , shimmerLoader = ST.AnimatingIn}} 
+  in updateAndExit newState $ RefreshScreen newState
 
 eval Loader state = updateAndExit state{data{shimmerLoader = AnimatedIn,loaderButtonVisibility = true}} $ LoaderOutput state
 
@@ -143,8 +145,6 @@ eval FilterSelected state = do
 
 eval (Scroll value) state = do
   let
-    sRLayoutId = getNewIDWithTag "0107003"
-  let
     firstIndex = fromMaybe 0 (fromString (fromMaybe "0" ((split (Pattern ",") (value)) Array.!! 0)))
   let
     visibleItems = fromMaybe 0 (fromString (fromMaybe "0" ((split (Pattern ",") (value)) Array.!! 1)))
@@ -178,7 +178,7 @@ eval (OnFadeComplete _ ) state = do
     then do
       continue state
     else do
-      update state {data{
+      continue state {data{
             shimmerLoader = case state.data.shimmerLoader of
                               AnimatedIn ->AnimatedOut
                               AnimatingOut -> AnimatedOut

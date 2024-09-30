@@ -91,7 +91,7 @@ import RemoteConfig as RC
 import Resource.Constants (decodeAddress, getLocationInfoFromStopLocation, rideTypeConstructor, getHomeStageFromString)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
-import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..), StopLocation(..),DriverProfileStatsResp(..), BookingTypes(..) , ScheduledBookingListResponse , ScheduleBooking(..) , BookingAPIEntity(..))
+import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..), StopLocation(..),DriverProfileStatsResp(..), BookingTypes(..) , ScheduledBookingListResponse(..) , ScheduleBooking(..) , BookingAPIEntity(..))
 import Services.Accessor (_lat, _lon, _area)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
@@ -131,6 +131,7 @@ import Components.PlanCard.Controller as PlanCard
 import Screens.RideSummaryScreen.ScreenData as  RSD
 import Screens.HomeScreen.ScreenData as HSD
 import Debug
+import Data.Tuple(Tuple(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -456,6 +457,7 @@ data Action = NoAction
             | ScheduledRideBannerClick
             | HomeScreenBannerCountDownTimer Int String String
             | OnRideBannerCountDownTimer Int String String
+            | GetRideCount Int
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -520,7 +522,7 @@ eval (AccountBlockedAC PopUpModal.OnButton2Click) state = continue state { props
 
 eval (AccountBlockedAC PopUpModal.OnButton1Click) state = do 
   void $ pure $ showDialer (SC.getSupportNumber "") false 
-  continue state
+  continue state 
 
 eval BookingOptions state = exit $ GoToBookingPreferences state  
 
@@ -1011,6 +1013,7 @@ eval (RateCardAC (RateCard.PrimaryButtonAC PrimaryButtonController.OnClick)) sta
 
 eval  (RideActionModalAction (RideActionModal.GetFare)) state  = continue state {props {showIntercityRateCard  = true}}
 
+eval (GetRideCount (count)) state = continue state { data {scheduleRideCount =  Just (Tuple count (getCurrentUTC ""))}}
 ------------------------------- ChatService - Start --------------------------
 
 eval (OpenChatScreen) state = do
