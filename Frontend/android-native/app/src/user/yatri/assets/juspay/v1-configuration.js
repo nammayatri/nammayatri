@@ -338,7 +338,7 @@ window.getMerchantConfig = function () {
       "link" : getAppLink(window.__OS)
       , "supportMail" :"support@nammayatri.in"
       , "name" : "Yatri"
-      , "website" : "https://www.getyatri.com"
+      , "website" : "https://www.getyatri.com/"
       , "logoLight" : ""
     }
   })

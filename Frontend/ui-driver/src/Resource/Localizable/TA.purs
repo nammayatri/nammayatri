@@ -1611,3 +1611,4 @@ getTA stringKey =
         CONTACT_SUPPORT_FOR_HELP -> "உதவிக்கு ஆதரவை தொடர்பு கொள்ளவும்"
         YOU_HAVE_SWITCHED_CITY_OR_VEHICLE -> "நீங்கள் உங்கள் வாகனம் அல்லது நகரத்தை மாற்றியுள்ளீர்கள். சவாரிகளைப் பெற திட்டத்தைத் தேர்ந்தெடுக்கவும்"
         XL_PLUS -> "XL பிளஸ்"
+        METRO_RIDE_COMPLETED -> "மெட்ரோ சவாரி முடிந்தது"

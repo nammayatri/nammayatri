@@ -1617,3 +1617,4 @@ getBN stringKey =
         CONTACT_SUPPORT_FOR_HELP -> "সহায়তার জন্য সমর্থনের সাথে যোগাযোগ করুন"
         YOU_HAVE_SWITCHED_CITY_OR_VEHICLE -> "আপনি আপনার গাড়ি বা শহর পরিবর্তন করেছেন। রাইড পেতে একটি পরিকল্পনা নির্বাচন করুন"
         XL_PLUS -> "XL প্লাস"
+        METRO_RIDE_COMPLETED -> "মেট্রো যাত্রা সম্পন্ন"
