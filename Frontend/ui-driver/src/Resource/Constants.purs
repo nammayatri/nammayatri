@@ -278,3 +278,6 @@ maxDriverImages = 4
 
 twoHrsInSec :: Int
 twoHrsInSec = 7200
+
+fiveMinInSec :: Int
+fiveMinInSec = 300

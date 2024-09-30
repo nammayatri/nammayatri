@@ -171,6 +171,7 @@ initData =
       , homeScreenBannerTimer : 0
       , onRideBannerTimerID :""
       , onRideBannerTimer : 0
+      , scheduleRideCount : Nothing
     }
   , props:
       { isFreeRide: false

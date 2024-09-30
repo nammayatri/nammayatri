@@ -23,14 +23,20 @@ rideRequestScreen :: FlowBT String RIDE_REQUEST_SCREEN_OUTPUT
 rideRequestScreen = do
   (GlobalState state) <- getState
   push <- liftFlowBT $ getPushFn Nothing "RideRequestScreen"
-  let _ = spy "screenName =>" push
   listItemm <- lift $ lift $ PrestoList.preComputeListItem $ RideRequestCard.view (push <<< RideRequestCardActionController) 
-  let _ = spy "screenName =>" listItemm
   act <- lift $ lift $ runScreen $ RideRequestScreen.screen state.rideRequestScreen listItemm
   case act of
-    GoBack -> App.BackT $ App.BackPoint <$> pure (GOTO_HOME )
-    RefreshScreen state -> App.BackT $ App.NoBack <$> pure ( RIDE_REQUEST_REFRESH_SCREEN  state)
-    LoaderOutput updatedState -> App.BackT $ App.BackPoint <$> (pure $ LOADER__OUTPUT updatedState)
+    GoBack updatedState  -> do 
+      modifyScreenState $ RideRequestScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> pure (GOTO_HOME updatedState  )
+      
+    RefreshScreen state -> do 
+      modifyScreenState $ RideRequestScreenStateType (\_ → state) 
+      App.BackT $ App.NoBack <$> pure ( RIDE_REQUEST_REFRESH_SCREEN  state)
+
+    LoaderOutput updatedState -> do
+      modifyScreenState $ RideRequestScreenStateType (\_ → updatedState) 
+      App.BackT $ App.BackPoint <$> (pure $ LOADER__OUTPUT updatedState)
 
     GoToRideSummary updatedState -> do
       modifyScreenState $ RideRequestScreenStateType (\_ -> updatedState)

@@ -69,6 +69,7 @@ import Styles.Types (FontSize)
 import Common.Types.App (CalendarDate)
 import Common.RemoteConfig.Types as CommonRC
 import Common.RemoteConfig.Types (OfferBanner(..)) as ReExport
+import Data.Tuple(Tuple(..))
 
 
 type EditTextInLabelState =
@@ -1087,6 +1088,7 @@ type HomeScreenData =  {
 , homeScreenBannerTimer :: Int
 , onRideBannerTimerID :: String
 , onRideBannerTimer :: Int
+, scheduleRideCount :: Maybe (Tuple Int String)
 }
 
 type PlansState = {

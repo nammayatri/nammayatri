@@ -179,6 +179,7 @@ screen initialState (GlobalState globalState) =
           when (isNothing initialState.data.bannerData.bannerItem) $ void $ launchAff $ EHC.flowRunner defaultGlobalState $ computeListItem push
           void $ launchAff $ flowRunner defaultGlobalState $ checkBgLocation push BgLocationAC initialState globalState.globalProps.bgLocPopupShown
           void $ triggerOnRideBannerTimer push initialState 
+          void $ launchAff $ EHC.flowRunner defaultGlobalState $ getScheduledRidecount push GetRideCount initialState
           case localStage of
             "RideRequested"  -> do
                                 if (getValueToLocalStore RIDE_STATUS_POLLING) == "False" then do
@@ -1653,10 +1654,11 @@ rideRequestButton push state =
     ] 
     [ pillView state push
     , pillShimmer state push
+    , scheduledRideCountView state push
     ]
 pillView :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 pillView state push =
-    linearLayout
+    frameLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , margin $ MarginVertical 5 10
@@ -1673,7 +1675,7 @@ pillView state push =
     , clickable $ state.data.upcomingRide == Nothing 
     , alpha $ if isNothing state.data.upcomingRide then 1.0 else 0.5
     , background Color.white900
-    , padding $ Padding 16 12 16 12
+    , padding $ Padding 16 11 16 11
     , gravity CENTER
     , stroke $ "1,"<> Color.grey900
     , rippleColor Color.rippleShade
@@ -1689,53 +1691,29 @@ pillView state push =
     , margin $ MarginLeft 10
     , color Color.black800
     ] <> FontStyle.tags TypoGraphy  
-    ]]
 
-    --This code is for the badge. Might be required for future 
+    ] ]
 
-    -- infoView :: HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-    -- infoView state push = 
-    -- linearLayout
-    -- [ height WRAP_CONTENT
-    --  , width MATCH_PARENT
-    --  , layoutGravity "right"
-    --  ][ textView $
-    --  [ height $ V 20
-    --  , width $ V 20
-    --  , cornerRadius 37.0
-    --  , text $ show (state.data.scheduledRideListResponse)
-    --  , visibility $ boolToVisibility  (state.data.scheduledRideListResponse /=0)
-    --  , color Color.black900
-    --  , gravity CENTER
-    --  , background Color.yellow900 
-    --  ] <> FontStyle.body9 TypoGraphy
-    --  ]
-  -- linearLayout
-  -- [ width WRAP_CONTENT
-  -- , height WRAP_CONTENT
-  -- , orientation HORIZONTAL
-  -- , margin $ MarginLeft 12
-  -- , cornerRadius 22.0
-  -- , onClick push $ const RideRequestsList
-  -- , background Color.white900
-  -- , padding $ Padding 16 12 16 12
-  -- , gravity CENTER
-  -- , stroke $ "1,"<> Color.grey900
-  -- , rippleColor Color.rippleShade
-  -- ][ imageView
-  --    [ width $ V 15
-  --    , height $ V 15
-  --    , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_location"
-  --    ]
-  --  , textView $
-  --    [ weight 1.0
-  --    , text  "Riderequest"
-  --    , gravity CENTER 
-  --    , margin $ MarginLeft 10
-  --    , color Color.black800
-  --    ] <> FontStyle.tags TypoGraphy  
-  -- ]
 
+scheduledRideCountView :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+scheduledRideCountView state push = 
+  linearLayout[ 
+       height WRAP_CONTENT
+     , width MATCH_PARENT
+     , layoutGravity "right"
+     , margin $ Margin 2 0 0 5
+     ][ textView $
+     [ height $ V 20
+     , width $ V 20
+     , cornerRadius 37.0
+     , text $ if rideCount < 5 then show rideCount  else "4+" 
+     , visibility  $ boolToVisibility $  (rideCount /= 0 ) && (isNothing state.data.upcomingRide)
+     , color Color.black900
+     , gravity CENTER
+     , background Color.yellow900 
+     ] <> FontStyle.body9 TypoGraphy
+  ]
+    where  rideCount  = fromMaybe 0 $ checkRideCountAndTime state.data.scheduleRideCount
 
 noGoToLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 noGoToLocationView push state =
@@ -2783,6 +2761,21 @@ onRideScreenBannerView state push  =
   ]
 ]
 
+getScheduledRidecount:: forall action.(action -> Effect Unit) -> (Int -> action) -> HomeScreenState ->  Flow GlobalState Unit
+getScheduledRidecount  push action state   = do
+  let  lastRespTime = spy "lastRespTime " $ maybe  "0" (\(Tuple count time) ->  (time)) state.data.scheduleRideCount 
+       difference  =  (runFn2 JB.differenceBetweenTwoUTC (EHC.getCurrentUTC "") lastRespTime)
+       checkApiCall =  if difference <= fiveMinInSec then false else true
+  when checkApiCall $ do
+        (scheduledBookingListResponse) <- Remote.rideBooking "5" "0" (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "YYYY-MM-DD")  (EHC.convertUTCtoISC (getFutureDate (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "YYYY-MM-DD") 1) "YYYY-MM-DD") ""
+        case scheduledBookingListResponse of
+          Right (ScheduledBookingListResponse listResp) -> do
+            let count  = DA.length (listResp.bookings)
+            doAff do liftEffect $ push $ action $ count 
+            void $ pure $  listResp
+            pure unit
+          Left (err) -> pure unit
+
 checkOnRideStage ::  HomeScreenState -> Boolean
 checkOnRideStage state = DA.elem state.props.currentStage [RideAccepted , RideStarted ,ChatWithCustomer ]
 
@@ -2823,4 +2816,11 @@ formatSecondsToNormalTime state =
       minutes = remainingSecondsAfterHours `div` 60
       seconds = remainingSecondsAfterHours `mod` 60
     in {seconds : seconds , hours : hours , minutes: minutes , difference : difference }
-  
+
+
+checkRideCountAndTime :: Maybe (Tuple Int String) -> Maybe Int
+checkRideCountAndTime tuple =  
+    maybe Nothing (\(Tuple count time) -> do
+      let diff = runFn2 JB.differenceBetweenTwoUTC (HU.getCurrentUTC "") (time)
+      if diff <= fiveMinInSec then Just count else Nothing
+      ) tuple

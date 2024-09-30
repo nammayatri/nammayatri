@@ -128,7 +128,7 @@ import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, UpdateRouteSrcDestConfig(..), KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..))
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
-import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..), PayoutVpaStatus(..))
+import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..), PayoutVpaStatus(..), ScheduledBookingListResponse (..))
 import Services.API as API
 import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
@@ -4449,12 +4449,14 @@ rideRequestScreenFlow :: FlowBT String Unit
 rideRequestScreenFlow = do
   action <- UI.rideRequestScreen
   case action  of 
-    TA.GOTO_HOME -> homeScreenFlow
+    TA.GOTO_HOME state -> do
+      let (ScheduledBookingListResponse listResponse) = state.data.resp
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data{scheduleRideCount =Just $ Tuple (DA.length listResponse.bookings) (getCurrentUTC "")} } )
+      homeScreenFlow
     TA.RIDE_REQUEST_REFRESH_SCREEN state -> do
-      modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{offset = 0, filteredArr =[], resp = RideRequestData.dummyResp}})
+      modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{offset = 0, resp = RideRequestData.dummyResp}})
       rideRequestScreenFlow
     TA.LOADER__OUTPUT state -> do
-
       modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{offset = state.data.offset + 5}})
       rideRequestScreenFlow
     TA.GOTO_RIDE_SUMMARY state -> do
