@@ -235,6 +235,8 @@ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction m
   CHistory.updateCoinEvent driverCoinEvent
   when (numCoins > 0) $ do
     sendCoinsNotification merchantOpCityId driverId numCoins
+  when (eventFunction == DCT.MetroRideCompleted) $ do
+    sendMetroCoinsNotification merchantOpCityId driverId
   pure numCoins
 
 sendCoinsNotificationV2 :: EventFlow m r => Id DMOC.MerchantOperatingCity -> Id DP.Person -> HighPrecMoney -> Int -> DCT.DriverCoinsFunctionType -> m ()
@@ -272,6 +274,10 @@ sendCoinsNotification merchantOpCityId driverId coinsValue =
             _ -> logDebug "Invalid message format."
         Nothing -> logDebug "Could not find Translations."
     replaceCoinsValue = T.replace "{#coinsValue#}" (T.pack $ show coinsValue)
+
+sendMetroCoinsNotification :: EventFlow m r => Id DMOC.MerchantOperatingCity -> Id DP.Person -> m ()
+sendMetroCoinsNotification merchantOpCityId driverId =
+  B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver -> Notify.sendNotificationToDriver merchantOpCityId FCM.DO_NOT_SHOW Nothing FCM.METRO_COIN_SUCCESS "" "" driver (driver.deviceToken)
 
 getExpirationSeconds :: MonadFlow m => Seconds -> m Int
 getExpirationSeconds timeDiffFromUtc = do
