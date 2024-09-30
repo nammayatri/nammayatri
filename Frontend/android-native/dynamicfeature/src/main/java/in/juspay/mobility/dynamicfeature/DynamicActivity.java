@@ -26,7 +26,10 @@ public class DynamicActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_resource);
-
+        System.loadLibrary("turbomodulejsijni");
+        System.loadLibrary("imagepipeline");
+        System.loadLibrary("reactnativeblob");
+        System.loadLibrary("native-imagetranscoder");
         Intent intent = getIntent();
         String repeatUserLoginToken = intent.getStringExtra("token");
         FirebaseApp.getApps(this);
