@@ -242,7 +242,6 @@ window.onMerchantEvent = function (_event, payload) {
     callInitiateResult();
   } else if (_event == "process") {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
-    window.__payload.sdkVersion = "2.0.1"
     console.warn("Process called");
     const parsedPayload = JSON.parse(payload);
     try {
@@ -337,6 +336,7 @@ window.callUICallback = function () {
 };
 
 window.onResumeListeners = [];
+window.internetListeners = {};
 
 window.onPause = function () {
   console.error("onEvent onPause");

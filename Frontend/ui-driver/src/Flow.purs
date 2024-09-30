@@ -74,7 +74,7 @@ import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, 
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.API (callApiBT, callApi)
-import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus, getLatestAndroidVersion)
+import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus, getLatestAndroidVersion)
 import Helpers.Utils as HU
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getAndroidVersion, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, mkRouteConfig)
 import JBridge as JB
@@ -159,16 +159,22 @@ import Resource.Constants (hvSdkTokenExp)
 import Services.Config as SC
 import Presto.Core.Types.Language.Flow (await)
 import Resource.Constants (hvSdkTokenExp)
+import PrestoDOM.Core(terminateUI)
 import Common.RemoteConfig.Utils as CommonRC
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenInitData
 import Engineering.Helpers.RippleCircles
 import Screens.RideRequestScreen.ScreenData as RideRequestData
 import Screens.RideSummaryScreen.Controller as RSC
 import Screens.RideSummaryScreen.ScreenData (initData) as RideSummaryScreenData
+import DecodeUtil as DU
+import Helpers.SplashUtils (hideSplashAndCallFlow, toggleSetupSplash)
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
-    lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "v1-assets_downloader.jsa" "https://assets.moving.tech/beckn/bundles/mobility-core/0.0.6/v1-assets_downloader.jsa" (cb <<< Right) $> nonCanceler
+    lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "v1-assets_downloader.jsa" "https://assets.moving.tech/beckn/bundles/mobility-core/0.0.8/v1-assets_downloader.jsa" (cb <<< Right) $> nonCanceler
+    let _ = DU.setKeyInWindow "forceAppToNoInternetScreen" true
+    when baseFlow $ lift $ lift $ initUI
+    toggleSetupSplash true
     liftFlowBT $ markPerformance "BASE_APP_FLOW_START"
     liftFlowBT $ Events.endMeasuringDuration "Flow.mainFlow"
     liftFlowBT $ Events.initMeasuringDuration "Flow.baseAppFlow"
@@ -182,7 +188,6 @@ baseAppFlow baseFlow event driverInfoResponse = do
     updateNightSafetyPopup
     void $ liftFlowBT initiateLocationServiceClient
     updateOperatingCity
-    when baseFlow $ lift $ lift $ initUI
     void $ pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     void $ pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getCurrency Constants.appConfig)
@@ -224,8 +229,6 @@ baseAppFlow baseFlow event driverInfoResponse = do
       setValueToLocalStore DISABLE_WIDGET "false"
       setValueToLocalStore BUNDLE_TIME_OUT "500"
       setValueToLocalStore ENABLE_SPECIAL_PICKUP_WIDGET "true"
-      when ((getValueToLocalStore SHOW_TOLL_POPUP == "__failed") || (getValueToLocalStore SHOW_TOLL_POPUP == "(null)")) $ do
-        setValueToLocalStore SHOW_TOLL_POPUP "true"
       when baseFlow $ setValueToLocalStore APP_SESSION_TRACK_COUNT if (appSessionCount /= "false") then "false" else "true"
       if ((movedToOfflineDate /= "" && isYesterday movedToOfflineDate) || movedToOfflineDate == "__failed") 
         then setValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE "" 
@@ -273,16 +276,12 @@ baseAppFlow baseFlow event driverInfoResponse = do
 authenticationFlow :: String -> FlowBT String Unit
 authenticationFlow _ = do
   liftFlowBT $ markPerformance "AUTHENTICATION_FLOW"
-  if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) 
-    then do 
-      liftFlowBT hideSplash
-      loginFlow
-    else welcomeScreenFlow
+  if EHC.isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion (getMerchant FunctionCall)) then  hideSplashAndCallFlow loginFlow else welcomeScreenFlow
 
 chooseLanguageFlow :: FlowBT String Unit
 chooseLanguageFlow = do
   liftFlowBT $ markPerformance "CHOOSE_LANGUAGE_FLOW"
-  liftFlowBT hideSplash
+  hideSplashAndCallFlow $ pure unit
   action <- UI.chooseLanguage
   case action of
     TA.LOGIN_FLOW -> loginFlow
@@ -322,7 +321,7 @@ checkRideAndInitiate event driverInfoResponse = do
 checkVersion :: Int -> FlowBT String Unit
 checkVersion versioncode = do
   when (getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" && versioncode < (getLatestAndroidVersion (getMerchant FunctionCall))) $ do
-    liftFlowBT hideSplash
+    hideSplashAndCallFlow $ pure unit
     modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppVersion})
     fl <- UI.handleAppUpdatePopUp
     case fl of
@@ -331,7 +330,7 @@ checkVersion versioncode = do
 
 appUpdatedFlow :: FCMBundleUpdate -> ST.AppUpdatePoppupFlowType -> FlowBT String Unit
 appUpdatedFlow payload flowType = do
-  liftFlowBT hideSplash
+  hideSplashAndCallFlow $ pure unit
   modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState → appUpdatePopUpScreenState {updatePopup = AppUpdated ,appUpdatedView{secondaryText=payload.description,primaryText=payload.title,coverImageUrl=payload.image, popupFlowType = flowType}})
   fl <- UI.handleAppUpdatePopUp
   case fl of
@@ -350,7 +349,7 @@ checkTimeSettings = do
   else do
     liftFlowBT $ logEvent logField_ "ny_network_time_disabled"
     modifyScreenState $ AppUpdatePopUpScreenType (\appUpdatePopUpScreenState -> appUpdatePopUpScreenState { updatePopup =DateAndTime })
-    liftFlowBT hideSplash
+    hideSplashAndCallFlow $ pure unit
     void $ UI.handleAppUpdatePopUp
     checkTimeSettings
 
@@ -374,7 +373,7 @@ isTokenValid = (/=) "__failed"
 loginFlow :: FlowBT String Unit
 loginFlow = do
   liftFlowBT $ markPerformance "LOGIN_FLOW"
-  liftFlowBT hideSplash
+  hideSplashAndCallFlow $ pure unit
   logField_ <- lift $ lift $ getLogFields
   appConfig <- getAppConfigFlowBT Constants.appConfig
   (GlobalState allState) <- getState
@@ -551,20 +550,14 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
   case event of -- TODO:: Need to handle in generic way for all screens. Could be part of flow refactoring
         Just e -> 
           case e.data of
-            "plans" | getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" && getValueToLocalNativeStore DISABLE_WIDGET /= "true" -> do
-              liftFlowBT hideSplash
-              updateAvailableAppsAndGoToSubs
+            "plans" | getValueToLocalNativeStore IS_RIDE_ACTIVE /= "true" && getValueToLocalNativeStore DISABLE_WIDGET /= "true" -> hideSplashAndCallFlow updateAvailableAppsAndGoToSubs
             "lang" -> do
-              liftFlowBT hideSplash 
               modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = ""}})
-              selectLanguageFlow
-            "contest" -> do
-              liftFlowBT hideSplash
-              referralFlow
+              hideSplashAndCallFlow selectLanguageFlow
+            "contest" -> hideSplashAndCallFlow referralFlow
             "coins" -> do 
-              liftFlowBT hideSplash
               modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen {props{subView = ST.YATRI_COINS_VIEW}})
-              driverEarningsFlow
+              hideSplashAndCallFlow driverEarningsFlow
             "online" -> do
               changeDriverStatus Online
               pure unit
@@ -574,24 +567,18 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
                 modifyScreenState $ BookingOptionsScreenType (\bookingOptions ->  bookingOptions{ props{ fromDeepLink = true } })
                 bookingOptionsFlow
             "addupi" -> do 
-              liftFlowBT hideSplash
               modifyScreenState $ CustomerReferralTrackerScreenStateType (\customerReferralTracker -> customerReferralTracker{props{fromDeepLink = true, openPP = true}})
-              customerReferralTrackerFlow
+              hideSplashAndCallFlow customerReferralTrackerFlow
             "alerts" -> do
-              liftFlowBT hideSplash
-              notificationFlow
+              hideSplashAndCallFlow notificationFlow
             _ -> pure unit
         Nothing -> pure unit
   (GlobalState allState) <- getState
   case allState.notificationScreen.selectedNotification of
-    Just _ -> do 
-      liftFlowBT hideSplash
-      notificationFlow
+    Just _ -> hideSplashAndCallFlow notificationFlow
     Nothing -> pure unit
   case allState.globalProps.callScreen of
-    ScreenNames.SUBSCRIPTION_SCREEN -> do 
-      liftFlowBT hideSplash
-      updateAvailableAppsAndGoToSubs
+    ScreenNames.SUBSCRIPTION_SCREEN -> hideSplashAndCallFlow updateAvailableAppsAndGoToSubs
     _ -> pure unit
   checkPreRequisites activeRideResp isActiveRide
 
@@ -749,7 +736,7 @@ onBoardingFlow = do
                       vehicleCategory = uiCurrentCategory,
                       accessToken = token
                   }, props {limitReachedFor = limitReachedFor, referralCodeSubmitted = referralCodeAdded, driverEnabled = driverEnabled}})
-  liftFlowBT hideSplash
+  hideSplashAndCallFlow (pure unit)
   flow <- UI.registration
   case flow of
     UPLOAD_DRIVER_LICENSE state -> do
@@ -937,7 +924,7 @@ updateDriverVersion dbClientVersion dbBundleVersion = do
 
 aadhaarVerificationFlow :: FlowBT String Unit
 aadhaarVerificationFlow = do
-  liftFlowBT hideSplash
+  hideSplashAndCallFlow (pure unit)
   out <- UI.aadhaarVerificationScreen
   case out of
     ENTER_AADHAAR_OTP state -> do
@@ -1255,7 +1242,7 @@ addVehicleDetailsflow addRcFromProf = do
 
 applicationSubmittedFlow :: String -> FlowBT String Unit
 applicationSubmittedFlow screenType = do
-  liftFlowBT hideSplash
+  hideSplashAndCallFlow $ pure unit
   logField_ <- lift $ lift $ getLogFields
   action <- UI.applicationStatus screenType
   setValueToLocalStore TEST_FLOW_FOR_REGISTRATOION "COMPLETED"
@@ -1853,8 +1840,10 @@ bookingOptionsFlow = do
       (response :: (Either ErrorResponse API.GetDriverRateCardRes)) <- lift $ lift $ HelpersAPI.callApi $ API.GetDriverRateCardReq Nothing (Just RC.defaultSliderDist)
       case response of
         Right resp -> do
-          let prefs = map (\item ->  HU.setPerKmRate resp item ) bopState.data.ridePreferences
-          modifyScreenState $ RateCardScreenStateType $ \_ -> RateCardScreenData.initData{data{ ridePreferences = prefs, rateCard = bopState.data.rateCard}}
+          let 
+            prefs = map (\item ->  HU.setPerKmRate resp item ) bopState.data.ridePreferences
+            nonZeroPrefs = filter (\item -> fromMaybe 0.0 item.perKmRate > 0.0 ) prefs
+          modifyScreenState $ RateCardScreenStateType $ \_ -> RateCardScreenData.initData{data{ ridePreferences = nonZeroPrefs, rateCard = bopState.data.rateCard}}
           rateCardScreenFlow
         Left errorPayload -> do
           void $ pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
@@ -1894,8 +1883,10 @@ rateCardScreenFlow = do
       case response of
         Left _ -> pure unit
         Right resp -> do
-          let prefs = map (\item ->  HU.setPerKmRate resp item ) updatedState.data.ridePreferences
-          modifyScreenState $ RateCardScreenStateType (\rcsType -> rcsType { props { sliderLoading = false}, data { ridePreferences = prefs}})
+          let 
+            prefs = map (\item ->  HU.setPerKmRate resp item ) updatedState.data.ridePreferences
+            nonZeroPrefs = filter (\item -> fromMaybe 0.0 item.perKmRate > 0.0 ) prefs
+          modifyScreenState $ RateCardScreenStateType (\rcsType -> rcsType { props { sliderLoading = false}, data { ridePreferences = nonZeroPrefs}})
       rateCardScreenFlow
     _ -> rateCardScreenFlow
 
@@ -1968,7 +1959,7 @@ writeToUsFlow = do
 permissionsScreenFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> Maybe Boolean -> FlowBT String Unit
 permissionsScreenFlow event activeRideResp isActiveRide = do
   logField_ <- lift $ lift $ getLogFields
-  liftFlowBT hideSplash
+  hideSplashAndCallFlow $ pure unit
   void $ pure $ hideKeyboardOnNavigation true
   (GlobalState state) <- getState
   action <- UI.permissions
@@ -3910,18 +3901,12 @@ logoutFlow = do
     chooseCityFlow
   else authenticationFlow ""
 
-runInternetCondition :: FlowBT String Unit
-runInternetCondition = do
-      internetAvailable <- lift $ lift $ liftFlow $ isInternetAvailable unit
-      unless internetAvailable $ noInternetScreenFlow "INTERNET_ACTION"
-
 chooseCityFlow :: FlowBT String Unit
 chooseCityFlow = do
   liftFlowBT $ markPerformance "CHOOSE_CITY_FLOW"
-  liftFlowBT hideSplash
+  hideSplashAndCallFlow $ pure unit
   (GlobalState globalstate) <- getState
   logField_ <- lift $ lift $ getLogFields
-  runInternetCondition
   chooseCityScreen <- UI.chooseCityScreen
   case chooseCityScreen of
     GoToWelcomeScreen -> authenticationFlow ""
@@ -3969,10 +3954,8 @@ chooseCityFlow = do
 welcomeScreenFlow :: FlowBT String Unit
 welcomeScreenFlow = do
   liftFlowBT $ markPerformance "WELCOME_SCREEN_FLOW"
-  liftFlowBT hideSplash
+  hideSplashAndCallFlow $ pure unit
   logField_ <- lift $ lift $ getLogFields
-  internetAvailable <- lift $ lift $ liftFlow $ isInternetAvailable unit
-  unless internetAvailable $ noInternetScreenFlow "INTERNET_ACTION"
   welcomeScreen <- UI.welcomeScreen
   case welcomeScreen of
     GoToMobileNumberScreen -> loginFlow
@@ -4522,3 +4505,4 @@ rideAcceptScreenFlow = do
   rideAcceptScreenFlow
    
   
+
