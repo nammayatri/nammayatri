@@ -1741,3 +1741,4 @@ getKN stringKey =
         BASE_CHARGE charge -> "ಮೂಲ ಶುಲ್ಕ "<> charge
         CLEAN_AUTO -> "ಸ್ವಚ್ಚ ಆಟೋ"
         CLEAN_CAB -> "ಸ್ವಚ್ಚ ಕ್ಯಾಬ್"
+        METRO_RIDE_COMPLETED -> "ಮೆಟ್ರೋ ಸವಾರಿ ಪೂರ್ಣಗೊಂಡಿದೆ"

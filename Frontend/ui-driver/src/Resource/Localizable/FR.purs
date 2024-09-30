@@ -1231,4 +1231,5 @@ getFR stringKey =
         BASE_CHARGE charge -> "Tarif de base" <> charge
         CLEAN_AUTO -> ""
         CLEAN_CAB -> ""
+        METRO_RIDE_COMPLETED -> "Trajet en métro terminé"
         _ -> ""
