@@ -26,6 +26,7 @@ module Lib.Yudhishthira.Types
     RolloutVersion (..),
     CreateTimeBoundRequest (..),
     LogicRolloutReq,
+    TimeBoundResp,
     -- DynamicPricingResult (..),
   )
 where
@@ -164,6 +165,7 @@ $(mkHttpInstancesForEnum ''LogicDomain)
 data AppDynamicLogicReq = AppDynamicLogicReq
   { rules :: [Value],
     inputData :: [Value],
+    description :: Maybe Text,
     shouldUpdateRule :: Maybe Bool,
     updatePassword :: Maybe Text,
     domain :: LogicDomain
@@ -182,9 +184,15 @@ data AppDynamicLogicResp = AppDynamicLogicResp
 data GetLogicsResp = GetLogicsResp
   { domain :: LogicDomain,
     version :: Int,
+    description :: Maybe Text,
     logics :: [Value]
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+type TimeBoundResp = [CreateTimeBoundRequest]
+
+instance HideSecrets TimeBoundResp where
+  hideSecrets = identity
 
 data CreateTimeBoundRequest = CreateTimeBoundRequest
   { timeBoundDomain :: LogicDomain,
@@ -219,7 +227,8 @@ instance HideSecrets LogicRolloutObject where
 
 data RolloutVersion = RolloutVersion
   { version :: Int,
-    rolloutPercentage :: Int
+    rolloutPercentage :: Int,
+    versionDescription :: Maybe Text
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

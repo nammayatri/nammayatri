@@ -23,6 +23,7 @@ instance FromTType' Beam.AppDynamicLogicRollout Lib.Yudhishthira.Types.AppDynami
             percentageRollout = percentageRollout,
             timeBounds = timeBounds,
             version = version,
+            versionDescription = versionDescription,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -35,6 +36,7 @@ instance ToTType' Beam.AppDynamicLogicRollout Lib.Yudhishthira.Types.AppDynamicL
         Beam.percentageRollout = percentageRollout,
         Beam.timeBounds = timeBounds,
         Beam.version = version,
+        Beam.versionDescription = versionDescription,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

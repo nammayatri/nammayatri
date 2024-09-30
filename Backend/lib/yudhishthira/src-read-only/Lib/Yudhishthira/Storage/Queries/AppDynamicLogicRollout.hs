@@ -27,7 +27,7 @@ createMany = traverse_ create
 
 findByMerchantOpCityAndDomain ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ([Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout]))
+  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout])
 findByMerchantOpCityAndDomain merchantOperatingCityId domain = do
   findAllWithKV
     [ Se.And
@@ -53,7 +53,11 @@ updateByPrimaryKey :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (
 updateByPrimaryKey (Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [Se.Set Beam.percentageRollout percentageRollout, Se.Set Beam.createdAt createdAt, Se.Set Beam.updatedAt _now]
+    [ Se.Set Beam.percentageRollout percentageRollout,
+      Se.Set Beam.versionDescription versionDescription,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt _now
+    ]
     [ Se.And
         [ Se.Is Beam.domain $ Se.Eq domain,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
