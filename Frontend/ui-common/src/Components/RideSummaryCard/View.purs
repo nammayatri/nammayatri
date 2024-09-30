@@ -130,7 +130,7 @@ vehicleInfo config push  =
     , textView $ 
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text if config.vehicleInfo.vehicleServiceTierAirConditioned then getString AC else getString NON_AC
+        , text $ config.vehicleInfo.airConditionedText
         , color Color.white900
         , margin $ Margin 3 0 0 1
         , layoutGravity "center_vertical"

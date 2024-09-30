@@ -120,6 +120,7 @@ foreign import compareUTCDateImpl :: Fn2 String String Int
 foreign import jBridgeMethodExists :: String -> Boolean
 foreign import getDateMinusNDays :: Fn2 String Int String
 
+foreign import getUTCBeforeNSecondsImpl :: Fn2 String Int String
 
 os :: String
 os = getOs unit
@@ -334,3 +335,6 @@ getUTCAfterNHours = runFn2 getUTCAfterNHoursImpl
 
 compareUTCDate :: String -> String -> Int
 compareUTCDate = runFn2 compareUTCDateImpl
+
+getUTCBeforeNSeconds :: String -> Int -> String 
+getUTCBeforeNSeconds = runFn2 getUTCBeforeNSecondsImpl

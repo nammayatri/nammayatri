@@ -27,7 +27,7 @@ import Prelude
 import PrestoDOM (BottomSheetState(..), Eval, update, continue, continueWithCmd, defaultPerformLog, exit, updateAndExit)
 import Screens.HomeScreen.Transformer (getDriverInfo)
 import Screens.HomeScreen.ScreenData (dummyDriverInfo)
-import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState)
+import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState,NotificationBody)
 import Services.API (RideBookingRes(..), Route, GetDriverLocationResp(..), MultiChatReq(..), APISuccessResp(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Common.Types.App (LazyCheck(..), SosStatus(..), Paths)
@@ -107,7 +107,7 @@ data Action
   | StopAudioPlayer
   | StartAudioPlayer
   | OnAudioCompleted String
-  | NotificationListener String
+  | NotificationListener String NotificationBody
   | DismissOverlay
   | UpdateRoute Route
   | UpdatePeekHeight
@@ -151,7 +151,7 @@ eval action state = case action of
     else continueWithCmd state [ pure BackPressed]
   UpdatePeekHeight -> continue state { data { counter = state.data.counter + 1 } }
   UpdateCurrentStage stage -> continue state{data{currentStage = stage}}
-  NotificationListener notification -> 
+  NotificationListener notification notificationBody -> 
     case notification of
       "SOS_TRIGGERED" -> exit $ RestartTracking state{data{emergencyAudioStatus = STOPPED}, props{isMock = false}}
       "SOS_RESOLVED" -> do

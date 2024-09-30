@@ -25,7 +25,8 @@ type VehicleInfoConfig =
   { vehicleServiceTierAirConditioned :: Boolean    
   , vehicleServiceTierSeatingCapacity :: Int
   , vehicleServiceTierName :: String
-  }
+  , airConditionedText :: String
+}
 
 type ScheduleInfoConfig  = 
   { pickUpTime :: String

@@ -154,6 +154,7 @@ dummyDriverInfo =
   , favCount : 0
   , rideDuration : Just 0
   , currentChatRecipient : dummyChatRecipient
+  , rideScheduledAtUTC : Nothing
   }
 
 dummyRentalBookingConfig :: CT.RentalBookingConfig
@@ -227,7 +228,11 @@ dummyRideBooking = RideBookingRes
   estimatedFareBreakup : [],
   isAlreadyFav : false,
   favCount : 0,
-  rideDuration : Just 0
+  rideDuration : Just 0,
+  isScheduled : false,
+  vehicleServiceTierAirConditioned : Nothing,
+  vehicleServiceTierSeatingCapacity : Nothing,
+  returnTime : Nothing
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails

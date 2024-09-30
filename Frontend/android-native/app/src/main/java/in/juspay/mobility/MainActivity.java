@@ -709,6 +709,7 @@ public class MainActivity extends AppCompatActivity {
         NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_HAS_REACHED);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.SOS_TRIGGERED);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.SOS_RESOLVED);
+        NotificationUtils.createNotificationChannel(this, NotificationUtils.NOSOUND_NOTIFICATION);
     }
 
     public void updateConfigURL() {

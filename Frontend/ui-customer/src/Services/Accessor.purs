@@ -329,5 +329,21 @@ _deviceId = lens (unwrap >>> _.deviceId) (\oldRec newVal -> wrap ((unwrap oldRec
 _androidId :: forall a b c. Newtype a { androidId :: b | c } => Lens' a b
 _androidId = lens (unwrap >>> _.androidId) (\oldRec newVal -> wrap ((unwrap oldRec) { androidId = newVal }))
 
+
 _chatMessageData :: forall a b c. Newtype a { chatMessageData :: b | c } => Lens' a b
 _chatMessageData = lens (unwrap >>> _.chatMessageData) (\oldRec newVal -> wrap ((unwrap oldRec) { chatMessageData = newVal }))
+
+_currency :: forall a b c. Newtype a {currency :: c | b} => Lens' a c
+_currency = lens (unwrap >>> _.currency) (\oldRec newVal -> wrap ((unwrap oldRec) {currency = newVal}))
+
+_quoteDetails :: forall a b c. Newtype a { quoteDetails :: b | c } => Lens' a b
+_quoteDetails = lens (unwrap >>> _.quoteDetails) (\oldRec newVal -> wrap ((unwrap oldRec) { quoteDetails = newVal }))
+
+_baseFare :: forall a b c. Newtype a { baseFare :: b | c } => Lens' a b
+_baseFare = lens (unwrap >>> _.baseFare) (\oldRec newVal -> wrap ((unwrap oldRec) { baseFare = newVal }))
+
+_nightShiftCharge :: forall a b c. Newtype a { nightShiftCharge :: b | c } => Lens' a b
+_nightShiftCharge = lens (unwrap >>> _.nightShiftCharge) (\oldRec newVal -> wrap ((unwrap oldRec) { nightShiftCharge = newVal }))
+
+_isScheduled :: forall a b c. Newtype a { isScheduled :: b | c } => Lens' a b
+_isScheduled = lens (unwrap >>> _.isScheduled) (\oldRec newVal -> wrap ((unwrap oldRec) { isScheduled = newVal }))

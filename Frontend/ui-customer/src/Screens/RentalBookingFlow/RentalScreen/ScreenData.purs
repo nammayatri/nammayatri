@@ -20,6 +20,7 @@ import Data.Maybe(Maybe(..))
 import PrestoDOM (Margin(..))
 import Screens.Types (RentalScreenState, RentalScreenStage(..))
 import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo)
+import Services.API as API
 import Screens.RentalBookingFlow.RideScheduledScreen.ScreenData as RideScheduledScreenData
 import ConfigProvider
 
@@ -58,6 +59,8 @@ initData =
     }
     , pickUpLoc : dummyLocationInfo
     , dropLoc : Nothing
+    , latestScheduledRides : Nothing
+    , overLappingBooking : Nothing
     }
   , props : {
       maxDuration : 12
@@ -72,5 +75,23 @@ initData =
     , showPopUpModal : false
     , showRentalPolicy : false
     , isOtpRideFlow : false
+    , showScheduledRideExistsPopUp : false
     }
   }
+
+dummyBookingDetails :: API.BookingLocationAPIEntity
+dummyBookingDetails =
+  API.BookingLocationAPIEntity
+    { area: Nothing
+    , state: Nothing
+    , country: Nothing
+    , building: Nothing
+    , door: Nothing
+    , street: Nothing
+    , lat: 0.0
+    , city: Nothing
+    , areaCode: Nothing
+    , lon: 0.0
+    , placeId : Nothing
+    , ward : Nothing
+    }

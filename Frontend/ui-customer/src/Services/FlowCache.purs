@@ -27,7 +27,14 @@ import Data.Either (Either(..))
 import Presto.Core.Flow
 import Engineering.Helpers.Commons
 import Effect.Class
-
+import Data.Array as DA
+import Screens.HomeScreen.Transformer (getFareProductType)
+import Accessor(_fareProductType)
+import Data.Lens ((^.))
+import Screens.Types (FareProductType(..)) as FPT
+import Engineering.Helpers.Commons as EHC
+import Helpers.Utils(checkOverLap)
+import Engineering.Helpers.Commons(getCurrentUTC)
 -------------------------------- GET Saved Location List API--------------------------
 updateAndFetchSavedLocations :: Boolean -> FlowBT String SavedLocationsListRes
 updateAndFetchSavedLocations needApiCall = do
@@ -61,3 +68,48 @@ dummySavedLocationsListRes =
   SavedLocationsListRes
     { list: []
     }
+
+fetchAndUpdateScheduledRides :: Boolean -> FlowBT String (Maybe RideBookingListRes) 
+fetchAndUpdateScheduledRides needApiCall = do
+  (GlobalState state) <- getState 
+  let 
+      savedScheduledRides = state.globalFlowCache.savedScheduledRides
+  if (not $ isJust savedScheduledRides) || needApiCall then do 
+    fetchResponse <- fetchScheduledRides
+    modifyScreenState $ GlobalFlowCacheType (\globalFlowCache -> globalFlowCache { savedScheduledRides = fetchResponse })
+    pure $ fetchResponse 
+  else 
+    pure $ savedScheduledRides 
+
+fetchScheduledRides :: FlowBT String (Maybe RideBookingListRes)
+fetchScheduledRides = do
+  rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "5" "0" "true"
+  pure $ case rideBookingListResponse of
+            Right (RideBookingListRes listResp) -> 
+                let 
+                  filteredRides = DA.filter (\(RideBookingRes item) -> 
+                                            let 
+                                                rideScheduledTime = fromMaybe (getCurrentUTC "") item.rideScheduledTime
+                                                isScheduled = item.isScheduled || rideScheduledTime > (getCurrentUTC "")
+                                            in 
+                                            (DA.any (_ == item.status) ["CONFIRMED" , "TRIP_ASSIGNED"]) && isScheduled) (listResp.list)
+                in if not (DA.null filteredRides) 
+                    then Just $ RideBookingListRes $ listResp { list = filteredRides } 
+                    else Nothing
+            Left _ -> Nothing
+
+overlappingRides :: String -> Maybe String -> Int -> FlowBT String { overLapping :: Boolean , overLappedBooking :: Maybe RideBookingRes}
+overlappingRides rideStartTime maybeRideEndTime overlappingPollingTime = do 
+  (GlobalState state) <- getState
+  let 
+    savedScheduledRides = state.globalFlowCache.savedScheduledRides
+    rideEndTime = fromMaybe rideStartTime maybeRideEndTime
+  pure $ case savedScheduledRides of 
+      Just (RideBookingListRes response) -> do
+        let 
+          overLappingRide = (DA.find (\item -> isJust (checkOverLap rideStartTime rideEndTime item overlappingPollingTime)) response.list)
+        case overLappingRide of 
+             Just resp -> { overLapping : true, overLappedBooking : Just resp }
+             Nothing   -> { overLapping : false, overLappedBooking : Nothing }
+      Nothing -> {overLapping : false , overLappedBooking : Nothing}
+  

@@ -226,4 +226,5 @@ mockDriverInfo =
   , isAlreadyFav : false
   , favCount : 0
   , rideDuration : Just 0
+  , rideScheduledAtUTC : Nothing
   }

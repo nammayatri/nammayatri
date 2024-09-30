@@ -32,7 +32,6 @@ import Data.Function.Uncurried (runFn1)
 import Data.String as DS
 import JBridge (getLayoutBounds)
 import Mobility.Prelude (boolToVisibility)
-import Debug
 import PrestoDOM.Animation as PrestoAnim
 import Animation (scaleYAnimWithDelay)
 
@@ -79,6 +78,7 @@ sourceLayout push config =
     , width MATCH_PARENT
     , margin config.sourceMargin
     , accessibility DISABLE
+    , afterRender push $ const AfterRender
     ][  imageView
         [ width config.sourceImageConfig.width
         , height config.sourceImageConfig.height

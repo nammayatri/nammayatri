@@ -54,7 +54,7 @@ import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreen
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
 import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType, PickupInstructionsScreenState, RiderRideCompletedScreenState, DataFetchScreenState, SelectFaqScreenState, FaqScreenState, FavouriteDriverTripsState, ParcelDeliveryScreenState) 
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType, PickupInstructionsScreenState, RiderRideCompletedScreenState, DataFetchScreenState, SelectFaqScreenState, FaqScreenState, FavouriteDriverTripsState,NotificationBody, ParcelDeliveryScreenState) 
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
@@ -92,6 +92,7 @@ import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddress
 import Services.API (BookingStatus(..))
 import Screens.DriverProfileScreenCommon.ScreenData (DriverProfileScreenCommonState(..))
 import Screens.CustomerUtils.FavouriteDriverTrips.ScreenData as FavouriteDriverTripsData
+import Screens.RideSummaryScreen.ScreenData as RideSummaryScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -142,6 +143,7 @@ newtype GlobalState = GlobalState {
   , dataExplainWithFetch :: DataFetchScreenState
   , favouriteDriverListScreen :: FavouriteDriverTripsState
   , parcelDeliveryScreen :: ParcelDeliveryScreenState
+  , rideSummaryScreen :: RideSummaryScreenData.RideSummaryScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -192,6 +194,7 @@ defaultGlobalState = GlobalState {
   , riderRideCompletedScreen : RiderRideCompletedScreenData.initData
   , favouriteDriverListScreen : FavouriteDriverTripsData.initData
   , parcelDeliveryScreen : ParcelDeliveryScreenData.initData
+  , rideSummaryScreen : RideSummaryScreenData.initData
   }
 
 defaultGlobalProps :: GlobalProps 
@@ -203,7 +206,8 @@ defaultGlobalProps = {
 
 defaultGlobalFlowCache :: GlobalFlowCache
 defaultGlobalFlowCache = {
-  savedLocations : Nothing
+    savedLocations : Nothing
+  , savedScheduledRides : Nothing
 }
 
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
@@ -212,7 +216,7 @@ data TRIP_DETAILS_SCREEN_OUTPUT = GO_TO_INVOICE TripDetailsScreenState | GO_TO_H
 
 data CONTACT_US_SCREEN_OUTPUT = GO_TO_HOME_FROM_CONTACT ContactUsScreenState
 
-data MY_RIDES_SCREEN_OUTPUT = REFRESH MyRidesScreenState | TRIP_DETAILS MyRidesScreenState | LOADER_OUTPUT MyRidesScreenState | BOOK_RIDE | GO_TO_HELP_SCREEN | GO_TO_NAV_BAR | REPEAT_RIDE_FLOW MyRidesScreenState | GO_TO_RIDE_SCHEDULED_SCREEN MyRidesScreenState | MY_RIDES_GO_TO_HOME_SCREEN MyRidesScreenState
+data MY_RIDES_SCREEN_OUTPUT = REFRESH MyRidesScreenState | TRIP_DETAILS MyRidesScreenState | LOADER_OUTPUT MyRidesScreenState | BOOK_RIDE | GO_TO_HELP_SCREEN | GO_TO_NAV_BAR | REPEAT_RIDE_FLOW MyRidesScreenState | GO_TO_RIDE_SCHEDULED_SCREEN MyRidesScreenState | MY_RIDES_GO_TO_HOME_SCREEN MyRidesScreenState | NOTIFICATION_HANDLER String NotificationBody
 
 
 
@@ -251,7 +255,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | CONFIRM_RIDE HomeScreenState
                         | ONGOING_RIDE HomeScreenState
                         | CANCEL_RIDE_REQUEST HomeScreenState CancelSearchType
-                        | FCM_NOTIFICATION String HomeScreenState
+                        | FCM_NOTIFICATION String NotificationBody HomeScreenState
                         | SEARCH_LOCATION String HomeScreenState
                         | UPDATE_LOCATION_NAME HomeScreenState Number Number
                         | GET_LOCATION_NAME HomeScreenState
@@ -284,7 +288,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | EDIT_LOCATION_FLOW HomeScreenState
                         | CONFIRM_EDITED_PICKUP HomeScreenState
                         | REALLOCATE_RIDE HomeScreenState
-                        | GO_TO_SCHEDULED_RIDES
+                        | GO_TO_SCHEDULED_RIDES (Maybe String)
                         | ADD_STOP HomeScreenState
                         | SAFETY_SUPPORT HomeScreenState Boolean
                         | GO_TO_SHARE_RIDE HomeScreenState
@@ -311,6 +315,8 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | EXIT_AND_ENTER_HOME_SCREEN
                         | SELECT_ESTIMATE_AND_QUOTES HomeScreenState
                         | UPDATE_CHAT
+                        | GO_TO_TRIP_TYPE_SELECTION HomeScreenState
+                        | GO_TO_RIDE_SUMMARY_SCREEN HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_BACK_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
@@ -395,6 +401,14 @@ data RIDER_RIDECOMPLETED_SCREEN_OP = RIDER_DETAILS_SCREEN RiderRideCompletedScre
 data PARCEL_DELIVERY_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_PARCEL_DELIVERY ParcelDeliveryScreenState
                                    | REFRESH_PARCEL_DELIVERY_SCREEN ParcelDeliveryScreenState
 
+data RIDE_SUMMARY_SCREEN_OUTPUT =     GO_TO_RIDE_REQUEST
+                                    | ACCEPT_SCHEDULED_RIDE String String
+                                    | RIDE_CONFIRMED String String (Maybe String)
+                                    | CANCEL_SCHEDULED_RIDE String String
+                                    | NOTIFICATION_LISTENER String NotificationBody
+                                    | REFRESH_RIDE_SUMMARY_SCREEN (Maybe String)
+                                    | CALL_DRIVER RideSummaryScreenData.RideSummaryScreenState CallType String
+
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
   | HomeScreenStateType (HomeScreenState -> HomeScreenState)
@@ -439,3 +453,4 @@ data ScreenType =
   | DataFetchScreenStateType (DataFetchScreenState -> DataFetchScreenState)
   | FavouriteDriverTripsStateType (FavouriteDriverTripsState -> FavouriteDriverTripsState)
   | ParcelDeliveryScreenStateType (ParcelDeliveryScreenState -> ParcelDeliveryScreenState)
+  | RideSummaryScreenStateType (RideSummaryScreenData.RideSummaryScreenState -> RideSummaryScreenData.RideSummaryScreenState)
