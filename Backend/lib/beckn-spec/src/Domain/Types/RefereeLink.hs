@@ -23,7 +23,7 @@ import Kernel.Types.APISuccess
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (removeNullFields)
 
-data RefereeInfo = RefereeInfo
+data ReferrerInfo = ReferrerInfo
   { firstName :: Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
@@ -37,10 +37,11 @@ data RefereeInfo = RefereeInfo
   }
   deriving (Generic, FromJSON, ToSchema)
 
-instance ToJSON RefereeInfo where
+instance ToJSON ReferrerInfo where
   toJSON = genericToJSON removeNullFields
 
-newtype LinkRefereeRes = LinkRefereeRes (Either APISuccess RefereeInfo)
+newtype LinkRefereeRes = LinkRefereeRes (Either APISuccess ReferrerInfo)
+  deriving (Generic, ToSchema)
 
 instance FromJSON LinkRefereeRes where
   parseJSON v =

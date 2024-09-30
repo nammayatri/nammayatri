@@ -105,3 +105,5 @@ validateRequest merchantId sReq = do
     (estimate : xs) -> do
       searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
       return (merchant, searchReq, [estimate] <> xs)
+
+-- Driver shouldn't be on ride, driver shouldn't have scheduled ride (need to discuss) and driver RR count on screen should be less than the config.
