@@ -2420,7 +2420,7 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
       merchantOperatingCity <- CQMOC.findById (cast opCityId) >>= fromMaybeM (MerchantOperatingCityNotFound opCityId.getId)
       logDebug $ "calling create payoutOrder with driverId: " <> personId.getId <> " | amount: " <> show createPayoutOrderReq.amount <> " | orderId: " <> show uid
       void $ adjustDues dueDriverFees
-      (_, mbPayoutOrder) <- DPayment.createPayoutService (cast person.merchantId) (cast personId) (Just $ map ((.getId) . (.id)) driverFeeToPayout) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+      (_, mbPayoutOrder) <- DPayment.createPayoutService (cast person.merchantId) (cast personId) (Just $ map ((.getId) . (.id)) driverFeeToPayout) (Just entityName) Nothing (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
       whenJust mbPayoutOrder $ \payoutOrder -> do
         let refundAmountSegregation = fromMaybe "NA" refundByPayoutReq.refundAmountSegregation
         ET.trackRefundSegregation payoutOrder refundAmountSegregation (show serviceName)
