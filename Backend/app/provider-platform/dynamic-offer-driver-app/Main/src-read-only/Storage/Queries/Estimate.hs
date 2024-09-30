@@ -6,6 +6,7 @@ module Storage.Queries.Estimate where
 
 import qualified Domain.Types.Common
 import qualified Domain.Types.Estimate
+import qualified Domain.Types.SearchRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -27,6 +28,22 @@ createMany = traverse_ create
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
 findById id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+
+updateSupplyDemandRatioByReqIdAndServiceTier ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Domain.Types.Common.ServiceTierType -> m ())
+updateSupplyDemandRatioByReqIdAndServiceTier supplyDemandRatioFromLoc supplyDemandRatioToLoc requestId vehicleServiceTier = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.supplyDemandRatioFromLoc supplyDemandRatioFromLoc,
+      Se.Set Beam.supplyDemandRatioToLoc supplyDemandRatioToLoc,
+      Se.Set Beam.updatedAt (Just _now)
+    ]
+    [ Se.And
+        [ Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId),
+          Se.Is Beam.vehicleVariant $ Se.Eq vehicleServiceTier
+        ]
+    ]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -51,6 +68,8 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.minFareAmount (Kernel.Prelude.Just minFare),
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
       Se.Set Beam.specialLocationTag specialLocationTag,
+      Se.Set Beam.supplyDemandRatioFromLoc supplyDemandRatioFromLoc,
+      Se.Set Beam.supplyDemandRatioToLoc supplyDemandRatioToLoc,
       Se.Set Beam.tollNames tollNames,
       Se.Set Beam.tripCategory (Kernel.Prelude.Just tripCategory),
       Se.Set Beam.updatedAt (Just _now),
@@ -81,6 +100,8 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             minFare = Kernel.Types.Common.mkAmountWithDefault minFareAmount minFare,
             requestId = Kernel.Types.Id.Id requestId,
             specialLocationTag = specialLocationTag,
+            supplyDemandRatioFromLoc = supplyDemandRatioFromLoc,
+            supplyDemandRatioToLoc = supplyDemandRatioToLoc,
             tollNames = tollNames,
             tripCategory = Kernel.Prelude.fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer) tripCategory,
             updatedAt = Kernel.Prelude.fromMaybe createdAt updatedAt,
@@ -108,6 +129,8 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.minFareAmount = Kernel.Prelude.Just minFare,
         Beam.requestId = Kernel.Types.Id.getId requestId,
         Beam.specialLocationTag = specialLocationTag,
+        Beam.supplyDemandRatioFromLoc = supplyDemandRatioFromLoc,
+        Beam.supplyDemandRatioToLoc = supplyDemandRatioToLoc,
         Beam.tollNames = tollNames,
         Beam.tripCategory = Kernel.Prelude.Just tripCategory,
         Beam.updatedAt = Kernel.Prelude.Just updatedAt,
