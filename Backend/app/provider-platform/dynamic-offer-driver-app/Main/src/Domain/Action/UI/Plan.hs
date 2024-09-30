@@ -960,6 +960,6 @@ isOnFreeTrial driverId subscriptionConfig freeTrialDaysLeft mbDriverPlan = do
       driverStats <- if isJust numRides then pure Nothing else QDS.findByPrimaryKey driverId
       let freeTrialRides = fromMaybe 0 $ subscriptionConfig.numberOfFreeTrialRides
       let totalRides = fromMaybe 0 $ numRides <|> (driverStats <&> (.totalRides))
-      let isOnFreeTrial' = not $ (totalRides >= freeTrialRides && subscriptionConfig.freeTrialRidesApplicable) || freeTrialDaysLeft <= 0
+      let isOnFreeTrial' = not $ (totalRides > freeTrialRides && subscriptionConfig.freeTrialRidesApplicable) || freeTrialDaysLeft <= 0
       fork "update free trial flag" $ QDPlan.updateFreeTrialByDriverIdAndServiceName isOnFreeTrial' driverId subscriptionConfig.serviceName
-      return (isOnFreeTrial', driverStats <&> (.totalRides))
+      return (isOnFreeTrial', Just totalRides)
