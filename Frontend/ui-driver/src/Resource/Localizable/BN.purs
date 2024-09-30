@@ -1743,3 +1743,4 @@ getBN stringKey =
         BASE_CHARGE charge ->  "বেস চার্জ"<>charge
         CLEAN_AUTO -> "পরিষ্কার অটো"
         CLEAN_CAB -> "পরিষ্কার ক্যাব"
+        METRO_RIDE_COMPLETED -> "মেট্রো যাত্রা সম্পন্ন"

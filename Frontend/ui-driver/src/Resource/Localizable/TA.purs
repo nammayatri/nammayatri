@@ -1744,3 +1744,4 @@ getTA stringKey =
         BASE_CHARGE charge ->  "அடிப்படை கட்டணம்"<>charge
         CLEAN_AUTO -> "சுத்தமான ஆட்டோ"
         CLEAN_CAB -> "சுத்தமான கேப்"
+        METRO_RIDE_COMPLETED -> "மெட்ரோ சவாரி முடிந்தது"

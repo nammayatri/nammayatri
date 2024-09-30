@@ -1745,3 +1745,4 @@ getEN stringKey =
         BASE_CHARGE charge -> "Base Charge" <> charge
         CLEAN_AUTO -> "Clean Auto"
         CLEAN_CAB -> "Clean Cab"
+        METRO_RIDE_COMPLETED -> "Metro Ride Completed"

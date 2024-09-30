@@ -14,23 +14,24 @@
 -}
 module Screens.DriverEarningsScreen.Transformer where
 
-import Prelude
 import Data.Maybe
+import Locale.Utils
+import Prelude
 import Screens.Types
-import Services.API as API
 import Storage
+
+import Data.String as STR
+import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
+import Helpers.Utils (isToday, getCityConfig, isDateGreaterThan)
+import JBridge (withinTimeRange)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Screens.Types as ST
-import Locale.Utils
-import Helpers.Utils (isToday, getCityConfig, isDateGreaterThan)
+import LocalStorage.Cache (getValueFromCache)
 import MerchantConfig.Types (AppConfig(..))
-import Data.String as STR
-import LocalStorage.Cache(getValueFromCache)
-import Screens.HomeScreen.Controller (getCoinPopupStatus)
-import JBridge (withinTimeRange)
 import Resource.Constants as RC
-import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
+import Screens.HomeScreen.Controller (getCoinPopupStatus)
+import Screens.Types as ST
+import Services.API as API
 
 getEventName :: DriverEarningsScreenState -> API.DriverCoinsFunctionType -> Maybe API.BulkCoinTitleTranslations -> String
 getEventName state event bulkUploadTitle = case event of
@@ -48,6 +49,7 @@ getEventName state event bulkUploadTitle = case event of
   API.PurpleRideCompleted -> getString PURPLE_RIDE_COMPLETED
   API.LeaderBoardTopFiveHundred -> getString TOP <> " " <> state.data.config.coinsConfig.leaderBoardThresholdForCoins <> " " <> getString IN_WEEKLY_LEADERBOARD
   API.TrainingCompleted -> getString TRAINING_COMPLTED
+  API.MetroRideCompleted -> getString METRO_RIDE_COMPLETED
   API.BulkUploadFunction -> case bulkUploadTitle of
     Just (API.BulkCoinTitleTranslations title) -> case getLanguageLocale languageKey of
                        "HI_IN" -> title.hi

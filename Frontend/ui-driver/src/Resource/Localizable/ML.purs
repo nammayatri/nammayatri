@@ -1743,3 +1743,4 @@ getML stringKey =
         BASE_CHARGE charge -> "അടിസ്ഥാന ചാർജ് "<>charge
         CLEAN_AUTO -> "ശുചിത്വം ഉള്ള വാഹനം"
         CLEAN_CAB -> "ശുചിത്വം ഉള്ള വാഹനം"
+        METRO_RIDE_COMPLETED -> "മെട്രോ യാത്ര പൂർത്തിയായി"

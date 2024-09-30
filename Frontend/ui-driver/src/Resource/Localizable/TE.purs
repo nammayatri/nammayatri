@@ -1744,3 +1744,4 @@ getTE stringKey =
         BASE_CHARGE charge -> "బేస్ ఛార్జ్"<>charge
         CLEAN_AUTO -> "క్లీన్ ఆటో"
         CLEAN_CAB -> "క్లీన్ క్యాబ్"
+        METRO_RIDE_COMPLETED -> "మెట్రో రైడ్ పూర్తయింది"

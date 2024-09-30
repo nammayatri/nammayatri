@@ -1744,3 +1744,4 @@ getHI stringKey =
         BASE_CHARGE charge ->  "आधार शुल्क"<>charge
         CLEAN_AUTO -> "स्वच्छ ऑटो"
         CLEAN_CAB -> "स्वच्छ कैब"
+        METRO_RIDE_COMPLETED -> "मेट्रो सवारी पूरी हुई"

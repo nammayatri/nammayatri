@@ -1722,3 +1722,4 @@ data STR = LETS_GET_STARTED
         | BASE_CHARGE String
         | CLEAN_AUTO
         | CLEAN_CAB
+        | METRO_RIDE_COMPLETED
