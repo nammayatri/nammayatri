@@ -51,6 +51,7 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.JSON as J
@@ -388,6 +389,18 @@ getActiveSos mbRide personId = do
           return $ mockSos <&> (.status)
         Just sos -> return $ Just sos.status
 
+getActiveSos' :: (CacheFlow m r, EsqDBFlow m r) => Maybe QRideLite.RideLite -> Id Person.Person -> m (Maybe DSos.SosStatus)
+getActiveSos' mbRide personId = do
+  case mbRide of
+    Nothing -> return Nothing
+    Just ride -> do
+      sosDetails <- CQSos.findByRideId ride.id
+      case sosDetails of
+        Nothing -> do
+          mockSos :: Maybe DSos.SosMockDrill <- Redis.safeGet $ CQSos.mockSosKey personId
+          return $ mockSos <&> (.status)
+        Just sos -> return $ Just sos.status
+
 buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Booking -> Id Person.Person -> m BookingAPIEntity
 buildBookingAPIEntity booking personId = do
   mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
@@ -425,14 +438,14 @@ buildBookingAPIEntity booking personId = do
 --Note :- if you are adding and extra field in BookingStatusAPIEntity then add it in BookingAPIEntity as well
 buildBookingStatusAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m BookingStatusAPIEntity
 buildBookingStatusAPIEntity booking = do
-  mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
+  mbActiveRide <- runInReplica $ QRideLite.findActiveByRBIdLite booking.id
   let showPrevDropLocationLatLon = maybe False (.showDriversPreviousRideDropLoc) mbActiveRide
       driversPreviousRideDropLocLat = if showPrevDropLocationLatLon then fmap (.lat) (mbActiveRide >>= (.driversPreviousRideDropLoc)) else Nothing
       driversPreviousRideDropLocLon = if showPrevDropLocationLatLon then fmap (.lon) (mbActiveRide >>= (.driversPreviousRideDropLoc)) else Nothing
       rideStatus = fmap (.status) mbActiveRide
       estimatedEndTimeRange = mbActiveRide >>= (.estimatedEndTimeRange)
       driverArrivalTime = mbActiveRide >>= (.driverArrivalTime)
-  sosStatus <- getActiveSos mbActiveRide booking.riderId
+  sosStatus <- getActiveSos' mbActiveRide booking.riderId
   return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus estimatedEndTimeRange driverArrivalTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
