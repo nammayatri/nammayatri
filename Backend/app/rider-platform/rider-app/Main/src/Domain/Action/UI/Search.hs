@@ -34,6 +34,7 @@ import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import Domain.Action.UI.HotSpot
 import Domain.Action.UI.Maps (makeAutoCompleteKey)
 import qualified Domain.Action.UI.Maps as DMaps
+import Domain.Types (GatewayAndRegistryService (..))
 import qualified Domain.Types.Client as DC
 import Domain.Types.HotSpot hiding (address, updatedAt)
 import Domain.Types.HotSpotConfig
@@ -352,6 +353,10 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
 
   fork "updating search counters" $ fraudCheck person merchantOperatingCity searchRequest
   let updatedPerson = backfillCustomerNammaTags person
+  gatewayUrl <-
+    case merchant.gatewayAndRegistryPriorityList of
+      (NY : _) -> asks (.nyGatewayUrl)
+      _ -> asks (.ondcGatewayUrl)
 
   riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id >>= fromMaybeM (RiderConfigNotFound merchantOperatingCity.id.getId)
   when (riderConfig.makeMultiModalSearch && isNothing journeySearchData) $ do
@@ -362,7 +367,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   return $
     SearchRes -- TODO: cleanup this reponse field based on what is not required for beckn type conversions
       { searchId = searchRequest.id,
-        gatewayUrl = merchant.gatewayUrl,
+        gatewayUrl = gatewayUrl,
         searchRequestExpiry = searchRequest.validTill,
         city = originCity,
         distance = shortestRouteDistance,

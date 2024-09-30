@@ -4,10 +4,12 @@
 
 module Storage.Queries.Merchant (module Storage.Queries.Merchant, module ReExport) where
 
+import qualified Domain.Types
 import qualified Domain.Types.Merchant
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Registry
@@ -28,3 +30,8 @@ findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Typ
 
 findBySubscriberId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber -> m (Maybe Domain.Types.Merchant.Merchant))
 findBySubscriberId subscriberId = do findOneWithKV [Se.Is Beam.subscriberId $ Se.Eq (Kernel.Types.Id.getShortId subscriberId)]
+
+updateGatewayAndRegistryPriorityList :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.GatewayAndRegistryService] -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ())
+updateGatewayAndRegistryPriorityList gatewayAndRegistryPriorityList id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.gatewayAndRegistryPriorityList (Kernel.Prelude.Just gatewayAndRegistryPriorityList), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

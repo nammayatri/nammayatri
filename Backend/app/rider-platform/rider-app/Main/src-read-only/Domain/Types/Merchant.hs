@@ -5,6 +5,7 @@
 module Domain.Types.Merchant where
 
 import Data.Aeson
+import qualified Domain.Types
 import Domain.Types.Common (UsageSafety (..))
 import Kernel.Prelude
 import qualified Kernel.Types.Base64
@@ -36,6 +37,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     fakeOtpEmails :: [Kernel.Prelude.Text],
     fakeOtpMobileNumbers :: [Kernel.Prelude.Text],
     fallbackShortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant,
+    gatewayAndRegistryPriorityList :: [Domain.Types.GatewayAndRegistryService],
     gatewayUrl :: Kernel.Types.Common.BaseUrl,
     geoHashPrecisionValue :: Kernel.Prelude.Int,
     geofencingConfig :: Kernel.Types.Geofencing.GeofencingConfig,

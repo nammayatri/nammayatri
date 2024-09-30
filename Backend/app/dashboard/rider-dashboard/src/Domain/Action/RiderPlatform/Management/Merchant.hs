@@ -24,6 +24,7 @@ module Domain.Action.RiderPlatform.Management.Merchant
     deleteMerchantSpecialLocationDelete,
     postMerchantSpecialLocationGatesUpsert,
     deleteMerchantSpecialLocationGatesDelete,
+    postMerchantConfigFailover,
   )
 where
 
@@ -36,6 +37,7 @@ import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
+import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -195,3 +197,9 @@ mkGeom :: FilePath -> Flow (Maybe Text)
 mkGeom kmlFile = do
   result <- getGeomFromKML kmlFile >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom.")
   return $ Just $ T.pack result
+
+postMerchantConfigFailover :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Common.ConfigNames -> Common.ConfigFailoverReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postMerchantConfigFailover merchantShortId opCity apiTokenInfo configName req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.PostMerchantConfigFailoverEndpoint apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ do Client.callRiderAppOperations checkedMerchantId opCity (.merchantDSL.postMerchantConfigFailover) configName req
