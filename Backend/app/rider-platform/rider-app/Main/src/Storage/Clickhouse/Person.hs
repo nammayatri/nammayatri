@@ -55,7 +55,7 @@ type Person = PersonT Identity
 
 deriving instance Show Person
 
-$(TH.mkClickhouseInstances ''PersonT 'NO_SELECT_MODIFIER)
+$(TH.mkClickhouseInstances ''PersonT)
 
 findTotalRidesCountByPersonId ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
