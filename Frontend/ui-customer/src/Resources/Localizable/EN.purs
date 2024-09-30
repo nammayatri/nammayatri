@@ -1639,3 +1639,4 @@ getEN stringKey =
         PER_MIN -> "per min"
         HOUR -> "hour"
         SEC -> "sec"
+        BIKE_TAXI -> "Bike Taxi"

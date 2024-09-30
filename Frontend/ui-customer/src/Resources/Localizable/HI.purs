@@ -1634,3 +1634,4 @@ getHI stringKey =
         PER_MIN -> "प्रति मिनट"
         HOUR -> "घंटा"
         SEC -> "सेकंड"
+        BIKE_TAXI -> "बाइक टैक्सी"

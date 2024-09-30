@@ -1638,3 +1638,4 @@ data STR
   | PER_MIN
   | HOUR
   | SEC
+  | BIKE_TAXI

@@ -1646,3 +1646,4 @@ getTE stringKey =
     PER_MIN -> "ప్రతి నిమిషానికి"
     HOUR -> "గంట"
     SEC -> "సెకండ్"
+    BIKE_TAXI -> "బైక్ టాక్సీ"

@@ -1632,3 +1632,4 @@ getBN stringKey =
         PER_MIN -> "প্রতি মিনিট"
         HOUR -> "ঘণ্টা"
         SEC -> "সেকেন্ড"
+        BIKE_TAXI -> "বাইক ট্যাক্সি"

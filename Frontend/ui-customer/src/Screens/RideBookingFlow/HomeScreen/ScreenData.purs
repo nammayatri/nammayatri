@@ -200,6 +200,7 @@ initData = let
     , latestScheduledRides : Nothing
     , overLappingBooking : Nothing
     , upcomingRideDetails : Nothing
+    , selectedService : Nothing
     },
     props: {
       rideRequestFlow : false

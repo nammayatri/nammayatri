@@ -1651,3 +1651,4 @@ getTA stringKey =
     PER_MIN -> "நிமிடத்திற்கு"
     HOUR -> "மணிகூடு"
     SEC -> "வினாடி"
+    BIKE_TAXI -> "பைக் டாக்ஸி"
