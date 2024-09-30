@@ -271,6 +271,7 @@ data UserActionType
   | REFUND_BY_PAYOUT
   | SECURITY_DEPOSIT_STATUS
   | CLEAR_CACHE_SUBSCRIPTION
+  | TOGGLE_CONFIG_PRIORITY
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)
