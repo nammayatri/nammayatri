@@ -651,8 +651,8 @@ getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocGeohash) to
   mbSupplyDemandRatioToLoc <- join <$> traverse (\locgeohash -> Hedis.withCrossAppRedis $ Hedis.get $ mkSupplyDemandRatioKeyWithGeohash locgeohash serviceTier) toLocGeohash
   (allLogics, _mbVersion) <- getAppDynamicLogic (cast merchantOperatingCityId) (LYT.DYNAMIC_PRICING serviceTier) localTime Nothing
   let dynamicPricingData = DynamicPricingData {speedKmh, distanceInKm, supplyDemandRatioFromLoc = fromMaybe 0.0 mbSupplyDemandRatioFromLoc, supplyDemandRatioToLoc = fromMaybe 0.0 mbSupplyDemandRatioToLoc, toss}
-  logInfo $ "DynamicPricing Req Logics : " <> show allLogics <> " and data is : " <> show dynamicPricingData
   response <- try @_ @SomeException $ LYTU.runLogics allLogics dynamicPricingData
+  logInfo $ "DynamicPricing Req Logics : " <> show allLogics <> " and data is : " <> show dynamicPricingData <> " and response is : " <> show response
   case response of
     Left e -> do
       logError $ "Error in running DynamicPricingLogics - " <> show e <> " - " <> show dynamicPricingData <> " - " <> show allLogics
@@ -661,7 +661,7 @@ getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocGeohash) to
       case (A.fromJSON resp.result :: Result DynamicPricingResult) of
         A.Success result -> return $ fmap (\congestionCharge -> (congestionCharge, result.version)) result.congestionFeePerMin
         A.Error err -> do
-          logError $ "Error in parsing DynamicPricingResult - " <> show err
+          logError $ "Error in parsing DynamicPricingResult - " <> show err <> " - " <> show resp <> " - " <> show dynamicPricingData <> " - " <> show allLogics
           return Nothing
 getCongestionChargeMultiplierFromModel' _ _ _ _ _ _ _ = pure Nothing
 
