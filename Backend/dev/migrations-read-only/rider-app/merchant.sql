@@ -73,3 +73,8 @@ ALTER TABLE atlas_app.merchant ADD COLUMN online_payment boolean NOT NULL defaul
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant ADD COLUMN num_of_allowed_edit_location_attempts_threshold int NOT NULL default 3;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant ADD COLUMN gateway_and_registry_priority_list text[]  default '{"NY"}';
