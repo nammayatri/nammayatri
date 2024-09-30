@@ -73,7 +73,8 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY jobData.vehicleCategory
   driverIds <- nub <$> getBatchedDriverIds merchantId merchantOpCityId jobId jobData.condition jobData.freeTrialDays jobData.timeDiffFromUtc jobData.driverPaymentCycleDuration jobData.driverPaymentCycleStartTime jobData.overlayBatchSize serviceName vehicleCategory
   logInfo $ "The Job " <> jobId.getId <> " is scheduled for following driverIds " <> show driverIds
-  driverIdsLength <- getSendOverlaySchedulerDriverIdsLength merchantOpCityId vehicleCategory jobId
+  let (conditionKey, isVehCatBased) = castConditionsToSchedulerTypeAndIsVehCatBased jobData.condition
+  driverIdsLength <- getSendOverlaySchedulerDriverIdsLength merchantOpCityId (if isVehCatBased then Just vehicleCategory else Nothing) (Just conditionKey)
   if driverIdsLength > 0 || (invoiceOverlayCondition jobData.condition && not (null driverIds))
     then do
       mapM_ (sendOverlayAccordingToCondition jobData serviceName vehicleCategory) driverIds
@@ -117,6 +118,14 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
         Just DTDI.PENDING -> return $ Just ""
         _ -> return $ Just "AUTOPAY_NOT_SET"
 
+    castConditionsToSchedulerTypeAndIsVehCatBased :: DOverlay.OverlayCondition -> (Text, Bool)
+    castConditionsToSchedulerTypeAndIsVehCatBased condition = case condition of
+      DOverlay.PaymentOverdueGreaterThan _ -> ("PaymentOverdueGreaterThan", True)
+      DOverlay.PaymentOverdueBetween _ _ -> ("PaymentOverdueBetween", True)
+      DOverlay.BlockedDrivers -> ("BlockedDrivers", True)
+      DOverlay.FreeTrialDaysLeft _ -> ("FreeTrialDaysLeft", False)
+      _ -> ("InvoiceGenerated", False)
+
     getAllManualDuesWithoutFilter driverId serviceName = do
       pendingDriverFees <- QDF.findAllOverdueDriverFeeByDriverIdForServiceName driverId serviceName
       return $ sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
@@ -144,20 +153,30 @@ sendOverlay driver overlayKey udf1 amount = do
     fork ("sending overlay to driver with driverId " <> (show driver.id)) $ do
       TN.sendOverlay driver.merchantOperatingCityId driver $ TN.mkOverlayReq overlay'
 
-getSendOverlaySchedulerDriverIdsLength :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DVC.VehicleCategory -> Id AnyJob -> m Integer
-getSendOverlaySchedulerDriverIdsLength merchantOpCityId vehicleCategory jobId = Hedis.lLen $ makeSendOverlaySchedulerDriverIdsKey merchantOpCityId vehicleCategory jobId
+getSendOverlaySchedulerDriverIdsLength :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe DVC.VehicleCategory -> Maybe Text -> m Integer
+getSendOverlaySchedulerDriverIdsLength merchantOpCityId vehicleCategory mbOperationName = Hedis.lLen $ makeSendOverlaySchedulerDriverIdsKey merchantOpCityId vehicleCategory mbOperationName
 
-getFirstNSendOverlaySchedulerDriverIds :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DVC.VehicleCategory -> Id AnyJob -> Integer -> m [Id DP.Person]
-getFirstNSendOverlaySchedulerDriverIds merchantOpCityId vehicleCategory jobId num = Hedis.lRange (makeSendOverlaySchedulerDriverIdsKey merchantOpCityId vehicleCategory jobId) 0 (num -1)
+getFirstNSendOverlaySchedulerDriverIds :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe DVC.VehicleCategory -> Maybe Text -> Integer -> m [Id DP.Person]
+getFirstNSendOverlaySchedulerDriverIds merchantOpCityId vehicleCategory mbOperationName num = Hedis.lRange (makeSendOverlaySchedulerDriverIdsKey merchantOpCityId vehicleCategory mbOperationName) 0 (num -1)
 
-deleteNSendOverlaySchedulerDriverIds :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DVC.VehicleCategory -> Id AnyJob -> Integer -> m ()
-deleteNSendOverlaySchedulerDriverIds merchantOpCityId vehicleCategory jobId num = Hedis.lTrim (makeSendOverlaySchedulerDriverIdsKey merchantOpCityId vehicleCategory jobId) num (-1)
+deleteNSendOverlaySchedulerDriverIds :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe DVC.VehicleCategory -> Maybe Text -> Integer -> m ()
+deleteNSendOverlaySchedulerDriverIds merchantOpCityId vehicleCategory mbOperationName num = Hedis.lTrim (makeSendOverlaySchedulerDriverIdsKey merchantOpCityId vehicleCategory mbOperationName) num (-1)
 
-addSendOverlaySchedulerDriverIds :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DVC.VehicleCategory -> Id AnyJob -> NonEmpty (Id DP.Person) -> m ()
-addSendOverlaySchedulerDriverIds merchantOpCityId vehicleCategory jobId = Hedis.rPush (makeSendOverlaySchedulerDriverIdsKey merchantOpCityId vehicleCategory jobId)
+addSendOverlaySchedulerDriverIds :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe DVC.VehicleCategory -> Maybe Text -> NonEmpty (Id DP.Person) -> m ()
+addSendOverlaySchedulerDriverIds merchantOpCityId vehicleCategory mbOperationName nePIds = do
+  Hedis.rPush (makeSendOverlaySchedulerDriverIdsKey merchantOpCityId vehicleCategory mbOperationName) nePIds
+  Hedis.expire (makeSendOverlaySchedulerDriverIdsKey merchantOpCityId vehicleCategory mbOperationName) (20 * 3600)
 
-makeSendOverlaySchedulerDriverIdsKey :: Id DMOC.MerchantOperatingCity -> DVC.VehicleCategory -> Id AnyJob -> Text
-makeSendOverlaySchedulerDriverIdsKey merchantOpCityId vehicleCategory jobId = "SendOverlayScheduler:merchantOpCityId-" <> merchantOpCityId.getId <> ":VehCat:-" <> show vehicleCategory <> ":jobId-" <> jobId.getId
+makeSendOverlaySchedulerDriverIdsKey :: Id DMOC.MerchantOperatingCity -> Maybe DVC.VehicleCategory -> Maybe Text -> Text
+makeSendOverlaySchedulerDriverIdsKey merchantOpCityId vehicleCategory mbOperationName =
+  do
+    "SendOverlayScheduler:merchantOpCityId-"
+    <> merchantOpCityId.getId
+    <> maybe "" ((":VehCat:-" <>) . show) vehicleCategory
+    <> maybe "" (":Operation:-" <>) mbOperationName
+
+freeTrialDaysSetKey :: Text
+freeTrialDaysSetKey = "SendOverlayScheduler:FreeTrialDaysSet:"
 
 getLastScheduledJobTime :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DVC.VehicleCategory -> Id AnyJob -> TimeOfDay -> Seconds -> m UTCTime
 getLastScheduledJobTime merchantOpCityId vehicleCategory jobId scheduledTime timeDiffFromUtc = do
@@ -189,7 +208,7 @@ getBatchedDriverIds ::
   DPlan.ServiceNames ->
   DVC.VehicleCategory ->
   m [Id DP.Person]
-getBatchedDriverIds merchantId merchantOperatingCityId jobId condition freeTrialDays timeDiffFromUtc driverPaymentCycleDuration driverPaymentCycleStartTime overlayBatchSize serviceName vehicleCategory = do
+getBatchedDriverIds merchantId merchantOperatingCityId _ condition freeTrialDays timeDiffFromUtc driverPaymentCycleDuration driverPaymentCycleStartTime overlayBatchSize serviceName vehicleCategory = do
   case condition of
     DOverlay.InvoiceGenerated paymentMode -> do
       now <- getLocalCurrentTime timeDiffFromUtc
@@ -200,28 +219,28 @@ getBatchedDriverIds merchantId merchantOperatingCityId jobId condition freeTrial
       let driverIds = driverFees <&> (.driverId)
       void $ QDF.updateDriverFeeOverlayScheduledByServiceName driverIds True startTime endTime serviceName
       return driverIds
-    _ -> do
-      -- except for the invoice generated condition, for rest of the conditions the all the required driverIds will be fetched one time and will be cached
-      driverIdsLength <- getSendOverlaySchedulerDriverIdsLength merchantOperatingCityId vehicleCategory jobId
+    DOverlay.PaymentOverdueGreaterThan _ -> getDriverIdsBatched (Just "PaymentOverdueGreaterThan") (Just vehicleCategory)
+    DOverlay.PaymentOverdueBetween _ _ -> getDriverIdsBatched (Just "PaymentOverdueBetween") (Just vehicleCategory)
+    DOverlay.BlockedDrivers -> getDriverIdsBatched (Just "BlockedDrivers") (Just vehicleCategory)
+    DOverlay.FreeTrialDaysLeft numOfDays -> do
+      driverIdsLength <- getSendOverlaySchedulerDriverIdsLength merchantOperatingCityId Nothing (Just "FreeTrialDaysLeft")
       when (driverIdsLength < 1) do
-        driverIds <- case condition of
-          DOverlay.PaymentOverdueGreaterThan _ -> QDI.fetchAllDriversWithPaymentPending merchantOperatingCityId <&> (<&> (.driverId))
-          DOverlay.PaymentOverdueBetween _ _ -> QDI.fetchAllDriversWithPaymentPending merchantOperatingCityId <&> (<&> (.driverId))
-          DOverlay.BlockedDrivers -> QDI.fetchAllBlockedDriversWithSubscribedFalse merchantOperatingCityId <&> (<&> (.driverId))
-          DOverlay.FreeTrialDaysLeft numOfDays -> do
-            now <- getCurrentTime
-            let startTime = addUTCTime (-1 * fromIntegral timeDiffFromUtc) $ addUTCTime (-1 * 86400 * fromIntegral (freeTrialDays - (numOfDays - 1))) (UTCTime (utctDay now) (secondsToDiffTime 0))
-                endTime = addUTCTime 86400 startTime
-            QDI.findAllByEnabledAtInWindow merchantOperatingCityId (Just startTime) (Just endTime) <&> (<&> (.driverId))
-          _ -> return []
-        whenJust (nonEmpty driverIds) $ addSendOverlaySchedulerDriverIds merchantOperatingCityId vehicleCategory jobId
-      batchedDriverIds <- getFirstNSendOverlaySchedulerDriverIds merchantOperatingCityId vehicleCategory jobId $ fromIntegral overlayBatchSize
-      deleteNSendOverlaySchedulerDriverIds merchantOperatingCityId vehicleCategory jobId $ fromIntegral overlayBatchSize
-      return batchedDriverIds
+        driverIds <- do
+          now <- getCurrentTime
+          let startTime = addUTCTime (-1 * fromIntegral timeDiffFromUtc) $ addUTCTime (-1 * 86400 * fromIntegral (freeTrialDays - (numOfDays - 1))) (UTCTime (utctDay now) (secondsToDiffTime 0))
+              endTime = addUTCTime 86400 startTime
+          QDI.findAllByEnabledAtInWindow merchantOperatingCityId (Just startTime) (Just endTime) <&> (<&> (.driverId))
+        whenJust (nonEmpty driverIds) $ addSendOverlaySchedulerDriverIds merchantOperatingCityId Nothing (Just "FreeTrialDaysLeft")
+      getDriverIdsBatched (Just "FreeTrialDaysLeft") Nothing
+    _ -> return []
   where
     getFeeType paymentMode = case paymentMode of
       DPlan.AUTOPAY -> DDF.RECURRING_EXECUTION_INVOICE
       DPlan.MANUAL -> DDF.RECURRING_INVOICE
+    getDriverIdsBatched mbOperation mbVehicleCategory = do
+      batchedDriverIds <- getFirstNSendOverlaySchedulerDriverIds merchantOperatingCityId mbVehicleCategory mbOperation $ fromIntegral overlayBatchSize
+      deleteNSendOverlaySchedulerDriverIds merchantOperatingCityId mbVehicleCategory mbOperation $ fromIntegral overlayBatchSize
+      return batchedDriverIds
 
 templateText :: Text -> Text
 templateText txt = "{#" <> txt <> "#}"
