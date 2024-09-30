@@ -44,7 +44,7 @@ getCalculateFare (_, merchantId, merchanOperatingCityId) distanceWeightage dropL
   let mbTollNames = (\(_, tollNames, _) -> tollNames) <$> mbTollChargesAndNames
   let mbIsAutoRickshawAllowed = (\(_, _, mbIsAutoRickshawAllowed') -> mbIsAutoRickshawAllowed') <$> mbTollChargesAndNames
   let allFarePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed fareProducts.farePolicies
-  estimates <- mapM (DBS.buildEstimate merchanOperatingCityId INR Meter Nothing now False Nothing False mbDistance Nothing mbTollCharges mbTollNames Nothing Nothing 0 Nothing False) allFarePolicies ------- No need to handle stops in this as this is used for analytical purpose via script, not an actual ui api------------------
+  estimates <- mapM (DBS.buildEstimate merchanOperatingCityId INR Meter Nothing now False Nothing False mbDistance Nothing mbTollCharges mbTollNames Nothing Nothing 0 Nothing False Nothing) allFarePolicies ------- No need to handle stops in this as this is used for analytical purpose via script, not an actual ui api------------------
   let estimateAPIEntity = map buildEstimateApiEntity estimates
   return API.Types.UI.FareCalculator.FareResponse {estimatedFares = estimateAPIEntity}
   where
