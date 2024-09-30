@@ -142,8 +142,8 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.Overlay as CQMO
-import qualified Storage.CachedQueries.Plan as CQPlan
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
+import qualified Storage.CachedQueries.Plan as CQPlan
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.CancellationFarePolicy as QCFP
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
@@ -1662,7 +1662,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- payout config
   payoutConfigs <- CPC.findAllByMerchantOpCityId baseOperatingCityId
-  newPayoutConfigs <- mapM (buildPayoutConfig newOperatingCity.id merchant.id) payoutConfigs
+  let newPayoutConfigs = map (buildPayoutConfig newOperatingCity.id merchant.id now) payoutConfigs
 
   -- transporter config
   transporterConfig <- CTC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Transporter Config not found")
@@ -1861,17 +1861,15 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           ..
         }
 
-    buildPayoutConfig newCityId mId DPC.PayoutConfig {..} = do
-      now <- getCurrentTime
-      return $
-        DPC.PayoutConfig
-          { merchantOperatingCityId = newCityId,
-            isPayoutEnabled = False,
-            merchantId = mId,
-            createdAt = now,
-            updatedAt = now,
-            ..
-          }
+    buildPayoutConfig newCityId mId currentTime DPC.PayoutConfig {..} = do
+      DPC.PayoutConfig
+        { merchantOperatingCityId = newCityId,
+          isPayoutEnabled = False,
+          merchantId = mId,
+          createdAt = currentTime,
+          updatedAt = currentTime,
+          ..
+        }
 
     buildTransporterConfig newCityId currentTime DTC.TransporterConfig {..} =
       DTC.TransporterConfig

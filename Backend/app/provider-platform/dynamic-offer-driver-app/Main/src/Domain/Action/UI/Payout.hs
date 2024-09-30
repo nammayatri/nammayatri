@@ -161,7 +161,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
     isSuccessStatus payoutStatus = payoutStatus `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]
 
     updateDFeeStatusForPayoutRegistrationRefund driverId = do
-      mbDriverFee <- QDF.findLatestByFeeTypeAndStatusWithServiceName DDF.PAYOUT_REGISTRATION [DDF.CLEARED] (Id driverId) DP.YATRI_SUBSCRIPTION
+      mbDriverFee <- QDF.findLatestByFeeTypeAndStatusWithServiceName DDF.PAYOUT_REGISTRATION [DDF.REFUND_PENDING] (Id driverId) DP.YATRI_SUBSCRIPTION
       whenJust mbDriverFee $ \driverFee -> do
         now <- getCurrentTime
         QDF.updateStatus DDF.REFUNDED driverFee.id now
@@ -251,7 +251,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
               createPayoutOrderCall = Payout.createPayoutOrder person.merchantId merchOpCity serviceName
           merchantOperatingCity <- CQMOC.findById (cast merchOpCity) >>= fromMaybeM (MerchantOperatingCityNotFound merchOpCity.getId)
           logDebug $ "calling create payoutOrder with driverId: " <> personId.getId <> " | amount: " <> show pendingAmount <> " | orderId: " <> show uid
-          void $ DPayment.createPayoutService (cast person.merchantId) (cast personId) (Just statsIds) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
+          void $ DPayment.createPayoutService (cast person.merchantId) (cast personId) (Just statsIds) (Just entityName) Nothing (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
         (_, False) -> do
           Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey personId.getId) 3 3 $ do
             mapM_ (QDailyStats.updatePayoutStatusById DS.ManualReview) statsIds -- don't pay if amount is greater than threshold amount

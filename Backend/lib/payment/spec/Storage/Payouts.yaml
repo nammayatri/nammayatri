@@ -33,6 +33,7 @@ PayoutOrder:
     entityIds : Maybe [Text]
     responseCode : Maybe Text
     responseMessage : Maybe Text
+    retriedOrderId : Maybe Text
   beamFields:
     amount:
       currency: Maybe Currency
