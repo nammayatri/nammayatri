@@ -1615,3 +1615,4 @@ getKN stringKey =
         CONTACT_SUPPORT_FOR_HELP -> "ಸಹಾಯಕ್ಕಾಗಿ ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿ"
         YOU_HAVE_SWITCHED_CITY_OR_VEHICLE -> "ನೀವು ನಿಮ್ಮ ವಾಹನ ಅಥವಾ ನಗರವನ್ನು ಬದಲಾಯಿಸಿದ್ದೀರಿ. ಸವಾರಿ ಪಡೆಯಲು ಯೋಜನೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ"
         XL_PLUS -> "XL ಪ್ಲಸ್"
+        METRO_RIDE_COMPLETED -> "ಮೆಟ್ರೋ ಸವಾರಿ ಪೂರ್ಣಗೊಂಡಿದೆ"

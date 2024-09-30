@@ -1616,3 +1616,4 @@ getML stringKey =
         CONTACT_SUPPORT_FOR_HELP -> "സഹായത്തിനായി പിന്തുണയെ ബന്ധപ്പെടുക"
         YOU_HAVE_SWITCHED_CITY_OR_VEHICLE -> "നിങ്ങൾ നിങ്ങളുടെ വാഹനം അല്ലെങ്കിൽ നഗരം മാറ്റിയിരിക്കുന്നു. യാത്രകൾ നേടാൻ ഒരു പദ്ധതി തിരഞ്ഞെടുക്കുക"
         XL_PLUS -> "XL പ്ലസ്"
+        METRO_RIDE_COMPLETED -> "മെട്രോ യാത്ര പൂർത്തിയായി"

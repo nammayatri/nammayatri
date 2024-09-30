@@ -1209,7 +1209,7 @@ sosView push state =
   shieldImage = if onUsRide 
                   then if state.props.currentStage == RideStarted 
                          then "ny_ic_shield_blue" 
-                         else "ny_ic_sos"
+                         else "ny_ic_shield_fill_blue"
                   else "ny_ic_sos_related"
 
 liveStatsDashboardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

@@ -1618,3 +1618,4 @@ getTE stringKey =
         CONTACT_SUPPORT_FOR_HELP -> "సహాయం కోసం మద్దతును సంప్రదించండి"
         YOU_HAVE_SWITCHED_CITY_OR_VEHICLE -> "మీరు మీ వాహనం లేదా నగరాన్ని మార్చారు. రైడ్లు పొందడానికి ఒక ప్లాన్‌ను ఎంచుకోండి"
         XL_PLUS -> "XL ప్లస్"
+        METRO_RIDE_COMPLETED -> "మెట్రో రైడ్ పూర్తయింది"

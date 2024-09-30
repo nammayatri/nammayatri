@@ -3394,6 +3394,7 @@ data DriverCoinsFunctionType
   | BulkUploadFunction
   | BulkUploadFunctionV2
   | RidesCompleted Int
+  | MetroRideCompleted
 
 instance makeCoinTransactionReq :: RestEndpoint CoinTransactionReq where
     makeRequest reqBody@(CoinTransactionReq date) headers = defaultMakeRequest GET (EP.getCoinTransactions date) headers reqBody Nothing
