@@ -710,6 +710,7 @@
       "tip_banner_rectangle" : true,
       "widget_close_gradient" : true,
       "zone_curve" : true,
+      "ny_ic_bike_taxi_service" : true,
       "ny_ic_delivery_instructions" : true,
       "ny_ic_backpack" : true,
       "ny_ic_prohibited" : true,

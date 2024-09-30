@@ -1536,4 +1536,4 @@ getBN stringKey =
         QUICK_DELIVERY_WITH str -> str <> " এর সাথে দ্রুত ডেলিভারি"
         STEP -> "ধাপ"
         BOOKING_CANNOT_PROCEED_ONE_PARTY_HAS_ACTIVE_BOOKING -> "বুকিং এগোতে পারবে না: একটি পক্ষের একটি সক্রিয় রাইড চলছে। অনুগ্রহ করে পরে চেষ্টা করুন!"
-        
+        BIKE_TAXI -> "বাইক ট্যাক্সি"        

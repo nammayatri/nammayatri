@@ -687,6 +687,7 @@
       "tip_banner_rectangle" : true,
       "widget_close_gradient" : true,
       "zone_curve" : true,
+      "ny_ic_bike_taxi_service" : true,
       "ny_ic_id_filled" : true
    }
 }

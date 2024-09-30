@@ -471,7 +471,8 @@ filterWithFareAndVariant state estimates estimateAndQuoteConfig preferredVariant
   let
     estimatesOrder = RC.getEstimatesOrder $ toLower $ getValueToLocalStore CUSTOMER_LOCATION
     preferedVariant = if not null preferredVariantConfig then  (fetchPreferredVariant state estimates) else preferredVariantConfig
-    finalList = [preferedVariant]<> estimatesOrder
+    preferredEstimatesOrder = maybe [] (\service -> service.preferredEstimateOrder) state.data.selectedService
+    finalList = DA.nub $ [preferedVariant] <> preferredEstimatesOrder <> estimatesOrder
     filteredEstimate = 
       case (getMerchant FunctionCall) of
         YATRISATHI -> DA.concat (map (\variant -> filterEstimateByVariants variant estimates) (estimateAndQuoteConfig.variantTypes :: Array (Array String)))

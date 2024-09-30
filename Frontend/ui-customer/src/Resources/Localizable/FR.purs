@@ -1509,7 +1509,7 @@ getFR stringKey =
         AVOID_SENDING_HIGH_VALUE_ITEMS -> "Évitez d'envoyer des articles de grande valeur / fragiles"
         ILLEGAL_ITEMS_PROHIBITED -> "Les articles illégaux sont interdits"
         PICKUP_INSTRUCTION -> "Instruction de ramassage"
-
+        BIKE_TAXI -> "Taxi Moto"
         DELIVERY_STR -> "Livraison"
         CONFIRM_PICKUP_AND_DROP_LOCATION -> ""
         CONFIRM_YOUR_DELIVERY -> ""

@@ -1508,7 +1508,7 @@ getKN stringKey =
         AVOID_SENDING_HIGH_VALUE_ITEMS -> "ಹೆಚ್ಚಿನ ಮೌಲ್ಯವುಳ್ಳ / ನಾಜೂಕಾದ ಐಟಂಗಳನ್ನು ಕಳುಹಿಸುವುದನ್ನು ತಡೆಯಿರಿ"
         ILLEGAL_ITEMS_PROHIBITED -> "ಅಕ್ರಮ ಐಟಂಗಳನ್ನು ನಿಷೇಧಿಸಲಾಗಿದೆ"
         PICKUP_INSTRUCTION -> "ಪಿಕಪ್ ಸೂಚನೆ"
-        DELIVERY_STR -> "ಡೆಲಿವರಿ"
+        BIKE_TAXI -> "ಬೈಕ್ ಟ್ಯಾಕ್ಸಿ"        DELIVERY_STR -> "ಡೆಲಿವರಿ"
         CONFIRM_PICKUP_AND_DROP_LOCATION -> "ಕನ್‌ಫರ್ಮ್ ಪಿಕಪ್ ಆಂಡ್ ಡ್ರಾಪ್"
         CONFIRM_YOUR_DELIVERY -> "ಕನ್‌ಫರ್ಮ್ ಯೋರ್ ಡಿಲಿವರಿ"
         PAYMENT_AT_RECEIVING_END -> "ರಿಸೀವರ್‍ನ ಅಂತ್ಯದ ಪೇಮೆಂಟ್"

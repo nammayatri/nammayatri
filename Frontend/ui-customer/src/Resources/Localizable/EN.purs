@@ -1507,6 +1507,7 @@ getEN stringKey =
         AVOID_SENDING_HIGH_VALUE_ITEMS -> "Avoid sending high-value / fragile items"
         ILLEGAL_ITEMS_PROHIBITED -> "Illegal items are prohibited"
         PICKUP_INSTRUCTION -> "Pickup Instruction"
+        BIKE_TAXI -> "Bike Taxi"       
         CONFIRM_PICKUP_AND_DROP_LOCATION -> "Confirm Pickup and Drop"
         CONFIRM_YOUR_DELIVERY -> "Confirm Your Delivery"
         PAYMENT_AT_RECEIVING_END -> "Payment at receiver’s end" 

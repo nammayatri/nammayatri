@@ -192,6 +192,7 @@ initData = let
     , chatPersonId : "Customer"
     , parking : initialParkingData
     , toll : initialTollData
+    , selectedService : Nothing
     , deliveryImage : Nothing
     , deliveryDetailsInfo : Nothing
     , requestorPartyRoles : Nothing

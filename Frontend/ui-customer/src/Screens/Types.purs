@@ -691,6 +691,7 @@ type HomeScreenStateData =
   , personIdFromFCM :: String
   , sourceFromFCM :: String
   , suggestedVehicalVarient :: Array (Maybe String)
+  , selectedService :: Maybe RC.Service
   , deliveryImage :: Maybe String
   , deliveryDetailsInfo :: Maybe API.DeliveryDetails
   , requestorPartyRoles :: Maybe (Array String)

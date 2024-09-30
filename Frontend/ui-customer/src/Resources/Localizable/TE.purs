@@ -1518,7 +1518,7 @@ getTE stringKey =
     AVOID_SENDING_HIGH_VALUE_ITEMS -> "అధిక విలువ/సున్నితమైన వస్తువులు పంపించకండి"
     ILLEGAL_ITEMS_PROHIBITED -> "అన్యాయ వస్తువులు నిషేధించబడ్డాయి"
     PICKUP_INSTRUCTION -> "పికప్ సూచన"
-    DELIVERY_STR -> "డెలివరీ"
+    BIKE_TAXI -> "బైక్ టాక్సీ"    DELIVERY_STR -> "డెలివరీ"
     CONFIRM_PICKUP_AND_DROP_LOCATION -> "కన్‌ఫర్మ్ పికప్ అండ్ డ్రాప్"
     CONFIRM_YOUR_DELIVERY -> "కన్ఫర్మ్ యోర్ డెలివరీ"
     PAYMENT_AT_RECEIVING_END -> "రిసీవర్ చివర పేమెంట్"

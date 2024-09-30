@@ -1506,7 +1506,7 @@ getHI stringKey =
         AVOID_SENDING_HIGH_VALUE_ITEMS -> "उच्च-मूल्य / नाजुक सामान भेजने से बचें"
         ILLEGAL_ITEMS_PROHIBITED -> "अवैध सामान निषिद्ध है"
         PICKUP_INSTRUCTION -> "पिकअप निर्देश"
-        DELIVERY_STR -> "डिलीवरी"
+        BIKE_TAXI -> "बाइक टैक्सी"        DELIVERY_STR -> "डिलीवरी"
         CONFIRM_PICKUP_AND_DROP_LOCATION -> "कन्फ़र्म पिकअप एंड ड्रॉप"
         CONFIRM_YOUR_DELIVERY -> "कन्फ़र्म_योर_डिलीवरी"
         PAYMENT_AT_RECEIVING_END -> "रिसीवर के अंत में पेमेंट"

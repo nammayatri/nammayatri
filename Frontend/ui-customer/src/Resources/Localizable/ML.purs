@@ -1504,7 +1504,7 @@ getML stringKey =
         AVOID_SENDING_HIGH_VALUE_ITEMS -> "ഉയർന്ന മൂല്യമുള്ള/നിശ്ചിത വസ്തുക്കൾ അയയ്ക്കുന്നത് ഒഴിവാക്കുക"
         ILLEGAL_ITEMS_PROHIBITED -> "നിയമവിരുദ്ധ വസ്തുക്കൾ നിരോധിച്ചിരിക്കുന്നു"
         PICKUP_INSTRUCTION -> "പിക്കപ്പ് നിർദ്ദേശം"
-        DELIVERY_STR -> "ഡെലിവറി"
+        BIKE_TAXI -> "ബൈക്ക് ടാക്സി"        DELIVERY_STR -> "ഡെലിവറി"
         CONFIRM_PICKUP_AND_DROP_LOCATION -> "കൺഫർം പിക്കപ്പ് ആൻഡ് ഡ്രോപ്പ്"
         CONFIRM_YOUR_DELIVERY -> "ಕನ್‌ಫರ್ಮ್ ಯೋರ್ ಡಿಲಿವರಿ"
         PAYMENT_AT_RECEIVING_END -> "ರಿಸೀವರ್‍ನ ಅಂತ್ಯದ ಪೇಮೆಂಟ್"
