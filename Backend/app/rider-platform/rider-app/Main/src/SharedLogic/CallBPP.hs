@@ -66,6 +66,17 @@ searchV2 gatewayUrl req merchantId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   bapId <- req.searchReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
   callBecknAPIWithSignature' merchantId bapId "search" API.searchAPIV2 gatewayUrl internalEndPointHashMap req
+    `catch` \e -> handleGatewayError e
+  where
+    handleGatewayError :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => ExternalAPICallError -> m AckResponse
+    handleGatewayError _ = do
+      merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+      let networkPriorityList = reorderList merchant.gatewayAndRegistryPriorityList
+      CQM.updateGatewayAndRegistryPriorityList merchant networkPriorityList
+      throwError $ InternalError "Gateway is down, switching to fallback gatewayUrl"
+    reorderList :: [a] -> [a]
+    reorderList [] = []
+    reorderList (x : xs) = xs ++ [x]
 
 searchMetro ::
   ( MonadFlow m,

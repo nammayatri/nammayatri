@@ -48,6 +48,14 @@ let SchedulerType = < RedisBased | DbBased >
 let urlShortnerConfig =
       { url = "http://localhost:9023/", apiKey = sec.urlShortnerApiKey }
 
+let ondcRegistryUrl = "http://localhost:8020/"
+
+let ondcGatewayUrl = "http://localhost:8015/v1"
+
+let nyRegistryUrl = "http://localhost:8020/"
+
+let nyGatewayUrl = "http://localhost:8015/v1"
+
 in  { smsSessionConfig = globalCommon.smsSessionConfig
     , autoMigrate = globalCommon.autoMigrate
     , loggerConfig =

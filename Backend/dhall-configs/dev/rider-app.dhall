@@ -351,4 +351,8 @@ in  { esqDBCfg
     , isMetroTestTransaction = False
     , urlShortnerConfig = common.urlShortnerConfig
     , sosAlertsTopicARN
+    , ondcRegistryUrl = common.ondcRegistryUrl
+    , ondcGatewayUrl = common.ondcGatewayUrl
+    , nyRegistryUrl = common.nyRegistryUrl
+    , nyGatewayUrl = common.nyGatewayUrl
     }
