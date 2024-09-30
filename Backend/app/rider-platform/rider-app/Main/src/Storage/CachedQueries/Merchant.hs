@@ -23,10 +23,12 @@ module Storage.CachedQueries.Merchant
     getDefaultMerchantOperatingCity,
     getDefaultMerchantOperatingCity_,
     updateGeofencingConfig,
+    updateGatewayAndRegistryPriorityList,
   )
 where
 
 import Data.Coerce (coerce)
+import qualified Domain.Types
 import Domain.Types.Common
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -118,3 +120,8 @@ getDefaultMerchantOperatingCity_ merchantShortId = do
 
 updateGeofencingConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> GeoRestriction -> GeoRestriction -> m ()
 updateGeofencingConfig = Queries.updateGeofencingConfig
+
+updateGatewayAndRegistryPriorityList :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> [Domain.Types.GatewayAndRegistryService] -> m ()
+updateGatewayAndRegistryPriorityList merchant gatewayAndRegistryPriorityList = do
+  Queries.updateGatewayAndRegistryPriorityList gatewayAndRegistryPriorityList merchant.id
+  clearCache merchant

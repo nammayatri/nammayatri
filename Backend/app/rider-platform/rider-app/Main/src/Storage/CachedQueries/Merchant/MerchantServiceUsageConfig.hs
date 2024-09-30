@@ -19,6 +19,8 @@ module Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
     findByMerchantOperatingCityId,
     clearCache,
     updateMerchantServiceUsageConfig,
+    updateSmsProvidersPriorityList,
+    updateWhatsappProvidersPriorityList,
   )
 where
 
@@ -26,6 +28,8 @@ import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.MerchantServiceUsageConfig
+import qualified Kernel.External.SMS.Types
+import qualified Kernel.External.Whatsapp.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -54,10 +58,20 @@ cacheMerchantServiceUsageConfig merchantServiceUsageConfig = do
 makeMerchantOperatingCityIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantOperatingCityIdKey id = "CachedQueries:MerchantServiceUsageConfig:MerchantOperatingCityId-" <> id.getId
 
+updateSmsProvidersPriorityList :: (CacheFlow m r, EsqDBFlow m r) => [Kernel.External.SMS.Types.SmsService] -> Id MerchantOperatingCity -> m ()
+updateSmsProvidersPriorityList smsProvidersPriorityList merchantOperatingCityId = do
+  Queries.updateSmsProvidersPriorityList smsProvidersPriorityList merchantOperatingCityId
+  clearCache merchantOperatingCityId
+
+updateWhatsappProvidersPriorityList :: (CacheFlow m r, EsqDBFlow m r) => [Kernel.External.Whatsapp.Types.WhatsappService] -> Id MerchantOperatingCity -> m ()
+updateWhatsappProvidersPriorityList whatsappProvidersPriorityList merchantOperatingCityId = do
+  Queries.updateWhatsappProvidersPriorityList whatsappProvidersPriorityList merchantOperatingCityId
+  clearCache merchantOperatingCityId
+
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
-clearCache merchanOperatingCityId = do
-  Hedis.del (makeMerchantOperatingCityIdKey merchanOperatingCityId)
+clearCache merchantOperatingCityId = do
+  Hedis.del (makeMerchantOperatingCityIdKey merchantOperatingCityId)
 
 updateMerchantServiceUsageConfig :: (CacheFlow m r, EsqDBFlow m r) => MerchantServiceUsageConfig -> m ()
 updateMerchantServiceUsageConfig = Queries.updateMerchantServiceUsageConfig

@@ -29,6 +29,7 @@ imports:
   SubCategory: Kernel.External.Notification.Interface.Types
   PaymentService: Kernel.External.Payment.Types
   TripCategory: Domain.Types.Trip
+  GatewayAndRegistryService: Domain.Types
 
 Merchant:
   derives: "Generic,Show,'UsageSafety"
@@ -75,6 +76,7 @@ Merchant:
     arrivingPickupThreshold: Distance
     driverOnTheWayNotifyExpiry: Seconds
     onlinePayment: Bool
+    gatewayAndRegistryPriorityList: "[GatewayAndRegistryService]"
 
   excludedFields:
     - merchantId
@@ -104,6 +106,7 @@ Merchant:
     scheduleRideBufferTime: Seconds
     driverOnTheWayNotifyExpiry: Maybe Seconds
     arrivingPickupThreshold: HighPrecDistance
+    gatewayAndRegistryPriorityList: Maybe [GatewayAndRegistryService]
 
   toTType:
     city: defaultCity|E
@@ -123,6 +126,7 @@ Merchant:
     arrivedPickupThreshold: (Just $ Kernel.Utils.Common.distanceToMeters arrivedPickupThreshold)|E
     arrivedPickupThresholdValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivedPickupThreshold)|E
     arrivingPickupThreshold: (Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivingPickupThreshold)|E
+    gatewayAndRegistryPriorityList: Kernel.Prelude.Just|I
 
   fromTType:
     defaultCity: city|E
@@ -137,6 +141,7 @@ Merchant:
     editPickupDistanceThreshold: Kernel.Utils.Common.mkDistanceWithDefault distanceUnit editPickupDistanceThresholdValue editPickupDistanceThreshold|E
     driverDistanceThresholdFromPickup: Kernel.Utils.Common.mkDistanceWithDefault distanceUnit driverDistanceThresholdFromPickupValue driverDistanceThresholdFromPickup|E
     driverOnTheWayNotifyExpiry: (fromMaybe 3600 driverOnTheWayNotifyExpiry)|E
+    gatewayAndRegistryPriorityList: fromMaybe [Domain.Types.ONDC, Domain.Types.NY] gatewayAndRegistryPriorityList|E
 
   sqlType:
     editPickupDistanceThreshold: double precision
@@ -183,6 +188,7 @@ Merchant:
     arrivedPickupThreshold: double precision
     arrivingPickupThreshold: double precision
     driverOnTheWayNotifyExpiry: integer
+    gatewayAndRegistryPriorityList: "text[]"
 
   default:
     arrivedPickupThreshold: "50"
@@ -203,6 +209,7 @@ Merchant:
     fakeOtpEmails: "'{}'"
     city: "'Kochi'"
     onlinePayment: "false"
+    gatewayAndRegistryPriorityList: "'{\"NY\"}'"
 
   constraints:
     shortId: SecondaryKey
@@ -221,6 +228,10 @@ Merchant:
     findBySubscriberId:
       kvFunction: findOneWithKV
       where: subscriberId
+    updateGatewayAndRegistryPriorityList:
+      kvFunction: updateWithKV
+      where: id
+      params: [gatewayAndRegistryPriorityList]
 
   excludedDefaultQueries:
     - createMany
@@ -324,6 +335,14 @@ MerchantServiceUsageConfig:
     findByMerchantOperatingCityId:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId
+    updateSmsProvidersPriorityList:
+      kvFunction: updateWithKV
+      where: merchantOperatingCityId
+      params: [smsProvidersPriorityList]
+    updateWhatsappProvidersPriorityList:
+      kvFunction: updateWithKV
+      where: merchantOperatingCityId
+      params: [whatsappProvidersPriorityList]
 
   excludedDefaultQueries:
     - findByPrimaryKey
