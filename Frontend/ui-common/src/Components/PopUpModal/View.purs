@@ -44,7 +44,6 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (os, getNewIDWithTag)
 import Data.Array ((!!), mapWithIndex, null, length, findIndex)
 import Data.Maybe (Maybe(..),fromMaybe)
-import Control.Monad.Trans.Class (lift)
 import JBridge 
 import Animation (fadeIn) as Anim
 import Data.String (replaceAll, Replacement(..), Pattern(..))

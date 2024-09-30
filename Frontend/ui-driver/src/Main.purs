@@ -106,6 +106,7 @@ onEvent event = do
   case event of 
     "onBackPressed" -> do
       PrestoDom.processEvent "onBackPressedEvent" unit
+    "onReloadApp" -> main { type: "REFRESH", data : "" } $ unsafeToForeign {}
     _ -> pure unit
 
 onConnectivityEvent :: String -> Effect Unit
@@ -113,7 +114,7 @@ onConnectivityEvent triggertype = do
   mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
     _ ← runExceptT $ runBackT $ case triggertype of
       "LOCATION_DISABLED" -> Flow.noInternetScreenFlow triggertype
-      "INTERNET_ACTION" -> Flow.noInternetScreenFlow triggertype
+      "INTERNET_ACTION" -> pure unit
       "REFRESH" -> do
         void $ restorePreviousState
         Flow.baseAppFlow false Nothing Nothing

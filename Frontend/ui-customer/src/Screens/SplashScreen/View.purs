@@ -29,14 +29,13 @@ import Styles.Colors as Color
 import Helpers.Utils
 import Engineering.Helpers.Commons
 
-screen :: SplashScreenState -> ScopedScreen Action SplashScreenState ScreenOutput
+screen :: SplashScreenState -> Screen Action SplashScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name: "SplashScreen"
   , globalEvents: [(\push -> pure $ push AfterRender)]
   , eval
-  , parent : Just "SplashScreen"
   }
 
 view ::

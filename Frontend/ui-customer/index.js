@@ -22,11 +22,11 @@ if (!window.__OS) {
   window.__OS = getOS();
 }
 
-const blackListFunctions = ["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "addToLogList", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds"]
+const blackListFunctions = new Set(["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds", "addToLogList"])
 
 if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){  
   Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
-    return blackListFunctions.indexOf(fnName) == -1
+    return !blackListFunctions.has(fnName);
   }).forEach(fnName => {
       window.JBridgeProxy = window.JBridgeProxy || {};
       window.JBridgeProxy[fnName] = window.JBridge[fnName];
@@ -36,11 +36,11 @@ if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){
           params = arguments[1].split("/").splice(6).join("/");
         }
         let shouldLog = true;
-        if (window.appConfig) {
-        shouldLog = window.appConfig.logFunctionCalls ? window.appConfig.logFunctionCalls : shouldLog;
+        if (window.decodeAppConfig) {
+          shouldLog = window.decodeAppConfig.logFunctionCalls ? window.decodeAppConfig.logFunctionCalls : shouldLog;
         }
         if (shouldLog) {
-        window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
+          window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
         }
         const result = window.JBridgeProxy[fnName](...arguments);
         return result;
@@ -95,7 +95,7 @@ window.isObject = function (object) {
   return (typeof object == "object");
 }
 window.manualEventsName = ["onBackPressedEvent", "onNetworkChange", "onResume", "onPause", "onKeyboardHeightChange", "onKeyboardClose", "onKeyboardOpen", "RestartAutoScroll"];
-window.whitelistedNotification = ["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "TRIP_FINISHED", "TRIP_STARTED", "REALLOCATE_PRODUCT", "FOLLOW_RIDE", "SOS_TRIGGERED", "SOS_RESOLVED", "SOS_MOCK_DRILL", "SHARE_RIDE", "SAFETY_ALERT_DEVIATION", "SOS_MOCK_DRILL_NOTIFY", "STOP_REACHED"];
+window.whitelistedNotification = new Set(["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "TRIP_FINISHED", "TRIP_STARTED", "REALLOCATE_PRODUCT", "FOLLOW_RIDE", "SOS_TRIGGERED", "SOS_RESOLVED", "SOS_MOCK_DRILL", "SHARE_RIDE", "SAFETY_ALERT_DEVIATION", "SOS_MOCK_DRILL_NOTIFY", "STOP_REACHED"]);
 // setInterval(function () { JBridge.submitAllLogs(); }, 10000);
 
 const isUndefined = function (val) {
