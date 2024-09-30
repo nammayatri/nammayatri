@@ -286,15 +286,21 @@ handler ValidatedDSearchReq {..} sReq = do
         }
 
     processPolicy ::
-      (Bool -> DFP.FullFarePolicy -> Flow DEst.Estimate) ->
-      (Bool -> DFP.FullFarePolicy -> Flow DQuote.Quote) ->
+      (Bool -> Maybe DVST.VehicleServiceTier -> DFP.FullFarePolicy -> Flow DEst.Estimate) ->
+      (Bool -> Maybe DVST.VehicleServiceTier -> DFP.FullFarePolicy -> Flow DQuote.Quote) ->
       DFP.FullFarePolicy ->
       ([DEst.Estimate], [DQuote.Quote]) ->
       Flow ([DEst.Estimate], [DQuote.Quote])
-    processPolicy buildEstimateHelper buildQuoteHelper fp (estimates, quotes) =
-      case tripCategoryToPricingPolicy fp.tripCategory of
-        EstimateBased {..} -> buildEstimateHelper nightShiftOverlapChecking fp >>= \est -> pure (est : estimates, quotes)
-        QuoteBased {..} -> buildQuoteHelper nightShiftOverlapChecking fp >>= \quote -> pure (estimates, quote : quotes)
+    processPolicy buildEstimateHelper buildQuoteHelper fp (estimates, quotes) = do
+      mbVehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId fp.vehicleServiceTier merchantOpCityId
+      case mbVehicleServiceTierItem of
+        Just vehicleServiceTierItem ->
+          case tripCategoryToPricingPolicy fp.tripCategory of
+            EstimateBased {..} -> buildEstimateHelper nightShiftOverlapChecking (Just vehicleServiceTierItem) fp >>= \est -> pure (est : estimates, quotes)
+            QuoteBased {..} -> buildQuoteHelper nightShiftOverlapChecking (Just vehicleServiceTierItem) fp >>= \quote -> pure (estimates, quote : quotes)
+        Nothing -> do
+          logError $ "Vehicle service tier not found for " <> show fp.vehicleServiceTier
+          pure (estimates, quotes)
 
     buildDSearchResp fromLocation toLocation stops specialLocationTag searchMetricsMVar quotes estimates specialLocationName now = do
       merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId merchantOpCityId
@@ -495,9 +501,10 @@ buildQuote ::
   Maybe Bool ->
   Maybe Bool ->
   Bool ->
+  Maybe DVST.VehicleServiceTier ->
   DFP.FullFarePolicy ->
   m DQuote.Quote
-buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled returnTime roundTrip mbDistance mbDuration specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute nightShiftOverlapChecking fullFarePolicy = do
+buildQuote _ searchRequest transporterId pickupTime isScheduled returnTime roundTrip mbDistance mbDuration specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance
   fareParams <-
     calculateFareParameters
@@ -531,7 +538,6 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
       estimatedFinishTime = (\duration -> fromIntegral duration `addUTCTime` now) <$> mbDuration
   -- Keeping quote expiry as search request expiry. Slack discussion: https://juspay.slack.com/archives/C0139KHBFU1/p1683349807003679
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
-  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId fullFarePolicy.vehicleServiceTier merchantOpCityId >>= fromMaybeM (VehicleServiceTierNotFound (show fullFarePolicy.vehicleServiceTier))
   let validTill = searchRequestExpirationSeconds `addUTCTime` now
       isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
   pure
@@ -541,7 +547,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
         providerId = transporterId,
         distance = mbDistance,
         vehicleServiceTier = fullFarePolicy.vehicleServiceTier,
-        vehicleServiceTierName = Just vehicleServiceTierItem.name,
+        vehicleServiceTierName = (.name) <$> vehicleServiceTierItem,
         tripCategory = fullFarePolicy.tripCategory,
         farePolicy = Just $ DFP.fullFarePolicyToFarePolicy fullFarePolicy,
         tollNames = if isTollApplicable then tollNames else Nothing,
@@ -571,9 +577,10 @@ buildEstimate ::
   Int ->
   Maybe Seconds ->
   Bool ->
+  Maybe DVST.VehicleServiceTier ->
   DFP.FullFarePolicy ->
   m DEst.Estimate
-buildEstimate merchantOpCityId currency distanceUnit mbSearchReq startTime isScheduled returnTime roundTrip mbDistance specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute noOfStops mbEstimatedDuration nightShiftOverlapChecking fullFarePolicy = do
+buildEstimate _ currency distanceUnit mbSearchReq startTime isScheduled returnTime roundTrip mbDistance specialLocationTag tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute noOfStops mbEstimatedDuration nightShiftOverlapChecking vehicleServiceTierItem fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance -- TODO: Fix Later
       isAmbulanceEstimate = isAmbulanceTrip fullFarePolicy.tripCategory
   (minFareParams, maxFareParams) <- do
@@ -614,7 +621,6 @@ buildEstimate merchantOpCityId currency distanceUnit mbSearchReq startTime isSch
   let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance dist <$> fullFarePolicy.driverExtraFeeBounds
       minFare = fareSum minFareParams + maybe 0.0 (.minFee) mbDriverExtraFeeBounds
       maxFare = fareSum maxFareParams + maybe 0.0 (.maxFee) mbDriverExtraFeeBounds
-  vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId fullFarePolicy.vehicleServiceTier merchantOpCityId >>= fromMaybeM (VehicleServiceTierNotFound (show fullFarePolicy.vehicleServiceTier))
   let isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
   (mbSupplyDemandRatioFromLoc, mbSupplyDemandRatioToLoc) <- case mbSearchReq of
     Nothing -> return (Nothing, Nothing)
@@ -639,7 +645,7 @@ buildEstimate merchantOpCityId currency distanceUnit mbSearchReq startTime isSch
       { id = estimateId,
         requestId = maybe (Id "") (.id) mbSearchReq,
         vehicleServiceTier = fullFarePolicy.vehicleServiceTier,
-        vehicleServiceTierName = Just vehicleServiceTierItem.name,
+        vehicleServiceTierName = (.name) <$> vehicleServiceTierItem,
         tripCategory = fullFarePolicy.tripCategory,
         estimatedDistance = mbDistance,
         currency,
