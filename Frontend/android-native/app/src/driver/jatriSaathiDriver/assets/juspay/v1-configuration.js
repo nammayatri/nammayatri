@@ -352,114 +352,7 @@ window.getMerchantConfig = function () {
     "fiveStarCoinEvent" : true,
     "oneTwoStarCoinEvent" : true,
   }
-  , "cityConfig" : [
-    { ...baseCityConfig,
-      "cityName" : "Kolkata",
-      "mapImage" : "ys_ic_kolkata_map",
-      "cityCode" : "std:033",
-      "showSubscriptions" : true,
-      "cityLat" : 22.5354064,
-      "cityLong" : 88.2649516,
-      "variantSubscriptionConfig" : {
-        "enableVariantBasedSubscription" : true,
-        "variantList" : ["CarCategory"],
-        "enableCabsSubscriptionView" : true,
-        "staticViewPlans" : []
-      },
-      "waitingChargesConfig" : {
-        "cab" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 2.0
-        },
-        "auto" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 1.50
-        },
-        "bike" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 2.0
-        }
-      },
-      "rentalWaitingChargesConfig" : {
-        "cab" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 2.0
-        },
-        "auto" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 2.0
-        },
-        "bike" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 2.0
-        }
-      }
-    },
-    { ...baseCityConfig,
-      "cityName" : "Siliguri",
-      "mapImage" : "ys_ic_siliguri_map",
-      "cityCode" : "std:0353",
-      "showSubscriptions" : false,
-      "cityLat" : 26.708845,
-      "cityLong" : 88.434362,
-      "supportNumber" : "08069724949",
-      "languageKey" : "BN_IN",
-      "waitingChargesConfig" : {
-        "cab" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 2.0
-        },
-        "auto" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 1.50
-        },
-        "bike" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 2.0
-        }
-      },
-      "rentalWaitingChargesConfig" : {
-        "cab" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 2.0
-        },
-        "auto" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 2.0
-        },
-        "bike" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 2.0
-        }
-      },
-    },
-    { ...baseCityConfig,
-      "cityName" : "Asansol",
-      "mapImage" : "ys_ic_asansol_map",
-      "cityCode" : "std:0353",
-      "showSubscriptions" : false,
-      "cityLat" : 23.6889,
-      "cityLong" : 86.9661,
-      "supportNumber" : "08069724949",
-      "languageKey" : "BN_IN"
-    },
-    { ...baseCityConfig
-    , "cityName" : "Durgapur"
-    , "mapImage" : "ys_ic_durgapur_map"
-    , "cityCode" : "std:0342"
-    , "cityLat" : 23.5204
-    , "cityLong" : 87.3119
-    , "showSubscriptions" : false
-    },
-    { ...baseCityConfig
-    , "cityName" : "Petrapole"
-    , "mapImage" : "ys_ic_petrapole_map"
-    , "cityCode" : "std:03215"
-    , "cityLat" : 22.40117
-    , "cityLong" : 88.58293
-    , "showSubscriptions" : false
-    }
-  ]
+  , "cityConfig" : getAllCityConfig()
   })
 }
 
@@ -481,99 +374,211 @@ let defaultStartAudioConfig = {
   "bike" : {}
 }
 
-let baseCityConfig = {
-  "cityName" : "",
-  "mapImage" : "",
-  "cityCode" : "",
-  "showSubscriptions" : false,
-  "enableAdvancedBooking" : true,
-  "advancedRidePopUpYoutubeLink" : "" ,
-  "callDriverInfoPost": false, // Dummy link need to change
-  "cityLat" : 0.0,
-  "cityLong" : 0.0,
-  "supportNumber" : "08069724949",
-  "languageKey" : "BN_IN",
-  "showScheduledRides" : false,
-  "showDriverReferral" : true,
-  "showCustomerReferral" : true,
-  "uploadRCandDL" : true,
-  "enableYatriCoins" : false,
-  "enableGullak": false,
-  "vehicleNSImg" : "ny_ic_location_unserviceable",
-  "registration" : {
-      "supportWAN" : "918618963188",
-      "callSupport" : true,
-      "whatsappSupport" : true
-  },
-  "variantSubscriptionConfig" : {
-    "enableVariantBasedSubscription" : false,
-    "variantList" : [],
-    "enableCabsSubscriptionView" : false,
-    "staticViewPlans" : []
-  },
-  "showEarningSection" : true,
-  "referral" : {
-      "domain" : "https://www.yatrisathi.in"
-    , "customerAppId" : "in.juspay.jatrisaathi"
-    , "driverAppId" : "in.juspay.jatrisaathidriver"
-  },
-  "waitingCharges" : 1.50,
-  "waitingChargesConfig" : {
-    "cab" : {
-      "freeSeconds" : 300,
-      "perMinCharges" : 1.0
+let getAllCityConfig = () => {
+  let baseCityConfig = {
+    "cityName" : "",
+    "mapImage" : "",
+    "cityCode" : "",
+    "showSubscriptions" : false,
+    "enableAdvancedBooking" : true,
+    "advancedRidePopUpYoutubeLink" : "" ,
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat" : 0.0,
+    "cityLong" : 0.0,
+    "supportNumber" : "08069724949",
+    "languageKey" : "BN_IN",
+    "showScheduledRides" : false,
+    "showDriverReferral" : true,
+    "showCustomerReferral" : true,
+    "uploadRCandDL" : true,
+    "enableYatriCoins" : false,
+    "enableGullak": false,
+    "vehicleNSImg" : "ny_ic_location_unserviceable",
+    "registration" : {
+        "supportWAN" : "918618963188",
+        "callSupport" : true,
+        "whatsappSupport" : true
     },
-    "auto" : {
-      "freeSeconds" : 180,
-      "perMinCharges" : 1.50
+    "variantSubscriptionConfig" : {
+      "enableVariantBasedSubscription" : false,
+      "variantList" : [],
+      "enableCabsSubscriptionView" : false,
+      "staticViewPlans" : []
     },
-    "bike" : {
-      "freeSeconds" : 300,
-      "perMinCharges" : 1.0
+    "showEarningSection" : true,
+    "referral" : {
+        "domain" : "https://www.yatrisathi.in"
+      , "customerAppId" : "in.juspay.jatrisaathi"
+      , "driverAppId" : "in.juspay.jatrisaathidriver"
+    },
+    "waitingCharges" : 1.50,
+    "waitingChargesConfig" : {
+      "cab" : {
+        "freeSeconds" : 300,
+        "perMinCharges" : 1.0
+      },
+      "auto" : {
+        "freeSeconds" : 180,
+        "perMinCharges" : 1.50
+      },
+      "bike" : {
+        "freeSeconds" : 300,
+        "perMinCharges" : 1.0
+      }
+    },
+    "rateCardConfig" : defRateCardConfig,
+    "gstPercentage" : "18",
+    "rentalWaitingChargesConfig" : {
+      "cab" : {
+        "freeSeconds" : 180,
+        "perMinCharges" : 2.0
+      },
+      "auto" : {
+        "freeSeconds" : 180,
+        "perMinCharges" : 2.0
+      },
+      "bike" : {
+        "freeSeconds" : 180,
+        "perMinCharges" : 2.0
+      }
+    },
+    "assets" :{
+      "auto_image" : "ny_ic_auto_side_view",
+      "onboarding_auto_image" : "ny_ic_auto_side",
+      "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab" : "ny_ic_refer_now_cab_ys,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ys.png"
+    },
+    "enableHvSdk" : true,
+    "purpleRideConfig" : {
+      "purpleRideConfigForAuto" : {
+        "vehicleVariant" : "Auto",
+        "showVideo" : false,
+        "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+        "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs" : {
+        "vehicleVariant" : "Cab",
+        "showVideo" : false,
+        "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+        "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes" : {
+        "vehicleVariant" : "Bike",
+        "showVideo" : false,
+        "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
+        "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
+      }
     }
-  },
-  "rateCardConfig" : defRateCardConfig,
-  "gstPercentage" : "18",
-  "rentalWaitingChargesConfig" : {
-    "cab" : {
-      "freeSeconds" : 180,
-      "perMinCharges" : 2.0
-    },
-    "auto" : {
-      "freeSeconds" : 180,
-      "perMinCharges" : 2.0
-    },
-    "bike" : {
-      "freeSeconds" : 180,
-      "perMinCharges" : 2.0
-    }
-  },
-  "assets" :{
-    "auto_image" : "ny_ic_auto_side_view",
-    "onboarding_auto_image" : "ny_ic_auto_side",
-    "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
-    "empty_referral_cab" : "ny_ic_refer_now_cab_ys,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ys.png"
-  },
-  "enableHvSdk" : true,
-  "purpleRideConfig" : {
-    "purpleRideConfigForAuto" : {
-      "vehicleVariant" : "Auto",
-      "showVideo" : false,
-      "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-      "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-    },
-    "purpleRideConfigForCabs" : {
-      "vehicleVariant" : "Cab",
-      "showVideo" : false,
-      "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-      "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-    },
-    "purpleRideConfigForBikes" : {
-      "vehicleVariant" : "Bike",
-      "showVideo" : false,
-      "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-      "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-    }
-  }
-, "rideStartAudio" : defaultStartAudioConfig
+  , "rideStartAudio" : defaultStartAudioConfig
+  };
+  
+  let cityConfigs = [
+    Object.assign({}, baseCityConfig, {
+      cityName: "Kolkata",
+      mapImage: "ys_ic_kolkata_map",
+      cityCode: "std:033",
+      showSubscriptions: true,
+      cityLat: 22.5354064,
+      cityLong: 88.2649516,
+      variantSubscriptionConfig: {
+        enableVariantBasedSubscription: true,
+        variantList: ["CarCategory"],
+        enableCabsSubscriptionView: true,
+        staticViewPlans: []
+      },
+      waitingChargesConfig: {
+        cab: {
+          freeSeconds: 180,
+          perMinCharges: 2.0
+        },
+        auto: {
+          freeSeconds: 180,
+          perMinCharges: 1.50
+        },
+        bike: {
+          freeSeconds: 180,
+          perMinCharges: 2.0
+        }
+      },
+      rentalWaitingChargesConfig: {
+        cab: {
+          freeSeconds: 180,
+          perMinCharges: 2.0
+        },
+        auto: {
+          freeSeconds: 180,
+          perMinCharges: 2.0
+        },
+        bike: {
+          freeSeconds: 180,
+          perMinCharges: 2.0
+        }
+      }
+    }),
+    Object.assign({}, baseCityConfig, {
+      cityName: "Siliguri",
+      mapImage: "ys_ic_siliguri_map",
+      cityCode: "std:0353",
+      showSubscriptions: false,
+      cityLat: 26.708845,
+      cityLong: 88.434362,
+      supportNumber: "08069724949",
+      languageKey: "BN_IN",
+      waitingChargesConfig: {
+        cab: {
+          freeSeconds: 300,
+          perMinCharges: 2.0
+        },
+        auto: {
+          freeSeconds: 180,
+          perMinCharges: 1.50
+        },
+        bike: {
+          freeSeconds: 180,
+          perMinCharges: 2.0
+        }
+      },
+      rentalWaitingChargesConfig: {
+        cab: {
+          freeSeconds: 300,
+          perMinCharges: 2.0
+        },
+        auto: {
+          freeSeconds: 180,
+          perMinCharges: 2.0
+        },
+        bike: {
+          freeSeconds: 180,
+          perMinCharges: 2.0
+        }
+      }
+    }),
+    Object.assign({}, baseCityConfig, {
+      cityName: "Asansol",
+      mapImage: "ys_ic_asansol_map",
+      cityCode: "std:0353",
+      showSubscriptions: false,
+      cityLat: 23.6889,
+      cityLong: 86.9661,
+      supportNumber: "08069724949",
+      languageKey: "BN_IN"
+    }),
+    Object.assign({}, baseCityConfig, {
+      cityName: "Durgapur",
+      mapImage: "ys_ic_durgapur_map",
+      cityCode: "std:0342",
+      cityLat: 23.5204,
+      cityLong: 87.3119,
+      showSubscriptions: false
+    }),
+    Object.assign({}, baseCityConfig, {
+      cityName: "Petrapole",
+      mapImage: "ys_ic_petrapole_map",
+      cityCode: "std:03215",
+      cityLat: 22.40117,
+      cityLong: 88.58293,
+      showSubscriptions: false
+    })
+  ];
+  return cityConfigs;
 }
