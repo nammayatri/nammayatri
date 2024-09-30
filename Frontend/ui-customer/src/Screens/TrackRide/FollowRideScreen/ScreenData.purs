@@ -199,6 +199,8 @@ mockDriverInfo =
   , driverArrived: false
   , estimatedDistance: ""
   , driverArrivalTime: 0
+  , destinationReachedAt : 0
+  , destinationReached : false
   , bppRideId: ""
   , driverNumber: Nothing
   , merchantExoPhone: ""
@@ -223,4 +225,7 @@ mockDriverInfo =
   , addressWard : Nothing
   , currentChatRecipient : dummyChatRecipient
   , hasToll : false
+  , senderDetails : Nothing
+  , receiverDetails : Nothing
+  , estimatedTimeToReachDestination : Nothing
   }

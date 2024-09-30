@@ -109,6 +109,8 @@ dummyBookingDetails =
     , lon: 0.0
     , placeId : Nothing
     , ward : Nothing
+    , extras : Nothing
+    , instructions : Nothing
     }
 
 dummyIndividualCard :: IndividualRideCardState

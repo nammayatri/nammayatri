@@ -15,12 +15,13 @@
 
 module Components.PrimaryEditText.View where
 
-import Prelude (Unit, ($), (<>), (==), (&&), not, bind, pure, unit)
+import Prelude (Unit, const, ($), (<>), (==), (&&), not, bind, pure, unit)
 import Effect (Effect)
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons (os, setText)
 import Components.PrimaryEditText.Controller (Action(..), Config)
-import PrestoDOM (InputType(..),Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, imageUrl, imageView, lineHeight, letterSpacing, linearLayout, margin, onChange, orientation, padding, pattern, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, inputType, multiLineEditText, maxLines, inputTypeI, onFocus, clickable, separator, separatorRepeat, accessibilityHint, accessibility)
+import PrestoDOM (InputType(..),Gravity(..), Length(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), alpha, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, hintColor, imageUrl, imageView, lineHeight, letterSpacing, linearLayout, margin, onChange, orientation, padding, pattern, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, inputType, multiLineEditText, maxLines, inputTypeI, onFocus, clickable, separator, separatorRepeat, accessibilityHint, accessibility, imageWithFallback)
+import PrestoDOM.Events (afterRender, onBackPressed, onClick)
 import Font.Style as FontStyle
 import Common.Types.App
 import Data.String as DS
@@ -63,9 +64,10 @@ editTextLayout push config =
     , cornerRadius config.cornerRadius
     , gravity CENTER_VERTICAL
     , stroke if config.showErrorLabel then config.warningStroke else if config.editText.focused then config.focusedStroke else config.stroke
-    ](  if config.showConstantField then 
+    ]((if config.showConstantField then 
           [constantField push config, editTextView push config ] 
-          else [editTextView push config])
+          else [editTextView push config, textImageView push config ])
+          )
 
 
 constantField :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
@@ -154,4 +156,17 @@ errorLabelLayout config =
         , visibility if config.showErrorLabel then VISIBLE else GONE
         , alpha config.errorLabel.alpha
         ] <> (FontStyle.getFontStyle config.errorLabel.textStyle LanguageStyle)
+    ]
+
+textImageView :: forall w . (Action  -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+textImageView push config = 
+  imageView
+    [ height config.textImage.height
+    , width config.textImage.width
+    , imageWithFallback config.textImage.imageUrl
+    , gravity RIGHT
+    , padding config.textImage.padding
+    , margin config.textImage.margin
+    , visibility config.textImage.visibility
+    , onClick push $ const TextImageClicked
     ]

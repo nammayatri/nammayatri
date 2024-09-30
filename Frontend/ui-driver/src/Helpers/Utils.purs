@@ -632,6 +632,7 @@ getVehicleVariantImage variant =
       "BIKE_TIER" -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
       "SUV_PLUS"  -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
       "SUV_PLUS_TIER" -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
+      "DELIVERY_BIKE" -> "ny_ic_parcel_box," <> commonUrl <> "ny_ic_parcel_box.png"
       _ -> fetchImage FF_ASSET "ic_vehicle_front"
 
 getVariantRideType :: String -> String
@@ -953,6 +954,7 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.INTERCITY -> "INTERCITY"
   SA.BIKE_TIER -> "BIKE"
   SA.SUV_PLUS_TIER -> "SUV_PLUS"
+  SA.DELIVERY_BIKE -> "DELIVERY_BIKE"
 
 getVehicleServiceTierImage :: SA.ServiceTierType -> String
 getVehicleServiceTierImage vehicleServiceTier = case vehicleServiceTier of
@@ -1061,7 +1063,9 @@ dummyLocationInfo = SA.LocationInfo {
       lat : 0.0,
       city : Nothing,
       areaCode : Nothing,
-      lon : 0.0
+      lon : 0.0,
+      extras : Nothing,
+      instructions : Nothing
   }
 
 vehicleVariantImage :: String -> String

@@ -697,7 +697,7 @@ newtype TripCategory = TripCategory {
   contents :: Maybe String,
   tag :: TripCategoryTag
 }
-data TripCategoryTag  = OneWay | Rental | RideShare | InterCity |CrossCity 
+data TripCategoryTag  = OneWay | Rental | RideShare | InterCity | CrossCity | Delivery
 
 
 derive instance genericTripCategoryTag  :: Generic TripCategoryTag   _

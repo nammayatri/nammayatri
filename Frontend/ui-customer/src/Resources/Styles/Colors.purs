@@ -433,3 +433,9 @@ gunMetal = "#2E303A"
 
 eerieBlack :: Color 
 eerieBlack = "#1A1C24"
+
+seashell :: Color
+seashell = "#FFF5EF"
+
+seashellBorder :: Color
+seashellBorder = "#FFECE1"

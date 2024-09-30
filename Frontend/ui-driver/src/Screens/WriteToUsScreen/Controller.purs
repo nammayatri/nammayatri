@@ -38,6 +38,7 @@ instance loggableAction :: Loggable Action where
     PrimaryEditTextActionController act -> case act of
       PrimaryEditText.TextChanged id value -> trackAppTextInput appId (getScreen WRITE_TO_US_SCREEN) "ride_feedback_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen WRITE_TO_US_SCREEN) "ride_feedback_text_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked -> trackAppTextInput appId (getScreen WRITE_TO_US_SCREEN) "ride_feedback_text_image_clicked" "primary_edit_text"
     PrimaryButtonActionController primaryButtonState act -> case primaryButtonState.props.isThankYouScreen of
       true -> case act of
         PrimaryButton.OnClick -> do

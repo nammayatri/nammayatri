@@ -105,6 +105,7 @@ waitTimeConstructor key = case key of
   "Triggered" -> ST.Triggered
   "PostTriggered" -> ST.PostTriggered
   "Scheduled" -> ST.Scheduled
+  "NotTriggered" -> ST.NotTriggered
   _ -> ST.NoStatus
 
 transformDocText :: ST.RegisterationStep -> String
@@ -166,23 +167,25 @@ transformVehicleType vehicletype =
 
 decodeVehicleType :: String -> Maybe ST.VehicleCategory
 decodeVehicleType value = case value of
-  "AutoCategory" -> Just ST.AutoCategory
-  "CarCategory" -> Just ST.CarCategory
-  "BikeCategory" -> Just ST.BikeCategory
-  "AmbulanceCategory" -> Just ST.AmbulanceCategory
-  _ -> Nothing
+    "AutoCategory" -> Just ST.AutoCategory
+    "CarCategory" -> Just ST.CarCategory
+    "BikeCategory" -> Just ST.BikeCategory
+    "AmbulanceCategory" -> Just ST.AmbulanceCategory
+    _ -> Nothing
 rideTypeConstructor :: Maybe TripCategory -> ST.TripType
 rideTypeConstructor ( tripCategory) = 
-        case tripCategory of
-            Nothing -> ST.OneWay
-            Just (TripCategory tripCategory') ->
-                case toLower tripCategory'.tag of
-                        "oneway" -> ST.OneWay 
-                        "roundtrip" -> ST.RoundTrip
-                        "rental" -> ST.Rental
-                        "intercity" -> ST.Intercity
-                        "rideshare" -> ST.RideShare
-                        _ -> ST.OneWay
+  case tripCategory of
+    Nothing -> ST.OneWay
+    Just (TripCategory tripCategory') ->
+        case toLower tripCategory'.tag of
+                "oneway" -> ST.OneWay 
+                "roundtrip" -> ST.RoundTrip
+                "rental" -> ST.Rental
+                "intercity" -> ST.Intercity
+                "rideshare" -> ST.RideShare
+                "delivery" -> ST.Delivery
+                _ -> ST.OneWay
+
 
 constructLocationInfo :: Maybe Number -> Maybe Number -> Maybe LocationInfo
 constructLocationInfo (latitude) (longitude) = 
@@ -198,7 +201,9 @@ constructLocationInfo (latitude) (longitude) =
                         lat : latitude',
                         city :  Just "",
                         areaCode :  Just "",
-                        lon : longitude'
+                        lon : longitude',
+                        instructions : Nothing,
+                        extras : Nothing
                 }
         _,_ -> Nothing
 
@@ -215,7 +220,9 @@ getLocationInfoFromStopLocation (StopLocationAddress {door, building, street, ar
                 lat : lat,
                 city :  city,
                 areaCode :  areaCode,
-                lon : lon
+                lon : lon,
+                instructions : Nothing,
+                extras : Nothing
         }
 
 getHomeStageFromString :: String -> ST.HomeScreenStage
@@ -262,6 +269,7 @@ serviceTierMapping tierName acRide =
   case acRide, tierName of
     Just true, "AC Mini" -> "Mini"
     Just false, "Non-AC Mini" -> "Mini"
+    _ , "DELIVERY_BIKE" -> "Delivery"
     _ , _ -> tierName
 
 defaultSliderDist :: Int

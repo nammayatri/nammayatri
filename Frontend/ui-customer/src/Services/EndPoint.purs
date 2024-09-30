@@ -309,3 +309,6 @@ getManuallySharedRideDetails rideId = (getBaseUrl "60") <> "/followRide/" <> rid
 
 multiChat :: String -> String 
 multiChat _ = (getBaseUrl "61") <> "/triggerFCM/message"
+
+getDeliveryImage :: String -> String
+getDeliveryImage rideId = (getBaseUrl "61") <> "/ride/" <> rideId <> "/deliveryImage"

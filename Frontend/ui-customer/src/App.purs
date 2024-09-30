@@ -216,6 +216,10 @@ data EMERGECY_CONTACTS_SCREEN_OUTPUT = POST_CONTACTS EmergencyContactsScreenStat
 
 data TICKET_INFO_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_TICKET_INFO
 
+data ParcelAction = GO_TO_PARCEL_INSTRUCTIONS HomeScreenState
+                    | GO_TO_DELIVERY_DETAILS HomeScreenState
+                    | GET_DELIVERY_IMAGE HomeScreenState
+
 data HOME_SCREEN_OUTPUT = LOGOUT
                         | RELOAD Boolean
                         | UPDATE_PICKUP_NAME HomeScreenState Number Number
@@ -304,6 +308,8 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | EXIT_AND_ENTER_HOME_SCREEN
                         | SELECT_ESTIMATE_AND_QUOTES HomeScreenState
                         | UPDATE_CHAT
+                        | PARCEL ParcelAction
+                        
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_BACK_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

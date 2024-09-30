@@ -192,6 +192,9 @@ initData = let
     , chatPersonId : "Customer"
     , parking : initialParkingData
     , toll : initialTollData
+    , deliveryImage : Nothing
+    , deliveryDetailsInfo : Nothing
+    , requestorPartyRoles : Nothing
     },
     props: {
       rideRequestFlow : false
@@ -398,6 +401,10 @@ initData = let
     , isSharedLocationFlow : false
     , isOtpRideFlow : false
     , safetySettings : Nothing
+    , isConfirmSourceCurrentLocation : true
+    , showDeliveryImageAndOtpModal : false
+    , loadingDeliveryImage : false
+    , fromDeliveryScreen : false
   }
 }
 
@@ -491,6 +498,8 @@ dummyDriverInfo =
   , driverArrived : false
   , estimatedDistance : ""
   , driverArrivalTime : 0
+  , destinationReachedAt : 0
+  , destinationReached : false
   , bppRideId : ""
   , driverNumber : Nothing
   , merchantExoPhone : ""
@@ -515,6 +524,9 @@ dummyDriverInfo =
   , addressWard : Nothing
   , currentChatRecipient : dummyChatRecipient
   , hasToll : false
+  , senderDetails : Nothing
+  , receiverDetails : Nothing
+  , estimatedTimeToReachDestination : Nothing
   }
 
 dummySettingBar :: SettingSideBarState
@@ -637,7 +649,10 @@ dummyRideBookingDetails = RideBookingDetails {
   toLocation : Nothing,
   estimatedDistance : Nothing,
   otpCode : Nothing,
-  stopLocation : Nothing
+  stopLocation : Nothing,
+  senderDetails : Nothing,
+  receiverDetails : Nothing,
+  requestorPartyRoles : Nothing
 }
 
 
@@ -751,3 +766,5 @@ dummyNewContacts = {
   isFollowing : Nothing,
   shareTripWithEmergencyContactOption : neverShareRideOption
 }
+
+

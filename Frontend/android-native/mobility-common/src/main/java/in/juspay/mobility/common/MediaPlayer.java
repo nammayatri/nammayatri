@@ -26,6 +26,7 @@ import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
 
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.FileProvider;
 
@@ -86,7 +87,7 @@ public class MediaPlayer {
         return null;
     }
 
-    public void uploadFile() { 
+    public void uploadFile(@Nullable Boolean canChooseFromFile) {
         if (!isUploadPopupOpen) {
             ExecutorManager.runOnMainThread(() -> {
                 Context context = bridgeComponents.getContext();
@@ -102,7 +103,7 @@ public class MediaPlayer {
                         Intent chooser = Intent.createChooser(takePicture, context.getString(R.string.upload_image));
                         chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
                         isUploadPopupOpen = true;
-                        bridgeComponents.getActivity().startActivityForResult(chooser, IMAGE_CAPTURE_REQ_CODE, null);
+                        bridgeComponents.getActivity().startActivityForResult((canChooseFromFile != null && canChooseFromFile.equals(false) ? takePicture : chooser), IMAGE_CAPTURE_REQ_CODE, null);
                     }
                 } else {
                     if (bridgeComponents.getActivity() != null) {
@@ -111,6 +112,10 @@ public class MediaPlayer {
                 }
             });
         }
+    }
+
+    public void takePhoto(){
+        uploadFile(false);
     }
 
     public boolean isMicrophonePermissionEnabled() {

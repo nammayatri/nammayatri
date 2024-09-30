@@ -44,7 +44,7 @@ import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, safeMarginBottom, screenWidth, getCurrentUTC, getUTCAfterNSeconds, convertUTCtoISC, getUTCAfterNSecondsImpl)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), userCommonAssetBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig, getCityNameFromCode, getDefaultPixelSize)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), userCommonAssetBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig, getCityNameFromCode, getDefaultPixelSize, getDistanceBwCordinates,disableChat)
 import Helpers.SpecialZoneAndHotSpots (specialZoneTagConfig)
 import Helpers.Utils (parseFloat)
 import JBridge (fromMetersToKm, getLayoutBounds)
@@ -116,6 +116,7 @@ view push state =
           , clickable true
           ][ otpAndWaitView push state 
             , endOTPView push state
+            , deliveryImageAndOtpView push state
             , linearLayout [
                 weight 1.0
               , visibility $ boolToVisibility $ state.props.currentStage == RideStarted
@@ -186,6 +187,47 @@ endOTPView push state =
       , margin $ Margin 0 4 4 4
       , background Color.grey700
       ] <> FontStyle.body22 TypoGraphy
+    ]
+  ]
+deliveryImageAndOtpView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
+deliveryImageAndOtpView push state =
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , cornerRadius if os == "IOS" then 18.0 else 32.0
+  , background Color.white900
+  , gravity CENTER
+  , clickable true
+  , accessibility DISABLE
+  , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
+  , visibility $ boolToVisibility $ state.data.fareProductType == FPT.DELIVERY
+  , margin $ Margin 8 8 6 8
+  ][ textView $
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , accessibilityHint $ " O T P : " <> (STR.replaceAll (STR.Pattern "") (STR.Replacement " ")  state.data.otp) 
+    , accessibility ENABLE
+    , text $ getString PACKAGE_PHOTO_AND_OTP
+    , padding $ Padding 12 0 4 if os == "IOS" then 0 else 3
+    , color Color.black700
+    ] <> FontStyle.body22 TypoGraphy
+  , linearLayout 
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , background Color.grey700
+    , clickable true
+    , onClick push $ const ShowDeliveryImageAndOtp
+    , margin $ Margin 4 4 4 4
+    , padding $ Padding 8 4 8 4
+    , cornerRadius 16.0
+    , rippleColor Color.rippleShade
+    ]
+    [ imageView 
+      [ gravity CENTER_VERTICAL
+      , height $ V 22
+      , width $ V 22
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right"
+      ] 
     ]
   ]
 
@@ -336,7 +378,7 @@ otpAndWaitView push state =
   , disableKeyboardAvoidance true
   , scrollBarX false
   , scrollBarY false
-  , visibility $ boolToVisibility $ (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver] && (state.props.stageBeforeChatScreen /= RideStarted))
+  , visibility $ boolToVisibility $ (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver] && (state.props.stageBeforeChatScreen /= RideStarted && state.data.fareProductType /= FPT.DELIVERY ))
   , gravity CENTER
   , accessibility DISABLE
   , weight 1.0
@@ -810,6 +852,7 @@ distanceView push state = let
        , singleLine false
       --  , maxLines 2
        ] <> FontStyle.body7 TypoGraphy
+     , etaView push state
      , textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
@@ -823,7 +866,13 @@ distanceView push state = let
   where 
     getTitleText :: String
     getTitleText = do
-      if state.data.fareProductType /= FPT.RENTAL || (null state.data.rentalData.startTimeUTC) then (getString ENJOY_THE_RIDE)
+      case state.data.fareProductType of
+        FPT.RENTAL -> getRentalTitleText
+        FPT.DELIVERY -> if state.data.destinationReached then getString ARRIVED_AT_DROP else getString OUT_FOR_DELIVERY 
+        _ -> getString ENJOY_THE_RIDE
+    getRentalTitleText :: String
+    getRentalTitleText = 
+      if (null state.data.rentalData.startTimeUTC) then (getString ENJOY_THE_RIDE)
       else 
         let startTime = state.data.rentalData.startTimeUTC
             startTimeNotEmpty = startTime /= ""
@@ -832,6 +881,28 @@ distanceView push state = let
             endTimeInHH = if startTimeNotEmpty then convertUTCtoISC endUTC "h" <> ":" <> convertUTCtoISC endUTC "mm" <> " " <> convertUTCtoISC endUTC "A" else ""
         in if state.data.destination /= "" then getString RENTAL_RIDE_UNTIL <> " " <> endTimeInHH
           else "Add Stop to continue ride" <> (if state.props.endOTPShown then " or share End-OTP to end ride" else "")
+
+etaView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
+etaView push state = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , orientation HORIZONTAL
+  , gravity CENTER
+  , margin $ MarginTop 4
+  , accessibility ENABLE
+  , cornerRadius 16.0
+  , background Color.blue800
+  , accessibilityHint $ "arriving in " <> fromMaybe "" state.data.estimatedTimeToReachDestination
+  , visibility $ boolToVisibility $ state.data.fareProductType == FPT.DELIVERY && state.data.estimatedTimeToReachDestination /= Nothing
+  ][ textView $
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , margin $ Margin 8 2 8 2
+    , color Color.white900
+    , text $ getString ESTIMATED_ARRIVAL_BY <> " " <> fromMaybe "" state.data.estimatedTimeToReachDestination
+    ] <> FontStyle.body1 TypoGraphy
+  ]
 
 brandingBannerView :: forall w. DriverInfoConfig -> Visibility -> Maybe String -> Boolean -> String -> PrestoDOM (Effect Unit) w
 brandingBannerView driverInfoConfig isVisible uid onUsRide providerName = 
@@ -879,7 +950,7 @@ cancelRideLayout push state =
   , onAnimationEnd push $ const $ NoAction
   , margin $ if state.data.config.showPickUpandDrop then MarginTop 0 else MarginTop 12
   , padding $ PaddingBottom if os == "IOS" then if safeMarginBottom == 0 then 24 else safeMarginBottom else 0
-  , visibility $ boolToVisibility $ rideNotStarted state
+  , visibility $ boolToVisibility $ showCancelRideCTA state
   ][ linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
@@ -1017,7 +1088,7 @@ chatButtonView push state =
   ]
   where 
     feature = state.data.config.feature
-    imageAsset = case feature.enableChat, state.data.providerType of
+    imageAsset = case feature.enableChat && disableChat state.data.fareProductType, state.data.providerType of
       true, ONUS -> fetchImage FF_ASSET if state.props.unReadMessages then "ic_chat_badge_green" else "ic_call_msg"
       _, _ -> fetchImage FF_COMMON_ASSET "ny_ic_call"
 
@@ -1547,13 +1618,18 @@ getTripDetails state = {
   , editingPickupLocation : EditingLocation Controller.SOURCE
   , isEditPickupEnabled : state.data.config.feature.enableEditPickupLocation
   , isOtpRideFlow : state.props.isOtpRideFlow
+  , senderDetails : state.data.senderDetails
+  , receiverDetails : state.data.receiverDetails
 }
 
 driverPickUpStatusText :: DriverInfoCardState -> String -> String
 driverPickUpStatusText state _ = 
-  case state.props.zoneType.priorityTag of
-    SPECIAL_PICKUP -> getString DRIVER_AT_PICKUP_LOCATION
-    _ -> if state.data.waitingTime == "--" then getString DRIVER_IS_ON_THE_WAY else getString DRIVER_IS_WAITING_AT_PICKUP 
+  case state.data.fareProductType of
+    FPT.DELIVERY -> if state.data.driverArrived then getString PICKUP_IN_PROGRESS else getString OUT_FOR_PICKUP
+    _ -> case state.props.zoneType.priorityTag of
+          SPECIAL_PICKUP -> getString DRIVER_AT_PICKUP_LOCATION
+          _ -> if state.data.waitingTime == "--" then getString DRIVER_IS_ON_THE_WAY else getString DRIVER_IS_WAITING_AT_PICKUP 
+     
 
 
 rideNotStarted :: DriverInfoCardState -> Boolean
@@ -1740,3 +1816,6 @@ rideInfoPill state rideData =
 
 isOtpRideFlow :: DriverInfoCardState -> Boolean
 isOtpRideFlow state = state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || (state.props.isOtpRideFlow && state.props.currentStage == RideAccepted)
+
+showCancelRideCTA :: DriverInfoCardState -> Boolean
+showCancelRideCTA state = rideNotStarted state && HU.isDeliveryInitiator state.data.requestorPartyRoles

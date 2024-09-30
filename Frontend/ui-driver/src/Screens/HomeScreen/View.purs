@@ -82,7 +82,7 @@ import MerchantConfig.Types (RideStartAudio(..), StartAudioUrls(..))
 import PaymentPage (consumeBP)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), ($>), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, shadow, clipChildren, textFromHtml, shimmerFrameLayout)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, shadow, clipChildren, textFromHtml, shimmerFrameLayout, accessibilityHint, accessibility, disableClickFeedback)
 import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
@@ -93,7 +93,7 @@ import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, Screen
 import Screens.HomeScreen.PopUpConfig as PopUpConfig
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), DriverStatus(..), DriverStatusResult(..), PillButtonState(..), TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..))
 import Screens.Types as ST
-import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..), DriverProfileStatsReq(..), DriverInfoReq(..), BookingTypes(..), RidesInfo(..), StopLocation(..), LocationInfo(..), ScheduledBookingListResponse(..))
+import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..), DriverProfileStatsReq(..), DriverInfoReq(..), BookingTypes(..), RidesInfo(..), StopLocation(..), LocationInfo(..), ScheduledBookingListResponse(..)) 
 import Services.Accessor (_lat, _lon)
 import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
@@ -131,8 +131,8 @@ screen initialState (GlobalState globalState) =
           _ <- HU.storeCallBackTime push TimeUpdate
           _ <- runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
           when initialState.data.config.enableMockLocation $ JB.isMockLocation push IsMockLocation
-          when (initialState.data.activeRide.tripType == ST.Rental) $ void $ JB.storeCallBackImageUpload push CallBackImageUpload
-          when (initialState.data.activeRide.tripType == ST.Rental) $ void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
+          when (DA.any (_ == initialState.data.activeRide.tripType) [ST.Rental, ST.Delivery]) $ void $ JB.storeCallBackImageUpload push CallBackImageUpload
+          when (DA.any (_ == initialState.data.activeRide.tripType) [ST.Rental, ST.Delivery]) $ void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
 
           if  (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) then  do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do  
@@ -165,11 +165,12 @@ screen initialState (GlobalState globalState) =
                   Left _ -> void $ pure $ setValueToLocalStore IS_DRIVER_STATS_CALLED "false"
              else pure unit
           let localStage = getValueToLocalNativeStore LOCAL_STAGE
-          if (localStage /= "RideAccepted" && localStage /= "ChatWithCustomer" && initialState.data.activeRide.waitTimerId /= "") then do
-            void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
-            push $ UpdateWaitTime ST.NoStatus
-            void $ pure $ clearTimerWithId initialState.data.activeRide.waitTimerId
-            pure unit
+          if (localStage /= "RideAccepted" && localStage /= "ChatWithCustomer" && initialState.data.activeRide.waitTimerId /= "")
+            then do
+              void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
+              push $ UpdateWaitTime ST.NoStatus
+              void $ pure $ clearTimerWithId initialState.data.activeRide.waitTimerId
+              pure unit
           else pure unit
           
           void if (DA.any (_ == localStage)["RideRequested", "HomeScreen", "__failed"]) && initialState.data.driverGotoState.isGotoEnabled then 
@@ -358,7 +359,7 @@ view push state =
       -- , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]       Disabled ProfileDemoView
       , if state.data.paymentState.makePaymentModal && (not $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideCompleted]) then makePaymentModal push state else dummyTextView
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
-      , if state.props.enterOtpModal || ((state.data.activeRide.tripType == ST.Intercity || state.data.activeRide.tripType == ST.Rental) && state.props.endRideOtpModal) then enterOtpModal push state else dummyTextView
+      , if state.props.enterOtpModal || state.props.endRideOtpModal then enterOtpModal push state else dummyTextView
       , if showEnterOdometerReadingModalView then enterOdometerReadingModal push state else dummyTextView
       , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
       , if state.props.cancelConfirmationPopup then cancelConfirmation push state else dummyTextView
@@ -399,6 +400,7 @@ view push state =
       , if state.props.showInterOperablePopUp then interOperableInfoPopUpView push state else dummyTextView
       , if state.props.isMockLocation && not cugUser then sourceUnserviceableView push state else dummyTextView
       , if state.data.plansState.showSwitchPlanModal then SelectPlansModal.view (push <<< SelectPlansModalAction) (selectPlansModalState state) else dummyTextView
+      , if state.props.showDeliveryCallPopup then customerDeliveryCallPopUp push state else dummyTextView
   ]
   where 
     showPopups = (DA.any (_ == true )
@@ -576,7 +578,7 @@ driverMapsHeaderView push state =
               ] $ [addAadhaarOrOTPView state push]
                 <> [specialPickupZone push state]
                 <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (state.props.driverStatusSet == ST.Offline) true --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Offline] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
-                <> if not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW","BIKE", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"] )&& DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [bookingPreferenceNavView push state] else []
+                <> if not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"] )&& DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [bookingPreferenceNavView push state] else []
             ]
         ]
         , bottomNavBar push state
@@ -1025,7 +1027,7 @@ offlineView push state =
   ]
   where
     isBookingPreferenceVisible = 
-      not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW", "BIKE", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"])
+      not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"])
       && state.props.driverStatusSet == ST.Offline
 
 popupModelSilentAsk :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -2822,3 +2824,122 @@ formatSecondsToNormalTime state =
       seconds = remainingSecondsAfterHours `mod` 60
     in {seconds : seconds , hours : hours , minutes: minutes , difference : difference }
   
+
+customerDeliveryCallPopUp :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+customerDeliveryCallPopUp push state =
+  relativeLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , alignParentBottom "true,-1"
+    ]
+    [ linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT 
+      , background Color.black9000
+      , accessibilityHint "Call customer popup double tap to dismiss : Button"
+      , accessibility PTD.ENABLE
+      , disableClickFeedback true
+      , onClick push (const $ CloseDeliveryCallPopup)
+      ][]
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , background Color.white900
+        , orientation VERTICAL
+        , PP.cornerRadii $ PTD.Corners 24.0 true true false false
+        , padding (Padding 20 32 20 25)
+        , alignParentBottom "true,-1"
+        , disableClickFeedback true
+        ]
+        [ textView
+            $
+              [ text (getString CALL_CUSTOMER_TEXT)
+              , height WRAP_CONTENT
+              , color Color.black700
+              , textSize FontSize.a_18
+              , margin (MarginBottom 4)
+              ]
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            ]
+            ( map
+                ( \item ->
+                    linearLayout
+                      [ height WRAP_CONTENT
+                      , width MATCH_PARENT
+                      , orientation VERTICAL
+                      ]
+                      [ callCardView push state item
+                      , if(item.type == ST.SENDER) then linearLayout
+                          [ height $ V 1
+                          , width MATCH_PARENT
+                          , background Color.grey900
+                          ]
+                          []
+                        else linearLayout[][]
+                      ]
+                )
+                (customerDeliveryCallPopUpData state)
+            )
+        ]
+    ]
+
+callCardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> { text :: String, imageWithFallback :: String, type :: ST.DeliverCallType, data :: String} -> PrestoDOM (Effect Unit) w
+callCardView push state item =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation HORIZONTAL
+    , padding (Padding 0 20 0 20)
+    , accessibility PTD.ENABLE
+    , accessibilityHint $ item.text <> " : " <> item.data
+    , gravity CENTER_VERTICAL
+    , onClick push (const (DeliveryCall item.type))
+    ]
+    [
+    imageView
+        [ imageWithFallback item.imageWithFallback
+        , height $ V 30
+        , width $ V 30
+        , margin (MarginRight 20)
+        ]
+    ,  linearLayout[
+        height WRAP_CONTENT
+      , weight 1.0
+      , orientation VERTICAL]
+    [
+      linearLayout
+      [
+        height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , gravity CENTER
+      , orientation HORIZONTAL
+      , margin (MarginBottom 2)
+      ][
+        textView
+        $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , textSize FontSize.a_16
+          , text item.text
+          , gravity CENTER_VERTICAL
+          , color Color.black800
+          ]
+      ]
+      , textView
+        $
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text item.data
+          , color Color.black600
+          ]
+    ]
+    , imageView
+        [ imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_chevron_right"
+        , height $ V 30
+        , width $ V 32
+        , padding (Padding 3 3 3 3)
+        ]
+    ]

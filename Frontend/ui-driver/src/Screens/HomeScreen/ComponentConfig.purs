@@ -95,6 +95,9 @@ rideActionModalConfig state =
   Tuple stage rideData = case state.props.bookingStage, state.data.advancedRideData of
                               ADVANCED, Just advRideInfo -> Tuple state.props.advancedRideStage advRideInfo
                               _, _  -> Tuple state.props.currentStage state.data.activeRide
+  isDelivery = state.data.activeRide.tripType == ST.Delivery
+  sourceAddressTitleText = fromMaybe (fromMaybe "" ((DS.split (DS.Pattern ",") (rideData.source)) DA.!! 0)) rideData.sourceArea
+  destinationAddressTitleText = (\destination -> fromMaybe (fromMaybe "" ((DS.split (DS.Pattern ",") destination) DA.!! 0)) rideData.destinationArea)
   rideActionModalConfig' = config {
     startRideActive = (state.props.currentStage == ST.RideAccepted || (state.props.currentStage == ST.ChatWithCustomer && (Const.getHomeStageFromString $ getValueToLocalStore PREVIOUS_LOCAL_STAGE) /= ST.RideStarted ) ),
     arrivedStopActive = state.props.arrivedAtStop,
@@ -104,12 +107,12 @@ rideActionModalConfig state =
                       else
                         (fromMaybe "" ((DS.split (DS.Pattern " ") (rideData.riderName)) DA.!! 0)),
     sourceAddress  {
-      titleText = fromMaybe (fromMaybe "" ((DS.split (DS.Pattern ",") (rideData.source)) DA.!! 0)) rideData.sourceArea,
-      detailText = rideData.source
+      titleText = sourceAddressTitleText,
+      detailText = (maybe "" (\addr -> addr <> ", ") rideData.extraFromLocationInfo) <> rideData.source
     },
     destinationAddress = (\destination -> {
-      titleText : fromMaybe (fromMaybe "" ((DS.split (DS.Pattern ",") destination) DA.!! 0)) rideData.destinationArea,
-      detailText : destination
+      titleText : destinationAddressTitleText destination,
+      detailText : (maybe "" (\addr -> addr <> ", " ) rideData.extraToLocationInfo) <> destination
     }) <$> state.data.activeRide.destination,
     stopAddress = (\stop -> {
       titleText : fromMaybe "" ((DS.split (DS.Pattern ",") stop) DA.!! 0),
@@ -141,7 +144,7 @@ rideActionModalConfig state =
     isOdometerReadingsRequired = state.props.isOdometerReadingsRequired,
     serviceTierAndAC = state.data.activeRide.serviceTier,
     capacity = state.data.activeRide.capacity,
-    acRide = if (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.AutoCategory then Nothing else state.data.activeRide.acRide,
+    acRide = isAcRide state,
     isAdvanced = (state.props.bookingStage == ADVANCED),
     bookingFromOtherPlatform = state.data.activeRide.bookingFromOtherPlatform,
     bapName = state.data.activeRide.bapName,
@@ -149,8 +152,34 @@ rideActionModalConfig state =
                   Just (API.Route obj) ->  obj.distance
                   Nothing -> 0
   , parkingCharge = state.data.activeRide.parkingCharge
+  , isDelivery = isDelivery
+  , delivery = if isDelivery then getDeliveryDetails state else Nothing
+  , isSourceDetailsExpanded = state.props.isSourceDetailsExpanded
+  , isDestinationDetailsExpanded = if state.props.currentStage == ST.RideStarted then true else not state.props.isSourceDetailsExpanded
   }
   in rideActionModalConfig'
+  where 
+    isAcRide :: ST.HomeScreenState -> Maybe Boolean
+    isAcRide state = if (RC.getCategoryFromVariant state.data.vehicleType) == Just ST.AutoCategory then Nothing else state.data.activeRide.acRide
+
+getDeliveryDetails :: ST.HomeScreenState -> Maybe RideActionModal.DeliveryDetails
+getDeliveryDetails state = 
+  Just $ {
+    sender : ({
+      name : maybe "" (\(API.PersonDetails pd) -> pd.name) state.data.activeRide.senderPersonDetails,
+      phoneNumber : maybe "" (\(API.PersonDetails pd) -> pd.primaryExophone) state.data.activeRide.senderPersonDetails,
+      premises : state.data.activeRide.extraFromLocationInfo,
+      exophoneNumber : Nothing,
+      instructions : state.data.activeRide.senderInstructions
+    }:: RideActionModal.PersonAndDeliveryInfo),
+    receiver : ( {
+      name : maybe "" (\(API.PersonDetails pd) -> pd.name) state.data.activeRide.receiverPersonDetails,
+      phoneNumber : maybe "" (\(API.PersonDetails pd) -> pd.primaryExophone) state.data.activeRide.receiverPersonDetails,
+      premises : state.data.activeRide.extraToLocationInfo,
+      exophoneNumber : Nothing,
+      instructions : state.data.activeRide.receiverInstructions
+    } :: RideActionModal.PersonAndDeliveryInfo)
+  }
 
 ---------------------------------------- endRidePopUp -----------------------------------------
 endRidePopUp :: ST.HomeScreenState -> PopUpModal.Config
@@ -778,6 +807,7 @@ enterOtpStateConfig state =
         alpha = if(DS.length state.props.rideOtp < 4) then 0.3 else 1.0
       },
       modalType = ST.OTP,
+      showRetakeParcelImage = state.data.activeRide.tripType == ST.Delivery && state.props.currentStage == ST.RideAccepted,
       enableDeviceKeyboard = appConfig.inAppKeyboardModalConfig.enableDeviceKeyboard,
       confirmBtnColor = if state.props.endRideOtpModal then Color.red else Color.darkMint
       }
@@ -1554,7 +1584,7 @@ getRideCompletedConfig state = let
         visible = if state.props.isFreeRide then VISIBLE else GONE
       },
       topPill = topPillConfig,
-      bottomText = getString RIDE_DETAILS
+      bottomText = if state.data.activeRide.tripType == ST.Delivery then getString DELIVERY_DETAILS else getString RIDE_DETAILS
     },
     driverBottomCard {
       visible = showDriverBottomCard,
@@ -1716,7 +1746,7 @@ getRatingCardConfig state = RatingCard.ratingCardConfig {
       alpha = if state.data.endRideData.rating > 0 then 1.0 else 0.4,
       id = "RatingCardPrimayButton"
     },
-    title = getString RATE_YOUR_RIDE_WITH1 <> " " <> state.data.endRideData.riderName <> " " <>  getString RATE_YOUR_RIDE_WITH2,
+    title = getString ( if state.data.activeRide.tripType == ST.Delivery then RATE_YOUR_DELIVERY_WITH else RATE_YOUR_RIDE_WITH1 )<> " " <> state.data.endRideData.riderName <> " " <>  getString RATE_YOUR_RIDE_WITH2,
     feedbackPlaceHolder = getString HELP_US_WITH_YOUR_FEEDBACK,
     closeImgVisible = VISIBLE
   }
@@ -2768,3 +2798,20 @@ selectPlansModalState state = SelectPlansModal.config
                   Just justPlan -> map (\plan -> plan {isSelected = plan.id == justPlan.id }) state.data.plansState.plansList
                   Nothing -> state.data.plansState.plansList
   }
+
+
+customerDeliveryCallPopUpData :: ST.HomeScreenState -> Array { text :: String, imageWithFallback :: String, type :: ST.DeliverCallType, data :: String }
+customerDeliveryCallPopUpData state = 
+   [
+    { text: (getString CALL_RECEIVER)
+    , imageWithFallback: HU.fetchImage HU.COMMON_ASSET "ic_phone_filled_red"
+    , type: ST.RECEIVER
+    , data: (maybe "" (\(API.PersonDetails det) -> det.name) state.data.activeRide.receiverPersonDetails)
+    },
+    { text: (getString CALL_SENDER)
+    , imageWithFallback: HU.fetchImage HU.COMMON_ASSET "ic_phone_filled_green"
+    , type: ST.SENDER
+    , data: (maybe "" (\(API.PersonDetails det) -> det.name) state.data.activeRide.senderPersonDetails)
+    }
+    ]
+  
