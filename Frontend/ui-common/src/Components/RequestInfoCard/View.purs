@@ -65,6 +65,7 @@ view push state =
               height $ V 1
              , width MATCH_PARENT
               , background Color.grey700
+              , visibility $ state.subTitle.visibility
             ][]
             , genericTextView push state.subTitle
             ]

@@ -56,7 +56,7 @@ import Effect.Console (logShow)
 import Effect.Uncurried (EffectFn1(..), EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5)
 import Effect.Uncurried (EffectFn1, EffectFn4, EffectFn3, runEffectFn3)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (getWindowVariable, isPreviousVersion, liftFlow, os, getCurrentUTC, compareUTCDate)
+import Engineering.Helpers.Commons (getWindowVariable, isPreviousVersion, liftFlow, os, getCurrentUTC, compareUTCDate,getUTCAfterNSeconds,getUTCBeforeNSeconds,convertDateTimeConfigToUTC,convertUTCtoISC)
 import Engineering.Helpers.Commons (parseFloat, setText, toStringJSON) as ReExport
 import Engineering.Helpers.Utils (class Serializable, serialize)
 import Foreign (MultipleErrors, unsafeToForeign)
@@ -70,15 +70,15 @@ import Juspay.OTP.Reader.Flow as Reader
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Eq, class EuclideanRing, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, mod, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<#>), (<$>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>=), (>>>), (||), (#), max, ($>), negate)
+import Prelude (class Eq, class EuclideanRing, class Ord, class Show, Unit, bind, compare, comparing, discard, identity, map, mod, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<#>), (<$>), (<*>), (<<<), (<=), (<>), (=<<), (==), (>), (>=), (>>>), (||), (#), max, ($>), negate,div)
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
-import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..), ZoneType(..))
+import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..), ZoneType(..),NotificationBody,TripTypeData,ScheduledRideDriverInfo)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations,Stage)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo, BookingTime, VehicleViewType(..), FareProductType(..))
-import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..), MetroBookingConfigRes)
+import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..), MetroBookingConfigRes,RideBookingRes(..),RideBookingAPIDetails(..),RideBookingDetails(..),RideBookingListRes(..),BookingLocationAPIEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
@@ -114,7 +114,7 @@ foreign import isWeekend :: String -> Boolean
 
 foreign import getNewTrackingId :: Unit -> String
 
-foreign import storeCallBackCustomer :: forall action. (action -> Effect Unit) -> (String -> action) -> String -> Effect Unit
+foreign import storeCallBackCustomer :: forall action. (action -> Effect Unit) -> (String -> NotificationBody -> action) -> String -> (String -> Maybe String) -> Maybe String -> Effect Unit
 
 foreign import getLocationName :: forall action. (action -> Effect Unit) -> Number -> Number -> String -> (Number -> Number -> String -> action) -> Effect Unit
 
@@ -142,6 +142,26 @@ foreign import factoryResetApp :: String -> Unit
 foreign import validateEmail :: String -> Boolean
 
 foreign import getUTCDay :: Date -> Int
+
+foreign import getISTDate :: String -> Int
+
+foreign import getISTMonth :: String -> Int
+foreign import getISTFullYear :: String -> Int
+foreign import getISTHours :: String -> Int
+foreign import getISTMinutes :: String -> Int
+foreign import getISTSeconds :: String -> Int
+
+foreign import getUTCDate :: String -> Int 
+
+foreign import getUTCMonth :: String -> Int 
+
+foreign import getUTCFullYear :: String -> Int 
+
+foreign import getUTCHours :: String -> Int 
+
+foreign import getUTCMinutes :: String -> Int 
+
+foreign import getUTCSeconds :: String -> Int 
 
 foreign import makePascalCase :: String -> String
 
@@ -243,8 +263,10 @@ convertTo12HourFormat time = do
     [h, m, _] -> do
       hours <- fromString h
       minutes <- fromString m
-      let {adjustedHours, period} = if hours < 12 then {adjustedHours: hours, period: "AM"} else {adjustedHours: hours - 12, period: "PM"}
-      let adjustedTime = show hours <> ":" <> show minutes <> " " <> period
+      let 
+        {adjustedHours, period} = if hours < 12 then {adjustedHours: hours, period: "AM"} else {adjustedHours: hours - 12, period: "PM"}
+        adjustedMinutes = (if minutes < 10 then "0" else "") <> show minutes
+        adjustedTime = show adjustedHours <> ":" <> adjustedMinutes <> " " <> period      
       pure adjustedTime
     _ -> Nothing
 
@@ -604,6 +626,7 @@ getScreenFromStage stage = case stage of
   ChangeToRideAccepted -> "change_to_ride_accepted"
   ChangeToRideStarted -> "change_to_ride_started"
   ConfirmingQuotes -> "confirming_quotes"
+  GoToTripSelect -> "go_to_round_trip"
 
 getGlobalPayload :: String -> Maybe GlobalPayload
 getGlobalPayload key = do
@@ -1203,3 +1226,188 @@ mkMapRouteConfig srcIcon destIcon isAnim animConfig =
     , autoZoom = true
     , polylineAnimationConfig = animConfig
     } 
+    
+formatDuration :: Int -> String
+formatDuration duration =
+  let days = duration / (60 * 60 * 24)
+      remainingAfterDays = duration `mod` (60 * 60 * 24)
+      hours = remainingAfterDays / (60 * 60)
+      remainingAfterHours = remainingAfterDays `mod` (60 * 60)
+      minutes = remainingAfterHours / 60
+      daysStr = if days > 0 then show days <> (if days > 1 then " days " else " day ") else ""
+      hoursStr = if hours > 0 then show hours <> " hrs " else ""
+      minutesStr = if days < 1 && minutes > 0 then show minutes <> " mins " else ""
+  in daysStr <> hoursStr <> minutesStr
+
+overlappingRides :: String -> Maybe String -> Int -> Maybe RideBookingListRes -> { overLapping :: Boolean , overLappedBooking :: Maybe RideBookingRes}
+overlappingRides rideStartTime maybeRideEndTime overlappingPollingTime savedScheduledRides = do 
+  let 
+    rideEndTime = fromMaybe rideStartTime maybeRideEndTime
+  case savedScheduledRides of 
+      Just (RideBookingListRes response) -> do
+        let 
+          overLappingRide = (DA.find (\item -> isJust (checkOverLap rideStartTime rideEndTime item overlappingPollingTime)) response.list)
+        case overLappingRide of 
+             Just resp -> { overLapping : true, overLappedBooking : Just resp }
+             Nothing   -> { overLapping : false, overLappedBooking : Nothing }
+      Nothing -> {overLapping : false , overLappedBooking : Nothing}
+  
+
+checkOverLap :: String -> String -> RideBookingRes -> Int -> Maybe RideBookingRes
+checkOverLap rideStartTime rideEndTime bookingResp overlappingPollingTime= do 
+  let 
+    bookingEndTime = calculateBookingEndTime bookingResp 
+    (RideBookingRes res) = bookingResp
+    rideScheduledTime = fromMaybe (getCurrentUTC "") res.rideScheduledTime
+    bookingStartTime = getUTCBeforeNSeconds rideScheduledTime overlappingPollingTime
+  if (isRidePossible rideStartTime rideEndTime bookingStartTime bookingEndTime ) then (Just bookingResp) else Nothing
+
+isRidePossible :: String -> String -> String -> String -> Boolean 
+isRidePossible searchStartTime searchEndTime bookingStartTime bookingEndTime = 
+  (bookingStartTime <= searchStartTime && searchStartTime <= bookingEndTime) 
+  || (bookingStartTime <= searchEndTime && searchEndTime <= bookingEndTime)
+  || (searchStartTime <= bookingStartTime && bookingEndTime <= searchEndTime) 
+  || (bookingStartTime <= searchStartTime && searchEndTime <= bookingEndTime)
+
+
+calculateBookingEndTime :: RideBookingRes -> String
+calculateBookingEndTime bookingResp =do
+  let     
+    (RideBookingRes resp) = bookingResp
+    (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+    (RideBookingDetails contents) = bookingDetails.contents
+    fareProductType = getFareProductType (bookingDetails.fareProductType)
+    estimatedDuration = fromMaybe 0 resp.estimatedDuration
+    estimatedDistance = resp.estimatedDistance
+    rideScheduledTime = fromMaybe (getCurrentUTC "") resp.rideScheduledTime
+    rideScheduledBufferTime = 60
+    timeToTravelOneKm = 3
+    returnTime = (fromMaybe rideScheduledTime resp.returnTime) 
+  case fareProductType of 
+    INTER_CITY -> do
+      let roundTrip = isJust resp.returnTime 
+      case roundTrip of 
+        true ->
+            let bookingEndTime = getUTCAfterNSeconds returnTime rideScheduledBufferTime
+            in bookingEndTime
+        false -> 
+            let 
+              estimatedDistanceInKm = calculateEstimatedDistanceInKm estimatedDistance
+              bookingEndTime =  getUTCAfterNSeconds rideScheduledTime $ (estimatedDistanceInKm * timeToTravelOneKm * 60) + rideScheduledBufferTime
+            in bookingEndTime 
+    RENTAL ->
+          let bookingEndTime = getUTCAfterNSeconds rideScheduledTime (estimatedDuration + rideScheduledBufferTime)
+          in bookingEndTime
+    _ -> 
+        let estimatedDistanceInKm = calculateEstimatedDistanceInKm estimatedDistance
+            bookingEndTime = getUTCAfterNSeconds rideScheduledTime $ (estimatedDistanceInKm * timeToTravelOneKm * 60) + rideScheduledBufferTime
+        in bookingEndTime 
+
+
+calculateEstimatedDistanceInKm :: Maybe Int  -> Int
+calculateEstimatedDistanceInKm distance =
+  let estimatedDistance = fromMaybe 0 distance
+   in estimatedDistance `div` 1000
+  
+
+getFareProductType :: String ->  FareProductType
+getFareProductType fareProductType = 
+  case fareProductType of 
+    "OneWaySpecialZoneAPIDetails" ->  ONE_WAY_SPECIAL_ZONE
+    "INTER_CITY" ->  INTER_CITY
+    "RENTAL" ->  RENTAL 
+    "ONE_WAY" ->  ONE_WAY
+    "DRIVER_OFFER" ->  DRIVER_OFFER
+    _ ->  ONE_WAY
+
+
+
+formatMonth :: Int -> String 
+formatMonth x
+  | x == 1 = (getString JANUARY)
+  | x == 2 = (getString FEBRUARY)
+  | x == 3 = (getString MARCH)
+  | x == 4 = (getString APRIL)
+  | x == 5 = (getString MAY)
+  | x == 6 = (getString JUNE)
+  | x == 7 = (getString JULY)
+  | x == 8 = (getString AUGUST)
+  | x == 9 = (getString SEPTEMBER)
+  | x == 10 = (getString OCTOBER)
+  | x == 11 = (getString NOVEMBER)
+  | x == 12 = (getString DECEMBER)
+  | otherwise = "Invalid"
+calculateDateInfo :: Int -> Int -> Int -> Int -> Int -> Int -> { returnTimeUTCString :: String, tripObj :: TripTypeData }
+calculateDateInfo year month day hour minute estDuration =
+  let 
+      hours = estDuration `div` 3600
+      remSeconds = estDuration `mod` 3600
+      mins = remSeconds / 60 
+
+      totalMin = (mins + minute )
+      totalHrs = hour + hours + (totalMin `div` 60)
+      totalDays = day + (totalHrs `div` 24)
+    
+      finalMin =  totalMin `mod` 60
+      finalHrs =  totalHrs `mod` 24
+      finalDay = totalDays
+
+      dateObj = addDaysToDate year (month+1) finalDay
+      returnTimeUTCString = unsafePerformEffect $ convertDateTimeConfigToUTC dateObj.year (dateObj.month) dateObj.day finalHrs finalMin 0
+      selectedDateTest = (show dateObj.day) <> " " <> (formatMonth (dateObj.month)) <> " , " <> (if(finalHrs > 12) then show (finalHrs - 12) else show finalHrs) <> ":" <>  (if finalMin < 10 then "0"  else "") <> (show finalMin) <> (if (finalHrs >= 12) then " PM" else " AM")
+      tripObj = 
+        { tripDateTimeConfig: 
+            { year: dateObj.year
+            , month: dateObj.month
+            , day: dateObj.day
+            , hour: finalHrs
+            , minute: finalMin
+            }
+        , tripDateUTC: returnTimeUTCString
+        , tripDateReadableString : selectedDateTest
+        }
+  in { returnTimeUTCString : returnTimeUTCString, tripObj : tripObj }
+
+addDaysToDate :: Int -> Int -> Int -> {year :: Int , month :: Int , day :: Int }
+addDaysToDate year month day
+  | day <= daysInMonth year month = { year: year, month: month, day: day }
+  | month == 12 = addDaysToDate (year + 1) 1 (day - daysInMonth year month)
+  | otherwise = addDaysToDate year (month + 1) (day - daysInMonth year month)
+
+daysInMonth :: Int -> Int -> Int
+daysInMonth y m
+  | m == 4 || m == 6 || m == 9 || m == 11 = 30
+  | m == 2 = if isLeapYear y then 29 else 28
+  | otherwise = 31
+isLeapYear :: Int -> Boolean
+isLeapYear y = (y `mod` 4 == 0 && y `mod` 100 /= 0) || (y `mod` 400 == 0)
+
+
+formatDateInHHMM :: String -> String
+formatDateInHHMM timeUTC = convertUTCtoISC timeUTC "hh" <> ":" <> convertUTCtoISC timeUTC "mm" <> " " <> convertUTCtoISC timeUTC "a"
+
+fetchDriverInformation :: Array API.RideAPIEntity -> Maybe ScheduledRideDriverInfo
+fetchDriverInformation rideList = do 
+      case head rideList of 
+        Just (API.RideAPIEntity driverInfo) -> do
+                                        let 
+                                          driverName = driverInfo.driverName
+                                          vehicleNumber = driverInfo.vehicleNumber
+                                        Just {driverName : driverName,vehicleNumber : vehicleNumber}
+        Nothing -> Nothing
+
+fetchAddressDetails :: String -> API.BookingLocationAPIEntity -> String
+fetchAddressDetails fareProductType (API.BookingLocationAPIEntity address) = 
+    let
+      door = fromMaybe "" address.door
+      street = fromMaybe "" address.street
+      area = fromMaybe "" address.area
+    in
+      if (fareProductType == "INTER_CITY" || ( DS.null street &&  DS.null door)) then
+        area
+      else if (not $ DS.null door && (not $ DS.null street)) then
+        door <> ", " <> street <> ", " <> area
+      else if (not $ DS.null door) then
+        door <> ", " <> area
+      else
+        street <> ", " <> area

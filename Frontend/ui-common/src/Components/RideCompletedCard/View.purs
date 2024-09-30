@@ -1,48 +1,46 @@
 module Components.RideCompletedCard.View where
 
-import Components.RideCompletedCard.Controller 
-
-import PrestoDOM 
-import Components.Banner.View as Banner
-import Components.Banner as BannerConfig
-import Data.Functor 
-import PrestoDOM.Animation as PrestoAnim
-import Animation (fadeIn,fadeInWithDelay) as Anim
-import Effect (Effect)
-import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (+), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, max, mod )
-import Common.Styles.Colors as Color
-import Components.SelectListModal as CancelRidePopUp
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Data.Array (mapWithIndex, length, (!!), null, any, (..),head)
-import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime, safeMarginTop, screenHeight, getNewIDWithTag)
-import Components.PrimaryButton as PrimaryButton
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import PrestoDOM.Properties (cornerRadii)
-import Language.Types (STR(..))
-import Common.Types.App 
-import Font.Style as FontStyle
-import Font.Size as FontSize
-import Halogen.VDom.DOM.Prop (Prop)
-import Components.PopUpModal as PopUpModal
-import JBridge as JB
-import Data.Function.Uncurried (runFn1)
-import Mobility.Prelude
+import Common.Types.App
+import Components.RideCompletedCard.Controller
 import ConfigProvider
-import Mobility.Prelude (boolToVisibility)
-import Engineering.Helpers.Commons as EHC
+import Data.Functor
 import Data.Maybe
-import JBridge(renderBase64Image)
-import Storage (getValueToLocalStore, KeyStore(..))
-import PrestoDOM.Animation as PrestoAnim
-import Animation as Anim
-import Engineering.Helpers.Utils as Utils
-import Data.Number (fromString)
-import Data.Int (ceil)
+import Mobility.Prelude
+import PrestoDOM
 import PrestoDOM.List
+
+import Animation (fadeIn, fadeInWithDelay) as Anim
+import Animation as Anim
 import CarouselHolder as CarouselHolder
-import Language.Strings (getString)
-import Debug
+import Common.Styles.Colors as Color
+import Components.Banner as BannerConfig
+import Components.Banner.View as Banner
+import Components.PopUpModal as PopUpModal
+import Components.PrimaryButton as PrimaryButton
+import Components.SelectListModal as CancelRidePopUp
+import Data.Array (mapWithIndex, length, (!!), null, any, (..), head)
+import Data.Function.Uncurried (runFn1)
+import Data.Int (ceil)
+import Data.Number (fromString)
 import Data.String as DS
+import Effect (Effect)
+import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime, safeMarginTop, screenHeight, getNewIDWithTag)
+import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.Utils as Utils
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import Halogen.VDom.DOM.Prop (Prop)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import JBridge (renderBase64Image)
+import JBridge as JB
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Mobility.Prelude (boolToVisibility)
+import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (+), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, max, mod)
+import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Storage (getValueToLocalStore, KeyStore(..))
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -353,7 +351,7 @@ customerSideBottomCardsView config push =
         , width MATCH_PARENT
         , visibility $ boolToVisibility config.showSafetyCenter
         ] $ map (\elem -> pillActionView push elem) config.customerBottomCard.actionPills
-      , if config.showRentalRideDetails then rentalTripDetailsView config push
+      , if config.showRentalRideDetails || config.showIntercityRideDetails then tripDetailsView config push
         else rideCustomerExperienceView config push 
       ]
     ]
@@ -955,8 +953,8 @@ contactSupportPopUpView config push =
 
 ---------------------------------------------- (Driver Card 7) rentalRideDetailsView  ------------------------------------------------------------------------------------------------------------------------------------------
 
-rentalTripDetailsView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-rentalTripDetailsView config push =
+tripDetailsView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+tripDetailsView config push =
   let rentalRowDetails = config.rentalRowDetails
       fareDiff = config.topCard.finalAmount - config.topCard.initialAmount
   in 
@@ -1010,6 +1008,7 @@ rentalTripDetailsView config push =
       , separatorView
       , rentalTripRowView config push TotalFare
       ]
+    , if config.showIntercityRideDetails then showIntercityFareDetailsView config else dummyTextView
     ]
   
   where 
@@ -1020,6 +1019,37 @@ rentalTripDetailsView config push =
       , margin $ MarginTop 16
       , background Color.grey700
       ][]
+
+showIntercityFareDetailsView :: forall w. Config -> PrestoDOM (Effect Unit) w 
+showIntercityFareDetailsView config = 
+      linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , cornerRadius 9.0
+      , background Color.white900
+      , padding $ Padding 16 16 16 16
+      , stroke $ "1,"<> Color.grey900
+      , margin $ MarginTop 16
+      , orientation VERTICAL
+      ][
+        textView  $ [
+          width MATCH_PARENT,
+          height WRAP_CONTENT,
+          margin $ MarginBottom 16,
+          text $ config.interCityTextConfig.headerText,
+          accessibility ENABLE,
+          accessibilityHint "Please pay parking or other charges incurred during the trip directly to the driver",
+          color Color.black700
+        ]<> FontStyle.body1 TypoGraphy
+      ,  textView  $ [
+          width MATCH_PARENT,
+          height WRAP_CONTENT,
+          text $ config.interCityTextConfig.bottomText,
+          accessibility ENABLE,
+          accessibilityHint "Toll and State permit charges are not included and have to be paid to the driver separately.",
+          color Color.black700
+        ]<> FontStyle.body1 TypoGraphy
+      ]
 
 rentalTripRowView :: forall w. Config -> (Action -> Effect Unit) -> RentalRowView -> PrestoDOM (Effect Unit) w
 rentalTripRowView config push description =

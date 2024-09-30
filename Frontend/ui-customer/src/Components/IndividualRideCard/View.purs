@@ -43,7 +43,7 @@ view push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   ][  if os == "IOS" then textView [] else shimmerView push state 
-    , cardView push state
+    , cardViewV2 push state
   ]
 
 
@@ -54,7 +54,7 @@ shimmerView push state =
   , width MATCH_PARENT
   , padding $ Padding 16 20 16 (if state.optionsVisibility then 16 else 20)
   , margin $ Margin 16 20 16 4
-  , cornerRadius 8.0
+  , cornerRadius 16.0
   , stroke $ "1,"<>Color.grey900
   , orientation VERTICAL
   , PrestoList.visibilityHolder "shimmerVisibility"
@@ -65,24 +65,37 @@ shimmerView push state =
     , viewDetailsAndRepeatRideShimmer state
    ]
 
+cardViewV2 :: forall w. (Action -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w
+cardViewV2 push state = 
+  linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        , margin $ Margin 16 20 16 4
+        , PrestoList.cornerRadiusHolder "cornerRadius"
+        , PrestoList.backgroundHolder "rideTypeBackground"
+        ]
+        [ rideTypeView state
+        , zoneView state
+        , cardView push state
+        ]
 cardView :: forall w. (Action -> Effect Unit) -> IndividualRideCardState -> PrestoDOM (Effect Unit) w
 cardView push state =
   linearLayout (
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , PrestoList.visibilityHolder "cardVisibility"
+  , background Color.blue800
   , orientation VERTICAL
-  , margin $ Margin 16 20 16 4
-  , cornerRadius 8.0
+  , cornerRadii $ Corners 16.0 true true false false
   , stroke $ "1,"<>Color.grey900
   , background Color.white900
   ] <> ( if not state.optionsVisibility then [PrestoList.onClickHolder push OnClick ] else []))
-  [  zoneView state
-    , linearLayout
+  [  linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , padding $ Padding 16 20 16 10
-      , cornerRadius 8.0
+      , cornerRadius 12.0
       , orientation VERTICAL
       , background Color.white900
       ]([  rideDetails push state
@@ -91,6 +104,22 @@ cardView push state =
       ] <> (if state.optionsVisibility then [separator, viewDetailsAndRepeatRide push state] else []))
    ]
 
+rideTypeView :: forall w. IndividualRideCardState -> PrestoDOM (Effect Unit) w 
+rideTypeView state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , padding (PaddingVertical 5 5)
+  , orientation HORIZONTAL
+  , gravity CENTER
+  , PrestoList.visibilityHolder "rideTypeVisibility"
+  ][ textView $
+     [ width WRAP_CONTENT
+     , height WRAP_CONTENT
+     , PrestoList.textHolder "itemRideType"
+     , color Color.white900
+     ] <> FontStyle.body6 LanguageStyle
+   ]
 zoneView :: forall w. IndividualRideCardState ->  PrestoDOM (Effect Unit) w
 zoneView state =
   linearLayout
@@ -162,7 +191,6 @@ rideDetails push state =
           , width WRAP_CONTENT
           , orientation HORIZONTAL
           , gravity CENTER_VERTICAL
-
           , layoutGravity "center_vertical"
           ][  textView (
               [ PrestoList.textHolder "totalAmount"

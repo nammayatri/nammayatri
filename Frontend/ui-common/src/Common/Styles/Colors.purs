@@ -356,6 +356,9 @@ mountainFig = "#373B49"
 blueGreen :: Color
 blueGreen = "#42B8BA"
 
+blueGreenBg :: Color 
+blueGreenBg = "#E8F5F6"
+
 azureine :: Color
 azureine = "#0157D8"
 

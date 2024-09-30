@@ -100,6 +100,7 @@ sourceToDestinationConfig state = let
   destinationText = if state.data.selectedItem.status /= "CANCELLED"
                   then endDate <> "\n" <> state.data.destination
                   else state.data.destination
+  fareProductType = state.data.selectedItem.rideType
   sourceToDestinationConfig' = SourceToDestination.config
     { id = Just $ "TripDetailsSTDC_" <> state.data.tripId
     , sourceImageConfig {
@@ -111,6 +112,7 @@ sourceToDestinationConfig state = let
       , padding = (Padding 2 0 2 2)
       , margin = (MarginHorizontal 12 15)
       , color = Color.greyDavy
+      , maxLines = 3
       , ellipsize = false
       }
     , destinationImageConfig {
@@ -125,7 +127,7 @@ sourceToDestinationConfig state = let
       , color = Color.greyDavy
       , ellipsize = false
       }
-    , showDestination = destinationText /= ""
+    , showDestination = destinationText /= "" && fareProductType /= ST.RENTAL
     }
   in sourceToDestinationConfig'
 
