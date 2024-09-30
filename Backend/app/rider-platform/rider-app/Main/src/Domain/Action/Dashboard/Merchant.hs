@@ -41,6 +41,9 @@ import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.RiderConfig as DRC
 import Environment
+import qualified "shared-services" IssueManagement.Common as ICommon
+import qualified "shared-services" IssueManagement.Domain.Types.Issue.IssueConfig as DIConfig
+import qualified "shared-services" IssueManagement.Storage.CachedQueries.Issue.IssueConfig as CQIssueConfig
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.SMS as SMS
@@ -60,6 +63,7 @@ import qualified Lib.Queries.SpecialLocationGeom as QSLG
 import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CQMM
@@ -355,22 +359,23 @@ postMerchantConfigOperatingCityCreate :: ShortId DM.Merchant -> Context.City -> 
 postMerchantConfigOperatingCityCreate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   baseOperatingCity <- CQMOC.findByMerchantIdAndCity merchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show city)
+  now <- getCurrentTime
   let baseOperatingCityId = baseOperatingCity.id
 
   -- city
-  newOperatingCity <- buildMerchantOperatingCity merchant.id
+  newOperatingCity <- buildMerchantOperatingCity merchant.id now
 
   -- merchant message
   merchantMessages <- CQMM.findAllByMerchantOpCityId baseOperatingCityId
-  newMerchantMessages <- mapM (buildMerchantMessage newOperatingCity.id) merchantMessages
+  let newMerchantMessages = map (buildMerchantMessage newOperatingCity.id now) merchantMessages
 
   -- merchant payment method
   merchantPaymentMethods <- CQMPM.findAllByMerchantOperatingCityId baseOperatingCityId
-  newMerchantPaymentMethods <- mapM (buildMerchantPaymentMethod newOperatingCity.id) merchantPaymentMethods
+  newMerchantPaymentMethods <- mapM (buildMerchantPaymentMethod newOperatingCity.id now) merchantPaymentMethods
 
   -- merchant service usage config
   merchantServiceUsageConfig <- CQMSUC.findByMerchantOperatingCityId baseOperatingCityId >>= fromMaybeM (InvalidRequest "Merchant Service Usage Config not found")
-  newMerchantServiceUsageConfig <- buildMerchantServiceUsageConfig newOperatingCity.id merchantServiceUsageConfig
+  let newMerchantServiceUsageConfig = buildMerchantServiceUsageConfig newOperatingCity.id now merchantServiceUsageConfig
 
   -- merchant service config
   -- merchantServiceConfigs <- CQMSC.findAllMerchantOpCityId baseOperatingCityId
@@ -378,13 +383,17 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- rider_config
   riderConfig <- CQRC.findByMerchantOperatingCityId baseOperatingCityId >>= fromMaybeM (InvalidRequest "Transporter Config not found")
-  newRiderConfig <- buildRiderConfig newOperatingCity.id riderConfig
+  let newRiderConfig = buildRiderConfig newOperatingCity.id now riderConfig
 
   -- geometry
   geometry <- buildGeometry
 
   -- exophone
   exophones <- CQExophone.findAllByMerchantOperatingCityId baseOperatingCityId
+
+  -- issue config
+  issueConfig <- CQIssueConfig.findByMerchantOpCityId (cast baseOperatingCityId) ICommon.DRIVER >>= fromMaybeM (InvalidRequest "Issue Config not found")
+  newIssueConfig <- buildIssueConfig newOperatingCity.id now issueConfig
 
   QGEO.create geometry
   CQMOC.create newOperatingCity
@@ -394,8 +403,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
   -- mapM_ CQMSC.create newMerchantServiceConfigs
   CQRC.create newRiderConfig
   whenJust (listToMaybe exophones) $ \exophone -> do
-    exophone' <- buildNewExophone newOperatingCity.id exophone
+    exophone' <- buildNewExophone newOperatingCity.id now exophone
     CQExophone.create exophone'
+  CQIssueConfig.create newIssueConfig
 
   when req.enableForMerchant $ do
     let newOrigin = updateGeoRestriction merchant.geofencingConfig.origin
@@ -420,10 +430,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             geom = Just req.geom
           }
 
-    buildMerchantOperatingCity merchantId = do
+    buildMerchantOperatingCity merchantId currentTime = do
       id <- generateGUID
-      now <- getCurrentTime
-      pure
+      return
         DMOC.MerchantOperatingCity
           { id,
             merchantId,
@@ -434,56 +443,50 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             state = req.state,
             country = req.country,
             distanceUnit = fromMaybe Meter req.distanceUnit,
-            createdAt = now,
-            updatedAt = now
+            createdAt = currentTime,
+            updatedAt = currentTime
           }
 
-    buildNewExophone newCityId DExophone.Exophone {..} = do
+    buildNewExophone newCityId currentTime DExophone.Exophone {..} = do
       newId <- generateGUID
-      now <- getCurrentTime
-      return $
+      return
         DExophone.Exophone
           { id = newId,
             merchantOperatingCityId = newCityId,
             primaryPhone = req.exophone,
             backupPhone = req.exophone,
             isPrimaryDown = False,
-            createdAt = now,
-            updatedAt = now,
+            createdAt = currentTime,
+            updatedAt = currentTime,
             ..
           }
 
-    buildMerchantMessage newCityId DMM.MerchantMessage {..} = do
-      now <- getCurrentTime
-      return $
-        DMM.MerchantMessage
-          { merchantOperatingCityId = newCityId,
-            createdAt = now,
-            updatedAt = now,
-            ..
-          }
+    buildMerchantMessage newCityId currentTime DMM.MerchantMessage {..} =
+      DMM.MerchantMessage
+        { merchantOperatingCityId = newCityId,
+          createdAt = currentTime,
+          updatedAt = currentTime,
+          ..
+        }
 
-    buildMerchantPaymentMethod newCityId DMPM.MerchantPaymentMethod {..} = do
+    buildMerchantPaymentMethod newCityId currentTime DMPM.MerchantPaymentMethod {..} = do
       newId <- generateGUID
-      now <- getCurrentTime
-      return $
+      return
         DMPM.MerchantPaymentMethod
           { id = newId,
             merchantOperatingCityId = newCityId,
-            createdAt = now,
-            updatedAt = now,
+            createdAt = currentTime,
+            updatedAt = currentTime,
             ..
           }
 
-    buildMerchantServiceUsageConfig newCityId DMSUC.MerchantServiceUsageConfig {..} = do
-      now <- getCurrentTime
-      return $
-        DMSUC.MerchantServiceUsageConfig
-          { merchantOperatingCityId = newCityId,
-            createdAt = now,
-            updatedAt = now,
-            ..
-          }
+    buildMerchantServiceUsageConfig newCityId currentTime DMSUC.MerchantServiceUsageConfig {..} = do
+      DMSUC.MerchantServiceUsageConfig
+        { merchantOperatingCityId = newCityId,
+          createdAt = currentTime,
+          updatedAt = currentTime,
+          ..
+        }
 
     {- Do it once service config on basis on city id is implemented -}
     -- buildMerchantServiceConfig newCityId DMSC.MerchantServiceConfig {..} = do
@@ -496,12 +499,21 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
     --         ..
     --       }
 
-    buildRiderConfig newCityId DRC.RiderConfig {..} = do
-      now <- getCurrentTime
-      return $
-        DRC.RiderConfig
-          { merchantOperatingCityId = newCityId,
-            createdAt = now,
-            updatedAt = now,
+    buildRiderConfig newCityId currentTime DRC.RiderConfig {..} =
+      DRC.RiderConfig
+        { merchantOperatingCityId = newCityId,
+          createdAt = currentTime,
+          updatedAt = currentTime,
+          ..
+        }
+
+    buildIssueConfig newCityId currentTime DIConfig.IssueConfig {..} = do
+      newId <- generateGUID
+      return
+        DIConfig.IssueConfig
+          { id = newId,
+            merchantOperatingCityId = cast newCityId,
+            createdAt = currentTime,
+            updatedAt = currentTime,
             ..
           }

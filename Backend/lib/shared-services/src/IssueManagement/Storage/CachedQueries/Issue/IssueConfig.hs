@@ -25,6 +25,9 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 
+create :: BeamFlow m r => IssueConfig -> m ()
+create = Queries.create
+
 findByMerchantOpCityId :: BeamFlow m r => Id MerchantOperatingCity -> Identifier -> m (Maybe IssueConfig)
 findByMerchantOpCityId merchantOpCityId identifier =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeIssueConfigKeyByMerchantOpCityId merchantOpCityId identifier) >>= \case
