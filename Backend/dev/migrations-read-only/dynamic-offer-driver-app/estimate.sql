@@ -53,3 +53,9 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN distance_unit character v
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN dp_version text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN supply_demand_ratio_to_loc double precision ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN supply_demand_ratio_from_loc double precision ;
