@@ -33,7 +33,9 @@ data IssueConfigT f = IssueConfigT
     onIssueReopenMsgs :: B.C f [Text],
     onKaptMarkIssueResMsgs :: B.C f [Text],
     merchantId :: B.C f Text,
-    messageTransformationConfig :: B.C f (Maybe DIC.MessageTransformationConfig)
+    messageTransformationConfig :: B.C f (Maybe DIC.MessageTransformationConfig),
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
