@@ -31,6 +31,7 @@ data Vehicle = Vehicle
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     model :: Kernel.Prelude.Text,
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    registeredAt :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
     registrationCategory :: Kernel.Prelude.Maybe Domain.Types.Vehicle.RegistrationCategory,
     registrationNo :: Kernel.Prelude.Text,
     selectedServiceTiers :: [Domain.Types.Common.ServiceTierType],

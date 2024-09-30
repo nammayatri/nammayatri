@@ -31,6 +31,7 @@ data VehicleT f = VehicleT
     merchantId :: B.C f Kernel.Prelude.Text,
     model :: B.C f Kernel.Prelude.Text,
     oxygen :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    registeredAt :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
     registrationCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.RegistrationCategory),
     registrationNo :: B.C f Kernel.Prelude.Text,
     selectedServiceTiers :: B.C f [Domain.Types.Common.ServiceTierType],

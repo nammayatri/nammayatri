@@ -286,6 +286,7 @@ makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now 
       mYManufacturing = rc.mYManufacturing,
       selectedServiceTiers = [],
       downgradeReason = Nothing,
+      registeredAt = utctDay <$> rc.dateOfRegistration,
       createdAt = now,
       updatedAt = now
     }
