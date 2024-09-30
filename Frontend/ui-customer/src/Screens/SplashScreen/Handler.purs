@@ -30,6 +30,5 @@ splashScreen :: FlowBT String Unit
 splashScreen = do
   (GlobalState globalState) <- getState
   void $ liftFlowBT $ initUIWithNameSpace "SplashScreen" Nothing
-  void $ lift $ lift  $ do 
-    void $ runScreenWithNameSpace $ SplashScreen.screen globalState.splashScreen
-    liftFlow $ JB.hideLoader ""
+  void $ lift $ lift $ runScreen $ SplashScreen.screen globalState.splashScreen
+  liftFlowBT $ JB.hideLoader ""

@@ -299,9 +299,6 @@ export const getPastYears = function (count) {
       };
       result.push(obj);
     }
-
-    console.log(language, formattedLanguage);
-    console.log(result);
     return result.reverse();
   } catch (e) {
     console.log("error in getPastYears", e);

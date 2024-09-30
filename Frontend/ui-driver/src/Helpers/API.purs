@@ -24,12 +24,17 @@ import Foreign.Generic (class Decode)
 import Types.App (FlowBT, GlobalState)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore, getValueToLocalNativeStore)
 import Control.Monad.Trans.Class (lift)
-import Presto.Core.Types.Language.Flow (loadS, APIResult(..), Flow)
+import Presto.Core.Types.Language.Flow (loadS, APIResult(..), Flow, fork)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Array (singleton)
 import Data.Maybe (maybe, Maybe(..))
 import Data.Either (Either(..))
 import Data.String as DS
+import JBridge as JB
+import Screens.NoInternetScreen.Handler as NoInternetScreen
+import Debug
+import Control.Transformers.Back.Trans as App
+import Engineering.Helpers.Utils (checkConditionToShowInternetScreen)
 
 data DriverDefaultErrorHandler = DriverDefaultErrorHandler
 instance defaultApiErrorHandler :: ApiErrorHandler DriverDefaultErrorHandler GlobalState where
@@ -75,7 +80,7 @@ callApiBTWithOptions :: forall a b e.
 callApiBTWithOptions payload headers errorHandler = do
   regToken <- lift $ lift $ loadS $ show REGISTERATION_TOKEN
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
-  API.callApiBT payload headers' errorHandler (pure unit)
+  API.callApiBT payload headers' errorHandler $ noInternetScreenHandler "lazy"
 
 callApiWithOptions :: forall a b.
   StandardEncode a =>
@@ -87,7 +92,8 @@ callApiWithOptions :: forall a b.
 callApiWithOptions payload headers = do
   regToken <- loadS $ show REGISTERATION_TOKEN
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
-  API.callApi payload headers' (pure unit)
+  API.callApi payload headers' $ noInternetScreenHandler "lazy"
+   
 
 callApi :: forall a b.
   StandardEncode a =>
@@ -108,7 +114,7 @@ callGzipApiWithOptions :: forall a b.
 callGzipApiWithOptions payload headers = do
   regToken <- loadS $ show REGISTERATION_TOKEN
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
-  API.callGzipApi payload headers' (pure unit)
+  API.callGzipApi payload headers' $ noInternetScreenHandler "lazy"
 
 callGzipApi :: forall a b.
   StandardEncode a =>
@@ -140,7 +146,7 @@ callGzipApiBTWithOptions :: forall a b e.
 callGzipApiBTWithOptions payload headers errorHandler = do
   regToken <- lift $ lift $ loadS $ show REGISTERATION_TOKEN
   let headers' = headers <> baseHeaders <> (tokenHeader regToken)
-  API.callGzipApiBT payload headers' errorHandler (pure unit)
+  API.callGzipApiBT payload headers' errorHandler $ noInternetScreenHandler "lazy"
 
 callGzipApiBT :: forall a b.
   StandardEncode a =>
@@ -150,3 +156,14 @@ callGzipApiBT :: forall a b.
   FlowBT String b
 callGzipApiBT payload =
   callGzipApiBTWithOptions payload [] DriverDefaultErrorHandler
+
+
+
+noInternetScreenHandler :: forall a. a -> Flow GlobalState Unit
+noInternetScreenHandler lazy = do
+  if checkConditionToShowInternetScreen "lazy" then do
+    void  $ fork $ do  
+        void $ pure $ JB.hideKeyboardOnNavigation true
+        void $ NoInternetScreen.noInternetScreen'
+  else 
+    pure unit

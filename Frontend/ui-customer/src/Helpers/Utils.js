@@ -233,7 +233,7 @@ export const storeCallBackCustomer = function (cb) {
                 console.log("notificationType ->", notificationType);
                 console.log("notificationBody ->", notificationBody);
                 window.notificationType = notificationType;
-                if (window.whitelistedNotification.includes(notificationType)) {
+                if (window.whitelistedNotification.has(notificationType)) {
                   Object.keys(notificationCallBacks).forEach((key) => {
                     notificationCallBacks[key](notificationType,notificationBody);
                   })
@@ -244,7 +244,7 @@ export const storeCallBackCustomer = function (cb) {
               });
               const notificationCallBack = function (notificationType,notificationBody) {
                 console.log("notificationType ->", notificationType);
-                if (window.whitelistedNotification.includes(notificationType)) {
+                if (window.whitelistedNotification.has(notificationType)) {
                   Object.keys(notificationCallBacks).forEach((key) => {
                     notificationCallBacks[key](notificationType,notificationBody);
                   })
