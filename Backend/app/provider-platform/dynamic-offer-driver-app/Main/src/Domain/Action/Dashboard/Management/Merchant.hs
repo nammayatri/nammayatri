@@ -77,6 +77,7 @@ import qualified Domain.Types.GoHomeConfig as DGoHomeConfig
 import qualified Domain.Types.LeaderBoardConfigs as DLC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DMM
+import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -1110,7 +1111,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   logTagInfo "Updating Fare Policies for merchant: " (show merchant.id <> " and city: " <> show opCity)
-  flatFarePolicies <- readCsv merchantOpCity.distanceUnit req.file
+  flatFarePolicies <- readCsv merchantOpCity.distanceUnit req.file merchantOpCity.id
   logTagInfo "Read file: " (show flatFarePolicies)
   let boundedAlreadyDeletedMap = Map.empty :: Map.Map Text Bool
   (farePolicyErrors, _) <- (foldlM (processFarePolicyGroup merchantOpCity) ([], boundedAlreadyDeletedMap) . groupFarePolices) flatFarePolicies
@@ -1122,11 +1123,11 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
   where
     cleanField = replaceEmpty . T.strip
 
-    readCsv distanceUnit csvFile = do
+    readCsv distanceUnit csvFile merchantOpCity = do
       csvData <- L.runIO $ BS.readFile csvFile
       case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector FarePolicyCSVRow)) of
         Left err -> throwError (InvalidRequest $ show err)
-        Right (_, v) -> V.imapM (makeFarePolicy distanceUnit) v >>= (pure . V.toList)
+        Right (_, v) -> V.imapM (makeFarePolicy merchantOpCity distanceUnit) v >>= (pure . V.toList)
 
     readCSVField :: Read a => Int -> Text -> Text -> Flow a
     readCSVField idx fieldValue fieldName =
@@ -1271,8 +1272,10 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 
           return (errors, newBoundedAlreadyDeletedMap)
 
-    makeFarePolicy :: DistanceUnit -> Int -> FarePolicyCSVRow -> Flow (Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, FarePolicy.FarePolicy)
-    makeFarePolicy distanceUnit idx row = do
+    checkIfvehicleServiceTierExists vehicleServiceTier merchanOperatingCityId = CQVST.findByServiceTierTypeAndCityId merchanOperatingCityId vehicleServiceTier >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
+
+    makeFarePolicy :: Id MerchantOperatingCity -> DistanceUnit -> Int -> FarePolicyCSVRow -> Flow (Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, FarePolicy.FarePolicy)
+    makeFarePolicy merchantOpCity distanceUnit idx row = do
       now <- getCurrentTime
       let createdAt = now
       let updatedAt = now
@@ -1296,6 +1299,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             return $ BoundedByWeekday bounds
       city :: Context.City <- readCSVField idx row.city "City"
       vehicleServiceTier :: ServiceTierType <- readCSVField idx row.vehicleServiceTier "Vehicle Service Tier"
+      _ <- checkIfvehicleServiceTierExists merchantOpCity vehicleServiceTier
       area :: SL.Area <- readCSVField idx row.area "Area"
       idText <- cleanCSVField idx row.farePolicyKey "Fare Policy Key"
       tripCategory :: TripCategory <- readCSVField idx row.tripCategory "Trip Category"

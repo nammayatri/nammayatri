@@ -23,6 +23,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.FarePolicy as FP
 import qualified SharedLogic.TollsDetector as TD
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Tools.Error
 import qualified Tools.Maps as Maps
 
 getCalculateFare ::
@@ -44,10 +46,16 @@ getCalculateFare (_, merchantId, merchanOperatingCityId) distanceWeightage dropL
   let mbTollNames = (\(_, tollNames, _) -> tollNames) <$> mbTollChargesAndNames
   let mbIsAutoRickshawAllowed = (\(_, _, mbIsAutoRickshawAllowed') -> mbIsAutoRickshawAllowed') <$> mbTollChargesAndNames
   let allFarePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed fareProducts.farePolicies
-  estimates <- mapM (DBS.buildEstimate merchanOperatingCityId INR Meter Nothing now False Nothing False mbDistance Nothing mbTollCharges mbTollNames Nothing Nothing 0 Nothing False Nothing) allFarePolicies ------- No need to handle stops in this as this is used for analytical purpose via script, not an actual ui api------------------
+  estimates <- mapM (\fp -> buildEstimateHelper fp mbTollCharges mbTollNames mbDistance now) allFarePolicies
   let estimateAPIEntity = map buildEstimateApiEntity estimates
   return API.Types.UI.FareCalculator.FareResponse {estimatedFares = estimateAPIEntity}
   where
+    buildEstimateHelper fp mbTollCharges mbTollNames mbDistance now = do
+      vehicleServiceTierItem <-
+        CQVST.findByServiceTierTypeAndCityId fp.vehicleServiceTier merchanOperatingCityId
+          >>= fromMaybeM (VehicleServiceTierNotFound $ show fp.vehicleServiceTier)
+      DBS.buildEstimate merchanOperatingCityId INR Meter Nothing now False Nothing False mbDistance Nothing mbTollCharges mbTollNames Nothing Nothing 0 Nothing False vehicleServiceTierItem fp
+
     selectFarePolicy distance' duration' mbIsAutoRickshawAllowed' =
       filter isValid
       where
