@@ -1632,3 +1632,4 @@ getML stringKey =
         PER_MIN -> "മിനിറ്റിന്"
         HOUR -> "മണിക്കൂർ"
         SEC -> "സെക്കൻഡ്"
+        BIKE_TAXI -> "ബൈക്ക് ടാക്സി"

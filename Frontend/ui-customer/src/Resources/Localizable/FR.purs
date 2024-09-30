@@ -1636,3 +1636,4 @@ getFR stringKey =
         PER_MIN -> "par min"
         HOUR -> "heure"
         SEC -> "seconde"
+        BIKE_TAXI -> "Taxi Moto"

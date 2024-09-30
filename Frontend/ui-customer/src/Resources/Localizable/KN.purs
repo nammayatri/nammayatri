@@ -1637,3 +1637,4 @@ getKN stringKey =
         PER_MIN -> "ಪ್ರತಿ ನಿಮಿಷ"
         HOUR -> "ಗಂಟೆ"
         SEC -> "ಸೆಕೆಂಡು"
+        BIKE_TAXI -> "ಬೈಕ್ ಟ್ಯಾಕ್ಸಿ"

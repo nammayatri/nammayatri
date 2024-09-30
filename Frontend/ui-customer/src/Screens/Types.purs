@@ -804,6 +804,7 @@ type HomeScreenStateData =
   , latestScheduledRides :: Maybe RideBookingListRes
   , overLappingBooking :: Maybe RideBookingRes
   , upcomingRideDetails :: Maybe UpcomingRideDetails
+  , selectedService :: Maybe RC.Service
 }
 
 type UpcomingRideDetails = {

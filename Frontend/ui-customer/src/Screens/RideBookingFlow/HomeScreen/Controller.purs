@@ -3140,17 +3140,19 @@ eval (UpdateSafetySettings safetySettings@(API.GetEmergencySettingsRes settings)
 
 eval (ServicesOnClick service) state = do 
   void $ pure $ performHapticFeedback unit
+  let updatedState = state{data{selectedService = Just service}}
   case service.type of 
-    RC.RENTAL -> exit $ GoToRentalsFlow state { data {rentalsInfo = Nothing } }
+    RC.RENTAL -> exit $ GoToRentalsFlow updatedState { data {rentalsInfo = Nothing } }
     RC.INTERCITY ->
-      if state.data.currentCityConfig.enableIntercity then do 
+      if updatedState.data.currentCityConfig.enableIntercity then do 
         void $ pure $ updateLocalStage SearchLocationModel 
-        continue state { data { source=(getString CURRENT_LOCATION), rentalsInfo = Nothing}, props{isSource = Just false, canScheduleRide = true, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }, isIntercityFlow = true}}
+        continue updatedState { data { source=(getString CURRENT_LOCATION), rentalsInfo = Nothing}, props{isSource = Just false, canScheduleRide = true, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }, isIntercityFlow = true}}
         else do
           void $ pure $ toast $ getString INTERCITY_RIDES_COMING_SOON
-          continue state
-    RC.INSTANT -> continueWithCmd state [ pure $ WhereToClick]
-    RC.TRANSIT -> exit $ GoToMetroTicketBookingFlow state
+          continue updatedState
+    RC.INSTANT -> continueWithCmd updatedState [ pure $ WhereToClick]
+    RC.TRANSIT -> exit $ GoToMetroTicketBookingFlow updatedState
+    RC.BIKE_TAXI -> continueWithCmd updatedState [ pure $ WhereToClick]
     _ -> continue state
 
 eval (EnableShareRideForContact personId) state = do
