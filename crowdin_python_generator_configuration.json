@@ -1,0 +1,52 @@
+{
+    "DRIVER_SOURCE_FILE" : "Frontend/ui-driver/src/generated/source/main_locale.json",
+    "DRIVER_TRANSLATION_PATH" : "Frontend/ui-driver/src/generated/translations/",
+    "DRIVER_PURS_LOCALIZATION_LOCATION" : "Frontend/ui-driver/src/generated/localization/",
+
+    "CUSTOMER_SOURCE_FILE" : "Frontend/ui-customer/src/generated/source/main_locale.json",
+    "CUSTOMER_TRANSLATION_PATH" : "Frontend/ui-customer/src/generated/translations/",
+    "CUSTOMER_PURS_LOCALIZATION_LOCATION" : "Frontend/ui-customer/src/generated/localization/",
+
+    "LANGUAGE_TRANSLATION_LIST" : [
+        {
+          "two_letter_code" : "bn",
+          "purs_localization_function" : "getBN",
+          "default_translation" : "bengali_default"
+        },
+        {
+            "two_letter_code" : "en",
+            "purs_localization_function" : "getEN",
+            "default_translation" : "english_default"
+        },
+        {
+            "two_letter_code" : "fr",
+            "purs_localization_function" : "getFR",
+            "default_translation" : "french_default"
+        },
+        {
+            "two_letter_code" : "hi",
+            "purs_localization_function" : "getHI",
+            "default_translation" : "hindi_default"
+        },
+        {
+            "two_letter_code" : "kn",
+            "purs_localization_function" : "getKN",
+            "default_translation" : "kannada_default"
+        },
+        {
+            "two_letter_code" : "ta",
+            "purs_localization_function" : "getTA",
+            "default_translation" : "tamil_default"
+        },
+        {
+            "two_letter_code" : "te",
+            "purs_localization_function" : "getTE",
+            "default_translation" : "telugu_default"
+        },
+        {
+            "two_letter_code" : "ml",
+            "purs_localization_function" : "getML",
+            "default_translation" : "malayalam_default"
+        }
+    ]
+}
