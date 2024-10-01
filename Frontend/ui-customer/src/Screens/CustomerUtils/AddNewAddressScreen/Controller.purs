@@ -331,6 +331,7 @@ getLocation prediction = {
   , recencyDate : Nothing
   , locationScore : Nothing
   , dynamicAction : Nothing
+  , types : Nothing
 }
 
 encodeAddressDescription :: AddNewAddressScreenState -> SavedReqLocationAPIEntity
@@ -395,6 +396,7 @@ getSavedLocations savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
 , recencyDate : Nothing
 , locationScore : Nothing
 , dynamicAction : Nothing
+, types : Nothing 
 }) savedLocation )
 
 getSavedTags :: (Array SavedReqLocationAPIEntity) -> Array String
@@ -508,4 +510,5 @@ savedLocTransformer savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
 , recencyDate : Nothing
 , locationScore : Nothing
 , dynamicAction : Nothing
+, types : Nothing
 }) savedLocation )
