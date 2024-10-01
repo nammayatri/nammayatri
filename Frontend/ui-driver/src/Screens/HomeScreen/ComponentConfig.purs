@@ -2790,7 +2790,7 @@ isAcWorkingPopupConfig state =
     , buttonLayoutMargin = MarginBottom 10
     , dismissPopup = true
     , isVisible = not (state.data.linkedVehicleCategory `elem` [ "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR" ])
-    , -- Temporary Fix until Ambulance Ride Flow is completed from BE margin = MarginHorizontal 25 25
+    -- Temporary Fix until Ambulance Ride Flow is completed from BE margin = MarginHorizontal 25 25
     , primaryText
       { text = getString IS_YOUR_CAR_AC_TURNED_ON_AND_WORKING
       , textStyle = Heading2
