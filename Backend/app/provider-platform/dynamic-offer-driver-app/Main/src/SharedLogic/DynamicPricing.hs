@@ -25,7 +25,7 @@ mkSupplyDemandRatioKeyWithGeohash geohash vehicleServiceTier = "S_D_ratio_geohas
 
 data DynamicPricingResult = DynamicPricingResult
   { congestionFeePerMin :: Maybe Double,
-    version :: Text
+    version :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
