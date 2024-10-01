@@ -34,20 +34,20 @@ import Debug (spy)
 import Effect.Class (liftEffect)
 import Data.Function.Uncurried (runFn2)
 import Engineering.Helpers.Commons (liftFlow, isInvalidUrl)
-import Engineering.Helpers.Utils (toggleLoader)
+import Engineering.Helpers.Utils (toggleLoader, checkConditionToShowInternetScreen)
 import Foreign.Generic (encode)
 import Foreign.NullOrUndefined (undefined)
 import Foreign.Object (empty)
 import Helpers.Utils (decodeErrorCode, getTime, toStringJSON, decodeErrorMessage, LatLon(..), getCityConfig)
 import Engineering.Helpers.Events as Events
-import JBridge (setKeyInSharedPrefKeys, toast, factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService, getManufacturerName)
+import JBridge (setKeyInSharedPrefKeys, toast, factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService, getManufacturerName, hideKeyboardOnNavigation)
 import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Prelude (bind, discard, pure, unit, identity, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show, (<>), (||), not, (/=), (<$>))
+import Prelude
 import Presto.Core.Types.API (ErrorResponse(..), Header(..), Headers(..))
-import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS)
+import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS, fork)
 import Screens.Types (DriverStatus)
 import Services.Config as SC
 import Services.EndPoints as EP
@@ -67,6 +67,8 @@ import SessionCache
 import Helpers.API (getDeviceDetails)
 import MerchantConfig.Types as MCT
 import Common.RemoteConfig.Utils as CommonRC
+import Screens.NoInternetScreen.Handler as NoInternetScreen
+import Helpers.API as HAPI
 
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
@@ -114,7 +116,8 @@ withAPIResult url f flow = do
                 _ <- pure $ printLog "error resp" errResp
                 let codeMessage = decodeErrorCode errResp.errorMessage
                 let userMessage = decodeErrorMessage errResp.errorMessage
-                if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
+                if err.code == -1 then do void $ HAPI.noInternetScreenHandler "lazy"
+                else if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
                     _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
                     _ <- pure $ deleteValueFromLocalStore VERSION_NAME
                     _ <- pure $ deleteValueFromLocalStore BASE_URL
@@ -145,7 +148,8 @@ withAPIResultBT url f errorHandler flow = do
                 _ <- pure $ printLog "error resp" errResp
                 let codeMessage = decodeErrorCode errResp.errorMessage
                 let userMessage = decodeErrorMessage errResp.errorMessage
-                if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
+                if err.code == -1 then void $ lift $ lift $ HAPI.noInternetScreenHandler "lazy"
+                else if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
                     deleteValueFromLocalStore REGISTERATION_TOKEN
                     deleteValueFromLocalStore VERSION_NAME
                     deleteValueFromLocalStore BASE_URL

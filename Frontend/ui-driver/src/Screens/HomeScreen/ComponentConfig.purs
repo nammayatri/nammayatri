@@ -1634,7 +1634,7 @@ getRideCompletedConfig state = let
     additionalCharges = [
       {
         text : if state.data.toll.tollAmbigous then getString TOLL_ROAD_CHANGED else if state.data.toll.finalCharge > 0.0  then getString $ RIDE_TOLL_FARE_INCLUDES $  (getCurrency appConfig) <> (show $ round $ state.data.toll.finalCharge) else getString TOLL_ROAD_CHANGED
-      , visibility : boolToVisibility $ state.data.toll.estimatedCharge > 0.0 ||  state.data.toll.finalCharge > 0.0
+      , visibility : boolToVisibility $ state.data.toll.tollAmbigous ||  state.data.toll.finalCharge > 0.0
       , image : fetchImage FF_COMMON_ASSET "ny_ic_blue_toll"
       , textColor : Color.blue800
       },

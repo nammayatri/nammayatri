@@ -11,13 +11,13 @@ try {
 } catch (err) {}
 const bundleLoadTime = Date.now();
 window.flowTimeStampObject = {};
-const blackListFunctions = ["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "addToLogList", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds"]
-window.whitelistedNotification = ["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "DRIVER_REACHED", "REALLOCATE_PRODUCT", "TRIP_STARTED", "EDIT_LOCATION"];
+const blackListFunctions = new Set(["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds",  "addToLogList"])
+window.whitelistedNotification = new Set(["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "DRIVER_REACHED", "REALLOCATE_PRODUCT", "TRIP_STARTED", "EDIT_LOCATION"]);
 
 console.log("APP_PERF INDEX_FIREBASE_LOG_PARAMS_START : ", new Date().getTime());
 if (window.JBridge.firebaseLogEventWithParams){  
   Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
-    return blackListFunctions.indexOf(fnName) == -1
+    return !blackListFunctions.has(fnName)
   }).forEach(fnName => {
       window.JBridgeProxy = window.JBridgeProxy || {};
       window.JBridgeProxy[fnName] = window.JBridge[fnName];
@@ -27,11 +27,11 @@ if (window.JBridge.firebaseLogEventWithParams){
           params = arguments[1].split("/").splice(6).join("/");
         }
         let shouldLog = true;
-        if (window.appConfig) {
-        shouldLog = window.appConfig.logFunctionCalls ? window.appConfig.logFunctionCalls : shouldLog;
+        if (window.decodeAppConfig) {
+          shouldLog = window.decodeAppConfig.logFunctionCalls ? window.decodeAppConfig.logFunctionCalls : shouldLog;
         }
         if (shouldLog) {
-        window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
+          window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
         }
         const result = window.JBridgeProxy[fnName](...arguments);
         return result;
@@ -242,7 +242,6 @@ window.onMerchantEvent = function (_event, payload) {
     callInitiateResult();
   } else if (_event == "process") {
     console.log("APP_PERF INDEX_PROCESS_CALLED : ", new Date().getTime());
-    window.__payload.sdkVersion = "2.0.1"
     console.warn("Process called");
     const parsedPayload = JSON.parse(payload);
     try {
@@ -337,6 +336,7 @@ window.callUICallback = function () {
 };
 
 window.onResumeListeners = [];
+window.internetListeners = {};
 
 window.onPause = function () {
   console.error("onEvent onPause");
@@ -424,6 +424,8 @@ window["onEvent'"] = function (_event, args) {
     }
   } else if ((_event == "onKeyboardOpen" || _event == "onKeyboardClose") && window.keyBoardCallback) {
     window.keyBoardCallback(_event);
+  }else if(_event === "onReloadApp") {
+    purescript.onEvent(_event)();
   }
 }
 

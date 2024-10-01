@@ -73,7 +73,7 @@ import Screens.PermissionScreen.Handler as PermissionScreen
 import Screens.Types as ST
 import Engineering.Helpers.BackTrack
 import Effect.Aff
-import Helpers.API (noInternetScreen)
+import Helpers.API (noInternetScreenHandler)
 import DecodeUtil
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
@@ -129,7 +129,7 @@ withAPIResult url f flow = do
             _ <- pure $ printLog "error resp" errResp
             let userMessage = decodeError errResp.errorMessage "errorMessage"
             let codeMessage = decodeError errResp.errorMessage "errorCode"
-            if err.code == -1 then do noInternetScreen "lazy"
+            if err.code == -1 then do noInternetScreenHandler "lazy"
             else if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
                 _ <- pure $ deleteValueFromLocalStore REGISTERATION_TOKEN
                 _ <- pure $ deleteValueFromLocalStore REGISTRATION_APPROVED
@@ -156,7 +156,7 @@ withAPIResultBT url f errorHandler flow = do
             let userMessage = decodeError errResp.errorMessage "errorMessage"
             let codeMessage = decodeError errResp.errorMessage "errorCode"
             _ <- pure $ printLog "error resp" errResp
-            if err.code == -1 then do lift $ lift $ noInternetScreen "lazy"
+            if err.code == -1 then do lift $ lift $ noInternetScreenHandler "lazy"
             else if (err.code == 401 && (codeMessage == "INVALID_TOKEN" || codeMessage == "TOKEN_EXPIRED")) || (err.code == 400 && codeMessage == "TOKEN_EXPIRED") then do
                 deleteValueFromLocalStore REGISTERATION_TOKEN
                 deleteValueFromLocalStore REGISTRATION_APPROVED
