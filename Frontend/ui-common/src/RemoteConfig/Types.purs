@@ -150,7 +150,10 @@ type SubscriptionConfigVariantLevelEntity = {
    yatriPlansPlaylist :: Maybe String,
    enableSubscriptionSupportPopup :: Maybe Boolean,
    offerBannerConfig :: Maybe OfferBanner,
-   enableSubsV2 :: Maybe Boolean
+   enableSubsV2 :: Maybe Boolean,
+   duesConfig :: Maybe RCSubscriptionDues,
+   freeTrialPopupDaysList :: Maybe (Array Int),
+   freeTrialPopupOnRidesList :: Maybe (Array Int)
 }
 
 type OfferBanner = {
@@ -161,6 +164,11 @@ type OfferBanner = {
     payAmount :: String
 }
 
+type RCSubscriptionDues = {
+    max_dues_limit :: Number,
+    low_dues_warning_limit :: Number,
+    high_due_warning_limit :: Number
+}
   
 ---------------------------------Remote Config Dynamic AC-----------------------------------------------
 
