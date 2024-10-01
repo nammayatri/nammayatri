@@ -86,6 +86,7 @@ import Data.Int
 import Styles.Types (Color(..))
 import RemoteConfig as RemoteConfig
 import Components.SelectPlansModal.Controller as SelectPlansModal
+import Debug
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -2214,7 +2215,7 @@ bgLocPopup state =
       , width = V 300
       , config{
           rawJson = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/" <>  (if state.data.config.appData.name =="Mana Yatri" then "enable_locatio_permission_lottie_manayatri" else "enable_locatio_permission_lottie") <> ".json"
-        , lottieId = EHC.getNewIDWithTag "bgLocLottie"
+        , lottieId =  EHC.getNewIDWithTag "bgLocLottie"
         }
       }
     }
