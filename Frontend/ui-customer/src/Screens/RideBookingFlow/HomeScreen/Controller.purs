@@ -3239,6 +3239,7 @@ dummyListItem = {
   , recencyDate : Nothing
   , locationScore : Nothing
   , dynamicAction : Nothing
+  , types : Nothing
 }
 
 tagClickEvent :: CardType -> (Maybe LocationListItemState) -> HomeScreenState -> Boolean -> Eval Action ScreenOutput HomeScreenState

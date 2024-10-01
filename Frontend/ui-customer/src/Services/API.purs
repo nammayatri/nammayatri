@@ -271,7 +271,8 @@ newtype SearchLocationResp = SearchLocationResp {
 newtype Prediction = Prediction {
  description :: String,
  placeId :: Maybe String,
- distance :: Maybe Int
+ distance :: Maybe Int,
+ types :: Array String
 }
 
 instance makeSearchLocationReq :: RestEndpoint SearchLocationReq  where

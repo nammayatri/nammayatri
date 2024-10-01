@@ -347,3 +347,6 @@ _nightShiftCharge = lens (unwrap >>> _.nightShiftCharge) (\oldRec newVal -> wrap
 
 _isScheduled :: forall a b c. Newtype a { isScheduled :: b | c } => Lens' a b
 _isScheduled = lens (unwrap >>> _.isScheduled) (\oldRec newVal -> wrap ((unwrap oldRec) { isScheduled = newVal }))
+
+_types :: forall a b c. Newtype a { types :: b | c } => Lens' a b
+_types = lens (unwrap >>> _.types) (\oldRec newVal -> wrap ((unwrap oldRec) { types = newVal }))
