@@ -132,6 +132,8 @@ dependencies:
   - json-logic-hs
   - yudhishthira
   - network-uri
+  - text-format
+  - scientific
 
 ghc-options:
   - -fwrite-ide-info

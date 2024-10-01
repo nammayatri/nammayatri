@@ -15,6 +15,7 @@ import qualified API.Types.ProviderPlatform.Management.NammaTag
 import qualified API.Types.ProviderPlatform.Management.Payout
 import qualified API.Types.ProviderPlatform.Management.Revenue
 import qualified API.Types.ProviderPlatform.Management.Ride
+import qualified API.Types.ProviderPlatform.Management.System
 import qualified Dashboard.Common
 import qualified Data.List
 import Data.OpenApi (ToSchema)
@@ -35,6 +36,7 @@ data ManagementEndpoint
   | PayoutAPI API.Types.ProviderPlatform.Management.Payout.PayoutEndpointDSL
   | RevenueAPI API.Types.ProviderPlatform.Management.Revenue.RevenueEndpointDSL
   | RideAPI API.Types.ProviderPlatform.Management.Ride.RideEndpointDSL
+  | SystemAPI API.Types.ProviderPlatform.Management.System.SystemEndpointDSL
   deriving stock (Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -52,6 +54,7 @@ instance Text.Show.Show ManagementEndpoint where
     PayoutAPI e -> "PAYOUT/" <> Dashboard.Common.showUserActionType e
     RevenueAPI e -> "REVENUE/" <> Dashboard.Common.showUserActionType e
     RideAPI e -> "RIDE/" <> Dashboard.Common.showUserActionType e
+    SystemAPI e -> "SYSTEM/" <> Dashboard.Common.showUserActionType e
 
 instance Text.Read.Read ManagementEndpoint where
   readsPrec d' =
@@ -150,6 +153,15 @@ instance Text.Read.Read ManagementEndpoint where
                    r2
                  )
                  | r1 <- stripPrefix "RIDE/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Dashboard.Common.readUserActionTypeS r1
+               ]
+            ++ [ ( SystemAPI v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "SYSTEM/" r,
                    ( v1,
                      r2
                      ) <-

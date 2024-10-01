@@ -155,6 +155,7 @@ library
       Domain.Action.Dashboard.Management.Payout
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
+      Domain.Action.Dashboard.Management.System
       Domain.Action.Dashboard.Overlay
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.RideBooking.Driver
@@ -624,6 +625,7 @@ library
       API.Action.Dashboard.Management.Payout
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride
+      API.Action.Dashboard.Management.System
       API.Action.Dashboard.RideBooking.Driver
       API.Action.UI.Cac
       API.Action.UI.DemandHotspots
@@ -1160,6 +1162,7 @@ library
     , record-hasfield
     , resource-pool
     , scheduler
+    , scientific
     , sequelize
     , servant
     , servant-client
@@ -1179,6 +1182,7 @@ library
     , template-haskell
     , text
     , text-conversions
+    , text-format
     , time
     , unordered-containers
     , utils
@@ -1290,6 +1294,7 @@ executable dynamic-offer-driver-app-exe
     , record-hasfield
     , resource-pool
     , scheduler
+    , scientific
     , sequelize
     , servant
     , servant-client
@@ -1307,6 +1312,7 @@ executable dynamic-offer-driver-app-exe
     , template-haskell
     , text
     , text-conversions
+    , text-format
     , time
     , unordered-containers
     , uuid
