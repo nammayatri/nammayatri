@@ -155,6 +155,19 @@ export const decodeErrorMessage = function (a) {
   }
 };
 
+export const decodeErrorPayload = function (a) {
+  try {
+    const errorPayload = JSON.parse(a).errorPayload;
+    if (errorPayload === null) {
+      return {};
+    }
+    return errorPayload;
+  } catch (e) {
+    console.log(e);
+    return {};
+  }
+};
+
 export const convertKmToM = function (dist) {
   try {
     const distance = parseInt(dist);
@@ -275,8 +288,8 @@ export const storeCallBackTime = function (cb) {
   return function (action) {
     return function () {
       try {
-        const callback = callbackMapper.map(function (time, lat, lng) {
-          cb(action(time)(lat)(lng))();
+        const callback = callbackMapper.map(function (time, lat, lng, errorCode) {
+          cb(action(time)(lat)(lng)(errorCode))();
         });
         JBridge.storeCallBackTime(callback);
       }

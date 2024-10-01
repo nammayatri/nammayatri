@@ -507,6 +507,55 @@ deleteRcPopUpConfig state =
   in
     popUpConfig'
 
+driverBLockedPopup :: ST.DriverProfileScreenState -> PopUpModal.Config
+driverBLockedPopup state = 
+  PopUpModal.config {
+    gravity = CENTER,
+    backgroundClickable = false,
+    optionButtonOrientation = "VERTICAL",
+    buttonLayoutMargin = Margin 16 0 16 20,
+    margin = MarginHorizontal 25 25, 
+    primaryText {
+      text = getString $ BLOCKED_TILL (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A") (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
+    , textStyle = Heading2
+    , margin = Margin 16 0 16 10},
+    secondaryText{
+      text = getString DUE_TO_HIGHER_CANCELLATION_RATE_YOU_ARE_BLOCKED
+    , textStyle = Body5
+    , margin = Margin 16 0 16 15 },
+    option1 {
+      text = getString CALL_SUPPORT
+    , color = Color.yellow900
+    , background = Color.black900
+    , strokeColor = Color.transparent
+    , textStyle = FontStyle.SubHeading1
+    , width = MATCH_PARENT
+    , image {
+        imageUrl = fetchImage FF_ASSET "ny_ic_phone_filled_yellow"
+        , height = V 16
+        , width = V 16
+        , visibility = VISIBLE
+        , margin = MarginRight 8
+      }
+    },
+    option2 {
+    text = getString CLOSE,
+    margin = MarginHorizontal 16 16,
+    color = Color.black650,
+    background = Color.white900,
+    strokeColor = Color.white900,
+    width = MATCH_PARENT
+  },
+    cornerRadius = Corners 15.0 true true true true,
+    coverImageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_ic_account_blocked"
+    , visibility = VISIBLE
+    , margin = Margin 16 16 16 16
+    , width = MATCH_PARENT
+    , height = V 250
+    }
+  }
+
 getChipRailArray :: Int -> String -> Array String -> String -> Array ST.ChipRailData
 getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
   let

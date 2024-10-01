@@ -207,7 +207,7 @@ instance loggableAction :: Loggable Action where
     AutoPayBanner act -> pure unit
     AdvancedRideBannerAction act -> pure unit
     RetryTimeUpdate -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "retry_time_update_onclick"
-    TimeUpdate time lat lng -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "time_update"
+    TimeUpdate time lat lng errorCode -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "time_update"
     ModifyRoute lat lon -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "modify_route"
     SetToken id -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "set_token"
     Cancel -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "cancel"
@@ -342,7 +342,7 @@ data Action = NoAction
             | UpiQrRendered String
             | ModifyRoute String String
             | RetryTimeUpdate
-            | TimeUpdate String String String
+            | TimeUpdate String String String String
             | RideActiveAction RidesInfo (Maybe RidesInfo)
             | RecenterButtonAction
             | ChatViewActionController ChatView.Action
@@ -401,6 +401,7 @@ data Action = NoAction
             | AddLocation PrimaryButtonController.Action
             | ConfirmDisableGoto PopUpModal.Action
             | AccountBlockedAC PopUpModal.Action
+            | AccountBlockedDueToCancellationsAC PopUpModal.Action
             | UpdateAndNotify
             | UpdateWaitTime ST.TimerStatus
             | NotifyAPI
@@ -526,6 +527,12 @@ eval (ReferralPopUpAction popUpType storageKey PopUpModal.DismissPopup) state = 
 eval (ConfirmDisableGoto PopUpModal.OnButton2Click) state = continue state { data { driverGotoState { confirmGotoCancel = false } }} 
 
 eval (ConfirmDisableGoto PopUpModal.OnButton1Click) state = updateAndExit state{ data { driverGotoState { confirmGotoCancel = false } }}  $ DisableGoto state{ data { driverGotoState { confirmGotoCancel = false } }} 
+
+eval (AccountBlockedDueToCancellationsAC PopUpModal.OnButton2Click) state = continue state { props { accountBlockedPopupDueToCancellations = false } }
+
+eval (AccountBlockedDueToCancellationsAC PopUpModal.OnButton1Click) state = do 
+  void $ pure $ showDialer (SC.getSupportNumber "") false 
+  continue state 
 
 eval (AccountBlockedAC PopUpModal.OnButton2Click) state = continue state { props { accountBlockedPopup = false } }
 
@@ -1209,43 +1216,49 @@ eval RetryTimeUpdate state = do
   _ <-  pure $ setValueToLocalNativeStore REGISTERATION_TOKEN (getValueToLocalStore REGISTERATION_TOKEN)
   (updateAndExit state { data = state.data { locationLastUpdatedTime = "" }, props = state.props {refreshAnimation = true}} $ Refresh state { data = state.data { locationLastUpdatedTime = "" }, props = state.props {refreshAnimation = true}})
 
-eval (TimeUpdate time lat lng) state = do
-  let driverLat = getLastKnownLocValue ST.LATITUDE lat
-      driverLong = getLastKnownLocValue ST.LONGITUDE lng
-      geoHash = Uncurried.runFn3 encodeGeohash driverLat driverLong 7
-      chargesOb = HU.getChargesOb state.data.activeRide.tripType state.data.cityConfig state.data.activeRide.driverVehicle
-      waitTimeEnabledForCity = chargesOb.perMinCharges > 0.0
-      nearestZone = case state.props.currentStage, state.data.config.feature.enableSpecialPickup of 
-                      ST.HomeScreen, true -> findNearestSpecialZone driverLat driverLong
-                      _, _ -> Nothing
-      shouldUpdateGeoHash = isJust nearestZone && state.props.mapRendered
-      newState = state { data{ currentDriverLat= driverLat,  currentDriverLon = driverLong, locationLastUpdatedTime = (convertUTCtoISC time "hh:mm a")}, props { specialZoneProps{ nearBySpecialZone = isJust nearestZone } }}
-  void $ pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP (show newState.data.activeRide.notifiedCustomer)
-  void $ pure $ setValueToLocalStore LOCATION_UPDATE_TIME (convertUTCtoISC time "hh:mm a")
-  continueWithCmd newState{ props{ specialZoneProps{ currentGeoHash = if shouldUpdateGeoHash then geoHash else "" }, mapRendered = true } } [ do
-    if (getValueToLocalNativeStore IS_RIDE_ACTIVE == "false") then
-      case nearestZone of
-        Just zone -> do
-          if state.props.specialZoneProps.currentGeoHash /= geoHash then do
-            void $ launchAff $ flowRunner defaultGlobalState $ do
-              push <- liftFlow $ getPushFn Nothing "HomeScreen"
-              _ <- pure $ JB.exitLocateOnMap ""
-              let _ = unsafePerformEffect $ runEffectFn1 JB.locateOnMap JB.locateOnMapConfig{ lat = driverLat, lon = driverLong, markerCallback = HU.onMarkerClickCallbackMapper push OnMarkerClickCallBack, markerCallbackForTags = ["selectedZoneGate"], geoJson = zone.geoJson, points = zone.gates, locationName = zone.locationName, navigateToNearestGate = false, specialZoneMarkerConfig{ showZoneLabel = true, labelActionImage = "ny_ic_navigation_blue_frame" }, enableMapClickListener = true }
+eval (TimeUpdate time lat lng errorCode) state = do
+  let isDriverBlocked = (errorCode == "DRIVER_BLOCKED")
+  if isDriverBlocked then do
+    void $ pure $ setValueToLocalStore DRIVER_STATUS "false"
+    void $ pure $ setValueToLocalStore DRIVER_STATUS_N "Offline" 
+    continue state{ props{ statusOnline = not isDriverBlocked , driverStatusSet = if isDriverBlocked then ST.Offline else state.props.driverStatusSet } }
+  else do
+    let driverLat = getLastKnownLocValue ST.LATITUDE lat
+        driverLong = getLastKnownLocValue ST.LONGITUDE lng
+        geoHash = Uncurried.runFn3 encodeGeohash driverLat driverLong 7
+        chargesOb = HU.getChargesOb state.data.activeRide.tripType state.data.cityConfig state.data.activeRide.driverVehicle
+        waitTimeEnabledForCity = chargesOb.perMinCharges > 0.0
+        nearestZone = case state.props.currentStage, state.data.config.feature.enableSpecialPickup of 
+                        ST.HomeScreen, true -> findNearestSpecialZone driverLat driverLong
+                        _, _ -> Nothing
+        shouldUpdateGeoHash = isJust nearestZone && state.props.mapRendered
+        newState = state { data{ currentDriverLat= driverLat,  currentDriverLon = driverLong, locationLastUpdatedTime = (convertUTCtoISC time "hh:mm a")}, props { specialZoneProps{ nearBySpecialZone = isJust nearestZone } }}
+    void $ pure $ setValueToLocalStore IS_DRIVER_AT_PICKUP (show newState.data.activeRide.notifiedCustomer)
+    void $ pure $ setValueToLocalStore LOCATION_UPDATE_TIME (convertUTCtoISC time "hh:mm a")
+    continueWithCmd newState{ props{ specialZoneProps{ currentGeoHash = if shouldUpdateGeoHash then geoHash else "" }, mapRendered = true } } [ do
+      if (getValueToLocalNativeStore IS_RIDE_ACTIVE == "false") then
+        case nearestZone of
+          Just zone -> do
+            if state.props.specialZoneProps.currentGeoHash /= geoHash then do
+              void $ launchAff $ flowRunner defaultGlobalState $ do
+                push <- liftFlow $ getPushFn Nothing "HomeScreen"
+                _ <- pure $ JB.exitLocateOnMap ""
+                let _ = unsafePerformEffect $ runEffectFn1 JB.locateOnMap JB.locateOnMapConfig{ lat = driverLat, lon = driverLong, markerCallback = HU.onMarkerClickCallbackMapper push OnMarkerClickCallBack, markerCallbackForTags = ["selectedZoneGate"], geoJson = zone.geoJson, points = zone.gates, locationName = zone.locationName, navigateToNearestGate = false, specialZoneMarkerConfig{ showZoneLabel = true, labelActionImage = "ny_ic_navigation_blue_frame" }, enableMapClickListener = true }
+                pure unit
               pure unit
-            pure unit
-          else pure unit
-          checkPermissionAndUpdateDriverMarker newState false 
-        Nothing -> do
-          _ <- pure $ JB.exitLocateOnMap ""
-          checkPermissionAndUpdateDriverMarker newState true
-    else pure unit
-    case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, isJust state.data.advancedRideData, waitTimeEnabledForCity of
-      true, ST.RideAccepted, false, false, true -> do
-        let dist = getDistanceBwCordinates driverLat driverLong state.data.activeRide.src_lat state.data.activeRide.src_lon
-            insideThreshold = dist <= state.data.config.waitTimeConfig.thresholdDist
-        pure $ if insideThreshold && (getValueToLocalStore WAITING_TIME_STATUS == show ST.NoStatus) then UpdateAndNotify else (UpdateLastLoc driverLat driverLong insideThreshold)
-      _, _, _, _, _ -> pure $ UpdateLastLoc driverLat driverLong false
-    ]
+            else pure unit
+            checkPermissionAndUpdateDriverMarker newState false 
+          Nothing -> do
+            _ <- pure $ JB.exitLocateOnMap ""
+            checkPermissionAndUpdateDriverMarker newState true
+      else pure unit
+      case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, isJust state.data.advancedRideData, waitTimeEnabledForCity of
+        true, ST.RideAccepted, false, false, true -> do
+          let dist = getDistanceBwCordinates driverLat driverLong state.data.activeRide.src_lat state.data.activeRide.src_lon
+              insideThreshold = dist <= state.data.config.waitTimeConfig.thresholdDist
+          pure $ if insideThreshold && (getValueToLocalStore WAITING_TIME_STATUS == show ST.NoStatus) then UpdateAndNotify else (UpdateLastLoc driverLat driverLong insideThreshold)
+        _, _, _, _, _ -> pure $ UpdateLastLoc driverLat driverLong false
+      ]
 
 eval (OnMarkerClickCallBack tag lat lon) state = do
   case Number.fromString lat, Number.fromString lon of
