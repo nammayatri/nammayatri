@@ -49,8 +49,6 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     tollCharges :: Maybe HighPrecMoney,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     congestionChargeMultiplier :: Maybe CongestionChargeMultiplier,
-    congestionChargePerMin :: Maybe Double,
-    dpVersion :: Maybe Text,
     perDistanceUnitInsuranceCharge :: Maybe HighPrecMoney,
     cardCharge :: Maybe CardCharge,
     farePolicyDetails :: FarePolicyDetailsD s,
@@ -147,6 +145,8 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     congestionChargeMultiplier :: Maybe CongestionChargeMultiplier,
     congestionChargePerMin :: Maybe Double,
     dpVersion :: Maybe Text,
+    mbSupplyDemandRatioToLoc :: Maybe Double,
+    mbSupplyDemandRatioFromLoc :: Maybe Double,
     perDistanceUnitInsuranceCharge :: Maybe HighPrecMoney,
     cardCharge :: Maybe CardCharge,
     farePolicyDetails :: FarePolicyDetailsD s,
@@ -162,6 +162,14 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
   deriving (Generic, Show)
 
 type FullFarePolicy = FullFarePolicyD 'DTC.Safe
+
+data CongestionChargeDetails = CongestionChargeDetails
+  { dpVersion :: Maybe Text,
+    mbSupplyDemandRatioToLoc :: Maybe Double,
+    mbSupplyDemandRatioFromLoc :: Maybe Double,
+    congestionChargePerMin :: Maybe Double
+  }
+  deriving (Generic, Show)
 
 instance FromJSON (FullFarePolicyD 'DTC.Unsafe)
 
@@ -183,8 +191,8 @@ mkCongestionChargeMultiplier :: DPM.CongestionChargeMultiplierAPIEntity -> Conge
 mkCongestionChargeMultiplier (DPM.BaseFareAndExtraDistanceFare charge) = BaseFareAndExtraDistanceFare charge
 mkCongestionChargeMultiplier (DPM.ExtraDistanceFare charge) = ExtraDistanceFare charge
 
-farePolicyToFullFarePolicy :: Id Merchant -> DVST.ServiceTierType -> DTC.TripCategory -> Maybe DTC.CancellationFarePolicy -> FarePolicy -> FullFarePolicy
-farePolicyToFullFarePolicy merchantId vehicleServiceTier tripCategory cancellationFarePolicy FarePolicy {..} =
+farePolicyToFullFarePolicy :: Id Merchant -> DVST.ServiceTierType -> DTC.TripCategory -> Maybe DTC.CancellationFarePolicy -> CongestionChargeDetails -> FarePolicy -> FullFarePolicy
+farePolicyToFullFarePolicy merchantId vehicleServiceTier tripCategory cancellationFarePolicy CongestionChargeDetails {..} FarePolicy {..} =
   FullFarePolicy {..}
 
 fullFarePolicyToFarePolicy :: FullFarePolicy -> FarePolicy

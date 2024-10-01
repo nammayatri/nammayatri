@@ -68,7 +68,6 @@ import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SharedLogic.BlockedRouteDetector
 import SharedLogic.DriverPool
-import qualified SharedLogic.DynamicPricing as DP
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleMaps
@@ -319,7 +318,7 @@ handler ValidatedDSearchReq {..} sReq = do
     addNammaTags :: TagData -> Flow ()
     addNammaTags tagData = do
       newSearchTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.Search tagData)
-      let tags = tagData.searchRequest.searchTags <> (eitherToMaybe newSearchTags)
+      let tags = tagData.searchRequest.searchTags <> eitherToMaybe newSearchTags
       QSR.updateSearchTags tags tagData.searchRequest.id
 
     mkBapMetaData :: Flow BapMetadata
@@ -599,24 +598,6 @@ buildEstimate merchantOpCityId currency distanceUnit mbSearchReq startTime isSch
       maxFare = fareSum maxFareParams + maybe 0.0 (.maxFee) mbDriverExtraFeeBounds
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId fullFarePolicy.vehicleServiceTier merchantOpCityId >>= fromMaybeM (VehicleServiceTierNotFound (show fullFarePolicy.vehicleServiceTier))
   let isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
-  (mbSupplyDemandRatioFromLoc, mbSupplyDemandRatioToLoc) <- case mbSearchReq of
-    Nothing -> return (Nothing, Nothing)
-    Just searchReq -> do
-      (mbSupplyDemandRatioToLoc' :: Maybe Double) <-
-        join
-          <$> traverse
-            ( \locgeohash ->
-                Redis.withCrossAppRedis $ Redis.get $ DP.mkSupplyDemandRatioKeyWithGeohash locgeohash fullFarePolicy.vehicleServiceTier
-            )
-            searchReq.toLocGeohash
-      (mbSupplyDemandRatioFromLoc' :: Maybe Double) <-
-        join
-          <$> traverse
-            ( \locgeohash ->
-                Redis.withCrossAppRedis $ Redis.get $ DP.mkSupplyDemandRatioKeyWithGeohash locgeohash fullFarePolicy.vehicleServiceTier
-            )
-            searchReq.fromLocGeohash
-      return (mbSupplyDemandRatioFromLoc', mbSupplyDemandRatioToLoc')
   pure
     DEst.Estimate
       { id = estimateId,
@@ -634,8 +615,8 @@ buildEstimate merchantOpCityId currency distanceUnit mbSearchReq startTime isSch
         dpVersion = fullFarePolicy.dpVersion,
         createdAt = now,
         updatedAt = now,
-        supplyDemandRatioToLoc = Just $ fromMaybe 0.0 mbSupplyDemandRatioToLoc,
-        supplyDemandRatioFromLoc = Just $ fromMaybe 0.0 mbSupplyDemandRatioFromLoc,
+        supplyDemandRatioToLoc = fullFarePolicy.mbSupplyDemandRatioToLoc,
+        supplyDemandRatioFromLoc = fullFarePolicy.mbSupplyDemandRatioFromLoc,
         ..
       }
 

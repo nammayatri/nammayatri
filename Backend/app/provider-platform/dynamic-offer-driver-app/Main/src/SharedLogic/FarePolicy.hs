@@ -11,13 +11,13 @@
 module SharedLogic.FarePolicy where
 
 import BecknV2.OnDemand.Tags as Tags
+import Control.Applicative ((<|>))
 import Data.Aeson as A
 import Data.Coerce (coerce)
-import qualified Data.Geohash as Geohash
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NE
 import Data.Ord (comparing)
-import Data.Text as T hiding (elem, find)
+import Data.Text as T hiding (elem, find, null)
 import Data.Time hiding (getCurrentTime)
 import Data.Time.Calendar.WeekDate
 import qualified Domain.Types as DTC
@@ -48,7 +48,6 @@ import qualified Storage.Cac.FarePolicy as QFP
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.CancellationFarePolicy as QCCFP
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
-import qualified Storage.CachedQueries.SurgePricing as SurgePricing
 import Tools.DynamicLogic
 import Tools.Error
 import Tools.Maps
@@ -158,21 +157,26 @@ getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mb
         maybe (return Nothing) (checkGeoHashAndCalculate localTimeZoneSeconds whiteListedGeohashes blackListedGeohashes) mbFromLocGeohash
       _ -> return Nothing -- For now, we are not supporting congestion charge through model for other trips
   farePolicy' <- QFP.findById txnId fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
-  let (updatedCongestionChargePerMin, updatedCongestionChargeMultiplier, version) =
+  let (updatedCongestionChargePerMin, updatedCongestionChargeMultiplier, version, supplyDemandRatioFromLoc, supplyDemandRatioToLoc) =
         case congestionChargeMultiplierFromModel of
-          Just (congestionChargePerMin, version') -> (Just congestionChargePerMin, farePolicy'.congestionChargeMultiplier, Just version') -----------Need to send Nothing here
-          Nothing -> (Nothing, farePolicy'.congestionChargeMultiplier, Just "Static")
-  let farePolicy = updateCongestionChargeMultiplier farePolicy' updatedCongestionChargeMultiplier updatedCongestionChargePerMin version
+          Just details ->
+            maybe
+              (Nothing, farePolicy'.congestionChargeMultiplier, Just "Static", details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc)
+              (\congestionChargePerMinute -> (Just congestionChargePerMinute, farePolicy'.congestionChargeMultiplier, details.dpVersion, details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc)) -----------Need to send Nothing here for congestionChargeMultiplier
+              details.congestionChargePerMin
+          Nothing -> (Nothing, farePolicy'.congestionChargeMultiplier, Just "Static", Nothing, Nothing)
+  let farePolicy = updateCongestionChargeMultiplier farePolicy' updatedCongestionChargeMultiplier
+  let congestionChargeDetails = FarePolicyD.CongestionChargeDetails version supplyDemandRatioToLoc supplyDemandRatioFromLoc updatedCongestionChargePerMin
   cancellationFarePolicy <- maybe (return Nothing) QCCFP.findById farePolicy.cancellationFarePolicyId
-  return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy farePolicy
+  return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy congestionChargeDetails farePolicy
   where
     checkGeoHashAndCalculate localTimeZoneSeconds whiteListedGeohashes blackListedGeohashes fromLocGeohash =
       if elem fromLocGeohash whiteListedGeohashes || notElem fromLocGeohash blackListedGeohashes
         then getCongestionChargeMultiplierFromModel' localTimeZoneSeconds (Just fromLocGeohash) mbToLocGeohash fareProduct.vehicleServiceTier mbDistance mbDuration fareProduct.merchantOperatingCityId
         else return Nothing
 
-updateCongestionChargeMultiplier :: FarePolicyD.FarePolicy -> Maybe FarePolicyD.CongestionChargeMultiplier -> Maybe Double -> Maybe Text -> FarePolicyD.FarePolicy
-updateCongestionChargeMultiplier FarePolicyD.FarePolicy {..} congestionMultiplier congestionChargePerMin' version = FarePolicyD.FarePolicy {congestionChargeMultiplier = congestionMultiplier, congestionChargePerMin = congestionChargePerMin', dpVersion = version, ..}
+updateCongestionChargeMultiplier :: FarePolicyD.FarePolicy -> Maybe FarePolicyD.CongestionChargeMultiplier -> FarePolicyD.FarePolicy
+updateCongestionChargeMultiplier FarePolicyD.FarePolicy {..} congestionMultiplier = FarePolicyD.FarePolicy {congestionChargeMultiplier = congestionMultiplier, ..}
 
 mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> FarePolicyD.FarePolicy -> [breakupItem]
 mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy = do
@@ -636,7 +640,7 @@ getCongestionChargeMultiplierFromModel' ::
   Maybe Meters ->
   Maybe Seconds ->
   Id DMOC.MerchantOperatingCity ->
-  m (Maybe (Double, Text))
+  m (Maybe FarePolicyD.CongestionChargeDetails)
 getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocGeohash) toLocGeohash serviceTier (Just (Meters distance)) (Just (Seconds duration)) merchantOperatingCityId = do
   localTime <- getLocalCurrentTime timeDiffFromUtc
   let distanceInKm = int2Double distance / 1000.0
@@ -645,40 +649,24 @@ getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocGeohash) to
   toss <- getRandomInRange (1, 100 :: Int)
   mbSupplyDemandRatioFromLoc <- Hedis.withCrossAppRedis $ Hedis.get $ mkSupplyDemandRatioKeyWithGeohash fromLocGeohash serviceTier
   mbSupplyDemandRatioToLoc <- join <$> traverse (\locgeohash -> Hedis.withCrossAppRedis $ Hedis.get $ mkSupplyDemandRatioKeyWithGeohash locgeohash serviceTier) toLocGeohash
-  (allLogics, _mbVersion) <- getAppDynamicLogic (cast merchantOperatingCityId) (LYT.DYNAMIC_PRICING serviceTier) localTime Nothing
+  (allLogics, mbVersion) <- getAppDynamicLogic (cast merchantOperatingCityId) (LYT.DYNAMIC_PRICING serviceTier) localTime Nothing
   let dynamicPricingData = DynamicPricingData {speedKmh, distanceInKm, supplyDemandRatioFromLoc = fromMaybe 0.0 mbSupplyDemandRatioFromLoc, supplyDemandRatioToLoc = fromMaybe 0.0 mbSupplyDemandRatioToLoc, toss}
-  response <- try @_ @SomeException $ LYTU.runLogics allLogics dynamicPricingData
-  logInfo $ "DynamicPricing Req Logics : " <> show allLogics <> " and data is : " <> show dynamicPricingData <> " and response is : " <> show response
-  case response of
-    Left e -> do
-      logError $ "Error in running DynamicPricingLogics - " <> show e <> " - " <> show dynamicPricingData <> " - " <> show allLogics
+  if null allLogics
+    then do
+      logInfo $ "No DynamicPricingLogics found for merchantOperatingCityId : " <> show merchantOperatingCityId <> " and serviceTier : " <> show serviceTier <> " and localTime : " <> show localTime
       return Nothing
-    Right resp -> do
-      case (A.fromJSON resp.result :: Result DynamicPricingResult) of
-        A.Success result -> return $ fmap (\congestionCharge -> (congestionCharge, result.version)) result.congestionFeePerMin
-        A.Error err -> do
-          logError $ "Error in parsing DynamicPricingResult - " <> show err <> " - " <> show resp <> " - " <> show dynamicPricingData <> " - " <> show allLogics
+    else do
+      response <- try @_ @SomeException $ LYTU.runLogics allLogics dynamicPricingData
+      logInfo $ "DynamicPricing Req Logics : " <> show allLogics <> " and data is : " <> show dynamicPricingData <> " and response is : " <> show response
+      case response of
+        Left e -> do
+          logError $ "Error in running DynamicPricingLogics - " <> show e <> " - " <> show dynamicPricingData <> " - " <> show allLogics
           return Nothing
-getCongestionChargeMultiplierFromModel' _ _ _ _ _ _ _ = pure Nothing
-
-getCongestionChargeMultiplierFromModel ::
-  ( MonadFlow m,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r
-  ) =>
-  Seconds ->
-  UTCTime ->
-  Maybe LatLong ->
-  ServiceTierType ->
-  m (Maybe Centesimal)
-getCongestionChargeMultiplierFromModel _ _ Nothing _ = pure Nothing
-getCongestionChargeMultiplierFromModel timeDiffFromUtc now (Just sourceLatLong) serviceTier = do
-  let localTime = utcToIst (secondsToMinutes timeDiffFromUtc) now
-  let (dayWeek, hourOfDay) = localTimeToDayOfWeekAndHour localTime
-  let mbSourceHash = Geohash.encode 5 (sourceLatLong.lat, sourceLatLong.lon)
-  case mbSourceHash of
-    Nothing -> pure Nothing
-    Just sourceHash -> do
-      surgePrice <- SurgePricing.findByHexDayHourAndVehicleServiceTier (T.pack sourceHash) (T.pack . show $ dayWeek) hourOfDay serviceTier
-      return $ surgePrice <&> (.surgeMultiplier)
+        Right resp ->
+          case (A.fromJSON resp.result :: Result DynamicPricingResult) of
+            A.Success result ->
+              return $ (fmap (T.pack . show) mbVersion <|> result.version) <&> \version -> FarePolicyD.CongestionChargeDetails (Just version) (Just dynamicPricingData.supplyDemandRatioToLoc) (Just dynamicPricingData.supplyDemandRatioFromLoc) result.congestionFeePerMin
+            A.Error err -> do
+              logError $ "Error in parsing DynamicPricingResult - " <> show err <> " - " <> show resp <> " - " <> show dynamicPricingData <> " - " <> show allLogics
+              return $ Just $ FarePolicyD.CongestionChargeDetails Nothing (Just dynamicPricingData.supplyDemandRatioToLoc) (Just dynamicPricingData.supplyDemandRatioFromLoc) Nothing
+getCongestionChargeMultiplierFromModel' _ _ _ _ _ _ _ = return Nothing
