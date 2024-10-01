@@ -8,6 +8,7 @@ module Storage.Beam.SurgePricing where
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
+import qualified Domain.Types.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -35,3 +36,5 @@ type SurgePricing = SurgePricingT Identity
 $(enableKVPG ''SurgePricingT ['id] [])
 
 $(mkTableInstances ''SurgePricingT "surge_pricing")
+
+$(Domain.Types.UtilsTH.mkCacParseInstance ''SurgePricingT)

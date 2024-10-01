@@ -7,6 +7,7 @@ module Storage.Beam.MerchantServiceUsageConfig where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.UtilsTH
 import qualified Kernel.External.AadhaarVerification.Types
 import qualified Kernel.External.BackgroundVerification.Types
 import qualified Kernel.External.Call
@@ -68,3 +69,5 @@ type MerchantServiceUsageConfig = MerchantServiceUsageConfigT Identity
 $(enableKVPG ''MerchantServiceUsageConfigT ['merchantOperatingCityId] [])
 
 $(mkTableInstances ''MerchantServiceUsageConfigT "merchant_service_usage_config")
+
+$(Domain.Types.UtilsTH.mkCacParseInstance ''MerchantServiceUsageConfigT)
