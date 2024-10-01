@@ -26,6 +26,7 @@ import qualified API.Action.Dashboard.Management.NammaTag as NammaTagDSL
 import qualified API.Action.Dashboard.Management.Payout as PayoutDSL
 import qualified API.Action.Dashboard.Management.Revenue as RevenueDSL
 import qualified API.Action.Dashboard.Management.Ride as RideDSL
+import qualified API.Action.Dashboard.Management.System as SystemDSL
 import qualified API.Dashboard.Management.Issue as Issue
 import qualified API.Dashboard.Management.Overlay as Overlay
 import qualified API.Dashboard.Management.Subscription as Subscription
@@ -53,6 +54,7 @@ type API =
            :<|> DriverRegistrationDSL.API
            :<|> BookingDSL.API
            :<|> PayoutDSL.API
+           :<|> SystemDSL.API
        )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
@@ -72,3 +74,4 @@ handler merchantId city _ =
     :<|> DriverRegistrationDSL.handler merchantId city
     :<|> BookingDSL.handler merchantId city
     :<|> PayoutDSL.handler merchantId city
+    :<|> SystemDSL.handler merchantId city
