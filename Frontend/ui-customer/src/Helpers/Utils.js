@@ -151,7 +151,7 @@ export const storeCallBackCustomer = function (cb) {
           const callback = callbackMapper.map(function (notificationType, notificationBody) {
             console.log("notificationType ->", notificationType);
             window.notificationType = notificationType;
-            if (window.whitelistedNotification.includes(notificationType)) {
+            if (window.whitelistedNotification.has(notificationType)) {
               Object.keys(notificationCallBacks).forEach((key) => {
                 notificationCallBacks[key](notificationType);
               })
@@ -162,7 +162,7 @@ export const storeCallBackCustomer = function (cb) {
           });
           const notificationCallBack = function (notificationType) {
             console.log("notificationType ->", notificationType);
-            if (window.whitelistedNotification.includes(notificationType)) {
+            if (window.whitelistedNotification.has(notificationType)) {
               Object.keys(notificationCallBacks).forEach((key) => {
                 notificationCallBacks[key](notificationType);
               })

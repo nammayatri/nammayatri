@@ -177,7 +177,7 @@ export const storeCallBackForNotification = function (cb) {
     return function () {
       try {
         const callback = callbackMapper.map(function (notificationType) {
-          if (window.whitelistedNotification.includes(notificationType)) {
+          if (window.whitelistedNotification.has(notificationType)) {
             cb(action(notificationType))();
           }
         });

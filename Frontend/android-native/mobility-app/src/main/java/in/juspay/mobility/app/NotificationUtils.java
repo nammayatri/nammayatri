@@ -593,6 +593,11 @@ public class NotificationUtils {
                 startMediaPlayer(context, cancellationSound, false);
             }
         }
+
+        if(MyFirebaseMessagingService.NotificationTypes.DRIVER_HAS_REACHED.equals(notificationType) && key.equals("USER")){
+            startMediaPlayer(context, R.raw.driver_arrived, false );
+        }
+
         if (MyFirebaseMessagingService.NotificationTypes.DRIVER_ASSIGNMENT.equals(notificationType)) {
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
             int audio = R.raw.ride_assigned;
