@@ -59,7 +59,7 @@ selectAppDynamicLogicVersion merchantOpCityId domain localTime = do
 cumulativeRollout :: [AppDynamicLogicRollout] -> [(AppDynamicLogicRollout, Int)]
 cumulativeRollout logics = scanl1 addPercentages $ zip logics (map (.percentageRollout) logics)
   where
-    addPercentages (logic1, p1) (_, p2) = (logic1, p1 + p2)
+    addPercentages (_, p1) (logic2, p2) = (logic2, p1 + p2)
 
 chooseLogic :: MonadFlow m => [AppDynamicLogicRollout] -> m (Maybe AppDynamicLogicRollout)
 chooseLogic logics = do
