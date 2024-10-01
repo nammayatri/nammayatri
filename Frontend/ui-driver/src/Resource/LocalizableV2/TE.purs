@@ -296,6 +296,7 @@ getTe =
     , vehicle_issue: "వాహన సమస్య"
     , fare_updated: "ఛార్జీ నవీకరించబడింది"
     , frequent_cancellations_will_lead_to_less_rides: "తరచుగా రద్దు చేయడం వలన తక్కువ రైడ్‌లు మరియు తక్కువ రేటింగ్‌లు వస్తాయి"
+    , frequent_cancellations_will_lead_to_blocking: "తరచుగా రద్దు చేయడం వలన బ్లాక్ చేయడం మరియు రేటింగ్ తగ్గడం జరుగుతుంది"
     , continue: "కొనసాగించు"
     , confirm_password: "పాస్‌వర్డ్‌ని నిర్ధారించండి"
     , demo_mode: "డెమో మోడ్"
@@ -1668,6 +1669,8 @@ getTe =
     , you_have_switched_city_or_vehicle: "మీరు మీ వాహనం లేదా నగరాన్ని మార్చారు. రైడ్లు పొందడానికి ఒక ప్లాన్‌ను ఎంచుకోండి"
     , xl_plus: "XL ప్లస్"
     , currently_there_are_no_rides_available: "ప్రస్తుతం, రైడ్‌లు అందుబాటులో లేవు."
+    , due_to_higher_cancellation_rate_you_are_blocked: "అధిక రద్దు రేటు కారణంగా, మీరు ఆన్‌లైన్‌కి వెళ్లకుండా బ్లాక్ చేయబడ్డారు"
+    , blocked_till: (\time date ->  date <> " " <> time <> " వరకు బ్లాక్ చేయబడింది ⚠️")
     , ride_requests: "రైడ్ అభ్యర్థనలు"
     , scheduled_ride_accepted: "షెడ్యూల్డ్ రైడ్ ఆమోదించబడింది!"
     , you_can_access_scheduled_rides: "మీరు షెడ్యూల్డ్ రైడ్‌లను యాక్సెస్ చేయవచ్చు"

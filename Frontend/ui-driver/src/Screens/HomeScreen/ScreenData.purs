@@ -175,6 +175,7 @@ initData =
       , onRideBannerTimerID :""
       , onRideBannerTimer : 0
       , scheduleRideCount : Nothing
+      , blockExpiryTime : ""
     }
   , props:
       { isFreeRide: false
@@ -235,6 +236,7 @@ initData =
       , waitTimeStatus: NoStatus
       , isMockLocation: false
       , accountBlockedPopup: false
+      , accountBlockedPopupDueToCancellations: false
       , showCoinsPopup: false
       , isStatsModelExpanded: false
       , tobeLogged: false
