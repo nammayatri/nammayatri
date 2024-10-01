@@ -32,6 +32,7 @@ import qualified API.Types.ProviderPlatform.Management.NammaTag as NammaTagDSL
 import qualified API.Types.ProviderPlatform.Management.Payout as PayoutDSL
 import qualified API.Types.ProviderPlatform.Management.Revenue as RevenueDSL
 import qualified API.Types.ProviderPlatform.Management.Ride as RideDSL
+import qualified API.Types.ProviderPlatform.Management.System as SystemDSL
 import qualified Dashboard.ProviderPlatform.Management.Driver as Driver
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
@@ -74,7 +75,8 @@ data DriverOperationAPIs = DriverOperationAPIs
     driverReferralDSL :: DriverReferralDSL.DriverReferralAPIs,
     driverRegistrationDSL :: DriverRegistrationDSL.DriverRegistrationAPIs,
     bookingDSL :: BookingDSL.BookingAPIs,
-    payoutDSL :: PayoutDSL.PayoutAPIs
+    payoutDSL :: PayoutDSL.PayoutAPIs,
+    systemDSL :: SystemDSL.SystemAPIs
   }
 
 data OverlayAPIs = OverlayAPIs
@@ -139,6 +141,7 @@ mkDriverOperationAPIs merchantId city token = do
   let driverRegistrationDSL = DriverRegistrationDSL.mkDriverRegistrationAPIs driverRegistrationClientDSL
   let bookingDSL = BookingDSL.mkBookingAPIs bookingClientDSL
   let payoutDSL = PayoutDSL.mkPayoutAPIs payoutClientDSL
+  let systemDSL = SystemDSL.mkSystemAPIs systemClientDSL
   DriverOperationAPIs {..}
   where
     subscriptionClient
@@ -155,7 +158,8 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> driverReferralClientDSL
       :<|> driverRegistrationClientDSL
       :<|> bookingClientDSL
-      :<|> payoutClientDSL = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
+      :<|> payoutClientDSL
+      :<|> systemClientDSL = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
 
     planListV2
       :<|> planSelectV2

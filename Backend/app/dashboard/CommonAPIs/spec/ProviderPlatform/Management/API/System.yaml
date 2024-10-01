@@ -1,0 +1,27 @@
+imports:
+  Driver: Dashboard.Common
+  Summary: Dashboard.Common
+  ServiceNames: Dashboard.Common.Driver
+  AuthReq: Dashboard.ProviderPlatform.Management.DriverRegistration
+  AuthRes: Dashboard.ProviderPlatform.Management.DriverRegistration
+  Value: Data.Aeson
+  Day: Data.Time
+
+module: System
+
+
+apis:
+  - POST:
+      endpoint: /runQuery
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MIGRATION RUN_QUERY
+      request:
+        type: QueryData
+      response:
+        type: APISuccess
+
+types:
+  QueryData:
+    - setClause: Value
+    - whereClause: Value
+    - tableName: Text
+    - derive: "'HideSecrets"

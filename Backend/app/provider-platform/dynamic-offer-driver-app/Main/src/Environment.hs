@@ -224,7 +224,8 @@ data AppEnv = AppEnv
     iosValidateEnpoint :: Text,
     passettoContext :: PassettoContext,
     quoteRespondCoolDown :: Int,
-    sosAlertsTopicARN :: Text
+    sosAlertsTopicARN :: Text,
+    esqDBCfg :: EsqDBConfig
   }
   deriving (Generic)
 
