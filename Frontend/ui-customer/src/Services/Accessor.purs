@@ -331,3 +331,6 @@ _androidId = lens (unwrap >>> _.androidId) (\oldRec newVal -> wrap ((unwrap oldR
 
 _chatMessageData :: forall a b c. Newtype a { chatMessageData :: b | c } => Lens' a b
 _chatMessageData = lens (unwrap >>> _.chatMessageData) (\oldRec newVal -> wrap ((unwrap oldRec) { chatMessageData = newVal }))
+
+_types :: forall a b c. Newtype a { types :: b | c } => Lens' a b
+_types = lens (unwrap >>> _.types) (\oldRec newVal -> wrap ((unwrap oldRec) { types = newVal }))
