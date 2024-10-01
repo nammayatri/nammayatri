@@ -52,3 +52,8 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN is_subscriptio
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN enable_city_based_fee_switch boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN is_vendor_split_enabled boolean ;

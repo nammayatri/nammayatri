@@ -22,6 +22,7 @@ import qualified Data.Text as T
 import qualified Data.UUID as UUID
 import Domain.Types
 import qualified Domain.Types.ServiceTierType as DVST
+import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as DTV
 import EulerHS.Prelude
 import Kernel.Prelude (intToNominalDiffTime, listToMaybe)
@@ -83,6 +84,15 @@ mapVariantToVehicle = \case
   DTV.SUV_PLUS -> Enums.CAB
   DTV.DELIVERY_BIKE -> Enums.MOTORCYCLE
   DTV.DELIVERY_LIGHT_GOODS_VEHICLE -> Enums.TRUCK
+
+castVehicleCategoryToDomain :: Enums.VehicleCategory -> DVC.VehicleCategory
+castVehicleCategoryToDomain = \case
+  Enums.CAB -> DVC.CAR
+  Enums.AUTO_RICKSHAW -> DVC.AUTO_CATEGORY
+  Enums.AMBULANCE -> DVC.AMBULANCE
+  Enums.MOTORCYCLE -> DVC.MOTORCYCLE
+  Enums.METRO -> DVC.TRAIN
+  _ -> DVC.CAR -- not used
 
 mapServiceTierToCategory :: ServiceTierType -> Enums.VehicleCategory
 mapServiceTierToCategory = \case
