@@ -486,6 +486,9 @@ getCommonAssetLink lazy = case (getMerchant lazy) of
   PASSCULTURE -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
   MOBILITY_RS -> "https://" <> assetDomain <> "/beckn/passculture/passculturecommon/"
 
+providersCommonAssetLink :: String -> String
+providersCommonAssetLink image = "https://" <> assetDomain <> "/beckn/common/driver/images/" <> image <> ".png"
+
 fetchImage :: FetchImageFrom -> String -> String
 fetchImage fetchImageFrom imageName =   
   if imageName  == "" then ","

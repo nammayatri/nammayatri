@@ -1277,15 +1277,13 @@ autopayBannerConfig state configureImage =
               _ -> Color.white900
           , style = if configureImage then FontStyle.Body3 else FontStyle.ParagraphText
           }
-        , imageUrl =
-          fetchImage COMMON_ASSET
-            $ case bannerType of
-                FREE_TRIAL_BANNER -> "ic_free_trial_period"
-                SETUP_AUTOPAY_BANNER -> "ny_ic_setup_autopay"
-                _
-                  | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> "ny_ic_clear_dues_v2"
-                DUE_LIMIT_WARNING_BANNER -> "ny_ic_due_limit_warning"
-                _ -> ""
+        , imageUrl = case bannerType of
+                        FREE_TRIAL_BANNER -> fetchImage COMMON_ASSET $ "ic_free_trial_period" 
+                        SETUP_AUTOPAY_BANNER -> HU.providersCommonAssetLink "ny_ic_setup_autopay"
+                        _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> HU.providersCommonAssetLink "ny_ic_clear_dues_v2"
+                        DUE_LIMIT_WARNING_BANNER -> fetchImage COMMON_ASSET $ "ny_ic_due_limit_warning"
+                        _ -> ""
+
         , imageHeight = if configureImage then (V 75) else (V 105)
         , imageWidth = if configureImage then (V 98) else (V 118)
         , titleStyle = if configureImage then FontStyle.Body4 else FontStyle.Body7
