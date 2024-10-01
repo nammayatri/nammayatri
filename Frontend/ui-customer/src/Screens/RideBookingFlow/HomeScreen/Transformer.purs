@@ -243,8 +243,8 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
         , recipient = currentRecipient
         , shareTripWithEmergencyContactOption = prevState.currentChatRecipient.shareTripWithEmergencyContactOption
         }
-      , isAlreadyFav : resp.isAlreadyFav
-      , favCount : resp.favCount
+      , isAlreadyFav : fromMaybe false resp.isAlreadyFav
+      , favCount : fromMaybe 0 resp.favCount
       , rideDuration : resp.duration
       }
 
