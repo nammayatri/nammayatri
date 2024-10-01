@@ -20,6 +20,9 @@ jobs:
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
           skipPush: true
 
+      - name: Inspect flake
+        run: om show .
+
       - name: Build all flake outputs
         run: om ci
 
