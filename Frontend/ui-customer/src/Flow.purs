@@ -521,11 +521,12 @@ toggleSetupSplash =
   if _ then do
     UI.splashScreen
   else do
-    state <- getState
-    void $ liftFlowBT $ launchAff $ flowRunner state $ runExceptT $ runBackT
-      $ do
-          void $ lift $ lift $ delay $ Milliseconds 2000.0
-          liftFlowBT $ terminateUI $ Just "SplashScreen"
+    pure unit
+    -- state <- getState
+    -- void $ liftFlowBT $ launchAff $ flowRunner state $ runExceptT $ runBackT
+    --   $ do
+    --       void $ lift $ lift $ delay $ Milliseconds 2000.0
+    --       liftFlowBT $ terminateUI $ Just "SplashScreen"
 
 riderRideCompletedScreenFlow :: FlowBT String Unit
 riderRideCompletedScreenFlow = do
@@ -5964,7 +5965,6 @@ firstRideCompletedEvent str = do
   logField_ <- lift $ lift $ getLogFields
   let
     appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
-
     eventPrefix = case appName of
       "Mana Yatri" -> "my_"
       "Yatri" -> "y_"
