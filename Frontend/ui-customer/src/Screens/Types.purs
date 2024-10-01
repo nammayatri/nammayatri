@@ -1594,6 +1594,7 @@ type LocationListItemState = {
   , recencyDate :: Maybe String
   , locationScore :: Maybe Number
   , dynamicAction :: Maybe CRT.RemoteAC
+  , types :: Maybe (Array String)
 }
 
 type SuggestionsMap = Map SourceGeoHash Suggestions
