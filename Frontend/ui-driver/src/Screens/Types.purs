@@ -479,6 +479,8 @@ type DriverProfileScreenData = {
   missedEarnings :: Int,
   driverInfoResponse :: Maybe GetDriverInfoResp,
   completingProfileRes :: CompletingProfileRes,
+  driverBlocked :: Boolean,
+  blockedExpiryTime :: String,
   favCount :: Maybe Int
 }
 
@@ -592,7 +594,8 @@ type DriverProfileScreenProps = {
   enableGoto :: Boolean,
   isRideActive :: Boolean,
   canSwitchToRental :: Maybe Boolean,
-  canSwitchToInterCity :: Maybe Boolean
+  canSwitchToInterCity :: Maybe Boolean,
+  showDriverBlockedPopup :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -1090,6 +1093,7 @@ type HomeScreenData =  {
 , homeScreenBannerTimer :: Int
 , onRideBannerTimerID :: String
 , onRideBannerTimer :: Int
+, blockExpiryTime :: String
 , scheduleRideCount :: Maybe (Tuple Int String)
 }
 
@@ -1365,6 +1369,7 @@ type HomeScreenProps =  {
   waitTimeStatus :: TimerStatus,
   isMockLocation :: Boolean,
   accountBlockedPopup :: Boolean,
+  accountBlockedPopupDueToCancellations :: Boolean,
   showCoinsPopup :: Boolean,
   isStatsModelExpanded :: Boolean,
   tobeLogged :: Boolean,
@@ -2613,7 +2618,7 @@ instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where stand
 instance decodeGoToPopUpType :: Decode GoToPopUpType where decode = defaultDecode
 instance encodeGoToPopUpType  :: Encode GoToPopUpType where encode = defaultEncode
 
-data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver | ReferralEarned | ReferNow | AddUPI | VerifyUPI
+data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver | ReferralEarned | ReferNow | AddUPI | VerifyUPI | AccountBlockedDueToCancellations
 
 derive instance genericHomeScreenPopUpTypes :: Generic HomeScreenPopUpTypes _
 instance showHomeScreenPopUpTypes :: Show HomeScreenPopUpTypes where show = genericShow

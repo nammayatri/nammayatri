@@ -263,7 +263,7 @@ cancelConfirmationConfig state = let
     margin = MarginHorizontal 24 24 ,
     buttonLayoutMargin = Margin 16 24 16 20 ,
     primaryText {
-      text =  getString LT.FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES
+      text =  getString LT.FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING
     , margin = Margin 16 24 16 0 },
     secondaryText {
       visibility = boolToVisibility $ state.props.showPopUp,
@@ -294,7 +294,7 @@ cancelConfirmationConfig state = let
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = fetchImage FF_ASSET "ic_cancel_prevention"
+      imageUrl = fetchImage FF_ASSET "ny_ic_frequent_cancellation_blocking"
     , visibility = VISIBLE
     , margin = Margin 16 20 16 0
     , height = V 178
