@@ -411,8 +411,8 @@ checkRideStatus rideAssigned prioritizeRating = do
                             , driverInfoCardState
                                 {
                                   driverName =  currRideListItem.driverName,
-                                  isAlreadyFav = resp.isAlreadyFav,
-                                  favCount = resp.favCount
+                                  isAlreadyFav = fromMaybe false resp.isAlreadyFav,
+                                  favCount = fromMaybe 0 resp.favCount
                                 }
                             , showSafetyCenter = state.data.config.feature.enableSafetyFlow && isRecentRide && not state.props.isSafetyCenterDisabled
                             , rideDuration = resp.duration
