@@ -270,6 +270,7 @@ data UserActionType
   | UPDATE_VEHICLE_MANUFACTURING
   | REFUND_BY_PAYOUT
   | SECURITY_DEPOSIT_STATUS
+  | RUN_QUERY
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)
@@ -278,7 +279,7 @@ genSingletons [''UserActionType]
 
 -------- Required access levels for helper api --------
 
-data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT | MESSAGE | REFERRAL | ISSUE | VOLUNTEER | SPECIAL_ZONES | SUBSCRIPTION | FLEET | OVERLAY | NAMMA_TAG
+data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT | MESSAGE | REFERRAL | ISSUE | VOLUNTEER | SPECIAL_ZONES | SUBSCRIPTION | FLEET | OVERLAY | NAMMA_TAG | MIGRATION
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''ApiEntity)
