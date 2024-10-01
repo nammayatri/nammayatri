@@ -225,8 +225,6 @@ fromTTypeFarePolicy handler BeamFP.FarePolicyT {..} = do
               farePolicyDetails,
               perMinuteRideExtraTimeCharge = perMinuteRideExtraTimeCharge,
               congestionChargeMultiplier = congestionCharge,
-              congestionChargePerMin = Nothing,
-              dpVersion = Nothing,
               perDistanceUnitInsuranceCharge = perDistanceUnitInsuranceCharge,
               cardCharge =
                 Just $

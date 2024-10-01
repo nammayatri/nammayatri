@@ -1500,7 +1500,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             defaultStepFee :: HighPrecMoney <- readCSVField idx row.defaultStepFee "Default Step Fee"
             return $ NE.nonEmpty [DFPEFB.DriverExtraFeeBounds {..}]
 
-      return (city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, congestionChargePerMin = Nothing, dpVersion = Nothing, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, ..})
+      return (city, vehicleServiceTier, tripCategory, area, timeBound, searchSource, FarePolicy.FarePolicy {id = Id idText, description = Just description, platformFee = platformFeeChargeFarePolicyLevel, sgst = platformFeeSgstFarePolicyLevel, cgst = platformFeeCgstFarePolicyLevel, platformFeeChargesBy = fromMaybe FarePolicy.Subscription platformFeeChargesBy, ..})
 
     makeKey :: Id DMOC.MerchantOperatingCity -> ServiceTierType -> TripCategory -> SL.Area -> DFareProduct.SearchSource -> Text
     makeKey cityId vehicleServiceTier tripCategory area searchSource =
@@ -1971,8 +1971,8 @@ postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
   where
     filterCriteriaPlan mbServiceName mbPlanId =
       case (mbServiceName, mbPlanId) of
-        (Just serviceName, Just planId) -> \plan -> plan.serviceName == (castServiceName serviceName) && plan.id == planId
-        (Just serviceName, Nothing) -> \plan -> plan.serviceName == (castServiceName serviceName)
+        (Just serviceName, Just planId) -> \plan -> plan.serviceName == castServiceName serviceName && plan.id == planId
+        (Just serviceName, Nothing) -> \plan -> plan.serviceName == castServiceName serviceName
         (Nothing, Just planId) -> \plan -> plan.id == planId
         (Nothing, Nothing) -> \_ -> True
     castServiceName = \case
