@@ -156,11 +156,25 @@ checkBookingsForStatus (currBooking : bookings) = do
 checkBookingsForStatus [] = pure ()
 
 bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Flow BookingListRes
-bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId = do
+bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId = do
   (rbList, allbookings) <- runInReplica $ QR.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId
-  fork "booking list status update" $ checkBookingsForStatus allbookings
-  logInfo $ "rbList: test " <> show rbList
-  BookingListRes <$> traverse (`SRB.buildBookingAPIEntity` personId) rbList
+  let limit = maybe 10 fromIntegral mbLimit
+  if null rbList
+    then do
+      now <- getCurrentTime
+      let allBookingsNotScheduled = length $ filter (\booking -> booking.startTime < now) allbookings
+      if allBookingsNotScheduled == limit
+        then do
+          bookingList (personId, merchantId) (Just (fromIntegral (limit + 1))) mbOffset mbOnlyActive mbBookingStatus mbClientId
+        else do
+          returnResonseAndClearStuckRides allbookings rbList personId
+    else do
+      returnResonseAndClearStuckRides allbookings rbList personId
+  where
+    returnResonseAndClearStuckRides allbookings rbList personId' = do
+      fork "booking list status update" $ checkBookingsForStatus allbookings
+      logInfo $ "rbList: test " <> show rbList
+      BookingListRes <$> traverse (`SRB.buildBookingAPIEntity` personId') rbList
 
 favouriteBookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> DriverNo -> Flow FavouriteBookingListRes
 favouriteBookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId driver = do
