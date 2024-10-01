@@ -1980,8 +1980,8 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
     alreadyGotEstimates = not $ null $ state.data.specialZoneQuoteList 
     estimates = getEstimateList state quotesRes.estimates state.data.config.estimateAndQuoteConfig state.data.selectedEstimatesObject.activeIndex
     quotes = filter filterNonAcAsPerGates $ getSpecialZoneQuotes quotesRes.quotes state.data.config.estimateAndQuoteConfig (state.data.fareProductType == FPT.INTER_CITY)
-    allQuoteListWithUpdatedIndex = spy "debug quotes allQuoteListWithUpdatedIndex" (mapWithIndex (\index item -> item{ index = index }) (estimates <> quotes))
-    quoteList = filter (\item -> item.providerType == ONUS || (item.providerType == OFFUS && state.data.currentCityConfig.iopConfig.enable)) allQuoteListWithUpdatedIndex
+    filteredAllQuoteList = filter (\item -> item.providerType == ONUS || (item.providerType == OFFUS && state.data.currentCityConfig.iopConfig.enable)) (estimates <> quotes)
+    quoteList = mapWithIndex (\index item -> item{ index = index }) filteredAllQuoteList
     repeatRideFailCheck =  not $ checkRecentRideVariantInEstimates quoteList state.props.repeatRideServiceTierName -- check if the repeat ride variant is available in the estimates
     isRepeatRide = state.props.isRepeatRide && not repeatRideFailCheck -- if repeat ride is enabled and the variant is not available in the estimates then disable repeat ride
     nYQuotes = filter (\item -> item.providerType == ONUS) quoteList
