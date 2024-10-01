@@ -2986,3 +2986,11 @@ export const takePhoto = function () {
       return false;
   }
 }
+
+export const getResourceIdentifier = function (resourceName,type) {
+  try{
+    JBridge.getResourceIdentifier(resourceName,type);
+  } catch (err) {
+    console.log("Error in getResourceIdentifier", err);
+  }
+}

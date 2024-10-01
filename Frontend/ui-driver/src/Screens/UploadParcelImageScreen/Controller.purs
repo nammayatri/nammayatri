@@ -39,6 +39,11 @@ eval :: Action -> ST.UploadParcelImageScreenState -> Eval Action ScreenOutput ST
 
 eval AfterRender state = continue state 
 
+eval NoAction state = 
+    if state.props.uploading && state.props.showConfirmAndUploadButton then do
+      exit $ UploadImage state
+    else continue state
+
 eval BackPressed state = do
     if state.props.showConfirmAndUploadButton then do
         continue state { props {showConfirmAndUploadButton = false} }

@@ -54,7 +54,7 @@ checkImageUploadStatusButtonConfig config =
       , prefixImageConfig
         { 
           animation = [Anim.rotateAnim (AnimConfig.rotateAnimConfig config.refreshAnimation)]
-        , imageUrl = HU.fetchImage HU.COMMON_ASSET "ny_ic_refresh"
+        , imageUrl = HU.fetchImage HU.COMMON_ASSET "ny_ic_refresh_outline"
         , height = V 10
         , width = V 10
         , margin = (Margin 0 0 2 0)
