@@ -37,7 +37,7 @@ import qualified Domain.Action.Beckn.OnTrack as OnTrack
 import Domain.Action.UI.Location (makeLocationAPIEntity)
 import qualified Domain.Action.UI.Person as UPerson
 import qualified Domain.Types.Booking as DB
-import Domain.Types.Booking.API (makeRideAPIEntity)
+import Domain.Types.Booking.API (buildRideAPIEntity)
 import qualified Domain.Types.BookingUpdateRequest as DBUR
 import Domain.Types.Extra.Ride (RideAPIEntity (..))
 import Domain.Types.Location (LocationAPIEntity)
@@ -194,6 +194,7 @@ getRideStatus ::
   m GetRideStatusResp
 getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  -- stopsInfo <- QSI.findAllByRideId rideId
   mbPos <-
     if ride.status == COMPLETED || ride.status == CANCELLED
       then return Nothing
@@ -205,6 +206,7 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
   decRider <- decrypt rider
   safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just rider)
   isSafetyCenterDisabled <- SLP.checkSafetyCenterDisabled rider safetySettings
+  ride' <- buildRideAPIEntity ride
   return $
     GetRideStatusResp
       { fromLocation = makeLocationAPIEntity booking.fromLocation,
@@ -216,7 +218,7 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
           DB.DriverOfferDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.AmbulanceDetails details -> Just $ makeLocationAPIEntity details.toLocation
           DB.DeliveryDetails details -> Just $ makeLocationAPIEntity details.toLocation,
-        ride = makeRideAPIEntity ride,
+        ride = ride',
         customer = UPerson.makePersonAPIEntity decRider tag isSafetyCenterDisabled safetySettings,
         driverPosition = mbPos <&> (.currPoint)
       }
@@ -297,7 +299,8 @@ editLocation rideId (personId, merchantId) req = do
                       { bppRideId = ride.bppRideId,
                         origin,
                         status = ACL.CONFIRM_UPDATE,
-                        destination = Nothing
+                        destination = Nothing,
+                        stops = Nothing
                       },
                 ..
               }
@@ -323,10 +326,10 @@ editLocation rideId (personId, merchantId) req = do
       void $ Serviceability.validateServiceability sourceLatLong stopsLatLong person
       QBUR.create bookingUpdateReq
       startLocMap <- SLM.buildPickUpLocationMapping startLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
-      oldDropLocMap <- SLM.buildDropLocationMapping oldDropLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
-      newDropLocationMap <- SLM.buildDropLocationMapping newDropLocation.id bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
       QLM.create startLocMap
+      oldDropLocMap <- SLM.buildDropLocationMapping oldDropLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
       QLM.create oldDropLocMap
+      newDropLocationMap <- SLM.buildDropLocationMapping newDropLocation.id bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
       QLM.create newDropLocationMap
       prevOrder <- QLM.maxOrderByEntity booking.id.getId
       let destination' = Just $ newDropLocation{id = show prevOrder}
@@ -344,7 +347,8 @@ editLocation rideId (personId, merchantId) req = do
                       { bppRideId = ride.bppRideId,
                         origin = Nothing,
                         status = ACL.SOFT_UPDATE,
-                        destination = destination'
+                        destination = destination',
+                        stops = Nothing
                       },
                 ..
               }

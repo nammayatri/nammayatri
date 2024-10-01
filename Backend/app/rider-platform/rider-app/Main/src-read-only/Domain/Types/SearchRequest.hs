@@ -56,6 +56,7 @@ data SearchRequest = SearchRequest
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     selectedPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
     startTime :: Kernel.Prelude.UTCTime,
+    stops :: [Domain.Types.Location.Location],
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     totalRidesCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     validTill :: Kernel.Prelude.UTCTime

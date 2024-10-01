@@ -77,6 +77,7 @@ import qualified Domain.Types.GoHomeConfig as DGoHomeConfig
 import qualified Domain.Types.LeaderBoardConfigs as DLC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DMM
+import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -89,6 +90,9 @@ import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
 import Environment
 import qualified EulerHS.Language as L
+import qualified "shared-services" IssueManagement.Common as ICommon
+import qualified "shared-services" IssueManagement.Domain.Types.Issue.IssueConfig as DIConfig
+import qualified "shared-services" IssueManagement.Storage.CachedQueries.Issue.IssueConfig as CQIssueConfig
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.SMS as SMS
@@ -117,6 +121,7 @@ import qualified SharedLogic.DriverFee as SDF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
+import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIPC
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CQDIPC
 import qualified Storage.Cac.DriverPoolConfig as CQDPC
@@ -963,6 +968,7 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     congestionChargeMultiplier :: Text,
     congestionChargeMultiplierIncludeBaseFare :: Text,
     parkingCharge :: Text,
+    perStopCharge :: Text,
     currency :: Text,
     baseDistance :: Text,
     baseFare :: Text,
@@ -1042,6 +1048,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "congestion_charge_multiplier"
       <*> r .: "congestion_charge_multiplier_include_base_fare"
       <*> r .: "parking_charge"
+      <*> r .: "per_stop_charge"
       <*> r .: "currency"
       <*> r .: "base_distance"
       <*> r .: "base_fare"
@@ -1104,7 +1111,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   logTagInfo "Updating Fare Policies for merchant: " (show merchant.id <> " and city: " <> show opCity)
-  flatFarePolicies <- readCsv merchantOpCity.distanceUnit req.file
+  flatFarePolicies <- readCsv merchantOpCity.distanceUnit req.file merchantOpCity.id
   logTagInfo "Read file: " (show flatFarePolicies)
   let boundedAlreadyDeletedMap = Map.empty :: Map.Map Text Bool
   (farePolicyErrors, _) <- (foldlM (processFarePolicyGroup merchantOpCity) ([], boundedAlreadyDeletedMap) . groupFarePolices) flatFarePolicies
@@ -1116,11 +1123,11 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
   where
     cleanField = replaceEmpty . T.strip
 
-    readCsv distanceUnit csvFile = do
+    readCsv distanceUnit csvFile merchantOpCity = do
       csvData <- L.runIO $ BS.readFile csvFile
       case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector FarePolicyCSVRow)) of
         Left err -> throwError (InvalidRequest $ show err)
-        Right (_, v) -> V.imapM (makeFarePolicy distanceUnit) v >>= (pure . V.toList)
+        Right (_, v) -> V.imapM (makeFarePolicy merchantOpCity distanceUnit) v >>= (pure . V.toList)
 
     readCSVField :: Read a => Int -> Text -> Text -> Flow a
     readCSVField idx fieldValue fieldName =
@@ -1265,8 +1272,10 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 
           return (errors, newBoundedAlreadyDeletedMap)
 
-    makeFarePolicy :: DistanceUnit -> Int -> FarePolicyCSVRow -> Flow (Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, FarePolicy.FarePolicy)
-    makeFarePolicy distanceUnit idx row = do
+    checkIfvehicleServiceTierExists vehicleServiceTier merchanOperatingCityId = CQVST.findByServiceTierTypeAndCityId merchanOperatingCityId vehicleServiceTier >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
+
+    makeFarePolicy :: Id MerchantOperatingCity -> DistanceUnit -> Int -> FarePolicyCSVRow -> Flow (Context.City, ServiceTierType, TripCategory, SL.Area, TimeBound, DFareProduct.SearchSource, FarePolicy.FarePolicy)
+    makeFarePolicy merchantOpCity distanceUnit idx row = do
       now <- getCurrentTime
       let createdAt = now
       let updatedAt = now
@@ -1290,6 +1299,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             return $ BoundedByWeekday bounds
       city :: Context.City <- readCSVField idx row.city "City"
       vehicleServiceTier :: ServiceTierType <- readCSVField idx row.vehicleServiceTier "Vehicle Service Tier"
+      _ <- checkIfvehicleServiceTierExists merchantOpCity vehicleServiceTier
       area :: SL.Area <- readCSVField idx row.area "Area"
       idText <- cleanCSVField idx row.farePolicyKey "Fare Policy Key"
       tripCategory :: TripCategory <- readCSVField idx row.tripCategory "Trip Category"
@@ -1320,6 +1330,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                   then Just $ FarePolicy.BaseFareAndExtraDistanceFare congestionChargeMultiplierValue
                   else Just $ FarePolicy.ExtraDistanceFare congestionChargeMultiplierValue
       let parkingCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.parkingCharge "Parking Charge"
+      let perStopCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perStopCharge "Per Stop Charge"
       currency :: Currency <- readCSVField idx row.currency "Currency"
 
       (freeWatingTime, waitingCharges, mbNightCharges) <- do
@@ -1593,6 +1604,7 @@ postMerchantConfigOperatingCityCreate :: ShortId DM.Merchant -> Context.City -> 
 postMerchantConfigOperatingCityCreate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   baseOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
+  now <- getCurrentTime
 
   -- city
   baseOperatingCity <- CQMOC.findById baseOperatingCityId >>= fromMaybeM (InvalidRequest "Base Operating City not found")
@@ -1600,11 +1612,11 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- intelligent pool config
   intelligentPoolConfig <- CDIPC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Intelligent Pool Config not found")
-  newIntelligentPoolConfig <- buildIntelligentPoolConfig newOperatingCity.id intelligentPoolConfig
+  let newIntelligentPoolConfig = buildIntelligentPoolConfig newOperatingCity.id now intelligentPoolConfig
 
   -- driver pool config
   driverPoolConfigs <- CQDPC.findAllByMerchantOpCityId baseOperatingCityId
-  newDriverPoolConfigs <- mapM (buildPoolConfig newOperatingCity.id) driverPoolConfigs
+  newDriverPoolConfigs <- mapM (buildPoolConfig newOperatingCity.id now) driverPoolConfigs
 
   -- fare products
   fareProducts <- CQFProduct.findAllFareProductByMerchantOpCityId baseOperatingCityId
@@ -1616,7 +1628,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- go home config
   goHomeConfig <- CGHC.findByMerchantOpCityId baseOperatingCityId Nothing
-  newGoHomeConfig <- buildGoHomeConfig newOperatingCity.id goHomeConfig
+  let newGoHomeConfig = buildGoHomeConfig newOperatingCity.id now goHomeConfig
 
   -- leader board configs
   leaderBoardConfigs <- CQLBC.findAllByMerchantOpCityId baseOperatingCityId
@@ -1624,7 +1636,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- merchant message
   merchantMessages <- CQMM.findAllByMerchantOpCityId baseOperatingCityId
-  newMerchantMessages <- mapM (buildMerchantMessage newOperatingCity.id) merchantMessages
+  let newMerchantMessages = map (buildMerchantMessage newOperatingCity.id now) merchantMessages
 
   -- merchant overlay
   merchantOverlays <- CQMO.findAllByMerchantOpCityId baseOperatingCityId
@@ -1632,29 +1644,33 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- merchant payment method
   merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId baseOperatingCityId
-  newMerchantPaymentMethods <- mapM (buildMerchantPaymentMethod newOperatingCity.id) merchantPaymentMethods
+  newMerchantPaymentMethods <- mapM (buildMerchantPaymentMethod newOperatingCity.id now) merchantPaymentMethods
 
   -- merchant service usage config
   merchantServiceUsageConfig <- CQMSUC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Merchant Service Usage Config not found")
-  newMerchantServiceUsageConfig <- buildMerchantServiceUsageConfig newOperatingCity.id merchantServiceUsageConfig
+  let newMerchantServiceUsageConfig = buildMerchantServiceUsageConfig newOperatingCity.id now merchantServiceUsageConfig
 
   -- merchant service config
   merchantServiceConfigs <- CQMSC.findAllMerchantOpCityId baseOperatingCityId
-  newMerchantServiceConfigs <- mapM (buildMerchantServiceConfig newOperatingCity.id) merchantServiceConfigs
+  let newMerchantServiceConfigs = map (buildMerchantServiceConfig newOperatingCity.id now) merchantServiceConfigs
 
   -- onboarding document config
   documentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId baseOperatingCityId
-  newDocumentVerificationConfigs <- mapM (buildNewDocumentVerificationConfig newOperatingCity.id) documentVerificationConfigs
+  let newDocumentVerificationConfigs = map (buildNewDocumentVerificationConfig newOperatingCity.id now) documentVerificationConfigs
 
   -- transporter config
   transporterConfig <- CTC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Transporter Config not found")
-  newTransporterConfig <- buildTransporterConfig newOperatingCity.id transporterConfig
+  let newTransporterConfig = buildTransporterConfig newOperatingCity.id now transporterConfig
 
   -- geometry
   geometry <- buildGeometry
 
   -- call ride exophone
   exophones <- CQExophone.findAllCallExophoneByMerchantOpCityId baseOperatingCityId
+
+  -- issue config
+  issueConfig <- CQIssueConfig.findByMerchantOpCityId (cast baseOperatingCityId) ICommon.DRIVER >>= fromMaybeM (InvalidRequest "Issue Config not found")
+  newIssueConfig <- buildIssueConfig newOperatingCity.id now issueConfig
 
   QGEO.create geometry
   CQMOC.create newOperatingCity
@@ -1672,8 +1688,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
   mapM_ CQDVC.create newDocumentVerificationConfigs
   CQTC.create newTransporterConfig
   whenJust (find (\exophone -> exophone.exophoneType == DExophone.CALL_RIDE) exophones) $ \exophone -> do
-    exophone' <- buildNewExophone newOperatingCity.id exophone
+    exophone' <- buildNewExophone newOperatingCity.id now exophone
     CQExophone.create exophone'
+  CQIssueConfig.create newIssueConfig
 
   when req.enableForMerchant $ do
     let newOrigin = updateGeoRestriction merchant.geofencingConfig.origin
@@ -1715,31 +1732,27 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             distanceUnit = fromMaybe baseCity.distanceUnit req.distanceUnit
           }
 
-    buildIntelligentPoolConfig newCityId DDIPC.DriverIntelligentPoolConfig {..} = do
-      now <- getCurrentTime
-      return $
-        DDIPC.DriverIntelligentPoolConfig
-          { merchantOperatingCityId = newCityId,
-            createdAt = now,
-            updatedAt = now,
-            ..
-          }
+    buildIntelligentPoolConfig newCityId currentTime DDIPC.DriverIntelligentPoolConfig {..} =
+      DDIPC.DriverIntelligentPoolConfig
+        { merchantOperatingCityId = newCityId,
+          createdAt = currentTime,
+          updatedAt = currentTime,
+          ..
+        }
 
-    buildPoolConfig newCityId DDPC.DriverPoolConfig {..} = do
+    buildPoolConfig newCityId currentTime DDPC.DriverPoolConfig {..} = do
       newId <- generateGUID
-      now <- getCurrentTime
       return $
         DDPC.DriverPoolConfig
           { id = newId,
             merchantOperatingCityId = newCityId,
-            createdAt = now,
-            updatedAt = now,
+            createdAt = currentTime,
+            updatedAt = currentTime,
             ..
           }
 
-    buildNewExophone newCityId DExophone.Exophone {..} = do
+    buildNewExophone newCityId currentTime DExophone.Exophone {..} = do
       newId <- generateGUID
-      now <- getCurrentTime
       return $
         DExophone.Exophone
           { id = newId,
@@ -1747,8 +1760,8 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             primaryPhone = req.exophone,
             backupPhone = req.exophone,
             isPrimaryDown = False,
-            createdAt = now,
-            updatedAt = now,
+            createdAt = currentTime,
+            updatedAt = currentTime,
             ..
           }
 
@@ -1770,16 +1783,14 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             ..
           }
 
-    buildGoHomeConfig newCityId DGoHomeConfig.GoHomeConfig {..} = do
-      now <- getCurrentTime
-      return $
-        DGoHomeConfig.GoHomeConfig
-          { merchantOperatingCityId = newCityId,
-            enableGoHome = False,
-            createdAt = now,
-            updatedAt = now,
-            ..
-          }
+    buildGoHomeConfig newCityId currentTime DGoHomeConfig.GoHomeConfig {..} =
+      DGoHomeConfig.GoHomeConfig
+        { merchantOperatingCityId = newCityId,
+          enableGoHome = False,
+          createdAt = currentTime,
+          updatedAt = currentTime,
+          ..
+        }
 
     buildLeaderBoardConfig newCityId DLC.LeaderBoardConfigs {..} = do
       newId <- generateGUID
@@ -1790,15 +1801,13 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             ..
           }
 
-    buildMerchantMessage newCityId DMM.MerchantMessage {..} = do
-      now <- getCurrentTime
-      return $
-        DMM.MerchantMessage
-          { merchantOperatingCityId = newCityId,
-            createdAt = now,
-            updatedAt = now,
-            ..
-          }
+    buildMerchantMessage newCityId currentTime DMM.MerchantMessage {..} =
+      DMM.MerchantMessage
+        { merchantOperatingCityId = newCityId,
+          createdAt = currentTime,
+          updatedAt = currentTime,
+          ..
+        }
 
     buildMerchantOverlay newCityId DMO.Overlay {..} = do
       newId <- generateGUID
@@ -1809,56 +1818,58 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             ..
           }
 
-    buildMerchantPaymentMethod newCityId DMPM.MerchantPaymentMethod {..} = do
+    buildMerchantPaymentMethod newCityId currentTime DMPM.MerchantPaymentMethod {..} = do
       newId <- generateGUID
-      now <- getCurrentTime
       return $
         DMPM.MerchantPaymentMethod
           { id = newId,
             merchantOperatingCityId = newCityId,
-            createdAt = now,
-            updatedAt = now,
+            createdAt = currentTime,
+            updatedAt = currentTime,
             ..
           }
 
-    buildMerchantServiceUsageConfig newCityId DMSUC.MerchantServiceUsageConfig {..} = do
-      now <- getCurrentTime
-      return $
-        DMSUC.MerchantServiceUsageConfig
-          { merchantOperatingCityId = newCityId,
-            createdAt = now,
-            updatedAt = now,
-            ..
-          }
+    buildMerchantServiceUsageConfig newCityId currentTime DMSUC.MerchantServiceUsageConfig {..} =
+      DMSUC.MerchantServiceUsageConfig
+        { merchantOperatingCityId = newCityId,
+          createdAt = currentTime,
+          updatedAt = currentTime,
+          ..
+        }
 
-    buildMerchantServiceConfig newCityId DMSC.MerchantServiceConfig {..} = do
-      now <- getCurrentTime
-      return $
-        DMSC.MerchantServiceConfig
-          { merchantOperatingCityId = Just newCityId,
-            createdAt = now,
-            updatedAt = now,
-            ..
-          }
+    buildMerchantServiceConfig newCityId currentTime DMSC.MerchantServiceConfig {..} =
+      DMSC.MerchantServiceConfig
+        { merchantOperatingCityId = Just newCityId,
+          createdAt = currentTime,
+          updatedAt = currentTime,
+          ..
+        }
 
-    buildNewDocumentVerificationConfig newCityId DVC.DocumentVerificationConfig {..} = do
-      now <- getCurrentTime
-      return $
-        DVC.DocumentVerificationConfig
-          { merchantOperatingCityId = newCityId,
-            rcNumberPrefixList = fromMaybe rcNumberPrefixList req.rcNumberPrefixList,
-            createdAt = now,
-            updatedAt = now,
-            ..
-          }
+    buildNewDocumentVerificationConfig newCityId currentTime DVC.DocumentVerificationConfig {..} =
+      DVC.DocumentVerificationConfig
+        { merchantOperatingCityId = newCityId,
+          rcNumberPrefixList = fromMaybe rcNumberPrefixList req.rcNumberPrefixList,
+          createdAt = currentTime,
+          updatedAt = currentTime,
+          ..
+        }
 
-    buildTransporterConfig newCityId DTC.TransporterConfig {..} = do
-      now <- getCurrentTime
+    buildTransporterConfig newCityId currentTime DTC.TransporterConfig {..} =
+      DTC.TransporterConfig
+        { merchantOperatingCityId = newCityId,
+          createdAt = currentTime,
+          updatedAt = currentTime,
+          ..
+        }
+
+    buildIssueConfig newCityId currentTime DIConfig.IssueConfig {..} = do
+      newId <- generateGUID
       return $
-        DTC.TransporterConfig
-          { merchantOperatingCityId = newCityId,
-            createdAt = now,
-            updatedAt = now,
+        DIConfig.IssueConfig
+          { id = newId,
+            merchantOperatingCityId = cast newCityId,
+            createdAt = currentTime,
+            updatedAt = currentTime,
             ..
           }
 

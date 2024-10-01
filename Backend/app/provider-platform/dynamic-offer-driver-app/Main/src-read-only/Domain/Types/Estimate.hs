@@ -30,6 +30,8 @@ data Estimate = Estimate
     minFare :: Kernel.Types.Common.HighPrecMoney,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    supplyDemandRatioFromLoc :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    supplyDemandRatioToLoc :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     tripCategory :: Domain.Types.Common.TripCategory,
     updatedAt :: Kernel.Prelude.UTCTime,

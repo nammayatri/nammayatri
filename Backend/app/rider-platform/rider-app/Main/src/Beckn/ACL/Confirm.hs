@@ -29,6 +29,7 @@ import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
+import qualified Domain.Types.Booking as DRB
 import EulerHS.Prelude hiding (id, state, (%~))
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -85,12 +86,17 @@ tfFulfillments res =
           fulfillmentCustomer = tfCustomer res,
           fulfillmentId = res.fulfillmentId,
           fulfillmentState = Nothing,
-          fulfillmentStops = Utils.mkStops' (Just res.fromLocation) res.mbToLocation,
+          fulfillmentStops = Utils.mkStops' (Just res.fromLocation) stops res.mbToLocation, -------fix me -----RITIKA
           fulfillmentTags = Nothing,
           fulfillmentType = Utils.tripCategoryToFulfillmentType <$> res.tripCategory,
           fulfillmentVehicle = tfVehicle res
         }
     ]
+  where
+    stops = case res.bookingDetails of
+      DRB.OneWayDetails details -> details.stops
+      DRB.OneWaySpecialZoneDetails details -> details.stops
+      _ -> []
 
 tfItems :: DOnInit.OnInitRes -> Maybe [Spec.Item]
 tfItems res =

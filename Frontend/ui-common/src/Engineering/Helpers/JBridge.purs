@@ -215,7 +215,7 @@ foreign import clearNoInternetAction :: Unit -> Effect Unit
 foreign import openWhatsAppSupport :: String -> Effect Unit
 foreign import generateSessionToken :: String -> String
 foreign import addMediaFile :: EffectFn7 String String String String String String Boolean Unit
-foreign import clearFocus :: EffectFn1 String Unit
+foreign import clearFocusFunction :: String -> Unit
 foreign import removeMediaPlayer :: EffectFn1 String Unit
 foreign import renderBase64ImageFile :: EffectFn4 String String Boolean String Unit
 foreign import saveAudioFile :: EffectFn1 String String
@@ -283,9 +283,9 @@ foreign import stopRecord :: Unit -> Effect Unit
 
 foreign import clearAudioPlayer :: String -> Unit
 foreign import pauseAudioPlayer :: String -> Unit
-foreign import startAudioPlayer :: forall action. Fn3 String (action -> Effect Unit) (String -> action) Unit
-foreign import datePickerImpl :: forall action. EffectFn3 (action -> Effect Unit) (String -> Int -> Int -> Int -> action) Int Unit
-foreign import timePickerImpl :: forall action. EffectFn2 (action -> Effect Unit) ( Int -> Int -> String -> action) Unit
+foreign import startAudioPlayer :: forall action. Fn4 String (action -> Effect Unit) (String -> action) String Unit
+foreign import datePickerImpl :: forall action. EffectFn4 (action -> Effect Unit) (String -> Int -> Int -> Int -> action) Int String Unit
+foreign import timePickerImpl :: forall action. EffectFn3 (action -> Effect Unit) ( Int -> Int -> String -> action) String Unit
 foreign import setMapPaddingImpl :: EffectFn4 Int Int Int Int Unit
 
 foreign import displayBase64Image :: EffectFn1 DisplayBase64ImageConig Unit
@@ -340,8 +340,12 @@ sliderConfig = {
   bgAlpha : 50
 }
 
+clearFocus :: EffectFn1 String Unit
+clearFocus = mkEffectFn1 $ \id -> pure $ clearFocusFunction id
+
 foreign import initHVSdk :: forall action. EffectFn8 String String String Boolean String String (String -> action) (action -> Effect Unit) Unit
 foreign import decodeAndStoreImage :: Fn1 String String
+foreign import convertAudioToBase64 :: Fn1 String String
 foreign import encodeToBase64 :: forall action. EffectFn5 String Int (String -> Maybe String) (Maybe String) (action -> Effect Unit) (Effect String)
 foreign import isSdkTokenExpired :: Fn1 String Boolean
 foreign import makeSdkTokenExpiry :: Fn1 Int String
@@ -357,8 +361,8 @@ getCurrentPositionWithTimeout :: forall action. (action -> Effect Unit) -> (Stri
 getCurrentPositionWithTimeout = runEffectFn4 getCurrentPositionWithTimeoutImpl
 
 
-timePickerWithoutTimeout :: forall action. (action -> Effect Unit) -> ( Int -> Int -> String -> action) -> Effect Unit
-timePickerWithoutTimeout = runEffectFn2 timePickerImpl
+timePickerWithoutTimeout :: forall action. (action -> Effect Unit) -> ( Int -> Int -> String -> action) -> String -> Effect Unit
+timePickerWithoutTimeout = runEffectFn3 timePickerImpl
 
 type LottieAnimationConfig = {
     rawJson :: String
@@ -495,11 +499,11 @@ setKeyInSharedPrefKeys key val = liftFlow (setKeyInSharedPrefKeysImpl key val)
 setEnvInNativeSharedPrefKeys :: forall st. String -> String -> Flow st Unit
 setEnvInNativeSharedPrefKeys key val = liftFlow (setEnvInNativeSharedPrefKeysImpl key val)
 
-datePickerWithTimeout :: forall action. (action -> Effect Unit) -> (String -> Int -> Int -> Int -> action) -> Int -> Effect Unit
-datePickerWithTimeout = runEffectFn3 datePickerImpl
+datePickerWithTimeout :: forall action. (action -> Effect Unit) -> (String -> Int -> Int -> Int -> action) -> Int -> String-> Effect Unit
+datePickerWithTimeout = runEffectFn4 datePickerImpl
 
-timePickerWithTimeout :: forall action. (action -> Effect Unit) -> ( Int -> Int -> String -> action) -> Effect Unit
-timePickerWithTimeout = runEffectFn2 timePickerImpl
+timePickerWithTimeout :: forall action. (action -> Effect Unit) -> ( Int -> Int -> String -> action) -> String -> Effect Unit
+timePickerWithTimeout = runEffectFn3 timePickerImpl
 
 -- onEventWithCB :: Foreign -> Flow GlobalState (Either String String)
 -- onEventWithCB obj = doAff do
@@ -921,6 +925,7 @@ displayBase64ImageConfig = {
   , id : ""
   , scaleType : "CENTER_CROP"
   , inSampleSize : 1
+  , adjustViewBounds : true 
 }
 ---------- ################################### DRAW ROUTE CONFIG ################################### ----------
 
@@ -996,16 +1001,17 @@ data DatePicker = DatePicker String Int Int Int
 data TimePicker = TimePicker Int Int String
 
 data CloseAction = SELECTED | DISMISSED | CANCELLED
-
 derive instance genericCloseAction :: Generic CloseAction _
 instance showCloseAction :: Show CloseAction where show = genericShow
 
-showDateTimePicker ∷ forall action. (action → Effect Unit) → (String → Int → Int → Int → String → Int → Int → action) → Aff Unit
-showDateTimePicker push action = do
-  datePicker <- makeAff \cb -> datePickerWithTimeout (cb <<< Right) DatePicker 30000 $> nonCanceler
+showDateTimePicker ∷ forall action. (action → Effect Unit) -> (String → Int → Int → Int → String → Int → Int → action) -> Maybe String -> Aff Unit
+showDateTimePicker push action maybePrevDate= do
+  let 
+    prevDate =  fromMaybe "" maybePrevDate 
+  datePicker <- makeAff \cb -> datePickerWithTimeout (cb <<< Right) DatePicker 30000 prevDate $> nonCanceler
   let (DatePicker dateResp year month day) = datePicker
   if dateResp == show SELECTED then do
-    timePicker <- makeAff \cb -> timePickerWithTimeout (cb <<< Right) TimePicker $> nonCanceler
+    timePicker <- makeAff \cb -> timePickerWithTimeout (cb <<< Right) TimePicker prevDate $> nonCanceler
     let (TimePicker hour minute timeResp) = timePicker
     liftEffect $ push $ action dateResp year month day timeResp hour minute
   else liftEffect $ push $ action dateResp year month day "" 0 0

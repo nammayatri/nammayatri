@@ -23,7 +23,7 @@ import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck(..), Feed
 import ConfigProvider as CP
 import Control.Monad.Except.Trans (lift, runExceptT)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..), runBackT)
-import Data.Array ((!!), catMaybes, concat, take, any, singleton, find, filter, length, null, mapMaybe)
+import Data.Array ((!!), catMaybes, concat, take, any, singleton, find, filter, length, null, mapMaybe, head)
 import Data.Either (Either(..), either)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
@@ -567,8 +567,45 @@ makeFeedBackReq rating rideId feedback wasOfferedAssistance = FeedbackReq
     ,   "rideId" : rideId
     ,   "feedbackDetails" : feedback
     ,   "wasOfferedAssistance" : wasOfferedAssistance
+    ,   "mbAudio" : Nothing
+    ,   "shouldFavDriver" : Nothing
+    ,   "nightSafety" : Nothing
     }
 
+makeFeedBackReqs :: Int -> String -> String -> Maybe Boolean -> String -> FeedbackReq
+makeFeedBackReqs rating rideId feedback favDriver audio = FeedbackReq
+    {   "rating" : rating
+    ,   "rideId" : rideId
+    ,   "feedbackDetails" : feedback
+    ,   "shouldFavDriver" : favDriver
+    ,   "nightSafety" : Nothing
+    ,   "wasOfferedAssistance" : Nothing
+    ,   "mbAudio" : if audio == "" then Nothing else Just audio
+    }
+
+removeFavouriteDriver :: String -> Flow GlobalState (Either ErrorResponse RemoveFavouriteDriverResp)
+removeFavouriteDriver id = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.removeFavouriteDriver id) unwrapResponse $ callAPI headers (RemoveFavouriteDriverReq id)
+    where
+        unwrapResponse (x) = x
+
+getFavouriteDriverList = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.getFavouriteDriverList)  unwrapResponse $ callAPI headers (GetFavouriteDriverListReq)
+    where
+        unwrapResponse (x) = x
+
+getFavouriteDriverTrips :: String -> String -> String -> String -> Flow GlobalState (Either ErrorResponse FavouriteDriverTripsResp)
+getFavouriteDriverTrips limit offset onlyActive driverNo = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.getFavouriteDriverTrips limit offset onlyActive (Just "COMPLETED") Nothing)  unwrapResponse $ callAPI headers (makeUpdateReq limit offset onlyActive (Just "COMPLETED") Nothing driverNo)
+    where
+        makeUpdateReq :: String -> String -> String -> Maybe String -> Maybe String -> String -> FavouriteDriverTripsReq
+        makeUpdateReq limit offset onlyActive status clientId driverNo = 
+            FavouriteDriverTripsReq limit offset onlyActive status clientId $ FavouriteDriverTripsBody $ { driverNumber : driverNo }
+
+        unwrapResponse (x) = x
 
 ----------------------------------------------------------------------- RideBooking BT Function ---------------------------------------------------------------------------------------
 rideBookingBT :: String -> FlowBT String RideBookingRes
@@ -1477,3 +1514,32 @@ makeEditLocationResultRequest bookingUpdateRequestId = GetEditLocResultReq booki
 
 makeEditLocResultConfirmReq :: String -> EditLocResultConfirmReq
 makeEditLocResultConfirmReq bookingUpdateRequestId = EditLocResultConfirmReq bookingUpdateRequestId
+
+
+------------------------------------------------------------------------------- Intercity ---------------------------------------------------------------------------------
+makeRoundTripReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Maybe String ->  Boolean -> SearchReq
+makeRoundTripReq slat slong dlat dlong srcAdd desAdd startTime returnTime roundTrip =
+    let appConfig = CP.getAppConfig CP.appConfig
+    in  SearchReq { "contents" : RoundTripSearchRequest (
+                                RoundTripSearchReq {
+                                        "stops" : if dlat == 0.0 then Nothing else 
+                                            (Just [SearchReqLocation {
+                                                    "gps" : LatLong {
+                                                        "lat" : dlat ,
+                                                        "lon" : dlong
+                                                        },
+                                                    "address" : (LocationAddress desAdd)
+                                            }]), 
+                                            "origin" : SearchReqLocation {
+                                            "gps" : LatLong {
+                                                        "lat" : slat ,
+                                                        "lon" : slong
+                                            },"address" : (LocationAddress srcAdd)
+                                            },
+                                            "startTime" : startTime,
+                                            "returnTime" : returnTime,
+                                            "roundTrip" : roundTrip,
+                                            "isReallocationEnabled" : Just appConfig.feature.enableReAllocation
+                                            }),
+                    "fareProductType" : "INTER_CITY"
+                   }

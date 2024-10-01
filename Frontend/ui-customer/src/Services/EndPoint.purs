@@ -52,7 +52,10 @@ sendIssue :: String -> String
 sendIssue dummyString = (getBaseUrl "9") <> "/support/sendIssue"
 
 getRoute :: String -> String
-getRoute routeType = (getBaseUrl "10") <> if routeType == "trip" then "/trip/route" else "/pickup/route"
+getRoute routeType = (getBaseUrl "10") <> case routeType of
+                                                "trip" -> "/trip/route"
+                                                "intercity" -> "/route"
+                                                _ -> "/pickup/route" 
 
 driverFeedBack :: String -> String
 driverFeedBack dummyString = (getBaseUrl "12") <> "/feedback/rateRide"
@@ -309,3 +312,21 @@ getManuallySharedRideDetails rideId = (getBaseUrl "60") <> "/followRide/" <> rid
 
 multiChat :: String -> String 
 multiChat _ = (getBaseUrl "61") <> "/triggerFCM/message"
+
+getFavouriteDriverList :: String
+getFavouriteDriverList = ((getBaseUrl "58") <> "/driver/favorites") 
+
+getFavouriteDriverTrips :: String -> String -> String -> Maybe String -> Maybe String -> String
+getFavouriteDriverTrips limit offset isActive status clientId = 
+  maybe 
+    ((getBaseUrl "16") <> "/rideBooking/favourites/list?limit="<> limit <>"&offset="<> offset <>"&onlyActive=" <> isActive)
+    (\rideStatus ->
+      let clientIdStr = (fromMaybe "" clientId)
+      in
+        if null clientIdStr
+          then (getBaseUrl "41") <> "/rideBooking/favourites/list?limit=" <> limit <> "&offset=" <> offset <> "&onlyActive=false" <> "&status=" <> show rideStatus
+          else (getBaseUrl "41") <> "/rideBooking/favourites/list?limit=" <> limit <> "&offset=" <> offset <> "&onlyActive=false" <> "&status=" <> show rideStatus <> "&clientId=" <> clientIdStr)
+    status
+
+removeFavouriteDriver :: String -> String
+removeFavouriteDriver id = ((getBaseUrl "59") <> "/favorites/" <> id <> "/remove") 

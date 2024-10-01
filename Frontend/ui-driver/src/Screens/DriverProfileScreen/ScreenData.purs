@@ -24,9 +24,10 @@ import Foreign.Object (empty)
 import Language.Types (STR(..)) as STR
 import ConfigProvider
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
-import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..),AutoPayStatus(..))
+import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..),AutoPayStatus(..), Component(..))
 import Services.API (GetDriverInfoResp(..), OrganizationInfo(..), DriverGoHomeInfo(..))
 import Screens.Types as ST
+import Engineering.Helpers.Commons as EHC
 
 initData :: DriverProfileScreenState
 initData = 
@@ -98,7 +99,30 @@ initData =
     cancelledRides : 0,
     cancellationWindow : Nothing,
     missedEarnings : 0,
-    driverInfoResponse : Nothing
+    driverInfoResponse : Nothing,
+    completingProfileRes : {
+      completed : 0
+    , pledge : []
+    , vehicalOffer : []
+    , languages : []
+    , aspirations : [] 
+    , homeTown : Nothing
+    , calendarState:
+      { calendarPopup: false
+      , endDate: Nothing
+      , selectedTimeSpan: dummyDateItem
+      , startDate: Just dummyDateItem
+      , weeks: []
+      }
+    , drivingSince : Nothing
+    , addImagesState: addImagesState'
+    , viewImageState: { image : "", imageName : Nothing}
+    , uploadedImagesIds: []
+    , addedImages: []
+    , datePickerState : datePickerState'
+    , inputTextState : inputTextState'
+      }
+    , favCount : Nothing
     },
 
   props: {
@@ -141,7 +165,31 @@ initData =
    }
 }
 
+inputTextState' = {
+  feedback : "",
+  component : Empty,
+  others : others'
+}
 
+others' = {
+  pledge : "",
+  aspirations : ""
+}
+
+datePickerState' = {
+  activeIndex : 0,
+  dates : EHC.getPastYears 70,
+  id : ""
+}
+
+addImagesState' = {
+  images: [],
+  stateChanged: false,
+  isLoading: false,
+  imageMediaIds: []
+}
+
+dummyDateItem = { date: 0, isInRange: false, isStart: false, isEnd: false, utcDate: "", shortMonth: "", year: 0, intMonth: 0 }
 
 
 languagesChoices :: Array CheckBoxOptions
@@ -232,6 +280,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , cancelledRidesCountInWindow : Nothing
     , assignedRidesCountInWindow : Nothing
     , windowSize : Nothing
+    , favCount : Nothing
     , isSubscriptionVehicleCategoryChanged : Nothing
     , isOnFreeTrial : Nothing
     , planMandatoryForCategory : Nothing

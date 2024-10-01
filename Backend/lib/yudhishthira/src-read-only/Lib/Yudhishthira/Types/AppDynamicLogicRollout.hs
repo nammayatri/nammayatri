@@ -17,6 +17,7 @@ data AppDynamicLogicRollout = AppDynamicLogicRollout
     percentageRollout :: Kernel.Prelude.Int,
     timeBounds :: Data.Text.Text,
     version :: Kernel.Prelude.Int,
+    versionDescription :: Kernel.Prelude.Maybe Data.Text.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

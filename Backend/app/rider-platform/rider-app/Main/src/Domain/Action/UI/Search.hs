@@ -125,6 +125,7 @@ fareProductConstructorModifier = \case
 data OneWaySearchReq = OneWaySearchReq
   { origin :: SearchReqLocation,
     destination :: SearchReqLocation,
+    stops :: Maybe [SearchReqLocation],
     isSourceManuallyMoved :: Maybe Bool,
     isDestinationManuallyMoved :: Maybe Bool,
     isSpecialLocation :: Maybe Bool,
@@ -311,7 +312,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
       person
       fromLocation
       merchantOperatingCity
-      (listToMaybe stopLocations) --- Take first stop, handle multiple stops later
+      (lastMaybe stopLocations) ---(Now - As it's drop which would be last element of stops list) --------------- (Earlier - Take first stop, handle multiple stops later)
       (convertMetersToDistance merchantOperatingCity.distanceUnit <$> longestRouteDistance)
       (convertMetersToDistance merchantOperatingCity.distanceUnit <$> shortestRouteDistance)
       startTime
@@ -329,6 +330,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
       person.totalRidesCount
       isDashboardRequest_
       placeNameSource
+      (init stopLocations)
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
   Metrics.startSearchMetrics merchant.name searchRequest.id.getId
@@ -387,6 +389,9 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
               ]
            }
 
+    lastMaybe [] = Nothing
+    lastMaybe xs = Just $ last xs
+
     validateStartAndReturnTime :: UTCTime -> UTCTime -> Maybe UTCTime -> Flow ()
     validateStartAndReturnTime now startTime returnTime = do
       whenJust returnTime $ \rt -> do
@@ -405,7 +410,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
         SearchDetails
           { riderPreferredOption = SearchRequest.OneWay,
             roundTrip = False,
-            stops = [destination],
+            stops = fromMaybe [] stops <> [destination],
             startTime = fromMaybe now startTime,
             returnTime = Nothing,
             ..
@@ -446,8 +451,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
     processOneWaySearch person merchant merchantOperatingCity searchRequestId sReq stopsLatLong now sourceLatLong roundTrip = do
       riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id >>= fromMaybeM (RiderConfigNotFound merchantOperatingCity.id.getId)
       autoCompleteEvent riderConfig searchRequestId sReq.sessionToken sReq.isSourceManuallyMoved sReq.isDestinationManuallyMoved now
-      destinationLatLong <- listToMaybe stopsLatLong & fromMaybeM (InternalError "Destination is required for OneWay Search")
-      let latLongs = if roundTrip then [sourceLatLong, destinationLatLong, sourceLatLong] else [sourceLatLong, destinationLatLong]
+      destinationLatLong <- lastMaybe stopsLatLong & fromMaybeM (InternalError "Destination is required for OneWay Search")
+      let latLongs = if roundTrip then [sourceLatLong, destinationLatLong, sourceLatLong] else sourceLatLong : stopsLatLong
       calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person searchRequestId latLongs now
 
     processRentalSearch person rentalReq stopsLatLong originCity = do
@@ -518,8 +523,9 @@ buildSearchRequest ::
   Maybe Int ->
   Bool ->
   Maybe Text ->
+  [Location.Location] ->
   Flow SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource stops = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   deploymentVersion <- asks (.version)
@@ -558,6 +564,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         availablePaymentMethods = [],
         riderPreferredOption, -- this is just to store the rider preference for the ride type to handle backward compatibility
         distanceUnit,
+        stops,
         totalRidesCount,
         isDashboardRequest = Just isDashboardRequest,
         placeNameSource = mbPlaceNameSource,

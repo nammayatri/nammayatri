@@ -49,6 +49,7 @@ Booking:
     riderId: Maybe (Id RiderDetails)
     fromLocation: Location
     toLocation: Maybe Location
+    stops: "[Location]"
     vehicleServiceTier: ServiceTierType
     vehicleServiceTierName: Text
     vehicleServiceTierSeatingCapacity: Maybe Int
@@ -101,6 +102,7 @@ Booking:
       bookingType: BookingType
     fromLocation:
       fromLocationId: Maybe Text
+    stops: {}
     toLocation:
       toLocationId: Maybe Text
     vehicleServiceTier:
@@ -152,6 +154,7 @@ Booking:
     fromLocation: fst fromAndToLocation'|E
     toLocation: snd fromAndToLocation'|E
     vehicleServiceTier: vehicleVariant|E
+    stops : Storage.Queries.Transformers.Booking.getStops id|EM
     vehicleServiceTierName: fromMaybe (show vehicleVariant) vehicleServiceTierName|E
     #estimatedFare: Kernel.Prelude.roundToIntegral estimatedFare|E
     isScheduled: fromMaybe False isScheduled|E

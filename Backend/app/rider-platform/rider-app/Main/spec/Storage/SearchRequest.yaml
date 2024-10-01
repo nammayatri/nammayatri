@@ -40,6 +40,7 @@ SearchRequest:
     clientId: Maybe (Id Client)
     fromLocation: Location
     toLocation: Maybe Location
+    stops: "[Location]"
     distance: Maybe Distance
     maxDistance: Maybe Distance
     distanceUnit: DistanceUnit
@@ -100,6 +101,10 @@ SearchRequest:
     distance:
       distance: Maybe Centesimal
       distanceValue: Maybe HighPrecDistance
+    stops: {}
+    # createdAt:
+    #   createdAt: UTCTime
+    #   stops: Maybe [Location]
     distanceUnit:
       distanceUnit: Maybe DistanceUnit
     maxDistance:
@@ -149,6 +154,7 @@ SearchRequest:
     riderPreferredOption: fromMaybe Domain.Types.SearchRequest.OneWay riderPreferredOption|E
     customerExtraFee: Kernel.Utils.Common.mkPriceWithDefault customerExtraFeeAmount currency <$> customerExtraFee|E
     fromLocation: Storage.Queries.Transformers.SearchRequest.getFromLocation id|EM
+    stops: Storage.Queries.Transformers.SearchRequest.getStops id|EM
     toLocation: Storage.Queries.Transformers.SearchRequest.getToLocation id|EM
     clientBundleVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)|EM
     clientSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)|EM

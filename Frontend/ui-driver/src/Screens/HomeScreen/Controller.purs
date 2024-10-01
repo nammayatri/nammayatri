@@ -448,6 +448,7 @@ data Action = NoAction
             | UpdateSpecialZoneList
             | ReferralPopUpAction ST.HomeScreenPopUpTypes (Maybe KeyStore) PopUpModal.Action
             | AddAlternateNumberAction
+            | GoToDriverProfile
             | SelectPlansModalAction SelectPlansModal.Action
             | PlanListResponse API.UiPlansResp
             | RideSummary

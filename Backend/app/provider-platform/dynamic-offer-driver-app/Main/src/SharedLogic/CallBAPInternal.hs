@@ -68,3 +68,43 @@ feedback ::
 feedback apiKey internalUrl request = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (feedbackClient (Just apiKey) request) "FeedBack" feedbackApi
+
+type StopEventsAPI =
+  "internal"
+    :> "stopEvents"
+    :> "stop"
+    :> Header "token" Text
+    :> ReqBody '[JSON] StopEventsReq
+    :> Post '[JSON] APISuccess
+
+data StopEventsReq = StopEventsReq
+  { action :: StopAction,
+    rideId :: Id DRide.Ride,
+    stopOrder :: Int,
+    waitingTimeStart :: UTCTime,
+    waitingTimeEnd :: Maybe UTCTime
+    -- stopId :: Id DRide.Stop
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data StopAction = Depart | Arrive
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+stopEventsClient :: Maybe Text -> StopEventsReq -> EulerClient APISuccess
+stopEventsClient = client (Proxy @StopEventsAPI)
+
+stopEventsApi :: Proxy StopEventsAPI
+stopEventsApi = Proxy
+
+stopEvents ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  StopEventsReq ->
+  m APISuccess
+stopEvents apiKey internalUrl request = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (stopEventsClient (Just apiKey) request) "StopEvents" stopEventsApi

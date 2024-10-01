@@ -18,15 +18,17 @@ module Services.API where
 import Data.Maybe
 
 import Control.Alt ((<|>))
+import Control.Monad.Except (runExcept,except)
 import Common.Types.App (Version(..), FeedbackAnswer)
 import Common.Types.App as CTA
+import Common.Types.App
 import Data.Either (Either(..))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
-import Foreign (ForeignError(..), fail, unsafeFromForeign)
+import Foreign (ForeignError(..), fail,unsafeFromForeign)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
 import Prelude (class Show, class Eq, show, ($), (<$>), (>>=))
@@ -43,7 +45,8 @@ import PaymentPage (PaymentPagePayload(..))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import Data.Lens ((^.))
 import Accessor (_amount)
-
+import DecodeUtil
+import Data.Function.Uncurried (runFn3)
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorPayload
 
@@ -466,7 +469,7 @@ newtype SearchReq = SearchReq {
   fareProductType :: String
 }
 
-data ContentType = OneWaySearchRequest OneWaySearchReq | RentalSearchRequest RentalSearchReq
+data ContentType = OneWaySearchRequest OneWaySearchReq | RentalSearchRequest RentalSearchReq | RoundTripSearchRequest RoundTripSearchReq
 
 newtype OneWaySearchReq = OneWaySearchReq {
   origin :: SearchReqLocation,
@@ -521,17 +524,37 @@ newtype RentalSearchReq = RentalSearchReq {
   rideRequestAndRideOtpUnifiedFlow :: Maybe Boolean
 }
 
+
+newtype RoundTripSearchReq = RoundTripSearchReq {
+  origin :: SearchReqLocation,
+  stops :: Maybe (Array SearchReqLocation),
+  startTime :: String,
+  returnTime :: Maybe String,
+  roundTrip :: Boolean,
+  isReallocationEnabled ::  Maybe Boolean
+}
+
 derive instance genericContentType :: Generic ContentType _
 instance standardEncodeContentType :: StandardEncode ContentType where
   standardEncode (OneWaySearchRequest body) = standardEncode body
   standardEncode (RentalSearchRequest body) = standardEncode body
+  standardEncode (RoundTripSearchRequest body) = standardEncode body
 instance showContentType :: Show ContentType where show = genericShow
 instance decodeContentType :: Decode ContentType
   where
-    decode body = (OneWaySearchRequest <$> decode body) <|> (RentalSearchRequest <$> decode body) <|> (fail $ ForeignError "Unknown response")
+    decode body = (OneWaySearchRequest <$> decode body) <|> (RentalSearchRequest <$> decode body) <|> (RoundTripSearchRequest  <$> decode body) <|> (fail $ ForeignError "Unknown response")
 instance encodeContentType  :: Encode ContentType where
   encode (OneWaySearchRequest body) = encode body
   encode (RentalSearchRequest body) = encode body
+  encode (RoundTripSearchRequest body) = encode body
+
+derive instance genericRoundTripSearchReq :: Generic RoundTripSearchReq _
+derive instance newtypeRoundTripSearchReq :: Newtype RoundTripSearchReq _
+instance standardEncodeRoundTripSearchReq :: StandardEncode RoundTripSearchReq where standardEncode (RoundTripSearchReq body) = standardEncode body
+instance showRoundTripSearchReq :: Show RoundTripSearchReq where show = genericShow
+instance decodeRoundTripSearchReq :: Decode RoundTripSearchReq where decode = defaultDecode
+instance encodeRoundTripSearchReq  :: Encode RoundTripSearchReq where encode = defaultEncode
+
 
 derive instance genericRentalSearchReq :: Generic RentalSearchReq _
 derive instance newtypeRentalSearchReq :: Newtype RentalSearchReq _
@@ -546,6 +569,8 @@ instance standardEncodeLocationAddress :: StandardEncode LocationAddress where s
 instance showLocationAddress :: Show LocationAddress where show = genericShow
 instance decodeLocationAddress :: Decode LocationAddress where decode = defaultDecode
 instance encodeLocationAddress  :: Encode LocationAddress where encode = defaultEncode
+instance eqLocationAddress :: Eq LocationAddress where eq = genericEq
+
 
 instance makeSearchReq :: RestEndpoint SearchReq  where
  makeRequest reqBody headers = defaultMakeRequest POST (EP.searchReq "") headers reqBody Nothing
@@ -680,7 +705,38 @@ newtype OneWayQuoteAPIDetails = OneWayQuoteAPIDetails {
 }
 
 newtype IntercityQuoteAPIDetails = IntercityQuoteAPIDetails {
-  quoteId :: String
+  quoteId :: String,
+  perDayMaxHourAllowance :: Maybe Int,
+  baseFare :: Maybe PriceAPIEntityDecimals ,
+  kmPerPlannedExtraHour :: Maybe DistanceWithUnit ,
+  perExtraKmRate :: Maybe PriceAPIEntityDecimals ,
+  perExtraMinRate :: Maybe PriceAPIEntityDecimals ,
+  perHourCharge :: Maybe PriceAPIEntityDecimals ,
+  plannedPerKmRateOneWay :: Maybe PriceAPIEntityDecimals ,
+  plannedPerKmRateRoundTrip :: Maybe PriceAPIEntityDecimals,
+  tollCharges :: Maybe PriceAPIEntityDecimals ,
+  deadKmFare :: Maybe PriceAPIEntityDecimals ,
+  nightShiftInfo :: Maybe NightShiftInfoAPIEntity
+}
+newtype NightShiftInfoAPIEntity = NightShiftInfoAPIEntity {   
+    nightShiftCharge :: Number,
+    nightShiftChargeWithCurrency :: Maybe PriceAPIEntityDecimals,
+    nightShiftStart :: String,
+    nightShiftEnd :: String
+}
+
+newtype PriceApiEntity = PriceApiEntity {
+  amount :: Int,
+  currency :: String
+}
+newtype PriceAPIEntityDecimals = PriceAPIEntityDecimals {
+  amount :: Number,
+  currency :: String
+}
+
+newtype DistanceWithUnit = DistanceWithUnit {
+  value :: Int,
+  unit :: String
 }
 
 newtype RentalQuoteAPIDetails = RentalQuoteAPIDetails {
@@ -699,7 +755,6 @@ newtype DeadKmFare = DeadKmFare {
   amount :: Int,
   currency :: String
 }
-
 newtype SpecialZoneQuoteAPIDetails = SpecialZoneQuoteAPIDetails {
   quoteId :: String
 }
@@ -853,11 +908,20 @@ instance standardEncodeQuoteAPIContents :: StandardEncode QuoteAPIContents where
   standardEncode (SPECIAL_ZONE body) = standardEncode body
   standardEncode (RENTAL body) = standardEncode body
   standardEncode (INTER_CITY body) = standardEncode body
-instance showQuoteAPIContents :: Show QuoteAPIContents where show = genericShow
-instance decodeQuoteAPIContents :: Decode QuoteAPIContents
-  where
-    decode body = (ONE_WAY <$> decode body) <|> (DRIVER_OFFER <$> decode body) <|> (SPECIAL_ZONE <$> decode body) <|> (RENTAL <$> decode body)<|> (fail $ ForeignError "Unknown response")
-instance encodeQuoteAPIContents  :: Encode QuoteAPIContents where
+instance showQuoteAPIContents :: Show QuoteAPIContents where
+  show = genericShow
+instance decodeQuoteAPIContents :: Decode QuoteAPIContents where
+  decode body =
+    case (runExcept $ (readProp "fareProductType" body) >>= decode) of
+      Right fareProductType -> case fareProductType of
+          "ONE_WAY"                          -> ONE_WAY <$> decode body
+          "DRIVER_OFFER"                     -> DRIVER_OFFER <$> decode body
+          "INTER_CITY"                       -> INTER_CITY <$> decode body
+          "RENTAL"                           -> RENTAL <$> decode body
+          "ONE_WAY_SPECIAL_ZONE"             -> SPECIAL_ZONE <$> decode body
+          _                                  -> (fail $ ForeignError "Unknown response but inside f")
+      Left err -> (fail $ ForeignError "Unknown response but outside fpt")
+instance encodeQuoteAPIContents :: Encode QuoteAPIContents where
   encode (ONE_WAY body) = encode body
   encode (DRIVER_OFFER body) = encode body
   encode (SPECIAL_ZONE body) = encode body
@@ -873,10 +937,19 @@ instance decodeQuoteAPIEntity :: Decode QuoteAPIEntity where decode = defaultDec
 instance encodeQuoteAPIEntity  :: Encode QuoteAPIEntity where encode = defaultEncode
 
 derive instance genericQuoteAPIDetails :: Generic QuoteAPIDetails _
-derive instance newtypeQuoteAPIDetails :: Newtype QuoteAPIDetails _
+derive instance newtypeQuoteAPIDetails :: Newtype QuoteAPIDetails _ 
 instance standardEncodeQuoteAPIDetails :: StandardEncode QuoteAPIDetails where standardEncode (QuoteAPIDetails body) = standardEncode body
-instance showQuoteAPIDetails :: Show QuoteAPIDetails where show = genericShow
-instance decodeQuoteAPIDetails :: Decode QuoteAPIDetails where decode = defaultDecode
+instance showQuoteAPIDetails :: Show QuoteAPIDetails where show = genericShow 
+instance decodeQuoteAPIDetails :: Decode QuoteAPIDetails where
+      decode body = case (runExcept $ (readProp "fareProductType" body)) of
+                      Right fareProductType -> 
+                        case (runExcept $ (readProp "contents" body)) of
+                          Right contents ->
+                            let updatedBody = runFn3 unsafeSetForeign "contents" body $ runFn3 unsafeSetForeign "fareProductType" contents fareProductType
+                            in defaultDecode $ updatedBody
+                          Left err     -> (fail $ ForeignError "Unknown response")
+                      Left err     -> (fail $ ForeignError "Unknown response")
+  
 instance encodeQuoteAPIDetails  :: Encode QuoteAPIDetails where encode = defaultEncode
 
 derive instance genericDriverOfferAPIEntity :: Generic DriverOfferAPIEntity _
@@ -964,6 +1037,43 @@ instance decodeDeadKmFare :: Decode DeadKmFare where decode = defaultDecode
 instance encodeDeadKmFare  :: Encode DeadKmFare where encode = defaultEncode
 
 
+derive instance genericNightShiftInfoAPIEntity :: Generic NightShiftInfoAPIEntity _
+derive instance newtypeNightShiftInfoAPIEntity :: Newtype NightShiftInfoAPIEntity _
+instance standardEncodeNightShiftInfoAPIEntity :: StandardEncode NightShiftInfoAPIEntity where standardEncode (NightShiftInfoAPIEntity body) = standardEncode body
+instance showNightShiftInfoAPIEntity :: Show NightShiftInfoAPIEntity where show = genericShow
+instance decodeNightShiftInfoAPIEntity :: Decode NightShiftInfoAPIEntity where decode = defaultDecode
+instance encodeNightShiftInfoAPIEntity  :: Encode NightShiftInfoAPIEntity where encode = defaultEncode
+
+
+derive instance genericPriceApiEntity :: Generic PriceApiEntity _
+derive instance newtypePriceApiEntity :: Newtype PriceApiEntity _
+instance standardEncodePriceApiEntity :: StandardEncode PriceApiEntity where standardEncode (PriceApiEntity body) = standardEncode body
+instance showPriceApiEntity :: Show PriceApiEntity where show = genericShow
+instance decodePriceApiEntity :: Decode PriceApiEntity where decode = defaultDecode
+instance encodePriceApiEntity  :: Encode PriceApiEntity where encode = defaultEncode
+
+derive instance genericPriceAPIEntityDecimals :: Generic PriceAPIEntityDecimals _
+derive instance newtypePriceAPIEntityDecimals :: Newtype PriceAPIEntityDecimals _
+instance standardEncodePriceAPIEntityDecimals :: StandardEncode PriceAPIEntityDecimals where
+  standardEncode (PriceAPIEntityDecimals body) = standardEncode body
+instance showPriceAPIEntityDecimals :: Show PriceAPIEntityDecimals where
+  show = genericShow
+instance decodePriceAPIEntityDecimals :: Decode PriceAPIEntityDecimals where
+  decode = defaultDecode
+instance encodePriceAPIEntityDecimals :: Encode PriceAPIEntityDecimals where
+  encode = defaultEncode
+
+derive instance genericDistanceWithUnit :: Generic DistanceWithUnit _
+derive instance newtypeDistanceWithUnit :: Newtype DistanceWithUnit _
+instance standardEncodeDistanceWithUnit :: StandardEncode DistanceWithUnit where
+  standardEncode (DistanceWithUnit body) = standardEncode body
+instance showDistanceWithUnit :: Show DistanceWithUnit where
+  show = genericShow
+instance decodeDistanceWithUnit :: Decode DistanceWithUnit where
+  decode = defaultDecode
+instance encodeDistanceWithUnit :: Encode DistanceWithUnit where
+  encode = defaultEncode
+
 ------- rideBooking/{bookingId}
 
 data RideBookingReq = RideBookingReq String
@@ -1006,8 +1116,15 @@ newtype RideBookingRes = RideBookingRes {
   vehicleServiceTierType :: Maybe String,
   tollConfidence :: Maybe CTA.Confidence,
   driversPreviousRideDropLocLat :: Maybe Number,
-  driversPreviousRideDropLocLon :: Maybe Number
-, estimatedFareBreakup :: Array FareBreakupAPIEntity
+  driversPreviousRideDropLocLon :: Maybe Number,
+  isScheduled :: Boolean,
+  estimatedFareBreakup :: Array FareBreakupAPIEntity,
+  isAlreadyFav :: Maybe Boolean,
+  favCount :: Maybe Int,
+  rideDuration :: Maybe Int,
+  vehicleServiceTierSeatingCapacity :: Maybe Int,
+  vehicleServiceTierAirConditioned :: Maybe Number,
+  returnTime :: Maybe String
 }
 
 newtype RideBookingStatusRes = RideBookingStatusRes {
@@ -1342,7 +1459,10 @@ newtype FeedbackReq = FeedbackReq
   { rating :: Int
   , rideId :: String
   , feedbackDetails :: String
+  , nightSafety :: Maybe Boolean
   , wasOfferedAssistance :: Maybe Boolean
+  , mbAudio :: Maybe String
+  , shouldFavDriver :: Maybe Boolean
   }
 
 
@@ -3853,3 +3973,137 @@ instance showMessageSource :: Show MessageSource where show = genericShow
 instance decodeMessageSource :: Decode MessageSource where decode = defaultDecode
 instance encodeMessageSource  :: Encode MessageSource where encode = defaultEnumEncode
 instance eqMessageSource :: Eq MessageSource where eq = genericEq
+
+
+
+
+-----------------------------------------------------------------RemoveFavouriteDriver-------------------------------------------
+
+data RemoveFavouriteDriverReq = RemoveFavouriteDriverReq String  
+
+newtype RemoveFavouriteDriverResp = RemoveFavouriteDriverResp {
+  result :: String
+}
+
+derive instance genericRemoveFavouriteDriverReq:: Generic RemoveFavouriteDriverReq _
+instance standardRemoveFavouriteDriverReq :: StandardEncode RemoveFavouriteDriverReq where standardEncode (RemoveFavouriteDriverReq driverId) = standardEncode {}
+instance showRemoveFavouriteDriverReq :: Show RemoveFavouriteDriverReq where show = genericShow
+instance decodeRemoveFavouriteDriverReq :: Decode RemoveFavouriteDriverReq where decode = defaultDecode
+instance encodeRemoveFavouriteDriverReq :: Encode RemoveFavouriteDriverReq where encode = defaultEncode
+
+derive instance genericRemoveFavouriteDriverResp:: Generic RemoveFavouriteDriverResp _
+instance standardRemoveFavouriteDriverResp :: StandardEncode RemoveFavouriteDriverResp where standardEncode (RemoveFavouriteDriverResp body) = standardEncode body
+instance showRemoveFavouriteDriverResp :: Show RemoveFavouriteDriverResp where show = genericShow
+instance decodeRemoveFavouriteDriverResp :: Decode RemoveFavouriteDriverResp where decode = defaultDecode
+instance encodeRemoveFavouriteDriverResp :: Encode RemoveFavouriteDriverResp where encode = defaultEncode
+
+instance makeRemoveFavouriteDriverReq :: RestEndpoint RemoveFavouriteDriverReq where
+ makeRequest reqBody@(RemoveFavouriteDriverReq driverId) headers = defaultMakeRequest POST (EP.removeFavouriteDriver driverId) headers reqBody Nothing
+ encodeRequest req = standardEncode req
+
+------------------------------------------------------------------------------GetFavouriteDriverList---------------------------------------------------
+
+newtype FavouriteDriverList = FavouriteDriverList {
+  driverName :: String,
+  driverPhone :: String,
+  driverRating :: Number,
+  favCount :: Int,
+  id :: Maybe String
+}
+data GetFavouriteDriverListReq = GetFavouriteDriverListReq 
+
+newtype GetFavouriteDriverListRes = GetFavouriteDriverListRes (Array FavouriteDriverList)
+
+derive instance genericGetFavouriteDriverListReq:: Generic GetFavouriteDriverListReq _
+instance standardGetFavouriteDriverListReq :: StandardEncode GetFavouriteDriverListReq where standardEncode (GetFavouriteDriverListReq ) = standardEncode {}
+instance showGetFavouriteDriverListReq :: Show GetFavouriteDriverListReq where show = genericShow
+instance decodeGetFavouriteDriverListReq :: Decode GetFavouriteDriverListReq where decode = defaultDecode
+instance encodeGetFavouriteDriverListReq :: Encode GetFavouriteDriverListReq where encode = defaultEncode
+
+derive instance genericGetFavouriteDriverListRes:: Generic GetFavouriteDriverListRes _
+derive instance newtypeGetFavouriteDriverListRes :: Newtype GetFavouriteDriverListRes _
+instance standardGetFavouriteDriverListRes :: StandardEncode GetFavouriteDriverListRes where standardEncode (GetFavouriteDriverListRes body) = standardEncode body
+instance showGetFavouriteDriverListRes :: Show GetFavouriteDriverListRes where show = genericShow
+instance decodeGetFavouriteDriverListRes :: Decode GetFavouriteDriverListRes where decode = defaultDecode
+instance encodeGetFavouriteDriverListRes :: Encode GetFavouriteDriverListRes where encode = defaultEncode
+
+
+instance makeGetFavouriteDriverListReq :: RestEndpoint GetFavouriteDriverListReq where
+ makeRequest reqBody@(GetFavouriteDriverListReq) headers = defaultMakeRequest GET (EP.getFavouriteDriverList) headers reqBody Nothing
+ encodeRequest req = standardEncode req
+
+derive instance genericFavouriteDriverList :: Generic FavouriteDriverList _
+derive instance newtypeFavouriteDriverList :: Newtype FavouriteDriverList _
+instance standardEncodeFavouriteDriverList :: StandardEncode FavouriteDriverList where standardEncode (FavouriteDriverList body) = standardEncode body
+instance showFavouriteDriverList :: Show FavouriteDriverList where show = genericShow
+instance decodeFavouriteDriverList :: Decode FavouriteDriverList where decode = defaultDecode
+instance encodeFavouriteDriverList  :: Encode FavouriteDriverList where encode = defaultEncode
+
+----------------------------------------------------------------GetFavouriteDriverTrips--------------------------------------------------
+
+data FavouriteDriverTripsReq = FavouriteDriverTripsReq String String String (Maybe String) (Maybe String) FavouriteDriverTripsBody
+
+newtype FavouriteDriverTripsBody = FavouriteDriverTripsBody
+  { 
+    driverNumber :: String
+  }
+
+newtype LocationAPIEntity = LocationAPIEntity
+  { 
+    address :: LocationAddress,
+    createdAt :: String,
+    id :: String,
+    lat :: Number,
+    lon :: Number,
+    updatedAt :: String
+  }
+
+newtype FavouriteDriverRides = FavouriteDriverRides {
+  rideRating :: Maybe Int,
+  fromLocation :: LocationAPIEntity,
+  toLocation :: Maybe LocationAPIEntity,
+  totalFare :: Maybe Int,
+  startTime :: Maybe String,
+  id :: Maybe String
+}
+
+newtype FavouriteDriverTripsResp = FavouriteDriverTripsResp {
+  list :: Array FavouriteDriverRides
+}
+
+instance makeFavouriteDriverTripsReq :: RestEndpoint FavouriteDriverTripsReq where
+  makeRequest reqBody@(FavouriteDriverTripsReq limit offset isActive status clientId (FavouriteDriverTripsBody abcBody)) headers = defaultMakeRequest POST (EP.getFavouriteDriverTrips limit offset isActive status clientId ) headers reqBody Nothing
+  encodeRequest req = standardEncode req
+
+derive instance genericFavouriteDriverTripsReq :: Generic FavouriteDriverTripsReq _
+instance standardFavouriteDriverTripsReq :: StandardEncode FavouriteDriverTripsReq where standardEncode (FavouriteDriverTripsReq limit offset isActive status clientId req) = standardEncode req
+instance decodeFavouriteDriverTripsReq :: Decode FavouriteDriverTripsReq where decode = defaultDecode
+instance encodeFavouriteDriverTripsReq :: Encode FavouriteDriverTripsReq where encode = defaultEncode
+
+derive instance genericFavouriteDriverTripsResp :: Generic FavouriteDriverTripsResp _
+derive instance newtypeFavouriteDriverTripsResp :: Newtype FavouriteDriverTripsResp _
+instance standardEncodeFavouriteDriverTripsResp :: StandardEncode FavouriteDriverTripsResp where standardEncode (FavouriteDriverTripsResp req) = standardEncode req
+instance showFavouriteDriverTripsResp :: Show FavouriteDriverTripsResp where show = genericShow
+instance decodeFavouriteDriverTripsResp :: Decode FavouriteDriverTripsResp where decode = defaultDecode
+instance encodeFavouriteDriverTripsResp :: Encode FavouriteDriverTripsResp where encode = defaultEncode
+
+derive instance genericFavouriteDriverTripsBody :: Generic FavouriteDriverTripsBody _
+derive instance newtypeFavouriteDriverTripsBody :: Newtype FavouriteDriverTripsBody _
+instance standardEncodeFavouriteDriverTripsBody :: StandardEncode FavouriteDriverTripsBody where standardEncode (FavouriteDriverTripsBody req) = standardEncode req
+instance showFavouriteDriverTripsBody :: Show FavouriteDriverTripsBody where show = genericShow
+instance decodeFavouriteDriverTripsBody :: Decode FavouriteDriverTripsBody where decode = defaultDecode
+instance encodeFavouriteDriverTripsBody :: Encode FavouriteDriverTripsBody where encode = defaultEncode
+
+derive instance genericFavouriteDriverRides :: Generic FavouriteDriverRides _
+derive instance newtypeFavouriteDriverRides :: Newtype FavouriteDriverRides _
+instance standardEncodeFavouriteDriverRides :: StandardEncode FavouriteDriverRides where standardEncode (FavouriteDriverRides req) = standardEncode req
+instance showFavouriteDriverRides :: Show FavouriteDriverRides where show = genericShow
+instance decodeFavouriteDriverRides :: Decode FavouriteDriverRides where decode = defaultDecode
+instance encodeFavouriteDriverRides :: Encode FavouriteDriverRides where encode = defaultEncode
+
+derive instance genericLocationAPIEntity :: Generic LocationAPIEntity _
+derive instance newtypeLocationAPIEntity :: Newtype LocationAPIEntity _
+instance standardEncodeLocationAPIEntity :: StandardEncode LocationAPIEntity where standardEncode (LocationAPIEntity req) = standardEncode req
+instance showLocationAPIEntity :: Show LocationAPIEntity where show = genericShow
+instance decodeLocationAPIEntity :: Decode LocationAPIEntity where decode = defaultDecode
+instance encodeLocationAPIEntity :: Encode LocationAPIEntity where encode = defaultEncode

@@ -12,6 +12,7 @@ import Components.LocationListItem.Controller as LocationListItemController
 import Components.LocationTagBar as LocationTagBarController
 import Components.LocationTagBarV2 as LocationTagBarV2Controller
 import Components.RideCompletedCard.Controller as RideCompletedCard
+import Screens.RideBookingFlow.RiderRideCompletedCard.Controller as RiderRideCompletedCard
 import Components.MenuButton.Controller (Action) as MenuButtonController
 import Components.PopUpModal.Controller as PopUpModal
 import Components.PricingTutorialModel.Controller as PricingTutorialModelController
@@ -37,7 +38,7 @@ import PrestoDOM.List (ListItem)
 import Prelude (class Show)
 import Data.Maybe (Maybe)
 
-import Screens.Types (BottomNavBarIcon, CallType, CancelSearchType, CardType, HomeScreenState, LocationListItemState, NewContacts, PermissionScreenStage, ReferralType, Trip)
+import Screens.Types (BottomNavBarIcon, CallType, CancelSearchType, CardType, HomeScreenState, LocationListItemState, NewContacts, PermissionScreenStage, ReferralType, Trip,NotificationBody)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 
 import Services.API (FollowRideRes, GetDriverLocationResp, GetEditLocResultResp, GetQuotesRes, RideBookingListRes, RideBookingRes,RideBookingStatusRes, SelectListRes, GetEmergencySettingsRes)
@@ -61,7 +62,7 @@ data ScreenOutput = LogoutUser
   | ConfirmFare HomeScreenState
   | UpdatedState HomeScreenState Boolean
   | CancelRide HomeScreenState CancelSearchType
-  | NotificationHandler String HomeScreenState
+  | NotificationHandler String NotificationBody HomeScreenState
   | GetSelectList HomeScreenState
   | RideConfirmed HomeScreenState
   | SelectEstimate HomeScreenState
@@ -73,7 +74,6 @@ data ScreenOutput = LogoutUser
   | UpdatePickupName HomeScreenState Number Number
   | GoToHome HomeScreenState
   | GoToFavourites HomeScreenState
-  | SubmitRating HomeScreenState
   | UpdatedSource HomeScreenState
   | OpenGoogleMaps HomeScreenState
   | InAppTrackStatus HomeScreenState
@@ -93,23 +93,20 @@ data ScreenOutput = LogoutUser
   | CheckFlowStatus HomeScreenState
   | ExitToPermissionFlow PermissionScreenStage
   | RetryFindingQuotes Boolean HomeScreenState
-  | RideDetailsScreen HomeScreenState
   | GoToTicketBookingFlow HomeScreenState
   | GoToMyTickets HomeScreenState
   | RepeatTrip HomeScreenState Trip
   | ExitToTicketing HomeScreenState
   | EditLocationScreenOutput HomeScreenState
   | ConfirmEditedPickup HomeScreenState
-  | GoToHelpAndSupport HomeScreenState
   | ReAllocateRide HomeScreenState
   | GoToRentalsFlow HomeScreenState
-  | GoToScheduledRides
+  | GoToScheduledRides HomeScreenState (Maybe String)
   | Add_Stop HomeScreenState
   | SafetySupport HomeScreenState Boolean
   | GoToShareRide HomeScreenState
   | GoToNotifyRideShare HomeScreenState
   | ExitToFollowRide HomeScreenState
-  | GoToReportSafetyIssue HomeScreenState
   | GoToMyMetroTickets HomeScreenState
   | GoToMetroTicketBookingFlow HomeScreenState
   | GoToSafetyEducation HomeScreenState
@@ -118,12 +115,12 @@ data ScreenOutput = LogoutUser
   | ExitToConfirmingLocationStage HomeScreenState
   | UpdateReferralCode HomeScreenState String
   | GoToSafetySettingScreen 
+  | GoToDriverProfiles HomeScreenState
   | GoToRideRelatedIssues HomeScreenState
   | Go_To_Search_Location_Flow HomeScreenState Boolean
   | RideSearchSO
   | ConfirmRentalRideSO HomeScreenState
   | StayInHomeScreenSO HomeScreenState
-  | GoToIssueReportChatScreenWithIssue HomeScreenState CTP.CustomerIssueTypes
   | ReloadFlowStatus HomeScreenState
   | ExitToPickupInstructions HomeScreenState Number Number String String
   | EditDestLocSelected HomeScreenState
@@ -131,6 +128,8 @@ data ScreenOutput = LogoutUser
   | ExitAndEnterHomeScreen HomeScreenState
   | SelectEstimateAndQuotes HomeScreenState
   | UpdateChatScreen HomeScreenState
+  | GoToTripSelectionScreen HomeScreenState
+  | RideSummary HomeScreenState
 
 data Action = NoAction
   | BackPressed
@@ -142,7 +141,7 @@ data Action = NoAction
   | ChangeToRideStartedAction
   | SidebarCloseAnimationCompleted
   | RideDurationTimer String String Int
-  | NotificationListener String
+  | NotificationListener String NotificationBody
   | OpenSettings
   | ContinueCmd
   | OpenPricingTutorial
@@ -245,6 +244,7 @@ data Action = NoAction
   | DisabilityBannerAC Banner.Action
   | DisabilityPopUpAC PopUpModal.Action
   | RideCompletedAC RideCompletedCard.Action
+  | RiderRideCompletedAC RiderRideCompletedCard.Action
   | LoadMessages
   | KeyboardCallback String
   | NotifyDriverStatusCountDown Int String String
@@ -337,7 +337,8 @@ data Action = NoAction
   | UpdateSafetySettings GetEmergencySettingsRes
   | ServicesOnClick RemoteConfig.Service
   | EnableShareRideForContact String 
-  
+  | DateSelectAction String String Int Int Int String Int Int
+
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where
   performLog = defaultPerformLog

@@ -58,6 +58,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
+import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Ride as QR
 import Tools.Error
 
@@ -147,7 +148,7 @@ checkBookingsForStatus (currBooking : bookings) = do
       when callStatusConditionNew $ do
         callOnStatus currBooking
       when callStatusConditionTripAssigned $ do
-        ride <- QR.findActiveByRBId currBooking.id >>= fromMaybeM (RideNotFound currBooking.id.getId)
+        ride <- QRideLite.findActiveByRBIdLite currBooking.id >>= fromMaybeM (RideNotFound currBooking.id.getId)
         unless (ride.status == DTR.INPROGRESS) do
           callOnStatus currBooking
       checkBookingsForStatus bookings

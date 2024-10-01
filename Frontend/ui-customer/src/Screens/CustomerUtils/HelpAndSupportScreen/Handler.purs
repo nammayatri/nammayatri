@@ -46,6 +46,7 @@ import Screens.RideSelectionScreen.Controller (getTitle)
 import Screens.HelpAndSupportScreen.ScreenData
 import Components.IssueView (IssueInfo)
 import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
+import Debug (spy)
 
 helpAndSupportScreen :: FlowBT String FlowState
 helpAndSupportScreen = do
@@ -81,14 +82,14 @@ helpAndSupportScreen = do
 goBackHandler :: HelpAndSupportScreenState -> FlowBT String FlowState
 goBackHandler updatedState =  do 
   modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
-  App.BackT $ App.BackPoint <$> (pure HomeScreenFlow)
+  App.BackT $ App.BackPoint <$> (pure $ if updatedState.data.fromScreen == "RideCompleted" then RiderRideCompleted else HomeScreenFlow)
 
 
 goHomeHandler :: HelpAndSupportScreenState -> FlowBT String FlowState
 goHomeHandler updatedState = do 
   modifyScreenState $ HomeScreenStateType (\homeScreenState -> homeScreenState{data{settingSideBar{opened = SettingSideBar.CLOSED}}}) 
   modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
-  App.BackT $ App.BackPoint <$> (pure HomeScreenFlow)
+  App.BackT $ App.BackPoint <$> (pure $ HomeScreenFlow)
 
 
 goToSupportScreenHandler :: String -> HelpAndSupportScreenState -> FlowBT String FlowState

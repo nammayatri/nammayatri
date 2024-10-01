@@ -32,6 +32,8 @@ data EstimateT f = EstimateT
     minFareAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     requestId :: B.C f Kernel.Prelude.Text,
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    supplyDemandRatioFromLoc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    supplyDemandRatioToLoc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     tollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),
     updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

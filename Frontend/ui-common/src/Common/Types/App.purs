@@ -39,6 +39,11 @@ type FlowBT e st a = BackT (ExceptT e (Free (FlowWrapper st))) a
 data VehicalTypes = Sedan | Hatchback | SUV | Auto | Bike | Ambulance_Taxi | Ambulance_Taxi_Oxy | Ambulance_AC | Ambulance_AC_Oxy | Ambulance_Ventilator | SUV_PLUS
 data LazyCheck = LanguageStyle | EndPoint | BaseUrl | TypoGraphy | WithoutOffers | FunctionCall | Config | Language
 
+data TicketType = ONE_WAY_TRIP | ROUND_TRIP
+
+derive instance genericTicketType :: Generic TicketType _
+instance eqTicketType :: Eq TicketType where eq = genericEq
+
 newtype Place = Place {
   id :: String
 , address :: String
@@ -252,7 +257,17 @@ type LayoutBound =
 -- instance encodeLocationLatLong :: Encode LocationLatLong where encode = defaultEncode
 -- instance decodeLocationLatLong :: Decode LocationLatLong where decode = defaultDecode
 
-data RateCardType = DefaultRateCard | DriverAddition | FareUpdate | PaymentFareBreakup | WaitingCharges | TollOrParkingCharges | RentalRateCard
+data RateCardType = 
+    DefaultRateCard 
+  | DriverAddition 
+  | FareUpdate 
+  | PaymentFareBreakup 
+  | WaitingCharges 
+  | TollOrParkingCharges 
+  | RentalRateCard
+  | DriverAllowance
+  | NightShiftCharges
+  | TollAndParkingCharges
 derive instance genericRateCardType :: Generic RateCardType _
 instance eqRateCardType :: Eq RateCardType where eq = genericEq
 instance decodeRateCardType :: Decode RateCardType where decode = defaultEnumDecode
@@ -519,6 +534,7 @@ type DisplayBase64ImageConig = {
   , id :: String
   , scaleType :: String
   , inSampleSize :: Int -- reduce image qulaity by this factor (highValue = low quality)
+  , adjustViewBounds :: Boolean  
 }
 
 type CircleRippleConfig = {

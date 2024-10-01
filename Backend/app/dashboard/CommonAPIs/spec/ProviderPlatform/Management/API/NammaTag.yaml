@@ -13,6 +13,7 @@ imports:
   CreateTimeBoundRequest: Lib.Yudhishthira.Types
   LogicRolloutObject: Lib.Yudhishthira.Types
   LogicRolloutReq: Lib.Yudhishthira.Types
+  TimeBoundResp: Lib.Yudhishthira.Types
 
 module: NammaTag
 
@@ -76,6 +77,13 @@ apis:
         type: RunKaalChakraJobReq
       response:
         type: RunKaalChakraJobRes
+  - GET:
+      endpoint: /timeBounds
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG TIME_BOUNDS
+      mandatoryQuery:
+        domain: LogicDomain
+      response:
+        type: TimeBoundResp
   - POST:
       endpoint: /timeBounds/create
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG TIME_BOUNDS

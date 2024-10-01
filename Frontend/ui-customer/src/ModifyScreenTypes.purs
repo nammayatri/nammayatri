@@ -72,8 +72,12 @@ modifyScreenStateFlow st =
     MetroTicketStatusScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroTicketStatusScreen = a state.metroTicketStatusScreen})
     GlobalFlowCacheType a -> modifyState (\(GlobalState state) -> GlobalState $ state {globalFlowCache = a state.globalFlowCache})
     PickupInstructionsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {pickupInstructionsScreen = a state.pickupInstructionsScreen})
+    DriverProfileScreenCommonStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {riderDriverProfileScreen = a state.riderDriverProfileScreen})
+    RiderRideCompletedScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {riderRideCompletedScreen = a state.riderRideCompletedScreen})
     DataFetchScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {dataExplainWithFetch = a state.dataExplainWithFetch})
+    FavouriteDriverTripsStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {favouriteDriverListScreen = a state.favouriteDriverListScreen})
     ParcelDeliveryScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {parcelDeliveryScreen = a state.parcelDeliveryScreen})
+    RideSummaryScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideSummaryScreen = a state.rideSummaryScreen})
 
     
 updateRepeatRideDetails :: Trip -> FlowBT String Unit
@@ -153,3 +157,4 @@ data FlowState = HelpAndSupportScreenFlow
                | MyRidesScreenFlow
                | GoToFavouritesScreenFlow
                | ChangeLanguageScreenFlow
+               | RiderRideCompleted

@@ -66,6 +66,7 @@ Ride:
     previousRideTripEndTime: Maybe UTCTime
     isAdvanceBooking : Bool
     fromLocation: Location
+    stops : "[Location]"
     toLocation: Maybe Location
     fareParametersId: Maybe (Id FareParameters)
     distanceCalculationFailed: Maybe Bool
@@ -141,6 +142,7 @@ Ride:
   beamFields:
     toLocation: {}
     fromLocation: {}
+    stops: {}
     clientDevice:
       clientOsType: Maybe DeviceType
       clientOsVersion: Maybe Text
@@ -175,6 +177,7 @@ Ride:
   fromTType:
     toLocation: Storage.Queries.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
     fromLocation: Storage.Queries.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId|IM
+    stops: Storage.Queries.Transformers.Ride.getStops id|EM
     trackingUrl: Kernel.Prelude.parseBaseUrl|IM
     merchantOperatingCityId: Storage.Queries.Transformers.Ride.getMerchantOperatingCityId bookingId merchantId|IM
     tripStartPos: Storage.Queries.Transformers.Ride.mkLatLong|I

@@ -16,7 +16,7 @@ module Screens.FollowRideScreen.Controller where
 
 import Accessor (_lat, _lon)
 import Data.Array (elem, last, length, filter, delete, notElem, any)
-import Data.Function.Uncurried (runFn3, runFn1)
+import Data.Function.Uncurried (runFn3, runFn1, runFn4)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe, isNothing, maybe)
 import Effect.Unsafe (unsafePerformEffect)
@@ -27,7 +27,7 @@ import Prelude
 import PrestoDOM (BottomSheetState(..), Eval, update, continue, continueWithCmd, defaultPerformLog, exit, updateAndExit)
 import Screens.HomeScreen.Transformer (getDriverInfo)
 import Screens.HomeScreen.ScreenData (dummyDriverInfo)
-import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState)
+import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState,NotificationBody)
 import Services.API (RideBookingRes(..), Route, GetDriverLocationResp(..), MultiChatReq(..), APISuccessResp(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Common.Types.App (LazyCheck(..), SosStatus(..), Paths)
@@ -68,7 +68,7 @@ import Services.API as API
 import Engineering.Helpers.Suggestions(getMessageFromKey, chatSuggestion)
 import Constants (languageKey)
 import Locale.Utils (getLanguageLocale)
-
+import Components.DriverInfoCard.Controller as DriverInfoCardController 
 instance showAction :: Show Action where
   show _ = ""
 
@@ -107,7 +107,7 @@ data Action
   | StopAudioPlayer
   | StartAudioPlayer
   | OnAudioCompleted String
-  | NotificationListener String
+  | NotificationListener String NotificationBody
   | DismissOverlay
   | UpdateRoute Route
   | UpdatePeekHeight
@@ -120,6 +120,7 @@ data Action
   | MessageExpiryTimer Int String String
   | AllChatsLoaded
   | CallSafetyTeam SafetyActionTileView.Action
+  | DriverInfoCardAction DriverInfoCardController.Action
 
 eval :: Action -> FollowRideScreenState -> Eval Action ScreenOutput FollowRideScreenState
 eval action state = case action of
@@ -150,7 +151,7 @@ eval action state = case action of
     else continueWithCmd state [ pure BackPressed]
   UpdatePeekHeight -> continue state { data { counter = state.data.counter + 1 } }
   UpdateCurrentStage stage -> continue state{data{currentStage = stage}}
-  NotificationListener notification -> 
+  NotificationListener notification notificationBody -> 
     case notification of
       "SOS_TRIGGERED" -> exit $ RestartTracking state{data{emergencyAudioStatus = STOPPED}, props{isMock = false}}
       "SOS_RESOLVED" -> do
@@ -412,7 +413,7 @@ startAudioPlayerCmd array state = do
             when canStartAudio
               $ do
                   push <- getPushFn Nothing "FollowRideScreen"
-                  void $ pure $ runFn3 startAudioPlayer "ny_ic_sos_danger_full" push OnAudioCompleted
+                  void $ pure $ runFn4 startAudioPlayer "ny_ic_sos_danger_full" push OnAudioCompleted "0"
             pure NoAction
         ] <> array)
 canStartAudioPlayer :: FollowRideScreenState -> Boolean

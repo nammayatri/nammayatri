@@ -6,7 +6,7 @@ import qualified Domain.Types.Person as Person
 import EulerHS.Prelude hiding (id, map)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
-import Kernel.Prelude
+import Kernel.Prelude hiding (whenJust)
 import Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -65,6 +65,9 @@ removeFavouriteDriver merchantId driverId apiKey GetFavouriteDriverInfoReq {..} 
     throwError $ AuthBlocked "Invalid BPP internal api key"
   numberHash <- getDbHash customerMobileNumber
   rider <- B.runInReplica $ QRD.findByMobileNumberHashAndMerchant numberHash merchant.id >>= fromMaybeM (InternalError "Rider does not exist")
-  RDC.updateFavouriteDriverForRider False rider.id driverId
-  QDS.decFavouriteRiderCount driverId
+  isfavourite' <- RDC.findByPrimaryKey driverId rider.id
+  whenJust isfavourite' $ \isfavourite -> do
+    when (isfavourite.favourite) $ do
+      RDC.updateFavouriteDriverForRider False rider.id driverId
+      QDS.decFavouriteRiderCount driverId
   pure APISuccess.Success

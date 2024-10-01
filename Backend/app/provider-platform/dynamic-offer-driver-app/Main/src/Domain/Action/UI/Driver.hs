@@ -431,6 +431,7 @@ data BookingAPIEntity = BookingAPIEntity
     startTime :: UTCTime,
     fromLocation :: DLoc.Location,
     toLocation :: Maybe DLoc.Location,
+    stops :: [DLoc.Location],
     vehicleServiceTier :: DVST.ServiceTierType,
     vehicleServiceTierName :: Text,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
@@ -459,6 +460,12 @@ data UpdateProfileInfoPoints = UpdateProfileInfoPoints
     isCategoryLevelSubscriptionEnabled :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+-- data Stop = Stop
+--   { location :: DLoc.Location,
+--     stopInfo :: Maybe DSI.StopInformation
+--   }
+--   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 validateUpdateDriverReq :: Validate UpdateDriverReq
 validateUpdateDriverReq UpdateDriverReq {..} =
@@ -1300,6 +1307,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               roundTrip = fromMaybe False searchReq.roundTrip,
               vehicleAge = sReqFD.vehicleAge,
               waitingTime = Nothing,
+              noOfStops = length searchReq.stops,
               actualRideDuration = Nothing,
               avgSpeedOfVehicle = Nothing,
               driverSelectedFare = reqOfferedValue,

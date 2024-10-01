@@ -52,8 +52,8 @@ import Screens.Types (FareProductType(..)) as FPT
 import Helpers.Utils as HU
 
 ---------------------------------- driverDetailsView ---------------------------------------
-driverDetailsView :: forall w. DriverDetailsType -> String -> String -> PrestoDOM (Effect Unit) w
-driverDetailsView config uid nid =
+driverDetailsView :: forall w. (Action -> Effect Unit) -> DriverDetailsType -> String -> String -> PrestoDOM (Effect Unit) w
+driverDetailsView push config uid nid =
  linearLayout
   [ orientation HORIZONTAL
   , height WRAP_CONTENT 
@@ -63,6 +63,7 @@ driverDetailsView config uid nid =
   , margin $ Margin 16 (if config.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || config.isOtpRideFlow then 12 else 0) 16 (if config.enablePaddingBottom then safeMarginBottom else 0)
   , background Color.white900
   , cornerRadius 8.0
+  , onClick push $ const GoToDriverProfile
   , visibility $  boolToVisibility $ if config.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || config.isOtpRideFlow then config.rideStarted else true
   ][  linearLayout
       [ orientation VERTICAL
@@ -91,16 +92,28 @@ driverDetailsView config uid nid =
             , ratingView config
             ]
           ]
-        , textView $
-          [ text config.driverName 
-          , maxLines 2
-          , ellipsize true
-          , accessibility DISABLE
-          , color Color.black800
+        , linearLayout[
+            height WRAP_CONTENT
           , width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , gravity LEFT
-          ] <> FontStyle.body27 TypoGraphy
+          ][
+            textView $
+            [ text config.driverName 
+            , maxLines 2
+            , ellipsize true
+            , accessibility DISABLE
+            , color Color.black800
+            , width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , gravity LEFT
+            ] <> FontStyle.body27 TypoGraphy
+          , imageView
+            [ height $ V 12
+            , width $ V 12
+            , margin $ Margin 3 3 0 0
+            , accessibilityHint $ "Go To Driver Profile"
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right"
+            ]
+          ]
         , textView (
           [ text $ spaceSeparatedPascalCase $ config.vehicleColor <> " " <> if config.vehicleModel == "Unkown" then HU.getVariantRideType config.vehicleVariant else config.vehicleModel
           , color Color.black700
@@ -286,6 +299,7 @@ getVehicleImage variant vehicleDetail city = do
 sourceDestinationView :: forall action w.(action -> Effect Unit) -> TripDetails action -> PrestoDOM (Effect Unit) w
 sourceDestinationView push config = 
   let isNotRentalRide = (config.fareProductType /= FPT.RENTAL)
+      isNotIntercityRide = config.fareProductType /= FPT.INTER_CITY
       bottomMargin = (if os == "IOS" && config.rideStarted && config.enablePaddingBottom then (safeMarginBottom + 36) else 12)
       locationTextWidthWhenFeatureEnabled = if os == "IOS" then V ((screenWidth unit) / 100 * 80) else V ((screenWidth unit) / 100 * 65)
       locationTextWidthWhenFeatureDisabled = V ((screenWidth unit) / 10 * 8)
@@ -403,7 +417,7 @@ sourceDestinationView push config =
                 , cornerRadius if os == "IOS" then 16.0 else 32.0
                 , stroke $ "1," <> Color.grey900
                 , padding $ Padding 12 8 12 8
-                , visibility $ boolToVisibility $ config.enableEditDestination && isNotRentalRide && (config.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE) && not config.isOtpRideFlow
+                , visibility $ boolToVisibility $ config.enableEditDestination && isNotRentalRide && (config.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE) && not config.isOtpRideFlow && isNotIntercityRide
                 , onClick push $ const config.editingDestinationLoc
                 , rippleColor Color.rippleShade
               ] <> FontStyle.body1 TypoGraphy

@@ -273,5 +273,8 @@ hvSdkTokenExp = 86400
 oneDayInMS :: Int
 oneDayInMS = 86400000
 
+maxDriverImages :: Int
+maxDriverImages = 4
+
 twoHrsInSec :: Int
 twoHrsInSec = 7200

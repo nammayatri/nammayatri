@@ -45,7 +45,7 @@ view push config =
     fromPrice = fromMaybe "" (priceRange DA.!! 0)
     toPrice = fromMaybe "" (priceRange DA.!! 1)
     accessibilityText = selectedVehicle <> (if isActiveIndex then " selected : " else " Un Selected : ") <> fromPrice <> (if toPrice /= "" then " to " <> toPrice else "") <> " with capacity of " <> config.capacity
-    isOneWayOrRental = config.searchResultType `DA.elem` [ESTIMATES, QUOTES RENTAL]
+    blackListedSearchResultType = config.searchResultType `DA.elem` [ESTIMATES, QUOTES RENTAL,QUOTES INTER_CITY]
   in
     frameLayout
       [ width MATCH_PARENT
@@ -120,7 +120,7 @@ view push config =
         [ height $ V selectedEstimateHeight
         , width $ MATCH_PARENT
         , gravity RIGHT
-        , visibility $ boolToVisibility $ (config.vehicleVariant /= "BOOK_ANY") && isOneWayOrRental
+        , visibility $ boolToVisibility $ (config.vehicleVariant /= "BOOK_ANY") && blackListedSearchResultType
         , accessibility DISABLE
         ][linearLayout
           [ height $ V selectedEstimateHeight
@@ -129,7 +129,7 @@ view push config =
           , accessibility DISABLE
           , onClick push $ const $ case config.showInfo && isActiveIndex of
                                     false -> OnSelect config
-                                    true  -> if config.showInfo && isOneWayOrRental then ShowRateCard config else NoAction config                        
+                                    true  -> if config.showInfo && blackListedSearchResultType then ShowRateCard config else NoAction config                        
           ][]
        ]
     ]

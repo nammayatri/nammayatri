@@ -8,7 +8,7 @@ import Components.GenericHeader.View as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination.View as SourceToDestinationView
 import Components.PopUpModal as PopUpModal
-import Data.Array (singleton, head)
+import Data.Array (singleton, head ,filter ,any)
 import Data.Either (Either(..))
 import Data.Maybe (maybe, fromMaybe, Maybe(..))
 import Data.Time.Duration (Milliseconds(..))
@@ -37,6 +37,9 @@ import Types.App (GlobalState, defaultGlobalState)
 import Mobility.Prelude (boolToVisibility)
 import Screens.Types (FareProductType(..)) as FPT
 import Resources.Localizable.EN (getEN)
+import Control.Monad.Except.Trans (lift)
+import Accessor(_status,_isScheduled)
+import Data.Lens((^.))
 
 rideScheduledScreen :: RideScheduledScreenState -> Screen Action RideScheduledScreenState ScreenOutput
 rideScheduledScreen initialState =
@@ -52,34 +55,34 @@ rideScheduledScreen initialState =
   }
   where
     getBookingListEvent push = do
-      void $ storeCallBackCustomer push NotificationListener "RideScheduledScreen"
-      void $ launchAff $ EHC.flowRunner defaultGlobalState $ getBookingList GetBookingList CheckFlowStatusAction 10 1000.0 push initialState
+      void $ storeCallBackCustomer push NotificationListener "RideScheduledScreen" Just Nothing
+      void $ launchAff $ EHC.flowRunner defaultGlobalState $ getBooking GetBooking CheckFlowStatusAction 10 1000.0 push initialState
       pure $ pure unit
-
-    getBookingList :: forall action. (RideBookingListRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> RideScheduledScreenState -> Flow GlobalState Unit
-    getBookingList action flowStatusAction count duration push state = do
-      if(count > 0 && state.data.bookingId == "") then do
-        resp <- Remote.rideBookingListWithStatus "1" "0" "CONFIRMED" Nothing
-        case resp of
-          Right response -> do
-            let (RideBookingListRes listResp) = response
-                (RideBookingRes resp) = fromMaybe dummyRideBooking $ head listResp.list
-            if not (resp.id == "") then doAff do liftEffect $ push $ action response
-            else do
-              if count == 1 then do
-                doAff do liftEffect $ push $ action response
+    getBooking :: forall action. (RideBookingRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> RideScheduledScreenState -> Flow GlobalState Unit
+    getBooking action flowStatusAction count duration push state = do
+        let 
+          bookingId = state.data.bookingId
+        if(count > 0 && bookingId /= "") then do
+          rideBookingResponse <- Remote.rideBooking bookingId
+          case rideBookingResponse of
+            Right response -> do
+              let (RideBookingRes resp) = response
+              if not (resp.id == "") then doAff do liftEffect $ push $ action response
               else do
-                void $ delay $ Milliseconds duration
-                getBookingList action flowStatusAction (count - 1) duration push state
-          Left err -> do
-            let errResp = err.response
-                codeMessage = decodeError errResp.errorMessage "errorMessage"
-            void $ delay $ Milliseconds duration
-            if(count == 1) then do
-              let response = RideBookingListRes { list : []}
-              doAff do liftEffect $ push $ action response
-            else getBookingList action flowStatusAction (count - 1) duration push state
-      else pure unit
+                if count == 1 then do
+                  doAff do liftEffect $ push $ action response
+                else do
+                  void $ delay $ Milliseconds duration
+                  getBooking action flowStatusAction (count - 1) duration push state
+            Left err -> do
+              let errResp = err.response
+                  codeMessage = decodeError errResp.errorMessage "errorMessage"
+              void $ delay $ Milliseconds duration
+              if(count == 1) then do
+                let response = dummyRideBooking
+                doAff do liftEffect $ push $ action response
+              else getBooking action flowStatusAction (count - 1) duration push state
+        else pure unit
 
 view :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w
 view push state =

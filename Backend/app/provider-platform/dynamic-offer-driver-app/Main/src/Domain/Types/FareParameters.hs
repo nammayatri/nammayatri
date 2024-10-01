@@ -28,6 +28,7 @@ data FareParameters = FareParameters
     customerExtraFee :: Maybe HighPrecMoney,
     serviceCharge :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
+    stopCharges :: Maybe HighPrecMoney,
     govtCharges :: Maybe HighPrecMoney,
     baseFare :: HighPrecMoney,
     waitingCharge :: Maybe HighPrecMoney,

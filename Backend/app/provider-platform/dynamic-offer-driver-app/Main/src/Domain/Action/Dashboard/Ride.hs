@@ -377,9 +377,10 @@ calculateLocations bookingId stopLocationId = do
       return (nextLoc, lastLoc)
 
 mkLocationAPIEntity :: DLoc.Location -> Common.LocationAPIEntity
-mkLocationAPIEntity DLoc.Location {..} = do
+mkLocationAPIEntity loc@DLoc.Location {..} = do
   let DLoc.LocationAddress {..} = address
-  Common.LocationAPIEntity {..}
+      id' = loc.id.getId
+  Common.LocationAPIEntity {id = id', ..}
 
 mkLocationFromLocationMapping ::
   ( CacheFlow m r,

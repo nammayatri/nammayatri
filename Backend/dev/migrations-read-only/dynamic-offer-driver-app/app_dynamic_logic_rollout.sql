@@ -20,3 +20,9 @@ ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_rollout ALTER COLUMN logic_
 
 ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_rollout DROP CONSTRAINT app_dynamic_logic_rollout_pkey;
 ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_rollout ADD PRIMARY KEY ( domain, merchant_operating_city_id, time_bounds, version);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_rollout ADD COLUMN version_description text ;

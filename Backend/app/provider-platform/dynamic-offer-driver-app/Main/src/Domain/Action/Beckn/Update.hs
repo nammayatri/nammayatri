@@ -232,6 +232,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     vehicleAge = Nothing,
                     roundTrip = fromMaybe False booking.roundTrip,
                     waitingTime = Nothing,
+                    noOfStops = length booking.stops,
                     actualRideDuration = Nothing,
                     avgSpeedOfVehicle = Nothing,
                     driverSelectedFare = booking.fareParams.driverSelectedFare,
@@ -249,14 +250,14 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             QFP.create fareParameters
             let validTill = addUTCTime (fromIntegral transporterConfig.editLocTimeThreshold) now
             bookingUpdateReq <- buildbookingUpdateRequest booking merchantOperatingCity.merchantId bapBookingUpdateRequestId fareParameters farePolicy.id maxEstimatedDist currentPoint estimatedDistance validTill mapsRouteReqInText routeInfoInText
-            QBUR.create bookingUpdateReq
             startLocMapping <- QLM.getLatestStartByEntityId bookingId.getId >>= fromMaybeM (InternalError $ "Latest start location mapping not found for bookingId: " <> bookingId.getId)
             dropLocMapping <- QLM.getLatestEndByEntityId bookingId.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingId: " <> bookingId.getId)
             startLocMap <- SLM.buildPickUpLocationMapping startLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
-            dropLocMap <- SLM.buildDropLocationMapping dropLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
-            destLocMapNew <- SLM.buildDropLocationMapping dropLocation.id bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
             QLM.create startLocMap
+            dropLocMap <- SLM.buildDropLocationMapping dropLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
             QLM.create dropLocMap
+            QBUR.create bookingUpdateReq
+            destLocMapNew <- SLM.buildDropLocationMapping dropLocation.id bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
             QLM.create destLocMapNew
             sendUpdateEditDestToBAP booking ride bookingUpdateReq (Just dropLocation) currentPoint SOFT_UPDATE
           Enums.CONFIRM_UPDATE -> do
@@ -371,23 +372,6 @@ buildLocationMapping locationId entityId isEdit merchantId merchantOperatingCity
         updatedAt = now,
         ..
       }
-
-mkLocationAPIEntity :: Common.Location -> DL.LocationAPIEntity
-mkLocationAPIEntity location =
-  DL.LocationAPIEntity
-    { lat = location.gps.lat,
-      lon = location.gps.lon,
-      street = location.address.street,
-      city = location.address.city,
-      state = location.address.state,
-      country = location.address.country,
-      building = location.address.building,
-      areaCode = location.address.area_code,
-      area = location.address.ward,
-      fullAddress = mkFullAddress location.address,
-      instructions = Nothing,
-      extras = Nothing
-    }
 
 processStop :: DBooking.Booking -> DL.Location -> Bool -> Flow ()
 processStop booking location isEdit = do

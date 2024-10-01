@@ -24,6 +24,7 @@ import Foreign.Object (empty)
 import MerchantConfig.Types (AppConfig)
 import Foreign (Foreign)
 import Foreign.Object (Object)
+import Screens (ScreenName(..), getScreen)
 
 initData :: HelpAndSupportScreenState
 initData = {
@@ -42,6 +43,7 @@ initData = {
     rideStartTime : "",
     rideEndTime : "",
     vehicleNumber : "",
+    fromScreen : getScreen HOME_SCREEN,
     rideId : "",
     tripId : "",
     bookingId : "",
@@ -89,6 +91,7 @@ type HelpAndSupportScreenData =
     totalAmount :: String,
     isNull :: Boolean,
     faresList :: Array FareComponent,
+    fromScreen :: String,
     status :: String,
     rideStatus :: String,
     rideCreatedAt :: String,

@@ -385,7 +385,7 @@ driverReferralCode push state =
     , orientation VERTICAL
     , padding $ Padding 20 16 20 16
     , background config.backgroundColor
-    , margin $ MarginBottom 32
+    , margin $ MarginBottom 16
     , cornerRadius 12.0
     , gravity CENTER
     ]
@@ -707,12 +707,12 @@ savingWithGullak push state image =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , margin $ MarginVertical 10 10
+    , margin $ MarginBottom 10
     ]
     [ textView
         $ [ text "Invest in gold"
           , color Color.black800
-          , margin $ MarginBottom 12
+          , margin $ MarginBottom 6
           ]
         <> FontStyle.h2 TypoGraphy
     , relativeLayout
@@ -725,11 +725,11 @@ savingWithGullak push state image =
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation VERTICAL
-            , margin $ MarginTop 5
             ][ linearLayout
               [ width $ MATCH_PARENT
               , background Color.greyDark
-              , height $ V 170
+              , height $ V 140
+              , margin $ MarginVertical 20 20
               , cornerRadius $ 16.0
               ][]
             ]

@@ -52,7 +52,7 @@ import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Foldable (for_)
 import Data.Function.Uncurried (runFn1, runFn2)
-import Data.Function.Uncurried (runFn3)
+import Data.Function.Uncurried (runFn3, runFn4)
 import Data.Int (ceil, toNumber, fromString)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe, isNothing)
@@ -113,7 +113,7 @@ import Control.Alt ((<|>))
 import Effect.Aff (launchAff, makeAff, nonCanceler)
 import Common.Resources.Constants(chatService)
 import DecodeUtil as DU
-import RemoteConfig.Utils (cancellationThresholds)
+import RemoteConfig.Utils (cancellationThresholds, getEnableOtpRideConfigData)
 import Components.SelectPlansModal as SelectPlansModal
 import Services.API as APITypes
 import Resource.Constants
@@ -794,6 +794,8 @@ rateCardView push state =
 
 addAadhaarOrOTPView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 addAadhaarOrOTPView state push =
+  let otpRideEnabledCityConfig = getEnableOtpRideConfigData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION 
+  in
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -806,7 +808,7 @@ addAadhaarOrOTPView state push =
       , width MATCH_PARENT
       , gravity if showAddAadhaar then CENTER else RIGHT
       ][  addAadhaarNumber push state showAddAadhaar
-        , if state.data.config.feature.enableOtpRide then otpButtonView state push else dummyTextView
+        , if (state.data.config.feature.enableOtpRide || otpRideEnabledCityConfig.enableOtpRide) then otpButtonView state push else dummyTextView
         ]
       ]
   where showAddAadhaar = state.props.showlinkAadhaarPopup && state.props.statusOnline
@@ -2527,7 +2529,7 @@ playAudioAndLaunchMap push action state audioCompleted acRide requestedVehicleVa
     
   case audioUrl of
     Just url -> 
-      if needToTriggerMaps then void $ pure $ runFn3 JB.startAudioPlayer url push audioCompleted
+      if needToTriggerMaps then void $ pure $ runFn4 JB.startAudioPlayer url push audioCompleted "0"
       else pure unit
     Nothing -> do  
       void $ delay $ Milliseconds 2000.0

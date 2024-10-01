@@ -71,6 +71,11 @@ type PurpleRideConfig = {
   genericAccessibilityVideo :: String
   }
 
+type GeoCodeConfig = {
+  radius :: Int,
+  strictBounds :: Boolean
+}
+
 type Language =  {
   name :: String,
   value :: String,

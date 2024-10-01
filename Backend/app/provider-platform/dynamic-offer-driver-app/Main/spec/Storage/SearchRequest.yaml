@@ -30,6 +30,7 @@ SearchRequest:
     fromLocation: Location
     fromLocGeohash: Maybe Text
     toLocGeohash: Maybe Text
+    stops: "[Location]"
     area: Maybe Area
     bapId: Text
     bapUri: BaseUrl
@@ -84,6 +85,7 @@ SearchRequest:
       fromLocationId: Maybe Text
     toLocation:
       toLocationId: Maybe Text
+    stops: {}
 
   toTType:
     fromLocationId: Just $ Kernel.Types.Id.getId ((.id) fromLocation)|E
@@ -112,6 +114,7 @@ SearchRequest:
     bapUri: Kernel.Prelude.parseBaseUrl|IM
     fromLocation: Storage.Queries.Location.findById ( (.locationId) fromLocationMapping) >>= fromMaybeM (Tools.Error.FromLocationNotFound ( (.getId) $ (.locationId) fromLocationMapping))|EM
     toLocation: maybe (pure Nothing) (Storage.Queries.Location.findById . (.locationId)) mbToLocationMapping|EM
+    stops: Storage.Queries.Transformers.SearchRequest.getStops id|EM
     startTime: startTime_|E
     validTill: fromMaybe (Kernel.Utils.Common.addUTCTime 600 startTime_) validTill|E
     isScheduled: fromMaybe False isScheduled|E

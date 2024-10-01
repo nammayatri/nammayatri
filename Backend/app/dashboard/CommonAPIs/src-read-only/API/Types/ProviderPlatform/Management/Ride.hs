@@ -87,7 +87,8 @@ data LocationAPIEntity = LocationAPIEntity
     country :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     building :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     areaCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    area :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    area :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    id :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

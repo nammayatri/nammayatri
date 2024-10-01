@@ -69,6 +69,24 @@ getLatestEndByEntityId entityId =
     (Just (Se.Desc BeamLM.createdAt))
     <&> listToMaybe
 
+getLatestStopsByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [LocationMapping]
+getLatestStopsByEntityId entityId = do
+  stops <- getLatestStopsByEntityId' entityId
+  if null stops
+    then return []
+    else return $ init stops
+
+getLatestStopsByEntityId' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [LocationMapping]
+getLatestStopsByEntityId' entityId =
+  findAllWithKVAndConditionalDB
+    [ Se.And
+        [ Se.Is BeamLM.entityId $ Se.Eq entityId,
+          Se.Is BeamLM.order $ Se.Not $ Se.Eq 0,
+          Se.Is BeamLM.version $ Se.Eq latestTag
+        ]
+    ]
+    (Just (Se.Asc BeamLM.order))
+
 maxOrderByEntity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m Int
 maxOrderByEntity entityId = do
   lms <- findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId] Nothing

@@ -81,6 +81,7 @@ type AppConfigCustomer a =
   , enableBookAny :: Boolean
   , acPopupConfig :: AcPopupConfig
   , showCheckoutRentalBanner :: Boolean
+  , riderRideCompletedCard :: RiderRideCompletedCard
   | a
   }
 
@@ -417,6 +418,7 @@ type CityConfig = {
   geoCodeConfig :: GeoCodeConfig,
   enableRentals :: Boolean,
   enableIntercity :: Boolean,
+  enableScheduling :: Boolean,
   enableCabs :: Boolean,
   iopConfig :: InteroperabilityConfig,
   estimateAndQuoteConfig :: EstimateConfig,
@@ -481,4 +483,8 @@ type WaitingChargeConfig = {
 type WaitingCharge = {
   freeMinutes :: Number,
   perMinCharges :: Number
+}
+
+type RiderRideCompletedCard = {
+  showDriverProfile :: Boolean
 }

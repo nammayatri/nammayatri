@@ -47,7 +47,7 @@ import Timers (clearTimerWithId, waitingCountdownTimerV2Impl, startTimer)
 import Engineering.Helpers.Commons as EHC
 import Types.EndPoint as EndPoint
 import Data.String as DS
-import Data.Function.Uncurried (runFn3)
+import Data.Function.Uncurried (runFn3, runFn4)
 import Components.PopupWithCheckbox.Controller as PopupWithCheckbox
 import Services.API as API
 import Services.Backend as Remote
@@ -56,6 +56,7 @@ import Effect.Aff (launchAff)
 import Types.App (defaultGlobalState)
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
+import Debug 
 
 instance showAction :: Show Action where
   show _ = ""
@@ -436,6 +437,6 @@ handleMediaPlayerRestart :: NammaSafetyScreenState -> Eval Action ScreenOutput N
 handleMediaPlayerRestart state = continueWithCmd state { props { triggerSiren = true } }
         [ do
             push <- getPushFn Nothing "SosActiveScreen"
-            void $ pure $ runFn3 JB.startAudioPlayer "ny_ic_sos_danger_full" push OnAudioCompleted
+            void $ pure $ runFn4 JB.startAudioPlayer "ny_ic_sos_danger_full" push OnAudioCompleted "0"
             pure NoAction
         ]

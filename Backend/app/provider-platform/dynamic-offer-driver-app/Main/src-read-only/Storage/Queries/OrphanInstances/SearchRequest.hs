@@ -19,6 +19,7 @@ import qualified Storage.CachedQueries.Merchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity
 import qualified Storage.Queries.Location
 import qualified Storage.Queries.LocationMapping
+import qualified Storage.Queries.Transformers.SearchRequest
 import qualified Tools.Error
 
 instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest where
@@ -32,6 +33,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
     fromLocation' <- Storage.Queries.Location.findById ((.locationId) fromLocationMapping) >>= fromMaybeM (Tools.Error.FromLocationNotFound ((.getId) $ (.locationId) fromLocationMapping))
     merchantOperatingCityId' <- Storage.CachedQueries.Merchant.MerchantOperatingCity.getMerchantOpCityId (Kernel.Types.Id.Id <$> merchantOperatingCityId) merchant bapCity
     toLocation' <- (maybe (pure Nothing) (Storage.Queries.Location.findById . (.locationId)) mbToLocationMapping)
+    stops' <- Storage.Queries.Transformers.SearchRequest.getStops id
     pure $
       Just
         Domain.Types.SearchRequest.SearchRequest
@@ -73,6 +75,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             specialLocationTag = specialLocationTag,
             startTime = startTime_,
             toLocGeohash = toLocGeohash,
+            stops = stops',
             toLocation = toLocation',
             tollCharges = tollCharges,
             tollNames = tollNames,

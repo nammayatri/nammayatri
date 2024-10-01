@@ -64,6 +64,7 @@ import Data.Boolean (otherwise)
 import Screens.Types as ST
 import Resource.Constants as RC
 import SessionCache
+import Services.API (DriverProfileDataReq(..))
 import Helpers.API (getDeviceDetails)
 import MerchantConfig.Types as MCT
 import Common.RemoteConfig.Utils as CommonRC
@@ -513,6 +514,25 @@ makeOfferRideReq requestId offeredFare = OfferRideReq
       "searchRequestId" : requestId,
       "offeredFare" : offeredFare
     }
+
+makeDriverProfileReq :: Maybe String -> Array String -> Array String -> Array String -> Maybe Int -> Array String -> GetUploadProfileReq
+makeDriverProfileReq homeTown pledge vehicalTags aspiration drivingSince imageId = GetUploadProfileReq {
+    pledges : pledge,
+    vehicleTags : vehicalTags,
+    languages : [],
+    aspirations : aspiration,
+    drivingSince : drivingSince,
+    hometown : homeTown,
+    imageIds : imageId
+}
+
+uploadProfileReq :: GetUploadProfileReq -> FlowBT String ApiSuccessResult
+uploadProfileReq body = do
+        headers <- getHeaders' "" true
+        withAPIResultBT (EP.submitDriverProfile "") identity errorHandler (lift $ lift $ callAPI headers (UploadProfileReq body))
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            BackT $ pure GoBack
 
 --------------------------------- getRideHistoryResp -------------------------------------------------------------------------
 getRideHistoryReq :: String -> String -> String -> String -> String -> Flow GlobalState (Either ErrorResponse GetRidesHistoryResp)
@@ -1750,6 +1770,16 @@ makeAadhaarCardReq aadhaarBackImageId aadhaarFrontImageId address consent consen
        "validationStatus" : validationStatus,
        "transactionId" : transactionId
     }
+
+---------------------------------------------------------Fetching Driver Profile------------------------------------------------------------
+
+
+fetchDriverProfile ::  Boolean -> Flow GlobalState (Either ErrorResponse DriverProfileDataRes)
+fetchDriverProfile isImages = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.getDriverProfile isImages) unwrapResponse $ callAPI headers $ DriverProfileDataReq isImages
+    where
+        unwrapResponse (x) = x
 
 
 --------------------------------- getCoinInfo ---------------------------------------------------------------------------------------------------

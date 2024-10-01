@@ -105,8 +105,8 @@ data RateCardBreakupItem = RateCardBreakupItem
     value :: Text
   }
 
-mkStops :: Maps.LatLong -> Maybe Maps.LatLong -> Maybe [Spec.Stop]
-mkStops origin mbDestination = do
+mkStops :: Maps.LatLong -> Maybe Maps.LatLong -> [Maps.LatLong] -> Maybe [Spec.Stop]
+mkStops origin mbDestination intermediateStops = do
   let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
       destinationGps destination = Gps.Gps {lat = destination.lat, lon = destination.lon}
   Just $
@@ -127,7 +127,9 @@ mkStops origin mbDestination = do
                     },
               stopType = Just $ show Enums.START,
               stopAuthorization = Nothing,
-              stopTime = Nothing
+              stopTime = Nothing,
+              stopId = Just "0",
+              stopParentStopId = Nothing
             },
         ( \destination ->
             Spec.Stop
@@ -145,11 +147,14 @@ mkStops origin mbDestination = do
                       },
                 stopType = Just $ show Enums.END,
                 stopAuthorization = Nothing,
-                stopTime = Nothing
+                stopTime = Nothing,
+                stopId = Just $ show (length intermediateStops + 1),
+                stopParentStopId = Just $ show (length intermediateStops)
               }
         )
           <$> mbDestination
       ]
+      <> (map (\(location, order) -> mkIntermediateStopSearch location order (order - 1)) $ zip intermediateStops [1 ..])
 
 parseLatLong :: MonadFlow m => Text -> m Maps.LatLong
 parseLatLong a =
@@ -287,8 +292,8 @@ parseAddress loc@Spec.Location {..} = do
     isEmpty :: Maybe Text -> Bool
     isEmpty = maybe True (T.null . T.replace " " "")
 
-mkStops' :: DLoc.Location -> Maybe DLoc.Location -> Maybe Text -> Maybe [Spec.Stop]
-mkStops' origin mbDestination mAuthorization =
+mkStops' :: DLoc.Location -> Maybe DLoc.Location -> [DLoc.Location] -> Maybe Text -> Maybe [Spec.Stop]
+mkStops' origin mbDestination intermediateStops mAuthorization =
   let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
       destinationGps dest = Gps.Gps {lat = dest.lat, lon = dest.lon}
    in Just $
@@ -309,7 +314,9 @@ mkStops' origin mbDestination mAuthorization =
                         },
                   stopType = Just $ show Enums.START,
                   stopAuthorization = mAuthorization >>= mkAuthorization,
-                  stopTime = Nothing
+                  stopTime = Nothing,
+                  stopId = Just "0",
+                  stopParentStopId = Nothing
                 },
             ( \destination ->
                 Spec.Stop
@@ -327,11 +334,14 @@ mkStops' origin mbDestination mAuthorization =
                           },
                     stopType = Just $ show Enums.END,
                     stopAuthorization = Nothing,
-                    stopTime = Nothing
+                    stopTime = Nothing,
+                    stopId = Just $ show (length intermediateStops + 1),
+                    stopParentStopId = Just $ show (length intermediateStops)
                   }
             )
               <$> mbDestination
           ]
+          <> (map (\(location, order) -> mkIntermediateStop location order (order - 1)) $ zip intermediateStops [1 ..])
   where
     mkAuthorization :: Text -> Maybe Spec.Authorization
     mkAuthorization auth =
@@ -345,6 +355,52 @@ mkAddress :: DLoc.LocationAddress -> Text
 mkAddress DLoc.LocationAddress {..} =
   let res = map replaceEmpty [door, building, street, area, city, state, country]
    in T.intercalate ", " $ catMaybes res
+
+mkIntermediateStop :: DLoc.Location -> Int -> Int -> Spec.Stop
+mkIntermediateStop stop id parentStopId =
+  let gps = Gps.Gps {lat = stop.lat, lon = stop.lon}
+   in Spec.Stop
+        { stopLocation =
+            Just $
+              Spec.Location
+                { locationAddress = Just $ mkAddress stop.address,
+                  locationAreaCode = stop.address.areaCode,
+                  locationCity = Just $ Spec.City Nothing stop.address.city,
+                  locationCountry = Just $ Spec.Country Nothing stop.address.country,
+                  locationGps = Utils.gpsToText gps,
+                  locationState = Just $ Spec.State stop.address.state,
+                  locationId = Just stop.id.getId,
+                  locationUpdatedAt = Nothing
+                },
+          stopType = Just $ show Enums.INTERMEDIATE_STOP,
+          stopAuthorization = Nothing,
+          stopTime = Nothing,
+          stopId = Just $ show id,
+          stopParentStopId = Just $ show parentStopId
+        }
+
+mkIntermediateStopSearch :: Maps.LatLong -> Int -> Int -> Spec.Stop
+mkIntermediateStopSearch stop id parentStopId =
+  let gps = Gps.Gps {lat = stop.lat, lon = stop.lon}
+   in Spec.Stop
+        { stopLocation =
+            Just $
+              Spec.Location
+                { locationAddress = Nothing,
+                  locationAreaCode = Nothing,
+                  locationCity = Nothing,
+                  locationCountry = Nothing,
+                  locationGps = Utils.gpsToText gps,
+                  locationState = Nothing,
+                  locationId = Nothing,
+                  locationUpdatedAt = Nothing
+                },
+          stopType = Just $ show Enums.INTERMEDIATE_STOP,
+          stopAuthorization = Nothing,
+          stopTime = Nothing,
+          stopId = Just $ show id,
+          stopParentStopId = Just $ show parentStopId
+        }
 
 data DriverInfo = DriverInfo
   { mobileNumber :: Text,
@@ -361,6 +417,7 @@ mkStopsOUS :: DBooking.Booking -> DRide.Ride -> Text -> Maybe [Spec.Stop]
 mkStopsOUS booking ride rideOtp =
   let origin = booking.fromLocation
       mbDestination = booking.toLocation
+      intermediateStops = booking.stops
       originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
       destinationGps dest = Gps.Gps {lat = dest.lat, lon = dest.lon}
    in Just $
@@ -380,6 +437,8 @@ mkStopsOUS booking ride rideOtp =
                           locationUpdatedAt = Nothing
                         },
                   stopType = Just $ show Enums.START,
+                  stopId = Just "0",
+                  stopParentStopId = Nothing,
                   stopAuthorization =
                     Just $
                       Spec.Authorization
@@ -404,9 +463,12 @@ mkStopsOUS booking ride rideOtp =
                         },
                   stopType = Just $ show Enums.END,
                   stopAuthorization = Nothing,
-                  stopTime = ride.tripEndTime <&> \tripEndTime' -> Spec.Time {timeTimestamp = Just tripEndTime', timeDuration = Nothing}
+                  stopTime = ride.tripEndTime <&> \tripEndTime' -> Spec.Time {timeTimestamp = Just tripEndTime', timeDuration = Nothing},
+                  stopId = Just $ show (length intermediateStops + 1),
+                  stopParentStopId = Just $ show (length intermediateStops)
                 }
           ]
+          <> (map (\(location, order) -> mkIntermediateStop location order (order - 1)) $ zip intermediateStops [1 ..])
 
 type IsValueAddNP = Bool
 
@@ -629,19 +691,21 @@ mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccount
               tagValue = Just $ show isFreeRide
             }
 
-    isAlreadyFavSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just $ show Tags.IS_ALREADY_FAVOURITE,
-                    descriptorName = Just "Is already favourite",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just $ show isAlreadyFav
-          }
+    isAlreadyFavSingleton
+      | not isAlreadyFav = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.IS_ALREADY_FAVOURITE,
+                      descriptorName = Just "Is already favourite",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = Just $ show isAlreadyFav
+            }
 
     favCountSingleton =
       List.singleton $
@@ -1490,7 +1554,7 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
   pure $
     Spec.Fulfillment
       { fulfillmentId = Just ride.id.getId,
-        fulfillmentStops = mkStops' booking.fromLocation (Just newDestination) (Just rideOtp),
+        fulfillmentStops = mkStops' booking.fromLocation (Just newDestination) booking.stops (Just rideOtp),
         fulfillmentType = Just $ Utils.tripCategoryToFulfillmentType booking.tripCategory,
         fulfillmentAgent =
           Just $

@@ -54,6 +54,7 @@ Ride:
     merchantId: Maybe (Id Merchant)
     clientId: Maybe (Id Client)
     fromLocation: Location
+    stops: "[Location]"
     toLocation: Maybe Location
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     status: RideStatus
@@ -146,6 +147,7 @@ Ride:
   beamFields:
     toLocation: {}
     fromLocation: {}
+    stops: {}
     clientDevice:
       clientOsType: Maybe DeviceType
       clientOsVersion: Maybe Text
@@ -182,6 +184,7 @@ Ride:
   fromTType:
     toLocation: Storage.Queries.Extra.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
     fromLocation: Storage.Queries.Extra.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId|IM
+    stops: Storage.Queries.Extra.Transformers.Ride.getStops id |EM
     fare: fmap (Kernel.Types.Common.mkPrice currency) fare|E
     totalFare: fmap (Kernel.Types.Common.mkPrice currency) totalFare|E
     trackingUrl: Kernel.Prelude.mapM Kernel.Prelude.parseBaseUrl|IM

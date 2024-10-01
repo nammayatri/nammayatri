@@ -577,6 +577,7 @@ library
       Storage.Queries.Transformers.ReelsData
       Storage.Queries.Transformers.RegistrationToken
       Storage.Queries.Transformers.Ride
+      Storage.Queries.Transformers.SearchRequest
       Storage.Queries.Transformers.SearchRequestForDriver
       Storage.Queries.Transformers.SearchTry
       Storage.Queries.TranslationsExtra
@@ -749,6 +750,7 @@ library
       Domain.Types.SearchRequest
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchTry
+      Domain.Types.StopInformation
       Domain.Types.SubscriptionConfig
       Domain.Types.SurgePricing
       Domain.Types.TimeBoundConfig
@@ -865,6 +867,7 @@ library
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchTry
+      Storage.Beam.StopInformation
       Storage.Beam.SubscriptionConfig
       Storage.Beam.SurgePricing
       Storage.Beam.TimeBoundConfig
@@ -1046,6 +1049,7 @@ library
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchTry
+      Storage.Queries.StopInformation
       Storage.Queries.SubscriptionConfig
       Storage.Queries.SurgePricing
       Storage.Queries.TimeBoundConfig

@@ -43,6 +43,9 @@ type Config
     , currentEstimateHeight :: Int
     , intercity :: Boolean
     , fareProductType :: FareProductType 
+    , startTimeUTC :: Maybe String
+    , returnTimeUTC :: Maybe String
+    , roundTrip :: Boolean
     }
 
 type BookAnyProps 
@@ -85,6 +88,9 @@ config =
   , showMultiProvider : false
   , intercity : false
   , fareProductType : ONE_WAY
+  , startTimeUTC : Nothing
+  , returnTimeUTC : Nothing
+  , roundTrip : false
   }
 
 bookAnyProps :: BookAnyProps

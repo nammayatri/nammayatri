@@ -1006,7 +1006,7 @@ export const addMediaFile =  (viewID, source,actionButtonID, playIcon,pauseIcon,
 }
 
 
-export const clearFocus = function (id){
+export const clearFocusFunction = function (id){
   if(window.JBridge.clearFocus){
     return JBridge.clearFocus(id)
   }
@@ -2738,12 +2738,17 @@ export const switchYoutubeVideo = function(videoId) {
   }
 }
 
-export const startAudioPlayer = function (fileName, cb, action) {
+export const startAudioPlayer = function (fileName, cb, action, isPath) {
   if (JBridge.startAudioPlayer) {
     const callback = callbackMapper.map(function (mediaStatus) {
       cb(action(mediaStatus))();
     });
-    return JBridge.startAudioPlayer(fileName, callback);
+    if(window.__OS=="IOS"){
+      return JBridge.startAudioPlayer(fileName, callback, isPath);
+    }
+    else{
+      return JBridge.startAudioPlayer(fileName, callback);
+    }
   }
 }
 
@@ -2758,28 +2763,55 @@ export const clearAudioPlayer = function () {
   }
 }
 
-export const datePickerImpl = function (cb , action, delay){
+export const datePickerImpl = function (cb , action, delay,prevDateUTC){
+  const prevDate = new Date(prevDateUTC);
+  const epoch = prevDate.getTime();
   const callback = callbackMapper.map(function (str, year, month, date) {
     cb(action(str)(year)(month)(date))();
   })
-  if (window.__OS == "IOS")
-    window.JBridge.datePicker(callback, "", "DatePicker");
-  else 
-    window.JBridge.datePicker(callback, "");
+  if (window.__OS == "IOS"){
+    try{
+      window.JBridge.datePicker(callback, "", "DatePicker",epoch.toString());
+    }catch(err){
+      console.log("Error in IOS DatePicker ->",err);
+      window.JBridge.datePicker(callBack,"","DatePicker");
+    }
+  }
+  else {
+    try{
+      window.JBridge.datePicker(callback, "",epoch.toString());
+    }catch(err){
+      console.log("Error in DatePicker ->",err);
+      window.JBridge.datePicker(callBack,"");
+    }
+  }
 }
 
-export const timePickerImpl = function (cb , action, delay){
-  
+export const timePickerImpl = function (cb , action,prevDateUTC){
+  const prevDate = new Date(prevDateUTC);
+  const epoch = prevDate.getTime();
   if (window.__OS == "IOS"){
     const callback = callbackMapper.map(function (resp, year, month, date, hour, min) {
       cb(action(hour)(min)(resp))();
     })
-    window.JBridge.datePicker(callback, "", "TimePicker");}
+    try{
+      window.JBridge.datePicker(callback, "", "TimePicker",epoch.toString());
+    }catch(err){
+      console.log("Error in IOS TimePicker ->",err);
+      window.JBridge.datePicker(callback, "", "TimePicker");
+    }
+  }
   else {
     const callback = callbackMapper.map(function (hour, min, resp) {
       cb(action(hour)(min)(resp))();
     })
-    window.JBridge.timePicker(callback);}
+    try{
+      window.JBridge.timePicker(callback,"",epoch.toString());
+    }catch(err){
+      console.log("Error in TimePicker ->",err);
+      window.JBridge.timePicker(callback,"");
+    }
+  }
 }
 
 export const renderSliderImpl = (cb, action, config) => {
@@ -2842,7 +2874,9 @@ export const decodeAndStoreImage = function (base64Image) {
   }
 }
 
-
+export const convertAudioToBase64 = function (base64Image) {
+    return JBridge.convertAudioToBase64(base64Image);
+}
 
 export const encodeToBase64 = function (url, delay, just, nothing, cb) {
   const callbackFallback = function () {

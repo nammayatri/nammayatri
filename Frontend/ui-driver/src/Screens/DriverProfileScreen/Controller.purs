@@ -35,12 +35,12 @@ import Debug (spy)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag,setText, getNewIDWithTag)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (getTime, getCurrentUTC, launchAppSettings, generateQR, downloadQR)
+import Helpers.Utils (getTime, getCurrentUTC, launchAppSettings, generateQR, downloadQR, getValueBtwRange)
 import JBridge (firebaseLogEvent, goBackPrevWebPage,differenceBetweenTwoUTC, toast, showDialer, hideKeyboardOnNavigation, shareImageMessage)
 import Language.Strings (getString)
 import Language.Types as STR
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, pure, unit, ($), discard, bind, (==), map, not, (/=), (<>), void, (>=), (>), (-), (+), (<=), (||), (&&))
+import Prelude (show, class Show, pure, unit, ($), discard, bind, (==), map, not, (/=), (<>), void, (>=), (>), (-), (+), (<=), (||), (&&))
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resource.Constants (transformVehicleType)
@@ -61,6 +61,10 @@ import Effect.Uncurried(runEffectFn4)
 import Storage (isLocalStageOn)
 import Helpers.Utils(fetchImage, FetchImageFrom(..))
 import Data.Function.Uncurried (runFn2)
+import Services.API (DriverProfileDataRes(..))
+import Data.Array as DA
+import Types.App
+import Engineering.Helpers.Commons as EHC
 
 instance showAction :: Show Action where
   show _ = ""
@@ -200,6 +204,7 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | SubscriptionScreen
                     | GoToDriverSavedLocationScreen DriverProfileScreenState
                     | GoToPendingVehicle DriverProfileScreenState String ST.VehicleCategory
+                    | GoToCompletingProfile DriverProfileScreenState
                     | GoToCancellationRateScreen DriverProfileScreenState
 
 data Action = BackPressed
@@ -257,11 +262,20 @@ data Action = BackPressed
             | ShareQR PrimaryButtonController.Action
             | ManageVehicleButtonAC PrimaryButtonController.Action
             | PendingVehicle String ST.VehicleCategory
+            | CompleteProfile 
             | OpenCancellationRateScreen
+            | ProfileDataAPIResponseAction DriverProfileDataRes
 
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
+eval (ProfileDataAPIResponseAction res) state = do 
+  let DriverProfileDataRes resp = res 
+  continue state{data{completingProfileRes{
+    completed = getValueBtwRange ((if resp.pledges == [] then 0 else 1) + (if resp.aspirations == [] then 0 else 1) + (if resp.drivingSince == Nothing then 0 else 1) + (if resp.hometown == Nothing then 0 else 1) + (if resp.vehicleTags == [] then 0 else 1) + (if resp.otherImageIds == [] then 0 else 1)) 0 6 0 4}}}
+
 eval AfterRender state = continue state
+
+eval CompleteProfile state = exit $ GoToCompletingProfile state
 
 eval (PrimaryEditTextAC (PrimaryEditTextController.TextChanged id val)) state = do
   case state.props.detailsUpdationType of
@@ -377,7 +391,8 @@ eval (GetDriverInfoResponse resp@(SA.GetDriverInfoResp driverProfileResp)) state
                                       cancellationRate = fromMaybe 0 driverProfileResp.cancellationRateInWindow,
                                       assignedRides = fromMaybe 0 driverProfileResp.assignedRidesCountInWindow,
                                       cancelledRides = fromMaybe 0 driverProfileResp.cancelledRidesCountInWindow,
-                                      cancellationWindow = driverProfileResp.windowSize
+                                      cancellationWindow = driverProfileResp.windowSize,
+                                      favCount = driverProfileResp.favCount
                                       },
                     props { enableGoto = driverProfileResp.isGoHomeEnabled && state.data.config.gotoConfig.enableGoto, canSwitchToRental = driverProfileResp.canSwitchToRental, canSwitchToInterCity = driverProfileResp.canSwitchToInterCity}}
 

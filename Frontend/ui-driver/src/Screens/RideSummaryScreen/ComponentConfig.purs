@@ -193,6 +193,7 @@ rideSummaryCardConfig (BookingAPIEntity entity) =
     (LocationAddress destinationAddress) = destination.address
     destinationFullAddress = fromMaybe "" destinationAddress.fullAddress
     roundTrip = fromMaybe false entity.roundTrip
+    vehicleServiceTierAirConditionedText = if vehicleServiceTierAirConditioned then (getString LType.AC) else (getString LType.NON_AC)
 
     returnTime = fromMaybe "" entity.returnTime
     (CTA.TripCategory tripCategory) = entity.tripCategory
@@ -206,6 +207,7 @@ rideSummaryCardConfig (BookingAPIEntity entity) =
         { vehicleServiceTierAirConditioned : vehicleServiceTierAirConditioned
         , vehicleServiceTierSeatingCapacity : vehicleServiceTierSeatingCapacity
         , vehicleServiceTierName : vehicleServiceTierName
+        , airConditionedText : vehicleServiceTierAirConditionedText
         }
       , scheduleInfo :
         { pickUpTime : startTime
