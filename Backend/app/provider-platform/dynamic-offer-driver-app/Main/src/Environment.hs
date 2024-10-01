@@ -19,6 +19,7 @@ import AWS.S3
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
+import Database.PostgreSQL.Simple as PG
 import EulerHS.Prelude
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Slack.Types (SlackConfig)
@@ -225,7 +226,7 @@ data AppEnv = AppEnv
     passettoContext :: PassettoContext,
     quoteRespondCoolDown :: Int,
     sosAlertsTopicARN :: Text,
-    esqDBCfg :: EsqDBConfig
+    psqlConn :: PG.Connection
   }
   deriving (Generic)
 
@@ -233,9 +234,20 @@ instance AuthenticatingEntity AppEnv where
   getSigningKey = (.signingKey)
   getSignatureExpiry = (.signatureExpiry)
 
+toConnectInfo :: EsqDBConfig -> ConnectInfo
+toConnectInfo config =
+  ConnectInfo
+    { connectHost = T.unpack config.connectHost,
+      connectPort = config.connectPort,
+      connectUser = T.unpack config.connectUser,
+      connectPassword = T.unpack config.connectPassword,
+      connectDatabase = T.unpack config.connectDatabase
+    }
+
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv cfg@AppCfg {..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
+  psqlConn <- PG.connect (toConnectInfo esqDBCfg)
   version <- lookupDeploymentVersion
   passettoContext <- (uncurry mkDefPassettoContext) encTools.service
   isShuttingDown <- newEmptyTMVarIO

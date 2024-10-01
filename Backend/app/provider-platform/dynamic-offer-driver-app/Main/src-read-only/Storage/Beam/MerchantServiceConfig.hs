@@ -9,6 +9,7 @@ import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.MerchantServiceConfig
+import qualified Domain.Types.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -33,3 +34,5 @@ type MerchantServiceConfig = MerchantServiceConfigT Identity
 $(enableKVPG ''MerchantServiceConfigT ['merchantId, 'serviceName] [])
 
 $(mkTableInstances ''MerchantServiceConfigT "merchant_service_config")
+
+$(Domain.Types.UtilsTH.mkCacParseInstance ''MerchantServiceConfigT)

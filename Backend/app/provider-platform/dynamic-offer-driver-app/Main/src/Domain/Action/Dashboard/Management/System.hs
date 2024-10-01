@@ -50,18 +50,13 @@ import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRenta
 import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs as FPRDPS
 import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as FPSS
 import Storage.Beam.GoHomeConfig as GHC
+import qualified Storage.Beam.MerchantOperatingCity as MOC
+import qualified Storage.Beam.MerchantServiceConfig as MSC
+import qualified Storage.Beam.MerchantServiceUsageConfig as MSUC
+import qualified Storage.Beam.Overlay as OV
+import qualified Storage.Beam.SurgePricing as SP
 import Storage.Beam.TransporterConfig as MTC
 import Tools.Auth
-
-toConnectInfo :: EsqDBConfig -> ConnectInfo
-toConnectInfo config =
-  ConnectInfo
-    { connectHost = Text.unpack config.connectHost,
-      connectPort = config.connectPort,
-      connectUser = Text.unpack config.connectUser,
-      connectPassword = Text.unpack config.connectPassword,
-      connectDatabase = Text.unpack config.connectDatabase
-    }
 
 postSystemRunQuery :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.System.QueryData -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postSystemRunQuery _ _ req = do
@@ -72,10 +67,8 @@ postSystemRunQuery _ _ req = do
   let query' = generateUpdateQuery tableName setClause' whereClause'
   case query' of
     Just q -> do
-      -- executeQuery conn q
-      config <- asks (.esqDBCfg)
-      res <- L.runIO $ try $ PG.withConnect (toConnectInfo config) (\conn -> PG.execute_ conn (Query (TE.encodeUtf8 q)))
-      -- res <- L.runIO $ try $ PG.execute_ conn (Query (TE.encodeUtf8 q))
+      conn <- asks (.psqlConn)
+      res <- L.runIO $ try $ PG.execute_ conn (Query (TE.encodeUtf8 q))
       case res of
         Left (e :: SomeException) -> throwError $ InvalidRequest $ "Query execution failed: " <> Text.pack (show e)
         Right _ -> return Kernel.Types.APISuccess.Success
@@ -139,22 +132,27 @@ snakeToCamel input =
       [] -> []
       (y : ys) -> DC.toUpper y : ys
 
-checkParseField :: (Monad m, Log m) => Text -> Text -> Value -> m Bool
+checkParseField :: (MonadThrow m, Log m) => Text -> Text -> Value -> m Bool
 checkParseField tableName tableColumn' value = do
   let tableColumn = snakeToCamel tableColumn'
-  return case tableName of
-    "driver_pool_config" -> checkParse (Proxy @DPC.DriverPoolConfigT) tableColumn value
-    "driver_intelligent_pool_config" -> checkParse (Proxy @DIPC.DriverIntelligentPoolConfigT) tableColumn value
-    "transporter_config" -> checkParse (Proxy @MTC.TransporterConfigT) tableColumn value
-    "go_home_config" -> checkParse (Proxy @GHC.GoHomeConfigT) tableColumn value
-    "fare_policy_progressive_details_per_extra_km_rate_section" -> checkParse (Proxy @[FPPDPEKRS.FarePolicyProgressiveDetailsPerExtraKmRateSection]) tableColumn value
-    "fare_policy_rental_details_distance_buffers" -> checkParse (Proxy @[FPRDDB.FarePolicyRentalDetailsDistanceBuffers]) tableColumn value
-    "fare_policy_rental_details_pricing_slabs" -> checkParse (Proxy @[FPRDPS.FarePolicyRentalDetailsPricingSlabs]) tableColumn value
-    "fare_policy_inter_city_details_pricing_slabs" -> checkParse (Proxy @[FPICDPS.FarePolicyInterCityDetailsPricingSlabs]) tableColumn value
-    "fare_policy_slabs_details_slab" -> checkParse (Proxy @[FPSS.FarePolicySlabsDetailsSlab]) tableColumn value
-    "driver_extra_fee_bounds" -> checkParse (Proxy @DEFB.DriverExtraFeeBoundsT) tableColumn value
-    "fare_policy_progressive_details" -> checkParse (Proxy @FPFB.FarePolicyProgressiveDetailsT) tableColumn value
-    "fare_policy_rental_details" -> checkParse (Proxy @FPRD.FarePolicyRentalDetailsT) tableColumn value
-    "fare_policy" -> checkParse (Proxy @FP.FarePolicyT) tableColumn value
-    "fare_policy_ambulance_details" -> checkParse (Proxy @FPAD.FarePolicyAmbulanceDetailsSlabT) tableColumn value
-    _ -> True
+  case tableName of
+    "driver_pool_config" -> return $ checkParse (Proxy @DPC.DriverPoolConfigT) tableColumn value
+    "driver_intelligent_pool_config" -> return $ checkParse (Proxy @DIPC.DriverIntelligentPoolConfigT) tableColumn value
+    "transporter_config" -> return $ checkParse (Proxy @MTC.TransporterConfigT) tableColumn value
+    "go_home_config" -> return $ checkParse (Proxy @GHC.GoHomeConfigT) tableColumn value
+    "fare_policy_progressive_details_per_extra_km_rate_section" -> return $ checkParse (Proxy @[FPPDPEKRS.FarePolicyProgressiveDetailsPerExtraKmRateSection]) tableColumn value
+    "fare_policy_rental_details_distance_buffers" -> return $ checkParse (Proxy @[FPRDDB.FarePolicyRentalDetailsDistanceBuffers]) tableColumn value
+    "fare_policy_rental_details_pricing_slabs" -> return $ checkParse (Proxy @[FPRDPS.FarePolicyRentalDetailsPricingSlabs]) tableColumn value
+    "fare_policy_inter_city_details_pricing_slabs" -> return $ checkParse (Proxy @[FPICDPS.FarePolicyInterCityDetailsPricingSlabs]) tableColumn value
+    "fare_policy_slabs_details_slab" -> return $ checkParse (Proxy @[FPSS.FarePolicySlabsDetailsSlab]) tableColumn value
+    "driver_extra_fee_bounds" -> return $ checkParse (Proxy @DEFB.DriverExtraFeeBoundsT) tableColumn value
+    "fare_policy_progressive_details" -> return $ checkParse (Proxy @FPFB.FarePolicyProgressiveDetailsT) tableColumn value
+    "fare_policy_rental_details" -> return $ checkParse (Proxy @FPRD.FarePolicyRentalDetailsT) tableColumn value
+    "fare_policy" -> return $ checkParse (Proxy @FP.FarePolicyT) tableColumn value
+    "fare_policy_ambulance_details" -> return $ checkParse (Proxy @FPAD.FarePolicyAmbulanceDetailsSlabT) tableColumn value
+    "merchant_operating_city" -> return $ checkParse (Proxy @MOC.MerchantOperatingCityT) tableColumn value
+    "merchant_service_config" -> return $ checkParse (Proxy @MSC.MerchantServiceConfigT) tableColumn value
+    "merchant_service_usage_config" -> return $ checkParse (Proxy @MSUC.MerchantServiceUsageConfigT) tableColumn value
+    "overlay" -> return $ checkParse (Proxy @OV.OverlayT) tableColumn value
+    "surge_pricing" -> return $ checkParse (Proxy @SP.SurgePricingT) tableColumn value
+    _ -> throwError $ InvalidRequest $ "The table `" <> tableName <> "` is not supported. "
