@@ -401,6 +401,7 @@ data Action = NoAction
             | AddLocation PrimaryButtonController.Action
             | ConfirmDisableGoto PopUpModal.Action
             | AccountBlockedAC PopUpModal.Action
+            | AccountBlockedDueToCancellationsAC PopUpModal.Action
             | UpdateAndNotify
             | UpdateWaitTime ST.TimerStatus
             | NotifyAPI
@@ -526,6 +527,12 @@ eval (ReferralPopUpAction popUpType storageKey PopUpModal.DismissPopup) state = 
 eval (ConfirmDisableGoto PopUpModal.OnButton2Click) state = continue state { data { driverGotoState { confirmGotoCancel = false } }} 
 
 eval (ConfirmDisableGoto PopUpModal.OnButton1Click) state = updateAndExit state{ data { driverGotoState { confirmGotoCancel = false } }}  $ DisableGoto state{ data { driverGotoState { confirmGotoCancel = false } }} 
+
+eval (AccountBlockedDueToCancellationsAC PopUpModal.OnButton2Click) state = continue state { props { accountBlockedPopupDueToCancellations = false } }
+
+eval (AccountBlockedDueToCancellationsAC PopUpModal.OnButton1Click) state = do 
+  void $ pure $ showDialer (SC.getSupportNumber "") false 
+  continue state 
 
 eval (AccountBlockedAC PopUpModal.OnButton2Click) state = continue state { props { accountBlockedPopup = false } }
 

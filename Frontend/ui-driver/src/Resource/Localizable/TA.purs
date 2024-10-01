@@ -295,6 +295,7 @@ getTA stringKey =
         VEHICLE_ISSUE -> "வாகனப் பிரச்சினை"
         FARE_UPDATED -> "கட்டணம் புதுப்பிக்கப்பட்டது"
         FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES -> "சவாரிகளை அடிக்கடி ரத்து செய்வது குறைவான சவாரிகளுக்கு வழிவகுக்கும் மற்றும் மதிப்பீட்டைக் குறைக்கும்."
+        FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING -> "அடிக்கடி ரத்துசெய்வது தடுப்பதற்கும் குறைந்த மதிப்பீட்டிற்கும் வழிவகுக்கும்"
         CONTINUE -> "தொடரவும்"
         MORE -> "more"
         LESS -> "less"
@@ -1699,8 +1700,9 @@ getTA stringKey =
         CONTACT_SUPPORT_FOR_HELP -> "உதவிக்கு ஆதரவை தொடர்பு கொள்ளவும்"
         YOU_HAVE_SWITCHED_CITY_OR_VEHICLE -> "நீங்கள் உங்கள் வாகனம் அல்லது நகரத்தை மாற்றியுள்ளீர்கள். சவாரிகளைப் பெற திட்டத்தைத் தேர்ந்தெடுக்கவும்"
         XL_PLUS -> "XL பிளஸ்"
-
         CURRENTLY_THERE_ARE_NO_RIDES_AVAILABLE -> "தற்போது, ​​சவாரிகள் எதுவும் இல்லை."
+        DUE_TO_HIGHER_CANCELLATION_RATE_YOU_ARE_BLOCKED -> "அதிக ரத்து விகிதம் காரணமாக, நீங்கள் ஆன்லைனில் செல்வதில் இருந்து தடுக்கப்பட்டுள்ளீர்கள்"
+        BLOCKED_TILL time date -> date <> ", " <> time <> " வரை தடுக்கப்பட்டது ⚠️"
         RIDE_REQUESTS -> "சவாரி கோரிக்கைகள்"
         SCHEDULED_RIDE_ACCEPTED -> "திட்டமிடப்பட்ட சவாரி ஏற்றுக்கொள்ளப்பட்டது!"
         YOU_CAN_ACCESS_SCHEDULED_RIDES -> "திட்டமிடப்பட்ட சவாரிகளை நீங்கள் அணுகலாம்"

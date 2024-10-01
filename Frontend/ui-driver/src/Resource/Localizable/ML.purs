@@ -295,6 +295,7 @@ getML stringKey =
         VEHICLE_ISSUE -> "വാഹന പ്രശ്നം"
         FARE_UPDATED -> "നിരക്ക് പുതുക്കി"
         FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES -> "പതിവ് റദ്ദാക്കലുകൾ കുറഞ്ഞ സവാരിക്കും കുറഞ്ഞ റേറ്റിംഗിലേക്കും നയിക്കും"
+        FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING -> "ഇടയ്‌ക്കിടെയുള്ള റദ്ദാക്കലുകൾ തടയുന്നതിനും റേറ്റിംഗ് കുറയുന്നതിനും ഇടയാക്കും"
         CONTINUE -> "തുടരുക"
         CONFIRM_PASSWORD -> "പാസ്സ്‌വേർഡ് സ്ഥിരീകരിക്കുക"
         DEMO_MODE -> "ഡെമോ മോഡ്"
@@ -1698,8 +1699,9 @@ getML stringKey =
         CONTACT_SUPPORT_FOR_HELP -> "സഹായത്തിനായി പിന്തുണയെ ബന്ധപ്പെടുക"
         YOU_HAVE_SWITCHED_CITY_OR_VEHICLE -> "നിങ്ങൾ നിങ്ങളുടെ വാഹനം അല്ലെങ്കിൽ നഗരം മാറ്റിയിരിക്കുന്നു. യാത്രകൾ നേടാൻ ഒരു പദ്ധതി തിരഞ്ഞെടുക്കുക"
         XL_PLUS -> "XL പ്ലസ്"
-
         CURRENTLY_THERE_ARE_NO_RIDES_AVAILABLE -> "നിലവിൽ, റൈഡുകളൊന്നും ലഭ്യമല്ല."
+        DUE_TO_HIGHER_CANCELLATION_RATE_YOU_ARE_BLOCKED -> "ഉയർന്ന റദ്ദാക്കൽ നിരക്ക് കാരണം, ഓൺലൈനിൽ പോകുന്നതിൽ നിന്ന് നിങ്ങളെ തടഞ്ഞിരിക്കുന്നു"
+        BLOCKED_TILL time date -> date <> " " <> time <> " വരെ തടഞ്ഞു ⚠️"
         RIDE_REQUESTS -> "റൈഡ് അഭ്യർത്ഥനകൾ"
         SCHEDULED_RIDE_ACCEPTED -> "ഷെഡ്യൂൾ ചെയ്ത റൈഡ് സ്വീകരിച്ചു!"
         YOU_CAN_ACCESS_SCHEDULED_RIDES -> "നിങ്ങൾക്ക് ഷെഡ്യൂൾ ചെയ്ത റൈഡുകൾ ആക്സസ് ചെയ്യാൻ കഴിയും"

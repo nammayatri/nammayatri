@@ -174,6 +174,7 @@ view push state =
     , if state.props.activateOrDeactivateRcView then activateAndDeactivateRcConfirmationPopUpView push state else dummyTextView
     , if state.props.paymentInfoView then paymentInfoPopUpView push state else dummyTextView
     , if state.props.deleteRcView then deleteRcPopUpView push state else dummyTextView
+    , if state.props.showDriverBlockedPopup then driverBlockedPopupView push state else dummyTextView
     ]
 
 updateDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -462,6 +463,22 @@ profileView push state =
         , visibility $ if state.props.openSettings || state.props.manageVehicleVisibility then GONE else VISIBLE
         ]
         [ headerView state push
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , background Color.red900
+            , padding $ Padding 16 16 16 16
+            , gravity LEFT
+            , visibility $ boolToVisibility $ state.data.driverBlocked && (not $ DS.null state.data.blockedExpiryTime)
+            , onClick push $ const ShowDrvierBlockedPopup
+            ]
+            [ textView $ 
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , color Color.white900
+                , text $ getString $ BLOCKED_TILL (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A") (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
+                ] <> FontStyle.subHeading3 TypoGraphy
+            ]
         , linearLayout
             [ height $ V 1
             , width MATCH_PARENT
@@ -2464,6 +2481,15 @@ deleteRcPopUpView push state =
     , width MATCH_PARENT
     ]
     [ PopUpModal.view (push <<< DeleteRcPopUpModalAction) (deleteRcPopUpConfig state) ]
+
+driverBlockedPopupView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+driverBlockedPopupView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    ]
+    [ PopUpModal.view (push <<< DriverBLockedPopupAction) (driverBLockedPopup state) ]
+
 
 rcActiveOnAnotherDriverProfilePopUpView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 rcActiveOnAnotherDriverProfilePopUpView push state =
