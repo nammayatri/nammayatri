@@ -20,11 +20,12 @@ import Locale.Utils
 import Services.API
 
 import Common.Types.App (Version(..))
+import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
 import ConfigProvider
 import Data.Array as DA
-import Data.Either (Either(..), either)
+import Data.Either (Either(..), either, hush)
 import Data.Int as INT
 import Data.Number as Number
 import Data.String as DS
@@ -35,10 +36,10 @@ import Effect.Class (liftEffect)
 import Data.Function.Uncurried (runFn2)
 import Engineering.Helpers.Commons (liftFlow, isInvalidUrl)
 import Engineering.Helpers.Utils (toggleLoader, checkConditionToShowInternetScreen)
-import Foreign.Generic (encode)
+import Foreign.Generic (encode, decode)
 import Foreign.NullOrUndefined (undefined)
 import Foreign.Object (empty)
-import Helpers.Utils (decodeErrorCode, getTime, toStringJSON, decodeErrorMessage, LatLon(..), getCityConfig)
+import Helpers.Utils (decodeErrorCode, getTime, toStringJSON, decodeErrorMessage, LatLon(..), getCityConfig, decodeErrorPayload)
 import Engineering.Helpers.Events as Events
 import JBridge (setKeyInSharedPrefKeys, toast, factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService, getManufacturerName, hideKeyboardOnNavigation)
 import Juspay.OTP.Reader as Readers
@@ -286,11 +287,15 @@ driverActiveInactiveBT status status_n = do
         headers <- getHeaders' "" false
         withAPIResultBT (EP.driverActiveInactiveSilent status status_n) identity errorHandler (lift $ lift $ callAPI headers (DriverActiveInactiveReq status status_n))
     where
-        errorHandler (ErrorPayload errorPayload) =  do
-            let codeMessage = decodeErrorCode errorPayload.response.errorMessage
-                accountBlocked = errorPayload.code == 403 && codeMessage == "DRIVER_ACCOUNT_BLOCKED"
+        dummyErrorResponseDriverActivity = ErrorResponseDriverActivity {blockExpiryTime: "", blockReason : ""}
+        errorHandler (ErrorPayload errorResp) =  do
+            let codeMessage = decodeErrorCode errorResp.response.errorMessage
+                accountBlocked = errorResp.code == 403 && codeMessage == "DRIVER_ACCOUNT_BLOCKED"
                 noPlanSelectedForDriver = errorPayload.code == 400 && codeMessage == "NO_PLAN_SELECTED"
-            if accountBlocked then modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { accountBlockedPopup = true }})
+            (ErrorResponseDriverActivity errorPayload) <- case hush $ runExcept $ decode (decodeErrorPayload errorResp.response.errorMessage) of
+                Just resp -> pure resp
+                _ -> pure dummyErrorResponseDriverActivity
+            if accountBlocked then if ((ErrorResponseDriverActivity errorPayload) /= dummyErrorResponseDriverActivity) then modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { data { blockExpiryTime = errorPayload.blockExpiryTime }, props { accountBlockedPopupDueToCancellations = true }}) else modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { accountBlockedPopup = true }})
             else modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { goOfflineModal = false }})
             pure if noPlanSelectedForDriver then 
                     toast $ (StringsV2.getStringV2 LT2.no_plan_selected)
@@ -385,7 +390,8 @@ cancelRide productId payload = do
 makeCancelRideReq :: String -> String -> DriverCancelRideReq
 makeCancelRideReq info reason = DriverCancelRideReq {
     "additionalInfo": info,
-    "reasonCode": reason
+    "reasonCode": reason,
+    "doCancellationRateBasedBlocking": true
 }
 
 --------------------------------- logOutBT ---------------------------------------------------------------------------------------------------------------------------------

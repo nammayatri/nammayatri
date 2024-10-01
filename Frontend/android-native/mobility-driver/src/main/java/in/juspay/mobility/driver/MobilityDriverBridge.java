@@ -184,10 +184,10 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         storeUpdateTimeCallBack = callback;
     }
 
-    public void callUpdateTimeCallBack(String time, String lat, String lng) {
+    public void callUpdateTimeCallBack(String time, String lat, String lng, String errorCode) {
         if (storeUpdateTimeCallBack != null) {
-            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s');",
-                    storeUpdateTimeCallBack, time, lat, lng);
+            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s','%s');",
+                    storeUpdateTimeCallBack, time, lat, lng, errorCode);
             Log.d(CALLBACK, javascript);
             JsCallback jsCallback = bridgeComponents.getJsCallback();
             if (jsCallback != null) {

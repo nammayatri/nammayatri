@@ -296,6 +296,7 @@ getKn =
     , vehicle_issue: "ವಾಹನ ಸಮಸ್ಯೆ"
     , fare_updated: "ದರವನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ"
     , frequent_cancellations_will_lead_to_less_rides: "ಪದೇ ಪದೇ ರದ್ದುಗೊಳಿಸುವುದರಿಂದ ಕಡಿಮೆ ರೈಡ್‌ಗಳು ಮತ್ತು ಕಡಿಮೆ ರೇಟಿಂಗ್‌ಗೆ ಕಾರಣವಾಗುತ್ತದೆ"
+    , frequent_cancellations_will_lead_to_blocking: "ಅನೇಕ ಬಾರಿ ರದ್ದತಿಗಳು ನಿಷೇಧಕ್ಕೆ ಹಾಗೂ ಕಡಿಮೆ ರೇಟಿಂಗ್‌ಗೆ ಕಾರಣವಾಗಬಹುದು."
     , continue: "ಮುಂದುವರಿಸಿ"
     , confirm_password: "ಪಾಸ್ವರ್ಡ್ ದೃಢೀಕರಿಸಿ"
     , demo_mode: "ಡೆಮೊ ಮೋಡ್"
@@ -1668,6 +1669,8 @@ getKn =
     , you_have_switched_city_or_vehicle: "ನೀವು ನಿಮ್ಮ ವಾಹನ ಅಥವಾ ನಗರವನ್ನು ಬದಲಾಯಿಸಿದ್ದೀರಿ. ಸವಾರಿ ಪಡೆಯಲು ಯೋಜನೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ"
     , xl_plus: "XL ಪ್ಲಸ್"
     , currently_there_are_no_rides_available: "ಪ್ರಸ್ತುತ, ಯಾವುದೇ ರೈಡ್‌ಗಳು ಲಭ್ಯವಿಲ್ಲ."
+    , due_to_higher_cancellation_rate_you_are_blocked: "ಹೆಚ್ಚಿನ ರದ್ದತಿ ದರದಿಂದಾಗಿ, ಆನ್‌ಲೈನ್‌ಗೆ ಹೋಗದಂತೆ ನಿಮ್ಮನ್ನು ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ"
+    , blocked_till: (\time date -> date <> " " <> time <> " ವರೆಗೆ ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ ⚠️")
     , ride_requests: "ಸವಾರಿ ವಿನಂತಿಗಳು"
     , scheduled_ride_accepted: "ನಿಗದಿತ ಸವಾರಿಯನ್ನು ಸ್ವೀಕರಿಸಲಾಗಿದೆ!"
     , you_can_access_scheduled_rides: "ನೀವು ನಿಗದಿತ ಸವಾರಿಗಳನ್ನು ಪ್ರವೇಶಿಸಬಹುದು"

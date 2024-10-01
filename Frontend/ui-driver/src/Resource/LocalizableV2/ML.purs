@@ -295,6 +295,7 @@ getMl =
     , vehicle_issue: "വാഹന പ്രശ്നം"
     , fare_updated: "നിരക്ക് പുതുക്കി"
     , frequent_cancellations_will_lead_to_less_rides: "പതിവ് റദ്ദാക്കലുകൾ കുറഞ്ഞ സവാരിക്കും കുറഞ്ഞ റേറ്റിംഗിലേക്കും നയിക്കും"
+    , frequent_cancellations_will_lead_to_blocking: "ഇടയ്‌ക്കിടെയുള്ള റദ്ദാക്കലുകൾ തടയുന്നതിനും റേറ്റിംഗ് കുറയുന്നതിനും ഇടയാക്കും"
     , continue: "തുടരുക"
     , confirm_password: "പാസ്സ്‌വേർഡ് സ്ഥിരീകരിക്കുക"
     , demo_mode: "ഡെമോ മോഡ്"
@@ -1668,6 +1669,8 @@ getMl =
     , you_have_switched_city_or_vehicle: "നിങ്ങൾ നിങ്ങളുടെ വാഹനം അല്ലെങ്കിൽ നഗരം മാറ്റിയിരിക്കുന്നു. യാത്രകൾ നേടാൻ ഒരു പദ്ധതി തിരഞ്ഞെടുക്കുക"
     , xl_plus: "XL പ്ലസ്"
     , currently_there_are_no_rides_available: "നിലവിൽ, റൈഡുകളൊന്നും ലഭ്യമല്ല."
+    , due_to_higher_cancellation_rate_you_are_blocked: "ഉയർന്ന റദ്ദാക്കൽ നിരക്ക് കാരണം, ഓൺലൈനിൽ പോകുന്നതിൽ നിന്ന് നിങ്ങളെ തടഞ്ഞിരിക്കുന്നു"
+    , blocked_till: (\time date -> date <> " " <> time <> " വരെ തടഞ്ഞു ⚠️")
     , ride_requests: "റൈഡ് അഭ്യർത്ഥനകൾ"
     , scheduled_ride_accepted: "ഷെഡ്യൂൾ ചെയ്ത റൈഡ് സ്വീകരിച്ചു!"
     , you_can_access_scheduled_rides: "നിങ്ങൾക്ക് ഷെഡ്യൂൾ ചെയ്ത റൈഡുകൾ ആക്സസ് ചെയ്യാൻ കഴിയും"

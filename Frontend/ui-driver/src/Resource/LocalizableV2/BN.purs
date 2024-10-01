@@ -296,6 +296,7 @@ getBn =
     , vehicle_issue: "যানবাহন সমস্যা"
     , fare_updated: "ভাড়া আপডেট হয়েছে"
     , frequent_cancellations_will_lead_to_less_rides: "ঘন ঘন বাতিলকরণগুলি কম রাইড এবং কম রেটিংয়ের দিকে পরিচালিত করবে"
+    , frequent_cancellations_will_lead_to_blocking: "ঘন ঘন বাতিল করা ব্লকিং এবং কম রেটিং এর দিকে পরিচালিত করবে"
     , continue: "চালিয়ে যান"
     , confirm_password: "পাসওয়ার্ড নিশ্চিত করুন"
     , demo_mode: "ডেমো মোড"
@@ -1635,6 +1636,8 @@ getBn =
     , there_might_be_multiple_stops_in_this_rental_ride: (\duration -> "এই ভ্রমণে একাধিক বিরতি থাকতে পারে। এই ভাড়ার ভ্রমণটি বুক করা হয়েছে" <> " <br></br><span><b>" <> duration <> "</b></span>&nbsp")
     , rental_ride_accepted: "ভাড়ার যাত্রা গৃহীত হয়েছে"
     , currently_there_are_no_rides_available: "বর্তমানে, কোন রাইড উপলব্ধ নেই."
+    , due_to_higher_cancellation_rate_you_are_blocked: "উচ্চতর বাতিলকরণ হারের কারণে, আপনাকে অনলাইনে যাওয়া থেকে অবরুদ্ধ করা হয়েছে"
+    , blocked_till: (\time date -> date <> ", " <> time <> " পর্যন্ত অবরুদ্ধ ⚠️")
     , ride_requests: "রাইড অনুরোধ"
     , scheduled_ride_accepted: "নির্ধারিত রাইড গৃহীত!"
     , you_can_access_scheduled_rides: "আপনি নির্ধারিত রাইড অ্যাক্সেস করতে পারেন"

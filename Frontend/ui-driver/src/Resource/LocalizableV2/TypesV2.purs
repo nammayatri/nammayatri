@@ -375,6 +375,7 @@ newtype Keymap
   , vehicle_issue :: String
   , fare_updated :: String
   , frequent_cancellations_will_lead_to_less_rides :: String
+  , frequent_cancellations_will_lead_to_blocking :: String
   , continue :: String
   , confirm_password :: String
   , demo_mode :: String
@@ -1687,6 +1688,8 @@ newtype Keymap
   , you_can_access_scheduled_rides :: String
   , from_your_homescreen :: String
   , currently_there_are_no_rides_available :: String
+  , due_to_higher_cancellation_rate_you_are_blocked :: String
+  , blocked_till :: String -> String -> String
   , cancel_booking :: String
   , go_to_pickup :: String
   , ride_scheduled :: String
@@ -2843,6 +2846,9 @@ fare_updated = a
 
 frequent_cancellations_will_lead_to_less_rides :: Proxy "frequent_cancellations_will_lead_to_less_rides"
 frequent_cancellations_will_lead_to_less_rides = a
+
+frequent_cancellations_will_lead_to_blocking :: Proxy "frequent_cancellations_will_lead_to_blocking"
+frequent_cancellations_will_lead_to_blocking = a
 
 continue :: Proxy "continue"
 continue = a
@@ -6767,6 +6773,12 @@ from_your_homescreen = a
 
 currently_there_are_no_rides_available :: Proxy "currently_there_are_no_rides_available"
 currently_there_are_no_rides_available = a
+
+due_to_higher_cancellation_rate_you_are_blocked :: Proxy "due_to_higher_cancellation_rate_you_are_blocked"
+due_to_higher_cancellation_rate_you_are_blocked = a
+
+blocked_till :: Proxy "blocked_till"
+blocked_till = a
 
 cancel_booking :: Proxy "cancel_booking"
 cancel_booking = a

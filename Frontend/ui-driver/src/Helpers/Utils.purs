@@ -118,7 +118,7 @@ type AffSuccess s = (s -> Effect Unit)
 
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
-foreign import storeCallBackTime :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action)  -> Effect Unit
+foreign import storeCallBackTime :: forall action. (action -> Effect Unit) -> (String -> String -> String -> String -> action)  -> Effect Unit
 foreign import onMarkerClickCallbackMapper :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action)  -> String
 foreign import getTime :: Unit -> Int
 foreign import hideSplash :: Effect Unit
@@ -131,6 +131,7 @@ foreign import toInt :: forall a. a -> String
 foreign import setRefreshing :: String -> Boolean -> Unit
 foreign import setEnabled :: String -> Boolean -> Unit
 foreign import decodeErrorCode :: String -> String
+foreign import decodeErrorPayload :: String -> Foreign
 foreign import decodeErrorMessage :: String -> String
 foreign import storeCallBackForNotification :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import storeCallBackForAddRideStop :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
@@ -419,8 +420,8 @@ rideLabelConfig _ = [
       text = getString ASSISTANCE_REQUIRED,
       secondaryText = getString LEARN_MORE,
       imageUrl = "ny_ic_wheelchair,https://" <> assetDomain <> "/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
-      cancelText = "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
-      cancelConfirmImage = "ic_cancel_prevention,https://" <> assetDomain <> "/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
+      cancelText = "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING",
+      cancelConfirmImage = fetchImage FF_ASSET "ny_ic_frequent_cancellation_blocking"
     },
   dummyLabelConfig
     { label = "Safety",
@@ -428,8 +429,8 @@ rideLabelConfig _ = [
       text = getString SAFETY_IS_OUR_RESPONSIBILITY,
       secondaryText = getString LEARN_MORE,
       imageUrl = fetchImage FF_ASSET  "ny_ic_user_safety_shield",
-      cancelText = "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
-      cancelConfirmImage = fetchImage FF_ASSET  "ic_cancel_prevention"
+      cancelText = "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING",
+      cancelConfirmImage = fetchImage FF_ASSET  "ny_ic_frequent_cancellation_blocking"
     },
   dummyLabelConfig  
     { label = "GOTO",
@@ -448,7 +449,7 @@ rideLabelConfig _ = [
       secondaryText = getString LEARN_MORE,
       imageUrl = "ny_ic_location_pin_white,",
       cancelText = "ZONE_CANCEL_TEXT_DROP",
-      cancelConfirmImage = "ic_cancel_prevention,https://" <> assetDomain <> "/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
+      cancelConfirmImage = fetchImage FF_ASSET "ny_ic_frequent_cancellation_blocking"
     }
 ]
 

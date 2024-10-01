@@ -690,7 +690,7 @@ cancelConfirmationConfig state = let
     buttonLayoutMargin = Margin 16 24 16 20 ,
     primaryText {
       text = case state.data.activeRide.specialLocationTag of
-              Nothing -> getString FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES
+              Nothing -> getString FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING
               Just specialLocationTag -> getString $ getCancelAlertText $ (HU.getRideLabelData (Just specialLocationTag)).cancelText
     , margin = Margin 16 24 16 0 },
     secondaryText {
@@ -722,11 +722,12 @@ cancelConfirmationConfig state = let
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
       imageUrl = fetchImage FF_ASSET  if (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag state.data.activeRide.specialLocationTag) == Nothing) 
-                    then if (RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY) == Just ST.CarCategory then "ic_cancel_prevention_cab" else "ic_cancel_prevention"
+                    then "ny_ic_frequent_cancellation_blocking"
                   else (HU.getRideLabelData state.data.activeRide.specialLocationTag).cancelConfirmImage
     , visibility = VISIBLE
-    , margin = Margin 16 20 16 0
-    , height = V 178
+    , margin = Margin 16 10 16 0
+    , height = V 250
+    , width = MATCH_PARENT
     },
     timerId = "PopUp"
   }
@@ -955,7 +956,7 @@ getCancelAlertText key = case key of
   "ZONE_CANCEL_TEXT_PICKUP" -> ZONE_CANCEL_TEXT_PICKUP
   "ZONE_CANCEL_TEXT_DROP" -> ZONE_CANCEL_TEXT_DROP
   "GO_TO_CANCELLATION_TITLE" -> GO_TO_CANCELLATION_TITLE
-  _ -> FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES
+  _ -> FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING
 
 mapRouteConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
 mapRouteConfig srcIcon destIcon isAnim animConfig  = JB.mapRouteConfig {
@@ -2236,6 +2237,58 @@ accountBlockedPopup state = PopUpModal.config {
     , margin = Margin 16 20 16 24
     , width = V 160
     , height = V 118
+    }
+  }
+
+accountBlockedDueToCancellationsPopup :: ST.HomeScreenState -> PopUpModal.Config
+accountBlockedDueToCancellationsPopup state = 
+  let blockedExpiryTime = EHC.convertUTCtoISC state.data.blockExpiryTime "hh:mm A"
+      blockedExpiryDate = EHC.convertUTCtoISC state.data.blockExpiryTime "DD-MM-YYYY"
+  in
+  PopUpModal.config {
+    gravity = CENTER,
+    backgroundClickable = false,
+    optionButtonOrientation = "VERTICAL",
+    buttonLayoutMargin = Margin 16 0 16 20,
+    margin = MarginHorizontal 25 25, 
+    primaryText {
+      text = getString $ BLOCKED_TILL blockedExpiryTime blockedExpiryDate
+    , textStyle = Heading2
+    , margin = Margin 16 0 16 10},
+    secondaryText{
+      text = getString DUE_TO_HIGHER_CANCELLATION_RATE_YOU_ARE_BLOCKED
+    , textStyle = Body5
+    , margin = Margin 16 0 16 15 },
+    option1 {
+      text = getString CALL_SUPPORT
+    , color = Color.yellow900
+    , background = Color.black900
+    , strokeColor = Color.transparent
+    , textStyle = FontStyle.SubHeading1
+    , width = MATCH_PARENT
+    , image {
+        imageUrl = fetchImage FF_ASSET "ny_ic_phone_filled_yellow"
+        , height = V 16
+        , width = V 16
+        , visibility = VISIBLE
+        , margin = MarginRight 8
+      }
+    },
+    option2 {
+    text = getString CLOSE,
+    margin = MarginHorizontal 16 16,
+    color = Color.black650,
+    background = Color.white900,
+    strokeColor = Color.white900,
+    width = MATCH_PARENT
+  },
+    cornerRadius = PTD.Corners 15.0 true true true true,
+    coverImageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_ic_account_blocked"
+    , visibility = VISIBLE
+    , margin = Margin 16 16 16 16
+    , width = MATCH_PARENT
+    , height = V 250
     }
   }
 

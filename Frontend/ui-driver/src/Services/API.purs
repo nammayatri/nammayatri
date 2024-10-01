@@ -20,6 +20,7 @@ import PaymentPage
 
 import Common.Types.App as CTA
 import Common.Types.App as Common
+import Data.Either
 import Domain.Payments as PP
 import Control.Alt ((<|>))
 import Control.Monad.Except (except, runExcept)
@@ -219,6 +220,17 @@ instance standardEncodeDriverActiveInactiveResp :: StandardEncode DriverActiveIn
 instance showDriverActiveInactiveResp :: Show DriverActiveInactiveResp where show = genericShow
 instance decodeDriverActiveInactiveResp :: Decode DriverActiveInactiveResp where decode = defaultDecode
 instance encodeDriverActiveInactiveResp :: Encode DriverActiveInactiveResp where encode = defaultEncode
+
+newtype ErrorResponseDriverActivity = ErrorResponseDriverActivity { 
+    blockExpiryTime :: String, 
+    blockReason :: String
+}
+
+derive instance genericErrorResponseDriverActivity :: Generic ErrorResponseDriverActivity _
+derive instance newtypeErrorResponseDriverActivity :: Newtype ErrorResponseDriverActivity _
+instance encodeErrorResponseDriverActivity :: Encode ErrorResponseDriverActivity where encode = defaultEncode
+instance decodeErrorResponseDriverActivity :: Decode ErrorResponseDriverActivity where decode = defaultDecode
+instance eqErrorResponseDriverActivity :: Eq ErrorResponseDriverActivity where eq = genericEq
 ----------------------------------------------------------------------------------------------------------------------------START RIDE----------------------------------------------------------------------------------------------------------------------------------------------
 -- StartRide API request, response types
 data StartRideRequest = StartRideRequest String StartRideReq
@@ -355,7 +367,8 @@ newtype DriverCancelRideResponse = DriverCancelRideResponse {
 newtype DriverCancelRideReq = DriverCancelRideReq
     {
       additionalInfo :: String,
-      reasonCode :: String
+      reasonCode :: String,
+      doCancellationRateBasedBlocking :: Boolean
     }
 
 data DriverCancelRideRequest = DriverCancelRideRequest String DriverCancelRideReq
@@ -435,6 +448,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , bundleVersion         :: Maybe CTA.Version
     , gender                :: Maybe String
     , blocked               :: Maybe Boolean
+    , blockExpiryTime       :: Maybe String
     , numberOfRides         :: Maybe Int
     , paymentPending        :: Boolean
     , subscribed            :: Boolean

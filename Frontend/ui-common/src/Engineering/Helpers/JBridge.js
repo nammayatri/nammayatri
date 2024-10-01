@@ -1082,7 +1082,6 @@ export const differenceBetweenTwoUTC = function (date1, date2) {
   if (isNaN(diffInSeconds)){
     return 0;
   }
-  console.log("differenceBetweenTwoUTC", date1, " ", date2, " " , diffInSeconds);
   return diffInSeconds;
 }
 

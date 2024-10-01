@@ -427,7 +427,8 @@ view push state =
         state.props.showReferralEarnedPopUp,
         state.props.showReferNowPopUp,
         state.props.showAddUPIPopUp,
-        state.props.showVerifyUPIPopUp
+        state.props.showVerifyUPIPopUp,
+        state.props.accountBlockedPopupDueToCancellations
       ])
     onRide = DA.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer, ST.RideCompleted]
     showEnterOdometerReadingModalView = state.props.isOdometerReadingsRequired && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal )
@@ -2120,7 +2121,7 @@ addAadhaarNumber push state visibility' =
 
 offlineNavigationLinks :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 offlineNavigationLinks push state =
-  let scheduleRideEnableConfig = spy "scheduleRideEnableConfig"$ getenableScheduledRideConfigData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+  let scheduleRideEnableConfig = getenableScheduledRideConfigData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
   in
   horizontalScrollView
   [ height WRAP_CONTENT
@@ -2336,6 +2337,7 @@ popupModals push state =
           ST.ReferNow -> referNowConfig state
           ST.AddUPI -> addUPIConfig state 
           ST.VerifyUPI -> verifyUPI state
+          ST.AccountBlockedDueToCancellations -> accountBlockedDueToCancellationsPopup state
       ]
   where 
   
@@ -2350,6 +2352,7 @@ popupModals push state =
       else if state.props.showReferNowPopUp then ST.ReferNow
       else if state.props.showAddUPIPopUp then ST.AddUPI
       else if state.props.showVerifyUPIPopUp then ST.VerifyUPI
+      else if state.props.accountBlockedPopupDueToCancellations then ST.AccountBlockedDueToCancellations
       else ST.KnowMore
 
     clickAction popupType = case popupType of
@@ -2364,6 +2367,7 @@ popupModals push state =
           ST.ReferNow -> (ReferralPopUpAction popupType (Just REFER_NOW_LAST_SHOWN))
           ST.AddUPI -> (ReferralPopUpAction popupType (Just ADD_UPI_LAST_SHOWN))
           ST.VerifyUPI -> (ReferralPopUpAction popupType (Just VERIFY_UPI_LAST_SHOWN))
+          ST.AccountBlockedDueToCancellations -> AccountBlockedDueToCancellationsAC
 
 enableCurrentLocation :: HomeScreenState -> Boolean
 enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true
@@ -2780,17 +2784,17 @@ onRideScreenBannerView state push  =
 ]
 
 getScheduledRidecount:: forall action.(action -> Effect Unit) -> (Int -> action) -> HomeScreenState ->  Flow GlobalState Unit
-getScheduledRidecount  push action state   = do
-  let  lastRespTime = spy "lastRespTime " $ maybe  "0" (\(Tuple count time) ->  (time)) state.data.scheduleRideCount 
-       difference  =  (runFn2 JB.differenceBetweenTwoUTC (EHC.getCurrentUTC "") lastRespTime)
-       checkApiCall =  if difference <= fiveMinInSec then false else true
+getScheduledRidecount  push action state = do
+  let lastRespTime = maybe "0" (\(Tuple count time) -> (time)) state.data.scheduleRideCount 
+      difference  = (runFn2 JB.differenceBetweenTwoUTC (EHC.getCurrentUTC "") lastRespTime)
+      checkApiCall = if difference <= fiveMinInSec then false else true
   when checkApiCall $ do
         (scheduledBookingListResponse) <- Remote.rideBooking "5" "0" (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "YYYY-MM-DD")  (EHC.convertUTCtoISC (getFutureDate (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "YYYY-MM-DD") 1) "YYYY-MM-DD") "" ( show state.data.currentDriverLat) (show state.data.currentDriverLon)
         case scheduledBookingListResponse of
           Right (ScheduledBookingListResponse listResp) -> do
             let count  = DA.length (listResp.bookings)
             doAff do liftEffect $ push $ action $ count 
-            void $ pure $  listResp
+            void $ pure $ listResp
             pure unit
           Left (err) -> pure unit
 

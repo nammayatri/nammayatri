@@ -433,6 +433,7 @@ getProxy str = case str of
   VEHICLE_ISSUE -> \a -> a @~ vehicle_issue
   FARE_UPDATED -> \a -> a @~ fare_updated
   FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES -> \a -> a @~ frequent_cancellations_will_lead_to_less_rides
+  FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING -> \a -> a @~ frequent_cancellations_will_lead_to_blocking
   CONTINUE -> \a -> a @~ continue
   CONFIRM_PASSWORD -> \a -> a @~ confirm_password
   DEMO_MODE -> \a -> a @~ demo_mode
@@ -1745,6 +1746,8 @@ getProxy str = case str of
   YOU_CAN_ACCESS_SCHEDULED_RIDES -> \a -> a @~ you_can_access_scheduled_rides
   FROM_YOUR_HOMESCREEN -> \a -> a @~ from_your_homescreen
   CURRENTLY_THERE_ARE_NO_RIDES_AVAILABLE -> \a -> a @~ currently_there_are_no_rides_available
+  DUE_TO_HIGHER_CANCELLATION_RATE_YOU_ARE_BLOCKED -> \a -> a @~ due_to_higher_cancellation_rate_you_are_blocked
+  BLOCKED_TILL arg1 arg2 -> \a -> (a @~ blocked_till) arg1 arg2
   CANCEL_BOOKING -> \a -> a @~ cancel_booking
   GO_TO_PICKUP -> \a -> a @~ go_to_pickup
   RIDE_SCHEDULED -> \a -> a @~ ride_scheduled

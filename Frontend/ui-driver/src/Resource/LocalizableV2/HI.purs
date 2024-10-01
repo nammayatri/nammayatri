@@ -296,6 +296,7 @@ getHi =
     , vehicle_issue: "वाहन का मामला"
     , fare_updated: "किराया अपडेट किया"
     , frequent_cancellations_will_lead_to_less_rides: "बार-बार रद्द करने से सवारी कम होगी और रेटिंग कम होगी"
+    , frequent_cancellations_will_lead_to_blocking: "बार-बार रद्द करने से ब्लॉकिंग और रेटिंग कम हो जाएगी"
     , continue: "जारी रखें"
     , confirm_password: "पासवर्ड की पुष्टि कीजिये"
     , demo_mode: "डेमो मोड"
@@ -1668,6 +1669,8 @@ getHi =
     , you_have_switched_city_or_vehicle: "आपने अपना वाहन या शहर बदल लिया है। राइड्स प्राप्त करने के लिए एक योजना चुनें"
     , xl_plus: "XL प्लस"
     , currently_there_are_no_rides_available: "वर्तमान में, कोई सवारी उपलब्ध नहीं है।"
+    , due_to_higher_cancellation_rate_you_are_blocked: "अधिक रद्दीकरण दर के कारण, आपको ऑनलाइन जाने से रोक दिया गया है"
+    , blocked_till: (\time date -> date <> ", " <> time <> " तक ब्लॉक किया गया ⚠️")
     , ride_requests: "सवारी अनुरोध"
     , scheduled_ride_accepted: "निर्धारित सवारी स्वीकार की गई!"
     , you_can_access_scheduled_rides: "आप निर्धारित सवारी तक पहुंच सकते हैं"

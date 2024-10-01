@@ -2725,7 +2725,8 @@ homeScreenFlow = do
       void $ pure $ JB.exitLocateOnMap ""
       void $ pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       void $ pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
-      void $ lift $ lift $ Remote.driverActiveInactive "true" $ toUpper $ show Online
+      resp <- lift $ lift $ Remote.driverActiveInactive "true" $ toUpper $ show Online
+      handleDriverActivityResp resp
       void $ pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
       void $ updateStage $ HomeScreenStage HomeScreen
       when state.data.driverGotoState.isGotoEnabled do
@@ -2741,12 +2742,7 @@ homeScreenFlow = do
       case notificationType of
         "CANCELLED_PRODUCT" -> do
           resp <- lift $ lift $ Remote.driverActiveInactive "true" $ toUpper $ show Online
-          case resp of
-            Right (DriverActiveInactiveResp apiResp) -> do
-              void $ pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
-              void $ pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
-              pure unit
-            Left _ -> pure unit
+          handleDriverActivityResp resp
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
           void $ pure $ setValueToLocalStore PARCEL_IMAGE_UPLOADED "false"
           void $ pure $ clearTimerWithId state.data.activeRide.waitTimerId
@@ -3818,6 +3814,9 @@ updateBannerAndPopupFlags = do
                       && appConfig.subscriptionConfig.enableSubscriptionPopups
                       && getValueToLocalStore SHOW_SUBSCRIPTIONS == "true"
     autoPayStatus = getAutopayStatus getDriverInfoResp.autoPayStatus
+    isDriverBlocked = fromMaybe false getDriverInfoResp.blocked
+    driverBlockedExpiryTime = fromMaybe "" getDriverInfoResp.blockExpiryTime
+    shouldDriverbeOffline = (isDriverBlocked && (not $ DS.null driverBlockedExpiryTime) && (runFn2 JB.differenceBetweenTwoUTC (driverBlockedExpiryTime) (EHC.getCurrentUTC "") > 0)) || getValueToLocalStore DRIVER_STATUS_N == "Offline"
     status = getDriverStatus ""
     autopayBannerType =
       if subscriptionConfig.enableSubscriptionPopups && getValueToLocalStore SHOW_SUBSCRIPTIONS == "true" then 
@@ -3887,7 +3886,7 @@ updateBannerAndPopupFlags = do
     showVerifyUPIPopUp = isPayoutEnabled && showReferralPopUp VERIFY_UPI_LAST_SHOWN ST.VerifyUPI && isJust payoutVpa && case payoutVpaStatus of 
                                                                                                               Just status -> status == MANUALLY_ADDED
                                                                                                               Nothing -> false
-
+  when shouldDriverbeOffline $ changeDriverStatus Offline
   when moveDriverToOffline $ do
       setValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE (getCurrentUTC "")
       changeDriverStatus Offline
@@ -4533,6 +4532,16 @@ rideRequestScreenFlow = do
       
     _                   -> rideRequestScreenFlow
 
+handleDriverActivityResp :: (Either ErrorResponse DriverActiveInactiveResp) -> FlowBT String Unit
+handleDriverActivityResp resp =
+  case resp of
+    Left err -> do
+      let errResp = err.response
+          codeMessage = decodeErrorCode errResp.errorMessage
+          accountBlocked = err.code == 403 && codeMessage == "DRIVER_ACCOUNT_BLOCKED"
+      when accountBlocked $ changeDriverStatus Offline
+      pure unit
+    Right _ -> changeDriverStatus Online
 
 rideSummaryScreenFlow :: FlowBT String Unit
 rideSummaryScreenFlow = do

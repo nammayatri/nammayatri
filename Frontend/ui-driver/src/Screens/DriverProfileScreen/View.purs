@@ -37,6 +37,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (length, mapWithIndex, null, any, (!!), take, range)
 import Data.Either (Either(..))
 import Data.Enum (enumFromThenTo)
+import Data.Function.Uncurried (runFn2)
 import Data.Int (toNumber, round)
 import Data.List (elem)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
@@ -174,6 +175,7 @@ view push state =
     , if state.props.activateOrDeactivateRcView then activateAndDeactivateRcConfirmationPopUpView push state else dummyTextView
     , if state.props.paymentInfoView then paymentInfoPopUpView push state else dummyTextView
     , if state.props.deleteRcView then deleteRcPopUpView push state else dummyTextView
+    , if state.props.showDriverBlockedPopup then driverBlockedPopupView push state else dummyTextView
     ]
 
 updateDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -455,6 +457,8 @@ manageVehicleItem state vehicle push =
 ---------------------------------------- PROFILE VIEW -----------------------------------------------------------
 profileView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 profileView push state =
+  let driverBlockedHeaderVisibility = state.data.driverBlocked && (not $ DS.null state.data.blockedExpiryTime) && (runFn2 JB.differenceBetweenTwoUTC (state.data.blockedExpiryTime) (EHC.getCurrentUTC "") > 0)
+  in
   PrestoAnim.animationSet [ Anim.fadeIn (not state.props.openSettings) ]
     $ linearLayout
         [ height MATCH_PARENT
@@ -464,6 +468,28 @@ profileView push state =
         , visibility $ if state.props.openSettings || state.props.manageVehicleVisibility then GONE else VISIBLE
         ]
         [ headerView state push
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , background Color.red900
+            , padding $ Padding 16 16 16 16
+            , gravity LEFT
+            , visibility $ boolToVisibility driverBlockedHeaderVisibility
+            ]
+            [ textView $ 
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , color Color.white900
+                , text $ getString $ BLOCKED_TILL (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A") (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
+                , weight 1.0
+                ] <> FontStyle.subHeading3 TypoGraphy
+            , imageView 
+                [ height $ V 24
+                , width $ V 24
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_question_mark_with_circle"
+                , onClick push $ const ShowDrvierBlockedPopup
+                ]
+            ]
         , linearLayout
             [ height $ V 1
             , width MATCH_PARENT
@@ -2472,6 +2498,15 @@ deleteRcPopUpView push state =
     , width MATCH_PARENT
     ]
     [ PopUpModal.view (push <<< DeleteRcPopUpModalAction) (deleteRcPopUpConfig state) ]
+
+driverBlockedPopupView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
+driverBlockedPopupView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    ]
+    [ PopUpModal.view (push <<< DriverBLockedPopupAction) (driverBLockedPopup state) ]
+
 
 rcActiveOnAnotherDriverProfilePopUpView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileScreenState -> PrestoDOM (Effect Unit) w
 rcActiveOnAnotherDriverProfilePopUpView push state =
