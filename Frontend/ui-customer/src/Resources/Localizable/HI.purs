@@ -1506,3 +1506,4 @@ getHI stringKey =
         AVOID_SENDING_HIGH_VALUE_ITEMS -> "उच्च-मूल्य / नाजुक सामान भेजने से बचें"
         ILLEGAL_ITEMS_PROHIBITED -> "अवैध सामान निषिद्ध है"
         PICKUP_INSTRUCTION -> "पिकअप निर्देश"
+        DISTANCE_FARE -> "दूरी भाड़ा"

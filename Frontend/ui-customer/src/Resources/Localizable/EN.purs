@@ -1507,3 +1507,4 @@ getEN stringKey =
         AVOID_SENDING_HIGH_VALUE_ITEMS -> "Avoid sending high-value / fragile items"
         ILLEGAL_ITEMS_PROHIBITED -> "Illegal items are prohibited"
         PICKUP_INSTRUCTION -> "Pickup Instruction"
+        DISTANCE_FARE -> "Distance Fare"
