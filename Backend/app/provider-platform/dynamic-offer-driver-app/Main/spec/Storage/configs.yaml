@@ -164,6 +164,10 @@ SurgePricing:
   constraints:
     id: PrimaryKey
 
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
   fromTType:
     vehicleServiceTier: Kernel.Prelude.fromMaybe Domain.Types.Common.HATCHBACK|I
 

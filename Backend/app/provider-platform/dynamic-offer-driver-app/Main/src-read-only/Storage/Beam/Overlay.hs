@@ -8,6 +8,7 @@ module Storage.Beam.Overlay where
 import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.UtilsTH
 import Kernel.External.Encryption
 import qualified Kernel.External.Types
 import Kernel.Prelude
@@ -51,3 +52,5 @@ type Overlay = OverlayT Identity
 $(enableKVPG ''OverlayT ['id] [['overlayKey]])
 
 $(mkTableInstances ''OverlayT "merchant_overlay")
+
+$(Domain.Types.UtilsTH.mkCacParseInstance ''OverlayT)
