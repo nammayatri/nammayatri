@@ -255,7 +255,7 @@ screen initialState =
                   pure unit
               EditingDestinationLoc -> case initialState.props.isSearchLocation of
                 LocateOnMap -> do
-                  void $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
+                  void $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenEditDest")
                   void $ runEffectFn2 storeCallBackLocateOnMap (\key lat lon -> push $ LocateOnMapCallBack key lat lon) (handleLocateOnMapCallback "HomeScreen")
                   pure unit
                 _ -> pure unit
