@@ -21,7 +21,9 @@ module Domain.Action.UI.Quote
     estimateBuildLockKey,
     processActiveBooking,
     mkQAPIEntityList,
+    mkQuoteBreakupAPIEntity,
     QuoteAPIEntity (..),
+    QuoteBreakupAPIEntity (..),
   )
 where
 

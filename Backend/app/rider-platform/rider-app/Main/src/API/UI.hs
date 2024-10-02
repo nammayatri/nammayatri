@@ -26,6 +26,7 @@ import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.FavouriteDriver as FavouriteDriver
 import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.Invoice as Invoice
+import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.Sos as SosApi
@@ -102,6 +103,7 @@ type API =
            :<|> Issue.API
            :<|> TicketService.API
            :<|> Invoice.API
+           :<|> PriceBreakup.API
            :<|> FollowRide.API
            :<|> SosApi.API
            :<|> FRFSTicketService.API
@@ -151,6 +153,7 @@ handler =
     :<|> Issue.handler
     :<|> TicketService.handler
     :<|> Invoice.handler
+    :<|> PriceBreakup.handler
     :<|> FollowRide.handler
     :<|> SosApi.handler
     :<|> FRFSTicketService.handler
