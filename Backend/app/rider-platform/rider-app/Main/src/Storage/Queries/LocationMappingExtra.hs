@@ -72,9 +72,7 @@ getLatestEndByEntityId entityId =
 getLatestStopsByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [LocationMapping]
 getLatestStopsByEntityId entityId = do
   stops <- getLatestStopsByEntityId' entityId
-  if null stops
-    then return []
-    else return $ init stops
+  pure $ safeInit stops
 
 getLatestStopsByEntityId' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [LocationMapping]
 getLatestStopsByEntityId' entityId =
