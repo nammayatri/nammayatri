@@ -274,4 +274,5 @@ getFareText fareType baseDistance estimatedDistance rideType =
         "TIME_BASED_FARE" -> getString TIME_BASED_CHARGES
         "EXTRA_TIME_FARE" -> getString EXTRA_TIME_CHARGES 
         "PARKING_CHARGE" -> getString PARKING_CHARGE <> "⁺"
+        "DISTANCE_FARE" -> getString DISTANCE_FARE
         _ -> formatFareType fareType

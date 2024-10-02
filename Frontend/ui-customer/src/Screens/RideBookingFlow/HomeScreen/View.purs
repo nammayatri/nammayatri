@@ -254,7 +254,7 @@ screen initialState =
                   pure unit
               EditingDestinationLoc -> case initialState.props.isSearchLocation of
                 LocateOnMap -> do
-                  void $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
+                  void $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenEditDest")
                   void $ runEffectFn2 storeCallBackLocateOnMap (\key lat lon -> push $ LocateOnMapCallBack key lat lon) (handleLocateOnMapCallback "HomeScreen")
                   pure unit
                 _ -> pure unit
@@ -466,7 +466,7 @@ view :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effec
 view push state =
   let 
     showLabel = not (state.props.defaultPickUpPoint == "" && DS.null state.props.markerLabel)
-    isEditDestination = any (_ == state.props.currentStage) [ConfirmEditDestinationLoc, ConfirmingEditDestinationLoc, RevisedEstimate]
+    isEditDestination = any (_ == state.props.currentStage) [ConfirmEditDestinationLoc, ConfirmingEditDestinationLoc, RevisedEstimate, EditingDestinationLoc]
     extraPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize (if os == "IOS" then 50 else 112) else (if os == "IOS" then 50 else 0)
     confirmingLocOrEditPickupStage = any (_ == state.props.currentStage) [ConfirmingLocation, EditPickUpLocation]
   in
