@@ -1719,7 +1719,7 @@ getKN stringKey =
         INCURRED_DURING_TRIP -> "ಗ್ರಾಹಕನಿಂದ ನೇರವಾಗಿ ಪ್ರಯಾಣದ ವೇಳೆ ಆಗಿರುವ"
         BACK -> "ಹಿಂತಿರುಗು"
         YOUR_RIDE_STARTS_IN -> "ನಿಮ್ಮ ಪ್ರಯಾಣ ಆರಂಭವಾಗುತ್ತದೆ"
-        AWAY -> "ದೂರ"
+        AWAY -> " ದೂರ"
         INTERCITY ->"ನಗರಾಂತರ"
         INTERCITY_RETURN -> "ನಗರಾಂತರ ಮರಳಿ"
         RENTAL -> "ಬಾಡಿಗೆ"

@@ -78,10 +78,9 @@ eval BackPressed state = exit $ GoBack state
 
 eval (SelectDay index) state = do
   let
-    updatedItem = map (\item ->  item { isSelected = item.index == index  }) state.data.dayArray
     now = (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "YYYY-MM-DD")
     date  = if index == 0 then now else  (getFutureDate now 1)
-    newState = state { data { dayArray = updatedItem , activeDayIndex = index , shimmerLoader  = ST.AnimatedIn , date  = date }}
+    newState = state { data { activeDayIndex = index , shimmerLoader  = ST.AnimatedIn , date  = date } ,props{shouldCall = true}}
 
   exit $ GoBackToRideRequest newState
 
@@ -127,22 +126,8 @@ eval FilterSelected state = do
         )
         resp.bookings
 
-    -- filleteredBasedOntime =
-    --   filter
-    --     ( \(ScheduleBooking trip) ->
-    --     let
-    --        (BookingAPIEntity booking)  = trip.bookingDetails
-    --        now = (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "YYYY-MM-DD") 
-    --        ride_date  = (EHC.convertUTCtoISC booking.startTime "YYYY-MM-DD") 
-
-    --       in 
-            
-    --        if state.data.activeDayIndex == 0 then (getFutureDate now 1) /= ride_date else (getFutureDate now 1) == ride_date
-    --     )
-    --     filteredList
     shimmerLoader =  ST.AnimatedOut
-    updatedItem = map (\item -> item { isSelected = (item.index == state.data.activeRideIndex) }) state.data.pillViewArray
-  continue state { data { filteredArr = filteredList, pillViewArray = updatedItem, shimmerLoader = shimmerLoader }, props{receivedResponse = false} }
+  continue state { data { filteredArr = filteredList, shimmerLoader = shimmerLoader }, props{receivedResponse = false} }
 
 
 
@@ -206,8 +191,9 @@ myRideListTransformerProp listres =
           time = (convertUTCtoISC booking.createdAt "h:mm A")
 
           totalAmount = Int.ceil ( booking.estimatedFare )
-
-          estimatedDuration = show $ fromMaybe 0 booking.estimatedDuration/3600
+          estimateDurationInHours = fromMaybe 0 booking.estimatedDuration/3600
+          estimateDurationInMin =   fromMaybe 0 booking.estimatedDuration/60
+          estimatedDuration =   if estimateDurationInHours  ==0 then show estimateDurationInMin<>" "<>"min" else show estimateDurationInHours<>" "<>"hr"
 
           startTime = (convertUTCtoISC booking.startTime "h:mm A")
 
@@ -288,6 +274,12 @@ myRideListTransformerProp listres =
                 CTA.Rental -> "ny_ic_clock_unfilled"
                 _ -> "ny_ic_ride_rental_vector"
           
+          journeyType  = case rideType of 
+                  CTA.Rental -> getString LType.RENTAL
+                  CTA.InterCity -> getString LType.INTERCITY
+                  _             -> ""
+          
+          
 
           
         in
@@ -300,7 +292,7 @@ myRideListTransformerProp listres =
           , cardVisibility: toPropValue "visible"
           , shimmerVisibility: toPropValue "gone"
           , carImage: toPropValue $ totalAmount
-          , rideType: toPropValue $ if booking.roundTrip == Just true then getString LType.INTERCITY_RETURN else  (show rideType)
+          , rideType: toPropValue $ if booking.roundTrip == Just true then getString LType.INTERCITY_RETURN else  (journeyType)
           , vehicleType: toPropValue $  vehicleType
           , srcLat: toPropValue $ show srcLat
           , srcLong: toPropValue $ show srcLong
@@ -314,7 +306,7 @@ myRideListTransformerProp listres =
           , visiblePill : (toPropValue visiblePill)
           , cornerRadius :  toPropValue  "32.0"
           , imageType : toPropValue $ imageType
-          , estimatedDuration : toPropValue (estimatedDuration <> " "<>"hr")
+          , estimatedDuration : toPropValue (estimatedDuration)
           }
         )
         listres

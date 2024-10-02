@@ -1722,7 +1722,7 @@ getTA stringKey =
         INCURRED_DURING_TRIP -> "வாடிக்கையாளர் மூலம் நேரடியாக பயணத்தின் போது ஏற்பட்டது"
         BACK -> "பின்பு"
         YOUR_RIDE_STARTS_IN -> "உங்கள் பயணம் இல் தொடங்குகிறது"
-        AWAY -> "தொலைவில்"
+        AWAY -> " தொலைவில்"
         INTERCITY -> "நகரங்களுக்கிடையிலான"
         INTERCITY_RETURN -> "நகரங்களுக்கிடையிலான திரும்ப"
         RENTAL -> "வாடகை"

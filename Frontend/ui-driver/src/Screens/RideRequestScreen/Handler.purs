@@ -18,13 +18,14 @@ import PrestoDOM.List as PrestoList
 import Presto.Core.Types.Language.Flow (getLogFields, setLogField)
 import Screens.RideRequestScreen.ScreenData
 import Debug
+import Storage (KeyStore(..), getValueToLocalStore)
 
 rideRequestScreen :: FlowBT String RIDE_REQUEST_SCREEN_OUTPUT
 rideRequestScreen = do
   (GlobalState state) <- getState
   push <- liftFlowBT $ getPushFn Nothing "RideRequestScreen"
   listItemm <- lift $ lift $ PrestoList.preComputeListItem $ RideRequestCard.view (push <<< RideRequestCardActionController) 
-  act <- lift $ lift $ runScreen $ RideRequestScreen.screen state.rideRequestScreen listItemm
+  act <- lift $ lift $ runScreen $ RideRequestScreen.screen state.rideRequestScreen{data{pillViewArray = rideTypePills (getValueToLocalStore VEHICLE_VARIANT /= "AUTO_RICKSHAW")}} listItemm
   case act of
     GoBack updatedState  -> do 
       modifyScreenState $ RideRequestScreenStateType (\_ -> updatedState)

@@ -200,7 +200,7 @@ screen initialState (GlobalState globalState) =
                                 let waitTime = DS.split (DS.Pattern "<$>") (getValueToLocalStore WAITING_TIME_VAL)
                                     id = fromMaybe "" (waitTime DA.!! 0)
                                     isTimerValid = id == initialState.data.activeRide.id
-                                    startingTime = (runFn2 JB.differenceBetweenTwoUTC (HU.getCurrentUTC "") (fromMaybe "" (waitTime DA.!! 1)))    
+                                    startingTime = (runFn2 JB.differenceBetweenTwoUTC (HU.getCurrentUTC "") (fromMaybe "" (waitTime DA.!! 1)))
                                 if (getValueToLocalStore WAITING_TIME_STATUS == show ST.Triggered) then do
                                   void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.PostTriggered)
                                   void $ waitingCountdownTimerV2 startingTime "1" "countUpTimerId" push WaitTimerCallback
@@ -212,7 +212,7 @@ screen initialState (GlobalState globalState) =
                                   else push $ UpdateWaitTime ST.NoStatus
                                   pure unit
                                 else if (getValueToLocalStore WAITING_TIME_STATUS == (show ST.Scheduled) && initialState.props.rideStartRemainingTime == -1 && isJust initialState.data.activeRide.tripScheduledAt) then do
-                                  void $ startTimer (runFn2 JB.differenceBetweenTwoUTC (fromMaybe (getCurrentUTC "") initialState.data.activeRide.tripScheduledAt) (getCurrentUTC "")) "rideStartRemainingTimeId" "1" push RideStartRemainingTime     
+                                  void $ startTimer (runFn2 JB.differenceBetweenTwoUTC (fromMaybe (getCurrentUTC "") initialState.data.activeRide.tripScheduledAt) (getCurrentUTC "")) ("rideStartRemainingTimeId_" <> initialState.data.activeRide.id) "1" push RideStartRemainingTime     
                                   else pure unit
                                 if (DA.elem initialState.data.peekHeight [518,470,0]) then void $ push $ RideActionModalAction (RideActionModal.NoAction) else pure unit
                                 _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "2000"
@@ -2783,13 +2783,14 @@ checkOnRideStage state = DA.elem state.props.currentStage [RideAccepted , RideSt
 triggerOnRideBannerTimer :: forall w . (Action -> Effect Unit) -> HomeScreenState ->  Effect Unit
 triggerOnRideBannerTimer push state = do 
   if checkOnRideStage state then do
-      pushOnRideBannerTimer <- runEffectFn1 EHC.getValueFromIdMap "onRideBannerTimer"
+      let id  = ( maybe "onRideBannerTimer" (\x -> "onRideBannerTimer_" <> x.id) state.data.upcomingRide  )
+      pushOnRideBannerTimer <- runEffectFn1 EHC.getValueFromIdMap id
       let 
         ridestartTime  = ( maybe "" (\x -> fromMaybe "" x.tripScheduledAt) state.data.upcomingRide  )
         currentTime = HU.getCurrentUTC ""
         difference  =  (runFn2 JB.differenceBetweenTwoUTC ridestartTime currentTime)
       if (pushOnRideBannerTimer.shouldPush && difference > 0 && difference <= twoHrsInSec && state.data.upcomingRide /= Nothing && (checkOnRideStage state) ) then do 
-        startTimer difference  "onRideBannerTimer" "1" push OnRideBannerCountDownTimer 
+        startTimer difference  id "1" push OnRideBannerCountDownTimer 
       else
         pure unit
   else pure unit
@@ -2797,13 +2798,14 @@ triggerOnRideBannerTimer push state = do
 
 triggerHomeScreenBannerTimer :: forall w . (Action -> Effect Unit) -> RidesInfo ->  Effect Unit
 triggerHomeScreenBannerTimer push (RidesInfo ride)  = do 
-  pushTimer <- runEffectFn1 EHC.getValueFromIdMap "bannerTimer"
+  let id = "bannerTimer_" <> ride.id
+  pushTimer <- runEffectFn1 EHC.getValueFromIdMap id
   let 
     ridestartTime  = fromMaybe "" ride.tripScheduledAt
     currentTime = HU.getCurrentUTC ""
     difference  = (runFn2 JB.differenceBetweenTwoUTC ridestartTime currentTime)
   if (pushTimer.shouldPush  && difference <=  twoHrsInSec) then do 
-    startTimer difference  "bannerTimer" "1" push HomeScreenBannerCountDownTimer 
+    startTimer difference id "1" push HomeScreenBannerCountDownTimer 
   else pure unit
 
 

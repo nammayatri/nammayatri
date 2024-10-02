@@ -6,9 +6,9 @@ import Prelude
 import PrestoDOM.List
 import Screens.RideRequestScreen.Controller
 import Screens.RideRequestScreen.ScreenData
-
+import Data.Maybe
 import Animation as Anim
-import Common.Types.App (LazyCheck(..), CategoryListType)
+import Common.Types.App 
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn1)
@@ -242,13 +242,13 @@ navbarlayout state push =
     , background Color.white900
     ]
     ( DA.mapWithIndex
-        ( \index item -> navpillView item push index
+        ( \index item -> navpillView state item push index
         )
         state.data.pillViewArray
     )
 
-navpillView :: PillViewConfig -> (Action -> Effect Unit) -> Int -> forall w. PrestoDOM (Effect Unit) w
-navpillView config push idx =
+navpillView :: RideRequestScreenState -> PillViewConfig -> (Action -> Effect Unit) -> Int -> forall w. PrestoDOM (Effect Unit) w
+navpillView state config push idx = 
   linearLayout
     [ height WRAP_CONTENT
     , gravity CENTER
@@ -257,7 +257,7 @@ navpillView config push idx =
     , weight 1.0
     , cornerRadius 18.0
     , onClick push $ const $ RideTypeSelected config.rideType idx
-    , background if config.isSelected then config.activeColor else Color.white900
+    , background if idx == state.data.activeRideIndex then config.activeColor else Color.white900
     , rippleColor Color.rippleShade
     ]
     [ textView
@@ -265,13 +265,13 @@ navpillView config push idx =
           , height WRAP_CONTENT
           , text config.pillViewText
           , textSize FontSize.a_13
-          , color if config.isSelected then Color.white900 else Color.black900
+          , color if idx == state.data.activeRideIndex then Color.white900 else Color.black900
           ]
         <> FontStyle.tags TypoGraphy
     ]
 
-daypillView :: PillViewConfig -> (Action -> Effect Unit) -> Int -> forall w. PrestoDOM (Effect Unit) w
-daypillView config push idx =
+daypillView :: RideRequestScreenState -> PillViewConfig -> (Action -> Effect Unit) -> Int -> forall w. PrestoDOM (Effect Unit) w
+daypillView state config push idx =
   linearLayout
     [ height WRAP_CONTENT
     , gravity CENTER
@@ -279,7 +279,7 @@ daypillView config push idx =
     , padding $ Padding 12 4 12 4
     , weight 1.0
     , cornerRadius 18.0
-    , background if config.isSelected then config.activeColor else Color.white900
+    , background if idx == state.data.activeDayIndex then config.activeColor else Color.white900
     , onClick push $ const $ SelectDay idx
     , rippleColor Color.rippleShade
     ]
@@ -287,7 +287,7 @@ daypillView config push idx =
         $ [ width WRAP_CONTENT
           , height WRAP_CONTENT
           , text config.pillViewText
-          , color if config.isSelected then Color.white900 else Color.black900
+          , color if idx == state.data.activeDayIndex then Color.white900 else Color.black900
           , textSize FontSize.a_13
           ]
         <> FontStyle.tags TypoGraphy
@@ -331,7 +331,7 @@ dayLayout state push =
     , background Color.white900
     ]
     ( DA.mapWithIndex
-        ( \index item -> daypillView item push index
+        ( \index item -> daypillView state item push index
         )
         state.data.dayArray
     )
@@ -373,15 +373,16 @@ loadButtonView state push =
 
 getRideList :: forall action. (ScheduledBookingListResponse -> String -> action) -> (action -> Effect Unit) -> RideRequestScreenState -> Flow GlobalState Unit
 getRideList action push state = do
-  (scheduledBookingListResponse) <- Remote.rideBooking "5" (show state.data.offset) (state.data.date) (state.data.date) (state.data.tripCategory)
-  case scheduledBookingListResponse of
-    Right (ScheduledBookingListResponse listResp) -> do
-      doAff do liftEffect $ push $ action (ScheduledBookingListResponse listResp) "success"
-      void $ pure $  listResp
-      pure unit
-    Left (err) -> do
-      doAff do liftEffect $ push $ action (ScheduledBookingListResponse dummyListResp) if err.code == 500 then "listCompleted" else "failure"
-      pure unit
+      when state.props.shouldCall $ do 
+        (scheduledBookingListResponse) <- Remote.rideBooking "5" (show state.data.offset) (state.data.date) (state.data.date) (state.data.tripCategory)
+        case scheduledBookingListResponse of
+          Right (ScheduledBookingListResponse listResp) -> do
+            doAff do liftEffect $ push $ action (ScheduledBookingListResponse listResp) "success"
+            void $ pure $  listResp
+            pure unit
+          Left (err) -> do
+            doAff do liftEffect $ push $ action (ScheduledBookingListResponse dummyListResp) if err.code == 500 then "listCompleted" else "failure"
+            pure unit
 
 dummyListResp :: forall a. { bookings :: Array a }
 dummyListResp = { bookings: [] }

@@ -162,7 +162,7 @@ view push state  =
             [  bannerView state push 
             , RideSummaryCard.view (rideSummaryCardConfig state.data.rideDetails) (push <<< RideSummaryCardActionController)
             , DropDownCard.view (push <<< PickUp) (dropDownCard state.props.pickUpOpen (getString PICKUP_DROP) (pickUpCard state push))
-            , DropDownCard.view (push <<< IncludedCharges) (dropDownCard state.props.includedChargesOpen (getString INCLUDED_CHARGES) (includedChargesCard state push))
+            -- , DropDownCard.view (push <<< IncludedCharges) (dropDownCard state.props.includedChargesOpen (getString INCLUDED_CHARGES) (includedChargesCard state push)) --might use later 
             , if tripCategory.tag /= CTA.OneWay then DropDownCard.view (push <<< ExcludedCharges) (dropDownCard state.props.excludedChargesOpen (getString EXCLUDED_CHARGES) (excludedChargesCard state push)) else emptyLayout
             , DropDownCard.view (push <<< Terms) (dropDownCard state.props.termsAndConditionOpen (getString T_C) (termsAndConditionCard state push))
             , cancelButtonView state push 
