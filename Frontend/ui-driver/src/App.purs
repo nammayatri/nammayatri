@@ -408,7 +408,8 @@ data RIDE_REQUEST_SCREEN_OUTPUT  = GOTO_HOME RideRequestScreenData.RideRequestSc
                                   | RIDE_REQUEST_REFRESH_SCREEN RideRequestScreenData.RideRequestScreenState
                                   | LOADER__OUTPUT RideRequestScreenData.RideRequestScreenState
                                   | NOTIFICATION_TYPE String RideRequestScreenData.RideRequestScreenState
-
+                                  | GO_BACK_TO_RIDEREQUEST_SCREEN RideRequestScreenData.RideRequestScreenState
+                                  
 data SCHEDULED_RIDE_ACCEPTED_SCREEN_OUTPUT = GO_HOME_FROM_SCHEDULED_RIDE_ACCEPT_SCREEN
 
 data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT | GO_TO_EARINING | OPEN_HELP_AND_SUPPORT | GO_TO_HOME_SCREEN

@@ -51,6 +51,7 @@ data ScreenOutput
   | RefreshScreen RideRequestScreenState
   | GoToRideSummary RideRequestScreenState
   | FcmNotifications String RideRequestScreenState
+  | GoBackToRideRequest RideRequestScreenState
 
 data Action
   = BackPressed
@@ -78,9 +79,11 @@ eval BackPressed state = exit $ GoBack state
 eval (SelectDay index) state = do
   let
     updatedItem = map (\item ->  item { isSelected = item.index == index  }) state.data.dayArray
+    now = (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "YYYY-MM-DD")
+    date  = if index == 0 then now else  (getFutureDate now 1)
+    newState = state { data { dayArray = updatedItem , activeDayIndex = index , shimmerLoader  = ST.AnimatedIn , date  = date }}
 
-    newState = state { data { dayArray = updatedItem , activeDayIndex = index , shimmerLoader  = ST.AnimatedIn} }
-  continueWithCmd newState [pure $ FilterSelected]
+  exit $ GoBackToRideRequest newState
 
 
 eval NoAction state = continue state
@@ -124,22 +127,22 @@ eval FilterSelected state = do
         )
         resp.bookings
 
-    filleteredBasedOntime =
-      filter
-        ( \(ScheduleBooking trip) ->
-        let
-           (BookingAPIEntity booking)  = trip.bookingDetails
-           now = (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "YYYY-MM-DD") 
-           ride_date  = (EHC.convertUTCtoISC booking.startTime "YYYY-MM-DD") 
+    -- filleteredBasedOntime =
+    --   filter
+    --     ( \(ScheduleBooking trip) ->
+    --     let
+    --        (BookingAPIEntity booking)  = trip.bookingDetails
+    --        now = (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "YYYY-MM-DD") 
+    --        ride_date  = (EHC.convertUTCtoISC booking.startTime "YYYY-MM-DD") 
 
-          in 
+    --       in 
             
-           if state.data.activeDayIndex == 0 then (getFutureDate now 1) /= ride_date else (getFutureDate now 1) == ride_date
-        )
-        filteredList
+    --        if state.data.activeDayIndex == 0 then (getFutureDate now 1) /= ride_date else (getFutureDate now 1) == ride_date
+    --     )
+    --     filteredList
     shimmerLoader =  ST.AnimatedOut
     updatedItem = map (\item -> item { isSelected = (item.index == state.data.activeRideIndex) }) state.data.pillViewArray
-  continue state { data { filteredArr = filleteredBasedOntime, pillViewArray = updatedItem, shimmerLoader = shimmerLoader } }
+  continue state { data { filteredArr = filteredList, pillViewArray = updatedItem, shimmerLoader = shimmerLoader }, props{receivedResponse = false} }
 
 
 

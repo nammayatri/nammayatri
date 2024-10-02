@@ -920,6 +920,11 @@ requestInfoCardConfig _ = let
 waitTimeInfoCardConfig :: ST.HomeScreenState -> RequestInfoCard.Config
 waitTimeInfoCardConfig state = 
   let cityConfig = state.data.cityConfig
+      tripScheduledAt = fromMaybe "" state.data.activeRide.tripScheduledAt
+      currentTime = EHC.getCurrentUTC ""
+      time_diff = runFn2 JB.differenceBetweenTwoUTC currentTime tripScheduledAt
+      infoText = if time_diff >=0 then getString $ CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE ("₹" <> (show chargesOb.perMinCharges)) (show maxWaitTimeInMinutes) else getString $ THE_CUSTOMER_WILL_PAY_POST_SCHEDULED_RIDE_START_TIME "₹2"
+
   in
     RequestInfoCard.config {
       title {
@@ -931,7 +936,7 @@ waitTimeInfoCardConfig state =
         padding = Padding 16 16 0 0
       }
     , secondaryText {
-        text = getString $ CUSTOMER_WILL_PAY_FOR_EVERY_MINUTE ("₹" <> (show chargesOb.perMinCharges)) (show maxWaitTimeInMinutes),
+        text = infoText,
         visibility = if rideInProgress then GONE else VISIBLE,
         padding = PaddingLeft 16
       }
@@ -1152,7 +1157,7 @@ rentalInfoPopUpConfig state =
     rideInfo = (show tripDuration) <> "h / " <> (show tripDistance) <> "km"
     tripType = state.data.activeRide.tripType
     destinationCity = fromMaybe "" $state.data.activeRide.destinationCity
-    text  = if tripType == ST.Rental then (getString $ THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE rideInfo) else (getString PLEASE_ENSURE_THAT_YOUR_VEHICLE_IS_READY_FOR_INTERCITY_TRIP <> destinationCity) <>"<br></br><span style='color:#2194FF'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>"
+    text  = if tripType == ST.Rental then (getString $ THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE rideInfo) else (getString PLEASE_ENSURE_THAT_YOUR_VEHICLE_IS_READY_FOR_INTERCITY_TRIP <> destinationCity)
     config' = config
       {
         gravity = CENTER,
