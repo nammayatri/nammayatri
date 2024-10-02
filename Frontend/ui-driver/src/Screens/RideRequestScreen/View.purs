@@ -131,7 +131,7 @@ listLayout push state listItm =
           , gravity CENTER_HORIZONTAL
           , background Color.grey700
           , orientation VERTICAL
-          , visibility  $ boolToVisibility $ (state.props.receivedResponse  && (DA.null state.data.filteredArr ))
+          , visibility  $ boolToVisibility $ (DA.null state.data.filteredArr )
         ][
           imageView [
             width $ V 140
@@ -373,7 +373,7 @@ loadButtonView state push =
 
 getRideList :: forall action. (ScheduledBookingListResponse -> String -> action) -> (action -> Effect Unit) -> RideRequestScreenState -> Flow GlobalState Unit
 getRideList action push state = do
-  (scheduledBookingListResponse) <- Remote.rideBooking "5" (show state.data.offset) (state.data.date) (getFutureDate state.data.date 1) (state.data.tripCategory)
+  (scheduledBookingListResponse) <- Remote.rideBooking "5" (show state.data.offset) (state.data.date) (state.data.date) (state.data.tripCategory)
   case scheduledBookingListResponse of
     Right (ScheduledBookingListResponse listResp) -> do
       doAff do liftEffect $ push $ action (ScheduledBookingListResponse listResp) "success"

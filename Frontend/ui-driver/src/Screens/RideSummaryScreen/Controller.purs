@@ -316,7 +316,25 @@ transformer resp  =
   startTime :fromMaybe "" tripScheduledAt,
   status : CTA.UPCOMING,
   stopLocationId : Nothing,
-  toLocation : Nothing,
+  toLocation : Just $ Location {
+    address : LocationAddress{
+          area : Nothing,
+          areaCode : Nothing,
+          building : Nothing,
+          city : Nothing,
+          country :Nothing,
+          state : Nothing,
+          street : Nothing,
+          door : Nothing,
+          fullAddress : Nothing
+          
+    },
+    createdAt : "",
+    id  : "",
+    lat : dest_lat,
+    lon : dest_lon,
+    updatedAt :""
+  },
   tollNames : Nothing,
   tripCategory : tripCategory,
   updatedAt : fromMaybe "" tripScheduledAt,

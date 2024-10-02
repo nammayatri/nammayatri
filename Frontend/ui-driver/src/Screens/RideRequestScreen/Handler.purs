@@ -45,3 +45,7 @@ rideRequestScreen = do
     FcmNotifications notificationType screenState -> do 
       modifyScreenState $ RideRequestScreenStateType (\_ → screenState)
       App.BackT $ App.BackPoint <$> (pure $ NOTIFICATION_TYPE notificationType screenState)
+    
+    GoBackToRideRequest screenState -> do 
+      modifyScreenState $ RideRequestScreenStateType (\_ → screenState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_BACK_TO_RIDEREQUEST_SCREEN  screenState)

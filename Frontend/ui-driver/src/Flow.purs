@@ -4456,7 +4456,12 @@ rideRequestScreenFlow = do
       case notificationType of
         "DRIVER_ASSIGNMENT" -> do
           currentRideFlow Nothing Nothing
-        _                   -> rideRequestScreenFlow
+        _ -> rideRequestScreenFlow
+    TA.GO_BACK_TO_RIDEREQUEST_SCREEN state -> do
+      modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{filteredArr = [],resp = RideRequestData.dummyResp}})
+      rideRequestScreenFlow
+      
+    _                   -> rideRequestScreenFlow
 
 
 rideSummaryScreenFlow :: FlowBT String Unit

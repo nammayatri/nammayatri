@@ -482,7 +482,7 @@ includedChargesFooter state push =
         , textView $ 
             [ width MATCH_PARENT
             , height WRAP_CONTENT
-            , text if tripCategory.tag == CTA.OneWay then (getString $ INC_2A  "10 am" "5 pm" "1.1x") else (getString $ INC_2B "10 am" "5 pm" )
+            , text if tripCategory.tag == CTA.OneWay then (getString $ INC_2A  "10am" "5pm" "1.1x") else (getString $ INC_2B "10am" "5pm" )
             , color Color.black600
 
             ] <> FontStyle.paragraphText TypoGraphy

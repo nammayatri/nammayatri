@@ -145,6 +145,9 @@ makePillList (BookingAPIEntity entity) (CTA.TripCategory tripCategory) =
   let
     estimatedDuration = formatSecIntoHourMins (fromMaybe 0 entity.estimatedDuration)
     estimatedDistance = show ((fromMaybe 0 entity.estimatedDistance) / 1000)
+    roundTrip = fromMaybe false entity.roundTrip
+    tripType  = if roundTrip then LType.ROUND_TRIP else LType.INTERCITY
+                  
   in
     case tripCategory.tag of
       CTA.InterCity -> [  
@@ -156,7 +159,7 @@ makePillList (BookingAPIEntity entity) (CTA.TripCategory tripCategory) =
                           , imageUrl : ""
                           , imageVisibility : GONE
                           },
-                          { text : getString LType.ROUND_TRIP
+                          { text : getString tripType
                           , imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_roundtrip_indicator"
                           , imageVisibility : VISIBLE
                           }
