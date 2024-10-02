@@ -64,6 +64,7 @@ import Language.Types (STR(..)) as STR
 import Data.String as DS
 import Services.FlowCache as FlowCache
 import Components.PopUpModal.Controller as PopUpModal
+import Data.Function.Uncurried (runFn2)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -219,7 +220,7 @@ eval (InputViewAC (InputViewController.TextFieldFocusChanged id isFocused hasFoc
       if (id == "DateAndTime") then continueWithCmd state{data{currentStage = RENTAL_SELECT_PACKAGE, rentalsQuoteList = []}, props{showPrimaryButton = true}} 
         [ do 
           push <- getPushFn Nothing "RentalScreen"
-          _ <- launchAff $ showDateTimePicker push DateTimePickerAction Nothing
+          _ <- launchAff $ showDateTimePicker push DateTimePickerAction (Just $ EHC.getCurrentUTC "") Nothing true true
           pure NoAction
         ]
       else genericBackPressed state {props{showPrimaryButton = true}}
@@ -248,11 +249,13 @@ genericBackPressed state = case state.data.currentStage of
   _ -> continue state
 
 openDateTimePicker :: RentalScreenState -> Eval Action ScreenOutput RentalScreenState
-openDateTimePicker state =
+openDateTimePicker state = do 
+  let 
+    scheduledUTC = runFn2 EHC.getUTCAfterNSecondsImpl (EHC.getCurrentUTC "") 1860
   continueWithCmd state
     [ do 
       push <- getPushFn Nothing "RentalScreen"
-      _ <- launchAff $ showDateTimePicker push DateTimePickerAction Nothing
+      _ <- launchAff $ showDateTimePicker push DateTimePickerAction (Just scheduledUTC) Nothing true true
       pure NoAction
     ]
 

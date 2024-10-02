@@ -3101,14 +3101,13 @@ type ParcelDeliveryScreenProps = {
 
 newtype BookingAPIEntity = BookingAPIEntity {
   currency :: Currency,
-  estimatedDistance ::Maybe Int,
+  estimatedDistance ::Maybe String,
   estimatedDuration ::Maybe Int,
   estimatedFare :: String ,
   fromLocation :: LocationInformation,
   id :: String,
   isAirConditioned ::Maybe Boolean ,
   isScheduled :: Boolean,
-  maxEstimatedDistance :: Maybe Number,
   returnTime :: Maybe String,
   roundTrip :: Maybe Boolean,
   startTime :: String ,

@@ -2763,33 +2763,29 @@ export const clearAudioPlayer = function () {
   }
 }
 
-export const datePickerImpl = function (cb , action, delay,prevDateUTC){
-  const prevDate = new Date(prevDateUTC);
-  const epoch = prevDate.getTime();
+export const datePickerImpl = function (cb , action, delay,prevDate, maxDate){
   const callback = callbackMapper.map(function (str, year, month, date) {
     cb(action(str)(year)(month)(date))();
   })
   if (window.__OS == "IOS"){
     try{
-      window.JBridge.datePicker(callback, "", "DatePicker",epoch.toString());
+      window.JBridge.datePicker(callback, "", "DatePicker",prevDate.toString(),maxDate.toString());
     }catch(err){
       console.log("Error in IOS DatePicker ->",err);
-      window.JBridge.datePicker(callBack,"","DatePicker");
+      window.JBridge.datePicker(callback,"","DatePicker");
     }
   }
   else {
     try{
-      window.JBridge.datePicker(callback, "",epoch.toString());
+      window.JBridge.datePicker(callback, "",prevDate.toString(),maxDate.toString());
     }catch(err){
       console.log("Error in DatePicker ->",err);
-      window.JBridge.datePicker(callBack,"");
+      window.JBridge.datePicker(callback,"");
     }
   }
 }
 
-export const timePickerImpl = function (cb , action,prevDateUTC){
-  const prevDate = new Date(prevDateUTC);
-  const epoch = prevDate.getTime();
+export const timePickerImpl = function (cb , action,epoch){
   if (window.__OS == "IOS"){
     const callback = callbackMapper.map(function (resp, year, month, date, hour, min) {
       cb(action(hour)(min)(resp))();
@@ -2812,6 +2808,10 @@ export const timePickerImpl = function (cb , action,prevDateUTC){
       window.JBridge.timePicker(callback,"");
     }
   }
+}
+
+export const getEpochTime = (date) => {
+  return new Date(date).getTime();
 }
 
 export const renderSliderImpl = (cb, action, config) => {

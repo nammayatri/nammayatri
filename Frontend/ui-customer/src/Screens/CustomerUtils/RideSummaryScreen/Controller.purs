@@ -26,6 +26,7 @@ import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (getFareProductType)
 import Engineering.Helpers.Commons (compareUTCDate)
+import Helpers.Utils (parseFloat)
 
 instance showAction  ::  Show Action where
   show _ = ""
@@ -117,7 +118,8 @@ eval (GetBooking apiResp status) state = do
                           bookingId = Just resp.id
                         }
                         ,props{
-                          isBookingAccepted = true
+                          isBookingAccepted = true,
+                          pickUpOpen = true
                         }}
     "failure" -> continue state{props{hasApiFailed = true}}
     _ -> continue state
@@ -160,9 +162,10 @@ fetchRideDetails state apiResp =
     roundTrip = isJust resp.returnTime
     returnTimeUTC = fromMaybe (getCurrentUTC "") resp.returnTime
     estimatedDuration = if roundTrip then (Just (compareUTCDate returnTimeUTC startTimeUTC)) else resp.estimatedDuration
+    estimatedDistance = fromMaybe 0 resp.estimatedDistance
     rideDetails =  BookingAPIEntity{
       currency : INR,
-      estimatedDistance : resp.estimatedDistance, 
+      estimatedDistance : Just $ formatDistance roundTrip estimatedDistance, 
       estimatedDuration : estimatedDuration, 
       estimatedFare : (getCurrency appConfig) <> show resp.estimatedFare, 
       fromLocation :(LocationInformation{
@@ -183,7 +186,6 @@ fetchRideDetails state apiResp =
             }),
       id : resp.id,
       isScheduled : resp.isScheduled,
-      maxEstimatedDistance : Just $ INT.toNumber $ fromMaybe 0 resp.estimatedDistance,
       returnTime : resp.returnTime,
       roundTrip : Just roundTrip, 
       isAirConditioned: resp.airConditioned,
@@ -214,7 +216,14 @@ fetchRideDetails state apiResp =
       vehicleServiceTierSeatingCapacity : Just $ fromMaybe 4 resp.vehicleServiceTierSeatingCapacity
     }
   in rideDetails
-
+  where 
+  formatDistance roundTrip duration =
+    let 
+      mul = 1.0
+      durationDecimals = INT.toNumber duration
+      duration' = if mul*durationDecimals < 1000.0 then (parseFloat (mul*durationDecimals) 0) <> " m" else (parseFloat ((mul*durationDecimals)/1000.0) 0) <> " km" 
+    in  
+      duration'
 
 
 
@@ -238,4 +247,10 @@ buildFullAddress location =
         state = fromMaybe "" contents.state
         country = fromMaybe "" contents.country
     in 
-      door <> " " <>building <> " " <>street <> " " <>area <> " " <>state <> " " <> country
+        (if (not $ DS.null door) then door <> " " else "")
+      <> (if (not $ DS.null building) then building <> " " else "")
+      <> (if (not $ DS.null street) then street <> " " else "")
+      <> (if (not $ DS.null area) then area <> " " else "")
+      <> (if (not $ DS.null city) then city <> " " else "")
+      <> (if (not $ DS.null state) then state <> " " else "")
+      <> (if (not $ DS.null country) then country else "")

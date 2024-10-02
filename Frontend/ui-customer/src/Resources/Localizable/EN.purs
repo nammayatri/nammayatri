@@ -1633,3 +1633,7 @@ getEN stringKey =
         EXTRAS_WILL_BE_CHARGED_AT -> "Extras Will be Charged At"
         AND -> " and "
         FIXED_CHARGES -> "Fixed Charges"
+        PICKUP_DATE_AND_TIME -> "Pickup Date & Time"
+        DROP_BACK_IN_AT cityName-> "Drop back in " <> cityName <>" at "
+        PER_KM -> "per km"
+        PER_MIN -> "per min"

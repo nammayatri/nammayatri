@@ -61,7 +61,7 @@ import Components.SelectListModal as CancelRidePopUpConfig
 import Components.ServiceTierCard.View as ServiceTierCard
 import Components.SourceToDestination as SourceToDestination
 import Control.Monad.Except (runExcept)
-import Data.Array ((!!), sortBy, mapWithIndex, elem, length, any,all)
+import Data.Array ((!!), sortBy, mapWithIndex, elem, length, any, all)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Foldable (foldl)
@@ -1026,7 +1026,7 @@ intercityRateCardConfig state =
     intercityBaseFareLimit = "30"
     expectedFareList = 
                       (if baseFareVal /= "0.0" then[{key : (getString FIXED_CHARGES), val : (getCurrency appConfig) <> (baseFareVal)},{key:(getString DISTANCE_FARE),val :(getCurrency appConfig) <> (plannedPerKmChargesVal) <> " /km"}] else [{key : getString DISTANCE_FARE,val : ((getCurrency appConfig) <> plannedPerKmChargesVal <> " /km")}])<>
-                      DA.filter (\item -> all (\key -> item.key /= key) ["DRIVER_ALLOWANCE", "PER_DAY_MAX_ALLOWANCE", "NIGHT_SHIFT_CHARGES", "BASE_FARE", "PLANNED_PER_KM_CHARGES"]) state.data.rateCard.extraFare
+                      DA.filter (\item -> all (\key -> item.key /= key) ["DRIVER_ALLOWANCE", "PER_DAY_MAX_ALLOWANCE", "NIGHT_SHIFT_CHARGES", "BASE_FARE", "PLANNED_PER_KM_CHARGES","EXTRA_TIME_FARE","EXTRA_DISTANCE_FARE"]) state.data.rateCard.extraFare
     intercityRateCardConfig' = 
       config'
       {
@@ -2524,8 +2524,8 @@ pickupConfig state =
   baseWidth: MATCH_PARENT,
   baseHeight: WRAP_CONTENT,
   baseOrientation: VERTICAL,
-  baseMargin: Margin 16 20 16 20,
-  titleConfig: (getString PICKUP),
+  baseMargin: Margin 16 0 16 20,
+  titleConfig: (getString PICKUP_DATE_AND_TIME),
   textColor: Color.black900,
   textMargin: MarginBottom 8,
   pickerHeight: WRAP_CONTENT,
@@ -2534,9 +2534,12 @@ pickupConfig state =
   pickerBackground: Color.white900,
   pickerPadding: Padding 20 15 20 15,
   selectDateText: case state.data.tripTypeDataConfig.tripPickupData of 
-                   Just obj ->  obj.tripDateReadableString
-                   Nothing -> (getString PICKUP_INPUT)
-  , dateHeight: WRAP_CONTENT,
+                   Just obj ->  EHC.convertUTCtoISC obj.tripDateUTC "DD MMM YYYY"
+                   Nothing -> (getString PICKUP_INPUT),
+  selectTimeText : case state.data.tripTypeDataConfig.tripPickupData of 
+                  Just obj ->  EHC.convertUTCtoISC obj.tripDateUTC "h:mm A"
+                  Nothing -> (getString PICKUP_INPUT),
+  dateHeight: WRAP_CONTENT,
   dateWidth: WRAP_CONTENT,
   dateColor: Color.black800,
   iconHeight: V 22,
@@ -2553,47 +2556,55 @@ pickupConfig state =
     secondaryText : (getString RESERVE),
     secondaryTextAccessibilityHint : (getEN RESERVE)
   },
-  returnViewPrimaryText :(getString ROUND_TRIP_EXPLAINER)
+  dateIconImage : "ny_ic_calendar",
+  timeIconImage : "ny_ic_clock_unfilled"
 }
   in pickupConfig'
 
 returnConfig :: ST.HomeScreenState -> DateSelectorController.DateSelectorConfig
-returnConfig state = 
-  let returnConfig' =  {
-  baseWidth: MATCH_PARENT,
-  baseHeight: WRAP_CONTENT,
-  baseOrientation: VERTICAL,
-  baseMargin: Margin 16 20 16 20,
-  titleConfig: (getString DROP),
-  textColor: Color.black900,
-  textMargin: MarginBottom 8,
-  pickerHeight: WRAP_CONTENT,
-  pickerWidth: MATCH_PARENT,
-  pickerCornerRadius: 8.0,
-  pickerBackground: Color.white900,
-  pickerPadding: Padding 20 15 20 15,
-  selectDateText: case state.data.tripTypeDataConfig.tripReturnData of 
-                  Just obj -> obj.tripDateReadableString
-                  Nothing -> (getString RETURN_INPUT)
-  , dateHeight: WRAP_CONTENT,
-  dateWidth: WRAP_CONTENT,
-  dateColor: Color.black800,
-  iconHeight: V 22,
-  iconWidth: V 22,
-  iconMargin: MarginLeft 8,
-  iconGravity: BOTTOM,
-  id : "Return",
-  radioButtonViewVisibilty : false,
-  returnTextViewVisibilty : true,
-  isEnabled : true,
-  radioButtonTextConfig : {
-    primaryText : (getString LEAVE_NOW),
-    primaryTextAccessibilityHint : (getEN LEAVE_NOW),
-    secondaryText : (getString RESERVE),
-    secondaryTextAccessibilityHint : (getEN RESERVE)
-  },
-  returnViewPrimaryText :(getString ROUND_TRIP_EXPLAINER)
-}
+returnConfig state =
+  
+  let 
+    srcCity = fromMaybe (show state.props.city) state.data.sourceAddress.city 
+    returnConfig' =  {
+    baseWidth: MATCH_PARENT,
+    baseHeight: WRAP_CONTENT,
+    baseOrientation: VERTICAL,
+    baseMargin: Margin 16 8 16 20,
+    titleConfig: (getString $ DROP_BACK_IN_AT srcCity),
+    textColor: Color.black900,
+    textMargin: MarginBottom 8,
+    pickerHeight: WRAP_CONTENT,
+    pickerWidth: MATCH_PARENT,
+    pickerCornerRadius: 8.0,
+    pickerBackground: Color.white900,
+    pickerPadding: Padding 20 15 20 15,
+    selectDateText: case state.data.tripTypeDataConfig.tripReturnData of 
+                   Just obj ->  EHC.convertUTCtoISC obj.tripDateUTC "DD MMM YYYY"
+                   Nothing -> (getString PICKUP_INPUT),
+    selectTimeText : case state.data.tripTypeDataConfig.tripReturnData of 
+                  Just obj ->  EHC.convertUTCtoISC obj.tripDateUTC "h:mm A"
+                  Nothing -> (getString PICKUP_INPUT),
+    dateHeight: WRAP_CONTENT,
+    dateWidth: WRAP_CONTENT,
+    dateColor: Color.black800,
+    iconHeight: V 22,
+    iconWidth: V 22,
+    iconMargin: MarginLeft 8,
+    iconGravity: BOTTOM,
+    id : "Return",
+    radioButtonViewVisibilty : false,
+    returnTextViewVisibilty : true,
+    isEnabled : true,
+    radioButtonTextConfig : {
+      primaryText : (getString LEAVE_NOW),
+      primaryTextAccessibilityHint : (getEN LEAVE_NOW),
+      secondaryText : (getString RESERVE),
+      secondaryTextAccessibilityHint : (getEN RESERVE)
+    },
+  dateIconImage : "ny_ic_calendar",
+  timeIconImage : "ny_ic_clock_unfilled"
+  }
   in returnConfig'
 
 fetchRideDetails :: ST.HomeScreenState -> ST.BookingAPIEntity
@@ -2608,7 +2619,7 @@ fetchRideDetails state =
                     
     rideDetails =  ST.BookingAPIEntity{
       currency : INR,
-      estimatedDistance : Just state.props.searchLocationModelProps.totalRideDistance,
+      estimatedDistance : Just state.data.rideDistance,
       estimatedDuration : Just state.props.searchLocationModelProps.totalRideDuration,
       estimatedFare : selectedEstimatesObject.price,
       fromLocation : ST.LocationInformation{
@@ -2618,7 +2629,6 @@ fetchRideDetails state =
       },
       id : fromMaybe "" state.data.selectedQuoteId,
       isScheduled : isScheduled,
-      maxEstimatedDistance : Just $ INT.toNumber $ fromMaybe 0 state.props.estimatedDistance,
       returnTime : Just returnTime,
       roundTrip : Just (state.props.searchLocationModelProps.tripType == ROUND_TRIP),
       isAirConditioned: Just false,

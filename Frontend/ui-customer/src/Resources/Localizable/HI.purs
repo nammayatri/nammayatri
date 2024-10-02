@@ -1628,3 +1628,7 @@ getHI stringKey =
         EXTRAS_WILL_BE_CHARGED_AT -> "अतिरिक्त शुल्क लिया जाएगा"
         AND -> " और "
         FIXED_CHARGES -> "निश्चित शुल्क"
+        PICKUP_DATE_AND_TIME -> "पिकअप दिनांक और समय"
+        DROP_BACK_IN_AT cityName -> cityName <> " में वापस लौटें "
+        PER_KM -> "प्रति किमी"
+        PER_MIN -> "प्रति मिनट"

@@ -76,48 +76,50 @@ screen initialState =
 
 view :: forall w.  (Action -> Effect Unit) -> RiderRideCompletedScreenState -> PrestoDOM (Effect Unit) w
 view push state  =
-  relativeLayout[
-        width MATCH_PARENT
-      , height MATCH_PARENT
-      , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
-      ]$[
-    scrollView
-    [ width MATCH_PARENT
-    , height MATCH_PARENT
-    , clickable true
-    , background Color.white900
-    , fillViewport true
-    ] $ [  
-        linearLayout[
+  screenAnimation 
+    $ relativeLayout[
           width MATCH_PARENT
-        , height $ V $ (EHC.screenHeight unit - (EHC.safeMarginTop + EHC.safeMarginBottom))
-        ][rideCompletedView state push]
-    ]
-  ] <> (if state.isRatingCard then 
-        [
+        , height MATCH_PARENT
+        , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
+        , background Color.white900
+        ]$[
+      scrollView
+      [ width MATCH_PARENT
+      , height MATCH_PARENT
+      , clickable true
+      , background Color.white900
+      , fillViewport true
+      ] $ [  
           linearLayout[
-              width MATCH_PARENT
-            , height MATCH_PARENT
-            , orientation VERTICAL][
-                linearLayout[
-                  width MATCH_PARENT
-                , weight 1.0
-                ][
-                  rideRatingView state push
-                ]
-              , stickyButtonView state push
-            ]
-          ]
-        else [] )
-        <> (if state.favDriverInfoCard then
+            width MATCH_PARENT
+          , height $ V $ (EHC.screenHeight unit - (EHC.safeMarginTop + EHC.safeMarginBottom))
+          ][rideCompletedView state push]
+      ]
+    ] <> (if state.isRatingCard then 
           [
-            linearLayout
-              [ height MATCH_PARENT
-              , width MATCH_PARENT
-              , background Color.white900
-              ][FavouriteDriverInfoCard.view (push <<< DriverInfocardAC) (FavouriteDriverInfoCardController.config)]
-          ]
-        else [])
+            linearLayout[
+                width MATCH_PARENT
+              , height MATCH_PARENT
+              , orientation VERTICAL][
+                  linearLayout[
+                    width MATCH_PARENT
+                  , weight 1.0
+                  ][
+                    rideRatingView state push
+                  ]
+                , stickyButtonView state push
+              ]
+            ]
+          else [] )
+          <> (if state.favDriverInfoCard then
+            [
+              linearLayout
+                [ height MATCH_PARENT
+                , width MATCH_PARENT
+                , background Color.white900
+                ][FavouriteDriverInfoCard.view (push <<< DriverInfocardAC) (FavouriteDriverInfoCardController.config)]
+            ]
+          else [])
 
 rideCompletedView :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 rideCompletedView config push = 

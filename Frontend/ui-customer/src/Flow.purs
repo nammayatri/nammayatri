@@ -1102,7 +1102,7 @@ homeScreenFlow = do
     GO_TO_TRIP_TYPE_SELECTION updatedState -> do 
       findEstimates updatedState
     GO_TO_RIDE_SUMMARY_SCREEN updatedState -> do 
-      modifyScreenState $ RideSummaryScreenStateType (\rideSummaryScreen -> RideSummaryScreenData.initData{ data { rideDetails = fetchRideDetails updatedState,extraFare = fetchExtraFares updatedState,fromScreen = (Screen.getScreen Screen.RIDE_SUMMARY_SCREEN)}} )
+      modifyScreenState $ RideSummaryScreenStateType (\rideSummaryScreen -> RideSummaryScreenData.initData{ data { rideDetails = fetchRideDetails updatedState,extraFare = fetchExtraFares updatedState,fromScreen = (Screen.getScreen Screen.RIDE_SUMMARY_SCREEN)},props{pickUpOpen = true}} )
       rideSummaryScreenFlow 
     RETRY_FINDING_QUOTES showLoader -> do
       void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS) -- TODO : Handled Loader in IOS Side
@@ -2551,6 +2551,8 @@ findEstimates updatedState = do
     void $ lift $ lift $ toggleLoader true
     routeObj <- getRouteInfo state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong 
     void $ lift $ lift $ toggleLoader false
+    let 
+      currentUTC =  (getCurrentUTC "")
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {
       props { 
         currentStage= GoToTripSelect 
@@ -2561,9 +2563,19 @@ findEstimates updatedState = do
         } 
       }
       , data {
-        tripEstDuration = routeObj.estDuration 
+        startTimeUTC = (getCurrentUTC "")
+      , tripEstDuration = routeObj.estDuration 
       , tripTypeDataConfig = HomeScreenData.tripTypeDataConfig{
-                      tripPickupData = Just HomeScreenData.dummyTripTypeData{tripDateReadableString = convertUTCtoISC (getCurrentUTC "") "D MMM, h:mm A" }
+                      tripPickupData = Just HomeScreenData.dummyTripTypeData{
+                          tripDateTimeConfig = {
+                            year : HU.getUTCFullYear currentUTC
+                          , month : HU.getUTCMonth currentUTC
+                          , day : HU.getUTCDate currentUTC
+                          , hour : HU.getUTCHours currentUTC
+                          , minute : HU.getUTCMinutes currentUTC
+                          }
+                        , tripDateUTC = currentUTC
+                        , tripDateReadableString = convertUTCtoISC currentUTC "D MMM, h:mm A" }
                     }
       }
     })

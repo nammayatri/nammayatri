@@ -17,7 +17,7 @@ module Services.Backend where
 
 import Locale.Utils
 import Services.API
-
+import Common.RemoteConfig.Utils (stuckRideFilterConfig)
 import Accessor (_deviceToken)
 import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck(..), FeedbackAnswer)
 import ConfigProvider as CP
@@ -75,6 +75,7 @@ import Engineering.Helpers.BackTrack
 import Effect.Aff
 import Helpers.API (noInternetScreenHandler)
 import DecodeUtil
+import Data.Int (fromString, toNumber)
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -618,10 +619,33 @@ rideBookingBT bookingId = do
 
 rideBookingList :: String -> String -> String -> Flow GlobalState (Either ErrorResponse RideBookingListRes)
 rideBookingList limit offset onlyActive = do
-        headers <- getHeaders "" true
+    headers <- getHeaders "" true
+    let config = stuckRideFilterConfig ""
+    if (config.enable && onlyActive == show true) 
+      then do 
+        let lim = fromMaybe 1 $ fromString limit
+        resp <- withAPIResult (EP.rideBookingList (if lim < 5 then "5" else "10") offset onlyActive Nothing Nothing)  unwrapResponse $ callAPI headers (RideBookingListReq limit offset onlyActive Nothing Nothing)
+        case resp of
+          Right resp -> do 
+            let filteredResp = spy "getFilteredRides" $ getFilteredRides resp lim
+            pure $ Right $ filteredResp
+          Left err -> pure $ Left err
+      else
         withAPIResult (EP.rideBookingList limit offset onlyActive Nothing Nothing)  unwrapResponse $ callAPI headers (RideBookingListReq limit offset onlyActive Nothing Nothing)
     where
         unwrapResponse (x) = x
+
+getFilteredRides :: RideBookingListRes -> Int -> RideBookingListRes
+getFilteredRides (RideBookingListRes resp) lim = 
+  let config = stuckRideFilterConfig ""
+  in 
+    RideBookingListRes {
+    list : take lim $ filter (\(RideBookingRes resp) ->
+      let duration = case resp.returnTime of
+                      Nothing -> fromMaybe config.estimatedDurationFallback resp.estimatedDuration
+                      Just date -> runFn2 JB.differenceBetweenTwoUTC (fromMaybe resp.createdAt resp.rideScheduledTime) date
+      in ((JB.getEpochTime (fromMaybe resp.createdAt resp.rideScheduledTime)) + ((toNumber duration) * 1000.0) + config.buffer) >= JB.getEpochTime (EHC.getCurrentUTC "")) resp.list
+    } 
 
 rideBookingListWithStatus :: String -> String -> String -> Maybe String -> Flow GlobalState (Either ErrorResponse RideBookingListRes)
 rideBookingListWithStatus limit offset status maybeClientId = do

@@ -182,6 +182,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
@@ -3857,8 +3858,13 @@ public class MobilityCommonBridge extends HyperBridge {
     public void datePicker(final String callback, String label) {
         datePicker(callback,label,null);
     }
+
     @JavascriptInterface
     public void datePicker(final String callback, String label, String defaultDate) {
+        datePicker(callback,label,defaultDate, null);
+    }
+    @JavascriptInterface
+    public void datePicker(final String callback, String label, String defaultDate, String maxDate) {
         ExecutorManager.runOnMainThread(new Runnable() {
             @Override
             public void run() {
@@ -3913,6 +3919,10 @@ public class MobilityCommonBridge extends HyperBridge {
                                             if (monthPicker != null) {
                                                 monthPicker.setDisplayedValues(monthNumbers);
                                             }
+                                            if (maxDate != null && !maxDate.isEmpty() && !maxDate.equals("-1")) {
+                                                long maxDateInMills = Long.parseLong(maxDate);
+                                                this.getDatePicker().setMaxDate(maxDateInMills);
+                                            }
                                         }
                                     }
                                 } catch (Exception e) {
@@ -3935,6 +3945,10 @@ public class MobilityCommonBridge extends HyperBridge {
                                             NumberPicker monthPicker = findViewById(month);
                                             if (monthPicker != null) {
                                                 monthPicker.setDisplayedValues(monthNumbers);
+                                            }
+                                            if (maxDate != null && !maxDate.isEmpty() && !maxDate.equals("-1")) {
+                                                long maxDateInMills = Long.parseLong(maxDate);
+                                                this.getDatePicker().setMaxDate(maxDateInMills);
                                             }
                                         }
                                     }
@@ -3959,7 +3973,6 @@ public class MobilityCommonBridge extends HyperBridge {
                         bridgeComponents.getJsCallback().addJsToWebView(javascript);
                     }
                 });
-
                 switch (label) {
                     case DatePickerLabels.MINIMUM_EIGHTEEN_YEARS:
                         Calendar maxDateDOB = Calendar.getInstance();
@@ -3981,7 +3994,11 @@ public class MobilityCommonBridge extends HyperBridge {
                         datePickerDialog.getDatePicker().setMinDate(minDate.getTimeInMillis());
                         break;
                 }
-                if (defaultDate != null && defaultDate!="") {
+                if (maxDate != null && !maxDate.isEmpty() && !maxDate.equals("-1")) {
+                    long maxDateInMills = Long.parseLong(maxDate);
+                    datePickerDialog.getDatePicker().setMaxDate(maxDateInMills);
+                }
+                if (defaultDate != null && !defaultDate.isEmpty() && !defaultDate.equals("-1")) {
                     try {
                         long defaultDateMillis = Long.parseLong(defaultDate);
                         Calendar defaultCa = Calendar.getInstance();

@@ -1626,3 +1626,7 @@ getBN stringKey =
         EXTRAS_WILL_BE_CHARGED_AT -> "অতিরিক্ত চার্জ করা হবে"
         AND -> " এবং "
         FIXED_CHARGES -> "স্থির চার্জ"
+        PICKUP_DATE_AND_TIME -> "পিকআপ তারিখ ও সময়"
+        DROP_BACK_IN_AT cityName -> "ফিরে আসুন " <> cityName <>" এ "
+        PER_KM -> "প্রতি কিমি"
+        PER_MIN -> "প্রতি মিনিট"

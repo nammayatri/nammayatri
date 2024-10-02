@@ -1640,3 +1640,7 @@ getTE stringKey =
     EXTRAS_WILL_BE_CHARGED_AT -> "అదనపు చార్జీలు చేయబడతాయి"
     AND -> " మరియు "
     FIXED_CHARGES -> "స్థిర ఛార్జీలు"
+    PICKUP_DATE_AND_TIME -> "పికప్ తేదీ మరియు సమయం"
+    DROP_BACK_IN_AT cityName -> cityName <> " వద్ద తిరిగి డ్రాప్ చేయబడింది"
+    PER_KM -> "ప్రతి కిలోమీటరుకు"
+    PER_MIN -> "ప్రతి నిమిషానికి"
