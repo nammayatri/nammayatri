@@ -94,7 +94,7 @@ cardHeaderLeft push =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , gravity CENTER
+    , gravity CENTER_VERTICAL
     ]
     [ imageView
         [ width $ V 30

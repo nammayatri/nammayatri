@@ -35,6 +35,7 @@ type RideRequestScreenData = {
   ,scrollEnable :: Boolean
   ,currCard :: BookingAPIEntity
   ,fareDetails :: Array RateCardItem
+  ,vehicleType :: String
 }
 
 dummyResp = ScheduledBookingListResponse {
@@ -155,10 +156,10 @@ dummyAPI = BookingAPIEntity{
 
 type RideRequestScreenProps= {
   cardHeight :: Int,
-  receivedResponse :: Boolean
+  receivedResponse :: Boolean,
+  shouldCall :: Boolean
 }
 type PillViewConfig ={
-  index :: Int,
   rideType ::  Maybe (CTA.TripCategoryTag),
   pillViewText :: String,
   isSelected :: Boolean,
@@ -171,7 +172,7 @@ initData _ = {
       activeRideIndex : 0,
       activeDayIndex : 0,
       shimmerLoader: ST.AnimatingIn,
-      pillViewArray : rideTypePills ""
+      pillViewArray : []
        ,dayArray : dayPills ""
             ,offset : 0
             ,limit  :  "0"
@@ -185,10 +186,12 @@ initData _ = {
             , filteredArr : []
             , currCard : dummyAPI
             , fareDetails : []
+            , vehicleType : ""
             },
     props: {
       cardHeight : 0
     ,receivedResponse: false
+    , shouldCall : true
     }
 }
 
@@ -223,42 +226,38 @@ cardData = [
     }
 ]
 
-rideTypePills ::String -> Array PillViewConfig 
-rideTypePills _ = [
-  {
-          index : 0,
-          pillViewText : getString LType.ALL,
-          rideType :  Nothing,
-          isSelected : true,
-          activeColor : Color.black900
+rideTypePills :: Boolean -> Array PillViewConfig
+rideTypePills includeIntercity =
+  ([ { pillViewText: getString LType.ALL
+    , rideType: Nothing
+    , isSelected: true
+    , activeColor: Color.black900
+    }
+  ])
+    <> (if includeIntercity then
+        [ { rideType: Just CTA.InterCity
+          , pillViewText: getString LType.INTERCITY
+          , isSelected: false
+          , activeColor: Color.blue800
           }
-        ,{
-          index : 1,
-          rideType : Just CTA.InterCity,
-          pillViewText : getString LType.INTERCITY,
-          isSelected : false,
-          activeColor : Color.blue800
-        },
-        {
-          index : 2,
-          rideType : Just CTA.Rental ,
-          pillViewText : getString LType.RENTAL,
-          isSelected : false,
-          activeColor : Color.blueGreen
-        }
-
-]
+        ]
+      else
+        [])
+          <> ([ { rideType: Just CTA.Rental
+              , pillViewText: getString LType.RENTAL
+              , isSelected: false
+              , activeColor: Color.blueGreen
+              }
+            ])
 
 dayPills :: String -> Array PillViewConfig
 dayPills _ = [
               {
-                index : 0,
                 rideType : Nothing,
                 pillViewText : getString LType.TODAY,
                 isSelected : true,
                 activeColor : Color.black900
                 },{
-                 index : 1,
                  rideType : Nothing,
                 pillViewText : getString LType.TOMMOROW,
                 isSelected : false,

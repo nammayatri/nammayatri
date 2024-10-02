@@ -1722,7 +1722,7 @@ getHI stringKey =
         INCURRED_DURING_TRIP -> "ग्राहक से सीधे यात्रा के दौरान हुए"
         BACK -> "वापस"
         YOUR_RIDE_STARTS_IN -> "आपकी सवारी में शुरू होती है"
-        AWAY -> "दूर"
+        AWAY -> " दूर"
         INTERCITY -> "अंतर-शहर"
         INTERCITY_RETURN -> "अंतर-शहर वापसी"
         RENTAL -> "किराया"

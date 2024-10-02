@@ -1721,7 +1721,7 @@ getML stringKey =
         INCURRED_DURING_TRIP -> "ഉപഭോക്താവിൽ നിന്നു നേരിട്ട് സംഭവിച്ച സമയം"
         BACK -> "തിരിച്ചു"
         YOUR_RIDE_STARTS_IN -> "നിങ്ങളുടെ യാത്രയിൽ ആരംഭിക്കുന്നു"
-        AWAY -> "അകലെ"
+        AWAY -> " അകലെ"
         INTERCITY -> "നഗരാന്തര"
         INTERCITY_RETURN -> "നഗരാന്തര തിരിച്ചു"
         RENTAL -> "വാടക"

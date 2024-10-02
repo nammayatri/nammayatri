@@ -132,6 +132,7 @@ import Screens.RideSummaryScreen.ScreenData as  RSD
 import Screens.HomeScreen.ScreenData as HSD
 import Debug
 import Data.Tuple(Tuple(..))
+import Data.String (Pattern(..), contains)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -1130,8 +1131,10 @@ eval (UpdateWaitTime status) state = do
 eval (WaitTimerCallback timerID _ seconds) state = 
   continue state { data {activeRide {waitTimerId = timerID, waitTimeSeconds = seconds}}}
 
-eval (RideStartRemainingTime seconds status id) state = do
-  if status == "EXPIRED" then
+eval (RideStartRemainingTime seconds status timerId) state = do
+  let id = "rideStartRemainingTimeId_" <> state.data.activeRide.id
+  if status == "EXPIRED" || id /= timerId then do
+    void $ pure $ TF.clearTimerWithId timerId
     updateAndExit state { props {rideStartRemainingTime = 0}} $ NotifyDriverArrived state { props {rideStartRemainingTime = 0}} 
   else continue state { props {rideStartRemainingTime = seconds}}
   
@@ -1233,7 +1236,7 @@ eval (TimeUpdate time lat lng) state = do
       true, ST.RideAccepted, false, false, true -> do
         let dist = getDistanceBwCordinates driverLat driverLong state.data.activeRide.src_lat state.data.activeRide.src_lon
             insideThreshold = dist <= state.data.config.waitTimeConfig.thresholdDist
-        pure $ if insideThreshold then UpdateAndNotify else (UpdateLastLoc driverLat driverLong insideThreshold)
+        pure $ if insideThreshold && (getValueToLocalStore WAITING_TIME_STATUS == show ST.NoStatus) && (state.data.activeRide.tripType == ST.Rental || state.data.activeRide.tripType == ST.Intercity) then UpdateAndNotify else (UpdateLastLoc driverLat driverLong insideThreshold)
       _, _, _, _, _ -> pure $ UpdateLastLoc driverLat driverLong false
     ]
 
@@ -1600,8 +1603,9 @@ eval (SelectPlansModalAction (SelectPlansModal.PlanCardAction item _)) state = c
 eval RideRequestsList state = exit $ GoToRideReqScreen state 
 
 eval (HomeScreenBannerCountDownTimer seconds status timerID) state = do
-  if status == "EXPIRED" then do
-    void $ pure $ TF.clearTimerWithId state.data.homeScreenBannerTimerID
+  let id = "bannerTimer_" <> state.data.activeRide.id
+  if status == "EXPIRED" || timerID == id then do
+    void $ pure $ TF.clearTimerWithId timerID
     continue state {props {homeScreenBannerVisibility  = false}}
   else if (seconds <= state.data.config.scheduledRideConfig.scheduledBannerTimerValue || Array.elem state.props.currentStage [ST.RideAccepted, ST.RideStarted, ST.ChatWithCustomer])  then do
     void $ pure  $ TF.clearTimerWithId state.data.homeScreenBannerTimerID
@@ -1610,9 +1614,9 @@ eval (HomeScreenBannerCountDownTimer seconds status timerID) state = do
     continue $ state { data { homeScreenBannerTimer = (seconds), homeScreenBannerTimerID = timerID } }
 
 eval (OnRideBannerCountDownTimer seconds status onRideBannerTimerID) state = do
-
-  if status == "EXPIRED" || Array.notElem state.props.currentStage [ST.RideAccepted, ST.RideStarted, ST.ChatWithCustomer] then do
-    void $ pure $ TF.clearTimerWithId state.data.onRideBannerTimerID
+  let currentId = "onRideBannerTimer_" <> state.data.activeRide.id
+  if (onRideBannerTimerID == currentId) || status == "EXPIRED" || (Array.notElem state.props.currentStage [ST.RideAccepted, ST.RideStarted, ST.ChatWithCustomer]) then do
+    void $ pure $ TF.clearTimerWithId onRideBannerTimerID
     continue state 
   else
     continue $ state { data { onRideBannerTimer = (seconds), onRideBannerTimerID = onRideBannerTimerID } }

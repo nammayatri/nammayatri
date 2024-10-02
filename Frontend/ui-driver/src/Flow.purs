@@ -2896,7 +2896,7 @@ homeScreenFlow = do
       homeScreenFlow
     GO_TO_EARNINGS_SCREEN -> driverEarningsFlow
     CLEAR_PENDING_DUES -> clearPendingDuesFlow true
-    GO_TO_RIDE_REQ_SCREEN -> do
+    GO_TO_RIDE_REQ_SCREEN state -> do
       modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> RideRequestData.initData "")
       rideRequestScreenFlow
     GO_TO_RIDE_SUMMARY_SCREEN state -> do 
@@ -4435,12 +4435,9 @@ rideRequestScreenFlow :: FlowBT String Unit
 rideRequestScreenFlow = do
   action <- UI.rideRequestScreen
   case action  of 
-    TA.GOTO_HOME state -> do
-      let (ScheduledBookingListResponse listResponse) = state.data.resp
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data{scheduleRideCount =Just $ Tuple (DA.length listResponse.bookings) (getCurrentUTC "")} } )
-      homeScreenFlow
+    TA.GOTO_HOME state -> homeScreenFlow
     TA.RIDE_REQUEST_REFRESH_SCREEN state -> do
-      modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{offset = 0, resp = RideRequestData.dummyResp}})
+      modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{offset = 0, resp = RideRequestData.dummyResp}, props{shouldCall = true}})
       rideRequestScreenFlow
     TA.LOADER__OUTPUT state -> do
       modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{offset = state.data.offset + 5}})
@@ -4458,7 +4455,7 @@ rideRequestScreenFlow = do
           currentRideFlow Nothing Nothing
         _ -> rideRequestScreenFlow
     TA.GO_BACK_TO_RIDEREQUEST_SCREEN state -> do
-      modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{filteredArr = [],resp = RideRequestData.dummyResp}})
+      modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{filteredArr = [],resp = RideRequestData.dummyResp, offset =0}})
       rideRequestScreenFlow
       
     _                   -> rideRequestScreenFlow
@@ -4484,6 +4481,7 @@ rideSummaryScreenFlow = do
       homeScreenFlow
     GO_TO_RIDE_REQUEST state ->  do 
      modifyScreenState $ RideSummaryScreenStateType (\rideSummaryScreen -> rideSummaryScreen {props {shimmerVisibility = true}}) 
+     modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> rideRequestScreen{props{shouldCall = false}})
      rideRequestScreenFlow
     BACK_HOME -> homeScreenFlow
     GO_TO_HOME_SCREEN_FROM_BANNER -> homeScreenFlow
@@ -4498,6 +4496,7 @@ rideSummaryScreenFlow = do
       void $ pure $ removeAllPolylines ""
       case notificationType of
         "DRIVER_ASSIGNMENT" -> do
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{rideStartRemainingTime = -1}}) 
           currentRideFlow Nothing Nothing
         "CANCELLED_PRODUCT" -> do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{checkUpcomingRide = true  }}  ) 

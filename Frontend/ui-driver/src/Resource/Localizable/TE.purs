@@ -1722,7 +1722,7 @@ getTE stringKey =
         INCURRED_DURING_TRIP -> "కస్టమర్ నుండి నేరుగా ప్రయాణ సమయంలో కలిగినవి"
         BACK -> "వెనక్కి"
         YOUR_RIDE_STARTS_IN -> "మీ ప్రయాణం లో ప్రారంభమవుతుంది"
-        AWAY -> "దూరంగా"
+        AWAY -> " దూరంగా"
         INTERCITY -> "అంతర నగర"
         INTERCITY_RETURN -> "అంతర నగర తిరుగు"
         RENTAL -> "అద్దె"

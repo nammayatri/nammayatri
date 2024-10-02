@@ -1723,7 +1723,7 @@ getEN stringKey =
         INCURRED_DURING_TRIP -> "incurred during the trip directly from customer"
         BACK -> "Back"       
         YOUR_RIDE_STARTS_IN -> "your ride starts in"
-        AWAY -> "away"
+        AWAY -> " away"
         INTERCITY -> "Intercity"
         INTERCITY_RETURN -> "Intercity Return"
         RENTAL -> "Rental"

@@ -1209,7 +1209,7 @@ getFR stringKey =
         INCURRED_DURING_TRIP -> "encourus pendant le voyage directement du client"
         BACK -> "arrière"
         YOUR_RIDE_STARTS_IN -> "votre course commence dans"
-        AWAY -> "loin"
+        AWAY -> " loin"
         INTERCITY ->"interurbain"
         INTERCITY_RETURN -> "retour interurbain"
         RENTAL -> "location"

@@ -1721,7 +1721,7 @@ getBN stringKey =
         INCURRED_DURING_TRIP -> "গ্রাহকের কাছ থেকে সরাসরি ভ্রমণের সময় হয়েছে"
         BACK -> "পিছনে"
         YOUR_RIDE_STARTS_IN -> "আপনার যাত্রা শুরু হচ্ছে"
-        AWAY ->  "দূরে"
+        AWAY ->  " দূরে"
         INTERCITY -> "আন্তঃনগর"
         INTERCITY_RETURN -> "আন্তঃনগর প্রত্যাবর্তন"
         RENTAL -> "ভাড়া"
