@@ -22,6 +22,7 @@ where
 import qualified Control.Monad.Catch as C
 import Control.Monad.Extra (mapMaybeM)
 import Data.Fixed (mod')
+import Data.List (nubBy)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
 import Data.Ord
@@ -119,6 +120,8 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       mbPlanFromDPlan <- getPlan mbDriverPlan serviceName merchantOpCityId (Just recalculateManualReview)
       let useDriverPlan = ((mbPlanFromDPlan <&> (.merchantOpCityId)) == Just driverFee.merchantOperatingCityId) && ((mbPlanFromDPlan <&> (.vehicleCategory)) == Just driverFee.vehicleCategory)
       mbPlan <- if useDriverPlan then pure mbPlanFromDPlan else maybe (pure Nothing) (\planId' -> CQP.findByIdAndPaymentModeWithServiceName planId' (fromMaybe MANUAL $ mbDriverPlan <&> (.planType)) serviceName) driverFee.planId
+      let maxCreditLimitLinkedToDPlan = mbPlan <&> (.maxCreditLimit)
+          isPlanToggleAllowedAtPlanLevel = mbPlan <&> (.subscribedFlagToggleAllowed)
       mbDriverStat <- QDS.findById (cast driverFee.driverId)
       case mbPlan of
         Nothing -> pure ()
@@ -172,12 +175,12 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
           -- blocking
           dueDriverFees <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName (cast driverFee.driverId) serviceName -- Problem with lazy evaluation?
           let driverFeeIds = map (.id) dueDriverFees
-              due = sum $ map (\fee -> roundToHalf fee.currency $ fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) dueDriverFees
-          if roundToHalf driverFee.currency (due + totalFee - min coinCashLeft totalFee) >= plan.maxCreditLimit
+              due = sum $ map (\fee -> if (fee.startTime /= startTime && fee.endTime /= endTime) then roundToHalf driverFee.currency $ fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst else 0) dueDriverFees
+          if roundToHalf driverFee.currency (due + totalFee - min coinCashLeft totalFee) >= fromMaybe plan.maxCreditLimit maxCreditLimitLinkedToDPlan
             then do
               mapM_ updateDriverFeeToManual driverFeeIds
               updateDriverFeeToManual driverFee.id
-              when plan.subscribedFlagToggleAllowed $ do
+              when (fromMaybe plan.subscribedFlagToggleAllowed isPlanToggleAllowedAtPlanLevel) $ do
                 updateSubscription False (cast driverFee.driverId)
                 SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "BlockedDrivers") nonEmptyDriverId
             else do
@@ -377,11 +380,13 @@ getOrGenerateDriverFeeDataBasedOnServiceName ::
 getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOperatingCityId transporterConfig recalculateManualReview subsConfig = do
   now <- getCurrentTime
   let statusToCheck = if recalculateManualReview then MANUAL_REVIEW_NEEDED else ONGOING
+  let enableCityBasedFeeSwitch = subsConfig.enableCityBasedFeeSwitch
   case serviceName of
     YATRI_SUBSCRIPTION -> do
-      driverFeeElderSiblings <- QDF.findAllFeesInRangeWithStatusAndServiceName (Just merchantId) merchantOperatingCityId startTime endTime statusToCheck transporterConfig.driverFeeCalculatorBatchSize serviceName
-      driverFeeRestSiblings <- QDF.findAllChildsOFDriverFee merchantOperatingCityId startTime endTime statusToCheck serviceName (map (.id) $ filter (\dfee -> dfee.hasSibling == Just True) driverFeeElderSiblings) True --- here we are only finding siblings of that particular city
-      return $ filter (\dfee -> dfee.merchantOperatingCityId == merchantOperatingCityId) $ driverFeeElderSiblings <> driverFeeRestSiblings
+      driverFeeElderSiblings <- QDF.findAllFeesInRangeWithStatusAndServiceName (Just merchantId) merchantOperatingCityId startTime endTime statusToCheck transporterConfig.driverFeeCalculatorBatchSize serviceName enableCityBasedFeeSwitch
+      --- here we are only finding siblings of that particular city due to disablement of city based fee switch we need to do nub as duplicate entries can be there ----
+      driverFeeRestSiblings <- QDF.findAllChildsOFDriverFee merchantOperatingCityId startTime endTime statusToCheck serviceName (map (.id) $ filter (\dfee -> dfee.hasSibling == Just True) driverFeeElderSiblings) True
+      return $ filter (\dfee -> dfee.merchantOperatingCityId == merchantOperatingCityId) $ nubBy (\x y -> x.id == y.id) $ driverFeeElderSiblings <> driverFeeRestSiblings
     YATRI_RENTAL -> do
       when (startTime >= endTime) $ throwError (InternalError "Invalid time range for driver fee calculation")
       let mbStartTime = Just startTime
@@ -405,7 +410,7 @@ getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merch
               driverEligibleForRentals
           setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOperatingCityId False
           return $ maybe driverFees (\limit -> take limit driverFees) transporterConfig.driverFeeCalculatorBatchSize
-        else QDF.findAllFeesInRangeWithStatusAndServiceName (Just merchantId) merchantOperatingCityId startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize serviceName
+        else QDF.findAllFeesInRangeWithStatusAndServiceName (Just merchantId) merchantOperatingCityId startTime endTime ONGOING transporterConfig.driverFeeCalculatorBatchSize serviceName enableCityBasedFeeSwitch
 
 mkInvoiceAgainstDriverFee ::
   ( MonadFlow m
