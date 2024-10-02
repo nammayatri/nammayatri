@@ -147,9 +147,7 @@ checkBookingsForStatus (currBooking : bookings) = do
       when callStatusConditionNew $ do
         callOnStatus currBooking
       when callStatusConditionTripAssigned $ do
-        ride <- QR.findActiveByRBId currBooking.id >>= fromMaybeM (RideNotFound currBooking.id.getId)
-        unless (ride.status == DTR.INPROGRESS) do
-          callOnStatus currBooking
+        callOnStatus currBooking
       checkBookingsForStatus bookings
     (_, _) -> logError "Nothing values for time diff threshold or booking end duration"
 checkBookingsForStatus [] = pure ()
