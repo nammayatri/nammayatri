@@ -124,8 +124,9 @@ findAllFeesInRangeWithStatusAndServiceName ::
   DriverFeeStatus ->
   Maybe Int ->
   ServiceNames ->
+  Bool ->
   m [DriverFee] -- remove maybe from merchantId later
-findAllFeesInRangeWithStatusAndServiceName mbMerchantId merchantOperatingCityId startTime endTime status mbLimit serviceName =
+findAllFeesInRangeWithStatusAndServiceName mbMerchantId merchantOperatingCityId startTime endTime status mbLimit serviceName enableCityBasedFeeSwitch =
   findAllWithOptionsKV
     [ Se.And $
         [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq startTime,
@@ -133,10 +134,10 @@ findAllFeesInRangeWithStatusAndServiceName mbMerchantId merchantOperatingCityId 
           Se.Is BeamDF.status $ Se.Eq status,
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
           Se.Is BeamDF.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
-          Se.Is BeamDF.feeType $ Se.In [RECURRING_EXECUTION_INVOICE, RECURRING_INVOICE],
-          Se.Is BeamDF.siblingFeeId $ Se.Eq Nothing
+          Se.Is BeamDF.feeType $ Se.In [RECURRING_EXECUTION_INVOICE, RECURRING_INVOICE]
         ]
           <> [Se.Is BeamDF.merchantId $ Se.Eq $ getId (fromJust mbMerchantId) | isJust mbMerchantId]
+          <> [Se.Is BeamDF.siblingFeeId $ Se.Eq Nothing | enableCityBasedFeeSwitch]
     ]
     (Se.Desc BeamDF.endTime)
     mbLimit
