@@ -54,7 +54,7 @@ mkStops origin stops startTime =
   let originGps = Gps.Gps {lat = origin.gps.lat, lon = origin.gps.lon}
       destinationGps dest = Gps.Gps {lat = dest.gps.lat, lon = dest.gps.lon}
       destination = [KP.last stops | not (null stops)]
-      intermediateStops = if length stops > 1 then KP.init stops else []
+      intermediateStops = KP.safeInit stops
    in Just
         ( [ Spec.Stop
               { stopLocation =

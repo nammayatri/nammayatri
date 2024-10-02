@@ -330,7 +330,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
       person.totalRidesCount
       isDashboardRequest_
       placeNameSource
-      (init stopLocations)
+      (safeInit stopLocations)
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
   Metrics.startSearchMetrics merchant.name searchRequest.id.getId
