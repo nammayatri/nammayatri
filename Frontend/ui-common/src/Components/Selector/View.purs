@@ -51,7 +51,7 @@ view push config=
         , accessibility ENABLE
         , margin $ itemConfig.itemMargin
         , accessibilityHint $ itemConfig.itemAccessibilty
-        ] <> FontStyle.body4 LanguageStyle
+        ] <> FontStyle.getFontStyle itemConfig.itemFontStyle LanguageStyle
       ) 
     config.items
     )

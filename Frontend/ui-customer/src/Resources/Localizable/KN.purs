@@ -1631,3 +1631,7 @@ getKN stringKey =
         EXTRAS_WILL_BE_CHARGED_AT -> "ಹೆಚ್ಚುವರಿ ಶುಲ್ಕ ವಸೂಲ್ ಮಾಡಲಾಗುವುದು"
         AND -> " ಮತ್ತು "
         FIXED_CHARGES -> "ನಿಯತ ಶುಲ್ಕಗಳು"
+        PICKUP_DATE_AND_TIME -> "ಪಿಕಪ್ ದಿನಾಂಕ ಮತ್ತು ಸಮಯ"
+        DROP_BACK_IN_AT cityName -> "ಇಲ್ಲಿ ವಾಪಸು " <> cityName <> " ನಲ್ಲಿ "
+        PER_KM -> "ಪ್ರತಿ ಕಿಮೀ"
+        PER_MIN -> "ಪ್ರತಿ ನಿಮಿಷ"

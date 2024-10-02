@@ -1232,24 +1232,40 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Primary
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DateTimePickerButtonClicked)) state = openDateTimePicker state 
 
-eval(SearchLocationModelActionController (SearchLocationModelController.DateSelectButtonClicked (DateSelectorController.OnClick str))) state = 
+eval(SearchLocationModelActionController (SearchLocationModelController.DateSelectButtonClicked (DateSelectorController.OnClick str selectionType))) state = 
     if(str == "Pickup") then
-          if ( state.data.startTimeUTC /= "") then openDateTimeSelector str state (Just state.data.startTimeUTC) 
+          if ( state.data.startTimeUTC /= "") then do
+            if selectionType == CTP.DATE then
+              openDateTimeSelector str state (Just state.data.startTimeUTC) true false
+            else 
+              openDateTimeSelector str state (Just state.data.startTimeUTC) false true
           else do 
             let  scheduledUTC = runFn2 getUTCAfterNSecondsImpl (getCurrentUTC "") 1860
-            openDateTimeSelector str state (Just scheduledUTC)
-    else openDateTimeSelector str state (Just state.data.returnTimeUTC)
+            if selectionType == CTP.DATE then
+              openDateTimeSelector str state (Just scheduledUTC) true false
+            else 
+              openDateTimeSelector str state (Just scheduledUTC) false true
+    else do 
+      if selectionType == CTP.DATE then
+        openDateTimeSelector str state (Just state.data.returnTimeUTC) true false
+      else 
+        openDateTimeSelector str state (Just state.data.returnTimeUTC) false true
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DateSelectButtonClicked (DateSelectorController.MenuButtonActionController (MenuButtonController.OnClick config)))) state = do
   if state.props.searchLocationModelProps.tripType == ONE_WAY_TRIP then 
     if config.id == "LeaveNow" then 
           continue state {
-            props { searchLocationModelProps {totalRideDuration=state.data.tripEstDuration},isTripSchedulable = false}
-          , data {returnTimeUTC = "", startTimeUTC = "",estReturnTimeUTC="" ,
-                    tripTypeDataConfig = HomeScreenData.tripTypeDataConfig{
+            props { searchLocationModelProps {totalRideDuration=state.data.tripEstDuration}
+                    ,isTripSchedulable = false
+                }
+          , data {  returnTimeUTC = ""
+                  , startTimeUTC = ""
+                  , estReturnTimeUTC = "" 
+                  , tripTypeDataConfig = HomeScreenData.tripTypeDataConfig{
                       tripPickupData = Just HomeScreenData.dummyTripTypeData{tripDateReadableString = convertUTCtoISC (getCurrentUTC "") "D MMM, h:mm A" }
                     }
-                  }}
+                  }
+                }
     else 
       let scheduledUTC = runFn2 getUTCAfterNSecondsImpl (getCurrentUTC "") 1860
           pickupTripConfig = calculateDateInfo (getUTCFullYear scheduledUTC) (getUTCMonth scheduledUTC) (getUTCDate scheduledUTC) (getUTCHours scheduledUTC) ( getUTCMinutes scheduledUTC) 19800
@@ -1325,7 +1341,6 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState 
         void $ pure $ performHapticFeedback unit
         let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.DestinationSearch" "true"
             _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
-            -- maybeInvalidBookingDetails = invalidBookingTime (getCurrentUTC "") Nothing
             latestScheduledRides = state.data.latestScheduledRides
             {overLapping,overLappedBooking} = HU.overlappingRides (getCurrentUTC "") Nothing 1800 latestScheduledRides
         if overLapping then do
@@ -2635,23 +2650,42 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
           void $ pure $ toast $ getString SCHEDULE_RIDE_AVAILABLE
           continue state 
 
-eval (DateSelectAction title dateResp year month day timeResp hour minute ) state = do 
-    if any (_ /= "SELECTED") [dateResp, timeResp] then continue state 
-    else
-      let selectedDateString = (show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month+1)) <> "-" <> (if day < 10 then "0"  else "") <> (show day)
+eval (DateSelectAction title dateResp respYear respMonth respDay timeResp respHour respMinute ) state = do 
+    if any (_ == "CANCELLED") [dateResp,timeResp] then continue state
+    else do 
+      let 
+          selectedStateDateUTC =  if title == "Return" then state.data.returnTimeUTC 
+                                  else if state.data.startTimeUTC /= "" then state.data.startTimeUTC 
+                                  else (getCurrentUTC "")
+
+          itcOffset = 19800
+
+          selectedIST = runFn2 getUTCAfterNSecondsImpl selectedStateDateUTC (itcOffset)
+          
+          year = if timeResp == "SELECTED" then getUTCFullYear selectedIST else respYear
+
+          month = if timeResp == "SELECTED" then getUTCMonth selectedIST else respMonth
+
+          day = if timeResp == "SELECTED" then getUTCDate selectedIST else respDay
+
+          hour = if dateResp == "SELECTED" then getUTCHours selectedIST else respHour
+
+          minute =  if dateResp == "SELECTED" then getUTCMinutes selectedIST else respMinute
+
+          selectedDateString = (show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month+1)) <> "-" <> (if day < 10 then "0"  else "") <> (show day)
 
           currentUTC = (getCurrentUTC "")
 
           selectedDateTest = (show day) <> " " <> (formatMonth (month+1)) <> " , " <> (if(hour > 12) then show (hour - 12) else show hour) <> ":" <>  (if minute < 10 then "0"  else "") <> (show minute) <> (if (hour >= 12) then " PM" else " AM")
 
-          selectedUTC = unsafePerformEffect $ convertDateTimeConfigToUTC year (month + 1) day hour minute 0
 
+          selectedUTC = unsafePerformEffect $ convertDateTimeConfigToUTC year (month + 1) day hour minute 0
           estDuration = state.data.tripEstDuration
           currentStartTimeUTC = if state.data.startTimeUTC == "" then (getCurrentUTC "") else state.data.startTimeUTC
           compareUTCwithEstReturn = if (title =="Return" && state.data.estReturnTimeUTC /= "") then (compareUTCDate selectedUTC state.data.estReturnTimeUTC) else 0
 
           returnTripConfig = calculateDateInfo year month day hour minute (2*estDuration + 3600 + compareUTCwithEstReturn)
-           -- additional check can happen here
+          -- additional check can happen here
           isAfterThirtyMinutes = ((compareUTCDate selectedUTC (getCurrentUTC "")) > (30 * 60))
 
           updatedDateTime = state.data.selectedDateTimeConfig { year = year, month = month, day = day, hour = hour, minute = minute }
@@ -2663,11 +2697,11 @@ eval (DateSelectAction title dateResp year month day timeResp hour minute ) stat
           bookingDurationCheck = ((title =="Return") && (compareUTCDate currentStartTimeUTC selectedUTC) < (48 * 60 * 60))
           totalRideDuration = if state.props.searchLocationModelProps.tripType == ONE_WAY_TRIP  then estDuration else (2*estDuration + 3600)
           newState = if validDate && isAfterThirtyMinutes && title == "Pickup" then 
-                           state {data 
-                           {startTimeUTC = selectedUTC,
-                           estReturnTimeUTC = returnTripConfig.returnTimeUTCString, 
-                           returnTimeUTC= returnTripConfig.returnTimeUTCString,
-                           tripTypeDataConfig {
+                          state {data 
+                          {startTimeUTC = selectedUTC,
+                          estReturnTimeUTC = returnTripConfig.returnTimeUTCString, 
+                          returnTimeUTC= returnTripConfig.returnTimeUTCString,
+                          tripTypeDataConfig {
                             tripPickupData =  Just HomeScreenData.dummyTripTypeData { 
                               tripDateTimeConfig =  updatedDateTime, 
                               tripDateUTC = selectedUTC , 
@@ -2677,50 +2711,49 @@ eval (DateSelectAction title dateResp year month day timeResp hour minute ) stat
                               tripDateUTC = returnTripConfig.tripObj.tripDateUTC , 
                               tripDateReadableString = returnTripConfig.tripObj.tripDateReadableString} 
                             }},
-                             props{
+                            props{
                               searchLocationModelProps
                               {totalRideDuration = totalRideDuration
                               }
                             }
                             }
                     else if validDate && isAfterThirtyMinutes && title == "Return" && selectedUTC > state.data.estReturnTimeUTC && ((compareUTCDate selectedUTC currentStartTimeUTC) < (48 * 60 * 60)) then
-                           state { data 
-                           { returnTimeUTC = selectedUTC, 
-                           tripTypeDataConfig {
+                          state { data 
+                          { returnTimeUTC = selectedUTC, 
+                          tripTypeDataConfig {
                             tripReturnData = Just HomeScreenData.dummyTripTypeData{
-                               tripDateTimeConfig = updatedDateTime, 
-                               tripDateUTC = selectedUTC , 
-                               tripDateReadableString = selectedDateTest
+                              tripDateTimeConfig = updatedDateTime, 
+                              tripDateUTC = selectedUTC , 
+                              tripDateReadableString = selectedDateTest
                               }}},
                             props{searchLocationModelProps{totalRideDuration = (2*estDuration + 3600 + compareUTCwithEstReturn)}}}
                     else state
-      in
-        if validDate then do
-          let       
-            latestScheduledRides = state.data.latestScheduledRides
-            {overLapping,overLappedBooking} = HU.overlappingRides selectedUTC (Just returnTripConfig.returnTimeUTCString) 1800 latestScheduledRides
-          if overLapping then do
-            continue state {data{overLappingBooking =overLappedBooking}, props{showScheduledRideExistsPopUp = true}}
-         else if title == "Pickup" && isAfterThirtyMinutes then
-            continue newState
-          else if title == "Return" then
-            if not isAfterThirtyMinutes then do
-              void $ pure $ toast $ getVarString DATE_INVALID_MESSAGE $ singleton $ show state.props.maxDateBooking
-              continue state
-            else if not validRoundTripReturnUTC then do
-              void $ pure $ toast $ getString ROUND_TRIP_INVALID_MESSAGE
-              continue state
-            else if not bookingDurationCheck then do
-              void $ pure $ toast $ getString BOOKING_DURATION_INVALID
-              continue state
-            else
-              continue newState
-          else do
-            void $ pure $ toast $ getString SCHEDULE_RIDE_AVAILABLE
+      if validDate then do
+        let       
+          latestScheduledRides = state.data.latestScheduledRides
+          {overLapping,overLappedBooking} = HU.overlappingRides selectedUTC (Just returnTripConfig.returnTimeUTCString) 1800 latestScheduledRides
+        if overLapping then do
+          continue state {data{overLappingBooking =overLappedBooking}, props{showScheduledRideExistsPopUp = true}}
+        else if title == "Pickup" && isAfterThirtyMinutes then
+          continue newState
+        else if title == "Return" then
+          if not isAfterThirtyMinutes then do
+            void $ pure $ toast $ getVarString DATE_INVALID_MESSAGE $ singleton $ show state.props.maxDateBooking
             continue state
+          else if not validRoundTripReturnUTC then do
+            void $ pure $ toast $ getString ROUND_TRIP_INVALID_MESSAGE
+            continue state
+          else if not bookingDurationCheck then do
+            void $ pure $ toast $ getString BOOKING_DURATION_INVALID
+            continue state
+          else
+            continue newState
         else do
-          void $ pure $ toast $ getVarString DATE_INVALID_MESSAGE $ singleton $ show state.props.maxDateBooking
+          void $ pure $ toast $ getString SCHEDULE_RIDE_AVAILABLE
           continue state
+      else do
+        void $ pure $ toast $ getVarString DATE_INVALID_MESSAGE $ singleton $ show state.props.maxDateBooking
+        continue state
 
 eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do 
   case tag of 
@@ -3553,18 +3586,19 @@ openDateTimePicker state =
   continueWithCmd state
     [ do 
       push <- getPushFn Nothing "HomeScreen"
-      _ <- launchAff $ showDateTimePicker push DateTimePickerAction Nothing
+      _ <- launchAff $ showDateTimePicker push DateTimePickerAction (Just $ getCurrentUTC "") Nothing true true
       pure NoAction
     ]
 
 
-openDateTimeSelector :: String -> HomeScreenState -> Maybe String -> Eval Action ScreenOutput HomeScreenState
-openDateTimeSelector str state prevDate = 
+openDateTimeSelector :: String -> HomeScreenState -> Maybe String -> Boolean-> Boolean-> Eval Action ScreenOutput HomeScreenState
+openDateTimeSelector str state prevDate isDateSelector isTimeSelector = 
   continueWithCmd state 
     [
       do 
       push <- getPushFn Nothing "HomeScreen"
-      _ <- launchAff $ showDateTimePicker push (DateSelectAction str) prevDate
+      let maxDate = Just $ getUTCAfterNHours (getCurrentUTC "") 120
+      _ <- launchAff $ showDateTimePicker push (DateSelectAction str) prevDate maxDate isDateSelector isTimeSelector
       pure NoAction 
     ]
 

@@ -61,7 +61,6 @@ dummyAPI = BookingAPIEntity{
   },
   id : "",
   isScheduled : false,
-  maxEstimatedDistance : Nothing,
   returnTime : Nothing,
   roundTrip : Nothing,
   isAirConditioned: Nothing,
@@ -105,7 +104,7 @@ initData = {
     fromScreen : ""
   },
   props: {
-    pickUpOpen : true,
+    pickUpOpen : false,
     termsAndConditionOpen : false,
     excludedChargesOpen : true,
     includedChargesOpen : true,

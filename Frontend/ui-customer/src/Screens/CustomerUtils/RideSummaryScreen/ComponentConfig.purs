@@ -89,7 +89,7 @@ sourceToDestinationConfig (BookingAPIEntity entity) =
         , visibility = VISIBLE
         , padding = Padding 2 0 2 2
         , margin = MarginHorizontal 12 17
-        , maxLines = 1
+        , maxLines = if tripCategory.tag == CTA.InterCity then 1 else 2
         , ellipsize = true
         , textStyle = FontStyle.ParagraphText
         }
@@ -125,10 +125,9 @@ sourceToDestinationConfig (BookingAPIEntity entity) =
         , margin = Margin 12 12 15 0
         }
       , pillsConfig
-        { visibility = GONE,
-          pillList = []
+        { visibility = VISIBLE
         }
-      , overrideSeparatorCount = if sourceFullAddress == "" then 4 else 7
+      , overrideSeparatorCount = if sourceFullAddress == "" then 4 else 6
       }
   in
     sourceToDestinationConfig'

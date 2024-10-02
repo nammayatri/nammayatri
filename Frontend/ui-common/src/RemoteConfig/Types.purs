@@ -207,3 +207,8 @@ type GullakConfig = {
   image :: String,
   enabled :: Boolean
 }
+type StuckRideFilterConfig = {
+  estimatedDurationFallback :: Int,
+  buffer :: Number,
+  enable :: Boolean
+}

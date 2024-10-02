@@ -474,6 +474,8 @@ getQuotesFareList quoteDetails tripType =
           (maybe [] (\perHourCharge -> (if perHourCharge ^._amount > 0.0 then [{ key : "DRIVER_ALLOWANCE" , val : (show $ perHourCharge ^. _amount)} ] else [])) interCityObj.perHourCharge)<>
           (maybe [] (\perDayMaxHourAllowance -> [{key : "PER_DAY_MAX_ALLOWANCE", val : (show $ perDayMaxHourAllowance)}]) interCityObj.perDayMaxHourAllowance)<>
           (maybe [] (\baseFare -> [{key : "BASE_FARE", val : (show $ baseFare ^. _amount)}]) interCityObj.baseFare)<>
+          (maybe []  (\perExtraKmRate -> [{key : "EXTRA_DISTANCE_FARE", val : (show $  perExtraKmRate ^. _amount )}]) interCityObj.perExtraKmRate) <> 
+          (maybe []  (\perExtraMinRate -> [{key : "EXTRA_TIME_FARE", val : (show $ perExtraMinRate ^. _amount)}]) interCityObj.perExtraMinRate) <>
           (if(not isRoundTrip) then  
             (maybe []  (\plannedPerKmRateOneWay -> [{key : "PLANNED_PER_KM_CHARGES", val : (show $  plannedPerKmRateOneWay ^. _amount )}]) interCityObj.plannedPerKmRateOneWay)
             else

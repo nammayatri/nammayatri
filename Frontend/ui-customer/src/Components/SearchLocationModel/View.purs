@@ -807,14 +807,7 @@ roundTripView push state =
   ][
     DateSelector.view (push <<< DateSelectButtonClicked) (state.pickupConfig)
   , DateSelector.view (push <<< DateSelectButtonClicked) (state.returnConfig)
-  , textView $ [
-       width MATCH_PARENT
-    ,  height WRAP_CONTENT
-    ,  color Color.black700
-    ,  margin (Margin 16 0 16 0)
-    ,  text (getString BOOK_A_ROUND_TRIP)
-    ] <> FontStyle.body3 TypoGraphy
-    , linearLayout[
+  , linearLayout[
       width MATCH_PARENT,
       weight 1.0
     ][]
@@ -850,6 +843,7 @@ itemsArrayConfig' state = let
     , itemTripType : ONE_WAY_TRIP
     , itemAccessibilty : if state.tripType == ONE_WAY_TRIP then "One Way Selected" else "One Way"
     , itemMargin : (Margin 2 2 2 2)
+    , itemFontStyle : FontStyle.Body6
     }
     ,
     { itemHeight: WRAP_CONTENT
@@ -863,6 +857,7 @@ itemsArrayConfig' state = let
     , itemTripType : ROUND_TRIP
     , itemAccessibilty : if state.tripType == ROUND_TRIP then "Round Trip Selected" else "Round Trip"
     , itemMargin : (Margin 2 2 2 2)
+    , itemFontStyle : FontStyle.Body6
     }
     ]
     in itemsArrayConfig
@@ -882,75 +877,8 @@ viewFareButton state push = linearLayout
     background Color.grey900,
     margin $ MarginVertical 4 4
     ][]
-  , tripDetailView push state -- we can make this configurable here 
   , PrimaryButton.view (push <<< PrimaryButtonActionController)(viewFareButtonConfig state)
   ]
-
-tripDetailView :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
-tripDetailView push state = linearLayout[
-    width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation VERTICAL
-  , background Color.white900
-  ][
-    linearLayout[
-      width MATCH_PARENT,
-      height WRAP_CONTENT,
-      orientation HORIZONTAL,
-      padding $ Padding 4 4 4 4,
-      margin $ Margin 16 8 16 8
-    ] [
-      textView $ [
-        text (getString TOTAL_RIDE_DURATION),
-        weight 1.0,
-        gravity LEFT,
-        color Color.black700
-      ] <> FontStyle.tags TypoGraphy,
-      textView $ [
-        text $ formatDuration (state.totalRideDuration),
-        width WRAP_CONTENT,
-        gravity RIGHT,
-        color Color.black700
-      ] <> FontStyle.tags TypoGraphy
-    ],
-    linearLayout[
-      width MATCH_PARENT,
-      height WRAP_CONTENT,
-      orientation HORIZONTAL,
-      padding $ Padding 4 4 4 4,
-      margin $ Margin 16 8 16 8
-    ] [
-      textView $ [
-        text (getString TOTAL_RIDE_DISTANCE),
-        gravity LEFT,
-        color Color.black700
-      ]<>FontStyle.tags TypoGraphy
-      , linearLayout [
-          weight 1.0,
-          height WRAP_CONTENT
-        ][
-        imageView
-          [ height $ V 16
-          , width  $ V 16
-          , gravity CENTER
-          , padding $ Padding 1 1 0 0 
-          , visibility $ boolToVisibility $ state.tripType == ROUND_TRIP
-          , onClick push $ const $ RideInfoButtonPressed
-          , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
-          ]
-        ]
-      , textView $ [
-        text $ if state.tripType == ROUND_TRIP then getDistanceString 2.0 else getDistanceString 1.0,
-        width WRAP_CONTENT,
-        gravity RIGHT,
-        color Color.black700,
-        margin $ (MarginRight 4)
-      ] <> FontStyle.tags TypoGraphy
-    ]
-  ]
-  where 
-  getDistanceString :: Number -> String
-  getDistanceString multipler= if ( multipler*(INT.toNumber $ state.totalRideDistance)) < 1000.0 then (parseFloat (multipler*(INT.toNumber state.totalRideDistance)) 1)<> " m" else (parseFloat (multipler*(INT.toNumber state.totalRideDistance)/1000.0) 1) <> " km" 
 
 formatDuration :: Int -> String
 formatDuration duration =
@@ -972,7 +900,7 @@ viewFareButtonConfig state =
       { textConfig
         { text = (getString VIEW_FARES)
         , color = Color.yellow900 
-        , textStyle =  FontStyle.Body7
+        , textStyle =  FontStyle.SubHeading3
         }
       , height = V state.appConfig.searchLocationConfig.primaryButtonHeight
       , gravity = CENTER

@@ -3,12 +3,14 @@ module Components.DateTimeSelector.Controller where
 import Prelude
 import Styles.Colors as Color
 import Font.Style as FontStyle
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..),DateTime(..))
 import PrestoDOM 
 import Components.MenuButton as MenuButton
 import Components.MenuButton.Controller as MenuButtonActionController
 
-data Action = OnClick String | NoAction | MenuButtonActionController MenuButtonActionController.Action
+data Action = OnClick String DateTime
+            | NoAction
+            | MenuButtonActionController MenuButtonActionController.Action
 
 type DateSelectorConfig = {
   baseWidth :: Length,
@@ -36,7 +38,9 @@ type DateSelectorConfig = {
   returnTextViewVisibilty :: Boolean,
   isEnabled :: Boolean,
   radioButtonTextConfig :: RadioTextConfig,
-  returnViewPrimaryText :: String
+  selectTimeText :: String,
+  dateIconImage :: String,
+  timeIconImage :: String
 }
 
 type RadioTextConfig = {

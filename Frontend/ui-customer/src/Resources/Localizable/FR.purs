@@ -1630,3 +1630,7 @@ getFR stringKey =
         EXTRAS_WILL_BE_CHARGED_AT -> "Les suppléments seront facturés à"
         AND -> " et "
         FIXED_CHARGES -> "Frais fixes"
+        PICKUP_DATE_AND_TIME -> "Date et heure de prise en charge"
+        DROP_BACK_IN_AT cityName -> "Retour à " <> cityName <>" à "
+        PER_KM -> "par km"
+        PER_MIN -> "par min"

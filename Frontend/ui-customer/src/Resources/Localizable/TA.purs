@@ -1645,3 +1645,7 @@ getTA stringKey =
     EXTRAS_WILL_BE_CHARGED_AT -> "கூடுதல் கட்டணம் விதிக்கப்படும்"
     AND -> " மற்றும் "
     FIXED_CHARGES -> "நிலையான கட்டணம்"
+    PICKUP_DATE_AND_TIME -> "பிக்கப் தேதி மற்றும் நேரம்"
+    DROP_BACK_IN_AT cityName -> cityName <> " இல் திரும்பவும்"
+    PER_KM -> "கி.மீ.க்கு"
+    PER_MIN -> "நிமிடத்திற்கு"

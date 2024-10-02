@@ -708,7 +708,6 @@ type FaqStringType = {
   value :: String,
   messageStringType :: String
 }
--- data TripCategory = OneWay | Rental | RideShare | InterCity | CrossCity 
 newtype TripCategory = TripCategory {
   contents :: Maybe String,
   tag :: TripCategoryTag
@@ -739,3 +738,8 @@ instance decodeBookingStatus :: Decode BookingStatus where decode = defaultEnumD
 instance encodeBookingStatus :: Encode BookingStatus where encode = defaultEnumEncode
 instance eqBookingStatus:: Eq BookingStatus where eq = genericEq
 instance standardEncodeBookingStatus :: StandardEncode BookingStatus where standardEncode _ = standardEncode {}
+
+data DateTime = DATE | TIME 
+
+derive instance genericDateTime :: Generic DateTime _
+instance eqDateTime :: Eq DateTime where eq = genericEq

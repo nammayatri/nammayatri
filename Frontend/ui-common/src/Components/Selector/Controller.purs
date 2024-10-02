@@ -34,5 +34,6 @@ type ItemConfig = {
     itemPadding :: Padding,
     itemTripType :: TicketType,
     itemAccessibilty :: String,
-    itemMargin :: Margin
+    itemMargin :: Margin,
+    itemFontStyle :: FontStyle.Style
 }

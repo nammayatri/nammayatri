@@ -14,7 +14,7 @@
 -}
 module Common.RemoteConfig.Utils where
 
-import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel, GullakConfig)
+import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel, GullakConfig, StuckRideFilterConfig)
 import DecodeUtil (decodeForeignObject, parseJSON, setAnyInWindow)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
@@ -269,6 +269,18 @@ defaultGullakConfig =
   { image: "",
     enabled : false
   }
+  
+defaultStuckRideFilterConfig :: StuckRideFilterConfig
+defaultStuckRideFilterConfig = 
+  { estimatedDurationFallback : 20,
+    buffer : 360000.0,
+    enable : false
+  }
+
+stuckRideFilterConfig :: String -> StuckRideFilterConfig
+stuckRideFilterConfig _ =
+  let config = fetchRemoteConfigString "stuck_ride_filter"
+  in decodeForeignObject (parseJSON config) defaultStuckRideFilterConfig
 
 gullakConfig :: String -> GullakConfig
 gullakConfig city = do

@@ -1626,3 +1626,7 @@ getML stringKey =
         EXTRAS_WILL_BE_CHARGED_AT -> "അധികം ഈടാക്കപ്പെടും"
         AND -> " ഒപ്പം "
         FIXED_CHARGES -> "സ്ഥിര ചാർജ്"
+        PICKUP_DATE_AND_TIME -> "പിക്കപ്പ് തീയതിയും സമയവും"
+        DROP_BACK_IN_AT cityName -> "തിരിച്ച് " <> cityName <>" ല്‍ "
+        PER_KM -> "കിലോമീറ്ററിന്"
+        PER_MIN -> "മിനിറ്റിന്"

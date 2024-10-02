@@ -33,7 +33,6 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.CommonView (emptyTextView)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), storeCallBackCustomer, makeNumber, decodeError)
-import Helpers.Utils (parseFloat)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Strings (getString, getVarString)
@@ -51,7 +50,7 @@ import Screens.RideSummaryScreen.Controller (Action(..), ScreenOutput, eval)
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
-
+import ConfigProvider
 
 
 screen :: RideSummaryScreenState -> Screen Action RideSummaryScreenState ScreenOutput
@@ -258,26 +257,10 @@ includedChargesCard state push =
 includedChargesBox :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 includedChargesBox state push =  
     let 
-      extraFares = state.data.extraFare
-      plannedKMFare = (head $ filter  (\item -> (item.key == (getString DISTANCE_FARE))) extraFares)
-      plannedKMFareVal = case plannedKMFare of 
-                                (Just plannedKMFare') -> plannedKMFare'.val
-                                _ -> ""
-      driverAllowance = (head $ filter  (\item -> (item.key == (getString DRIVER_ALLOWANCE_))) extraFares)
-      driverAllowanceVal = case driverAllowance of 
-                                (Just driverAllowance') -> driverAllowance'.val
-                                _ -> ""
-      extraDistanceFare = (head $ filter  (\item -> (item.key == (getString EXTRA_DISTANCE_FARE))) extraFares)
-      extraDistanceFareVal = case extraDistanceFare of 
-                                (Just extraDistanceFare') -> extraDistanceFare'.val
-                                _ -> ""
-      extraTimeFare = (head $ filter  (\item -> (item.key == (getString EXTRA_TIME_FARE))) extraFares)
-      extraTimeFareVal = case extraTimeFare of 
-                                (Just extraTimeFare') -> extraTimeFare'.val
-                                _ -> ""                        
+      extraFares = state.data.extraFare                     
       (BookingAPIEntity entity) = state.data.rideDetails
       (CTA.TripCategory tripCategory) = entity.tripCategory
-      includedDistance = fromMaybe 0 entity.estimatedDistance
+      includedDistance = fromMaybe "" entity.estimatedDistance
       includedDuration = fromMaybe 0 entity.estimatedDuration
       roundTrip = fromMaybe false entity.roundTrip
     in
@@ -292,7 +275,7 @@ includedChargesBox state push =
             , height WRAP_CONTENT
             , orientation VERTICAL
             ]
-          [chargesTile (getString LType.DISTANCE )(formatDistance roundTrip includedDistance) true state push 
+          [chargesTile (getString LType.DISTANCE )(includedDistance) true state push 
             ]
         , linearLayout
             [ width WRAP_CONTENT
@@ -318,14 +301,6 @@ includedChargesBox state push =
               hoursStr = if hours > 0 then show hours <> " hrs " else ""
               minutesStr = if minutes > 0 then show minutes <> " mins " else ""
           in daysStr <> hoursStr <> minutesStr
-        formatDistance :: Boolean -> Int -> String
-        formatDistance roundTrip duration =
-          let 
-            mul = if roundTrip then 2.0 else 1.0
-            durationDecimals = toNumber duration
-            duration' = if mul*durationDecimals < 1000.0 then (parseFloat (mul*durationDecimals) 0) <> " m" else (parseFloat ((mul*durationDecimals)/1000.0) 0) <> " km" 
-          in  
-            duration'
 
 includedChargesFooter :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 includedChargesFooter state push = 
@@ -333,11 +308,11 @@ includedChargesFooter state push =
       extraFares = state.data.extraFare
       (BookingAPIEntity entity) = state.data.rideDetails
       (CTA.TripCategory tripCategory) = entity.tripCategory
-      extraDistanceFare = (head $ filter  (\item -> (item.key == (getString EXTRA_DISTANCE_FARE))) extraFares)
+      extraDistanceFare = (head $ filter  (\item -> (item.key == "EXTRA_DISTANCE_FARE")) extraFares)
       extraDistanceFareVal = case extraDistanceFare of 
                                 (Just extraDistanceFare') -> extraDistanceFare'.val
                                 _ -> ""
-      extraTimeFare = (head $ filter  (\item -> (item.key == (getString EXTRA_TIME_FARE))) extraFares)
+      extraTimeFare = (head $ filter  (\item -> (item.key == "EXTRA_TIME_FARE")) extraFares)
       extraTimeFareVal = case extraTimeFare of 
                                 (Just extraTimeFare') -> extraTimeFare'.val
                                 _ -> "" 
@@ -374,7 +349,7 @@ includedChargesFooter state push =
             , textView $ 
               [ width MATCH_PARENT
               , height WRAP_CONTENT
-              , text $ extraDistanceFareVal <> (getString LType.AND) <> extraTimeFareVal
+              , text $ ((getCurrency appConfig) <>extraDistanceFareVal <> " " <>(getString LType.PER_KM)) <> (getString LType.AND) <> ((getCurrency appConfig) <>extraTimeFareVal <> " " <> (getString LType.PER_MIN)) 
               , color Color.black700
               , margin $ Margin 2 0 2 2
               ] <> FontStyle.body1 TypoGraphy
@@ -428,7 +403,7 @@ excludedChargesCard state push =
             ]
             [ linearLayout
                 [ width WRAP_CONTENT
-                , height $ V 20
+                , height WRAP_CONTENT
                 , orientation HORIZONTAL
                 , margin $ MarginBottom 24
                 , visibility if tripCategory.tag == CTA.InterCity then VISIBLE else GONE
@@ -449,7 +424,7 @@ excludedChargesCard state push =
                 ]
             , linearLayout
                 [ width WRAP_CONTENT
-                , height $ V 20
+                , height $ WRAP_CONTENT
                 , orientation HORIZONTAL
                 , margin $ MarginBottom 24
                 , visibility if tripCategory.tag == CTA.InterCity then VISIBLE else GONE
@@ -803,7 +778,7 @@ driverInfoView push state =
       , width $ V 50
       , padding $ Padding 2 3 2 1
       , imageWithFallback $ fetchImage FF_ASSET (case driverInfo.vehicleVariant of
-                                                       "AUTO_RICKSHAW" -> "ny_ic_driver_auto"
+                                                       "AUTO_RICKSHAW" -> "ny_ic_driver_auto_profile"
                                                        _ -> "ny_ic_driver_cab")
       ]
       , ratingView state
