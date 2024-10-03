@@ -434,8 +434,9 @@ notifyOnBookingCancelled ::
   SBCR.CancellationSource ->
   DBppDetails.BppDetails ->
   Maybe DRide.Ride ->
+  [Person.Person] ->
   m ()
-notifyOnBookingCancelled booking cancellationSource bppDetails mbRide = do
+notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParties = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let notificationSoundType = case cancellationSource of
         SBCR.ByDriver -> do
@@ -452,8 +453,7 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide = do
         Nothing -> "BOOKING_CANCEL_WITH_NO_RIDE"
       entity = Notification.Entity Notification.Product booking.id.getId (RideCancelParam booking.startTime booking.id)
       dynamicParams = RideCancelParam booking.startTime booking.id
-  allOtherBookingPartyPersons <- getAllOtherRelatedPartyPersons booking
-  forM_ (person : allOtherBookingPartyPersons) $ \person' -> do
+  forM_ (person : otherParties) $ \person' -> do
     tag <- getDisabilityTag person.hasDisability person'.id
     dynamicNotifyPerson
       person'
