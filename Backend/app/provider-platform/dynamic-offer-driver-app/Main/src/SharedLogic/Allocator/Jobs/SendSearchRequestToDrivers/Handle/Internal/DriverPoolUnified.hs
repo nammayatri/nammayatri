@@ -418,13 +418,13 @@ assignDriverGoHomeTags pool searchReq searchTry tripQuoteDetails driverPoolCfg m
         filterOutGoHomeDriversAccordingToHomeLocation (map (convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult False) pool) goHomeReq merchantOpCityId
       _ -> pure ([], [])
   let goHomeDriversToDestionation = map (\dp -> dp.driverPoolResult.driverId) goHomeDriversInQueue
-      goHomePool' = assignGoHomeTags goHomeDriversToDestionation GoHomeDriverToDestination pool
-  return $ assignGoHomeTags goHomeDriversNotToDestination GoHomeDriverNotToDestination goHomePool'
+      goHomePool' = (filter (\dp -> dp.driverPoolResult.driverId `notElem` goHomeDriversToDestionation) pool) <> (assignGoHomeTags goHomeDriversToDestionation GoHomeDriverToDestination False goHomeDriversInQueue)
+  return $ assignGoHomeTags goHomeDriversNotToDestination GoHomeDriverNotToDestination True goHomePool'
   where
-    assignGoHomeTags goHomeDrivers driverTag =
+    assignGoHomeTags goHomeDrivers driverTag checkNeeded =
       map
         ( \dp ->
-            if dp.driverPoolResult.driverId `elem` goHomeDrivers
+            if (not checkNeeded) || dp.driverPoolResult.driverId `elem` goHomeDrivers
               then
                 dp
                   { driverPoolResult =
