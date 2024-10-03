@@ -16,6 +16,7 @@ module SharedLogic.Confirm where
 
 import Control.Monad.Extra (anyM)
 import qualified Data.HashMap.Strict as HM
+import Data.List (nub)
 import qualified Data.Map as M
 import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Quote as DQuote
@@ -103,6 +104,28 @@ tryInitTriggerLock searchRequestId = do
       lockExpiryTime = 10 -- Note: this value should be decided based on the delay between consecutive quotes in on_select api & also considering reallocation.
   Redis.tryLockRedis initTriggerLockKey lockExpiryTime
 
+tryInitAllPartyLock :: (Redis.HedisFlow m r) => [Id DP.Person] -> m Bool
+tryInitAllPartyLock [] = pure True
+tryInitAllPartyLock (currPartyId : rest) = do
+  let initPartyLockKey = "Customer:Init:Trigger:BookingPartyId:-" <> currPartyId.getId
+      lockExpiryTime = 10
+  isLocked <- Redis.tryLockRedis initPartyLockKey lockExpiryTime
+  if isLocked
+    then do
+      isRestLocked <- tryInitAllPartyLock rest
+      if isRestLocked
+        then pure True
+        else do
+          Redis.unlockRedis initPartyLockKey
+          pure False
+    else do
+      pure False
+
+unlockAllPartyLock :: (Redis.HedisFlow m r) => [Id DP.Person] -> m ()
+unlockAllPartyLock partyIds = forM_ partyIds $ \partyId -> do
+  let initPartyLockKey = "Customer:Init:Trigger:BookingPartyId:-" <> partyId.getId
+  Redis.unlockRedis initPartyLockKey
+
 confirm ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -145,8 +168,6 @@ confirm DConfirmReq {..} = do
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
   (booking, bookingParties) <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled
-  -- check also for the booking parties
-  checkIfActiveRidePresentForParties bookingParties
   when isScheduled $ do
     let scheduledRideReminderTime = addUTCTime (- (merchant.scheduleRideBufferTime + 10 * 60)) booking.startTime
     let scheduleAfter = diffUTCTime scheduledRideReminderTime now
@@ -162,11 +183,17 @@ confirm DConfirmReq {..} = do
       then mapM decrypt person.mobileNumber
       else pure . Just $ prependZero booking.primaryExophone
   let riderName = person.firstName
+  let allPartyIds = nub $ personId : map (.partyId) bookingParties
+  lockAllBookingParties <- tryInitAllPartyLock allPartyIds
+  unless lockAllBookingParties $ throwError $ InvalidRequest "COULD_NOT_LOCK_ALL_PARTIES_FOR_BOOKING"
+  -- check for the booking parties
+  checkIfActiveRidePresentForParties bookingParties
   triggerBookingCreatedEvent BookingEventData {booking = booking}
   void $ QRideB.createBooking booking
   void $ QBPL.createMany bookingParties
   void $ QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = booking.id, validTill = searchRequest.validTill, fareProductType = Just (QTB.getFareProductType booking.bookingDetails), tripCategory = booking.tripCategory}
   void $ QEstimate.updateStatusByRequestId DEstimate.COMPLETED quote.requestId
+  unlockAllPartyLock allPartyIds
   confirmResDetails <- case quote.tripCategory of
     Just (Trip.Delivery _) -> Just <$> makeDeliveryDetails booking bookingParties
     _ -> return Nothing
