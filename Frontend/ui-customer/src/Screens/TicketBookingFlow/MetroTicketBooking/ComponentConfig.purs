@@ -57,7 +57,7 @@ metroTicketBookingHeaderConfig state = let
           } 
         , padding = PaddingVertical 5 5
         , textConfig {
-            text = getString BUY_METRO_TICKETS
+            text = if state.props.busClicked then "Buy Bus Tickets" else getString BUY_METRO_TICKETS
           , color = Color.darkCharcoal
           }
         , suffixImageConfig {

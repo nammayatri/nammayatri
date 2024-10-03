@@ -1335,27 +1335,35 @@ retryMetroTicketPayment quoteId = do
   where
     unwrapResponse x = x
 
-getMetroStationBT :: String -> FlowBT String GetMetroStationResponse
-getMetroStationBT city = do
+getMetroStationBT :: String -> String -> String -> FlowBT String GetMetroStationResponse
+getMetroStationBT vehicleType city routeCode = do
     headers <- getHeaders' "" false
-    withAPIResultBT (EP.getMetroStations city) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ GetMetroStationReq city)
+    withAPIResultBT (EP.getMetroStations vehicleType city routeCode) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ GetMetroStationReq vehicleType city routeCode)
     where
     errorHandler errorPayload = do
       BackT $ pure GoBack 
 
-searchMetroBT :: SearchMetroReq -> FlowBT String SearchMetroResp
-searchMetroBT  requestBody = do
+getBusRoutesBT :: String -> FlowBT String GetBusRoutesResponse
+getBusRoutesBT city = do
     headers <- getHeaders' "" false
-    withAPIResultBT (EP.searchMetro "") (\x -> x) errorHandler (lift $ lift $ callAPI headers requestBody)
+    withAPIResultBT (EP.getBusRoutes city) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ GetBusRoutesReq city)
+    where
+    errorHandler errorPayload = do
+      BackT $ pure GoBack
+searchMetroBT :: String -> SearchMetroReq -> FlowBT String SearchMetroResp
+searchMetroBT vehicleType requestBody = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.searchMetro vehicleType) (\x -> x) errorHandler (lift $ lift $ callAPI headers (SearchMetroRequest requestBody vehicleType))
     where
     errorHandler errorPayload = do
       BackT $ pure GoBack 
 
-makeSearchMetroReq :: String -> String -> Int -> SearchMetroReq
-makeSearchMetroReq srcCode destCode count = SearchMetroReq {
+makeSearchMetroReq :: String -> String -> Int -> Maybe String-> SearchMetroReq
+makeSearchMetroReq srcCode destCode count routeCode = SearchMetroReq {
     "fromStationCode" : srcCode,
     "toStationCode" : destCode,
-    "quantity" : count
+    "quantity" : count,
+    "routeCode" : routeCode
     }
 
 getMetroQuotesBT :: String -> FlowBT String GetMetroQuotesRes

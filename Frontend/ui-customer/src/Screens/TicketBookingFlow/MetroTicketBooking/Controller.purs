@@ -28,18 +28,20 @@ import Services.API
 import Data.Array
 import Data.Maybe
 import Debug (spy)
-import JBridge (toast, toggleBtnLoader)
+import JBridge (toast, toggleBtnLoader,hideKeyboardOnNavigation)
 import Components.RequestInfoCard as InfoCard
 import Language.Strings
 import Language.Types
 import MerchantConfig.Types (MetroConfig)
 import Data.Int as DI
+import Log(trackAppScreenEvent)
 
 instance showAction :: Show Action where
   show _ = ""
 
 instance loggableAction :: Loggable Action where
   performLog action appId  = case action of
+    ListExpandAinmationEnd -> trackAppScreenEvent appId (getScreen TRIP_DETAILS_SCREEN) "in_screen" "list_expand_animation_end"
     _ -> pure unit
 
 data Action = BackPressed
@@ -57,6 +59,9 @@ data Action = BackPressed
             | InfoCardAC InfoCard.Action 
             | GetSDKPollingAC CreateOrderRes
             | MetroBookingConfigAction MetroBookingConfigRes
+            | ListExpandAinmationEnd
+            | SelectRoutes String
+            | SelectRouteslistView
 
 data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | UpdateAction ST.MetroTicketBookingScreenState
@@ -66,6 +71,7 @@ data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | SelectSrcDest ST.LocationActionId ST.MetroTicketBookingScreenState
                   | Refresh ST.MetroTicketBookingScreenState
                   | GotoPaymentPage CreateOrderRes String
+                  | GO_TO_ROUTE_SEARCH ST.MetroTicketBookingScreenState
 
 eval :: Action -> ST.MetroTicketBookingScreenState -> Eval Action ScreenOutput ST.MetroTicketBookingScreenState
 
@@ -73,7 +79,7 @@ eval (MetroBookingConfigAction resp) state = do
   let updatedState = state { data {metroBookingConfigResp = resp}, props { showShimmer = false }}
   continue updatedState
 
-eval BackPressed state =  exit $ GoToHome
+eval BackPressed state =  if state.props.ticketServiceType == BUS then exit $ GO_TO_ROUTE_SEARCH state else exit $ GoToHome
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
     updateAndExit state $ UpdateAction state
 
@@ -102,7 +108,12 @@ eval (ChangeTicketTab ticketType cityMetroConfig) state = do
           ST.ROUND_TRIP_TICKET -> if state.data.ticketCount > metroBookingConfigResp.roundTripTicketLimit then metroBookingConfigResp.roundTripTicketLimit else state.data.ticketCount
     continue state { data {ticketType = ticketType, ticketCount = updatedTicketCount}, props {currentStage  = ST.MetroTicketSelection}}
 
-eval (SelectLocation loc ) state = updateAndExit state{props{currentStage  = ST.MetroTicketSelection}} $ SelectSrcDest loc state{props{currentStage  = ST.MetroTicketSelection}}
+eval (SelectLocation loc) state = 
+  if state.props.isEmptyRoute == "" && state.props.ticketServiceType == BUS
+    then do
+      void $ pure $ toast $ "Kindly select route number first"
+      continue state
+    else updateAndExit state { props { currentStage = ST.MetroTicketSelection }} $ SelectSrcDest loc state { props { currentStage = ST.MetroTicketSelection }}
 
 eval (GetMetroQuotesAction resp) state = do 
   void $ pure $ toggleBtnLoader "" false
@@ -116,7 +127,7 @@ eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd 
 eval (ShowMetroBookingTimeError withinTimeRange) state = 
   continue state {
     props{
-      showMetroBookingTimeError = not withinTimeRange
+      showMetroBookingTimeError = if state.props.ticketServiceType == BUS then false else not withinTimeRange
     }
   }
 
@@ -126,7 +137,14 @@ eval (InfoCardAC (InfoCard.Close)) state =
       showMetroBookingTimeError = false
     }
   }
-
+eval ListExpandAinmationEnd state = continue state {props {showRouteOptions = false }}
+eval SelectRouteslistView state = do
+  let old = state.props.routeList
+  _ <- pure $ hideKeyboardOnNavigation true
+  
+  continue state{props{routeList = not old , showRouteOptions = true}}
+  -- updateAndExit state{props{routeList = not old , showRouteOptions = true}} $ SearchRoute state
+eval (SelectRoutes route) state = continue state{props{isEmptyRoute = route ,routeList = not state.props.routeList , showRouteOptions = true}}
 eval (GetSDKPollingAC createOrderRes) state = exit $ GotoPaymentPage createOrderRes state.data.bookingId
 
 eval _ state = update state

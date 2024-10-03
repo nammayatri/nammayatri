@@ -35,6 +35,7 @@ homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do
   liftFlowBT $ markPerformance "HOME_SCREEN_RUN"
   (GlobalState state) <- getState
+  
   act <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen
   void $ lift $ lift $ toggleLoader false
   case act of
@@ -92,6 +93,9 @@ homeScreen = do
     GoToMetroTicketBookingFlow updatedState -> do 
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
           App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_BOOKING updatedState)
+    GoToSearchLocationScreenForRoutes updatedState sorce -> do 
+          modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+          App.BackT $ App.BackPoint <$> (pure $ GO_TO_SEARCH_LOCATION_SCREEN_FOR_ROUTE_SEARCH updatedState sorce)
     LogoutUser -> App.BackT $ App.NoBack <$> (pure $ LOGOUT)
     SelectEstimate updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)

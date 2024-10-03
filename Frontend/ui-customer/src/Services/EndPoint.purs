@@ -52,10 +52,7 @@ sendIssue :: String -> String
 sendIssue dummyString = (getBaseUrl "9") <> "/support/sendIssue"
 
 getRoute :: String -> String
-getRoute routeType = (getBaseUrl "10") <> case routeType of
-                                                "trip" -> "/trip/route"
-                                                "intercity" -> "/route"
-                                                _ -> "/pickup/route" 
+getRoute routeType = (getBaseUrl "10") <> if routeType == "trip" then "/trip/route" else "/pickup/route"
 
 driverFeedBack :: String -> String
 driverFeedBack dummyString = (getBaseUrl "12") <> "/feedback/rateRide"
@@ -243,11 +240,14 @@ shareRide dummy = (getBaseUrl "54") <> "/share/ride"
 followRide :: String -> String
 followRide _ = (getBaseUrl "47") <> "/follow/ride"
 
-getMetroStations :: String -> String
-getMetroStations city = (getBaseUrl "47") <> "/frfs/stations?vehicleType=\"METRO\"" <> "&city=" <> city  
+getMetroStations :: String -> String -> String -> String
+getMetroStations vehicleType city routeCode = (getBaseUrl "47") <> "/frfs/stations?vehicleType=\"" <> vehicleType <> "\"&city=" <> city <> (if vehicleType == "BUS" then "&routeCode=" <> routeCode else "")
 
 searchMetro :: String -> String
-searchMetro dummy = (getBaseUrl "48") <> "/frfs/search?vehicleType=\"METRO\""
+searchMetro vehicleType = (getBaseUrl "48") <> "/frfs/search?vehicleType=\"" <> vehicleType <> "\""
+
+getBusRoutes :: String -> String
+getBusRoutes city = (getBaseUrl "47") <> "/frfs/routes?vehicleType=\"BUS\"" <> "&city=" <> city
 
 getMetroQuotes :: String -> String
 getMetroQuotes searchId = (getBaseUrl "49") <> "/frfs/search/" <> searchId <> "/quote"
