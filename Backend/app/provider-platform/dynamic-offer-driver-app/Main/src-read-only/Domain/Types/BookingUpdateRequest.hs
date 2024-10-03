@@ -37,6 +37,7 @@ data BookingUpdateRequest = BookingUpdateRequest
     oldFareParamsId :: Kernel.Types.Id.Id Domain.Types.FareParameters.FareParameters,
     oldMaxEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     routeInfoResp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    snapToRoadFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     status :: Domain.Types.BookingUpdateRequest.BookingUpdateRequestStatus,
     totalDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     travelledDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,

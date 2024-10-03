@@ -66,6 +66,7 @@ import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.LocationUpdates as LocUpd
+import qualified Lib.LocationUpdates.Internal as LocUpdInternal
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Types as Yudhishthira
@@ -395,6 +396,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                         else calculateFinalValuesForCorrectDistanceCalculations handle booking ride booking.maxEstimatedDistance pickupDropOutsideOfThreshold thresholdConfig tripEndPoint
                 pure (chargeableDistance, finalFare, mbUpdatedFareParams, ride, Just pickupDropOutsideOfThreshold, Just distanceCalculationFailed)
     let newFareParams = fromMaybe booking.fareParams mbUpdatedFareParams
+    clearEditDestinationWayAndSnappedPoints driverId
     let updRide' =
           ride{tripEndTime = Just now,
                chargeableDistance = Just chargeableDistance,
@@ -442,6 +444,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
 
   return $ EndRideResp {result = "Success", homeLocationReached = homeLocationReached'}
   where
+    clearEditDestinationWayAndSnappedPoints driverId = LocUpdInternal.deleteEditDestinationSnappedWaypoints driverId >> LocUpdInternal.deleteEditDestinationWaypoints driverId
     buildRoutesReq tripEndPoint driverHomeLocation =
       Maps.GetRoutesReq
         { waypoints = tripEndPoint :| [driverHomeLocation],

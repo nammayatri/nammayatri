@@ -34,3 +34,8 @@ ALTER TABLE atlas_driver_offer_bpp.booking_update_request ADD COLUMN distance_un
 
 ALTER TABLE atlas_driver_offer_bpp.booking_update_request ADD COLUMN route_info_resp text ;
 ALTER TABLE atlas_driver_offer_bpp.booking_update_request ADD COLUMN get_route_req text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking_update_request ADD COLUMN snap_to_road_failed boolean ;

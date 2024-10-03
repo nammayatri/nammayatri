@@ -35,6 +35,7 @@ data BookingUpdateRequestT f = BookingUpdateRequestT
     oldFareParamsId :: B.C f Kernel.Prelude.Text,
     oldMaxEstimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     routeInfoResp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    snapToRoadFailed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     status :: B.C f Domain.Types.BookingUpdateRequest.BookingUpdateRequestStatus,
     totalDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     travelledDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),

@@ -43,6 +43,7 @@ BookingUpdateRequest:
     merchantOperatingCityId: Id MerchantOperatingCity
     getRouteReq: Maybe Text
     routeInfoResp: Maybe Text
+    snapToRoadFailed: Maybe Bool
 
   beamType:
     distanceUnit: Maybe DistanceUnit
@@ -63,9 +64,11 @@ BookingUpdateRequest:
       where:
         and: [bapBookingUpdateRequestId]
     findAllByBookingId:
-      kvFunction: findAllWithKV
-      where:
-        and: [bookingId]
+      kvFunction: findAllWithOptionsKV
+      where: bookingId
+      orderBy:
+        field: createdAt
+        order: asc
     updateMultipleById:
       kvFunction: updateOneWithKV
       params: [travelledDistance, estimatedFare, totalDistance, currentPointLat, currentPointLon, updatedAt]
