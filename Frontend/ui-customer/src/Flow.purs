@@ -456,6 +456,7 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
                     Left _ -> currentFlowStatus
                 _ -> currentFlowStatus
             _ -> pure unit
+        "delivery" -> currentFlowStatus
         _ -> do
           case breakPrefixAndId screen of
             Just ( Tuple "metroBooking" bookingId )-> do
@@ -1243,7 +1244,6 @@ homeScreenFlow = do
                           Nothing
                       }
                     , showShimmer = false
-                    , isSource = if bothLocationChangedState.data.fareProductType == FPT.DELIVERY then Just true else bothLocationChangedState.props.isSource
                     }
                   }
             )
@@ -2667,9 +2667,9 @@ findEstimates updatedState = do
         --   updateLocalStage DistanceOutsideLimits
         --   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation, findingQuotesProgress = 0.0, isShorterTrip = false}})
         --   homeScreenFlow
-        if ((response.distance < 500 || isDistMoreThanThreshold) && Arr.all (_ == false) [ isLocalStageOn PickUpFarFromCurrentLocation, isLocalStageOn ShortDistance ] && state.data.fareProductType /= FPT.DELIVERY) then do
+        if ((response.distance < 500 || (isDistMoreThanThreshold && state.data.fareProductType /= FPT.DELIVERY)) && Arr.all (_ == false) [ isLocalStageOn PickUpFarFromCurrentLocation, isLocalStageOn ShortDistance ]) then do
           let
-            currentStage = if isDistMoreThanThreshold then PickUpFarFromCurrentLocation else ShortDistance
+            currentStage = if (isDistMoreThanThreshold && state.data.fareProductType /= FPT.DELIVERY) then PickUpFarFromCurrentLocation else ShortDistance
           updateLocalStage currentStage
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { maxEstimatedDuration = maxEstimatedDuration }, props { currentStage = currentStage, rideRequestFlow = true, isSearchLocation = SearchLocation, distance = response.distance, isShorterTrip = response.distance < 500, findingQuotesProgress = 0.0 } })
           homeScreenFlow
@@ -2975,9 +2975,9 @@ rideSearchFlow flowType = do
                 if (cityConfig.geoCodeConfig.strictBounds && response.distance >= cityConfig.geoCodeConfig.radius) then do
                   void $ pure $ updateLocalStage DistanceOutsideLimits
                   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = DistanceOutsideLimits, rideRequestFlow = true, isSearchLocation = SearchLocation } })
-                else if ((response.distance < 500 || isDistMoreThanThreshold) && Arr.all (_ == false) [ isLocalStageOn PickUpFarFromCurrentLocation, isLocalStageOn ShortDistance ] && flowType /= "REPEAT_RIDE_FLOW" && finalState.data.fareProductType /= FPT.DELIVERY) then do
+                else if ((response.distance < 500 || (isDistMoreThanThreshold && finalState.data.fareProductType /= FPT.DELIVERY)) && Arr.all (_ == false) [ isLocalStageOn PickUpFarFromCurrentLocation, isLocalStageOn ShortDistance ] && flowType /= "REPEAT_RIDE_FLOW" ) then do
                   let
-                    currentStage = if isDistMoreThanThreshold then PickUpFarFromCurrentLocation else ShortDistance
+                    currentStage = if (isDistMoreThanThreshold && finalState.data.fareProductType /= FPT.DELIVERY) then PickUpFarFromCurrentLocation else ShortDistance
                   void $ pure $ updateLocalStage currentStage
                   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = currentStage, rideRequestFlow = true, isSearchLocation = SearchLocation, isShorterTrip = response.distance < 500, distance = response.distance, findingQuotesProgress = 0.0 } })
                 else do

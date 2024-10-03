@@ -43,7 +43,7 @@ import Prelude (Unit, const, map, unit, ($), (&&), (/=), (<<<), (<=), (<>), (==)
 import PrestoDOM (Accessiblity(..), FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, color, cornerRadius, disableClickFeedback, editText, fontStyle, frameLayout, gravity, height, hint, hintColor, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, multiLineEditText, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, alpha)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.TripDetailsScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.Types (PaymentMode(..), VehicleViewType(..), TripDetailsGoBackType(..))
+import Screens.Types (PaymentMode(..), VehicleViewType(..), TripDetailsGoBackType(..), FareProductType(..), VehicleVariant(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Storage (getValueToLocalStore, KeyStore(..))
@@ -174,7 +174,7 @@ tripIdView push state =
       rideType = if cityConfig.enableAcViews 
                   then ServiceTierCard.parseName serviceTierName
                   else serviceTierName
-      hasAirConditioned = ServiceTierCard.showACDetails rideType Nothing
+      hasAirConditioned = ServiceTierCard.showACDetails rideType Nothing (if state.data.vehicleVariant == Just DELIVERY_BIKE then DELIVERY else ONE_WAY)
       rideTypeWithAc = if hasAirConditioned && rideType /= "" && cityConfig.enableAcViews then "AC • " <> rideType else rideType
   in
   linearLayout

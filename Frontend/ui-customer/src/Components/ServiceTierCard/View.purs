@@ -35,7 +35,7 @@ view config = let
         , width WRAP_CONTENT
         , background Color.blue800
         , padding $ Padding 4 bluePillPadding 5 bluePillPadding
-        , visibility $ MP.boolToVisibility $ showACDetails config.name config.isAc && config.showACPill
+        , visibility $ MP.boolToVisibility $ showACDetails config.name config.isAc config.fareProductType && config.showACPill
         , gravity CENTER_VERTICAL
         , cornerRadius if EHC.os == "IOS" then 11.0 else 18.0
         ]
@@ -120,11 +120,11 @@ view config = let
     mapDeliveryServiceTier name = if name == "Delivery Bike" then "2W Parcel" else name
 
 
-showACDetails :: String -> Maybe Boolean -> Boolean
-showACDetails name isAc =
+showACDetails :: String -> Maybe Boolean -> FareProductType -> Boolean
+showACDetails name isAc fareProductType =
     case isAc of
         Just val -> val
-        Nothing -> (not DS.contains (DS.Pattern "Non-AC") name) && Array.notElem name ["Auto", "Taxi", "AUTO_RICKSHAW", "Eco", "Bike Taxi", "Delivery Bike"]
+        Nothing -> (not DS.contains (DS.Pattern "Non-AC") name) && Array.notElem name ["Auto", "Taxi", "AUTO_RICKSHAW", "Eco", "Bike Taxi"] && fareProductType /= DELIVERY
 
 type Config
   = { name :: String

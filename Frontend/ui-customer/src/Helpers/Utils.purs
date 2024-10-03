@@ -1116,7 +1116,7 @@ mkSrcMarker = getCitySpecificMarker
 getCitySpecificMarker :: City -> String -> Maybe Stage -> String
 getCitySpecificMarker city variant currentStage = 
     let isDeliveryImagePresent = (JB.getResourceIdentifier "ny_ic_bike_delivery_nav_on_map" "drawable") /= 0
-    in  case variant of
+        variantImage = case variant of
             "AUTO_RICKSHAW" -> getAutoImage city
             "SEDAN"         -> "ny_ic_vehicle_nav_on_map"
             "SUV"           -> "ny_ic_suv_nav_on_map"
@@ -1125,6 +1125,7 @@ getCitySpecificMarker city variant currentStage =
             "DELIVERY_BIKE" -> if isDeliveryImagePresent then "ny_ic_bike_delivery_nav_on_map" else "ny_ic_bike_nav_on_map"
             "SUV_PLUS"      -> "ny_ic_suv_plus_nav_on_map"
             _               -> "ny_ic_vehicle_nav_on_map"
+    in variantImage
 
 mkDestMarker :: TrackingType -> FareProductType -> String
 mkDestMarker trackingType fareProductType = 
