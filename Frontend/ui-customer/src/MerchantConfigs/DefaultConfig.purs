@@ -436,6 +436,7 @@ config =
             enableAcViews = true,
             enableRentals = true,
             enableIntercity = true,
+            enableScheduling = true,
             waitingChargeConfig  {
               cabs  {
                 freeMinutes = 5.0
@@ -452,6 +453,7 @@ config =
             enableAcViews = true,
             enableRentals = true,
             enableIntercity = true,
+            enableScheduling = true,
             waitingChargeConfig  {
               cabs  {
                 freeMinutes = 5.0
@@ -465,6 +467,7 @@ config =
             , enableCabs = true
             , enableRentals = true 
             , enableIntercity = true
+            , enableScheduling = true
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }
@@ -479,6 +482,7 @@ config =
             , enableCabs = true
             , enableRentals = true 
             , enableIntercity = true
+            , enableScheduling = true
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }
@@ -493,6 +497,7 @@ config =
             , enableCabs = true
             , enableRentals = true 
             , enableIntercity = true
+            , enableScheduling = true
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }
@@ -507,6 +512,7 @@ config =
             , enableCabs = true
             , enableRentals = true 
             , enableIntercity = true
+            , enableScheduling = true
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }
@@ -521,6 +527,7 @@ config =
             , enableCabs = true
             , enableRentals = true 
             , enableIntercity = true
+            , enableScheduling = true
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }
@@ -535,6 +542,7 @@ config =
             , enableCabs = true
             , enableRentals = true 
             , enableIntercity = true
+            , enableScheduling = true
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }
@@ -549,6 +557,7 @@ config =
             , enableCabs = true
             , enableRentals = true 
             , enableIntercity = true
+            , enableScheduling = true
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }
@@ -563,6 +572,7 @@ config =
             , enableCabs = true
             , enableRentals = true 
             , enableIntercity = true
+            , enableScheduling = true
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }
@@ -578,6 +588,7 @@ config =
             , enableCabs = true
             , enableRentals = true 
             , enableIntercity = true
+            , enableScheduling = true
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }

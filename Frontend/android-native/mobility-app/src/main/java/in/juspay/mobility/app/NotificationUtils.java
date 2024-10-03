@@ -651,7 +651,7 @@ public class NotificationUtils {
                 Date currentTime = new Date();
                 if (rideTime != null) {
                     long timeDifference = rideTime.getTime() - currentTime.getTime();
-                    return (timeDifference > (long) scheduled_ride_buffer_time);
+                    return (timeDifference < (long) scheduled_ride_buffer_time);
                 }else{
                     return true;
                 }

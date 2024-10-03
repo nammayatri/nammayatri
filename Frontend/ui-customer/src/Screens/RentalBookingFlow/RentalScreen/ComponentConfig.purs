@@ -28,7 +28,7 @@ import Data.Array ((!!), singleton, null)
 import Data.Maybe as MB 
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
-import Helpers.Utils (FetchImageFrom(..), fetchImage,calculateBookingEndTime,formatDateInHHMM,fetchAddressDetails)
+import Helpers.Utils (FetchImageFrom(..), fetchImage,calculateBookingEndTime,formatDateInHHMM,fetchAddressDetails,calculateBookingEndTime,fetchAddressDetails)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
@@ -368,15 +368,20 @@ scheduledRideExistsPopUpConfig state =
           (API.RideBookingAPIDetails details) = overLappingBooking.bookingDetails
           (API.RideBookingDetails contents) = details.contents
           (API.BookingLocationAPIEntity fromLocationResp) = overLappingBooking.fromLocation
-          (API.BookingLocationAPIEntity toLocationResp) =  MB.fromMaybe dummyBookingDetails contents.toLocation
+          stopLocation = MB.fromMaybe dummyBookingDetails (case details.fareProductType of 
+                                                                  "RENTAL" -> contents.stopLocation
+                                                                  "INTER_CITY" -> contents.toLocation
+                                                                  _ -> contents.toLocation)          
           rideType = case details.fareProductType of 
                               "INTER_CITY" -> "intercity"
                               "RENTAL" -> "rental"
                               _ -> "one way"
+          destinationNotGiven =  (details.fareProductType == "RENTAL" && (MB.isNothing contents.stopLocation))
           rideScheduledTime = MB.fromMaybe "" overLappingBooking.rideScheduledTime
           rideEndTime = calculateBookingEndTime (API.RideBookingRes overLappingBooking)
           fromLocation = fetchAddressDetails details.fareProductType overLappingBooking.fromLocation
-          toLocation = fetchAddressDetails details.fareProductType (MB.fromMaybe dummyBookingDetails contents.toLocation)
+          toLocation = fetchAddressDetails details.fareProductType stopLocation
         in
-          getVarString YOU_HAVE_AN_RIDE_FROM_TO_SCHEDULED_FROM_TILL [ rideType, fromLocation, toLocation, formatDateInHHMM rideScheduledTime, formatDateInHHMM rideEndTime ]
+          if destinationNotGiven then getVarString YOU_HAVE_AN_RIDE_FROM_WITHOUT_TO [rideType , fromLocation , formatDateInHHMM rideScheduledTime , formatDateInHHMM rideEndTime]
+                                 else getVarString YOU_HAVE_AN_RIDE_FROM_TO_SCHEDULED_FROM_TILL [ rideType, fromLocation, toLocation, formatDateInHHMM rideScheduledTime,formatDateInHHMM rideEndTime ]
       MB.Nothing -> ""

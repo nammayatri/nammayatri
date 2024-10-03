@@ -2366,10 +2366,10 @@ scheduledRideExistsPopUpConfig state =
           (API.RideBookingAPIDetails details) = overLappingBooking.bookingDetails
           (API.RideBookingDetails contents) = details.contents
           (API.BookingLocationAPIEntity fromLocationResp) = overLappingBooking.fromLocation
-          (API.BookingLocationAPIEntity stopLocation) = fromMaybe dummyBookingDetails (case details.fareProductType of 
-                                                                                              "RENTAL" -> contents.stopLocation
-                                                                                              "INTER_CITY" -> contents.toLocation
-                                                                                              _ -> contents.toLocation)          
+          stopLocation = fromMaybe dummyBookingDetails (case details.fareProductType of 
+                                                            "RENTAL" -> contents.stopLocation
+                                                            "INTER_CITY" -> contents.toLocation
+                                                            _ -> contents.toLocation)          
           rideType = case details.fareProductType of 
                               "INTER_CITY" -> "intercity"
                               "RENTAL" -> "rental"
@@ -2378,10 +2378,10 @@ scheduledRideExistsPopUpConfig state =
           rideScheduledTime = fromMaybe "" overLappingBooking.rideScheduledTime
           rideEndTime = HU.calculateBookingEndTime (API.RideBookingRes overLappingBooking)
           fromLocation = HU.fetchAddressDetails details.fareProductType overLappingBooking.fromLocation
-          toLocation = HU.fetchAddressDetails details.fareProductType (fromMaybe dummyBookingDetails contents.toLocation)
+          toLocation = HU.fetchAddressDetails details.fareProductType stopLocation
         in
-          if destinationNotGiven then getVarString YOU_HAVE_AN_RIDE_FROM_TO_SCHEDULED_FROM_TILL [ rideType, fromLocation, toLocation, formatDateInHHMM rideScheduledTime,formatDateInHHMM rideEndTime ]
-                                 else getVarString YOU_HAVE_AN_RIDE_FROM_WITHOUT_TO [rideType , fromLocation , formatDateInHHMM rideScheduledTime , formatDateInHHMM rideEndTime]
+          if destinationNotGiven then getVarString YOU_HAVE_AN_RIDE_FROM_WITHOUT_TO [rideType , fromLocation , formatDateInHHMM rideScheduledTime , formatDateInHHMM rideEndTime]
+                                 else getVarString YOU_HAVE_AN_RIDE_FROM_TO_SCHEDULED_FROM_TILL [ rideType, fromLocation, toLocation, formatDateInHHMM rideScheduledTime,formatDateInHHMM rideEndTime ]
       Nothing -> ""
 
 
