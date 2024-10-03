@@ -331,7 +331,8 @@ rideAssignedReqHandler ::
     SchedulerFlow r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
   ) =>
   ValidatedRideAssignedReq ->
   m ()
@@ -372,7 +373,8 @@ rideAssignedReqHandler req = do
         SchedulerFlow r,
         HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
         HasBAPMetrics m r,
-        EventStreamFlow m r
+        EventStreamFlow m r,
+        HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
       ) =>
       ValidatedRideAssignedReq ->
       Maybe DMerchant.Merchant ->
@@ -427,7 +429,7 @@ rideAssignedReqHandler req = do
             encReceiverMobileNumber <- receiverPerson.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
             let exophoneNumber =
                   maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExoPhone
-            let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
+            let trackLink = riderConfig.trackingShortUrlPattern <> ride.id.getId
             let senderSmsReq =
                   MessageBuilder.BuildDeliveryMessageReq
                     { MessageBuilder.driverName = ride.driverName,
@@ -435,7 +437,7 @@ rideAssignedReqHandler req = do
                       MessageBuilder.appUrl = riderConfig.appUrl,
                       MessageBuilder.senderName = senderParty.partyName,
                       MessageBuilder.receiverName = receiverParty.partyName,
-                      MessageBuilder.trackingUrl = trackLink,
+                      MessageBuilder.trackingUrl = Just trackLink,
                       MessageBuilder.otp = ride.otp,
                       MessageBuilder.hasEnded = False,
                       MessageBuilder.pickedUp = False,
@@ -511,14 +513,14 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
       let countryCode = fromMaybe "+91" receiverPerson.mobileCountryCode
       let phoneNumber = countryCode <> receiverMobileNumber
       endOtp <- fromMaybeM (InternalError "EndOtp not found to be send in sms for delivery receiver") endOtp_
-      let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
+      let trackLink = riderConfig.trackingShortUrlPattern <> ride.id.getId
       let exophoneNumber =
             maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExoPhone
       let receiverSmsReq =
             MessageBuilder.BuildDeliveryMessageReq
               { MessageBuilder.driverName = ride.driverName,
                 MessageBuilder.driverNumber = exophoneNumber,
-                MessageBuilder.trackingUrl = trackLink,
+                MessageBuilder.trackingUrl = Just trackLink,
                 MessageBuilder.appUrl = riderConfig.appUrl,
                 MessageBuilder.senderName = senderParty.partyName,
                 MessageBuilder.receiverName = receiverParty.partyName,
@@ -565,6 +567,7 @@ rideCompletedReqHandler ::
     HasLongDurationRetryCfg r c,
     HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasBAPMetrics m r,
     EventStreamFlow m r,
     HasField "hotSpotExpiry" r Seconds,
@@ -772,6 +775,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
   triggerBookingCancelledEvent BookingEventData {booking = booking{status = DRB.CANCELLED}}
   QPFS.updateStatus booking.riderId DPFS.IDLE
+  otherParties <- Notify.getAllOtherRelatedPartyPersons booking
   unless (booking.status == DRB.CANCELLED) $
     void $ do
       QRB.updateStatus booking.id DRB.CANCELLED
@@ -795,7 +799,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
     QBCR.upsert bookingCancellationReason
   -- notify customer
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
-  Notify.notifyOnBookingCancelled booking cancellationSource bppDetails mbRide
+  Notify.notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParties
   where
     handleUpgradedToCabRideCancellation =
       case booking.bookingDetails of
@@ -979,6 +983,7 @@ buildPersonClientInfo personId clientId cityId merchantId vehicleCategory rideCo
 
 sendRideEndMessage ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
@@ -999,7 +1004,7 @@ sendRideEndMessage bk = case bk.tripCategory of
             MessageBuilder.BuildDeliveryMessageReq
               { MessageBuilder.driverName = "",
                 MessageBuilder.driverNumber = "",
-                MessageBuilder.trackingUrl = "",
+                MessageBuilder.trackingUrl = Nothing,
                 MessageBuilder.appUrl = "",
                 MessageBuilder.senderName = senderParty.partyName,
                 MessageBuilder.receiverName = receiverParty.partyName,

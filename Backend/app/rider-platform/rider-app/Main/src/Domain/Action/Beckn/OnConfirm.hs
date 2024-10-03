@@ -50,6 +50,7 @@ import Tools.Error
 import Tools.Metrics (HasBAPMetrics)
 import qualified Tools.SMS as Sms
 import TransactionLogs.Types
+import qualified UrlShortner.Common as UrlShortner
 
 data OnConfirmReq
   = RideAssigned RideAssignedInfo
@@ -108,6 +109,7 @@ onConfirm ::
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "storeRidesTimeLimit" r Int,
     HasBAPMetrics m r,
     EventStreamFlow m r
