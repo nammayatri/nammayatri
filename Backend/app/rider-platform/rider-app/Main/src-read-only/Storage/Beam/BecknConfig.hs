@@ -12,6 +12,7 @@ import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Base64
 import Tools.Beam.UtilsTH
 
 data BecknConfigT f = BecknConfigT

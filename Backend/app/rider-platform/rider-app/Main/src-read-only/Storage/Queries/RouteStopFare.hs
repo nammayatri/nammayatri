@@ -52,6 +52,7 @@ updateByPrimaryKey (Domain.Types.RouteStopFare.RouteStopFare {..}) = do
       Se.Set Beam.timeBounds timeBounds,
       Se.Set Beam.vehicleServiceTierId (Kernel.Types.Id.getId vehicleServiceTierId),
       Se.Set Beam.vehicleType vehicleType,
+      Se.Set Beam.vehicleVariant vehicleVariant,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -72,6 +73,7 @@ instance FromTType' Beam.RouteStopFare Domain.Types.RouteStopFare.RouteStopFare 
             timeBounds = timeBounds,
             vehicleServiceTierId = Kernel.Types.Id.Id vehicleServiceTierId,
             vehicleType = vehicleType,
+            vehicleVariant = vehicleVariant,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -89,6 +91,7 @@ instance ToTType' Beam.RouteStopFare Domain.Types.RouteStopFare.RouteStopFare wh
         Beam.timeBounds = timeBounds,
         Beam.vehicleServiceTierId = Kernel.Types.Id.getId vehicleServiceTierId,
         Beam.vehicleType = vehicleType,
+        Beam.vehicleVariant = vehicleVariant,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

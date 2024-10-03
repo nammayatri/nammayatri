@@ -10,6 +10,7 @@ import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
+import qualified Kernel.Types.Base64
 import qualified Kernel.Types.Id
 import qualified Servant.Client.Core
 import qualified Tools.Beam.UtilsTH

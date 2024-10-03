@@ -24,6 +24,8 @@ BecknConfig:
     paymentParamsJson: Maybe Text
     vehicleCategory: VehicleCategory|NoRelation
     collectedBy: Network
+    verifiedBy: Network
+    verificationCipher: Maybe Base64
     staticTermsUrl: Maybe BaseUrl
     buyerFinderFee: Maybe Text # becomes redundant
     settlementWindow: Maybe Text

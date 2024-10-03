@@ -710,7 +710,6 @@ RouteStopFare:
       kvFunction: findAllWithKV
       where:
         and: [routeCode, startStopCode, endStopCode]
-
 FRFSVehicleServiceTier:
   tableName: frfs_vehicle_service_tier
   fields:
