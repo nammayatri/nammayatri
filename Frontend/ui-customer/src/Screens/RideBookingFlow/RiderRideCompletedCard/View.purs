@@ -56,6 +56,7 @@ import Engineering.Helpers.Commons (os)
 import Animation (screenAnimation)
 import Components.FavouriteDriverInfoCard.FavouriteDriverInfoCard as FavouriteDriverInfoCard
 import Components.FavouriteDriverInfoCard.Controller as FavouriteDriverInfoCardController
+import Resources.Localizable.EN (getEN)
 
 screen :: RiderRideCompletedScreenState -> Screen Action RiderRideCompletedScreenState ScreenOutput
 screen initialState =
@@ -151,6 +152,24 @@ topGradientView config push =
 
 priceAndDistanceUpdateView :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 priceAndDistanceUpdateView state push = 
+  let rideDuration = fromMaybe 0 state.rideDuration
+      sec = if rideDuration >= 3600 then 0 else if rideDuration < 60 then rideDuration else rideDuration `mod` 60
+      min = if rideDuration >= 60 then 
+              if sec /= 0 then 
+                rideDuration/60
+              else (rideDuration/60) `mod` 60
+            else 0
+      hour = if rideDuration >= 3600 then rideDuration/3600 else 0
+      timeString = (
+        if hour == 0 then 
+          if min == 0 then 
+            show sec <> " " <> getEN SEC 
+          else 
+            show min <> getEN MINS <> " " <> show sec <> " " <> getEN SEC 
+        else 
+          show hour <> " " <> getEN HOUR <> " " <> show min <> getEN MINS
+        )
+  in
   linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -186,7 +205,7 @@ priceAndDistanceUpdateView state push =
         , textView $
           [ width MATCH_PARENT
           , height WRAP_CONTENT
-          , text $ getString REACHED_DESTINATION <> show (fromMaybe 0 state.rideDuration) <> getString MINS 
+          , text $ getString $ REACHED_DESTINATION timeString
           , gravity CENTER
           , weight 1.0
           , color Color.black800

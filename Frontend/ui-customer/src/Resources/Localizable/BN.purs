@@ -1475,7 +1475,7 @@ getBN stringKey =
         TRACKING_NO_SETUP -> "আপনি আপনার বিশ্বাসযোগ্য যোগাযোগের সাথে স্বয়ংক্রিয় লাইভ ট্র্যাকিং সেট আপ করেননি।"
         FOLLOWING_STR -> "অনুসরণ"
         DIALING_POLICE_IN_TIME time -> "পুলিশকে ডায়াল করা হচ্ছে " <> time <> "..."
-        REACHED_DESTINATION -> "ইয়ে! ঠিক পৌঁছেছি মাত্র "
+        REACHED_DESTINATION time -> "ইয়ে! ঠিক পৌঁছেছি মাত্র " <> time
         MINS -> " মিনিটে"
         UPDATED_FARE -> "ভাড়া আপডেট করা হয়েছে"
         HOW'S_TRIP -> "আজকের ট্রিপ কেমন ছিল?"
@@ -1630,3 +1630,5 @@ getBN stringKey =
         DROP_BACK_IN_AT cityName -> "ফিরে আসুন " <> cityName <>" এ "
         PER_KM -> "প্রতি কিমি"
         PER_MIN -> "প্রতি মিনিট"
+        HOUR -> "ঘণ্টা"
+        SEC -> "সেকেন্ড"

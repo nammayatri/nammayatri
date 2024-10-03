@@ -1479,7 +1479,7 @@ getKN stringKey =
         TRACKING_NO_SETUP -> "ನೀವು ನಿಮ್ಮ ವಿಶ್ವಾಸಾರ್ಹ ಸಂಪರ್ಕಗಳೊಂದಿಗೆ ಸ್ವಯಂಚಾಲಿತ ಲೈವ್ ಟ್ರ್ಯಾಕಿಂಗ್ ಅನ್ನು ಸೆಟಪ್ ಮಾಡಿಲ್ಲ."
         FOLLOWING_STR -> "ಅನುಸರಿಸುತ್ತಿದ್ದಾರೆ"
         DIALING_POLICE_IN_TIME time -> "ಪೊಲೀಸ್ ಕರೆಯುತ್ತಿದ್ದಾರೆ " <> time <> " ಸಮಯದಲ್ಲಿ..."
-        REACHED_DESTINATION -> "ಯೇ! ಸ್ಥಳಕ್ಕೆ ತಲುಪಿದ್ದೀರಾ ಕೇವಲ "
+        REACHED_DESTINATION time -> "ಹೇ !ಗಮ್ಯಸ್ಥಾನವನ್ನು ತಲುಪಿದೆ ಕೇವಲ " <> time
         MINS -> " ನಿಮಿಷಗಳಲ್ಲಿ"
         UPDATED_FARE -> "ಕಿರಾಯಿಯನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ"
         HOW'S_TRIP -> "ನೀವು ಇಂದಿನ ಪ್ರಯಾಣವನ್ನು ಹೇಗೆ ಅನುಭವಿಸಿದ್ದೀರಿ?"
@@ -1635,3 +1635,5 @@ getKN stringKey =
         DROP_BACK_IN_AT cityName -> "ಇಲ್ಲಿ ವಾಪಸು " <> cityName <> " ನಲ್ಲಿ "
         PER_KM -> "ಪ್ರತಿ ಕಿಮೀ"
         PER_MIN -> "ಪ್ರತಿ ನಿಮಿಷ"
+        HOUR -> "ಗಂಟೆ"
+        SEC -> "ಸೆಕೆಂಡು"

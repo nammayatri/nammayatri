@@ -62,6 +62,7 @@ screen initialState =
 
 getDriverProfile :: forall action. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> FlowBT String Unit
 getDriverProfile push state = do
+  void $ lift $ lift $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   void $ lift $ lift $ EHU.toggleLoader true
   (driversProfileResp) <- lift $ lift $ if state.props.rideId == "" then SB.getDriverProfileById state.props.driverId else SB.getDriverProfile state.props.rideId
   case driversProfileResp of

@@ -1478,7 +1478,7 @@ getFR stringKey =
         TRACKING_NO_SETUP -> "Vous n'avez pas configuré le suivi en direct automatique avec vos contacts de confiance."
         FOLLOWING_STR -> "Suivant"
         DIALING_POLICE_IN_TIME time -> "Appel de la police dans " <> time <> "..."
-        REACHED_DESTINATION -> "Yay! Vous êtes arrivé à destination en seulement "
+        REACHED_DESTINATION time -> "Yay! Vous êtes arrivé à destination en seulement " <> time
         MINS -> " minutes"
         UPDATED_FARE -> "Le tarif a été mis à jour"
         HOW'S_TRIP -> "Comment s'est passé votre trajet aujourd'hui?"
@@ -1634,3 +1634,5 @@ getFR stringKey =
         DROP_BACK_IN_AT cityName -> "Retour à " <> cityName <>" à "
         PER_KM -> "par km"
         PER_MIN -> "par min"
+        HOUR -> "heure"
+        SEC -> "seconde"

@@ -1475,7 +1475,7 @@ getML stringKey =
         TRACKING_NO_SETUP -> "നിങ്ങളുടെ വിശ്വസനീയ ബന്ധങ്ങളുമായി സ്വയമേഖല ലൈവ് ട്രാക്കിംഗ് സജ്ജമാക്കിയിട്ടില്ല."
         FOLLOWING_STR -> "അനുസരിക്കുന്നു"
         DIALING_POLICE_IN_TIME time -> "പോലീസിനെ സമയത്തോടെ വിളിക്കുന്നു " <> time <> "..."
-        REACHED_DESTINATION -> "യേ! ലക്ഷ്യത്തിൽ എത്തിച്ചേർന്നിരിക്കുന്നു വെറും "
+        REACHED_DESTINATION time -> "യേ! ലക്ഷ്യത്തിൽ എത്തിച്ചേർന്നിരിക്കുന്നു വെറും " <> time
         MINS -> " മിനിറ്റുകളിൽ"
         UPDATED_FARE -> "കൂലി പുതുക്കിയിരിക്കുന്നു"
         HOW'S_TRIP -> "ഇന്നത്തെ യാത്ര എങ്ങനെയായിരുന്നു?"
@@ -1630,3 +1630,5 @@ getML stringKey =
         DROP_BACK_IN_AT cityName -> "തിരിച്ച് " <> cityName <>" ല്‍ "
         PER_KM -> "കിലോമീറ്ററിന്"
         PER_MIN -> "മിനിറ്റിന്"
+        HOUR -> "മണിക്കൂർ"
+        SEC -> "സെക്കൻഡ്"

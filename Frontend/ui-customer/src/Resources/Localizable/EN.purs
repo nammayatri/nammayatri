@@ -1480,7 +1480,7 @@ getEN stringKey =
         TRACKING_NO_SETUP -> "You have not set up automatic live tracking with your trusted contacts"
         FOLLOWING_STR -> "Following"
         DIALING_POLICE_IN_TIME time -> "Dialling Police in " <> time <> "..." 
-        REACHED_DESTINATION -> "Yay! Reached destination in just "
+        REACHED_DESTINATION time -> "Yay! Reached destination in just " <> time 
         MINS -> " mins"
         UPDATED_FARE -> "Fare has been Updated"
         HOW'S_TRIP -> "How was your trip today?"
@@ -1637,3 +1637,5 @@ getEN stringKey =
         DROP_BACK_IN_AT cityName-> "Drop back in " <> cityName <>" at "
         PER_KM -> "per km"
         PER_MIN -> "per min"
+        HOUR -> "hour"
+        SEC -> "sec"

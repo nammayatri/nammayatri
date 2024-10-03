@@ -62,6 +62,7 @@ screen initialState st =
 
 getFavouriteDriverTrips :: (Action -> Effect Unit) -> ST.FavouriteDriverTripsState -> FlowBT String Unit
 getFavouriteDriverTrips push state = do
+  void $ lift $ lift $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   void $ lift $ lift $ EHU.toggleLoader true
   (favouriteDriversResp) <- lift $ lift $ Remote.getFavouriteDriverTrips "5" "0" "false" state.data.driverNumber
   case favouriteDriversResp of
