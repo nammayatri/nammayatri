@@ -31,3 +31,19 @@ SELECT
     CURRENT_TIMESTAMP
 FROM
     atlas_driver_offer_bpp.merchant_operating_city moc;
+
+INSERT INTO atlas_driver_offer_bpp.merchant_push_notification (
+    fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+)
+SELECT
+    'USER_FAVOURITE_DRIVER',
+    'FAVOURITE_DRIVER_ALERT',
+    moc.merchant_id,
+    moc.id,
+    '{#riderName#} has added you as their favourite driver!',
+    'Now, he can schedule regular rides with you, creating new earning opportunities!....',
+    'ENGLISH',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+FROM
+    atlas_driver_offer_bpp.merchant_operating_city moc;
