@@ -61,8 +61,9 @@ getNextScheduleTime ::
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
+  UTCTime ->
   m (Maybe NominalDiffTime)
-getNextScheduleTime driverPoolConfig searchRequest = do
+getNextScheduleTime driverPoolConfig searchRequest now = do
   mbScheduleTryTimes <- getKey
   let scheduleTryTimes =
         case mbScheduleTryTimes of
@@ -71,9 +72,13 @@ getNextScheduleTime driverPoolConfig searchRequest = do
   case scheduleTryTimes of
     [] -> return Nothing
     (scheduleTryTime : rest) -> do
-      setKey rest
-      now <- getCurrentTime
-      return $ Just $ max 5 (searchRequest.startTime `diffUTCTime` (scheduleTryTime `addUTCTime` now)) -- 5 seconds buffer
+      if (diffUTCTime searchRequest.startTime now <= scheduleTryTime)
+        then do
+          setKey rest
+          case rest of
+            [] -> return Nothing
+            (next : _) -> return $ Just $ max 2 (searchRequest.startTime `diffUTCTime` (next `addUTCTime` now))
+        else return $ Just $ max 2 (searchRequest.startTime `diffUTCTime` (scheduleTryTime `addUTCTime` now))
   where
     scheduleSearchKey = "ScheduleSearch-" <> searchRequest.id.getId
     setKey scheduleTryTimes = Redis.withCrossAppRedis $ Redis.setExp scheduleSearchKey scheduleTryTimes 3600
@@ -108,7 +113,10 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) searchReq.estimatedDistance (Just (TransactionId (Id searchReq.transactionId)))
   goHomeCfg <- CGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId)))
   singleBatchProcessingTempDelay <- asks (.singleBatchProcessingTempDelay)
-  if not searchTry.isScheduled || isRepeatSearch
+  now <- getCurrentTime
+  let scheduleTryTimes = secondsToNominalDiffTime . Seconds <$> driverPoolConfig.scheduleTryTimes
+      instantReallocation = maybe True (\scheduleTryTime -> diffUTCTime searchReq.startTime now <= scheduleTryTime) (listToMaybe scheduleTryTimes)
+  if not searchTry.isScheduled || (instantReallocation && isRepeatSearch)
     then do
       (res, _, mbNewScheduleTimeIn) <- sendSearchRequestToDrivers driverPoolConfig searchTry searchBatchInput goHomeCfg
       let inTime = singleBatchProcessingTempDelay + maybe (fromIntegral driverPoolConfig.singleBatchProcessTime) fromIntegral mbNewScheduleTimeIn
@@ -116,7 +124,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
         ReSchedule _ -> scheduleBatching searchTry inTime
         _ -> return ()
     else do
-      mbScheduleTime <- getNextScheduleTime driverPoolConfig searchReq
+      mbScheduleTime <- getNextScheduleTime driverPoolConfig searchReq now
       case mbScheduleTime of
         Just scheduleTime -> scheduleBatching searchTry scheduleTime
         Nothing -> do
