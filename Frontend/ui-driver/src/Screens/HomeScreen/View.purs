@@ -113,7 +113,7 @@ import Control.Alt ((<|>))
 import Effect.Aff (launchAff, makeAff, nonCanceler)
 import Common.Resources.Constants(chatService)
 import DecodeUtil as DU
-import RemoteConfig.Utils (cancellationThresholds, getEnableOtpRideConfigData)
+import RemoteConfig.Utils (cancellationThresholds, getEnableOtpRideConfigData,getenableScheduledRideConfigData)
 import Components.SelectPlansModal as SelectPlansModal
 import Services.API as APITypes
 import Helpers.SplashUtils as HS
@@ -1645,13 +1645,15 @@ gotoListView push state =
    ]
 
 rideRequestButton :: forall w .(Action -> Effect Unit) -> HomeScreenState ->  PrestoDOM (Effect Unit) w
-rideRequestButton push state =
+rideRequestButton push state = 
+  let scheduleRideEnableConfig = spy "scheduleRideEnableConfig"$ getenableScheduledRideConfigData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+  in
   frameLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , orientation VERTICAL
     , margin $ MarginTop 3
-    , visibility $ boolToVisibility $ state.data.cityConfig.showScheduledRides
+    , visibility $ spy "boolToVisibility" $ boolToVisibility $ scheduleRideEnableConfig.enableScheduledRides
     ] 
     [ pillView state push
     , pillShimmer state push
@@ -2105,6 +2107,8 @@ addAadhaarNumber push state visibility' =
 
 offlineNavigationLinks :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 offlineNavigationLinks push state =
+  let scheduleRideEnableConfig = spy "scheduleRideEnableConfig"$ getenableScheduledRideConfigData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+  in
   horizontalScrollView
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -2127,7 +2131,7 @@ offlineNavigationLinks push state =
             , margin $ MarginLeft if index == 0 then 0 else 5
             , gravity CENTER_VERTICAL
             , onClick push $ const item.action
-            , visibility $ itemVisibility item.action
+            , visibility $ itemVisibility item.action scheduleRideEnableConfig
             , rippleColor Color.rippleShade
             , alpha $ itemAlpha item.action
             , clickable $ itemClickable item.action
@@ -2155,11 +2159,11 @@ offlineNavigationLinks push state =
                         {title : getString REPORT_ISSUE, icon : "ny_ic_vector_black", action : HelpAndSupportScreen},
                         {title : getString ENTER_AADHAAR_DETAILS, icon : "ny_ic_aadhaar_logo", action : LinkAadhaarAC}
                       ]
-      itemVisibility action = case action of
+      itemVisibility action config = case action of
                         AddAlternateNumberAction -> if isNothing state.data.driverAlternateMobile then VISIBLE else GONE
                         LinkAadhaarAC -> if state.props.showlinkAadhaarPopup then VISIBLE else GONE
                         AddGotoAC -> if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto then VISIBLE else GONE
-                        RideRequestsList -> if state.data.cityConfig.showScheduledRides then VISIBLE else GONE
+                        RideRequestsList -> if config.enableScheduledRides then VISIBLE else GONE
                         _ -> VISIBLE
       itemAlpha action = case action of 
                     RideRequestsList -> if isNothing state.data.upcomingRide then 1.0 else 0.5

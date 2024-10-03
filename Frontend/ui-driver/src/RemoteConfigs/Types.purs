@@ -70,3 +70,7 @@ type MetroCoinsEvent = {
 type EnableOtpRideConfig = {
     enableOtpRide :: Boolean
 }
+
+type EnableScheduledRides = {
+  enableScheduledRides :: Boolean
+}
