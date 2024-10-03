@@ -317,7 +317,7 @@ calculateFareParameters params = do
             customerExtraFee = params.customerExtraFee,
             serviceCharge = fp.serviceCharge,
             parkingCharge = fp.parkingCharge,
-            congestionCharge = congestionChargeByMultiplier, ----------Needs to be changed to congestionChargeResult
+            congestionCharge = congestionChargeResult, ----------Needs to be changed to congestionChargeResult
             congestionChargeViaDp = congestionChargeByPerMin,
             stopCharges = stopCharges, --(\charges -> Just $ HighPrecMoney (toRational params.noOfStops * charges))=<< fp.perStopCharge,
             waitingCharge = resultWaitingCharge,
