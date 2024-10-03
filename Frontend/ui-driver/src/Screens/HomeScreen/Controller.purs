@@ -1607,8 +1607,8 @@ eval (HomeScreenBannerCountDownTimer seconds status timerID) state = do
   if status == "EXPIRED" || timerID == id then do
     void $ pure $ TF.clearTimerWithId timerID
     continue state {props {homeScreenBannerVisibility  = false}}
-  else if (seconds <= state.data.config.scheduledRideConfig.scheduledBannerTimerValue || Array.elem state.props.currentStage [ST.RideAccepted, ST.RideStarted, ST.ChatWithCustomer])  then do
-    void $ pure  $ TF.clearTimerWithId state.data.homeScreenBannerTimerID
+  else if (Array.elem state.props.currentStage [ST.RideAccepted, ST.RideStarted, ST.ChatWithCustomer])  then do
+    void $ pure  $ TF.clearTimerWithId timerID
     continue state
   else
     continue $ state { data { homeScreenBannerTimer = (seconds), homeScreenBannerTimerID = timerID } }
