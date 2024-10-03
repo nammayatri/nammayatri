@@ -18,6 +18,7 @@ import qualified API.Types.UI.EditBooking as EditBooking
 import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import qualified BecknV2.OnDemand.Enums as Enums
 import Data.List (last)
+import Data.List.Split (chunksOf)
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text as Text
@@ -184,18 +185,36 @@ handler (UEditLocationReq EditLocationReq {..}) = do
         merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
         case status of
           Enums.SOFT_UPDATE -> do
-            (pickedWaypoints, currentPoint) <-
+            (pickedWaypoints, currentPoint, snapToRoadFailed) <-
               if ride.status == DRide.INPROGRESS
                 then do
+                  bookingUpdateRequests <- QBUR.findAllByBookingId Nothing Nothing booking.id
+                  let prevSnapToRoadFailed = any (\request -> request.snapToRoadFailed == Just True) bookingUpdateRequests
+                  let allEditedlatLongs =
+                        [ Maps.LatLong lat lon | request <- bookingUpdateRequests, Just lat <- [request.currentPointLat], Just lon <- [request.currentPointLon]
+                        ]
                   currentLocationPointsBatch <- LTS.driverLocation rideId merchantOperatingCity.merchantId ride.driverId
-                  previousLocationPointBatches <- getInterpolatedPointsImplementation ride.driverId
-                  intermediateLocationPoints <- getAllWaypointsImplementation ride.driverId
+                  editDestinationWaypoints <- getEditDestinationWaypoints ride.driverId
+                  (snapToRoadFailed, editDestinationPoints) <-
+                    if prevSnapToRoadFailed
+                      then return (True, allEditedlatLongs)
+                      else do
+                        (snapToRoadFailed, snappedLatLongs) <- getLatlongsViaSnapToRoad (editDestinationWaypoints <> currentLocationPointsBatch.loc) merchantOperatingCity.merchantId merchantOperatingCity.id
+                        if snapToRoadFailed
+                          then return (True, allEditedlatLongs)
+                          else do
+                            alreadySnappedPoints <- getEditDestinationSnappedWaypoints ride.driverId
+                            whenJust (nonEmpty snappedLatLongs) $ \snappedLatLongs' -> do
+                              addEditDestinationSnappedWayPoints ride.driverId snappedLatLongs'
+                            return (False, alreadySnappedPoints <> snappedLatLongs)
+
                   let (currentPoint :: Maps.LatLong) =
                         fromMaybe (Maps.LatLong ride.fromLocation.lat ride.fromLocation.lon) $
                           (if not $ null currentLocationPointsBatch.loc then Just (last currentLocationPointsBatch.loc) else Nothing)
-                            <|> (if not $ null previousLocationPointBatches then Just (last previousLocationPointBatches) else Nothing)
-                  return (srcPt :| (pickWaypoints (previousLocationPointBatches <> intermediateLocationPoints <> currentLocationPointsBatch.loc) ++ [currentPoint, dropLatLong]), Just currentPoint)
-                else return (srcPt :| [dropLatLong], Nothing)
+                            <|> (if not $ null editDestinationWaypoints then Just (last editDestinationWaypoints) else Nothing)
+                  deleteEditDestinationWaypoints ride.driverId
+                  return (srcPt :| (pickWaypoints editDestinationPoints ++ [currentPoint, dropLatLong]), Just currentPoint, Just snapToRoadFailed)
+                else return (srcPt :| [dropLatLong], Nothing, Nothing)
             logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show pickedWaypoints
             routeResponse <-
               Maps.getRoutes merchantOperatingCity.merchantId merchantOperatingCity.id $
@@ -249,7 +268,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                   }
             QFP.create fareParameters
             let validTill = addUTCTime (fromIntegral transporterConfig.editLocTimeThreshold) now
-            bookingUpdateReq <- buildbookingUpdateRequest booking merchantOperatingCity.merchantId bapBookingUpdateRequestId fareParameters farePolicy.id maxEstimatedDist currentPoint estimatedDistance validTill mapsRouteReqInText routeInfoInText
+            bookingUpdateReq <- buildbookingUpdateRequest booking merchantOperatingCity.merchantId bapBookingUpdateRequestId fareParameters farePolicy.id maxEstimatedDist currentPoint estimatedDistance validTill mapsRouteReqInText routeInfoInText snapToRoadFailed
             startLocMapping <- QLM.getLatestStartByEntityId bookingId.getId >>= fromMaybeM (InternalError $ "Latest start location mapping not found for bookingId: " <> bookingId.getId)
             dropLocMapping <- QLM.getLatestEndByEntityId bookingId.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingId: " <> bookingId.getId)
             startLocMap <- SLM.buildPickUpLocationMapping startLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
@@ -294,6 +313,30 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                 Notify.sendUpdateLocOverlay merchantOperatingCity.id person (Notify.mkOverlayReq overlay') entityData
               else void $ EditBooking.postEditResult (Just person.id, merchantOperatingCity.merchantId, merchantOperatingCity.id) bookingUpdateReq.id (EditBooking.EditBookingRespondAPIReq {action = EditBooking.ACCEPT})
           _ -> throwError (InvalidRequest "Invalid status for edit location request")
+  where
+    snapToRoad latlongs merchantId merchanOperatingCityId = do
+      res <- try $ Maps.snapToRoad merchantId merchanOperatingCityId Maps.SnapToRoadReq {points = latlongs, distanceUnit = Meter}
+      case res of
+        Left (e :: SomeException) -> do
+          logTagError "snapToRoad failed" $ "Error: " <> show e
+          return (True, [])
+        Right snapToRoadResp -> return (False, snapToRoadResp.snappedPoints)
+
+    getLatlongsViaSnapToRoad latlongs merchantId merchanOperatingCityId = do
+      let latlongs' = chunksOf 98 latlongs
+      --  if snapToRoad fails for any chunk, we will return a tuple of (True, []) to indicate that the snapToRoad failed and we will not proceed with the further processing
+      (failed, snappedLatLongs) <-
+        foldM
+          ( \(failed, snappedLatLongs) latlons ->
+              if failed
+                then return (True, [])
+                else do
+                  (failed', snappedLatLongs') <- snapToRoad latlons merchantId merchanOperatingCityId
+                  return (failed' || failed, snappedLatLongs ++ snappedLatLongs')
+          )
+          (False, [])
+          latlongs'
+      return (failed, snappedLatLongs)
 
 mkActions2 :: Text -> Double -> Double -> FCM.FCMActions -> FCM.FCMActions
 mkActions2 bookingUpdateReqId lat long action = do
@@ -393,8 +436,8 @@ validateStopReq booking isEdit = do
     then unless (isJust booking.stopLocationId) $ throwError (InvalidRequest $ "Can't find stop to be edited " <> booking.id.getId) -- should we throw error or just allow?
     else unless (isNothing booking.stopLocationId) $ throwError (InvalidRequest $ "Can't add next stop before reaching previous stop " <> booking.id.getId)
 
-buildbookingUpdateRequest :: MonadFlow m => DBooking.Booking -> Id DM.Merchant -> Text -> DFP.FareParameters -> Id DFP.FarePolicy -> Maybe Meters -> Maybe Maps.LatLong -> Meters -> UTCTime -> Text -> Text -> m DBUR.BookingUpdateRequest
-buildbookingUpdateRequest booking merchantId bapBookingUpdateRequestId fareParams farePolicyId maxEstimatedDistance currentPoint estimatedDistance validTill mapsRouteReqInText routeInfoInText = do
+buildbookingUpdateRequest :: MonadFlow m => DBooking.Booking -> Id DM.Merchant -> Text -> DFP.FareParameters -> Id DFP.FarePolicy -> Maybe Meters -> Maybe Maps.LatLong -> Meters -> UTCTime -> Text -> Text -> Maybe Bool -> m DBUR.BookingUpdateRequest
+buildbookingUpdateRequest booking merchantId bapBookingUpdateRequestId fareParams farePolicyId maxEstimatedDistance currentPoint estimatedDistance validTill mapsRouteReqInText routeInfoInText snapToRoadFailed = do
   guid <- generateGUID
   now <- getCurrentTime
   return $

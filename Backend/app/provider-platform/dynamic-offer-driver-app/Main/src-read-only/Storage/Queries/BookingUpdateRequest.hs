@@ -23,8 +23,10 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BookingUpdateRequest.BookingUpdateRequest] -> m ())
 createMany = traverse_ create
 
-findAllByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m [Domain.Types.BookingUpdateRequest.BookingUpdateRequest])
-findAllByBookingId bookingId = do findAllWithKV [Se.And [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId bookingId)]]
+findAllByBookingId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m [Domain.Types.BookingUpdateRequest.BookingUpdateRequest])
+findAllByBookingId limit offset bookingId = do findAllWithOptionsKV [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId bookingId)] (Se.Asc Beam.createdAt) limit offset
 
 findByBAPBUReqId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.BookingUpdateRequest.BookingUpdateRequest))
 findByBAPBUReqId bapBookingUpdateRequestId = do findOneWithKV [Se.And [Se.Is Beam.bapBookingUpdateRequestId $ Se.Eq bapBookingUpdateRequestId]]
@@ -94,6 +96,7 @@ updateByPrimaryKey (Domain.Types.BookingUpdateRequest.BookingUpdateRequest {..})
       Se.Set Beam.oldFareParamsId (Kernel.Types.Id.getId oldFareParamsId),
       Se.Set Beam.oldMaxEstimatedDistance oldMaxEstimatedDistance,
       Se.Set Beam.routeInfoResp routeInfoResp,
+      Se.Set Beam.snapToRoadFailed snapToRoadFailed,
       Se.Set Beam.status status,
       Se.Set Beam.totalDistance totalDistance,
       Se.Set Beam.travelledDistance travelledDistance,
@@ -127,6 +130,7 @@ instance FromTType' Beam.BookingUpdateRequest Domain.Types.BookingUpdateRequest.
             oldFareParamsId = Kernel.Types.Id.Id oldFareParamsId,
             oldMaxEstimatedDistance = oldMaxEstimatedDistance,
             routeInfoResp = routeInfoResp,
+            snapToRoadFailed = snapToRoadFailed,
             status = status,
             totalDistance = totalDistance,
             travelledDistance = travelledDistance,
@@ -157,6 +161,7 @@ instance ToTType' Beam.BookingUpdateRequest Domain.Types.BookingUpdateRequest.Bo
         Beam.oldFareParamsId = Kernel.Types.Id.getId oldFareParamsId,
         Beam.oldMaxEstimatedDistance = oldMaxEstimatedDistance,
         Beam.routeInfoResp = routeInfoResp,
+        Beam.snapToRoadFailed = snapToRoadFailed,
         Beam.status = status,
         Beam.totalDistance = totalDistance,
         Beam.travelledDistance = travelledDistance,
