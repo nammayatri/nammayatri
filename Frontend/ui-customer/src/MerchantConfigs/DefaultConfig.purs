@@ -435,6 +435,7 @@ config =
             },
             enableAcViews = true,
             enableRentals = true,
+            enableIntercity = true,
             waitingChargeConfig  {
               cabs  {
                 freeMinutes = 5.0
@@ -450,6 +451,7 @@ config =
             },
             enableAcViews = true,
             enableRentals = true,
+            enableIntercity = true,
             waitingChargeConfig  {
               cabs  {
                 freeMinutes = 5.0
@@ -462,7 +464,7 @@ config =
             , cityCode = "std:044"
             , enableCabs = true
             , enableRentals = true 
-            , enableIntercity = false
+            , enableIntercity = true
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }
@@ -476,7 +478,7 @@ config =
             , cityCode = "std:0452"
             , enableCabs = true
             , enableRentals = true 
-            , enableIntercity = false
+            , enableIntercity = true
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }
@@ -490,7 +492,7 @@ config =
             , cityCode = "std:0462"
             , enableCabs = true
             , enableRentals = true 
-            , enableIntercity = false
+            , enableIntercity = true
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }
@@ -504,7 +506,7 @@ config =
             , cityCode = "std:04362"
             , enableCabs = true
             , enableRentals = true 
-            , enableIntercity = false
+            , enableIntercity = true
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }
@@ -518,7 +520,7 @@ config =
             , cityCode = "std:0452"
             , enableCabs = true
             , enableRentals = true 
-            , enableIntercity = false
+            , enableIntercity = true
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }
@@ -532,7 +534,7 @@ config =
             , cityCode = "std:0427"
             , enableCabs = true
             , enableRentals = true 
-            , enableIntercity = false
+            , enableIntercity = true
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }
@@ -546,7 +548,7 @@ config =
             , cityCode = "std:04344"
             , enableCabs = true
             , enableRentals = true 
-            , enableIntercity = false
+            , enableIntercity = true
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }
@@ -560,7 +562,7 @@ config =
             , cityCode = "std:0431"
             , enableCabs = true
             , enableRentals = true 
-            , enableIntercity = false
+            , enableIntercity = true
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }
@@ -575,7 +577,7 @@ config =
             , cityCode = "std:0422"
             , enableCabs = true
             , enableRentals = true 
-            , enableIntercity = false
+            , enableIntercity = true
             , estimateAndQuoteConfig {
               showInfoIcon = false
               }
