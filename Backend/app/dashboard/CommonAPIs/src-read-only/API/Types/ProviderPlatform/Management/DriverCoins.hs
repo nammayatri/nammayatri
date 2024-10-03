@@ -81,15 +81,10 @@ data CoinStatus
 
 data DriverCoinsFunctionType
   = OneOrTwoStarRating
-  | RideCompleted
   | FiveStarRating
   | BookingCancellation
   | CustomerReferral
   | DriverReferral
-  | TwoRidesCompleted
-  | FiveRidesCompleted
-  | TenRidesCompleted
-  | EightPlusRidesInOneDay
   | PurpleRideCompleted
   | LeaderBoardTopFiveHundred
   | TrainingCompleted

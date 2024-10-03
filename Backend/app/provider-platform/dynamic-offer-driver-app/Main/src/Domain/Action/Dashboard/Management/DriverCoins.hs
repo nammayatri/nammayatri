@@ -225,18 +225,13 @@ castEventFunctionForCoins :: DCT.DriverCoinsFunctionType -> Common.DriverCoinsFu
 castEventFunctionForCoins e = case e of
   DCT.BulkUploadFunction -> Common.BulkUploadFunction
   DCT.OneOrTwoStarRating -> Common.OneOrTwoStarRating
-  DCT.RideCompleted -> Common.RideCompleted
   DCT.FiveStarRating -> Common.FiveStarRating
   DCT.BookingCancellation -> Common.BookingCancellation
   DCT.CustomerReferral -> Common.CustomerReferral
   DCT.DriverReferral -> Common.DriverReferral
-  DCT.EightPlusRidesInOneDay -> Common.EightPlusRidesInOneDay
   DCT.PurpleRideCompleted -> Common.PurpleRideCompleted
   DCT.LeaderBoardTopFiveHundred -> Common.LeaderBoardTopFiveHundred
   DCT.TrainingCompleted -> Common.TrainingCompleted
-  DCT.TwoRidesCompleted -> Common.TwoRidesCompleted
-  DCT.FiveRidesCompleted -> Common.FiveRidesCompleted
-  DCT.TenRidesCompleted -> Common.TenRidesCompleted
   DCT.RidesCompleted a -> Common.RidesCompleted a
   DCT.BulkUploadFunctionV2 msg -> Common.BulkUploadFunctionV2 (castCoinMessage msg)
   DCT.MetroRideCompleted -> Common.MetroRideCompleted
@@ -251,18 +246,13 @@ castEventFunctionForCoinsReverse :: Common.DriverCoinsFunctionType -> DCT.Driver
 castEventFunctionForCoinsReverse e = case e of
   Common.BulkUploadFunction -> DCT.BulkUploadFunction
   Common.OneOrTwoStarRating -> DCT.OneOrTwoStarRating
-  Common.RideCompleted -> DCT.RideCompleted
   Common.FiveStarRating -> DCT.FiveStarRating
   Common.BookingCancellation -> DCT.BookingCancellation
   Common.CustomerReferral -> DCT.CustomerReferral
   Common.DriverReferral -> DCT.DriverReferral
-  Common.EightPlusRidesInOneDay -> DCT.EightPlusRidesInOneDay
   Common.PurpleRideCompleted -> DCT.PurpleRideCompleted
   Common.LeaderBoardTopFiveHundred -> DCT.LeaderBoardTopFiveHundred
   Common.TrainingCompleted -> DCT.TrainingCompleted
-  Common.TwoRidesCompleted -> DCT.TwoRidesCompleted
-  Common.FiveRidesCompleted -> DCT.FiveRidesCompleted
-  Common.TenRidesCompleted -> DCT.TenRidesCompleted
   Common.RidesCompleted a -> DCT.RidesCompleted a
   Common.BulkUploadFunctionV2 msg -> DCT.BulkUploadFunctionV2 (castCoinMessageReverse msg)
   Common.MetroRideCompleted -> DCT.MetroRideCompleted
