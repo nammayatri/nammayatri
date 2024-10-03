@@ -107,8 +107,9 @@ toBookingDetailsAndFromLocation ::
   Maybe Text ->
   Maybe DistanceUnit ->
   Maybe HighPrecDistance ->
+  Maybe Bool ->
   m (DL.Location, BookingDetails)
-toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType mbTripCategory toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue = do
+toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType mbTripCategory toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue hasStops = do
   logTagDebug ("bookingId:-" <> id) $ "Location Mappings:-" <> show mappings
   if null mappings
     then do
@@ -139,16 +140,17 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
     else do
       fromLocationMapping <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
       fl <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
-
-      stopsLocationMapping <- QLM.getLatestStopsByEntityId id
       stops <-
-        mapM
-          ( \stopLocationMapping ->
-              QL.findById stopLocationMapping.locationId
-                >>= fromMaybeM (StopsLocationNotFound stopLocationMapping.locationId.getId)
-          )
-          stopsLocationMapping
-
+        if hasStops == Just True
+          then do
+            stopsLocationMapping <- QLM.getLatestStopsByEntityId id
+            mapM
+              ( \stopLocationMapping ->
+                  QL.findById stopLocationMapping.locationId
+                    >>= fromMaybeM (StopsLocationNotFound stopLocationMapping.locationId.getId)
+              )
+              stopsLocationMapping
+          else return []
       mbToLocationMapping <- QLM.getLatestEndByEntityId id
       let toLocId = (.locationId.getId) <$> mbToLocationMapping
 

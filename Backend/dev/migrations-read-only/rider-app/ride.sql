@@ -169,3 +169,28 @@ ALTER TABLE atlas_app.ride ADD COLUMN tip_amount numeric(30,2) ;
 
 ALTER TABLE atlas_app.ride ADD COLUMN payment_status text ;
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN has_stops boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

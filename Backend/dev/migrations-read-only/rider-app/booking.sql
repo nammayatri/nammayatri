@@ -137,3 +137,27 @@ ALTER TABLE atlas_app.booking ADD COLUMN estimated_static_duration integer ;
 
 
 ------- SQL updates -------
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN has_stops boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

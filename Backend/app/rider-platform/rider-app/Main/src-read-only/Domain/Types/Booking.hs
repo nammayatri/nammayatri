@@ -47,6 +47,7 @@ data Booking = Booking
     estimatedTotalFare :: Kernel.Types.Common.Price,
     fromLocation :: Domain.Types.Location.Location,
     fulfillmentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    hasStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     initialPickupLocation :: Domain.Types.Location.Location,
     initiatedBy :: Kernel.Prelude.Maybe Domain.Types.Trip.TripParty,

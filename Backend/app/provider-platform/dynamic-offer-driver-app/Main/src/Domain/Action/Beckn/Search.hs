@@ -476,6 +476,7 @@ buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverEx
         tripCategory = Nothing,
         poolingLogicVersion = Nothing,
         stops = stops',
+        hasStops = Just . not $ null stops',
         ..
       }
 

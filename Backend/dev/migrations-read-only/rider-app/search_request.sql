@@ -107,3 +107,28 @@ ALTER TABLE atlas_app.search_request ADD COLUMN stops text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN has_stops boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

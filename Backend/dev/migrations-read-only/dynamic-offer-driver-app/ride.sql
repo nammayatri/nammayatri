@@ -172,3 +172,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN estimated_end_time_range_end 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN ride_tags text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN has_stops boolean ;

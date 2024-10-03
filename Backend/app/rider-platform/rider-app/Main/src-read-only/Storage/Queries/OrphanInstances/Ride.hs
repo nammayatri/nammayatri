@@ -24,7 +24,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
     clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
     clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     fromLocation' <- Storage.Queries.Extra.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId
-    stops' <- Storage.Queries.Extra.Transformers.Ride.getStops id
+    stops' <- Storage.Queries.Extra.Transformers.Ride.getStops id hasStops
     toLocation' <- Storage.Queries.Extra.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId
     trackingUrl' <- Kernel.Prelude.mapM Kernel.Prelude.parseBaseUrl trackingUrl
     pure $
@@ -63,6 +63,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             fare = fmap (Kernel.Types.Common.mkPrice currency) fare,
             favCount = favCount,
             fromLocation = fromLocation',
+            hasStops = hasStops,
             id = Kernel.Types.Id.Id id,
             isAlreadyFav = isAlreadyFav,
             isFreeRide = isFreeRide,
@@ -80,8 +81,8 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             showDriversPreviousRideDropLoc = Kernel.Prelude.fromMaybe False showDriversPreviousRideDropLoc,
             startOdometerReading = startOdometerReading,
             status = status,
-            tipAmount = fmap (Kernel.Types.Common.mkPrice currency) tipAmount,
             stops = stops',
+            tipAmount = fmap (Kernel.Types.Common.mkPrice currency) tipAmount,
             toLocation = toLocation',
             tollConfidence = tollConfidence,
             totalFare = fmap (Kernel.Types.Common.mkPrice currency) totalFare,
@@ -140,6 +141,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.currency = Kernel.Prelude.fmap (.currency) fare,
         Beam.fare = Kernel.Prelude.fmap (.amount) fare,
         Beam.favCount = favCount,
+        Beam.hasStops = hasStops,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAlreadyFav = isAlreadyFav,
         Beam.isFreeRide = isFreeRide,

@@ -24,7 +24,7 @@ import qualified Storage.Queries.TripTerms
 instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
   fromTType' (Beam.BookingT {..}) = do
     mappings <- Storage.Queries.LocationMapping.findByEntityId id
-    toBookingDetailsAndFromLocation' <- Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue
+    toBookingDetailsAndFromLocation' <- Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue hasStops
     backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
     clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
     clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
@@ -56,6 +56,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             estimatedTotalFare = Kernel.Types.Common.mkPrice currency estimatedTotalFare,
             fromLocation = fst toBookingDetailsAndFromLocation',
             fulfillmentId = fulfillmentId,
+            hasStops = hasStops,
             id = Kernel.Types.Id.Id id,
             initialPickupLocation = initialPickupLocation',
             initiatedBy = initiatedBy,
@@ -124,6 +125,7 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.estimatedTotalFare = (.amount) estimatedTotalFare,
         Beam.fromLocationId = Just $ Kernel.Types.Id.getId $ (.id) fromLocation,
         Beam.fulfillmentId = fulfillmentId,
+        Beam.hasStops = hasStops,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.initiatedBy = initiatedBy,
         Beam.isAirConditioned = isAirConditioned,

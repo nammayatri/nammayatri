@@ -208,6 +208,7 @@ data SearchDetails = SearchDetails
     isSpecialLocation :: Maybe Bool,
     startTime :: UTCTime,
     returnTime :: Maybe UTCTime,
+    hasStops :: Maybe Bool,
     isReallocationEnabled :: Maybe Bool,
     quotesUnifiedFlow :: Maybe Bool,
     placeNameSource :: Maybe Text
@@ -330,6 +331,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
       person.totalRidesCount
       isDashboardRequest_
       placeNameSource
+      hasStops
       (safeInit stopLocations)
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
@@ -406,13 +408,14 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
 
     extractSearchDetails :: UTCTime -> SearchReq -> SearchDetails
     extractSearchDetails now = \case
-      OneWaySearch OneWaySearchReq {..} ->
+      OneWaySearch reqDetails@OneWaySearchReq {..} ->
         SearchDetails
           { riderPreferredOption = SearchRequest.OneWay,
             roundTrip = False,
             stops = fromMaybe [] stops <> [destination],
             startTime = fromMaybe now startTime,
             returnTime = Nothing,
+            hasStops = reqDetails.stops >>= \s -> Just $ length s > 0,
             ..
           }
       RentalSearch RentalSearchReq {..} ->
@@ -420,6 +423,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
           { riderPreferredOption = SearchRequest.Rental,
             roundTrip = False,
             stops = fromMaybe [] stops,
+            hasStops = Nothing,
             returnTime = Nothing,
             ..
           }
@@ -427,6 +431,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
         SearchDetails
           { riderPreferredOption = SearchRequest.InterCity,
             stops = fromMaybe [] stops,
+            hasStops = Nothing,
             ..
           }
       AmbulanceSearch OneWaySearchReq {..} ->
@@ -436,6 +441,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
             stops = [destination],
             startTime = fromMaybe now startTime,
             returnTime = Nothing,
+            hasStops = Nothing,
             ..
           }
       DeliverySearch OneWaySearchReq {..} ->
@@ -445,6 +451,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
             stops = [destination],
             startTime = fromMaybe now startTime,
             returnTime = Nothing,
+            hasStops = Nothing,
             ..
           }
 
@@ -523,9 +530,10 @@ buildSearchRequest ::
   Maybe Int ->
   Bool ->
   Maybe Text ->
+  Maybe Bool ->
   [Location.Location] ->
   Flow SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource stops = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   deploymentVersion <- asks (.version)
@@ -548,6 +556,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         estimatedRideDuration = duration,
         estimatedRideStaticDuration = staticDuration,
         device = device,
+        hasStops,
         clientBundleVersion = bundleVersion,
         clientSdkVersion = clientVersion,
         clientDevice = getDeviceFromText device,

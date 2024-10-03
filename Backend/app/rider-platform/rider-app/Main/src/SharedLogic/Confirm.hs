@@ -213,8 +213,8 @@ confirm DConfirmReq {..} = do
 
     makeDeliveryDetails :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => DRB.Booking -> [DBPL.BookingPartiesLink] -> m DConfirmResDetails
     makeDeliveryDetails booking bookingParties = do
-      senderParty <- fromMaybeM (InternalError "SenderParty not found") $ find (\party -> party.partyType == (Trip.DeliveryParty Trip.Sender)) bookingParties
-      receiverParty <- fromMaybeM (InternalError "ReceiverParty not found") $ find (\party -> party.partyType == (Trip.DeliveryParty Trip.Receiver)) bookingParties
+      senderParty <- fromMaybeM (InternalError "SenderParty not found") $ find (\party -> party.partyType == Trip.DeliveryParty Trip.Sender) bookingParties
+      receiverParty <- fromMaybeM (InternalError "ReceiverParty not found") $ find (\party -> party.partyType == Trip.DeliveryParty Trip.Receiver) bookingParties
       senderPerson <- QPerson.findById senderParty.partyId >>= fromMaybeM (PersonDoesNotExist senderParty.partyId.getId)
       encSenderMobileNumber <- senderPerson.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
       receiverPerson <- QPerson.findById receiverParty.partyId >>= fromMaybeM (PersonDoesNotExist receiverParty.partyId.getId)
@@ -320,7 +320,8 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           specialLocationName = quote.specialLocationName,
           isDashboardRequest = searchRequest.isDashboardRequest,
           tripCategory = quote.tripCategory,
-          initiatedBy = searchRequest.initiatedBy
+          initiatedBy = searchRequest.initiatedBy,
+          hasStops = searchRequest.hasStops
         },
       bookingParties
     )
@@ -366,7 +367,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
     makeDeliveryParties :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m [DBPL.BookingPartiesLink]
     makeDeliveryParties bookingId = do
       allSearchReqParties <- QSRPL.findAllBySearchRequestId searchRequest.id
-      when ((length allSearchReqParties) < 2) $ throwError $ InternalError "No parties found for search request delivery"
+      when (length allSearchReqParties < 2) $ throwError $ InternalError "No parties found for search request delivery"
       mapM
         ( \party -> do
             bookingPartyId <- generateGUID
