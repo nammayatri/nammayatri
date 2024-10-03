@@ -1503,7 +1503,7 @@ getTE stringKey =
     DEFAULT_CONTACT_NOT_SET -> "డిఫాల్ట్ కాంటాక్ట్ సెట్ చేయబడలేదు"
     DRIVER -> "డ్రైవర్"
     RECOMMEND_SHARE_MANUALLY -> "మీరు మనువల్లో కూడా షేర్ బటన్ ఉపయోగించి ఎవరితో కూడా షేర్ చేయవచ్చు"
-    REACHED_DESTINATION -> "యే! మీరు గమ్యస్థానానికి "
+    REACHED_DESTINATION time -> "గమ్యాన్ని చేరుకున్నారు " <> time
     MINS -> " నిమిషాలలో చేరారు"
     UPDATED_FARE -> "పెట్టుబడి నవీకరించబడింది"
     HOW'S_TRIP -> "ఈ రోజు మీ ప్రయాణం ఎలా ఉందంటే?"
@@ -1644,3 +1644,5 @@ getTE stringKey =
     DROP_BACK_IN_AT cityName -> cityName <> " వద్ద తిరిగి డ్రాప్ చేయబడింది"
     PER_KM -> "ప్రతి కిలోమీటరుకు"
     PER_MIN -> "ప్రతి నిమిషానికి"
+    HOUR -> "గంట"
+    SEC -> "సెకండ్"
