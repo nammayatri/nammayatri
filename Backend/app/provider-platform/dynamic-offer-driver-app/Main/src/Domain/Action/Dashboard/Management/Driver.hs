@@ -72,8 +72,8 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Clickhouse.SearchRequestForDriver as CSR
 import qualified Storage.Queries.DriverLicense as QDL
-import qualified Storage.Queries.SearchRequestForDriver as QR
 import Tools.Error
 
 -- TODO move handlers from Domain.Action.Dashboard.Driver
@@ -185,9 +185,9 @@ postDriverRefundByPayout = DDriver.postDriverRefundByPayout
 getDriverSecurityDepositStatus :: (ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Common.ServiceNames -> Flow [Common.SecurityDepositDfStatusRes])
 getDriverSecurityDepositStatus = DDriver.getDriverSecurityDepositStatus
 
-getDriverDriverLicenseDetails :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow DriverLicenseD
-getDriverDriverLicenseDetails _ _ dId = do
-  mbDriverLicense <- B.runInReplica $ QDL.findByDriverId (cast dId)
+getDriverDriverLicenseDetails :: ShortId DM.Merchant -> Context.City -> Id Common.DriverLicense -> Flow DriverLicenseD
+getDriverDriverLicenseDetails _ _ dlId = do
+  mbDriverLicense <- B.runInReplica $ QDL.findByDLNumber (getId dlId)
   case mbDriverLicense of
     Just DL.DriverLicense {..} -> do
       licenseNo <- decrypt licenseNumber
@@ -208,31 +208,32 @@ getDriverDriverLicenseDetails _ _ dId = do
     Nothing -> throwError (InvalidRequest "Driver license not found")
 
 getDriverSearchRequests :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Int -> Flow [Common.SearchRequestForDriver]
-getDriverSearchRequests _ _ driverId xMin = do
+getDriverSearchRequests _ _ dId xMin = do
   when (xMin > 180) $ throwError (InvalidRequest "xMin should be less than 180")
-  searchReqs <- B.runInReplica $ QR.findByDriverForLastXMinute (cast driverId) xMin
+  searchReqs <- B.runInReplica $ CSR.findByDriverForLastXMinute (cast dId) xMin
   pure $ map buildSearchRequestForDriver searchReqs
-
-buildSearchRequestForDriver :: SR.SearchRequestForDriver -> Common.SearchRequestForDriver
-buildSearchRequestForDriver SR.SearchRequestForDriver {..} =
-  Common.SearchRequestForDriver
-    { id = cast id,
-      driverId = cast driverId,
-      goHomeRequestId = case goHomeRequestId of
-        Just ghId -> Just $ cast ghId
-        Nothing -> Nothing,
-      merchantId = case merchantId of
-        Just mId -> Just $ cast mId
-        Nothing -> Nothing,
-      merchantOperatingCityId = cast merchantOperatingCityId,
-      mode = Just $ castDriverStatus mode,
-      notificationSource = Just $ castNotificationSource notificationSource,
-      requestId = cast requestId,
-      response = Just $ castSearchRequestForDriverResponse response,
-      searchTryId = cast searchTryId,
-      status = castDriverSearchRequestStatus status,
-      ..
-    }
+  where
+    buildSearchRequestForDriver :: (CSR.SearchRequestForDriverT Identity) -> Common.SearchRequestForDriver
+    buildSearchRequestForDriver CSR.SearchRequestForDriverT {..} =
+      Common.SearchRequestForDriver
+        { id = cast id,
+          driverId = cast dId,
+          goHomeRequestId = case goHomeRequestId of
+            Just ghId -> Just $ cast ghId
+            Nothing -> Nothing,
+          merchantId = case merchantId of
+            Just mId -> Just $ cast mId
+            Nothing -> Nothing,
+          merchantOperatingCityId = cast merchantOperatingCityId,
+          mode = Just $ castDriverStatus mode,
+          notificationSource = Just $ castNotificationSource notificationSource,
+          requestId = cast requestId,
+          response = Just $ castSearchRequestForDriverResponse response,
+          searchTryId = cast searchTryId,
+          status = castDriverSearchRequestStatus status,
+          createdAt = createdAt.getDateTime,
+          ..
+        }
 
 castDriverStatus :: Maybe DrInfo.DriverMode -> Common.DriverMode
 castDriverStatus = \case

@@ -133,7 +133,7 @@ postDriverRefundByPayout a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashbo
 getDriverSecurityDepositStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Dashboard.Common.Driver.ServiceNames -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.Driver.SecurityDepositDfStatusRes])
 getDriverSecurityDepositStatus a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Management.Driver.getDriverSecurityDepositStatus a4 a3 a2 a1
 
-getDriverDriverLicenseDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler Dashboard.Common.Driver.DriverLicenseD)
+getDriverDriverLicenseDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver.DriverLicense -> Environment.FlowHandler Dashboard.Common.Driver.DriverLicenseD)
 getDriverDriverLicenseDetails a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Management.Driver.getDriverDriverLicenseDetails a3 a2 a1
 
 getDriverSearchRequests :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Int -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.Driver.SearchRequestForDriver])

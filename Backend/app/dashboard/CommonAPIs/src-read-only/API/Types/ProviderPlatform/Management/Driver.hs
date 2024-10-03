@@ -577,7 +577,7 @@ type GetDriverSecurityDepositStatus =
       :> Get '[JSON] [API.Types.ProviderPlatform.Management.Driver.SecurityDepositDfStatusRes]
   )
 
-type GetDriverDriverLicenseDetails = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "DriverLicenseDetails" :> Get '[JSON] Dashboard.Common.Driver.DriverLicenseD)
+type GetDriverDriverLicenseDetails = (Capture "licenseId" (Kernel.Types.Id.Id Dashboard.Common.Driver.DriverLicense) :> "DriverLicenseDetails" :> Get '[JSON] Dashboard.Common.Driver.DriverLicenseD)
 
 type GetDriverSearchRequests =
   ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> Capture "xMin" Kernel.Prelude.Int :> "searchRequests"
@@ -623,7 +623,7 @@ data DriverAPIs = DriverAPIs
     postDriverUpdateVehicleManufacturing :: Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.Driver.UpdateVehicleManufacturingReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverRefundByPayout :: Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.Driver.RefundByPayoutReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverSecurityDepositStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Dashboard.Common.Driver.ServiceNames -> EulerHS.Types.EulerClient [API.Types.ProviderPlatform.Management.Driver.SecurityDepositDfStatusRes],
-    getDriverDriverLicenseDetails :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Dashboard.Common.Driver.DriverLicenseD,
+    getDriverDriverLicenseDetails :: Kernel.Types.Id.Id Dashboard.Common.Driver.DriverLicense -> EulerHS.Types.EulerClient Dashboard.Common.Driver.DriverLicenseD,
     getDriverSearchRequests :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Int -> EulerHS.Types.EulerClient [API.Types.ProviderPlatform.Management.Driver.SearchRequestForDriver]
   }
 

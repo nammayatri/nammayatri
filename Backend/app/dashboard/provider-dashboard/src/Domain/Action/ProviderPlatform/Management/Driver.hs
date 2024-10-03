@@ -319,10 +319,10 @@ getDriverSecurityDepositStatus merchantShortId opCity apiTokenInfo driverId mbSe
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.getDriverSecurityDepositStatus) driverId mbServiceName
 
-getDriverDriverLicenseDetails :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Environment.Flow Dashboard.Common.Driver.DriverLicenseD)
-getDriverDriverLicenseDetails merchantShortId opCity apiTokenInfo driverId = do
+getDriverDriverLicenseDetails :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.DriverLicense -> Environment.Flow Dashboard.Common.Driver.DriverLicenseD)
+getDriverDriverLicenseDetails merchantShortId opCity apiTokenInfo dLicenseId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.getDriverDriverLicenseDetails) driverId
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.getDriverDriverLicenseDetails) dLicenseId
 
 getDriverSearchRequests :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Types.Id.Id Common.Driver -> Int -> Environment.Flow [Common.SearchRequestForDriver])
 getDriverSearchRequests merchantShortId opCity apiTokenInfo driverId xMin = do

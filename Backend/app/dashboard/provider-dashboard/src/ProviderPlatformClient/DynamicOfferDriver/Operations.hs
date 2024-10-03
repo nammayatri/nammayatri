@@ -77,7 +77,7 @@ data DriverOperationAPIs = DriverOperationAPIs
     driverRegistrationDSL :: DriverRegistrationDSL.DriverRegistrationAPIs,
     bookingDSL :: BookingDSL.BookingAPIs,
     payoutDSL :: PayoutDSL.PayoutAPIs,
-    systemDSL :: SystemDSL.SystemAPIs
+    systemDSL :: SystemDSL.SystemAPIs,
     ticketServiceDSL :: TicketServiceDSL.TicketServiceAPIs
   }
 
@@ -162,7 +162,7 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> driverRegistrationClientDSL
       :<|> bookingClientDSL
       :<|> payoutClientDSL
-      :<|> systemClientDSL = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
+      :<|> systemClientDSL
       :<|> ticketServiceClientDSL = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
 
     planListV2

@@ -1,5 +1,6 @@
 imports:
   Driver: Dashboard.Common
+  DriverLicense: Dashboard.Common.Driver
   Summary: Dashboard.Common
   DriverIds: Dashboard.Common.Driver
   Ride: Dashboard.Common
@@ -418,15 +419,13 @@ apis:
       response:
         type: ([SecurityDepositDfStatusRes])
   - GET:
-      endpoint: /{driverId}/DriverLicenseDetails
+      endpoint: /{licenseId}/DriverLicenseDetails
       params:
-        driverId: Id Driver
+        licenseId: Id DriverLicense
       auth:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_LICENSE_DETAILS
       response:
         type: DriverLicenseD
-      migrate:
-        endpointV2:
   - GET:
       endpoint: /{driverId}/{xMin}/searchRequests
       params:
@@ -436,8 +435,6 @@ apis:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SEARCH_REQUESTS
       response:
         type: ([SearchRequestForDriver])
-      migrate:
-        endpointV2:
 types:
   DriverListRes:
     - totalItems: Int # for backward compatibility

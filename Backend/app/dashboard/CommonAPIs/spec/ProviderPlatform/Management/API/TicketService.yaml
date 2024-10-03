@@ -13,7 +13,5 @@ apis:
         type: CreateTicketReq
       response:
         type: CreateTicketResp
-      migrate:
-        endpointV2:
 
 types: {}
