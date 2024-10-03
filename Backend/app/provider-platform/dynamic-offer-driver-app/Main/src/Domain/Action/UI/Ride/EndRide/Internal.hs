@@ -34,6 +34,8 @@ module Domain.Action.UI.Ride.EndRide.Internal
     getEndDateMonth,
     makeDriverLeaderBoardKey,
     getMonth,
+    pickedWaypointsForEditDestination,
+    pickNWayPoints,
   )
 where
 
@@ -68,7 +70,7 @@ import GHC.Float (double2Int)
 import GHC.Num.Integer (integerFromInt, integerToInt)
 import Kernel.External.Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
-import Kernel.Prelude hiding (find, forM_, whenJust)
+import Kernel.Prelude hiding (find, forM_, map, whenJust)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
@@ -475,8 +477,48 @@ getRouteInfoWithShortestDuration (routeInfo : routeInfoArray) =
 -- for distance api we can't pick more than 10 waypoints
 pickWaypoints :: [a] -> [a]
 pickWaypoints waypoints = do
-  let step = length waypoints `div` 10
+  let step = length waypoints `div` 7
   take 7 $ foldr (\(n, waypoint) list -> if n `safeMod` step == 0 then waypoint : list else list) [] $ zip [1 ..] waypoints
+
+-- here pickNWayPoints is used to pick n waypoints from the list of waypoints
+pickNWayPoints :: Int -> [a] -> [a]
+pickNWayPoints number waypoints
+  | null waypoints = []
+  | number <= 1 = [last waypoints]
+  | otherwise = do
+    let len = length waypoints
+        step = len `div` number
+        pickedPoints =
+          take (number - 1) $
+            foldr
+              (\(n, waypoint) list -> if n `safeMod` step == 0 then waypoint : list else list)
+              []
+              (zip [1 ..] waypoints)
+    pickedPoints ++ [last waypoints]
+
+pickedWaypointsForEditDestination :: [(LatLong, Bool)] -> [LatLong]
+pickedWaypointsForEditDestination waypoints =
+  let n = length waypoints -- Total number of waypoints
+      chunks = breakOnTrueInclude waypoints
+      remainingPicks = 7 :: Int
+      weightedChunks =
+        [pickNWayPoints (max 1 (remainingPicks * length chunk `div` n)) chunk | chunk <- chunks]
+   in concat weightedChunks
+
+breakOnTrueInclude :: [(LatLong, Bool)] -> [[LatLong]]
+breakOnTrueInclude [] = []
+breakOnTrueInclude latlongs =
+  -- take elements until we find a true an
+  foldr
+    ( \(latlong, bool') acc ->
+        if bool'
+          then [latlong] : acc
+          else case acc of
+            [] -> [[latlong]]
+            (x : xs) -> (latlong : x) : xs
+    )
+    []
+    latlongs
 
 safeMod :: Int -> Int -> Int
 _ `safeMod` 0 = 0

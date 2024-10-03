@@ -338,36 +338,30 @@ makeEditDestinationWaypointsRedisKey driverId = mconcat ["editDestinationWaypoin
 makeEditDestinationSnappedWaypointsRedisKey :: Id person -> Text
 makeEditDestinationSnappedWaypointsRedisKey driverId = mconcat ["editDestinationSnappedWaypoints", ":", driverId.getId]
 
-addEditDestinationSnappedWayPoints :: (HedisFlow m env) => Id person -> NonEmpty LatLong -> m ()
+addEditDestinationSnappedWayPoints :: (HedisFlow m env) => Id person -> NonEmpty (LatLong, Bool) -> m ()
 addEditDestinationSnappedWayPoints driverId waypoints = do
   let key = makeEditDestinationSnappedWaypointsRedisKey driverId
-      numPoints = length waypoints
   rPush key waypoints
-  Hedis.expire key 21600 -- 6 hours
-  logInfo $ mconcat ["added ", show numPoints, " edit destination snapped points for driverId = ", driverId.getId]
+  Hedis.expire key 86400 -- 24 hours
 
-getEditDestinationSnappedWaypoints :: (HedisFlow m env) => Id person -> m [LatLong]
+getEditDestinationSnappedWaypoints :: (HedisFlow m env) => Id person -> m [(LatLong, Bool)]
 getEditDestinationSnappedWaypoints driverId = lRange (makeEditDestinationSnappedWaypointsRedisKey driverId) 0 (-1)
 
 deleteEditDestinationSnappedWaypoints :: (HedisFlow m env) => Id person -> m ()
 deleteEditDestinationSnappedWaypoints driverId = do
   let key = makeEditDestinationSnappedWaypointsRedisKey driverId
   Hedis.del key
-  logInfo $ mconcat ["cleared edit destination snapped points for driverId = ", driverId.getId]
 
 addEditDestinationPoints :: (HedisFlow m env) => Id person -> NonEmpty LatLong -> m ()
 addEditDestinationPoints driverId waypoints = do
   let key = makeEditDestinationWaypointsRedisKey driverId
-      numPoints = length waypoints
   rPush key waypoints
-  Hedis.expire key 21600 -- 6 hours
-  logInfo $ mconcat ["added ", show numPoints, " edit destination points for driverId = ", driverId.getId]
+  Hedis.expire key 86400 -- 24 hours
 
 deleteEditDestinationWaypoints :: (HedisFlow m env) => Id person -> m ()
 deleteEditDestinationWaypoints driverId = do
   let key = makeEditDestinationWaypointsRedisKey driverId
   Hedis.del key
-  logInfo $ mconcat ["cleared edit destination points for driverId = ", driverId.getId]
 
 getEditDestinationWaypoints :: (HedisFlow m env) => Id person -> m [LatLong]
 getEditDestinationWaypoints driverId = lRange (makeEditDestinationWaypointsRedisKey driverId) 0 (-1)
