@@ -43,6 +43,7 @@ Ride:
     id: Id Ride
     bookingId: Id Booking
     shortId: ShortId Ride
+    hasStops : Maybe Bool
     clientId: Maybe (Id Client)
     merchantId: Maybe (Id Merchant)
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -177,7 +178,7 @@ Ride:
   fromTType:
     toLocation: Storage.Queries.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
     fromLocation: Storage.Queries.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId|IM
-    stops: Storage.Queries.Transformers.Ride.getStops id|EM
+    stops: Storage.Queries.Transformers.Ride.getStops id hasStops|EM
     trackingUrl: Kernel.Prelude.parseBaseUrl|IM
     merchantOperatingCityId: Storage.Queries.Transformers.Ride.getMerchantOperatingCityId bookingId merchantId|IM
     tripStartPos: Storage.Queries.Transformers.Ride.mkLatLong|I

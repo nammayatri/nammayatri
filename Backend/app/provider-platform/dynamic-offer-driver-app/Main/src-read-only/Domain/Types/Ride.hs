@@ -57,6 +57,7 @@ data Ride = Ride
     fare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     fareParametersId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FareParameters.FareParameters),
     fromLocation :: Domain.Types.Location.Location,
+    hasStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
     isAdvanceBooking :: Kernel.Prelude.Bool,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

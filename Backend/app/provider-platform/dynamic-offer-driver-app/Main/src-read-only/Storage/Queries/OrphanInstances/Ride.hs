@@ -26,7 +26,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
     clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     fromLocation' <- Storage.Queries.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId
     merchantOperatingCityId' <- Storage.Queries.Transformers.Ride.getMerchantOperatingCityId bookingId merchantId merchantOperatingCityId
-    stops' <- Storage.Queries.Transformers.Ride.getStops id
+    stops' <- Storage.Queries.Transformers.Ride.getStops id hasStops
     toLocation' <- Storage.Queries.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId
     trackingUrl' <- Kernel.Prelude.parseBaseUrl trackingUrl
     tripCategory' <- Storage.Queries.Transformers.Ride.getTripCategory bookingId tripCategory
@@ -64,6 +64,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             fare = fmap (Kernel.Types.Common.mkAmountWithDefault fareAmount) fare,
             fareParametersId = Kernel.Types.Id.Id <$> fareParametersId,
             fromLocation = fromLocation',
+            hasStops = hasStops,
             id = Kernel.Types.Id.Id id,
             isAdvanceBooking = Kernel.Prelude.fromMaybe False isAdvanceBooking,
             isAirConditioned = isAirConditioned,
@@ -147,6 +148,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.fare = Kernel.Prelude.fmap roundToIntegral fare,
         Beam.fareAmount = fare,
         Beam.fareParametersId = Kernel.Types.Id.getId <$> fareParametersId,
+        Beam.hasStops = hasStops,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAdvanceBooking = Kernel.Prelude.Just isAdvanceBooking,
         Beam.isAirConditioned = isAirConditioned,

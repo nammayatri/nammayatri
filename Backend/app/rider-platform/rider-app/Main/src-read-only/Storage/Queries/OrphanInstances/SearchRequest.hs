@@ -26,7 +26,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
     clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     fromLocation' <- Storage.Queries.Transformers.SearchRequest.getFromLocation id
     merchantOperatingCityId' <- Storage.Queries.Transformers.SearchRequest.backfillMOCId merchantId merchantOperatingCityId
-    stops' <- Storage.Queries.Transformers.SearchRequest.getStops id
+    stops' <- Storage.Queries.Transformers.SearchRequest.getStops id hasStops
     toLocation' <- Storage.Queries.Transformers.SearchRequest.getToLocation id
     pure $
       Just
@@ -50,6 +50,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             estimatedRideDuration = estimatedRideDuration,
             estimatedRideStaticDuration = estimatedRideStaticDuration,
             fromLocation = fromLocation',
+            hasStops = hasStops,
             id = Kernel.Types.Id.Id id,
             initiatedBy = initiatedBy,
             isAdvanceBookingEnabled = isAdvanceBookingEnabled,
@@ -99,6 +100,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.estimatedRideDuration = estimatedRideDuration,
         Beam.estimatedRideStaticDuration = estimatedRideStaticDuration,
         Beam.fromLocationId = Just $ Kernel.Types.Id.getId ((.id) fromLocation),
+        Beam.hasStops = hasStops,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.initiatedBy = initiatedBy,
         Beam.isAdvanceBookingEnabled = isAdvanceBookingEnabled,

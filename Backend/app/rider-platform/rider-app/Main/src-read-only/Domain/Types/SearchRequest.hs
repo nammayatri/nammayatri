@@ -41,6 +41,7 @@ data SearchRequest = SearchRequest
     estimatedRideDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedRideStaticDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     fromLocation :: Domain.Types.Location.Location,
+    hasStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     initiatedBy :: Kernel.Prelude.Maybe Domain.Types.Trip.TripParty,
     isAdvanceBookingEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

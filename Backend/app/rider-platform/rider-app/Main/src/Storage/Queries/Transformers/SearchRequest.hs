@@ -17,15 +17,18 @@ getFromLocation id = do
   fromLocation <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
   return fromLocation
 
-getStops :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Kernel.Prelude.Text -> m [Domain.Types.Location.Location]
-getStops id = do
-  stopsLocationMapping <- QLM.getLatestStopsByEntityId id
-  mapM
-    ( \stopLocationMapping ->
-        QL.findById stopLocationMapping.locationId
-          >>= fromMaybeM (StopsLocationNotFound stopLocationMapping.locationId.getId)
-    )
-    stopsLocationMapping
+getStops :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Kernel.Prelude.Text -> Maybe Bool -> m [Domain.Types.Location.Location]
+getStops id hasStops = do
+  if hasStops == Just True
+    then do
+      stopsLocationMapping <- QLM.getLatestStopsByEntityId id
+      mapM
+        ( \stopLocationMapping ->
+            QL.findById stopLocationMapping.locationId
+              >>= fromMaybeM (StopsLocationNotFound stopLocationMapping.locationId.getId)
+        )
+        stopsLocationMapping
+    else return []
 
 backfillMOCId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
 backfillMOCId merchantId = \case

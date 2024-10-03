@@ -51,6 +51,7 @@ Ride:
     bppRideId: Id BPPRide
     bookingId: Id Booking
     shortId: ShortId Ride
+    hasStops : Maybe Bool
     merchantId: Maybe (Id Merchant)
     clientId: Maybe (Id Client)
     fromLocation: Location
@@ -184,7 +185,7 @@ Ride:
   fromTType:
     toLocation: Storage.Queries.Extra.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId|IM
     fromLocation: Storage.Queries.Extra.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId|IM
-    stops: Storage.Queries.Extra.Transformers.Ride.getStops id |EM
+    stops: Storage.Queries.Extra.Transformers.Ride.getStops id hasStops|EM
     fare: fmap (Kernel.Types.Common.mkPrice currency) fare|E
     totalFare: fmap (Kernel.Types.Common.mkPrice currency) totalFare|E
     trackingUrl: Kernel.Prelude.mapM Kernel.Prelude.parseBaseUrl|IM

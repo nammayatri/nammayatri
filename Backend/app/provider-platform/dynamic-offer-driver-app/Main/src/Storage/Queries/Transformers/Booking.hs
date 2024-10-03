@@ -49,16 +49,19 @@ fromAndToLocation mappings tripCategory id fromLocationId toLocationId providerI
 
       return (fl, tl)
 
-getStops :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [DL.Location]
-getStops id = do
-  stopsLocationMapping <- QLM.getLatestStopsByEntityId id
-  mapM
-    ( \stopLocationMapping ->
-        QL.findById stopLocationMapping.locationId
-          >>= fromMaybeM
-            (StopsLocationNotFound stopLocationMapping.locationId.getId)
-    )
-    stopsLocationMapping
+getStops :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> Maybe Bool -> m [DL.Location]
+getStops id hasStops = do
+  if hasStops == Just True
+    then do
+      stopsLocationMapping <- QLM.getLatestStopsByEntityId id
+      mapM
+        ( \stopLocationMapping ->
+            QL.findById stopLocationMapping.locationId
+              >>= fromMaybeM
+                (StopsLocationNotFound stopLocationMapping.locationId.getId)
+        )
+        stopsLocationMapping
+    else return []
 
 getBookingTypeFromTripCategory :: TripCategory -> Domain.Types.Booking.BookingType
 getBookingTypeFromTripCategory tripCategory =

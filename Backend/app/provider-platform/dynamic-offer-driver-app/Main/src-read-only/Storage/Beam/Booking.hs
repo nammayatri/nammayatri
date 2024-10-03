@@ -37,6 +37,7 @@ data BookingT f = BookingT
     fareParametersId :: B.C f Kernel.Prelude.Text,
     fromLocGeohash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    hasStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     initiatedAs :: B.C f (Kernel.Prelude.Maybe Domain.Types.Trip.TripParty),
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

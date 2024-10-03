@@ -24,6 +24,7 @@ SearchRequest:
     id: Id SearchRequest
     transactionId: Text
     messageId: Maybe Text
+    hasStops : Maybe Bool
     providerId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     riderId: Maybe (Id RiderDetails)
@@ -114,7 +115,7 @@ SearchRequest:
     bapUri: Kernel.Prelude.parseBaseUrl|IM
     fromLocation: Storage.Queries.Location.findById ( (.locationId) fromLocationMapping) >>= fromMaybeM (Tools.Error.FromLocationNotFound ( (.getId) $ (.locationId) fromLocationMapping))|EM
     toLocation: maybe (pure Nothing) (Storage.Queries.Location.findById . (.locationId)) mbToLocationMapping|EM
-    stops: Storage.Queries.Transformers.SearchRequest.getStops id|EM
+    stops: Storage.Queries.Transformers.SearchRequest.getStops id hasStops|EM
     startTime: startTime_|E
     validTill: fromMaybe (Kernel.Utils.Common.addUTCTime 600 startTime_) validTill|E
     isScheduled: fromMaybe False isScheduled|E
