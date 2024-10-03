@@ -3,6 +3,8 @@ package in.juspay.mobility.dynamicfeature;
 import android.app.Application;
 import android.content.Intent;
 import android.os.Bundle;
+import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.annotation.Nullable;
 
@@ -16,6 +18,7 @@ import com.finternet.sdk.GullakSDKResponse;
 import com.finternet.sdk.MyEventPackage;
 import com.google.firebase.FirebaseApp;
 import com.google.gson.Gson;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 import java.util.List;
 
@@ -26,27 +29,33 @@ public class DynamicActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_resource);
-        System.loadLibrary("turbomodulejsijni");
-        System.loadLibrary("imagepipeline");
-        System.loadLibrary("reactnativeblob");
-        System.loadLibrary("native-imagetranscoder");
-        Intent intent = getIntent();
-        String repeatUserLoginToken = intent.getStringExtra("token");
-        FirebaseApp.getApps(this);
-
-
-        String response = GullakCore.startGullak(DynamicActivity.this, repeatUserLoginToken, getApplicationContext().getPackageName(), new Callback() {
-            @Override
-            public void onResponse(GullakSDKResponse s) {
-                Gson gson = new Gson();
-                String responseJson = gson.toJson(s);
-                Intent resultIntent = new Intent();
-                resultIntent.putExtra("responseJson", responseJson);
-                if (intent.getStringExtra("cbIdentifier")!=null) resultIntent.putExtra("cbIdentifier", intent.getStringExtra("cbIdentifier"));
-                setResult(RESULT_OK, resultIntent);
-                finish();
-            }
-        });
+        try{
+            System.loadLibrary("turbomodulejsijni");
+            System.loadLibrary("imagepipeline");
+            System.loadLibrary("reactnativeblob");
+            System.loadLibrary("native-imagetranscoder");
+            System.loadLibrary("logger");
+            System.loadLibrary("yoga");
+            Intent intent = getIntent();
+            String repeatUserLoginToken = intent.getStringExtra("token");
+            FirebaseApp.getApps(this);
+            String response = GullakCore.startGullak(DynamicActivity.this, repeatUserLoginToken, getApplicationContext().getPackageName(), new Callback() {
+                @Override
+                public void onResponse(GullakSDKResponse s) {
+                    Gson gson = new Gson();
+                    String responseJson = gson.toJson(s);
+                    Intent resultIntent = new Intent();
+                    resultIntent.putExtra("responseJson", responseJson);
+                    if (intent.getStringExtra("cbIdentifier")!=null) resultIntent.putExtra("cbIdentifier", intent.getStringExtra("cbIdentifier"));
+                    setResult(RESULT_OK, resultIntent);
+                    finish();
+                }
+            });
+        }catch(Exception e){
+            Toast.makeText(this, "Error occurred", Toast.LENGTH_SHORT).show();
+            FirebaseCrashlytics.getInstance().recordException(e);
+            finish();
+        }
     }
 
     public static ReactNativeHost createReactNativeHost(Application app) {
