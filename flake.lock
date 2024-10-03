@@ -697,11 +697,11 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1723219060,
-        "narHash": "sha256-GHoQ9nMpmPxCTqlJBFmIuQxcf90ecM3yk3MAkvfdz68=",
+        "lastModified": 1729171003,
+        "narHash": "sha256-xpy4MIpqSITxeKc0Xt3qlbMDVmYLkWAxgXhXosk0glg=",
         "owner": "nammayatri",
         "repo": "euler-hs",
-        "rev": "a2d3de7e7a1bbac8237909367d8870a285e09c06",
+        "rev": "0260a70cede65f232c47f4893b4d2c18f47b1b2b",
         "type": "github"
       },
       "original": {
@@ -3802,15 +3802,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1728987357,
-        "narHash": "sha256-tRxPZamtQNvKYncN1zmpe2yNofP0p8BqAswZFrRDros=",
+        "lastModified": 1729172465,
+        "narHash": "sha256-81azC+gCyjJDlggRxwpOOOpGEbmAcADGoDJslrSmquQ=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "15a23db5ce178061ad1cbca466d02118296587c3",
+        "rev": "8b7775390f48713be0374e4e3dfc90eaa6a94090",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/fork-and-wait",
         "repo": "shared-kernel",
         "type": "github"
       }
