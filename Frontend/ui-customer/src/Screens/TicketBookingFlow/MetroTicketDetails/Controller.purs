@@ -59,12 +59,22 @@ data Action = NoAction
             | CancelBookingPopUpAC PopUpModalController.Action
             | ShowMetroBookingCancelledView MetroBookingHardCancelStatusResp
 
-data ScreenOutput = NoOutput | GoBack | BackToSearchMetroLocation | GoToHome | GoToMyMetroTickets | SoftCancelBooking ST.MetroTicketDetailsScreenState | HardCancelBooking ST.MetroTicketDetailsScreenState
+data ScreenOutput = 
+    NoOutput 
+  | GoBack 
+  | BackToSearchMetroLocation 
+  | GoToHome 
+  | GoToMyMetroTickets 
+  | SoftCancelBooking ST.MetroTicketDetailsScreenState 
+  | HardCancelBooking ST.MetroTicketDetailsScreenState 
+  | GoToBusTicketBookingScreen
 
 eval :: Action -> MetroTicketDetailsScreenState -> Eval Action ScreenOutput MetroTicketDetailsScreenState
 
 eval BackPressed state = 
-  if (state.props.stage == MetroMapStage || state.props.stage == MetroRouteDetailsStage) && state.props.previousScreenStage == MetroMyTicketsStage then 
+  if state.props.fromScreen == Just (getScreen BUS_TICKET_BOOKING_SCREEN) then
+    exit GoToBusTicketBookingScreen
+  else if (state.props.stage == MetroMapStage || state.props.stage == MetroRouteDetailsStage) && state.props.previousScreenStage == MetroMyTicketsStage then 
     continue
       state {
         props {

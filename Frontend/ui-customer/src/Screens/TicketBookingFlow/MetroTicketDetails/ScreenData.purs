@@ -43,5 +43,6 @@ initData = {
   , isBookingCancellable : Nothing
   , cancellationCharges : Nothing
   , refundAmount : Nothing
+  , fromScreen : Nothing
   }
 }

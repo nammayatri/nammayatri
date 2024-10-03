@@ -380,6 +380,7 @@ fieldView push state fieldName fieldValue visibility_ =
 ticketDetailsView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
 ticketDetailsView push state = 
   let 
+    (Config.StatusPillConfig config) = Config.getStatusPillConfig state
     statusPillConfig = Config.getStatusPillConfig state 
   in
     linearLayout [
@@ -393,19 +394,48 @@ ticketDetailsView push state =
       , width MATCH_PARENT
       , orientation VERTICAL
       ][
-        linearLayout[
+        relativeLayout [
+          height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , background Color.grey700
+        , margin $ Margin 16 24 16 0
+        ]
+        [ 
+          imageView [
+          width MATCH_PARENT
+        , height $ V 50
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET case config.ticketStatus of
+                                                              "ACTIVE" -> "ny_ic_active_state"
+                                                              "EXPIRED" -> "ny_ic_expired_state"
+                                                              _ -> "ny_ic_verified_state"
+        , gravity CENTER
+        , margin $ MarginBottom 0
+        ]
+        , linearLayout[
           width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        , padding $ Padding 16 30 16 16
-        , margin $ Margin 16 24 16 0
-        , background Color.white900
-        , cornerRadii $ Corners 8.0 true true false false
+        , padding $ Padding 16 0 16 16
+        , margin $ MarginTop 44
+        , background $ case config.ticketStatus of
+                           "ACTIVE" -> Color.activeTicketColor
+                           "EXPIRED" -> Color.expiredTicketColor
+                           _ -> Color.blue600
+        , cornerRadii $ Corners 15.0 false false true true
         ][
           metroHeaderView push state (FontStyle.body20 TypoGraphy) true
+        , imageView [
+            width MATCH_PARENT
+          , height $ V 20 
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_horizontal_dash"
+          , gravity CENTER
+          , margin $ MarginTop 10  
+        ]
         , qrCodeView push state
         , ticketNumberAndValidView push state
         ]    
+      ]
       , linearLayout[
           width MATCH_PARENT
         , height WRAP_CONTENT
@@ -417,10 +447,13 @@ ticketDetailsView push state =
         width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
-      , background Color.white900
+      , background $ case config.ticketStatus of
+                           "ACTIVE" -> Color.activeTicketColor
+                           "EXPIRED" -> Color.expiredTicketColor
+                           _ -> Color.blue600
       , padding $ Padding 16 30 16 16
       , margin $ MarginHorizontal 16 16 
-      , cornerRadii $ Corners 8.0 false false true true 
+      , cornerRadii $ Corners 15.0 true true true true
       ][
         originAndDestinationView push state VERTICAL (FontStyle.body3 TypoGraphy) (FontStyle.body1 TypoGraphy) LEFT
       ]
@@ -468,7 +501,7 @@ metroHeaderView push state headerFontStyle detailVisibility =
           width WRAP_CONTENT
         , height WRAP_CONTENT
         , text $ cityConfig.title
-        , color Color.black800
+        , color Color.white900
         ] <> headerFontStyle
       , linearLayout [
           width WRAP_CONTENT
@@ -481,7 +514,7 @@ metroHeaderView push state headerFontStyle detailVisibility =
             width WRAP_CONTENT
           , height WRAP_CONTENT
           , text $ getString if state.data.ticketType == "SingleJourney" then ONWORD_JOURNEY else ROUND_TRIP_STR
-          , color Color.black800
+          , color Color.black500
           ] <> FontStyle.tags TypoGraphy
         , linearLayout [
             width $ V 4
@@ -495,7 +528,7 @@ metroHeaderView push state headerFontStyle detailVisibility =
             width WRAP_CONTENT
           , height WRAP_CONTENT
           , text $ (show $ state.data.noOfTickets) <> " " <> (getString $ if state.data.noOfTickets > 1 then TICKETS else TICKET)
-          , color Color.black800
+          , color Color.black500
           ] <> FontStyle.tags TypoGraphy
         , linearLayout [
             width $ V 4
@@ -509,7 +542,7 @@ metroHeaderView push state headerFontStyle detailVisibility =
             width WRAP_CONTENT
           , height WRAP_CONTENT
           , text $ "₹" <> show state.data.ticketPrice
-          , color Color.black800
+          , color Color.black500
           ] <> FontStyle.tags TypoGraphy
       ]
         ]
@@ -700,6 +733,7 @@ originAndDestinationView push state fieldOrientation fieldFontStyle valueFontSty
           textView $ [
             width WRAP_CONTENT
           , height WRAP_CONTENT
+          , color Color.black500
           , text originConfig.name
           ] <> valueFontStyle
         -- , linePillView originConfig.line -- need to enabled once metro line is available
@@ -745,6 +779,7 @@ originAndDestinationView push state fieldOrientation fieldFontStyle valueFontSty
           textView $ [
             width WRAP_CONTENT
           , height WRAP_CONTENT
+          , color Color.black500
           , text destinationConfig.name
           ] <> valueFontStyle
         -- , linePillView destinationConfig.line -- need to enabled once metro line is available

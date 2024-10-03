@@ -439,3 +439,9 @@ seashell = "#FFF5EF"
 
 seashellBorder :: Color
 seashellBorder = "#FFECE1"
+
+activeTicketColor :: Color
+activeTicketColor = "#165718"
+
+expiredTicketColor :: Color 
+expiredTicketColor = "#2C2F3A"

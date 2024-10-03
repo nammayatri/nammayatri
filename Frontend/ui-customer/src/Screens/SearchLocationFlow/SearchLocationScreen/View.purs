@@ -70,15 +70,15 @@ import Log (printLog)
 import Mobility.Prelude (boolToVisibility, boolToInvisibility)
 import Prelude ((<<<), (==), Unit, ($), (<>), (&&), (-), (/), (>), (/=), (+), (||), bind, show, pure, const, unit, not, void, discard, map, identity, (>=), (*), when, (<#>))
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed, onAnimationEnd, adjustViewWithKeyboard, shimmerFrameLayout, accessibility, Accessiblity(..),accessibilityHint)
+import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation,rippleColor, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed, onAnimationEnd, adjustViewWithKeyboard, shimmerFrameLayout, accessibility, Accessiblity(..),accessibilityHint)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants (getDelayForAutoComplete)
 import Screens.SearchLocationScreen.ComponentConfig (locationTagBarConfig, separatorConfig, primaryButtonConfig, mapInputViewConfig, menuButtonConfig, confirmLocBtnConfig, locUnserviceablePopUpConfig, primaryButtonRequestRideConfig, rentalRateCardConfig, chooseYourRideConfig)
 import Screens.SearchLocationScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps, Station, ZoneType(..))
-import Services.API(GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..))
+import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps, Station, ZoneType(..),RideType(..))
+import Services.API(GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..),GetBusRouteResp(..),GetMetroStationResp(..))
 import Services.Backend (getQuotes, rideBooking)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
@@ -504,7 +504,7 @@ locUnserviceableView push state =
 
 locateOnMapFooterView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
 locateOnMapFooterView push state = let 
-  viewVisibility = boolToVisibility $ currentStageOn state PredictionsStage
+  viewVisibility = boolToVisibility $ (currentStageOn state PredictionsStage && state.props.actionType /= BusStationSelectionAction) 
   animationSet' = if EHC.os == "IOS" then [] else [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 true ]
   in 
   PrestoAnim.animationSet animationSet' $ 
@@ -574,16 +574,64 @@ verticalSeparatorView hght margin' =
     ][]
 
 footerArray state = 
-  case state.props.actionType of 
-    MetroStationSelectionAction -> [{action : MetroRouteMapAction, text : "See Metro Map", buttonType : "SetLocationOnMap", imageName : "ny_ic_metro_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_metro_map.png"}]
+  case state.props.actionType of  -- TODO:- text : See Metro
+    MetroStationSelectionAction -> [{action : MetroRouteMapAction, text : "See Metro", buttonType : "SetLocationOnMap", imageName : "ny_ic_metro_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_metro_map.png"}]
+    BusStationSelectionAction -> []
+    BusSearchSelectionAction -> []
+    BusRouteSelectionAction -> []
+    BusStopSelectionAction -> []
     _ -> if state.props.focussedTextField == MB.Just SearchLocPickup then 
             [ {action : SetLocationOnMap, text : getString SELECT_ON_MAP, buttonType : "SetLocationOnMap", imageName : "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png"}
             , {action : CurrentLocation , text : getString CURRENT_LOCATION, buttonType : "CurrentLocation", imageName : "ny_ic_current_location,https://assets.juspay.in/nammayatri/images/user/ny_ic_current_location.png"}
             ]
             else [{action : SetLocationOnMap, text : getString SELECT_LOCATION_ON_MAP, buttonType : "SetLocationOnMap", imageName : "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png"}]
 
+navbarlayout :: SearchLocationScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+navbarlayout state push =
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , padding $ Padding 3 4 3 4
+    , margin $ Margin 16 16 16 16
+    , cornerRadius 18.0
+    , visibility $ boolToVisibility  (not DA.null state.data.updatedRouteSearchedList && not DA.null state.data.updatedStopsSearchedList)
+    , background Color.white900
+    ]
+    ( DA.mapWithIndex
+        ( \index item -> navpillView state item push index
+        )
+        [ROUTES , STOP]
+    )
 
-
+navpillView :: SearchLocationScreenState -> RideType -> (Action -> Effect Unit) -> Int -> forall w. PrestoDOM (Effect Unit) w
+navpillView state item push idx = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , gravity CENTER
+    , orientation HORIZONTAL
+    , padding $ Padding 5 8 5 8
+    , weight 1.0
+    , cornerRadius 18.0
+    , onClick push $ const $ RideTypeSelected item idx
+    , background if idx == state.data.activeRideIndex then Color.black900 else Color.white900
+    , rippleColor Color.rippleShade
+    ]
+    [ imageView  
+        [ width $ V 18  
+        , height $ V 18  
+        , imageWithFallback $ fetchImage FF_ASSET (if idx == 0 then "ny_ic_route_bus" else "ny_ic_loc_grey")
+        , margin $ MarginRight 8
+        ]
+    , textView
+        $ [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text  (show item )
+          , textSize FontSize.a_13
+          , color if idx == state.data.activeRideIndex then Color.white900 else Color.black900
+          ]
+        <> FontStyle.tags TypoGraphy
+    ]
 searchLocationView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> GlobalProps ->  PrestoDOM (Effect Unit) w
 searchLocationView push state globalProps = let
   viewVisibility = boolToVisibility $ currentStageOn state PredictionsStage  || currentStageOn state PredictionSelectedFromHome 
@@ -601,7 +649,8 @@ searchLocationView push state globalProps = let
         else 
         [ locationTagsView state push globalProps
         , infoView $ findPlaceConfig state
-        , infoView $ locUnserviceableConfig state 
+        , infoView $ locUnserviceableConfig state
+        , navbarlayout state push
         , predictionsView push state globalProps]
   where 
 
@@ -613,6 +662,10 @@ searchLocationView push state globalProps = let
       , viewVisibility : boolToVisibility $ 
                           case state.props.actionType of 
                               MetroStationSelectionAction -> DA.null state.data.updatedMetroStations
+                              BusStationSelectionAction -> DA.null state.data.updatedMetroStations
+                              BusSearchSelectionAction -> false
+                              BusRouteSelectionAction -> false
+                              BusStopSelectionAction ->  DA.null state.data.updatedStopsSearchedList
                               _ -> DA.null state.data.locationList
       , headerText : (getVarString WELCOME_TEXT [appName]) <> "!"
       , descText : getString START_TYPING_TO_SEARCH_PLACES
@@ -631,7 +684,7 @@ locationTagsView state push globalProps =
     [ height WRAP_CONTENT
     , margin $ MarginTop 16
     , width MATCH_PARENT
-    , visibility $ boolToVisibility state.props.canSelectFromFav
+    , visibility $ boolToVisibility ( state.props.canSelectFromFav && state.props.actionType /= BusSearchSelectionAction && state.props.actionType /= BusRouteSelectionAction && state.props.actionType /= BusStopSelectionAction)
     , gravity CENTER
     ][  LocationTagBar.view (push <<< LocationTagBarAC globalProps.savedLocations) (locationTagBarConfig state globalProps )]
     
@@ -641,9 +694,16 @@ predictionsView push state globalProps = let
   viewVisibility = boolToVisibility $ 
     case state.props.actionType of 
       MetroStationSelectionAction -> not $ DA.null state.data.updatedMetroStations
+      BusStationSelectionAction -> not $ DA.null state.data.updatedMetroStations
+      BusSearchSelectionAction -> (not  DA.null state.data.updatedRouteSearchedList) || (not $ DA.null state.data.updatedStopsSearchedList)
+      BusRouteSelectionAction -> not $ DA.null state.data.updatedStopsSearchedList
+      BusStopSelectionAction -> not $ DA.null state.data.updatedStopsSearchedList
       _ -> (not DA.null state.data.locationList) && (not state.props.locUnserviceable)
   headerText = if state.props.isAutoComplete then (getString SEARCH_RESULTS)
-                else if state.props.actionType == MetroStationSelectionAction then "Metro Stations"
+                else if state.props.actionType == MetroStationSelectionAction then "Metro Stations" -- TODO: Change this to metro stations
+                else if state.props.actionType == BusStationSelectionAction then "Bus Routes"
+                else if state.props.actionType == BusSearchSelectionAction then if (not DA.null state.data.updatedRouteSearchedList && DA.null state.data.updatedStopsSearchedList) then "Route Search" else "Bus Search"
+                else if state.props.actionType == BusRouteSelectionAction || state.props.actionType == BusStopSelectionAction then "Bus Search"
                 else 
                   MB.maybe "" (\ currField -> if currField == SearchLocPickup then (getString PAST_SEARCHES) else (getString SUGGESTED_DESTINATION)) state.props.focussedTextField
   in
@@ -663,8 +723,15 @@ predictionsView push state globalProps = let
               [ text headerText
               , color Color.black700
               , margin $ MarginVertical 14 8
+              , visibility $ boolToVisibility  (DA.null state.data.updatedRouteSearchedList || DA.null state.data.updatedStopsSearchedList)
               ] <> FontStyle.body3 TypoGraphy
-          , predictionArrayView $ if state.props.actionType == MetroStationSelectionAction then metroStationsArray state.data.updatedMetroStations else state.data.locationList
+          , predictionArrayView (case state.props.actionType of
+                                    MetroStationSelectionAction -> metroStationsArray state.data.updatedMetroStations
+                                    BusStationSelectionAction -> metroStationsArray state.data.updatedMetroStations
+                                    BusSearchSelectionAction ->if (state.data.rideType == ROUTES && (DA.length state.data.updatedRouteSearchedList /= 0)) then busRouteArray state.data.updatedRouteSearchedList else busStopArray state.data.updatedStopsSearchedList
+                                    BusRouteSelectionAction -> busStopArray state.data.updatedStopsSearchedList
+                                    BusStopSelectionAction ->  busStopArray state.data.updatedStopsSearchedList
+                                    _ -> state.data.locationList)
           , footerView
         ]
       ]
@@ -684,7 +751,7 @@ predictionsView push state globalProps = let
         , orientation VERTICAL
         ](  DA.mapWithIndex 
               (\index item -> locationListItemView item index ) 
-              if (DA.null locList && state.props.actionType /= MetroStationSelectionAction) then globalProps.cachedSearches else locList )
+              if (DA.null locList && (state.props.actionType /= MetroStationSelectionAction || state.props.actionType /= BusStationSelectionAction || state.props.actionType /= BusStopSelectionAction)) then globalProps.cachedSearches else locList )
 
     metroStationsArray:: Array Station -> Array LocationListItemState
     metroStationsArray metroStations = let
@@ -721,7 +788,74 @@ predictionsView push state globalProps = let
               , dynamicAction : MB.Nothing
               , types : MB.Nothing
               }) filteredStations
+    
+    busRouteArray :: Array GetBusRouteResp -> Array LocationListItemState
+    busRouteArray busRoute = 
+      map (\(GetBusRouteResp route) -> {
+          prefixImageUrl: fetchImage FF_ASSET "ny_ic_route_bus",
+          postfixImageUrl: "",
+          postfixImageVisibility: false,
+          title: MB.fromMaybe "No Code" route.code,
+          subTitle: route.longName,
+          placeId: MB.Nothing,
+          lat: MB.Nothing,
+          lon: MB.Nothing,
+          description: "",
+          tag: route.longName,
+          tagType: MB.Nothing,
+          cardType: MB.Nothing,
+          address: "",
+          tagName: "",
+          isEditEnabled: true,
+          savedLocation: "",
+          placeName: "",
+          isClickable: true,
+          alpha: 1.0,
+          fullAddress: dummyAddress,
+          locationItemType: MB.Nothing,
+          distance: MB.Nothing,
+          showDistance: MB.Just false,
+          actualDistance: MB.Nothing,  
+          frequencyCount: MB.Nothing,
+          recencyDate: MB.Nothing,
+          locationScore: MB.Nothing,
+          dynamicAction: MB.Nothing,
+          types: MB.Nothing 
+        }) busRoute
 
+    busStopArray :: Array GetMetroStationResp -> Array LocationListItemState
+    busStopArray busStops = 
+      map (\(GetMetroStationResp stops) -> {
+          prefixImageUrl: fetchImage FF_ASSET "ny_ic_route_bus",
+          postfixImageUrl: "",
+          postfixImageVisibility: false,
+          title: stops.name,
+          subTitle: "",
+          placeId: MB.Nothing,
+          lat: MB.Nothing,
+          lon: MB.Nothing,
+          description: "",
+          tag: stops.code,
+          tagType: MB.Nothing,
+          cardType: MB.Nothing,
+          address: "",
+          tagName: "",
+          isEditEnabled: true,
+          savedLocation: "",
+          placeName: "",
+          isClickable: true,
+          alpha: 1.0,
+          fullAddress: dummyAddress,
+          locationItemType: MB.Nothing,
+          distance: MB.Nothing,
+          showDistance: MB.Just false,
+          actualDistance: MB.Nothing,  
+          frequencyCount: MB.Nothing,
+          recencyDate: MB.Nothing,
+          locationScore: MB.Nothing,
+          dynamicAction: MB.Nothing,
+          types: MB.Nothing 
+        }) busStops
     locationListItemView :: LocationListItemState -> Int -> PrestoDOM (Effect Unit) w
     locationListItemView item index = let 
       enableErrorFeedback = 
