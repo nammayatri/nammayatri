@@ -2563,22 +2563,14 @@ findEstimates updatedState = do
         } 
       }
       , data {
-        startTimeUTC = (getCurrentUTC "")
-      , tripEstDuration = routeObj.estDuration 
+         tripEstDuration = routeObj.estDuration 
       , tripTypeDataConfig = HomeScreenData.tripTypeDataConfig{
                       tripPickupData = Just HomeScreenData.dummyTripTypeData{
-                          tripDateTimeConfig = {
-                            year : HU.getUTCFullYear currentUTC
-                          , month : HU.getUTCMonth currentUTC
-                          , day : HU.getUTCDate currentUTC
-                          , hour : HU.getUTCHours currentUTC
-                          , minute : HU.getUTCMinutes currentUTC
-                          }
-                        , tripDateUTC = currentUTC
-                        , tripDateReadableString = convertUTCtoISC currentUTC "D MMM, h:mm A" }
+                        tripDateReadableString = convertUTCtoISC currentUTC "D MMM, h:mm A" }
                     }
+            }
       }
-    })
+    )
     
     updateLocalStage GoToTripSelect
     homeScreenFlow
