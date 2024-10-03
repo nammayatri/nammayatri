@@ -32,7 +32,7 @@ import PrestoDOM.Types.Core (class Loggable)
 import Components.PrimaryButton as PrimaryButton 
 import Services.API
 import Screens.TicketBookingFlow.MetroMyTickets.Transformer (metroTicketListApiToMyTicketsTransformer)
-
+import Data.Maybe (Maybe(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -54,6 +54,7 @@ data ScreenOutput = NoOutput
                   | GoToMetroTicketStatusFlow MetroTicketBookingStatus
                   | GoToHomeScreen
                   | GoToMetroBooking
+                  | GoToBusBookingScreen
 
 
 eval :: Action -> MetroMyTicketsScreenState -> Eval Action ScreenOutput MetroMyTicketsScreenState
@@ -80,6 +81,9 @@ eval (GoToMetroBookingScreen PrimaryButton.OnClick) state =
 eval BackPressed state = 
   case state.props.entryPoint of 
     HomeScreenToMetroMyTickets -> exit GoToHomeScreen
-    MetroTicketBookingToMetroMyTickets -> exit GoToMetroBooking
+    MetroTicketBookingToMetroMyTickets ->
+      if state.props.fromScreen == Just (getScreen BUS_TICKET_BOOKING_SCREEN)
+        then exit GoToBusBookingScreen
+        else exit GoToHomeScreen
 
 eval _ state = update state

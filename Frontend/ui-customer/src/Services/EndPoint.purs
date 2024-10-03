@@ -15,7 +15,7 @@
 
 module Types.EndPoint where
 
-import Prelude ((<>),show, (==))
+import Prelude ((<>),show, (==),(&&),(/=))
 import Data.Maybe (maybe, Maybe(..), fromMaybe)
 import Services.Config (getBaseUrl)
 import Data.String
@@ -52,10 +52,7 @@ sendIssue :: String -> String
 sendIssue dummyString = (getBaseUrl "9") <> "/support/sendIssue"
 
 getRoute :: String -> String
-getRoute routeType = (getBaseUrl "10") <> case routeType of
-                                                "trip" -> "/trip/route"
-                                                "intercity" -> "/route"
-                                                _ -> "/pickup/route" 
+getRoute routeType = (getBaseUrl "10") <> if routeType == "trip" then "/trip/route" else "/pickup/route"
 
 driverFeedBack :: String -> String
 driverFeedBack dummyString = (getBaseUrl "12") <> "/feedback/rateRide"
@@ -243,11 +240,13 @@ shareRide dummy = (getBaseUrl "54") <> "/share/ride"
 followRide :: String -> String
 followRide _ = (getBaseUrl "47") <> "/follow/ride"
 
-getMetroStations :: String -> String
-getMetroStations city = (getBaseUrl "47") <> "/frfs/stations?vehicleType=\"METRO\"" <> "&city=" <> city  
+getMetroStations :: String -> String -> String -> String -> String
+getMetroStations vehicleType city routeCode startStationCode= (getBaseUrl "47") <> "/frfs/stations?vehicleType=\"" <> vehicleType <> "\"&city=" <> city <> (if (vehicleType == "BUS" && routeCode /= "") then "&routeCode=" <> routeCode else "") <> (if (vehicleType == "BUS" && startStationCode /= "") then "&startStationCode=" <> startStationCode else "")
 
 searchMetro :: String -> String
-searchMetro dummy = (getBaseUrl "48") <> "/frfs/search?vehicleType=\"METRO\""
+searchMetro vehicleType = (getBaseUrl "48") <> "/frfs/search?vehicleType=\"" <> vehicleType <> "\""
+getBusRoutes :: String -> String -> String -> String
+getBusRoutes city startStationCode endStationCode = (getBaseUrl "47") <> "/frfs/routes?vehicleType=\"BUS\"" <> "&city=" <> city <> "&startStationCode=" <> startStationCode <> "&endStationCode=" <> endStationCode
 
 getMetroQuotes :: String -> String
 getMetroQuotes searchId = (getBaseUrl "49") <> "/frfs/search/" <> searchId <> "/quote"
@@ -330,3 +329,9 @@ getFavouriteDriverTrips limit offset isActive status clientId =
 
 removeFavouriteDriver :: String -> String
 removeFavouriteDriver id = ((getBaseUrl "59") <> "/favorites/" <> id <> "/remove") 
+
+
+busAutoComplete :: String -> String -> String -> Maybe String -> String
+busAutoComplete vehicleType city location input = 
+  (getBaseUrl "48") <> "/frfs/autocomplete?vehicleType=\"" <> vehicleType <> "\"&city=" <> city <> "&location=" <> location <>
+  maybe "" (\i -> "&input=" <> i) input

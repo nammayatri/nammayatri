@@ -46,4 +46,5 @@ metroTicketStatusScreen = do
       modifyScreenState $ MetroTicketStatusScreenStateType (\_ ->updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_TRY_AGAIN_PAYMENT updatedState)
     GoToMyMetroTicketsScreen -> App.BackT $ App.NoBack <$> (pure $ GO_TO_METRO_TICKETS_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN)
+    GoToBusTicketBookingScreen -> App.BackT $ App.NoBack <$> (pure $ GO_TO_BUS_TICKET_BOOKING_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN)
     

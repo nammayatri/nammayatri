@@ -2769,10 +2769,15 @@ eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do
     _ -> continue state
   
 eval (RentalBannerClick) state = maybe (exit $ GoToScheduledRides state Nothing) (\rentalsInfo -> if rentalsInfo.multipleScheduled then exit (PastRides state true) else exit $ GoToScheduledRides state (Just rentalsInfo.bookingId)) state.data.rentalsInfo
+
 eval (BottomNavBarAction id) state = do 
-  let newState = state {props {focussedBottomIcon = id}}
+  let newState = state {props {focussedBottomIcon = id , busClicked = true}}
   case id of 
     TICKETING -> updateAndExit newState $ GoToTicketBookingFlow newState
+    BUS_ -> do
+      let updatedState = newState { props { ticketServiceType = API.BUS } }
+      updateAndExit updatedState $ GoToBusTicketBookingFlow state
+      -- updateAndExit updatedState $ GoToSearchLocationScreenForRoutes updatedState ST.Src
     MOBILITY -> continue newState 
     _ -> continue state 
     

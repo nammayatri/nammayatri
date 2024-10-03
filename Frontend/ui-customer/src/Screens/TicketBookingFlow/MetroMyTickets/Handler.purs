@@ -38,4 +38,5 @@ metroMyTicketsScreen = do
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_TICKET_STAUS_FLOW bookingStatusApiResp)
     GoToHomeScreen ->  App.BackT $ App.BackPoint <$> (pure $ GO_HOME_FROM_METRO_MY_TICKETS ) 
     GoToMetroBooking -> App.BackT $ App.BackPoint <$> (pure $ GO_METRO_BOOKING_FROM_METRO_MY_TICKETS)
+    GoToBusBookingScreen -> App.BackT $ App.BackPoint <$> (pure $ GO_BUS_BOOKING_FROM_METRO_MY_TICKETS)
     _  -> App.BackT $ App.NoBack <$> (pure $ METRO_MY_TICKETS_SCREEN_OUTPUT_NO_OUTPUT)

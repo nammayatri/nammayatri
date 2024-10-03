@@ -1335,27 +1335,44 @@ retryMetroTicketPayment quoteId = do
   where
     unwrapResponse x = x
 
-getMetroStationBT :: String -> FlowBT String GetMetroStationResponse
-getMetroStationBT city = do
+getMetroStationBT :: String -> String -> String -> String-> FlowBT String GetMetroStationResponse
+getMetroStationBT vehicleType city routeCode startStationCode = do
     headers <- getHeaders' "" false
-    withAPIResultBT (EP.getMetroStations city) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ GetMetroStationReq city)
+    withAPIResultBT (EP.getMetroStations vehicleType city routeCode startStationCode) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ GetMetroStationReq vehicleType city routeCode startStationCode)
     where
     errorHandler errorPayload = do
       BackT $ pure GoBack 
 
-searchMetroBT :: SearchMetroReq -> FlowBT String SearchMetroResp
-searchMetroBT  requestBody = do
+getBusRoutesBT :: String -> String -> String -> FlowBT String GetBusRoutesResponse
+getBusRoutesBT city startStationCode endStationCode= do
     headers <- getHeaders' "" false
-    withAPIResultBT (EP.searchMetro "") (\x -> x) errorHandler (lift $ lift $ callAPI headers requestBody)
+    withAPIResultBT (EP.getBusRoutes city startStationCode endStationCode ) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ GetBusRoutesReq city startStationCode endStationCode)
+    where
+    errorHandler errorPayload = do
+      BackT $ pure GoBack
+searchMetroBT :: String -> SearchMetroReq -> FlowBT String SearchMetroResp
+searchMetroBT vehicleType requestBody = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.searchMetro vehicleType) (\x -> x) errorHandler (lift $ lift $ callAPI headers (SearchMetroRequest requestBody vehicleType))
     where
     errorHandler errorPayload = do
       BackT $ pure GoBack 
 
-makeSearchMetroReq :: String -> String -> Int -> SearchMetroReq
-makeSearchMetroReq srcCode destCode count = SearchMetroReq {
+busAutoCompleteBT :: String -> String -> String -> Maybe String -> FlowBT String AutoCompleteResp
+busAutoCompleteBT vehicleType city location input = do 
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.busAutoComplete vehicleType city location input) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ BusAutoCompleteReq vehicleType city location input)
+    where
+    errorHandler errorPayload = do
+      BackT $ pure GoBack 
+
+
+makeSearchMetroReq :: String -> String -> Int -> Maybe String-> SearchMetroReq
+makeSearchMetroReq srcCode destCode count routeCode = SearchMetroReq {
     "fromStationCode" : srcCode,
     "toStationCode" : destCode,
-    "quantity" : count
+    "quantity" : count,
+    "routeCode" : routeCode
     }
 
 getMetroQuotesBT :: String -> FlowBT String GetMetroQuotesRes
