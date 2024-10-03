@@ -188,32 +188,20 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             (pickedWaypoints, currentPoint, snapToRoadFailed) <-
               if ride.status == DRide.INPROGRESS
                 then do
-                  bookingUpdateRequests <- QBUR.findAllByBookingId Nothing Nothing booking.id
-                  let prevSnapToRoadFailed = any (\request -> request.snapToRoadFailed == Just True) bookingUpdateRequests
-                  let allEditedlatLongs =
-                        [ Maps.LatLong lat lon | request <- bookingUpdateRequests, Just lat <- [request.currentPointLat], Just lon <- [request.currentPointLon]
-                        ]
                   currentLocationPointsBatch <- LTS.driverLocation rideId merchantOperatingCity.merchantId ride.driverId
                   editDestinationWaypoints <- getEditDestinationWaypoints ride.driverId
-                  (snapToRoadFailed, editDestinationPoints) <-
-                    if prevSnapToRoadFailed
-                      then return (True, allEditedlatLongs)
-                      else do
-                        (snapToRoadFailed, snappedLatLongs) <- getLatlongsViaSnapToRoad (editDestinationWaypoints <> currentLocationPointsBatch.loc) merchantOperatingCity.merchantId merchantOperatingCity.id
-                        if snapToRoadFailed
-                          then return (True, allEditedlatLongs)
-                          else do
-                            alreadySnappedPoints <- getEditDestinationSnappedWaypoints ride.driverId
-                            whenJust (nonEmpty snappedLatLongs) $ \snappedLatLongs' -> do
-                              addEditDestinationSnappedWayPoints ride.driverId snappedLatLongs'
-                            return (False, alreadySnappedPoints <> snappedLatLongs)
-
-                  let (currentPoint :: Maps.LatLong) =
+                  (snapToRoadFailed, editDestinationPoints) <- getLatlongsViaSnapToRoad (editDestinationWaypoints <> currentLocationPointsBatch.loc) merchantOperatingCity.merchantId merchantOperatingCity.id
+                  let (currentLocPoint :: Maps.LatLong) =
                         fromMaybe (Maps.LatLong ride.fromLocation.lat ride.fromLocation.lon) $
                           (if not $ null currentLocationPointsBatch.loc then Just (last currentLocationPointsBatch.loc) else Nothing)
                             <|> (if not $ null editDestinationWaypoints then Just (last editDestinationWaypoints) else Nothing)
+                  alreadySnappedPoints <- getEditDestinationSnappedWaypoints ride.driverId
+                  let currentPoint = if snapToRoadFailed then currentLocPoint else fst $ last editDestinationPoints
+                      alreadySnappedPointsWithCurrentPoint = alreadySnappedPoints <> editDestinationPoints <> [(currentPoint, True)]
+                  whenJust (nonEmpty alreadySnappedPointsWithCurrentPoint) $ \alreadySnappedPointsWithCurrentPoint' -> do
+                    addEditDestinationSnappedWayPoints ride.driverId alreadySnappedPointsWithCurrentPoint'
                   deleteEditDestinationWaypoints ride.driverId
-                  return (srcPt :| (pickWaypoints editDestinationPoints ++ [currentPoint, dropLatLong]), Just currentPoint, Just snapToRoadFailed)
+                  return (srcPt :| (pickedWaypointsForEditDestination (alreadySnappedPoints <> editDestinationPoints) ++ [currentPoint, dropLatLong]), Just currentPoint, Just snapToRoadFailed)
                 else return (srcPt :| [dropLatLong], Nothing, Nothing)
             logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show pickedWaypoints
             routeResponse <-
@@ -315,28 +303,24 @@ handler (UEditLocationReq EditLocationReq {..}) = do
           _ -> throwError (InvalidRequest "Invalid status for edit location request")
   where
     snapToRoad latlongs merchantId merchanOperatingCityId = do
-      res <- try $ Maps.snapToRoad merchantId merchanOperatingCityId Maps.SnapToRoadReq {points = latlongs, distanceUnit = Meter}
+      res <- Maps.snapToRoadWithFallback Nothing merchantId merchanOperatingCityId Maps.SnapToRoadReq {points = latlongs, distanceUnit = Meter}
       case res of
-        Left (e :: SomeException) -> do
-          logTagError "snapToRoad failed" $ "Error: " <> show e
+        (_, Left e) -> do
+          logTagError "snapToRoadWithFallback failed in edit destination" $ "Error: " <> show e
           return (True, [])
-        Right snapToRoadResp -> return (False, snapToRoadResp.snappedPoints)
+        (_, Right snapToRoadResp) -> return (False, snapToRoadResp.snappedPoints)
 
     getLatlongsViaSnapToRoad latlongs merchantId merchanOperatingCityId = do
       let latlongs' = chunksOf 98 latlongs
-      --  if snapToRoad fails for any chunk, we will return a tuple of (True, []) to indicate that the snapToRoad failed and we will not proceed with the further processing
       (failed, snappedLatLongs) <-
         foldM
-          ( \(failed, snappedLatLongs) latlons ->
-              if failed
-                then return (True, [])
-                else do
-                  (failed', snappedLatLongs') <- snapToRoad latlons merchantId merchanOperatingCityId
-                  return (failed' || failed, snappedLatLongs ++ snappedLatLongs')
+          ( \(failed, snappedLatLongs) latlons -> do
+              (failed', snappedLatLongs') <- snapToRoad latlons merchantId merchanOperatingCityId
+              return (failed' || failed, snappedLatLongs <> snappedLatLongs')
           )
           (False, [])
           latlongs'
-      return (failed, snappedLatLongs)
+      return (failed, map (,False) snappedLatLongs)
 
 mkActions2 :: Text -> Double -> Double -> FCM.FCMActions -> FCM.FCMActions
 mkActions2 bookingUpdateReqId lat long action = do
