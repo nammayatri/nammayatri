@@ -120,9 +120,8 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
           -1 -> do
             gateTaggedDrivers <- assignDriverGateTags searchReq onlyNewAndFilteredDrivers
             goHomeTaggedDrivers <- assignDriverGoHomeTags gateTaggedDrivers searchReq searchTry tripQuoteDetails driverPoolCfg merchant goHomeConfig merchantOpCityId isValueAddNP transporterConfig
-            driverPoolOnRide <- getDriverPoolOnRide merchantOpCityId transporterConfig radiusStep blockListedDrivers NormalPool
             logDebug $ "GoHomeDriverPool and GateTaggedPool-" <> show goHomeTaggedDrivers
-            return (goHomeTaggedDrivers, driverPoolOnRide)
+            calculateNormalBatch merchantOpCityId transporterConfig onlyNonBlockedDrivers radiusStep blockListedDrivers (bookAnyFilters transporterConfig goHomeTaggedDrivers previousBatchesDrivers) txnId
           _ -> do
             allNearbyNonGoHomeDrivers <- filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId merchantOpCityId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) onlyNewAndFilteredDrivers
             logDebug $ "Calculating Normal Batch for the pool " <> show allNearbyNonGoHomeDrivers
