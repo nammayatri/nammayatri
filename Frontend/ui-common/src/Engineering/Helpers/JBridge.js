@@ -2987,10 +2987,19 @@ export const takePhoto = function () {
   }
 }
 
-export const getResourceIdentifier = function (resourceName,type) {
-  try{
-    JBridge.getResourceIdentifier(resourceName,type);
-  } catch (err) {
-    console.log("Error in getResourceIdentifier", err);
-  }
+export const getResourceIdentifier = function (resourceName) {
+  return function(type){
+    try{
+      if(JBridge.getResourceIdentifier){
+        return JBridge.getResourceIdentifier(resourceName,type);
+      }
+      else
+      {
+        return 0;
+      }
+    } catch (err) {
+      console.log("Error in getResourceIdentifier", err);
+      return 0;
+    }
+}
 }

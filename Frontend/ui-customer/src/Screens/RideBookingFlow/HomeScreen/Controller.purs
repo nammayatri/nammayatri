@@ -1362,7 +1362,7 @@ eval OpenLiveDashboard state = openLiveDashboard state{props{showShimmer = false
 eval (SearchLocationModelActionController (SearchLocationModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = do
   void $ pure $ performHapticFeedback unit
   _ <- pure $ exitLocateOnMap ""
-  let newState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, locateOnMap = false, defaultPickUpPoint = ""}}
+  let newState = state{props{isSource = maybe (Just false) (\isSource -> Just $ not isSource) state.props.isSource, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, locateOnMap = false, defaultPickUpPoint = ""}}
   updateAndExit newState $ LocationSelected (fromMaybe dummyListItem (if state.props.isSource == Just false then state.data.selectedLocationListItem else Nothing)) (state.props.isSource == Just false) newState
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DateTimePickerButtonClicked)) state = openDateTimePicker state 
@@ -1538,7 +1538,7 @@ eval (CancelSearchAction PopUpModal.OnButton1Click) state = do
   else callDriver state $ fromMaybe "ANONYMOUS" $ state.data.config.callOptions !! 0
 
 eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
-  let isAcCab = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing
+  let isAcCab = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing state.data.fareProductType
                 && state.data.currentCityConfig.enableAcViews
       cancellationReasons = cancelReasons isAcCab
       noOfReasons = length cancellationReasons
@@ -1723,7 +1723,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
 eval (SearchLocationModelActionController (SearchLocationModelController.EditTextFocusChanged textType)) state = do
   _ <- pure $ spy "searchLocationModal" textType
   if textType == "D" then
-    continue state { props { isSource = if state.props.currentStage == ConfirmingLocation && state.data.fareProductType == FPT.DELIVERY && state.props.isSource == Just true then Just true else Just false, searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}, data {source = if state.data.source == "" then state.data.searchLocationModelData.prevLocation else state.data.source, locationList = if state.props.isSource == Just false then state.data.locationList else state.data.destinationSuggestions } }
+    continue state { props { isSource = if state.props.currentStage == ConfirmingLocation && state.props.isSource == Just true then Just true else Just false, searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}, data {source = if state.data.source == "" then state.data.searchLocationModelData.prevLocation else state.data.source, locationList = if state.props.isSource == Just false then state.data.locationList else state.data.destinationSuggestions } }
   else
     continue state { props { isSource = Just true, searchLocationModelProps{crossBtnSrcVisibility = (STR.length state.data.source) > 2}} , data{ locationList = if state.props.isSource == Just true then state.data.locationList else state.data.recentSearchs.predictionArray } }
 
@@ -2803,7 +2803,7 @@ eval GoToHomeScreen state = do
   exit $ GoToHome state
 
 eval (AcWorkingPopupAction (PopUpModal.OnButton1Click)) state = do
-  let isAcCabRide = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing
+  let isAcCabRide = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing state.data.fareProductType
   if isAcCabRide then
     void $ pure $ toast $ getString GREAT_ENJOY_THE_TRIP
   else pure unit
@@ -2812,7 +2812,7 @@ eval (AcWorkingPopupAction (PopUpModal.OnButton1Click)) state = do
 
 eval (AcWorkingPopupAction (PopUpModal.OnButton2Click)) state = do
   void $ pure $ setValueToCache (show AC_POPUP_SHOWN_FOR_RIDE) state.data.driverInfoCardState.rideId (\id -> id)
-  let isAcCabRide = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing
+  let isAcCabRide = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing  state.data.fareProductType
   if isAcCabRide then
     exit $ GoToRideRelatedIssues state
   else 
@@ -2909,7 +2909,7 @@ eval (EditDestSearchLocationModelActionController (SearchLocationModelController
 eval (EditDestSearchLocationModelActionController (SearchLocationModelController.EditTextFocusChanged textType)) state = do
   _ <- pure $ spy "searchLocationModal" textType
   if textType == "D" then
-    continue state { props { isSource = if state.props.currentStage == ConfirmingLocation && state.data.fareProductType == FPT.DELIVERY && state.props.isSource == Just true then Just true else Just false, searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}, data {source = if state.data.source == "" then state.data.searchLocationModelData.prevLocation else state.data.source, locationList = if state.props.isSource == Just false then state.data.locationList else state.data.destinationSuggestions } }
+    continue state { props { isSource = if state.props.currentStage == ConfirmingLocation && state.props.isSource == Just true then Just true else Just false, searchLocationModelProps{crossBtnDestVisibility = (STR.length state.data.destination) > 2}}, data {source = if state.data.source == "" then state.data.searchLocationModelData.prevLocation else state.data.source, locationList = if state.props.isSource == Just false then state.data.locationList else state.data.destinationSuggestions } }
   else
     continue state { props { isSource = Just true, searchLocationModelProps{crossBtnSrcVisibility = (STR.length state.data.source) > 2}} , data{ locationList = if state.props.isSource == Just true then state.data.locationList else state.data.recentSearchs.predictionArray } }
 
@@ -3057,7 +3057,7 @@ eval (ServicesOnClick service) state = do
     RC.INTERCITY ->
       if updatedState.data.currentCityConfig.enableIntercity then do 
         void $ pure $ updateLocalStage SearchLocationModel 
-        continue updatedState { data { source=(getString CURRENT_LOCATION), rentalsInfo = Nothing}, props{isSource = Just false, canScheduleRide = true, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}}
+        continue updatedState { data { source=(getString CURRENT_LOCATION), rentalsInfo = Nothing}, props{isSource = Just false, canScheduleRide = false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}} -- done for ys release
         else do
           void $ pure $ toast $ getString INTERCITY_RIDES_COMING_SOON
           continue updatedState

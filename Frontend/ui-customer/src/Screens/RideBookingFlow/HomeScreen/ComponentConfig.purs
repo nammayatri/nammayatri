@@ -1919,7 +1919,7 @@ acNotWorkingPill :: ST.HomeScreenState -> Array RatingCard.FeedbackItem
 acNotWorkingPill state =
   ( case state.data.ratingViewState.rideBookingRes ^. _serviceTierName of
       Just serviceTierName ->
-        if ServiceTierCard.showACDetails serviceTierName Nothing then
+        if ServiceTierCard.showACDetails serviceTierName Nothing state.data.fareProductType then
           [ { id: "14", text: getString AC_TURNED_OFF } ]
         else
           []
@@ -2309,7 +2309,7 @@ acWorkingPopupConfig state =
   let
     config = PopUpModal.config
 
-    isAcCabRide = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing
+    isAcCabRide = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing state.data.fareProductType
 
     primaryText_ =
       getString
