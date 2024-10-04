@@ -21,7 +21,11 @@ apis:
 
 types:
   QueryData:
+    - queryType: QueryType
+    - tableName: Text
     - setClause: Value
     - whereClause: Value
-    - tableName: Text
     - derive: "'HideSecrets"
+
+  QueryType:
+    - enum: "INSERT, UPDATE"
