@@ -82,17 +82,17 @@ data DriverProfileRes = DriverProfileRes
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
-knowYourDriver :: Id Ride -> Maybe Text -> Flow DriverProfileRes
-knowYourDriver rideId apiKey =
+knowYourDriver :: Id Ride -> Maybe Bool -> Maybe Text -> Flow DriverProfileRes
+knowYourDriver rideId withImages apiKey =
   QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
     >>= \ride ->
       getDriver ride.driverId apiKey
-        >>= getDriverProfile
+        >>= getDriverProfile withImages
 
-knowYourFavDriver :: Id DP.Person -> Maybe Text -> Flow DriverProfileRes
-knowYourFavDriver driverId apiKey =
+knowYourFavDriver :: Id DP.Person -> Maybe Bool -> Maybe Text -> Flow DriverProfileRes
+knowYourFavDriver driverId withImages apiKey =
   getDriver driverId apiKey
-    >>= getDriverProfile
+    >>= getDriverProfile withImages
 
 getDriver :: Id DP.Person -> Maybe Text -> Flow DP.Person
 getDriver driverId apiKey = do
@@ -103,13 +103,13 @@ getDriver driverId apiKey = do
         then pure person
         else throwError (AuthBlocked "Invalid BPP internal api key")
 
-getDriverProfile :: DP.Person -> Flow DriverProfileRes
-getDriverProfile person = do
+getDriverProfile :: Maybe Bool -> DP.Person -> Flow DriverProfileRes
+getDriverProfile withImages person = do
   driverProfile <- DPQ.findByPersonId person.id
   driverStats <- B.runInReplica $ QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
   vehicle <- QVeh.findById person.id
   modules <- SQDMC.findByDriverIdAndStatus person.id MODULE_COMPLETED >>= mapM (\driverModule -> QLmsModule.findById driverModule.moduleId)
-  images <- maybe (pure []) (maybe (pure []) (getImages . map Id) . (.imageIds)) driverProfile
+  images <- if withImages == Just True then maybe (pure []) (maybe (pure []) (getImages . map Id) . (.imageIds)) driverProfile else pure []
   profileImage <- ImageQuery.findByPersonIdImageTypeAndValidationStatus (person.id) DTO.ProfilePhoto DImage.APPROVED >>= maybe (return Nothing) (\image -> S3.get (T.unpack (image.s3Path)) <&> Just)
   topFeedbacks <- getTopFeedBackForDriver person.id
   pure $
