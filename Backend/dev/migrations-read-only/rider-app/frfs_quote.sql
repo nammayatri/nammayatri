@@ -50,3 +50,8 @@ ALTER TABLE atlas_app.frfs_quote ADD COLUMN discounted_tickets integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_quote ADD COLUMN route_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN vehicle_variant text ;

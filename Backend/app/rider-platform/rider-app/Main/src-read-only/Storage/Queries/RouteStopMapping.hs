@@ -25,6 +25,9 @@ createMany = traverse_ create
 findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
 findByRouteCode routeCode = do findAllWithKV [Se.Is Beam.routeCode $ Se.Eq routeCode]
 
+findByRouteCodeAndStopCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.RouteStopMapping.RouteStopMapping))
+findByRouteCodeAndStopCode routeCode stopCode = do findOneWithKV [Se.And [Se.Is Beam.routeCode $ Se.Eq routeCode, Se.Is Beam.stopCode $ Se.Eq stopCode]]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.RouteStopMapping.RouteStopMapping))
 findByPrimaryKey routeCode stopCode = do findOneWithKV [Se.And [Se.Is Beam.routeCode $ Se.Eq routeCode, Se.Is Beam.stopCode $ Se.Eq stopCode]]
 
@@ -32,7 +35,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.RouteStopMapping.RouteStopMapping {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+    [ Se.Set Beam.code code,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.sequenceNum sequenceNum,
       Se.Set Beam.stopName stopName,
@@ -50,7 +54,8 @@ instance FromTType' Beam.RouteStopMapping Domain.Types.RouteStopMapping.RouteSto
     pure $
       Just
         Domain.Types.RouteStopMapping.RouteStopMapping
-          { merchantId = Kernel.Types.Id.Id merchantId,
+          { code = code,
+            merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             routeCode = routeCode,
             sequenceNum = sequenceNum,
@@ -66,7 +71,8 @@ instance FromTType' Beam.RouteStopMapping Domain.Types.RouteStopMapping.RouteSto
 instance ToTType' Beam.RouteStopMapping Domain.Types.RouteStopMapping.RouteStopMapping where
   toTType' (Domain.Types.RouteStopMapping.RouteStopMapping {..}) = do
     Beam.RouteStopMappingT
-      { Beam.merchantId = Kernel.Types.Id.getId merchantId,
+      { Beam.code = code,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.routeCode = routeCode,
         Beam.sequenceNum = sequenceNum,

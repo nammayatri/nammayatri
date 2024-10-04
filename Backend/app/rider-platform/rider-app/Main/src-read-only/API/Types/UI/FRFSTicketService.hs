@@ -22,7 +22,7 @@ import qualified Lib.JourneyPlannerTypes
 import Servant
 import Tools.Auth
 
-data AutocompleteRes = AutocompleteRes {routes :: [API.Types.UI.FRFSTicketService.FRFSRouteAPI], stops :: [API.Types.UI.FRFSTicketService.Stop]}
+data AutocompleteRes = AutocompleteRes {routes :: [API.Types.UI.FRFSTicketService.FRFSRouteAPI], stops :: [API.Types.UI.FRFSTicketService.FRFSStationAPI]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -150,8 +150,4 @@ data StationType
   | TRANSIT
   | INTERMEDIATE
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data Stop = Stop {distance :: Kernel.Types.Common.Meters, stopCode :: Data.Text.Text, stopName :: Data.Text.Text}
-  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

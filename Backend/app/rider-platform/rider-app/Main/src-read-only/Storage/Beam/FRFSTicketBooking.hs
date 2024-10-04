@@ -57,6 +57,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     toStationId :: B.C f Kernel.Prelude.Text,
     validTill :: B.C f Kernel.Prelude.UTCTime,
     vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
+    vehicleVariant :: B.C f (Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleVariant),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

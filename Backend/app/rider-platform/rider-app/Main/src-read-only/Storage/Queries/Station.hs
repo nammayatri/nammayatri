@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.Station where
+module Storage.Queries.Station (module Storage.Queries.Station, module ReExport) where
 
 import qualified BecknV2.FRFS.Enums
 import qualified Domain.Types.MerchantOperatingCity
@@ -13,10 +13,10 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import qualified Kernel.Types.TimeBound
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Station as Beam
+import Storage.Queries.StationExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Station.Station -> m ())
 create = createWithKV
@@ -27,19 +27,19 @@ createMany = traverse_ create
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe Domain.Types.Station.Station))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByStationCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Station.Station))
-findByStationCode code = do findOneWithKV [Se.Is Beam.code $ Se.Eq code]
-
-getTicketPlacesByMerchantOperatingCityIdAndVehicleType ::
+findByMerchantOperatingCityIdAndVehicleType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.FRFS.Enums.VehicleCategory -> m [Domain.Types.Station.Station])
-getTicketPlacesByMerchantOperatingCityIdAndVehicleType merchantOperatingCityId vehicleType = do
+findByMerchantOperatingCityIdAndVehicleType merchantOperatingCityId vehicleType = do
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.vehicleType $ Se.Eq vehicleType
         ]
     ]
+
+findByStationCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Station.Station))
+findByStationCode code = do findOneWithKV [Se.Is Beam.code $ Se.Eq code]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Station.Station -> m (Maybe Domain.Types.Station.Station))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -61,39 +61,3 @@ updateByPrimaryKey (Domain.Types.Station.Station {..}) = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.Station Domain.Types.Station.Station where
-  fromTType' (Beam.StationT {..}) = do
-    pure $
-      Just
-        Domain.Types.Station.Station
-          { address = address,
-            code = code,
-            id = Kernel.Types.Id.Id id,
-            lat = lat,
-            lon = lon,
-            merchantId = Kernel.Types.Id.Id merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            name = name,
-            timeBounds = fromMaybe Kernel.Types.TimeBound.Unbounded timeBounds,
-            vehicleType = vehicleType,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.Station Domain.Types.Station.Station where
-  toTType' (Domain.Types.Station.Station {..}) = do
-    Beam.StationT
-      { Beam.address = address,
-        Beam.code = code,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.lat = lat,
-        Beam.lon = lon,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.name = name,
-        Beam.timeBounds = Kernel.Prelude.Just timeBounds,
-        Beam.vehicleType = vehicleType,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
-      }

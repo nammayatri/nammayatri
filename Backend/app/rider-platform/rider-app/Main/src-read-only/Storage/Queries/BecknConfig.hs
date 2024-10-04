@@ -75,6 +75,7 @@ updateByPrimaryKey (Domain.Types.BecknConfig.BecknConfig {..}) = do
       Se.Set Beam.trackTTLSec trackTTLSec,
       Se.Set Beam.uniqueKeyId uniqueKeyId,
       Se.Set Beam.vehicleCategory vehicleCategory,
+      Se.Set Beam.verificationCipher verificationCipher,
       Se.Set Beam.verifiedBy (Kernel.Prelude.Just verifiedBy),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),

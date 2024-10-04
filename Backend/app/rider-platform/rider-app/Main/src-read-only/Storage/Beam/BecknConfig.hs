@@ -12,6 +12,7 @@ import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Base64
 import Tools.Beam.UtilsTH
 
 data BecknConfigT f = BecknConfigT
@@ -40,6 +41,7 @@ data BecknConfigT f = BecknConfigT
     trackTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     uniqueKeyId :: B.C f Kernel.Prelude.Text,
     vehicleCategory :: B.C f BecknV2.OnDemand.Enums.VehicleCategory,
+    verificationCipher :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Base64.Base64),
     verifiedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.BecknConfig.Network),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

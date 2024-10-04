@@ -164,7 +164,7 @@ type API =
       :> "frfs"
       :> "autocomplete"
       :> QueryParam
-           "text"
+           "input"
            Data.Text.Text
       :> MandatoryQueryParam
            "city"

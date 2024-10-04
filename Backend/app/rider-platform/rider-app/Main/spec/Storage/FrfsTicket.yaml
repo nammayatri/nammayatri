@@ -9,6 +9,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   VehicleCategory: BecknV2.FRFS.Enums
+  VehicleVariant: BecknV2.FRFS.Enums
   FRFSSearch: Domain.Types.FRFSSearch
   FRFSQuote: Domain.Types.FRFSQuote
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
@@ -111,7 +112,7 @@ Station:
     timeBounds: Kernel.Prelude.Just|I
 
   queries:
-    getTicketPlacesByMerchantOperatingCityIdAndVehicleType:
+    findByMerchantOperatingCityIdAndVehicleType:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, vehicleType]
@@ -121,6 +122,9 @@ Station:
     findByStationCode:
       kvFunction: findOneWithKV
       where: code
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 FRFSQuote:
   tableName: frfs_quote
@@ -136,6 +140,7 @@ FRFSQuote:
     quantity: Int
     stationsJson: Text
     vehicleType: VehicleCategory
+    vehicleVariant: VehicleVariant
     bppSubscriberId: Text
     bppSubscriberUrl: Text
     providerId: Text
@@ -156,16 +161,21 @@ FRFSQuote:
       currency: Maybe Currency
       price: HighPrecMoney
 
+  beamType:
+    vehicleVariant: Maybe VehicleVariant
+
   types:
     FRFSQuoteType:
       enum: "SingleJourney, ReturnJourney, Pass, SpecialFareSingleJourney"
 
   fromTType:
     price: Kernel.Types.Common.mkPrice currency price|E
+    vehicleVariant: fromMaybe BecknV2.FRFS.Enums.METRO_TRAIN|I
 
   toTType:
     price: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
+    vehicleVariant: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
@@ -198,6 +208,7 @@ FRFSTicketBooking:
     routeId: Maybe (Id Route)
     quantity: Int
     vehicleType: VehicleCategory
+    vehicleVariant: VehicleVariant
     bppSubscriberId: Text
     bppSubscriberUrl: Text
     providerId: Text
@@ -236,6 +247,9 @@ FRFSTicketBooking:
     finalPrice:
       finalPrice: Maybe HighPrecMoney
 
+  beamType:
+    vehicleVariant: Maybe VehicleVariant
+
   types:
     FRFSTicketBookingStatus:
       enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED, COUNTER_CANCELLED"
@@ -246,12 +260,14 @@ FRFSTicketBooking:
     price: Kernel.Types.Common.mkPrice currency price|E
     estimatedPrice: Kernel.Types.Common.mkPrice currency estimatedPrice|E
     finalPrice: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice|E
+    vehicleVariant: fromMaybe BecknV2.FRFS.Enums.METRO_TRAIN|I
 
   toTType:
     price: (.amount)|I
     estimatedPrice: (.amount)|I
     finalPrice: Kernel.Prelude.fmap (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
+    vehicleVariant: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
@@ -597,12 +613,15 @@ Route:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, vehicleType]
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 RouteStopMapping:
   tableName: route_stop_mapping
   fields:
     routeCode: Text
     stopCode: Text
+    code: Text
     stopName: Text
     stopPoint: LatLong
     sequenceNum: Int
@@ -628,6 +647,10 @@ RouteStopMapping:
     findByRouteCode:
       kvFunction: findAllWithKV
       where: routeCode
+    findByRouteCodeAndStopCode:
+      kvFunction: findOneWithKV
+      where:
+        and: [routeCode, stopCode]
 
 RouteStopFare:
   tableName: route_stop_fare
@@ -637,6 +660,7 @@ RouteStopFare:
     endStopCode: Text
     amount: HighPrecMoney
     vehicleType: VehicleCategory
+    vehicleVariant: VehicleVariant
     currency: Currency
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -652,3 +676,7 @@ RouteStopFare:
       kvFunction: findOneWithKV
       where:
         and: [routeCode, startStopCode, endStopCode]
+    findByRouteCode:
+      kvFunction: findAllWithKV
+      where:
+        and: [routeCode]

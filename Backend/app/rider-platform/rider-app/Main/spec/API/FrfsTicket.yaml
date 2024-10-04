@@ -127,12 +127,7 @@ types:
 
   AutocompleteRes:
     routes: [FRFSRouteAPI]
-    stops: [Stop]
-
-  Stop:
-    stopCode: Text
-    stopName: Text
-    distance: Meters
+    stops: [FRFSStationAPI]
 
 apis:
   # GET metro/bus routes for the merchant city
@@ -260,6 +255,7 @@ apis:
       response:
         type: API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
 
+  # Get Start stop or Routes suggestions based on User's input or nearby stops if user input is unknown
   - GET:
       endpoint: /frfs/autocomplete
       auth: TokenAuth
@@ -268,6 +264,6 @@ apis:
         location: LatLong
         vehicleType: VehicleCategory
       query:
-        text: Text
+        input: Text
       response:
         type: "[API.Types.UI.FRFSTicketService.AutocompleteRes]"
