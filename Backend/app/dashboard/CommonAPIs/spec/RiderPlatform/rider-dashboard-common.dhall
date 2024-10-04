@@ -217,6 +217,7 @@ let defaultImports =
           , "EulerHS.Types"
           , "Kernel.Types.APISuccess"
           , "Kernel.Storage.Esqueleto"
+          , "Data.Singletons.TH"
           ]
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.API_TYPES
@@ -228,6 +229,7 @@ let defaultImports =
           , "Text.Read"
           , "Dashboard.Common"
           , "Data.List"
+          , "Data.Singletons.TH"
           ]
         , _packageImports = [] : List PackageImport
         , _generationType = GeneratorType.SERVANT_API_TREE

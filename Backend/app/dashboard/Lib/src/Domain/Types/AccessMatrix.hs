@@ -16,6 +16,10 @@
 
 module Domain.Types.AccessMatrix where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet as ProviderFleet
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as ProviderManagement
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.RideBooking as ProviderRideBooking
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management as RiderManagement
 import Data.Singletons.TH
 import Domain.Types.Merchant
 import Domain.Types.Role as DRole
@@ -24,6 +28,8 @@ import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
+
+-- import qualified "dashboard-helper-api" API.Types.RiderPlatform.RideBooking as RiderRideBooking
 
 -------- Possible user action for helper API --------
 
@@ -34,6 +40,9 @@ data UserAccessType
 
 $(mkBeamInstancesForEnum ''UserAccessType)
 
+-- TODO remove old
+-- TODO Show/Read instances, use newtype over UserActionType?
+-- newtype UserActionType = {getUserActionType :: UserActionTypeInternal}
 data UserActionType
   = DOCUMENTS_INFO
   | AADHAAR_INFO
@@ -272,6 +281,11 @@ data UserActionType
   | SECURITY_DEPOSIT_STATUS
   | CLEAR_CACHE_SUBSCRIPTION
   | RUN_QUERY
+  | PROVIDER_FLEET ProviderFleet.FleetUserActionType
+  | PROVIDER_MANAGEMENT ProviderManagement.ManagementUserActionType
+  | PROVIDER_RIDE_BOOKING ProviderRideBooking.RideBookingUserActionType
+  | RIDER_MANAGEMENT RiderManagement.ManagementUserActionType
+  -- -- | RIDER_RIDE_BOOKING RiderRideBooking.RideBookingUserActionType
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)

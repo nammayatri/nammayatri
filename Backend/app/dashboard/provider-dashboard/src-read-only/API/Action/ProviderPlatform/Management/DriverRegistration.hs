@@ -7,6 +7,7 @@ module API.Action.ProviderPlatform.Management.DriverRegistration
   )
 where
 
+import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration
 import qualified Dashboard.Common
 import qualified Domain.Action.ProviderPlatform.Management.DriverRegistration
@@ -31,29 +32,47 @@ type GetDriverRegistrationDocumentsList =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
       'DRIVERS
-      'DOCUMENT_LIST
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_REGISTRATION / 'API.Types.ProviderPlatform.Management.DriverRegistration.GET_DRIVER_REGISTRATION_DOCUMENTS_LIST)
       :> API.Types.ProviderPlatform.Management.DriverRegistration.GetDriverRegistrationDocumentsList
   )
 
-type GetDriverRegistrationGetDocument = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'GET_DOCUMENT :> API.Types.ProviderPlatform.Management.DriverRegistration.GetDriverRegistrationGetDocument)
+type GetDriverRegistrationGetDocument =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DRIVERS
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_REGISTRATION / 'API.Types.ProviderPlatform.Management.DriverRegistration.GET_DRIVER_REGISTRATION_GET_DOCUMENT)
+      :> API.Types.ProviderPlatform.Management.DriverRegistration.GetDriverRegistrationGetDocument
+  )
 
 type PostDriverRegistrationDocumentUpload =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
       'DRIVERS
-      'UPLOAD_DOCUMENT
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_REGISTRATION / 'API.Types.ProviderPlatform.Management.DriverRegistration.POST_DRIVER_REGISTRATION_DOCUMENT_UPLOAD)
       :> API.Types.ProviderPlatform.Management.DriverRegistration.PostDriverRegistrationDocumentUpload
   )
 
-type PostDriverRegistrationRegisterDl = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'REGISTER_DL :> API.Types.ProviderPlatform.Management.DriverRegistration.PostDriverRegistrationRegisterDl)
+type PostDriverRegistrationRegisterDl =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DRIVERS
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_REGISTRATION / 'API.Types.ProviderPlatform.Management.DriverRegistration.POST_DRIVER_REGISTRATION_REGISTER_DL)
+      :> API.Types.ProviderPlatform.Management.DriverRegistration.PostDriverRegistrationRegisterDl
+  )
 
-type PostDriverRegistrationRegisterRc = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'REGISTER_RC :> API.Types.ProviderPlatform.Management.DriverRegistration.PostDriverRegistrationRegisterRc)
+type PostDriverRegistrationRegisterRc =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DRIVERS
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_REGISTRATION / 'API.Types.ProviderPlatform.Management.DriverRegistration.POST_DRIVER_REGISTRATION_REGISTER_RC)
+      :> API.Types.ProviderPlatform.Management.DriverRegistration.PostDriverRegistrationRegisterRc
+  )
 
 type PostDriverRegistrationRegisterGenerateAadhaarOtp =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
       'DRIVERS
-      'GENERATE_AADHAAR_OTP
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_REGISTRATION / 'API.Types.ProviderPlatform.Management.DriverRegistration.POST_DRIVER_REGISTRATION_REGISTER_GENERATE_AADHAAR_OTP)
       :> API.Types.ProviderPlatform.Management.DriverRegistration.PostDriverRegistrationRegisterGenerateAadhaarOtp
   )
 
@@ -61,7 +80,7 @@ type PostDriverRegistrationRegisterVerifyAadhaarOtp =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
       'DRIVERS
-      'VERIFY_AADHAAR_OTP
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_REGISTRATION / 'API.Types.ProviderPlatform.Management.DriverRegistration.POST_DRIVER_REGISTRATION_REGISTER_VERIFY_AADHAAR_OTP)
       :> API.Types.ProviderPlatform.Management.DriverRegistration.PostDriverRegistrationRegisterVerifyAadhaarOtp
   )
 
@@ -69,7 +88,7 @@ type GetDriverRegistrationUnderReviewDrivers =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
       'DRIVERS
-      'UNDER_REVIEW_DRIVERS_LIST
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_REGISTRATION / 'API.Types.ProviderPlatform.Management.DriverRegistration.GET_DRIVER_REGISTRATION_UNDER_REVIEW_DRIVERS)
       :> API.Types.ProviderPlatform.Management.DriverRegistration.GetDriverRegistrationUnderReviewDrivers
   )
 
@@ -77,7 +96,7 @@ type GetDriverRegistrationDocumentsInfo =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
       'DRIVERS
-      'DRIVER_DOCUMENT_INFO
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_REGISTRATION / 'API.Types.ProviderPlatform.Management.DriverRegistration.GET_DRIVER_REGISTRATION_DOCUMENTS_INFO)
       :> API.Types.ProviderPlatform.Management.DriverRegistration.GetDriverRegistrationDocumentsInfo
   )
 
@@ -85,7 +104,7 @@ type PostDriverRegistrationDocumentsUpdate =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
       'DRIVERS
-      'UPDATE_DOCUMENT
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_REGISTRATION / 'API.Types.ProviderPlatform.Management.DriverRegistration.POST_DRIVER_REGISTRATION_DOCUMENTS_UPDATE)
       :> API.Types.ProviderPlatform.Management.DriverRegistration.PostDriverRegistrationDocumentsUpdate
   )
 

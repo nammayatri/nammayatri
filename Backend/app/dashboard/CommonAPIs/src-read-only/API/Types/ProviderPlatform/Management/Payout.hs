@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -5,6 +6,7 @@ module API.Types.ProviderPlatform.Management.Payout where
 
 import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
 import qualified Data.Time
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
@@ -204,12 +206,14 @@ mkPayoutAPIs payoutClient = (PayoutAPIs {..})
   where
     getPayoutPayoutReferralHistory :<|> getPayoutPayoutHistory :<|> postPayoutPayoutVerifyFraudStatus :<|> postPayoutPayoutRetryFailed :<|> postPayoutPayoutRetryAllWithStatus :<|> postPayoutPayoutPendingPayout = payoutClient
 
-data PayoutEndpointDSL
-  = GetPayoutPayoutReferralHistoryEndpoint
-  | GetPayoutPayoutHistoryEndpoint
-  | PostPayoutPayoutVerifyFraudStatusEndpoint
-  | PostPayoutPayoutRetryFailedEndpoint
-  | PostPayoutPayoutRetryAllWithStatusEndpoint
-  | PostPayoutPayoutPendingPayoutEndpoint
+data PayoutUserActionType
+  = GET_PAYOUT_PAYOUT_REFERRAL_HISTORY
+  | GET_PAYOUT_PAYOUT_HISTORY
+  | POST_PAYOUT_PAYOUT_VERIFY_FRAUD_STATUS
+  | POST_PAYOUT_PAYOUT_RETRY_FAILED
+  | POST_PAYOUT_PAYOUT_RETRY_ALL_WITH_STATUS
+  | POST_PAYOUT_PAYOUT_PENDING_PAYOUT
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(Data.Singletons.TH.genSingletons [''PayoutUserActionType])

@@ -33,13 +33,12 @@ buildPayoutManagementServerTransaction ::
   ( MonadFlow m,
     Dashboard.Common.HideSecrets request
   ) =>
-  API.Types.ProviderPlatform.Management.Payout.PayoutEndpointDSL ->
   ApiTokenInfo ->
   Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) ->
   Maybe request ->
   m DT.Transaction
-buildPayoutManagementServerTransaction endpoint apiTokenInfo driverId =
-  T.buildTransaction (DT.ProviderManagementAPI $ API.Types.ProviderPlatform.Management.PayoutAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) driverId Nothing
+buildPayoutManagementServerTransaction apiTokenInfo driverId =
+  T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) driverId Nothing
 
 getPayoutPayoutReferralHistory :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.Flow API.Types.ProviderPlatform.Management.Payout.PayoutReferralHistoryRes
 getPayoutPayoutReferralHistory merchantShortId opCity apiTokenInfo areActivatedRidesOnly customerPhoneNo driverId driverPhoneNo from limit offset to = do
@@ -54,27 +53,27 @@ getPayoutPayoutHistory merchantShortId opCity apiTokenInfo driverId driverPhoneN
 postPayoutPayoutVerifyFraudStatus :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Payout.UpdateFraudStatusReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postPayoutPayoutVerifyFraudStatus merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildPayoutManagementServerTransaction API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutVerifyFraudStatusEndpoint apiTokenInfo (Just req.driverId) (Just req)
+  transaction <- buildPayoutManagementServerTransaction apiTokenInfo (Just req.driverId) (Just req)
   T.withTransactionStoring transaction $ do
     ProviderPlatformClient.DynamicOfferDriver.Operations.callDriverOfferBPPOperations checkedMerchantId opCity (.payoutDSL.postPayoutPayoutVerifyFraudStatus) req
 
 postPayoutPayoutRetryFailed :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Payout.FailedRetryPayoutReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postPayoutPayoutRetryFailed merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildPayoutManagementServerTransaction API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutRetryFailedEndpoint apiTokenInfo Nothing (Just req)
+  transaction <- buildPayoutManagementServerTransaction apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ do
     ProviderPlatformClient.DynamicOfferDriver.Operations.callDriverOfferBPPOperations checkedMerchantId opCity (.payoutDSL.postPayoutPayoutRetryFailed) req
 
 postPayoutPayoutRetryAllWithStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Payout.RetryPayoutsReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postPayoutPayoutRetryAllWithStatus merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildPayoutManagementServerTransaction API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutRetryAllWithStatusEndpoint apiTokenInfo Nothing (Just req)
+  transaction <- buildPayoutManagementServerTransaction apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ do
     ProviderPlatformClient.DynamicOfferDriver.Operations.callDriverOfferBPPOperations checkedMerchantId opCity (.payoutDSL.postPayoutPayoutRetryAllWithStatus) req
 
 postPayoutPayoutPendingPayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Payout.PendingPayoutReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postPayoutPayoutPendingPayout merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildPayoutManagementServerTransaction API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutPendingPayoutEndpoint apiTokenInfo Nothing (Just req)
+  transaction <- buildPayoutManagementServerTransaction apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ do
     ProviderPlatformClient.DynamicOfferDriver.Operations.callDriverOfferBPPOperations checkedMerchantId opCity (.payoutDSL.postPayoutPayoutPendingPayout) req

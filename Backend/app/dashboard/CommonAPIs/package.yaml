@@ -56,6 +56,7 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - TemplateHaskell
 
 dependencies:
   - aeson
@@ -86,6 +87,7 @@ dependencies:
   - special-zone-a
   - yudhishthira
   - casing
+  - singletons-th
 
 ghc-options:
   - -Wall

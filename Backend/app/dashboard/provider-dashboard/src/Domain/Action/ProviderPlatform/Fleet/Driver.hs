@@ -21,7 +21,6 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Registration
@@ -48,13 +47,12 @@ buildTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  Common.DriverEndpointDSL ->
   ApiTokenInfo ->
   Maybe (Id Common.Driver) ->
   Maybe request ->
   m DT.Transaction
-buildTransaction endpoint apiTokenInfo driverId =
-  T.buildTransaction (DT.ProviderFleetAPI $ Common.DriverAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) driverId Nothing
+buildTransaction apiTokenInfo driverId =
+  T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) driverId Nothing
 
 postDriverFleetAddVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Maybe Text -> Common.AddVehicleReq -> Flow APISuccess
 postDriverFleetAddVehicle merchantShortId opCity apiTokenInfo phoneNo mbMobileCountryCode req = do
@@ -125,14 +123,14 @@ getDriverFleetVehicleAssociation merhcantId opCity apiTokenInfo mbLimit mbOffset
 postDriverFleetVehicleDriverRcStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.RCStatusReq -> Flow APISuccess
 postDriverFleetVehicleDriverRcStatus merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.PostDriverFleetVehicleDriverRcStatusEndpoint apiTokenInfo (Just driverId) $ Just req
+  transaction <- buildTransaction apiTokenInfo (Just driverId) $ Just req
   T.withTransactionStoring transaction $
     Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.driverDSL.postDriverFleetVehicleDriverRcStatus) driverId apiTokenInfo.personId.getId req
 
 postDriverUpdateFleetOwnerInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateFleetOwnerInfoReq -> Flow APISuccess
 postDriverUpdateFleetOwnerInfo merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.PostDriverUpdateFleetOwnerInfoEndpoint apiTokenInfo (Just driverId) (Just req)
+  transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
   T.withTransactionStoring transaction $ do
     unless (apiTokenInfo.personId.getId == driverId.getId) $
       throwError AccessDenied

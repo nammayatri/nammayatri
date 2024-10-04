@@ -24,7 +24,6 @@ module Domain.Action.ProviderPlatform.Management.Message
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Message as Common
 import AWS.S3 (FileType (..))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Message as Common
@@ -48,19 +47,18 @@ buildTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  Common.MessageEndpointDSL ->
   ApiTokenInfo ->
   Maybe request ->
   m DT.Transaction
-buildTransaction endpoint apiTokenInfo =
-  T.buildTransaction (DT.ProviderManagementAPI $ Common.MessageAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
+buildTransaction apiTokenInfo =
+  T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 postMessageUploadFile :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UploadFileRequest -> Flow Common.UploadFileResponse
 postMessageUploadFile merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   unless (req.fileType `elem` [Audio, Image]) $
     throwError $ InvalidRequest "Only support Audio/Image media type. For Video/MediaLinks use AddLink API."
-  transaction <- buildTransaction Common.PostMessageUploadFileEndpoint apiTokenInfo T.emptyRequest
+  transaction <- buildTransaction apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (addMultipartBoundary . (.messageDSL.postMessageUploadFile)) req
   where
@@ -71,7 +69,7 @@ postMessageAddLink merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   unless (((req.fileType == VideoLink || req.fileType == PortraitVideoLink) && checkIfYoutubeLink req.url) || req.fileType == ImageLink) $
     throwError $ InvalidRequest "Only support youtube video links and image links. For Audio use uploadFile API."
-  transaction <- buildTransaction Common.PostMessageAddLinkEndpoint apiTokenInfo T.emptyRequest
+  transaction <- buildTransaction apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.messageDSL.postMessageAddLink) req
   where
@@ -83,14 +81,14 @@ postMessageAdd merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   unless (length req.mediaFiles <= 1) $
     throwError $ InvalidRequest "Only support one media file per message. More than one media support will be added soon."
-  transaction <- buildTransaction Common.PostMessageAddEndpoint apiTokenInfo T.emptyRequest
+  transaction <- buildTransaction apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.messageDSL.postMessageAdd) req
 
 postMessageSend :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.SendMessageRequest -> Flow APISuccess
 postMessageSend merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.PostMessageSendEndpoint apiTokenInfo T.emptyRequest
+  transaction <- buildTransaction apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (addMultipartBoundary . (.messageDSL.postMessageSend)) req
   where

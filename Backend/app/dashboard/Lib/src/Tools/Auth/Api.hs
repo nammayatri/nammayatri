@@ -53,7 +53,8 @@ data ApiPayload (sn :: DSN.ServerName) (ae :: DMatrix.ApiEntity) (uat :: DMatrix
 data ApiTokenInfo = ApiTokenInfo
   { personId :: Id DP.Person,
     merchant :: DM.Merchant,
-    city :: City.City
+    city :: City.City,
+    userActionType :: DMatrix.UserActionType
   }
 
 instance VerificationMethod VerifyApi where
@@ -80,7 +81,13 @@ verifyApi requiredAccessLevel token = do
   verifiedPersonId <- verifyAccessLevel requiredAccessLevel personId
   verifiedMerchant <- verifyServer requiredAccessLevel.serverName merchantId
   _ <- verifyCity verifiedMerchant city
-  pure ApiTokenInfo {personId = verifiedPersonId, merchant = verifiedMerchant, city = city}
+  pure
+    ApiTokenInfo
+      { personId = verifiedPersonId,
+        merchant = verifiedMerchant,
+        city = city,
+        userActionType = requiredAccessLevel.userActionType
+      }
 
 instance
   forall (sn :: DSN.ServerName) (ae :: DMatrix.ApiEntity) (uat :: DMatrix.UserActionType).
@@ -119,3 +126,7 @@ verifyServer requiredServerAccess merchantId = do
 
 verifyCity :: MonadFlow m => DM.Merchant -> City.City -> m ()
 verifyCity merchant city = unless (city `elem` merchant.supportedOperatingCities) $ throwError AccessDenied
+
+type (/) a b = a b
+
+infixr 0 /

@@ -7,6 +7,7 @@ module API.Action.ProviderPlatform.Management.DriverReferral
   )
 where
 
+import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.DriverReferral
 import qualified Domain.Action.ProviderPlatform.Management.DriverReferral
 import qualified "lib-dashboard" Domain.Types.Merchant
@@ -29,7 +30,7 @@ type PostDriverReferralReferralOpsPassword =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
       'REFERRAL
-      'REFERRAL_PROGRAM_PASSWORD_UPDATE
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_REFERRAL / 'API.Types.ProviderPlatform.Management.DriverReferral.POST_DRIVER_REFERRAL_REFERRAL_OPS_PASSWORD)
       :> API.Types.ProviderPlatform.Management.DriverReferral.PostDriverReferralReferralOpsPassword
   )
 
@@ -37,7 +38,7 @@ type PostDriverReferralLinkReferral =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
       'REFERRAL
-      'REFERRAL_PROGRAM_LINK_CODE
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_REFERRAL / 'API.Types.ProviderPlatform.Management.DriverReferral.POST_DRIVER_REFERRAL_LINK_REFERRAL)
       :> API.Types.ProviderPlatform.Management.DriverReferral.PostDriverReferralLinkReferral
   )
 
