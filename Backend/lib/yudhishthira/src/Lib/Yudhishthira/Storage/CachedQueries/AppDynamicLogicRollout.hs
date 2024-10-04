@@ -16,14 +16,16 @@ findByMerchantOpCityAndDomain ::
 findByMerchantOpCityAndDomain merchantOperatingCityId domain = do
   Hedis.withCrossAppRedis (Hedis.safeGet $ "driverOfferCachedQueries:AppDynamicLogicRollout:" <> ":MerchantOperatingCityId-" <> show (Kernel.Types.Id.getId merchantOperatingCityId) <> ":Domain-" <> show domain)
     >>= ( \case
-            Just a -> pure a
-            Nothing ->
-              ( \dataToBeCached -> do
-                  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-                  Hedis.withCrossAppRedis $ Hedis.setExp ("driverOfferCachedQueries:AppDynamicLogicRollout:" <> ":MerchantOperatingCityId-" <> show (Kernel.Types.Id.getId merchantOperatingCityId) <> ":Domain-" <> show domain) dataToBeCached expTime
-              )
-                /=<< Queries.findByMerchantOpCityAndDomain merchantOperatingCityId domain
+            Just a -> if null a then fetchAndCase else pure a
+            Nothing -> fetchAndCase
         )
+  where
+    fetchAndCase =
+      ( \dataToBeCached -> do
+          expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+          Hedis.withCrossAppRedis $ Hedis.setExp ("driverOfferCachedQueries:AppDynamicLogicRollout:" <> ":MerchantOperatingCityId-" <> show (Kernel.Types.Id.getId merchantOperatingCityId) <> ":Domain-" <> show domain) dataToBeCached expTime
+      )
+        /=<< Queries.findByMerchantOpCityAndDomain merchantOperatingCityId domain
 
 delete :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ()
 delete = Queries.delete

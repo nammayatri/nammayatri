@@ -14,7 +14,7 @@ imports:
   DeviceType: Kernel.Types.Version
   LocalTime: Data.Time
   Months: Kernel.Types.Time
-
+  Value: Data.Aeson
 
 
 SearchRequestForDriver:
@@ -86,6 +86,9 @@ SearchRequestForDriver:
     currency: Currency
     distanceUnit: DistanceUnit
     totalRides: Int
+    driverTags: Maybe Value
+    customerTags: Maybe Value
+    poolingLogicVersion: Maybe Int
     previousDropGeoHash : Maybe Text
     renderedAt : Maybe UTCTime
     respondedAt: Maybe UTCTime
@@ -223,6 +226,8 @@ SearchRequestForDriver:
     driverAvailableTime: real
     estimateId: character varying (36)
     vehicleAge: int
+    driverTags: json
+    customerTags: json
 
   default:
     rideRequestPopupDelayDuration: 0
