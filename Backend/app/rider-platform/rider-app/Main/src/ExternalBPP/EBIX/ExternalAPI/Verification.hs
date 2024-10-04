@@ -41,13 +41,14 @@ getVerificationDetails bapConfig txnUUID qrTtl booking = do
   route <- B.runInReplica $ QRoute.findByRouteId routeId >>= fromMaybeM (RouteNotFound routeId.getId)
   fromRoute <- B.runInReplica $ QRouteStopMapping.findByRouteCodeAndStopCode route.code fromStation.code >>= fromMaybeM (RouteMappingDoesNotExist route.code fromStation.code)
   toRoute <- B.runInReplica $ QRouteStopMapping.findByRouteCodeAndStopCode route.code toStation.code >>= fromMaybeM (RouteMappingDoesNotExist route.code toStation.code)
-  qrValidity <- addUTCTime (secondsToNominalDiffTime qrTtl) <$> getLocalCurrentTime 19800
+  qrValidity <- addUTCTime (secondsToNominalDiffTime qrTtl) <$> getCurrentTime
   let adultQuantity = booking.quantity
       childQuantity :: Int = 0
       amount = booking.price.amountInt
       paggId :: Int = 12613
       busTypeId = getBusTypeId booking.vehicleVariant
-      ticket = "{tt: [{t: \"" <> fromRoute.code <> "," <> toRoute.code <> "," <> show adultQuantity <> "," <> show childQuantity <> "," <> show busTypeId <> "," <> formatUtcTime qrValidity <> "," <> txnUUID <> "," <> show amount <> "," <> show paggId <> "\"}]}"
+      qrValidityIST = addUTCTime (secondsToNominalDiffTime 19800) qrValidity
+      ticket = "{tt: [{t: \"" <> fromRoute.code <> "," <> toRoute.code <> "," <> show adultQuantity <> "," <> show childQuantity <> "," <> show busTypeId <> "," <> formatUtcTime qrValidityIST <> "," <> txnUUID <> "," <> show amount <> "," <> show paggId <> "\"}]}"
   cipherKey <- bapConfig.verificationCipher & fromMaybeM (InternalError $ "Verification Cipher Not Found for txnUUID : " <> txnUUID)
   encryptedQR <- encryptDES cipherKey ticket & fromEitherM (\err -> InternalError $ "Failed to encrypt: " <> show err)
   return (encryptedQR, "UNCLAIMED", qrValidity, txnUUID)

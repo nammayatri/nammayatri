@@ -10,6 +10,7 @@ import Domain.Types.BecknConfig
 import Domain.Types.FRFSConfig
 import Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
+import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -18,9 +19,12 @@ import Domain.Types.Station
 import ExternalBPP.EBIX.ExternalAPI.Order as EBIXOrder
 import ExternalBPP.EBIX.ExternalAPI.Payment as EBIXPayment
 import ExternalBPP.EBIX.ExternalAPI.Verification as EBIXVerification
+import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto.Config as DB
+import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.Queries.FRFSTicket as QFRFSTicket
 import Storage.Queries.Route as QRoute
 import Storage.Queries.RouteStopFare as QRouteStopFare
 import Storage.Queries.RouteStopMapping as QRouteStopMapping
@@ -136,3 +140,30 @@ confirm _merchant _merchantOperatingCity frfsConfig bapConfig (_mRiderName, _mRi
             validTill = qrValidity,
             status = qrStatus
           }
+
+status :: (CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Id Merchant -> MerchantOperatingCity -> BecknConfig -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
+status _merchantId _merchantOperatingCity bapConfig booking = do
+  tickets' <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
+  bppOrderId <- EBIXOrder.getOrderId booking
+  let tickets =
+        map
+          ( \DFRFSTicket.FRFSTicket {status = _status, ..} ->
+              DTicket
+                { bppFulfillmentId = "Kolkata Buses Fulfillment",
+                  status = "UNCLAIMED",
+                  ..
+                }
+          )
+          tickets'
+  return $
+    DOrder
+      { providerId = bapConfig.uniqueKeyId,
+        totalPrice = booking.price.amount,
+        fareBreakUp = [],
+        bppOrderId = bppOrderId,
+        bppItemId = "Kolkata Buses Item",
+        transactionId = booking.searchId.getId,
+        orderStatus = Nothing,
+        messageId = booking.id.getId,
+        tickets = tickets
+      }
