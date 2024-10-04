@@ -38,6 +38,9 @@ findAllByMerchantOperatingCityAndVehicleType merchantOperatingCityId vehicleType
 findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Route.Route))
 findByRouteCode code = do findOneWithKV [Se.Is Beam.code $ Se.Eq code]
 
+findByRouteCodes :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Prelude.Text] -> m [Domain.Types.Route.Route])
+findByRouteCodes code = do findAllWithKV [Se.And [Se.Is Beam.code $ Se.In code]]
+
 findByRouteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Route.Route -> m (Maybe Domain.Types.Route.Route))
 findByRouteId id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
