@@ -197,7 +197,7 @@ headerLayout state push =
     , background Color.white900
     , gravity CENTER_HORIZONTAL
     ][headerLeft state push
-    , headerRight state push
+    -- , headerRight state push   -- Might use later 
     ]
 
 headerLeft :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
