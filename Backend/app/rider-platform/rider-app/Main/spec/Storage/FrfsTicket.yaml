@@ -63,11 +63,24 @@ Station:
     lon: Maybe Double
     address: Maybe Text
     merchantId: Id Merchant
+    timeBounds: TimeBound
     merchantOperatingCityId: Id MerchantOperatingCity
+
+  default:
+    timeBounds: "'Unbounded'"
+
+  beamType:
+    timeBounds: Maybe TimeBound
 
   constraints:
     id: PrimaryKey
     code: SecondaryKey
+
+  fromTType:
+    timeBounds: fromMaybe Kernel.Types.TimeBound.Unbounded timeBounds|E
+
+  toTType:
+    timeBounds: Kernel.Prelude.Just|I
 
   queries:
     getTicketPlacesByMerchantOperatingCityIdAndVehicleType:
@@ -469,10 +482,14 @@ FRFSConfig:
     customDates: '[Text]'
     customEndTime: Text
     cancellationReasonId: Maybe Text
+    straightLineDistance: Meters
+    radius: Meters
 
   beamType:
     isCancellationAllowed: Maybe Bool
     busStationTtl: Maybe Seconds
+    straightLineDistance: Maybe Meters
+    radius: Maybe Meters
 
   queries:
     findByMerchantOperatingCityId:
@@ -488,14 +505,21 @@ FRFSConfig:
     freeTicketInterval: "9999"
     maxFreeTicketCashback: "0"
     busStationTtl: "1800"
+    straightLineDistance: "5000"
+    radius: "3000"
 
   fromTType:
     isCancellationAllowed: Kernel.Prelude.fromMaybe True|I
     busStationTtl: Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 1800)|I
+    straightLineDistance: Kernel.Prelude.fromMaybe  (Kernel.Types.Distance.Meters 5000)|I
+    radius: Kernel.Prelude.fromMaybe (Kernel.Types.Distance.Meters 3000)|I
+
 
   toTType:
     isCancellationAllowed: Kernel.Prelude.Just|I
     busStationTtl: Kernel.Prelude.Just|I
+    straightLineDistance: Kernel.Prelude.Just|I
+    radius: Kernel.Prelude.Just|I
 
 Route:
   tableName: route

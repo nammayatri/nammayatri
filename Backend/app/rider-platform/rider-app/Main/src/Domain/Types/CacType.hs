@@ -46,6 +46,7 @@ instance CheckParse MSUC.MerchantServiceUsageConfig where
       "getRoutes" -> checkField (Proxy @MapsService) value
       "snapToRoad" -> checkField (Proxy @MapsService) value
       "getPlaceName" -> checkField (Proxy @MapsService) value
+      "getFrfsAutocompleteDistances" -> checkField (Proxy @MapsService) value
       "getPickupRoutes" -> checkField (Proxy @MapsService) value
       "getTripRoutes" -> checkField (Proxy @MapsService) value
       "getPlaceDetails" -> checkField (Proxy @MapsService) value

@@ -19,6 +19,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
+import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
@@ -159,10 +160,28 @@ type API =
       :> Get
            '[JSON]
            API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
+      :<|> TokenAuth
+      :> "frfs"
+      :> "autocomplete"
+      :> QueryParam
+           "text"
+           Data.Text.Text
+      :> MandatoryQueryParam
+           "city"
+           Kernel.Types.Beckn.Context.City
+      :> MandatoryQueryParam
+           "location"
+           Kernel.External.Maps.Types.LatLong
+      :> MandatoryQueryParam
+           "vehicleType"
+           BecknV2.FRFS.Enums.VehicleCategory
+      :> Get
+           '[JSON]
+           [API.Types.UI.FRFSTicketService.AutocompleteRes]
   )
 
 handler :: Environment.FlowServer API
-handler = getFrfsRoutes :<|> getFrfsStations :<|> postFrfsSearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> getFrfsConfig
+handler = getFrfsRoutes :<|> getFrfsStations :<|> postFrfsSearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> getFrfsConfig :<|> getFrfsAutocomplete
 
 getFrfsRoutes ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -283,3 +302,15 @@ getFrfsConfig ::
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
   )
 getFrfsConfig a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsConfig (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getFrfsAutocomplete ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Types.Beckn.Context.City ->
+    Kernel.External.Maps.Types.LatLong ->
+    BecknV2.FRFS.Enums.VehicleCategory ->
+    Environment.FlowHandler [API.Types.UI.FRFSTicketService.AutocompleteRes]
+  )
+getFrfsAutocomplete a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsAutocomplete (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1

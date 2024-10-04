@@ -5,10 +5,12 @@ module Domain.Action.UI.FRFSTicketService where
 
 import API.Types.UI.FRFSTicketService
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
+import BecknV2.FRFS.Enums hiding (END, START)
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import qualified BecknV2.OnDemand.Enums as OnDemandEnums
 import Control.Monad.Extra hiding (fromMaybeM)
+import qualified Data.List.NonEmpty as NonEmpty hiding (map)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.FRFS.Common as Common
@@ -37,7 +39,8 @@ import EulerHS.Prelude hiding (all, and, id, length, map, readMaybe, whenJust)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
-import Kernel.External.Maps.Types
+import Kernel.External.Maps.Interface.Types
+import qualified Kernel.External.Maps.Types
 import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude hiding (whenJust)
@@ -48,6 +51,7 @@ import qualified Kernel.Types.Common as Common
 import Kernel.Types.Error (MerchantError (MerchantOperatingCityNotFound))
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
+import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common hiding (mkPrice)
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -78,6 +82,7 @@ import qualified Storage.Queries.RouteStopMapping as QRouteStopMapping
 import qualified Storage.Queries.Station as QStation
 import Tools.Auth
 import Tools.Error
+import Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Payment as Payment
 
@@ -629,3 +634,154 @@ getFrfsConfig (pId, mId) opCity = do
   let isEventOngoing' = fromMaybe False isEventOngoing
       ticketsBookedInEvent = fromMaybe 0 ((.ticketsBookedInEvent) =<< stats)
   return FRFSTicketService.FRFSConfigAPIRes {isEventOngoing = isEventOngoing', ..}
+
+data StationResult = StationResult
+  { code :: Kernel.Prelude.Text,
+    name :: Kernel.Prelude.Text,
+    vehicleType :: Spec.VehicleCategory,
+    lat :: Double,
+    lon :: Double
+  }
+
+instance HasCoordinates StationResult where
+  getCoordinates stop = LatLong (stop.lat) (stop.lon)
+
+getFrfsAutocomplete ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Prelude.Maybe Text ->
+  Context.City ->
+  Kernel.External.Maps.Types.LatLong ->
+  BecknV2.FRFS.Enums.VehicleCategory ->
+  Environment.Flow [API.Types.UI.FRFSTicketService.AutocompleteRes]
+getFrfsAutocomplete (_, mId) text opCity origin vehicle = do
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity mId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> mId.getId <> " ,city: " <> show opCity)
+  frfsConfig <-
+    CQFRFSConfig.findByMerchantOperatingCityId merchantOpCity.id
+      >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show merchantOpCity.id)
+  case text of
+    Nothing -> do
+      allStops <- QStation.getTicketPlacesByMerchantOperatingCityIdAndVehicleType merchantOpCity.id vehicle
+
+      currentTime <- getCurrentTime
+
+      let serviceableStops = DTB.findBoundedDomain allStops currentTime
+
+      let filteredStops =
+            filter
+              ( \stop ->
+                  let straightLineDist = highPrecMetersToMeters (CD.distanceBetweenInMeters origin (LatLong (fromMaybe merchantOpCity.lat stop.lat) (fromMaybe merchantOpCity.long stop.lon)))
+                   in straightLineDist <= frfsConfig.straightLineDistance
+              )
+              serviceableStops
+
+      let transformedStops =
+            map
+              ( \stop ->
+                  StationResult
+                    { lat = fromMaybe merchantOpCity.lat stop.lat,
+                      lon = fromMaybe merchantOpCity.long stop.lon,
+                      code = stop.code,
+                      name = stop.name,
+                      vehicleType = stop.vehicleType
+                    }
+              )
+              filteredStops
+
+      let stopsReq =
+            GetDistancesReq
+              { origins = NonEmpty.fromList [origin],
+                destinations = NonEmpty.fromList transformedStops,
+                distanceUnit = Meter,
+                sourceDestinationMapping = Just Maps.ManyToMany,
+                travelMode = Just CAR
+              }
+
+      stopsDistanceResp <- Maps.getFrfsAutocompleteDistances mId merchantOpCity.id stopsReq
+
+      let finalStops = filter (\stopResp -> stopResp.distance <= (frfsConfig.radius)) (NonEmpty.toList stopsDistanceResp)
+
+      let formattedStops =
+            map
+              ( \stopResp ->
+                  Stop
+                    { stopCode = stopResp.destination.code,
+                      stopName = stopResp.destination.name,
+                      distance = stopResp.distance
+                    }
+              )
+              finalStops
+
+      return
+        [ API.Types.UI.FRFSTicketService.AutocompleteRes
+            { routes = [],
+              stops = formattedStops
+            }
+        ]
+    Just userInput -> do
+      allStops <- QStation.getTicketPlacesByMerchantOperatingCityIdAndVehicleType merchantOpCity.id vehicle
+      allRoutes <- QRoute.findAllByMerchantOperatingCityAndVehicleType merchantOpCity.id vehicle
+      let input = T.toUpper userInput
+          matchingStops = filter (\stop -> T.isInfixOf input (T.toUpper stop.name)) allStops
+          matchingRoutes = filter (\route -> T.isInfixOf input (T.toUpper route.longName)) allRoutes
+
+      currentTime <- getCurrentTime
+
+      let serviceableStops = DTB.findBoundedDomain matchingStops currentTime
+          serviceableRoutes = DTB.findBoundedDomain matchingRoutes currentTime
+
+      let transformedStops =
+            map
+              ( \stop ->
+                  StationResult
+                    { lat = fromMaybe merchantOpCity.lat stop.lat,
+                      lon = fromMaybe merchantOpCity.long stop.lon,
+                      code = stop.code,
+                      name = stop.name,
+                      vehicleType = stop.vehicleType
+                    }
+              )
+              serviceableStops
+
+      let stopsReq =
+            GetDistancesReq
+              { origins = NonEmpty.fromList [origin],
+                destinations = NonEmpty.fromList transformedStops,
+                distanceUnit = Meter,
+                sourceDestinationMapping = Just Maps.ManyToMany,
+                travelMode = Just Maps.CAR
+              }
+
+      stopsDistanceResp <- Maps.getFrfsAutocompleteDistances mId merchantOpCity.id stopsReq
+
+      let formattedStops =
+            map
+              ( \stopResp ->
+                  Stop
+                    { stopCode = stopResp.destination.code,
+                      stopName = stopResp.destination.name,
+                      distance = stopResp.distance
+                    }
+              )
+              (NonEmpty.toList stopsDistanceResp)
+
+      let formattedRoutes =
+            map
+              ( \routeResp ->
+                  FRFSRouteAPI
+                    { code = routeResp.code,
+                      shortName = routeResp.shortName,
+                      longName = routeResp.longName,
+                      startPoint = routeResp.startPoint,
+                      endPoint = routeResp.endPoint
+                    }
+              )
+              serviceableRoutes
+
+      return
+        [ API.Types.UI.FRFSTicketService.AutocompleteRes
+            { routes = formattedRoutes,
+              stops = formattedStops
+            }
+        ]
