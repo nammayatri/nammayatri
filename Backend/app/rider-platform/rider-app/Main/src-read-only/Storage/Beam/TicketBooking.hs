@@ -8,7 +8,7 @@ module Storage.Beam.TicketBooking where
 import qualified Data.Time.Calendar
 import qualified Database.Beam as B
 import Domain.Types.Common ()
-import qualified Domain.Types.TicketBooking
+import qualified Domain.Types.Extra.TicketBooking
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -25,7 +25,7 @@ data TicketBookingT f = TicketBookingT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     personId :: B.C f Kernel.Prelude.Text,
     shortId :: B.C f Kernel.Prelude.Text,
-    status :: B.C f Domain.Types.TicketBooking.BookingStatus,
+    status :: B.C f Domain.Types.Extra.TicketBooking.BookingStatus,
     ticketPlaceId :: B.C f Kernel.Prelude.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     visitDate :: B.C f Data.Time.Calendar.Day,
