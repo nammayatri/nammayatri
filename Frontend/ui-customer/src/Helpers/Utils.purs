@@ -1281,7 +1281,7 @@ calculateBookingEndTime bookingResp =do
     estimatedDistance = resp.estimatedDistance
     rideScheduledTime = fromMaybe (getCurrentUTC "") resp.rideScheduledTime
     rideScheduledBufferTime = 60
-    timeToTravelOneKm = 6
+    timeToTravelOneKm = 3
     returnTime = (fromMaybe rideScheduledTime resp.returnTime) 
   case fareProductType of 
     INTER_CITY -> do
