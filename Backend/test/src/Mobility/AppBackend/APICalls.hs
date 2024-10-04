@@ -58,8 +58,8 @@ mkAppCancelReq stage =
 appConfirmRide :: Text -> Id AbeQuote.Quote -> Maybe Payment.PaymentMethodId -> ClientM ConfirmAPI.ConfirmRes
 appConfirmRide = client (Proxy :: Proxy ConfirmAPI.API)
 
-knowYourDriver :: Text -> Id BRide.Ride -> ClientM AppFeedback.DriverProfileResponse
-knowYourFavDriver :: Text -> Text -> ClientM AppFeedback.DriverProfileResponse
+knowYourDriver :: Text -> Id BRide.Ride -> Maybe Bool -> ClientM AppFeedback.DriverProfileResponse
+knowYourFavDriver :: Text -> Text -> Maybe Bool -> ClientM AppFeedback.DriverProfileResponse
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess
 appFeedback :<|> knowYourDriver :<|> knowYourFavDriver = client (Proxy :: Proxy AppFeedback.API)
 
