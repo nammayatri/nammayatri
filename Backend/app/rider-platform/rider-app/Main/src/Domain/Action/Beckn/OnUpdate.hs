@@ -471,7 +471,7 @@ onUpdate = \case
     void $ QPFS.updateStatus searchReq.riderId flowStatus
     void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId ride.id
     -- notify customer
-    Notify.notifyOnEstOrQuoteReallocated cancellationSource booking quote.id.getId
+    Notify.notifyOnEstOrQuoteReallocated cancellationSource newBooking quote.id.getId
   OUValidatedSafetyAlertReq ValidatedSafetyAlertReq {..} -> do
     logDebug $ "Safety alert triggered for rideId: " <> ride.id.getId
     merchantOperatingCityId <- maybe (QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId) >>= pure . (.merchantOperatingCityId)) pure ride.merchantOperatingCityId
