@@ -20,6 +20,7 @@ imports:
   BusinessHourType: Domain.Types.BusinessHour
   Value: Data.Aeson
   TimeBound : Kernel.Types.TimeBound
+  BookingStatus: Domain.Types.Extra.TicketBooking
 
 TicketPlace:
   tableName: ticket_place
@@ -302,11 +303,6 @@ TicketBooking:
     shortId: SecondaryKey
     personId: SecondaryKey
 
-  types:
-    BookingStatus:
-      enum: "Pending,Failed,Booked,Cancelled"
-      derive: HttpInstance
-
   default:
     bookedSeats: "0"
 
@@ -336,6 +332,7 @@ TicketBooking:
 
   extraOperations:
   - EXTRA_QUERY_FILE
+  - EXTRA_DOMAIN_TYPE_FILE
 
 TicketBookingService:
   tableName: ticket_booking_service
