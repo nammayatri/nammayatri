@@ -5,6 +5,7 @@
 
 module Storage.Beam.SearchRequestForDriver where
 
+import qualified Data.Aeson
 import qualified Data.Time
 import qualified Database.Beam as B
 import Domain.Types.Common ()
@@ -39,6 +40,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     createdAt :: B.C f Data.Time.LocalTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     customerCancellationDues :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    customerTags :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     driverAvailableTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     driverDefaultStepFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
@@ -51,6 +53,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     driverSpeed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     driverStepFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
     driverStepFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    driverTags :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     durationToPickup :: B.C f Kernel.Types.Common.Seconds,
     estimateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromLocGeohash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -67,6 +70,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     notificationSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource),
     parallelSearchRequestCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     pickupZone :: B.C f Kernel.Prelude.Bool,
+    poolingLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     previousDropGeoHash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     renderedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     requestId :: B.C f Kernel.Prelude.Text,

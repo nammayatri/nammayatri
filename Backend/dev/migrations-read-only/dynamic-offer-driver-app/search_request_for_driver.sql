@@ -102,3 +102,15 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN rendered
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN from_loc_geohash text ;
 
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN driver_tags json ;
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN customer_tags json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN pooling_logic_version integer ;

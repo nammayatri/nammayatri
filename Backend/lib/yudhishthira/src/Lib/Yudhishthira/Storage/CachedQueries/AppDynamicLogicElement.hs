@@ -17,14 +17,16 @@ findByDomain :: (BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.LogicDomain -
 findByDomain domain = do
   Hedis.withCrossAppRedis (Hedis.safeGet $ "yudhishthiraCachedQueries:AppDynamicLogicElement:" <> ":Domain-" <> show domain)
     >>= ( \case
-            Just a -> pure a
-            Nothing ->
-              ( \dataToBeCached -> do
-                  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-                  Hedis.withCrossAppRedis $ Hedis.setExp ("yudhishthiraCachedQueries:AppDynamicLogicElement:" <> ":Domain-" <> show domain) dataToBeCached expTime
-              )
-                /=<< Queries.findByDomain domain
+            Just a -> if null a then fetchAndCase else pure a
+            Nothing -> fetchAndCase
         )
+  where
+    fetchAndCase =
+      ( \dataToBeCached -> do
+          expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+          Hedis.withCrossAppRedis $ Hedis.setExp ("yudhishthiraCachedQueries:AppDynamicLogicElement:" <> ":Domain-" <> show domain) dataToBeCached expTime
+      )
+        /=<< Queries.findByDomain domain
 
 findByDomainAndVersion ::
   (BeamFlow.BeamFlow m r) =>
@@ -32,14 +34,16 @@ findByDomainAndVersion ::
 findByDomainAndVersion domain version = do
   Hedis.withCrossAppRedis (Hedis.safeGet $ "yudhishthiraCachedQueries:AppDynamicLogicElement:" <> ":Domain-" <> show domain <> ":Version-" <> show version)
     >>= ( \case
-            Just a -> pure a
-            Nothing ->
-              ( \dataToBeCached -> do
-                  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-                  Hedis.withCrossAppRedis $ Hedis.setExp ("yudhishthiraCachedQueries:AppDynamicLogicElement:" <> ":Domain-" <> show domain <> ":Version-" <> show version) dataToBeCached expTime
-              )
-                /=<< Queries.findByDomainAndVersion Nothing Nothing domain version
+            Just a -> if null a then fetchAndCase else pure a
+            Nothing -> fetchAndCase
         )
+  where
+    fetchAndCase =
+      ( \dataToBeCached -> do
+          expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+          Hedis.withCrossAppRedis $ Hedis.setExp ("yudhishthiraCachedQueries:AppDynamicLogicElement:" <> ":Domain-" <> show domain <> ":Version-" <> show version) dataToBeCached expTime
+      )
+        /=<< Queries.findByDomainAndVersion Nothing Nothing domain version
 
 clearCache :: BeamFlow.BeamFlow m r => Lib.Yudhishthira.Types.LogicDomain -> m ()
 clearCache domain =
