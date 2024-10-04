@@ -1207,7 +1207,7 @@ data DriverOnboardingError
   | UnsyncedImageNotFound
   | DocumentAlreadyInSync
   | NotValidatedUisngFrontendSDK
-  | HyperVergeWebhookPayloadRecordNotFound
+  | HyperVergeWebhookPayloadRecordNotFound Text
   | DupilicateWebhookRecieved
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
@@ -1257,7 +1257,7 @@ instance IsBaseError DriverOnboardingError where
     UnsyncedImageNotFound -> Just "Unsynced image not found"
     DocumentAlreadyInSync -> Just "Document already in sync"
     NotValidatedUisngFrontendSDK -> Just "Document not validated using frontend SDK"
-    HyperVergeWebhookPayloadRecordNotFound -> Just "Request id in Hyperverge webhook does not match any request id in HypervergeVerification table."
+    HyperVergeWebhookPayloadRecordNotFound reqId -> Just "Request id in Hyperverge webhook does not match any request id in HypervergeVerification table. RequestId : " <> reqId
     DupilicateWebhookRecieved -> Just "Multiple webhooks received for same request id."
 
 instance IsHTTPError DriverOnboardingError where
@@ -1306,7 +1306,7 @@ instance IsHTTPError DriverOnboardingError where
     UnsyncedImageNotFound -> "UNSYNCED_IMAGE_NOT_FOUND"
     DocumentAlreadyInSync -> "DOCUMENT_ALREADY_IN_SYNC"
     NotValidatedUisngFrontendSDK -> "DOCUMENT_NOT_VALIDATED_USING_FRONTEND_SDK"
-    HyperVergeWebhookPayloadRecordNotFound -> "HYPERVERGE_WEBHOOK_PAYLOAD_RECORD_NOT_FOUND"
+    HyperVergeWebhookPayloadRecordNotFound _ -> "HYPERVERGE_WEBHOOK_PAYLOAD_RECORD_NOT_FOUND"
     DupilicateWebhookRecieved -> "DUPLICATE_WEBHOOK_RECEIVED"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
@@ -1353,7 +1353,7 @@ instance IsHTTPError DriverOnboardingError where
     UnsyncedImageNotFound -> E400
     DocumentAlreadyInSync -> E400
     NotValidatedUisngFrontendSDK -> E400
-    HyperVergeWebhookPayloadRecordNotFound -> E400
+    HyperVergeWebhookPayloadRecordNotFound _ -> E400
     DupilicateWebhookRecieved -> E400
 
 instance IsAPIError DriverOnboardingError
