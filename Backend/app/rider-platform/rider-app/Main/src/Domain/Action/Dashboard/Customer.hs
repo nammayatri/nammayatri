@@ -16,7 +16,7 @@ module Domain.Action.Dashboard.Customer
   ( deleteCustomer,
     blockCustomer,
     unblockCustomer,
-    listCustomers,
+    getCustomerList,
     customerInfo,
     customerCancellationDuesSync,
     getCancellationDuesDetails,
@@ -26,6 +26,7 @@ module Domain.Action.Dashboard.Customer
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Customer as Common
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Customer as Common
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -149,8 +150,8 @@ customerInfo merchantShortId opCity customerId = do
       }
 
 ---------------------------------------------------------------------
-listCustomers :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe (Id Common.Customer) -> Flow Common.CustomerListRes
-listCustomers merchantShortId opCity mbLimit mbOffset mbEnabled mbBlocked mbSearchPhone mbPersonId = do
+getCustomerList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe (Id Common.Customer) -> Flow Common.CustomerListRes
+getCustomerList merchantShortId opCity mbLimit mbOffset mbEnabled mbBlocked mbSearchPhone mbPersonId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit

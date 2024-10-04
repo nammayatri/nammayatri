@@ -36,10 +36,8 @@ import Tools.Auth.Merchant
 
 type API =
   "customer"
-    :> ( ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'CUSTOMER_LIST
-           :> Common.CustomerListAPI
-           :<|> ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'CUSTOMER_DELETE
-             :> Common.CustomerDeleteAPI
+    :> ( ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'CUSTOMER_DELETE
+           :> Common.CustomerDeleteAPI
            :<|> ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'CUSTOMER_BLOCK
              :> Common.CustomerBlockAPI
            :<|> ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'CUSTOMER_UNBLOCK
@@ -60,8 +58,7 @@ type API =
 
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
-  listCustomer merchantId city
-    :<|> deleteCustomer merchantId city
+  deleteCustomer merchantId city
     :<|> blockCustomer merchantId city
     :<|> unblockCustomer merchantId city
     :<|> customerInfo merchantId city
@@ -81,21 +78,6 @@ buildTransaction ::
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.CustomerAPI endpoint) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
-
-listCustomer ::
-  ShortId DM.Merchant ->
-  City.City ->
-  ApiTokenInfo ->
-  Maybe Int ->
-  Maybe Int ->
-  Maybe Bool ->
-  Maybe Bool ->
-  Maybe Text ->
-  Maybe (Id Common.Customer) ->
-  FlowHandler Common.CustomerListRes
-listCustomer merchantShortId opCity apiTokenInfo mbLimit mbOffset enabled blocked phone mbPersonId = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callRiderAppOperations checkedMerchantId opCity (.customers.customerList) mbLimit mbOffset enabled blocked phone mbPersonId
 
 deleteCustomer ::
   ShortId DM.Merchant ->

@@ -15,6 +15,7 @@
 module API.Dashboard where
 
 import qualified API.Action.Dashboard.Management.Booking as BookingDSL
+import qualified API.Action.Dashboard.Management.Customer as CustomerDSL
 import qualified API.Action.Dashboard.Management.Invoice as InvoiceDSL
 import qualified API.Action.Dashboard.Management.Merchant as MerchantDSL
 import qualified API.Dashboard.Customer as Customer
@@ -61,6 +62,7 @@ type OperationsAPI =
            :<|> Tickets.API
            :<|> HotSpot.API
            :<|> BookingDSL.API
+           :<|> CustomerDSL.API
            :<|> MerchantDSL.API
            :<|> InvoiceDSL.API
        )
@@ -102,6 +104,7 @@ operationHandler merchantId city _ = do
     :<|> Tickets.handler merchantId
     :<|> HotSpot.handler merchantId
     :<|> BookingDSL.handler merchantId city
+    :<|> CustomerDSL.handler merchantId city
     :<|> MerchantDSL.handler merchantId city
     :<|> InvoiceDSL.handler merchantId city
 

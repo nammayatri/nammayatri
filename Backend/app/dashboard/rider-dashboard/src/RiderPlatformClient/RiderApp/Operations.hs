@@ -21,6 +21,7 @@ where
 
 import qualified "rider-app" API.Dashboard as BAP
 import qualified API.Types.RiderPlatform.Management.Booking as BookingDSL
+import qualified API.Types.RiderPlatform.Management.Customer as CustomerDSL
 import qualified API.Types.RiderPlatform.Management.Invoice as InvoiceDSL
 import qualified API.Types.RiderPlatform.Management.Merchant as MerchantDSL
 import qualified "rider-app" API.Types.UI.TicketService as DTB
@@ -65,13 +66,13 @@ data AppBackendAPIs = AppBackendAPIs
     tickets :: TicketAPIs,
     hotSpot :: HotSpotAPIs,
     bookingDSL :: BookingDSL.BookingAPIs,
+    customerDSL :: CustomerDSL.CustomerAPIs,
     merchantDSL :: MerchantDSL.MerchantAPIs,
     invoiceDSL :: InvoiceDSL.InvoiceAPIs
   }
 
 data CustomerAPIs = CustomerAPIs
-  { customerList :: Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe (Id Customer.Customer) -> Euler.EulerClient Customer.CustomerListRes,
-    customerDelete :: Id Customer.Customer -> Euler.EulerClient APISuccess,
+  { customerDelete :: Id Customer.Customer -> Euler.EulerClient APISuccess,
     customerBlock :: Id Customer.Customer -> Euler.EulerClient APISuccess,
     customerUnblock :: Id Customer.Customer -> Euler.EulerClient APISuccess,
     customerInfo :: Id Customer.Customer -> Euler.EulerClient Customer.CustomerInfoRes,
@@ -139,6 +140,7 @@ mkAppBackendAPIs merchantId city token = do
   let hotSpot = HotSpotAPIs {..}
 
   let bookingDSL = BookingDSL.mkBookingAPIs bookingClientDSL
+  let customerDSL = CustomerDSL.mkCustomerAPIs customerClientDSL
   let merchantDSL = MerchantDSL.mkMerchantAPIs merchantClientDSL
   let invoiceDSL = InvoiceDSL.mkInvoiceAPIs invoiceClientDSL
   AppBackendAPIs {..}
@@ -150,12 +152,12 @@ mkAppBackendAPIs merchantId city token = do
       :<|> ticketsClient
       :<|> hotSpotClient
       :<|> bookingClientDSL
+      :<|> customerClientDSL
       :<|> merchantClientDSL
       :<|> invoiceClientDSL =
         clientWithMerchantAndCity (Proxy :: Proxy BAP.OperationsAPI) merchantId city token
 
-    customerList
-      :<|> customerDelete
+    customerDelete
       :<|> customerBlock
       :<|> customerUnblock
       :<|> customerInfo
