@@ -1,1 +1,0 @@
-ALTER TABLE atlas_app.app_dynamic_logic_element ADD PRIMARY KEY ( domain, "order", version);
