@@ -88,7 +88,8 @@ handler merchant sReq searchReq estimates = do
             tripQuoteDetails,
             customerExtraFee = sReq.customerExtraFee,
             messageId = sReq.messageId,
-            isRepeatSearch = False
+            isRepeatSearch = False,
+            isDriverCancellation = False
           }
   initiateDriverSearchBatch driverSearchBatchInput
   Metrics.finishGenericLatencyMetrics Metrics.SELECT_TO_SEND_REQUEST searchReq.transactionId

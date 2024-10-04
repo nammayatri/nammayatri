@@ -62,8 +62,9 @@ getNextScheduleTime ::
   DriverPoolConfig ->
   DSR.SearchRequest ->
   UTCTime ->
+  Bool ->
   m (Maybe NominalDiffTime)
-getNextScheduleTime driverPoolConfig searchRequest now = do
+getNextScheduleTime driverPoolConfig searchRequest now isDriverCancellation = do
   mbScheduleTryTimes <- getKey
   let scheduleTryTimes =
         case mbScheduleTryTimes of
@@ -74,14 +75,14 @@ getNextScheduleTime driverPoolConfig searchRequest now = do
     (scheduleTryTime : rest) -> do
       if (diffUTCTime searchRequest.startTime now <= scheduleTryTime)
         then do
-          setKey rest
+          unless isDriverCancellation $ setKey rest
           case rest of
             [] -> return Nothing
             (next : _) -> return $ Just $ max 2 (searchRequest.startTime `diffUTCTime` (next `addUTCTime` now))
         else return $ Just $ max 2 (searchRequest.startTime `diffUTCTime` (scheduleTryTime `addUTCTime` now))
   where
     scheduleSearchKey = "ScheduleSearch-" <> searchRequest.id.getId
-    setKey scheduleTryTimes = Redis.withCrossAppRedis $ Redis.setExp scheduleSearchKey scheduleTryTimes 3600
+    setKey scheduleTryTimes = Redis.withCrossAppRedis $ Redis.setExp scheduleSearchKey scheduleTryTimes 172800
     getKey = Redis.withCrossAppRedis $ Redis.safeGet scheduleSearchKey
 
 initiateDriverSearchBatch ::
@@ -124,7 +125,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
         ReSchedule _ -> scheduleBatching searchTry inTime
         _ -> return ()
     else do
-      mbScheduleTime <- getNextScheduleTime driverPoolConfig searchReq now
+      mbScheduleTime <- getNextScheduleTime driverPoolConfig searchReq now isDriverCancellation
       case mbScheduleTime of
         Just scheduleTime -> scheduleBatching searchTry scheduleTime
         Nothing -> do

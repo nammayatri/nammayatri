@@ -111,7 +111,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
       searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
       transporterConfig <- QTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId $ Id booking.transactionId)) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-      isRepeatSearch <- checkIfRepeatSearch searchTry ride.driverArrivalTime searchReq.isReallocationEnabled now booking.isScheduled transporterConfig
+      isRepeatSearch <- checkIfRepeatSearch searchTry ride.driverArrivalTime searchReq.isReallocationEnabled now searchReq.isScheduled transporterConfig
       if isRepeatSearch
         then performDynamicOfferReallocation driverQuote searchReq searchTry
         else cancelRideTransactionForNonReallocation Nothing (Just searchTry.estimateId)
@@ -138,7 +138,8 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 tripQuoteDetails = tripQuoteDetails,
                 customerExtraFee = Nothing,
                 messageId = booking.id.getId,
-                isRepeatSearch = True
+                isRepeatSearch = True,
+                isDriverCancellation = True
               }
       handleDriverSearchBatch driverSearchBatchInput booking searchTry.estimateId False
 
@@ -160,7 +161,8 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 tripQuoteDetails = [tripQuoteDetail],
                 customerExtraFee = Nothing,
                 messageId = booking.id.getId,
-                isRepeatSearch
+                isRepeatSearch,
+                isDriverCancellation = True
               }
       handleDriverSearchBatch driverSearchBatchInput newBooking searchTry.estimateId True
 

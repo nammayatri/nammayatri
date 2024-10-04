@@ -161,7 +161,8 @@ handler merchant req validatedQuote = do
                 tripQuoteDetails = [tripQuoteDetail],
                 customerExtraFee = Nothing,
                 messageId = booking.id.getId,
-                isRepeatSearch = False
+                isRepeatSearch = False,
+                isDriverCancellation = False
               }
       initiateDriverSearchBatch driverSearchBatchInput
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)

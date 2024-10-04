@@ -113,7 +113,8 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
             tripQuoteDetails,
             customerExtraFee = searchTry.customerExtraFee,
             messageId = searchTry.messageId,
-            isRepeatSearch = False
+            isRepeatSearch = False,
+            isDriverCancellation = False
           }
   (res, _, _) <- sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput goHomeCfg
   return res
