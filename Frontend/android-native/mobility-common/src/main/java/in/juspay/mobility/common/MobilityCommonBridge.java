@@ -5226,9 +5226,17 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void uploadFile() {
-        if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
-        mediaPlayer.uploadFile();
+    public void uploadFile(String ratio) {
+        try{
+            if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
+            JSONObject payload = new JSONObject(ratio);
+            int imageAspectHeight = payload.optInt("imageAspectHeight", 0);
+            int imageAspectWidth = payload.optInt("imageAspectWidth", 0);
+            boolean showAccordingToAspectRatio = payload.optBoolean("showAccordingToAspectRatio", false);
+            mediaPlayer.uploadFile(imageAspectHeight, imageAspectWidth, showAccordingToAspectRatio);
+        }catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @JavascriptInterface
@@ -5284,7 +5292,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 if (resultCode == RESULT_OK) {
                     if (bridgeComponents.getActivity() != null) {
                         if(mediaPlayer != null) mediaPlayer.isUploadPopupOpen = false;
-                        captureImage(data, bridgeComponents.getActivity(), bridgeComponents.getContext());
+                        captureImage(data, bridgeComponents.getActivity(), bridgeComponents.getContext(), mediaPlayer.showToAspectRatio, mediaPlayer.height, mediaPlayer.width);
                     }
                 } else {
                     if(mediaPlayer != null) mediaPlayer.isUploadPopupOpen = false;

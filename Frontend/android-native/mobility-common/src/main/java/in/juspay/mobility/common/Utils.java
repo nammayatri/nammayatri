@@ -154,7 +154,7 @@ public class Utils {
         return bitmap;
     }
 
-    public static void captureImage(@Nullable Intent data, Activity activity, Context context) {
+    public static void captureImage(@Nullable Intent data, Activity activity, Context context, boolean showToAspectRatio, int height, int width) {
         try {
             Uri imageUri;
             SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
@@ -164,16 +164,21 @@ public class Utils {
             } else { // storage
                 imageUri = data.getData();
             }
-            startCropImageActivity(imageUri, activity);
+            startCropImageActivity(imageUri, activity, showToAspectRatio, height, width);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public static void startCropImageActivity(Uri imageUri, Activity activity) {
-        CropImage.activity(imageUri)
-                .setAllowFlipping(false)
-                .start(activity);
+    public static void startCropImageActivity(Uri imageUri, Activity activity, boolean showToAspectRatio, int height, int width) {
+        if (showToAspectRatio){
+            CropImage.activity(imageUri)
+                    .setAllowFlipping(false).setAspectRatio(width,height).start(activity);
+        }
+        else{
+            CropImage.activity(imageUri)
+                    .setAllowFlipping(false).start(activity);
+        }
     }
 
     public static void encodeImageToBase64(@Nullable Intent data, Context context, @Nullable Uri imageData) {

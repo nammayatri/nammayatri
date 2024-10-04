@@ -52,6 +52,9 @@ import in.juspay.mobility.common.mediaPlayer.DefaultMediaPlayerControl;
 
 public class MediaPlayer {
     public boolean isUploadPopupOpen = false;
+    public int height = 0;
+    public int width = 0;
+    public boolean showToAspectRatio = false;
     public ArrayList<MediaPlayerView> audioPlayers = new ArrayList<>();
     public MediaPlayerView.AudioRecorder audioRecorder = null;
     private static final int IMAGE_CAPTURE_REQ_CODE = 101;
@@ -86,7 +89,7 @@ public class MediaPlayer {
         return null;
     }
 
-    public void uploadFile() { 
+    public void uploadFile(int imageAspectHeight, int imageAspectWidth, boolean showAccordingToAspectRatio) { 
         if (!isUploadPopupOpen) {
             ExecutorManager.runOnMainThread(() -> {
                 Context context = bridgeComponents.getContext();
@@ -102,6 +105,9 @@ public class MediaPlayer {
                         Intent chooser = Intent.createChooser(takePicture, context.getString(R.string.upload_image));
                         chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{chooseFromFile});
                         isUploadPopupOpen = true;
+                        height = imageAspectHeight;
+                        width = imageAspectWidth;
+                        showToAspectRatio = showAccordingToAspectRatio;
                         bridgeComponents.getActivity().startActivityForResult(chooser, IMAGE_CAPTURE_REQ_CODE, null);
                     }
                 } else {
