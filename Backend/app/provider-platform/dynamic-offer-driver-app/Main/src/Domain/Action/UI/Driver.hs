@@ -2154,7 +2154,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
       -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
       cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId
       let availableServiceTiers = (.serviceTierType) <$> (map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers))
-      scheduledBookings <- runInReplica $ QBooking.findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay DRB.NEW mbTripCategory availableServiceTiers True cityId transporterConfig.timeDiffFromUtc
+      scheduledBookings <- runInReplica $ QBooking.findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay DRB.NEW mbTripCategory availableServiceTiers True cityId transporterConfig.timeDiffFromUtc driverInfo.canSwitchToInterCity driverInfo.canSwitchToRental
       mbCurrentDriverLocation <- LTF.driversLocation [driverInfo.driverId]
       dloc <- fromMaybeM LocationNotFound (listToMaybe mbCurrentDriverLocation)
       let driverLocation = LatLong {lat = dloc.lat, lon = dloc.lon}

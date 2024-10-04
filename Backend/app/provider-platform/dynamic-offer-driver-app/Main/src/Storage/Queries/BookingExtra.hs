@@ -16,6 +16,7 @@ import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.Trip as Trip
 import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -77,30 +78,39 @@ findByTransactionIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => T
 findByTransactionIdAndStatus txnId status =
   findOneWithKV [Se.And [Se.Is BeamB.transactionId $ Se.Eq txnId, Se.Is BeamB.status $ Se.Eq status]]
 
-findByStatusTripCatSchedulingAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Integer -> Maybe Integer -> Maybe DT.Day -> Maybe DT.Day -> BookingStatus -> Maybe DTC.TripCategory -> [DVST.ServiceTierType] -> Bool -> Id DMOC.MerchantOperatingCity -> Seconds -> m [Booking]
-findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay status mbTripCategory serviceTiers isScheduled (Id merchanOperatingCityId) timeDiffFromUtc = do
+findByStatusTripCatSchedulingAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Integer -> Maybe Integer -> Maybe DT.Day -> Maybe DT.Day -> BookingStatus -> Maybe DTC.TripCategory -> [DVST.ServiceTierType] -> Bool -> Id DMOC.MerchantOperatingCity -> Seconds -> Bool -> Bool -> m [Booking]
+findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay status _mbTripCategory serviceTiers isScheduled (Id merchanOperatingCityId) timeDiffFromUtc isIntercityEnabled isRentalEnabled = do
+  let rentalTripCategoryTypes = [Trip.Rental Trip.RideOtp, Trip.Rental Trip.OnDemandStaticOffer]
   let limitVal = maybe 5 fromInteger mbLimit
       offsetVal = maybe 0 fromInteger mbOffset
   now <- getCurrentTime
-  (from, to) <- case (mbFromDay, mbToDay) of
-    (Just fromDay, Just toDay) -> pure (DT.UTCTime (DT.addDays (-1) fromDay) (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)), DT.UTCTime toDay (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)))
-    (Just fromDay, Nothing) -> pure (DT.UTCTime (DT.addDays (-1) fromDay) (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)), now)
-    (Nothing, Just toDay) -> pure (DT.UTCTime (DT.fromGregorian 2020 1 1) 0, DT.UTCTime toDay (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)))
-    (Nothing, Nothing) -> pure (DT.UTCTime (DT.fromGregorian 2020 1 1) 0, now)
-  findAllWithOptionsKV
-    [ Se.And $
-        [ Se.Is BeamB.startTime $ Se.GreaterThanOrEq from,
-          Se.Is BeamB.startTime $ Se.LessThanOrEq to,
-          Se.Is BeamB.vehicleVariant $ Se.In serviceTiers,
-          Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just merchanOperatingCityId),
-          Se.Is BeamB.isScheduled $ Se.Eq (Just isScheduled),
-          Se.Is BeamB.status $ Se.Eq status
+  if isIntercityEnabled || isRentalEnabled
+    then do
+      (from, to) <- case (mbFromDay, mbToDay) of
+        (Just fromDay, Just toDay) -> pure (DT.UTCTime (DT.addDays (-1) fromDay) (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)), DT.UTCTime toDay (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)))
+        (Just fromDay, Nothing) -> pure (DT.UTCTime (DT.addDays (-1) fromDay) (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)), now)
+        (Nothing, Just toDay) -> pure (DT.UTCTime (DT.fromGregorian 2020 1 1) 0, DT.UTCTime toDay (86400 - DT.secondsToDiffTime (toInteger timeDiffFromUtc.getSeconds)))
+        (Nothing, Nothing) -> pure (DT.UTCTime (DT.fromGregorian 2020 1 1) 0, now)
+      findAllWithOptionsKV
+        [ Se.And $
+            [ Se.Is BeamB.startTime $ Se.GreaterThanOrEq from,
+              Se.Is BeamB.startTime $ Se.LessThanOrEq to,
+              Se.Is BeamB.vehicleVariant $ Se.In serviceTiers,
+              Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just merchanOperatingCityId),
+              Se.Is BeamB.isScheduled $ Se.Eq (Just isScheduled),
+              Se.Is BeamB.status $ Se.Eq status
+            ]
+              <> case (isIntercityEnabled, isRentalEnabled) of
+                (True, True) -> []
+                (True, False) -> [Se.Is BeamB.tripCategory $ Se.Not $ Se.In (Just <$> rentalTripCategoryTypes)]
+                (False, True) -> [Se.Is BeamB.tripCategory $ Se.In (Just <$> rentalTripCategoryTypes)]
+                (False, False) -> []
         ]
-          <> [Se.Is BeamB.tripCategory $ Se.Eq mbTripCategory | isJust mbTripCategory]
-    ]
-    (Se.Desc BeamB.startTime)
-    (Just limitVal)
-    (Just offsetVal)
+        (Se.Desc BeamB.startTime)
+        (Just limitVal)
+        (Just offsetVal)
+    else do
+      pure []
 
 updateStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do
