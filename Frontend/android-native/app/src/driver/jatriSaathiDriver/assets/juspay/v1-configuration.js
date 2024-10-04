@@ -383,7 +383,7 @@ window.getMerchantConfig = function () {
       "rentalWaitingChargesConfig" : {
         "cab" : {
           "freeSeconds" : 180,
-          "perMinCharges" : 2.0
+          "perMinCharges" : 1.0
         },
         "auto" : {
           "freeSeconds" : 180,
@@ -421,7 +421,7 @@ window.getMerchantConfig = function () {
       "rentalWaitingChargesConfig" : {
         "cab" : {
           "freeSeconds" : 300,
-          "perMinCharges" : 2.0
+          "perMinCharges" : 1.0
         },
         "auto" : {
           "freeSeconds" : 180,
@@ -537,7 +537,7 @@ let baseCityConfig = {
   "rentalWaitingChargesConfig" : {
     "cab" : {
       "freeSeconds" : 180,
-      "perMinCharges" : 2.0
+      "perMinCharges" : 1.0
     },
     "auto" : {
       "freeSeconds" : 180,
