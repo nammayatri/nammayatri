@@ -250,22 +250,22 @@ feedback request personId = do
           <> feedbackMsg
           <> "\n"
 
-knowYourDriver :: Id DRide.Ride -> App.Flow DriverProfileResponse
-knowYourDriver rideId = do
+knowYourDriver :: Id DRide.Ride -> Maybe Bool -> App.Flow DriverProfileResponse
+knowYourDriver rideId withImages = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   if isValueAddNP
     then do
-      res <- CallBPPInternal.getknowYourDriverDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId
+      res <- CallBPPInternal.getknowYourDriverDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId withImages
       pure $ DriverProfileResponse {response = Just res}
     else pure $ DriverProfileResponse {response = Nothing}
 
-knowYourFavDriver :: Text -> Id DM.Merchant -> App.Flow DriverProfileResponse
-knowYourFavDriver driverId merchantId = do
+knowYourFavDriver :: Text -> Id DM.Merchant -> Maybe Bool -> App.Flow DriverProfileResponse
+knowYourFavDriver driverId merchantId withImages = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  res <- CallBPPInternal.getKnowYourFavDriverDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl driverId
+  res <- CallBPPInternal.getKnowYourFavDriverDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl driverId withImages
   pure $ DriverProfileResponse {response = Just res}
 
 audioFeedbackUpload ::
