@@ -1158,7 +1158,7 @@ rentalInfoPopUpConfig state =
     rideInfo = (show tripDuration) <> "h / " <> (show tripDistance) <> "km"
     tripType = state.data.activeRide.tripType
     destinationCity = fromMaybe "" $state.data.activeRide.destinationCity
-    text  = if tripType == ST.Rental then (getString $ THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE rideInfo) else (getString PLEASE_ENSURE_THAT_YOUR_VEHICLE_IS_READY_FOR_INTERCITY_TRIP <> destinationCity)
+    text  = if tripType == ST.Rental then ((getString $ THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE rideInfo) <>"<br></br><span style='color:#2194FF'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>") else (getString PLEASE_ENSURE_THAT_YOUR_VEHICLE_IS_READY_FOR_INTERCITY_TRIP <> destinationCity)
     config' = config
       {
         gravity = CENTER,
@@ -1179,6 +1179,8 @@ rentalInfoPopUpConfig state =
         , visibility = VISIBLE
         , textStyle = SubHeading2
         , margin = MarginBottom 24
+        , isClickable  = tripType ==ST.Rental
+
         },
         option1 {
           text = getString GOT_IT

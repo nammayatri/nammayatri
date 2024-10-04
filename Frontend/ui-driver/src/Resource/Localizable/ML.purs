@@ -1701,7 +1701,7 @@ getML stringKey =
 
         CURRENTLY_THERE_ARE_NO_RIDES_AVAILABLE -> "നിലവിൽ, റൈഡുകളൊന്നും ലഭ്യമല്ല."
         RIDE_REQUESTS -> "റൈഡ് അഭ്യർത്ഥനകൾ"
-        SCHEDULED_RIDE_ACCEPTED -> "ഷെഡ്യൂൾ ചെയ്ത റൈഡ് സ്വീകരിച്ചു"
+        SCHEDULED_RIDE_ACCEPTED -> "ഷെഡ്യൂൾ ചെയ്ത റൈഡ് സ്വീകരിച്ചു!"
         YOU_CAN_ACCESS_SCHEDULED_RIDES -> "നിങ്ങൾക്ക് ഷെഡ്യൂൾ ചെയ്ത റൈഡുകൾ ആക്സസ് ചെയ്യാൻ കഴിയും"
         FROM_YOUR_HOMESCREEN -> "നിങ്ങളുടെ ഹോംസ്‌ക്രീനിൽ നിന്ന്"
         CANCEL_BOOKING -> "ബുക്കിംഗ് റദ്ദാക്കുക"
@@ -1745,3 +1745,5 @@ getML stringKey =
         CLEAN_AUTO -> "ശുചിത്വം ഉള്ള വാഹനം"
         CLEAN_CAB -> "ശുചിത്വം ഉള്ള വാഹനം"
         METRO_RIDE_COMPLETED -> "മെട്രോ യാത്ര പൂർത്തിയായി"
+        OR_RIDE_IS_CANCELLED_BY_CUSTOMER -> "യാത്ര ഉപഭോക്താവിൽ നിന്ന് റദ്ദാക്കി"
+        THE_RIDE_STARTS -> "യാത്ര ആരംഭിക്കുന്നു"

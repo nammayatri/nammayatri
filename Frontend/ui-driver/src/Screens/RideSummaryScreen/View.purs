@@ -666,7 +666,7 @@ termsAndConditionCard state push =
 buttonLayout :: RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 buttonLayout state push = 
   linearLayout
-    [ width MATCH_PARENT
+    [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , orientation HORIZONTAL
     , padding $ Padding 16 16 16 16

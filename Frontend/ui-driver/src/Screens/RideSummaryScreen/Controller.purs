@@ -321,12 +321,12 @@ transformer resp  =
           area : Nothing,
           areaCode : Nothing,
           building : Nothing,
-          city : Nothing,
+          city : Just destinationCity,
           country :Nothing,
           state : Nothing,
           street : Nothing,
           door : Nothing,
-          fullAddress : Nothing
+          fullAddress : destination
           
     },
     createdAt : "",

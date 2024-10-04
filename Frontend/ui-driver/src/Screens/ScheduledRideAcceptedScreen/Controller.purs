@@ -16,7 +16,7 @@ instance loggableAction :: Loggable Action where
   performLog = defaultPerformLog
 
 data Action = 
-    OnClick
+    OnClick | NoAction
     
 data ScreenOutput = 
     GoHome
@@ -24,3 +24,4 @@ data ScreenOutput =
 
 eval :: Action -> ScheduleRideAcceptedScreenState -> Eval Action ScreenOutput ScheduleRideAcceptedScreenState
 eval  OnClick state = exit GoHome
+eval NoAction state = update state

@@ -1044,9 +1044,9 @@ driverVehicleToVechicleServiceTier vehicle =
         "Sedan" -> SA.SEDAN_TIER
         "Non-AC Mini" -> SA.TAXI
         "AC Mini" -> SA.ECO
-        "AUTO"  ->  SA.AUTO_RICKSHAW
+        "AUTO_RICKSHAW"  ->  SA.AUTO_RICKSHAW
         "XL Cab" -> SA.SUV_TIER
-        _ -> SA.TAXI
+        _ ->SA.AUTO_RICKSHAW
 
 checkNotificationType :: String -> ST.NotificationType -> Boolean
 checkNotificationType currentNotification requiredNotification = (show requiredNotification) == currentNotification

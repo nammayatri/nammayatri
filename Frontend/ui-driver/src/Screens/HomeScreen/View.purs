@@ -113,7 +113,7 @@ import Control.Alt ((<|>))
 import Effect.Aff (launchAff, makeAff, nonCanceler)
 import Common.Resources.Constants(chatService)
 import DecodeUtil as DU
-import RemoteConfig.Utils (cancellationThresholds, getEnableOtpRideConfigData,getenableScheduledRideConfigData)
+import RemoteConfig.Utils (cancellationThresholds, getEnableOtpRideConfigData,getenableScheduledRideConfigData,getenableScheduledRideConfigData)
 import Components.SelectPlansModal as SelectPlansModal
 import Services.API as APITypes
 import Helpers.SplashUtils as HS
@@ -1646,14 +1646,14 @@ gotoListView push state =
 
 rideRequestButton :: forall w .(Action -> Effect Unit) -> HomeScreenState ->  PrestoDOM (Effect Unit) w
 rideRequestButton push state = 
-  let scheduleRideEnableConfig = spy "scheduleRideEnableConfig"$ getenableScheduledRideConfigData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+  let scheduleRideEnableConfig =  getenableScheduledRideConfigData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
   in
   frameLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , orientation VERTICAL
     , margin $ MarginTop 3
-    , visibility $ spy "boolToVisibility" $ boolToVisibility $ scheduleRideEnableConfig.enableScheduledRides
+    , visibility $ boolToVisibility $ scheduleRideEnableConfig.enableScheduledRides
     ] 
     [ pillView state push
     , pillShimmer state push
@@ -2163,7 +2163,7 @@ offlineNavigationLinks push state =
                         AddAlternateNumberAction -> if isNothing state.data.driverAlternateMobile then VISIBLE else GONE
                         LinkAadhaarAC -> if state.props.showlinkAadhaarPopup then VISIBLE else GONE
                         AddGotoAC -> if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto then VISIBLE else GONE
-                        RideRequestsList -> if config.enableScheduledRides then VISIBLE else GONE
+                        RideRequestsList -> boolToVisibility config.enableScheduledRides 
                         _ -> VISIBLE
       itemAlpha action = case action of 
                     RideRequestsList -> if isNothing state.data.upcomingRide then 1.0 else 0.5
@@ -2559,7 +2559,7 @@ in
     ,width MATCH_PARENT
     , orientation VERTICAL
     , gravity CENTER
-    , margin $ MarginHorizontal 30 30 
+    , margin $ Margin 15 15 15 15  
     , cornerRadius 12.0
     , background Color.blue800
     , visibility $ boolToVisibility $ state.props.homeScreenBannerVisibility && state.data.upcomingRide /= Nothing && state.props.currentStage == HomeScreen

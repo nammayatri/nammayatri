@@ -1702,7 +1702,7 @@ getHI stringKey =
 
         CURRENTLY_THERE_ARE_NO_RIDES_AVAILABLE -> "वर्तमान में, कोई सवारी उपलब्ध नहीं है।"
         RIDE_REQUESTS -> "सवारी अनुरोध"
-        SCHEDULED_RIDE_ACCEPTED -> "निर्धारित सवारी स्वीकार की गई"
+        SCHEDULED_RIDE_ACCEPTED -> "निर्धारित सवारी स्वीकार की गई!"
         YOU_CAN_ACCESS_SCHEDULED_RIDES -> "आप निर्धारित सवारी तक पहुंच सकते हैं"
         FROM_YOUR_HOMESCREEN -> "आपके होमस्क्रीन से"
         CANCEL_BOOKING -> "बुकिंग रद्द करें"
@@ -1746,3 +1746,5 @@ getHI stringKey =
         CLEAN_AUTO -> "स्वच्छ ऑटो"
         CLEAN_CAB -> "स्वच्छ कैब"
         METRO_RIDE_COMPLETED -> "मेट्रो सवारी पूरी हुई"
+        OR_RIDE_IS_CANCELLED_BY_CUSTOMER -> "यात्रा ग्राहक द्वारा रद्द कर दी गई है।"
+        THE_RIDE_STARTS -> "सवारी शुरू हो गई है"

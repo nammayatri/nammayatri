@@ -188,7 +188,7 @@ rideSummaryCardConfig (BookingAPIEntity entity) =
     vehicleServiceTier = entity.vehicleServiceTier
     currency = entity.currency
     estimatedFare = entity.estimatedFare
-    vehicleServiceTierAirConditioned = fromMaybe false (map (\x -> x >= 0.0) entity.vehicleServiceTierAirConditioned)
+    vehicleServiceTierAirConditioned = fromMaybe false entity.isAirConditioned
     vehicleServiceTierSeatingCapacity = (fromMaybe 0 entity.vehicleServiceTierSeatingCapacity)
     vehicleServiceTierName =  entity.vehicleServiceTierName
     startTime = entity.startTime
@@ -315,8 +315,10 @@ errorPopUpConfig state = let
       text = getString LType.RIDE_ASSIGNED_TO_ANOTHER_DRIVER
     , margin = Margin 16 24 16 0 },
     secondaryText {
-       text = getString LType.YOU_CAN_SEE_OTHER_AVAILABLE_RIDE_IN_MORE_RIDES_SECTION
+       text = getString LType.OR_RIDE_IS_CANCELLED_BY_CUSTOMER
       ,margin = Margin  6 4 0 0  
+      ,color  = Color.black900
+      ,textStyle = FontStyle.SubHeading2
       },
     option1 {
       text = (getString LT.CONTINUE)

@@ -347,6 +347,7 @@ view push state =
             , padding state.secondaryText.padding
             , visibility $ state.secondaryText.visibility
             , onClick push $ const OnSecondaryTextClick
+            , clickable $ state.secondaryText.isClickable
           ][ imageView [
                width state.secondaryText.prefixImage.width
                , height state.secondaryText.prefixImage.height
