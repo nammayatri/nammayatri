@@ -390,10 +390,11 @@ type GetgetknowYourDriverDetailsAPI =
   "internal"
     :> Capture "rideId" Text
     :> "knowYourDriver"
+    :> QueryParam "isImages" Bool
     :> Header "token" Text
     :> Get '[JSON] DriverProfileRes
 
-getknowYourDriverClient :: Text -> Maybe Text -> EulerClient DriverProfileRes
+getknowYourDriverClient :: Text -> Maybe Bool -> Maybe Text -> EulerClient DriverProfileRes
 getknowYourDriverClient = client getKnowYourDriverApi
 
 getKnowYourDriverApi :: Proxy GetgetknowYourDriverDetailsAPI
@@ -407,19 +408,21 @@ getknowYourDriverDetails ::
   Text ->
   BaseUrl ->
   Text ->
+  Maybe Bool ->
   m DriverProfileRes
-getknowYourDriverDetails apiKey internalUrl bppRideId = do
+getknowYourDriverDetails apiKey internalUrl bppRideId withImages = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getknowYourDriverClient bppRideId (Just apiKey)) "KnowYourDriver" getKnowYourDriverApi
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getknowYourDriverClient bppRideId withImages (Just apiKey)) "KnowYourDriver" getKnowYourDriverApi
 
 type GetKnowYourFavDriverDetailsAPI =
   "internal"
     :> Capture "driverId" Text
     :> "knowYourFavDriver"
+    :> QueryParam "isImages" Bool
     :> Header "token" Text
     :> Get '[JSON] DriverProfileRes
 
-getKnowYourDriverClient :: Text -> Maybe Text -> EulerClient DriverProfileRes
+getKnowYourDriverClient :: Text -> Maybe Bool -> Maybe Text -> EulerClient DriverProfileRes
 getKnowYourDriverClient = client getKnowYourFavDriverApi
 
 getKnowYourFavDriverApi :: Proxy GetKnowYourFavDriverDetailsAPI
@@ -433,10 +436,11 @@ getKnowYourFavDriverDetails ::
   Text ->
   BaseUrl ->
   Text ->
+  Maybe Bool ->
   m DriverProfileRes
-getKnowYourFavDriverDetails apiKey internalUrl bppRideId = do
+getKnowYourFavDriverDetails apiKey internalUrl bppRideId withImages = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getKnowYourDriverClient bppRideId (Just apiKey)) "KnowYourFavDriver" getKnowYourFavDriverApi
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getKnowYourDriverClient bppRideId withImages (Just apiKey)) "KnowYourFavDriver" getKnowYourFavDriverApi
 
 type GetDriverCoordinatesDetailsAPI =
   "internal"
