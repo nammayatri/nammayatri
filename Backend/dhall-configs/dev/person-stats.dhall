@@ -2,6 +2,8 @@ let common = ./common.dhall
 
 let sec = ./secrets/rider-app.dhall
 
+let genericCommon = ../generic/common.dhall
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -42,11 +44,36 @@ let hedisClusterCfg =
       , connectTimeout = None Integer
       }
 
+let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
+
+let kafkaProducerCfg =
+      { brokers = [ "localhost:29092" ]
+      , kafkaCompression = common.kafkaCompression.LZ4
+      }
+
 let consumerProperties =
       { groupId = "person-stats-compute"
       , brockers = [ "localhost:29092" ]
       , autoCommit = None Integer
       , kafkaCompression = common.kafkaCompression.LZ4
+      }
+
+let kafkaClickhouseCfg =
+      { username = sec.clickHouseUsername
+      , host = "localhost"
+      , port = 8123
+      , password = sec.clickHousePassword
+      , database = "atlas_kafka"
+      , tls = False
+      }
+
+let sericeClickhouseCfg =
+      { username = sec.clickHouseUsername
+      , host = "localhost"
+      , port = 8123
+      , password = sec.clickHousePassword
+      , database = "atlas_app"
+      , tls = False
       }
 
 let kafkaConsumerCfg =
@@ -80,6 +107,7 @@ in  { hedisCfg
     , cacheConfig
     , dumpEvery = +10
     , kafkaConsumerCfg
+    , metricsPort = +9083
     , timeBetweenUpdates = +10
     , availabilityTimeWindowOption
     , granualityPeriodType = common.periodType.Hours
@@ -93,4 +121,9 @@ in  { hedisCfg
     , enablePrometheusMetricLogging = True
     , kvConfigUpdateFrequency
     , cacConfig
+    , kafkaClickhouseCfg
+    , sericeClickhouseCfg
+    , encTools
+    , healthCheckAppCfg = None genericCommon.healthCheckAppCfgT
+    , kafkaProducerCfg
     }
