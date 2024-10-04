@@ -138,7 +138,8 @@ type TextConfig = {
   textStyle :: Style,
   accessibilityHint :: String,
   suffixImage :: ImageConfig,
-  prefixImage :: ImageConfig
+  prefixImage :: ImageConfig,
+  isClickable :: Boolean
 }
 type ButtonConfig = {
   background :: String,
@@ -279,6 +280,7 @@ config = {
       text : "Text1",
       color : Color.black800,
       gravity : CENTER,
+      isClickable : false,
       padding : (Padding 16 0 16 0),
       margin : (Margin 0 20 0 0),
       visibility : VISIBLE,
@@ -308,6 +310,7 @@ config = {
       padding : (Padding 16 0 16 0),
       margin : (Margin 0 20 0 20),
       visibility : VISIBLE,
+      isClickable : false ,
       textStyle : ParagraphText,
       accessibilityHint : "", 
       suffixImage : {
@@ -418,6 +421,7 @@ config = {
         text : "",
         color : Color.black800,
         gravity : CENTER,
+        isClickable :true,
         padding : (Padding 0 0 0 0),
         margin : (Margin 0 0 0 0),
         visibility : GONE,
@@ -445,6 +449,7 @@ config = {
         color : Color.black800,
         gravity : CENTER,
         padding : (Padding 0 0 0 0),
+        isClickable : true,
         margin : (Margin 0 0 0 0),
         visibility : GONE,
         textStyle : Heading2,
@@ -547,6 +552,7 @@ config = {
           text : "",
           color : Color.textSecondary,
           gravity : CENTER,
+          isClickable : true,
           padding : PaddingHorizontal 16 16,
           margin : MarginVertical 20 20,
           visibility : GONE,
@@ -599,6 +605,7 @@ config = {
       headingText : {
       text : "Text1",
       color : Color.black800,
+      isClickable : false,
       gravity : CENTER,
       padding : (Padding 0 0 0 0),
       margin : (Margin 0 0 0 0),
@@ -628,6 +635,7 @@ config = {
       gravity : CENTER,
       padding : (Padding 16 0 16 0),
       margin : (Margin 0 20 0 20),
+      isClickable : false,
       visibility : VISIBLE,
       textStyle : Tags,
       accessibilityHint : "", 

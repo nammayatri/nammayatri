@@ -23,7 +23,7 @@ import Foreign (Foreign)
 import Foreign.Index (readProp)
 import Data.Newtype (class Newtype)
 import Presto.Core.Utils.Encoding (defaultDecode)
-import RemoteConfig.Types (RCSubscription, ReelItem, ReelButtonConfig, HVConfigs, ReferralPopUpDelays, CancellationRateConfig, CancellationRateEntity(..), CancellationThresholdConfig, MetroCoinsEvent, EnableOtpRideConfig , EnableScheduledRides)
+import RemoteConfig.Types (RCSubscription, ReelItem, ReelButtonConfig, HVConfigs, ReferralPopUpDelays, CancellationRateConfig, CancellationRateEntity(..), CancellationThresholdConfig, MetroCoinsEvent, EnableOtpRideConfig , EnableScheduledRides , EnableScheduledRides)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
 import Common.RemoteConfig.Utils
@@ -160,14 +160,12 @@ defaultScheduledRideConfigData = {
 }
 
 getenableScheduledRideConfigData :: String -> EnableScheduledRides 
-getenableScheduledRideConfigData city  = do 
-    let config = fetchRemoteConfigString "enable_scheduled_rides"
-        value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig defaultScheduledRideConfigData
-    getCityBasedConfig value $ toLower city 
+getenableScheduledRideConfigData city = 
+  let 
+    config = fetchRemoteConfigString "enable_scheduled_rides"
+    value = decodeForeignObject (parseJSON config) $ defaultRemoteConfig defaultScheduledRideConfigData
+  in getCityBasedConfig value $ toLower city 
     
-
-
-
 defaultMetroCoinsEvent :: MetroCoinsEvent
 defaultMetroCoinsEvent = {
   coins : 0,

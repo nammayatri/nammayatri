@@ -1702,7 +1702,7 @@ getTA stringKey =
 
         CURRENTLY_THERE_ARE_NO_RIDES_AVAILABLE -> "தற்போது, ​​சவாரிகள் எதுவும் இல்லை."
         RIDE_REQUESTS -> "சவாரி கோரிக்கைகள்"
-        SCHEDULED_RIDE_ACCEPTED -> "திட்டமிடப்பட்ட சவாரி ஏற்றுக்கொள்ளப்பட்டது"
+        SCHEDULED_RIDE_ACCEPTED -> "திட்டமிடப்பட்ட சவாரி ஏற்றுக்கொள்ளப்பட்டது!"
         YOU_CAN_ACCESS_SCHEDULED_RIDES -> "திட்டமிடப்பட்ட சவாரிகளை நீங்கள் அணுகலாம்"
         FROM_YOUR_HOMESCREEN -> "உங்கள் முகப்புத் திரையில் இருந்து"
         CANCEL_BOOKING -> "முன்பதிவு ரத்து செய்"
@@ -1746,3 +1746,5 @@ getTA stringKey =
         CLEAN_AUTO -> "சுத்தமான ஆட்டோ"
         CLEAN_CAB -> "சுத்தமான கேப்"
         METRO_RIDE_COMPLETED -> "மெட்ரோ சவாரி முடிந்தது"
+        OR_RIDE_IS_CANCELLED_BY_CUSTOMER -> "பயணம் வாடிக்கையாளர் மூலம் ரத்து செய்யப்பட்டது."
+        THE_RIDE_STARTS -> "சவாரி தொடங்குகிறது "

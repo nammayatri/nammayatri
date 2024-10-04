@@ -58,7 +58,7 @@ view state push  =
   linearLayout [
         height MATCH_PARENT
     ,   width MATCH_PARENT
-    ,   background Color.grey700
+    ,   background Color.white900
      ][
 
      linearLayout[
@@ -73,17 +73,19 @@ view state push  =
             , gravity CENTER
             ][
             linearLayout[weight 1.0][]
-            ,imageView [
-             width $ V 180
-             ,height $ V 150
-             ,margin $ Margin 0 0 0 30
-             ,imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_ride_accepted_symbol"
-             ]
+            , lottieAnimationView
+                      [ width  MATCH_PARENT
+                      , height $ V 300
+                      , id $ getNewIDWithTag "successAnim"
+                      , afterRender (\action -> do
+                            _ <- pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = "success_lottie.json", lottieId = (getNewIDWithTag "successAnim"),scaleType = "CENTER_CROP", repeat = false}
+                            pure unit) (const NoAction)
+                      ]
              , textView $ [
                 height WRAP_CONTENT
                ,width WRAP_CONTENT
                ,text $ getString SCHEDULED_RIDE_ACCEPTED
-               , color Color.black900
+               , color Color.black800
              ]<>FontStyle.h1 TypoGraphy
             , instructionView state push
             ,linearLayout[
@@ -122,45 +124,25 @@ instructionView  push state  =
     height WRAP_CONTENT
    ,width MATCH_PARENT
    ,orientation VERTICAL
-   ,background Color.verySoftOrange
-   , margin $ Margin 14 10 14 20
-   , padding $ Padding 15 15 15 5
-   , cornerRadius 12.0
-   , gravity CENTER_VERTICAL
+   ,background Color.blue600
+   , margin $ Margin 18 18 18 20
+   , padding $ Padding 20 10 20 20
+   , cornerRadius 16.0
   ][
-    linearLayout[
+     linearLayout[
       height WRAP_CONTENT
      ,width WRAP_CONTENT
      ,orientation HORIZONTAL
+     , margin $ MarginVertical 4 4
     ][
-      imageView[
-        height $ V 40
-      , width $ V 40
-      ,imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_exclamation_triangle"
-      , margin $Margin 0 4 4 4 
-      
-      ]
-      , textView $[
-        height WRAP_CONTENT
-        ,width WRAP_CONTENT
-        ,color Color.black900
-        ,margin $ MarginHorizontal 10 4 
-        ,textFromHtml $ getString FOLLOW_INSTRUCTIONS_TO_AVOID_REASSIGNMENT_OF_RIDE
-      ]<>FontStyle.h3 TypoGraphy
-    ]
-    ,linearLayout[
-      height WRAP_CONTENT
-     ,width WRAP_CONTENT
-     ,orientation HORIZONTAL
-     , gravity CENTER_VERTICAL
-    ][
-      imageView[
-        height $ V 10
-      , width $ V 10
-      ,imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_circle"
-      , margin $Margin 4 4 4 4 
-      
-      ]
+      linearLayout
+      [ width $ V 8
+      , height $ V 8
+      , cornerRadius 4.0
+      , background Color.black700
+      , margin $ MarginTop 12
+      ][]
+       
       ,linearLayout[
         height WRAP_CONTENT
        ,width WRAP_CONTENT
@@ -170,14 +152,14 @@ instructionView  push state  =
        textView $[
         height WRAP_CONTENT
         ,width WRAP_CONTENT
-        ,textFromHtml $ getString $ PLEASE_BE_ONLINE "45"
-        , color Color.black900
+        ,textFromHtml $ getString $ PLEASE_BE_ONLINE "40"
+        , color Color.black700
       ]<>FontStyle.h3 TypoGraphy
       , textView $[
         height WRAP_CONTENT
         ,width WRAP_CONTENT
-        ,color Color.black900
-        ,textFromHtml $ getString BEFORE_THE_RIDE_STARTS
+        ,color Color.black700
+        ,textFromHtml $ getString THE_RIDE_STARTS
       ]<>FontStyle.h3 TypoGraphy
     ]
     ]
@@ -185,15 +167,14 @@ instructionView  push state  =
       height WRAP_CONTENT
      ,width WRAP_CONTENT
      ,orientation HORIZONTAL
-     , gravity CENTER_VERTICAL
     ][
-      imageView[
-        height $ V 10
-      , width $ V 10
-      ,imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_circle"
-      , margin $Margin 4 4 4 4 
-      
-      ]
+       linearLayout
+      [ width $ V 8
+      , height $ V 8
+      , cornerRadius 4.0
+      , background Color.black700
+      , margin $ MarginTop 12
+      ][]
       ,linearLayout[
         height WRAP_CONTENT
        ,width WRAP_CONTENT
@@ -203,15 +184,15 @@ instructionView  push state  =
        textView $[
         height WRAP_CONTENT
         ,width WRAP_CONTENT
-        ,color Color.black900
+        ,color Color.black700
         ,textFromHtml $ getString BE_WITHIN_10KM_OF_PICKUP
       
       ]<>FontStyle.h3 TypoGraphy
       , textView $[
         height WRAP_CONTENT
         ,width WRAP_CONTENT
-        , color Color.black900
-        ,textFromHtml $ getString BEFORE_THE_RIDE_STARTS
+        , color Color.black700
+        ,textFromHtml $ getString  BEFORE_THE_RIDE_STARTS
       ]<>FontStyle.h3 TypoGraphy
     ]
     ]

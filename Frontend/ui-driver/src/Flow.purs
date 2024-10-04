@@ -4435,7 +4435,10 @@ rideRequestScreenFlow :: FlowBT String Unit
 rideRequestScreenFlow = do
   action <- UI.rideRequestScreen
   case action  of 
-    TA.GOTO_HOME state -> homeScreenFlow
+    TA.GOTO_HOME state -> do
+      let (ScheduledBookingListResponse listResponse) = state.data.resp
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data{scheduleRideCount =Just $ Tuple (DA.length listResponse.bookings) (getCurrentUTC "")} } )
+      homeScreenFlow
     TA.RIDE_REQUEST_REFRESH_SCREEN state -> do
       modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> state{data{offset = 0, resp = RideRequestData.dummyResp}, props{shouldCall = true}})
       rideRequestScreenFlow
