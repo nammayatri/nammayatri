@@ -1,11 +1,13 @@
 module ExternalBPP.Common.Status where
 
 import BecknV2.OnDemand.Enums
+import qualified Domain.Action.Beckn.FRFS.OnStatus as DOnStatus
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicketBooking as DBooking
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Environment
+import qualified ExternalBPP.EBIX.Flow as EBIXFlow
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -17,5 +19,11 @@ status merchantId merchantOperatingCity bapConfig booking = do
   case (bapConfig.vehicleCategory, bapConfig.provider) of
     (METRO, ONDC) -> do
       void $ CallFRFSBPP.callBPPStatus booking bapConfig merchantOperatingCity.city merchantId
-    (BUS, EBIX) -> return ()
+    (BUS, EBIX) -> do
+      onStatusReq <- EBIXFlow.status merchantId merchantOperatingCity bapConfig booking
+      processOnStatus onStatusReq
     _ -> throwError $ InternalError ("Unsupported FRFS Flow vehicleCategory : " <> show bapConfig.vehicleCategory <> ", provider: " <> show bapConfig.provider)
+  where
+    processOnStatus onStatusReq = do
+      (merchant', booking') <- DOnStatus.validateRequest onStatusReq
+      DOnStatus.onStatus merchant' booking' onStatusReq

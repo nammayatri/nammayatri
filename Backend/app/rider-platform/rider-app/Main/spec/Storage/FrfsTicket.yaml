@@ -613,6 +613,11 @@ Route:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, vehicleType]
+    findByRouteCodes:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [code]
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -651,6 +656,14 @@ RouteStopMapping:
       kvFunction: findOneWithKV
       where:
         and: [routeCode, stopCode]
+    findByStopCode:
+      kvFunction: findAllWithKV
+      where: stopCode
+    findByRouteCodes:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [routeCode]
 
 RouteStopFare:
   tableName: route_stop_fare
