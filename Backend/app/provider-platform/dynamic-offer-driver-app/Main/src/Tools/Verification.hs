@@ -59,7 +59,11 @@ verifyDLAsync ::
   Id DMOC.MerchantOperatingCity ->
   VerifyDLAsyncReq ->
   m VerifyDLAsyncResp
-verifyDLAsync = runWithServiceConfig Verification.verifyDLAsync (.verificationService)
+verifyDLAsync _ merchantOpCityId req = do
+  merchantServiceUsageConfig <-
+    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+      >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.verificationProvidersPriorityList) (listToMaybe merchantServiceUsageConfig.verificationProvidersPriorityList) >>= \provider -> callService merchantOpCityId provider Verification.verifyDLAsync req -- Using first element of priority list as of now would be soon replacing this with a proper fallback implementation.
 
 verifyRC ::
   ( ServiceFlow m r,

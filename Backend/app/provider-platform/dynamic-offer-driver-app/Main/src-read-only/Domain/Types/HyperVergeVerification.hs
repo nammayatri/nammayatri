@@ -35,6 +35,7 @@ data HyperVergeVerificationE e = HyperVergeVerification
     requestId :: Kernel.Prelude.Text,
     retryCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     status :: Kernel.Prelude.Text,
+    transactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
@@ -44,9 +45,9 @@ data HyperVergeVerificationE e = HyperVergeVerification
   }
   deriving (Generic)
 
-type HyperVergeVerification = HyperVergeVerificationE ('AsEncrypted)
+type HyperVergeVerification = HyperVergeVerificationE 'AsEncrypted
 
-type DecryptedHyperVergeVerification = HyperVergeVerificationE ('AsUnencrypted)
+type DecryptedHyperVergeVerification = HyperVergeVerificationE 'AsUnencrypted
 
 instance EncryptedItem HyperVergeVerification where
   type Unencrypted HyperVergeVerification = (DecryptedHyperVergeVerification, HashSalt)
@@ -71,6 +72,7 @@ instance EncryptedItem HyperVergeVerification where
           requestId = requestId entity,
           retryCount = retryCount entity,
           status = status entity,
+          transactionId = transactionId entity,
           vehicleCategory = vehicleCategory entity,
           ventilator = ventilator entity,
           merchantId = merchantId entity,
@@ -99,6 +101,7 @@ instance EncryptedItem HyperVergeVerification where
             requestId = requestId entity,
             retryCount = retryCount entity,
             status = status entity,
+            transactionId = transactionId entity,
             vehicleCategory = vehicleCategory entity,
             ventilator = ventilator entity,
             merchantId = merchantId entity,

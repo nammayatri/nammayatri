@@ -35,6 +35,7 @@ data HyperVergeVerificationT f = HyperVergeVerificationT
     requestId :: B.C f Kernel.Prelude.Text,
     retryCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     status :: B.C f Kernel.Prelude.Text,
+    transactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     ventilator :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
