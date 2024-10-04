@@ -1749,3 +1749,6 @@ getEN stringKey =
         METRO_RIDE_COMPLETED -> "Metro Ride Completed"
         OR_RIDE_IS_CANCELLED_BY_CUSTOMER -> "Or Ride is cancelled by customer"
         THE_RIDE_STARTS -> "the ride starts"
+        GOOD_SERVICES -> "Good Service"
+        SMOOTH_DRIVING -> "Smooth Driving"
+        NO_CANCELLATION -> "No Cancellation"

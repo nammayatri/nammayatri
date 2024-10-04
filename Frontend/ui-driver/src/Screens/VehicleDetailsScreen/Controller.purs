@@ -30,6 +30,7 @@ import JBridge(previewImage, uploadFile)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Screens (ScreenName(..), getScreen)
 import Helpers.Utils(getVehicleType)
+import Common.Types.App
 
 instance showAction :: Show Action where
   show _ = ""
@@ -71,6 +72,13 @@ data Action = NoAction
               | CallBackImageUpload String String String
               | AfterRender
 
+uploadFileConfig :: UploadFileConfig
+uploadFileConfig = UploadFileConfig {
+  showAccordingToAspectRatio : false,
+  imageAspectHeight : 0,
+  imageAspectWidth : 0
+}
+
 eval :: Action -> VehicleDetailsScreenState -> Eval Action ScreenOutput VehicleDetailsScreenState
 eval AfterRender state = continue state
 
@@ -89,7 +97,7 @@ eval (PreviewImage) state = continueWithCmd state [do
   pure NoAction]
 
 eval (UploadImage) state = continueWithCmd state [do
-  _ <- liftEffect $ uploadFile false
+  _ <- liftEffect $ uploadFile uploadFileConfig
   pure NoAction]
 
 eval (CallBackImageUpload base_64 imageName imagePath) state = do

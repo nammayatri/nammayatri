@@ -1444,7 +1444,7 @@ getEN stringKey =
         DRIVER_ID_CHECK_SUB -> "We periodically prompt drivers to take selfies and only enable them if their identity matches the verified documents."
         DATA_PRIVACY -> "Data Privacy"
         DATA_PRIVACY_SUB -> "Drivers cannot see your phone number, and you have the option to make anonymous calls to the driver. Your exact address is masked from the driver after the ride ends."
-        FAVOURITE_DRIVER -> "Favourite Drivers"
+        FAVOURITE_DRIVER -> "Favourite your driver"
         FAVOURITE_DRIVER_SUB -> "You can favourite trustworthy drivers at the end of your ride to prefer them for your next ride if they are available nearby."
         WOMEN_DRIVERS -> "Women Drivers"
         WOMEN_DRIVERS_SUB -> "We are promoting women drivers through comprehensive training and facilitating financing to help them become EV auto owners. As their numbers grow, we plan to allow women riders to choose women drivers."

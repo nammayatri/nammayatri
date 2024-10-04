@@ -1748,3 +1748,6 @@ getTE stringKey =
         METRO_RIDE_COMPLETED -> "మెట్రో రైడ్ పూర్తయింది"
         OR_RIDE_IS_CANCELLED_BY_CUSTOMER -> "ప్రయాణం కస్టమర్ ద్వారా రద్దు చేయబడింది."
         THE_RIDE_STARTS -> "సవారి ప్రారంభమవుతోంది"
+        GOOD_SERVICES -> "మంచి సేవ"
+        SMOOTH_DRIVING -> "మృదువైన డ్రైవింగ్"
+        NO_CANCELLATION -> "రద్దు లేదు"

@@ -118,9 +118,9 @@ withAPIResult url f flow = do
     pure resp
 
 ---------------------------------------------------Get Driver Profile Api---------------------------------------------------------------
-data DriverProfileReq = DriverProfileReq String
+data DriverProfileReq = DriverProfileReq String Boolean
 
-data DriverProfileReqById = DriverProfileReqById String
+data DriverProfileReqById = DriverProfileReqById String Boolean
 
 newtype DriverProfile = DriverProfile
   { certificates :: Array String,
@@ -147,7 +147,7 @@ newtype DriverProfileRes = DriverProfileRes
   }
 
 derive instance genericDriverProfileReq :: Generic DriverProfileReq _
-instance standardEncodeDriverProfileReq :: StandardEncode DriverProfileReq where standardEncode (DriverProfileReq body) = standardEncode body
+instance standardEncodeDriverProfileReq :: StandardEncode DriverProfileReq where standardEncode (DriverProfileReq body body2) = standardEncode body
 instance showDriverProfileReq :: Show DriverProfileReq where show = genericShow
 instance decodeDriverProfileReq :: Decode DriverProfileReq where decode = defaultDecode
 instance encodeDriverProfileReq  :: Encode DriverProfileReq where encode = defaultEncode
@@ -168,33 +168,33 @@ instance encodeDriverProfile  :: Encode DriverProfile where encode = defaultEnco
 
 
 instance makeDriverProfileReq :: RestEndpoint DriverProfileReq where
-  makeRequest reqBody@(DriverProfileReq id) headers = defaultMakeRequest GET (profile id) headers reqBody Nothing
+  makeRequest reqBody@(DriverProfileReq id withImages) headers = defaultMakeRequest GET (profile id withImages) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericDriverProfileReqById :: Generic DriverProfileReqById _
-instance standardEncodeDriverProfileReqById :: StandardEncode DriverProfileReqById where standardEncode (DriverProfileReqById body) = standardEncode body
+instance standardEncodeDriverProfileReqById :: StandardEncode DriverProfileReqById where standardEncode (DriverProfileReqById body body2) = standardEncode body
 instance showDriverProfileReqById :: Show DriverProfileReqById where show = genericShow
 instance decodeDriverProfileReqById :: Decode DriverProfileReqById where decode = defaultDecode
 instance encodeDriverProfileReqById :: Encode DriverProfileReqById where encode = defaultEncode
 
 instance makeDriverProfileReqById :: RestEndpoint DriverProfileReqById where
-  makeRequest reqBody@(DriverProfileReqById id) headers = defaultMakeRequest GET (profileById id) headers reqBody Nothing
+  makeRequest reqBody@(DriverProfileReqById id withImages) headers = defaultMakeRequest GET (profileById id withImages) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
-profile :: String -> String
-profile rideId = (getBaseUrl "1") <>"/knowYourDriver" <> "/" <> rideId
+profile :: String -> Boolean-> String
+profile rideId withImages = (getBaseUrl "1") <>"/knowYourDriver" <> "/" <> rideId <> "?isImages=" <> show withImages
 
-getDriverProfile rideId= do
+getDriverProfile rideId withImages= do
         headers <- getHeaders "" User true
-        withAPIResult (profile rideId)  unwrapResponse $ callAPI headers (DriverProfileReq rideId)
+        withAPIResult (profile rideId withImages)  unwrapResponse $ callAPI headers (DriverProfileReq rideId withImages)
     where
         unwrapResponse (x) = x
 
-profileById :: String -> String
-profileById driverId = (getBaseUrl "2") <>"/knowYourFavDriver" <> "/" <> driverId
+profileById :: String -> Boolean -> String
+profileById driverId withImages = (getBaseUrl "2") <>"/knowYourFavDriver" <> "/" <> driverId <> "?isImages=" <> show withImages
 
-getDriverProfileById driverId= do
+getDriverProfileById driverId withImages= do
         headers <- getHeaders "" Driver true
-        withAPIResult (profileById driverId)  unwrapResponse $ callAPI headers (DriverProfileReqById driverId)
+        withAPIResult (profileById driverId withImages)  unwrapResponse $ callAPI headers (DriverProfileReqById driverId withImages)
     where
         unwrapResponse (x) = x

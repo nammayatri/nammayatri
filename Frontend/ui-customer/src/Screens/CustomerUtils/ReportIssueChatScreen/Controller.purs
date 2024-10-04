@@ -54,6 +54,7 @@ import Timers
 import Effect.Uncurried 
 import Screens.ReportIssueChatScreen.ScreenData (ReportIssueChatScreenState, ReportIssueChatScreenEntryPoint(..))
 import Components.ServiceTierCard.View as ServiceTierCard
+import Common.Types.App
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -148,6 +149,13 @@ data ScreenOutput = GoToHelpAndSupportScreen ReportIssueChatScreenState
                   | GoToSafetyScreen ReportIssueChatScreenState
                   | GoToHomeScreen ReportIssueChatScreenState
                   | GoToFaqScreen ReportIssueChatScreenState
+
+uploadFileConfig :: UploadFileConfig
+uploadFileConfig = UploadFileConfig {
+  showAccordingToAspectRatio : false,
+  imageAspectHeight : 0,
+  imageAspectWidth : 0
+}
 
 eval :: Action -> ReportIssueChatScreenState -> Eval Action ScreenOutput ReportIssueChatScreenState
 
@@ -266,7 +274,7 @@ eval (AddAudioModelAction (AddAudioModel.OnClickDelete)) state =
 eval (AddImagesModelAction (AddImagesModel.AddImage)) state =
   continueWithCmd state [do
     void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "primary_button_loader.json", lottieId = (getNewIDWithTag "add_images_model_done_button"), scaleType = "CENTER_CROP" }
-    void $ liftEffect $ uploadFile true
+    void $ liftEffect $ uploadFile uploadFileConfig
     pure NoAction
   ]
 

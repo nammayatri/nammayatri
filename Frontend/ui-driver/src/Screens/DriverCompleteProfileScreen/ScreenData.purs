@@ -48,7 +48,7 @@ others' = {
 
 datePickerState' = {
   activeIndex : 0,
-  dates : EHC.getPastYears 70,
+  dates : EHC.getPastYears 30,
   id : ""
 }
 

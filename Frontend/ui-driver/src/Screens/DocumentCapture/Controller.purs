@@ -39,6 +39,7 @@ import Screens.Types as ST
 import Helpers.Utils as HU
 import Effect.Unsafe (unsafePerformEffect)
 import Storage (KeyStore(..), getValueToLocalStore)
+import Common.Types.App
 
 instance showAction :: Show Action where
   show _ = ""
@@ -66,10 +67,17 @@ data ScreenOutput = GoBack
                   | SelectLang DocumentCaptureScreenState
                   | ChangeVehicle DocumentCaptureScreenState
 
+uploadFileConfig :: UploadFileConfig
+uploadFileConfig = UploadFileConfig {
+  showAccordingToAspectRatio : false,
+  imageAspectHeight : 0,
+  imageAspectWidth : 0
+}
+
 eval :: Action -> DocumentCaptureScreenState -> Eval Action ScreenOutput DocumentCaptureScreenState
 
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = continueWithCmd state [do
-  _ <- liftEffect $ JB.uploadFile false
+  _ <- liftEffect $ JB.uploadFile uploadFileConfig
   pure NoAction]
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue state {props { menuOptions = true }}
@@ -89,7 +97,7 @@ eval (ValidateDocumentModalAction (ValidateDocumentModal.PrimaryButtonActionCont
     updateAndExit state{props{validating = true}} $ UploadAPI state{props{validating = true}}
   else 
     continueWithCmd state {props {validateDocModal = false}, data{errorMessage = Nothing}} [do
-    void $ liftEffect $ JB.uploadFile false
+    void $ liftEffect $ JB.uploadFile uploadFileConfig
     pure NoAction]
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})

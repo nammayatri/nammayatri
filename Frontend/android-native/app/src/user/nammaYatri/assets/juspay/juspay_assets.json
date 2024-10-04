@@ -218,6 +218,7 @@
       "ny_ic_bent_right_arrow" : true,
       "ny_ic_big_blue_star" : true,
       "ny_ic_bike_left_side" : true,
+      "ny_ic_bike_taxi_service" : true,
       "ny_ic_black_auto" : true,
       "ny_ic_black_auto_quote_list" : true,
       "ny_ic_black_toll" : true,
@@ -449,8 +450,10 @@
       "ny_ic_letter" : true,
       "ny_ic_live_stats" : true,
       "ny_ic_loader" : true,
+      "ny_ic_loc_bus" : true,
       "ny_ic_loc_grey" : true,
       "ny_ic_loc_red" : true,
+      "ny_ic_loc_train" : true,
       "ny_ic_locate_on_map" : true,
       "ny_ic_location_access" : true,
       "ny_ic_location_arrow" : true,
@@ -753,7 +756,6 @@
       "silent_popup_background" : true,
       "tip_banner_rectangle" : true,
       "widget_close_gradient" : true,
-      "zone_curve" : true,
-      "ny_ic_bike_taxi_service" : true
+      "zone_curve" : true
    }
 }

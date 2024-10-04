@@ -24,7 +24,7 @@ import Screens.HomeScreen.ComponentConfig
 import Screens.SubscriptionScreen.Controller
 import Common.Resources.Constants (zoomLevel)
 import Common.Styles.Colors as Color
-import Common.Types.App (OptionButtonList, LazyCheck(..), Paths(..)) as Common
+import Common.Types.App (OptionButtonList, LazyCheck(..), Paths(..), UploadFileConfig(..)) as Common
 import Components.Banner as Banner
 import Components.BannerCarousel as BannerCarousel
 import Components.BottomNavBar as BottomNavBar
@@ -461,6 +461,13 @@ data Action = NoAction
             | OnRideBannerCountDownTimer Int String String
             | GetRideCount Int
 
+uploadFileConfig :: Common.UploadFileConfig
+uploadFileConfig = Common.UploadFileConfig {
+  showAccordingToAspectRatio : false,
+  imageAspectHeight : 0,
+  imageAspectWidth : 0
+}
+
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
 eval (GoToButtonClickAC PrimaryButtonController.OnClick) state = do
@@ -717,7 +724,7 @@ eval (UploadImage) state = do
   else if state.props.odometerUploadAttempts < 3 then do
     continueWithCmd (state {props {odometerUploadAttempts = state.props.odometerUploadAttempts + 1,odometerImageUploading = true}}) [do
       let _ = unsafePerformEffect $ logEvent state.data.logField "UPLOAD odometer reading"
-      _ <- liftEffect $ JB.uploadFile false
+      _ <- liftEffect $ JB.uploadFile uploadFileConfig
       pure NoAction
       ]
   else do

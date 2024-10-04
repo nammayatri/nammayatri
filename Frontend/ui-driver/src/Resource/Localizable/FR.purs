@@ -1235,4 +1235,7 @@ getFR stringKey =
         METRO_RIDE_COMPLETED -> "Trajet en métro terminé"
         OR_RIDE_IS_CANCELLED_BY_CUSTOMER -> "La course a été annulée par le client."
         THE_RIDE_STARTS -> "La course commence"
+        GOOD_SERVICES -> "Bon Service"
+        SMOOTH_DRIVING -> "Conduite Fluide"
+        NO_CANCELLATION -> "Pas d'Annulation"
         _ -> ""

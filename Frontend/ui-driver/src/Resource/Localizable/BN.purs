@@ -1747,3 +1747,6 @@ getBN stringKey =
         METRO_RIDE_COMPLETED -> "মেট্রো যাত্রা সম্পন্ন"
         OR_RIDE_IS_CANCELLED_BY_CUSTOMER -> "যাত্রা গ্রাহকের দ্বারা বাতিল করা হয়েছে।"
         THE_RIDE_STARTS -> "যাত্রা শুরু হচ্ছে"
+        GOOD_SERVICES -> "ভালো সেবা"
+        SMOOTH_DRIVING -> "মসৃণ ড্রাইভিং"
+        NO_CANCELLATION -> "কোন বাতিল নেই"
