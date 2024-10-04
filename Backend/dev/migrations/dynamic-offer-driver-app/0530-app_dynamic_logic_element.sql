@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_element ADD PRIMARY KEY (domain, "order", version);
