@@ -1625,7 +1625,7 @@ getHI stringKey =
         TIME_FARE -> "समय शुल्क"
         TRIP_FARE_INCLUDES -> "यात्रा किराए में शामिल है"
         TRIP_FARE_EXCLUDES -> "यात्रा किराए में शामिल नहीं है"
-        EXTRAS_WILL_BE_CHARGED_AT -> "अतिरिक्त शुल्क लिया जाएगा"
+        EXTRAS_WILL_BE_CHARGED_AT -> "अतिरिक्त उपयोग के लिए शुल्क लिया जाएगा"
         AND -> " और "
         FIXED_CHARGES -> "निश्चित शुल्क"
         PICKUP_DATE_AND_TIME -> "पिकअप दिनांक और समय"

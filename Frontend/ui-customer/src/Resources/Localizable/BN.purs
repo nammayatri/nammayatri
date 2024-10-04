@@ -1623,7 +1623,7 @@ getBN stringKey =
         TIME_FARE -> "সময় চার্জ"
         TRIP_FARE_INCLUDES -> "ভ্রমণ ভাড়া অন্তর্ভুক্ত করে"
         TRIP_FARE_EXCLUDES -> "ভ্রমণ ভাড়া বাদ দেয়"
-        EXTRAS_WILL_BE_CHARGED_AT -> "অতিরিক্ত চার্জ করা হবে"
+        EXTRAS_WILL_BE_CHARGED_AT -> "অতিরিক্ত ব্যবহারের জন্য চার্জ করা হবে"
         AND -> " এবং "
         FIXED_CHARGES -> "স্থির চার্জ"
         PICKUP_DATE_AND_TIME -> "পিকআপ তারিখ ও সময়"

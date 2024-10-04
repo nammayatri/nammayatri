@@ -1628,7 +1628,7 @@ getKN stringKey =
         TIME_FARE -> "ಕಾಲ ಶುಲ್ಕ"
         TRIP_FARE_INCLUDES -> "ಪ್ರಯಾಣದ ಶುಲ್ಕದಲ್ಲಿ ಸೇರಿಸಲಾಗಿದೆ"
         TRIP_FARE_EXCLUDES -> "ಪ್ರಯಾಣದ ಶುಲ್ಕದಿಂದ ಹೊರಗುಳಿಸಲಾಗಿದೆ"
-        EXTRAS_WILL_BE_CHARGED_AT -> "ಹೆಚ್ಚುವರಿ ಶುಲ್ಕ ವಸೂಲ್ ಮಾಡಲಾಗುವುದು"
+        EXTRAS_WILL_BE_CHARGED_AT -> "ಅಧಿಕ ಬಳಕೆಗಾಗಿ ಶುಲ್ಕ ವಿಧಿಸಲಾಗುತ್ತದೆ"
         AND -> " ಮತ್ತು "
         FIXED_CHARGES -> "ನಿಯತ ಶುಲ್ಕಗಳು"
         PICKUP_DATE_AND_TIME -> "ಪಿಕಪ್ ದಿನಾಂಕ ಮತ್ತು ಸಮಯ"

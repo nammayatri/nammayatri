@@ -6645,7 +6645,6 @@ fcmHandler notification state notificationBody= do
     "REALLOCATE_PRODUCT" -> do
       logStatus "ride_reallocated_notification" ("estimateId : " <> state.props.estimateId)
       (updateScheduledRides true true)
-      (GlobalState updatedState) <- getState
       let bookingScheduledTime = fromMaybe (getCurrentUTC "") notificationBody.rideTime
           scheduledBufferTime = 1800 -- need to configure this
           currentUtcAfterScheduledTime = EHC.getUTCAfterNSeconds (getCurrentUTC "") scheduledBufferTime
@@ -6663,6 +6662,7 @@ fcmHandler notification state notificationBody= do
         void $ pure $ removeAllPolylines ""
         removeChatService ""
         setValueToLocalStore PICKUP_DISTANCE "0"
+        (GlobalState updatedState) <- getState
         let
           homeScreenState = updatedState.homeScreen { data { quoteListModelState = [] }, props { isBanner = state.props.isBanner, currentStage = ReAllocated, estimateId = updatedState.homeScreen.props.estimateId, reAllocation { showPopUp = true }, tipViewProps { isVisible = updatedState.homeScreen.props.tipViewProps.activeIndex >= 0 }, selectedQuote = Nothing, isCancelRide = false, cancelSearchCallDriver = false, showRateCard = false } }
         let
