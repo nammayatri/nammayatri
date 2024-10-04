@@ -30,7 +30,11 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "frfs" :> "routes" :> MandatoryQueryParam "city" Kernel.Types.Beckn.Context.City :> MandatoryQueryParam "vehicleType" BecknV2.FRFS.Enums.VehicleCategory
+  ( TokenAuth :> "frfs" :> "routes" :> QueryParam "endStationCode" Data.Text.Text :> QueryParam "startStationCode" Data.Text.Text
+      :> MandatoryQueryParam
+           "city"
+           Kernel.Types.Beckn.Context.City
+      :> MandatoryQueryParam "vehicleType" BecknV2.FRFS.Enums.VehicleCategory
       :> Get
            '[JSON]
            [API.Types.UI.FRFSTicketService.FRFSRouteAPI]
@@ -42,6 +46,9 @@ type API =
            Kernel.Types.Beckn.Context.City
       :> QueryParam
            "routeCode"
+           Data.Text.Text
+      :> QueryParam
+           "startStationCode"
            Data.Text.Text
       :> MandatoryQueryParam
            "vehicleType"
@@ -187,11 +194,13 @@ getFrfsRoutes ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Types.Beckn.Context.City ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSRouteAPI]
   )
-getFrfsRoutes a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsRoutes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getFrfsRoutes a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsRoutes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 getFrfsStations ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -199,10 +208,11 @@ getFrfsStations ::
     ) ->
     Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
     Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSStationAPI]
   )
-getFrfsStations a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsStations (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getFrfsStations a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsStations (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postFrfsSearch ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

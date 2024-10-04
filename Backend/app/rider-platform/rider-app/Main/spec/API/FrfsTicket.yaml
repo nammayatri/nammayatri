@@ -140,6 +140,9 @@ apis:
       mandatoryQuery:
         vehicleType: VehicleCategory
         city: City
+      query:
+        startStationCode: Text
+        endStationCode: Text
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSRouteAPI]"
 
@@ -155,6 +158,7 @@ apis:
       query:
         city: City
         routeCode: Text
+        startStationCode: Text
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
 
