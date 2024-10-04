@@ -416,6 +416,7 @@ library
       Tools.Ticket
       Tools.Whatsapp
       API.Action.Dashboard.Management.Booking
+      API.Action.Dashboard.Management.Customer
       API.Action.Dashboard.Management.Invoice
       API.Action.Dashboard.Management.Merchant
       API.Action.UI.Cac

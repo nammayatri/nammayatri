@@ -13,12 +13,12 @@ ALTER TABLE atlas_app.app_dynamic_logic_rollout ADD PRIMARY KEY ( logic_id);
 
 ------- SQL updates -------
 
-
+ALTER TABLE atlas_app.app_dynamic_logic_rollout DROP CONSTRAINT app_dynamic_logic_rollout_pkey;
 --- Now DSL don't allow dropping tables instead we will drop not null constraint if any .Please be careful while running ---
 ALTER TABLE atlas_app.app_dynamic_logic_rollout ALTER COLUMN logic_id DROP NOT NULL;
 --- Drop section ends. Please check before running ---
 
-ALTER TABLE atlas_app.app_dynamic_logic_rollout DROP CONSTRAINT app_dynamic_logic_rollout_pkey;
+
 ALTER TABLE atlas_app.app_dynamic_logic_rollout ADD PRIMARY KEY ( domain, merchant_operating_city_id, time_bounds, version);
 
 

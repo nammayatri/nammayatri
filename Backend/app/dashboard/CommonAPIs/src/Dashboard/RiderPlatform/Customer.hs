@@ -85,39 +85,6 @@ data CustomerInfoRes = CustomerInfoRes
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
----------------------------------------------------------
--- customer List ----------------------------------------
-
-type CustomerListAPI =
-  "list"
-    :> QueryParam "limit" Int
-    :> QueryParam "offset" Int
-    :> QueryParam "enabled" Bool
-    :> QueryParam "blocked" Bool
-    :> QueryParam "phone" Text
-    :> QueryParam "personId" (Id Customer)
-    :> Get '[JSON] CustomerListRes
-
-data CustomerListRes = CustomerListRes
-  { totalItems :: Int, -- for backward compatibility
-    summary :: Summary,
-    customers :: [CustomerListItem]
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data CustomerListItem = CustomerListItem
-  { customerId :: Id Customer,
-    firstName :: Maybe Text,
-    middleName :: Maybe Text,
-    lastName :: Maybe Text,
-    phoneNo :: Maybe Text,
-    enabled :: Bool,
-    blocked :: Bool
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 ---------------------------------------------------------------------------
 -- customer cancellation dues sync ----------------------------------------
 

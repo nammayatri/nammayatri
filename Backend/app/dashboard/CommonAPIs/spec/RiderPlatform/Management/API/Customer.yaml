@@ -1,0 +1,33 @@
+imports:
+  Customer: Dashboard.Common
+  Summary: Dashboard.Common
+
+module: Customer
+
+apis:
+  - GET:
+      endpoint: /list
+      auth: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_LIST
+      query:
+        - limit: Int
+        - offset: Int
+        - enabled: Bool
+        - blocked: Bool
+        - phone: Text
+        - personId: Id Customer
+      response:
+        type: CustomerListRes
+
+types:
+  CustomerListRes:
+    - totalItems: Int # for backward compatibility
+    - summary: Summary
+    - customers: [CustomerListItem]
+  CustomerListItem:
+    - customerId: Id Customer
+    - firstName: Maybe Text
+    - middleName: Maybe Text
+    - lastName: Maybe Text
+    - phoneNo: Maybe Text
+    - enabled: Bool
+    - blocked: Bool

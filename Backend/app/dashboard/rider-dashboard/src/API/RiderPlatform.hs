@@ -21,6 +21,7 @@ module API.RiderPlatform
 where
 
 import qualified API.Action.RiderPlatform.Management.Booking as ManagementBookingDSL
+import qualified API.Action.RiderPlatform.Management.Customer as ManagementCustomerDSL
 import qualified API.Action.RiderPlatform.Management.Invoice as ManagementInvoiceDSL
 import qualified API.Action.RiderPlatform.Management.Merchant as ManagementMerchantDSL
 import qualified API.RiderPlatform.Customer as Customer
@@ -90,11 +91,13 @@ handlerV2 merchantId city =
 
 type ManagementAPI =
   ManagementBookingDSL.API
+    :<|> ManagementCustomerDSL.API
     :<|> ManagementMerchantDSL.API
     :<|> ManagementInvoiceDSL.API
 
 managementHandler :: ShortId DMerchant.Merchant -> City.City -> FlowServer ManagementAPI
 managementHandler merchantId city =
   ManagementBookingDSL.handler merchantId city
+    :<|> ManagementCustomerDSL.handler merchantId city
     :<|> ManagementMerchantDSL.handler merchantId city
     :<|> ManagementInvoiceDSL.handler merchantId city

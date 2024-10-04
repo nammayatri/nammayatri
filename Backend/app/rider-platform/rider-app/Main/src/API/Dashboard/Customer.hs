@@ -28,8 +28,7 @@ import Storage.Beam.SystemConfigs ()
 
 type API =
   "customer"
-    :> ( Common.CustomerListAPI
-           :<|> Common.CustomerDeleteAPI
+    :> ( Common.CustomerDeleteAPI
            :<|> Common.CustomerBlockAPI
            :<|> Common.CustomerUnblockAPI
            :<|> Common.CustomerInfoAPI
@@ -42,8 +41,7 @@ type API =
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantId city =
-  listCustomers merchantId city
-    :<|> deleteCustomer merchantId city
+  deleteCustomer merchantId city
     :<|> blockCustomer merchantId city
     :<|> unblockCustomer merchantId city
     :<|> customerInfo merchantId city
@@ -52,19 +50,6 @@ handler merchantId city =
     :<|> updateSafetyCenterBlocking merchantId city
     :<|> postCustomersPersonNumbers merchantId city
     :<|> postCustomerPersonId merchantId city
-
-listCustomers ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Maybe Int ->
-  Maybe Int ->
-  Maybe Bool ->
-  Maybe Bool ->
-  Maybe Text ->
-  Maybe (Id Common.Customer) ->
-  FlowHandler Common.CustomerListRes
-listCustomers merchantShortId opCity mbLimit mbOffset enabled blocked personId =
-  withFlowHandlerAPI . DCustomer.listCustomers merchantShortId opCity mbLimit mbOffset enabled blocked personId
 
 deleteCustomer ::
   ShortId DM.Merchant ->
