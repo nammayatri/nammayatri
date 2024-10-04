@@ -76,6 +76,7 @@ search _merchant _merchantOperatingCity bapConfig searchReq = do
             { bppItemId = "Kolkata Buses Item",
               _type = DFRFSQuote.SingleJourney,
               routeCode = Just routeCode,
+              vehicleVariant = farePolicy.vehicleVariant,
               ..
             }
         ]
@@ -106,9 +107,9 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       BPP -> EBIXPayment.getPaymentDetails merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
 
 confirm :: (CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> FRFSConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
-confirm merchant merchantOperatingCity frfsConfig bapConfig (mRiderName, mRiderNumber) booking = do
-  bppOrderId <- EBIXOrder.getOrderId merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
-  ticket <- mkTicket
+confirm _merchant _merchantOperatingCity frfsConfig bapConfig (_mRiderName, _mRiderNumber) booking = do
+  bppOrderId <- EBIXOrder.getOrderId booking
+  ticket <- mkTicket bppOrderId
   return $
     DOrder
       { providerId = bapConfig.uniqueKeyId,
@@ -122,16 +123,11 @@ confirm merchant merchantOperatingCity frfsConfig bapConfig (mRiderName, mRiderN
         tickets = [ticket]
       }
   where
-    mkTicket = do
+    mkTicket bppOrderId = do
       (qrData, qrStatus, qrValidity, ticketNumber) <-
         case bapConfig.verifiedBy of
-          BAP -> do
-            qrValidity <- addUTCTime (secondsToNominalDiffTime frfsConfig.busStationTtl) <$> getCurrentTime
-            let qrData = "I'm a Dummy QR Guys, will be replaced soon!"
-                qrStatus = "UNCLAIMED" -- "UNCLAIMED" | "CLAIMED"
-                ticketNumber = "#007-24042024-001"
-            return (qrData, qrStatus, qrValidity, ticketNumber)
-          BPP -> EBIXVerification.getVerificationDetails merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
+          BAP -> throwError (InternalError "Verification can only be done by the Provider")
+          BPP -> EBIXVerification.getVerificationDetails bapConfig bppOrderId frfsConfig.busStationTtl booking
       return $
         DTicket
           { qrData = qrData,

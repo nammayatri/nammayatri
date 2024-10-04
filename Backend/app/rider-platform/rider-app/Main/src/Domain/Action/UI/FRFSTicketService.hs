@@ -128,9 +128,9 @@ getFrfsStations (_personId, mId) mbCity mbRouteCode vehicleType_ = do
                   ..
                 }
           )
-          routeStops
+          $ sortOn (.sequenceNum) routeStops
     Nothing -> do
-      stations <- B.runInReplica $ QStation.getTicketPlacesByMerchantOperatingCityIdAndVehicleType merchantOpCity.id vehicleType_
+      stations <- B.runInReplica $ QStation.findByMerchantOperatingCityIdAndVehicleType merchantOpCity.id vehicleType_
       return $
         map
           ( \Station.Station {..} ->
@@ -662,7 +662,7 @@ getFrfsAutocomplete (_, mId) text opCity origin vehicle = do
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show merchantOpCity.id)
   case text of
     Nothing -> do
-      allStops <- QStation.getTicketPlacesByMerchantOperatingCityIdAndVehicleType merchantOpCity.id vehicle
+      allStops <- QStation.findByMerchantOperatingCityIdAndVehicleType merchantOpCity.id vehicle
 
       currentTime <- getCurrentTime
 
@@ -720,7 +720,7 @@ getFrfsAutocomplete (_, mId) text opCity origin vehicle = do
             }
         ]
     Just userInput -> do
-      allStops <- QStation.getTicketPlacesByMerchantOperatingCityIdAndVehicleType merchantOpCity.id vehicle
+      allStops <- QStation.findByMerchantOperatingCityIdAndVehicleType merchantOpCity.id vehicle
       allRoutes <- QRoute.findAllByMerchantOperatingCityAndVehicleType merchantOpCity.id vehicle
       let input = T.toUpper userInput
           matchingStops = filter (\stop -> T.isInfixOf input (T.toUpper stop.name)) allStops

@@ -1,14 +1,14 @@
 module ExternalBPP.EBIX.ExternalAPI.Order where
 
-import Domain.Types.BecknConfig
+import qualified Data.UUID as UU
 import Domain.Types.FRFSTicketBooking
-import Domain.Types.Merchant
-import Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import Kernel.Utils.Common
+import Tools.Error
 
-getOrderId :: (MonadGuid m) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m Text
-getOrderId _merchant _merchantOperatingCity _bapConfig (_mRiderName, _mRiderNumber) _booking = do
-  -- TODO :: Need to be shared by EBIX team.
-  orderId <- generateGUIDText
-  return orderId
+-- This should be max 20 characters UUID (Using Transaction UUID)
+getOrderId :: (MonadFlow m) => FRFSTicketBooking -> m Text
+getOrderId booking = do
+  bookingUUID <- UU.fromText booking.id.getId & fromMaybeM (InternalError "Booking Id not being able to parse into UUID")
+  let bookingUUIDInt :: Integer = fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords bookingUUID))
+  return $ show bookingUUIDInt

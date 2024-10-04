@@ -9,6 +9,7 @@ import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
+import qualified Kernel.Types.Base64
 import qualified Kernel.Types.Id
 import qualified Servant.Client.Core
 import qualified Tools.Beam.UtilsTH
@@ -39,13 +40,14 @@ data BecknConfig = BecknConfig
     trackTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     uniqueKeyId :: Kernel.Prelude.Text,
     vehicleCategory :: BecknV2.OnDemand.Enums.VehicleCategory,
+    verificationCipher :: Kernel.Prelude.Maybe Kernel.Types.Base64.Base64,
     verifiedBy :: Domain.Types.BecknConfig.Network,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data Network = BAP | BPP deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

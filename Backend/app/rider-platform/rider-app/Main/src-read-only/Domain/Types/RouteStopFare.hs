@@ -22,6 +22,7 @@ data RouteStopFare = RouteStopFare
     routeCode :: Kernel.Prelude.Text,
     startStopCode :: Kernel.Prelude.Text,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
+    vehicleVariant :: BecknV2.FRFS.Enums.VehicleVariant,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

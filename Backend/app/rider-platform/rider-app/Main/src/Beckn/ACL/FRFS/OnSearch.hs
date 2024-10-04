@@ -98,6 +98,7 @@ parseFulfillments item fulfillments fulfillmentId = do
       { bppItemId = itemId,
         price,
         vehicleType,
+        vehicleVariant = Spec.METRO_TRAIN,
         stations,
         routeCode = Nothing,
         _type = quoteType

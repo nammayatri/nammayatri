@@ -272,6 +272,14 @@ data UserActionType
   | SECURITY_DEPOSIT_STATUS
   | CLEAR_CACHE_SUBSCRIPTION
   | RUN_QUERY
+  | LIST_FRFS_ROUTES
+  | ADD_FRFS_ROUTE
+  | DELETE_FRFS_ROUTE
+  | LIST_FRFS_ROUTE_FARE
+  | UPSERT_FRFS_ROUTE_FARE
+  | LIST_FRFS_STATION
+  | ADD_FRFS_STATION
+  | DELETE_FRFS_STATION
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)
@@ -280,7 +288,7 @@ genSingletons [''UserActionType]
 
 -------- Required access levels for helper api --------
 
-data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT | MESSAGE | REFERRAL | ISSUE | VOLUNTEER | SPECIAL_ZONES | SUBSCRIPTION | FLEET | OVERLAY | NAMMA_TAG | MIGRATION
+data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT | MESSAGE | REFERRAL | ISSUE | VOLUNTEER | SPECIAL_ZONES | SUBSCRIPTION | FLEET | OVERLAY | NAMMA_TAG | MIGRATION | FRFS
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''ApiEntity)

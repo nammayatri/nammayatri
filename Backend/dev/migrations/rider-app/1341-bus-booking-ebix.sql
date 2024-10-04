@@ -20,6 +20,7 @@ INSERT INTO
     buyer_finder_fee,
     collected_by,
     verified_by,
+    verification_cipher,
     provider,
     confirm_buffer_ttl_sec,
     confirm_ttl_sec,
@@ -52,7 +53,8 @@ VALUES
     null,
     null,
     'BAP',
-    'BAP',
+    'BPP',
+    'VGhpc0lzVGVzdEVuY3J5cHRpb25LZXkh',
     'EBIX',
     10,
     120,
@@ -199,6 +201,7 @@ VALUES
 
 INSERT INTO
   atlas_app.route_stop_mapping (
+    code,
     route_code,
     stop_code,
     stop_name,
@@ -214,6 +217,7 @@ INSERT INTO
   )
 VALUES
   (
+    '1',
     'Route:1:SHUTTLE-U',
     'Stop:1:18465',
     'ECO T PARK',
@@ -228,6 +232,7 @@ VALUES
     now()
   ),
   (
+    '2',
     'Route:1:SHUTTLE-U',
     'Stop:1:18024',
     'AKANKHA MORE',
@@ -242,6 +247,7 @@ VALUES
     now()
   ),
   (
+    '3',
     'Route:1:SHUTTLE-U',
     'Stop:1:18304',
     'CITY CENTER 2',
@@ -256,6 +262,7 @@ VALUES
     now()
   ),
   (
+    '4',
     'Route:1:SHUTTLE-U',
     'Stop:1:18705',
     'KAIKHALI/HALDIRAM',
@@ -270,6 +277,7 @@ VALUES
     now()
   ),
   (
+    '5',
     'Route:1:SHUTTLE-U',
     'Stop:1:18058',
     'AIRPORT GATE NO1',
@@ -292,6 +300,7 @@ INSERT INTO
     amount,
     currency,
     vehicle_type,
+    vehicle_variant,
     merchant_id,
     merchant_operating_city_id,
     created_at,
@@ -305,6 +314,7 @@ VALUES
     10,
     'INR',
     'BUS',
+    'VOLVO',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
@@ -317,6 +327,7 @@ VALUES
     20,
     'INR',
     'BUS',
+    'VOLVO',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
@@ -329,6 +340,7 @@ VALUES
     30,
     'INR',
     'BUS',
+    'VOLVO',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
@@ -341,6 +353,7 @@ VALUES
     40,
     'INR',
     'BUS',
+    'VOLVO',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
@@ -353,6 +366,7 @@ VALUES
     10,
     'INR',
     'BUS',
+    'VOLVO',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
@@ -365,6 +379,7 @@ VALUES
     20,
     'INR',
     'BUS',
+    'VOLVO',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
@@ -377,6 +392,7 @@ VALUES
     30,
     'INR',
     'BUS',
+    'VOLVO',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
@@ -389,6 +405,7 @@ VALUES
     10,
     'INR',
     'BUS',
+    'VOLVO',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
@@ -401,6 +418,7 @@ VALUES
     20,
     'INR',
     'BUS',
+    'VOLVO',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
@@ -413,6 +431,7 @@ VALUES
     10,
     'INR',
     'BUS',
+    'VOLVO',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
