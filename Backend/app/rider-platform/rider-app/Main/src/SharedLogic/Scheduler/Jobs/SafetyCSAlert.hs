@@ -32,6 +32,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.Sos as QSos
 import Tools.Error
+import qualified Tools.Notifications as Notify
 import Tools.Ticket as Ticket
 
 sendSafetyCSAlert ::
@@ -67,7 +68,7 @@ createSafetyTicket ::
 createSafetyTicket person ride = do
   logDebug $ "Creating Safety Ticket for ride : " <> show ride.id
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-  let trackLink = riderConfig.trackingShortUrlPattern <> ride.id.getId
+  let trackLink = Notify.buildTemplate [("rideId", ride.id.getId), ("vp", "shareRide")] riderConfig.trackingShortUrlPattern
   phoneNumber <- mapM decrypt person.mobileNumber
   let rideInfo = buildRideInfo ride person phoneNumber
       kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
