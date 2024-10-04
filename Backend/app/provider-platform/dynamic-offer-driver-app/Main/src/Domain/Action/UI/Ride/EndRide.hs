@@ -47,6 +47,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.TransporterConfig as DTConf
 import Environment (Flow)
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, pi)
 import Kernel.External.Maps
 import qualified Kernel.External.Maps.Interface.Types as Maps
@@ -409,14 +410,17 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
               }
     newRideTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.RideEnd (EndRideTagData updRide' booking))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
-    fork "updating time and latlong in advance ride if any" $ do
-      advanceRide <- QRide.getActiveAdvancedRideByDriverId driverId
-      whenJust advanceRide $ \advanceRide' -> do
-        QRide.updatePreviousRideTripEndPosAndTime (Just tripEndPoint) (Just now) advanceRide'.id
+    let forkActionFortimeAndLatLongUpdate =
+          ( "updating time and latlong in advance ride if any",
+            do
+              advanceRide <- QRide.getActiveAdvancedRideByDriverId driverId
+              whenJust advanceRide $ \advanceRide' -> do
+                QRide.updatePreviousRideTripEndPosAndTime (Just tripEndPoint) (Just now) advanceRide'.id
+          )
 
     -- we need to store fareParams only when they changed
-    withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbUpdatedFareParams booking.riderId newFareParams thresholdConfig
-    withTimeAPI "endRide" "clearInterpolatedPoints" $ clearInterpolatedPoints driverId
+    endRideTransactionFork <- forkAndWaitForResult "endRide->endRideTransaction" $ withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbUpdatedFareParams booking.riderId newFareParams thresholdConfig
+    clearInterpolatedPointsFork <- forkAndWaitForResult "endRide->clearInterpolatedPoints" $ withTimeAPI "endRide" "clearInterpolatedPoints" $ clearInterpolatedPoints driverId
 
     logDebug $ "RideCompleted Coin Event" <> show chargeableDistance
     fork "DriverRideCompletedCoin Event : " $ do
@@ -431,17 +435,21 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
       findPaymentMethodByIdAndMerchantId paymentMethodId booking.merchantOperatingCityId
         >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
     let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
-    withTimeAPI "endRide" "notifyCompleteToBAP" $ notifyCompleteToBAP booking updRide newFareParams mbPaymentMethodInfo Nothing (Just tripEndPoint)
-
-    fork "sending dashboardSMS - CallbasedEndRide " $ do
-      case req of
-        CallBasedReq callBasedEndRideReq -> do
-          let requestor = callBasedEndRideReq.requestor
-          sendDashboardSms requestor.merchantId booking.merchantOperatingCityId Sms.ENDRIDE (Just ride) driverId (Just booking) finalFare
-        _ -> pure ()
-
+    notifyCompleteToBAPFork <- forkAndWaitForResult "endRide->notifyCompleteToBAP" $ withTimeAPI "endRide" "notifyCompleteToBAP" $ notifyCompleteToBAP booking updRide newFareParams mbPaymentMethodInfo Nothing (Just tripEndPoint)
+    let forkActionForSendingDashboardSMS =
+          ( "sending dashboardSMS - CallbasedEndRide ",
+            case req of
+              CallBasedReq callBasedEndRideReq -> do
+                let requestor = callBasedEndRideReq.requestor
+                sendDashboardSms requestor.merchantId booking.merchantOperatingCityId Sms.ENDRIDE (Just ride) driverId (Just booking) finalFare
+              _ -> pure ()
+          )
+    logDebug $ "EndRide: Executing Forks"
+    forkMultiple [forkActionFortimeAndLatLongUpdate, forkActionForSendingDashboardSMS]
+    awaitAll [endRideTransactionFork, clearInterpolatedPointsFork, notifyCompleteToBAPFork]
   return $ EndRideResp {result = "Success", homeLocationReached = homeLocationReached'}
   where
+    awaitAll = mapM_ (L.await Nothing)
     buildRoutesReq tripEndPoint driverHomeLocation =
       Maps.GetRoutesReq
         { waypoints = tripEndPoint :| [driverHomeLocation],
