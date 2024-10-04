@@ -67,6 +67,7 @@ import qualified Storage.Queries.SafetySettings as QSafety
 import qualified Storage.Queries.Sos as QSos
 import qualified Tools.Call as Call
 import Tools.Error
+import qualified Tools.Notifications as Notify
 import Tools.Ticket as Ticket
 
 data SOSVideoUploadReq = SOSVideoUploadReq
@@ -145,7 +146,7 @@ postSosCreate (mbPersonId, _merchantId) req = do
   Redis.del $ CQSos.mockSosKey personId
   ride <- QRide.findById req.rideId >>= fromMaybeM (RideDoesNotExist req.rideId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-  let trackLink = riderConfig.trackingShortUrlPattern <> ride.id.getId
+  let trackLink = Notify.buildTemplate [("rideId", ride.id.getId), ("vp", "shareRide")] riderConfig.trackingShortUrlPattern
   sosId <- createTicketForNewSos person ride riderConfig trackLink req
   safetySettings <- QSafety.findSafetySettingsWithFallback personId (Just person)
   let localRideEndTime = addUTCTime (secondsToNominalDiffTime riderConfig.timeDiffFromUtc) <$> ride.rideEndTime
@@ -304,7 +305,7 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
       ride <- QRide.findById sosDetails.rideId >>= fromMaybeM (RideDoesNotExist sosDetails.rideId.getId)
       phoneNumber <- mapM decrypt person.mobileNumber
       let rideInfo = SIVR.buildRideInfo ride person phoneNumber
-          trackLink = riderConfig.trackingShortUrlPattern <> ride.id.getId
+          trackLink = Notify.buildTemplate [("rideId", ride.id.getId), ("vp", "shareRide")] riderConfig.trackingShortUrlPattern
           kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
       when riderConfig.enableSupportForSafety $
         void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber ["https://" <> trackLink, fileUrl] rideInfo DSos.AudioRecording riderConfig.kaptureConfig.disposition kaptureQueue))
