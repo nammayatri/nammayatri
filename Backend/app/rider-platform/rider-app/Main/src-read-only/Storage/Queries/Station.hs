@@ -13,6 +13,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.TimeBound
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Station as Beam
@@ -54,6 +55,7 @@ updateByPrimaryKey (Domain.Types.Station.Station {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.name name,
+      Se.Set Beam.timeBounds (Kernel.Prelude.Just timeBounds),
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
@@ -73,6 +75,7 @@ instance FromTType' Beam.Station Domain.Types.Station.Station where
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             name = name,
+            timeBounds = fromMaybe Kernel.Types.TimeBound.Unbounded timeBounds,
             vehicleType = vehicleType,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -89,6 +92,7 @@ instance ToTType' Beam.Station Domain.Types.Station.Station where
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.name = name,
+        Beam.timeBounds = Kernel.Prelude.Just timeBounds,
         Beam.vehicleType = vehicleType,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

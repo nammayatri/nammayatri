@@ -8,6 +8,7 @@ import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Time
 import qualified Tools.Beam.UtilsTH
@@ -28,7 +29,9 @@ data FRFSConfig = FRFSConfig
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     metroStationTtl :: Kernel.Prelude.Int,
     oneWayTicketLimit :: Kernel.Prelude.Int,
+    radius :: Kernel.Types.Common.Meters,
     roundTripTicketLimit :: Kernel.Prelude.Int,
+    straightLineDistance :: Kernel.Types.Common.Meters,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
