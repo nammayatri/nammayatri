@@ -1747,3 +1747,6 @@ getML stringKey =
         METRO_RIDE_COMPLETED -> "മെട്രോ യാത്ര പൂർത്തിയായി"
         OR_RIDE_IS_CANCELLED_BY_CUSTOMER -> "യാത്ര ഉപഭോക്താവിൽ നിന്ന് റദ്ദാക്കി"
         THE_RIDE_STARTS -> "യാത്ര ആരംഭിക്കുന്നു"
+        GOOD_SERVICES -> "നല്ല സേവനം"
+        SMOOTH_DRIVING -> "മൃദുവായ ഡ്രൈവിംഗ്"
+        NO_CANCELLATION -> "റദ്ദാക്കൽ ഇല്ല"

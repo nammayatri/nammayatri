@@ -4,7 +4,7 @@ import Prelude
 import Screens.DriverProfileScreenCommon.Controller (Action(..), eval, ScreenOutput, getVariant, getPillText, getAspirationsText)
 import Screens.DriverProfileScreenCommon.ScreenData (DriverProfileScreenCommonState(..))
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, relativeLayout, gravity, height, alpha, imageUrl, imageView, imageWithFallback, maxLines, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, horizontalScrollView, stroke, text, textSize, textView, visibility, weight, width, singleLine, id, frameLayout, scrollBarY, fillViewport, onAnimationEnd, rippleColor, alignParentBottom, progressBar, scrollBarX)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, relativeLayout, gravity, height, alpha, imageUrl, imageView, imageWithFallback, maxLines, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, horizontalScrollView, stroke, text, textSize, textView, visibility, weight, width, singleLine, id, frameLayout, scrollBarY, fillViewport, onAnimationEnd, rippleColor, alignParentBottom, progressBar, scrollBarX, shimmerFrameLayout)
 import Effect (Effect)
 import Animation as Anim
 import Styles.Colors as Color
@@ -64,16 +64,27 @@ getDriverProfile :: forall action. (Action -> Effect Unit) -> DriverProfileScree
 getDriverProfile push state = do
   void $ lift $ lift $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   void $ lift $ lift $ EHU.toggleLoader true
-  (driversProfileResp) <- lift $ lift $ if state.props.rideId == "" then SB.getDriverProfileById state.props.driverId else SB.getDriverProfile state.props.rideId
+  (driversProfileResp) <- lift $ lift $ if state.props.rideId == "" 
+    then SB.getDriverProfileById state.props.driverId false
+    else SB.getDriverProfile state.props.rideId false
   case driversProfileResp of
         Right resp -> do
-            void $ lift $ lift $ delay $ Milliseconds 2000.0
             void $ lift $ lift $ EHU.toggleLoader false
+            liftFlowBT $ push $ GetDriverProfileAPIResponseAction resp
+        Left _ -> do
+            void $ pure $ JB.toast $ getString NOT_AVAILABLE
+            void $ lift $ lift $ EHU.toggleLoader false
+            liftFlowBT $ push $ GoBack
+
+  (driversProfileRespWithImage) <- lift $ lift $ if state.props.rideId == "" 
+    then SB.getDriverProfileById state.props.driverId true
+    else SB.getDriverProfile state.props.rideId true
+  case driversProfileRespWithImage of
+        Right resp -> do
             liftFlowBT $ push $ GetDriverProfileAPIResponseAction resp
             pure unit
         Left _ -> do
             void $ pure $ JB.toast $ getString NOT_AVAILABLE
-            void $ lift $ lift $ EHU.toggleLoader false
             liftFlowBT $ push $ GoBack
             pure unit
 
@@ -87,24 +98,63 @@ view push state =
      , background Color.white900
      , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
      ] $
-     [
+     [  
         linearLayout[
             height MATCH_PARENT
         ,   width MATCH_PARENT
-        ,   orientation VERTICAL
-        ,   padding $ PaddingBottom 16
         ][
-            back push state
-        ,   header push state
-        ,   driverStats push state
-        ,   driverInfoCard push state
-        ,   reviews push state
-        ,   ratings push state
-        ,   trainings push state
-        ,   pledge push state
-        ,   aboutMe push state
+            linearLayout[
+                height MATCH_PARENT
+            ,   width MATCH_PARENT
+            ,   orientation VERTICAL
+            ,   padding $ PaddingBottom 16
+            ,   visibility $ boolToVisibility $ not $ state.data.shimmerView
+            ][
+                back push state
+            ,   header push state
+            ,   driverStats push state
+            ,   driverInfoCard push state
+            ,   reviews push state
+            ,   ratings push state
+            ,   trainings push state
+            ,   pledge push state
+            ,   aboutMe push state
+            ]
+        ,   shimmerView state 
         ]
     ]
+
+shimmerView :: forall w. DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
+shimmerView state =
+    linearLayout[
+        height MATCH_PARENT
+    ,   width MATCH_PARENT
+    ,   orientation VERTICAL
+    ,   margin $ MarginTop 15
+    ,   visibility $ boolToVisibility $ state.data.shimmerView
+    ][
+        sfl 45 8.0
+    ,   sfl 300 8.0
+    ,   sfl 200 8.0
+    ,   sfl 200 8.0
+    ]
+
+sfl :: forall w. Int -> Number -> PrestoDOM (Effect Unit) w
+sfl height' radius' =
+  shimmerFrameLayout
+  [ cornerRadius radius'
+  , stroke $ "1," <> Color.grey900
+  , margin $ Margin 15 0 15 18
+  , width MATCH_PARENT
+  , height $ V height'
+  ][linearLayout 
+    [ width MATCH_PARENT
+    , height $ V height'
+    , cornerRadius radius'
+    , background Color.grey900
+    ][]
+  ]
+
 
 back :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
 back push state =
@@ -124,21 +174,21 @@ driverProfile push state =
     ][
         linearLayout
         [ width $ V $ (screenWidth unit)
-        , height $ V $ ((screenWidth unit)*2)/3
+        , height $ V $ ((screenWidth unit)*4)/5
         , id $ getNewIDWithTag "add_image_component_images"
         , visibility $ boolToVisibility $ DA.length state.data.displayImages > 0
         ][]
     ,   imageView [
           width $ V $ (screenWidth unit)
-        , height $ V $ ((screenWidth unit)*2)/3
+        , height $ V $ ((screenWidth unit)*4)/5
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_driver_dummy_image"
         , visibility $ boolToVisibility $ DA.length state.data.displayImages == 0
-        , background Color.red
+        , background Color.white900
         ]
     ,   linearLayout[
             width MATCH_PARENT
         ,   height WRAP_CONTENT
-        ,   margin $ MarginTop 120
+        ,   margin $ MarginTop 150
         ][
             linearLayout[
                 width WRAP_CONTENT
@@ -178,7 +228,7 @@ header push state =
         driverProfile push state
     ,   linearLayout[
             width $ V $ (screenWidth unit)
-        ,   height $ V $ ((screenWidth unit)*2)/3
+        ,   height $ V $ ((screenWidth unit)*4)/5
         ,   orientation VERTICAL
         ][
                 linearLayout[weight 1.0][]

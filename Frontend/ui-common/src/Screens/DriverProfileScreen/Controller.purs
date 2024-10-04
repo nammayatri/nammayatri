@@ -43,21 +43,21 @@ eval (GetDriverProfileAPIResponseAction (DriverProfileRes resp)) state = do
       updatedState = state{data = getDriverProfile response}
   _ <- pure $ EHU.toggleLoader false
   continueWithCmd updatedState [do 
-    void $ runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source = getImage updatedState, id = getNewIDWithTag "add_image_component_images" , scaleType =  "FIT_XY", adjustViewBounds = false, inSampleSize = 2}
+    void $ runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source = getImage updatedState, id = getNewIDWithTag "add_image_component_images" , scaleType =  "FIT_CENTER", adjustViewBounds = false, inSampleSize = 2}
     pure NoAction
   ]
 
 eval (PrevImg) state = do 
   let updatedState = state{data{ imgIdx = if state.data.imgIdx /= 0 then state.data.imgIdx - 1 else 0 }}
   continueWithCmd updatedState [do 
-    void $ runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source = getImage updatedState, id = getNewIDWithTag "add_image_component_images" , scaleType =  "FIT_XY", adjustViewBounds = false, inSampleSize = 2}
+    void $ runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source = getImage updatedState, id = getNewIDWithTag "add_image_component_images" , scaleType =  "FIT_CENTER", adjustViewBounds = false, inSampleSize = 2}
     pure NoAction
   ]
 
 eval (NextImg) state = do 
   let updatedState = state{data{ imgIdx = if DA.length state.data.displayImages - 1 /= state.data.imgIdx then state.data.imgIdx + 1 else state.data.imgIdx }}
   continueWithCmd updatedState [do 
-    void $ runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source = getImage updatedState, id = getNewIDWithTag "add_image_component_images" , scaleType =  "FIT_XY", adjustViewBounds = false, inSampleSize = 2}
+    void $ runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source = getImage updatedState, id = getNewIDWithTag "add_image_component_images" , scaleType =  "FIT_CENTER", adjustViewBounds = false, inSampleSize = 2}
     pure NoAction
   ]
 
@@ -94,7 +94,8 @@ getDriverProfile (DriverProfile details) = {
     images : details.images,
     displayImages : getProfileImages details.profileImage details.images,
     topReviews : details.topReviews,
-    imgIdx : 0
+    imgIdx : 0,
+    shimmerView : false
   }
 
 getVariant :: Variant -> String

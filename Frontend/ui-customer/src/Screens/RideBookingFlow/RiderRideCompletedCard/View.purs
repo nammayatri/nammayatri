@@ -540,15 +540,16 @@ needHelpPillView state push =
     ]
 
 stickyButtonView ::  forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-stickyButtonView state push = 
-  linearLayout[
-      width MATCH_PARENT
-    , height WRAP_CONTENT
-    , cornerRadii $ Corners 16.0 true true false false
-    , background Color.white900
-    , padding $ Padding 16 16 16 16
-    , adjustViewWithKeyboard "true"
-    ][PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)]
+stickyButtonView state push =
+  screenAnimation 
+    $ linearLayout[
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , cornerRadii $ Corners 16.0 true true false false
+      , background Color.white900
+      , padding $ Padding 16 16 16 16
+      , adjustViewWithKeyboard "true"
+      ][PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)]
 
 skipButton :: forall w. (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 skipButton push =

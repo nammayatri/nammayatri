@@ -9,7 +9,7 @@ import Prelude (show, class Show, pure, unit, ($), discard, bind, (==), map, not
 import PrestoDOM (Eval, update, continue, exit, updateAndExit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types (DriverCompleteProfileScreenState, Component(..))
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), UploadFileConfig(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Helpers.Utils (getVehicleVariantImage)
 import Language.Strings (getString)
@@ -56,6 +56,14 @@ data Action = OnClickPledge String Boolean
             | Done
             | InputTextAC InputTextView.Action 
             | ProfileDataAPIResponseAction DriverProfileDataRes
+
+
+uploadFileConfig :: UploadFileConfig
+uploadFileConfig = UploadFileConfig {
+  showAccordingToAspectRatio : true,
+  imageAspectHeight : 12,
+  imageAspectWidth : 15
+}
 
 instance showAction :: Show Action where
   show _ = ""
@@ -159,7 +167,7 @@ eval (OnClickUpload) state = continue state {props {showImageModel = not state.p
 eval (AddImagesModelAction (AddImagesModel.AddImage)) state =
   continueWithCmd state [do
     void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "primary_button_loader.json", lottieId = (getNewIDWithTag "add_images_model_done_button"), scaleType = "CENTER_CROP" }
-    void $ liftEffect $ uploadFile true
+    void $ liftEffect $ uploadFile uploadFileConfig
     pure NoAction
   ]
 

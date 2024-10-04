@@ -547,6 +547,7 @@ riderRideCompletedScreenFlow = do
       void $ updateLocalStage HomeScreen
       updateUserInfoToState state.homeScreen
       currentFlowStatus false
+      modifyScreenState $ RiderRideCompletedScreenStateType (\_ -> RiderRideCompletedScreenData.initData)
       homeScreenFlow
     GOTO_NAMMASAFETY _ triggerSos showtestDrill -> do
       (GlobalState state) <- getState
@@ -596,7 +597,7 @@ riderRideCompletedScreenFlow = do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = HomeScreen } })
         searchLocationFlow
       else
-       currentFlowStatus false
+       pure unit
       if state.ratingCard.rating == 5 then do
         void $ pure $ launchInAppRatingPopup unit
         pure unit

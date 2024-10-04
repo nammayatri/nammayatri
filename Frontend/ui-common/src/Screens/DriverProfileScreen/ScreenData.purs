@@ -39,7 +39,8 @@ type DriverProfileScreenCommonData = {
     images :: Array String,
     displayImages :: Array String,
     imgIdx :: Int,
-    topReviews :: Array DriverReview
+    topReviews :: Array DriverReview,
+    shimmerView :: Boolean
 }
 
 initData :: DriverProfileScreenCommonState
@@ -62,7 +63,8 @@ initData = {
         images : [],
         displayImages : [""],
         imgIdx : 0,
-        topReviews : []
+        topReviews : [],
+        shimmerView : true
     },
     props : {
         driverId : "",

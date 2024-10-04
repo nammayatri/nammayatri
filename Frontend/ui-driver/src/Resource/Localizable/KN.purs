@@ -1745,3 +1745,6 @@ getKN stringKey =
         METRO_RIDE_COMPLETED -> "ಮೆಟ್ರೋ ಸವಾರಿ ಪೂರ್ಣಗೊಂಡಿದೆ"
         OR_RIDE_IS_CANCELLED_BY_CUSTOMER -> "ಪ್ರಯಾಣವನ್ನು ಗ್ರಾಹಕ ರದ್ದುಪಡಿಸಿದ್ದಾನೆ."
         THE_RIDE_STARTS -> "ಸವಾರಿ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ "
+        GOOD_SERVICES -> "ಉತ್ತಮ ಸೇವೆ"
+        SMOOTH_DRIVING -> "ನಾದ್ರು ಡ್ರೈವಿಂಗ್"
+        NO_CANCELLATION -> "ಯಾವುದೇ ರದ್ದುಪಡಿಸಲು ಇಲ್ಲ"

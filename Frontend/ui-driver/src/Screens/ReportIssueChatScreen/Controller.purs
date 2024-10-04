@@ -52,6 +52,7 @@ import Screens (ScreenName(REPORT_ISSUE_CHAT_SCREEN), getScreen)
 import Screens.Types (ReportIssueChatScreenState)
 import Services.EndPoints (uploadFile) as EndPoint
 import Timers (waitingCountdownTimerV2, clearTimerWithId)
+import Common.Types.App
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -134,6 +135,13 @@ data Action = Exit (ScreenOutput)
 data ScreenOutput = GoBack
                   | UploadIssue  ReportIssueChatScreenState
                   | CallCustomer ReportIssueChatScreenState
+
+uploadFileConfig :: UploadFileConfig
+uploadFileConfig = UploadFileConfig {
+  showAccordingToAspectRatio : false,
+  imageAspectHeight : 0,
+  imageAspectWidth : 0
+}
 
 eval :: Action -> ReportIssueChatScreenState -> Eval Action ScreenOutput ReportIssueChatScreenState
 
@@ -246,7 +254,7 @@ eval (AddAudioModelAction (AudioModel.OnClickDelete)) state =
 eval (AddImagesModelAction (ImageModel.AddImage)) state =
   continueWithCmd state [do
     void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "primary_button_loader.json", lottieId = getNewIDWithTag "add_images_model_done_button" }
-    void $ liftEffect $ uploadFile false
+    void $ liftEffect $ uploadFile uploadFileConfig
     pure NoAction
   ]
 

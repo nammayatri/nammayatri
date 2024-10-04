@@ -743,3 +743,9 @@ data DateTime = DATE | TIME
 
 derive instance genericDateTime :: Generic DateTime _
 instance eqDateTime :: Eq DateTime where eq = genericEq
+
+newtype UploadFileConfig = UploadFileConfig {
+  showAccordingToAspectRatio :: Boolean,
+  imageAspectHeight :: Int,
+  imageAspectWidth :: Int
+}

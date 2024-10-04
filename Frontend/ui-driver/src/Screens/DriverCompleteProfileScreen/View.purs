@@ -34,7 +34,7 @@ import Components.ViewImageModel.View (view) as ViewImageModel
 import Effect.Uncurried(runEffectFn4, runEffectFn1)
 import PrestoDOM.Animation as PrestoAnim
 import Animation (scaleYAnimWithDelay, triggerOnAnimationEnd)
-import Components.InputTextView.View (view) as InputTextView
+import Components.InputTextView as InputTextView
 import Services.Backend as Remote
 import Effect.Aff (Milliseconds(..), launchAff)
 import Services.API (DriverProfileDataRes(..))
@@ -64,6 +64,7 @@ screen initialState st =
             _ = spy "DriverProfileCompleteScreen state" state
           void $ case action of 
             TextChanged _ _ -> pure unit
+            InputTextAC (InputTextView.FeedbackChanged _) -> pure unit
             _ -> do 
                 let _ = JB.hideKeyboardOnNavigation true
                 let _ =  JB.clearFocusFunction (getNewIDWithTag "homeTown-editText")
@@ -357,9 +358,12 @@ pillItems push state action title isSelected =
 pledge :: forall w. (Action -> Effect Unit) -> ST.DriverCompleteProfileScreenState -> PrestoDOM (Effect Unit) w
 pledge push state =
     let isSafeJourneySelected = checkPillSelected (getEN SAFE_JOURNEY) state.data.pledge
-        isCleanCarSelected = checkPillSelected (getEN CLEAN_CAR) state.data.pledge
+        isCleanCarSelected = checkPillSelected (getEN CLEAN_VEHICLE) state.data.pledge
         isPickUpSelected = checkPillSelected (getEN ON_TIME_PICK_UP) state.data.pledge
         isRegularMaintenanceSelected = checkPillSelected (getEN MAINTENANCE) state.data.pledge
+        isGoodServicesSelected = checkPillSelected (getEN GOOD_SERVICES) state.data.pledge
+        isSmoothDrivingSelected = checkPillSelected (getEN SMOOTH_DRIVING) state.data.pledge
+        isNoCancellationSelected = checkPillSelected (getEN NO_CANCELLATION) state.data.pledge
         isOtherSelected = checkPledgeOtherSelected state
     in 
     linearLayout[
@@ -388,18 +392,35 @@ pledge push state =
             ,   height WRAP_CONTENT
             ][
                 pillItems push state (OnClickPledge (getEN SAFE_JOURNEY) isSafeJourneySelected ) (getString SAFE_JOURNEY) isSafeJourneySelected
-            ,   pillItems push state (OnClickPledge (getEN CLEAN_CAR) isCleanCarSelected) (getString CLEAN_CAR) isCleanCarSelected
+            ,   pillItems push state (OnClickPledge (getEN CLEAN_VEHICLE) isCleanCarSelected) (getString CLEAN_VEHICLE) isCleanCarSelected
             ]
-        ,   pill push state (OnClickPledge (getEN ON_TIME_PICK_UP) isPickUpSelected) (getString ON_TIME_PICK_UP) isPickUpSelected
-        ,   pill push state (OnClickPledge (getEN MAINTENANCE) isRegularMaintenanceSelected) (getString MAINTENANCE) isRegularMaintenanceSelected
-        ,   pill push state (OnClickPledge (getEN OTHER) isOtherSelected ) (getString OTHER) isOtherSelected
+        ,   linearLayout[
+                width MATCH_PARENT
+            ,   height WRAP_CONTENT
+            ][
+                pillItems push state (OnClickPledge (getEN ON_TIME_PICK_UP) isPickUpSelected) (getString ON_TIME_PICK_UP) isPickUpSelected
+            ,   pillItems push state (OnClickPledge (getEN MAINTENANCE) isRegularMaintenanceSelected) (getString MAINTENANCE) isRegularMaintenanceSelected
+            ]
+        ,   linearLayout[
+                width MATCH_PARENT
+            ,   height WRAP_CONTENT
+            ][
+                pillItems push state (OnClickPledge (getEN GOOD_SERVICES) isGoodServicesSelected) (getString GOOD_SERVICES) isGoodServicesSelected
+            ,   pillItems push state (OnClickPledge (getEN SMOOTH_DRIVING) isSmoothDrivingSelected) (getString SMOOTH_DRIVING) isSmoothDrivingSelected
+            ]
+        ,   linearLayout[
+                width MATCH_PARENT
+            ,   height WRAP_CONTENT
+            ][
+                pillItems push state (OnClickPledge (getEN NO_CANCELLATION) isNoCancellationSelected ) (getString NO_CANCELLATION) isNoCancellationSelected
+            ,   pillItems push state (OnClickPledge (getEN OTHER) isOtherSelected ) (getString OTHER) isOtherSelected
+            ]
         ]
     ]
 
 vehicalOffer :: forall w. (Action -> Effect Unit) -> ST.DriverCompleteProfileScreenState -> PrestoDOM (Effect Unit) w
 vehicalOffer push state =
-    let isGasSelected = checkPillSelected (getEN GAS) state.data.vehicalOffer
-        isRadioSelected = checkPillSelected (getEN RADIO) state.data.vehicalOffer
+    let isRadioSelected = checkPillSelected (getEN RADIO) state.data.vehicalOffer
         isEcoFriendlySelected = checkPillSelected (getEN ECO_FRIENDLY) state.data.vehicalOffer
         isDeviceChargingSelected = checkPillSelected (getEN DEVICE_CHARGING) state.data.vehicalOffer
         isBootSpaceSelected = checkPillSelected (getEN BOOT_SPACE) state.data.vehicalOffer
@@ -430,14 +451,7 @@ vehicalOffer push state =
                 width MATCH_PARENT
             ,   height WRAP_CONTENT
             ][
-                pillItems push state (OnClickVehicalOffer (getEN GAS) isGasSelected) (getString GAS) isGasSelected
-            ,   pillItems push state (OnClickVehicalOffer (getEN RADIO) isRadioSelected) (getString RADIO) isRadioSelected
-            ]
-        ,   linearLayout[
-                width MATCH_PARENT
-            ,   height WRAP_CONTENT
-            ][
-                pillItems push state (OnClickVehicalOffer (getEN ECO_FRIENDLY) isEcoFriendlySelected) (getString ECO_FRIENDLY) isEcoFriendlySelected
+                pillItems push state (OnClickVehicalOffer (getEN RADIO) isRadioSelected) (getString RADIO) isRadioSelected
             ,   pillItems push state (OnClickVehicalOffer (getEN DEVICE_CHARGING) isDeviceChargingSelected) (getString DEVICE_CHARGING) isDeviceChargingSelected
             ]
         ,   linearLayout[
@@ -446,6 +460,12 @@ vehicalOffer push state =
             ][
                 pillItems push state (OnClickVehicalOffer (getEN BOOT_SPACE) isBootSpaceSelected) (getString BOOT_SPACE) isBootSpaceSelected
             ,   pillItems push state (OnClickVehicalOffer (getEN PET_FRIENDLY) isPetFriendly) (getString PET_FRIENDLY) isPetFriendly
+            ]
+        ,   linearLayout[
+                width MATCH_PARENT
+            ,   height WRAP_CONTENT
+            ][
+                pill push state (OnClickVehicalOffer (getEN ECO_FRIENDLY) isEcoFriendlySelected) (getString ECO_FRIENDLY) isEcoFriendlySelected
             ]
         ]
     ]

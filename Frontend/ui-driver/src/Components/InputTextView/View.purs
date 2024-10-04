@@ -53,6 +53,7 @@ inputTextView push state =
   , cornerRadii $ Corners 20.0 true true false false
   , clickable true
   , alignParentBottom "true,-1"
+  , adjustViewWithKeyboard "true"
   ][  
     linearLayout[
         width MATCH_PARENT

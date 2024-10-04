@@ -1748,3 +1748,6 @@ getTA stringKey =
         METRO_RIDE_COMPLETED -> "மெட்ரோ சவாரி முடிந்தது"
         OR_RIDE_IS_CANCELLED_BY_CUSTOMER -> "பயணம் வாடிக்கையாளர் மூலம் ரத்து செய்யப்பட்டது."
         THE_RIDE_STARTS -> "சவாரி தொடங்குகிறது "
+        GOOD_SERVICES -> "நல்ல சேவை"
+        SMOOTH_DRIVING -> "மென்மையான ஓட்டம்"
+        NO_CANCELLATION -> "ரத்து இல்லை"

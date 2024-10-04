@@ -1748,3 +1748,6 @@ getHI stringKey =
         METRO_RIDE_COMPLETED -> "मेट्रो सवारी पूरी हुई"
         OR_RIDE_IS_CANCELLED_BY_CUSTOMER -> "यात्रा ग्राहक द्वारा रद्द कर दी गई है।"
         THE_RIDE_STARTS -> "सवारी शुरू हो गई है"
+        GOOD_SERVICES -> "अच्छी सेवा"
+        SMOOTH_DRIVING -> "स्मूद ड्राइविंग"
+        NO_CANCELLATION -> "कोई रद्द नहीं"
