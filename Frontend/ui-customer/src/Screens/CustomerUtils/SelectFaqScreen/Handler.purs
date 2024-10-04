@@ -42,7 +42,6 @@ import Data.Maybe
 import Components.ChatView (makeChatComponent')
 import Screens.SelectFaqScreen.Transformer
 import Engineering.Helpers.Commons (getCurrentUTC)
-import Screens.RideSelectionScreen.Controller (getTitle)
 import Screens.SelectFaqScreen.ScreenData
 import Components.IssueView (IssueInfo)
 import Debug (spy)
@@ -84,13 +83,12 @@ goToFaqScreenHandler :: CategoryListType -> ST.SelectFaqScreenState -> FlowBT St
 goToFaqScreenHandler selectedCategory updatedState = do
   modifyScreenState $ SelectFaqScreenStateType (\_ -> updatedState)
   let language = fetchLanguage $ getLanguageLocale languageKey
-  let categoryName' = getTitle $ fromMaybe "" selectedCategory.categoryAction
   (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" "" ""
   let messages' = DA.mapWithIndex (\index (Message currMessage) -> {title : (fromMaybe "" currMessage.messageTitle), description : currMessage.message, isExpanded : false, id : currMessage.id, action : currMessage.messageAction, referenceCategoryId : currMessage.referenceCategoryId, referenceOptionId : currMessage.referenceOptionId, label : currMessage.label}) getOptionsRes.messages
   modifyScreenState $ FaqScreenStateType (
     \updatedState ->  updatedState {
       data {
-        categoryName = categoryName',
+        categoryName = fromMaybe "FAQs" selectedCategory.categoryAction,
         dropDownList = messages',
         maxAllowedRideAge = selectedCategory.maxAllowedRideAge
       }
@@ -113,7 +111,6 @@ goToChatScreenHandler selectedCategory updatedState =  do
         timestamp : getCurrentUTC ""
       }
     ) getOptionsRes.messages
-    categoryName = getTitle $ fromMaybe "" selectedCategory.categoryAction
 
   modifyScreenState $ ReportIssueChatScreenStateType (
     \updatedState ->  updatedState {

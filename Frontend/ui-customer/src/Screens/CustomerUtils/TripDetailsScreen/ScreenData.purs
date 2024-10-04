@@ -39,7 +39,7 @@ initData = {
       categories : []
   },
   props: {
-    reportIssue : false,
+    reportIssue : true,
     issueReported : false,
     activateSubmit : false,
     fromMyRides : Home,

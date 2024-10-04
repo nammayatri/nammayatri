@@ -41,7 +41,6 @@ import Data.Maybe
 import Components.ChatView (makeChatComponent', makeChatComponent)
 import Screens.FaqScreen.Transformer
 import Engineering.Helpers.Commons (getCurrentUTC)
-import Screens.RideSelectionScreen.Controller (getTitle)
 import Screens.FaqScreen.ScreenData
 import Components.IssueView (IssueInfo)
 import Debug

@@ -26,7 +26,6 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..))
-import Screens.RideSelectionScreen.Controller (getTitle)
 import Storage as Storage
 import Styles.Colors as Color
 import Data.Maybe 
@@ -110,7 +109,7 @@ genericHeaderConfig state = let
       , accessibilityHint = "Back Button"
       } 
     , textConfig {
-        text = (getTitle (fromMaybe "" state.selectedCategory.categoryAction))
+        text = getString REPORT_AN_ISSUE
       , color = Color.darkCharcoal
       }
     , suffixImageConfig {

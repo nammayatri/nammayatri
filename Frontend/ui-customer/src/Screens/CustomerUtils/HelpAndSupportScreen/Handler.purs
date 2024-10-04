@@ -42,11 +42,12 @@ import Data.Maybe
 import Components.ChatView (makeChatComponent')
 import Screens.HelpAndSupportScreen.Transformer(reportIssueMessageTransformer)
 import Engineering.Helpers.Commons (getCurrentUTC)
-import Screens.RideSelectionScreen.Controller (getTitle)
 import Screens.HelpAndSupportScreen.ScreenData
 import Components.IssueView (IssueInfo)
 import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
 import Debug (spy)
+import Language.Strings (getString)
+import Language.Types
 
 helpAndSupportScreen :: FlowBT String FlowState
 helpAndSupportScreen = do
@@ -226,13 +227,12 @@ goToChatScreenHandler selectedCategory updatedState =  do
         timestamp : getCurrentUTC ""
       }
     ) getOptionsRes.messages
-    categoryName = getTitle $ fromMaybe "" selectedCategory.categoryAction
 
   modifyScreenState $ ReportIssueChatScreenStateType (
     \updatedState ->  updatedState {
       data {
         chats = chats'
-      , selectedCategory = selectedCategory {categoryName = categoryName}
+      , selectedCategory = selectedCategory {categoryName = getString REPORT_AN_ISSUE}
       , options = options'
       , chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{
           messages = messages'
@@ -245,11 +245,10 @@ goToChatScreenHandler selectedCategory updatedState =  do
 goToSelectFaqScreenHandler :: CategoryListType -> HelpAndSupportScreenState -> FlowBT String FlowState
 goToSelectFaqScreenHandler selectedCategory updatedState = do 
   modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
-  let categoryName' = getTitle $ fromMaybe "" selectedCategory.categoryAction
   modifyScreenState $ SelectFaqScreenStateType (
     \updatedState ->  updatedState {
       data {
-        categoryName = categoryName'
+        categoryName = getString FAQ
       }
     }
   )
@@ -265,7 +264,6 @@ goToOldChatScreenHandler selectedIssue updatedState = do
   let 
     options' = DA.mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option)}) issueInfoRes.options
     messages' = DA.mapWithIndex (\_ (ChatDetail currMessage) -> makeChatComponent' (reportIssueMessageTransformer (fromMaybe "" currMessage.content)) currMessage.title currMessage.actionText (if currMessage.sender == "USER" then "Customer" else "Bot") currMessage.timestamp currMessage.chatType 0)issueInfoRes.chats
-    categoryName = getTitle issueInfoRes.categoryLabel
     showStillHaveIssue' = case (DA.last issueInfoRes.chats) of
       Just (ChatDetail msg) -> (fromMaybe "" msg.label) == "AUTO_MARKED_RESOLVED"
       Nothing -> false 
@@ -276,7 +274,7 @@ goToOldChatScreenHandler selectedIssue updatedState = do
         entryPoint = ReportIssueChatScreenData.OldChatEntry
         , showStillHaveIssue = showStillHaveIssue'
         , selectedCategory = {
-              categoryName : categoryName
+              categoryName : getString REPORT_AN_ISSUE
             , categoryImageUrl : Nothing
             , categoryAction : Nothing
             , categoryId : issueInfoRes.categoryId
