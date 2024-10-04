@@ -276,6 +276,7 @@ MerchantServiceUsageConfig:
     notifyPerson: NotificationService
     getDistances: MapsService
     getRoutes: MapsService
+    getFrfsAutocompleteDistances: MapsService
     snapToRoad: MapsService
     getPlaceName: MapsService
     getPickupRoutes: MapsService
@@ -306,12 +307,15 @@ MerchantServiceUsageConfig:
 
   beamType:
     cancelPaymentIntent: Maybe PaymentService
+    getFrfsAutocompleteDistances: Maybe MapsService
 
   fromTType:
     cancelPaymentIntent: fromMaybe (Kernel.External.Payment.Types.Stripe) cancelPaymentIntent|E
+    getFrfsAutocompleteDistances: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
 
   toTType:
     cancelPaymentIntent: Kernel.Prelude.Just|I
+    getFrfsAutocompleteDistances: Kernel.Prelude.Just|I
 
   beamInstance:
     - MakeTableInstances
@@ -363,6 +367,7 @@ MerchantServiceUsageConfig:
     createSetupIntent: "'Stripe'"
     deleteCard: "'Stripe'"
     getDistancesForScheduledRides: "'OSRM'"
+    getFrfsAutocompleteDistances: "'OSRM'"
 
 MerchantPaymentMethod:
   derives: "Generic,'UsageSafety"

@@ -38,6 +38,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     getDistancesForCancelRide :: B.C f Kernel.External.Maps.Types.MapsService,
     getDistancesForScheduledRides :: B.C f Kernel.External.Maps.Types.MapsService,
     getExophone :: B.C f Kernel.External.Call.Types.CallService,
+    getFrfsAutocompleteDistances :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
     getPickupRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
     getPlaceDetails :: B.C f Kernel.External.Maps.Types.MapsService,
     getPlaceName :: B.C f Kernel.External.Maps.Types.MapsService,

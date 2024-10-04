@@ -6,6 +6,7 @@ module Storage.Queries.OrphanInstances.MerchantServiceUsageConfig where
 import qualified Domain.Types.MerchantServiceUsageConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Payment.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -35,6 +36,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             getDistancesForCancelRide = getDistancesForCancelRide,
             getDistancesForScheduledRides = getDistancesForScheduledRides,
             getExophone = getExophone,
+            getFrfsAutocompleteDistances = fromMaybe Kernel.External.Maps.Types.OSRM getFrfsAutocompleteDistances,
             getPickupRoutes = getPickupRoutes,
             getPlaceDetails = getPlaceDetails,
             getPlaceName = getPlaceName,
@@ -73,6 +75,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.getDistancesForCancelRide = getDistancesForCancelRide,
         Beam.getDistancesForScheduledRides = getDistancesForScheduledRides,
         Beam.getExophone = getExophone,
+        Beam.getFrfsAutocompleteDistances = Kernel.Prelude.Just getFrfsAutocompleteDistances,
         Beam.getPickupRoutes = getPickupRoutes,
         Beam.getPlaceDetails = getPlaceDetails,
         Beam.getPlaceName = getPlaceName,

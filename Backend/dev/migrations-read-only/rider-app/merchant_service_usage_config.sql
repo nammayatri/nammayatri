@@ -55,3 +55,8 @@ ALTER TABLE atlas_app.merchant_service_usage_config ALTER COLUMN get_distances_f
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN cancel_payment_intent text  default 'Stripe';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_frfs_autocomplete_distances text  default 'OSRM';

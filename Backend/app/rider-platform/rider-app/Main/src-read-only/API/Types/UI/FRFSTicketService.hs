@@ -21,6 +21,10 @@ import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
+data AutocompleteRes = AutocompleteRes {routes :: [API.Types.UI.FRFSTicketService.FRFSRouteAPI], stops :: [API.Types.UI.FRFSTicketService.Stop]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSBookingPaymentAPI = FRFSBookingPaymentAPI {paymentOrder :: Data.Maybe.Maybe Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp, status :: API.Types.UI.FRFSTicketService.FRFSBookingPaymentStatusAPI}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -139,4 +143,8 @@ data StationType
   | TRANSIT
   | INTERMEDIATE
   deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data Stop = Stop {distance :: Kernel.Types.Common.Meters, stopCode :: Data.Text.Text, stopName :: Data.Text.Text}
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

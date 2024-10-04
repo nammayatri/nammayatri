@@ -20,11 +20,13 @@ module Tools.Maps
     getPlaceDetails,
     getPlaceName,
     getRoutes,
+    getFrfsAutocompleteDistances,
     snapToRoad,
     getPickupRoutes,
     getTripRoutes,
     getDistanceForCancelRide,
     getDistanceForScheduledRides,
+    getMerchantOperatingCityId,
   )
 where
 
@@ -108,6 +110,17 @@ getPickupRoutes personId merchantId mbMOCId req = do
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mOCId <- getMerchantOperatingCityId personId mbMOCId
   runWithServiceConfig (Maps.getRoutes merchant.isAvoidToll) (.getPickupRoutes) merchantId mOCId req
+
+getFrfsAutocompleteDistances ::
+  ( ServiceFlow m r,
+    HasCoordinates a,
+    HasCoordinates b
+  ) =>
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  GetDistancesReq a b ->
+  m (GetDistancesResp a b)
+getFrfsAutocompleteDistances = runWithServiceConfig Maps.getDistances (.getFrfsAutocompleteDistances)
 
 getTripRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
 getTripRoutes personId merchantId mbMOCId req = do

@@ -123,6 +123,15 @@ types:
     endPoint: LatLong
     derive: "Show"
 
+  AutocompleteRes:
+    routes: [FRFSRouteAPI]
+    stops: [Stop]
+
+  Stop:
+    stopCode: Text
+    stopName: Text
+    distance: Meters
+
 apis:
   # GET metro/bus routes for the merchant city
   - GET:
@@ -131,10 +140,16 @@ apis:
       mandatoryQuery:
         vehicleType: VehicleCategory
         city: City
+      query:
+        startStationCode: Text
+        endStationCode: Text
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSRouteAPI]"
 
   # GET metro/bus stops for the merchant city
+  # - Get all stations when routeCode and startStationCode is Unknown.
+  # - Get all stations on a Route when only routeCode is Known.
+  # - Get all end stations when startStationCode is Unknown, further filter if routeCode is also Unknown.
   - GET:
       endpoint: /frfs/stations
       auth: TokenAuth
@@ -143,6 +158,7 @@ apis:
       query:
         city: City
         routeCode: Text
+        startStationCode: Text
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
 
@@ -245,3 +261,15 @@ apis:
       auth: TokenAuth
       response:
         type: API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
+
+  - GET:
+      endpoint: /frfs/autocomplete
+      auth: TokenAuth
+      mandatoryQuery:
+        city: City
+        location: LatLong
+        vehicleType: VehicleCategory
+      query:
+        text: Text
+      response:
+        type: "[API.Types.UI.FRFSTicketService.AutocompleteRes]"

@@ -32,3 +32,9 @@ ALTER TABLE atlas_app.frfs_config ADD COLUMN is_cancellation_allowed boolean  de
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_config ADD COLUMN bus_station_ttl integer  default 1800;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_config ADD COLUMN straight_line_distance integer  default 5000;
+ALTER TABLE atlas_app.frfs_config ADD COLUMN radius integer  default 3000;
