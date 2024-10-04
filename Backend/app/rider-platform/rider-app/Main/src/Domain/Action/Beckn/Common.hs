@@ -429,7 +429,7 @@ rideAssignedReqHandler req = do
             encReceiverMobileNumber <- receiverPerson.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
             let exophoneNumber =
                   maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExoPhone
-            let trackLink = riderConfig.trackingShortUrlPattern <> ride.id.getId
+            let trackLink = Notify.buildTemplate [("rideId", ride.id.getId), ("vp", "delivery")] riderConfig.trackingShortUrlPattern
             let senderSmsReq =
                   MessageBuilder.BuildDeliveryMessageReq
                     { MessageBuilder.driverName = ride.driverName,
@@ -513,7 +513,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
       let countryCode = fromMaybe "+91" receiverPerson.mobileCountryCode
       let phoneNumber = countryCode <> receiverMobileNumber
       endOtp <- fromMaybeM (InternalError "EndOtp not found to be send in sms for delivery receiver") endOtp_
-      let trackLink = riderConfig.trackingShortUrlPattern <> ride.id.getId
+      let trackLink = Notify.buildTemplate [("rideId", ride.id.getId), ("vp", "delivery")] riderConfig.trackingShortUrlPattern
       let exophoneNumber =
             maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExoPhone
       let receiverSmsReq =
