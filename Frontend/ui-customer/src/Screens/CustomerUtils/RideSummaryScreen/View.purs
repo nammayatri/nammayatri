@@ -662,7 +662,6 @@ driverDetailsView push state =
     , whiteSeperator
     , carDetailsView state
     ]
-    -- , carDetailsView state 
   ]
 
 carDetailsView ::  forall w. RideSummaryScreenState -> PrestoDOM (Effect Unit) w 
@@ -674,26 +673,17 @@ carDetailsView state =
     height WRAP_CONTENT,
     width MATCH_PARENT,
     orientation HORIZONTAL
-  ][
-    linearLayout[
-        height WRAP_CONTENT,
-        width WRAP_CONTENT,
-        padding $ PaddingHorizontal 4 4
-      ][
-        textView $ [
-          height WRAP_CONTENT,
-          text $ driverInfo.vehicleColor <> " " <> driverInfo.vehicleModel,
-          margin $ MarginVertical 8 8,
-          color $ Color.black700
-        ]<> FontStyle.paragraphText TypoGraphy
-    ]
-      , linearLayout [
-          height WRAP_CONTENT,
-          weight 1.0,
-          visibility VISIBLE
-        ][]
-    , vehiclePlateView state
-    ]
+  ][ textView $ 
+   [ height WRAP_CONTENT
+    , weight 1.0
+    , singleLine false 
+    , maxLines 2
+    , text $  driverInfo.vehicleColor <> " " <> driverInfo.vehicleModel
+    , margin $ Margin 4 8 4 8
+    , color $ Color.black700
+    ] <> FontStyle.paragraphText TypoGraphy
+   , vehiclePlateView state
+  ]
 
 vehiclePlateView :: forall w. RideSummaryScreenState -> PrestoDOM (Effect Unit) w
 vehiclePlateView state =  
@@ -708,12 +698,13 @@ vehiclePlateView state =
     , gravity RIGHT
     , accessibilityHint $ "Vehicle Number " <> (DS.replaceAll (DS.Pattern "") (DS.Replacement " ") vehicleNumber)
     , accessibility DISABLE_DESCENDANT
+    , margin $ MarginTop 8
     ][linearLayout
     [ height WRAP_CONTENT
-    , width WRAP_CONTENT
+    , width MATCH_PARENT
     ][ linearLayout
       [ height $ V 38
-      , width WRAP_CONTENT
+      , width MATCH_PARENT
       , background $ Color.yellow900
       , cornerRadius 4.0
       , orientation HORIZONTAL
@@ -722,7 +713,7 @@ vehiclePlateView state =
       , alignParentBottom "true,-1"
       ][linearLayout
         [ height $ V 34
-        , width WRAP_CONTENT
+        , width MATCH_PARENT
         , stroke $ "2," <> Color.black
         , cornerRadius 4.0
         , orientation HORIZONTAL
@@ -735,8 +726,9 @@ vehiclePlateView state =
             , width $ V 22
             ]
             , textView $
-            [  margin $ Margin 2 2 2 2
-              , weight 1.0
+            [  margin $ MarginHorizontal 4 4
+              , singleLine true 
+              , maxLines 1 
               , height MATCH_PARENT
               , text $ (makeNumber vehicleNumber)
               , color Color.black800

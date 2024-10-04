@@ -1623,7 +1623,7 @@ getML stringKey =
         TIME_FARE -> "സമയ ചാർജ്"
         TRIP_FARE_INCLUDES -> "യാത്രാ നിരക്കില്‍ ഉള്‍പ്പെടുന്നു"
         TRIP_FARE_EXCLUDES -> "യാത്രാ നിരക്കില്‍ നിന്ന് ഒഴിവാക്കുന്നു"
-        EXTRAS_WILL_BE_CHARGED_AT -> "അധികം ഈടാക്കപ്പെടും"
+        EXTRAS_WILL_BE_CHARGED_AT -> "അധിക ഉപയോക്തൃ നിരക്ക് ചാർജ് ചെയ്യപ്പെടും"
         AND -> " ഒപ്പം "
         FIXED_CHARGES -> "സ്ഥിര ചാർജ്"
         PICKUP_DATE_AND_TIME -> "പിക്കപ്പ് തീയതിയും സമയവും"

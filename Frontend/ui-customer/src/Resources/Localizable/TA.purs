@@ -1642,7 +1642,7 @@ getTA stringKey =
     TIME_FARE -> "நேர கட்டணம்"
     TRIP_FARE_INCLUDES -> "பயண கட்டணத்தில் சேர்க்கப்பட்டுள்ளது"
     TRIP_FARE_EXCLUDES -> "பயண கட்டணத்தில் சேர்க்கப்படவில்லை"
-    EXTRAS_WILL_BE_CHARGED_AT -> "கூடுதல் கட்டணம் விதிக்கப்படும்"
+    EXTRAS_WILL_BE_CHARGED_AT -> "அதிக பயன்பாட்டிற்கு கட்டணம் விதிக்கப்படும்"
     AND -> " மற்றும் "
     FIXED_CHARGES -> "நிலையான கட்டணம்"
     PICKUP_DATE_AND_TIME -> "பிக்கப் தேதி மற்றும் நேரம்"

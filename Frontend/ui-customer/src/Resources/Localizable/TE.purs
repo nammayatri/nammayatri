@@ -1637,7 +1637,7 @@ getTE stringKey =
     TIME_FARE -> "సమయ ఛార్జ్"
     TRIP_FARE_INCLUDES -> "ప్రయాణ ఛార్జ్‌లో చేర్చబడింది"
     TRIP_FARE_EXCLUDES -> "ప్రయాణ ఛార్జ్‌లో ఉండదు"
-    EXTRAS_WILL_BE_CHARGED_AT -> "అదనపు చార్జీలు చేయబడతాయి"
+    EXTRAS_WILL_BE_CHARGED_AT -> "అదనపు ఉపయోగానికి ఛార్జ్ చేయబడుతుంది"
     AND -> " మరియు "
     FIXED_CHARGES -> "స్థిర ఛార్జీలు"
     PICKUP_DATE_AND_TIME -> "పికప్ తేదీ మరియు సమయం"

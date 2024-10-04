@@ -1630,7 +1630,7 @@ getEN stringKey =
         TIME_FARE -> "Time Fare"
         TRIP_FARE_INCLUDES -> "Trip Fare Includes"
         TRIP_FARE_EXCLUDES -> "Trip Fare Excludes"
-        EXTRAS_WILL_BE_CHARGED_AT -> "Extras Will be Charged At"
+        EXTRAS_WILL_BE_CHARGED_AT -> "Extra usage will be charged at"
         AND -> " and "
         FIXED_CHARGES -> "Fixed Charges"
         PICKUP_DATE_AND_TIME -> "Pickup Date & Time"

@@ -1627,7 +1627,7 @@ getFR stringKey =
         TIME_FARE -> "Tarif horaire"
         TRIP_FARE_INCLUDES -> "Le tarif du trajet inclut"
         TRIP_FARE_EXCLUDES -> "Le tarif du trajet exclut"
-        EXTRAS_WILL_BE_CHARGED_AT -> "Les suppléments seront facturés à"
+        EXTRAS_WILL_BE_CHARGED_AT -> "L'utilisation supplémentaire sera facturée à"
         AND -> " et "
         FIXED_CHARGES -> "Frais fixes"
         PICKUP_DATE_AND_TIME -> "Date et heure de prise en charge"

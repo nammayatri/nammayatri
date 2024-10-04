@@ -166,7 +166,7 @@ checkRideStatus rideAssigned prioritizeRating = do
                         maybe 
                           Nothing 
                           (\ride -> 
-                            let rideScheduledAt = fromMaybe "" ride.rideScheduledAtUTC
+                            let rideScheduledAt = fromMaybe (EHC.getUTCAfterNSeconds (EHC.getCurrentUTC "") 1800) ride.rideScheduledAtUTC
                                 rideScheduledTimeInIST = convertUTCtoISC rideScheduledAt "D" <> " " <> convertUTCtoISC rideScheduledAt "MMMM" <> " " <> convertUTCtoISC rideScheduledAt "YYYY" <> " , " <> convertUTCtoISC rideScheduledAt "HH" <> ":" <> convertUTCtoISC rideScheduledAt "mm"
                             in if ride.status == "NEW" 
                                 then Just {bookingId : "", rideScheduledAt : rideScheduledTimeInIST } 
