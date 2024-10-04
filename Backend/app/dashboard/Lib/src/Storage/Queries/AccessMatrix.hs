@@ -32,7 +32,7 @@ findByRoleIdAndEntityAndActionType ::
   BeamFlow m r =>
   Id DRole.Role ->
   DMatrix.ApiEntity ->
-  DMatrix.UserActionType ->
+  DMatrix.UserActionTypeWrapper ->
   m (Maybe DMatrix.AccessMatrixItem)
 findByRoleIdAndEntityAndActionType roleId apiEntity userActionType =
   findOneWithKV
@@ -60,7 +60,7 @@ findAllByRoleId roleId = findAllWithKV [Se.Is BeamAM.roleId $ Se.Eq $ getId role
 updateUserAccessType ::
   BeamFlow m r =>
   Id DMatrix.AccessMatrixItem ->
-  DMatrix.UserActionType ->
+  DMatrix.UserActionTypeWrapper ->
   DMatrix.UserAccessType ->
   m ()
 updateUserAccessType accessMatrixItemId userActionType userAccessType = do
