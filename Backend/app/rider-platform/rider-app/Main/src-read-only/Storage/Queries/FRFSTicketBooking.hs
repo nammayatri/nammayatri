@@ -166,6 +166,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.toStationId (Kernel.Types.Id.getId toStationId),
       Se.Set Beam.validTill validTill,
       Se.Set Beam.vehicleType vehicleType,
+      Se.Set Beam.vehicleVariant (Kernel.Prelude.Just vehicleVariant),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]

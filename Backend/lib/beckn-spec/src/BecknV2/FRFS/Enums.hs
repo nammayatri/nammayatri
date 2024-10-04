@@ -74,6 +74,11 @@ data VehicleCategory = METRO | BUS
 
 $(mkHttpInstancesForEnum ''VehicleCategory)
 
+data VehicleVariant = METRO_TRAIN | ASHOK_LEYLAND_AC | MIDI_AC | VOLVO_AC | SPECIAL | MIDI_NON_AC | GSAGAR | EXECUTIVE | ELECTRIC_VEHICLE | ORDINARY
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''VehicleVariant)
+
 data StopType = START | END | INTERMEDIATE_STOP
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
 

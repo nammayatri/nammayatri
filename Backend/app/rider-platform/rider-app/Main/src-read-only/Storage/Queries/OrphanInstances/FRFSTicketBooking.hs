@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.FRFSTicketBooking where
 
+import qualified BecknV2.FRFS.Enums
 import qualified Domain.Types.FRFSTicketBooking
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -58,6 +59,7 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             toStationId = Kernel.Types.Id.Id toStationId,
             validTill = validTill,
             vehicleType = vehicleType,
+            vehicleVariant = fromMaybe BecknV2.FRFS.Enums.METRO_TRAIN vehicleVariant,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -105,6 +107,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.toStationId = Kernel.Types.Id.getId toStationId,
         Beam.validTill = validTill,
         Beam.vehicleType = vehicleType,
+        Beam.vehicleVariant = Kernel.Prelude.Just vehicleVariant,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

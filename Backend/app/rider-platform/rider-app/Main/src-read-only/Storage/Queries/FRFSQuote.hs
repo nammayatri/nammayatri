@@ -4,6 +4,7 @@
 
 module Storage.Queries.FRFSQuote where
 
+import qualified BecknV2.FRFS.Enums
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import Kernel.Beam.Functions
@@ -60,6 +61,7 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.toStationId (Kernel.Types.Id.getId toStationId),
       Se.Set Beam.validTill validTill,
       Se.Set Beam.vehicleType vehicleType,
+      Se.Set Beam.vehicleVariant (Kernel.Prelude.Just vehicleVariant),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -94,6 +96,7 @@ instance FromTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
             toStationId = Kernel.Types.Id.Id toStationId,
             validTill = validTill,
             vehicleType = vehicleType,
+            vehicleVariant = fromMaybe BecknV2.FRFS.Enums.METRO_TRAIN vehicleVariant,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -126,6 +129,7 @@ instance ToTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
         Beam.toStationId = Kernel.Types.Id.getId toStationId,
         Beam.validTill = validTill,
         Beam.vehicleType = vehicleType,
+        Beam.vehicleVariant = Kernel.Prelude.Just vehicleVariant,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

@@ -1,4 +1,5 @@
 imports:
+  Base64: Kernel.Types.Base64
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   BaseUrl: Servant.Client.Core
@@ -22,6 +23,7 @@ BecknConfig:
     vehicleCategory: VehicleCategory|NoRelation
     collectedBy: Network
     verifiedBy: Network
+    verificationCipher: Maybe Base64
     staticTermsUrl: Maybe BaseUrl
     buyerFinderFee: Maybe Text # becomes redundant
     settlementWindow: Maybe Text
@@ -36,6 +38,8 @@ BecknConfig:
     ratingTTLSec: Maybe Int
     cancelTTLSec: Maybe Int
     provider: Provider
+
+  derives: "Generic,Show,FromJSON,ToJSON"
 
   types:
     Provider:

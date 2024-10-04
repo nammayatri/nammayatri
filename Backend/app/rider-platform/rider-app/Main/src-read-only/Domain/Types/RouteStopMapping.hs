@@ -15,7 +15,8 @@ import qualified Kernel.Types.TimeBound
 import qualified Tools.Beam.UtilsTH
 
 data RouteStopMapping = RouteStopMapping
-  { merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+  { code :: Kernel.Prelude.Text,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     routeCode :: Kernel.Prelude.Text,
     sequenceNum :: Kernel.Prelude.Int,

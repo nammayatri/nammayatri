@@ -21,6 +21,7 @@ where
 
 import qualified "rider-app" API.Dashboard as BAP
 import qualified API.Types.RiderPlatform.Management.Booking as BookingDSL
+import qualified API.Types.RiderPlatform.Management.FRFSTicket as FRFSTicketDSL
 import qualified API.Types.RiderPlatform.Management.Invoice as InvoiceDSL
 import qualified API.Types.RiderPlatform.Management.Merchant as MerchantDSL
 import qualified "rider-app" API.Types.UI.TicketService as DTB
@@ -66,7 +67,8 @@ data AppBackendAPIs = AppBackendAPIs
     hotSpot :: HotSpotAPIs,
     bookingDSL :: BookingDSL.BookingAPIs,
     merchantDSL :: MerchantDSL.MerchantAPIs,
-    invoiceDSL :: InvoiceDSL.InvoiceAPIs
+    invoiceDSL :: InvoiceDSL.InvoiceAPIs,
+    fRFSTicketDSL :: FRFSTicketDSL.FRFSTicketAPIs
   }
 
 data CustomerAPIs = CustomerAPIs
@@ -141,6 +143,7 @@ mkAppBackendAPIs merchantId city token = do
   let bookingDSL = BookingDSL.mkBookingAPIs bookingClientDSL
   let merchantDSL = MerchantDSL.mkMerchantAPIs merchantClientDSL
   let invoiceDSL = InvoiceDSL.mkInvoiceAPIs invoiceClientDSL
+  let fRFSTicketDSL = FRFSTicketDSL.mkFRFSTicketAPIs fRFSTicketClientDSL
   AppBackendAPIs {..}
   where
     customersClient
@@ -151,7 +154,8 @@ mkAppBackendAPIs merchantId city token = do
       :<|> hotSpotClient
       :<|> bookingClientDSL
       :<|> merchantClientDSL
-      :<|> invoiceClientDSL =
+      :<|> invoiceClientDSL
+      :<|> fRFSTicketClientDSL =
         clientWithMerchantAndCity (Proxy :: Proxy BAP.OperationsAPI) merchantId city token
 
     customerList
