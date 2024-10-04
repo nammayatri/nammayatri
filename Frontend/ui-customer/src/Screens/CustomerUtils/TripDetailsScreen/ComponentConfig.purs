@@ -37,7 +37,7 @@ import Data.Array (filter, elem)
 import Common.Animation.Config
 import PrestoDOM.Animation as PrestoAnim
 import Engineering.Helpers.Commons (convertUTCtoISC)
-import Data.Maybe (maybe)
+import Data.Maybe
 
 genericHeaderConfig :: ST.TripDetailsScreenState -> GenericHeader.Config 
 genericHeaderConfig state= let 
@@ -132,14 +132,12 @@ sourceToDestinationConfig state = let
   in sourceToDestinationConfig'
 
 topicsList :: ST.TripDetailsScreenState -> Array CategoryListType
-topicsList state =  
-  let appConfig = getAppConfig Const.appConfig 
-      neededCategories = ["RIDE_RELATED", "LOST_AND_FOUND", "PAYMENT_RELATED", "FARE_DISCREPANCY", "SAFETY"]
-  in 
-  if appConfig.feature.enableSelfServe then 
-    filter (\obj -> maybe false (\action -> 
-      action `elem` neededCategories) obj.categoryAction) state.data.categories
-  else 
+topicsList state =
+  let appConfig = getAppConfig Const.appConfig
+  in
+  if appConfig.feature.enableSelfServe then
+    filter (_.isRideRequired) state.data.categories
+  else
       [{ categoryAction : Just "CONTACT_US"
       , categoryName : getString FOR_OTHER_ISSUES_WRITE_TO_US
       , categoryImageUrl : Just $ fetchImage FF_COMMON_ASSET "ny_ic_clip_board"
@@ -160,9 +158,9 @@ topicsList state =
       }]
 
 listExpandingAnimationConfig :: Boolean -> AnimConfig
-listExpandingAnimationConfig isExpanded = let 
-  config = getConfig isExpanded 
-  animConfig' = animConfig 
+listExpandingAnimationConfig isExpanded = let
+  config = getConfig isExpanded
+  animConfig' = animConfig
           { fromScaleY = config.fromScaleY
           , toScaleY = config.toScaleY
           , fromY = config.fromY
@@ -170,18 +168,18 @@ listExpandingAnimationConfig isExpanded = let
           , repeatCount = PrestoAnim.Repeat 0
           , ifAnim = isExpanded
           , duration = 150
-          } 
+          }
   in animConfig'
 
 getConfig :: Boolean -> {fromScaleY :: Number , toScaleY :: Number, fromY :: Int, toY :: Int}
-getConfig  isExpanded = 
-  if isExpanded then 
+getConfig  isExpanded =
+  if isExpanded then
     { fromScaleY : 0.0
     , toScaleY : 1.0
     , fromY : -100
     , toY : 0
-    } 
-  else  
+    }
+  else
     { fromScaleY : 1.0
     , toScaleY : 0.0
     , fromY : 0

@@ -45,7 +45,7 @@ import Screens.Types (Fares, IndividualRideCardState, ItemState, Stage(..), Zone
 import Storage (isLocalStageOn, getValueToLocalStore, KeyStore(..))
 import Data.Ord (abs)
 import ConfigProvider
-import Screens.RideSelectionScreen.ScreenData 
+import Screens.RideSelectionScreen.ScreenData
 import JBridge (differenceBetweenTwoUTCInMinutes, getSecondsFromUTCTime)
 import Data.Function.Uncurried (runFn2)
 import Helpers.SpecialZoneAndHotSpots (getSpecialTag)
@@ -78,8 +78,8 @@ myRideListTransformerProp listRes selectedCategory = mapMaybe transformRide list
                (RideBookingAPIDetails rideApiDetails) = ride.bookingDetails
                destination = fromMaybe dummyBookingDetails $ if ride.status == "CONFIRMED" then (ride.bookingDetails ^._contents^._stopLocation) else (ride.bookingDetails ^._contents^._toLocation)
                rideType = getFareProductType rideApiDetails.fareProductType
-           in  
-             Just 
+           in
+             Just
                {
                  date : toPropValue (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
                  time : toPropValue (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
@@ -111,17 +111,17 @@ myRideListTransformerProp listRes selectedCategory = mapMaybe transformRide list
                  rideTypeBackground : toPropValue $ Color.white900,
                  cornerRadius : toPropValue $ "0"
                }
-          ) 
+          )
         else Nothing
 
 myRideListTransformer :: Boolean -> Array RideBookingRes -> AppConfig -> Maybe CategoryListType -> Array IndividualRideCardState
 myRideListTransformer isSrcServiceable listRes config mbSelectedCategory = mapMaybe transformRide listRes
-  where 
+  where
     transformRide (RideBookingRes ride) = do
       let rideStatus = fromMaybe "" (ride.rideList !! 0 <#> \(RideAPIEntity ride) -> ride.status)
           isValidRide = findIfRideIsValid mbSelectedCategory rideStatus ride.createdAt ride.status
       if isValidRide
-        then 
+        then
           let (RideBookingAPIDetails rideApiDetails) = ride.bookingDetails
               fares = getFares ride.fareBreakup
               (RideAPIEntity rideDetails) = fromMaybe dummyRideAPIEntity (ride.rideList !!0)
@@ -131,18 +131,18 @@ myRideListTransformer isSrcServiceable listRes config mbSelectedCategory = mapMa
               updatedFareList = getFaresList ride.fareBreakup baseDistanceVal (rideApiDetails.fareProductType == "OneWaySpecialZoneAPIDetails")
               specialTags = getSpecialTag ride.specialLocationTag
               cityStr = getValueToLocalStore CUSTOMER_LOCATION
-              city = getCityFromString cityStr    
+              city = getCityFromString cityStr
               cityConfig = getCityConfig config.cityConfig cityStr
               rideType = getFareProductType rideApiDetails.fareProductType
               autoWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.auto else cityConfig.waitingChargeConfig.auto 
               cabsWaitingCharges = if rideType == FPT.RENTAL then cityConfig.rentalWaitingChargeConfig.cabs else cityConfig.waitingChargeConfig.cabs
               bikeWaitingCharges = cityConfig.waitingChargeConfig.bike
-              waitingCharges = 
+              waitingCharges =
                 if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
                     autoWaitingCharges
                 else if rideDetails.vehicleVariant == "BIKE" then
                     bikeWaitingCharges
-                else 
+                else
                     cabsWaitingCharges
               nightChargeFrom = if city == Delhi then "11 PM" else "10 PM"
               nightChargeTill = "5 AM"
@@ -233,7 +233,7 @@ findIfRideIsValid :: Maybe CategoryListType -> String -> String -> String -> Boo
 findIfRideIsValid mbSelectedCategory rideStatus rideCreatedAt bookingStatus =
   case mbSelectedCategory of
     Just selectedCategory ->
-      let maxAllowedRideAge = fromMaybe defaultMaxAllowedRideAge selectedCategory.maxAllowedRideAge
+      let maxAllowedRideAge = fromMaybe 259200 selectedCategory.maxAllowedRideAge
           currentTimeInSeconds = getSecondsFromUTCTime $ getCurrentUTC ""
           rideCreatedAtInSeconds = getSecondsFromUTCTime rideCreatedAt
           rideStatusIsValid = elem (castRideStatus rideStatus) (fromMaybe ["R_COMPLETED", "R_CANCELLED"] selectedCategory.allowedRideStatuses)
@@ -247,12 +247,3 @@ findIfRideIsValid mbSelectedCategory rideStatus rideCreatedAt bookingStatus =
         "COMPLETED" -> "R_COMPLETED"
         "CANCELLED" -> "R_CANCELLED"
         _ -> rideStatus
-
-    defaultMaxAllowedRideAge :: Int
-    defaultMaxAllowedRideAge = case mbSelectedCategory of
-      Just selectedCategory ->
-        case fromMaybe "" selectedCategory.categoryAction of
-          "LOST_AND_FOUND" -> 86400
-          _ -> 295200
-      Nothing -> 295200
-  

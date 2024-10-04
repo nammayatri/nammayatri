@@ -137,19 +137,19 @@ view push state =
                     ] <> FontStyle.body1 LanguageStyle
                   ]
                   , recentRideView state push
-                ] 
-                  <> [ headingView state $ getString ALL_TOPICS
-                   , if state.data.isFaqListEmpty 
-                      then allTopicsView state push $ topicsList state 
-                      else allTopicsView state push $ addFaqSection $ topicsList state] 
+                ]
+                  <> [ headingView state $ getString REPORT_AN_ISSUE
+                   , if state.data.isFaqListEmpty
+                      then allTopicsView state push $ topicsList state
+                      else allTopicsView state push $ addFaqSection $ topicsList state]
                   <> ( if state.data.config.feature.enableSelfServe then [
                           if DA.null state.data.ongoingIssueList && DA.null state.data.resolvedIssueList then textView[height $ V 0, visibility GONE] else headingView state $ getString YOUR_REPORTS
                           , allTopicsView state push $ reportsList state
                       ] else [])
               )
             ]
-      , apiFailureView state push  
-      ] 
+      , apiFailureView state push
+      ]
     , deleteAccountView state push
   ] <> (if state.props.isCallConfirmation then [PopUpModal.view (push <<< PopupModelActionController) (callConfirmationPopup state)] else [])
     <> (if state.data.accountStatus == ST.CONFIRM_REQ then [PopUpModal.view (push <<<  PopUpModalAction) (requestDeletePopUp state )] else [])

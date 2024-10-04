@@ -111,7 +111,6 @@ import Screens.DataExplainWithFetch.Controller as DataExplainWithFetchC
 import Screens.RentalBookingFlow.RideScheduledScreen.ScreenData as RideScheduledScreenData
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationConfig, getTipViewData,fetchRideDetails,fetchExtraFares)
-import Screens.RideSelectionScreen.Controller (getTitle)
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SearchLocationScreen.Controller as SearchLocationController
 import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
@@ -2499,7 +2498,7 @@ homeScreenFlow = do
                 )
                 getOptionsRes.messages
           void $ lift $ lift $ toggleLoader false
-          modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data { entryPoint = ReportIssueChatScreenData.HomeScreenEntry, chats = chats', tripId = Just rideId, selectedCategory = { categoryName : getTitle category.label, categoryId : category.issueCategoryId, categoryImageUrl : Nothing, categoryAction : Nothing, isRideRequired : false, maxAllowedRideAge : Nothing, categoryType : "Category", allowedRideStatuses : Nothing}, options = getOptionsRes', chatConfig { messages = messages' }, selectedRide = Nothing } })
+          modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data { entryPoint = ReportIssueChatScreenData.HomeScreenEntry, chats = chats', tripId = Just rideId, selectedCategory = { categoryName : getString STR.REPORT_AN_ISSUE, categoryId : category.issueCategoryId, categoryImageUrl : Nothing, categoryAction : Nothing, isRideRequired : false, maxAllowedRideAge : Nothing, categoryType : "Category", allowedRideStatuses : Nothing}, options = getOptionsRes', chatConfig { messages = messages' }, selectedRide = Nothing } })
           flowRouter IssueReportChatScreenFlow
         Nothing -> do
           void $ lift $ lift $ toggleLoader false
@@ -3086,7 +3085,7 @@ tripDetailsScreenFlow = do
                       chatType : "IssueMessage",
                       timestamp : getCurrentUTC ""
                     }) getOptionsRes.messages
-          categoryName = getTitle $ fromMaybe "" selectedCategory.categoryAction
+          categoryName = getString STR.REPORT_AN_ISSUE
           selectedCategory' = selectedCategory  {categoryName = categoryName}
           merchantExoPhone' = if updatedState.data.selectedItem.merchantExoPhone == "" then Nothing else Just updatedState.data.selectedItem.merchantExoPhone
       modifyScreenState $ ReportIssueChatScreenStateType (\ reportIssueChatState -> reportIssueChatState {

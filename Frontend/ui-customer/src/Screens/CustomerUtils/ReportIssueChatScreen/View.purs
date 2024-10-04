@@ -168,7 +168,7 @@ headerLayout state push =
         , textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text state.data.selectedCategory.categoryName
+              , text $ getString REPORT_AN_ISSUE
               , margin $ MarginLeft 5
               , weight 1.0
               , color Color.black900
@@ -237,7 +237,7 @@ chatView push state =
 
 submitView :: (Action -> Effect Unit) -> ReportIssueChatScreenState -> forall w. PrestoDOM (Effect Unit) w
 submitView push state =
-  let enableSubmit = (STR.length (STR.trim state.data.messageToBeSent)) > 0 || (isJust state.data.uploadedAudioId) || (length state.data.uploadedImagesIds) > 0
+  let enableSubmit = (STR.length (STR.trim state.data.messageToBeSent)) > 10 || (isJust state.data.uploadedAudioId) || (length state.data.uploadedImagesIds) > 0
   in 
   linearLayout
     [ height WRAP_CONTENT

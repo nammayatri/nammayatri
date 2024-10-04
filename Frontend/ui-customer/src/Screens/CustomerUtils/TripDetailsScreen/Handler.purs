@@ -32,7 +32,7 @@ tripDetailsScreen = do
     act <- lift $ lift $ runScreen $ TripDetailsScreen.screen state.tripDetailsScreen
     case act of
         GoBack fromMyRides updatedState -> do
-          modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{issueReported = false, reportIssue = false}})
+          modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {props{issueReported = false, reportIssue = true}})
           case fromMyRides of 
             Home -> App.BackT $ App.NoBack <$> (pure $ GO_TO_HOME updatedState)
             MyRides -> App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDES)

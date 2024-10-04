@@ -52,7 +52,7 @@ genericHeaderConfig state = let
       , enableRipple = true
       } 
     , textConfig {
-        text = state.data.categoryName
+        text = getString FAQ
       , color = Color.darkCharcoal
       }
     , suffixImageConfig {

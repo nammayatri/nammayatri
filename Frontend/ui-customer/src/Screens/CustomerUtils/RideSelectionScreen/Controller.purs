@@ -185,20 +185,3 @@ eval Refresh state = updateAndExit state{props{ receivedResponse = false, loader
 
 eval _ state = update state
 
-getTitle :: String -> String
-getTitle category  = 
-  case category of
-    "APP_RELATED"             -> getString APP_RELATED_ISSUE_PAGE_NAME
-    "RIDE_RELATED"            -> getString VEHICLE_RELATED_ISSUE_PAGE_NAME
-    "DRIVER_RELATED"          -> getString DRIVER_RELATED_ISSUE_PAGE_NAME
-    "LOST_AND_FOUND"          -> getString LOST_AND_FOUND_ISSUE_PAGE_NAME
-    "SOS"                     -> getString SOS_ISSUE_PAGE_NAME
-    "FARE_DISCREPANCY"        -> getString FARE_DISCREPANCIES_ISSUE_PAGE_NAME
-    "PAYMENT_RELATED"         -> getString PAYMENT_RELATED_ISSUE_PAGE_NAME
-    "ACCOUNT_RELATED"         -> getString ACCOUNT_RELATED_ISSUE_PAGE_NAME
-    "OTHER"                   -> getString OTHER_ISSUES
-    "OTHERS"                  -> getString OTHER_ISSUES
-    "SAFETY"                  -> getString SAFETY_ISSUE_PAGE_NAME
-    "PAYMENT_&_FARE_RELATED"  -> getString PAYMENT_AND_FARE_RELATED_ISSUE_PAGE_NAME    
-    "VEHICLE_RELATED"         -> getString VEHICLE_RELATED_ISSUE_PAGE_NAME
-    _                         -> getString ISSUE

@@ -47,9 +47,10 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import MerchantConfig.Types as MT
 import ConfigProvider (getAppConfig)
 import Constants (appConfig)
-import Screens.RideSelectionScreen.Controller (getTitle)
 import Debug
 import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
+import Language.Strings (getString)
+import Language.Types
 
 rideSelection :: FlowBT String FlowState
 rideSelection = do
@@ -135,7 +136,6 @@ selectRideHandler state = do
       _         -> Nothing
 
   let showSubmitComp' = any (\ (Message  message) -> (fromMaybe "" message.label) == "CREATE_TICKET") getOptionsRes.messages 
-      categoryName = getTitle $ fromMaybe "" state.selectedCategory.categoryAction
 
   modifyScreenState $ ReportIssueChatScreenStateType (\_ -> 
     ReportIssueChatScreenData.initData { 
@@ -144,7 +144,7 @@ selectRideHandler state = do
       , chats = chats'
       , tripId = tripId'
       , merchantExoPhone = merchantExoPhone'
-      , selectedCategory = state.selectedCategory {categoryName = categoryName}
+      , selectedCategory = state.selectedCategory {categoryName = getString REPORT_AN_ISSUE}
       , options = getOptionsRes'
       , chatConfig { 
         messages = (globalState.reportIssueChatScreen.data.chatConfig.messages <> messages')
