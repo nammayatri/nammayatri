@@ -43,7 +43,7 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..), Accessiblity(..))
 import RemoteConfig as RC
-import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes, RideShareOptions, LocationAPIEntity(..), DeadKmFare(..),PriceAPIEntityDecimals(..),DistanceWithUnit(..),RideAPIEntity(..),RideBookingListRes)
+import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes, RideShareOptions,GetBusRouteResp,TicketServiceType, LocationAPIEntity(..), DeadKmFare(..),PriceAPIEntityDecimals(..),DistanceWithUnit(..),RideAPIEntity(..),RideBookingListRes)
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent, ChatContacts)
 import Screens(ScreenName)
@@ -1097,14 +1097,15 @@ type HomeScreenStateProps =
   , showEditPickupPopupOnCancel :: Boolean
   , isIntercityFlow :: Boolean 
   , isTripSchedulable :: Boolean
+  , busClicked :: Boolean
+  , ticketServiceType :: API.TicketServiceType
   }
 
 type EditedLocation = {
   gps :: LatLong ,
   address :: Address
 }
-
-data BottomNavBarIcon = TICKETING | MOBILITY
+data BottomNavBarIcon = TICKETING | MOBILITY | BUS_
 
 type BookingTime = {
   rideStartTime :: String,
@@ -2330,6 +2331,7 @@ type TicketStatusScreenProps = {
 
 data TicketStatusEntry = MetroTicketToPaymentStatusEntry
                        | ZooTicketToPaymentStatusEntry
+                       | BusTicketToPaymentStatusEntry
 derive instance genericTicketStatusEntry :: Generic TicketStatusEntry _ 
 instance showTicketStatusEntry :: Show TicketStatusEntry where show = genericShow
 instance eqTicketStatusEntry :: Eq TicketStatusEntry where eq = genericEq
@@ -2357,12 +2359,18 @@ type SearchLocationScreenData =
     defaultGate :: String,
     nearByGates :: Array Location,
     specialZoneCoordinates :: String,
+    activeRideIndex :: Int,
     confirmLocCategory :: ZoneType,
     metroStations :: Array Station,
     updatedMetroStations :: Array Station,
     predictionSelectedFromHome :: LocationListItemState,
     quotesList :: Array QuotesList,
-    rideDetails :: RideDetails
+    rideDetails :: RideDetails,
+    routeSearchedList :: Array GetBusRouteResp,
+    stopsSearchedList :: Array GetBusRouteResp,
+    updatedStopsSearchedList :: Array GetBusRouteResp,
+    updatedRouteSearchedList :: Array GetBusRouteResp,
+    rideType :: RideType
   }
 
 type RideDetails = {
@@ -2397,11 +2405,16 @@ type SearchLocationScreenProps =
   , customerTip :: CustomerTipProps
   , fareProductType :: FareProductType
   , currentEstimateHeight :: Int
+  , routeSearch :: Boolean
+  , routeSelected :: String
   , selectedEstimateHeight :: Int }
 
 data SearchLocationActionType = AddingStopAction 
                               | SearchLocationAction
                               | MetroStationSelectionAction
+                              | BusStationSelectionAction
+                              | BusRouteSelectionAction
+                              
 
 derive instance genericSearchLocationActionType :: Generic SearchLocationActionType _
 instance eqSearchLocationActionType :: Eq SearchLocationActionType where eq = genericEq
@@ -2440,6 +2453,13 @@ type LocationInfo =
     city :: City
   }
   
+data RideType = ROUTES | STOP
+
+derive instance genericRideType :: Generic RideType _
+instance eqRideType :: Eq RideType where eq = genericEq
+instance showRideType :: Show RideType where
+  show ROUTES = "Routes"
+  show STOP = "Stops"
 -- ############################################## NammaSafetyScreenState #############################
 
 
@@ -2718,6 +2738,7 @@ type MetroStation = {
   , address :: Maybe String
   , stationType :: Maybe String
   , color :: Maybe String
+  , distance :: Maybe Int
   , sequenceNum :: Maybe Int
 }
 
@@ -2747,6 +2768,8 @@ type MetroTicketBookingScreenData = {
   , bookingId :: String
   , quoteId :: String
   , quoteResp :: Array MetroQuote
+  , routeSearchedList :: Array GetBusRouteResp
+  , stopsSearchedList :: Array GetBusRouteResp
   , metroBookingConfigResp :: MetroBookingConfigRes
   , eventDiscountAmount :: Maybe Int
 }
@@ -2758,6 +2781,11 @@ type MetroTicketBookingScreenProps = {
 , isButtonActive :: Boolean
 , showMetroBookingTimeError :: Boolean
 , showShimmer :: Boolean
+, busClicked :: Boolean
+, routeList :: Boolean
+, showRouteOptions :: Boolean
+, isEmptyRoute :: String
+, ticketServiceType :: API.TicketServiceType
 }
 
 data MetroTicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote | PaymentSDKPooling

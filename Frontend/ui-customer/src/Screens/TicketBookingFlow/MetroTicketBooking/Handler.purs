@@ -49,8 +49,14 @@ metroTicketBookingScreen = do
         SelectSrcDest srcdest updatedState -> do
             void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> updatedState)
             App.BackT $ App.NoBack <$> (pure $ GO_TO_METRO_STATION_SEARCH srcdest updatedState)
+        -- SearchRoute updatedState -> do
+        --     void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> updatedState)
+        --     App.BackT $ App.NoBack <$> (pure $ GO_TO_BUS_STATION_SEARCH updatedState)
         Refresh updatedState -> do
             void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> updatedState)
             App.BackT $ App.NoBack <$> (pure $ REFRESH_METRO_TICKET_SCREEN updatedState)
         GotoPaymentPage orderResp bookingId-> 
             App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_PAYMENT_PAGE orderResp bookingId)
+        GO_TO_ROUTE_SEARCH  updatedState-> 
+            App.BackT $ App.BackPoint <$> (pure $ GO_TO_ROUTE_SEARCH_SCREEN updatedState)
+        

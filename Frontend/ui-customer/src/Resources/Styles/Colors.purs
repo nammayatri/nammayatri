@@ -436,3 +436,6 @@ eerieBlack = "#1A1C24"
 
 greyBackground :: Color 
 greyBackground = "#F2F2F2"
+
+activeTicketColor :: Color
+activeTicketColor = "#165718"

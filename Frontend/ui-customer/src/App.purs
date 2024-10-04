@@ -296,6 +296,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | EXIT_TO_FOLLOW_RIDE
                         | GO_TO_MY_METRO_TICKETS HomeScreenState
                         | GO_TO_METRO_BOOKING HomeScreenState
+                        | GO_TO_SEARCH_LOCATION_SCREEN_FOR_ROUTE_SEARCH HomeScreenState LocationActionId
                         | GO_TO_SAFETY_EDUCATION
                         | REPEAT_SEARCH HomeScreenState
                         | CHANGE_VEHICLE_VARIANT HomeScreenState
@@ -390,6 +391,7 @@ data METRO_TICKET_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_METRO_TICKET MetroTicke
                                  | GO_TO_HOME_FROM_METRO_TICKET
                                  | REFRESH_METRO_TICKET_SCREEN MetroTicketBookingScreenState
                                  | GO_TO_METRO_PAYMENT_PAGE CreateOrderRes String
+                                 | GO_TO_ROUTE_SEARCH_SCREEN MetroTicketBookingScreenState
 
 data PICKUP_INSTRUCTIONS_SCREEN_OP = GO_TO_HOME_SCREEN_FROM_PICKUP_INSTRUCTIONS
 

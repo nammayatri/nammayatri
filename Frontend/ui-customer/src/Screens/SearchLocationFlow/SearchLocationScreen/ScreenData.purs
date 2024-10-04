@@ -15,7 +15,7 @@
 
 module Screens.SearchLocationScreen.ScreenData where
 
-import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo, ZoneType(..), City(..), FareDetails(..), QuotesList(..), TipViewStage(..), FareProductType(..))
+import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo, ZoneType(..), City(..), FareDetails(..), QuotesList(..), TipViewStage(..), FareProductType(..),RideType(..))
 import ConfigProvider
 import Screens (ScreenName(..), getScreen)
 import Data.Maybe (Maybe(..))
@@ -38,6 +38,11 @@ initData = {
             rideScheduledTime : "",
             rideScheduledTimeUTC : ""
          }
+         , routeSearchedList : []
+         , updatedRouteSearchedList : []
+         , rideType : ROUTES
+         , stopsSearchedList : []
+         , updatedStopsSearchedList : []
          , currentLoc : dummyLocationInfo{
             address = "Current Location"
          } 
@@ -54,6 +59,7 @@ initData = {
         , latLonOnMap : dummyLocationInfo
         , defaultGate : ""
         , nearByGates : []
+        , activeRideIndex : 0
         , specialZoneCoordinates : ""
         , confirmLocCategory : NOZONE
         , metroStations : []
@@ -95,8 +101,9 @@ initData = {
       , tipForDriver: 0
       , tipActiveIndex: -1
       , isTipSelected: false
-      }
-
+      },
+   routeSearch : false,
+   routeSelected : ""
   },
   appConfig : getAppConfig appConfig
 }

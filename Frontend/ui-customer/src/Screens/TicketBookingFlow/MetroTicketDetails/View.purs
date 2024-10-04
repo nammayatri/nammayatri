@@ -393,19 +393,42 @@ ticketDetailsView push state =
       , width MATCH_PARENT
       , orientation VERTICAL
       ][
-        linearLayout[
+        relativeLayout [
+          height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , background Color.grey700
+        , margin $ Margin 16 24 16 0
+        ]
+        [ 
+          imageView [
+          width MATCH_PARENT
+        , height $ V 50
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_active_state"
+        , gravity CENTER
+        , margin $ MarginBottom 0
+        ]
+        , linearLayout[
           width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        , padding $ Padding 16 30 16 16
-        , margin $ Margin 16 24 16 0
-        , background Color.white900
-        , cornerRadii $ Corners 8.0 true true false false
+        , padding $ Padding 16 0 16 16
+        , margin $ MarginTop 44
+        , background Color.activeTicketColor
+        , cornerRadii $ Corners 6.0 true true false false
         ][
           metroHeaderView push state (FontStyle.body20 TypoGraphy) true
+        , imageView [
+            width MATCH_PARENT
+          , height $ V 20 
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_horizontal_dash"
+          , gravity CENTER
+          , margin $ MarginTop 10  
+        ]
         , qrCodeView push state
         , ticketNumberAndValidView push state
         ]    
+      ]
       , linearLayout[
           width MATCH_PARENT
         , height WRAP_CONTENT
@@ -468,7 +491,7 @@ metroHeaderView push state headerFontStyle detailVisibility =
           width WRAP_CONTENT
         , height WRAP_CONTENT
         , text $ cityConfig.title
-        , color Color.black800
+        , color Color.white900
         ] <> headerFontStyle
       , linearLayout [
           width WRAP_CONTENT
@@ -481,7 +504,7 @@ metroHeaderView push state headerFontStyle detailVisibility =
             width WRAP_CONTENT
           , height WRAP_CONTENT
           , text $ getString if state.data.ticketType == "SingleJourney" then ONWORD_JOURNEY else ROUND_TRIP_STR
-          , color Color.black800
+          , color Color.black500
           ] <> FontStyle.tags TypoGraphy
         , linearLayout [
             width $ V 4
@@ -495,7 +518,7 @@ metroHeaderView push state headerFontStyle detailVisibility =
             width WRAP_CONTENT
           , height WRAP_CONTENT
           , text $ (show $ state.data.noOfTickets) <> " " <> (getString $ if state.data.noOfTickets > 1 then TICKETS else TICKET)
-          , color Color.black800
+          , color Color.black500
           ] <> FontStyle.tags TypoGraphy
         , linearLayout [
             width $ V 4
@@ -509,7 +532,7 @@ metroHeaderView push state headerFontStyle detailVisibility =
             width WRAP_CONTENT
           , height WRAP_CONTENT
           , text $ "₹" <> show state.data.ticketPrice
-          , color Color.black800
+          , color Color.black500
           ] <> FontStyle.tags TypoGraphy
       ]
         ]
