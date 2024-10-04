@@ -19,6 +19,7 @@ import EulerHS.Prelude hiding (maybe, show)
 import Kafka.Consumer
 import Kernel.External.Encryption (EncTools)
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
 import Kernel.Storage.Hedis.Config
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerCfg, KafkaProducerTools, buildKafkaProducerTools, castCompression)
@@ -104,7 +105,9 @@ data AppCfg = AppCfg
     kvConfigUpdateFrequency :: Int,
     metricsPort :: Int,
     encTools :: EncTools,
-    kafkaProducerCfg :: KafkaProducerCfg
+    kafkaProducerCfg :: KafkaProducerCfg,
+    sericeClickhouseCfg :: ClickhouseCfg,
+    kafkaClickhouseCfg :: ClickhouseCfg
   }
   deriving (Generic, FromDhall)
 
@@ -140,7 +143,9 @@ data AppEnv = AppEnv
     isShuttingDown :: Shutdown,
     httpClientOptions :: HttpClientOptions,
     encTools :: EncTools,
-    kafkaProducerTools :: KafkaProducerTools
+    kafkaProducerTools :: KafkaProducerTools,
+    serviceClickhouseEnv :: ClickhouseEnv,
+    kafkaClickhouseEnv :: ClickhouseEnv
   }
   deriving (Generic)
 
@@ -184,6 +189,8 @@ buildAppEnv AppCfg {..} consumerType = do
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   isShuttingDown <- mkShutdown
+  serviceClickhouseEnv <- createConn sericeClickhouseCfg
+  kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   pure $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

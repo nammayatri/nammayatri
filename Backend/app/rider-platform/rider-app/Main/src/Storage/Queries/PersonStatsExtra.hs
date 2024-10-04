@@ -11,7 +11,8 @@ import qualified Sequelize as Se
 import Storage.Beam.PersonStats as BeamPS
 import Storage.Queries.OrphanInstances.PersonStats ()
 
--- Extra code goes here --
+createPersonStats :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.PersonStats -> m Domain.PersonStats
+createPersonStats p = createWithKV p >> pure p
 
 incrementOrSetPersonStats :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.PersonStats -> m ()
 incrementOrSetPersonStats personStats = do

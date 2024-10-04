@@ -112,3 +112,59 @@ findCountByRiderIdAndStatus riderId status createdAt = do
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
   pure $ fromMaybe 0 (listToMaybe res)
+
+findAllCancelledBookingIdsByRider ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DP.Person ->
+  UTCTime ->
+  m [Id DB.Booking]
+findAllCancelledBookingIdsByRider riderId createdAt = do
+  res <-
+    CH.findAll $
+      CH.select_ (\booking -> CH.notGrouped booking.id) $
+        CH.filter_
+          ( \booking _ ->
+              booking.status CH.==. DB.CANCELLED
+                CH.&&. booking.riderId CH.==. riderId
+                CH.&&. booking.createdAt >=. createdAt
+          )
+          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
+  pure res
+
+findAllCancelledBookingIdsByRiderAndMaxTime ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DP.Person ->
+  UTCTime ->
+  m ([Id DB.Booking], UTCTime)
+findAllCancelledBookingIdsByRiderAndMaxTime riderId createdAt = do
+  res <-
+    CH.findAll $
+      CH.select $
+        CH.filter_
+          ( \booking _ ->
+              booking.status CH.==. DB.CANCELLED
+                CH.&&. booking.riderId CH.==. riderId
+                CH.&&. booking.createdAt >=. createdAt
+          )
+          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
+  let (ids, maxTime) = foldr (\b (accIds, maxT) -> (b.id : accIds, max maxT (b.createdAt))) ([], createdAt) res
+  pure (ids, maxTime)
+
+findByRiderIdAndStatus ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DP.Person ->
+  DB.BookingStatus ->
+  UTCTime ->
+  m [Booking]
+findByRiderIdAndStatus riderId status createdAt = do
+  res <-
+    CH.findAll $
+      CH.select $
+        CH.filter_
+          ( \booking _ ->
+              booking.status CH.==. status
+                CH.&&. booking.riderId CH.==. riderId
+                CH.&&. booking.createdAt >=. createdAt
+          )
+          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
+  pure res
