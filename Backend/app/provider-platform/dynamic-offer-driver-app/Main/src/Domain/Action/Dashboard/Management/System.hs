@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Action.Dashboard.Management.System (postSystemRunQuery) where
+module Domain.Action.Dashboard.Management.System (postSystemRunQuery, generateInsertQuery) where
 
 import qualified API.Types.ProviderPlatform.Management.System
 import Data.Aeson
@@ -61,10 +61,18 @@ import Tools.Auth
 postSystemRunQuery :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.System.QueryData -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postSystemRunQuery _ _ req = do
   let tableName = req.tableName
-  whereClause' <- getKeyNameAndValue req.whereClause
   setClause' <- getKeyNameAndValue req.setClause
-  _ <- queryTypeCheck tableName whereClause' setClause'
-  let query' = generateUpdateQuery tableName setClause' whereClause'
+  case req.queryType of
+    API.Types.ProviderPlatform.Management.System.UPDATE -> do
+      whereClause' <- getKeyNameAndValue req.whereClause
+      _ <- queryTypeCheck tableName whereClause' setClause'
+      executeQuery $ generateUpdateQuery tableName setClause' whereClause'
+    API.Types.ProviderPlatform.Management.System.INSERT -> do
+      _ <- queryTypeCheck tableName [] setClause'
+      executeQuery $ generateInsertQuery tableName setClause'
+
+executeQuery :: Maybe Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+executeQuery query' = do
   case query' of
     Just q -> do
       conn <- asks (.psqlConn)
@@ -79,10 +87,14 @@ valueToSQL (String s) = "'" <> Text.replace "'" "''" s <> "'" -- Quote and escap
 valueToSQL (Number n) = case S.floatingOrInteger n of
   Left r -> Text.pack (show (r :: Double)) -- Floating point number
   Right i -> Text.pack (show (i :: Integer)) -- Integer number
-valueToSQL (Bool b) = if b then "TRUE" else "FALSE" -- SQL boolean values
+valueToSQL (Bool b) = if b then "true" else "false" -- SQL boolean values
 valueToSQL Null = "NULL" -- SQL NULL
 valueToSQL (Object obj) = "'" <> TE.decodeUtf8 (BSL.toStrict (encode (Object obj))) <> "'::json"
 valueToSQL (Array arr) = "'" <> TE.decodeUtf8 (BSL.toStrict (encode (Array arr))) <> "'::json"
+
+generateInsertQuery :: Text -> [(Text, Value)] -> Maybe Text
+generateInsertQuery tableName setClause =
+  Just $ "INSERT INTO " <> tableName <> " (" <> Text.intercalate " , " (fst <$> setClause) <> ") VALUES (" <> Text.intercalate " , " ((valueToSQL .snd) <$> setClause) <> ");"
 
 generateUpdateQuery :: Text -> [(Text, Value)] -> [(Text, Value)] -> Maybe Text
 generateUpdateQuery tableName setClause whereClause = do
