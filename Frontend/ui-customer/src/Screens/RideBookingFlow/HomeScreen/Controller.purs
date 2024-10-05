@@ -319,7 +319,7 @@ eval GoToFollowRide state = exit $ ExitToFollowRide state{props{chatcallbackInit
 eval (UpdateRepeatTrips rideList) state = do
   void $ pure $ setValueToLocalStore UPDATE_REPEAT_TRIPS "false"
   let listResp = rideList ^._list
-      filteredList = filter (\(RideBookingRes item) -> getFareProductType (item.bookingDetails ^._fareProductType) /= FPT.RENTAL) listResp
+      filteredList = filter (\(RideBookingRes item) -> getFareProductType (item.bookingDetails ^._fareProductType) /= FPT.RENTAL &&  getFareProductType (item.bookingDetails ^._fareProductType) /= FPT.INTER_CITY) listResp
       list = rideListToTripsTransformer filteredList
   if not (null list) then do
     let updatedMap = updateMapWithPastTrips list state
@@ -2805,7 +2805,7 @@ eval IntercityBusAC state =
     encryptedPhoneNumber = if state.data.intercityBus.hasPhoneNumberPermission then JB.rsEncryption (getValueToLocalStore MOBILE_NUMBER) else ""
     url' = "https://pp-app-nammayatri.redbus.in/" <> if  state.data.intercityBus.hasPhoneNumberPermission  then "?mobileNo=" <> encryptedPhoneNumber else ""
   in 
-    if state.data.intercityBus.showWebView then
+    if state.data.intercityBus.showWebView && os == "IOS" then
       continueWithCmd state [do
         void $ runEffectFn2 JB.launchCustomTab url' NoAction
         pure NoAction
