@@ -241,8 +241,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
           && (bookingCReason.source == SBCR.ByDriver || (bookingCReason.source == SBCR.ByUser && userReallocationEnabled))
           && (isSearchTryValid || isScheduled)
           && fromMaybe False isReallocationEnabled
-          && driverHasNotArrived
-
+          && (driverHasNotArrived || searchTry.startTime > now)
     buildBookingCancellationReason newBooking = do
       return $
         SBCR.BookingCancellationReason
