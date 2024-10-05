@@ -26,7 +26,7 @@ import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (getFareProductType)
 import Engineering.Helpers.Commons (compareUTCDate)
-import Helpers.Utils (parseFloat)
+import Helpers.Utils (parseFloat,fetchAddressDetails)
 
 instance showAction  ::  Show Action where
   show _ = ""
@@ -182,7 +182,7 @@ fetchRideDetails state apiResp =
                     placeId : fromLocation.placeId
               },
               placeId  : fromMaybe "" fromLocation.placeId,
-              fullAddress : buildFullAddress $ resp.fromLocation
+              fullAddress : fetchAddressDetails $ resp.fromLocation
             }),
       id : resp.id,
       isScheduled : resp.isScheduled,
@@ -204,7 +204,7 @@ fetchRideDetails state apiResp =
                     placeId : stopLocation.placeId
               },
               placeId  : fromMaybe "" stopLocation.placeId,
-              fullAddress : buildFullAddress $ (API.BookingLocationAPIEntity stopLocation) 
+              fullAddress : fetchAddressDetails $ (API.BookingLocationAPIEntity stopLocation) 
              }),
       tripCategory : CTA.TripCategory {
         contents : Just "",
@@ -233,24 +233,3 @@ getTag fpt =
     INTER_CITY -> CTA.InterCity
     RENTAL -> CTA.Rental
     _ -> CTA.OneWay
-
-
-buildFullAddress :: API.BookingLocationAPIEntity -> String
-buildFullAddress location = 
-    let 
-        (API.BookingLocationAPIEntity contents) = location
-        door = fromMaybe "" contents.door 
-        building = fromMaybe "" contents.building
-        street = fromMaybe "" contents.street
-        area = fromMaybe "" contents.area
-        city = fromMaybe "" contents.city
-        state = fromMaybe "" contents.state
-        country = fromMaybe "" contents.country
-    in 
-        (if (not $ DS.null door) then door <> " " else "")
-      <> (if (not $ DS.null building) then building <> " " else "")
-      <> (if (not $ DS.null street) then street <> " " else "")
-      <> (if (not $ DS.null area) then area <> " " else "")
-      <> (if (not $ DS.null city) then city <> " " else "")
-      <> (if (not $ DS.null state) then state <> " " else "")
-      <> (if (not $ DS.null country) then country else "")

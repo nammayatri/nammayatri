@@ -1639,3 +1639,4 @@ getML stringKey =
         DENY -> "നിരസിക്കുക"
         ALLOW -> "അനുവദിക്കുക"
         INTERCITY_BUS -> "ഇൻ്റർസിറ്റി ബസ്"
+        DRIVER_ASSIGNED -> "ഡ്രൈവർ നൽകിയിരിക്കുന്നു"

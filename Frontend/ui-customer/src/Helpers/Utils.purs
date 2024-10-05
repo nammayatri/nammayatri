@@ -1299,7 +1299,7 @@ calculateBookingEndTime bookingResp =do
         false -> 
             let 
               estimatedDistanceInKm = calculateEstimatedDistanceInKm estimatedDistance
-              bookingEndTime =  getUTCAfterNSeconds rideScheduledTime $ (estimatedDistanceInKm * timeToTravelOneKm * 60) + rideScheduledBufferTime
+              bookingEndTime =  getUTCAfterNSeconds rideScheduledTime $ estimatedDuration + rideScheduledBufferTime
             in bookingEndTime 
     RENTAL ->
           let bookingEndTime = getUTCAfterNSeconds rideScheduledTime (estimatedDuration + rideScheduledBufferTime)
@@ -1402,18 +1402,24 @@ fetchDriverInformation rideList = do
                                         Just {driverName : driverName,vehicleNumber : vehicleNumber}
         Nothing -> Nothing
 
-fetchAddressDetails :: String -> API.BookingLocationAPIEntity -> String
-fetchAddressDetails fareProductType (API.BookingLocationAPIEntity address) = 
-    let
-      door = fromMaybe "" address.door
-      street = fromMaybe "" address.street
-      area = fromMaybe "" address.area
-    in
-      if (fareProductType == "INTER_CITY" || ( DS.null street &&  DS.null door)) then
-        area
-      else if (not $ DS.null door && (not $ DS.null street)) then
-        door <> ", " <> street <> ", " <> area
-      else if (not $ DS.null door) then
-        door <> ", " <> area
-      else
-        street <> ", " <> area
+fetchAddressDetails :: API.BookingLocationAPIEntity -> String
+fetchAddressDetails  (API.BookingLocationAPIEntity contents) = 
+   let 
+      door = fromMaybe "" contents.door 
+      building = fromMaybe "" contents.building
+      street = fromMaybe "" contents.street
+      area = fromMaybe "" contents.area
+      city = fromMaybe "" contents.city
+      state = fromMaybe "" contents.state
+      country = fromMaybe "" contents.country
+      ward = fromMaybe "" contents.ward
+      finalString = (if (not $ DS.null door) then door <> " " else "")
+                    <> (if (not $ DS.null building) then building <> " " else "")
+                    <> (if (not $ DS.null street) then street <> " " else "")
+                    <> (if (not $ DS.null area) then area <> " " else "")
+                    <> (if (not $ DS.null city) then city <> " " else "")
+                    <> (if (not $ DS.null state) then state <> " " else "")
+                    <> (if (not $ DS.null country) then country else "")
+      wardAddedString = if finalString == "" then finalString <> ward else finalString
+    in 
+      wardAddedString

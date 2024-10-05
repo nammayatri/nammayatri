@@ -2562,6 +2562,7 @@ findEstimates updatedState = do
           totalRideDistance = routeObj.estDistance
         , totalRideDuration = routeObj.estDuration 
         } 
+      , isTripSchedulable = false
       }
       , data {
          tripEstDuration = routeObj.estDuration 

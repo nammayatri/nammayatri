@@ -2378,8 +2378,8 @@ scheduledRideExistsPopUpConfig state =
           destinationNotGiven =  (details.fareProductType == "RENTAL" && (isNothing contents.stopLocation))
           rideScheduledTime = fromMaybe "" overLappingBooking.rideScheduledTime
           rideEndTime = HU.calculateBookingEndTime (API.RideBookingRes overLappingBooking)
-          fromLocation = HU.fetchAddressDetails details.fareProductType overLappingBooking.fromLocation
-          toLocation = HU.fetchAddressDetails details.fareProductType stopLocation
+          fromLocation = HU.fetchAddressDetails  overLappingBooking.fromLocation
+          toLocation = HU.fetchAddressDetails stopLocation
         in
           if destinationNotGiven then getVarString YOU_HAVE_AN_RIDE_FROM_WITHOUT_TO [rideType , fromLocation , formatDateInHHMM rideScheduledTime , formatDateInHHMM rideEndTime]
                                  else getVarString YOU_HAVE_AN_RIDE_FROM_TO_SCHEDULED_FROM_TILL [ rideType, fromLocation, toLocation, formatDateInHHMM rideScheduledTime,formatDateInHHMM rideEndTime ]
