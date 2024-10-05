@@ -74,10 +74,12 @@ handler merchantId req ride = do
     Just booking -> do
       whenJust (liftA3 (,,) req.shouldFavDriver (getId <$> booking.riderId) req.riderPhoneNum) $ \(shouldFavDriver', riderId, riderPhoneNum) -> do
         when shouldFavDriver' $ do
-          correlationRes <- RDC.findByRiderIdAndDriverId (Id riderId) ride.driverId
-          case correlationRes of
-            Just _ -> do
-              RDC.updateFavouriteDriverForRider True (Id riderId) ride.driverId
+          mbCorrelationRes <- RDC.findByRiderIdAndDriverId (Id riderId) ride.driverId
+          case mbCorrelationRes of
+            Just correlationRes -> do
+              when (not correlationRes.favourite) $ do
+                RDC.updateFavouriteDriverForRider True (Id riderId) ride.driverId
+                SQD.incFavouriteRiderCount ride.driverId
             Nothing -> do
               now <- getCurrentTime
               encPhoneNumber <- encrypt riderPhoneNum
