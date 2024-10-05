@@ -144,6 +144,13 @@ jobs:
         env:
           PLAY_CONSOLE_SECRET: ${{ secrets.PLAY_CONSOLE_SECRET }}
 
+      - name: Add Configs to local.properties
+        run: |
+          echo "" >> local.properties
+          echo "$ADDITIONAL_LOCAL_PROPERTIES" >> local.properties
+        env:
+          ADDITIONAL_LOCAL_PROPERTIES: ${{ secrets.ADDITIONAL_LOCAL_PROPERTIES }}
+
       - name: Distribute app to Production 🚀
         run: |
           echo "Hello, world! $FASTLANE_CMD"
