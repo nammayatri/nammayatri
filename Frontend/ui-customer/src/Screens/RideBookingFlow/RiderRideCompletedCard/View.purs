@@ -850,6 +850,8 @@ bottomPartView state push =
     , relativeLayout[
         width MATCH_PARENT
       , height WRAP_CONTENT
+      , orientation VERTICAL
+      , visibility $ boolToVisibility $ state.driverInfoCardState.isAlreadyFav || state.ratingCard.favDriver || state.ratingCard.rating < 4
       ][
         editTextView state push
       , audioRecorder state push
@@ -1003,7 +1005,7 @@ editTextView state push =
   , margin $ Margin 0 20 0 24
   , padding $ Padding 16 0 16 16
   , stroke $ "1," <> Color.grey800
-  , visibility $ boolToVisibility $ (state.ratingCard.favDriver && not state.recordedView) || (not state.driverInfoCardState.isAlreadyFav && state.ratingCard.rating < 4 && not state.recordedView) || (state.driverInfoCardState.isAlreadyFav && not state.recordedView)
+  , visibility $ boolToVisibility $ not state.recordedView
   ][
     (editText)
       $
@@ -1045,7 +1047,7 @@ audioRecorder state push =
   , margin $ Margin 0 20 0 24
   , padding $ Padding 16 0 8 0
   , stroke $ "1," <> Color.grey800
-  , visibility $ boolToVisibility $ (state.ratingCard.favDriver && state.recordedView) || (state.ratingCard.rating < 4 && state.recordedView) || (state.driverInfoCardState.isAlreadyFav && state.recordedView)
+  , visibility $ boolToVisibility $ state.recordedView
   ][
     imageView 
       [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_delete_icon"

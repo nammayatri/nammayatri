@@ -21,6 +21,7 @@ import Data.Maybe (Maybe(..))
 import ConfigProvider 
 import Constants as Const
 import Data.Array (filter, elem)
+import Data.String as DS
 import Common.Animation.Config
 import PrestoDOM.Animation as PrestoAnim
 import Engineering.Helpers.Commons (convertUTCtoISC)
@@ -46,9 +47,8 @@ genericHeaderConfig state = let
       , enableRipple = true
       }
     , textConfig {
-        text = state.data.driverName
+        text = if DS.length state.data.driverName > 10 then (DS.take 10 state.data.driverName) <> ".." else state.data.driverName
       , color = Color.darkCharcoal
-      --, ellipsize = true
       }
     , suffixImageConfig {
         visibility = GONE

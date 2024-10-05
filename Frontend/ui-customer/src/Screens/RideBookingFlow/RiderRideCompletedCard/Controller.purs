@@ -152,7 +152,6 @@ eval (UpdateState updatedState) state = continue updatedState
 
 eval (OnClickStop) state =
   continueWithCmd state { ratingCard { recordAudioState { isRecording = false, recordingDone = true, timer = "00 : 00" } } } [do
-    _   <- pure $ clearTimerWithId state.timerId
     res <- runEffectFn1 JB.stopAudioRecording ""
     pure $ UpdateRecordModelPlayer res
   ]
@@ -170,7 +169,7 @@ eval (UpdateRecordModelPlayer url) state = do
   ]
 
 eval (OnClickDone) state =
-  continueWithCmd state { recordedView = false, ratingCard { recordAudioState { isUploading = true, pauseLootie = true } } } [do
+  continueWithCmd state { ratingCard { recordAudioState { isUploading = true, pauseLootie = true } } } [do
     void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = "audio_upload_animation.json", lottieId = (getNewIDWithTag "audio_recording_done"), scaleType = "FIT_CENTER", speed = 1.0 }
     void $ pure $ clearTimerWithId state.timerId
     case state.ratingCard.recordAudioState.recordedFile of
@@ -190,10 +189,11 @@ eval (UploadMultiPartDataCallback fileType fileId) state = do
 
 eval (OnClickClose) state = do
   pure $ JB.clearAudioPlayer ""
-  continueWithCmd state { ratingCard { recordAudioState { pauseLootie = false, recordedFile = Nothing, recordingDone = false, isRecording = false, openAddAudioModel = false, isUploading = false, timer = "00 : 00", recordedAudioUrl = Nothing, uploadedAudioId = Nothing, isListening = false } }, timerValue = "0:00", recordedView = false} [do
+  let updatedState = state { ratingCard { recordAudioState { pauseLootie = false, recordedFile = Nothing, recordingDone = false, isRecording = false, openAddAudioModel = false, isUploading = false, timer = "00 : 00", recordedAudioUrl = Nothing, uploadedAudioId = Nothing, isListening = false } }, timerValue = "0:00", recordedView = false}
+  continueWithCmd updatedState [do
     void $ runEffectFn1 JB.stopAudioRecording ""
     void $ pure $ clearTimerWithId state.timerId
-    pure $ UpdateState state { ratingCard { recordAudioState { pauseLootie = false, recordedFile = Nothing, recordingDone = false, isRecording = false, openAddAudioModel = false, isUploading = false, timer = "00 : 00", recordedAudioUrl = Nothing, uploadedAudioId = Nothing, isListening = false } }, timerValue = "0:00", recordedView = false}
+    pure $ UpdateState updatedState
   ]
 
 eval _ state = update state

@@ -82,16 +82,16 @@ eval (OnClickPledge title isSelected) state = do
 
 eval (ProfileDataAPIResponseAction res) state = do 
   let DriverProfileDataRes resp = res 
-      pledgeOthers = (DA.filter (\item -> (item /= "Safe Journey" && item /= "Clean Car" && item /= "On-time Pick up" && item /= "Regular Maintenance") )) resp.pledges
+      pledgeOthers = (DA.filter (\item -> (item /= "Safe Journey" && item /= "Clean Vehicle" && item /= "On-time Pick up" && item /= "Regular Maintenance" && item /= "Good Service" && item /= "Smooth Driving" && item /= "No Cancellation") )) resp.pledges
       whyNyOthers = (DA.filter (\item -> (item /= "Buy New Home" && item /= "Kid's Education" && item /= "Buy New Vehicle") )) resp.aspirations
   continue state{data{
-    pledge = (DA.filter (\item -> (item == "Safe Journey" || item == "Clean Car" || item == "On-time Pick up" || item == "Regular Maintenance") )) resp.pledges, 
+    pledge = (DA.filter (\item -> (item == "Safe Journey" || item == "Clean Vehicle" || item == "On-time Pick up" || item == "Regular Maintenance" || item == "Good Service" || item == "Smooth Driving" || item == "No Cancellation") )) resp.pledges, 
     aspirations = (DA.filter (\item -> (item == "Buy New Home" || item == "Kid's Education" || item == "Buy New Vehicle") )) resp.aspirations, 
     drivingSince = resp.drivingSince, 
     vehicalOffer = resp.vehicleTags, 
     inputTextState { others {pledge = if DA.length pledgeOthers == 0 then "" else fromMaybe "" $ DA.head pledgeOthers, aspirations = if DA.length whyNyOthers == 0 then "" else fromMaybe "" $ DA.head whyNyOthers}},
     homeTown = resp.hometown, 
-    datePickerState {activeIndex = if resp.drivingSince == Nothing then 0 else 69 - ((fromMaybe 0 $ fromString (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "YYYY")) - fromMaybe 0 resp.drivingSince)},
+    datePickerState {activeIndex = if resp.drivingSince == Nothing then 0 else 29 - ((fromMaybe 0 $ fromString (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "YYYY")) - fromMaybe 0 resp.drivingSince)},
     addImagesState{ images = DA.mapWithIndex(\idx item -> {image : item, imageName :( "Image" <> show idx)})resp.otherImages, imageMediaIds = resp.otherImageIds, stateChanged = true}, 
     uploadedImagesIds = resp.otherImageIds, addedImages = DA.mapWithIndex(\idx item -> {image : item, imageName : ("Image" <> show idx)})resp.otherImages}}
 

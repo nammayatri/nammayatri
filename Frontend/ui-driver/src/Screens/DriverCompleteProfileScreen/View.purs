@@ -65,6 +65,9 @@ screen initialState st =
           void $ case action of 
             TextChanged _ _ -> pure unit
             InputTextAC (InputTextView.FeedbackChanged _) -> pure unit
+            InputTextAC (InputTextView.PrimaryButtonAC _) -> do
+                let _ =  JB.clearFocusFunction (getNewIDWithTag "homeTown-editText")
+                pure unit
             _ -> do 
                 let _ = JB.hideKeyboardOnNavigation true
                 let _ =  JB.clearFocusFunction (getNewIDWithTag "homeTown-editText")
@@ -501,7 +504,7 @@ homeTown push state =
               , hint $ (fromMaybe "" state.data.homeTown)
               , hintColor Color.black650
               , cornerRadius 4.0
-              , singleLine false
+              , singleLine true
               , id $ getNewIDWithTag "homeTown-editText"
               , onChange push (TextChanged ( EHC.getNewIDWithTag "homeTown-editText") )
               , pattern "[A-Za-z0-9 ]*,100"
