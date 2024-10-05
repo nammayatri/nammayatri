@@ -54,6 +54,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Confidence
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Logging as Logging
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBPP as CallBPP
@@ -869,8 +870,8 @@ validateRideStartedReq RideStartedReq {..} = do
   let BookingDetails {..} = bookingDetails
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
-  unless (booking.status == DRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
-  unless (ride.status == DRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
+  unless (booking.status == DRB.TRIP_ASSIGNED) $ Logging.logError $ "Booking status is not TRIP_ASSIGNED. BookingId:-" <> show booking.id.getId <> ", Status:-" <> show booking.status
+  unless (ride.status == DRide.NEW) $ Logging.logError $ "Ride status is not NEW. RideId:-" <> show ride.id.getId <> ", Status:-" <> show ride.status
   let estimatedEndTimeRange = mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd
   return $ ValidatedRideStartedReq {..}
   where
