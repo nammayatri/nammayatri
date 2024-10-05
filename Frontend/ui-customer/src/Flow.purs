@@ -230,6 +230,8 @@ import Components.MessagingView.Controller as CMC
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.Controller as ParcelDeliveryScreenController
 import Screens.Types (TripDetailsGoBackType(..))
 import DecodeUtil
+import Screens.TicketBookingFlow.BusTicketBooking.Controller as BusTicketBookingController
+import Screens.TicketBookingFlow.BusTicketBooking.ScreenData as BusTicketBookingScreenData
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -2526,6 +2528,9 @@ homeScreenFlow = do
       else do
         modifyScreenState $ PickupInstructionsScreenStateType $ \pickupInstructionsScreen -> pickupInstructionsScreen { data { pickupLat = lat, pickupLong = lon, pickupInstructions = pickupInstructions } }
         pickupInstructionsScreenFlow
+    GO_TO_BUS_TICKET_BOOKING_SCREEN -> do
+      modifyScreenState $ BusTicketBookingScreenStateType (\_ -> BusTicketBookingScreenData.initData)
+      busTicketBookingFlow
     _ -> homeScreenFlow
 
 findEstimates :: HomeScreenState -> FlowBT String Unit 
@@ -4505,6 +4510,7 @@ metroTicketBookingFlow = do
     --   modifyScreenState $ MetroTicketBookingScreenStateType (\slsState -> slsState { data { routeSearchedList = busRoutes} })
     --   metroTicketBookingFlow
     METRO_FARE_AND_PAYMENT state -> do
+      modifyScreenState $ BusTicketBookingScreenStateType (\_ -> BusTicketBookingScreenData.initData)
       if state.props.currentStage == MetroTicketSelection then do
         if state.data.srcCode == state.data.destCode then do
           void $ pure $ toast "Source and destination cannot be same."
@@ -4932,6 +4938,9 @@ metroTicketDetailsFlow = do
       (APISuccessResp result) <- Remote.metroBookingHardCancelBT state.data.bookingId
       modifyScreenState $ MetroTicketDetailsScreenStateType (\state -> state { props { stage = MetroHardCancelStatusStage, showLoader = true, isBookingCancellable = Nothing } })
       metroTicketDetailsFlow
+    GO_TO_BUS_TICKET_BOOKING_SCREEN_FROM_METRO_TICKET_DETAILS_SCREEN -> do
+      modifyScreenState $ MetroTicketDetailsScreenStateType (\_ -> MetroTicketDetailsScreenData.initData)
+      busTicketBookingFlow
     _ -> metroTicketDetailsFlow
 
 metroMyTicketsFlow :: FlowBT String Unit
@@ -4989,6 +4998,7 @@ metroMyTicketsFlow = do
                     }
               )
       metroTicketBookingFlow
+    GO_BUS_BOOKING_FROM_METRO_MY_TICKETS -> busTicketBookingFlow
     _ -> metroMyTicketsFlow
 
 viewTicketDetialsFlow :: Maybe String -> FlowBT String Unit
@@ -5066,6 +5076,7 @@ metroTicketStatusFlow = do
       metroTicketBookingFlow
     GO_TO_HOME_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN -> homeScreenFlow
     GO_TO_METRO_TICKETS_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN -> metroMyTicketsFlow
+    GO_TO_BUS_TICKET_BOOKING_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN -> busTicketBookingFlow
 
 searchLocationFlow :: FlowBT String Unit
 searchLocationFlow = do
@@ -5154,6 +5165,7 @@ searchLocationFlow = do
       (GlobalState globalState) <- getState
       fcmHandler notificationType globalState.homeScreen notificationBody
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  homeScreenFlow)
+    SearchLocationController.BusTicketBookingScreen state ->  (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  busTicketBookingFlow)
     _ -> pure unit
   where
   locSelectedOnMapFlow :: SearchLocationScreenState -> FlowBT String Unit
@@ -6882,3 +6894,64 @@ updateScheduledRides needApiCall updateRentals= do
       pure unit
     )
     pure unit
+
+busTicketBookingFlow :: FlowBT String Unit
+busTicketBookingFlow = do
+  (GlobalState currentState) <- getState
+  action <- lift $ lift $ runScreen $ UI.busTicketBookingScreen currentState.busTicketBookingScreen
+  case action of
+    BusTicketBookingController.GoToHomeScreen state -> 
+      homeScreenFlow
+    BusTicketBookingController.RefreshScreen state -> do
+      modifyScreenState $ BusTicketBookingScreenStateType (\_ -> state)
+      parcelDeliveryFlow
+    BusTicketBookingController.GoToMyTicketsScreen state -> do
+      modifyScreenState $ MetroMyTicketsScreenStateType (\metroMyTicketsScreen -> metroMyTicketsScreen { props { entryPoint = ST.MetroTicketBookingToMetroMyTickets, fromScreen = Just $ Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN} })
+      metroMyTicketsFlow
+    BusTicketBookingController.GoToSearchLocationScreenForRoutes state source -> do
+      let currentCity = getValueToLocalStore CUSTOMER_LOCATION
+          searchLocationState = currentState.searchLocationScreen
+      modifyScreenState $ BusTicketBookingScreenStateType (\_ -> state)
+      if null searchLocationState.data.routeSearchedList then
+        modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData { props { actionType = BusRouteSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data { srcLoc = Nothing, destLoc = Nothing, fromScreen = (Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN)} })
+      else
+        modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData { props { actionType = BusRouteSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data { srcLoc = Nothing, destLoc = Nothing, fromScreen = (Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN)} })
+      searchLocationFlow
+    BusTicketBookingController.GoToMetroTicketDetailsFlow bookingId -> do
+      (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT bookingId
+      let
+        (MetroTicketBookingStatus metroTicketBookingStatus) = resp
+      if (metroTicketBookingStatus.status == "CONFIRMED") then do
+        modifyScreenState
+          $ MetroTicketDetailsScreenStateType
+              ( \metroTicketDetailsState ->
+                  let
+                    transformedState = metroTicketDetailsTransformer resp metroTicketDetailsState
+                  in
+                    transformedState { props { fromScreen = Just (Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN), previousScreenStage = ST.MetroMyTicketsStage } }
+              )
+        metroTicketDetailsFlow
+      else if (metroTicketBookingStatus.status == "CANCELLED") then do
+        modifyScreenState
+          $ MetroTicketDetailsScreenStateType
+              ( \metroTicketDetailsState ->
+                  let
+                    transformedState = metroTicketDetailsTransformer resp metroTicketDetailsState
+                  in
+                    transformedState { props { fromScreen = Just (Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN),  previousScreenStage = ST.MetroMyTicketsStage, stage = MetroHardCancelStatusStage } }
+              )
+        metroTicketDetailsFlow
+      else if (any (_ == metroTicketBookingStatus.status) [ "PAYMENT_PENDING", "FAILED" ]) then do
+        modifyScreenState
+          $ MetroTicketStatusScreenStateType
+              ( \metroTicketStatusScreen ->
+                  let
+                    transformedState = metroTicketStatusTransformer resp metroTicketStatusScreen
+                  in
+                    transformedState { props { entryPoint = BusTicketToMetroTicketStatus} }
+              )
+        setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
+        metroTicketStatusFlow
+      else
+        metroMyTicketsFlow
+    _ -> pure unit

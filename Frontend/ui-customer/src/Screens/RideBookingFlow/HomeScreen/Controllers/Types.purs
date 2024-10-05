@@ -131,6 +131,7 @@ data ScreenOutput = LogoutUser
   | GoToTripSelectionScreen HomeScreenState
   | RideSummary HomeScreenState
   | GoToSearchLocationScreenForRoutes HomeScreenState LocationActionId
+  | GoToBusTicketBookingFlow HomeScreenState
 
 data Action = NoAction
   | BackPressed

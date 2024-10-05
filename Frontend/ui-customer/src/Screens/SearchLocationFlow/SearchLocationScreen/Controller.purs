@@ -132,6 +132,7 @@ data ScreenOutput = NoOutput SearchLocationScreenState
                   | CurrentFlowStatus
                   | NotificationListenerSO String NotificationBody
                   | GoToRouteBusSearch SearchLocationScreenState
+                  | BusTicketBookingScreen SearchLocationScreenState
 
 eval :: Action -> SearchLocationScreenState -> Eval Action ScreenOutput SearchLocationScreenState
 
@@ -529,6 +530,7 @@ handleBackPress state = do
           void $ pure $ hideKeyboardOnNavigation true
           if state.data.fromScreen == getScreen HOME_SCREEN then exit $ HomeScreen state 
           else if state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN then exit $ RideScheduledScreen state
+          else if state.data.fromScreen == getScreen BUS_TICKET_BOOKING_SCREEN then exit $ BusTicketBookingScreen state
           else exit $ RentalsScreen state 
         AllFavouritesStage -> continue state{props{searchLocStage = PredictionsStage}}
         LocateOnMapStage -> do 

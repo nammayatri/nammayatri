@@ -12,37 +12,20 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-module Screens.TicketBookingFlow.MetroTicketDetails.ScreenData where
+module Screens.TicketBookingFlow.BusTicketBooking.ScreenData where
 
-import Prelude
-
-import Common.Types.App as Common
-import ConfigProvider
-import Screens.Types
 import Data.Maybe (Maybe(..))
+import Services.API as API
+import Screens.Types as ST
 
-initData :: MetroTicketDetailsScreenState
-initData = {
-  data : {
-    dummyData : ""
-  , bookingId : ""
-  , city : AnyCity
-  , bookingUpdatedAt : ""
-  , metroRoute : []
-  , ticketsInfo : []
-  , ticketType : ""
-  , noOfTickets : 0
-  , ticketPrice : 0
+initData :: ST.BusTicketBookingState
+initData =
+  { data: 
+    { routeList : false
+    , showRouteOptions : false
+    , isEmptyRoute : ""
+    , ticketServiceType : API.METRO
+    , ticketDetailsState : Nothing
+    }
+  , props: {}
   }
-, props :  {
-    dummyProps : ""
-  , showLoader : false
-  , stage : MetroTicketDetailsStage
-  , currentTicketIndex : 0
-  , previousScreenStage : MetroMyTicketsStage 
-  , isBookingCancellable : Nothing
-  , cancellationCharges : Nothing
-  , refundAmount : Nothing
-  , fromScreen : Nothing
-  }
-}

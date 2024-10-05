@@ -2234,6 +2234,7 @@ type MetroTicketDetailsScreenProps = {
 , cancellationCharges :: Maybe Number
 , refundAmount :: Maybe Number
 , showLoader :: Boolean
+, fromScreen :: Maybe String
 }
 
 data PreviousMetroTicketDetailsStage = MetroMyTicketsStage 
@@ -2273,6 +2274,7 @@ type MetroMyTicketsScreenProps = {
   dummyProps :: String
 , showShimmer :: Boolean
 , entryPoint :: MetroMyTicketsEntry
+, fromScreen :: Maybe String
 }
 
 type MetroTicketCardData = {
@@ -2827,7 +2829,7 @@ type MetroTicketStatusScreenProps = {
 , entryPoint :: MetroTicketStatusScreenEntry
 }
 
-data MetroTicketStatusScreenEntry = HomescreenToMetroTicketStatus | MyMetroTicketsToMetroTicketStatus
+data MetroTicketStatusScreenEntry = HomescreenToMetroTicketStatus | MyMetroTicketsToMetroTicketStatus | BusTicketToMetroTicketStatus
 
 type RideSearchProps = {
     sessionId :: String
@@ -3156,4 +3158,23 @@ data Currency  = INR | USD | EUR
 type NotificationBody = {
   rideTime :: Maybe String,
   bookingId :: Maybe String
+}
+
+-- ######################################### BusTicketBookingFlow ####################################################
+
+type BusTicketBookingState = {
+  data :: BusTicketBookingData,
+  props :: BusTicketBookingProps
+}
+
+type BusTicketBookingData = {
+    routeList :: Boolean
+  , showRouteOptions :: Boolean
+  , isEmptyRoute :: String
+  , ticketServiceType :: API.TicketServiceType
+  , ticketDetailsState :: Maybe MetroMyTicketsScreenState
+}
+
+type BusTicketBookingProps = {
+
 }
