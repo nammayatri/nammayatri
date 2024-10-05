@@ -114,6 +114,9 @@ buildTemplate paramVars template =
     template
     paramVars
 
+buildTrackingUrl :: Id SRide.Ride -> [(Text, Text)] -> Text -> Text
+buildTrackingUrl rideId extraQueryParams trackingUrlPattern = (buildTemplate extraQueryParams trackingUrlPattern) <> rideId.getId
+
 notifyPerson ::
   ( ServiceFlow m r,
     ToJSON a,
@@ -829,7 +832,7 @@ notifyRideStartToEmergencyContacts booking ride = do
   let shouldShare = not $ null followingContacts
   if shouldShare
     then do
-      let trackLink = buildTemplate [("rideId", ride.id.getId), ("vp", "shareRide")] riderConfig.trackingShortUrlPattern
+      let trackLink = buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
       decEmContacts <- decrypt `mapM` followingContacts
       for_ decEmContacts \contact -> do
         case contact.contactPersonId of
