@@ -904,6 +904,7 @@ eval BackPressed state = do
           , tipViewProps = HomeScreenData.initData.props.tipViewProps
           , hasEstimateBackpoint = false
           , searchLocationModelProps {tripType = ONE_WAY_TRIP}
+          , isTripSchedulable = false
           }
         }
     ConfirmingLocation -> do
@@ -1727,7 +1728,19 @@ eval (SearchLocationModelActionController (SearchLocationModelController.GoBack)
     ]
 
 eval (SearchLocationModelActionController (SearchLocationModelController.GoBackSearchModel)) state = do
-  let updatedState = state { data {startTimeUTC = "", returnTimeUTC= "",estReturnTimeUTC = "", tripTypeDataConfig =  HomeScreenData.tripTypeDataConfig},props{searchLocationModelProps{tripType = ONE_WAY_TRIP}}}
+  let updatedState = state { 
+    data {
+        startTimeUTC = ""
+      , returnTimeUTC= ""
+      , estReturnTimeUTC = ""
+      , tripTypeDataConfig =  HomeScreenData.tripTypeDataConfig}
+    ,props{
+        searchLocationModelProps{
+            tripType = ONE_WAY_TRIP
+          }
+      , isTripSchedulable = false
+        }
+      }
   void $ pure $ performHapticFeedback unit
   continueWithCmd updatedState [ do pure $ BackPressed ]
 
@@ -2686,12 +2699,17 @@ eval (DateSelectAction title dateResp respYear respMonth respDay timeResp respHo
 
 
           selectedUTC = unsafePerformEffect $ convertDateTimeConfigToUTC year (month + 1) day hour minute 0
+          
           estDuration = state.data.tripEstDuration
+          
           currentStartTimeUTC = if state.data.startTimeUTC == "" then (getCurrentUTC "") else state.data.startTimeUTC
+          
           compareUTCwithEstReturn = if (title =="Return" && state.data.estReturnTimeUTC /= "") then (compareUTCDate selectedUTC state.data.estReturnTimeUTC) else 0
 
-          returnTripConfig = calculateDateInfo year month day hour minute (2*estDuration + 3600 + compareUTCwithEstReturn)
-          -- additional check can happen here
+          bookingDuration = if title == "Return" then estDuration else 2*estDuration + 3600 + compareUTCwithEstReturn
+
+          returnTripConfig = calculateDateInfo year month day hour minute (bookingDuration)
+
           isAfterThirtyMinutes = ((compareUTCDate selectedUTC (getCurrentUTC "")) > (30 * 60))
 
           updatedDateTime = state.data.selectedDateTimeConfig { year = year, month = month, day = day, hour = hour, minute = minute }

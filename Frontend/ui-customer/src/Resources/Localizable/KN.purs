@@ -1643,3 +1643,4 @@ getKN stringKey =
         DENY -> "ನಿರಾಕರಿಸಿ"
         ALLOW -> "ಅನುಮತಿಸು"
         INTERCITY_BUS -> "ಇಂಟರ್‌ಸಿಟಿ ಬಸ್"
+        DRIVER_ASSIGNED -> "ಡ್ರೈವರ್ ನೀಡಲಾಗಿದೆ"

@@ -1660,3 +1660,4 @@ getTA stringKey =
     DENY -> "மறுக்கவும்"
     ALLOW -> "அனுமதி"
     INTERCITY_BUS -> "இன்டர்சிட்டி பேருந்து"
+    DRIVER_ASSIGNED -> "இயக்குனர் ஒதுக்கப்பட்டது"

@@ -1641,3 +1641,4 @@ getHI stringKey =
         DENY -> "इनकार"
         ALLOW -> "अनुमति दें"
         INTERCITY_BUS -> "इंटरसिटी बस"
+        DRIVER_ASSIGNED -> "ड्राइवर असाइन"

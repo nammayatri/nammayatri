@@ -4797,10 +4797,10 @@ rentalBannerView state push =
               vehicleNumber = resp.vehicleNumber
               fpt = rentalsInfo.fareProductType
               bookingInfoString = case fpt of 
-                                      FPT.INTER_CITY -> "Intercity"
-                                      FPT.RENTAL -> "Rental"
-                                      _ -> "Scheduled"
-            "Driver Assigned" <> " &#8226; " <> bookingInfoString <> "<br> <b>" <> driverName <> " &#8226; " <> vehicleNumber <> "</b>"
+                                      FPT.INTER_CITY -> (getString INTER_CITY_)
+                                      FPT.RENTAL -> (getString RENTAL_STR)
+                                      _ -> (getString SCHEDULED)
+            (getString DRIVER_ASSIGNED) <> " &#8226; " <> bookingInfoString <> "<br> <b>" <> driverName <> " &#8226; " <> vehicleNumber <> "</b>"
           _ -> do 
             let timeUTC = rentalsInfo.rideScheduledAtUTC
                 fpt = rentalsInfo.fareProductType
