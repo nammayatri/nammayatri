@@ -22,3 +22,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_intelligent_pool_config ADD COLUMN num
 ALTER TABLE atlas_driver_offer_bpp.driver_intelligent_pool_config ADD COLUMN speed_normalizer double precision NOT NULL default 28;
 ALTER TABLE atlas_driver_offer_bpp.driver_intelligent_pool_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_intelligent_pool_config ADD PRIMARY KEY ( merchant_operating_city_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_intelligent_pool_config ADD COLUMN actual_pickup_duration_weightage integer NOT NULL default 0;
