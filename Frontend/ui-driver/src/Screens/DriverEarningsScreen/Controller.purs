@@ -767,7 +767,9 @@ dummyRideHistoryItem = RidesInfo {
       bapName : Nothing,
       isValueAddNP : false,
       roundTrip : false,
-      returnTime : Nothing
-    , parkingCharge : Nothing
- , coinsEarned : Nothing  
+      returnTime : Nothing,
+      parkingCharge : Nothing,
+      senderDetails : Nothing,
+      receiverDetails : Nothing,
+      coinsEarned : Nothing 
 }

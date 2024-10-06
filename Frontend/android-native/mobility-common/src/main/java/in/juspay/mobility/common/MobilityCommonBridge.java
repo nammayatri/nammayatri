@@ -232,6 +232,8 @@ public class MobilityCommonBridge extends HyperBridge {
     protected static final int LOCATION_RESOLUTION_REQUEST_CODE = 21345;
     private static final int DATEPICKER_SPINNER_COUNT = 3;
     private static final int REQUEST_CODE_NOTIFICATION_PERMISSION = 10;
+    private static final int PICK_CONTACT_REQUEST_CODE = 191;
+    private static final int PICK_CONTACT_PERMISSION_REQUEST_CODE = 1993;
     //Maps
     protected HashMap <String, Marker> markers = new HashMap <>();
     protected GoogleMap googleMap;
@@ -246,6 +248,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected String storeDashboardCallBack = null;
     private String storeImageUploadCallBack = null;
     private String storeUploadMultiPartCallBack = null;
+    private String storePickContactCallBack = null;
     protected Marker userPositionMarker;
     private final UICallBacks callBack;
     private final FusedLocationProviderClient client;
@@ -3393,6 +3396,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 removeMarker("ic_auto_nav_on_map");
                 removeMarker("ny_ic_vehicle_nav_on_map");
                 removeMarker("ny_ic_black_yellow_auto");
+                removeMarker("ny_ic_bike_delivery_nav_on_map");
                 removeMarker("ny_ic_src_marker");
                 removeMarker("ny_ic_dest_marker");
                 removeMarker("ny_ic_blue_marker");
@@ -5218,14 +5222,14 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void uploadFile(String ratio) {
+    public void uploadFile(String ratio, boolean canChooseFromFile) {
         try{
             if(mediaPlayer == null) mediaPlayer = new MediaPlayer(bridgeComponents);
             JSONObject payload = new JSONObject(ratio);
             int imageAspectHeight = payload.optInt("imageAspectHeight", 0);
             int imageAspectWidth = payload.optInt("imageAspectWidth", 0);
             boolean showAccordingToAspectRatio = payload.optBoolean("showAccordingToAspectRatio", false);
-            mediaPlayer.uploadFile(imageAspectHeight, imageAspectWidth, showAccordingToAspectRatio);
+            mediaPlayer.uploadFile(imageAspectHeight, imageAspectWidth, showAccordingToAspectRatio, canChooseFromFile);
         }catch (Exception e) {
             e.printStackTrace();
         }
@@ -5298,6 +5302,26 @@ public class MobilityCommonBridge extends HyperBridge {
                     Log.e(OVERRIDE, result.getError().toString());
                 }
                 break;
+            case PICK_CONTACT_REQUEST_CODE:
+                if (resultCode == RESULT_OK) {
+                    Uri contactUri = data.getData();
+
+                    String[] projection = new String[]{
+                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                        ContactsContract.CommonDataKinds.Phone.NUMBER
+                    };
+
+                    try (Cursor cursor = bridgeComponents.getContext().getContentResolver().query(contactUri, projection, null, null, null)) {
+                        if (cursor != null && cursor.moveToFirst()) {
+                            String name = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
+                            String phoneNumber = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER));
+
+                            Log.d("Contact Info", "Name: " + name + ", Phone Number: " + phoneNumber);
+                            callPickContactCallBack(name, phoneNumber);
+                        }
+                    }
+                    }
+                break;
         }
         return super.onActivityResult(requestCode, resultCode, data);
     }
@@ -5348,6 +5372,10 @@ public class MobilityCommonBridge extends HyperBridge {
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
+                break;
+            case PICK_CONTACT_PERMISSION_REQUEST_CODE:
+                Intent contactPickerIntent = new Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI);
+                bridgeComponents.getActivity().startActivityForResult(contactPickerIntent, PICK_CONTACT_REQUEST_CODE, null);
                 break;
             default:
                 break;
@@ -5500,5 +5528,36 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public String rsEncryption(String phoneNumber){
         return CipherUtil.getInstance().encryptData(phoneNumber);
+    }
+
+
+    @JavascriptInterface
+    public void storeCallBackPickContact(String callback){
+        storePickContactCallBack = callback;
+    }
+
+    public void callPickContactCallBack(String name, String phoneNumber) {
+        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
+                storePickContactCallBack, name, phoneNumber);
+        bridgeComponents.getJsCallback().addJsToWebView(javascript);
+    }
+
+    @JavascriptInterface
+    public void pickContact()
+    {
+        if (ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+            if (bridgeComponents.getActivity() != null) {
+                ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.READ_CONTACTS}, PICK_CONTACT_PERMISSION_REQUEST_CODE);
+            }
+        } else {
+            ExecutorManager.runOnMainThread(() -> {
+                try {
+                    Intent contactPickerIntent = new Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI);
+                    bridgeComponents.getActivity().startActivityForResult(contactPickerIntent, PICK_CONTACT_REQUEST_CODE, null);
+                } catch (Exception e) {
+                    Log.e(UTILS, "Exception in Contact Permission" + e);
+                }
+            });
+        }
     }
 }

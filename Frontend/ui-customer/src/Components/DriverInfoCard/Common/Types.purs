@@ -5,7 +5,7 @@ import Prelude
 import MerchantConfig.Types (AppConfig)
 import Data.Maybe (Maybe(..))
 import Common.Types.App as CTP
-import Screens.Types (City, SearchResultType, FareProductType)
+import Screens.Types (City, SearchResultType, FareProductType, PersonDeliveryDetails)
 
 type DriverDetailsType
   = { fareProductType :: FareProductType
@@ -40,4 +40,6 @@ type TripDetails a
   , rideAccepted :: Boolean
   , editingPickupLocation :: a
   , isEditPickupEnabled :: Boolean
+  , senderDetails :: Maybe PersonDeliveryDetails
+  , receiverDetails :: Maybe PersonDeliveryDetails
     }

@@ -1722,4 +1722,24 @@ getBn =
     , free_trial_ending_in_n_days : (\days -> "ফ্রি ট্রায়াল শেষ হচ্ছে " <> days <> " দিনে")
     , n_free_rides_completed : (\n -> n <> " ফ্রি রাইড সম্পন্ন")
     , n_more_free_rides_left: (\n -> n <> " আরও ফ্রি রাইড বাকি")
+    , collect_cash_at_drop : "ড্রপে নগদ সংগ্রহ করুন"
+    , more_details : "আরো বিস্তারিত"
+    , take_photo_of_parcel : "প্যাকেজের ছবি তুলুন"
+    , sender_will_verify_parcel : "প্রেরক আপনাকে OTP দিতে এই ফটো যাচাই করবেন"
+    , call_customer_text : "গ্রাহককে কল করুন"
+    , call_sender : "সেন্ডারকে কল করুন"
+    , call_receiver : "রিসিভারকে কল করুন"
+    , start : "শুরু"
+    , end : "শেষ"
+    , delivery_bike_service_tier_desc : "অনুগ্রহ করে নিশ্চিত করুন যে আপনি আপনার দুই চাকার যানে কমপক্ষে 15 লিটারের একটি ব্যাকপ্যাক বা পিছনে লাগানো ক্যারিয়ার বক্স বহন করছেন"
+    , rate_your_delivery_with : "আপনার ডেলিভারি রেট করুন"
+    , delivery_details : "ডেলিভারি বিবরণ"
+    , take_clear_picture_parcel : "আপনার ডেলিভারি পার্সেলের একটি পরিষ্কার ছবি একটি সমতল পৃষ্ঠে তুলুন।"
+    , ensure_adequate_light_parcel_desc : "নিশ্চিত করুন যে আলো যথেষ্ট এবং পার্সেলের সমস্ত দিক পরিষ্কারভাবে দৃশ্যমান।"
+    , fit_parcel_correctly : "পুরো পার্সেলটিকে নিচে দেখানো মতো চিহ্নিত এলাকায় সঠিকভাবে ফিট করুন।"
+    , correct_positioning : "সঠিক অবস্থানবিচার"
+    , incorrect_positioning : "ভুল অবস্থানবিচার"
+    , upload_parcel_image : "পার্সেল ছবি আপলোড করুন"
+    , pickup_instruction : "পিকআপ নির্দেশাবলী"
+    , drop_instruction : "ড্রপ নির্দেশাবলী"
     }

@@ -24,7 +24,7 @@ import Data.Maybe (Maybe(..))
 import Prelude (show)
 import Effect (Effect)
 import PrestoDOM (Visibility(..), Padding(..), Gravity(..), Prop)
-import Screens.Types (SearchLocationModelType, LocationListItemState, LocItemType(..))
+import Screens.Types (SearchLocationModelType, LocationListItemState, LocItemType(..), FareProductType(..))
 import MerchantConfig.Types (AppConfig)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..),TicketType(..))
@@ -93,7 +93,8 @@ type SearchLocationModelState = {
   , totalRideDistance :: Int
   , showRideInfo :: Boolean
   , isIntercityFlow :: Boolean
- }
+  , fareProductType :: FareProductType
+}
 
 type ButtonLayoutConfig = 
   { text :: String

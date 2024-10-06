@@ -156,6 +156,7 @@ data KeyStore = USER_NAME
                 | DONT_CALL_REFRESH
                 | IS_ON_FREE_TRIAL
                 | INTRODUCING_YATRI_POINTS_POPUP_LIMIT
+                | PARCEL_IMAGE_UPLOADED
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

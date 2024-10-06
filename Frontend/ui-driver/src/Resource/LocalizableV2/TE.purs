@@ -1722,4 +1722,24 @@ getTe =
     , free_trial_ending_in_n_days: (\days -> "ఉచిత ప్రయత్నం " <> days <> " రోజుల్లో ముగిస్తుంది")
     , n_free_rides_completed : (\n -> n <> " ఉచిత రైడ్లను పూర్తిచేసారు")
     , n_more_free_rides_left : (\n -> n <> " మరిన్ని ఉచిత రైడ్లు ఉన్నాయి")
+    , collect_cash_at_drop : "డ్రాప్ వద్ద నగదు సేకరించండి"
+    , more_details : "మరిన్ని వివరాలు"
+    , take_photo_of_parcel : "ప్యాకేజ్ ఫోటో తీయండి"
+    , sender_will_verify_parcel : "పంపినవారు మీకు OTP ఇవ్వడానికి ఈ ఫోటోని ధృవీకరిస్తారు"
+    , call_customer_text : "కస్టమర్ను కాల్ చేయండి"
+    , call_sender : "సెండర్ కి కాల్ చేయండి"
+    , call_receiver : "రిసీవర్ కి కాల్ చేయండి"
+    , start : "ప్రారంభించు"
+    , end : "ముగించు"
+    , delivery_bike_service_tier_desc : "మీ ద్విచక్ర వాహనంపై కనీసం 15L బ్యాక్‌ప్యాక్ లేదా వెనుక భాగంలో అమర్చిన క్యారియర్ బాక్స్‌ను తీసుకెళ్లేలా చూసుకోండి"
+    , rate_your_delivery_with : "మీ డెలివరీని రేట్ చేయండి"
+    , delivery_details : "డెలివరీ వివరాలు"
+    , take_clear_picture_parcel : "మీ డెలివరీ పార్సెల్ యొక్క స్పష్టమైన ఫోటోను సపాటైన ఉపరితలంపై తీయండి"
+    , ensure_adequate_light_parcel_desc : "వెలుతురు తగినంతగా ఉండేలా చూసి, పార్సెల్ అన్ని వైపులా స్పష్టంగా కనిపించేలా చేయండి."
+    , fit_parcel_correctly : "పార్సెల్ మొత్తం క్రింద చూపినట్లు మార్క్ చేసిన ప్రాంతంలో సరైన విధంగా అమర్చండి."
+    , correct_positioning : "సరైన స్థానప్రాప్తి"
+    , incorrect_positioning : "తప్పు స్థానప్రాప్తి"
+    , upload_parcel_image : "పార్సెల్ చిత్రాన్ని అప్‌లోడ్ చేయండి"
+    , pickup_instruction : "పికప్ సూచన"
+    , drop_instruction : "డ్రాప్ సూచన"
     }

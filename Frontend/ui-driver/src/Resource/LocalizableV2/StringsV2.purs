@@ -1794,3 +1794,23 @@ getProxy str = case str of
   FREE_TRIAL_ENDING_IN_N_DAYS arg1 -> \a -> (a @~ free_trial_ending_in_n_days) arg1
   N_MORE_FREE_RIDES arg1 -> \a -> (a @~ n_more_free_rides_left) arg1
   N_FREE_RIDES_COMPLETED arg1 -> \a -> (a @~ n_free_rides_completed) arg1
+  COLLECT_CASH_AT_DROP -> \a -> a @~ collect_cash_at_drop
+  MORE_DETAILS -> \a -> a @~ more_details
+  TAKE_PHOTO_OF_PARCEL -> \a -> a @~ take_photo_of_parcel
+  SENDER_WILL_VERIFY_PARCEL -> \a -> a @~ sender_will_verify_parcel
+  CALL_CUSTOMER_TEXT -> \a -> a @~ call_customer_text
+  CALL_SENDER -> \a -> a @~ call_sender
+  CALL_RECEIVER -> \a -> a @~ call_receiver
+  START' -> \a -> a @~ start
+  END' -> \a -> a @~ end
+  DELIVERY_BIKE_SERVICE_TIER_DESC -> \a -> a @~ delivery_bike_service_tier_desc
+  RATE_YOUR_DELIVERY_WITH -> \a -> a @~ rate_your_delivery_with
+  DELIVERY_DETAILS -> \a -> a @~ delivery_details
+  TAKE_CLEAR_PICTURE_PARCEL -> \a -> a @~ take_clear_picture_parcel
+  ENSURE_ADEQUATE_LIGHT_PARCEL_DESC -> \a -> a @~ ensure_adequate_light_parcel_desc
+  FIT_PARCEL_CORRECTLY -> \a -> a @~ fit_parcel_correctly
+  CORRECT_POSITIONING -> \a -> a @~ correct_positioning
+  INCORRECT_POSITIONING -> \a -> a @~ incorrect_positioning
+  UPLOAD_PARCEL_IMAGE -> \a -> a @~ upload_parcel_image
+  PICKUP_INSTRUCTION -> \a -> a @~ pickup_instruction
+  DROP_INSTRUCTION -> \a -> a @~ drop_instruction

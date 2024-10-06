@@ -1736,6 +1736,26 @@ newtype Keymap
   , free_trial_ending_in_n_days :: String -> String
   , n_free_rides_completed :: String -> String
   , n_more_free_rides_left :: String -> String
+  , collect_cash_at_drop :: String
+  , more_details :: String
+  , take_photo_of_parcel :: String
+  , sender_will_verify_parcel :: String
+  , call_customer_text :: String
+  , call_sender :: String
+  , call_receiver :: String
+  , start :: String
+  , end :: String
+  , delivery_bike_service_tier_desc :: String
+  , rate_your_delivery_with :: String
+  , delivery_details :: String
+  , take_clear_picture_parcel :: String
+  , ensure_adequate_light_parcel_desc :: String
+  , fit_parcel_correctly :: String
+  , correct_positioning ::  String
+  , incorrect_positioning :: String
+  , upload_parcel_image :: String
+  , pickup_instruction :: String
+  , drop_instruction :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -6892,3 +6912,63 @@ n_free_rides_completed = a
 
 n_more_free_rides_left :: Proxy "n_more_free_rides_left"
 n_more_free_rides_left = a
+
+collect_cash_at_drop :: Proxy "collect_cash_at_drop"
+collect_cash_at_drop = a
+
+more_details :: Proxy "more_details"
+more_details = a
+
+take_photo_of_parcel :: Proxy "take_photo_of_parcel"
+take_photo_of_parcel = a
+
+sender_will_verify_parcel :: Proxy "sender_will_verify_parcel"
+sender_will_verify_parcel = a
+
+call_customer_text :: Proxy "call_customer_text"
+call_customer_text = a
+
+call_sender :: Proxy "call_sender"
+call_sender = a
+
+call_receiver :: Proxy "call_receiver"
+call_receiver = a
+
+start :: Proxy "start"
+start = a
+
+end :: Proxy "end"
+end = a
+
+delivery_bike_service_tier_desc :: Proxy "delivery_bike_service_tier_desc"
+delivery_bike_service_tier_desc = a
+
+rate_your_delivery_with :: Proxy "rate_your_delivery_with"
+rate_your_delivery_with = a
+
+delivery_details :: Proxy "delivery_details"
+delivery_details = a
+
+take_clear_picture_parcel :: Proxy "take_clear_picture_parcel"
+take_clear_picture_parcel = a
+
+ensure_adequate_light_parcel_desc :: Proxy "ensure_adequate_light_parcel_desc"
+ensure_adequate_light_parcel_desc = a
+
+fit_parcel_correctly :: Proxy "fit_parcel_correctly"
+fit_parcel_correctly = a
+
+correct_positioning :: Proxy "correct_positioning"
+correct_positioning = a
+
+incorrect_positioning :: Proxy "incorrect_positioning"
+incorrect_positioning = a
+
+upload_parcel_image :: Proxy "upload_parcel_image"
+upload_parcel_image = a
+
+pickup_instruction :: Proxy "pickup_instruction"
+pickup_instruction = a
+
+drop_instruction :: Proxy "drop_instruction"
+drop_instruction = a

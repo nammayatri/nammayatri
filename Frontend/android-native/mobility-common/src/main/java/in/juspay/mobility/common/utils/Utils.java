@@ -220,6 +220,7 @@ public class Utils {
             {
                 String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
                 for (int i = 0; i < callBack.size(); i++) {
+
                     if (fileUri != null) {
                         callBack.get(i).imageUploadCallBack(encImage, "IMG_" + timeStamp + ".jpg", fileUri.getPath());
                     }

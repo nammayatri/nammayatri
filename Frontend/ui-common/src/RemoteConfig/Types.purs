@@ -128,7 +128,8 @@ type TipsConfig
       taxi :: Maybe (Array Int),
       taxiPlus :: Maybe (Array Int),
       bike :: Maybe (Array Int),
-      default :: Maybe (Array Int)
+      default :: Maybe (Array Int),
+      deliveryBike :: Maybe (Array Int)
     }
 
 type SubscriptionConfigVariantLevel 
@@ -139,7 +140,8 @@ type SubscriptionConfigVariantLevel
       bookAny :: Maybe SubscriptionConfigVariantLevelEntity,
       taxi :: Maybe SubscriptionConfigVariantLevelEntity,
       taxiPlus :: Maybe SubscriptionConfigVariantLevelEntity,
-      default :: Maybe SubscriptionConfigVariantLevelEntity
+      default :: Maybe SubscriptionConfigVariantLevelEntity,
+      deliveryBike :: Maybe SubscriptionConfigVariantLevelEntity
     }
 
 

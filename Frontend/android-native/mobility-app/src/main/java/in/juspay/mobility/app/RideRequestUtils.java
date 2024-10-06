@@ -604,6 +604,8 @@ public class RideRequestUtils {
     }
 
     public static void updateTierAndAC(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
+        
+        String tripCategory = model.getRideProductType() != null ? model.getRideProductType() : "";
         boolean showTier = model.getVehicleServiceTier() != null;
         int airConditioned = model.isAirConditioned();
         boolean ventilator = model.getRequestedVehicleVariant().equals("AMBULANCE_VENTILATOR");
@@ -620,10 +622,13 @@ public class RideRequestUtils {
             holder.acView.setVisibility(View.GONE);
             holder.nonAcView.setVisibility(View.GONE);
         }
+        
+        if(tripCategory.equals(NotificationUtils.DELIVERY)) holder.vcTierAndACView.setRadius(dpToPx(8,context));
+
         holder.vcTierAndACView.setVisibility((showTier || showAC || showNonAC) ? View.VISIBLE : View.GONE);
-        holder.vcTierAndACView.setCardBackgroundColor(Color.parseColor(showNonAC ? "#F4F7FF" : "#1A0066FF"));
+        holder.vcTierAndACView.setCardBackgroundColor(getVcTierAndACBg(tripCategory, showNonAC, context));
         holder.vehicleServiceTier.setText(model.getVehicleServiceTier() != null ? getSTMapping (model.getVehicleServiceTier(), context) : "");
-        holder.vehicleServiceTier.setTextColor(context.getColor(showNonAC ? R.color.black650 : R.color.blue800));
+        holder.vehicleServiceTier.setTextColor(getVehicleServiceTierTextColor(tripCategory, showNonAC, context));
         holder.vehicleServiceTier.setVisibility(showTier ? View.VISIBLE : View.GONE);
         holder.acNonAcView.setVisibility( showAC || showNonAC ? View.VISIBLE : View.GONE);
     }
@@ -759,6 +764,52 @@ public class RideRequestUtils {
             firebaseLogEventWithParams("exception_in_get_st_mapping", "exception", String.valueOf(e), context);
         }
         return serviceTier;
+    }
+
+    public static int getVehicleServiceTierTextColor (String tripCategory, Boolean showNonAC, Context context){
+        try {
+                JSONObject tagOb = getRRCityStyleConfig(tripCategory, showNonAC, context);
+                if (tagOb.has("textColor")){
+                    return Color.parseColor(tagOb.getString("textColor"));
+                }
+            }
+        catch (Exception e){
+            firebaseLogEventWithParams("exception_in_get_st_text_color", "exception", String.valueOf(e), context);
+        }
+        return context.getColor(showNonAC ? R.color.black650 : R.color.blue800);
+    }
+
+    public static int getVcTierAndACBg (String tripCategory, Boolean showNonAC, Context context){
+        JSONObject myCityOb = currentCityObject("ride_request_popup_style_config", context);
+        try{
+            JSONObject tagOb = getRRCityStyleConfig(tripCategory, showNonAC, context);
+            if (tagOb.has("cardBG")){
+                return Color.parseColor(tagOb.getString("cardBG"));
+            }
+        }
+        catch (Exception e){
+            firebaseLogEventWithParams("exception_in_get_st_text_color", "exception", String.valueOf(e), context);
+        }
+        return Color.parseColor(showNonAC ? "#F4F7FF" : "#1A0066FF");
+    }
+
+    public static JSONObject getRRCityStyleConfig (String tripCategory, Boolean showNonAC, Context context)
+    {
+        JSONObject myCityOb = currentCityObject("ride_request_popup_style_config", context);
+        try {
+            if (myCityOb.has(tripCategory)) {
+                JSONObject tripCategoryOb = myCityOb.getJSONObject(tripCategory);
+
+                if (tripCategoryOb.has(showNonAC ? "nonAcTag" : "acTag")) {
+
+                    return tripCategoryOb.getJSONObject(showNonAC ? "nonAcTag" : "acTag");
+                }
+            }
+        }
+        catch (Exception e){
+            firebaseLogEventWithParams("exception_in_get_rr_city_style_config", "exception", String.valueOf(e), context);
+    }
+        return new JSONObject();
     }
 
     public static JSONObject currentCityObject (String keyName, Context context){

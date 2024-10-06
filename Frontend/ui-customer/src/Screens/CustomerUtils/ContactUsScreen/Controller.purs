@@ -58,12 +58,15 @@ instance loggableAction :: Loggable Action where
         SubjectEditTextActionController act -> case act of
             PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "subject_edit_text_changed" "primary_edit_text" 
             PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "subject_edit_text_focus_changed" "primary_edit_text" 
+            PrimaryEditText.TextImageClicked -> trackAppActionClick appId (getScreen CONTACT_US_SCREEN) "subject_edit_text_image_onclick" "primary_edit_text"
         EmailEditTextActionController act -> case act of
             PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "email_edit_text_changed" "primary_edit_text"
             PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "email_edit_text_focus_changed" "primary_edit_text" 
+            PrimaryEditText.TextImageClicked -> trackAppActionClick appId (getScreen CONTACT_US_SCREEN) "email_edit_text_image_onclick" "primary_edit_text"
         DescriptionEditTextActionController act -> case act of
             PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "description_edit_text_changed" "primary_edit_text"
             PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen CONTACT_US_SCREEN) "description_edit_text_focus_changed" "primary_edit_text" 
+            PrimaryEditText.TextImageClicked -> trackAppActionClick appId (getScreen CONTACT_US_SCREEN) "description_edit_text_image_onclick" "primary_edit_text"
 
 data ScreenOutput = GoBack | GoHome ContactUsScreenState
 

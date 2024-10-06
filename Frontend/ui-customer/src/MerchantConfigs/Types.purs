@@ -396,7 +396,8 @@ type VariantConfig = {
   taxiPlus :: VariantInfo,
   bookAny :: VariantInfo,
   bike :: VariantInfo,
-  suvPlus :: VariantInfo
+  suvPlus :: VariantInfo,
+  deliveryBike :: VariantInfo
 }
 
 type VariantInfo = {

@@ -26,6 +26,7 @@ import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
 
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.FileProvider;
 
@@ -89,7 +90,7 @@ public class MediaPlayer {
         return null;
     }
 
-    public void uploadFile(int imageAspectHeight, int imageAspectWidth, boolean showAccordingToAspectRatio) { 
+    public void uploadFile(int imageAspectHeight, int imageAspectWidth, boolean showAccordingToAspectRatio, @Nullable Boolean canChooseFromFile) {
         if (!isUploadPopupOpen) {
             ExecutorManager.runOnMainThread(() -> {
                 Context context = bridgeComponents.getContext();
@@ -108,7 +109,7 @@ public class MediaPlayer {
                         height = imageAspectHeight;
                         width = imageAspectWidth;
                         showToAspectRatio = showAccordingToAspectRatio;
-                        bridgeComponents.getActivity().startActivityForResult(chooser, IMAGE_CAPTURE_REQ_CODE, null);
+                        bridgeComponents.getActivity().startActivityForResult((canChooseFromFile != null && canChooseFromFile.equals(false) ? takePicture : chooser), IMAGE_CAPTURE_REQ_CODE, null);
                     }
                 } else {
                     if (bridgeComponents.getActivity() != null) {

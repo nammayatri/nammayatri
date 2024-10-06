@@ -58,6 +58,7 @@ import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
+import Screens.UploadParcelImageScreen.ScreenData as UploadParcelImageScreenData
 import Screens.Types 
 import Screens.UploadAdhaarScreen.ScreenData as UploadAdhaarScreenData
 import Screens.UploadDrivingLicenseScreen.ScreenData as UploadDrivingLicenseScreenData
@@ -140,6 +141,7 @@ newtype GlobalState = GlobalState {
   , rideRequestScreen :: RideRequestScreenData.RideRequestScreenState
   , rideSummaryScreen :: RideSummaryScreenData.RideSummaryScreenState
   , scheduledRideAcceptedScreen :: ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState
+  , uploadParcelImageScreen :: UploadParcelImageScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -199,6 +201,7 @@ defaultGlobalState = GlobalState {
 , rideRequestScreen : RideRequestScreenData.initData ""
 , rideSummaryScreen : RideSummaryScreenData.initData
 , scheduledRideAcceptedScreen :ScheduledRideAcceptedScreenData.initData
+, uploadParcelImageScreen : UploadParcelImageScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -268,6 +271,7 @@ data ScreenType =
   | RideRequestScreenStateType (RideRequestScreenData.RideRequestScreenState ->RideRequestScreenData.RideRequestScreenState)
   | RideSummaryScreenStateType (RideSummaryScreenData.RideSummaryScreenState -> RideSummaryScreenData.RideSummaryScreenState)
   | ScheduleRideAcceptedScreenStateType (ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState -> ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState )
+  | UploadParcelImageScreenStateType (UploadParcelImageScreenState -> UploadParcelImageScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -465,6 +469,8 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | GO_TO_RIDE_REQ_SCREEN HomeScreenState String String
                           | GO_TO_RIDE_SUMMARY
                           | GO_TO_RIDE_SUMMARY_SCREEN HomeScreenState
+                          | GO_TO_UPLOAD_PARCEL_IMAGE HomeScreenState
+                          | NOTIFY_DRIVER_REACHED_DESTINATION HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
@@ -600,3 +606,5 @@ data CUSTOMER_REFERRAL_TRACKER_SCREEN_OUTPUT = ADD_UPI_FLOW CustomerReferralScre
                                                | DELETE_UPI_FLOW CustomerReferralScreenTypes.CustomerReferralTrackerScreenState
                                                | REFRESH_ORDER_STATUS CustomerReferralScreenTypes.CustomerReferralTrackerScreenState
                                                | HOME_SCREEN_FROM_REFERRAL_TRACKER
+
+data UPLOAD_PARCEL_IMAGE_SCREEN_OUTPUT = GOTO_HOME_SCREEN | UPLOAD_IMAGE UploadParcelImageScreenState
