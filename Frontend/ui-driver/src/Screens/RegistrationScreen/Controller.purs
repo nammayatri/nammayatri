@@ -105,6 +105,7 @@ instance loggableAction :: Loggable Action where
     PrimaryEditTextActionController act -> case act of
       PrimaryEditText.TextChanged id value -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "registration_number_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "registration_number_text_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "registration_number_text_image_clicked" "primary_edit_text"
     ReferralCodeTextChanged str -> pure unit
     EnterReferralCode val -> pure unit
     _ -> trackAppActionClick appId (getScreen REGISTRATION_SCREEN) "popup_modal_action" "no_action"

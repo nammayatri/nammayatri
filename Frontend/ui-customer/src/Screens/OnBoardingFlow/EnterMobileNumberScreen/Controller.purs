@@ -78,6 +78,7 @@ instance loggableAction :: Loggable Action where
         OTPEditTextAction act -> case act of 
             PrimaryEditTextController.TextChanged id value -> trackAppTextInput appId (getScreen ENTER_OTP_NUMBER_SCREEN) "otp_edit_text_changed" "primary_edit_text"
             PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen ENTER_OTP_NUMBER_SCREEN) "otp_edit_text_focus_changed" "primary_edit_text"
+            PrimaryEditTextController.TextImageClicked -> trackAppTextInput appId (getScreen ENTER_OTP_NUMBER_SCREEN) "otp_edit_text_image_clicked" "primary_edit_text"
         GenericHeaderActionController act -> case act of
             GenericHeaderController.PrefixImgOnClick -> do
                 trackAppActionClick appId (getScreen ENTER_MOBILE_NUMBER_SCREEN) "generic_header_action" "back_icon_onclick"

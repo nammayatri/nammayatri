@@ -77,7 +77,7 @@ uploadFileConfig = UploadFileConfig {
 eval :: Action -> DocumentCaptureScreenState -> Eval Action ScreenOutput DocumentCaptureScreenState
 
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = continueWithCmd state [do
-  _ <- liftEffect $ JB.uploadFile uploadFileConfig
+  _ <- liftEffect $ JB.uploadFile uploadFileConfig true
   pure NoAction]
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue state {props { menuOptions = true }}
@@ -97,7 +97,7 @@ eval (ValidateDocumentModalAction (ValidateDocumentModal.PrimaryButtonActionCont
     updateAndExit state{props{validating = true}} $ UploadAPI state{props{validating = true}}
   else 
     continueWithCmd state {props {validateDocModal = false}, data{errorMessage = Nothing}} [do
-    void $ liftEffect $ JB.uploadFile uploadFileConfig
+    void $ liftEffect $ JB.uploadFile uploadFileConfig true
     pure NoAction]
 
 eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})

@@ -57,7 +57,7 @@ import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
 import Components.ServiceTierCard.View as ServiceTierCard
 import Helpers.Utils hiding (withinTimeRange)
 import Data.Int as INT
-import Language.Types (STR(..)) as STR
+import Language.Types (STR(..))
 import Language.Strings (getVarString)
 import PrestoDOM
 import Screens.RideBookingFlow.HomeScreen.Config (getFareUpdatedStr)
@@ -68,7 +68,10 @@ import ConfigProvider (getCurrency)
 import Constants (appConfig)
 
 customerFeedbackPillData :: RideBookingRes -> String -> Array (Array (Array ST.FeedbackItem))
-customerFeedbackPillData (RideBookingRes state) vehicalVariant = [ feedbackPillDataWithRating1 (RideBookingRes state), feedbackPillDataWithRating2 (RideBookingRes state), feedbackPillDataWithRating3 vehicalVariant, feedbackPillDataWithRating4 vehicalVariant, feedbackPillDataWithRating5 vehicalVariant ]
+customerFeedbackPillData (RideBookingRes state) vehicalVariant = if ((state.bookingDetails) ^. _fareProductType) == "DELIVERY" then parcelFeedbackPillData else normalRideFeedbackPillData (RideBookingRes state) vehicalVariant
+
+normalRideFeedbackPillData :: RideBookingRes -> String -> Array (Array (Array ST.FeedbackItem))
+normalRideFeedbackPillData (RideBookingRes state) vehicalVariant = [ feedbackPillDataWithRating1 (RideBookingRes state), feedbackPillDataWithRating2 (RideBookingRes state), feedbackPillDataWithRating3 vehicalVariant, feedbackPillDataWithRating4 vehicalVariant, feedbackPillDataWithRating5 vehicalVariant ]
 
 feedbackPillDataWithRating1 :: RideBookingRes -> Array (Array ST.FeedbackItem)
 feedbackPillDataWithRating1 (RideBookingRes state) =
@@ -86,7 +89,7 @@ acNotWorkingPill :: RideBookingRes -> Array ST.FeedbackItem
 acNotWorkingPill (RideBookingRes state) =
   ( case state.serviceTierName of
       Just serviceTierName ->
-        if ServiceTierCard.showACDetails serviceTierName Nothing then
+        if ServiceTierCard.showACDetails serviceTierName Nothing (getFareProductType ((state.bookingDetails) ^. _fareProductType)) then
           [ { id: "14", text: getString LT.AC_TURNED_OFF } ]
         else
           []
@@ -137,6 +140,62 @@ feedbackPillDataWithRating5 vehicalVariant =
     ]
   ]
 
+
+parcelFeedbackPillData :: Array ( Array (Array ST.FeedbackItem))
+parcelFeedbackPillData = [ parcelFeedbackPillDataWithRating1, parcelFeedbackPillDataWithRating2, parcelFeedbackPillDataWithRating3, parcelFeedbackPillDataWithRating4, parcelFeedbackPillDataWithRating5 ]
+
+parcelFeedbackPillDataWithRating1 :: Array (Array ST.FeedbackItem)
+parcelFeedbackPillDataWithRating1 =
+  [ [ { id: "6", text: getString RUDE_BEHAVIOUR }
+    , { id: "1", text: getString TOO_MANY_CALLS }
+    ]
+  , [ { id: "6", text: getString RECKLESS_HANDLING }
+    , { id: "6", text: getString ASKED_FOR_EXTRA_FARE }
+    ]
+  , ( [ { id: "15", text: getString DELIVERY_DELAYED } 
+      , { id: "15", text: getString ITEMS_MISSING } ]
+    )
+  ]
+
+parcelFeedbackPillDataWithRating2 :: Array (Array ST.FeedbackItem)
+parcelFeedbackPillDataWithRating2 = parcelFeedbackPillDataWithRating1 
+
+parcelFeedbackPillDataWithRating3 :: Array (Array ST.FeedbackItem)
+parcelFeedbackPillDataWithRating3 =
+  [ [ { id: "8", text: getString UNPROFESSIONAL_DRIVER }]
+  , [ { id: "8", text: getString ASKED_FOR_EXTRA_FARE }
+    , { id: "11", text: getString TOO_MANY_CALLS}
+    ]
+  , [ { id: "3", text: getString DELIVERY_DELAYED }
+    , { id: "3", text: getString RUDE_BEHAVIOUR }
+    ]
+  ]
+
+parcelFeedbackPillDataWithRating4 :: Array (Array ST.FeedbackItem)
+parcelFeedbackPillDataWithRating4 =
+  [ [ { id: "9", text: getString POLITE_ATTITUDE }
+    , { id: "9", text: getString SMOOTH_EXPERIENCE }
+    ]
+  , [ { id: "9", text: getString SECURE_DELIVERY }
+    , { id: "11", text: getString ASKED_FOR_EXTRA_FARE}
+    ]
+  , [ { id: "4", text: getString DELIVERY_DELAYED }
+    , { id: "4", text: getString TOO_MANY_CALLS }
+    ]
+  ]
+
+parcelFeedbackPillDataWithRating5 :: Array (Array ST.FeedbackItem)
+parcelFeedbackPillDataWithRating5 =
+  [ [ { id: "10", text: getString POLITE_ATTITUDE }
+    , { id: "5", text: getString SMOOTH_EXPERIENCE }
+    ]
+  , [ { id: "12", text: getString ON_TIME }
+    , { id: "10", text: getString MINIMAL_CALLING }
+    ]
+  , [ { id: "10", text: getString SECURE_DELIVERY }]
+  ]
+
+
 checkRideStatus :: Boolean -> Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned prioritizeRating = do
   logField_ <- lift $ lift $ getLogFields
@@ -163,6 +222,7 @@ checkRideStatus rideAssigned prioritizeRating = do
             response = listResp.list
             activeRideListData = map (\resp -> let listData = fetchListData resp state 
               in listData) (response)
+            requestorPartyRoles = (resp.bookingDetails ^._contents^._requestorPartyRoles)
             newState = 
               state
                 { data
@@ -197,6 +257,7 @@ checkRideStatus rideAssigned prioritizeRating = do
                         estimatedCharges = getFareFromArray resp.estimatedFareBreakup "TOLL_CHARGES"
                       , showIncludedPopUp = rideStatus == RideAccepted && (getFareFromArray resp.estimatedFareBreakup "TOLL_CHARGES" > 0.0)
                       }
+                    , requestorPartyRoles = requestorPartyRoles
                       },
                   props
                     { currentStage = rideStatus
@@ -397,6 +458,7 @@ checkRideStatus rideAssigned prioritizeRating = do
                             confidence = ride.tollConfidence
                           , showAmbiguousPopUp = ride.tollConfidence == Just CTA.Unsure
                           }
+                          , requestorPartyRoles = contents.requestorPartyRoles
                         }
                       }
                     )
@@ -421,6 +483,7 @@ checkRideStatus rideAssigned prioritizeRating = do
                                 {
                                   driverName =  currRideListItem.driverName,
                                   isAlreadyFav = fromMaybe false resp.isAlreadyFav,
+                                  fareProductType = fareProductType,
                                   favCount = fromMaybe 0 resp.favCount
                                 }
                             , showSafetyCenter = state.data.config.feature.enableSafetyFlow && isRecentRide && not state.props.isSafetyCenterDisabled
@@ -476,13 +539,13 @@ checkRideStatus rideAssigned prioritizeRating = do
                             , bookingId = resp.id
                             , additionalCharges = [
                                 {
-                                  text :  getString if ride.tollConfidence == (Just CTA.Unsure) then  STR.TOLL_ROAD_CHANGED else if finalFareHasToll then  STR.TOLL_CHARGES_INCLUDED else STR.TOLL_ROAD_CHANGED 
+                                  text :  getString if ride.tollConfidence == (Just CTA.Unsure) then  TOLL_ROAD_CHANGED else if finalFareHasToll then  TOLL_CHARGES_INCLUDED else TOLL_ROAD_CHANGED 
                                 , visibility : boolToVisibility $ finalFareHasToll || estimateFareHasToll
                                 , image :  fetchImage FF_COMMON_ASSET "ny_ic_grey_toll"
                                 , textColor : Color.black700
                                 },
                                 {
-                                  text : maybe "" (\parking ->  getString $ STR.PARKING_CHARGES_INCLUDED $ (getCurrency appConfig) <>  (show $ INT.ceil $ parking ^. _amount)) parkingCharges
+                                  text : maybe "" (\parking ->  getString $ PARKING_CHARGES_INCLUDED $ (getCurrency appConfig) <>  (show $ INT.ceil $ parking ^. _amount)) parkingCharges
                                 , visibility : boolToVisibility $ isJust parkingCharges 
                                 , image : fetchImage FF_COMMON_ASSET "ny_ic_parking_logo_grey"
                                 , textColor : Color.black700

@@ -268,6 +268,8 @@ initData =
       }
       , showIntercityRateCard : false
       , intercityInfoPopUp : false
+      , isSourceDetailsExpanded : false
+      , showDeliveryCallPopup : false
       }
   }
 
@@ -342,10 +344,16 @@ dummyRideData = {
       , bookingFromOtherPlatform : false
       , parkingCharge : 0.0
       , sourceCity : ""
-      ,destinationCity : Nothing
-      ,roundTrip : false
-      ,returnTime : ""
-      
+      , destinationCity : Nothing
+      , roundTrip : false
+      , returnTime : ""
+      , extraFromLocationInfo : Nothing
+      , extraToLocationInfo : Nothing
+      , senderInstructions : Nothing
+      , receiverInstructions : Nothing
+      , senderPersonDetails : Nothing
+      , receiverPersonDetails : Nothing
+      , notifiedReachedDestination : false
       }
 
 initialParkingData :: ParkingData

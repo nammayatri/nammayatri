@@ -1722,4 +1722,24 @@ getEn =
     , free_trial_ending_in_n_days: (\days -> "Free trial ending in " <> days <> " days!")
     , n_free_rides_completed: (\n -> n <> " free Rides Completed")
     , n_more_free_rides_left: (\n -> n <> " more free rides left!")
+    , collect_cash_at_drop : "Collect Cash At Drop"
+    , more_details : "more details"
+    , take_photo_of_parcel : "Take Photo of Package"
+    , sender_will_verify_parcel : "Sender will verify this photo to give you the OTP"
+    , call_customer_text : "Call Customer"
+    , call_sender : "Call Sender"
+    , call_receiver : "Call Receiver"
+    , start : "Start"
+    , end : "End"
+    , delivery_bike_service_tier_desc : "Please ensure that you carry at least a 15L backpack or rear-mounted carrier box on your two-wheeler"
+    , rate_your_delivery_with : "Rate your delivery with"
+    , delivery_details : "Delivery Details"
+    , take_clear_picture_parcel : "Take a clear picture of your delivery parcel on a flat surface."
+    , ensure_adequate_light_parcel_desc : "Ensure that the lighting is adequate and all necessary information on parcel are clearly visible."
+    , fit_parcel_correctly : "Fit the entire parcel in the marked area correctly as shown below."
+    , correct_positioning : "Correct Positioning"
+    , incorrect_positioning : "Incorrect Positioning"
+    , upload_parcel_image : "Upload Parcel Image"
+    , pickup_instruction : "Pickup Instruction"
+    , drop_instruction : "Drop Instruction"
     }

@@ -43,7 +43,7 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..), Accessiblity(..))
 import RemoteConfig as RC
-import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes, RideShareOptions, LocationAPIEntity(..), DeadKmFare(..),PriceAPIEntityDecimals(..),DistanceWithUnit(..),RideAPIEntity(..),RideBookingListRes)
+import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes, RideShareOptions, DeliveryDetails(..), PersonLocationAndInstruction(..), InitiatedAs(..), InstructionAndAddress(..), LocationAPIEntity(..), DeadKmFare(..),PriceAPIEntityDecimals(..),DistanceWithUnit(..),RideAPIEntity(..),RideBookingListRes)
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent, ChatContacts)
 import Screens(ScreenName)
@@ -496,7 +496,7 @@ type IndividualRideCardState =
   }
 
 
-data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE | SUV_PLUS
+data VehicleVariant = SUV | SEDAN | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS | BIKE | SUV_PLUS | DELIVERY_BIKE
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance eqVehicleVariant :: Eq VehicleVariant where eq = genericEq
@@ -706,6 +706,7 @@ data Stage = HomeScreen
            | RevisedEstimate
            | FavouriteLocationModelEditDest
            | GoToTripSelect
+           | GoToConfirmgDelivery
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -828,12 +829,15 @@ type HomeScreenStateData =
   , upcomingRideDetails :: Maybe UpcomingRideDetails
   , selectedService :: Maybe RC.Service
   , intercityBus :: IntercityBusData
+  , deliveryImage :: Maybe String
+  , deliveryDetailsInfo :: Maybe API.DeliveryDetails
+  , requestorPartyRoles :: Maybe (Array String)
 }
 
 type UpcomingRideDetails = {
   bookingId :: String,
   rideScheduledAt :: String
-  }
+}
 
 type TollData = {
   confidence :: Maybe CTA.Confidence
@@ -1129,6 +1133,10 @@ type HomeScreenStateProps =
   , showEditPickupPopupOnCancel :: Boolean
   , isIntercityFlow :: Boolean 
   , isTripSchedulable :: Boolean
+  , isConfirmSourceCurrentLocation :: Boolean
+  , showDeliveryImageAndOtpModal :: Boolean
+  , loadingDeliveryImage :: Boolean
+  , fromDeliveryScreen :: Boolean
   }
 
 type EditedLocation = {
@@ -1529,6 +1537,8 @@ type DriverInfoCard =
   , driverArrived :: Boolean
   , estimatedDistance :: String
   , driverArrivalTime :: Int
+  , destinationReached :: Boolean
+  , destinationReachedAt :: Int
   , bppRideId :: String
   , driverNumber :: Maybe String
   , merchantExoPhone :: String
@@ -1557,6 +1567,9 @@ type DriverInfoCard =
   , favCount :: Int
   , rideDuration :: Maybe Int
   , rideScheduledAtUTC :: Maybe String
+  , senderDetails :: Maybe PersonDeliveryDetails
+  , receiverDetails :: Maybe PersonDeliveryDetails
+  , estimatedTimeToReachDestination :: Maybe String 
   }
 
 type RatingCard =
@@ -3016,7 +3029,7 @@ type DateTimeConfig = {
 
 ----------------------------------------------------------------------
 
-data FareProductType = RENTAL | INTER_CITY | ONE_WAY | ONE_WAY_SPECIAL_ZONE | DRIVER_OFFER
+data FareProductType = RENTAL | INTER_CITY | ONE_WAY | ONE_WAY_SPECIAL_ZONE | DRIVER_OFFER | DELIVERY
 
 derive instance genericFareProductType :: Generic FareProductType _
 instance showFareProductType :: Show FareProductType where show = genericShow
@@ -3073,7 +3086,6 @@ type SelectFaqScreenProps =
   , needIssueListApiCall :: Boolean
   }
 
-
 -- ######################################### FaqScreenState ####################################################
 
 type FaqScreenState =
@@ -3121,15 +3133,29 @@ type ParcelDeliveryScreenData = {
   , sourceLong :: Number
   , destinationLat :: Number
   , destinationLong :: Number
+  , senderDetails :: PersonDeliveryDetails
+  , receiverDetails :: PersonDeliveryDetails
+  , initiatedAs :: API.InitiatedAs
   , selectedQuote :: Maybe QuotesList
   , parcelQuoteList :: ChooseVehicle.Config
   , rateCard :: CTA.RateCard
   , config :: AppConfig
-  , showRateCard :: Boolean
+  , tipForDriver :: Maybe Int
 }
 
 type ParcelDeliveryScreenProps = {
+  editDetails :: PersonDeliveryDetails,
+  showRateCard :: Boolean,
+  isEditModal :: Boolean,
+  focusField :: String,
+  isValidInputs :: Boolean
+}
 
+type PersonDeliveryDetails = {
+  name :: String,
+  phone :: String,
+  extras :: String,
+  instructions :: Maybe String
 }
 
 

@@ -105,6 +105,7 @@ instance loggableAction :: Loggable Action where
       ReferralMobileNumberController.PrimaryEditTextActionController act -> case act of 
         PrimaryEditTextController.TextChanged valId newVal -> trackAppTextInput appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "referral_mobile_number_text_changed" "primary_edit_text"
         PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "referral_mobile_number_text_focus_changed" "primary_edit_text"
+        PrimaryEditTextController.TextImageClicked -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "referral_mobile_number" "text_image_onclick"
       ReferralMobileNumberController.OnSubTextClick -> pure unit
     ReferralMobileNumber -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "trigger_referral_mobile_number"
     GenericMessageModalAction act -> case act of
@@ -250,7 +251,7 @@ eval (BackPressed flag) state = do
             continueWithCmd (state {props{ validateProfilePicturePopUp = false,imageCaptureLayoutView = true}}) [ pure UploadFile]
         else do
             continueWithCmd state {props { validateProfilePicturePopUp = false, fileCameraPopupModal = false, fileCameraOption = false, imageCaptureLayoutView = false}} [do
-                _ <- liftEffect $ uploadFile uploadFileConfig
+                _ <- liftEffect $ uploadFile uploadFileConfig true
                 pure NoAction]
     else if(state.props.imageCaptureLayoutView) then continue state{props{imageCaptureLayoutView = false,openHowToUploadManual = true}} 
     else if(state.props.fileCameraPopupModal) then continue state{props{fileCameraPopupModal = false, validateProfilePicturePopUp = false, imageCaptureLayoutView = false}} 
@@ -379,7 +380,7 @@ eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = do
   else if (state.props.openHowToUploadManual == false) then 
     continue state {props {openHowToUploadManual = true}}
   else  continueWithCmd state {props { fileCameraPopupModal = false, fileCameraOption = false}} [do
-     _ <- liftEffect $ uploadFile uploadFileConfig
+     _ <- liftEffect $ uploadFile uploadFileConfig true
      pure NoAction]
 eval (GenericMessageModalAction (GenericMessageModalController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = exit ApplicationSubmittedScreen
 
@@ -388,7 +389,7 @@ eval ButtonClick state = do
   else if (state.props.openHowToUploadManual == false) then 
     continue state {props {openHowToUploadManual = true}}
   else  continueWithCmd state {props { fileCameraPopupModal = false, fileCameraOption = false}} [do
-     _ <- liftEffect $ uploadFile uploadFileConfig
+     _ <- liftEffect $ uploadFile uploadFileConfig true
      pure NoAction]
 
 eval SkipButton state = exit $ ValidateDataAPICall state
@@ -428,12 +429,12 @@ eval (ValidateDocumentModalAction (ValidateDocumentModal.PrimaryButtonActionCont
     updateAndExit state{props{validating = true}} $ ValidateDetails state{props{validating = true}}
    else  
      continueWithCmd state {props {validateProfilePicturePopUp = false, errorVisibility = false, fileCameraPopupModal = false, fileCameraOption = false}, data{errorMessage = ""}} [do
-     _ <- liftEffect $ uploadFile uploadFileConfig
+     _ <- liftEffect $ uploadFile uploadFileConfig true
      pure NoAction]
 
 eval (PopUpModalActions (PopUpModal.OnButton2Click)) state = do
    continueWithCmd state {props { fileCameraPopupModal = false, fileCameraOption = false}} [do
-     _ <- liftEffect $ uploadFile uploadFileConfig
+     _ <- liftEffect $ uploadFile uploadFileConfig true
      pure NoAction]
 
 eval (PopUpModalActions (PopUpModal.OnButton1Click)) state = do

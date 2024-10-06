@@ -61,9 +61,11 @@ instance loggableAction :: Loggable Action where
     NameEditTextAction act -> case act of
       PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "edit_name_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "edit_name_text_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "name_text_image_click"
     EmailIDEditTextAction act -> case act of
       PrimaryEditText.TextChanged _ _ -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "edit_email_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "edit_email_text_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "email_text_image_click"
     SpecialAssistanceListAC _ -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "special_assistance_list_click"
     GenericRadioButtonAC _ -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "disability_radio_btn_click"
     MoreInfo _ ->  trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "learn_more_button_click"

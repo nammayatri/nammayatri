@@ -1722,4 +1722,24 @@ getHi =
     , free_trial_ending_in_n_days: (\days -> "मुफ्त परीक्षण का समापन " <> days <> " दिनों में!")
     , n_free_rides_completed: (\n -> n <> " मुफ्त सवारियां पूरी हुईं")
     , n_more_free_rides_left: (\n -> n <> " और मुफ्त सवारियां बाकी हैं!")
+    , collect_cash_at_drop : "ड्रॉप पर नकद इकट्ठा करें"
+    , more_details : "अधिक जानकारी"
+    , take_photo_of_parcel : "पार्सल की फोटो लें"
+    , sender_will_verify_parcel : "प्रेषक आपको OTP देने के लिए इस फोटो की पुष्टि करेगा"
+    , call_customer_text : "ग्राहक को कॉल करें"
+    , call_sender : "सेंडर को कॉल करें"
+    , call_receiver : "रिसीवर को कॉल करें"
+    , start : "शुरू"
+    , end : "समाप्त"
+    , delivery_bike_service_tier_desc : "कृपया सुनिश्चित करें कि आप अपने दोपहिया वाहन पर कम से कम 15 लीटर का बैकपैक या पीछे लगा हुआ कैरियर बॉक्स ले जाएं"
+    , rate_your_delivery_with : "अपनी डिलीवरी को रेट करें"
+    , delivery_details : "डिलीवरी विवरण"
+    , take_clear_picture_parcel : "अपने डिलीवरी पार्सल की एक साफ़ तस्वीर एक सपाट सतह पर लें।"
+    , ensure_adequate_light_parcel_desc : "सुनिश्चित करें कि प्रकाश पर्याप्त हो और पार्सल के सभी हिस्से स्पष्ट रूप से दिखाई"
+    , fit_parcel_correctly : "पूरे पार्सल को नीचे दिखाए गए अनुसार सही ढंग से चिह्नित क्षेत्र में फिट करें।"
+    , correct_positioning : "सही स्थिति"
+    , incorrect_positioning : "गलत स्थिति"
+    , upload_parcel_image : "पार्सल छवि अपलोड करें"
+    , pickup_instruction : "पिकअप निर्देश"
+    , drop_instruction : "ड्रॉप निर्देश"
     }

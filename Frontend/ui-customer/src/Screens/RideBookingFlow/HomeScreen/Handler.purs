@@ -24,7 +24,7 @@ import ModifyScreenState (modifyScreenState)
 import Prelude (bind, discard, ($), (<$>), pure, void)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.HomeScreen.View as HomeScreen
-import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREEN_OUTPUT(..))
+import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREEN_OUTPUT(..), ParcelAction(..))
 import Screens.Types (BottomNavBarIcon(..))
 import Screens.HomeScreen.Transformer(getTripDetailsState)
 import Presto.Core.Types.Language.Flow (getLogFields)
@@ -275,4 +275,13 @@ homeScreen = do
       App.BackT $ App.NoBack <$> (pure $ GO_TO_TRIP_TYPE_SELECTION state)
     RideSummary state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> state) 
-      App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDE_SUMMARY_SCREEN state)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDE_SUMMARY_SCREEN state)    
+    GoToParcelInstructions updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ PARCEL (GO_TO_PARCEL_INSTRUCTIONS updatedState))
+    GetDeliveryImage updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ PARCEL (GET_DELIVERY_IMAGE updatedState))
+    GoToDeliveryDetails updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ PARCEL (GO_TO_DELIVERY_DETAILS updatedState))

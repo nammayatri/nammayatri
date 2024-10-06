@@ -1722,4 +1722,24 @@ getKn =
     , free_trial_ending_in_n_days: (\days -> "ಉಚಿತ ಪ್ರಯೋಗ ಕೊನೆಯಾಗುತ್ತಿದೆ "<> days <>" ದಿನಗಳಲ್ಲಿ!")
     , n_free_rides_completed : (\n -> n <> " ಉಚಿತ ಸವಾರಿಗಳನ್ನು ಪೂರೈಸಿದ್ದೀರಿ!")
     , n_more_free_rides_left : (\n -> n <> " ಉಚಿತ ಸವಾರಿಗಳು ಉಳಿದಿವೆ!")
+    , collect_cash_at_drop : "ಡ್ರಾಪ್‌ನಲ್ಲಿ ನಗದು ಸಂಗ್ರಹಿಸಿ"
+    , more_details : "ಹೆಚ್ಚಿನ ವಿವರಗಳು"
+    , take_photo_of_parcel : "ಪ್ಯಾಕೇಜ್‌ನ ಫೋಟೋ ತೆಗೆಯಿರಿ"
+    , sender_will_verify_parcel : "ಕಳುಹಿಸುವವರು ನಿಮಗೆ OTP ನೀಡಲು ಈ ಫೋಟೋವನ್ನು ಪರಿಶೀಲಿಸುತ್ತಾರೆ"
+    , call_customer_text : "ಗ್ರಾಹಕರಿಗೆ ಕರೆ ಮಾಡಿ"
+    , call_sender : "ಸೆಂಡರ್‌ಗೆ ಕಾಲ್ ಮಾಡಿ"
+    , call_receiver : "ರಿಸೀವರ್ ಗೆ ಕಾಲ್ ಮಾಡಿ"
+    , start : "ಪ್ರಾರಂಭಿಸಿ"
+    , end : "ಮುಗಿಸಿ"
+    , delivery_bike_service_tier_desc : "ದಯವಿಟ್ಟು ನಿಮ್ಮ ದ್ವಿಚಕ್ರ ವಾಹನದಲ್ಲಿ ಕನಿಷ್ಠ 15 ಲೀಟರ್ ಬ್ಯಾಕ್‌ಪ್ಯಾಕ್ ಅಥವಾ ಹಿಂಭಾಗದಲ್ಲಿ ಅಳವಡಿಸಲಾದ ಕ್ಯಾರಿಯರ್ ಬಾಕ್ಸ್ ಅನ್ನು ಹೊಂದಿರುವುದನ್ನು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ"
+    , rate_your_delivery_with : "റേറ്റ് യൂര് ഡെലിവറി വിത്"
+    , delivery_details : "ഡെലിവറി ഡിടെയിൽസ്"
+    , take_clear_picture_parcel : "ನಿಮ್ಮ ಡೆಲಿವರಿ ಪಾರ್ಸೆಲ್ ಅನ್ನು ಸಮತಟ್ಟಾದ ಮೇಲ್ಮೈ ಮೇಲೆ ಸ್ಪಷ್ಟವಾಗಿ ಪಟಮಾಡಿ."
+    , ensure_adequate_light_parcel_desc : "ಬೆಳಕು ಸಮರ್ಪಕವಾಗಿ ಇದ್ದಂತೆಯೂ, ಪಾರ್ಸೆಲ್ ಎಲ್ಲಾ ಬದಿಗಳೂ ಸ್ಪಷ್ಟವಾಗಿ ಕಾಣಿಸಿಕೊಳ್ಳುವಂತೆಯೂ ಮಾಡಿರಿ."
+    , fit_parcel_correctly : "ಪಾರ್ಸೆಲ್ ಅನ್ನು ಕೆಳಗೆ ತೋರಿಸಿದಂತೆ ಗುರುತಿಸಲಾದ ಪ್ರದೇಶದಲ್ಲಿ ಸರಿಯಾಗಿ ಹೊಂದಿಸಿ."
+    , correct_positioning : "ಸರಿಯಾದ ಸ್ಥಾನಪ್ರಾಪ್ತಿ"
+    , incorrect_positioning : "ತಪ್ಪಾದ ಸ್ಥಾನಪ್ರಾಪ್ತಿ"
+    , upload_parcel_image : "ಪಾರ್ಸೆಲ್ ಚಿತ್ರವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ"
+    , pickup_instruction : "ಪಿಕಪ್ ಸೂಚನೆ"
+    , drop_instruction : "ಡ್ರಾಪ್ ಸೂಚನೆ"
     }

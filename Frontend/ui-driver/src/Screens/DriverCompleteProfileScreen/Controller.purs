@@ -166,7 +166,7 @@ eval (OnClickUpload) state = continue state {props {showImageModel = not state.p
 eval (AddImagesModelAction (AddImagesModel.AddImage)) state =
   continueWithCmd state [do
     void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "primary_button_loader.json", lottieId = (getNewIDWithTag "add_images_model_done_button"), scaleType = "CENTER_CROP" }
-    void $ liftEffect $ uploadFile uploadFileConfig
+    void $ liftEffect $ uploadFile uploadFileConfig true
     pure NoAction
   ]
 
