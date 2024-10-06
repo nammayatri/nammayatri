@@ -56,6 +56,7 @@ library
       Domain.Action.ProviderPlatform.Management.Revenue
       Domain.Action.ProviderPlatform.Management.Ride
       Domain.Action.ProviderPlatform.Management.System
+      Domain.Action.ProviderPlatform.Management.TicketService
       Domain.Action.ProviderPlatform.RideBooking.Driver
       ProviderPlatformClient.DynamicOfferDriver.Exotel
       ProviderPlatformClient.DynamicOfferDriver.Fleet
@@ -78,6 +79,7 @@ library
       API.Action.ProviderPlatform.Management.Revenue
       API.Action.ProviderPlatform.Management.Ride
       API.Action.ProviderPlatform.Management.System
+      API.Action.ProviderPlatform.Management.TicketService
       API.Action.ProviderPlatform.RideBooking.Driver
   other-modules:
       Paths_provider_dashboard

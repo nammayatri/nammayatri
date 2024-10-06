@@ -25,10 +25,11 @@ import Data.Aeson
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.Common (HighPrecMoney, PriceAPIEntity)
+import qualified Kernel.Types.Documents
 import Kernel.Types.Id
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Servant hiding (Summary, throwError)
-import qualified Text.Show
+import Text.Show
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
 data DriverEndpoint
@@ -215,3 +216,25 @@ data DriverFeeStatus
   | ONE_TIME_SECURITY_ADJUSTED
   deriving stock (Eq, Show, Generic, Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DriverLicenseD = DriverLicenseD
+  { classOfVehicles :: [Text],
+    consent :: Bool,
+    consentTimestamp :: UTCTime,
+    dateOfIssue :: Maybe UTCTime,
+    documentImageId1 :: Id Image,
+    documentImageId2 :: Maybe (Id Image),
+    driverDob :: Maybe UTCTime,
+    driverId :: Id Driver,
+    driverName :: Maybe Text,
+    failedRules :: [Text],
+    id :: Id DriverLicenseD,
+    licenseExpiry :: UTCTime,
+    licenseNumber :: Text,
+    rejectReason :: Maybe Text,
+    verificationStatus :: Kernel.Types.Documents.VerificationStatus,
+    merchantId :: Maybe (Id Merchant),
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
