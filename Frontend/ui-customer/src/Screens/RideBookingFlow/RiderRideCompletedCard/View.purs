@@ -633,7 +633,8 @@ sosButtonView config push =
 
 rideRatingView :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 rideRatingView state push = 
-    scrollView
+  screenAnimation 
+    $ scrollView
         [ width MATCH_PARENT
         , height MATCH_PARENT
         , clickable true
@@ -990,7 +991,7 @@ title state =
     , color Color.black
     , maxLines 1
     , margin $ Margin 0 20 0 0
-    , visibility $ boolToVisibility $ (not state.driverInfoCardState.isAlreadyFav && state.ratingCard.rating < 4 && not state.recordedView) || (state.driverInfoCardState.isAlreadyFav && not state.recordedView)
+    , visibility $ boolToVisibility $ not state.ratingCard.favDriver && not state.recordedView && (state.driverInfoCardState.isAlreadyFav || state.ratingCard.rating < 4)
     ] <> FontStyle.subHeading1 LanguageStyle
 
 

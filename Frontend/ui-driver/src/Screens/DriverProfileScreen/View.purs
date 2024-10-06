@@ -518,12 +518,11 @@ completedProfile state push =
     visibility $ boolToVisibility $ state.props.screenType == ST.DRIVER_DETAILS,
     gravity CENTER,
     orientation VERTICAL,
-    margin $ MarginTop $ if (((state.data.completingProfileRes.completed*100)/4) /= 100) then 110 else 135
+    margin $ MarginTop 110
   ][
     linearLayout[
       height WRAP_CONTENT,
       width WRAP_CONTENT,
-      margin $ MarginBottom 7,
       cornerRadius 50.0,
       background Color.blue900,
       padding $ Padding 12 2 12 2,
@@ -543,7 +542,7 @@ completedProfile state push =
   , linearLayout[
       height WRAP_CONTENT,
       width MATCH_PARENT,
-      margin $ MarginBottom 15,
+      margin $ if ((state.data.completingProfileRes.completed*100)/4) /= 100 then Margin 0 7 0 12 else Margin 0 20 0 12,
       onClick push $ const CompleteProfile,
       gravity CENTER
     ][

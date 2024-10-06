@@ -128,6 +128,7 @@ view push state =
 
 getProfileData :: forall action. (DriverProfileDataRes -> action) -> (action -> Effect Unit) -> ST.DriverCompleteProfileScreenState -> FlowBT String Unit
 getProfileData action push state = do
+  void $ lift $ lift $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   void $ lift $ lift $ EHU.toggleLoader true
   driverProfileResp <- lift $ lift $ Remote.fetchDriverProfile true
   case driverProfileResp of
