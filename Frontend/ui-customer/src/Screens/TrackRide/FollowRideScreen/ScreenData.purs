@@ -199,6 +199,8 @@ mockDriverInfo =
   , driverArrived: false
   , estimatedDistance: ""
   , driverArrivalTime: 0
+  , destinationReachedAt : 0
+  , destinationReached : false
   , bppRideId: ""
   , driverNumber: Nothing
   , merchantExoPhone: ""
@@ -227,4 +229,7 @@ mockDriverInfo =
   , favCount : 0
   , rideDuration : Just 0
   , rideScheduledAtUTC : Nothing
+  , senderDetails : Nothing
+  , receiverDetails : Nothing
+  , estimatedTimeToReachDestination : Nothing
   }

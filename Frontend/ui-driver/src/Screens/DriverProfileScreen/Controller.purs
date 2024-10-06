@@ -155,6 +155,7 @@ instance loggableAction :: Loggable Action where
     PrimaryEditTextActionController act -> case act of
       PrimaryEditText.TextChanged valId newVal -> trackAppTextInput appId (getScreen DRIVER_PROFILE_SCREEN) "reenter_dl_number_text_changed" "primary_edit_text"
       PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen DRIVER_PROFILE_SCREEN) "alternate_mobile_number_text_focus_changed" "primary_edit_text"
+      PrimaryEditTextController.TextImageClicked -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "alternate_mobile_number_text_image" "on_click"
     NoAction -> trackAppScreenEvent appId (getScreen DRIVER_PROFILE_SCREEN) "in_screen" "no_action"
     RemoveAlternateNumberAC act -> case act of
       PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen DRIVER_PROFILE_SCREEN) "show_delete_popup_modal_action" "delete_account_cancel"

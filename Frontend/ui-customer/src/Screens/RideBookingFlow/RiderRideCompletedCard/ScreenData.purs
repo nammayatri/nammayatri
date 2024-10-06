@@ -155,6 +155,11 @@ dummyDriverInfo =
   , rideDuration : Just 0
   , currentChatRecipient : dummyChatRecipient
   , rideScheduledAtUTC : Nothing
+  , destinationReached : false
+  , destinationReachedAt : 0
+  , senderDetails : Nothing
+  , receiverDetails : Nothing
+  , estimatedTimeToReachDestination : Nothing
   }
 
 dummyRentalBookingConfig :: CT.RentalBookingConfig
@@ -246,7 +251,10 @@ dummyRideBookingDetails = RideBookingDetails {
   toLocation : Nothing,
   estimatedDistance : Nothing,
   otpCode : Nothing,
-  stopLocation : Nothing
+  stopLocation : Nothing,
+  senderDetails : Nothing,
+  receiverDetails : Nothing,
+  requestorPartyRoles : Nothing
 }
 
 fareUpdatePill :: ST.FareUpdatePill

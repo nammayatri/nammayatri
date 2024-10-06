@@ -605,6 +605,20 @@ instance makeUploadProfileReq :: RestEndpoint UploadProfileReq where
 
 -----------------------------------------------GET RIDES HISTORY---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+data InitiatedAs = AsSender | AsReciever | AsSomeoneElse
+
+derive instance genericInitiatedAs :: Generic InitiatedAs _
+instance showInitiatedAs :: Show InitiatedAs where show = genericShow
+instance decodeInitiatedAs :: Decode InitiatedAs where decode = defaultEnumDecode
+instance encodeInitiatedAs :: Encode InitiatedAs where encode = defaultEnumEncode
+instance eqInitiatedAs :: Eq InitiatedAs where eq = genericEq
+instance standardInitiatedAs :: StandardEncode InitiatedAs
+  where
+  standardEncode AsSender = standardEncode $ show AsSender
+  standardEncode AsReciever = standardEncode $ show AsReciever
+  standardEncode AsSomeoneElse = standardEncode $ show AsSomeoneElse
+  standardEncode _ = standardEncode $ show AsSender
+
 data GetRidesHistoryReq = GetRidesHistoryReq String String String String String
 
 newtype GetRidesHistoryResp = GetRidesHistoryResp
@@ -666,13 +680,13 @@ newtype RidesInfo = RidesInfo
       bookingType :: Maybe BookingTypes,
       bapName :: Maybe String,
       isValueAddNP :: Boolean,
-
       parkingCharge :: Maybe Number, 
       coinsEarned :: Maybe (Array CoinsEarned),
       roundTrip :: Boolean,
-      returnTime :: Maybe String
-  }
-
+      returnTime :: Maybe String,
+      senderDetails :: Maybe PersonDetails,
+      receiverDetails :: Maybe PersonDetails
+}
 
 newtype CoinsEarned = CoinsEarned CoinsEarnedType
 
@@ -681,7 +695,19 @@ type CoinsEarnedType = {
   eventType :: String
 }
 
+newtype PersonDetails = PersonDetails
+  {
+    name :: String,
+    primaryExophone :: String
+  }
 
+derive instance genericPersonDetails :: Generic PersonDetails _
+derive instance newtypePersonDetails :: Newtype PersonDetails _
+instance standardEncodePersonDetails :: StandardEncode PersonDetails where standardEncode (PersonDetails req) = standardEncode req
+instance showPersonDetails :: Show PersonDetails where show = genericShow
+instance eqPersonDetails :: Eq PersonDetails where eq = genericEq
+instance decodePersonDetails :: Decode PersonDetails where decode = defaultDecode
+instance encodePersonDetails :: Encode PersonDetails where encode = defaultEncode
 
 newtype OdometerReading = OdometerReading
   {
@@ -755,7 +781,9 @@ newtype LocationInfo = LocationInfo
         lat :: Number,
         city :: Maybe String,
         areaCode :: Maybe String,
-        lon :: Number
+        lon :: Number,
+        instructions :: Maybe String,
+        extras :: Maybe String
       }
 
 data BookingTypes = CURRENT | ADVANCED
@@ -4324,6 +4352,7 @@ data ServiceTierType
   | INTERCITY
   | BIKE_TIER
   | SUV_PLUS_TIER
+  | DELIVERY_BIKE
 
 data AirConditionedRestrictionType
   = ToggleAllowed
@@ -4385,6 +4414,7 @@ instance decodeServiceTierType :: Decode ServiceTierType
                   "INTERCITY"    -> except $ Right INTERCITY
                   "BIKE"         -> except $ Right BIKE_TIER
                   "SUV_PLUS"     -> except $ Right SUV_PLUS_TIER
+                  "DELIVERY_BIKE" -> except $ Right DELIVERY_BIKE
                   _              -> except $ Right COMFY
 instance encodeServiceTierType :: Encode ServiceTierType where encode = defaultEnumEncode
 instance eqServiceTierType :: Eq ServiceTierType where eq = genericEq
@@ -4400,6 +4430,7 @@ instance standardEncodeServiceTierType :: StandardEncode ServiceTierType
     standardEncode TAXI = standardEncode "TAXI"
     standardEncode TAXI_PLUS = standardEncode "TAXI_PLUS"
     standardEncode BIKE_TIER = standardEncode "BIKE"
+    standardEncode DELIVERY_BIKE = standardEncode "DELIVERY_BIKE"
     standardEncode RENTALS = standardEncode "RENTALS"
     standardEncode INTERCITY = standardEncode "INTERCITY"
     standardEncode SUV_PLUS_TIER = standardEncode "SUV_PLUS"
@@ -4849,7 +4880,35 @@ instance standardEncodeDriverProfileDataRes :: StandardEncode DriverProfileDataR
 instance showDriverProfileDataRes:: Show DriverProfileDataRes where show = genericShow
 instance decodeDriverProfileDataRes :: Decode DriverProfileDataRes where decode = defaultDecode
 instance encodeDriverProfileDataRes :: Encode DriverProfileDataRes where encode = defaultEncode
+------------------------------------------------------ Driver Reached Destination --------------------------------------------------------
 
+data DriverReachedDestinationRequest = DriverReachedDestinationRequest String DriverReachedReq
+
+newtype DriverReachedReq  = DriverReachedReq {
+    lat :: Number
+  , lon :: Number
+  }
+
+
+derive instance genericDriverReachedDestinationRequest :: Generic DriverReachedDestinationRequest _
+instance standardEncodeDriverReachedDestinationRequest :: StandardEncode DriverReachedDestinationRequest where standardEncode (DriverReachedDestinationRequest rideId req) = standardEncode req
+instance showDriverReachedDestinationRequest :: Show DriverReachedDestinationRequest where show = genericShow
+instance decodeDriverReachedDestinationRequest :: Decode DriverReachedDestinationRequest where decode = defaultDecode
+instance encodeDriverReachedDestinationRequest :: Encode DriverReachedDestinationRequest where encode = defaultEncode
+
+
+instance makeDriverReachedReq :: RestEndpoint DriverReachedDestinationRequest where
+    makeRequest reqBody@(DriverReachedDestinationRequest rideId (DriverReachedReq rqBody)) headers = defaultMakeRequest POST (EP.driverReachedDestination rideId) headers reqBody Nothing
+    encodeRequest req = standardEncode req
+
+derive instance genericDriverReachedReq :: Generic DriverReachedReq _
+instance showDriverReachedReq :: Show DriverReachedReq where show = genericShow
+instance standardEncodeDriverReachedReq :: StandardEncode DriverReachedReq where standardEncode (DriverReachedReq req) = standardEncode req
+instance decodeDriverReachedReq :: Decode DriverReachedReq where decode = defaultDecode
+instance encodeDriverReachedReq :: Encode DriverReachedReq where encode = defaultEncode
+
+
+------------------------------------------------------ Driver Reached Destination --------------------------------------------------------
 
 data CoinInfoReq = CoinInfoReq 
 

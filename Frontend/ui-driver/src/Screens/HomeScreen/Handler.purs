@@ -204,4 +204,9 @@ homeScreen = do
     GoToRideSummaryScreen  updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_SUMMARY_SCREEN  updatedState)
-       
+    UploadParcelImage updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_UPLOAD_PARCEL_IMAGE updatedState)
+    NotifyDriverReachedDestination updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ NOTIFY_DRIVER_REACHED_DESTINATION updatedState)

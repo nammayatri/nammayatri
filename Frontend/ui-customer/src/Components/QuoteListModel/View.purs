@@ -21,7 +21,7 @@ import Components.QuoteListItem as QuoteListItem
 import Components.QuoteListModel.Controller (Action(..), QuoteListModelState)
 import Components.SeparatorView.View as SeparatorView
 import Components.TipsView as TipsView
-import Data.Array (filter, head, null, (!!), mapWithIndex, slice, length, cons, findIndex, elem, sortBy)
+import Data.Array (filter, head, null, (!!), mapWithIndex, slice, length, cons, findIndex, elem, sortBy, any)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenWidth)
@@ -253,7 +253,7 @@ quotesView state push =
 
 findingRidesView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 findingRidesView state push =
-  let lottieRawJson = if (state.appConfig.autoVariantEnabled && getValueToLocalStore SELECTED_VARIANT == "AUTO_RICKSHAW") then (getAssetsBaseUrl FunctionCall) <> getAutoLottie state.city else if getValueToLocalStore SELECTED_VARIANT == "BIKE" then (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_bike.json" else (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_without_text_cab.json"
+  let lottieRawJson = if (state.appConfig.autoVariantEnabled && getValueToLocalStore SELECTED_VARIANT == "AUTO_RICKSHAW") then (getAssetsBaseUrl FunctionCall) <> getAutoLottie state.city else if any (_ == getValueToLocalStore SELECTED_VARIANT) ["BIKE", "DELIVERY_BIKE"] then (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_bike.json" else (getAssetsBaseUrl FunctionCall) <> "lottie/finding_rides_loader_without_text_cab.json"
   in
     linearLayout
     [ height MATCH_PARENT

@@ -327,4 +327,6 @@ transformer (Location loc) =
       , city: addr.city
       , areaCode: addr.areaCode
       , lon: loc.lon
+      , instructions: Nothing
+      , extras: Nothing
       }

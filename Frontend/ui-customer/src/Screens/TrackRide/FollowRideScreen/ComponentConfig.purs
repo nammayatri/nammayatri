@@ -132,6 +132,8 @@ getTripDetails state color =
     , rideAccepted : false
     , editingPickupLocation : NoAction
     , isEditPickupEnabled : false
+    , senderDetails : Nothing
+    , receiverDetails : Nothing
     }
 
 getCurrentFollower :: Maybe Followers -> Followers

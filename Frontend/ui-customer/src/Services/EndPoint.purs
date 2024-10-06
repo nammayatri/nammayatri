@@ -330,3 +330,6 @@ getFavouriteDriverTrips limit offset isActive status clientId =
 
 removeFavouriteDriver :: String -> String
 removeFavouriteDriver id = ((getBaseUrl "59") <> "/favorites/" <> id <> "/remove") 
+
+getDeliveryImage :: String -> String
+getDeliveryImage rideId = (getBaseUrl "61") <> "/ride/" <> rideId <> "/deliveryImage"

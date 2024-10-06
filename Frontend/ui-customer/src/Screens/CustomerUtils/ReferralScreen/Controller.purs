@@ -56,6 +56,7 @@ instance loggableAction :: Loggable Action where
     ReferralEditText act -> case act of
       PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen REFERRAL_SCREEN) "referral_code_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen REFERRAL_SCREEN) "referral_code_text_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "referral_code_text_image_onclick" "primary_edit_text"
     GenericHeaderAC act -> case act of
       GenericHeader.PrefixImgOnClick -> do
         trackAppActionClick appId (getScreen REFERRAL_SCREEN) "generic_header_action" "back_icon"

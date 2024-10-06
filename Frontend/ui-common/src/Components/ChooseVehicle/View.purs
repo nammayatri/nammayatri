@@ -237,7 +237,7 @@ variantsView push state =
 
 vehicleDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 vehicleDetailsView push config =
-  let selectedVehicle = maybe (getVehicleName config) (\name -> name) config.serviceTierName
+  let selectedVehicle = maybe (getVehicleName config) (\name -> getCustomNameForServiceTier config.vehicleVariant name) config.serviceTierName
   in
   linearLayout
     [ height WRAP_CONTENT
@@ -280,6 +280,12 @@ vehicleDetailsView push config =
         ] <> FontStyle.tags TypoGraphy
       ]
     ]
+  where
+    getCustomNameForServiceTier :: String -> String -> String
+    getCustomNameForServiceTier vehicleVariant name = 
+      case vehicleVariant of
+        "DELIVERY_BIKE" -> "2 Wheeler"
+        _ -> name
 
 getVehicleName :: Config -> String
 getVehicleName config = 
@@ -293,6 +299,7 @@ getVehicleName config =
     "BIKE" -> "Bike Taxi"
     "BOOK_ANY" -> "Book Any"
     "SUV_PLUS" -> "XL Plus"
+    "DELIVERY_BIKE" -> "2 Wheeler"
     _ -> "Non-AC Mini"
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w

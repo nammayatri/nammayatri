@@ -350,3 +350,33 @@ _isScheduled = lens (unwrap >>> _.isScheduled) (\oldRec newVal -> wrap ((unwrap 
 
 _types :: forall a b c. Newtype a { types :: b | c } => Lens' a b
 _types = lens (unwrap >>> _.types) (\oldRec newVal -> wrap ((unwrap oldRec) { types = newVal }))
+
+_senderDetails :: forall a b c. Newtype a { senderDetails :: b | c } => Lens' a b
+_senderDetails = lens (unwrap >>> _.senderDetails) (\oldRec newVal -> wrap ((unwrap oldRec) { senderDetails = newVal }))
+
+_receiverDetails :: forall a b c. Newtype a { receiverDetails :: b | c } => Lens' a b
+_receiverDetails = lens (unwrap >>> _.receiverDetails) (\oldRec newVal -> wrap ((unwrap oldRec) { receiverDetails = newVal }))
+
+_initiatedAs :: forall a b c. Newtype a { initiatedAs :: b | c } => Lens' a b
+_initiatedAs = lens (unwrap >>> _.initiatedAs) (\oldRec newVal -> wrap ((unwrap oldRec) { initiatedAs = newVal }))
+
+_phoneNumber :: forall a b c. Newtype a { phoneNumber :: b | c } => Lens' a b
+_phoneNumber = lens (unwrap >>> _.phoneNumber) (\oldRec newVal -> wrap ((unwrap oldRec) { phoneNumber = newVal }))
+
+_address :: forall a b c. Newtype a { address :: b | c } => Lens' a b
+_address = lens (unwrap >>> _.address) (\oldRec newVal -> wrap ((unwrap oldRec) { address = newVal }))
+
+_instruction :: forall a b c. Newtype a { instruction :: b | c } => Lens' a b
+_instruction = lens (unwrap >>> _.instruction) (\oldRec newVal -> wrap ((unwrap oldRec) { instruction = newVal }))
+
+_extras :: forall a b c. Newtype a { extras :: b | c } => Lens' a b
+_extras = lens (unwrap >>> _.extras) (\oldRec newVal -> wrap ((unwrap oldRec) { extras = newVal }))
+
+_start :: forall a b c. Newtype a { start :: b | c } => Lens' a b
+_start = lens (unwrap >>> _.start) (\oldRec newVal -> wrap ((unwrap oldRec) { start = newVal }))
+
+_end :: forall a b c. Newtype a { end :: b | c } => Lens' a b
+_end = lens (unwrap >>> _.end) (\oldRec newVal -> wrap ((unwrap oldRec) { end = newVal }))
+
+_requestorPartyRoles :: forall a b c. Newtype a { requestorPartyRoles :: b | c } => Lens' a b
+_requestorPartyRoles = lens (unwrap >>> _.requestorPartyRoles) (\oldRec newVal -> wrap ((unwrap oldRec) { requestorPartyRoles = newVal }))

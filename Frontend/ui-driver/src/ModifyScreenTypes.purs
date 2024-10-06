@@ -82,6 +82,7 @@ modifyScreenState st =
     RideRequestScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideRequestScreen = a state.rideRequestScreen})
     RideSummaryScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideSummaryScreen = a state.rideSummaryScreen})
     ScheduleRideAcceptedScreenStateType a  -> modifyState (\(GlobalState state) -> GlobalState $ state {scheduledRideAcceptedScreen = a state.scheduledRideAcceptedScreen})
+    UploadParcelImageScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {uploadParcelImageScreen = a state.uploadParcelImageScreen})
 
 updateStage :: ScreenStage -> FlowBT String Unit
 updateStage stage = do
