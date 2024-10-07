@@ -4,8 +4,12 @@ import android.animation.ValueAnimator;
 
 import androidx.annotation.NonNull;
 
-public class CircleRippleEffectOptions implements Cloneable {
+import com.google.android.gms.maps.model.Circle;
 
+public class CircleRippleEffectOptions implements Cloneable {
+    public enum StrokePattern {
+        NORMAL, DOTTED, DASHED
+    }
     private long mDelay = 100, mDuration = 1000, mPause = 1;
     private int mRepeatMode = ValueAnimator.INFINITE;
     private float mMaxRadius = 5, mRadius = 10.0f;
@@ -13,7 +17,8 @@ public class CircleRippleEffectOptions implements Cloneable {
     private float mStrokeWidth = 5.0f, mMaxStrokeWidth = 8.0f;
     private String mFromStrokeColor = "#000000", mToStrokeColor = "#000000";
     private int fillColor = 0;
-
+    private StrokePattern strokePattern = StrokePattern.NORMAL;
+    private boolean isCircleClickable = false;
     public float getStrokeWidth() {
         return mStrokeWidth;
     }
@@ -30,6 +35,17 @@ public class CircleRippleEffectOptions implements Cloneable {
         return this;
     }
 
+    public CircleRippleEffectOptions isCircleClickable(boolean isCircleClickable){
+        this.isCircleClickable = isCircleClickable;
+        return this;
+    }
+    public CircleRippleEffectOptions strokePattern(String pattern) {
+        this.strokePattern = pattern.equals("NORMAL") ? StrokePattern.NORMAL: pattern.equals("DASHED") ? StrokePattern.DASHED : StrokePattern.DOTTED;
+        return this;
+    }
+
+    public boolean getIsCircleClickable() { return isCircleClickable;}
+    public StrokePattern getStrokePattern() { return strokePattern;}
     public float getMaxStrokeWidth() {
         return mMaxStrokeWidth;
     }

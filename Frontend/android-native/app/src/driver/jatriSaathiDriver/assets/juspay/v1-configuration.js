@@ -375,7 +375,7 @@ let getAllCityConfig = () => {
     "enableYatriCoins" : false,
     "enableGullak": false,
     "vehicleNSImg" : "ny_ic_location_unserviceable",
-    "registration" : {
+  "registration" : {
         "supportWAN" : "918618963188",
         "callSupport" : true,
         "whatsappSupport" : true

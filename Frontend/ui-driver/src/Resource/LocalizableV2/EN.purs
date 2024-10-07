@@ -1194,6 +1194,18 @@ getEn =
     , yatri_points_faqs_ques2_ans1: (\days -> "All Yatri Points earned should be converted into Discount Points within " <> days <> " days from the date of earning.")
     , yatri_points_faqs_ques2_ans2: (\_ -> "The Discount Points must be utilized within the same period.")
     , yatri_points_faqs_ques2_ans3: "If the conversion or utilization does not occur within this timeframe, the points will be forfeited."
+    , hotspots: "Hotspots"
+    , very_high: "Very High"
+    , high: "High"
+    , very_high_demand_area: "Very High Demand Area"
+    , high_demand_area: "High Demand Area"
+    , moderate: "Moderate"
+    , average_demand_area: "Average Demand Area"
+    , this_area_is_experiencing_average_searches: "This area is experiencing average number of searches from customers"
+    , this_area_is_experiencing_very_high_searches: "This area is experiencing a very high number of searches from customers"
+    , this_area_is_experiencing_high_searches: "This area is experiencing a high number of searches from customers"
+    , navigate: "Navigate"
+    , hotspots_not_available_currently: "Hotspots not available currently, Please try again later!"
     , yatri_points_faqs_ques3: (\_ -> "How can I earn Yatri Points?")
     , yatri_points_faqs_ques3_ans1: (\_ -> "Yatri Points are earned through regular activities on the app, such as taking rides and referring customers. There's no need to do anything different.")
     , yatri_points_faqs_ques3_ans2: (\_ -> "You can earn additional points by exhibiting good behavior, such as low cancellations and receiving good ratings from customers.")

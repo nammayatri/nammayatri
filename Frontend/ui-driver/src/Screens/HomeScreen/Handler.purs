@@ -195,6 +195,9 @@ homeScreen = do
     SwitchPlan plan updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ SWITCH_PLAN_FROM_HS plan updatedState)
+    GotoHotspotScreen updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GOTO_HOTSPOT_SCREEN updatedState)
     GoToRideReqScreen updatedState -> do
       LatLon lat lon _ <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon updatedState.data.currentDriverLat updatedState.data.currentDriverLon 700 false true
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)

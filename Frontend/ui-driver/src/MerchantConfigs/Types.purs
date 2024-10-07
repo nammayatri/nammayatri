@@ -48,6 +48,7 @@ type AppConfigDriver a =
     rcLimit :: Int,
     acExplanation :: Boolean,
     showMonthlyLeaderBoard :: Boolean,
+    hotspotConfig :: HotspotConfig,
     rentalRideVideoConfig :: RentalRideVideoConfig,
     scheduledRideConfig :: ScheduledRideConfig
     | a
@@ -364,3 +365,14 @@ type WaitingChargesConfig = {
   bike :: ChargesEntity
 }
 
+type HotspotConfig = {
+  veryHighHotspotColor :: String,
+  highHotspotColor :: String,
+  moderateHotspotColor :: String,
+  veryHighRange :: Number,
+  highRange :: Number,
+  circleRadius ::Number,
+  centerDeviation :: Number,
+  showColorWithRelativeWeight :: Boolean,
+  minCirclesNeededForSortedWeights :: Int
+}
