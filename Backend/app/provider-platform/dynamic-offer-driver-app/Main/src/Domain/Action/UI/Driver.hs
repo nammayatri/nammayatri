@@ -2121,7 +2121,7 @@ listScheduledBookings ::
   Maybe Day ->
   Maybe DTC.TripCategory ->
   Flow ScheduledBookingRes
-listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay mbTripCategory = do
+listScheduledBookings (personId, merchantId, cityId) mbLimit mbOffset mbFromDay mbToDay mbTripCategory = do
   case (mbFromDay, mbToDay) of
     (Just from, Just to) -> when (from > to) $ throwError $ InvalidRequest "From date should be less than to date"
     _ -> pure ()
@@ -2134,10 +2134,11 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
       -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
       cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId
       let availableServiceTiers = (.serviceTierType) <$> (map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers))
-      scheduledBookings <- runInReplica $ QBooking.findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay DRB.NEW mbTripCategory availableServiceTiers True cityId transporterConfig.timeDiffFromUtc
+      scheduledBookings <- runInReplica $ QBooking.findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay DRB.NEW mbTripCategory availableServiceTiers True merchantId transporterConfig.timeDiffFromUtc
       mbCurrentDriverLocation <- LTF.driversLocation [driverInfo.driverId]
-      dloc <- fromMaybeM LocationNotFound (listToMaybe mbCurrentDriverLocation)
-      let driverLocation = LatLong {lat = dloc.lat, lon = dloc.lon}
+      let driverLocation = case listToMaybe mbCurrentDriverLocation of
+            Just dloc -> Just $ LatLong {lat = dloc.lat, lon = dloc.lon}
+            Nothing -> Nothing
       bookings <- mapM (buildBookingAPIEntityFromBooking driverLocation) scheduledBookings
       filteredBookings <- filterM (\booking -> isAbleToReach booking.bookingDetails vehicle.variant transporterConfig.avgSpeedOfVehicle) bookings
       let sortedBookings = sortBookingsByDistance filteredBookings
@@ -2162,9 +2163,9 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
     compareDistances Nothing (Just _) = GT
     compareDistances Nothing Nothing = EQ
 
-    buildBookingAPIEntityFromBooking driverLocation DRB.Booking {..} = do
+    buildBookingAPIEntityFromBooking mbDriverLocation DRB.Booking {..} = do
       let pickup = LatLong {lat = fromLocation.lat, lon = fromLocation.lon}
-          distanceToPickup' = Just $ highPrecMetersToMeters $ distanceBetweenInMeters driverLocation pickup
+          distanceToPickup' = highPrecMetersToMeters . (`distanceBetweenInMeters` pickup) <$> mbDriverLocation
       quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
       let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkBreakupItem estimatedDistance Nothing) quote.farePolicy
       return $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', ..} (catMaybes farePolicyBreakups)
