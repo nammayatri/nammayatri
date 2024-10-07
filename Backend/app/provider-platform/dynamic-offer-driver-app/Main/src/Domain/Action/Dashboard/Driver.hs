@@ -366,7 +366,7 @@ getDriverDue merchantShortId _ mbMobileCountryCode phone = do
   merchant <- findMerchantByShortId merchantShortId
   mobileNumber <- getDbHash phone
   driver <- B.runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumber merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
-  driverFees <- findPendingFeesByDriverIdAndServiceName (cast driver.id) YATRI_SUBSCRIPTION
+  driverFees <- findPendingFeesByDriverIdAndServiceName (cast driver.id) Nothing YATRI_SUBSCRIPTION
   driverFeeByInvoices <- case driverFees of
     [] -> pure []
     driverFee : _ -> SLDriverFee.groupDriverFeeByInvoices driverFee.currency driverFees
@@ -575,18 +575,18 @@ convertToCommon res =
 
 ---------------------------------------------------------------------
 collectCash :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Flow APISuccess
-collectCash mId city driver requestorId = recordPayment False mId city driver requestorId YATRI_SUBSCRIPTION
+collectCash mId city driver requestorId = recordPayment False mId city driver requestorId YATRI_SUBSCRIPTION Nothing
 
-collectCashV2 :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.ServiceNames -> Flow APISuccess
-collectCashV2 mId city driver requestorId serviceName = recordPayment False mId city driver requestorId (mapServiceName serviceName)
+collectCashV2 :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.ServiceNames -> Maybe Common.ExemptionAndCashCollectionDriverFeeReq -> Flow APISuccess
+collectCashV2 mId city driver requestorId serviceName mbExemptionAndCashCollectionDriverFeeReq = recordPayment False mId city driver requestorId (mapServiceName serviceName) mbExemptionAndCashCollectionDriverFeeReq
 
 ---------------------------------------------------------------------
 
 exemptCash :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Flow APISuccess
-exemptCash mId city driver requestorId = recordPayment True mId city driver requestorId YATRI_SUBSCRIPTION
+exemptCash mId city driver requestorId = recordPayment True mId city driver requestorId YATRI_SUBSCRIPTION Nothing
 
-exemptCashV2 :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.ServiceNames -> Flow APISuccess
-exemptCashV2 mId city driver requestorId serviceName = recordPayment True mId city driver requestorId (mapServiceName serviceName)
+exemptCashV2 :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.ServiceNames -> Maybe Common.ExemptionAndCashCollectionDriverFeeReq -> Flow APISuccess
+exemptCashV2 mId city driver requestorId serviceName mbExemptionAndCashCollectionDriverFeeReq = recordPayment True mId city driver requestorId (mapServiceName serviceName) mbExemptionAndCashCollectionDriverFeeReq
 
 mapServiceName :: Common.ServiceNames -> ServiceNames
 mapServiceName common = case common of
@@ -603,8 +603,8 @@ paymentStatus isExempted
 recordPaymentLockKey :: Id Common.Driver -> Text
 recordPaymentLockKey driverId = "RP:LK:DId:-" <> driverId.getId
 
-recordPayment :: Bool -> ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> ServiceNames -> Flow APISuccess
-recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceName = do
+recordPayment :: Bool -> ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> ServiceNames -> Maybe Common.ExemptionAndCashCollectionDriverFeeReq -> Flow APISuccess
+recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceName mbExemptionAndCashCollectionDriverFeeReq = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
@@ -614,7 +614,16 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
     -- merchant access checking
     let merchantId = driver.merchantId
     unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-    driverFees <- findPendingFeesByDriverIdAndServiceName driverId serviceName
+    driverFees <-
+      case mbExemptionAndCashCollectionDriverFeeReq of
+        Nothing -> findPendingFeesByDriverIdAndServiceName driverId Nothing serviceName
+        Just req -> do
+          duePaymentIds <- findPendingFeesByDriverIdAndServiceName driverId (Just $ map Id req.paymentIds) serviceName
+          let len = length duePaymentIds
+          let paymentIdLength = length req.paymentIds
+          unless (len == paymentIdLength) $
+            throwError $ InvalidRequest "Status of some id is not PAYMENT_OVERDUE."
+          return duePaymentIds
     let totalFee = sum $ map (\fee -> fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
     transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc

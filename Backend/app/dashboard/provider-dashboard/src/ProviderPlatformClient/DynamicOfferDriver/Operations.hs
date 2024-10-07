@@ -120,7 +120,8 @@ data SubscriptionAPIs = SubscriptionAPIs
     planSubscribe :: Id Driver.Driver -> Id DPlan.Plan -> Euler.EulerClient Subscription.PlanSubscribeRes,
     currentPlan :: Id Driver.Driver -> Euler.EulerClient Subscription.CurrentPlanRes,
     getPaymentHistory :: Id Driver.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> Euler.EulerClient ADriver.HistoryEntityV2,
-    getPaymentHistoryEntityDetails :: Id Driver.Driver -> Id INV.Invoice -> Euler.EulerClient ADriver.HistoryEntryDetailsEntityV2
+    getPaymentHistoryEntityDetails :: Id Driver.Driver -> Id INV.Invoice -> Euler.EulerClient ADriver.HistoryEntryDetailsEntityV2,
+    collectManualPayments :: Id Driver.Driver -> DPlan.ServiceNames -> MSubscription.CollectManualPaymentsReq -> Euler.EulerClient APISuccess
   }
 
 mkDriverOperationAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> DriverOperationAPIs
@@ -177,7 +178,8 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> getPaymentHistory
       :<|> getPaymentHistoryEntityDetails
       :<|> updateSubscriptionDriverFeeAndInvoice
-      :<|> sendMessageToDriverViaDashboard = subscriptionClient
+      :<|> sendMessageToDriverViaDashboard
+      :<|> collectManualPayments = subscriptionClient
 
     createOverlay
       :<|> deleteOverlay

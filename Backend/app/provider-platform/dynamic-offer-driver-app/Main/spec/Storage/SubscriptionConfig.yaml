@@ -38,6 +38,7 @@ SubscriptionConfig:
     executionEnabledForVehicleCategories: Maybe [VehicleCategory]
     isSubscriptionEnabledAtCategoryLevel: Bool
     enableCityBasedFeeSwitch: Bool
+    partialDueClearanceMessageKey: Maybe Domain.Types.MerchantMessage.MessageKey
 
   fromTType:
     genericJobRescheduleTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
