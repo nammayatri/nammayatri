@@ -1729,7 +1729,7 @@ getTE stringKey =
         REGULAR -> "సాధారణ"
         UPCOMING_RIDE -> "రాబోయే"
         ALL -> "అన్ని"
-        TOMMOROW -> "రేపు"
+        TOMORROW -> "రేపు"
         YOU_HAVE_AN_UPCOMING ->"మీకు రాబోయే"
         BOOKING -> "బుకింగ్"
         INTERCITY_RIDE_ACCEPTED -> "అంతర్రాష్ట్రీయ సవారి ఆమోదించబడింది"

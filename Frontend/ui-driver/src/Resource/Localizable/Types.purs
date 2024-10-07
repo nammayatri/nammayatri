@@ -1707,7 +1707,7 @@ data STR = LETS_GET_STARTED
         | REGULAR
         | UPCOMING_RIDE
         | ALL
-        | TOMMOROW
+        | TOMORROW
         | YOU_HAVE_AN_UPCOMING 
         | BOOKING
         | INTERCITY_RIDE_ACCEPTED

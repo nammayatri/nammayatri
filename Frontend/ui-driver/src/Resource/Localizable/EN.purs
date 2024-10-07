@@ -1730,7 +1730,7 @@ getEN stringKey =
         REGULAR -> "Regular"
         UPCOMING_RIDE -> "Upcoming"
         ALL -> "All"
-        TOMMOROW -> "Tommorow"
+        TOMORROW -> "Tomorrow"
         YOU_HAVE_AN_UPCOMING -> "You have an upcoming"
         BOOKING -> "Booking"
         INTERCITY_RIDE_ACCEPTED -> "Intercity Ride accepted"

@@ -1729,7 +1729,7 @@ getTA stringKey =
         REGULAR -> "சாதாரண"
         UPCOMING_RIDE -> "வரவிருக்கும்"
         ALL -> "எல்லாம்"
-        TOMMOROW -> "நாளை"
+        TOMORROW -> "நாளை"
         YOU_HAVE_AN_UPCOMING -> "உங்களுக்கு வரவிருக்கும்"
         BOOKING -> "முன்பதிவு"
         INTERCITY_RIDE_ACCEPTED -> "இடைநகர் சவாரி ஏற்கப்பட்டது "
