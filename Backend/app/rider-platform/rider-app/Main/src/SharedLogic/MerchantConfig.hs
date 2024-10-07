@@ -98,7 +98,7 @@ getTotalRidesCountAndUpdate :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, EsqDB
 getTotalRidesCountAndUpdate riderId mSearchReq = do
   totalRidesCount <- getTotalRidesCount riderId mSearchReq
   whenJust totalRidesCount $ \count' -> do
-    QP.updateTotalRidesCount riderId (Just count')
+    maybe (pure ()) (\searchReq -> when (isNothing searchReq.totalRidesCount) $ QP.updateTotalRidesCount riderId (Just count')) mSearchReq
   pure totalRidesCount
 
 getTotalRidesCount ::
