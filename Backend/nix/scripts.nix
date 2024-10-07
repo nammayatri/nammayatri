@@ -29,6 +29,26 @@ _:
         '';
       };
 
+      latest-docs = {
+        category = "Backend";
+        description = "Replica of https://hoogle.haskell.org/ to run locally.";
+        exec = ''
+          re_generate=false
+          for arg in "$@"; do
+            if [[ "$arg" == "--generate" ]]; then
+              re_generate=true
+              break
+            fi
+          done
+          set -x
+          if [ ! -d "''${FLAKE_ROOT}/Backend/hoogle-db" ] || [[ $re_generate == true ]]; then
+            hoogle generate --download --database="''${FLAKE_ROOT}/Backend/hoogle-db/.hoogle"
+          fi
+          echo "#### Hoogle running at: http://localhost:8091"
+          hoogle serve --port 8091 --database="''${FLAKE_ROOT}/Backend/hoogle-db/.hoogle"
+        '';
+      };
+
       hpack = {
         category = "Backend";
         description = "Run hpack to generate cabal files.";
