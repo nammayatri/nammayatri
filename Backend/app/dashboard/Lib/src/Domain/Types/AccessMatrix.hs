@@ -272,6 +272,8 @@ data UserActionType
   | SECURITY_DEPOSIT_STATUS
   | CLEAR_CACHE_SUBSCRIPTION
   | RUN_QUERY
+  | COLLECT_MANUAL_PAYMENTS
+  | EXEMPT_DRIVER_FEE
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)

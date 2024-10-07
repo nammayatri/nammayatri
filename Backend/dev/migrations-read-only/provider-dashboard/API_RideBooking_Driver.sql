@@ -87,3 +87,11 @@ UPDATE atlas_bpp_dashboard.transaction
 UPDATE atlas_bpp_dashboard.transaction
   SET endpoint = 'PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_SET_RC_STATUS'
   WHERE endpoint = 'DriverAPI PostDriverSetRCStatusEndpoint';
+
+
+------- SQL updates -------
+
+-- {"api":"PostDriverExemptDriverFee","migration":"endpoint","param":"DriverAPI ExemptionAndCashCollectionDriverFeeEndpoint","schema":"atlas_bpp_dashboard"}
+UPDATE atlas_bpp_dashboard.transaction
+  SET endpoint = 'PROVIDER_RIDE_BOOKING/DRIVER/POST_DRIVER_EXEMPT_DRIVER_FEE'
+  WHERE endpoint = 'DriverAPI ExemptionAndCashCollectionDriverFeeEndpoint';

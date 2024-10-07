@@ -43,15 +43,16 @@ findPendingFeesByDriverFeeId (Id driverFeeId) =
         ]
     ]
 
-findPendingFeesByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> ServiceNames -> m [DriverFee]
-findPendingFeesByDriverIdAndServiceName (Id driverId) serviceName =
+findPendingFeesByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Maybe [Id DriverFee] -> ServiceNames -> m [DriverFee]
+findPendingFeesByDriverIdAndServiceName (Id driverId) mbDriverFeeIds serviceName =
   findAllWithKV
-    [ Se.And
+    [ Se.And $
         [ Se.Is BeamDF.driverId $ Se.Eq driverId,
           Se.Is BeamDF.status $ Se.In [PAYMENT_PENDING, PAYMENT_OVERDUE],
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
           Se.Is BeamDF.feeType $ Se.Eq RECURRING_INVOICE
         ]
+          <> maybe [] (\driverFeeIds -> [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]) mbDriverFeeIds
     ]
 
 findFeeByDriverIdAndServiceNameInRange ::
@@ -467,16 +468,18 @@ findAllByStatusAndDriverIdWithServiceName ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id Person ->
   [Domain.DriverFeeStatus] ->
+  Maybe [Id DriverFee] ->
   ServiceNames ->
   m [DriverFee]
-findAllByStatusAndDriverIdWithServiceName (Id driverId) driverFeeStatus serviceName = do
+findAllByStatusAndDriverIdWithServiceName (Id driverId) driverFeeStatus mbDriverFeeIds serviceName = do
   findAllWithKV
-    [ Se.And
+    [ Se.And $
         [ Se.Is BeamDF.feeType $ Se.In [RECURRING_INVOICE],
           Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
           Se.Is BeamDF.status $ Se.In driverFeeStatus,
           Se.Is BeamDF.driverId $ Se.Eq driverId
         ]
+          <> maybe [] (\driverFeeIds -> [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]) mbDriverFeeIds
     ]
 
 findAllPendingAndDueDriverFeeByDriverIdForServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> ServiceNames -> m [DriverFee]

@@ -190,6 +190,19 @@ apis:
       migrate:
         endpoint: DriverAPI SetRCStatusEndpoint
         endpointV2:
+  - POST:
+      endpoint: /{driverId}/exemptDriverFee/{token}/{serviceName}
+      auth: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_DRIVER_FEE
+      params:
+        driverId: Id Driver
+        token: Text
+        serviceName: ServiceNames
+      request:
+        type: ExemptionAndCashCollectionDriverFeeReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: DriverAPI ExemptionAndCashCollectionDriverFeeEndpoint
 types:
   DriverOutstandingBalanceResp:
     - driverFeeId: Id DriverOutstandingBalanceResp
@@ -309,3 +322,8 @@ types:
     - vehicleVariant: Maybe VehicleVariant
     # - createdAt: UTCTime # do we need it?
     # - updatedAt UTCTime
+  ExemptionAndCashCollectionDriverFeeReq:
+    - paymentIds: [Text]
+    - messageKey: Maybe Text
+    - isExempt: Bool
+    - derive: "'HideSecrets"
