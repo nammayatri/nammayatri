@@ -396,7 +396,20 @@ window.getMerchantConfig = function () {
       },
       "waitingCharges" : 1.50,
       "waitingChargesConfig" : defWaitingChargesConfig,
-      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
+      "rentalWaitingChargesConfig" :{
+        "auto" : {
+          "freeMinutes" : 3.0
+        , "perMinCharges" : 1.5
+        },
+        "cabs" : {
+          "freeMinutes" : 3.0
+        , "perMinCharges" : 2.0
+        },
+        "bike" : {
+          "freeMinutes" : 3.0
+        , "perMinCharges" : 2.0
+        }
+      },
       "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
       "gstPercentage" : "18",
       "assets" :{

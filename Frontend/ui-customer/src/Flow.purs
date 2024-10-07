@@ -6629,7 +6629,7 @@ fcmHandler notification state notificationBody= do
           currentUtcAfterScheduledTime =  EHC.getUTCAfterNSeconds (getCurrentUTC "") scheduledBufferTime
           timeDiff = EHC.compareUTCDate bookingScheduledTime (currentUtcAfterScheduledTime)
           fcmBookingId = fromMaybe "null" notificationBody.bookingId
-      if (state.props.bookingId /= "" && fcmBookingId /= state.props.bookingId && timeDiff >= -1800 && timeDiff <= 0) then do 
+      if (state.props.bookingId /= "" && fcmBookingId /= state.props.bookingId && fcmBookingId /= "null" && timeDiff >= -1800 && timeDiff <= 0) then do 
         let rideScheduledAt = fromMaybe "" notificationBody.rideTime
             rideSchTimeInIST = convertUTCtoISC rideScheduledAt "D" <> " " <> convertUTCtoISC rideScheduledAt "MMMM" <> " " <> convertUTCtoISC rideScheduledAt "YYYY" <> " , " <> convertUTCtoISC rideScheduledAt "HH" <> ":" <> convertUTCtoISC rideScheduledAt "mm"
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{upcomingRideDetails = Just { bookingId : fcmBookingId ,

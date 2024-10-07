@@ -442,6 +442,16 @@ config =
                 freeMinutes = 5.0
               , perMinCharges = 1.0
               }
+            },
+            rentalWaitingChargeConfig {
+              auto {
+                freeMinutes = 3.0
+              , perMinCharges = 1.5
+              },
+              cabs {
+                freeMinutes = 3.0
+              , perMinCharges = 2.0
+              }
             }
           },
         defaultCityConfig 
