@@ -38,6 +38,7 @@ import Components.PopUpModal.Controller as PopUpModalController
 import Components.PrimaryButton.Controller as PrimaryButton
 import Components.PopUpModal.Controller as PopUpModal
 import Debug
+import Components.SourceToDestination.Controller as SourceToDestinationController
 
 instance showAction :: Show Action where
   show _ = ""
@@ -58,6 +59,8 @@ data Action = NoAction
             | ShowCancelBookingPopup MetroBookingSoftCancelStatusResp
             | CancelBookingPopUpAC PopUpModalController.Action
             | ShowMetroBookingCancelledView MetroBookingHardCancelStatusResp
+            | SourceToDestinationAC (SourceToDestinationController.Action)
+            | PaymentDetailsClick
 
 data ScreenOutput = 
     NoOutput 
@@ -210,6 +213,8 @@ eval (ShowMetroBookingCancelledView (MetroBookingHardCancelStatusResp resp)) sta
         showLoader = false
       }
     }
+
+eval PaymentDetailsClick state = continue state { props { paymentDetailsExpanded = not state.props.paymentDetailsExpanded } }
 
 eval _ state = update state
 

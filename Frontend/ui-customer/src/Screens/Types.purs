@@ -2027,6 +2027,8 @@ type MetroTicketDetailsScreenData = {
 , ticketType :: String
 , ticketPrice :: Int
 , noOfTickets :: Int
+, vehicleType :: String
+, route :: Maybe GetBusRouteResp
 }
 
 type MetroTicketInfo = {
@@ -2065,6 +2067,7 @@ type MetroTicketDetailsScreenProps = {
 , refundAmount :: Maybe Number
 , showLoader :: Boolean
 , fromScreen :: Maybe String
+, paymentDetailsExpanded :: Boolean
 }
 
 data PreviousMetroTicketDetailsStage = MetroMyTicketsStage 
