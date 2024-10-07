@@ -633,13 +633,13 @@ processAndSendManualPaymentLink ::
 processAndSendManualPaymentLink driverPlansToProccess subscriptionConfigs merchantId opCityId serviceName mbDeepLinkExpiry endTime now = do
   forM_ driverPlansToProccess $ \driverPlanForManualCharge -> do
     let driverId = driverPlanForManualCharge.driverId
-    getPendingAndOverDueDriverFees <- QDF.findAllByStatusAndDriverIdWithServiceName driverId [PAYMENT_OVERDUE, PAYMENT_PENDING] serviceName
+    getPendingAndOverDueDriverFees <- QDF.findAllByStatusAndDriverIdWithServiceName driverId [PAYMENT_OVERDUE, PAYMENT_PENDING] Nothing serviceName
     updateStatusByIds PAYMENT_OVERDUE (map (.id) $ filter ((== PAYMENT_PENDING) . (.status)) getPendingAndOverDueDriverFees) now
     let allowDeepLink = subscriptionConfigs.sendDeepLink
     let mbDeepLinkData = if allowDeepLink then Just $ SPayment.DeepLinkData {sendDeepLink = Just True, expiryTimeInMinutes = mbDeepLinkExpiry} else Nothing
     if not $ null getPendingAndOverDueDriverFees
       then do
-        resp' <- try @_ @SomeException $ DDriver.clearDriverDues (driverId, merchantId, opCityId) serviceName mbDeepLinkData
+        resp' <- try @_ @SomeException $ DDriver.clearDriverDues (driverId, merchantId, opCityId) serviceName Nothing mbDeepLinkData
         errorCatchAndHandle
           driverId
           resp'

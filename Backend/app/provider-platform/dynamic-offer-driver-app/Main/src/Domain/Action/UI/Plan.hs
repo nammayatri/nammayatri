@@ -195,7 +195,8 @@ data DriverDuesEntity = DriverDuesEntity
     coinDiscountAmountWithCurrency :: Maybe PriceAPIEntity,
     specialZoneRideCount :: Int,
     totalSpecialZoneCharges :: HighPrecMoney,
-    totalSpecialZoneChargesWithCurrency :: PriceAPIEntity
+    totalSpecialZoneChargesWithCurrency :: PriceAPIEntity,
+    driverFeeId :: Text
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
@@ -494,7 +495,7 @@ planSwitchGeneric serviceName planId (driverId, _, merchantOpCityId) = do
   let isSubscriptionEnabledAtCategoryLevel = fromMaybe False (subscriptionConfig <&> (.enableCityBasedFeeSwitch))
   QDPlan.updatePlanIdByDriverIdAndServiceName driverId planId serviceName (Just plan.vehicleCategory) plan.merchantOpCityId
   when (serviceName == YATRI_SUBSCRIPTION) $ do
-    driverManualDuesFees <- QDF.findAllByStatusAndDriverIdWithServiceName driverId [DF.PAYMENT_OVERDUE] serviceName
+    driverManualDuesFees <- QDF.findAllByStatusAndDriverIdWithServiceName driverId [DF.PAYMENT_OVERDUE] Nothing serviceName
     let currentDues = calculateDues driverManualDuesFees
     when plan.subscribedFlagToggleAllowed $ DI.updateSubscription (currentDues < plan.maxCreditLimit) driverId
   (from, to) <- getStartTimeAndEndTimeRange merchantOpCityId driverId Nothing
@@ -585,7 +586,7 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
   let allowDueAddition = subscriptionConfig.allowDueAddition
   let paymentServiceName = subscriptionConfig.paymentServiceName
-  driverManualDuesFees <- if allowAtMerchantLevel && allowDueAddition then QDF.findAllByStatusAndDriverIdWithServiceName driverId [DF.PAYMENT_OVERDUE] serviceName else return []
+  driverManualDuesFees <- if allowAtMerchantLevel && allowDueAddition then QDF.findAllByStatusAndDriverIdWithServiceName driverId [DF.PAYMENT_OVERDUE] Nothing serviceName else return []
   let currentDues = calculateDues driverManualDuesFees
   now <- getCurrentTime
   (driverRegisterationFee, invoice) <- getLatestMandateRegistrationFeeAndCheckIfEligible currentDues now
@@ -739,7 +740,6 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {
     if isCurrentPlanEntity
       then do mkDueDriverFeeInfoEntity serviceName dueDriverFees transporterConfig_
       else return []
-
   let currentDues = sum $ map (.driverFeeAmount) dues
   let autopayDues = sum $ map (.driverFeeAmount) $ filter (\due -> due.feeType == DF.RECURRING_EXECUTION_INVOICE) dues
   let dueBoothCharges = roundToHalf currency $ sum $ map (.specialZoneAmount) (nubBy (\x y -> (x.startTime == y.startTime) && (x.endTime == y.endTime)) dueDriverFees)
@@ -909,7 +909,8 @@ mkDueDriverFeeInfoEntity serviceName driverFees transporterConfig = do
               specialZoneRideCount = driverFee.specialZoneRideCount,
               totalSpecialZoneCharges = driverFee.specialZoneAmount,
               totalSpecialZoneChargesWithCurrency = PriceAPIEntity driverFee.specialZoneAmount driverFee.currency,
-              totalEarningsWithCurrency = PriceAPIEntity driverFee.totalEarnings driverFee.currency
+              totalEarningsWithCurrency = PriceAPIEntity driverFee.totalEarnings driverFee.currency,
+              driverFeeId = driverFee.id.getId
             }
     )
     driverFees

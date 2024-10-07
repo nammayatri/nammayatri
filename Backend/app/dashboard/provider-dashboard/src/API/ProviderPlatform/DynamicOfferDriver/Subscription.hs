@@ -52,6 +52,7 @@ type API =
            :<|> PaymentStatus
            :<|> DriverPaymentHistoryAPIV2
            :<|> DriverPaymentHistoryEntityDetailsAPIV2
+           :<|> CollectManualPayments
        )
 
 type ListPlan =
@@ -106,6 +107,10 @@ type DriverPaymentHistoryEntityDetailsAPIV2 =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'SUBSCRIPTION 'PAYMENT_HISTORY_ENTITY_DETAILS_V2
     :> SD.DriverPaymentHistoryEntityDetailsAPIV2
 
+type CollectManualPayments =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'SUBSCRIPTION 'COLLECT_MANUAL_PAYMENTS
+    :> SD.CollectManualPayments
+
 buildTransaction ::
   ( MonadFlow m
   ) =>
@@ -131,6 +136,7 @@ handler merchantId city =
     :<|> paymentStatus merchantId city
     :<|> getPaymentHistoryV2 merchantId city
     :<|> getPaymentHistoryEntityDetailsV2 merchantId city
+    :<|> collectManualPayments merchantId city
 
 planList ::
   ShortId DMerchant.Merchant ->
@@ -221,6 +227,13 @@ planSubscribeV2 merchantShortId opCity apiTokenInfo driverId planId serviceName 
   transaction <- buildTransaction SD.SubscribePlanEndpoint apiTokenInfo (Just driverId)
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.subscription.planSubscribeV2) driverId planId serviceName req
+
+collectManualPayments :: ShortId DMerchant.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> DPlan.ServiceNames -> SD.CollectManualPaymentsReq -> FlowHandler APISuccess
+collectManualPayments merchantShortId opCity apiTokenInfo driverId serviceName req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction SD.CollectPaymentsEndPoint apiTokenInfo (Just driverId)
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.subscription.collectManualPayments) driverId serviceName req
 
 currentPlan :: ShortId DMerchant.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler DTPlan.CurrentPlanRes
 currentPlan merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
