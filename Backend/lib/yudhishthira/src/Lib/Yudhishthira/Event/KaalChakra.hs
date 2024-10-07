@@ -1,6 +1,8 @@
 module Lib.Yudhishthira.Event.KaalChakra
   ( Handle (..),
     kaalChakraEvent,
+    clearEventData,
+    updateUserTagsHandler,
     Template.Template (..),
     runQueryRequestTemplate,
   )
@@ -19,6 +21,7 @@ import qualified Data.Time.Clock as Time
 import qualified JsonLogic
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Event.KaalChakra.Parse as Parse
@@ -27,6 +30,7 @@ import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import Lib.Yudhishthira.Storage.Queries.ChakraQueries as QChakraQueries
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTag as QNammaTag
 import qualified Lib.Yudhishthira.Storage.Queries.UserData as QUserData
+import qualified Lib.Yudhishthira.Storage.Queries.UserDataExtra as QUserDataE
 import Lib.Yudhishthira.Tools.Error
 import Lib.Yudhishthira.Tools.Utils
 import qualified Lib.Yudhishthira.Types as Yudhishthira
@@ -36,7 +40,9 @@ import qualified Lib.Yudhishthira.Types.UserData as DUserData
 
 data Handle m = Handle
   { getUserTags :: Id Yudhishthira.User -> m (Maybe [Text]), -- Nothing if user not found
-    updateUserTags :: Id Yudhishthira.User -> [Text] -> m ()
+    updateUserTags :: Id Yudhishthira.User -> [Text] -> m (),
+    createFetchUserDataJob :: Yudhishthira.UpdateKaalBasedTagsJobReq -> UTCTime -> m (),
+    createUpdateUserTagDataJob :: Yudhishthira.RunKaalChakraJobReq -> Id Yudhishthira.Event -> UTCTime -> m ()
   }
 
 --  which is log level in PROD?
@@ -44,27 +50,27 @@ skipUpdateUserTagsHandler :: (Monad m, Log m) => Handle m
 skipUpdateUserTagsHandler =
   Handle
     { getUserTags = \userId -> logInfo ("Skip update user tags in DB selected: userId: " <> show userId) >> pure (Just []),
-      updateUserTags = \userId updatedTags -> logInfo $ "Skip update user tags in DB selected: userId: " <> show userId <> "; updated tags: " <> show updatedTags
+      updateUserTags = \userId updatedTags -> logInfo $ "Skip update user tags in DB selected: userId: " <> show userId <> "; updated tags: " <> show updatedTags,
+      createFetchUserDataJob = \updateTagData _scheduledTime -> logInfo $ "Skip generateUserData job for: " <> show updateTagData,
+      createUpdateUserTagDataJob = \kaalChakraData eventId _scheduledTime -> logInfo $ "Skip updateTag job for: " <> show kaalChakraData <> "; for event: " <> show eventId
     }
 
 kaalChakraEvent ::
   (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
-  Handle m ->
   Yudhishthira.RunKaalChakraJobReq ->
   m Yudhishthira.RunKaalChakraJobRes
-kaalChakraEvent h req = do
-  eventId <- Id <$> generateGUID
+kaalChakraEvent req = do
+  eventId <- getEventId req.chakra
   if req.updateUserTags
-    then kaalChakraEventInternal h eventId req
-    else kaalChakraEventInternal skipUpdateUserTagsHandler eventId req
+    then kaalChakraEventInternal eventId req
+    else kaalChakraEventInternal eventId req
 
 kaalChakraEventInternal ::
   (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
-  Handle m ->
   Id Yudhishthira.Event ->
   Yudhishthira.RunKaalChakraJobReq ->
   m Yudhishthira.RunKaalChakraJobRes
-kaalChakraEventInternal h eventId req = withLogTag ("EventId-" <> eventId.getId) do
+kaalChakraEventInternal eventId req = withLogTag ("EventId-" <> eventId.getId) do
   startTime <- getCurrentTime
   logInfo $
     "Running kaal-chakra event: chakra: "
@@ -80,7 +86,37 @@ kaalChakraEventInternal h eventId req = withLogTag ("EventId-" <> eventId.getId)
       <> "; max batches: "
       <> show req.maxBatches
   chakraQueries <- QChakraQueries.findAllByChakra req.chakra
+  bn <- nextChakraBatchNumber req.chakra
+  let batchesNumber = bn - 1
+  batchedUserData <- fetchUserDataBatch req eventId chakraQueries batchesNumber
+  let usersNumber = length batchedUserData.userIds
+  endTime <- getCurrentTime
+  let durationInSeconds = Time.nominalDiffTimeToSeconds $ diffUTCTime endTime startTime
+  logInfo $ "User data fetched successfully: batches number: " <> show batchesNumber <> "; users number: " <> show usersNumber
+  logDebug $ "took time: " <> show durationInSeconds
+  pure $ Yudhishthira.RunKaalChakraJobRes (Just eventId) Nothing Nothing batchedUserData.chakraBatchState
+
+updateUserTagsHandler ::
+  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  Handle m ->
+  Yudhishthira.UpdateKaalBasedTagsJobReq ->
+  m Yudhishthira.RunKaalChakraJobRes
+updateUserTagsHandler h req = do
+  if req.updateUserTags
+    then updateUserTagsHandlerInternal skipUpdateUserTagsHandler req
+    else updateUserTagsHandlerInternal h req
+
+updateUserTagsHandlerInternal ::
+  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  Handle m ->
+  Yudhishthira.UpdateKaalBasedTagsJobReq ->
+  m Yudhishthira.RunKaalChakraJobRes
+updateUserTagsHandlerInternal h req = do
+  let eventId = req.eventId
+  startTime <- getCurrentTime
+  chakraQueries <- QChakraQueries.findAllByChakra req.chakra
   tags <- QNammaTag.findAllByChakra req.chakra
+
   -- Skip LLM tags instead of throwing error
   filteredTags <- flip filterM tags $ \tag -> case tag.rule of
     Yudhishthira.RuleEngine _ -> pure True
@@ -88,51 +124,52 @@ kaalChakraEventInternal h eventId req = withLogTag ("EventId-" <> eventId.getId)
       logError $ "LLM is not implemented: tag: " <> tag.name <> "; skipping."
       pure False
 
-  loopData <- loopM (LoopData 0 S.empty req.batchDelayInSec) $ fetchUserDataBatch req eventId chakraQueries
-  let batchesNumber = loopData.batchNumber - 1
-  let usersNumber = length loopData.userIds
-  logInfo $ "User data fetched successfully: batches number: " <> show batchesNumber <> "; users number: " <> show usersNumber
+  bn <- nextChakraBatchNumber req.chakra
+  let batchNumber = bn - 1
+  let limit = Just $ req.usersInBatch
+  let offset = Just $ batchNumber * req.usersInBatch
+  batchedUserData <- QUserDataE.findAllByEventIdWithLimitOffset eventId limit offset
+  -- getting this, but maybe limit offset will leave some part of the data of trailing guyz begind so using this just as a medium to get the userIds to do tagging for.
 
-  -- We shouldn't return huge amount of data for all db users in case of ALL_USERS selected
   let defaultUserDataMap = Parse.mkDefaultUserDataMap chakraQueries
   res <- case req.usersSet of
     Yudhishthira.ALL_USERS -> do
-      forM_ loopData.userIds $
-        kaalChakraEventUser h filteredTags eventId defaultUserDataMap
-      pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing}
+      if null batchedUserData
+        then pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Completed}
+        else do
+          if batchNumber > req.maxBatches
+            then do
+              void $ decrChakraBatchNumber req.chakra
+              logError $ "Reached max batch size: " <> show batchNumber <> "; for updateTags job."
+              pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Completed}
+            else do
+              forM_ batchedUserData $
+                kaalChakraEventUser h filteredTags eventId defaultUserDataMap . (.userId)
+              pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Continue req.batchDelayInSec}
     _ -> do
-      usersAPIEntity <- forM (S.toList loopData.userIds) $ \userId -> do
+      usersAPIEntity <- forM batchedUserData $ \(DUserData.UserData {userId}) -> do
         kaalChakraEventUser h filteredTags eventId defaultUserDataMap userId
       let tagsAPIEntity = mkTagAPIEntity <$> filteredTags
-      pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Just tagsAPIEntity, users = Just usersAPIEntity}
+      pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Just tagsAPIEntity, users = Just usersAPIEntity, chakraBatchState = Yudhishthira.Completed}
   endTime <- getCurrentTime
   let durationInSeconds = Time.nominalDiffTimeToSeconds $ diffUTCTime endTime startTime
-  logInfo $ "User tags updated successfully in " <> show durationInSeconds <> " seconds; batches number: " <> show batchesNumber <> "; users number: " <> show usersNumber
+  logInfo $ "User tags updated successfully in " <> show durationInSeconds <> " seconds; batches number: " <> show batchNumber
   pure res
 
-data Loop a b = Continue a | Abort b
-
-loopM :: Monad m => a -> (a -> m (Loop a b)) -> m b
-loopM seed action = do
-  result <- action seed
-  case result of
-    Continue newSeed -> loopM newSeed action
-    Abort b -> pure b
-
-data LoopData = LoopData
-  { batchNumber :: Int,
-    userIds :: S.Set (Id Yudhishthira.User),
-    batchDelayInSec :: Int
+data ChakraBatchedUserData = ChakraBatchedUserData
+  { userIds :: S.Set (Id Yudhishthira.User),
+    chakraBatchState :: Yudhishthira.ChakraBatchState
   }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 fetchUserDataBatch ::
   (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
   Yudhishthira.RunKaalChakraJobReq ->
   Id Yudhishthira.Event ->
   [Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries] ->
-  LoopData ->
-  m (Loop LoopData LoopData)
-fetchUserDataBatch req eventId chakraQueries (LoopData batchNumber oldUserIds batchDelayInSec) = do
+  Int ->
+  m ChakraBatchedUserData
+fetchUserDataBatch req eventId chakraQueries batchNumber = do
   logInfo $ "Running batch: " <> show batchNumber
   when (req.usersInBatch < 1) $ throwError (InvalidRequest "Quantity of users in batch should be more than 0")
   let limit = Yudhishthira.QLimit req.usersInBatch
@@ -149,18 +186,20 @@ fetchUserDataBatch req eventId chakraQueries (LoopData batchNumber oldUserIds ba
 
   let notEmptyResults = filter (\res -> not (null res.queryResultObjects)) chakraQueriesResults
   case notEmptyResults of
-    [] -> pure $ Abort $ LoopData (batchNumber + 1) oldUserIds batchDelayInSec
+    [] -> do
+      logError $ "Got empty result for the batchNumber:" <> show batchNumber <> ", chakra successfully finished, rescheduling for the next chakra"
+      pure $ ChakraBatchedUserData S.empty Yudhishthira.Completed
     _ -> do
-      when (batchNumber + 1 > req.maxBatches) $ do
-        forM_ notEmptyResults $ \res -> do
-          logError $ "Max batches limit: " <> show req.maxBatches <> " reached, but query: " <> res.queryName <> "; query text: '" <> res.queryText <> "' returned data; job aborted."
-        throwError (InvalidRequest $ "Max batches limit: " <> show req.maxBatches <> " reached, job aborted.")
-
-      userDataList <- buildUserDataList req.chakra eventId batchNumber notEmptyResults
-      QUserData.createMany userDataList
-      let newUserIds = S.fromList $ userDataList <&> (.userId)
-      threadDelaySec $ Seconds batchDelayInSec
-      pure $ Continue $ LoopData (batchNumber + 1) (S.union oldUserIds newUserIds) batchDelayInSec
+      if batchNumber > req.maxBatches
+        then do
+          logError $ "Exceeded number of batched, reached:" <> show batchNumber <> ", finishing job"
+          void $ decrChakraBatchNumber req.chakra
+          pure $ ChakraBatchedUserData S.empty Yudhishthira.Completed
+        else do
+          userDataList <- buildUserDataList req.chakra eventId batchNumber notEmptyResults
+          QUserData.createMany userDataList
+          let newUserIds = S.fromList $ userDataList <&> (.userId)
+          pure $ ChakraBatchedUserData newUserIds (Yudhishthira.Continue req.batchDelayInSec)
 
 kaalChakraEventUser ::
   (BeamFlow m r, Monad m, Log m) =>
@@ -357,3 +396,48 @@ checkForMissingFieldsInQueryResponse queryResults (obj : _) = do
   case missingResults of
     [] -> pure ()
     _ : _ -> throwError (InvalidRequest $ "Missing fields in clickhouse response: " <> show missingResults)
+
+clearEventData ::
+  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  Yudhishthira.Chakra ->
+  Maybe (Id Yudhishthira.Event) ->
+  m ()
+clearEventData chakra (Just eventId) = do
+  resetChakraBatchNumber chakra
+  delChakraEventId chakra
+  QUserDataE.deleteUserDataWithEventId eventId
+clearEventData chakra Nothing = do
+  resetChakraBatchNumber chakra
+
+-- keeping chakra event in redis
+getEventId :: (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Yudhishthira.Chakra -> m (Id Yudhishthira.Event)
+getEventId chakra = do
+  mbOngoingEventId <- Hedis.get $ mkChakraEventIdKey chakra
+  case mbOngoingEventId of
+    Just ongoingEventId -> pure $ Id ongoingEventId
+    Nothing -> do
+      eventId <- Id <$> generateGUID
+      cacheChakraEventId chakra eventId
+      pure eventId
+
+cacheChakraEventId :: (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Yudhishthira.Chakra -> Id Yudhishthira.Event -> m ()
+cacheChakraEventId chakra eventId = Hedis.setExp (mkChakraEventIdKey chakra) eventId.getId 64800
+
+mkChakraEventIdKey :: Yudhishthira.Chakra -> Text
+mkChakraEventIdKey chakra = "chakra_event_id:" <> show chakra
+
+delChakraEventId :: (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Yudhishthira.Chakra -> m ()
+delChakraEventId chakra = Hedis.del (mkChakraEventIdKey chakra)
+
+-- resetting chakra batchNumber for next days chakra as all users are exhausted
+batchNumberKey :: Yudhishthira.Chakra -> Text
+batchNumberKey chakra = "kaal_chkra_batch_number:" <> show chakra
+
+resetChakraBatchNumber :: (CacheFlow m r, Monad m, Log m, MonadFlow m) => Yudhishthira.Chakra -> m ()
+resetChakraBatchNumber = Hedis.del . batchNumberKey
+
+decrChakraBatchNumber :: (CacheFlow m r, Monad m, Log m, MonadFlow m) => Yudhishthira.Chakra -> m Int
+decrChakraBatchNumber = fmap fromIntegral . (\a -> Hedis.decr a <* Hedis.expire a 64800) . batchNumberKey
+
+nextChakraBatchNumber :: (CacheFlow m r, Monad m, Log m, MonadFlow m) => Yudhishthira.Chakra -> m Int
+nextChakraBatchNumber = fmap fromIntegral . (\a -> Hedis.incr a <* Hedis.expire a 64800) . batchNumberKey

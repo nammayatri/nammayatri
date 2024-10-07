@@ -10,7 +10,6 @@ packages:
   app/rider-platform/rider-app/Scheduler
   app/rider-platform/rider-app/search-result-aggregator
   app/safety-dashboard
-  app/kaal-chakra
   app/mocks/sms
   app/mocks/fcm
   app/dashboard/rider-dashboard

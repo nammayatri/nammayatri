@@ -8,12 +8,18 @@ module Lib.Yudhishthira.Types
     CreateNammaTagRequest (..),
     LogicDomain (..),
     AppDynamicLogicReq (..),
+    UpdateKaalBasedTagsJobReq (..),
     AppDynamicLogicResp (..),
     RunLogicResp (..),
     RunKaalChakraJobReq (..),
     KaalChakraAction (..),
     KaalChakraJobData (..),
+    ChakraBatchState (..),
     mkKaalChakraJobData,
+    mkKaalChakraJobDataFromUpdateTagData,
+    UpdateKaalBasedTagsData (..),
+    mkUpdateKaalBasedTagsData,
+    mkUpdateTagDataFromKaalChakraJobData,
     RunKaalChakraJobRes (..),
     RunKaalChakraJobResForUser (..),
     TagAPIEntity (..),
@@ -238,6 +244,32 @@ instance HideSecrets RolloutVersion where
 instance HideSecrets AppDynamicLogicReq where
   hideSecrets = identity
 
+data UpdateKaalBasedTagsJobReq = UpdateKaalBasedTagsJobReq
+  { eventId :: Id Event,
+    updateUserTags :: Bool,
+    usersInBatch :: Int,
+    maxBatches :: Int,
+    batchDelayInSec :: Int,
+    usersSet :: UsersSet,
+    chakra :: Chakra
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data UpdateKaalBasedTagsData = UpdateKaalBasedTagsData
+  { eventId :: Id Event,
+    updateUserTags :: Bool,
+    usersInBatch :: Int,
+    maxBatches :: Int,
+    batchDelayInSec :: Int
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+mkUpdateKaalBasedTagsData :: UpdateKaalBasedTagsJobReq -> UpdateKaalBasedTagsData
+mkUpdateKaalBasedTagsData UpdateKaalBasedTagsJobReq {..} = UpdateKaalBasedTagsData {..}
+
+mkKaalChakraJobDataFromUpdateTagData :: UpdateKaalBasedTagsJobReq -> Bool -> KaalChakraJobData
+mkKaalChakraJobDataFromUpdateTagData UpdateKaalBasedTagsJobReq {..} parseQueryResults = KaalChakraJobData {..}
+
 data RunKaalChakraJobReq = RunKaalChakraJobReq
   { chakra :: Chakra,
     action :: KaalChakraAction,
@@ -263,16 +295,23 @@ data KaalChakraJobData = KaalChakraJobData
 mkKaalChakraJobData :: RunKaalChakraJobReq -> KaalChakraJobData
 mkKaalChakraJobData RunKaalChakraJobReq {..} = KaalChakraJobData {..}
 
+mkUpdateTagDataFromKaalChakraJobData :: RunKaalChakraJobReq -> Id Event -> UpdateKaalBasedTagsData
+mkUpdateTagDataFromKaalChakraJobData RunKaalChakraJobReq {..} eventId = UpdateKaalBasedTagsData {..}
+
 data KaalChakraAction = RUN | SCHEDULE UTCTime
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data UsersSet = SINGLE_USER (Id User) | LIST_USERS [Id User] | ALL_USERS
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data ChakraBatchState = Continue Int | Completed
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data RunKaalChakraJobRes = RunKaalChakraJobRes
   { eventId :: Maybe (Id Event),
     tags :: Maybe [TagAPIEntity],
-    users :: Maybe [RunKaalChakraJobResForUser]
+    users :: Maybe [RunKaalChakraJobResForUser],
+    chakraBatchState :: ChakraBatchState
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
