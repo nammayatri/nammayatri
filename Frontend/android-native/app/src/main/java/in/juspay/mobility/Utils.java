@@ -12,6 +12,7 @@ import android.util.Log;
 
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.play.core.splitinstall.SplitInstallManager;
 import com.google.android.play.core.splitinstall.SplitInstallManagerFactory;
@@ -56,7 +57,7 @@ public class Utils {
     }
 
 
-    public static void handleGlResp(ActivityResult result, HyperServices hyperServices, Context context){
+    public static void handleGlResp(ActivityResult result, AppCompatActivity appCompatActivity, Context context){
         if (result.getResultCode() == RESULT_OK) {
             Intent data = result.getData();
             if (data != null) {
@@ -70,7 +71,7 @@ public class Utils {
                     processPL.put(PaymentConstants.PAYLOAD, innerPayload)
                             .put("requestId", UUID.randomUUID())
                             .put("service", getService());
-                    hyperServices.process(processPL);
+                    SDKHolder.getInstance(appCompatActivity).process(appCompatActivity, processPL);
                 } catch (JSONException e) {
                     FirebaseCrashlytics.getInstance().recordException(e);
                 }
