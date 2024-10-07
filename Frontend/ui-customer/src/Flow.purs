@@ -1563,8 +1563,7 @@ homeScreenFlow = do
                           }
                         }
                   )
-            homeScreenFlow
-
+            homeScreenFlow 
       handleConfirmingQuotes :: String -> HomeScreenState -> FlowBT String Unit
       handleConfirmingQuotes bookingId state = do
         let
@@ -2317,7 +2316,7 @@ homeScreenFlow = do
       rentalScreenFlow
     GO_TO_SCHEDULED_RIDES -> rideScheduledFlow
     GO_TO_SEARCH_LOCATION_SCREEN_FOR_ROUTE_SEARCH state source -> do
-     (AutoCompleteResp routeStopresponse) <- Remote.busAutoCompleteBT "BUS" "Kochi" "22.57957400517871,88.35683883238157" (Just "A")
+     (AutoCompleteResp routeStopresponse) <- Remote.busAutoCompleteBT "BUS" "Kochi" "22.57957400517871,88.35683883238157" Nothing
      let 
        currentCity = getValueToLocalStore CUSTOMER_LOCATION
        searchLocationState = currentState.searchLocationScreen
@@ -4524,12 +4523,7 @@ metroTicketBookingFlow = do
     GO_TO_METRO_PAYMENT_PAGE orderResp bookingId -> do
       modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { props { currentStage = ConfirmMetroQuote } })
       metroTicketPaymentFlow orderResp bookingId
-    GO_TO_ROUTE_SEARCH_SCREEN state -> do
-      let 
-          searchLocationState = currentState.searchLocationScreen
-      modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
-      modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data { srcLoc = Nothing, destLoc = Nothing, routeSearchedList = searchLocationState.data.routeSearchedList , updatedRouteSearchedList = searchLocationState.data.routeSearchedList} })
-      searchLocationFlow
+    GO_TO_ROUTE_SEARCH_SCREEN state -> busTicketBookingFlow
   where
   fetchMetroStations currentCity metroStationsList routeCode ticketServiceType = do
     (GetMetroStationResponse getMetroStationResp) <- Remote.getMetroStationBT ticketServiceType currentCity routeCode ""
@@ -5088,14 +5082,16 @@ searchLocationFlow = do
        currentCity = getValueToLocalStore CUSTOMER_LOCATION
      (AutoCompleteResp routeStopresponse) <- Remote.busAutoCompleteBT "BUS" "Kochi" "22.57957400517871,88.35683883238157" (Just input)
      if null routeStopresponse.routes && null routeStopresponse.stops then do
-      modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
-      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> searchPlaceFlow input state)    
-     else if null state.data.routeSearchedList then do
-        modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
-        modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data { srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = routeStopresponse.stops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = routeStopresponse.stops } })
+      -- modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
+      modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
+      modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data { srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = routeStopresponse.stops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = routeStopresponse.stops } })
+      (App.BackT $ App.BackPoint <$> pure unit) >>= (\_ -> searchPlaceFlow input state)    
      else do
         modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
-        modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data { srcLoc = Nothing, destLoc = Nothing , routeSearchedList = routeStopresponse.routes , stopsSearchedList = routeStopresponse.stops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = routeStopresponse.stops } })
+        modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data { srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = routeStopresponse.stops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = routeStopresponse.stops } })
+    --  else do
+    --     modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
+    --     modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data { srcLoc = Nothing, destLoc = Nothing , routeSearchedList = routeStopresponse.routes , stopsSearchedList = routeStopresponse.stops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = routeStopresponse.stops } })
      searchLocationFlow
     SearchLocationController.AddFavLoc state tag -> do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
@@ -5362,7 +5358,7 @@ searchLocationFlow = do
     savedLoc <- fetchGlobalSavedLocations
     let
       { currentLat, currentLng } = { currentLat: fromMaybe 0.0 state.data.currentLoc.lat, currentLng: fromMaybe 0.0 state.data.currentLoc.lon }
-
+      _ = spy "actionType" state.props.actionType
       { lat, lng } = maybe { lat: currentLat, lng: currentLng } (\loc -> { lat: fromMaybe 0.0 loc.lat, lng: fromMaybe 0.0 loc.lon }) $ maybe Nothing (\currField -> if currField == SearchLocPickup then (state.data.srcLoc) else (state.data.destLoc)) $ state.props.focussedTextField
       config = getCityConfig state.appConfig.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
       cityConfig = case state.props.focussedTextField of
@@ -5393,14 +5389,24 @@ searchLocationFlow = do
                 item { lat = item.lat, lon = item.lon, locationItemType = item.locationItemType, postfixImageUrl = fetchImage FF_ASSET "ny_ic_fav" }
           )
           (filteredRecentsList <> filteredPredictionList)
-    modifyScreenState
-      $ SearchLocationScreenStateType
-          ( \searchLocationScreen ->
-              searchLocationScreen
-                { data { locationList = updatedLocList }
-                , props { showLoader = false }
-                }
-          )
+    if state.props.actionType == BusSearchSelectionAction then do
+       modifyScreenState
+          $ SearchLocationScreenStateType
+              ( \searchLocationScreen ->
+                  searchLocationScreen
+                    { data { locationList = spy "updatedLocList" updatedLocList , routeSearchedList = [] , updatedRouteSearchedList = [] , stopsSearchedList = [] , updatedStopsSearchedList = [], ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing }
+                    , props { showLoader = false , actionType = NoBusRouteSelectionAction , canSelectFromFav = false , routeSearch = true , isAutoComplete = false }
+                    }
+              )
+    else do
+        modifyScreenState
+          $ SearchLocationScreenStateType
+              ( \searchLocationScreen ->
+                  searchLocationScreen
+                    { data { locationList = updatedLocList}
+                    , props { showLoader = false }
+                    }
+              )
     searchLocationFlow
 
   checkRedundantFavLocFlow :: SearchLocationScreenState -> Array LocationListItemState -> FlowBT String Unit
@@ -5520,32 +5526,52 @@ predictionClickedFlow prediction state = do
       state.props.focussedTextField
     void $ lift $ lift $ toggleLoader false
     (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  searchLocationFlow)
-  else if state.props.actionType == BusSearchSelectionAction then do
+  else if state.props.actionType == BusSearchSelectionAction || state.props.actionType == BusRouteSelectionAction then do
           if state.data.searchRideType == API.BUS_ROUTE then do
               let 
                 currentCity = getValueToLocalStore CUSTOMER_LOCATION
+                busRouteSelected = state.props.routeSelected
+                _ = spy "searchRideType = " state.data.searchRideType
               (GetMetroStationResponse getBusStopResp) <- Remote.getMetroStationBT (show state.data.ticketServiceType) currentCity state.props.routeSelected ""
-              if null state.data.routeSearchedList then do
-                  modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
-                  modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusRouteSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data { ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing,  stopsSearchedList = getBusStopResp , updatedStopsSearchedList = getBusStopResp} })
-              else do
-                  modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
-                  modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusRouteSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data {ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing , stopsSearchedList = state.data.updatedStopsSearchedList , updatedStopsSearchedList = state.data.updatedStopsSearchedList } })
+              pure $ setText (getNewIDWithTag (show SearchLocPickup)) ""
+              -- if null state.data.routeSearchedList || null state.data.stopsSearchedList then do
+              modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
+              modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusRouteSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false, routeSelected = busRouteSelected }, data { ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing,  stopsSearchedList = getBusStopResp , updatedStopsSearchedList = getBusStopResp} })
+              -- else do
+              --     modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
+              --     modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusRouteSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , routeSelected = busRouteSelected}, data {ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing , stopsSearchedList = state.data.updatedStopsSearchedList , updatedStopsSearchedList = state.data.updatedStopsSearchedList } })
               searchLocationFlow
         
-        else do
-              let 
-                 currentCity = getValueToLocalStore CUSTOMER_LOCATION
-                 srcLocation = Just $ SearchLocationScreenData.dummyLocationInfo { busStopInfo = Just { stationName : state.props.stopNameSelected, stationCode : state.props.stopCodeSelected }, address =  state.props.stopNameSelected, stationCode = state.props.stopCodeSelected }
-                 destLocation = Just $ SearchLocationScreenData.dummyLocationInfo { busStopInfo = Just { stationName : state.props.stopNameSelected, stationCode : "" }, address = "", stationCode = "" }
-              (GetMetroStationResponse getBusStopResp) <-  Remote.getMetroStationBT (show state.data.ticketServiceType) currentCity "" state.props.stopCodeSelected
-            --  if null state.data.metroStations then do
-            --   modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
-            --   modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = if state.props.ticketServiceType == BUS then BusStationSelectionAction else MetroStationSelectionAction, canSelectFromFav = false, focussedTextField = textFieldFocus }, data { srcLoc = srcLocation, destLoc = destLocation,fromScreen = getScreen Screen.METRO_TICKET_BOOKING_SCREEN, metroStations = parsedStations_, updatedMetroStations = parsedStations_ } })
-            --  else do
-              modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
-              modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusStopSelectionAction ,  canSelectFromFav = false, focussedTextField = Just SearchLocPickup }, data { srcLoc = srcLocation, destLoc = destLocation, stopsSearchedList = getBusStopResp , updatedStopsSearchedList = getBusStopResp  } })
-              searchLocationFlow
+          else do
+                let 
+                  currentCity = getValueToLocalStore CUSTOMER_LOCATION
+                  busRouteSelected = state.props.routeSelected
+                  srcLocation = Just $ SearchLocationScreenData.dummyLocationInfo { busStopInfo = Just { stationName : state.props.stopNameSelected, stationCode : state.props.stopCodeSelected }, address =  state.props.stopNameSelected, stationCode = state.props.stopCodeSelected }
+                  destLocation = Just $ SearchLocationScreenData.dummyLocationInfo { busStopInfo = Just { stationName : state.props.stopNameSelected, stationCode : "" }, address = "", stationCode = "" }
+                (GetMetroStationResponse getBusStopResp) <-  Remote.getMetroStationBT (show state.data.ticketServiceType) currentCity "" state.props.stopCodeSelected
+              --  if null state.data.metroStations then do
+              --   modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
+              --   modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = if state.props.ticketServiceType == BUS then BusStationSelectionAction else MetroStationSelectionAction, canSelectFromFav = false, focussedTextField = textFieldFocus }, data { srcLoc = srcLocation, destLoc = destLocation,fromScreen = getScreen Screen.METRO_TICKET_BOOKING_SCREEN, metroStations = parsedStations_, updatedMetroStations = parsedStations_ } })
+              --  else do
+                modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
+                modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusStopSelectionAction ,  canSelectFromFav = false, focussedTextField = Just SearchLocDrop , routeSelected = busRouteSelected }, data { srcLoc = srcLocation, destLoc = destLocation, stopsSearchedList = getBusStopResp , updatedStopsSearchedList = getBusStopResp  } })
+                searchLocationFlow
+  else if state.props.actionType == NoBusRouteSelectionAction then do
+    let { lat, lon, placeId } = { lat: fromMaybe 0.0 prediction.lat, lon: fromMaybe 0.0 prediction.lon, placeId: prediction.placeId }
+    (GetPlaceNameResp resp) <- getPlaceNameResp (prediction.title <> ", " <> prediction.subTitle) placeId lat lon prediction
+    let (PlaceName placeName) = maybe SearchLocationScreenData.dummyLocationName identity $ head resp
+        (LatLong placeLatLong) = placeName.location
+        { placeLat, placeLon } = { placeLat: placeLatLong.lat, placeLon: placeLatLong.lon }
+        _ = spy "debug bus predictionClickedFlow placeName" placeName
+        
+    (AutoCompleteResp busStopResponse) <- Remote.busAutoCompleteBT "BUS" "Kochi" (show placeLat <> "," <> show placeLon) (Nothing)
+    pure $ setText (getNewIDWithTag (show SearchLocPickup)) ""
+    if (null busStopResponse.stops) then do
+      void $ pure $ toast "No routes and stops"
+    else do
+      modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
+      modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusRouteSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false }, data { ticketServiceType = BUS , destLoc = Nothing,  stopsSearchedList = busStopResponse.stops , updatedStopsSearchedList = busStopResponse.stops} })
+    searchLocationFlow 
 
   else if state.props.actionType == MetroStationSelectionAction || state.props.actionType == BusStationSelectionAction || state.props.actionType == BusStopSelectionAction then do
     if isJust state.data.srcLoc && isJust state.data.destLoc then do
@@ -5560,12 +5586,12 @@ predictionClickedFlow prediction state = do
         srcCode = spy "srcCode" (maybe "" (\(loc) -> loc.stationCode) state.data.srcLoc)
 
         destCode = spy "destCode" (maybe "" (\(loc) -> loc.stationCode) state.data.destLoc)
-
+        busRouteSelected = state.props.routeSelected
         ticketServiceType = if state.props.actionType == BusStopSelectionAction then API.BUS else API.METRO
-      (GetBusRoutesResponse busRoutesResp) <- if ticketServiceType == API.BUS && state.props.actionType == BusStopSelectionAction
+      (GetBusRoutesResponse busRoutesResp) <- if ticketServiceType == API.BUS && state.props.actionType == BusStopSelectionAction && state.props.routeSelected == ""
                         then Remote.getBusRoutesBT currentCity srcCode destCode
                         else pure $ GetBusRoutesResponse []
-      modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data { srcLoc = src, destLoc = dest, srcCode = srcCode, destCode = destCode , routeList = (spy "busRoutesResp" busRoutesResp) }, props { isButtonActive = true, ticketServiceType =  ticketServiceType} })
+      modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data { srcLoc = src, destLoc = dest, srcCode = srcCode, destCode = destCode , routeList = (spy "busRoutesResp" busRoutesResp) }, props { isButtonActive = true, ticketServiceType =  ticketServiceType , isEmptyRoute = busRouteSelected} })
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> metroTicketBookingFlow)
     else do
       if state.props.focussedTextField == Just SearchLocPickup then
@@ -6720,15 +6746,18 @@ busTicketBookingFlow = do
     BusTicketBookingController.GoToMyTicketsScreen state -> do
       modifyScreenState $ MetroMyTicketsScreenStateType (\metroMyTicketsScreen -> metroMyTicketsScreen { props { entryPoint = ST.MetroTicketBookingToMetroMyTickets, fromScreen = Just $ Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN} })
       metroMyTicketsFlow
-    BusTicketBookingController.GoToSearchLocationScreenForRoutes state source -> do
-      let currentCity = getValueToLocalStore CUSTOMER_LOCATION
-          searchLocationState = currentState.searchLocationScreen
-      modifyScreenState $ BusTicketBookingScreenStateType (\_ -> state)
-      if null searchLocationState.data.routeSearchedList then
-        modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData { props { actionType = BusRouteSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data { srcLoc = Nothing, destLoc = Nothing, fromScreen = (Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN)} })
-      else
-        modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData { props { actionType = BusRouteSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data { srcLoc = Nothing, destLoc = Nothing, fromScreen = (Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN)} })
-      searchLocationFlow
+    BusTicketBookingController.GoToSearchLocationScreenForRoutes state source ->do
+     (AutoCompleteResp routeStopresponse) <- Remote.busAutoCompleteBT "BUS" "Kochi" "22.57957400517871,88.35683883238157" (Nothing)
+     let 
+       currentCity = getValueToLocalStore CUSTOMER_LOCATION
+       searchLocationState = currentState.searchLocationScreen
+    --  if null searchLocationState.data.routeSearchedList || null searchLocationState.data.stopsSearchedList then do
+     modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
+     modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data { ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = routeStopresponse.stops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = routeStopresponse.stops, fromScreen = (Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN) } })
+    --  else do
+        -- modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
+        -- modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data {ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing , routeSearchedList = searchLocationState.data.updatedRouteSearchedList , stopsSearchedList = searchLocationState.data.updatedStopsSearchedList ,updatedRouteSearchedList = searchLocationState.data.updatedRouteSearchedList , updatedStopsSearchedList = searchLocationState.data.updatedStopsSearchedList } })
+     searchLocationFlow
     BusTicketBookingController.GoToMetroTicketDetailsFlow bookingId -> do
       (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT bookingId
       let

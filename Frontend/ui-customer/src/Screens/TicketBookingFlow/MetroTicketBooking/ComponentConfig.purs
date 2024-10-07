@@ -38,7 +38,7 @@ import DecodeUtil (getAnyFromWindow)
 import Data.Function.Uncurried (runFn3)
 import MerchantConfig.Types (MetroConfig)
 import Storage
-import Services.API (MetroBookingConfigRes(..))
+import Services.API (MetroBookingConfigRes(..),TicketServiceType(..))
 import Mobility.Prelude (getNumberWithSuffix)
 
 metroTicketBookingHeaderConfig :: ST.MetroTicketBookingScreenState -> GenericHeader.Config
@@ -57,7 +57,7 @@ metroTicketBookingHeaderConfig state = let
           } 
         , padding = PaddingVertical 5 5
         , textConfig {
-            text = if state.props.busClicked then "Buy Bus Tickets" else getString BUY_METRO_TICKETS
+            text = if state.props.ticketServiceType == BUS then "Buy Bus Tickets" else getString BUY_METRO_TICKETS
           , color = Color.darkCharcoal
           }
         , suffixImageConfig {

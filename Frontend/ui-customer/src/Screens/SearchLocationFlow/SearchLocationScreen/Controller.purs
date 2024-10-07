@@ -193,7 +193,9 @@ eval (LocationListItemAC savedLocations (LocationListItemController.FavClick ite
     else exit $ SaveFavLoc state{data{saveFavouriteCard{ address = item.description , selectedItem = item, tag = "", tagExists = false, isBtnActive = false }}} savedLocations
 
 eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state =
-  if state.props.actionType == MetroStationSelectionAction || state.props.actionType == BusStationSelectionAction then do
+  if state.props.actionType == NoBusRouteSelectionAction then do
+      exit $ PredictionClicked item state
+ else  if state.props.actionType == MetroStationSelectionAction || state.props.actionType == BusStationSelectionAction then do
       let metroLocInfo = {stationName: item.title, stationCode : item.tag }
       let updatedLoc = {placeId : MB.Nothing , address : item.title , lat : MB.Nothing , lon : MB.Nothing, city : AnyCity, addressComponents : dummyAddress, metroInfo : MB.Just metroLocInfo, busStopInfo : MB.Nothing , stationCode : item.tag}
           newState = if state.props.focussedTextField == MB.Just SearchLocPickup then 
@@ -207,6 +209,12 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state =
               newState = if state.props.focussedTextField == MB.Just SearchLocPickup then 
                           state { data { srcLoc = MB.Just updatedLoc }, props { isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop }} 
                           else state { data { destLoc = MB.Just updatedLoc}, props {isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop} }
+          void $ pure $ hideKeyboardOnNavigation true
+          updateAndExit newState $ PredictionClicked item newState
+  else if state.props.actionType == BusRouteSelectionAction then do
+          let busCodeSelected = item.tag
+              busNameSelected = item.title
+              newState = state {props {stopCodeSelected = busCodeSelected , stopNameSelected = busNameSelected}, data {searchRideType = BUS_SOURCE}}
           void $ pure $ hideKeyboardOnNavigation true
           updateAndExit newState $ PredictionClicked item newState
   else if state.props.actionType == BusSearchSelectionAction then do
@@ -224,6 +232,7 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state =
                 updateAndExit newState $ PredictionClicked item newState
           else if DA.length state.data.routeSearchedList /= 0 && DA.length state.data.stopsSearchedList == 0 then do
                 let busRouteSelected = item.title
+                    _ = spy "Printing for check " busRouteSelected
                     newState = state {props {routeSelected = busRouteSelected , isAutoComplete = false} , data {searchRideType = BUS_ROUTE}}
                 void $ pure $ hideKeyboardOnNavigation true
                 updateAndExit newState $ PredictionClicked item newState
@@ -366,7 +375,7 @@ eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textFie
     getAddress location = MB.maybe "" (\loc -> loc.address) location
 
 eval (InputViewAC _ (InputViewController.AutoCompleteCallBack value pickUpchanged)) state = do 
-  if state.props.actionType == BusSearchSelectionAction then 
+  if state.props.actionType == BusSearchSelectionAction || state.props.actionType == NoBusRouteSelectionAction then 
     exit $ GoToRouteBusSearch state value 
   else if state.props.actionType == BusRouteSelectionAction then continue state
   else if (state.props.isAutoComplete && state.data.fromScreen /= getScreen METRO_TICKET_BOOKING_SCREEN) then -- so that selecting from favourites doesn't trigger autocomplete
@@ -583,7 +592,7 @@ findRouteWithPrefix prefix arr = DA.filter matchesPrefix arr
 findStopWithPrefix :: String -> Array GetMetroStationResp -> Array GetMetroStationResp
 findStopWithPrefix prefix arr =  DA.filter matchesPrefix arr
   where
-    matchesPrefix (GetMetroStationResp stop) = containString prefix stop.code
+    matchesPrefix (GetMetroStationResp stop) = containString prefix stop.name
 
 
 containString :: String -> String -> Boolean

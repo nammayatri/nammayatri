@@ -190,13 +190,13 @@ routeListView state push =
     , onAnimationEnd push $ const ListExpandAinmationEnd
     ](DA.mapWithIndex (\index (GetBusRouteResp route) ->
         let
-          routeCode = fromMaybe "No Code" route.code -- Extracting the code from route
+          routeCode = fromMaybe "No Code" route.code 
         in
         linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , padding $ Padding 16 13 16 13
-        , onClick push $ const $ SelectRoutes routeCode -- Using routeCode here
+        , onClick push $ const $ SelectRoutes routeCode 
         , orientation VERTICAL
         ][  linearLayout
             [ height WRAP_CONTENT
@@ -204,12 +204,12 @@ routeListView state push =
             , orientation HORIZONTAL
             ][  textView $
                 [ accessibilityHint $ routeCode <> " : Button"
-                , textFromHtml routeCode -- Displaying the code
+                , textFromHtml routeCode 
                 , color Color.darkCharcoal
                 ] <> FontStyle.paragraphText LanguageStyle
 
               ]
-          ]) state.data.routeList) -- Ensure this is of type Array GetBusRouteResp
+          ]) state.data.routeList)
 
 
 
@@ -217,7 +217,7 @@ infoSelectioView :: forall w . ST.MetroTicketBookingScreenState -> (Action -> Ef
 infoSelectioView state push city cityMetroConfig metroConfig =
   let
     isBusTicketService = state.props.ticketServiceType == BUS
-    showRouteList = (state.data.srcLoc /= "" && state.data.destLoc /="")
+    showRouteList = (state.data.srcLoc /= "" && state.data.destLoc /="") && state.props.isEmptyRoute == ""
   in
     scrollView
       [ height MATCH_PARENT
@@ -460,6 +460,7 @@ headerView state push =
           , gravity CENTER
           , orientation VERTICAL
           , padding $ PaddingRight 16
+          , visibility $ boolToVisibility $ state.props.ticketServiceType /= BUS
           , background Color.white900
           ][ textView $
               [ height WRAP_CONTENT

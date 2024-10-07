@@ -579,6 +579,7 @@ footerArray state =
     BusStationSelectionAction -> []
     BusSearchSelectionAction -> []
     BusRouteSelectionAction -> []
+    NoBusRouteSelectionAction -> []
     BusStopSelectionAction -> []
     _ -> if state.props.focussedTextField == MB.Just SearchLocPickup then 
             [ {action : SetLocationOnMap, text : getString SELECT_ON_MAP, buttonType : "SetLocationOnMap", imageName : "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png"}
@@ -595,7 +596,7 @@ navbarlayout state push =
     , padding $ Padding 3 4 3 4
     , margin $ Margin 16 16 16 16
     , cornerRadius 18.0
-    , visibility $ boolToVisibility  (not DA.null state.data.updatedRouteSearchedList && not DA.null state.data.updatedStopsSearchedList)
+    , visibility $ boolToVisibility  (DA.length state.data.updatedRouteSearchedList /= 0  && DA.length state.data.updatedStopsSearchedList /= 0)
     , background Color.white900
     ]
     ( DA.mapWithIndex
@@ -665,6 +666,7 @@ searchLocationView push state globalProps = let
                               BusStationSelectionAction -> DA.null state.data.updatedMetroStations
                               BusSearchSelectionAction -> false
                               BusRouteSelectionAction -> false
+                              NoBusRouteSelectionAction -> false
                               BusStopSelectionAction ->  DA.null state.data.updatedStopsSearchedList
                               _ -> DA.null state.data.locationList
       , headerText : (getVarString WELCOME_TEXT [appName]) <> "!"
@@ -684,7 +686,7 @@ locationTagsView state push globalProps =
     [ height WRAP_CONTENT
     , margin $ MarginTop 16
     , width MATCH_PARENT
-    , visibility $ boolToVisibility ( state.props.canSelectFromFav && state.props.actionType /= BusSearchSelectionAction && state.props.actionType /= BusRouteSelectionAction && state.props.actionType /= BusStopSelectionAction)
+    , visibility $ boolToVisibility ( state.props.canSelectFromFav && state.props.actionType /= BusSearchSelectionAction && state.props.actionType /= BusRouteSelectionAction && state.props.actionType /= BusStopSelectionAction && state.props.actionType /= NoBusRouteSelectionAction)
     , gravity CENTER
     ][  LocationTagBar.view (push <<< LocationTagBarAC globalProps.savedLocations) (locationTagBarConfig state globalProps )]
     
@@ -704,7 +706,8 @@ predictionsView push state globalProps = let
                 else if state.props.actionType == BusStationSelectionAction then "Bus Routes"
                 else if state.props.actionType == BusSearchSelectionAction then if (not DA.null state.data.updatedRouteSearchedList && DA.null state.data.updatedStopsSearchedList) then "Route Search" else "Bus Search"
                 else if state.props.actionType == BusRouteSelectionAction || state.props.actionType == BusStopSelectionAction then "Bus Search"
-                else 
+                else if state.props.actionType == NoBusRouteSelectionAction then "Bus Search"
+                else
                   MB.maybe "" (\ currField -> if currField == SearchLocPickup then (getString PAST_SEARCHES) else (getString SUGGESTED_DESTINATION)) state.props.focussedTextField
   in
   scrollView
@@ -731,6 +734,7 @@ predictionsView push state globalProps = let
                                     BusSearchSelectionAction ->if (state.data.rideType == ROUTES && (DA.length state.data.updatedRouteSearchedList /= 0)) then busRouteArray state.data.updatedRouteSearchedList else busStopArray state.data.updatedStopsSearchedList
                                     BusRouteSelectionAction -> busStopArray state.data.updatedStopsSearchedList
                                     BusStopSelectionAction ->  busStopArray state.data.updatedStopsSearchedList
+                                    NoBusRouteSelectionAction -> state.data.locationList
                                     _ -> state.data.locationList)
           , footerView
         ]
@@ -860,7 +864,7 @@ predictionsView push state globalProps = let
     locationListItemView item index = let 
       enableErrorFeedback = 
         ( state.props.focussedTextField == MB.Just SearchLocPickup && 
-          state.props.actionType == SearchLocationAction && 
+          (state.props.actionType == SearchLocationAction || state.props.actionType == NoBusRouteSelectionAction ) && 
           currentStageOn state PredictionsStage)
       in 
         linearLayout

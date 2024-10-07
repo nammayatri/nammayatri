@@ -2255,6 +2255,7 @@ data SearchLocationActionType = AddingStopAction
                               | BusSearchSelectionAction
                               | BusRouteSelectionAction
                               | BusStopSelectionAction
+                              | NoBusRouteSelectionAction
                               
 
 derive instance genericSearchLocationActionType :: Generic SearchLocationActionType _

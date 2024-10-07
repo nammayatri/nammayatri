@@ -139,10 +139,12 @@ eval (InfoCardAC (InfoCard.Close)) state =
   }
 eval ListExpandAinmationEnd state = continue state {props {showRouteOptions = false }}
 eval SelectRouteslistView state = do
-  let old = state.props.routeList
-  _ <- pure $ hideKeyboardOnNavigation true
-  
-  continue state{props{routeList = not old , showRouteOptions = true}}
+ if state.props.isEmptyRoute /= "" then do continue state
+ else do 
+    let old = state.props.routeList
+    _ <- pure $ hideKeyboardOnNavigation true
+    
+    continue state{props{routeList = not old , showRouteOptions = true}}
   -- updateAndExit state{props{routeList = not old , showRouteOptions = true}} $ SearchRoute state
 eval (SelectRoutes route) state = continue state{props{isEmptyRoute = route ,routeList = not state.props.routeList , showRouteOptions = true}}
 eval (GetSDKPollingAC createOrderRes) state = exit $ GotoPaymentPage createOrderRes state.data.bookingId

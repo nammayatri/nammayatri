@@ -264,7 +264,7 @@ mapInputViewConfig state isEditable =
           , width : V 15
           , padding : Padding 0 0 0 0 
           }
-      , stroke : if item.isFocussed then "1," <> Color.yellow900 else "0," <> Color.yellow900
+      , stroke : if item.isFocussed && state.props.actionType == ST.BusStopSelectionAction then "1," <> Color.yellow900 else "0," <> Color.yellow900
       , imageSeparator : separatorConfig 
       , fontStyle : FontStyle.subHeading2 TypoGraphy
       , clearTextIcon : 
@@ -304,7 +304,7 @@ mapInputViewConfig state isEditable =
           , placeHolder : getInputView.srcPlaceHolder
           , canClearText : DS.length (if addressOnMap /= "" && pickUpFocussed then addressOnMap else srcLoc) > 2
           , id : ST.SearchLocPickup
-          , isEditable : not $ (state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN) || (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN))
+          , isEditable :  state.props.actionType /= ST.BusStopSelectionAction && (not $ (state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN) || (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN)))
           }] <> (if state.props.routeSearch then [] else 
           [{ textValue : destLoc
           , isFocussed : dropLocFocussed
@@ -326,6 +326,7 @@ mapInputViewConfig state isEditable =
             ST.BusSearchSelectionAction -> { srcPrefixImageName :"", destPrefixImageName : "", srcPlaceHolder : "Route/Bus No" , destPlaceHolder : "", inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
             ST.BusRouteSelectionAction ->  { srcPrefixImageName :"", destPrefixImageName : "", srcPlaceHolder : "PickUp Stop" , destPlaceHolder : "", inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
             ST.BusStopSelectionAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_red_circle", srcPlaceHolder : "Starting From?", destPlaceHolder : (getString WHERE_TO), inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
+            ST.NoBusRouteSelectionAction -> { srcPrefixImageName :"", destPrefixImageName : "", srcPlaceHolder : "Route/Bus No" , destPlaceHolder : "", inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
 
 menuButtonConfig :: ST.SearchLocationScreenState -> JB.Location -> MenuButton.Config
 menuButtonConfig state item = let
