@@ -195,6 +195,9 @@ homeScreen = do
     SwitchPlan plan updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ SWITCH_PLAN_FROM_HS plan updatedState)
+    GotoHotspotScreen updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GOTO_HOTSPOT_SCREEN updatedState)
     GoToRideReqScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_REQ_SCREEN updatedState )
