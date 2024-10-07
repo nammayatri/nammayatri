@@ -9,7 +9,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   VehicleCategory: BecknV2.FRFS.Enums
-  VehicleVariant: BecknV2.FRFS.Enums
+  ServiceTierType: BecknV2.FRFS.Enums
   FRFSSearch: Domain.Types.FRFSSearch
   FRFSQuote: Domain.Types.FRFSQuote
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
@@ -140,7 +140,11 @@ FRFSQuote:
     quantity: Int
     stationsJson: Text
     vehicleType: VehicleCategory
-    vehicleVariant: VehicleVariant
+    serviceTierCode: Text
+    serviceTierType: ServiceTierType
+    serviceTierShortName: Text
+    serviceTierLongName: Text
+    serviceTierDescription: Text
     bppSubscriberId: Text
     bppSubscriberUrl: Text
     providerId: Text
@@ -163,6 +167,11 @@ FRFSQuote:
 
   beamType:
     vehicleVariant: Maybe VehicleVariant
+    serviceTierCode: Maybe Text
+    serviceTierType: Maybe ServiceTierType
+    serviceTierShortName: Maybe Text
+    serviceTierLongName: Maybe Text
+    serviceTierDescription: Maybe Text
 
   types:
     FRFSQuoteType:
@@ -170,12 +179,20 @@ FRFSQuote:
 
   fromTType:
     price: Kernel.Types.Common.mkPrice currency price|E
-    vehicleVariant: fromMaybe BecknV2.FRFS.Enums.METRO_TRAIN|I
+    serviceTierCode: Kernel.Prelude.fromMaybe ""|I
+    serviceTierType: fromMaybe BecknV2.FRFS.Enums.AC|I
+    serviceTierShortName: Kernel.Prelude.fromMaybe ""|I
+    serviceTierLongName: Kernel.Prelude.fromMaybe ""|I
+    serviceTierDescription: Kernel.Prelude.fromMaybe ""|I
 
   toTType:
     price: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
-    vehicleVariant: Kernel.Prelude.Just|I
+    serviceTierCode: Kernel.Prelude.Just|I
+    serviceTierType: Kernel.Prelude.Just|I
+    serviceTierShortName: Kernel.Prelude.Just|I
+    serviceTierLongName: Kernel.Prelude.Just|I
+    serviceTierDescription: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
@@ -208,7 +225,11 @@ FRFSTicketBooking:
     routeId: Maybe (Id Route)
     quantity: Int
     vehicleType: VehicleCategory
-    vehicleVariant: VehicleVariant
+    serviceTierCode: Text
+    serviceTierType: ServiceTierType
+    serviceTierShortName: Text
+    serviceTierLongName: Text
+    serviceTierDescription: Text
     bppSubscriberId: Text
     bppSubscriberUrl: Text
     providerId: Text
@@ -248,7 +269,11 @@ FRFSTicketBooking:
       finalPrice: Maybe HighPrecMoney
 
   beamType:
-    vehicleVariant: Maybe VehicleVariant
+    serviceTierCode: Maybe Text
+    serviceTierType: Maybe ServiceTierType
+    serviceTierShortName: Maybe Text
+    serviceTierLongName: Maybe Text
+    serviceTierDescription: Maybe Text
 
   types:
     FRFSTicketBookingStatus:
@@ -260,14 +285,22 @@ FRFSTicketBooking:
     price: Kernel.Types.Common.mkPrice currency price|E
     estimatedPrice: Kernel.Types.Common.mkPrice currency estimatedPrice|E
     finalPrice: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice|E
-    vehicleVariant: fromMaybe BecknV2.FRFS.Enums.METRO_TRAIN|I
+    serviceTierCode: Kernel.Prelude.fromMaybe ""|I
+    serviceTierType: fromMaybe BecknV2.FRFS.Enums.AC|I
+    serviceTierShortName: Kernel.Prelude.fromMaybe ""|I
+    serviceTierLongName: Kernel.Prelude.fromMaybe ""|I
+    serviceTierDescription: Kernel.Prelude.fromMaybe ""|I
 
   toTType:
     price: (.amount)|I
     estimatedPrice: (.amount)|I
     finalPrice: Kernel.Prelude.fmap (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
-    vehicleVariant: Kernel.Prelude.Just|I
+    serviceTierCode: Kernel.Prelude.Just|I
+    serviceTierType: Kernel.Prelude.Just|I
+    serviceTierShortName: Kernel.Prelude.Just|I
+    serviceTierLongName: Kernel.Prelude.Just|I
+    serviceTierDescription: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
@@ -599,9 +632,11 @@ Route:
   fromTType:
     startPoint: Kernel.External.Maps.Types.LatLong startLat startLon|E
     endPoint: Kernel.External.Maps.Types.LatLong endLat endLon|E
+
   constraints:
     id: PrimaryKey
     code: SecondaryKey
+
   queries:
     findByRouteCode:
       kvFunction: findOneWithKV
@@ -671,12 +706,13 @@ RouteStopFare:
     routeCode: Text
     startStopCode: Text
     endStopCode: Text
-    amount: HighPrecMoney
     vehicleType: VehicleCategory
-    vehicleVariant: VehicleVariant
+    vehicleServiceTierId: Id FRFSVehicleServiceTier
+    amount: HighPrecMoney
     currency: Currency
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    timeBounds: TimeBound
   default:
     timeBounds: "'Unbounded'"
     currency: "'INR'"
@@ -686,10 +722,24 @@ RouteStopFare:
     endStopCode: PrimaryKey
   queries:
     findByRouteStartAndStopCode:
-      kvFunction: findOneWithKV
-      where:
-        and: [routeCode, startStopCode, endStopCode]
-    findByRouteCode:
       kvFunction: findAllWithKV
       where:
-        and: [routeCode]
+        and: [routeCode, startStopCode, endStopCode]
+
+FRFSVehicleServiceTier:
+  tableName: frfs_vehicle_service_tier
+  fields:
+    id: Id FRFSVehicleServiceTier
+    code: Text
+    _type: ServiceTierType
+    shortName: Text
+    longName: Text
+    description: Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  constraints:
+    id: PrimaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id

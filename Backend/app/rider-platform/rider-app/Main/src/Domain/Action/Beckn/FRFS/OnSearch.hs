@@ -50,7 +50,11 @@ data DQuote = DQuote
   { bppItemId :: Text,
     price :: Price,
     vehicleType :: Spec.VehicleCategory,
-    vehicleVariant :: Spec.VehicleVariant,
+    serviceTierType :: Spec.ServiceTierType,
+    serviceTierCode :: Text,
+    serviceTierShortName :: Text,
+    serviceTierDescription :: Text,
+    serviceTierLongName :: Text,
     stations :: [DStation],
     routeCode :: Maybe Text,
     _type :: Quote.FRFSQuoteType

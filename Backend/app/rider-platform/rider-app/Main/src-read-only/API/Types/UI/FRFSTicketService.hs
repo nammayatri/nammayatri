@@ -26,7 +26,11 @@ data AutocompleteRes = AutocompleteRes {routes :: [API.Types.UI.FRFSTicketServic
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSBookingPaymentAPI = FRFSBookingPaymentAPI {paymentOrder :: Data.Maybe.Maybe Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp, status :: API.Types.UI.FRFSTicketService.FRFSBookingPaymentStatusAPI}
+data FRFSBookingPaymentAPI = FRFSBookingPaymentAPI
+  { paymentOrder :: Data.Maybe.Maybe Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp,
+    status :: API.Types.UI.FRFSTicketService.FRFSBookingPaymentStatusAPI,
+    transactionId :: Data.Maybe.Maybe Data.Text.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -79,6 +83,10 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     quantity :: Kernel.Prelude.Int,
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
+    serviceTierDescription :: Data.Text.Text,
+    serviceTierLongName :: Data.Text.Text,
+    serviceTierShortName :: Data.Text.Text,
+    serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
     stations :: [API.Types.UI.FRFSTicketService.FRFSStationAPI],
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
@@ -134,6 +142,10 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     quantity :: Kernel.Prelude.Int,
+    serviceTierDescription :: Data.Text.Text,
+    serviceTierLongName :: Data.Text.Text,
+    serviceTierShortName :: Data.Text.Text,
+    serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
     stations :: [API.Types.UI.FRFSTicketService.FRFSStationAPI],
     status :: Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
     tickets :: [API.Types.UI.FRFSTicketService.FRFSTicketAPI],

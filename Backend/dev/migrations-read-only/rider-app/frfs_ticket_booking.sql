@@ -86,7 +86,10 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN cashback_payout_order_id te
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN route_id character varying(36) ;
 
-
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN vehicle_variant text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN service_tier_type text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN service_tier_short_name text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN service_tier_long_name text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN service_tier_description text ;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN service_tier_code text ;
