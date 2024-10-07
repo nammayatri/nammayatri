@@ -1243,7 +1243,7 @@ eval (TimeUpdate time lat lng) state = do
       true, ST.RideAccepted, false, false, true -> do
         let dist = getDistanceBwCordinates driverLat driverLong state.data.activeRide.src_lat state.data.activeRide.src_lon
             insideThreshold = dist <= state.data.config.waitTimeConfig.thresholdDist
-        pure $ if insideThreshold && (getValueToLocalStore WAITING_TIME_STATUS == show ST.NoStatus) && (state.data.activeRide.tripType == ST.Rental || state.data.activeRide.tripType == ST.Intercity) then UpdateAndNotify else (UpdateLastLoc driverLat driverLong insideThreshold)
+        pure $ if insideThreshold && (getValueToLocalStore WAITING_TIME_STATUS == show ST.NoStatus) then UpdateAndNotify else (UpdateLastLoc driverLat driverLong insideThreshold)
       _, _, _, _, _ -> pure $ UpdateLastLoc driverLat driverLong false
     ]
 
