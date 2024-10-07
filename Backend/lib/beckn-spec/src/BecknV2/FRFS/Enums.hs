@@ -74,13 +74,16 @@ data VehicleCategory = METRO | BUS
 
 $(mkHttpInstancesForEnum ''VehicleCategory)
 
-data VehicleVariant = METRO_TRAIN | ASHOK_LEYLAND_AC | MIDI_AC | VOLVO_AC | SPECIAL | MIDI_NON_AC | GSAGAR | EXECUTIVE | ELECTRIC_VEHICLE | ORDINARY
+data ServiceTierType = ORDINARY | AC | NON_AC | EXPRESS | SPECIAL | EXECUTIVE
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(mkHttpInstancesForEnum ''VehicleVariant)
+$(mkHttpInstancesForEnum ''ServiceTierType)
 
 data StopType = START | END | INTERMEDIATE_STOP
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
+
+data Network = BAP | BPP
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data PaymentType = PRE_ORDER | PRE_FULFILLMENT | ON_FULFILLMENT | POST_FULFILLMENT | ON_ORDER
   deriving (Eq, Ord, Show, Read, Generic)

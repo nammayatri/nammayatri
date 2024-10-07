@@ -1,6 +1,8 @@
 module ExternalBPP.EBIX.Flow where
 
 import qualified API.Types.UI.FRFSTicketService as API
+import qualified BecknV2.FRFS.Enums as Spec
+import BecknV2.FRFS.Utils
 import Data.List (sortOn)
 import Domain.Action.Beckn.FRFS.Common
 import Domain.Action.Beckn.FRFS.OnInit
@@ -23,8 +25,11 @@ import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto.Config as DB
 import Kernel.Types.Id
+import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common
+import Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import Storage.Queries.FRFSTicket as QFRFSTicket
+import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import Storage.Queries.Route as QRoute
 import Storage.Queries.RouteStopFare as QRouteStopFare
 import Storage.Queries.RouteStopMapping as QRouteStopMapping
@@ -68,22 +73,32 @@ search _merchant _merchantOperatingCity bapConfig searchReq = do
             [startStation] ++ intermediateStations ++ [endStation]
 
     mkQuote stations vehicleType routeCode startStopCode endStopCode = do
-      farePolicy <- QRouteStopFare.findByRouteStartAndStopCode routeCode startStopCode endStopCode >>= fromMaybeM (RouteFareNotFound routeCode startStopCode endStopCode)
-      let price =
-            Price
-              { amountInt = round farePolicy.amount,
-                amount = farePolicy.amount,
-                currency = farePolicy.currency
-              }
-      return $
-        [ DQuote
-            { bppItemId = "Kolkata Buses Item",
-              _type = DFRFSQuote.SingleJourney,
-              routeCode = Just routeCode,
-              vehicleVariant = farePolicy.vehicleVariant,
-              ..
-            }
-        ]
+      currentTime <- getCurrentTime
+      farePolicies <- QRouteStopFare.findByRouteStartAndStopCode routeCode startStopCode endStopCode
+      let serviceableFarePolicies = DTB.findBoundedDomain farePolicies currentTime ++ filter (\farePolicy -> farePolicy.timeBounds == DTB.Unbounded) farePolicies
+      mapM
+        ( \farePolicy -> do
+            vehicleServiceTier <- QFRFSVehicleServiceTier.findById farePolicy.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> farePolicy.vehicleServiceTierId.getId)
+            let price =
+                  Price
+                    { amountInt = round farePolicy.amount,
+                      amount = farePolicy.amount,
+                      currency = farePolicy.currency
+                    }
+            return $
+              DQuote
+                { bppItemId = "Kolkata Buses Item - " <> show vehicleServiceTier._type <> " - " <> vehicleServiceTier.code,
+                  _type = DFRFSQuote.SingleJourney,
+                  routeCode = Just routeCode,
+                  serviceTierType = vehicleServiceTier._type,
+                  serviceTierCode = vehicleServiceTier.code,
+                  serviceTierShortName = vehicleServiceTier.shortName,
+                  serviceTierDescription = vehicleServiceTier.description,
+                  serviceTierLongName = vehicleServiceTier.longName,
+                  ..
+                }
+        )
+        serviceableFarePolicies
 
 init :: (CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit
 init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking = do
@@ -105,15 +120,16 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       }
   where
     mkPaymentDetails = \case
-      BAP -> do
+      Spec.BAP -> do
         let paymentParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson
         paymentParams & fromMaybeM (InternalError "BknPaymentParams Not Found")
-      BPP -> EBIXPayment.getPaymentDetails merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
+      Spec.BPP -> EBIXPayment.getPaymentDetails merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
 
 confirm :: (CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> FRFSConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
-confirm _merchant _merchantOperatingCity frfsConfig bapConfig (_mRiderName, _mRiderNumber) booking = do
+confirm _merchant merchantOperatingCity frfsConfig bapConfig (_mRiderName, _mRiderNumber) booking = do
+  integratedBppConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) >>= fromMaybeM (InternalError "Integrated BPP Config not found")
   bppOrderId <- EBIXOrder.getOrderId booking
-  ticket <- mkTicket bppOrderId
+  ticket <- mkTicket bppOrderId integratedBppConfig
   return $
     DOrder
       { providerId = bapConfig.uniqueKeyId,
@@ -127,11 +143,11 @@ confirm _merchant _merchantOperatingCity frfsConfig bapConfig (_mRiderName, _mRi
         tickets = [ticket]
       }
   where
-    mkTicket bppOrderId = do
+    mkTicket bppOrderId integratedBppConfig = do
       (qrData, qrStatus, qrValidity, ticketNumber) <-
-        case bapConfig.verifiedBy of
-          BAP -> throwError (InternalError "Verification can only be done by the Provider")
-          BPP -> EBIXVerification.getVerificationDetails bapConfig bppOrderId frfsConfig.busStationTtl booking
+        case integratedBppConfig.qrGeneratedBy of
+          Spec.BAP -> throwError (InternalError "Verification can only be done by the Provider")
+          Spec.BPP -> EBIXVerification.getVerificationDetails integratedBppConfig bppOrderId frfsConfig.busStationTtl booking
       return $
         DTicket
           { qrData = qrData,

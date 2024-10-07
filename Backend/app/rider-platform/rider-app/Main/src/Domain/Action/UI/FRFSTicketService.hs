@@ -317,6 +317,10 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
               quantity = quote.quantity,
               validTill = quote.validTill,
               vehicleType = quote.vehicleType,
+              serviceTierType = quote.serviceTierType,
+              serviceTierShortName = quote.serviceTierShortName,
+              serviceTierLongName = quote.serviceTierLongName,
+              serviceTierDescription = quote.serviceTierDescription,
               discountedTickets = quote.discountedTickets,
               eventDiscountAmount = quote.eventDiscountAmount,
               _route = route,
@@ -418,6 +422,10 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
           quantity = booking.quantity,
           validTill = booking.validTill,
           vehicleType = booking.vehicleType,
+          serviceTierType = booking.serviceTierType,
+          serviceTierShortName = booking.serviceTierShortName,
+          serviceTierLongName = booking.serviceTierLongName,
+          serviceTierDescription = booking.serviceTierDescription,
           status = booking.status,
           payment = Nothing,
           tickets = [],
@@ -469,7 +477,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
               FRFSTicketService.FAILURE -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.FAILED
               FRFSTicketService.SUCCESS -> Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_PENDING
               _ -> Nothing
-      let mbPaymentObj = paymentStatusAPI <&> \status -> FRFSTicketService.FRFSBookingPaymentAPI {status, paymentOrder = Nothing}
+      let mbPaymentObj = paymentStatusAPI <&> \status -> FRFSTicketService.FRFSBookingPaymentAPI {status, paymentOrder = Nothing, transactionId = Nothing}
       buildFRFSTicketBookingStatusAPIRes booking mbPaymentObj
     DFRFSTicketBooking.CONFIRMING -> do
       if booking.validTill < now
@@ -513,7 +521,8 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                     Just $
                       FRFSTicketService.FRFSBookingPaymentAPI
                         { status = paymentStatus_,
-                          paymentOrder = paymentOrder_
+                          paymentOrder = paymentOrder_,
+                          transactionId = Nothing
                         }
               buildFRFSTicketBookingStatusAPIRes updatedBooking paymentObj
     DFRFSTicketBooking.PAYMENT_PENDING -> do
@@ -556,13 +565,14 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                         Just
                           FRFSTicketService.FRFSBookingPaymentAPI
                             { status = paymentStatus_,
-                              paymentOrder = paymentOrder_
+                              paymentOrder = paymentOrder_,
+                              transactionId = Nothing
                             }
                   buildFRFSTicketBookingStatusAPIRes booking paymentObj
     DFRFSTicketBooking.CANCELLED -> do
       updateTotalOrderValueAndSettlementAmount booking bapConfig
       paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
-      let mbPaymentObj = paymentBooking <&> \tbp -> FRFSTicketService.FRFSBookingPaymentAPI {status = Utils.mkTBPStatusAPI tbp.status, paymentOrder = Nothing}
+      let mbPaymentObj = paymentBooking <&> \tbp -> FRFSTicketService.FRFSBookingPaymentAPI {status = Utils.mkTBPStatusAPI tbp.status, paymentOrder = Nothing, transactionId = Nothing}
       buildFRFSTicketBookingStatusAPIRes booking mbPaymentObj
     DFRFSTicketBooking.COUNTER_CANCELLED -> do
       updateTotalOrderValueAndSettlementAmount booking bapConfig
@@ -572,14 +582,16 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
       Just $
         FRFSTicketService.FRFSBookingPaymentAPI
           { status = FRFSTicketService.SUCCESS,
-            paymentOrder = Nothing
+            paymentOrder = Nothing,
+            transactionId = Nothing
           }
 
     paymentFailed =
       Just $
         FRFSTicketService.FRFSBookingPaymentAPI
           { status = FRFSTicketService.FAILURE,
-            paymentOrder = Nothing
+            paymentOrder = Nothing,
+            transactionId = Nothing
           }
 
     buildCreateOrderResp paymentOrder person commonPersonId merchantOperatingCityId booking = do
@@ -664,10 +676,15 @@ buildFRFSTicketBookingStatusAPIRes booking payment = do
         quantity = booking.quantity,
         validTill = booking.validTill,
         vehicleType = booking.vehicleType,
+        serviceTierType = booking.serviceTierType,
+        serviceTierShortName = booking.serviceTierShortName,
+        serviceTierLongName = booking.serviceTierLongName,
+        serviceTierDescription = booking.serviceTierDescription,
         status = booking.status,
         discountedTickets = booking.discountedTickets,
         eventDiscountAmount = booking.eventDiscountAmount,
         _route = route,
+        payment = payment <&> (\p -> p {transactionId = booking.paymentTxnId}),
         ..
       }
 
@@ -810,13 +827,15 @@ getFrfsAutocomplete (_, mId) mbInput opCity origin vehicle = do
             stops = stopsWithinActualRadius
           }
     Just userInput -> do
-      allStops <- QStation.findByMerchantOperatingCityIdAndVehicleType merchantOpCity.id vehicle
-      allRoutes <- QRoute.findAllByMerchantOperatingCityAndVehicleType merchantOpCity.id vehicle
+      -- allStops <- QStation.findByMerchantOperatingCityIdAndVehicleType merchantOpCity.id vehicle
+      -- allRoutes <- QRoute.findAllByMerchantOperatingCityAndVehicleType merchantOpCity.id vehicle
+      matchingStops <- QStation.findAllMatchingStations (Just userInput) Nothing Nothing merchantOpCity.id vehicle
+      matchingRoutes <- QRoute.findAllMatchingRoutes (Just userInput) Nothing Nothing merchantOpCity.id vehicle
       currentTime <- getCurrentTime
-      let input = T.toUpper userInput
-          matchingStops = filter (\stop -> T.isInfixOf input (T.toUpper stop.name)) allStops
-          matchingRoutes = filter (\route -> T.isInfixOf input (T.toUpper route.code) || T.isInfixOf input (T.toUpper route.shortName) || T.isInfixOf input (T.toUpper route.longName)) allRoutes
-          serviceableStops = DTB.findBoundedDomain matchingStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) matchingStops
+      -- let input = T.toUpper userInput
+      -- matchingStops = filter (\stop -> T.isInfixOf input (T.toUpper stop.name)) allStops
+      -- matchingRoutes = filter (\route -> T.isInfixOf input (T.toUpper route.code) || T.isInfixOf input (T.toUpper route.shortName) || T.isInfixOf input (T.toUpper route.longName)) allRoutes
+      let serviceableStops = DTB.findBoundedDomain matchingStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) matchingStops
           serviceableRoutes = DTB.findBoundedDomain matchingRoutes currentTime ++ filter (\route -> route.timeBounds == DTB.Unbounded) matchingRoutes
       stopsWithDistance <- mkStopsWithDistance merchantOpCity serviceableStops
       let routes =

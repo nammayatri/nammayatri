@@ -40,13 +40,3 @@ ALTER TABLE atlas_app.beckn_config ADD COLUMN cancel_ttl_sec integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.beckn_config ADD COLUMN provider text  default 'ONDC';
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.beckn_config ADD COLUMN verified_by text  default 'BPP';
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.beckn_config ADD COLUMN verification_cipher text ;

@@ -4,12 +4,12 @@
 
 module Domain.Types.BecknConfig where
 
+import qualified BecknV2.FRFS.Enums
 import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
-import qualified Kernel.Types.Base64
 import qualified Kernel.Types.Id
 import qualified Servant.Client.Core
 import qualified Tools.Beam.UtilsTH
@@ -18,7 +18,7 @@ data BecknConfig = BecknConfig
   { bapIFSC :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     buyerFinderFee :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancelTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    collectedBy :: Domain.Types.BecknConfig.Network,
+    collectedBy :: BecknV2.FRFS.Enums.Network,
     confirmBufferTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     confirmTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     domain :: Kernel.Prelude.Text,
@@ -40,8 +40,6 @@ data BecknConfig = BecknConfig
     trackTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     uniqueKeyId :: Kernel.Prelude.Text,
     vehicleCategory :: BecknV2.OnDemand.Enums.VehicleCategory,
-    verificationCipher :: Kernel.Prelude.Maybe Kernel.Types.Base64.Base64,
-    verifiedBy :: Domain.Types.BecknConfig.Network,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
@@ -49,10 +47,6 @@ data BecknConfig = BecknConfig
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-data Network = BAP | BPP deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
 data Provider = ONDC | EBIX deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Network)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Provider)

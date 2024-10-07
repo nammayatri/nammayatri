@@ -1,6 +1,5 @@
 module ExternalBPP.EBIX.ExternalAPI.Verification where
 
-import BecknV2.FRFS.Enums
 import Crypto.Cipher.TripleDES
 import Crypto.Cipher.Types
 import Crypto.Error (CryptoFailable (..))
@@ -10,8 +9,8 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time as Time
 import Data.Time.Format
-import Domain.Types.BecknConfig
 import Domain.Types.FRFSTicketBooking
+import Domain.Types.IntegratedBPPConfig
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
@@ -33,8 +32,8 @@ import Tools.Error
 -- 8. Ticket Amount :  25
 -- 9. Pagg ID : 12613 . ( you have to add 12613 identification code every time in qr data)
 -- {tt: [{t: "1251001,1251022,1,0,4,12-04-2022 23:19:50,223451258,20,12613"}]}
-getVerificationDetails :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => BecknConfig -> Text -> Seconds -> FRFSTicketBooking -> m (Text, Text, UTCTime, Text)
-getVerificationDetails bapConfig txnUUID qrTtl booking = do
+getVerificationDetails :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => IntegratedBPPConfig -> Text -> Seconds -> FRFSTicketBooking -> m (Text, Text, UTCTime, Text)
+getVerificationDetails integratedBppConfig txnUUID qrTtl booking = do
   routeId <- booking.routeId & fromMaybeM (InternalError "Route id not found.")
   fromStation <- B.runInReplica $ QStation.findById booking.fromStationId >>= fromMaybeM (StationNotFound booking.fromStationId.getId)
   toStation <- B.runInReplica $ QStation.findById booking.toStationId >>= fromMaybeM (StationNotFound booking.toStationId.getId)
@@ -46,26 +45,13 @@ getVerificationDetails bapConfig txnUUID qrTtl booking = do
       childQuantity :: Int = 0
       amount = booking.price.amountInt
       paggId :: Int = 12613
-      busTypeId = getBusTypeId booking.vehicleVariant
+      busTypeId = booking.serviceTierCode
       qrValidityIST = addUTCTime (secondsToNominalDiffTime 19800) qrValidity
-      ticket = "{tt: [{t: \"" <> fromRoute.code <> "," <> toRoute.code <> "," <> show adultQuantity <> "," <> show childQuantity <> "," <> show busTypeId <> "," <> formatUtcTime qrValidityIST <> "," <> txnUUID <> "," <> show amount <> "," <> show paggId <> "\"}]}"
-  cipherKey <- bapConfig.verificationCipher & fromMaybeM (InternalError $ "Verification Cipher Not Found for txnUUID : " <> txnUUID)
+      ticket = "{tt: [{t: \"" <> fromRoute.code <> "," <> toRoute.code <> "," <> show adultQuantity <> "," <> show childQuantity <> "," <> busTypeId <> "," <> formatUtcTime qrValidityIST <> "," <> txnUUID <> "," <> show amount <> "," <> show paggId <> "\"}]}"
+  cipherKey <- integratedBppConfig.qrGenerationKey & fromMaybeM (InternalError $ "QR Generation Key Not Found for txnUUID : " <> txnUUID)
   encryptedQR <- encryptDES cipherKey ticket & fromEitherM (\err -> InternalError $ "Failed to encrypt: " <> show err)
   return (encryptedQR, "UNCLAIMED", qrValidity, txnUUID)
   where
-    getBusTypeId :: VehicleVariant -> Int
-    getBusTypeId = \case
-      ORDINARY -> 2
-      VOLVO_AC -> 3
-      EXECUTIVE -> 4
-      SPECIAL -> 5
-      ASHOK_LEYLAND_AC -> 6
-      GSAGAR -> 7
-      ELECTRIC_VEHICLE -> 8
-      MIDI_AC -> 9
-      MIDI_NON_AC -> 10
-      _ -> 1
-
     formatUtcTime :: UTCTime -> Text
     formatUtcTime utcTime = T.pack $ formatTime Time.defaultTimeLocale "%d-%m-%Y %H:%M:%S" utcTime
 

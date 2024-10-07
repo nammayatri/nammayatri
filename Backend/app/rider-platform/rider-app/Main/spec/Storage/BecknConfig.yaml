@@ -6,6 +6,7 @@ imports:
   showBaseUrl: Kernel.Prelude
   parseBaseUrl: Kernel.Prelude
   VehicleCategory: BecknV2.OnDemand.Enums
+  Network: BecknV2.FRFS.Enums
 
 BecknConfig:
   tableName: beckn_config
@@ -22,8 +23,6 @@ BecknConfig:
     paymentParamsJson: Maybe Text
     vehicleCategory: VehicleCategory|NoRelation
     collectedBy: Network
-    verifiedBy: Network
-    verificationCipher: Maybe Base64
     staticTermsUrl: Maybe BaseUrl
     buyerFinderFee: Maybe Text # becomes redundant
     settlementWindow: Maybe Text
@@ -44,14 +43,11 @@ BecknConfig:
   types:
     Provider:
       enum: "ONDC, EBIX"
-    Network:
-      enum: "BAP, BPP"
 
   default:
     vehicleCategory: "'CAB'"
     provider: "'ONDC'"
     collectedBy: "'BPP'"
-    verifiedBy: "'BPP'"
 
   queries:
     findByMerchantIdAndDomain:
@@ -83,12 +79,44 @@ BecknConfig:
     registryUrl: showBaseUrl|I
     staticTermsUrl: (Kernel.Prelude.fmap showBaseUrl)|I
     provider: Kernel.Prelude.Just|I
-    verifiedBy: Kernel.Prelude.Just|I
 
   fromTType:
     subscriberUrl: parseBaseUrl|MI
     gatewayUrl: parseBaseUrl|IM
     registryUrl: parseBaseUrl|MI
     provider: Kernel.Prelude.fromMaybe Domain.Types.BecknConfig.ONDC|I
-    verifiedBy: Kernel.Prelude.fromMaybe Domain.Types.BecknConfig.BPP|I
     staticTermsUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
+
+IntegratedBPPConfig:
+  tableName: integrated_bpp_config
+
+  fields:
+    id: Id IntegratedBPPConfig
+    domain: Text
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    vehicleCategory: VehicleCategory|NoRelation
+    qrGeneratedBy: Network
+    qrGenerationKey: Maybe Base64
+    qrVerifiedBy: Network
+    qrVerificationKey: Maybe Base64
+
+  derives: "Generic,Show,FromJSON,ToJSON"
+
+  default:
+    vehicleCategory: "'BUS'"
+    qrGeneratedBy: "'BAP'"
+    qrVerifiedBy: "'BPP'"
+
+  queries:
+    findByDomainAndCityAndVehicleCategory:
+      kvFunction: findOneWithKV
+      where:
+        and: [domain, merchantOperatingCityId, vehicleCategory]
+
+  cachedQueries:
+    findByDomainAndCityAndVehicleCategory:
+      keyParams: [domain, merchantOperatingCityId, vehicleCategory]
+      dbQuery: findByDomainAndCityAndVehicleCategory
+      dbQueryParams: [domain, merchantOperatingCityId, vehicleCategory]
+      queryType: FindAndCache

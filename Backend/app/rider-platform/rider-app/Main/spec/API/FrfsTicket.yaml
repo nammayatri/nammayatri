@@ -11,6 +11,7 @@ imports:
   PriceAPIEntity: Kernel.Types.Common
   FRFSSearch: Domain.Types.FRFSSearch
   VehicleCategory: BecknV2.FRFS.Enums
+  ServiceTierType: BecknV2.FRFS.Enums
   CreateOrderResp: Kernel.External.Payment.Juspay.Types.CreateOrder
   City: Kernel.Types.Beckn.Context
   Merchant: Domain.Types.Merchant
@@ -35,6 +36,10 @@ types:
     quoteId: Id FRFSQuote
     _type: FRFSQuoteType
     vehicleType: VehicleCategory
+    serviceTierType: ServiceTierType
+    serviceTierShortName: Text
+    serviceTierLongName: Text
+    serviceTierDescription: Text
     quantity: Int
     price: HighPrecMoney
     priceWithCurrency: PriceAPIEntity
@@ -52,6 +57,10 @@ types:
     _type: FRFSQuoteType
     quantity: Int
     vehicleType: VehicleCategory
+    serviceTierType: ServiceTierType
+    serviceTierShortName: Text
+    serviceTierLongName: Text
+    serviceTierDescription: Text
     price: HighPrecMoney
     priceWithCurrency: PriceAPIEntity
     validTill: UTCTime
@@ -73,6 +82,7 @@ types:
   FRFSBookingPaymentAPI:
     status: FRFSBookingPaymentStatusAPI
     paymentOrder: Maybe CreateOrderResp
+    transactionId: Maybe Text
 
   FRFSBookingPaymentStatusAPI:
     enum: "NEW, PENDING, SUCCESS, FAILURE, REFUND_PENDING, REFUNDED"

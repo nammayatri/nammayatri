@@ -19,8 +19,6 @@ INSERT INTO
     bap_ifsc,
     buyer_finder_fee,
     collected_by,
-    verified_by,
-    verification_cipher,
     provider,
     confirm_buffer_ttl_sec,
     confirm_ttl_sec,
@@ -53,8 +51,6 @@ VALUES
     null,
     null,
     'BAP',
-    'BPP',
-    'VGhpc0lzVGVzdEVuY3J5cHRpb25LZXkh',
     'EBIX',
     10,
     120,
@@ -81,6 +77,138 @@ VALUES
     120,
     30,
     'localhost/beckn/frfs/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52'
+  );
+
+INSERT INTO
+  atlas_app.integrated_bpp_config(
+    id,
+    domain,
+    merchant_id,
+    merchant_operating_city_id,
+    vehicle_category,
+    qr_generated_by,
+    qr_generation_key,
+    qr_verified_by,
+    qr_verification_key,
+    created_at,
+    updated_at
+  )
+VALUES
+  (
+    md5(random() :: text || clock_timestamp() :: text) :: uuid,
+    'FRFS',
+    'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    'namma-yatri-0-0000-0000-00000000city',
+    'BUS',
+    'BAP',
+    'VGhpc0lzVGVzdEVuY3J5cHRpb25LZXkh',
+    'BPP',
+    NULL,
+    now(),
+    now()
+  );
+
+INSERT INTO
+  atlas_app.frfs_vehicle_service_tier (
+    id,
+    merchant_id,
+    merchant_operating_city_id,
+    type,
+    code,
+    short_name,
+    long_name,
+    description
+  )
+VALUES
+  (
+    '59e722df-feb0-4a86-bd5b-015cf118f400',
+    'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    'namma-yatri-0-0000-0000-00000000city',
+    'AC',
+    '6',
+    'ALA',
+    'ASHOK LEYLAND AC',
+    'অশোক লেইল্যান্ড এসি'
+  ),
+  (
+    '59e722df-feb0-4a86-bd5b-015cf118f401',
+    'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    'namma-yatri-0-0000-0000-00000000city',
+    'NON_AC',
+    '9',
+    'MDA',
+    'MIDI AC',
+    'মিডিয়াম এসি'
+  ),
+  (
+    '59e722df-feb0-4a86-bd5b-015cf118f402',
+    'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    'namma-yatri-0-0000-0000-00000000city',
+    'AC',
+    '3',
+    'VOL',
+    'VOLVO AC',
+    'ভলভো এসি'
+  ),
+  (
+    '59e722df-feb0-4a86-bd5b-015cf118f403',
+    'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    'namma-yatri-0-0000-0000-00000000city',
+    'SPECIAL',
+    '5',
+    'SPL',
+    'SPECIAL',
+    'স্পেশাল'
+  ),
+  (
+    '59e722df-feb0-4a86-bd5b-015cf118f404',
+    'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    'namma-yatri-0-0000-0000-00000000city',
+    'NON_AC',
+    '10',
+    'MDN',
+    'MIDI NON AC',
+    'মিডি নন এসি'
+  ),
+  (
+    '59e722df-feb0-4a86-bd5b-015cf118f405',
+    'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    'namma-yatri-0-0000-0000-00000000city',
+    'NON_AC',
+    '7',
+    'GSA',
+    'GSAGAR',
+    'গঙ্গা সাগর'
+  ),
+  (
+    '59e722df-feb0-4a86-bd5b-015cf118f406',
+    'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    'namma-yatri-0-0000-0000-00000000city',
+    'EXECUTIVE',
+    '4',
+    'EXE',
+    'EXECUTIVE',
+    'এক্সিকিউটিভ'
+  ),
+  (
+    '59e722df-feb0-4a86-bd5b-015cf118f407',
+    'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    'namma-yatri-0-0000-0000-00000000city',
+    'EV',
+    '8',
+    'ELE',
+    'ELECTRIC V',
+    'ইলেক্ট্রিক ভি'
+  ),
+  (
+    '59e722df-feb0-4a86-bd5b-015cf118f408',
+    'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    'namma-yatri-0-0000-0000-00000000city',
+    'ORDINARY',
+    '2',
+    'ORD',
+    'ORDINARY',
+    'সাধারণ'
   );
 
 INSERT INTO
@@ -300,7 +428,7 @@ INSERT INTO
     amount,
     currency,
     vehicle_type,
-    vehicle_variant,
+    vehicle_service_tier_id,
     merchant_id,
     merchant_operating_city_id,
     created_at,
@@ -314,7 +442,7 @@ VALUES
     10,
     'INR',
     'BUS',
-    'VOLVO',
+    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
@@ -327,7 +455,7 @@ VALUES
     20,
     'INR',
     'BUS',
-    'VOLVO',
+    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
@@ -340,7 +468,7 @@ VALUES
     30,
     'INR',
     'BUS',
-    'VOLVO',
+    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
@@ -353,7 +481,7 @@ VALUES
     40,
     'INR',
     'BUS',
-    'VOLVO',
+    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
@@ -366,7 +494,7 @@ VALUES
     10,
     'INR',
     'BUS',
-    'VOLVO',
+    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
@@ -379,7 +507,7 @@ VALUES
     20,
     'INR',
     'BUS',
-    'VOLVO',
+    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
@@ -392,7 +520,7 @@ VALUES
     30,
     'INR',
     'BUS',
-    'VOLVO',
+    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
@@ -405,7 +533,7 @@ VALUES
     10,
     'INR',
     'BUS',
-    'VOLVO',
+    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
@@ -418,7 +546,7 @@ VALUES
     20,
     'INR',
     'BUS',
-    'VOLVO',
+    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
@@ -431,7 +559,7 @@ VALUES
     10,
     'INR',
     'BUS',
-    'VOLVO',
+    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),

@@ -21,12 +21,9 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RouteStopFare.RouteStopFare] -> m ())
 createMany = traverse_ create
 
-findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RouteStopFare.RouteStopFare])
-findByRouteCode routeCode = do findAllWithKV [Se.And [Se.Is Beam.routeCode $ Se.Eq routeCode]]
-
-findByRouteStartAndStopCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.RouteStopFare.RouteStopFare))
+findByRouteStartAndStopCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ([Domain.Types.RouteStopFare.RouteStopFare]))
 findByRouteStartAndStopCode routeCode startStopCode endStopCode = do
-  findOneWithKV
+  findAllWithKV
     [ Se.And
         [ Se.Is Beam.routeCode $ Se.Eq routeCode,
           Se.Is Beam.startStopCode $ Se.Eq startStopCode,
@@ -52,8 +49,9 @@ updateByPrimaryKey (Domain.Types.RouteStopFare.RouteStopFare {..}) = do
       Se.Set Beam.currency currency,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.timeBounds timeBounds,
+      Se.Set Beam.vehicleServiceTierId (Kernel.Types.Id.getId vehicleServiceTierId),
       Se.Set Beam.vehicleType vehicleType,
-      Se.Set Beam.vehicleVariant vehicleVariant,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]
@@ -71,8 +69,9 @@ instance FromTType' Beam.RouteStopFare Domain.Types.RouteStopFare.RouteStopFare 
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             routeCode = routeCode,
             startStopCode = startStopCode,
+            timeBounds = timeBounds,
+            vehicleServiceTierId = Kernel.Types.Id.Id vehicleServiceTierId,
             vehicleType = vehicleType,
-            vehicleVariant = vehicleVariant,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -87,8 +86,9 @@ instance ToTType' Beam.RouteStopFare Domain.Types.RouteStopFare.RouteStopFare wh
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.routeCode = routeCode,
         Beam.startStopCode = startStopCode,
+        Beam.timeBounds = timeBounds,
+        Beam.vehicleServiceTierId = Kernel.Types.Id.getId vehicleServiceTierId,
         Beam.vehicleType = vehicleType,
-        Beam.vehicleVariant = vehicleVariant,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

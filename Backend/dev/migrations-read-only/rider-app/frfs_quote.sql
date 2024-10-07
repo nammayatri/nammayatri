@@ -51,7 +51,10 @@ ALTER TABLE atlas_app.frfs_quote ADD COLUMN discounted_tickets integer ;
 
 ALTER TABLE atlas_app.frfs_quote ADD COLUMN route_id character varying(36) ;
 
-
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.frfs_quote ADD COLUMN vehicle_variant text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN service_tier_type text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN service_tier_short_name text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN service_tier_long_name text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN service_tier_description text ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN service_tier_code text ;

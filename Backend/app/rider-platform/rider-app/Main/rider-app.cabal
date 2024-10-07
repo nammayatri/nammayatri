@@ -493,7 +493,9 @@ library
       Domain.Types.FRFSTicket
       Domain.Types.FRFSTicketBooking
       Domain.Types.FRFSTicketBookingPayment
+      Domain.Types.FRFSVehicleServiceTier
       Domain.Types.HotSpotConfig
+      Domain.Types.IntegratedBPPConfig
       Domain.Types.InterCityDetails
       Domain.Types.Issue
       Domain.Types.Journey
@@ -591,7 +593,9 @@ library
       Storage.Beam.FRFSTicket
       Storage.Beam.FRFSTicketBooking
       Storage.Beam.FRFSTicketBookingPayment
+      Storage.Beam.FRFSVehicleServiceTier
       Storage.Beam.HotSpotConfig
+      Storage.Beam.IntegratedBPPConfig
       Storage.Beam.InterCityDetails
       Storage.Beam.Issue
       Storage.Beam.Journey
@@ -656,6 +660,7 @@ library
       Storage.Beam.WalkLegMultimodal
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.FeedbackForm
+      Storage.CachedQueries.IntegratedBPPConfig
       Storage.CachedQueries.SavedReqLocation
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify
@@ -689,7 +694,9 @@ library
       Storage.Queries.FRFSTicket
       Storage.Queries.FRFSTicketBooking
       Storage.Queries.FRFSTicketBookingPayment
+      Storage.Queries.FRFSVehicleServiceTier
       Storage.Queries.HotSpotConfig
+      Storage.Queries.IntegratedBPPConfig
       Storage.Queries.InterCityDetails
       Storage.Queries.Issue
       Storage.Queries.Journey
