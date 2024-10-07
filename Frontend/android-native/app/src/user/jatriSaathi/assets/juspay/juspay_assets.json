@@ -795,6 +795,7 @@
       "ny_ic_ticket_icon_yellow" : true,
       "ny_ic_bus_icon_light_blue" : true,
       "ny_ic_dotted_line" : true,
-      "ny_ic_bus_ticket_illustration" : true
+      "ny_ic_bus_ticket_illustration" : true,
+      "ny_ic_user_profile_grey" : true
    }
 }

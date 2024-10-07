@@ -445,3 +445,12 @@ activeTicketColor = "#165718"
 
 expiredTicketColor :: Color 
 expiredTicketColor = "#2C2F3A"
+
+backgroundPassengerColor :: Color
+backgroundPassengerColor = "#206423"
+
+abbey :: Color
+abbey = "#47484D"
+
+cloudBurst :: Color
+cloudBurst = "#1D3449"

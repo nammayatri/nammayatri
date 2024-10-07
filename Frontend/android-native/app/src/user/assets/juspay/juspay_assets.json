@@ -582,6 +582,7 @@
       "ny_ic_wallet_outline": true,
       "ny_ic_refresh" : true,
       "ny_ic_dotted_line" : true,
-      "ny_ic_bus_ticket_illustration" : true
+      "ny_ic_bus_ticket_illustration" : true,
+      "ny_ic_user_profile_grey" : true
    }
 }

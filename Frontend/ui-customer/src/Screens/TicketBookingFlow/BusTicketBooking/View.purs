@@ -320,8 +320,8 @@ ticketCardView push ticketData =
       ]
     , linearLayout [weight 1.0] []
     , textView $
-      [ text $ if isActive then "Active" else "Expired"
-      , color $ if isActive then Color.white900 else Color.black650
+      [ text $ if isActive then "Active" else if isVerified then "Verified" else "Expired"
+      , color $ if isActive then Color.white900 else if isVerified then Color.white900 else Color.black650
       , background $ if isActive then Color.green900 else Color.grey900
       , padding $ Padding 12 6 12 6
       , cornerRadius 20.0
@@ -354,7 +354,14 @@ ticketCardView push ticketData =
     isActive :: Boolean
     isActive = do
       let (MetroTicketBookingStatus ticketBookingStatusResp) = ticketData.metroTicketStatusApiResp
-      (DA.any (_ == ticketData.status) ["CONFIRMED", "CONFIRMING"]) && (not $ isTicketExpired ticketBookingStatusResp.validTill)
+          ticketStatus = DA.head $ map (\(FRFSTicketAPI ticketD) -> ticketD.status) ticketBookingStatusResp.tickets
+      (DA.any (_ == ticketData.status) ["CONFIRMED", "CONFIRMING", "ACTIVE"]) && (DA.any (_ == ticketStatus) [Just "CONFIRMED", Just "CONFIRMING", Just "ACTIVE"])
+
+    isVerified :: Boolean
+    isVerified = do
+      let (MetroTicketBookingStatus ticketBookingStatusResp) = ticketData.metroTicketStatusApiResp
+          ticketStatus = DA.head $ map (\(FRFSTicketAPI ticketD) -> ticketD.status) ticketBookingStatusResp.tickets
+      (DA.any (_ == ticketStatus) [Just "USED"])
 
     isTicketExpired :: String -> Boolean
     isTicketExpired validTill =  (DFU.runFn2 JB.differenceBetweenTwoUTC validTill (EHC.getCurrentUTC "")) < 0
