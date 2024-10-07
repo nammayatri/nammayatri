@@ -65,6 +65,7 @@ import Screens.DriverCompleteProfileScreen.Handler (driverCompleteProfileScreen)
 import Screens.RateCardScreen.Handler (rateCardScreen) as UI
 import Screens.CustomerReferralTrackerScreen.Handler (customerReferralTrackerScreen) as UI
 import Screens.CancellationRateScreen.Handler (cancellationRateScreen) as UI
+import Screens.HotspotScreen.Handler (hotspotScreen) as UI
 import Screens.RideRequestScreen.Handler (rideRequestScreen) as UI
 import Screens.RideSummaryScreen.Handler (rideSummaryScreen) as UI
 import Screens.ScheduledRideAcceptedScreen.Handler (scheduledRideAcceptedScreen) as UI
