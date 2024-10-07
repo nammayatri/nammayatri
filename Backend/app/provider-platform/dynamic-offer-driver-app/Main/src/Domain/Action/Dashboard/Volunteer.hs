@@ -30,7 +30,7 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Forkable (fork), MonadTime (getCurrentTime), PriceAPIEntity (..), convertMetersToDistance)
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, throwError)
+import Kernel.Utils.Common (fromMaybeM)
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Person (findPerson)
 import qualified SharedLogic.Ride as SRide
@@ -102,7 +102,6 @@ assignCreateAndStartOtpRide :: ShortId DM.Merchant -> Context.City -> Common.Ass
 assignCreateAndStartOtpRide _ _ Common.AssignCreateAndStartOtpRideAPIReq {..} = do
   requestor <- findPerson (cast driverId)
   booking <- runInReplica $ QBooking.findById (cast bookingId) >>= fromMaybeM (BookingNotFound bookingId.getId)
-  when (DVST.isRentalTrip booking.tripCategory) $ throwError (InvalidRequest "Rental rides are not supported through dashboard.")
   rideOtp <- booking.specialZoneOtpCode & fromMaybeM (InternalError "otpCode not found for special zone booking")
   Redis.whenWithLockRedis (SRide.confirmLockKey booking.id) 60 $ do
     ride <- DRide.otpRideCreate requestor rideOtp booking Nothing
