@@ -18,6 +18,7 @@ import Data.Text.Format (format)
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Builder as TLB
 import qualified Data.Tuple.Extra as DTX
+import qualified Data.Vector as DV
 import Database.PostgreSQL.Simple as PG
 import Database.PostgreSQL.Simple.ToField (ToField, toField)
 import Database.PostgreSQL.Simple.Types (Query (Query))
@@ -90,7 +91,20 @@ valueToSQL (Number n) = case S.floatingOrInteger n of
 valueToSQL (Bool b) = if b then "true" else "false" -- SQL boolean values
 valueToSQL Null = "NULL" -- SQL NULL
 valueToSQL (Object obj) = "'" <> TE.decodeUtf8 (BSL.toStrict (encode (Object obj))) <> "'::json"
-valueToSQL (Array arr) = "'" <> TE.decodeUtf8 (BSL.toStrict (encode (Array arr))) <> "'::json"
+valueToSQL (Array arr) = quote $ "{" <> Text.intercalate "," (map valueToSQL' (DV.toList arr)) <> "}"
+  where
+    valueToSQL' :: Value -> Text
+    valueToSQL' (String s) = "'" <> Text.replace "'" "''" s <> "'"
+    valueToSQL' (Number n) = case S.floatingOrInteger n of
+      Left r -> Text.pack (show (r :: Double))
+      Right i -> Text.pack (show (i :: Integer))
+    valueToSQL' (Bool b) = if b then "true" else "false"
+    valueToSQL' Null = "NULL"
+    valueToSQL' (Object obj) = "'" <> TE.decodeUtf8 (BSL.toStrict (encode (Object obj))) <> "'::json"
+    valueToSQL' (Array a) = "{" <> Text.intercalate "," (map valueToSQL' (DV.toList a)) <> "}"
+
+quote :: Text -> Text
+quote t = "'" <> Text.replace "'" "''" t <> "'"
 
 generateInsertQuery :: Text -> [(Text, Value)] -> Maybe Text
 generateInsertQuery tableName setClause =
