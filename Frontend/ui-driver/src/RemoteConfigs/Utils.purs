@@ -149,6 +149,18 @@ defaultScheduledRideConfigData = {
   enableScheduledRides : false
 }
 
+defaultEnableHotspotsFeature :: EnableHotspotsFeature
+defaultEnableHotspotsFeature = {
+  enableHotspotsFeature : false
+}
+
+getHotspotsFeatureData :: String -> EnableHotspotsFeature
+getHotspotsFeatureData city = 
+  let 
+    config = fetchRemoteConfigString "enable_hotspots_feature"
+    value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultEnableHotspotsFeature
+  in getCityBasedConfig value $ toLower city 
+
 getenableScheduledRideConfigData :: String -> EnableScheduledRides 
 getenableScheduledRideConfigData city = 
   let 

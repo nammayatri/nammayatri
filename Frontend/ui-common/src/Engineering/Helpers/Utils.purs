@@ -21,10 +21,9 @@ import Control.Monad.Except.Trans (lift)
 import Data.Either (Either(..), hush)
 import Data.Function.Uncurried (Fn2, runFn2, Fn3, Fn1)
 import Data.Maybe (Maybe(..), maybe, fromMaybe)
-import Data.String (length, trim, toLower)
 import Data.Maybe (Maybe(..))
 import Effect.Uncurried (EffectFn2(..), runEffectFn2, EffectFn1(..), runEffectFn1)
-import Data.String (length, trim, Pattern(..), split, toUpper, toLower, joinWith, take, drop)
+import Data.String (length, trim, Pattern(..), split, toUpper, toLower, joinWith, take, drop, replaceAll, Replacement(..), replace)
 import Data.String.CodeUnits (charAt)
 import Data.Foldable (foldl)
 import Data.Time.Duration (Milliseconds(..))
@@ -463,6 +462,31 @@ formatMinIntoHoursMins mins =
     minutes = mins `mod` 60
   in (if hours < 10 then "0" else "") <> show hours <> " : " <> (if minutes < 10 then "0" else "") <> show minutes <> " hr"
 
+getColorWithOpacity :: Int -> String -> String 
+getColorWithOpacity opacity color =
+  let percentToHex = (if opacity `mod` 2 == 1 then DI.ceil else DI.floor) $  (255.0 * (DI.toNumber opacity)) /100.0
+      hexString = getHexFromInt percentToHex
+      prefixForColor = "#" <> if length hexString < 2 then "0" <> hexString else hexString
+  in prefixForColor <> (replace (Pattern "#") (Replacement "") color)
+
+getHexFromInt :: Int -> String
+getHexFromInt number = if number == 0 then "0" else toUpper (convertToHex number)
+
+convertToHex :: Int -> String
+convertToHex number = do
+  if number == 0 
+    then ""
+    else do
+      let quotient = number/16
+          remainder = number `mod` 16
+          hexDigit = fromMaybe "" (intToHexChar remainder)
+      append (convertToHex quotient) hexDigit
+
+intToHexChar :: Int -> Maybe String
+intToHexChar n =
+  hexChars DA.!! n
+  where
+    hexChars = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"]
 
 checkConditionToShowInternetScreen :: forall a. a -> Boolean
 checkConditionToShowInternetScreen lazy = 

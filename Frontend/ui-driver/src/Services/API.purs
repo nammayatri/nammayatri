@@ -4987,6 +4987,46 @@ instance showCoinInfo :: Show CoinInfo where show = genericShow
 instance standardEncodeCoinInfo :: StandardEncode CoinInfo where standardEncode _ = standardEncode{} 
 instance decodeCoinInfo :: Decode CoinInfo where decode = defaultDecode
 instance encodeCoinInfo :: Encode CoinInfo where encode = defaultEncode
+
+--------------------------------------------------------------- Demand Hotspots API response -------------------------------------------------------------
+
+data DemandHotspotsReq = DemandHotspotsReq String
+
+newtype DemandHotspotsResp = DemandHotspotsResp 
+  { createdAt :: String,
+    expiryAt :: String,
+    hotspotsDetails :: Array HotspotsDetails
+  }
+
+newtype HotspotsDetails = HotspotsDetails {
+  frequency :: Int, 
+  location :: LatLong
+}
+
+instance makeDemandHotspotsReq :: RestEndpoint DemandHotspotsReq where
+    makeRequest reqBody@(DemandHotspotsReq dummy) headers = defaultMakeRequestWithoutLogs GET (EP.demandHotspots dummy) headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericDemandHotspotsReq :: Generic DemandHotspotsReq _
+instance showDemandHotspotsReq :: Show DemandHotspotsReq where show = genericShow
+instance standardEncodeDemandHotspotsReq :: StandardEncode DemandHotspotsReq where standardEncode _ = standardEncode {}
+instance decodeDemandHotspotsReq :: Decode DemandHotspotsReq where decode = defaultDecode
+instance encodeDemandHotspotsReq :: Encode DemandHotspotsReq where encode = defaultEncode
+
+derive instance genericDemandHotspotsResp :: Generic DemandHotspotsResp _
+derive instance newtypeDemandHotspotsResp :: Newtype DemandHotspotsResp _
+instance showDemandHotspotsResp :: Show DemandHotspotsResp where show = genericShow
+instance standardEncodeDemandHotspotsResp :: StandardEncode DemandHotspotsResp where standardEncode _ = standardEncode {}
+instance decodeDemandHotspotsResp :: Decode DemandHotspotsResp where decode = defaultDecode
+instance encodeDemandHotspotsResp :: Encode DemandHotspotsResp where encode = defaultEncode
+
+derive instance genericHotspotsDetails :: Generic HotspotsDetails _
+derive instance newtypeHotspotsDetails :: Newtype HotspotsDetails _
+instance standardEncodeHotspotsDetails :: StandardEncode HotspotsDetails where standardEncode _ = standardEncode {}
+instance showHotspotsDetails :: Show HotspotsDetails where show = genericShow
+instance decodeHotspotsDetails :: Decode HotspotsDetails where decode = defaultDecode
+instance encodeHotspotsDetails :: Encode HotspotsDetails where encode = defaultEncode
+
 data ScheduledBookingListRequest = ScheduledBookingListRequest String String String String String String String
 
 instance makeScheduledBookingListRequest :: RestEndpoint ScheduledBookingListRequest where

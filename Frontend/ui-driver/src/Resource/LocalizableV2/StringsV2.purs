@@ -1623,6 +1623,18 @@ getProxy str = case str of
   YATRI_POINTS_FAQS_QUES1_ANS4 arg1 -> \a -> (a @~ yatri_points_faqs_ques1_ans4) arg1
   YATRI_POINTS_TNC -> \a -> a @~ yatri_points_tnc
   YATRI_POINTS_FAQS_QUES2_ANS3 -> \a -> a @~ yatri_points_faqs_ques2_ans3
+  HOTSPOTS -> \a -> a @~ hotspots
+  VERY_HIGH -> \a -> a @~ very_high
+  HIGH -> \a -> a @~ high
+  VERY_HIGH_DEMAND_AREA -> \a -> a @~ very_high_demand_area
+  HIGH_DEMAND_AREA -> \a -> a @~ high_demand_area
+  MODERATE -> \a -> a @~ moderate
+  AVERAGE_DEMAND_AREA -> \a -> a @~ average_demand_area
+  THIS_AREA_IS_EXPERIENCING_AVERAGE_SEARCHES -> \a -> a @~ this_area_is_experiencing_average_searches
+  THIS_AREA_IS_EXPERIENCING_VERY_HIGH_SEARCHES -> \a -> a @~ this_area_is_experiencing_very_high_searches
+  THIS_AREA_IS_EXPERIENCING_HIGH_SEARCHES -> \a -> a @~ this_area_is_experiencing_high_searches
+  NAVIGATE -> \a -> a @~ navigate
+  HOTSPOTS_NOT_AVAILABLE_CURRENTLY -> \a -> a @~ hotspots_not_available_currently
   GST_WITH_PERCENTAGE arg1 -> \a -> (a @~ gst_with_percentage) arg1
   DISCOUNT_POINTS_UPTO arg1 -> \a -> (a @~ discount_points_upto) arg1
   CANNOT_DETECT_PAN_CARD -> \a -> a @~ cannot_detect_pan_card

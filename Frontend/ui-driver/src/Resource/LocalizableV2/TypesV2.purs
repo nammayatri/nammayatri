@@ -1565,6 +1565,18 @@ newtype Keymap
   , yatri_points_faqs_ques1_ans4 :: String -> String
   , yatri_points_tnc :: String
   , yatri_points_faqs_ques2_ans3 :: String
+  , hotspots :: String
+  , very_high :: String
+  , high :: String
+  , very_high_demand_area :: String
+  , high_demand_area :: String
+  , moderate :: String
+  , average_demand_area :: String
+  , this_area_is_experiencing_average_searches :: String
+  , this_area_is_experiencing_very_high_searches :: String
+  , this_area_is_experiencing_high_searches :: String
+  , navigate :: String
+  , hotspots_not_available_currently :: String
   , gst_with_percentage :: String -> String
   , discount_points_upto :: String -> String
   , cannot_detect_pan_card :: String
@@ -6412,6 +6424,42 @@ yatri_points_tnc = a
 
 yatri_points_faqs_ques2_ans3 :: Proxy "yatri_points_faqs_ques2_ans3"
 yatri_points_faqs_ques2_ans3 = a
+
+hotspots :: Proxy "hotspots"
+hotspots = a
+
+very_high :: Proxy "very_high"
+very_high = a
+
+high :: Proxy "high"
+high = a
+
+very_high_demand_area :: Proxy "very_high_demand_area"
+very_high_demand_area = a
+
+high_demand_area :: Proxy "high_demand_area"
+high_demand_area = a
+
+moderate :: Proxy "moderate"
+moderate = a
+
+average_demand_area :: Proxy "average_demand_area"
+average_demand_area = a
+
+this_area_is_experiencing_average_searches :: Proxy "this_area_is_experiencing_average_searches"
+this_area_is_experiencing_average_searches = a
+
+this_area_is_experiencing_very_high_searches :: Proxy "this_area_is_experiencing_very_high_searches"
+this_area_is_experiencing_very_high_searches = a
+
+this_area_is_experiencing_high_searches :: Proxy "this_area_is_experiencing_high_searches"
+this_area_is_experiencing_high_searches = a
+
+navigate :: Proxy "navigate"
+navigate = a 
+
+hotspots_not_available_currently :: Proxy "hotspots_not_available_currently"
+hotspots_not_available_currently = a
 
 gst_with_percentage :: Proxy "gst_with_percentage"
 gst_with_percentage = a

@@ -79,6 +79,7 @@ import Screens.RateCardScreen.ScreenData as RateCardScreenData
 import Screens.CustomerReferralTrackerScreen.ScreenData as CustomerReferralTrackerScreenData
 import Screens.CancellationRateScreen.ScreenData as CancellationRateScreenData
 import Screens.CustomerReferralTrackerScreen.Types as CustomerReferralScreenTypes
+import Screens.HotspotScreen.ScreenData as HotspotScreenData
 import Screens.RideRequestScreen.ScreenData as RideRequestScreenData
 import Screens.RideSummaryScreen.ScreenData as RideSummaryScreenData
 import Screens.ScheduledRideAcceptedScreen.ScreenData as ScheduledRideAcceptedScreenData
@@ -138,6 +139,7 @@ newtype GlobalState = GlobalState {
   , rateCardScreen :: RateCardScreenState
   , customerReferralTrackerScreen :: CustomerReferralScreenTypes.CustomerReferralTrackerScreenState
   , cancellationRateScreen :: CancellationRateScreenState
+  , hotspotScreen :: HotspotScreenState
   , rideRequestScreen :: RideRequestScreenData.RideRequestScreenState
   , rideSummaryScreen :: RideSummaryScreenData.RideSummaryScreenState
   , scheduledRideAcceptedScreen :: ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState
@@ -198,6 +200,7 @@ defaultGlobalState = GlobalState {
 , rateCardScreen : RateCardScreenData.initData
 , customerReferralTrackerScreen : CustomerReferralTrackerScreenData.initData
 , cancellationRateScreen : CancellationRateScreenData.initData
+, hotspotScreen : HotspotScreenData.initData 
 , rideRequestScreen : RideRequestScreenData.initData ""
 , rideSummaryScreen : RideSummaryScreenData.initData
 , scheduledRideAcceptedScreen :ScheduledRideAcceptedScreenData.initData
@@ -269,6 +272,7 @@ data ScreenType =
   | RateCardScreenStateType (RateCardScreenState -> RateCardScreenState)
   | CustomerReferralTrackerScreenStateType (CustomerReferralScreenTypes.CustomerReferralTrackerScreenState -> CustomerReferralScreenTypes.CustomerReferralTrackerScreenState)
   | CancellationRateScreenStateType (CancellationRateScreenState -> CancellationRateScreenState)
+  | HotspotScreenStateType (HotspotScreenState -> HotspotScreenState)
   | RideRequestScreenStateType (RideRequestScreenData.RideRequestScreenState ->RideRequestScreenData.RideRequestScreenState)
   | RideSummaryScreenStateType (RideSummaryScreenData.RideSummaryScreenState -> RideSummaryScreenData.RideSummaryScreenState)
   | ScheduleRideAcceptedScreenStateType (ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState -> ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState )
@@ -302,6 +306,8 @@ data DRIVER_EARNINGS_SCREEN_OUTPUT = EARNINGS_NAV NAVIGATION_ACTIONS DriverEarni
                                    | GOTO_TRIP_DETAILS IndividualRideCardState
                                    | LOAD_MORE_HISTORY DriverEarningsScreenState
                                    | GOTO_COINS_EARNING_INFO DriverEarningsScreenState
+
+data HOTSPOT_SCREEN_OUTPUT = REFRESH_HOTSPOTS | BACK_TO_HOMESCREEN
 
 data REFERRAL_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_RIDES_SCREEN_FROM_REFERRAL_SCREEN
@@ -467,6 +473,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | GO_TO_ADD_UPI_SCREEN
                           | VERIFY_MANUAL_UPI HomeScreenState
                           | SWITCH_PLAN_FROM_HS PlanCardState HomeScreenState
+                          | GOTO_HOTSPOT_SCREEN HomeScreenState
                           | GO_TO_RIDE_REQ_SCREEN HomeScreenState String String
                           | GO_TO_RIDE_SUMMARY
                           | GO_TO_RIDE_SUMMARY_SCREEN HomeScreenState

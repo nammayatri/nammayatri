@@ -2648,6 +2648,36 @@ export const debounceFunction = function (delay) {
   }
 }
 
+export const drawCircleOnMap = function (config) {
+  if (JBridge.drawCircleOnMap) {
+    JBridge.drawCircleOnMap(JSON.stringify(config));
+  }
+}
+
+export const getCircleCallback = function(push, action) {
+  if (window.JBridge.storeCallbackCircleOnClick) {
+    const callback = callbackMapper.map(function (lat, lon, color) {
+      push(action(lat)(lon)(color))();
+    });
+    window.JBridge.storeCallbackCircleOnClick(callback);
+  }
+}
+
+export const storeCallbackHotspotMap = function (push, cb) {
+  if (window.JBridge.storeCallbackHotspotMap) { 
+    const callback = callbackMapper.map(function (left, right, top, bottom) {
+      if (timerIdDebounce) {
+        clearTimeout(timerIdDebounce);
+        timerIdDebounce = undefined;
+      }
+      timerIdDebounce = setTimeout(() => {
+        push(cb(left)(right)(top)(bottom))();
+      }, 100);
+    });
+    window.JBridge.storeCallbackHotspotMap(callback);
+  }
+}
+
 export const updateInputString = function (a) {
   console.log("UPDATED STRING " + a);
   inputForDebounce = a;

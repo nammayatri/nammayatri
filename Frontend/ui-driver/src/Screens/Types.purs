@@ -3248,6 +3248,41 @@ type GullakSDKResp = {
   responseCode :: Int,
   isNewUser :: Boolean
 }
+------------------------------------------------------- HOTSPOT_SCREEN ------------------------------------------------------------------------
+
+type HotspotScreenState = {
+  data :: HotspotScreenData,
+  props :: HotspotScreenProps
+}
+
+type HotspotScreenData = {
+  pointsWithWeight :: Array PointsWithWeight,
+  dataExpiryAt :: String,
+  currentDriverLat :: Number,
+  currentDriverLon :: Number,
+  config :: AppConfig
+}
+
+type HotspotScreenProps = {
+  lastUpdatedTime :: String,
+  showNavigationSheet :: Boolean,
+  refreshAnimation :: Boolean,
+  selectedCircleColor :: String,
+  selectedCircleLatLng :: API.LatLong,
+  isAnyCircleSelected :: Boolean,
+  mapCorners :: {
+    leftPoint :: String,
+    topPoint :: String,
+    rightPoint :: String,
+    bottomPoint :: String
+  }
+}
+
+type PointsWithWeight = {
+  latlong :: API.LatLong,
+  weight :: Number,
+  id :: String
+}
 
 -------------------------------------------------- Parcel Image Upload Screen ------------------------------------
 

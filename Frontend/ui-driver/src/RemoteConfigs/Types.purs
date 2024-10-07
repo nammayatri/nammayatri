@@ -69,6 +69,10 @@ type EnableScheduledRides = {
   enableScheduledRides :: Boolean
 }
 
+type EnableHotspotsFeature = {
+  enableHotspotsFeature :: Boolean
+}
+
 type LocationUpdateServiceConfig = {
   minDisplacement :: String,
   rideGFrequencyWithFrequentUpdates :: String,

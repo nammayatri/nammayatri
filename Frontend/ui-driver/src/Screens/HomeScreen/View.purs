@@ -113,7 +113,7 @@ import Control.Alt ((<|>))
 import Effect.Aff (launchAff, makeAff, nonCanceler)
 import Common.Resources.Constants(chatService)
 import DecodeUtil as DU
-import RemoteConfig.Utils (cancellationThresholds, getEnableOtpRideConfigData,getenableScheduledRideConfigData,getenableScheduledRideConfigData, getLocationUpdateServiceConfig)
+import RemoteConfig.Utils (cancellationThresholds, getEnableOtpRideConfigData,getenableScheduledRideConfigData, getHotspotsFeatureData, getLocationUpdateServiceConfig)
 import Components.SelectPlansModal as SelectPlansModal
 import Services.API as APITypes
 import Helpers.SplashUtils as HS
@@ -294,7 +294,7 @@ screen initialState (GlobalState globalState) =
                                 _ <- pure $ JB.removeAllPolylines ""
                                 _ <- JB.reallocateMapFragment (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap")
                                 _ <- pure $ setValueToLocalStore SESSION_ID (JB.generateSessionId unit)
-                                _ <- checkPermissionAndUpdateDriverMarker initialState true
+                                _ <- checkPermissionAndUpdateDriverMarker true
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification initialState
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.invoiceId 4 5000.0 initialState push PaymentStatusAction
                                 when initialState.data.plansState.cityOrVehicleChanged $ void $ launchAff $ EHC.flowRunner defaultGlobalState $ getPlansList push PlanListResponse
@@ -746,6 +746,8 @@ genericAccessibilityPopUpView push state =
   
 gotoRecenterAndSupport :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 gotoRecenterAndSupport state push =
+  let hotspotsRemoteConfig = getHotspotsFeatureData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+  in
   horizontalScrollView
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -764,6 +766,7 @@ gotoRecenterAndSupport state push =
         ][ locationUpdateView push state
           , if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto 
             then gotoButton push state else linearLayout[][]
+          , if hotspotsRemoteConfig.enableHotspotsFeature then seeNearbyHotspots state push else noView
           , rideRequestButton  push state
           , helpAndSupportBtnView push showReportText
           , recenterBtnView state push
@@ -919,6 +922,34 @@ helpAndSupportBtnView push showReportText =
      , color Color.black800
      , visibility if showReportText then VISIBLE else GONE
      ] <> FontStyle.tags TypoGraphy  
+  ]
+
+seeNearbyHotspots :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
+seeNearbyHotspots state push =
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , orientation HORIZONTAL
+  , margin $ MarginLeft 12
+  , cornerRadius 22.0
+  , onClick push $ const OpenHotspotScreen
+  , background Color.white900
+  , padding $ Padding 16 12 16 12
+  , gravity CENTER
+  , stroke $ "1,"<> Color.grey900
+  , rippleColor Color.rippleShade
+  ][ imageView
+     [ width $ V 15
+     , height $ V 15
+     , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_hotspots"
+     ]
+   , textView $
+     [ weight 1.0
+     , text $ getString HOTSPOTS
+     , gravity CENTER
+     , margin $ MarginLeft 10
+     , color Color.black800
+     ] <> FontStyle.tags TypoGraphy
   ]
 
 recenterBtnView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
@@ -2170,6 +2201,7 @@ offlineNavigationLinks push state =
     ]
     where
       navLinksArray = [ {title : getString if showAddGoto then ADD_GOTO else GOTO_LOCS , icon : "ny_ic_loc_goto", action : AddGotoAC},
+                        {title : getString HOTSPOTS, icon : "ny_ic_hotspots", action : OpenHotspotScreen},
                         {title : getString ADD_ALTERNATE_NUMBER, icon : "ic_call_plus", action : AddAlternateNumberAction},
                         {title : getString RIDE_REQUESTS, icon : "ny_ic_location", action : RideRequestsList},
                         {title : getString REPORT_ISSUE, icon : "ny_ic_vector_black", action : HelpAndSupportScreen},
@@ -2179,6 +2211,9 @@ offlineNavigationLinks push state =
                         AddAlternateNumberAction -> if isNothing state.data.driverAlternateMobile then VISIBLE else GONE
                         LinkAadhaarAC -> if state.props.showlinkAadhaarPopup then VISIBLE else GONE
                         AddGotoAC -> if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto then VISIBLE else GONE
+                        OpenHotspotScreen -> do
+                          let hotspotsRemoteConfig = getHotspotsFeatureData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+                          boolToVisibility hotspotsRemoteConfig.enableHotspotsFeature
                         RideRequestsList -> boolToVisibility config.enableScheduledRides 
                         _ -> VISIBLE
       itemAlpha action = case action of 

@@ -316,8 +316,9 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GotoAddUPIScreen ST.HomeScreenState
                     | VerifyManualUPI ST.HomeScreenState
                     | SwitchPlan ST.PlanCardState ST.HomeScreenState
+                    | GotoHotspotScreen ST.HomeScreenState
                     | GoToRideSummary ST.HomeScreenState
-                    | GoToRideSummaryScreen  ST.HomeScreenState                 
+                    | GoToRideSummaryScreen  ST.HomeScreenState 
                     | UploadParcelImage ST.HomeScreenState
                     | NotifyDriverReachedDestination ST.HomeScreenState
 
@@ -459,6 +460,7 @@ data Action = NoAction
             | GoToDriverProfile
             | SelectPlansModalAction SelectPlansModal.Action
             | PlanListResponse API.UiPlansResp
+            | OpenHotspotScreen
             | RideSummary
             | UpComingRideDetails (Maybe RidesInfo)
             | RideDetail
@@ -722,7 +724,7 @@ eval CancelGoOffline state = do
 eval (GoOffline status) state = exit (DriverAvailabilityStatus state { props = state.props { goOfflineModal = false }} ST.Offline)
 
 eval (ShowMap key lat lon) state = continueWithCmd state [ do
-  id <- checkPermissionAndUpdateDriverMarker state true
+  id <- checkPermissionAndUpdateDriverMarker true
   pure AfterRender
   ]
 
@@ -1299,10 +1301,10 @@ eval (TimeUpdate time lat lng errorCode) state = do
                 pure unit
               pure unit
             else pure unit
-            checkPermissionAndUpdateDriverMarker newState false 
+            checkPermissionAndUpdateDriverMarker false 
           Nothing -> do
             _ <- pure $ JB.exitLocateOnMap ""
-            checkPermissionAndUpdateDriverMarker newState true
+            checkPermissionAndUpdateDriverMarker true
       else pure unit
       case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, isJust state.data.advancedRideData, waitTimeEnabledForCity, state.data.activeRide.tripType of
         true, ST.RideAccepted, false, false, true, _ -> do
@@ -1315,6 +1317,8 @@ eval (TimeUpdate time lat lng errorCode) state = do
           pure $ if insideThreshold then UpdateAndNotify false else (UpdateLastLoc driverLat driverLong insideThreshold)
         _, _, _, _, _, _ -> pure $ UpdateLastLoc driverLat driverLong false
       ]
+
+eval OpenHotspotScreen state = exit $ GotoHotspotScreen state
 
 eval (OnMarkerClickCallBack tag lat lon) state = do
   case Number.fromString lat, Number.fromString lon of
@@ -1391,7 +1395,7 @@ eval (SwitchDriverStatus status) state =
           _ <- pure $ setValueToLocalStore IS_DEMOMODE_ENABLED "false"
           _ <- pure $ toast (getString LT.DEMO_MODE_DISABLED)
           _ <- pure $  deleteValueFromLocalStore DEMO_MODE_PASSWORD
-          _ <- getCurrentPosition (showDriverMarker state "ny_ic_auto" true) constructLatLong
+          _ <- getCurrentPosition (showDriverMarker "ny_ic_auto" true) constructLatLong
           pure NoAction
           ]
   else if state.props.driverStatusSet == status then continue state
@@ -1710,14 +1714,11 @@ eval (OnRideBannerCountDownTimer seconds status onRideBannerTimerID) state = do
   else
     continue $ state { data { onRideBannerTimer = (seconds), onRideBannerTimerID = onRideBannerTimerID } }
 
-
-
 eval (UpComingRideDetails  resp) state = do
    let scheduledRide = activeRideDetail state <$> resp
    continue state {data {upcomingRide = scheduledRide} , props {checkUpcomingRide = false, homeScreenBannerVisibility = true , rideRequestPill{pillShimmerVisibility = false}}}
 
 eval ScheduledRideBannerClick state  =  exit $ GoToRideSummaryScreen state
-
 eval (ParcelIntroductionPopup action) state = do
   let newState = state { props { showParcelIntroductionPopup = false } }
       parcelConfig = RC.getParcelConfig "lazy"
@@ -1744,19 +1745,19 @@ eval (BlockedForNDays PopUpModal.OnButton2Click) state =
 
 eval _ state = update state 
 
-checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Boolean -> Effect Unit
-checkPermissionAndUpdateDriverMarker state toAnimateCamera = do
+checkPermissionAndUpdateDriverMarker :: Boolean -> Effect Unit
+checkPermissionAndUpdateDriverMarker toAnimateCamera = do
   conditionA <- isLocationPermissionEnabled unit
   conditionB <- isLocationEnabled unit
   if conditionA && conditionB then do
-    _ <- getCurrentPosition (showDriverMarker state "ic_vehicle_side" toAnimateCamera) constructLatLong
+    _ <- getCurrentPosition (showDriverMarker "ic_vehicle_side" toAnimateCamera) constructLatLong
     pure unit
     else do
       _ <- requestLocation unit
       pure unit
 
-showDriverMarker :: ST.HomeScreenState -> String -> Boolean -> ST.Location -> Effect Unit
-showDriverMarker state marker toAnimateCamera location = do
+showDriverMarker :: String -> Boolean -> ST.Location -> Effect Unit
+showDriverMarker marker toAnimateCamera location = do
   case getValueToLocalStore DEMO_MODE_PASSWORD of
     "7891234" -> updateDemoLocationIcon 13.311895563147432 76.93981481869986
     "8917234" -> updateDemoLocationIcon 13.260559676317829 76.4785809882692
