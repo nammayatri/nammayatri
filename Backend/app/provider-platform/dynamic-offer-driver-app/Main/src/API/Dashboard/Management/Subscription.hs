@@ -20,6 +20,7 @@ import qualified Domain.Action.Dashboard.Driver as DDriver
 import qualified Domain.Action.UI.Driver as Driver
 import qualified Domain.Action.UI.Payment as APayment
 import qualified Domain.Action.UI.Plan as DTPlan
+import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverPlan as DDPlan
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
@@ -28,7 +29,7 @@ import qualified Domain.Types.Plan as DPlan
 import Environment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
-import Kernel.Types.APISuccess
+import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -43,6 +44,7 @@ data SubscriptionEndpoint
   = SelectPlanEndpoint
   | SubscribePlanEndpoint
   | SuspendPlanEndpoint
+  | CollectPaymentsEndPoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord, ToSchema)
 
 derivePersistField "SubscriptionEndpoint"
@@ -66,6 +68,7 @@ type API =
            :<|> DriverPaymentHistoryEntityDetailsAPI
            :<|> Common.UpdateSubscriptionDriverFeeAndInvoiceAPI
            :<|> SendSmsToDriverAPI
+           :<|> CollectManualPayments
        )
 
 type ListPlan =
@@ -120,6 +123,18 @@ type SubscribePlan =
     :> Capture "planId" (Id DPlan.Plan)
     :> "subscribe"
     :> Post '[JSON] DTPlan.PlanSubscribeRes
+
+type CollectManualPayments =
+  Capture "driverId" (Id DP.Driver)
+    :> Capture "serviceName" DPlan.ServiceNames
+    :> "collect"
+    :> ReqBody '[JSON] CollectManualPaymentsReq
+    :> Post '[JSON] APISuccess
+
+data CollectManualPaymentsReq = CollectManualPaymentsReq
+  { paymentIds :: Maybe [Id DF.DriverFee]
+  }
+  deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, Ord, ToSchema)
 
 newtype PlanSubscribeReq = PlanSubscribeReq
   { vehicleNumber :: Maybe Text
@@ -216,6 +231,7 @@ handler merchantId city =
     :<|> getPaymentHistoryEntityDetails merchantId city
     :<|> updateDriverSubscriptionDriverFeeAndInvoiceUpdate merchantId city
     :<|> sendSmsToDriver merchantId city
+    :<|> collectManualPayments merchantId city
 
 planListV2 :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> DPlan.ServiceNames -> FlowHandler DTPlan.PlanListAPIRes
 planListV2 merchantShortId opCity driverId serviceName = do
@@ -269,6 +285,14 @@ planSubscribeV2 merchantShortId opCity driverId planId serviceName req = withFlo
     Nothing -> return DDPlan.NoData
     Just vehicleNumber -> return $ DDPlan.RentedVehicleNumber vehicleNumber
   DTPlan.planSubscribe serviceName planId (True, Just DMM.WHATSAPP) (cast driverId, m.id, mOCityId) driverInfo subscriptionRelatedData
+
+collectManualPayments :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> DPlan.ServiceNames -> CollectManualPaymentsReq -> FlowHandler APISuccess
+collectManualPayments merchantShortId opCity driverId serviceName req = withFlowHandlerAPI $ do
+  m <- findMerchantByShortId merchantShortId
+  mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
+  let dataClearManualSelectedDues = Driver.ClearManualSelectedDues {driverFeeIds = fromMaybe [] req.paymentIds}
+  _ <- Driver.clearDriverDues (cast driverId, m.id, mOCityId) serviceName (Just dataClearManualSelectedDues) Nothing
+  return Success
 
 planSubscribe ::
   ShortId DM.Merchant ->

@@ -89,7 +89,7 @@ planSubscribe planId (personId, merchantId, merchantOpCityId) = withFlowHandlerA
   if autoPayStatus == Just DI.SUSPENDED
     then do
       void $ DPlan.planResume DPlan.YATRI_SUBSCRIPTION (personId, merchantId, merchantOpCityId)
-      Driver.ClearDuesRes {..} <- Driver.clearDriverDues (personId, merchantId, merchantOpCityId) DPlan.YATRI_SUBSCRIPTION Nothing
+      Driver.ClearDuesRes {..} <- Driver.clearDriverDues (personId, merchantId, merchantOpCityId) DPlan.YATRI_SUBSCRIPTION Nothing Nothing
       return $ DPlan.PlanSubscribeRes {..}
     else do DPlan.planSubscribe DPlan.YATRI_SUBSCRIPTION planId (False, Nothing) (personId, merchantId, merchantOpCityId) driverInfo DPlan.NoData
 

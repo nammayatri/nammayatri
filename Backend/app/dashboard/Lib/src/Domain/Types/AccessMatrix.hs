@@ -284,6 +284,8 @@ data UserActionType
   | LIST_FRFS_STATION
   | ADD_FRFS_STATION
   | DELETE_FRFS_STATION
+  | COLLECT_MANUAL_PAYMENTS
+  | EXEMPT_DRIVER_FEE
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)

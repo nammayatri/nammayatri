@@ -24,6 +24,7 @@ module Domain.Action.Dashboard.RideBooking.Driver
     postDriverEndRCAssociation,
     postDriverSetRCStatus,
     postDriverAddVehicle,
+    postDriverExemptDriverFee,
   )
 where
 
@@ -68,7 +69,7 @@ postDriverV2CollectCash ::
   Text ->
   Common.ServiceNames ->
   Flow APISuccess
-postDriverV2CollectCash = DDriver.collectCashV2
+postDriverV2CollectCash mId city driver requestorId serviceName = DDriver.collectCashV2 mId city driver requestorId serviceName Nothing
 
 postDriverExemptCash ::
   ShortId DM.Merchant ->
@@ -85,7 +86,7 @@ postDriverV2ExemptCash ::
   Text ->
   Common.ServiceNames ->
   Flow APISuccess
-postDriverV2ExemptCash = DDriver.exemptCashV2
+postDriverV2ExemptCash mId city driver requestorId serviceName = DDriver.exemptCashV2 mId city driver requestorId serviceName Nothing
 
 getDriverInfo ::
   ShortId DM.Merchant ->
@@ -132,3 +133,16 @@ postDriverSetRCStatus ::
   Common.RCStatusReq ->
   Flow APISuccess
 postDriverSetRCStatus = DDriver.setRCStatus
+
+postDriverExemptDriverFee ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Driver ->
+  Text ->
+  Common.ServiceNames ->
+  Common.ExemptionAndCashCollectionDriverFeeReq ->
+  Flow APISuccess
+postDriverExemptDriverFee mId city driver requestorId serviceName req = do
+  if req.isExempt
+    then DDriver.exemptCashV2 mId city driver requestorId serviceName (Just req)
+    else DDriver.collectCashV2 mId city driver requestorId serviceName (Just req)
