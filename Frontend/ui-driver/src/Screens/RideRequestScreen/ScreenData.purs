@@ -259,7 +259,7 @@ dayPills _ = [
                 activeColor : Color.black900
                 },{
                  rideType : Nothing,
-                pillViewText : getString LType.TOMMOROW,
+                pillViewText : getString LType.TOMORROW,
                 isSelected : false,
                 activeColor : Color.black900
               }

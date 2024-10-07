@@ -1728,7 +1728,7 @@ getBN stringKey =
         REGULAR -> "নিয়মিত"
         UPCOMING_RIDE -> "আসন্ন"
         ALL -> "সব"
-        TOMMOROW -> "আগামীকাল"
+        TOMORROW -> "আগামীকাল"
         YOU_HAVE_AN_UPCOMING -> "আপনার একটি আসন্ন"
         BOOKING -> "বুকিং"
         INTERCITY_RIDE_ACCEPTED -> "আন্তঃনগর যাত্রা গৃহীত "
