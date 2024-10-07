@@ -4072,11 +4072,20 @@ public class MobilityCommonBridge extends HyperBridge {
             }
             NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, channelId);
             mBuilder.setContentTitle(toastMessage)
-                    .setSmallIcon(bridgeComponents.getContext().getResources().getIdentifier((Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ic_launcher", (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "drawable" : "mipmap", bridgeComponents.getContext().getPackageName()))
                     .setContentText(notificationContent)
                     .setAutoCancel(true)
                     .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
                     .setPriority(NotificationCompat.PRIORITY_MAX);
+
+            int iconId = bridgeComponents.getContext().getResources().getIdentifier((Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ic_launcher", (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "drawable" : "mipmap", bridgeComponents.getContext().getPackageName());
+            if (iconId == 0){
+                iconId =  bridgeComponents.getContext().getResources().getIdentifier("ic_launcher", "mipmap", bridgeComponents.getContext().getPackageName());
+
+            }
+            if(iconId != 0){
+                mBuilder.setSmallIcon(iconId);
+            }
+
             mBuilder.setContentIntent(pendingIntent);
             NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
             JuspayLogger.d(OTHERS, channelDesc + "notification is Created");
