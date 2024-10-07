@@ -1777,14 +1777,12 @@ makeAadhaarCardReq aadhaarBackImageId aadhaarFrontImageId address consent consen
 
 ---------------------------------------------------------Fetching Driver Profile------------------------------------------------------------
 
-
 fetchDriverProfile ::  Boolean -> Flow GlobalState (Either ErrorResponse DriverProfileDataRes)
 fetchDriverProfile isImages = do
         headers <- getHeaders "" true
         withAPIResult (EP.getDriverProfile isImages) unwrapResponse $ callAPI headers $ DriverProfileDataReq isImages
     where
         unwrapResponse (x) = x
-
 
 --------------------------------- getCoinInfo ---------------------------------------------------------------------------------------------------
 
@@ -1799,6 +1797,18 @@ getCoinInfoBT lazy = do
   withAPIResultBT (EP.getCoinInfo "") identity errorHandler (lift $ lift $ callAPI headers CoinInfoReq)
   where
     errorHandler (ErrorPayload errorPayload) =  BackT $ pure GoBack
+
+-------------------------------------------------------------- Demand Hotspots API -------------------------------------------------------------
+
+getDemandHotspotsBT :: String -> FlowBT String DemandHotspotsResp
+getDemandHotspotsBT dummy = do
+        headers <- lift $ lift $ getHeaders "" true
+        withAPIResultBT (EP.demandHotspots "") (\x → x) errorHandler (lift $ lift $ callAPI headers (DemandHotspotsReq dummy))
+    where
+    errorHandler (ErrorPayload errorPayload) =  do
+        pure $ toast $ getString HOTSPOTS_NOT_AVAILABLE_CURRENTLY
+        void $ lift $ lift $ toggleLoader false
+        BackT $ pure GoBack
 
 -------------------------- REACHED DESTINATION --------------------------------------------
 
