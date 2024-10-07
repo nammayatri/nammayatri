@@ -50,4 +50,4 @@ cacheBapMetadata subscriberId domain bapMetadata = do
   Hedis.setExp idKey bapMetadata expTime
 
 makeSubscriberIdKey :: Id BapMetadata -> Text -> Text
-makeSubscriberIdKey subscriberId domain = "CachedQueries:BapMetadata:" <> domain <> ": sid-" <> subscriberId.getId
+makeSubscriberIdKey subscriberId domain = "CachedQueries:BapMetadata:" <> domain <> ":sid-" <> subscriberId.getId
