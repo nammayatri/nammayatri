@@ -36,10 +36,8 @@ import Tools.Auth.Merchant
 
 type API =
   "customer"
-    :> ( ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'CUSTOMER_DELETE
-           :> Common.CustomerDeleteAPI
-           :<|> ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'CUSTOMER_BLOCK
-             :> Common.CustomerBlockAPI
+    :> ( ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'CUSTOMER_BLOCK
+           :> Common.CustomerBlockAPI
            :<|> ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'CUSTOMER_UNBLOCK
              :> Common.CustomerUnblockAPI
            :<|> ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'CUSTOMER_INFO
@@ -58,8 +56,7 @@ type API =
 
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
-  deleteCustomer merchantId city
-    :<|> blockCustomer merchantId city
+  blockCustomer merchantId city
     :<|> unblockCustomer merchantId city
     :<|> customerInfo merchantId city
     :<|> customerCancellationDuesSync merchantId city
@@ -78,18 +75,6 @@ buildTransaction ::
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.CustomerAPI endpoint) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
-
-deleteCustomer ::
-  ShortId DM.Merchant ->
-  City.City ->
-  ApiTokenInfo ->
-  Id Common.Customer ->
-  FlowHandler APISuccess
-deleteCustomer merchantShortId opCity apiTokenInfo customerId = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.DeleteCustomerEndpoint apiTokenInfo T.emptyRequest
-  T.withTransactionStoring transaction $
-    Client.callRiderAppOperations checkedMerchantId opCity (.customers.customerDelete) customerId
 
 blockCustomer ::
   ShortId DM.Merchant ->

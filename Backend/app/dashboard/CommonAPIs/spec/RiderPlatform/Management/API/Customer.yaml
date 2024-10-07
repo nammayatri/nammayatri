@@ -17,6 +17,13 @@ apis:
         - personId: Id Customer
       response:
         type: CustomerListRes
+  - DELETE:
+        endpoint: /delete
+        auth: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_DELETE
+        params:
+          customerId: Id Customer
+        response:
+          type: APISuccess
 
 types:
   CustomerListRes:

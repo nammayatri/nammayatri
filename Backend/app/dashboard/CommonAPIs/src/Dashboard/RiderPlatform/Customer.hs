@@ -42,14 +42,6 @@ data CustomerEndpoint
 derivePersistField "CustomerEndpoint"
 
 ---------------------------------------------------------
--- customer delete --------------------------------------
-
-type CustomerDeleteAPI =
-  Capture "customerId" (Id Customer)
-    :> "delete"
-    :> Post '[JSON] APISuccess
-
----------------------------------------------------------
 -- customer block  --------------------------------------
 
 type CustomerBlockAPI =

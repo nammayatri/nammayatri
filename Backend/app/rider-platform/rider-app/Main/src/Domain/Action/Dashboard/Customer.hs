@@ -13,7 +13,7 @@
 -}
 
 module Domain.Action.Dashboard.Customer
-  ( deleteCustomer,
+  ( deleteCustomerDelete,
     blockCustomer,
     unblockCustomer,
     getCustomerList,
@@ -61,12 +61,12 @@ import qualified Storage.Queries.SafetySettings as QSafety
 import qualified Storage.Queries.SavedReqLocation as QSRL
 
 ---------------------------------------------------------------------
-deleteCustomer ::
+deleteCustomerDelete ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Customer ->
   Flow APISuccess
-deleteCustomer merchantShortId opCity customerId = do
+deleteCustomerDelete merchantShortId opCity customerId = do
   let personId = cast @Common.Customer @DP.Person customerId
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
