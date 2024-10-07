@@ -77,8 +77,8 @@ findByTransactionIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => T
 findByTransactionIdAndStatus txnId status =
   findOneWithKV [Se.And [Se.Is BeamB.transactionId $ Se.Eq txnId, Se.Is BeamB.status $ Se.Eq status]]
 
-findByStatusTripCatSchedulingAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Integer -> Maybe Integer -> Maybe DT.Day -> Maybe DT.Day -> BookingStatus -> Maybe DTC.TripCategory -> [DVST.ServiceTierType] -> Bool -> Id DMOC.MerchantOperatingCity -> Seconds -> m [Booking]
-findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay status mbTripCategory serviceTiers isScheduled (Id merchanOperatingCityId) timeDiffFromUtc = do
+findByStatusTripCatSchedulingAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Integer -> Maybe Integer -> Maybe DT.Day -> Maybe DT.Day -> BookingStatus -> Maybe DTC.TripCategory -> [DVST.ServiceTierType] -> Bool -> Id Merchant -> Seconds -> m [Booking]
+findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay status mbTripCategory serviceTiers isScheduled (Id merchantId) timeDiffFromUtc = do
   let limitVal = maybe 5 fromInteger mbLimit
       offsetVal = maybe 0 fromInteger mbOffset
   now <- getCurrentTime
@@ -92,7 +92,7 @@ findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay stat
         [ Se.Is BeamB.startTime $ Se.GreaterThanOrEq from,
           Se.Is BeamB.startTime $ Se.LessThanOrEq to,
           Se.Is BeamB.vehicleVariant $ Se.In serviceTiers,
-          Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just merchanOperatingCityId),
+          Se.Is BeamB.providerId $ Se.Eq merchantId,
           Se.Is BeamB.isScheduled $ Se.Eq (Just isScheduled),
           Se.Is BeamB.status $ Se.Eq status
         ]

@@ -65,10 +65,14 @@ getNextScheduleTime ::
   m (Maybe NominalDiffTime)
 getNextScheduleTime driverPoolConfig searchRequest now = do
   mbScheduleTryTimes <- getKey
-  let scheduleTryTimes =
-        case mbScheduleTryTimes of
-          Just scheduleTryTimes' -> scheduleTryTimes'
-          Nothing -> secondsToNominalDiffTime . Seconds <$> driverPoolConfig.scheduleTryTimes
+  scheduleTryTimes <-
+    case mbScheduleTryTimes of
+      Just scheduleTryTimes' -> pure scheduleTryTimes'
+      Nothing -> do
+        let origTryTimes = secondsToNominalDiffTime . Seconds <$> driverPoolConfig.scheduleTryTimes
+        case origTryTimes of
+          [] -> throwError $ InternalError "Non-emptiness of scheduleTryTime is guaranteed."
+          (x : xs) -> pure (x : xs)
   case scheduleTryTimes of
     [] -> return Nothing
     (scheduleTryTime : rest) -> do
