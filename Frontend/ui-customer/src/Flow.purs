@@ -2561,6 +2561,7 @@ findEstimates updatedState = do
       , searchLocationModelProps { 
           totalRideDistance = routeObj.estDistance
         , totalRideDuration = routeObj.estDuration 
+        , tripType = CTA.ONE_WAY_TRIP
         } 
       , isTripSchedulable = false
       }
