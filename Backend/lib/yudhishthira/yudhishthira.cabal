@@ -37,6 +37,7 @@ library
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRolloutExtra
       Lib.Yudhishthira.Storage.Queries.NammaTagExtra
       Lib.Yudhishthira.Storage.Queries.Transformers.NammaTag
+      Lib.Yudhishthira.Storage.Queries.UserDataExtra
       Lib.Yudhishthira.Tools.Error
       Lib.Yudhishthira.Tools.Utils
       Lib.Yudhishthira.Types
@@ -57,6 +58,7 @@ library
       Lib.Yudhishthira.Storage.Queries.NammaTag
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.NammaTag
+      Lib.Yudhishthira.Storage.Queries.OrphanInstances.UserData
       Lib.Yudhishthira.Storage.Queries.UserData
       Lib.Yudhishthira.Types.AppDynamicLogicElement
       Lib.Yudhishthira.Types.AppDynamicLogicRollout

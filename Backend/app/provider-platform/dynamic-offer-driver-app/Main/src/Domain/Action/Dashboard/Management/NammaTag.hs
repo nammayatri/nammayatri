@@ -201,7 +201,7 @@ postNammaTagRunJob _merchantShortId _opCity req = do
         Lib.Yudhishthira.Types.Quarterly -> QAllJ.createJobByTime @_ @'Quarterly scheduledTime maxShards jobData
 
       logInfo $ "Scheduled new " <> show req.chakra <> " job"
-      pure $ Lib.Yudhishthira.Types.RunKaalChakraJobRes {eventId = Nothing, tags = Nothing, users = Nothing}
+      pure $ Lib.Yudhishthira.Types.RunKaalChakraJobRes {eventId = Nothing, tags = Nothing, users = Nothing, chakraBatchState = Lib.Yudhishthira.Types.Completed}
 
 castChakra :: AllocatorJobType -> Maybe Lib.Yudhishthira.Types.Chakra
 castChakra Daily = Just Lib.Yudhishthira.Types.Daily

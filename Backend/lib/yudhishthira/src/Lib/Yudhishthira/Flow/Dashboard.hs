@@ -164,7 +164,7 @@ postRunKaalChakraJob ::
   Handle m ->
   Lib.Yudhishthira.Types.RunKaalChakraJobReq ->
   m Lib.Yudhishthira.Types.RunKaalChakraJobRes
-postRunKaalChakraJob h req =
+postRunKaalChakraJob _h req =
   case req.usersSet of
     Lib.Yudhishthira.Types.ALL_USERS -> throwError (InvalidRequest "ALL_USERS option available only from kaal-chakra scheduler")
-    _ -> kaalChakraEvent h req
+    _ -> kaalChakraEvent req

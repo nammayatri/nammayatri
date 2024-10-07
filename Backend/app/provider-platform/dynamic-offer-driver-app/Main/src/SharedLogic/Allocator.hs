@@ -57,6 +57,10 @@ data AllocatorJobType
   | Weekly
   | Monthly
   | Quarterly
+  | DailyUpdateTag
+  | WeeklyUpdateTag
+  | MonthlyUpdateTag
+  | QuarterlyUpdateTag
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -83,6 +87,10 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SWeekly jobData = AnyJobInfo <$> restoreJobInfo SWeekly jobData
   restoreAnyJobInfo SMonthly jobData = AnyJobInfo <$> restoreJobInfo SMonthly jobData
   restoreAnyJobInfo SQuarterly jobData = AnyJobInfo <$> restoreJobInfo SQuarterly jobData
+  restoreAnyJobInfo SDailyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SDailyUpdateTag jobData
+  restoreAnyJobInfo SWeeklyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SWeeklyUpdateTag jobData
+  restoreAnyJobInfo SMonthlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SMonthlyUpdateTag jobData
+  restoreAnyJobInfo SQuarterlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SQuarterlyUpdateTag jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -92,6 +100,14 @@ instance JobInfoProcessor 'Monthly
 
 instance JobInfoProcessor 'Quarterly
 
+instance JobInfoProcessor 'DailyUpdateTag
+
+instance JobInfoProcessor 'WeeklyUpdateTag
+
+instance JobInfoProcessor 'MonthlyUpdateTag
+
+instance JobInfoProcessor 'QuarterlyUpdateTag
+
 type instance JobContent 'Daily = LYT.KaalChakraJobData
 
 type instance JobContent 'Weekly = LYT.KaalChakraJobData
@@ -99,6 +115,14 @@ type instance JobContent 'Weekly = LYT.KaalChakraJobData
 type instance JobContent 'Monthly = LYT.KaalChakraJobData
 
 type instance JobContent 'Quarterly = LYT.KaalChakraJobData
+
+type instance JobContent 'DailyUpdateTag = LYT.UpdateKaalBasedTagsData
+
+type instance JobContent 'WeeklyUpdateTag = LYT.UpdateKaalBasedTagsData
+
+type instance JobContent 'MonthlyUpdateTag = LYT.UpdateKaalBasedTagsData
+
+type instance JobContent 'QuarterlyUpdateTag = LYT.UpdateKaalBasedTagsData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,
