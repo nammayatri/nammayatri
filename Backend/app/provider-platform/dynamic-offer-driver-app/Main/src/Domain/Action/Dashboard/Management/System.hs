@@ -116,7 +116,7 @@ queryTypeCheck tableName' whereClause' setClause' = do
   let tableName = KP.last $ Text.splitOn "." tableName'
   mapM_
     ( \(tableColumn, value) -> do
-        res <- checkParseField tableName tableColumn value
+        res <- bool (checkParseField tableName tableColumn value) (return True) (tableName' == "atlas_driver_offer_bpp.system_configs")
         if res then return True else throwError $ InvalidRequest ("Type Validation Failed For the column: " <> tableColumn)
     )
     whereClause'
@@ -167,4 +167,8 @@ checkParseField tableName tableColumn' value = do
     "merchant_service_usage_config" -> return $ checkParse (Proxy @MSUC.MerchantServiceUsageConfigT) tableColumn value
     "overlay" -> return $ checkParse (Proxy @OV.OverlayT) tableColumn value
     "surge_pricing" -> return $ checkParse (Proxy @SP.SurgePricingT) tableColumn value
+    "system_configs" -> return $ do
+      case value of
+        String value' -> isJust $ decodeFromText @Tables value'
+        _ -> False
     _ -> throwError $ InvalidRequest $ "The table `" <> tableName <> "` is not supported. "
