@@ -22,13 +22,14 @@ module Domain.Types.Trip where
 import Control.Lens.Operators hiding ((.=))
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.HashMap.Strict.InsOrd as HMSIO
 import qualified Data.List as List
 import Data.OpenApi hiding (name)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
 import Domain.Types.ServiceTierType
-import EulerHS.Prelude hiding (length, map, readMaybe)
+import EulerHS.Prelude hiding (length, map, readMaybe, (.~))
 import Kernel.Prelude
 import Kernel.Utils.GenericPretty
 import Servant
@@ -46,7 +47,8 @@ data TripCategory
   | Ambulance OneWayMode
   | Delivery OneWayMode
   deriving stock (Eq, Ord, Generic)
-  deriving anyclass (ToSchema)
+
+-- deriving anyclass (ToSchema)
 
 data PartyRole
   = Initiator
@@ -153,6 +155,46 @@ instance FromJSON TripCategory where
       "Ambulance" -> Ambulance <$> v .: "contents"
       "Delivery" -> Delivery <$> v .: "contents"
       _ -> fail $ "Unknown tag: " ++ tag
+
+instance ToSchema TripCategory where
+  declareNamedSchema _ = do
+    oneWayModeSchema <- declareSchemaRef (Proxy :: Proxy OneWayMode)
+    rentalModeSchema <- declareSchemaRef (Proxy :: Proxy RentalMode)
+    rideShareModeSchema <- declareSchemaRef (Proxy :: Proxy RideShareMode)
+    textSchema <- declareSchemaRef (Proxy :: Proxy Text)
+
+    return $
+      NamedSchema (Just "TripCategory") $
+        mempty
+          & type_ ?~ OpenApiObject
+          & oneOf
+            ?~ [ tripCategorySchema oneWayModeSchema [] ["OneWay"],
+                 tripCategorySchema rentalModeSchema [] ["Rental"],
+                 tripCategorySchema rideShareModeSchema [] ["RideShare"],
+                 tripCategorySchema oneWayModeSchema [("city", textSchema)] ["InterCity"],
+                 tripCategorySchema oneWayModeSchema [("city", textSchema)] ["CrossCity"],
+                 tripCategorySchema oneWayModeSchema [] ["Ambulance"],
+                 tripCategorySchema oneWayModeSchema [] ["Delivery"]
+               ]
+    where
+      tripCategorySchema contentSchema otherSchemas enums =
+        Inline $
+          mempty
+            & type_ ?~ OpenApiObject
+            & properties
+              .~ HMSIO.fromList
+                ( [ ("contents", contentSchema),
+                    ("tag", enumInlineSchema enums)
+                  ]
+                    ++ otherSchemas
+                )
+            & required .~ ["tag", "contents"]
+
+      enumInlineSchema enums =
+        Inline $
+          mempty
+            & type_ ?~ OpenApiString
+            & enum_ ?~ enums
 
 data TripOption = TripOption
   { schedule :: UTCTime,

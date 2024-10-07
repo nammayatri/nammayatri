@@ -135,6 +135,7 @@ dependencies:
   - extra
   - hw-kafka-client
   - regex-posix
+  - insert-ordered-containers
 
 ghc-options:
   - -fwrite-ide-info
