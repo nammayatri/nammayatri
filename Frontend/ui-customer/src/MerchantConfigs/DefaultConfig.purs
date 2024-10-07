@@ -601,6 +601,8 @@ config =
         defaultCityConfig
           { cityName = "Hyderabad",
             cityCode = "std:040",
+            enableIntercity = true,
+            enableScheduling = true,
             iopConfig = {
             enable :EHC.os /= "IOS",
             autoSelectTime : 8
