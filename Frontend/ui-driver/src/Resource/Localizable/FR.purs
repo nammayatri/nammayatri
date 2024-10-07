@@ -1216,7 +1216,7 @@ getFR stringKey =
         REGULAR -> "régulier"
         UPCOMING_RIDE -> "À venir"
         ALL -> "Tous"
-        TOMMOROW -> "Demain"
+        TOMORROW -> "Demain"
         YOU_HAVE_AN_UPCOMING -> "Vous avez un(e)"
         BOOKING -> "Réservation"
         INTERCITY_RIDE_ACCEPTED -> "Trajet interurbain accepté"

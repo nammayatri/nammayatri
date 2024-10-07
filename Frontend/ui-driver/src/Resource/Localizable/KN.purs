@@ -1726,7 +1726,7 @@ getKN stringKey =
         REGULAR -> "ನಿಯಮಿತ"
         UPCOMING_RIDE -> "ಮುಂದಿನ"
         ALL -> "ಎಲ್ಲಾ"
-        TOMMOROW -> "ನಾಳೆ"
+        TOMORROW -> "ನಾಳೆ"
         YOU_HAVE_AN_UPCOMING -> " ನಿಮ್ಮ ಬಳಿ ಮುಂಬರುವ"
         BOOKING -> "ಬುಕಿಂಗ್"
         INTERCITY_RIDE_ACCEPTED -> "ಅಂತರನಗರ ಸವಾರಿ ಸ್ವೀಕಾರಿಸಲಾಗಿದೆ "

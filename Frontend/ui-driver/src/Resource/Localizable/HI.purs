@@ -1729,7 +1729,7 @@ getHI stringKey =
         REGULAR -> "नियमित"
         UPCOMING_RIDE -> "आगामी"
         ALL -> "सभी"
-        TOMMOROW -> "कल"
+        TOMORROW -> "कल"
         YOU_HAVE_AN_UPCOMING -> "आपके पास एक आगामी"
         BOOKING -> "बुकिंग"
         INTERCITY_RIDE_ACCEPTED -> "अंतर-शहर सवारी स्वीकार की गई"

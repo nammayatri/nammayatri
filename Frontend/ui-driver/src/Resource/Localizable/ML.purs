@@ -1728,7 +1728,7 @@ getML stringKey =
         REGULAR -> "സ്ഥിരം"
         UPCOMING_RIDE -> "വരാനിരിക്കുന്ന"
         ALL -> "എല്ലാം"
-        TOMMOROW -> "നാളെ"
+        TOMORROW -> "നാളെ"
         YOU_HAVE_AN_UPCOMING -> "നിങ്ങള്ക്ക് ഒരു വരാനിരിക്കുന്ന"
         BOOKING -> "ബുക്കിംഗ്"
         INTERCITY_RIDE_ACCEPTED -> "അന്തരനഗര യാത്ര സ്വീകരിച്ചത് "
