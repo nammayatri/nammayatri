@@ -114,6 +114,10 @@ instance Read DriverCoinsFunctionType where
                  | r1 <- stripPrefix "MetroRideCompleted" r,
                    ((), r2) <- pure ((), r1)
                ]
+            ++ [ (RidesCompleted v1, r2)
+                 | r1 <- stripPrefix "RidesCompleted " r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 9
@@ -138,6 +142,10 @@ instance FromJSON DriverCoinsFunctionType where
       "TrainingCompleted" -> pure TrainingCompleted
       "BulkUploadFunction" -> pure BulkUploadFunction
       "MetroRideCompleted" -> pure MetroRideCompleted
+      "RidesCompleted" -> do
+        contents <- obj .: "contents"
+        v1 <- parseJSON (String (pack contents))
+        pure $ RidesCompleted v1
       "BulkUploadFunctionV2" -> do
         contents <- obj .: "contents"
         msg <- parseJSON (String (pack contents))
