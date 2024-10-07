@@ -282,6 +282,7 @@ library
     , hspec
     , http-media
     , hw-kafka-client
+    , insert-ordered-containers
     , jwt
     , kleene
     , lattices
