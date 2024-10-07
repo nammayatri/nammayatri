@@ -110,6 +110,10 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runWeeklyJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runMonthlyJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runDailyUpdateTagJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runWeeklyUpdateTagJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runMonthlyUpdateTagJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runQuarterlyUpdateTagJob)
     }
 
 runDriverOfferAllocator ::

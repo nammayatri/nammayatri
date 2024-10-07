@@ -67,7 +67,6 @@ in
         "search-result-aggregator-exe"
         "special-zone-exe"
         "safety-dashboard-exe"
-        "kaal-chakra-exe"
       ];
 
       haskellProcessFor = name:
