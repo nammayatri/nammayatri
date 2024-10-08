@@ -624,7 +624,7 @@ driverInfoView push state =
               [ width MATCH_PARENT
               , height WRAP_CONTENT
               , visibility $ boolToVisibility isRideData
-              , padding $ PaddingBottom $ safeMarginBottomWithDefault 16
+              , padding $ PaddingBottom $ safeMarginBottomWithDefault (if os == "IOS" then 48 else 32)
               ]
               [ driverDetailsView (getDriverDetails state) "FollowRideDriverDetailsView" "FollowNumberPlate"
               ]
