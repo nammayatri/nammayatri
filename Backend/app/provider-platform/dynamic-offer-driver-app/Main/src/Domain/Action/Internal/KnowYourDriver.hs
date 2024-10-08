@@ -155,7 +155,7 @@ getDriverProfile withImages person = do
       ratings <- QRating.findTopRatingsForDriver driverId (Just 5)
       ratingsWithDriverNames <- getBookingsAndRides ratings
       partialRatings <- QFeedback.findFeedbackFromRatings (ratings <&> (.rideId)) >>= constructPartialRatings ratingsWithDriverNames
-      remRatings <- constructRemRatings ratingsWithDriverNames
+      remRatings <- constructRemRatings ratingsWithDriverNames driverId
       pure $ partialRatings <> remRatings
 
     constructPartialRatings ratings feedbacks =
@@ -182,8 +182,8 @@ getDriverProfile withImages person = do
       "ML_IN" -> "Malayalam"
       lang -> lang
 
-    constructRemRatings prevRatings = do
-      feedbacks <- QFeedback.findOtherFeedbacks ((.rideId) <$> (fst <$> prevRatings)) (Just 5)
+    constructRemRatings prevRatings driverId = do
+      feedbacks <- QFeedback.findOtherFeedbacks ((.rideId) <$> (fst <$> prevRatings)) driverId (Just 5)
       ratings <- (mapM QRating.findRatingForRideIfPositive ((.rideId) <$> feedbacks)) <&> catMaybes
       ratingsWithDriverNames <- getBookingsAndRides ratings
       pure $ foldl (goFeedbacks feedbacks) [] ratingsWithDriverNames
