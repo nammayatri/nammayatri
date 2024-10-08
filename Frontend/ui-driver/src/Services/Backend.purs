@@ -1799,3 +1799,12 @@ getCoinInfoBT lazy = do
   withAPIResultBT (EP.getCoinInfo "") identity errorHandler (lift $ lift $ callAPI headers CoinInfoReq)
   where
     errorHandler (ErrorPayload errorPayload) =  BackT $ pure GoBack
+
+-------------------------- REACHED DESTINATION --------------------------------------------
+
+driverReachedDestination :: String -> DriverReachedReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
+driverReachedDestination rideId payload = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.driverReachedDestination rideId) unwrapResponse $ callAPI headers $ DriverReachedDestinationRequest rideId payload
+    where
+        unwrapResponse (x) = x

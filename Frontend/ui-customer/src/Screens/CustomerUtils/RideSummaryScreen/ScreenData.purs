@@ -140,9 +140,10 @@ dummyRideAPIEntity = RideAPIEntity{
   bppRideId : "",
   endOtp : Nothing,
   startOdometerReading : Nothing,
-  endOdometerReading : Nothing
-, tollConfidence : Nothing
-, allowedEditPickupLocationAttempts : Nothing
+  endOdometerReading : Nothing,
+  tollConfidence : Nothing,
+  allowedEditPickupLocationAttempts : Nothing,
+  destinationReachedAt : Nothing
   }
 
 dummyBookingDetails :: BookingLocationAPIEntity
@@ -160,4 +161,6 @@ dummyBookingDetails =
     , lon: 0.0
     , placeId : Nothing
     , ward : Nothing
+    , extras : Nothing
+    , instructions : Nothing
     }

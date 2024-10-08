@@ -34,11 +34,11 @@ import Foreign.Generic (decode)
 import JBridge as JBridge
 import Log (printLog)
 import ModifyScreenState (modifyScreenState)
-import Prelude (Unit, bind, pure, show, unit, void, ($), (<$>), (<<<), discard)
+import Prelude (Unit, bind, pure, show, unit, void, ($), (<$>), (<<<), discard, (==))
 import Presto.Core.Types.Language.Flow (throwErr)
 import PrestoDOM.Core (processEvent) as PrestoDom
 import Types.App (defaultGlobalState, FlowBT, ScreenType(..))
-import Screens.Types(PermissionScreenStage(..), SafetyAlertType(..))
+import Screens.Types(PermissionScreenStage(..), SafetyAlertType(..), FareProductType(..))
 import AssetsProvider (fetchAssets)
 import Effect.Uncurried
 import Engineering.Helpers.BackTrack (liftFlowBT)
@@ -103,7 +103,7 @@ updateEventData event = do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ openChatScreen = true } })
       "REFERRER_URL" -> setValueToLocalStore REFERRER_URL event.data
       "SAFETY_ALERT_DEVIATION" -> do
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ safetyAlertType = Just DEVIATION } })
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ safetyAlertType = if homeScreen.data.fareProductType == DELIVERY then Nothing else Just DEVIATION } })
       _ -> pure unit  
 
 onNewIntent :: Event -> Effect Unit

@@ -840,12 +840,12 @@ individualServiceBHView push state service =
            , width MATCH_PARENT
            , orientation VERTICAL
            ] 
-           $ [] <> if DA.length service.serviceCategories > 1 
+           $ [] <> (if DA.length service.serviceCategories > 1 
                    then maybe [] (\selServiceCat -> [multipleServiceCategory push state service.id service.selectedBHId service.serviceCategories selServiceCat]) mbSelectedCategory
                    else maybe [] (\selServiceCat -> if shouldDisplayIncDscView selServiceCat.validOpDay service.selectedBHId
                                                    then map (incrementDecrementView push state service.id selServiceCat.categoryId) selServiceCat.peopleCategories
                                                    else []
-                                  ) mbSelectedCategory
+                                  ) mbSelectedCategory)
                    <> maybe [] (\selServiceCat -> [timeSlotView push state service.id selServiceCat.categoryId service.selectedBHId (getSlots selServiceCat.validOpDay)]) mbSelectedCategory
   where
     getSlots mbOpDay = maybe [] (\opDayElem -> opDayElem.slot) mbOpDay

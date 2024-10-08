@@ -82,7 +82,7 @@ acNotWorkingPill :: RideBookingRes -> Array ST.FeedbackItem
 acNotWorkingPill (RideBookingRes state) =
   ( case state.serviceTierName of
       Just serviceTierName ->
-        if ServiceTierCard.showACDetails serviceTierName Nothing then
+        if ServiceTierCard.showACDetails serviceTierName Nothing (getFareProductType ((state.bookingDetails) ^. _fareProductType)) then
           [ { id: "14", text: getString LT.AC_TURNED_OFF } ]
         else
           []
@@ -157,6 +157,7 @@ checkRideStatus rideAssigned prioritizeRating = do
             response = listResp.list
             activeRideListData = map (\resp -> let listData = fetchListData resp state 
               in listData) (response)
+            requestorPartyRoles = (resp.bookingDetails ^._contents^._requestorPartyRoles)
             newState = 
               state
                 { data
@@ -191,6 +192,7 @@ checkRideStatus rideAssigned prioritizeRating = do
                         estimatedCharges = getFareFromArray resp.estimatedFareBreakup "TOLL_CHARGES"
                       , showIncludedPopUp = rideStatus == RideAccepted && (getFareFromArray resp.estimatedFareBreakup "TOLL_CHARGES" > 0.0)
                       }
+                    , requestorPartyRoles = requestorPartyRoles
                       },
                   props
                     { currentStage = rideStatus
@@ -388,6 +390,7 @@ checkRideStatus rideAssigned prioritizeRating = do
                             confidence = ride.tollConfidence
                           , showAmbiguousPopUp = ride.tollConfidence == Just CTA.Unsure
                           }
+                          , requestorPartyRoles = contents.requestorPartyRoles
                         }
                       }
                     )

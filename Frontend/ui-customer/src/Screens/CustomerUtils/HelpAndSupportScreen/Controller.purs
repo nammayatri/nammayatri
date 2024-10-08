@@ -122,9 +122,11 @@ instance loggableAction :: Loggable Action where
       EmailEditTextAC act -> case act of
         PrimaryEditText.TextChanged _ _-> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "email_edit_text_changed" "primary_edit_text"
         PrimaryEditText.FocusChanged _-> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "email_edit_text_focus_changed" "primary_edit_text"
+        PrimaryEditText.TextImageClicked -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "email_edit_text_image_onclick" "primary_edit_text"
       DescriptionEditTextAC act -> case act of
         PrimaryEditText.TextChanged _ _-> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "description_edit_text_changed" "primary_edit_text"
         PrimaryEditText.FocusChanged _-> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "description_edit_text_focus_changed" "primary_edit_text"
+        PrimaryEditText.TextImageClicked -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "description_edit_text_image_onclick" "primary_edit_text"
       PrimaryButtonAC act -> case act of
         PrimaryButton.OnClick -> do
             trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "primary_button_action" "go_to_home/submit"

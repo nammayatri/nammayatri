@@ -118,3 +118,12 @@ translateFullYAnimWithDurationConfig duration ifAnim = animConfig {
 , interpolator = PrestoAnim.EaseInOut
 , ifAnim = ifAnim
 }
+
+rotateAnimConfig :: Boolean -> Common.AnimConfig
+rotateAnimConfig rotate = animConfig {
+  fromRotation = 0
+, toRotation = 360
+, delay = 0
+, duration = 800
+, ifAnim = rotate
+}

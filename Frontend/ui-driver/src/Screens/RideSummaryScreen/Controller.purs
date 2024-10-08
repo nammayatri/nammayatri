@@ -353,3 +353,4 @@ tripCategoryTotripType tripType =
     ST.Intercity -> CTA.TripCategory {contents : Nothing , tag : CTA.InterCity}  
     ST.RideShare -> CTA.TripCategory {contents : Nothing , tag : CTA.RideShare}
     ST.RoundTrip -> CTA.TripCategory {contents : Nothing , tag : CTA.CrossCity}
+    ST.Delivery -> CTA.TripCategory {contents : Nothing , tag : CTA.Delivery}

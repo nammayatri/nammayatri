@@ -450,3 +450,6 @@ mayaBlue  = "#80B2FF"
 
 verySoftOrange :: Color
 verySoftOrange  = "#feebb9"
+
+seaGreen :: Color
+seaGreen = "#288B43"

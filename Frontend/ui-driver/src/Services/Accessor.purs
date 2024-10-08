@@ -99,3 +99,9 @@ _languagesAvailableForVideos = lens (unwrap >>> _.languagesAvailableForVideos) (
 
 _area :: forall a b c. Newtype a { area :: b | c } => Lens' a b
 _area = lens (unwrap >>> _.area) (\oldRec newVal -> wrap ((unwrap oldRec) { area = newVal }))
+
+_extras :: forall a b c. Newtype a { extras :: b | c } => Lens' a b
+_extras = lens (unwrap >>> _.extras) (\oldRec newVal -> wrap ((unwrap oldRec) { extras = newVal }))
+
+_instructions :: forall a b c. Newtype a { instructions :: b | c } => Lens' a b
+_instructions = lens (unwrap >>> _.instructions) (\oldRec newVal -> wrap ((unwrap oldRec) { instructions = newVal }))

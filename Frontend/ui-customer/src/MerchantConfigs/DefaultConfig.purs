@@ -181,7 +181,7 @@ config =
       }
   , estimateAndQuoteConfig : 
       { variantTypes : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"], ["TAXI"]]
-      , variantOrder : ["BIKE", "HATCHBACK", "TAXI_PLUS", "SEDAN", "TAXI", "SUV", "SUV_PLUS", "AUTO_RICKSHAW"]
+      , variantOrder : ["BIKE", "HATCHBACK", "TAXI_PLUS", "SEDAN", "TAXI", "SUV", "SUV_PLUS", "AUTO_RICKSHAW", "DELIVERY_BIKE"]
       , variantInfo : {
         hatchback : {
           name : "Hatchback",
@@ -227,6 +227,11 @@ config =
           name: "XL Plus",
           image: "ny_ic_suv_plus_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv_plus_side.png",
           leftViewImage: "ny_ic_suv_plus_left_side,"
+        },
+        deliveryBike : {
+          name : "Bike Delivery",
+          image : "ny_ic_bike_delivery,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_bike_delivery.png",
+          leftViewImage : "ny_ic_bike_delivery_left_view,"
         }
       }
       , enableOnlyAuto : false

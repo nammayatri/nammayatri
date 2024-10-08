@@ -53,7 +53,7 @@ import PrestoDOM (Accessiblity(..), InputType(..), Gravity(..), Length(..), Marg
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
 import Resources.Localizable.EN (getEN)
-import Screens.Types (SearchLocationModelType(..), LocationListItemState)
+import Screens.Types (SearchLocationModelType(..), LocationListItemState, FareProductType(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Data.Int as INT
@@ -334,7 +334,7 @@ sourceDestinationEditTextView state push =
               , color if state.isSource == Just true then state.appConfig.searchLocationConfig.editTextDefaultColor else state.appConfig.searchLocationConfig.editTextColor
               , stroke $ "0," <> Color.black
               , padding (Padding 8 7 4 7)
-              , hint (getString WHERE_TO)
+              , hint (if state.fareProductType == DELIVERY then getString DROP else getString WHERE_TO)
               , hintColor state.appConfig.searchLocationConfig.hintColor
               , singleLine true
               , ellipsize true
@@ -423,7 +423,7 @@ editableSourceView state push =
         , lineHeight "24"
         , accessibilityHint "Pickup Location Editable field"
         , accessibility ENABLE
-        , hint (getString START_)
+        , hint (if state.fareProductType == DELIVERY then getString PICKUP else getString START_)
         , hintColor state.appConfig.searchLocationConfig.hintColor
         , id $ getNewIDWithTag "SourceEditText"
         , afterRender (\_ -> do
