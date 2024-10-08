@@ -30,11 +30,12 @@ apis:
   # GET /invoice
   - GET:
       endpoint: /invoice
-      auth:
-        ApiAuth APP_BACKEND CUSTOMERS INVOICE
+      auth: ApiAuth APP_BACKEND
       mandatoryQuery:
         from: UTCTime
         to: UTCTime
         phoneNumber: Text
       response:
         type: "[InvoiceRes]"
+      migrate:
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS INVOICE

@@ -68,6 +68,7 @@ library
       Storage.Queries.Transaction
       Tools.Auth
       Tools.Auth.Api
+      Tools.Auth.ApiV2
       Tools.Auth.Common
       Tools.Auth.Dashboard
       Tools.Auth.Merchant

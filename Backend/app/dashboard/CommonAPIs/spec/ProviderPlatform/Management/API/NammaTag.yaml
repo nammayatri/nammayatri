@@ -22,96 +22,117 @@ types: {}
 apis:
   - POST:
       endpoint: /tag/create
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       request:
         type: CreateNammaTagRequest
       response:
         type: APISuccess
       migrate:
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
   - POST:
       endpoint: /tag/update
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       request:
         type: UpdateNammaTagRequest
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
   - DELETE:
       endpoint: /tag/delete
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       mandatoryQuery:
         tagName: Text
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
   - POST:
       endpoint: /query/create
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_CHAKRA_QUERY
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       request:
         type: ChakraQueriesAPIEntity
       response:
         type: APISuccess
       migrate:
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_CHAKRA_QUERY
   - POST:
       endpoint: /appDynamicLogic/verify
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       request:
         type: AppDynamicLogicReq
       response:
         type: AppDynamicLogicResp
       migrate:
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
   - GET:
       endpoint: /appDynamicLogic
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       mandatoryQuery:
         domain: LogicDomain
       query:
         version: Int
       response:
         type: "[GetLogicsResp]"
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
   - POST:
       endpoint: /runJob
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG RUN_KAAL_CHAKRA_JOB
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       request:
         type: RunKaalChakraJobReq
       response:
         type: RunKaalChakraJobRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG RUN_KAAL_CHAKRA_JOB
   - GET:
       endpoint: /timeBounds
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG TIME_BOUNDS
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       mandatoryQuery:
         domain: LogicDomain
       response:
         type: TimeBoundResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG TIME_BOUNDS
   - POST:
       endpoint: /timeBounds/create
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG TIME_BOUNDS
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       request:
         type: CreateTimeBoundRequest
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG TIME_BOUNDS
   - DELETE:
       endpoint: /timeBounds/delete
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG TIME_BOUNDS
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       mandatoryQuery:
         domain: LogicDomain
         name: Text
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG TIME_BOUNDS
   - GET:
       endpoint: /appDynamicLogic/getLogicRollout
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       mandatoryQuery:
         domain: LogicDomain
       query:
         timeBound: Text
       response:
         type: "[LogicRolloutObject]"
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
   - POST:
       endpoint: /appDynamicLogic/upsertLogicRollout
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       request:
         type: LogicRolloutReq
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY

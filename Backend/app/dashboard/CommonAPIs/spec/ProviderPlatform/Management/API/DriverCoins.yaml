@@ -7,21 +7,25 @@ apiPrefix: coins
 apis:
   - POST: # BulkUploadCoinsAPI
       endpoint: bulkUploadCoins
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BULK_UPLOAD
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       request:
         type: BulkUploadCoinsReq
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BULK_UPLOAD
   - POST: # BulkUploadCoinsAPIV2
       endpoint: bulkUploadCoinsV2
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BULK_UPLOAD_V2
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       request:
         type: BulkUploadCoinsReqV2
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BULK_UPLOAD_V2
   - GET: # CoinHistoryAPI
       endpoint: coinHistory/{driverId}
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_HISTORY
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       query:
@@ -29,6 +33,8 @@ apis:
         - offset: Integer
       response:
         type: CoinHistoryRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_HISTORY
 
 types:
   BulkUploadCoinsReq:

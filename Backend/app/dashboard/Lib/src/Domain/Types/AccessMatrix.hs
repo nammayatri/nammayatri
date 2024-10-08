@@ -360,6 +360,11 @@ data ApiAccessLevel = ApiAccessLevel
     userActionType :: UserActionType
   }
 
+data ApiV2AccessLevel = ApiV2AccessLevel
+  { serverName :: DSN.ServerName,
+    userActionType :: UserActionType
+  }
+
 -------- Access Matrix item --------
 
 -- roleId & apiEntity should be unique
@@ -367,7 +372,7 @@ data ApiAccessLevel = ApiAccessLevel
 data AccessMatrixItem = AccessMatrixItem
   { id :: Id AccessMatrixItem,
     roleId :: Id DRole.Role,
-    apiEntity :: ApiEntity,
+    apiEntity :: Maybe ApiEntity,
     userAccessType :: UserAccessType,
     userActionType :: UserActionTypeWrapper,
     createdAt :: UTCTime,
@@ -392,7 +397,7 @@ data AccessMatrixRowAPIEntity = AccessMatrixRowAPIEntity
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data AccessMatrixItemAPIEntity = AccessMatrixItemAPIEntity
-  { apiEntity :: ApiEntity,
+  { apiEntity :: Maybe ApiEntity,
     userAccessType :: UserAccessType,
     userActionType :: UserActionTypeWrapper
   }

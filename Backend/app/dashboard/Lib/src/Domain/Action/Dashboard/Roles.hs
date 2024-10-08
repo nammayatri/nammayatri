@@ -37,7 +37,7 @@ data CreateRoleReq = CreateRoleReq
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data AssignAccessLevelReq = AssignAccessLevelReq
-  { apiEntity :: DMatrix.ApiEntity,
+  { apiEntity :: Maybe DMatrix.ApiEntity,
     userActionType :: DMatrix.UserActionTypeWrapper,
     userAccessType :: DMatrix.UserAccessType
   }

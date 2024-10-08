@@ -20,7 +20,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
+import Tools.Auth.ApiV2
 
 type API = ("invoice" :> GetInvoiceInvoice)
 
@@ -28,9 +28,8 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getInvoiceInvoice merchantId city
 
 type GetInvoiceInvoice =
-  ( ApiAuth
+  ( ApiAuthV2
       'APP_BACKEND
-      'CUSTOMERS
       ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.INVOICE / 'API.Types.RiderPlatform.Management.Invoice.GET_INVOICE_INVOICE)
       :> API.Types.RiderPlatform.Management.Invoice.GetInvoiceInvoice
   )

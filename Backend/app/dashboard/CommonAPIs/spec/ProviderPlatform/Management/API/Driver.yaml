@@ -31,45 +31,53 @@ module: Driver
 apis:
   - GET: # DriverDocumentsInfoAPI
       endpoint: /documents/info
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DOCUMENTS_INFO
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       response:
         type: DriverDocumentsInfoRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DOCUMENTS_INFO
   - POST: # PersonNumbersAPI
       endpoint: /personNumbers
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PERSON_NUMBERS
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       multipart:
         type: PersonIdsReq
       response:
         type: "[PersonRes]"
       migrate:
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PERSON_NUMBERS
   - POST: # PersonIDAPI
       endpoint: /personId
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS FETCH_PERSON_ID
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       multipart:
         type: PersonMobileNoReq
       response:
         type: "[PersonRes]"
       migrate:
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS FETCH_PERSON_ID
 
   - GET: # DriverAadhaarInfoAPI
       endpoint: /{driverId}/aadhaarInfo
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS AADHAAR_INFO
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       response:
         type: DriverAadhaarInfoRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS AADHAAR_INFO
   - GET: # DriverAadhaarInfoByPhoneAPI
       endpoint: /{mobileNo}/aadhaarInfobyMobileNumber
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS AADHAAR_INFO_PHONE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         mobileNo: Text
       response:
         type: DriverAadhaarInfoByPhoneReq
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS AADHAAR_INFO_PHONE
   - GET: # DriverListAPI
       endpoint: /list
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS LIST
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       query:
         - limit: Int
         - offset: Int
@@ -81,14 +89,18 @@ apis:
         - vehicleNumberSearchString: Text
       response:
         type: DriverListRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS LIST
   - GET: # DriverActivityAPI
       endpoint: /activity
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS ACTIVITY
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       response:
         type: DriverActivityRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS ACTIVITY
   - POST: # DisableDriverAPI
       endpoint: /{driverId}/disable
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DISABLE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       response:
@@ -96,9 +108,10 @@ apis:
       migrate:
         endpoint: DriverAPI DisableDriverEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DISABLE
   - POST: # UpdateACUsageRestrictionAPI
       endpoint: /{driverId}/acRestriction/update
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REMOVE_AC_USAGE_RESTRICTION
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       request:
@@ -108,9 +121,10 @@ apis:
       migrate:
         endpoint: DriverAPI RemoveACUsageRestrictionEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REMOVE_AC_USAGE_RESTRICTION
   - POST: # BlockDriverWithReasonAPI
       endpoint: /{driverId}/blockWithReason
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS BLOCK_WITH_REASON
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       request:
@@ -120,7 +134,7 @@ apis:
       helperApi:
         - POST:
             endpoint: /{driverId}/blockWithReason/{dashboardUserName}
-            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS BLOCK_WITH_REASON
+            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
             params:
               driverId: Id Driver
               dashboardUserName: Text
@@ -131,9 +145,10 @@ apis:
       migrate:
         endpoint: DriverAPI BlockDriverWithReasonEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS BLOCK_WITH_REASON
   - POST: # BlockDriverAPI
       endpoint: /{driverId}/block
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS BLOCK
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       response:
@@ -141,14 +156,17 @@ apis:
       migrate:
         endpoint: DriverAPI BlockDriverEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS BLOCK
   - GET: # BlockReasonListAPI
       endpoint: /blockReasonList
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS BLOCK_REASON_LIST
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       response:
         type: "[BlockReason]"
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS BLOCK_REASON_LIST
   - POST: # UnblockDriverAPI
       endpoint: /{driverId}/unblock
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UNBLOCK
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       response:
@@ -156,7 +174,7 @@ apis:
       helperApi:
         - POST:
             endpoint: /{driverId}/unblock/{dashboardUserName}
-            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UNBLOCK
+            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
             params:
               driverId: Id Driver
               dashboardUserName: Text
@@ -165,9 +183,10 @@ apis:
       migrate:
         endpoint: DriverAPI UnblockDriverEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UNBLOCK
   - GET: # DriverLocationAPI
       endpoint: /location
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS LOCATION
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       query:
         - limit: Int
         - offset: Int
@@ -175,9 +194,11 @@ apis:
         type: DriverIds
       response:
         type: DriverLocationRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS LOCATION
   - DELETE: # DeleteDriverAPI
       endpoint: /{driverId}/permanentlyDelete
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DELETE_DRIVER
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       response:
@@ -185,9 +206,10 @@ apis:
       migrate:
         endpoint: DriverAPI DeleteDriverEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DELETE_DRIVER
   - POST: # UnlinkDLAPI
       endpoint: /{driverId}/unlinkDL
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UNLINK_DL
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       response:
@@ -195,9 +217,10 @@ apis:
       migrate:
         endpoint: DriverAPI UnlinkDLEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UNLINK_DL
   - POST: # UnlinkAadhaarAPI
       endpoint: /{driverId}/unlinkAadhaar
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UNLINK_AADHAAR
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       response:
@@ -205,9 +228,10 @@ apis:
       migrate:
         endpoint: DriverAPI UnlinkAadhaarEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UNLINK_AADHAAR
   - POST: # UpdatePhoneNumberAPI
       endpoint: /{driverId}/updatePhoneNumber
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_PHONE_NUMBER
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       request:
@@ -218,18 +242,21 @@ apis:
       migrate:
         endpoint: DriverAPI UpdatePhoneNumberEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_PHONE_NUMBER
   - POST: # UpdateDriverAadhaarAPI
       endpoint: /{mobileNo}/updateByPhoneNumber
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS AADHAAR_UPDATE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         mobileNo: Text
       request:
         type: UpdateDriverDataReq
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS AADHAAR_UPDATE
   - POST: # UpdateDriverNameAPI
       endpoint: /{driverId}/updateName
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DRIVER_NAME
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS
       params:
         driverId: Id Driver
       request:
@@ -240,9 +267,10 @@ apis:
       migrate:
         endpoint: DriverAPI UpdateDriverNameEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DRIVER_NAME
   - POST: # DeleteRCAPI
       endpoint: /{driverId}/deleteRC
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DELETE_RC
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       request:
@@ -252,16 +280,19 @@ apis:
       migrate:
         endpoint: DriverAPI DeleteRCEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DELETE_RC
   - GET: # ClearOnRideStuckDriversAPI
       endpoint: /clearStuck/onRide
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS CLEAR_ON_RIDE_STUCK_DRIVER_IDS
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       query:
         - dbSyncTime: Int
       response:
         type: ClearOnRideStuckDriversRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS CLEAR_ON_RIDE_STUCK_DRIVER_IDS
   - POST: # SendDummyRideRequestToDriverViaDashboardAPI
       endpoint: /{driverId}/sendDummyNotification # TODO: refactor to sendDummyRideRequestToDriver
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SEND_DUMMY_NOTIFICATION
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       response:
@@ -269,9 +300,10 @@ apis:
       migrate:
         endpoint: DriverAPI SendDummyRideRequestToDriverViaDashboardEndPoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SEND_DUMMY_NOTIFICATION
   - POST: # ChangeOperatingCityAPI
       endpoint: /{driverId}/changeOperatingCity
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS CHANGE_OPERATING_CITY
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       request:
@@ -281,18 +313,21 @@ apis:
       migrate:
         endpoint: DriverAPI ChangeOperatingCityEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS CHANGE_OPERATING_CITY
   - GET: # GetOperatingCityAPI
       endpoint: /getOperatingCity
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GET_OPERATING_CITY
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       query:
         - mobileCountryCode: Text
         - mobileNumber: Text
         - rideId: Id Ride
       response:
         type: GetOperatingCityResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GET_OPERATING_CITY
   - POST: # PauseOrResumeServiceChargesAPI
       endpoint: /{driverId}/pauseOrResumeServiceCharges
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS TOGGLE_SERVICE_USAGE_CHARGE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       request:
@@ -302,9 +337,10 @@ apis:
       migrate:
         endpoint: DriverAPI PauseOrResumeServiceChargesEndPoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS TOGGLE_SERVICE_USAGE_CHARGE
   - POST: # UpdateRCInvalidStatusAPI
       endpoint: /updateRCInvalidStatus/{driverId}
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_RC_INVALID_STATUS
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       request:
@@ -314,9 +350,10 @@ apis:
       migrate:
         endpoint: DriverAPI UpdateRCInvalidStatusEndPoint65454
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_RC_INVALID_STATUS
   - POST: # UpdateVehicleVariantAPI
       endpoint: /updateVehicleVariant/{driverId}
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_VEHICLE_VARIANT
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       request:
@@ -326,9 +363,10 @@ apis:
       migrate:
         endpoint: DriverAPI UpdateVehicleVariantEndPoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_VEHICLE_VARIANT
   - POST: # BulkReviewRCVariantAPI
       endpoint: /bulkReviewRCVariant
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS BULK_REVIEW_RC_VARIANT
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       request:
         type: "[ReviewRCVariantReq]"
       response:
@@ -336,9 +374,10 @@ apis:
       migrate:
         endpoint: DriverAPI BulkReviewRCVariantEndPoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS BULK_REVIEW_RC_VARIANT
   - POST: # UpdateDriverTagAPI
       endpoint: /{driverId}/updateDriverTag
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DRIVER_TAG
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       request:
@@ -348,9 +387,10 @@ apis:
       migrate:
         endpoint: DriverAPI UpdateDriverTagEndPoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DRIVER_TAG
   - POST:
       endpoint: /clearFee
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS CLEAR_FEE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       mandatoryQuery:
         driverId: Id Driver
       request:
@@ -359,6 +399,7 @@ apis:
         type: APISuccess
       migrate:
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS CLEAR_FEE
   - GET:
       endpoint: /panAadharSelfieDetails
       mandatoryQuery:
@@ -368,6 +409,8 @@ apis:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAN_AADHAAR_SELFIE_DETAILS
       response:
         type: PanAadharSelfieDetailsResp
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAN_AADHAAR_SELFIE_DETAILS
   - POST:
       endpoint: /syncDocAadharPan
       request:
@@ -378,15 +421,18 @@ apis:
         type: APISuccess
       migrate:
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SYNC_DOC_AADHAR_PAN
   - POST:
       endpoint: /updateVehicleManufacturing/{driverId}
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_VEHICLE_MANUFACTURING
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       request:
         type: UpdateVehicleManufacturingReq
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_VEHICLE_MANUFACTURING
 
   - POST:
       endpoint: /{driverId}/refundByPayout
@@ -398,6 +444,8 @@ apis:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REFUND_BY_PAYOUT
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REFUND_BY_PAYOUT
   - GET:
       endpoint: /{driverId}/securityDepositStatus
       params:
@@ -408,6 +456,8 @@ apis:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SECURITY_DEPOSIT_STATUS
       response:
         type: ([SecurityDepositDfStatusRes])
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SECURITY_DEPOSIT_STATUS
 types:
   DriverListRes:
     - totalItems: Int # for backward compatibility
