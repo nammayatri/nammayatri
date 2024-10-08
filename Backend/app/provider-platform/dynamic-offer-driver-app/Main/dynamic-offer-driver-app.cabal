@@ -980,7 +980,6 @@ library
       Storage.Queries.OrphanInstances.DocumentVerificationConfig
       Storage.Queries.OrphanInstances.DriverBankAccount
       Storage.Queries.OrphanInstances.DriverBlockReason
-      Storage.Queries.OrphanInstances.DriverBlockTransactions
       Storage.Queries.OrphanInstances.DriverFee
       Storage.Queries.OrphanInstances.DriverGoHomeRequest
       Storage.Queries.OrphanInstances.DriverHomeLocation

@@ -14,3 +14,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_block_transactions ADD COLUMN merchant
 ALTER TABLE atlas_driver_offer_bpp.driver_block_transactions ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_block_transactions ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_block_transactions ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_block_transactions ADD COLUMN block_reason_flag text ;

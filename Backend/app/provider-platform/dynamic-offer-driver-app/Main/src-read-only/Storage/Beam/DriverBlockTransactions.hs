@@ -12,10 +12,12 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
+import qualified Tools.Error
 
 data DriverBlockTransactionsT f = DriverBlockTransactionsT
   { blockLiftTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     blockReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    blockReasonFlag :: B.C f (Kernel.Prelude.Maybe Tools.Error.BlockReasonFlag),
     blockTimeInHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     blockedBy :: B.C f Domain.Types.DriverBlockTransactions.BlockedBy,
     driverId :: B.C f Kernel.Prelude.Text,

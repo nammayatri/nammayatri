@@ -96,7 +96,6 @@ import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Types.Beckn.Context as Context
@@ -375,9 +374,9 @@ rideAssignedCommon booking ride driver veh = do
     updateVehicle DVeh.Vehicle {..} newModel = DVeh.Vehicle {model = newModel, ..}
     refillVehicleModel = try @_ @SomeException do
       -- TODO: remove later
-      mbIsRefilledToday :: Maybe Bool <- Redis.get refillKey
+      mbIsRefilledToday :: Maybe Bool <- Hedis.get refillKey
       case mbIsRefilledToday of
-        Just True -> Redis.expire refillKey 86400 $> veh
+        Just True -> Hedis.expire refillKey 86400 $> veh
         _ -> do
           driverVehicleIdfyResponse <-
             find
@@ -396,7 +395,7 @@ rideAssignedCommon booking ride driver veh = do
               if modelValueToUpdate == veh.model
                 then pure veh
                 else QVeh.updateVehicleModel modelValueToUpdate ride.driverId $> updateVehicle veh modelValueToUpdate
-          Redis.setExp refillKey True 86400
+          Hedis.setExp refillKey True 86400
           pure newVehicle
 
     checkIsDriverBirthDay mbTransporterConfig driverBirthDate = do

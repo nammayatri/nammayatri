@@ -35,6 +35,7 @@ updateByPrimaryKey (Domain.Types.DriverBlockTransactions.DriverBlockTransactions
   updateWithKV
     [ Se.Set Beam.blockLiftTime blockLiftTime,
       Se.Set Beam.blockReason blockReason,
+      Se.Set Beam.blockReasonFlag blockReasonFlag,
       Se.Set Beam.blockTimeInHours blockTimeInHours,
       Se.Set Beam.blockedBy blockedBy,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
@@ -55,6 +56,7 @@ instance FromTType' Beam.DriverBlockTransactions Domain.Types.DriverBlockTransac
         Domain.Types.DriverBlockTransactions.DriverBlockTransactions
           { blockLiftTime = blockLiftTime,
             blockReason = blockReason,
+            blockReasonFlag = blockReasonFlag,
             blockTimeInHours = blockTimeInHours,
             blockedBy = blockedBy,
             driverId = Kernel.Types.Id.Id driverId,
@@ -73,6 +75,7 @@ instance ToTType' Beam.DriverBlockTransactions Domain.Types.DriverBlockTransacti
     Beam.DriverBlockTransactionsT
       { Beam.blockLiftTime = blockLiftTime,
         Beam.blockReason = blockReason,
+        Beam.blockReasonFlag = blockReasonFlag,
         Beam.blockTimeInHours = blockTimeInHours,
         Beam.blockedBy = blockedBy,
         Beam.driverId = Kernel.Types.Id.getId driverId,

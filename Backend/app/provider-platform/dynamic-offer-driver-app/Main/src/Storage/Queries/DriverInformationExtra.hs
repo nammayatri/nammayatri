@@ -153,7 +153,8 @@ updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime d
             updatedAt = now,
             merchantOperatingCityId = Just merchantOperatingCityId,
             blockedBy = blockedBy,
-            requestorId = Just dashboardUserName
+            requestorId = Just dashboardUserName,
+            blockReasonFlag = Just blockReasonFlag
           }
 
   QDBT.create driverBlockDetails
@@ -190,6 +191,7 @@ updateBlockedState driverId isBlocked blockStateModifier merchantId merchantOper
             driverId = driverId,
             id = uid,
             reasonCode = Nothing,
+            blockReasonFlag = Nothing,
             reportedAt = now,
             merchantId = Just merchantId,
             createdAt = now,

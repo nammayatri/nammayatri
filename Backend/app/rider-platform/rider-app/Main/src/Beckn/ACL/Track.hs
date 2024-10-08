@@ -30,7 +30,7 @@ import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
 import Kernel.Prelude
-import Kernel.Storage.Hedis as Redis
+import Kernel.Storage.Hedis as Redis hiding (ttl)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Id
