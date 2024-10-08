@@ -89,7 +89,7 @@ valueToSQL (Number n) = case S.floatingOrInteger n of
   Left r -> Text.pack (show (r :: Double)) -- Floating point number
   Right i -> Text.pack (show (i :: Integer)) -- Integer number
 valueToSQL (Bool b) = if b then "true" else "false" -- SQL boolean values
-valueToSQL Null = "NULL" -- SQL NULL
+valueToSQL Null = "null" -- SQL NULL
 valueToSQL (Object obj) = "'" <> TE.decodeUtf8 (BSL.toStrict (encode (Object obj))) <> "'::json"
 valueToSQL (Array arr) = quote $ "{" <> Text.intercalate "," (map valueToSQL' (DV.toList arr)) <> "}"
   where
@@ -99,7 +99,7 @@ valueToSQL (Array arr) = quote $ "{" <> Text.intercalate "," (map valueToSQL' (D
       Left r -> Text.pack (show (r :: Double))
       Right i -> Text.pack (show (i :: Integer))
     valueToSQL' (Bool b) = if b then "true" else "false"
-    valueToSQL' Null = "NULL"
+    valueToSQL' Null = "null"
     valueToSQL' (Object obj) = "'" <> TE.decodeUtf8 (BSL.toStrict (encode (Object obj))) <> "'::json"
     valueToSQL' (Array a) = "{" <> Text.intercalate "," (map valueToSQL' (DV.toList a)) <> "}"
 
