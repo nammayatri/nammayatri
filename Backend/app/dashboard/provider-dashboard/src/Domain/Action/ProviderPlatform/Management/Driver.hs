@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Action.ProviderPlatform.Management.Driver
   ( getDriverDocumentsInfo,
@@ -49,6 +50,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     postDriverUpdateVehicleManufacturing,
     postDriverRefundByPayout,
     getDriverSecurityDepositStatus,
+    postDriverDriverDataDecryption,
   )
 where
 
@@ -62,6 +64,7 @@ import EulerHS.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
+import qualified Kernel.Types.HideSecrets
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
@@ -315,3 +318,12 @@ getDriverSecurityDepositStatus :: (ShortId DM.Merchant -> City.City -> ApiTokenI
 getDriverSecurityDepositStatus merchantShortId opCity apiTokenInfo driverId mbServiceName = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.getDriverSecurityDepositStatus) driverId mbServiceName
+
+instance Kernel.Types.HideSecrets.HideSecrets [Common.DriverEncDataReq] where
+  hideSecrets = (identity <$>)
+
+postDriverDriverDataDecryption :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> [Common.DriverEncDataReq] -> Environment.Flow [Common.DriverDecDataResp])
+postDriverDriverDataDecryption merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.ProviderManagementAPI (Common.DriverAPI Common.PostDriverDriverDataDecryptionEndpoint)) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  T.withTransactionStoring transaction (do Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.postDriverDriverDataDecryption) req)

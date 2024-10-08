@@ -49,6 +49,7 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverUpdateVehicleManufacturing,
     postDriverRefundByPayout,
     getDriverSecurityDepositStatus,
+    postDriverDriverDataDecryption,
   )
 where
 
@@ -171,3 +172,6 @@ postDriverRefundByPayout = DDriver.postDriverRefundByPayout
 
 getDriverSecurityDepositStatus :: (ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Common.ServiceNames -> Flow [Common.SecurityDepositDfStatusRes])
 getDriverSecurityDepositStatus = DDriver.getDriverSecurityDepositStatus
+
+postDriverDriverDataDecryption :: (ShortId DM.Merchant -> Context.City -> [Common.DriverEncDataReq] -> Flow [Common.DriverDecDataResp])
+postDriverDriverDataDecryption = DDriver.postDriverDriverDataDecryption

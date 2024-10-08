@@ -197,3 +197,11 @@ UPDATE atlas_bpp_dashboard.transaction
 UPDATE atlas_bpp_dashboard.transaction
   SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_SYNC_DOC_AADHAR_PAN'
   WHERE endpoint = 'DriverAPI PostDriverSyncDocAadharPanEndpoint';
+
+
+------- SQL updates -------
+
+-- {"api":"PostDriverDriverDataDecryption","migration":"endpointV2","param":null,"schema":"atlas_bpp_dashboard"}
+UPDATE atlas_bpp_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_DRIVER_DATA_DECRYPTION'
+  WHERE endpoint = 'DriverAPI PostDriverDriverDataDecryptionEndpoint';
