@@ -27,7 +27,7 @@ import Kernel.Prelude (NominalDiffTime, (>>>=))
 import Kernel.Sms.Config
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
-import Kernel.Storage.Hedis as Redis
+import Kernel.Storage.Hedis as Redis hiding (ttl)
 import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.App

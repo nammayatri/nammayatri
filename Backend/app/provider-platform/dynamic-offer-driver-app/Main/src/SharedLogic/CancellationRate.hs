@@ -141,14 +141,15 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
       (dailyCancellationRate, dailyAssignedCount) <- getCancellationRateOfDays 1 windowSize
       (weeklyCancellationRate, weeklyAssignedCount) <- getCancellationRateOfDays 7 windowSize
       let cooldDownWeekly = driverInfo.weeklyCancellationRateBlockingCooldown
-      blockedOnWeekly <- blockDriverCondition cancellationRateThresholdWeekly weeklyMinRidesforBlocking weeklyCancellationRate weeklyAssignedCount weeklyOffenceSuspensionTimeHours cooldDownWeekly now
+      blockedOnWeekly <- blockDriverCondition cancellationRateThresholdWeekly weeklyMinRidesforBlocking weeklyCancellationRate weeklyAssignedCount weeklyOffenceSuspensionTimeHours cooldDownWeekly now CancellationRateWeekly
+      logDebug $ "All cancellation rate data: dailyCancellationRate: " <> show dailyCancellationRate <> " dailyAssignedCount: " <> show dailyAssignedCount <> " weeklyCancellationRate: " <> show weeklyCancellationRate <> " weeklyAssignedCount: " <> show weeklyAssignedCount
       if blockedOnWeekly
         then do
           let cooldownTime = addUTCTime (secondsToNominalDiffTime $ 7 * 24 * 60 * 60) now -- one week
           QDriverInformation.updateWeeklyCancellationRateBlockingCooldown (Just cooldownTime) driver.id
         else do
           let cooldDownDaily = driverInfo.dailyCancellationRateBlockingCooldown
-          blockedOnDaily <- blockDriverCondition cancellationRateThresholdDaily dailyMinRidesforBlocking dailyCancellationRate dailyAssignedCount dailyOffenceSuspensionTimeHours cooldDownDaily now
+          blockedOnDaily <- blockDriverCondition cancellationRateThresholdDaily dailyMinRidesforBlocking dailyCancellationRate dailyAssignedCount dailyOffenceSuspensionTimeHours cooldDownDaily now CancellationRateDaily
           if blockedOnDaily
             then do
               let cooldownTime = addUTCTime (secondsToNominalDiffTime $ 24 * 60 * 60) now -- one day
@@ -165,8 +166,8 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
       let cancellationRate = (cancelledCount * 100) `div` max 1 assignedCount
       return (cancellationRate, assignedCount)
 
-    blockDriverCondition :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m) => Int -> Int -> Int -> Int -> Int -> Maybe UTCTime -> UTCTime -> m Bool
-    blockDriverCondition cancellationRateThreshold rideAssignedThreshold cancellationRate assignedCount blockTimeInHours mbCooldown now = do
+    blockDriverCondition :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m) => Int -> Int -> Int -> Int -> Int -> Maybe UTCTime -> UTCTime -> BlockReasonFlag -> m Bool
+    blockDriverCondition cancellationRateThreshold rideAssignedThreshold cancellationRate assignedCount blockTimeInHours mbCooldown now blockReasonFlag = do
       let rule = (cancellationRate > cancellationRateThreshold) && (assignedCount > rideAssignedThreshold)
       canApplyBlock <- case mbCooldown of
         Just cooldown -> return $ rule && (cooldown <= now)
@@ -174,7 +175,7 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
       if canApplyBlock
         then do
           logInfo $ "Blocking driver based on cancellation rate, driverId: " <> driver.id.getId
-          QDriverInformation.updateDynamicBlockedStateWithActivity driver.id (Just "BLOCKED_BASED_ON_CANCELLATION_RATE") (Just blockTimeInHours) "AUTOMATICALLY_BLOCKED_BY_APP" driver.merchantId "AUTOMATICALLY_BLOCKED_BY_APP" driver.merchantOperatingCityId DTDBT.Application True (Just False) (Just DriverInfo.OFFLINE) CancellationRate
+          QDriverInformation.updateDynamicBlockedStateWithActivity driver.id (Just "BLOCKED_BASED_ON_CANCELLATION_RATE") (Just blockTimeInHours) "AUTOMATICALLY_BLOCKED_BY_APP" driver.merchantId "AUTOMATICALLY_BLOCKED_BY_APP" driver.merchantOperatingCityId DTDBT.Application True (Just False) (Just DriverInfo.OFFLINE) blockReasonFlag
           let expiryTime = addUTCTime (fromIntegral blockTimeInHours * 60 * 60) now
           void $ LTS.blockDriverLocationsTill (driver.merchantId) (driver.id) expiryTime
           maxShards <- asks (.maxShards)

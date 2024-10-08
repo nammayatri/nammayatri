@@ -37,7 +37,7 @@ import Kernel.Prelude
 import Kernel.Sms.Config
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
-import Kernel.Storage.Hedis as Redis
+import Kernel.Storage.Hedis as Redis hiding (ttl)
 import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
 import Kernel.Types.App
 import Kernel.Types.Cache

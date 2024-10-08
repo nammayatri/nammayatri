@@ -3,6 +3,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Person : Domain.Types.Person
   DriverBlockReason: Domain.Types.DriverBlockReason
+  BlockReasonFlag: Tools.Error
 DriverBlockTransactions:
   tableName: driver_block_transactions
 
@@ -19,6 +20,7 @@ DriverBlockTransactions:
     blockLiftTime : Maybe UTCTime
     blockedBy : BlockedBy
     requestorId : Maybe Text
+    blockReasonFlag: Maybe BlockReasonFlag
   constraints:
     id: PrimaryKey
     driverId: "!SecondaryKey"

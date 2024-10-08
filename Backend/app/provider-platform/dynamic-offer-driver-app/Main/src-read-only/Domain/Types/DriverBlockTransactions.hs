@@ -11,10 +11,12 @@ import qualified Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
+import qualified Tools.Error
 
 data DriverBlockTransactions = DriverBlockTransactions
   { blockLiftTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     blockReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    blockReasonFlag :: Kernel.Prelude.Maybe Tools.Error.BlockReasonFlag,
     blockTimeInHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     blockedBy :: Domain.Types.DriverBlockTransactions.BlockedBy,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
