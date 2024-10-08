@@ -513,9 +513,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
               txn <- QPaymentTransaction.findNewTransactionByOrderId paymentOrder.id
               let paymentStatus_ = if isNothing txn then FRFSTicketService.NEW else paymentBookingStatus
               void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.PAYMENT_PENDING bookingId
-              let payerVpa = paymentStatusResp.payerVpa
-                  updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.PAYMENT_PENDING Nothing
-              void $ QFRFSTicketBooking.insertPayerVpaIfNotPresent payerVpa bookingId
+              let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.PAYMENT_PENDING Nothing
               paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId merchantOperatingCity.id booking
               let paymentObj =
                     Just $
@@ -555,6 +553,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                   let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL)
                   let mRiderName = person.firstName <&> (\fName -> person.lastName & maybe fName (\lName -> fName <> " " <> lName))
                   mRiderNumber <- mapM decrypt person.mobileNumber
+                  void $ QFRFSTicketBooking.insertPayerVpaIfNotPresent paymentStatusResp.payerVpa bookingId
                   void $ CallExternalBPP.confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) updatedBooking
                   buildFRFSTicketBookingStatusAPIRes updatedBooking paymentSuccess
                 else do
