@@ -101,34 +101,26 @@ ALTER TABLE atlas_app.search_request ADD COLUMN estimated_ride_static_duration i
 ALTER TABLE atlas_app.search_request ADD COLUMN place_name_source text ;
 ALTER TABLE atlas_app.search_request ADD COLUMN initiated_by text ;
 
+
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.search_request ADD COLUMN stops text ;
-
-------- SQL updates -------
-
-
 
 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.search_request ADD COLUMN has_stops boolean ;
+ALTER TABLE atlas_app.search_request ADD COLUMN skip_mode boolean ;
+ALTER TABLE atlas_app.search_request ADD COLUMN skip_booking boolean ;
+ALTER TABLE atlas_app.search_request ADD COLUMN journey_leg_order integer ;
+ALTER TABLE atlas_app.search_request ADD COLUMN journey_id text ;
+ALTER TABLE atlas_app.search_request ADD COLUMN convenience_cost integer ;
+ALTER TABLE atlas_app.search_request ADD COLUMN agency text ;
 
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
 
 
 
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.search_request ADD COLUMN pricing_id text ;

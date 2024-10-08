@@ -14,6 +14,8 @@
 
 module Domain.Action.UI.Search where
 
+import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Tags as Beckn
 import Control.Monad
 import Data.Aeson
@@ -23,12 +25,14 @@ import Data.OpenApi hiding (Header, description, email)
 import qualified Data.OpenApi as OpenApi hiding (Header)
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.Encoding as TE
+import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import Domain.Action.UI.HotSpot
 import Domain.Action.UI.Maps (makeAutoCompleteKey)
 import qualified Domain.Action.UI.Maps as DMaps
 import qualified Domain.Types.Client as DC
 import Domain.Types.HotSpot hiding (address, updatedAt)
 import Domain.Types.HotSpotConfig
+import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.Location as Location
 import Domain.Types.LocationAddress
 import Domain.Types.Merchant
@@ -41,6 +45,8 @@ import Domain.Types.RiderConfig
 import Domain.Types.SavedReqLocation
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
+import qualified Domain.Types.Trip as DTrip
+import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
 import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -59,6 +65,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.Version
+import qualified Lib.JourneyPlannerTypes as JPT
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.MerchantConfig as SMC
@@ -71,9 +78,11 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedReqLocation as CSavedLocation
+import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
 import Tools.Error
 import Tools.Event
 import qualified Tools.JSON as J
@@ -215,6 +224,18 @@ data SearchDetails = SearchDetails
   }
   deriving (Generic, Show)
 
+data JourneyPlannerLeg = JourneyPlannerLeg
+  { mode :: DTrip.TravelMode,
+    agency :: Text,
+    originGps :: LatLong,
+    destinationGps :: LatLong,
+    legOrder :: Int,
+    estimatedDistance :: Distance,
+    estimatedDuration :: Seconds,
+    originAddress :: LocationAddress,
+    destinationAddress :: LocationAddress
+  }
+
 hotSpotUpdate ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -273,8 +294,9 @@ search ::
   Maybe Text ->
   Bool ->
   Bool ->
+  Maybe JPT.JourneySearchData ->
   Flow SearchRes
-search personId req bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ makeMultiModalSearch = do
+search personId req bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ makeMultiModalSearch journeySearchData = do
   now <- getCurrentTime
   let SearchDetails {..} = extractSearchDetails now req
   validateStartAndReturnTime now startTime returnTime
@@ -333,6 +355,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
       placeNameSource
       hasStops
       (safeInit stopLocations)
+      journeySearchData
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
   Metrics.startSearchMetrics merchant.name searchRequest.id.getId
@@ -343,7 +366,10 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
   fork "updating search counters" $ fraudCheck person merchantOperatingCity searchRequest
   let updatedPerson = backfillCustomerNammaTags person
   when makeMultiModalSearch $ do
-    fork "multi-modal search" $ multiModalSearch searchRequest
+    case req of
+      OneWaySearch searchReq -> fork "multi-modal search" $ multiModalSearch personId person.merchantId searchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ searchRequest
+      _ -> pure ()
+
   return $
     SearchRes -- TODO: cleanup this reponse field based on what is not required for beckn type conversions
       { searchId = searchRequest.id,
@@ -489,22 +515,170 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
 -- TODO(MultiModal): Move all multimodal related code to a separate module
 data MultiModalRoute = Metro [LatLong] | None
 
-multiModalSearch :: SearchRequest.SearchRequest -> Flow ()
-multiModalSearch searchRequest = do
-  multiModalRoute <- checkIfMultModalRoutePossible searchRequest
-  case multiModalRoute of
-    Metro _metroRoute -> do
-      -- TODO(MultiModal):
-      -- make a search to metro BAP (call FRFS function, also pass parent searchId to aggregate information) with metro stations
-      -- if firstMile and lastMile is not walk then call
-      -- search personId req bundleVersion clientVersion clientConfigVersion clientId device isDashboardRequest_ False parentSearchId
-      -- check on_status information for more details
-      throwError (InternalError "Not implemented")
-    None -> return ()
+multiModalSearch ::
+  Id Person.Person ->
+  Id DM.Merchant ->
+  OneWaySearchReq ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe (Id DC.Client) ->
+  Maybe Text ->
+  Bool ->
+  SearchRequest.SearchRequest ->
+  Flow ()
+multiModalSearch personId merchantId searchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ searchRequest = do
+  journeyId <- generateGUID
+  now <- getCurrentTime
+  let journeyPlannerLegs = getJourneyPlannerLegs
+      journeyLegsCount = length journeyPlannerLegs -- -> journey.totalLegs
+      modes = map (.mode) journeyPlannerLegs
+      totalDistance = convertMetersToDistance Meter (sum $ map (distanceToMeters .estimatedDistance) journeyPlannerLegs)
+      totalDuration = sum $ map (.estimatedDuration) journeyPlannerLegs
+  forM_ journeyPlannerLegs $ \journeyPlannerLeg -> do
+    let mode = journeyPlannerLeg.mode
+        journeySearchData =
+          JPT.JourneySearchData
+            { journeyId = journeyId,
+              journeyLegOrder = journeyPlannerLeg.legOrder,
+              agency = Just journeyPlannerLeg.agency,
+              skipBooking = False,
+              convenienceCost = 0,
+              pricingId = Nothing
+            }
+    case mode of
+      DTrip.Taxi -> do
+        let legSearchReq =
+              OneWaySearch
+                OneWaySearchReq
+                  { origin =
+                      SearchReqLocation
+                        { gps = journeyPlannerLeg.originGps,
+                          address = journeyPlannerLeg.originAddress
+                        },
+                    destination =
+                      SearchReqLocation
+                        { gps = journeyPlannerLeg.destinationGps,
+                          address = journeyPlannerLeg.destinationAddress
+                        },
+                    isSourceManuallyMoved = if journeyPlannerLeg.legOrder == 1 then searchReq.isSourceManuallyMoved else Nothing,
+                    isDestinationManuallyMoved = if journeyPlannerLeg.legOrder == journeyLegsCount then searchReq.isDestinationManuallyMoved else Nothing,
+                    isSpecialLocation = searchReq.isSpecialLocation,
+                    startTime = Just searchRequest.startTime, -- need to see for other legs
+                    isReallocationEnabled = searchReq.isReallocationEnabled,
+                    quotesUnifiedFlow = searchReq.quotesUnifiedFlow,
+                    sessionToken = searchReq.sessionToken,
+                    placeNameSource = Nothing,
+                    stops = Nothing
+                  }
+        void $ search personId legSearchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ False (Just journeySearchData)
+      DTrip.Metro -> do
+        let frfsSearchReq = convertLatLongToFRFSStations (Just journeySearchData)
+        void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) Spec.METRO frfsSearchReq
+      -- poll getFrfsSearchQuote from frontend
+      DTrip.Bus -> do
+        let frfsSearchReq = convertLatLongToFRFSStations (Just journeySearchData)
+        void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) Spec.BUS frfsSearchReq
+      -- poll getFrfsSearchQuote from frontend
+      DTrip.Walk -> do
+        fromLocation_ <- buildSearchReqLoc $ SearchReqLocation {gps = journeyPlannerLeg.originGps, address = journeyPlannerLeg.originAddress}
+        toLocation_ <- buildSearchReqLoc $ SearchReqLocation {gps = journeyPlannerLeg.destinationGps, address = journeyPlannerLeg.destinationAddress}
+        walkeLegid <- generateGUID
+        let walkLeg =
+              DWalkLeg.WalkLegMultimodal
+                { id = walkeLegid,
+                  estimatedDistance = journeyPlannerLeg.estimatedDistance,
+                  estimatedDuration = Just $ journeyPlannerLeg.estimatedDuration,
+                  fromLocation = fromLocation_,
+                  toLocation = Just $ toLocation_,
+                  journeyLegInfo = Just journeySearchData,
+                  riderId = personId,
+                  startTime = searchRequest.startTime,
+                  merchantId = Just merchantId,
+                  merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
+                  createdAt = now,
+                  updatedAt = now
+                }
+        QWalkLeg.create walkLeg
+
+  let journey =
+        DJourney.Journey
+          { convenienceCost = 0,
+            estimatedDistance = totalDistance,
+            estimatedDuration = Just $ totalDuration,
+            estimatedFare = Nothing,
+            fare = Nothing,
+            id = Id journeyId,
+            legsDone = 0,
+            totalLegs = journeyLegsCount,
+            modes = modes,
+            searchRequestId = searchRequest.id,
+            merchantId = Just merchantId,
+            merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now
+          }
+  QJourney.create journey
+
+---------------------------------- dummy data: to be removed. we would get the data from open trip planner. ------------------------------------------------
+
+getJourneyPlannerLegs :: [JourneyPlannerLeg] -- would be used to get journeyLegs from JourneyPlanner
+getJourneyPlannerLegs =
+  [ JourneyPlannerLeg
+      { mode = DTrip.Taxi,
+        agency = "Auto",
+        originGps =
+          LatLong
+            { lat = 20.5937,
+              lon = 78.9629
+            },
+        destinationGps =
+          LatLong
+            { lat = 20.5637,
+              lon = 78.9929
+            },
+        legOrder = 1,
+        estimatedDistance = Distance {value = 1000, unit = Meter},
+        estimatedDuration = 100,
+        originAddress = dummyAddress,
+        destinationAddress = dummyAddress
+      },
+    JourneyPlannerLeg
+      { mode = DTrip.Metro,
+        agency = "DMRC",
+        originGps =
+          LatLong
+            { lat = 20.5637,
+              lon = 78.9929
+            },
+        destinationGps =
+          LatLong
+            { lat = 20.5937,
+              lon = 78.9629
+            },
+        legOrder = 2,
+        estimatedDistance = Distance {value = 1000, unit = Meter},
+        estimatedDuration = 100,
+        originAddress = dummyAddress,
+        destinationAddress = dummyAddress
+      }
+  ]
+
+convertLatLongToFRFSStations :: Maybe JPT.JourneySearchData -> FRFSTicketService.FRFSSearchAPIReq -- would be used to convert latlong to station codes in FRFS form
+convertLatLongToFRFSStations journeySearchData_ = do
+  FRFSTicketService.FRFSSearchAPIReq
+    { fromStationCode = "Station1",
+      toStationCode = "Station2",
+      quantity = 3,
+      journeySearchData = journeySearchData_,
+      routeCode = Nothing
+    }
 
 -- TODO(MultiModal)
 checkIfMultModalRoutePossible :: SearchRequest.SearchRequest -> Flow MultiModalRoute
 checkIfMultModalRoutePossible _ = throwError (InternalError "Not implemented")
+
+------------------------------------------------------------------ dummy data end ------------------------------------------------------------------------
 
 buildSearchRequest ::
   Id SearchRequest.SearchRequest ->
@@ -532,8 +706,9 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Bool ->
   [Location.Location] ->
+  Maybe JPT.JourneySearchData ->
   Flow SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   deploymentVersion <- asks (.version)
@@ -577,7 +752,8 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         totalRidesCount,
         isDashboardRequest = Just isDashboardRequest,
         placeNameSource = mbPlaceNameSource,
-        initiatedBy = Nothing
+        initiatedBy = Nothing,
+        journeyLegInfo = journeySearchData
       }
   where
     getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime
@@ -695,4 +871,21 @@ makeSearchReqLoc' Location.Location {..} =
   SearchReqLocation
     { gps = LatLong lat lon,
       ..
+    }
+
+dummyAddress :: LocationAddress
+dummyAddress =
+  LocationAddress
+    { street = Nothing,
+      door = Nothing,
+      city = Nothing,
+      state = Nothing,
+      country = Nothing,
+      building = Nothing,
+      areaCode = Nothing,
+      area = Nothing,
+      ward = Nothing,
+      placeId = Nothing,
+      instructions = Nothing,
+      extras = Nothing
     }

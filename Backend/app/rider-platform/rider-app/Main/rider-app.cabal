@@ -194,6 +194,7 @@ library
       Domain.Action.UI.Maps
       Domain.Action.UI.MerchantPaymentMethod
       Domain.Action.UI.MultiModal
+      Domain.Action.UI.MultimodalConfirm
       Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Payment
       Domain.Action.UI.Person
@@ -252,12 +253,14 @@ library
       ExternalBPP.EBIX.ExternalAPI.Payment
       ExternalBPP.EBIX.ExternalAPI.Verification
       ExternalBPP.EBIX.Flow
+      Lib.JourneyPlannerTypes
       Lib.Mesh
       SharedLogic.Cac
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
       SharedLogic.CallFRFSBPP
       SharedLogic.Confirm
+      SharedLogic.CreateFareForMultiModal
       SharedLogic.FRFSUtils
       SharedLogic.GoogleTranslate
       SharedLogic.JobScheduler
@@ -346,6 +349,7 @@ library
       Storage.Queries.Extra.Transformers.Ride
       Storage.Queries.FareBreakupExtra
       Storage.Queries.FeedbackFormExtra
+      Storage.Queries.FRFSSearchExtra
       Storage.Queries.FRFSTicketBokingPayment
       Storage.Queries.FRFSTicketBookingExtra
       Storage.Queries.Geometry
@@ -380,11 +384,13 @@ library
       Storage.Queries.Transformers.BookingCancellationReason
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.Estimate
+      Storage.Queries.Transformers.FRFSSearch
       Storage.Queries.Transformers.Merchant
       Storage.Queries.Transformers.MerchantConfig
       Storage.Queries.Transformers.MerchantMessage
       Storage.Queries.Transformers.MerchantPaymentMethod
       Storage.Queries.Transformers.MerchantServiceConfig
+      Storage.Queries.Transformers.MultiModal
       Storage.Queries.Transformers.PartnerOrgConfig
       Storage.Queries.Transformers.Person
       Storage.Queries.Transformers.Quote
@@ -428,6 +434,7 @@ library
       API.Action.UI.FRFSTicketService
       API.Action.UI.Invoice
       API.Action.UI.MultiModal
+      API.Action.UI.MultimodalConfirm
       API.Action.UI.PriceBreakup
       API.Action.UI.RidePayment
       API.Action.UI.SocialLogin
@@ -442,6 +449,7 @@ library
       API.Types.UI.FRFSTicketService
       API.Types.UI.Invoice
       API.Types.UI.MultiModal
+      API.Types.UI.MultimodalConfirm
       API.Types.UI.PriceBreakup
       API.Types.UI.RidePayment
       API.Types.UI.SocialLogin
@@ -483,6 +491,8 @@ library
       Domain.Types.HotSpotConfig
       Domain.Types.InterCityDetails
       Domain.Types.Issue
+      Domain.Types.Journey
+      Domain.Types.JourneyBooking
       Domain.Types.Location
       Domain.Types.LocationMapping
       Domain.Types.Merchant
@@ -499,6 +509,7 @@ library
       Domain.Types.PartnerOrganization
       Domain.Types.PartnerOrgConfig
       Domain.Types.PartnerOrgStation
+      Domain.Types.PassengerDetails
       Domain.Types.PayoutConfig
       Domain.Types.Person
       Domain.Types.PersonDefaultEmergencyNumber
@@ -540,6 +551,7 @@ library
       Domain.Types.TripTerms
       Domain.Types.ValueAddNP
       Domain.Types.VehicleConfig
+      Domain.Types.WalkLegMultimodal
       Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
@@ -577,6 +589,8 @@ library
       Storage.Beam.HotSpotConfig
       Storage.Beam.InterCityDetails
       Storage.Beam.Issue
+      Storage.Beam.Journey
+      Storage.Beam.JourneyBooking
       Storage.Beam.Location
       Storage.Beam.LocationMapping
       Storage.Beam.Merchant
@@ -593,6 +607,7 @@ library
       Storage.Beam.PartnerOrganization
       Storage.Beam.PartnerOrgConfig
       Storage.Beam.PartnerOrgStation
+      Storage.Beam.PassengerDetails
       Storage.Beam.PayoutConfig
       Storage.Beam.Person
       Storage.Beam.PersonDefaultEmergencyNumber
@@ -633,6 +648,7 @@ library
       Storage.Beam.TripTerms
       Storage.Beam.ValueAddNP
       Storage.Beam.VehicleConfig
+      Storage.Beam.WalkLegMultimodal
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.SavedReqLocation
@@ -671,6 +687,8 @@ library
       Storage.Queries.HotSpotConfig
       Storage.Queries.InterCityDetails
       Storage.Queries.Issue
+      Storage.Queries.Journey
+      Storage.Queries.JourneyBooking
       Storage.Queries.Location
       Storage.Queries.LocationMapping
       Storage.Queries.Merchant
@@ -696,6 +714,7 @@ library
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.FareBreakup
       Storage.Queries.OrphanInstances.FeedbackForm
+      Storage.Queries.OrphanInstances.FRFSSearch
       Storage.Queries.OrphanInstances.FRFSTicketBooking
       Storage.Queries.OrphanInstances.Issue
       Storage.Queries.OrphanInstances.LocationMapping
@@ -725,6 +744,7 @@ library
       Storage.Queries.PartnerOrganization
       Storage.Queries.PartnerOrgConfig
       Storage.Queries.PartnerOrgStation
+      Storage.Queries.PassengerDetails
       Storage.Queries.PayoutConfig
       Storage.Queries.Person
       Storage.Queries.PersonDefaultEmergencyNumber
@@ -765,6 +785,7 @@ library
       Storage.Queries.TripTerms
       Storage.Queries.ValueAddNP
       Storage.Queries.VehicleConfig
+      Storage.Queries.WalkLegMultimodal
       Storage.Queries.WhiteListOrg
   other-modules:
       Paths_rider_app

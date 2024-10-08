@@ -1,5 +1,6 @@
 module Storage.Queries.SearchRequestExtra where
 
+import Domain.Types.Journey
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Person (Person)
@@ -80,4 +81,22 @@ updateMultipleByRequestId (Id searchRequestId) autoAssignedEnabled autoAssignedE
       Se.Set BeamSR.autoAssignEnabledV2 $ Just autoAssignedEnabledV2,
       Se.Set BeamSR.isAdvanceBookingEnabled isAdvanceBookingEnabled
     ]
+    [Se.Is BeamSR.id (Se.Eq searchRequestId)]
+
+findAllByJourneyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m [Domain.Types.SearchRequest.SearchRequest]
+findAllByJourneyId journeyId =
+  findAllWithKVAndConditionalDB
+    [Se.Is BeamSR.journeyId $ Se.Eq (Just journeyId.getId)]
+    Nothing
+
+updatePricingId :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Text -> m ()
+updatePricingId (Id searchRequestId) pricingId = do
+  updateOneWithKV
+    [Se.Set BeamSR.pricingId pricingId]
+    [Se.Is BeamSR.id (Se.Eq searchRequestId)]
+
+updateSkipBooking :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Bool -> m ()
+updateSkipBooking (Id searchRequestId) skipBooking = do
+  updateOneWithKV
+    [Se.Set BeamSR.skipBooking skipBooking]
     [Se.Is BeamSR.id (Se.Eq searchRequestId)]

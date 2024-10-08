@@ -54,6 +54,7 @@ import qualified Kernel.Types.TimeBound as DTB
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common hiding (mkPrice)
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
+import qualified Lib.JourneyPlannerTypes as JPT
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
@@ -61,6 +62,8 @@ import qualified Lib.Payment.Domain.Types.PaymentTransaction as DPaymentTransact
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import Servant hiding (route, throwError)
+import qualified SharedLogic.CallFRFSBPP as CallBPP
+import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified SharedLogic.FRFSUtils as Utils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
@@ -76,6 +79,7 @@ import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.RouteStopMapping as QRouteStopMapping
@@ -180,6 +184,7 @@ postFrfsSearchHandler (mbPersonId, merchantId) vehicleType_ FRFSSearchAPIReq {..
             riderId = personId,
             partnerOrgTransactionId = mbPOrgTxnId,
             partnerOrgId = mbPOrgId,
+            journeyLegInfo = journeySearchData,
             ..
           }
   QFRFSSearch.create searchReq
@@ -192,6 +197,11 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
   search <- QFRFSSearch.findById searchId_ >>= fromMaybeM (InvalidRequest "Invalid search id")
   unless (personId == search.riderId) $ throwError AccessDenied
   (quotes :: [DFRFSQuote.FRFSQuote]) <- B.runInReplica $ QFRFSQuote.findAllBySearchId searchId_
+
+  let mbRequiredQuote = filterQuotes quotes
+  whenJust mbRequiredQuote $ \requiredQuote -> do
+    SLCF.createFares search.journeyLegInfo requiredQuote.price (QFRFSSearch.updatePricingId searchId_ (Just requiredQuote.id.getId))
+
   mapM
     ( \quote -> do
         (stations :: [FRFSStationAPI]) <- decodeFromText quote.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
@@ -212,6 +222,22 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
             }
     )
     quotes
+
+filterQuotes :: [DFRFSQuote.FRFSQuote] -> Maybe DFRFSQuote.FRFSQuote
+filterQuotes quotes = listToMaybe quotes
+
+-- /{jouneryId}/confirm
+-- => create JourneyBooking
+-- => loop for all journeyleg
+-- 	If leg is Auto/Cab -> call select
+-- if ONDC flow
+-- 	create JourneyBooking
+-- 	init
+-- 	Skipthis: onInit (create Payment link but what about unified flow)
+-- else if direct third party call
+-- 	Create journeyBooking
+-- 	Skip this: If they will collect the money? How will
+-- => create payment link of basis how may booking confirmed
 
 postFrfsQuoteConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do

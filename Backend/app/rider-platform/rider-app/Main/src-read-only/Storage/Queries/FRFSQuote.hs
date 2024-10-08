@@ -23,7 +23,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSQuote.FRFSQuote] -> m ())
 createMany = traverse_ create
 
-findAllBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m [Domain.Types.FRFSQuote.FRFSQuote])
+findAllBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m ([Domain.Types.FRFSQuote.FRFSQuote]))
 findAllBySearchId searchId = do findAllWithKV [Se.Is Beam.searchId $ Se.Eq (Kernel.Types.Id.getId searchId)]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m (Maybe Domain.Types.FRFSQuote.FRFSQuote))
@@ -47,7 +47,7 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
-      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
+      Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) price),
       Se.Set Beam.price ((.amount) price),
       Se.Set Beam.providerDescription providerDescription,
       Se.Set Beam.providerId providerId,
@@ -113,7 +113,7 @@ instance ToTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.partnerOrgId = Kernel.Types.Id.getId <$> partnerOrgId,
         Beam.partnerOrgTransactionId = Kernel.Types.Id.getId <$> partnerOrgTransactionId,
-        Beam.currency = (Kernel.Prelude.Just . (.currency)) price,
+        Beam.currency = ((Kernel.Prelude.Just . (.currency))) price,
         Beam.price = (.amount) price,
         Beam.providerDescription = providerDescription,
         Beam.providerId = providerId,

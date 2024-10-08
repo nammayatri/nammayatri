@@ -64,6 +64,7 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails
 import qualified Storage.CachedQueries.Merchant as QMerch
@@ -255,21 +256,14 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       pure ()
     else do
       deploymentVersion <- asks (.version)
-      -- TODO(MultiModal)
-      {-
-      case searchRequest.parentSearchId of
-        Just parentSearchId -> do
-          parentEstimates <- getEstimates parentSearchId -- getEstimates using parent searchId and check if multimodal estimate if available
-          if null parentEstimates
-            then do
-              create estimate with parent searchId and check if allroutes estimates came if yes then mark estimate as done else mark with ongoing
-            else do
-              update estimates price with new estimate price
-              check if allroutes estimates came if yes then mark estimate as done else mark with ongoing
-        Nothing -> pure ()
-      -}
-      estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion) (filterEstimtesByPrefference estimatesInfo blackListedVehicles)
+
+      estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion) (filterEstimtesByPrefference estimatesInfo blackListedVehicles) -- add to SR
       quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo blackListedVehicles)
+
+      let mbRequiredEstimate = find (\est -> est.vehicleServiceTierType == DVST.AUTO_RICKSHAW) estimates -- hardcoded for now, we can set a default vehicle in config
+      whenJust mbRequiredEstimate $ \requiredEstimate ->
+        SLCF.createFares searchRequest.journeyLegInfo requiredEstimate.estimatedTotalFare (QSearchReq.updatePricingId requestId (Just requiredEstimate.id.getId))
+
       forM_ estimates $ \est -> do
         triggerEstimateEvent EstimateEventData {estimate = est, personId = searchRequest.riderId, merchantId = searchRequest.merchantId}
       let lockKey = DQ.estimateBuildLockKey searchRequest.id.getId
