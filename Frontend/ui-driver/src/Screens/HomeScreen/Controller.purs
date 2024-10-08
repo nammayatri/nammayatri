@@ -1502,6 +1502,7 @@ eval (CoinsPopupAC PopUpModal.OnButton1Click) state = do
 
 eval (CoinsPopupAC PopUpModal.OptionWithHtmlClick) state = do
   void $ pure $ setValueToLocalNativeStore COINS_POPUP_SHOWN_DATE (getCurrentUTC "")
+  void $ pure $ incrementValueOfLocalStoreKey INTRODUCING_YATRI_POINTS_POPUP_LIMIT
   continue state {props {showCoinsPopup = false}}
 
 eval (CoinEarnedPopupAC PopUpModal.OnButton1Click) state = do

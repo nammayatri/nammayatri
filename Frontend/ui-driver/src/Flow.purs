@@ -73,7 +73,7 @@ import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, 
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.API (callApiBT, callApi)
-import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus, getLatestAndroidVersion)
+import Helpers.Utils (isYesterday, LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, isDateGreaterThan, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus, getLatestAndroidVersion, isDateNDaysAgo)
 import Helpers.Utils as HU
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getAndroidVersion, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, mkRouteConfig)
 import JBridge as JB
@@ -3778,12 +3778,12 @@ updateBannerAndPopupFlags = do
         && pendingTotalManualDues >= subscriptionRemoteConfig.high_due_warning_limit
         && getDriverInfoResp.mode /= Just "OFFLINE"
     
-    isCoinPopupNotShownToday = (isYesterday $ getValueToLocalStore COINS_POPUP_SHOWN_DATE) || (getValueToLocalStore COINS_POPUP_SHOWN_DATE == "__failed")
+    isCoinPopupNotShownToday = (isYesterday (getValueToLocalStore COINS_POPUP_SHOWN_DATE)) || (getValueToLocalStore COINS_POPUP_SHOWN_DATE == "__failed")
     showCoinPopup = fromMaybe 0 (fromString $ getValueToLocalStore VISITED_DRIVER_COINS_PAGE) == 0
         && appConfig.feature.enableYatriCoins
         && cityConfig.enableYatriCoins
         && toBool (getValueToLocalNativeStore IS_RIDE_ACTIVE)  == false 
-        && (fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) /= 7)
+        && fromMaybe 0 (fromString $ getValueToLocalStore INTRODUCING_YATRI_POINTS_POPUP_LIMIT) < appConfig.coinsConfig.rideMoreEarnCoinPopupMaxLimit
         && isCoinPopupNotShownToday
 
     hsState = allState.homeScreen
@@ -3864,7 +3864,7 @@ callGetPastDaysData appConfig hsState = do
       checkCoinIsEnabled = appConfig.feature.enableYatriCoins && cityConfig.enableYatriCoins
       vehicleVariant = hsState.data.vehicleType 
       isAutoRicksaw = RC.getCategoryFromVariant vehicleVariant == Just ST.AutoCategory
-  if (isPopupShownToday coinPopupInfo.rideMoreEarnCoin && checkCoinIsEnabled && isAutoRicksaw && withinTimeRange RC.rideMoreEarnMorePopupStartTime RC.dayEndTime (convertUTCtoISC (getCurrentUTC "") "HH:mm:ss")) then do
+  if ((isPopupShownToday coinPopupInfo.rideMoreEarnCoin && (STR.null coinPopupInfo.rideMoreEarnCoin || (runFn2 isDateNDaysAgo coinPopupInfo.rideMoreEarnCoin appConfig.coinsConfig.rideMoreEarnCoinIntervalLimit))) && checkCoinIsEnabled && isAutoRicksaw && withinTimeRange RC.rideMoreEarnMorePopupStartTime RC.dayEndTime (convertUTCtoISC (getCurrentUTC "") "HH:mm:ss")) then do
       resp <- lift $ lift $ Remote.getRideStatusPastDays ""
       case resp of
         Right (API.RideStatusPastDaysRes response) ->

@@ -39,7 +39,7 @@ import Engineering.Helpers.Commons (getCurrentUTC, getFutureDate, getDayName, co
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (initializeCalendar, saveObject, getCurrentDay)
 import Foreign.Generic (decodeJSON)
-import Helpers.Utils (checkSpecialPickupZone, isYesterday, getcurrentdate, getDayOfWeek, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag, transformBapName ,dummyLocationInfo )
+import Helpers.Utils (checkSpecialPickupZone, getcurrentdate, getDayOfWeek, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag, transformBapName ,dummyLocationInfo )
 import JBridge (pauseYoutubeVideo)
 import Language.Strings (getString)
 import Language.Types

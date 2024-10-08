@@ -309,6 +309,8 @@ type CoinsConfig = {
   driverToCustomerRefCoinEvent :: Boolean,
   coinConversionPopupLottie :: String,
   driverToCustomerRefPopupEndDate :: String,
+  rideMoreEarnCoinIntervalLimit :: Int,
+  rideMoreEarnCoinPopupMaxLimit :: Int,
   monsoonOfferDate :: String,
   coinsValidTill :: Int
 }

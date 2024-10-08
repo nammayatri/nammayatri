@@ -50,7 +50,7 @@ import Font.Size as FontSize
 import Font.Style (Style(..))
 import Font.Style (Style(..))
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), isYesterday, getMerchantVehicleSize, onBoardingSubscriptionScreenCheck, getCityConfig, getPurpleRideConfigForVehicle)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getMerchantVehicleSize, onBoardingSubscriptionScreenCheck, getCityConfig, getPurpleRideConfigForVehicle)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
