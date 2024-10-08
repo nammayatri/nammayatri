@@ -142,14 +142,8 @@ instance FromJSON DriverCoinsFunctionType where
       "TrainingCompleted" -> pure TrainingCompleted
       "BulkUploadFunction" -> pure BulkUploadFunction
       "MetroRideCompleted" -> pure MetroRideCompleted
-      "RidesCompleted" -> do
-        contents <- obj .: "contents"
-        v1 <- parseJSON (String (pack contents))
-        pure $ RidesCompleted v1
-      "BulkUploadFunctionV2" -> do
-        contents <- obj .: "contents"
-        msg <- parseJSON (String (pack contents))
-        pure $ BulkUploadFunctionV2 msg
+      "RidesCompleted" -> RidesCompleted <$> obj .: "contents"
+      "BulkUploadFunctionV2" -> BulkUploadFunctionV2 <$> obj .: "contents"
       _ -> fail $ "Unknown DriverCoinsFunctionType tag encountered from DB : " ++ tag
 
 data DriverCoinsEventType
