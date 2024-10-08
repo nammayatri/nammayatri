@@ -11,6 +11,7 @@ import Domain.Types.Extra.MerchantMessage as ReExport
 import qualified Domain.Types.Extra.MerchantMessage
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.VehicleCategory
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
@@ -25,7 +26,8 @@ data MerchantMessageD (s :: UsageSafety) = MerchantMessage
     messageKey :: Domain.Types.MerchantMessage.MessageKey,
     senderHeader :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     templateId :: Kernel.Prelude.Text,
-    updatedAt :: Kernel.Prelude.UTCTime
+    updatedAt :: Kernel.Prelude.UTCTime,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory
   }
   deriving (Generic, Show)
 

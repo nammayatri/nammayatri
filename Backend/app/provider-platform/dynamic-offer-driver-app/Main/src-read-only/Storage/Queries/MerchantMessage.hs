@@ -8,9 +8,11 @@ import qualified Data.Aeson
 import qualified Data.Default.Class
 import qualified Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.VehicleCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -40,6 +42,18 @@ findByMerchantOpCityIdAndMessageKey merchantOperatingCityId messageKey = do
         ]
     ]
 
+findByMerchantOpCityIdAndMessageKeyVehicleCategory ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.MerchantMessage.MessageKey -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage))
+findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId messageKey vehicleCategory = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.messageKey $ Se.Eq messageKey,
+          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
+        ]
+    ]
+
 instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMessage where
   fromTType' (Beam.MerchantMessageT {..}) = do
     pure $
@@ -54,7 +68,8 @@ instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMe
             messageKey = messageKey,
             senderHeader = senderHeader,
             templateId = fromMaybe "" templateId,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            vehicleCategory = vehicleCategory
           }
 
 instance ToTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMessage where
@@ -69,5 +84,6 @@ instance ToTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMess
         Beam.messageKey = messageKey,
         Beam.senderHeader = senderHeader,
         Beam.templateId = Just templateId,
-        Beam.updatedAt = updatedAt
+        Beam.updatedAt = updatedAt,
+        Beam.vehicleCategory = vehicleCategory
       }

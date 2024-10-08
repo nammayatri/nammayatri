@@ -7,6 +7,7 @@ module Storage.Queries.Overlay where
 import qualified Data.Aeson
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Overlay
+import qualified Domain.Types.VehicleCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Types
@@ -37,6 +38,19 @@ deleteByOverlayKeyMerchantOpCityIdUdf merchantOperatingCityId overlayKey udf1 = 
         ]
     ]
 
+deleteByOverlayKeyMerchantOpCityIdUdfMbVehicleCategory ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m ())
+deleteByOverlayKeyMerchantOpCityIdUdfMbVehicleCategory merchantOperatingCityId overlayKey udf1 vehicleCategory = do
+  deleteWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.overlayKey $ Se.Eq overlayKey,
+          Se.Is Beam.udf1 $ Se.Eq udf1,
+          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
+        ]
+    ]
+
 findAllByLanguage ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Types.Language -> m [Domain.Types.Overlay.Overlay])
@@ -45,6 +59,18 @@ findAllByLanguage merchantOperatingCityId language = do
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.language $ Se.Eq language
+        ]
+    ]
+
+findAllByLanguageVehicleCategory ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Types.Language -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m [Domain.Types.Overlay.Overlay])
+findAllByLanguageVehicleCategory merchantOperatingCityId language vehicleCategory = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.language $ Se.Eq language,
+          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
         ]
     ]
 
@@ -63,6 +89,19 @@ findAllByOverlayKeyUdf merchantOperatingCityId overlayKey udf1 = do
         ]
     ]
 
+findAllByOverlayKeyUdfVehicleCategory ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m [Domain.Types.Overlay.Overlay])
+findAllByOverlayKeyUdfVehicleCategory merchantOperatingCityId overlayKey udf1 vehicleCategory = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.overlayKey $ Se.Eq overlayKey,
+          Se.Is Beam.udf1 $ Se.Eq udf1,
+          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
+        ]
+    ]
+
 findByMerchantOpCityIdPNKeyLangaugeUdf ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.External.Types.Language -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.Overlay.Overlay))
@@ -73,6 +112,20 @@ findByMerchantOpCityIdPNKeyLangaugeUdf merchantOperatingCityId overlayKey langua
           Se.Is Beam.overlayKey $ Se.Eq overlayKey,
           Se.Is Beam.language $ Se.Eq language,
           Se.Is Beam.udf1 $ Se.Eq udf1
+        ]
+    ]
+
+findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.External.Types.Language -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.Overlay.Overlay))
+findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory merchantOperatingCityId overlayKey language udf1 vehicleCategory = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.overlayKey $ Se.Eq overlayKey,
+          Se.Is Beam.language $ Se.Eq language,
+          Se.Is Beam.udf1 $ Se.Eq udf1,
+          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
         ]
     ]
 
@@ -104,7 +157,8 @@ instance FromTType' Beam.Overlay Domain.Types.Overlay.Overlay where
             socialMediaLinks = Kernel.Utils.JSON.valueToMaybe =<< socialMediaLinks,
             title = title,
             toastMessage = toastMessage,
-            udf1 = udf1
+            udf1 = udf1,
+            vehicleCategory = vehicleCategory
           }
 
 instance ToTType' Beam.Overlay Domain.Types.Overlay.Overlay where
@@ -133,5 +187,6 @@ instance ToTType' Beam.Overlay Domain.Types.Overlay.Overlay where
         Beam.socialMediaLinks = Data.Aeson.toJSON <$> socialMediaLinks,
         Beam.title = title,
         Beam.toastMessage = toastMessage,
-        Beam.udf1 = udf1
+        Beam.udf1 = udf1,
+        Beam.vehicleCategory = vehicleCategory
       }
