@@ -1,4 +1,6 @@
 imports:
+  UTCTime: Kernel.Prelude
+  TravelMode: Domain.Types.Common
   HighPrecMoney: Kernel.Types.Common
   Currency: Kernel.Types.Common
   Price: Kernel.Types.Common
@@ -23,6 +25,7 @@ imports:
   PartnerOrgTransaction: Domain.Types.PartnerOrganization
   TimeBound: Kernel.Types.TimeBound
   LatLong: Kernel.External.Maps.Types
+  JourneySearchData: Lib.JourneyPlannerTypes
 
 FRFSSearch:
   tableName: frfs_search
@@ -39,9 +42,31 @@ FRFSSearch:
     merchantOperatingCityId: Id MerchantOperatingCity
     partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
+    journeyLegInfo: Maybe JourneySearchData
+
+  beamFields:
+    journeyLegInfo:
+      journeyLegOrder: Maybe Int
+      journeyId: Maybe Text
+      agency: Maybe Text
+      skipBooking: Maybe Bool
+      convenienceCost: Maybe Int
+      pricingId: Maybe Text
+
+  toTType:
+    journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
+    journeyId: Kernel.Prelude.fmap (.journeyId)|I
+    agency: (journeyLegInfo >>= (.agency))|E
+    skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
+    convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
+    pricingId: (journeyLegInfo >>= (.pricingId))|E
+
+  fromTType:
+    journeyLegInfo: mkJourneyLegInfo
 
   constraints:
     riderId: "!SecondaryKey" # forcing to be a secondary key
+    # journeyId: "!SecondaryKey"
 
   queries:
     getTicketPlaces:
@@ -50,6 +75,9 @@ FRFSSearch:
     findById:
       kvFunction: findOneWithKV
       where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 Station:
   tableName: station
