@@ -41,33 +41,8 @@ data CustomerEndpoint
 
 derivePersistField "CustomerEndpoint"
 
----------------------------------------------------------
--- customer unblock  ------------------------------------
-
-type CustomerUnblockAPI =
-  Capture "customerId" (Id Customer)
-    :> "unblock"
-    :> Post '[JSON] APISuccess
-
----------------------------------------------------------
--- customer info  ---------------------------------------
-
 -- Do we need to use filters instead of customerId, like in driverInfo API?
 -- {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/info?mobileNumber=6666666666
-
-type CustomerInfoAPI =
-  Capture "customerId" (Id Customer)
-    :> "info"
-    :> Get '[JSON] CustomerInfoRes
-
-data CustomerInfoRes = CustomerInfoRes
-  { numberOfRides :: Int,
-    falseSafetyAlarmCount :: Int,
-    safetyCenterDisabledOnDate :: Maybe UTCTime,
-    totalSosCount :: Int
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 ---------------------------------------------------------------------------
 -- customer cancellation dues sync ----------------------------------------

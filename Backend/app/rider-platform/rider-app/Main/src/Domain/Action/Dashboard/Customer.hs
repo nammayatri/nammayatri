@@ -15,9 +15,9 @@
 module Domain.Action.Dashboard.Customer
   ( deleteCustomerDelete,
     postCustomerBlock,
-    unblockCustomer,
+    postCustomerUnblock,
     getCustomerList,
-    customerInfo,
+    getCustomerInfo,
     customerCancellationDuesSync,
     getCancellationDuesDetails,
     updateSafetyCenterBlocking,
@@ -99,8 +99,8 @@ postCustomerBlock merchantShortId opCity customerId = do
   pure Success
 
 ---------------------------------------------------------------------
-unblockCustomer :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Flow APISuccess
-unblockCustomer merchantShortId opCity customerId = do
+postCustomerUnblock :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Flow APISuccess
+postCustomerUnblock merchantShortId opCity customerId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let personId = cast @Common.Customer @DP.Person customerId
@@ -124,8 +124,8 @@ unblockCustomer merchantShortId opCity customerId = do
   pure Success
 
 ---------------------------------------------------------------------
-customerInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Flow Common.CustomerInfoRes
-customerInfo merchantShortId opCity customerId = do
+getCustomerInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Flow Common.CustomerInfoRes
+getCustomerInfo merchantShortId opCity customerId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let personId = cast @Common.Customer @DP.Person customerId

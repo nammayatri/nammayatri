@@ -35,6 +35,23 @@ apis:
         type: APISuccess
       migrate:
         endpoint: CustomerAPI BlockCustomerEndpoint
+  - POST:
+      endpoint:  /{customerId}/unblock
+      auth: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_UNBLOCK
+      params:
+        customerId: Id Customer
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: CustomerAPI UnblockCustomerEndpoint
+  - GET:
+      endpoint:  /{customerId}/info
+      auth: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_INFO
+      params:
+        customerId: Id Customer
+      response:
+        type: CustomerInfoRes
+
 
 types:
   CustomerListRes:
@@ -49,3 +66,8 @@ types:
     - phoneNo: Maybe Text
     - enabled: Bool
     - blocked: Bool
+  CustomerInfoRes:
+    - numberOfRides: Int
+    - falseSafetyAlarmCount: Int
+    - safetyCenterDisabledOnDate: Maybe UTCTime
+    - totalSosCount: Int

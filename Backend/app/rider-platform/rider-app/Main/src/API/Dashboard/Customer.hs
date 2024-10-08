@@ -28,9 +28,7 @@ import Storage.Beam.SystemConfigs ()
 
 type API =
   "customer"
-    :> ( Common.CustomerUnblockAPI
-           :<|> Common.CustomerInfoAPI
-           :<|> Common.CustomerCancellationDuesSyncAPI
+    :> ( Common.CustomerCancellationDuesSyncAPI
            :<|> Common.GetCancellationDuesDetailsAPI
            :<|> Common.UpdateSafetyCenterBlockingAPI
            :<|> Common.PostCustomersPersonNumbersAPI
@@ -39,27 +37,11 @@ type API =
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantId city =
-  unblockCustomer merchantId city
-    :<|> customerInfo merchantId city
-    :<|> customerCancellationDuesSync merchantId city
+  customerCancellationDuesSync merchantId city
     :<|> getCancellationDuesDetails merchantId city
     :<|> updateSafetyCenterBlocking merchantId city
     :<|> postCustomersPersonNumbers merchantId city
     :<|> postCustomerPersonId merchantId city
-
-unblockCustomer ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Id Common.Customer ->
-  FlowHandler APISuccess
-unblockCustomer merchantShortId opCity personId = withFlowHandlerAPI $ DCustomer.unblockCustomer merchantShortId opCity personId
-
-customerInfo ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Id Common.Customer ->
-  FlowHandler Common.CustomerInfoRes
-customerInfo merchantShortId opCity personId = withFlowHandlerAPI $ DCustomer.customerInfo merchantShortId opCity personId
 
 customerCancellationDuesSync :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Common.CustomerCancellationDuesSyncReq -> FlowHandler APISuccess
 customerCancellationDuesSync (ShortId merchantShortId) _ personId = withFlowHandlerAPI . DCustomer.customerCancellationDuesSync (ShortId merchantShortId) personId
