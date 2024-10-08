@@ -49,6 +49,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     postDriverUpdateVehicleManufacturing,
     postDriverRefundByPayout,
     getDriverSecurityDepositStatus,
+    postDriverDriverDataDecryption,
   )
 where
 
@@ -315,3 +316,9 @@ getDriverSecurityDepositStatus :: (ShortId DM.Merchant -> City.City -> ApiTokenI
 getDriverSecurityDepositStatus merchantShortId opCity apiTokenInfo driverId mbServiceName = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.getDriverSecurityDepositStatus) driverId mbServiceName
+
+postDriverDriverDataDecryption :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> [Common.DriverEncDataReq] -> Environment.Flow [Common.DriverDecDataResp])
+postDriverDriverDataDecryption merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.ProviderManagementAPI (Common.DriverAPI Common.PostDriverDriverDataDecryptionEndpoint)) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  T.withTransactionStoring transaction (do Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.postDriverDriverDataDecryption) req)

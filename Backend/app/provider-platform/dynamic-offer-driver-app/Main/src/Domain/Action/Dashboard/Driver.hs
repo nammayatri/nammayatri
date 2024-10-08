@@ -86,6 +86,7 @@ module Domain.Action.Dashboard.Driver
     postDriverUpdateVehicleManufacturing,
     postDriverRefundByPayout,
     getDriverSecurityDepositStatus,
+    postDriverDriverDataDecryption,
   )
 where
 
@@ -2415,6 +2416,22 @@ getDriverPersonNumbers _ _ req = do
         decPerson <- decrypt p
         return $ Common.PersonRes decPerson.id.getId decPerson.mobileNumber decPerson.alternateMobileNumber decPerson.merchantOperatingCityId.getId
       return decryptedPersons
+
+postDriverDriverDataDecryption :: ShortId DM.Merchant -> Context.City -> [Common.DriverEncDataReq] -> Flow [Common.DriverDecDataResp]
+postDriverDriverDataDecryption _ _ = mapM decryptDriverData
+  where
+    toEncryptedHash :: Text -> Flow (EncryptedHashed Text)
+    toEncryptedHash a = do
+      let encrypted = Encrypted a
+      hash <- getDbHash a
+      pure $ EncryptedHashed {..}
+
+    decryptDriverData :: Common.DriverEncDataReq -> Flow Common.DriverDecDataResp
+    decryptDriverData encDriver = do
+      let driverId = Common.driverIdReq encDriver
+      encDriverData <- toEncryptedHash $ Common.driverDataReq encDriver
+      decryptedDriverData <- decrypt encDriverData
+      pure (Common.DriverDecDataResp driverId (Just decryptedDriverData))
 
 getDriverPersonId :: ShortId DM.Merchant -> Context.City -> Common.PersonMobileNoReq -> Flow [Common.PersonRes]
 getDriverPersonId _ _ req = do

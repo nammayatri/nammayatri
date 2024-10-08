@@ -43,6 +43,14 @@ apis:
         type: "[PersonRes]"
       migrate:
         endpointV2:
+  - POST: # PersonMobileNoAPI
+      endpoint: /driverDataDecryption
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_DECRYPTION
+      request:
+        type: "[DriverEncDataReq]"
+      response:
+        type: "[DriverDecDataResp]"
+
   - POST: # PersonIDAPI
       endpoint: /personId
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS FETCH_PERSON_ID
@@ -478,6 +486,14 @@ types:
   DeleteRCReq:
     - recordType: NewType
     - rcNo: Text
+    - derive: "'HideSecrets"
+  DriverEncDataReq:
+    - driverIdReq: Id Driver
+    - driverDataReq: Text
+    - derive: "'HideSecrets"
+  DriverDecDataResp:
+    - driverIdResp: Id Driver
+    - driverDataResp: Maybe Text
     - derive: "'HideSecrets"
   UpdatePhoneNumberReq:
     - newPhoneNumber: Text
