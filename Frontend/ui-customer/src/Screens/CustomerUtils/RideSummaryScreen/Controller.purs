@@ -119,7 +119,8 @@ eval (GetBooking apiResp status) state = do
                         }
                         ,props{
                           isBookingAccepted = true,
-                          pickUpOpen = true
+                          pickUpOpen = true,
+                          shimmerVisibility = false
                         }}
     "failure" -> continue state{props{hasApiFailed = true}}
     _ -> continue state

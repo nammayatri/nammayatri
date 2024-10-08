@@ -34,7 +34,8 @@ type RideSummaryScreenProps = {
   isBookingAccepted :: Boolean,
   isCancelRide :: Boolean,
   showCallPopUp :: Boolean,
-  hasApiFailed :: Boolean
+  hasApiFailed :: Boolean,
+  shimmerVisibility :: Boolean
 }
 
 dummyAPI :: BookingAPIEntity
@@ -62,7 +63,7 @@ dummyAPI = BookingAPIEntity{
   id : "",
   isScheduled : false,
   returnTime : Nothing,
-  roundTrip : Nothing,
+  roundTrip : Just true,
   isAirConditioned: Nothing,
   startTime : "",
   toLocation : Just (LocationInformation{
@@ -111,7 +112,8 @@ initData = {
     isBookingAccepted : false,
     isCancelRide : false,
     showCallPopUp : false,
-    hasApiFailed : false
+    hasApiFailed : false,
+    shimmerVisibility : true
   }
 }
 

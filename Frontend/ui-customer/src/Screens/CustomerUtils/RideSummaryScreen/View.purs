@@ -51,7 +51,8 @@ import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import ConfigProvider
-
+import PrestoDOM.Elements.Keyed as Keyed 
+import Data.Tuple (Tuple(..))
 
 screen :: RideSummaryScreenState -> Screen Action RideSummaryScreenState ScreenOutput
 screen initialState =  
@@ -98,6 +99,7 @@ view :: forall w. (Action -> Effect Unit) -> RideSummaryScreenState -> PrestoDOM
 view push state  =
   let 
       (BookingAPIEntity entity) = state.data.rideDetails
+      startTime = entity.startTime
       (CTA.TripCategory tripCategory) = entity.tripCategory
       pickupCardHeader = case tripCategory.tag of 
                           CTA.Rental -> getString LType.PICKUP 
@@ -105,13 +107,14 @@ view push state  =
       hasApiFailed = state.props.hasApiFailed
   in
     Anim.screenAnimation $
-    relativeLayout[
+    Keyed.relativeLayout[
       width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
+    , onBackPressed push $ const $ BackPressed $ startTime
     ]
-   ( [
-    linearLayout
+   ( [ if not state.props.shimmerVisibility then
+    Tuple "DefaultLayout" $ linearLayout
       [ width MATCH_PARENT
       , height MATCH_PARENT
       , orientation VERTICAL
@@ -163,11 +166,10 @@ view push state  =
               ][]
             ,  buttonLayout state push
             ] 
-          ] <> if state.props.isCancelRide then [cancelRidePopUpView push state] else [dummyView]
-            <> if state.props.showCallPopUp then [driverCallPopUp push state] else [dummyView])
-          where 
-            dummyView :: forall w. PrestoDOM (Effect Unit) w
-            dummyView = linearLayout [height $ V 0, width $ V 0, visibility GONE] []
+          else  Tuple "shimmerView" $ shimmerView state push 
+          ]
+           <> if state.props.isCancelRide then [Tuple "CancelRidePopUp" $ cancelRidePopUpView push state] else []
+           <> if state.props.showCallPopUp then [Tuple "DriverCallPopUp" $ driverCallPopUp push state] else [])
 
 
 
@@ -268,7 +270,6 @@ includedChargesBox state push =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation HORIZONTAL
-        , weight 1.0
         ]
         [ linearLayout
             [ width $ V $ (screenWidth unit) / 2
@@ -1039,3 +1040,49 @@ errorView config =
       , visibility VISIBLE
       ] <> (FontStyle.body6 LanguageStyle) 
   ]
+
+
+shimmerView ::  RideSummaryScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w  
+shimmerView state push   =
+  shimmerFrameLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , color Color.white900
+    ,visibility $ boolToVisibility $ state.props.shimmerVisibility
+    ]
+    [ linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , color Color.white900
+        , orientation VERTICAL
+        ]
+        [ linearLayout
+            [ height (V 350)
+            , width MATCH_PARENT
+            , background Color.greyDark
+            , cornerRadius 12.0
+            , orientation VERTICAL
+            ]
+            []
+        , linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , orientation VERTICAL
+            , margin $ MarginTop 24
+            ]
+            ( map
+                ( \_ ->
+                    linearLayout
+                      [ width MATCH_PARENT
+                      , height (V 60)
+                      , orientation VERTICAL
+                      , margin $ MarginVertical 10 10
+                      , background Color.greyDark
+                      , cornerRadius 12.0
+                      ]
+                      []
+                )
+                (1 .. 4)
+            )
+        ]
+    ]
