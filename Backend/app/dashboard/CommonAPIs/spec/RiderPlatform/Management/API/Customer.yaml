@@ -26,7 +26,6 @@ apis:
         type: APISuccess
       migrate:
         endpoint: CustomerAPI DeleteCustomerEndpoint
-        endpointV2:
 
 types:
   CustomerListRes:
