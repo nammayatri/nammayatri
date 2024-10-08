@@ -125,6 +125,9 @@ dependencies:
   - http-client
   - http-client-tls
   - hashable
+  - text-format
+  - scientific
+  - resource-pool
 
 ghc-options:
   - -fwrite-ide-info

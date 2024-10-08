@@ -8,6 +8,7 @@ module Storage.Beam.PayoutConfig where
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.PayoutConfig
+import qualified Domain.Types.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -38,3 +39,5 @@ type PayoutConfig = PayoutConfigT Identity
 $(enableKVPG ''PayoutConfigT ['merchantOperatingCityId] [])
 
 $(mkTableInstances ''PayoutConfigT "payout_config")
+
+$(Domain.Types.UtilsTH.mkCacParseInstance ''PayoutConfigT)

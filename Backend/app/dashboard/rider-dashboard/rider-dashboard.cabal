@@ -50,6 +50,7 @@ library
       Domain.Action.RiderPlatform.Management.FRFSTicket
       Domain.Action.RiderPlatform.Management.Invoice
       Domain.Action.RiderPlatform.Management.Merchant
+      Domain.Action.RiderPlatform.Management.System
       RiderPlatformClient.RiderApp.Operations
       RiderPlatformClient.RiderApp.RideBooking
       Storage.Beam.CommonInstances
@@ -57,6 +58,7 @@ library
       API.Action.RiderPlatform.Management.FRFSTicket
       API.Action.RiderPlatform.Management.Invoice
       API.Action.RiderPlatform.Management.Merchant
+      API.Action.RiderPlatform.Management.System
   other-modules:
       Paths_rider_dashboard
   hs-source-dirs:

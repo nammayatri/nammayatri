@@ -237,6 +237,10 @@ MerchantServiceConfig:
     updatedAt: UTCTime
     createdAt: UTCTime
 
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
   beamFields:
     serviceConfig:
       serviceName: Domain.Types.MerchantServiceConfig.ServiceName
@@ -247,7 +251,6 @@ MerchantServiceConfig:
   constraints:
     merchantId: PrimaryKey
     serviceName: PrimaryKey
-
   fromTType:
     serviceConfig: Storage.Queries.Transformers.MerchantServiceConfig.getServiceConfigFromDomain serviceName configJSON|EM
 
@@ -500,6 +503,10 @@ RideRelatedNotificationConfig:
       where:
         and: [merchantOperatingCityId, timeDiffEvent]
 
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
 MerchantPushNotification:
   tableName: merchant_push_notification
   derives: "Generic,Show,ToJSON,FromJSON"
@@ -569,6 +576,10 @@ PayoutConfig:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, isPayoutEnabled, payoutEntity]
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
 
   types:
     PayoutEntity:
