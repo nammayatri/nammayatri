@@ -28,8 +28,7 @@ import Storage.Beam.SystemConfigs ()
 
 type API =
   "customer"
-    :> ( Common.CustomerBlockAPI
-           :<|> Common.CustomerUnblockAPI
+    :> ( Common.CustomerUnblockAPI
            :<|> Common.CustomerInfoAPI
            :<|> Common.CustomerCancellationDuesSyncAPI
            :<|> Common.GetCancellationDuesDetailsAPI
@@ -40,21 +39,13 @@ type API =
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantId city =
-  blockCustomer merchantId city
-    :<|> unblockCustomer merchantId city
+  unblockCustomer merchantId city
     :<|> customerInfo merchantId city
     :<|> customerCancellationDuesSync merchantId city
     :<|> getCancellationDuesDetails merchantId city
     :<|> updateSafetyCenterBlocking merchantId city
     :<|> postCustomersPersonNumbers merchantId city
     :<|> postCustomerPersonId merchantId city
-
-blockCustomer ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Id Common.Customer ->
-  FlowHandler APISuccess
-blockCustomer merchantShortId opCity personId = withFlowHandlerAPI $ DCustomer.blockCustomer merchantShortId opCity personId
 
 unblockCustomer ::
   ShortId DM.Merchant ->

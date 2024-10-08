@@ -1,7 +1,12 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Action.RiderPlatform.Management.Customer (getCustomerList, deleteCustomerDelete) where
+module Domain.Action.RiderPlatform.Management.Customer
+  ( getCustomerList,
+    deleteCustomerDelete,
+    postCustomerBlock,
+  )
+where
 
 import qualified API.Types.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.Customer
@@ -37,3 +42,15 @@ deleteCustomerDelete merchantShortId opCity apiTokenInfo customerId = do
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.RiderManagementAPI (API.Types.RiderPlatform.Management.CustomerAPI API.Types.RiderPlatform.Management.Customer.DeleteCustomerDeleteEndpoint)) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   SharedLogic.Transaction.withTransactionStoring transaction $
     RiderPlatformClient.RiderApp.Operations.callRiderAppOperations checkedMerchantId opCity (.customerDSL.deleteCustomerDelete) customerId
+
+postCustomerBlock ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  Kernel.Types.Id.Id Dashboard.Common.Customer ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postCustomerBlock merchantShortId opCity apiTokenInfo customerId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.RiderManagementAPI (API.Types.RiderPlatform.Management.CustomerAPI API.Types.RiderPlatform.Management.Customer.PostCustomerBlockEndpoint)) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+  SharedLogic.Transaction.withTransactionStoring transaction $
+    RiderPlatformClient.RiderApp.Operations.callRiderAppOperations checkedMerchantId opCity (.customerDSL.postCustomerBlock) customerId

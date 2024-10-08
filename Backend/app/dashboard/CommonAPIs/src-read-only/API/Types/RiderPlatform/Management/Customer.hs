@@ -30,7 +30,7 @@ data CustomerListRes = CustomerListRes {totalItems :: Kernel.Prelude.Int, summar
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("customer" :> (GetCustomerList :<|> DeleteCustomerDelete))
+type API = ("customer" :> (GetCustomerList :<|> DeleteCustomerDelete :<|> PostCustomerBlock))
 
 type GetCustomerList =
   ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> QueryParam "enabled" Kernel.Prelude.Bool
@@ -48,18 +48,22 @@ type GetCustomerList =
 
 type DeleteCustomerDelete = (Capture "customerId" (Kernel.Types.Id.Id Dashboard.Common.Customer) :> "delete" :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type PostCustomerBlock = (Capture "customerId" (Kernel.Types.Id.Id Dashboard.Common.Customer) :> "block" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
 data CustomerAPIs = CustomerAPIs
   { getCustomerList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Customer) -> EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.Customer.CustomerListRes,
-    deleteCustomerDelete :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    deleteCustomerDelete :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postCustomerBlock :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkCustomerAPIs :: (Client EulerHS.Types.EulerClient API -> CustomerAPIs)
 mkCustomerAPIs customerClient = (CustomerAPIs {..})
   where
-    getCustomerList :<|> deleteCustomerDelete = customerClient
+    getCustomerList :<|> deleteCustomerDelete :<|> postCustomerBlock = customerClient
 
 data CustomerEndpointDSL
   = GetCustomerListEndpoint
   | DeleteCustomerDeleteEndpoint
+  | PostCustomerBlockEndpoint
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

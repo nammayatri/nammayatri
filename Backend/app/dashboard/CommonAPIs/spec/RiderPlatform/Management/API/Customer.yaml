@@ -26,6 +26,15 @@ apis:
         type: APISuccess
       migrate:
         endpoint: CustomerAPI DeleteCustomerEndpoint
+  - POST:
+      endpoint:  /{customerId}/block
+      auth: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_BLOCK
+      params:
+        customerId: Id Customer
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: CustomerAPI BlockCustomerEndpoint
 
 types:
   CustomerListRes:
