@@ -22,7 +22,6 @@ where
 
 import Data.Aeson
 import qualified Data.List as List
-import Data.Text (pack)
 import Domain.Types.Ride
 import Kernel.Prelude
 import Kernel.Types.Common (Meters)
