@@ -397,16 +397,16 @@ window.getMerchantConfig = function () {
       "waitingCharges" : 1.50,
       "waitingChargesConfig" : defWaitingChargesConfig,
       "rentalWaitingChargesConfig" :{
-        "auto" : {
-          "freeMinutes" : 3.0
-        , "perMinCharges" : 1.5
-        },
-        "cabs" : {
-          "freeMinutes" : 3.0
+        "cab" : {
+          "freeSeconds" : 180
         , "perMinCharges" : 2.0
         },
+        "auto" : {
+          "freeSeconds" : 180
+        , "perMinCharges" : 1.5
+        },
         "bike" : {
-          "freeMinutes" : 3.0
+          "freeSeconds" : 180
         , "perMinCharges" : 2.0
         }
       },
