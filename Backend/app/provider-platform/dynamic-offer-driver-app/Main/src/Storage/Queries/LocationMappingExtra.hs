@@ -42,7 +42,7 @@ findByEntityId entityId =
   findAllWithKVAndConditionalDB
     [ Se.Is BeamLM.entityId $ Se.Eq entityId
     ]
-    (Just (Se.Desc BeamLM.createdAt))
+    Nothing
 
 getLatestStartByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe LocationMapping)
 getLatestStartByEntityId entityId =
