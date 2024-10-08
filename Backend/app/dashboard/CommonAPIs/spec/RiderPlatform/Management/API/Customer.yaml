@@ -18,12 +18,15 @@ apis:
       response:
         type: CustomerListRes
   - DELETE:
-        endpoint: /delete
-        auth: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_DELETE
-        params:
-          customerId: Id Customer
-        response:
-          type: APISuccess
+      endpoint:  /{customerId}/delete
+      auth: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_DELETE
+      params:
+        customerId: Id Customer
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: CustomerAPI DeleteCustomerEndpoint
+        endpointV2:
 
 types:
   CustomerListRes:
