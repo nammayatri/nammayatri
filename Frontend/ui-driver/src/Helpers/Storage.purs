@@ -155,6 +155,7 @@ data KeyStore = USER_NAME
                 | GULLAK_TOKEN
                 | DONT_CALL_REFRESH
                 | IS_ON_FREE_TRIAL
+                | INTRODUCING_YATRI_POINTS_POPUP_LIMIT
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

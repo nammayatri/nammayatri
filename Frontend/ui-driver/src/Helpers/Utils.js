@@ -433,6 +433,18 @@ export const isYesterday = function (dateString) {
   return false;
 }
 
+export const isDateNDaysAgo = function (dateString, n) {
+  try {
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() - n);
+    const date = new Date(dateString);
+    return date.toDateString() <= targetDate.toDateString();
+  } catch (error) {
+    console.error("error in isDateNDaysAgo function : " + error);
+  }
+  return false;
+}
+
 export const isMoreThanXMs = function(timestamp, millis) {
   try {
     if(timestamp === "__failed") return true;
