@@ -14,6 +14,7 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import Servant
@@ -123,6 +124,13 @@ data DriverRCAssociationAPIEntity = DriverRCAssociationAPIEntity
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data ExemptionAndCashCollectionDriverFeeReq = ExemptionAndCashCollectionDriverFeeReq {paymentIds :: [Kernel.Prelude.Text], messageKey :: Kernel.Prelude.Maybe Kernel.Prelude.Text, isExempt :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets ExemptionAndCashCollectionDriverFeeReq where
+  hideSecrets = Kernel.Prelude.identity
+
 data PlatformFee = PlatformFee
   { fee :: Kernel.Types.Common.HighPrecMoney,
     cgst :: Kernel.Types.Common.HighPrecMoney,
@@ -159,7 +167,7 @@ data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPI
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("driver" :> (GetDriverPaymentDue :<|> PostDriverEnable :<|> PostDriverCollectCashHelper :<|> PostDriverCollectCashV2Helper :<|> PostDriverExemptCashHelper :<|> PostDriverExemptCashV2Helper :<|> GetDriverInfoHelper :<|> PostDriverUnlinkVehicle :<|> PostDriverEndRCAssociation :<|> PostDriverAddVehicle :<|> PostDriverSetRCStatus))
+type API = ("driver" :> (GetDriverPaymentDue :<|> PostDriverEnable :<|> PostDriverCollectCashHelper :<|> PostDriverCollectCashV2Helper :<|> PostDriverExemptCashHelper :<|> PostDriverExemptCashV2Helper :<|> GetDriverInfoHelper :<|> PostDriverUnlinkVehicle :<|> PostDriverEndRCAssociation :<|> PostDriverAddVehicle :<|> PostDriverSetRCStatus :<|> PostDriverExemptDriverFee))
 
 type GetDriverPaymentDue =
   ( "paymentDue" :> QueryParam "countryCode" Kernel.Prelude.Text :> MandatoryQueryParam "phone" Kernel.Prelude.Text
@@ -280,6 +288,19 @@ type PostDriverSetRCStatus =
       :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
+type PostDriverExemptDriverFee =
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "exemptDriverFee" :> Capture "token" Kernel.Prelude.Text
+      :> Capture
+           "serviceName"
+           Dashboard.Common.Driver.ServiceNames
+      :> ReqBody
+           '[JSON]
+           API.Types.ProviderPlatform.RideBooking.Driver.ExemptionAndCashCollectionDriverFeeReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
 data DriverAPIs = DriverAPIs
   { getDriverPaymentDue :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient [API.Types.ProviderPlatform.RideBooking.Driver.DriverOutstandingBalanceResp],
     postDriverEnable :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -291,13 +312,14 @@ data DriverAPIs = DriverAPIs
     postDriverUnlinkVehicle :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverEndRCAssociation :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverAddVehicle :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Dashboard.ProviderPlatform.Fleet.Driver.AddVehicleReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverSetRCStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Dashboard.ProviderPlatform.Fleet.Driver.RCStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postDriverSetRCStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Dashboard.ProviderPlatform.Fleet.Driver.RCStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverExemptDriverFee :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Dashboard.Common.Driver.ServiceNames -> API.Types.ProviderPlatform.RideBooking.Driver.ExemptionAndCashCollectionDriverFeeReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)
 mkDriverAPIs driverClient = (DriverAPIs {..})
   where
-    getDriverPaymentDue :<|> postDriverEnable :<|> postDriverCollectCash :<|> postDriverV2CollectCash :<|> postDriverExemptCash :<|> postDriverV2ExemptCash :<|> getDriverInfo :<|> postDriverUnlinkVehicle :<|> postDriverEndRCAssociation :<|> postDriverAddVehicle :<|> postDriverSetRCStatus = driverClient
+    getDriverPaymentDue :<|> postDriverEnable :<|> postDriverCollectCash :<|> postDriverV2CollectCash :<|> postDriverExemptCash :<|> postDriverV2ExemptCash :<|> getDriverInfo :<|> postDriverUnlinkVehicle :<|> postDriverEndRCAssociation :<|> postDriverAddVehicle :<|> postDriverSetRCStatus :<|> postDriverExemptDriverFee = driverClient
 
 data DriverEndpointDSL
   = GetDriverPaymentDueEndpoint
@@ -311,5 +333,6 @@ data DriverEndpointDSL
   | PostDriverEndRCAssociationEndpoint
   | PostDriverAddVehicleEndpoint
   | PostDriverSetRCStatusEndpoint
+  | PostDriverExemptDriverFeeEndpoint
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

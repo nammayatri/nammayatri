@@ -13,6 +13,7 @@ module Domain.Action.ProviderPlatform.RideBooking.Driver
     postDriverEndRCAssociation,
     postDriverAddVehicle,
     postDriverSetRCStatus,
+    postDriverExemptDriverFee,
   )
 where
 
@@ -157,3 +158,10 @@ postDriverSetRCStatus merchantShortId opCity apiTokenInfo driverId req = do
   transaction <- buildTransaction Common.PostDriverSetRCStatusEndpoint apiTokenInfo (Just driverId) $ Just req
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId opCity (.driverDSL.postDriverSetRCStatus) driverId req
+
+postDriverExemptDriverFee :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Text -> Common.ServiceNames -> Common.ExemptionAndCashCollectionDriverFeeReq -> Flow APISuccess
+postDriverExemptDriverFee merchantShortId opCity apiTokenInfo driverId requestorId serviceName req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.PostDriverExemptDriverFeeEndpoint apiTokenInfo (Just driverId) $ Just req
+  T.withTransactionStoring transaction $
+    Client.callDriverOfferBPP checkedMerchantId opCity (.driverDSL.postDriverExemptDriverFee) driverId requestorId serviceName req
