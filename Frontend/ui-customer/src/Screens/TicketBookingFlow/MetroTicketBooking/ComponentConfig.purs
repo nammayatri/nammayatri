@@ -38,8 +38,9 @@ import DecodeUtil (getAnyFromWindow)
 import Data.Function.Uncurried (runFn3)
 import MerchantConfig.Types (MetroConfig)
 import Storage
-import Services.API (MetroBookingConfigRes(..))
+import Services.API (MetroBookingConfigRes(..),TicketServiceType(..))
 import Mobility.Prelude (getNumberWithSuffix)
+import Debug
 
 metroTicketBookingHeaderConfig :: ST.MetroTicketBookingScreenState -> GenericHeader.Config
 metroTicketBookingHeaderConfig state = let
@@ -57,7 +58,7 @@ metroTicketBookingHeaderConfig state = let
           } 
         , padding = PaddingVertical 5 5
         , textConfig {
-            text = getString BUY_METRO_TICKETS
+            text = if state.props.ticketServiceType == BUS then "Buy Bus Tickets" else getString BUY_METRO_TICKETS
           , color = Color.darkCharcoal
           }
         , suffixImageConfig {
@@ -73,7 +74,7 @@ updateButtonConfig state = let
     price = state.data.ticketPrice * state.data.ticketCount
     eventDiscountAmount = fromMaybe 0 state.data.eventDiscountAmount
     (MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
-    priceWithoutDiscount = ((metroBookingConfigResp.discount * price) / 100) + price
+    priceWithoutDiscount = spy "priceWithoutDiscount" (((metroBookingConfigResp.discount * price) / 100) + price)
     discountText = if price /= priceWithoutDiscount then ("&nbsp;&nbsp; " <> " ₹" <> "<strike> " <> "<span style='color:#7F6A34;'>"<> (show priceWithoutDiscount)  <> " </span>" <> " </strike>" <> " ") else ""
     cashbackText = if eventDiscountAmount > 0 then (" (" <> "₹" <> show eventDiscountAmount <> " cashback)") else ""
     updateButtonConfig' = config 

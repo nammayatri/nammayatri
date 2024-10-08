@@ -63,7 +63,7 @@ import Screens (getScreen, ScreenName(..))
 import Screens.HomeScreen.Transformer (getQuotesTransformer, getFilteredQuotes, transformQuote, getFareProductType, extractFareProductType)
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationConfig)
 import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo, initData) as SearchLocationScreenData
-import Services.API (QuoteAPIEntity(..), GetQuotesRes(..), OfferRes(..), RentalQuoteAPIDetails(..), QuoteAPIContents(..), Snapped(..), LatLong(..), Route(..))
+import Services.API (QuoteAPIEntity(..), GetQuotesRes(..), OfferRes(..), RentalQuoteAPIDetails(..), QuoteAPIContents(..), Snapped(..), LatLong(..), Route(..), GetBusRouteResp(..),SearchRideType(..),GetMetroStationResp(..))
 import Services.Backend (walkCoordinates, walkCoordinate)
 import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..))
 import Types.App (GlobalState(..), defaultGlobalState, FlowBT, ScreenType(..))
@@ -109,6 +109,9 @@ data Action = NoAction
             | CurrentLocation 
             | ChooseYourRideAC ChooseYourRideController.Action
             | NotificationListener String
+            | BusRouteAction
+            | RideTypeSelected RideType Int
+            | NoStopNoRoutePopUp PopUpModalController.Action
             
 
 data ScreenOutput = NoOutput SearchLocationScreenState
@@ -129,10 +132,15 @@ data ScreenOutput = NoOutput SearchLocationScreenState
                   | SelectedQuote SearchLocationScreenState
                   | CurrentFlowStatus
                   | NotificationListenerSO String
+                  | GoToRouteBusSearch SearchLocationScreenState String
+                  | BusTicketBookingScreen SearchLocationScreenState
+                  | GO_TO_BUS_SEARCH SearchLocationScreenState
 
 eval :: Action -> SearchLocationScreenState -> Eval Action ScreenOutput SearchLocationScreenState
 
 eval CheckFlowStatusAction state = exit $ CurrentFlowStatus
+
+eval (RideTypeSelected item idx  )state = continue state {data { activeRideIndex = idx , rideType = item }}
 
 eval (MapReady _ _ _) state = do 
   if state.props.searchLocStage == PredictionSelectedFromHome then 
@@ -187,14 +195,57 @@ eval (LocationListItemAC savedLocations (LocationListItemController.FavClick ite
     else exit $ SaveFavLoc state{data{saveFavouriteCard{ address = item.description , selectedItem = item, tag = "", tagExists = false, isBtnActive = false }}} savedLocations
 
 eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state =
-  if state.props.actionType == MetroStationSelectionAction then do
+  if state.props.actionType == NoBusRouteSelectionAction then do
+      exit $ PredictionClicked item state
+ else  if state.props.actionType == MetroStationSelectionAction || state.props.actionType == BusStationSelectionAction then do
       let metroLocInfo = {stationName: item.title, stationCode : item.tag }
-      let updatedLoc = {placeId : MB.Nothing , address : item.title , lat : MB.Nothing , lon : MB.Nothing, city : AnyCity, addressComponents : dummyAddress, metroInfo : MB.Just metroLocInfo, stationCode : item.tag}
+      let updatedLoc = {placeId : MB.Nothing , address : item.title , lat : MB.Nothing , lon : MB.Nothing, city : AnyCity, addressComponents : dummyAddress, metroInfo : MB.Just metroLocInfo, busStopInfo : MB.Nothing , stationCode : item.tag}
           newState = if state.props.focussedTextField == MB.Just SearchLocPickup then 
                           state { data { srcLoc = MB.Just updatedLoc }, props { isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop }} 
                           else state { data { destLoc = MB.Just updatedLoc}, props {isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop} }
+      void $ pure $ hideKeyboardOnNavigation true
       updateAndExit newState $ PredictionClicked item newState
-    else do 
+  else if state.props.actionType == BusStopSelectionAction then do
+          let busStopInfo = {stationName : item.title , stationCode : item.tag}
+          let updatedLoc = {placeId : MB.Nothing , address : item.title , lat : MB.Nothing , lon : MB.Nothing, city : AnyCity, addressComponents : dummyAddress, metroInfo : MB.Nothing, busStopInfo : MB.Just busStopInfo , stationCode : item.tag}
+              newState = if state.props.focussedTextField == MB.Just SearchLocPickup then 
+                          state { data { srcLoc = MB.Just updatedLoc }, props { isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop }} 
+                          else state { data { destLoc = MB.Just updatedLoc}, props {isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop} }
+          void $ pure $ hideKeyboardOnNavigation true
+          updateAndExit newState $ PredictionClicked item newState
+  else if state.props.actionType == BusRouteSelectionAction then do
+          let busCodeSelected = item.tag
+              busNameSelected = item.title
+              updatedStopsSearchedList = filterStopsBySequence item.title state.data.updatedStopsSearchedList
+              newState = state {props {stopCodeSelected = busCodeSelected , stopNameSelected = busNameSelected}, data {searchRideType = BUS_SOURCE , updatedStopsSearchedList = updatedStopsSearchedList}}
+          void $ pure $ hideKeyboardOnNavigation true
+          updateAndExit newState $ PredictionClicked item newState
+  else if state.props.actionType == BusSearchSelectionAction then do
+          if DA.length state.data.routeSearchedList /= 0 && DA.length state.data.stopsSearchedList /= 0 then do
+              if state.data.rideType == ROUTES then do 
+                  let busRouteSelected = item.title
+                      newState = state {props {routeSelected = busRouteSelected , isAutoComplete = false}, data {searchRideType = BUS_ROUTE}}
+                  void $ pure $ hideKeyboardOnNavigation true
+                  updateAndExit newState $ PredictionClicked item newState
+              else do
+                let busCodeSelected = item.tag
+                    busNameSelected = item.title
+                    newState = state {props {stopCodeSelected = busCodeSelected , stopNameSelected = busNameSelected}, data {searchRideType = BUS_SOURCE}}
+                void $ pure $ hideKeyboardOnNavigation true
+                updateAndExit newState $ PredictionClicked item newState
+          else if DA.length state.data.routeSearchedList /= 0 && DA.length state.data.stopsSearchedList == 0 then do
+                let busRouteSelected = item.title
+                    _ = spy "Printing for check " busRouteSelected
+                    newState = state {props {routeSelected = busRouteSelected , isAutoComplete = false} , data {searchRideType = BUS_ROUTE}}
+                void $ pure $ hideKeyboardOnNavigation true
+                updateAndExit newState $ PredictionClicked item newState
+          else do
+                let busCodeSelected = item.tag
+                    busNameSelected = item.title
+                    newState = state {props {stopCodeSelected = busCodeSelected , stopNameSelected = busNameSelected}, data {searchRideType = BUS_SOURCE}}
+                void $ pure $ hideKeyboardOnNavigation true
+                updateAndExit newState $ PredictionClicked item newState
+  else do
       void $ pure $ hideKeyboardOnNavigation true
       MB.maybe (continue state) (\currTextField -> predictionClicked currTextField) state.props.focussedTextField
   where 
@@ -209,6 +260,7 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state =
           , city : AnyCity
           , addressComponents : LocationListItemController.dummyAddress
           , metroInfo : MB.Nothing 
+          , busStopInfo : MB.Nothing
           , stationCode : ""
           }
         newState = 
@@ -234,7 +286,9 @@ eval (InputViewAC globalProps (InputViewController.ClearTextField textField)) st
     continue state { data {locationList = fetchSortedCachedSearches state globalProps textField, updatedMetroStations = state.data.metroStations, destLoc = MB.Nothing }
                    , props {canClearText = false, isAutoComplete = false, locUnserviceable = false}}
   
-eval (InputViewAC _ (InputViewController.BackPressed)) state = handleBackPress state  
+eval (InputViewAC _ (InputViewController.BackPressed)) state = do
+  void $ pure $ hideKeyboardOnNavigation true
+  handleBackPress state
 
 eval (BackpressAction) state = handleBackPress state 
 
@@ -324,18 +378,28 @@ eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textFie
     getAddress location = MB.maybe "" (\loc -> loc.address) location
 
 eval (InputViewAC _ (InputViewController.AutoCompleteCallBack value pickUpchanged)) state = do 
-  if state.props.isAutoComplete && state.data.fromScreen /= getScreen METRO_TICKET_BOOKING_SCREEN then -- so that selecting from favourites doesn't trigger autocomplete
+  if state.props.actionType == BusSearchSelectionAction || state.props.actionType == NoBusRouteSelectionAction then 
+    exit $ GoToRouteBusSearch state value 
+  else if state.props.actionType == BusRouteSelectionAction then continue state
+  else if (state.props.isAutoComplete && state.data.fromScreen /= getScreen METRO_TICKET_BOOKING_SCREEN) then -- so that selecting from favourites doesn't trigger autocomplete
     autoCompleteAPI state value $ if pickUpchanged then SearchLocPickup else SearchLocDrop
     else continue state
 
 eval (InputViewAC _ (InputViewController.InputChanged value)) state = do 
-  if state.props.actionType == MetroStationSelectionAction && not (STR.null value) then do
+  if (state.props.actionType == MetroStationSelectionAction || state.props.actionType == BusStationSelectionAction )&& not (STR.null value) then do
     void $ pure $ spy "InputChanged" value
     let newArray = findStationWithPrefix value state.data.metroStations
         canClearText = STR.length value > 2
     continueWithCmd state{ data { updatedMetroStations = newArray},props { canClearText = canClearText, isAutoComplete = canClearText} } [ do
       void $ pure $ updateInputString value 
       pure NoAction
+    ]
+    else if (state.props.actionType == BusRouteSelectionAction || state.props.actionType == BusStopSelectionAction) then do
+       let newArray = findStopWithPrefix value state.data.stopsSearchedList
+           canClearText = STR.length value > 2 
+       continueWithCmd state {data {updatedStopsSearchedList = newArray} , props {canClearText = canClearText , isAutoComplete = canClearText}} [ do
+         void $ pure $ updateInputString value 
+         pure NoAction
     ]
     else do
       let canClearText = STR.length value > 2
@@ -353,8 +417,8 @@ eval (InputViewAC _ (InputViewController.InputChanged value)) state = do
 --                       currentLoc = MB.Just updatedLoc
 --                     , locationList = DA.sortBy (comparing (_.actualDistance)) $ updateLocListWithDistance recentSearches (MB.fromMaybe 0.0 updatedLoc.lat) (MB.fromMaybe 0.0 updatedLoc.lon) true state.appConfig.suggestedTripsAndLocationConfig.locationWithinXDist }
 eval (UpdateLocAndLatLong cachedSearches lat lng) state = do 
-  let defaultAddress = if state.props.actionType == MetroStationSelectionAction then "" else "Current Location"
-      updatedLoc = {placeId : MB.Nothing, city : AnyCity , addressComponents : LocationListItemController.dummyAddress , address : defaultAddress , lat : NUM.fromString lat , lon : NUM.fromString lng, metroInfo : MB.Nothing, stationCode : ""}
+  let defaultAddress = if (state.props.actionType == MetroStationSelectionAction || state.props.actionType == BusStationSelectionAction || state.props.actionType == BusSearchSelectionAction || state.props.actionType == BusRouteSelectionAction || state.props.actionType == BusStopSelectionAction) then "" else "Current Location"
+      updatedLoc = {placeId : MB.Nothing, city : AnyCity , addressComponents : LocationListItemController.dummyAddress , address : defaultAddress , lat : NUM.fromString lat , lon : NUM.fromString lng, metroInfo : MB.Nothing,busStopInfo : MB.Nothing ,stationCode : ""}
       shouldUpdateCurrent = MB.fromMaybe 0.0 state.data.currentLoc.lat == 0.0
       shouldUpdateSrc = MB.maybe true (\loc -> (MB.fromMaybe 0.0 loc.lat) == 0.0) (state.data.srcLoc)
   continue state{ data 
@@ -413,13 +477,17 @@ eval MetroRouteMapAction state = do
   void $ pure $ hideKeyboardOnNavigation true
   exit $ GoToMetroRouteMap state
 
+eval BusRouteAction state = continue state
+
 eval BackPressed state = do
  if state.data.fromScreen == getScreen METRO_TICKET_BOOKING_SCREEN then exit $ MetroTicketBookingScreen state 
   else continue state
 
 eval (GetQuotes (GetQuotesRes res )) state = quotesFlow res state 
   -- handle for other cases too ( other fare product types )
-
+eval (NoStopNoRoutePopUp (PopUpModalController.OnButton2Click)) state = do
+     void $ pure $ hideKeyboardOnNavigation true
+     exit $ GO_TO_BUS_SEARCH state
 eval (RateCardAC action) state =
   case action of
     RateCardController.NoAction -> continue state
@@ -504,6 +572,7 @@ handleBackPress state = do
           void $ pure $ hideKeyboardOnNavigation true
           if state.data.fromScreen == getScreen HOME_SCREEN then exit $ HomeScreen state 
           else if state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN then exit $ RideScheduledScreen state
+          else if state.data.fromScreen == getScreen BUS_TICKET_BOOKING_SCREEN then exit $ BusTicketBookingScreen state
           else exit $ RentalsScreen state 
         AllFavouritesStage -> continue state{props{searchLocStage = PredictionsStage}}
         LocateOnMapStage -> do 
@@ -516,6 +585,20 @@ handleBackPress state = do
 
 findStationWithPrefix :: String -> Array Station -> Array Station
 findStationWithPrefix prefix arr = DA.filter (\station -> containString prefix station.stationName) arr
+
+findRouteWithPrefix :: String -> Array GetBusRouteResp -> Array GetBusRouteResp
+findRouteWithPrefix prefix arr = DA.filter matchesPrefix arr
+  where
+    matchesPrefix (GetBusRouteResp route) = 
+      case route.code of
+        MB.Just codeStr -> containString prefix codeStr
+        MB.Nothing -> false
+
+findStopWithPrefix :: String -> Array GetMetroStationResp -> Array GetMetroStationResp
+findStopWithPrefix prefix arr =  DA.filter matchesPrefix arr
+  where
+    matchesPrefix (GetMetroStationResp stop) = containString prefix stop.name
+
 
 containString :: String -> String -> Boolean
 containString prefix str = contains (Pattern (STR.toLower prefix)) (STR.toLower str)
@@ -636,3 +719,12 @@ quotesFlow res state = do
                 (QuoteAPIEntity quoteEntity2) = body2.onRentalCab
             in compare quoteEntity1.estimatedFare quoteEntity2.estimatedFare
           _ , _ -> EQ
+
+filterStopsBySequence :: String -> Array GetMetroStationResp -> Array GetMetroStationResp
+filterStopsBySequence title updatedStopsSearchedList = 
+  case DA.find (\(GetMetroStationResp stop) -> stop.name == title) updatedStopsSearchedList of
+    MB.Just (GetMetroStationResp foundStop) -> 
+      let foundSequence = foundStop.sequenceNum
+      in DA.filter (\(GetMetroStationResp stop) -> stop.sequenceNum > foundSequence) updatedStopsSearchedList
+    MB.Nothing -> 
+      updatedStopsSearchedList

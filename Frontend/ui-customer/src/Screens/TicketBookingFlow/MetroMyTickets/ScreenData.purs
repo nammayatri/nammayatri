@@ -19,6 +19,7 @@ import Prelude
 import Common.Types.App as Common
 import ConfigProvider
 import Screens.Types 
+import Data.Maybe (Maybe(..))
 
 initData :: MetroMyTicketsScreenState
 initData = {
@@ -31,5 +32,6 @@ initData = {
       dummyProps : ""
     , showShimmer : true
     , entryPoint : HomeScreenToMetroMyTickets
+    , fromScreen : Nothing
     }
   }
