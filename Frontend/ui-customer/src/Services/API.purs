@@ -1889,7 +1889,8 @@ newtype GateInfoFull = GateInfoFull {
   geoJson :: Maybe String,
   id :: String,
   name :: String,
-  point :: LatLong
+  point :: LatLong,
+  gateType :: String
 }
 
 newtype HotSpotInfo = HotSpotInfo {

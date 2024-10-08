@@ -111,7 +111,7 @@ import Effect.Class (liftEffect)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
 import Screens.RideBookingFlow.HomeScreen.Config (reportIssueOptions, safetyIssueOptions)
-import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails, PermissionScreenStage(..), SuggestionsMap(..), SosBannerType(..), ReferralType(..), ReferralStage(..))
+import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails, PermissionScreenStage(..), SuggestionsMap(..), SosBannerType(..), ReferralType(..), ReferralStage(..),LocationType(..))
 import Screens.Types as ST
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import PrestoDOM.Properties (sheetState) as PP
@@ -196,8 +196,10 @@ eval2 action  =
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
-eval GoToConfirmingLocationStage state = 
-  exit $ ExitToConfirmingLocationStage state
+eval (GoToConfirmingLocationStage isSource) state = 
+  exit $ ExitToConfirmingLocationStage  state isSource
+
+
 eval UpdateNoInternet state = continue state { props { isOffline = true } }
 eval (InternetCallBackCustomer internetAvailable) state =
   if (internetAvailable == "true") then do
@@ -908,10 +910,7 @@ eval BackPressed state = do
           }
         }
     ConfirmingLocation -> do
-                      void $ pure $ performHapticFeedback unit
-                      _ <- pure $ exitLocateOnMap ""
-                      _ <- pure $ removeAllPolylines ""
-                      _ <- pure $ updateLocalStage SearchLocationModel
+                      exitToSearchLocationModel
                       continue state{props{defaultPickUpPoint = "", rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation,isSharedLocationFlow = false},data{polygonCoordinates = "", nearByPickUpPoints = []}}
     GoToTripSelect -> do
                      void $ pure $ performHapticFeedback unit
@@ -919,6 +918,9 @@ eval BackPressed state = do
                      _ <- pure $ removeAllPolylines ""
                      _ <- pure $ updateLocalStage SearchLocationModel
                      continue state{props{defaultPickUpPoint = "", rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation},data{polygonCoordinates = "", nearByPickUpPoints = [] ,fareProductType = FPT.ONE_WAY}}
+    ConfirmingDropLocation -> do
+                      exitToSearchLocationModel
+                      continue state{props{defaultPickUpPoint = "", defaultDropOfPoint = "",rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation,isSharedLocationFlow = false,rideSearchProps{sourceManuallyMoved = false,destManuallyMoved = false,sourceSelectType = ST.SEARCH}},data{polygonCoordinates = "", nearByPickUpPoints = [],dropPolygonCoordinates = "",nearByDropOfPoints = []}}
     EditPickUpLocation -> do 
                       void $ pure $ exitLocateOnMap ""
                       void $ pure $ removeAllPolylines ""
@@ -927,6 +929,8 @@ eval BackPressed state = do
                       let updatedState = state { props { defaultPickUpPoint = "", currentStage = RideAccepted, markerLabel = ""}}
                       updateAndExit updatedState $ RefreshHomeScreen updatedState
     FindingEstimate -> do
+                      void $ pure $ removeAllPolylines ""
+                      void $ pure $ exitLocateOnMap ""
                       void $ pure $ performHapticFeedback unit
                       _ <- pure $ updateLocalStage SearchLocationModel
                       let newState = state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}}
@@ -1015,11 +1019,17 @@ eval BackPressed state = do
                           else do
                               pure $ terminateApp state.props.currentStage true
                               continue state{props{showShimmer = false}}
+    where 
+    exitToSearchLocationModel = do 
+      void $ pure $ performHapticFeedback unit
+      void $ pure $ removeAllPolylines ""
+      void $ pure $ exitLocateOnMap ""
+      void $ pure $ updateLocalStage SearchLocationModel
 
-eval GoBackToSearchLocationModal state = do
+eval (GoBackToSearchLocationModal isSource) state = do
   void $ pure $ updateLocalStage SearchLocationModel
   void $ pure $ exitLocateOnMap ""
-  continue state { props { rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation, isSource = Just true, isSrcServiceable = true, isRideServiceable = true } }
+  continue state { props { rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation, isSource = Just isSource, isSrcServiceable = true, isRideServiceable = true } }
   -- let newState = state { props { rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation, isSource = Just true, isSrcServiceable = true, isRideServiceable = true } }
   -- updateAndExit newState $ Go_To_Search_Location_Flow newState true
 eval HandleCallback state = do
@@ -1110,29 +1120,61 @@ eval (LocateOnMapCallBack key lat lon) state = do
               Just spot -> exit $ UpdateLocationName updatedState{props{defaultPickUpPoint = key, markerLabel = "", rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved, destManuallyMoved = destManuallyMoved}, locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot.isSpecialPickUp }, hotSpot{ centroidPoint = Nothing }}} spot.lat spot.lng
               Nothing -> continue updatedState
 
-eval (UpdatePickupLocation key lat lon) state = do
+eval (UpdatePickupLocation key lat lon isSource) state = do
   let latitude = fromMaybe 0.0 (NUM.fromString lat)
       longitude = fromMaybe 0.0 (NUM.fromString lon)
-  if os == "IOS" && not state.props.locateOnMapProps.cameraAnimatedToSource && (getDistanceBwCordinates latitude longitude state.props.sourceLat state.props.sourceLong) > 5.0 then do
+      currentLat = case isSource of
+                    Source -> state.props.sourceLat
+                    Destination -> state.props.destinationLat
+      currentLong = case isSource of
+                    Source -> state.props.sourceLong
+                    Destination -> state.props.destinationLong
+  if os == "IOS" && not state.props.locateOnMapProps.cameraAnimatedToSource && (getDistanceBwCordinates latitude longitude currentLat currentLong) > 5.0 then do
     continueWithCmd state{ props{ locateOnMapProps{ cameraAnimatedToSource = true } } } [do
-      void $ animateCamera state.props.sourceLat state.props.sourceLong 25.0 "NO_ZOOM"
+      void $ animateCamera currentLat currentLong 25.0 "NO_ZOOM"
       pure NoAction
     ]
   else do
     let updatedState = state{ props{ locateOnMapProps{ cameraAnimatedToSource = true } } }
-        sourceManuallyMoved = true
+        destManuallyMoved = case isSource of
+                              Source -> state.props.rideSearchProps.destManuallyMoved
+                              Destination -> true
+        sourceManuallyMoved = case isSource of
+                              Source -> true
+                              Destination -> state.props.rideSearchProps.sourceManuallyMoved
+        dropOrPickupPoints = case isSource of
+                              Source -> updatedState.data.nearByPickUpPoints
+                              Destination -> updatedState.data.nearByDropOfPoints
     case (STR.replace (STR.Pattern "LocationIsFar") (STR.Replacement "") key) of
       "LatLon" -> do
-        let selectedSpot = head (filter (\spots -> (getDistanceBwCordinates (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon)) spots.lat spots.lng) * 1000.0 < (toNumber JB.locateOnMapConfig.thresholdDistToSpot) ) updatedState.data.nearByPickUpPoints)
-        exit $ UpdatePickupName updatedState{props{defaultPickUpPoint = "", markerLabel = if STR.contains (STR.Pattern "LocationIsFar") key then getString LOCATION_IS_TOO_FAR else "", rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}, hotSpot{ selectedSpot = selectedSpot }, locateOnMapProps{ isSpecialPickUpGate = false }}} latitude longitude
+        let selectedSpot = head (filter (\spots -> (getDistanceBwCordinates (fromMaybe 0.0 (NUM.fromString lat)) (fromMaybe 0.0 (NUM.fromString lon)) spots.lat spots.lng) * 1000.0 < (toNumber JB.locateOnMapConfig.thresholdDistToSpot) ) dropOrPickupPoints)
+        exit $ UpdatePickupName updatedState{props{
+                                            defaultDropOfPoint = case isSource of
+                                                                  Source -> state.props.defaultDropOfPoint
+                                                                  Destination -> ""
+                                          , defaultPickUpPoint = case isSource of
+                                                                  Source -> ""
+                                                                  Destination -> state.props.defaultPickUpPoint
+                                          , markerLabel = if STR.contains (STR.Pattern "LocationIsFar") key then getString LOCATION_IS_TOO_FAR else ""
+                                          , rideSearchProps{ destManuallyMoved = destManuallyMoved , sourceManuallyMoved = sourceManuallyMoved}, hotSpot{ selectedSpot = selectedSpot }
+                                          , locateOnMapProps{ isSpecialPickUpGate = false }}} latitude longitude isSource
       _ -> do
         let key' = STR.replace (STR.Pattern "LocationIsFar") (STR.Replacement "") key
-            focusedIndex = findIndex (\item -> item.place == key') updatedState.data.nearByPickUpPoints
-            spot = (filter(\item -> item.place == key' ) updatedState.data.nearByPickUpPoints) !! 0
+            focusedIndex = findIndex (\item -> item.place == key') dropOrPickupPoints
+            spot = (filter(\item -> item.place == key' ) dropOrPickupPoints) !! 0
         case focusedIndex, spot of
           Just index, Just spot' -> do
             _ <- pure $ scrollViewFocus (getNewIDWithTag "scrollViewParent") index
-            exit $ UpdatePickupName updatedState{props{defaultPickUpPoint = key', markerLabel = if STR.contains (STR.Pattern "LocationIsFar") key then getString LOCATION_IS_TOO_FAR else key, rideSearchProps{ sourceManuallyMoved = sourceManuallyMoved}, locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot'.isSpecialPickUp }, hotSpot{ centroidPoint = Nothing }}} spot'.lat spot'.lng
+            exit $ UpdatePickupName updatedState{props{defaultDropOfPoint = case isSource of
+                                                                  Source -> state.props.defaultDropOfPoint
+                                                                  Destination -> key'
+                                                    , defaultPickUpPoint = case isSource of
+                                                                            Source -> key'
+                                                                            Destination -> state.props.defaultPickUpPoint      
+                                                    , markerLabel = if STR.contains (STR.Pattern "LocationIsFar") key then getString LOCATION_IS_TOO_FAR else key
+                                                    , rideSearchProps{ destManuallyMoved = destManuallyMoved , sourceManuallyMoved = sourceManuallyMoved}
+                                                    , locateOnMapProps{ isSpecialPickUpGate = fromMaybe false spot'.isSpecialPickUp }
+                                                    , hotSpot{ centroidPoint = Nothing }}} spot'.lat spot'.lng isSource
           _, _ -> continue updatedState
 
 
@@ -1380,6 +1422,12 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState 
                         exit $ SelectEstimateAndQuotes updatedState
       RevisedEstimate -> do
         exit $ ConfirmFare state
+      ConfirmingDropLocation -> do 
+        void $ pure $ performHapticFeedback unit
+        void $ pure $ exitLocateOnMap ""
+        void $ pure $ updateLocalStage GoToConfirmLocation
+        let updatedState = state{props{markerLabel = "",defaultDropOfPoint = ""},data{nearByDropOfPoints =[]}}
+        updateAndExit updatedState $ ExitToGoToConfirmLocationStage updatedState
       _            -> continue state
 
 eval WhereToClick state = do
@@ -1650,7 +1698,11 @@ eval (TagClick savedAddressType arrItem) state = tagClickEvent savedAddressType 
 eval (SearchLocationModelActionController (SearchLocationModelController.LocationListItemActionController (LocationListItemController.OnClick item))) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_location_list_item"
   let condition = state.props.isSource == Just true && any (_ == item.locationItemType) [Just RECENTS, Just SUGGESTED_DESTINATIONS] 
-  locationSelected item {tag = if condition then "" else item.tag, showDistance = Just false} true state{ props { rideSearchProps{ sourceSelectType = if condition then ST.SUGGESTION else state.props.rideSearchProps.sourceSelectType } }, data { nearByDrivers = Nothing } } false
+      confirmDestination = state.props.isSource == Just false && state.props.rideSearchProps.sourceSelectType == ST.MAP
+  locationSelected item {tag = if condition then "" else item.tag, showDistance = Just false} true state{ props { rideSearchProps{ sourceSelectType = if condition then ST.SUGGESTION 
+                                                                                                                                                      else if confirmDestination then ST.SEARCH 
+                                                                                                                                                      else state.props.rideSearchProps.sourceSelectType } 
+                                                                                                                }, data { nearByDrivers = Nothing } } false
 
 eval (ExitLocationSelected item addToRecents)state = exit $ LocationSelected item  addToRecents state
 

@@ -235,9 +235,9 @@ homeScreen = do
     ChangeVehicleVarient updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ CHANGE_VEHICLE_VARIANT updatedState)
-    ExitToConfirmingLocationStage updatedState -> do
+    ExitToConfirmingLocationStage updatedState isSource-> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ GOTO_CONFIRMING_LOCATION_STAGE updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GOTO_CONFIRMING_LOCATION_STAGE updatedState isSource)
     UpdateReferralCode updatedState code -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ UPDATE_REFERRAL_CODE code)
@@ -267,9 +267,12 @@ homeScreen = do
     SelectEstimateAndQuotes updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ SELECT_ESTIMATE_AND_QUOTES updatedState)
-    UpdatePickupName updatedState lat lng -> do
+    UpdatePickupName updatedState lat lng isSource -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-      App.BackT $ App.BackPoint <$> pure (UPDATE_PICKUP_NAME updatedState lat lng)
+      App.BackT $ App.BackPoint <$> pure (UPDATE_PICKUP_NAME updatedState lat lng isSource)
+    ExitToGoToConfirmLocationStage updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_CONFIRM_PICKUP updatedState)     
     GoToTripSelectionScreen state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> state) 
       App.BackT $ App.NoBack <$> (pure $ GO_TO_TRIP_TYPE_SELECTION state)
