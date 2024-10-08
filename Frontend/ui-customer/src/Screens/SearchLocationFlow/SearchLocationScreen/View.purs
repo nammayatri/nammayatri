@@ -75,7 +75,7 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants (getDelayForAutoComplete)
-import Screens.SearchLocationScreen.ComponentConfig (locationTagBarConfig, separatorConfig, primaryButtonConfig, mapInputViewConfig, menuButtonConfig, confirmLocBtnConfig, locUnserviceablePopUpConfig, primaryButtonRequestRideConfig, rentalRateCardConfig, chooseYourRideConfig)
+import Screens.SearchLocationScreen.ComponentConfig (locationTagBarConfig, separatorConfig, primaryButtonConfig, mapInputViewConfig, menuButtonConfig, confirmLocBtnConfig, locUnserviceablePopUpConfig, primaryButtonRequestRideConfig, rentalRateCardConfig, chooseYourRideConfig,noStopRouteConfig)
 import Screens.SearchLocationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps, Station, ZoneType(..),RideType(..))
 import Services.API(GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..),GetBusRouteResp(..),GetMetroStationResp(..))
@@ -128,7 +128,7 @@ view globalProps push state =
     , width MATCH_PARENT
     , padding $ PaddingBottom EHC.safeMarginBottom
     , background Color.white900
-    ][ relativeLayout
+    ]$[ relativeLayout
           [ height MATCH_PARENT
           , width MATCH_PARENT
           , onBackPressed push $ const BackpressAction
@@ -149,7 +149,7 @@ view globalProps push state =
                 ][  RateCard.view (push <<< RateCardAC) (rentalRateCardConfig state)] 
                 else emptyTextView
           ]
-      ]
+      ] <> if (state.props.actionType == BusRouteSelectionAction) && ( DA.null state.data.routeSearchedList && DA.null state.data.stopsSearchedList) then [PopUpModal.view (push <<< NoStopNoRoutePopUp) (noStopRouteConfig state)] else []
   where
 
     markerView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w

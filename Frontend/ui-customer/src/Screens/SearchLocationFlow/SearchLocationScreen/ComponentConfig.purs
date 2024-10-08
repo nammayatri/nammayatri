@@ -503,3 +503,41 @@ chooseYourRideConfig state =
     formatDate formatSTR = 
       let startTime = if state.data.rideDetails.rideScheduledTimeUTC == "" then EHC.getCurrentUTC "" else state.data.rideDetails.rideScheduledTimeUTC
       in EHC.convertUTCtoISC startTime formatSTR
+
+noStopRouteConfig :: ST.SearchLocationScreenState -> PopUpModal.Config
+noStopRouteConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER,
+    margin = (MarginHorizontal 16 16),
+    buttonLayoutMargin = (Margin 0 16 16 0),
+    editTextVisibility = GONE,
+    dismissPopupConfig {
+      visibility = GONE
+      },
+    primaryText {
+      text = "Oops! No stops found nearby.", 
+      gravity = CENTER,
+      margin = MarginTop 16
+      },
+    secondaryText { 
+      text = "Try searching a different location",
+      margin = MarginTop 4
+      },
+    option1 {
+      visibility = false
+      },
+    option2 { 
+      text = "Search Different Location",
+      padding = (Padding 16 0 16 0)
+    },
+    cornerRadius = (PTD.Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_noroute_nobus"
+      , visibility = VISIBLE
+      , margin = Margin 16 16 16 24
+      , width = MATCH_PARENT
+      , height = V 200
+    }
+  }
+  in popUpConfig'

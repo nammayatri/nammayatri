@@ -109,9 +109,8 @@ eval (ChangeTicketTab ticketType cityMetroConfig) state = do
     continue state { data {ticketType = ticketType, ticketCount = updatedTicketCount}, props {currentStage  = ST.MetroTicketSelection}}
 
 eval (SelectLocation loc) state = 
-  if state.props.isEmptyRoute == "" && state.props.ticketServiceType == BUS
+  if state.props.ticketServiceType == BUS
     then do
-      void $ pure $ toast $ "Kindly select route number first"
       continue state
     else updateAndExit state { props { currentStage = ST.MetroTicketSelection }} $ SelectSrcDest loc state { props { currentStage = ST.MetroTicketSelection }}
 

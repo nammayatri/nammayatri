@@ -40,6 +40,7 @@ import MerchantConfig.Types (MetroConfig)
 import Storage
 import Services.API (MetroBookingConfigRes(..),TicketServiceType(..))
 import Mobility.Prelude (getNumberWithSuffix)
+import Debug
 
 metroTicketBookingHeaderConfig :: ST.MetroTicketBookingScreenState -> GenericHeader.Config
 metroTicketBookingHeaderConfig state = let
@@ -73,7 +74,7 @@ updateButtonConfig state = let
     price = state.data.ticketPrice * state.data.ticketCount
     eventDiscountAmount = fromMaybe 0 state.data.eventDiscountAmount
     (MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
-    priceWithoutDiscount = ((metroBookingConfigResp.discount * price) / 100) + price
+    priceWithoutDiscount = spy "priceWithoutDiscount" (((metroBookingConfigResp.discount * price) / 100) + price)
     discountText = if price /= priceWithoutDiscount then ("&nbsp;&nbsp; " <> " ₹" <> "<strike> " <> "<span style='color:#7F6A34;'>"<> (show priceWithoutDiscount)  <> " </span>" <> " </strike>" <> " ") else ""
     cashbackText = if eventDiscountAmount > 0 then (" (" <> "₹" <> show eventDiscountAmount <> " cashback)") else ""
     updateButtonConfig' = config 

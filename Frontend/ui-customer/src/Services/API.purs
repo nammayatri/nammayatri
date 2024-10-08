@@ -492,6 +492,7 @@ newtype LatLong = LatLong {
   lon :: Number
 }
 
+instance eqLatLong :: Eq LatLong where eq = genericEq
 newtype SearchRes = SearchRes {
   searchId :: String,
   searchExpiry :: String,
@@ -3269,6 +3270,7 @@ newtype GetBusRouteResp = GetBusRouteResp {
 derive instance genericGetBusRoutesResponse :: Generic GetBusRoutesResponse _
 derive instance newtypeGetBusRoutesResponse :: Newtype GetBusRoutesResponse _
 instance showGetBusRoutesResponse :: Show GetBusRoutesResponse where show = genericShow
+instance eqGetBusRouteResp :: Eq GetBusRouteResp where eq = genericEq
 instance decodeGetBusRoutesResponse :: Decode GetBusRoutesResponse where decode = defaultDecode
 
 instance makeGetBusRoutesReq :: RestEndpoint GetBusRoutesReq  where

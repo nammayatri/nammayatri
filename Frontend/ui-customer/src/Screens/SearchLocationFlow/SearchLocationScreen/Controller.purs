@@ -111,6 +111,7 @@ data Action = NoAction
             | NotificationListener String
             | BusRouteAction
             | RideTypeSelected RideType Int
+            | NoStopNoRoutePopUp PopUpModalController.Action
             
 
 data ScreenOutput = NoOutput SearchLocationScreenState
@@ -133,6 +134,7 @@ data ScreenOutput = NoOutput SearchLocationScreenState
                   | NotificationListenerSO String
                   | GoToRouteBusSearch SearchLocationScreenState String
                   | BusTicketBookingScreen SearchLocationScreenState
+                  | GO_TO_BUS_SEARCH SearchLocationScreenState
 
 eval :: Action -> SearchLocationScreenState -> Eval Action ScreenOutput SearchLocationScreenState
 
@@ -214,7 +216,8 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state =
   else if state.props.actionType == BusRouteSelectionAction then do
           let busCodeSelected = item.tag
               busNameSelected = item.title
-              newState = state {props {stopCodeSelected = busCodeSelected , stopNameSelected = busNameSelected}, data {searchRideType = BUS_SOURCE}}
+              updatedStopsSearchedList = filterStopsBySequence item.title state.data.updatedStopsSearchedList
+              newState = state {props {stopCodeSelected = busCodeSelected , stopNameSelected = busNameSelected}, data {searchRideType = BUS_SOURCE , updatedStopsSearchedList = updatedStopsSearchedList}}
           void $ pure $ hideKeyboardOnNavigation true
           updateAndExit newState $ PredictionClicked item newState
   else if state.props.actionType == BusSearchSelectionAction then do
@@ -482,7 +485,9 @@ eval BackPressed state = do
 
 eval (GetQuotes (GetQuotesRes res )) state = quotesFlow res state 
   -- handle for other cases too ( other fare product types )
-
+eval (NoStopNoRoutePopUp (PopUpModalController.OnButton2Click)) state = do
+     void $ pure $ hideKeyboardOnNavigation true
+     exit $ GO_TO_BUS_SEARCH state
 eval (RateCardAC action) state =
   case action of
     RateCardController.NoAction -> continue state
@@ -714,3 +719,12 @@ quotesFlow res state = do
                 (QuoteAPIEntity quoteEntity2) = body2.onRentalCab
             in compare quoteEntity1.estimatedFare quoteEntity2.estimatedFare
           _ , _ -> EQ
+
+filterStopsBySequence :: String -> Array GetMetroStationResp -> Array GetMetroStationResp
+filterStopsBySequence title updatedStopsSearchedList = 
+  case DA.find (\(GetMetroStationResp stop) -> stop.name == title) updatedStopsSearchedList of
+    MB.Just (GetMetroStationResp foundStop) -> 
+      let foundSequence = foundStop.sequenceNum
+      in DA.filter (\(GetMetroStationResp stop) -> stop.sequenceNum > foundSequence) updatedStopsSearchedList
+    MB.Nothing -> 
+      updatedStopsSearchedList
