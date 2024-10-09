@@ -22,6 +22,7 @@ import Control.Lens
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Data.Time
+import qualified Domain.Types.RefereeLink as DRL
 import EulerHS.Prelude hiding (id, view, (^?))
 import Kernel.External.Maps as Maps
 import Kernel.Types.Common
@@ -159,6 +160,11 @@ buildMultipleRoutesTag :: Spec.SearchReqMessage -> Maybe [Maps.RouteInfo]
 buildMultipleRoutesTag req = do
   let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
   decode . encodeUtf8 =<< Utils.getTagV2 Tag.ROUTE_INFO Tag.MULTIPLE_ROUTES tagGroups
+
+getDriverIdentifier :: Spec.SearchReqMessage -> Maybe DRL.DriverIdentifier
+getDriverIdentifier req = do
+  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentTags)
+  decode . encodeUtf8 =<< Utils.getTagV2 Tag.DRIVER_IDENTIFIER Tag.DRIVER_IDENTITY tagGroups
 
 firstStop :: [Spec.Stop] -> Maybe Spec.Stop
 firstStop = find (\stop -> Spec.stopType stop == Just (show Enums.START))

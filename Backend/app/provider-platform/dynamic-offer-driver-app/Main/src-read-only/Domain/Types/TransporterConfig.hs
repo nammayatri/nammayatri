@@ -87,6 +87,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     driverAutoPayNotificationTime :: Kernel.Prelude.NominalDiffTime,
     driverDistanceToPickupThresholdOnCancel :: Kernel.Types.Common.Meters,
     driverDistanceTravelledOnPickupThresholdOnCancel :: Kernel.Types.Common.Meters,
+    driverDrivenSearchReqExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.NominalDiffTime,
     driverFeeCalculationTime :: Kernel.Prelude.Maybe Kernel.Prelude.NominalDiffTime,
     driverFeeCalculatorBatchGap :: Kernel.Prelude.Maybe Kernel.Prelude.NominalDiffTime,
     driverFeeCalculatorBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

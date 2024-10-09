@@ -124,3 +124,10 @@ ALTER TABLE atlas_app.search_request ADD COLUMN agency text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.search_request ADD COLUMN pricing_id text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN driver_identifier_value text ;
+ALTER TABLE atlas_app.search_request ADD COLUMN driver_identifier_type text ;

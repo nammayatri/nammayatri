@@ -83,9 +83,9 @@ import Tools.Maps as Maps
 import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
 
+-- NOTE: Please don't fetch driverPoolConfig from DB, as its been mutated-locally for some cases.
 isBatchNumExceedLimit ::
-  ( EsqDBFlow m r,
-    CacheFlow m r
+  ( CacheFlow m r
   ) =>
   DriverPoolConfig ->
   Id DST.SearchTry ->
