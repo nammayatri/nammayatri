@@ -1508,3 +1508,4 @@ getEN stringKey =
         ILLEGAL_ITEMS_PROHIBITED -> "Illegal items are prohibited"
         PICKUP_INSTRUCTION -> "Pickup Instruction"
         DISTANCE_FARE -> "Distance Fare"
+        EXPLORE -> "Explore"

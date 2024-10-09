@@ -1520,3 +1520,4 @@ getTE stringKey =
     ILLEGAL_ITEMS_PROHIBITED -> "అన్యాయ వస్తువులు నిషేధించబడ్డాయి"
     PICKUP_INSTRUCTION -> "పికప్ సూచన"
     DISTANCE_FARE -> "దూరం పెట్టుబడి"
+    EXPLORE -> "పరిశీలించండి"

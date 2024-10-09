@@ -1507,3 +1507,4 @@ getHI stringKey =
         ILLEGAL_ITEMS_PROHIBITED -> "अवैध सामान निषिद्ध है"
         PICKUP_INSTRUCTION -> "पिकअप निर्देश"
         DISTANCE_FARE -> "दूरी भाड़ा"
+        EXPLORE -> "अन्वेषण करें"

@@ -1524,3 +1524,4 @@ getTA stringKey =
     ILLEGAL_ITEMS_PROHIBITED -> "சட்டவிரோதமான பொருட்கள் தடைசெய்யப்பட்டுள்ளன"
     PICKUP_INSTRUCTION -> "பிக் அப் வழிமுறைகள்"
     DISTANCE_FARE -> "தூக்கி வாடகை"
+    EXPLORE -> "ஆராயுங்கள்"

@@ -1510,3 +1510,4 @@ getFR stringKey =
         ILLEGAL_ITEMS_PROHIBITED -> "Les articles illégaux sont interdits"
         PICKUP_INSTRUCTION -> "Instruction de ramassage"
         DISTANCE_FARE -> "Tarif de distance"
+        EXPLORE -> "Explore"

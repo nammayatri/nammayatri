@@ -1506,3 +1506,4 @@ getML stringKey =
         ILLEGAL_ITEMS_PROHIBITED -> "നിയമവിരുദ്ധ വസ്തുക്കൾ നിരോധിച്ചിരിക്കുന്നു"
         PICKUP_INSTRUCTION -> "പിക്കപ്പ് നിർദ്ദേശം"
         DISTANCE_FARE -> "അകലം കൂലി"
+        EXPLORE -> "പര്യവേക്ഷണം ചെയ്യുക"
