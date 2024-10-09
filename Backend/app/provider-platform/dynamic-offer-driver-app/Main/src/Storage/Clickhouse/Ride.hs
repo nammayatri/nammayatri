@@ -56,7 +56,7 @@ rideTTable =
 
 type Ride = RideT Identity
 
-$(TH.mkClickhouseInstances ''RideT 'SELECT_FINAL_MODIFIER)
+$(TH.mkClickhouseInstances ''RideT)
 
 data RideStats = RideStats
   { totalEarnings :: Int,
