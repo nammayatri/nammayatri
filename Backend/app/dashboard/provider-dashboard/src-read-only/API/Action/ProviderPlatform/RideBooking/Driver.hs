@@ -23,7 +23,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.ApiV2
+import Tools.Auth.Api
 
 type API = ("driver" :> (GetDriverPaymentDue :<|> PostDriverEnable :<|> PostDriverCollectCash :<|> PostDriverV2CollectCash :<|> PostDriverExemptCash :<|> PostDriverV2ExemptCash :<|> GetDriverInfo :<|> PostDriverUnlinkVehicle :<|> PostDriverEndRCAssociation :<|> PostDriverAddVehicle :<|> PostDriverSetRCStatus))
 
@@ -31,78 +31,89 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getDriverPaymentDue merchantId city :<|> postDriverEnable merchantId city :<|> postDriverCollectCash merchantId city :<|> postDriverV2CollectCash merchantId city :<|> postDriverExemptCash merchantId city :<|> postDriverV2ExemptCash merchantId city :<|> getDriverInfo merchantId city :<|> postDriverUnlinkVehicle merchantId city :<|> postDriverEndRCAssociation merchantId city :<|> postDriverAddVehicle merchantId city :<|> postDriverSetRCStatus merchantId city
 
 type GetDriverPaymentDue =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP
+      'DSL
       ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.GET_DRIVER_PAYMENT_DUE)
       :> API.Types.ProviderPlatform.RideBooking.Driver.GetDriverPaymentDue
   )
 
 type PostDriverEnable =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP
+      'DSL
       ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.POST_DRIVER_ENABLE)
       :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverEnable
   )
 
 type PostDriverCollectCash =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP
+      'DSL
       ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.POST_DRIVER_COLLECT_CASH)
       :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverCollectCash
   )
 
 type PostDriverV2CollectCash =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP
+      'DSL
       ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.POST_DRIVER_V2_COLLECT_CASH)
       :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverV2CollectCash
   )
 
 type PostDriverExemptCash =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP
+      'DSL
       ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.POST_DRIVER_EXEMPT_CASH)
       :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverExemptCash
   )
 
 type PostDriverV2ExemptCash =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP
+      'DSL
       ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.POST_DRIVER_V2_EXEMPT_CASH)
       :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverV2ExemptCash
   )
 
 type GetDriverInfo =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP
+      'DSL
       ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.GET_DRIVER_INFO)
       :> API.Types.ProviderPlatform.RideBooking.Driver.GetDriverInfo
   )
 
 type PostDriverUnlinkVehicle =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP
+      'DSL
       ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.POST_DRIVER_UNLINK_VEHICLE)
       :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverUnlinkVehicle
   )
 
 type PostDriverEndRCAssociation =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP
+      'DSL
       ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.POST_DRIVER_END_RC_ASSOCIATION)
       :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverEndRCAssociation
   )
 
 type PostDriverAddVehicle =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP
+      'DSL
       ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.POST_DRIVER_ADD_VEHICLE)
       :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverAddVehicle
   )
 
 type PostDriverSetRCStatus =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP
+      'DSL
       ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.POST_DRIVER_SET_RC_STATUS)
       :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverSetRCStatus
   )

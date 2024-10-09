@@ -22,7 +22,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.ApiV2
+import Tools.Auth.Api
 
 type API = ("driver" :> (PostDriverFleetAddVehicle :<|> PostDriverFleetAddRCWithoutDriver :<|> GetDriverFleetGetAllVehicle :<|> GetDriverFleetGetAllDriver :<|> PostDriverFleetUnlink :<|> PostDriverFleetRemoveVehicle :<|> PostDriverFleetRemoveDriver :<|> GetDriverFleetTotalEarning :<|> GetDriverFleetVehicleEarning :<|> GetDriverFleetDriverEarning :<|> GetDriverFleetDriverVehicleAssociation :<|> GetDriverFleetDriverAssociation :<|> GetDriverFleetVehicleAssociation :<|> PostDriverFleetVehicleDriverRcStatus :<|> PostDriverUpdateFleetOwnerInfo :<|> GetDriverFleetOwnerInfo :<|> PostDriverFleetSendJoiningOtp :<|> PostDriverFleetVerifyJoiningOtp :<|> PostDriverFleetLinkRCWithDriver))
 
@@ -30,134 +30,153 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = postDriverFleetAddVehicle merchantId city :<|> postDriverFleetAddRCWithoutDriver merchantId city :<|> getDriverFleetGetAllVehicle merchantId city :<|> getDriverFleetGetAllDriver merchantId city :<|> postDriverFleetUnlink merchantId city :<|> postDriverFleetRemoveVehicle merchantId city :<|> postDriverFleetRemoveDriver merchantId city :<|> getDriverFleetTotalEarning merchantId city :<|> getDriverFleetVehicleEarning merchantId city :<|> getDriverFleetDriverEarning merchantId city :<|> getDriverFleetDriverVehicleAssociation merchantId city :<|> getDriverFleetDriverAssociation merchantId city :<|> getDriverFleetVehicleAssociation merchantId city :<|> postDriverFleetVehicleDriverRcStatus merchantId city :<|> postDriverUpdateFleetOwnerInfo merchantId city :<|> getDriverFleetOwnerInfo merchantId city :<|> postDriverFleetSendJoiningOtp merchantId city :<|> postDriverFleetVerifyJoiningOtp merchantId city :<|> postDriverFleetLinkRCWithDriver merchantId city
 
 type PostDriverFleetAddVehicle =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.DRIVER / 'API.Types.ProviderPlatform.Fleet.Driver.POST_DRIVER_FLEET_ADD_VEHICLE)
       :> API.Types.ProviderPlatform.Fleet.Driver.PostDriverFleetAddVehicle
   )
 
 type PostDriverFleetAddRCWithoutDriver =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.DRIVER / 'API.Types.ProviderPlatform.Fleet.Driver.POST_DRIVER_FLEET_ADD_RC_WITHOUT_DRIVER)
       :> API.Types.ProviderPlatform.Fleet.Driver.PostDriverFleetAddRCWithoutDriver
   )
 
 type GetDriverFleetGetAllVehicle =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.DRIVER / 'API.Types.ProviderPlatform.Fleet.Driver.GET_DRIVER_FLEET_GET_ALL_VEHICLE)
       :> API.Types.ProviderPlatform.Fleet.Driver.GetDriverFleetGetAllVehicle
   )
 
 type GetDriverFleetGetAllDriver =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.DRIVER / 'API.Types.ProviderPlatform.Fleet.Driver.GET_DRIVER_FLEET_GET_ALL_DRIVER)
       :> API.Types.ProviderPlatform.Fleet.Driver.GetDriverFleetGetAllDriver
   )
 
 type PostDriverFleetUnlink =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.DRIVER / 'API.Types.ProviderPlatform.Fleet.Driver.POST_DRIVER_FLEET_UNLINK)
       :> API.Types.ProviderPlatform.Fleet.Driver.PostDriverFleetUnlink
   )
 
 type PostDriverFleetRemoveVehicle =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.DRIVER / 'API.Types.ProviderPlatform.Fleet.Driver.POST_DRIVER_FLEET_REMOVE_VEHICLE)
       :> API.Types.ProviderPlatform.Fleet.Driver.PostDriverFleetRemoveVehicle
   )
 
 type PostDriverFleetRemoveDriver =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.DRIVER / 'API.Types.ProviderPlatform.Fleet.Driver.POST_DRIVER_FLEET_REMOVE_DRIVER)
       :> API.Types.ProviderPlatform.Fleet.Driver.PostDriverFleetRemoveDriver
   )
 
 type GetDriverFleetTotalEarning =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.DRIVER / 'API.Types.ProviderPlatform.Fleet.Driver.GET_DRIVER_FLEET_TOTAL_EARNING)
       :> API.Types.ProviderPlatform.Fleet.Driver.GetDriverFleetTotalEarning
   )
 
 type GetDriverFleetVehicleEarning =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.DRIVER / 'API.Types.ProviderPlatform.Fleet.Driver.GET_DRIVER_FLEET_VEHICLE_EARNING)
       :> API.Types.ProviderPlatform.Fleet.Driver.GetDriverFleetVehicleEarning
   )
 
 type GetDriverFleetDriverEarning =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.DRIVER / 'API.Types.ProviderPlatform.Fleet.Driver.GET_DRIVER_FLEET_DRIVER_EARNING)
       :> API.Types.ProviderPlatform.Fleet.Driver.GetDriverFleetDriverEarning
   )
 
 type GetDriverFleetDriverVehicleAssociation =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.DRIVER / 'API.Types.ProviderPlatform.Fleet.Driver.GET_DRIVER_FLEET_DRIVER_VEHICLE_ASSOCIATION)
       :> API.Types.ProviderPlatform.Fleet.Driver.GetDriverFleetDriverVehicleAssociation
   )
 
 type GetDriverFleetDriverAssociation =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.DRIVER / 'API.Types.ProviderPlatform.Fleet.Driver.GET_DRIVER_FLEET_DRIVER_ASSOCIATION)
       :> API.Types.ProviderPlatform.Fleet.Driver.GetDriverFleetDriverAssociation
   )
 
 type GetDriverFleetVehicleAssociation =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.DRIVER / 'API.Types.ProviderPlatform.Fleet.Driver.GET_DRIVER_FLEET_VEHICLE_ASSOCIATION)
       :> API.Types.ProviderPlatform.Fleet.Driver.GetDriverFleetVehicleAssociation
   )
 
 type PostDriverFleetVehicleDriverRcStatus =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.DRIVER / 'API.Types.ProviderPlatform.Fleet.Driver.POST_DRIVER_FLEET_VEHICLE_DRIVER_RC_STATUS)
       :> API.Types.ProviderPlatform.Fleet.Driver.PostDriverFleetVehicleDriverRcStatus
   )
 
 type PostDriverUpdateFleetOwnerInfo =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.DRIVER / 'API.Types.ProviderPlatform.Fleet.Driver.POST_DRIVER_UPDATE_FLEET_OWNER_INFO)
       :> API.Types.ProviderPlatform.Fleet.Driver.PostDriverUpdateFleetOwnerInfo
   )
 
 type GetDriverFleetOwnerInfo =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.DRIVER / 'API.Types.ProviderPlatform.Fleet.Driver.GET_DRIVER_FLEET_OWNER_INFO)
       :> API.Types.ProviderPlatform.Fleet.Driver.GetDriverFleetOwnerInfo
   )
 
 type PostDriverFleetSendJoiningOtp =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.DRIVER / 'API.Types.ProviderPlatform.Fleet.Driver.POST_DRIVER_FLEET_SEND_JOINING_OTP)
       :> API.Types.ProviderPlatform.Fleet.Driver.PostDriverFleetSendJoiningOtp
   )
 
 type PostDriverFleetVerifyJoiningOtp =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.DRIVER / 'API.Types.ProviderPlatform.Fleet.Driver.POST_DRIVER_FLEET_VERIFY_JOINING_OTP)
       :> API.Types.ProviderPlatform.Fleet.Driver.PostDriverFleetVerifyJoiningOtp
   )
 
 type PostDriverFleetLinkRCWithDriver =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.DRIVER / 'API.Types.ProviderPlatform.Fleet.Driver.POST_DRIVER_FLEET_LINK_RC_WITH_DRIVER)
       :> API.Types.ProviderPlatform.Fleet.Driver.PostDriverFleetLinkRCWithDriver
   )

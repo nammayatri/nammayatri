@@ -61,7 +61,6 @@ runService configModifier = do
   where
     context =
       Auth.verifyApiAction @(FlowR AppEnv)
-        :. Auth.verifyApiV2Action @(FlowR AppEnv)
         :. Auth.verifyDashboardAction @(FlowR AppEnv)
         :. EmptyContext
 

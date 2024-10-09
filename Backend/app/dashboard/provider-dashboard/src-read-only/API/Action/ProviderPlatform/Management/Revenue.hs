@@ -19,7 +19,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.ApiV2
+import Tools.Auth.Api
 
 type API = ("revenue" :> (GetRevenueCollectionHistory :<|> GetRevenueAllFeeHistory))
 
@@ -27,15 +27,17 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getRevenueCollectionHistory merchantId city :<|> getRevenueAllFeeHistory merchantId city
 
 type GetRevenueCollectionHistory =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.REVENUE / 'API.Types.ProviderPlatform.Management.Revenue.GET_REVENUE_COLLECTION_HISTORY)
       :> API.Types.ProviderPlatform.Management.Revenue.GetRevenueCollectionHistory
   )
 
 type GetRevenueAllFeeHistory =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.REVENUE / 'API.Types.ProviderPlatform.Management.Revenue.GET_REVENUE_ALL_FEE_HISTORY)
       :> API.Types.ProviderPlatform.Management.Revenue.GetRevenueAllFeeHistory
   )

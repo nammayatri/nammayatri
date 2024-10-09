@@ -26,7 +26,7 @@ import Kernel.Prelude
 data AccessMatrixT f = AccessMatrixT
   { id :: B.C f Text,
     roleId :: B.C f Text,
-    apiEntity :: B.C f (Maybe Domain.ApiEntity), -- TODO add migration for drop not null
+    apiEntity :: B.C f Domain.ApiEntity,
     userActionType :: B.C f Domain.UserActionTypeWrapper,
     userAccessType :: B.C f Domain.UserAccessType,
     createdAt :: B.C f Time.UTCTime,

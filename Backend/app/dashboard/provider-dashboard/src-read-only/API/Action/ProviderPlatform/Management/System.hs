@@ -19,7 +19,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.ApiV2
+import Tools.Auth.Api
 
 type API = ("system" :> PostSystemRunQuery)
 
@@ -27,8 +27,9 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = postSystemRunQuery merchantId city
 
 type PostSystemRunQuery =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.SYSTEM / 'API.Types.ProviderPlatform.Management.System.POST_SYSTEM_RUN_QUERY)
       :> API.Types.ProviderPlatform.Management.System.PostSystemRunQuery
   )

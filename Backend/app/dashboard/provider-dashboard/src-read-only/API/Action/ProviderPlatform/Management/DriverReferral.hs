@@ -19,7 +19,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.ApiV2
+import Tools.Auth.Api
 
 type API = ("driverReferral" :> (PostDriverReferralReferralOpsPassword :<|> PostDriverReferralLinkReferral))
 
@@ -27,15 +27,17 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = postDriverReferralReferralOpsPassword merchantId city :<|> postDriverReferralLinkReferral merchantId city
 
 type PostDriverReferralReferralOpsPassword =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_REFERRAL / 'API.Types.ProviderPlatform.Management.DriverReferral.POST_DRIVER_REFERRAL_REFERRAL_OPS_PASSWORD)
       :> API.Types.ProviderPlatform.Management.DriverReferral.PostDriverReferralReferralOpsPassword
   )
 
 type PostDriverReferralLinkReferral =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_REFERRAL / 'API.Types.ProviderPlatform.Management.DriverReferral.POST_DRIVER_REFERRAL_LINK_REFERRAL)
       :> API.Types.ProviderPlatform.Management.DriverReferral.PostDriverReferralLinkReferral
   )

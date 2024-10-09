@@ -104,7 +104,7 @@ instance
 verifyAccessLevel :: BeamFlow m r => DMatrix.ApiAccessLevel -> Id DP.Person -> m (Id DP.Person)
 verifyAccessLevel requiredApiAccessLevel personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntityAndActionType person.roleId (Just requiredApiAccessLevel.apiEntity) $ DMatrix.UserActionTypeWrapper requiredApiAccessLevel.userActionType
+  mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntityAndActionType person.roleId requiredApiAccessLevel.apiEntity $ DMatrix.UserActionTypeWrapper requiredApiAccessLevel.userActionType
   let userAccessType = maybe DMatrix.USER_NO_ACCESS (.userAccessType) mbAccessMatrixItem
   unless (checkUserAccess userAccessType) $
     throwError AccessDenied
@@ -126,3 +126,7 @@ verifyServer requiredServerAccess merchantId = do
 
 verifyCity :: MonadFlow m => DM.Merchant -> City.City -> m ()
 verifyCity merchant city = unless (city `elem` merchant.supportedOperatingCities) $ throwError AccessDenied
+
+type (/) a b = a b
+
+infixr 0 /

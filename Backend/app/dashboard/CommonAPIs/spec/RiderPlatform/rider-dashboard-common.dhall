@@ -151,7 +151,7 @@ let defaultImports =
       , { _simpleImports =
           [ "EulerHS.Prelude"
           , "Servant"
-          , "Tools.Auth.ApiV2"
+          , "Tools.Auth.Api"
           , "Kernel.Utils.Common"
           , "Storage.Beam.CommonInstances ()"
           ]
@@ -177,7 +177,7 @@ let defaultImports =
         }
       , { _simpleImports =
           [ "EulerHS.Prelude"
-          , "Tools.Auth.ApiV2"
+          , "Tools.Auth.Api"
           , "Tools.Auth.Merchant"
           , "Kernel.Utils.Common"
           , "Storage.Beam.CommonInstances ()"

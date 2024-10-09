@@ -12,94 +12,92 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Tools.Auth.ApiV2 (module Tools.Auth.ApiV2, module Reexport) where
+module Tools.Auth.ApiV2 where
 
-import Data.Singletons.TH
-import Domain.Types.AccessMatrix as Reexport (ApiEntity (..), UserActionType (..))
-import qualified Domain.Types.AccessMatrix as DMatrix
-import qualified Domain.Types.Person as DP
-import Domain.Types.ServerName as Reexport (ServerName (..))
-import qualified Domain.Types.ServerName as DSN
-import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Error
-import Kernel.Types.Id
-import Kernel.Utils.Common
-import Kernel.Utils.Monitoring.Prometheus.Servant
-import Kernel.Utils.Servant.HeaderAuth
-import Servant hiding (throwError)
-import Storage.Beam.BeamFlow
-import qualified Storage.Queries.AccessMatrix as QAccessMatrix
-import qualified Storage.Queries.Person as QPerson
-import Tools.Auth.Api as Reexport (ApiTokenInfo (..), checkUserAccess, verifyCity, verifyServer)
-import qualified Tools.Auth.Common as Common
-import Tools.Servant.HeaderAuth
+-- (module Tools.Auth.ApiV2, module Reexport) where
 
-instance
-  SanitizedUrl (sub :: Type) =>
-  SanitizedUrl (ApiAuthV2 sn uat :> sub)
-  where
-  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
+-- import Data.Singletons.TH
+-- import Domain.Types.AccessMatrix as Reexport (ApiEntity (..), UserActionType (..))
+-- import qualified Domain.Types.AccessMatrix as DMatrix
+-- import qualified Domain.Types.Person as DP
+-- import Domain.Types.ServerName as Reexport (ServerName (..))
+-- import qualified Domain.Types.ServerName as DSN
+-- import Kernel.Prelude
+-- import qualified Kernel.Storage.Hedis as Redis
+-- import Kernel.Types.Error
+-- import Kernel.Types.Id
+-- import Kernel.Utils.Common
+-- import Kernel.Utils.Monitoring.Prometheus.Servant
+-- import Kernel.Utils.Servant.HeaderAuth
+-- import Servant hiding (throwError)
+-- import Storage.Beam.BeamFlow
+-- import qualified Storage.Queries.AccessMatrix as QAccessMatrix
+-- import qualified Storage.Queries.Person as QPerson
+-- import Tools.Auth.Api as Reexport (ApiTokenInfo (..), checkUserAccess, verifyCity, verifyServer)
+-- import qualified Tools.Auth.Common as Common
+-- import Tools.Servant.HeaderAuth
 
--- | Performs token verification with checking api access level.
-type ApiAuthV2 sn uat = HeaderAuthWithPayload "token" VerifyApiV2 (ApiPayloadV2 sn uat)
+-- instance
+--   SanitizedUrl (sub :: Type) =>
+--   SanitizedUrl (ApiAuthV2 sn uat :> sub)
+--   where
+--   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
 
-data VerifyApiV2
+-- -- | Performs token verification with checking api access level.
+-- type ApiAuthV2 sn uat = HeaderAuthWithPayload "token" VerifyApiV2 (ApiPayloadV2 sn uat)
 
-data ApiPayloadV2 (sn :: DSN.ServerName) (uat :: DMatrix.UserActionType)
+-- data VerifyApiV2
 
-instance VerificationMethod VerifyApiV2 where
-  type VerificationResult VerifyApiV2 = ApiTokenInfo
-  verificationDescription =
-    "Checks whether token is registered and checks person api access. \
-    \If you don't have a token, use registration endpoints."
+-- data ApiPayloadV2 (sn :: DSN.ServerName) (uat :: DMatrix.UserActionType)
 
-instance VerificationMethodWithPayload VerifyApiV2 where
-  type VerificationPayloadType VerifyApiV2 = DMatrix.ApiV2AccessLevel
+-- instance VerificationMethod VerifyApiV2 where
+--   type VerificationResult VerifyApiV2 = ApiTokenInfo
+--   verificationDescription =
+--     "Checks whether token is registered and checks person api access. \
+--     \If you don't have a token, use registration endpoints."
 
-verifyApiV2Action ::
-  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
-  VerificationActionWithPayload VerifyApiV2 m
-verifyApiV2Action = VerificationActionWithPayload verifyApiV2
+-- instance VerificationMethodWithPayload VerifyApiV2 where
+--   type VerificationPayloadType VerifyApiV2 = DMatrix.ApiV2AccessLevel
 
-verifyApiV2 ::
-  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
-  DMatrix.ApiV2AccessLevel ->
-  RegToken ->
-  m ApiTokenInfo
-verifyApiV2 requiredAccessLevel token = do
-  (personId, merchantId, city) <- Common.verifyPerson token
-  verifiedPersonId <- verifyAccessLevelV2 requiredAccessLevel personId
-  verifiedMerchant <- verifyServer requiredAccessLevel.serverName merchantId
-  _ <- verifyCity verifiedMerchant city
-  pure
-    ApiTokenInfo
-      { personId = verifiedPersonId,
-        merchant = verifiedMerchant,
-        city = city,
-        userActionType = requiredAccessLevel.userActionType
-      }
+-- verifyApiV2Action ::
+--   (Common.AuthFlow m r, Redis.HedisFlow m r) =>
+--   VerificationActionWithPayload VerifyApiV2 m
+-- verifyApiV2Action = VerificationActionWithPayload verifyApiV2
 
-instance
-  forall (sn :: DSN.ServerName) (uat :: DMatrix.UserActionType).
-  (SingI sn, SingI uat) =>
-  (VerificationPayload DMatrix.ApiV2AccessLevel) (ApiPayloadV2 sn uat)
-  where
-  toPayloadType _ =
-    DMatrix.ApiV2AccessLevel
-      { serverName = fromSing (sing @sn),
-        userActionType = fromSing (sing @uat)
-      }
+-- verifyApiV2 ::
+--   (Common.AuthFlow m r, Redis.HedisFlow m r) =>
+--   DMatrix.ApiV2AccessLevel ->
+--   RegToken ->
+--   m ApiTokenInfo
+-- verifyApiV2 requiredAccessLevel token = do
+--   (personId, merchantId, city) <- Common.verifyPerson token
+--   verifiedPersonId <- verifyAccessLevelV2 requiredAccessLevel personId
+--   verifiedMerchant <- verifyServer requiredAccessLevel.serverName merchantId
+--   _ <- verifyCity verifiedMerchant city
+--   pure
+--     ApiTokenInfo
+--       { personId = verifiedPersonId,
+--         merchant = verifiedMerchant,
+--         city = city,
+--         userActionType = requiredAccessLevel.userActionType
+--       }
 
-verifyAccessLevelV2 :: BeamFlow m r => DMatrix.ApiV2AccessLevel -> Id DP.Person -> m (Id DP.Person)
-verifyAccessLevelV2 requiredApiAccessLevel personId = do
-  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntityAndActionType person.roleId (Just DMatrix.DSL) $ DMatrix.UserActionTypeWrapper requiredApiAccessLevel.userActionType
-  let userAccessType = maybe DMatrix.USER_NO_ACCESS (.userAccessType) mbAccessMatrixItem
-  unless (checkUserAccess userAccessType) $
-    throwError AccessDenied
-  pure person.id
+-- instance
+--   forall (sn :: DSN.ServerName) (uat :: DMatrix.UserActionType).
+--   (SingI sn, SingI uat) =>
+--   (VerificationPayload DMatrix.ApiV2AccessLevel) (ApiPayloadV2 sn uat)
+--   where
+--   toPayloadType _ =
+--     DMatrix.ApiV2AccessLevel
+--       { serverName = fromSing (sing @sn),
+--         userActionType = fromSing (sing @uat)
+--       }
 
-type (/) a b = a b
-
-infixr 0 /
+-- verifyAccessLevelV2 :: BeamFlow m r => DMatrix.ApiV2AccessLevel -> Id DP.Person -> m (Id DP.Person)
+-- verifyAccessLevelV2 requiredApiAccessLevel personId = do
+--   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+--   mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntityAndActionType person.roleId (Just DMatrix.DSL) $ DMatrix.UserActionTypeWrapper requiredApiAccessLevel.userActionType
+--   let userAccessType = maybe DMatrix.USER_NO_ACCESS (.userAccessType) mbAccessMatrixItem
+--   unless (checkUserAccess userAccessType) $
+--     throwError AccessDenied
+--   pure person.id

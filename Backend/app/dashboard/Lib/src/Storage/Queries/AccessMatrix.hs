@@ -31,7 +31,7 @@ create = createWithKV
 findByRoleIdAndEntityAndActionType ::
   BeamFlow m r =>
   Id DRole.Role ->
-  Maybe DMatrix.ApiEntity ->
+  DMatrix.ApiEntity ->
   DMatrix.UserActionTypeWrapper ->
   m (Maybe DMatrix.AccessMatrixItem)
 findByRoleIdAndEntityAndActionType roleId apiEntity userActionType =

@@ -21,7 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.ApiV2
+import Tools.Auth.Api
 
 type API = ("ride" :> (GetRideList :<|> PostRideEndMultiple :<|> PostRideCancelMultiple :<|> GetRideInfo :<|> PostRideSync :<|> PostRideSyncMultiple :<|> PostRideRoute :<|> GetRideKaptureList))
 
@@ -29,57 +29,65 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getRideList merchantId city :<|> postRideEndMultiple merchantId city :<|> postRideCancelMultiple merchantId city :<|> getRideInfo merchantId city :<|> postRideSync merchantId city :<|> postRideSyncMultiple merchantId city :<|> postRideRoute merchantId city :<|> getRideKaptureList merchantId city
 
 type GetRideList =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.RIDE / 'API.Types.ProviderPlatform.Management.Ride.GET_RIDE_LIST)
       :> API.Types.ProviderPlatform.Management.Ride.GetRideList
   )
 
 type PostRideEndMultiple =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.RIDE / 'API.Types.ProviderPlatform.Management.Ride.POST_RIDE_END_MULTIPLE)
       :> API.Types.ProviderPlatform.Management.Ride.PostRideEndMultiple
   )
 
 type PostRideCancelMultiple =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.RIDE / 'API.Types.ProviderPlatform.Management.Ride.POST_RIDE_CANCEL_MULTIPLE)
       :> API.Types.ProviderPlatform.Management.Ride.PostRideCancelMultiple
   )
 
 type GetRideInfo =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.RIDE / 'API.Types.ProviderPlatform.Management.Ride.GET_RIDE_INFO)
       :> API.Types.ProviderPlatform.Management.Ride.GetRideInfo
   )
 
 type PostRideSync =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.RIDE / 'API.Types.ProviderPlatform.Management.Ride.POST_RIDE_SYNC)
       :> API.Types.ProviderPlatform.Management.Ride.PostRideSync
   )
 
 type PostRideSyncMultiple =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.RIDE / 'API.Types.ProviderPlatform.Management.Ride.POST_RIDE_SYNC_MULTIPLE)
       :> API.Types.ProviderPlatform.Management.Ride.PostRideSyncMultiple
   )
 
 type PostRideRoute =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.RIDE / 'API.Types.ProviderPlatform.Management.Ride.POST_RIDE_ROUTE)
       :> API.Types.ProviderPlatform.Management.Ride.PostRideRoute
   )
 
 type GetRideKaptureList =
-  ( ApiAuthV2
+  ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.RIDE / 'API.Types.ProviderPlatform.Management.Ride.GET_RIDE_KAPTURE_LIST)
       :> API.Types.ProviderPlatform.Management.Ride.GetRideKaptureList
   )

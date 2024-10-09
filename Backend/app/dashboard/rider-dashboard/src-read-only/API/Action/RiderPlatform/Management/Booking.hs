@@ -19,7 +19,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.ApiV2
+import Tools.Auth.Api
 
 type API = ("booking" :> (PostBookingCancelAllStuck :<|> PostBookingSyncMultiple))
 
@@ -27,15 +27,17 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = postBookingCancelAllStuck merchantId city :<|> postBookingSyncMultiple merchantId city
 
 type PostBookingCancelAllStuck =
-  ( ApiAuthV2
+  ( ApiAuth
       'APP_BACKEND_MANAGEMENT
+      'DSL
       ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.BOOKING / 'API.Types.RiderPlatform.Management.Booking.POST_BOOKING_CANCEL_ALL_STUCK)
       :> API.Types.RiderPlatform.Management.Booking.PostBookingCancelAllStuck
   )
 
 type PostBookingSyncMultiple =
-  ( ApiAuthV2
+  ( ApiAuth
       'APP_BACKEND_MANAGEMENT
+      'DSL
       ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.BOOKING / 'API.Types.RiderPlatform.Management.Booking.POST_BOOKING_SYNC_MULTIPLE)
       :> API.Types.RiderPlatform.Management.Booking.PostBookingSyncMultiple
   )
