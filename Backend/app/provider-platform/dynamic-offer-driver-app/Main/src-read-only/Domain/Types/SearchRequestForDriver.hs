@@ -62,6 +62,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     notificationSource :: Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource,
     parallelSearchRequestCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     pickupZone :: Kernel.Prelude.Bool,
+    poolingConfigVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     poolingLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     previousDropGeoHash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     renderedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

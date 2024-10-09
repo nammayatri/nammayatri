@@ -33,6 +33,7 @@ module Lib.Yudhishthira.Types
     CreateTimeBoundRequest (..),
     LogicRolloutReq,
     TimeBoundResp,
+    ConfigType (..),
     -- DynamicPricingResult (..),
   )
 where
@@ -55,6 +56,10 @@ import Lib.Yudhishthira.Types.KaalChakra as Reexport
 import Lib.Yudhishthira.Types.Manual as Reexport
 import Lib.Yudhishthira.Types.Tag as Reexport
 import qualified Text.Show (show)
+
+data ConfigType
+  = DriverPoolConfig
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded)
 
 data Source
   = Application ApplicationEvent
@@ -124,6 +129,7 @@ data LogicDomain
   = POOLING
   | FARE_POLICY
   | DYNAMIC_PRICING_UNIFIED
+  | CONFIG ConfigType
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
 
 generateLogicDomainShowInstances :: [String]
@@ -131,6 +137,9 @@ generateLogicDomainShowInstances =
   [show POOLING]
     ++ [show FARE_POLICY]
     ++ [show DYNAMIC_PRICING_UNIFIED]
+    ++ [show (CONFIG configType) | configType <- configTypes]
+  where
+    configTypes = [minBound .. maxBound]
 
 instance ToParamSchema LogicDomain where
   toParamSchema _ =
@@ -144,6 +153,7 @@ instance Show LogicDomain where
   show POOLING = "POOLING"
   show FARE_POLICY = "FARE-POLICY"
   show DYNAMIC_PRICING_UNIFIED = "DYNAMIC_PRICING_UNIFIED"
+  show (CONFIG configType) = "CONFIG_" ++ show configType
 
 instance Read LogicDomain where
   readsPrec _ s =
@@ -155,6 +165,11 @@ instance Read LogicDomain where
             [(FARE_POLICY, drop 1 rest)]
           "DYNAMIC_PRICING_UNIFIED" ->
             [(DYNAMIC_PRICING_UNIFIED, drop 1 rest)]
+          "CONFIG" ->
+            let (configType', rest1) = break (== '_') (drop 1 rest)
+             in case readMaybe configType' of
+                  Just configType -> [(CONFIG configType, rest1)]
+                  Nothing -> []
           _ -> []
 
 $(mkBeamInstancesForEnumAndList ''LogicDomain)

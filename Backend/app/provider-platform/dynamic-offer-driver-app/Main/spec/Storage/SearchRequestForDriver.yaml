@@ -89,6 +89,7 @@ SearchRequestForDriver:
     driverTags: Maybe Value
     customerTags: Maybe Value
     poolingLogicVersion: Maybe Int
+    poolingConfigVersion: Maybe Int
     previousDropGeoHash : Maybe Text
     renderedAt : Maybe UTCTime
     respondedAt: Maybe UTCTime

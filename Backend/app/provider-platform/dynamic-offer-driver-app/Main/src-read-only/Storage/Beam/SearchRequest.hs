@@ -49,6 +49,7 @@ data SearchRequestT f = SearchRequestT
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     messageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     pickupZoneGateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    poolingConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     poolingLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     providerId :: B.C f Kernel.Prelude.Text,
     returnTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

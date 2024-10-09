@@ -67,6 +67,7 @@ SearchRequest:
     createdAt: UTCTime
     tripCategory: Maybe TripCategory
     poolingLogicVersion: Maybe Int
+    poolingConfigVersion: Maybe Int
 
   beamType:
     startTime: Maybe UTCTime
@@ -187,6 +188,11 @@ SearchRequest:
     updatePoolingLogicVersion:
       kvFunction: updateWithKV
       params: [poolingLogicVersion]
+      where: id
+
+    updatePoolingConfigVersion:
+      kvFunction: updateWithKV
+      params: [poolingConfigVersion]
       where: id
 
   extraOperations:
