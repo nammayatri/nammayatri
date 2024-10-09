@@ -36,6 +36,8 @@ import Screens.Types as ST
 import Data.Array as DA
 import Language.Types (STR(..)) as LType
 import Language.Strings (getString)
+import Screens.HomeScreen.Controller
+import Data.Number (fromString) as Number
 
 
 
@@ -71,6 +73,7 @@ data Action
   | Loader
   | OnFadeComplete String
   | Notification String
+  | UpdateCurrentLocation String String
 
 
 eval :: Action -> RideRequestScreenState -> Eval Action ScreenOutput RideRequestScreenState
@@ -178,6 +181,19 @@ eval (Notification notificationType) state = do
     if (HU.checkNotificationType notificationType ST.DRIVER_ASSIGNMENT ) then do
       exit $ FcmNotifications notificationType state
     else continue state
+
+eval (UpdateCurrentLocation lat lon) state = do
+  let new_lat = fromMaybe 0.0 (Number.fromString lat)
+      new_lon = fromMaybe 0.0 (Number.fromString lon)
+      curr_lat = state.data.driverLat
+      curr_lon = state.data.driverLong
+      updatedState = 
+        if new_lat /= 0.0 && new_lon /= 0.0 then
+          state { data { driverLat = Just $ show new_lat, driverLong =Just $ show new_lon } }
+        else
+          state { data { driverLat = curr_lat, driverLong = curr_lon } }
+  continue updatedState
+
 
 eval _ state = update state
 

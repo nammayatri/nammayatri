@@ -36,6 +36,8 @@ type RideRequestScreenData = {
   ,currCard :: BookingAPIEntity
   ,fareDetails :: Array RateCardItem
   ,vehicleType :: String
+  ,driverLat :: Maybe String
+  ,driverLong :: Maybe String
 }
 
 dummyResp = ScheduledBookingListResponse {
@@ -187,6 +189,8 @@ initData _ = {
             , currCard : dummyAPI
             , fareDetails : []
             , vehicleType : ""
+            , driverLat : Nothing
+            , driverLong : Nothing
             },
     props: {
       cardHeight : 0
