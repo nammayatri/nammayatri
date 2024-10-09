@@ -140,11 +140,11 @@ FRFSQuote:
     quantity: Int
     stationsJson: Text
     vehicleType: VehicleCategory
-    serviceTierCode: Text
-    serviceTierType: ServiceTierType
-    serviceTierShortName: Text
-    serviceTierLongName: Text
-    serviceTierDescription: Text
+    serviceTierProviderCode: Maybe Text
+    serviceTierType: Maybe ServiceTierType
+    serviceTierShortName: Maybe Text
+    serviceTierLongName: Maybe Text
+    serviceTierDescription: Maybe Text
     bppSubscriberId: Text
     bppSubscriberUrl: Text
     providerId: Text
@@ -167,11 +167,6 @@ FRFSQuote:
 
   beamType:
     vehicleVariant: Maybe VehicleVariant
-    serviceTierCode: Maybe Text
-    serviceTierType: Maybe ServiceTierType
-    serviceTierShortName: Maybe Text
-    serviceTierLongName: Maybe Text
-    serviceTierDescription: Maybe Text
 
   types:
     FRFSQuoteType:
@@ -179,20 +174,10 @@ FRFSQuote:
 
   fromTType:
     price: Kernel.Types.Common.mkPrice currency price|E
-    serviceTierCode: Kernel.Prelude.fromMaybe ""|I
-    serviceTierType: fromMaybe BecknV2.FRFS.Enums.AC|I
-    serviceTierShortName: Kernel.Prelude.fromMaybe ""|I
-    serviceTierLongName: Kernel.Prelude.fromMaybe ""|I
-    serviceTierDescription: Kernel.Prelude.fromMaybe ""|I
 
   toTType:
     price: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
-    serviceTierCode: Kernel.Prelude.Just|I
-    serviceTierType: Kernel.Prelude.Just|I
-    serviceTierShortName: Kernel.Prelude.Just|I
-    serviceTierLongName: Kernel.Prelude.Just|I
-    serviceTierDescription: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
@@ -225,11 +210,11 @@ FRFSTicketBooking:
     routeId: Maybe (Id Route)
     quantity: Int
     vehicleType: VehicleCategory
-    serviceTierCode: Text
-    serviceTierType: ServiceTierType
-    serviceTierShortName: Text
-    serviceTierLongName: Text
-    serviceTierDescription: Text
+    serviceTierProviderCode: Maybe Text
+    serviceTierType: Maybe ServiceTierType
+    serviceTierShortName: Maybe Text
+    serviceTierLongName: Maybe Text
+    serviceTierDescription: Maybe Text
     bppSubscriberId: Text
     bppSubscriberUrl: Text
     providerId: Text
@@ -268,13 +253,6 @@ FRFSTicketBooking:
     finalPrice:
       finalPrice: Maybe HighPrecMoney
 
-  beamType:
-    serviceTierCode: Maybe Text
-    serviceTierType: Maybe ServiceTierType
-    serviceTierShortName: Maybe Text
-    serviceTierLongName: Maybe Text
-    serviceTierDescription: Maybe Text
-
   types:
     FRFSTicketBookingStatus:
       enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED, COUNTER_CANCELLED"
@@ -285,22 +263,12 @@ FRFSTicketBooking:
     price: Kernel.Types.Common.mkPrice currency price|E
     estimatedPrice: Kernel.Types.Common.mkPrice currency estimatedPrice|E
     finalPrice: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice|E
-    serviceTierCode: Kernel.Prelude.fromMaybe ""|I
-    serviceTierType: fromMaybe BecknV2.FRFS.Enums.AC|I
-    serviceTierShortName: Kernel.Prelude.fromMaybe ""|I
-    serviceTierLongName: Kernel.Prelude.fromMaybe ""|I
-    serviceTierDescription: Kernel.Prelude.fromMaybe ""|I
 
   toTType:
     price: (.amount)|I
     estimatedPrice: (.amount)|I
     finalPrice: Kernel.Prelude.fmap (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
-    serviceTierCode: Kernel.Prelude.Just|I
-    serviceTierType: Kernel.Prelude.Just|I
-    serviceTierShortName: Kernel.Prelude.Just|I
-    serviceTierLongName: Kernel.Prelude.Just|I
-    serviceTierDescription: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
@@ -730,7 +698,7 @@ FRFSVehicleServiceTier:
   tableName: frfs_vehicle_service_tier
   fields:
     id: Id FRFSVehicleServiceTier
-    code: Text
+    providerCode: Text
     _type: ServiceTierType
     shortName: Text
     longName: Text

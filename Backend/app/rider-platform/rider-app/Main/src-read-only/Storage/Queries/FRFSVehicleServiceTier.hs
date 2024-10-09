@@ -35,11 +35,11 @@ updateByPrimaryKey (Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier {
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam._type _type,
-      Se.Set Beam.code code,
       Se.Set Beam.description description,
       Se.Set Beam.longName longName,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.providerCode providerCode,
       Se.Set Beam.shortName shortName,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
@@ -52,12 +52,12 @@ instance FromTType' Beam.FRFSVehicleServiceTier Domain.Types.FRFSVehicleServiceT
       Just
         Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier
           { _type = _type,
-            code = code,
             description = description,
             id = Kernel.Types.Id.Id id,
             longName = longName,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            providerCode = providerCode,
             shortName = shortName,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -67,12 +67,12 @@ instance ToTType' Beam.FRFSVehicleServiceTier Domain.Types.FRFSVehicleServiceTie
   toTType' (Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier {..}) = do
     Beam.FRFSVehicleServiceTierT
       { Beam._type = _type,
-        Beam.code = code,
         Beam.description = description,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.longName = longName,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.providerCode = providerCode,
         Beam.shortName = shortName,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

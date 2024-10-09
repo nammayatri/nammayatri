@@ -87,14 +87,14 @@ search _merchant _merchantOperatingCity bapConfig searchReq = do
                     }
             return $
               DQuote
-                { bppItemId = "Kolkata Buses Item - " <> show vehicleServiceTier._type <> " - " <> vehicleServiceTier.code,
+                { bppItemId = "Kolkata Buses Item - " <> show vehicleServiceTier._type <> " - " <> vehicleServiceTier.providerCode,
                   _type = DFRFSQuote.SingleJourney,
                   routeCode = Just routeCode,
-                  serviceTierType = vehicleServiceTier._type,
-                  serviceTierCode = vehicleServiceTier.code,
-                  serviceTierShortName = vehicleServiceTier.shortName,
-                  serviceTierDescription = vehicleServiceTier.description,
-                  serviceTierLongName = vehicleServiceTier.longName,
+                  serviceTierType = Just vehicleServiceTier._type,
+                  serviceTierProviderCode = Just vehicleServiceTier.providerCode,
+                  serviceTierShortName = Just vehicleServiceTier.shortName,
+                  serviceTierDescription = Just vehicleServiceTier.description,
+                  serviceTierLongName = Just vehicleServiceTier.longName,
                   ..
                 }
         )

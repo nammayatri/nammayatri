@@ -14,12 +14,12 @@ import qualified Tools.Beam.UtilsTH
 
 data FRFSVehicleServiceTier = FRFSVehicleServiceTier
   { _type :: BecknV2.FRFS.Enums.ServiceTierType,
-    code :: Kernel.Prelude.Text,
     description :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier,
     longName :: Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    providerCode :: Kernel.Prelude.Text,
     shortName :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

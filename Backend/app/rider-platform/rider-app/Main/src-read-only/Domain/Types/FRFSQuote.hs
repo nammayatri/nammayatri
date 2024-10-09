@@ -39,11 +39,11 @@ data FRFSQuote = FRFSQuote
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     routeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Route.Route),
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
-    serviceTierCode :: Kernel.Prelude.Text,
-    serviceTierDescription :: Kernel.Prelude.Text,
-    serviceTierLongName :: Kernel.Prelude.Text,
-    serviceTierShortName :: Kernel.Prelude.Text,
-    serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
+    serviceTierDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    serviceTierLongName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    serviceTierProviderCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    serviceTierShortName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     stationsJson :: Kernel.Prelude.Text,
     toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     validTill :: Kernel.Prelude.UTCTime,
@@ -55,4 +55,4 @@ data FRFSQuote = FRFSQuote
 
 data FRFSQuoteType = SingleJourney | ReturnJourney | Pass | SpecialFareSingleJourney deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSQuoteType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSQuoteType)

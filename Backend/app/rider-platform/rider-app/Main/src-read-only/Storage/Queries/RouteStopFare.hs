@@ -21,7 +21,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RouteStopFare.RouteStopFare] -> m ())
 createMany = traverse_ create
 
-findByRouteStartAndStopCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ([Domain.Types.RouteStopFare.RouteStopFare]))
+findByRouteStartAndStopCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m [Domain.Types.RouteStopFare.RouteStopFare])
 findByRouteStartAndStopCode routeCode startStopCode endStopCode = do
   findAllWithKV
     [ Se.And

@@ -4,7 +4,6 @@
 
 module Storage.Queries.FRFSQuote where
 
-import qualified BecknV2.FRFS.Enums
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import Kernel.Beam.Functions
@@ -24,7 +23,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSQuote.FRFSQuote] -> m ())
 createMany = traverse_ create
 
-findAllBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m ([Domain.Types.FRFSQuote.FRFSQuote]))
+findAllBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m [Domain.Types.FRFSQuote.FRFSQuote])
 findAllBySearchId searchId = do findAllWithKV [Se.Is Beam.searchId $ Se.Eq (Kernel.Types.Id.getId searchId)]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m (Maybe Domain.Types.FRFSQuote.FRFSQuote))
@@ -48,7 +47,7 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
-      Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) price),
+      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
       Se.Set Beam.price ((.amount) price),
       Se.Set Beam.providerDescription providerDescription,
       Se.Set Beam.providerId providerId,
@@ -57,11 +56,11 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.routeId (Kernel.Types.Id.getId <$> routeId),
       Se.Set Beam.searchId (Kernel.Types.Id.getId searchId),
-      Se.Set Beam.serviceTierCode (Kernel.Prelude.Just serviceTierCode),
-      Se.Set Beam.serviceTierDescription (Kernel.Prelude.Just serviceTierDescription),
-      Se.Set Beam.serviceTierLongName (Kernel.Prelude.Just serviceTierLongName),
-      Se.Set Beam.serviceTierShortName (Kernel.Prelude.Just serviceTierShortName),
-      Se.Set Beam.serviceTierType (Kernel.Prelude.Just serviceTierType),
+      Se.Set Beam.serviceTierDescription serviceTierDescription,
+      Se.Set Beam.serviceTierLongName serviceTierLongName,
+      Se.Set Beam.serviceTierProviderCode serviceTierProviderCode,
+      Se.Set Beam.serviceTierShortName serviceTierShortName,
+      Se.Set Beam.serviceTierType serviceTierType,
       Se.Set Beam.stationsJson stationsJson,
       Se.Set Beam.toStationId (Kernel.Types.Id.getId toStationId),
       Se.Set Beam.validTill validTill,
@@ -96,11 +95,11 @@ instance FromTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
             riderId = Kernel.Types.Id.Id riderId,
             routeId = Kernel.Types.Id.Id <$> routeId,
             searchId = Kernel.Types.Id.Id searchId,
-            serviceTierCode = Kernel.Prelude.fromMaybe "" serviceTierCode,
-            serviceTierDescription = Kernel.Prelude.fromMaybe "" serviceTierDescription,
-            serviceTierLongName = Kernel.Prelude.fromMaybe "" serviceTierLongName,
-            serviceTierShortName = Kernel.Prelude.fromMaybe "" serviceTierShortName,
-            serviceTierType = fromMaybe BecknV2.FRFS.Enums.AC serviceTierType,
+            serviceTierDescription = serviceTierDescription,
+            serviceTierLongName = serviceTierLongName,
+            serviceTierProviderCode = serviceTierProviderCode,
+            serviceTierShortName = serviceTierShortName,
+            serviceTierType = serviceTierType,
             stationsJson = stationsJson,
             toStationId = Kernel.Types.Id.Id toStationId,
             validTill = validTill,
@@ -124,7 +123,7 @@ instance ToTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.partnerOrgId = Kernel.Types.Id.getId <$> partnerOrgId,
         Beam.partnerOrgTransactionId = Kernel.Types.Id.getId <$> partnerOrgTransactionId,
-        Beam.currency = ((Kernel.Prelude.Just . (.currency))) price,
+        Beam.currency = (Kernel.Prelude.Just . (.currency)) price,
         Beam.price = (.amount) price,
         Beam.providerDescription = providerDescription,
         Beam.providerId = providerId,
@@ -133,11 +132,11 @@ instance ToTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
         Beam.riderId = Kernel.Types.Id.getId riderId,
         Beam.routeId = Kernel.Types.Id.getId <$> routeId,
         Beam.searchId = Kernel.Types.Id.getId searchId,
-        Beam.serviceTierCode = Kernel.Prelude.Just serviceTierCode,
-        Beam.serviceTierDescription = Kernel.Prelude.Just serviceTierDescription,
-        Beam.serviceTierLongName = Kernel.Prelude.Just serviceTierLongName,
-        Beam.serviceTierShortName = Kernel.Prelude.Just serviceTierShortName,
-        Beam.serviceTierType = Kernel.Prelude.Just serviceTierType,
+        Beam.serviceTierDescription = serviceTierDescription,
+        Beam.serviceTierLongName = serviceTierLongName,
+        Beam.serviceTierProviderCode = serviceTierProviderCode,
+        Beam.serviceTierShortName = serviceTierShortName,
+        Beam.serviceTierType = serviceTierType,
         Beam.stationsJson = stationsJson,
         Beam.toStationId = Kernel.Types.Id.getId toStationId,
         Beam.validTill = validTill,
