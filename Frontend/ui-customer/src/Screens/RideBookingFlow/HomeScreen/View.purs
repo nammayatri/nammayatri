@@ -5103,7 +5103,7 @@ exploreCitySection push state =
     , margin $ MarginTop 20
     , visibility $ boolToVisibility  $ not $ null state.data.famousDestinations
     ][  textView $
-          [ text $ getString $ EXPLORE_CITY_WITH_US $ getLanguageBasedCityName city
+          [ text $ getString EXPLORE
           , color Color.black900
           ] <> FontStyle.h3 TypoGraphy
       , horizontalScrollView

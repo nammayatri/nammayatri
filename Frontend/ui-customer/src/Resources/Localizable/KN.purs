@@ -1510,3 +1510,4 @@ getKN stringKey =
         ILLEGAL_ITEMS_PROHIBITED -> "ಅಕ್ರಮ ಐಟಂಗಳನ್ನು ನಿಷೇಧಿಸಲಾಗಿದೆ"
         PICKUP_INSTRUCTION -> "ಪಿಕಪ್ ಸೂಚನೆ"
         DISTANCE_FARE -> "ದೂರವು ಕಿರಾಯಿಯನ್ನು ನಿರ್ಧರಿಸುತ್ತದೆ"
+        EXPLORE -> "ಅನ್ವೇಷಿಸಿ"

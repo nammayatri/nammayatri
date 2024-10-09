@@ -29,6 +29,8 @@ import DecodeUtil (getAnyFromWindow)
 import Components.RideCompletedCard as RideCompletedCard
 import Data.Foldable
 import ConfigProvider (getAppConfig)
+import Data.Array as DA
+import Common.RemoteConfig.Types as CTR
 
 getBannerConfigs :: forall action. HomeScreenState -> (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
 getBannerConfigs state action =
@@ -45,7 +47,7 @@ getBannerConfigs state action =
   --   else [])
   -- <> (if  state.data.config.banners.homeScreenSafety && state.props.sosBannerType == Just ST.SETUP_BANNER && state.data.config.feature.enableSafetyFlow then [sosSetupBannerConfig state action] else [])
   -- <> 
-  (getRemoteBannerConfigs state.props.city)
+  getRemoteBannerConfigs state.props.city
   where
     getRemoteBannerConfigs :: City -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
     getRemoteBannerConfigs city = do
@@ -53,7 +55,8 @@ getBannerConfigs state action =
           language = getLanguage $ getLanguageLocale languageKey
           configName = "customer_carousel_banner" <> language
           datas = RC.carouselConfigData location configName "customer_carousel_banner_en" (getValueFromWindow "CUSTOMER_ID") "" ""
-      BannerCarousel.remoteConfigTransformer datas action Nothing
+          transformedBanners = BannerCarousel.remoteConfigTransformer datas action Nothing
+      if state.data.settingSideBar.hasCompletedSafetySetup then DA.filter (\item -> item.dynamicAction /= Just CTR.SetupSafety) transformedBanners else transformedBanners
     getLanguage :: String -> String
     getLanguage lang = 
       let language = toLower $ take 2 lang
@@ -64,10 +67,8 @@ getBannerConfigs state action =
 
 
 getDriverInfoCardBanners :: forall action. HomeScreenState -> (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
-getDriverInfoCardBanners state action = 
-  if isJust state.props.sosBannerType && state.data.config.feature.enableSafetyFlow && state.data.driverInfoCardState.providerType == ONUS
-    then [sosSetupBannerConfig state action] 
-    else []
+getDriverInfoCardBanners state action = do
+  DA.filter (\item -> item.showDuringRide == Just true) $ getBannerConfigs state action
 
 
 disabilityBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config a

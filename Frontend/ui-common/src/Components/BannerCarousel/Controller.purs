@@ -91,6 +91,7 @@ type Config a = {
 , imageBannerUrl :: String
 , bannerSize :: Maybe String
 , dynamicAction :: Maybe RemoteAC
+, showDuringRide :: Maybe Boolean
 }
 
 config :: forall a. a -> Config a
@@ -131,6 +132,7 @@ config action = {
 , imageBannerUrl : ""
 , bannerSize : Nothing
 , dynamicAction : Nothing
+, showDuringRide : Nothing
 }
 
 
@@ -223,6 +225,7 @@ remoteConfigTransformer remoteConfig action mbBannerSize =
         imageBannerUrl = fromMaybe "" remoteConfig.image_banner,
         dynamicAction = remoteConfig.dynamic_action,
         accessibilityHint = remoteConfig.accessibilityHint,
-        bannerSize = mbBannerSize
+        bannerSize = mbBannerSize,
+        showDuringRide = remoteConfig.showDuringRide
       }
     in config'') remoteConfig

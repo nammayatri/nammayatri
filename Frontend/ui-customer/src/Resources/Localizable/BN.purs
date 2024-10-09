@@ -1506,3 +1506,4 @@ getBN stringKey =
         ILLEGAL_ITEMS_PROHIBITED -> "অবৈধ আইটেম নিষিদ্ধ"
         PICKUP_INSTRUCTION -> "পিকআপ নির্দেশনা"
         DISTANCE_FARE -> "দূরত্ব ভাড়া"
+        EXPLORE -> "অন্বেষণ করুন"
