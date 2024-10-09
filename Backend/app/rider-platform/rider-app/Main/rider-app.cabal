@@ -424,6 +424,7 @@ library
       Tools.Metrics
       Tools.Metrics.BAPMetrics
       Tools.Metrics.BAPMetrics.Types
+      Tools.MultiModal
       Tools.Notifications
       Tools.Payment
       Tools.Payout

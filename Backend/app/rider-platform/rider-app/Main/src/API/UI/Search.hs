@@ -73,7 +73,7 @@ search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe
 search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice mbIsDashboardRequest = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
   fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice
-  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) False Nothing
+  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing
   fork "search cabs" . withShortRetry $ do
     becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
     let generatedJson = encode becknTaxiReqV2
