@@ -46,7 +46,7 @@ handler ::
 handler onIssueReq issue = do
   now <- UTCTimeRFC3339 <$> getCurrentTime
   let respondentAction = onIssueReq.respondentAction
-  let respondentAction' = decode . (encode <$> respondentAction)
+  let respondentAction' = (decode . encode) =<< respondentAction
   issueStatus <- case respondentAction' >>= mapActionToStatus of
     Just status -> pure status
     Nothing -> throwError $ InvalidRequest "Invalid RespondentActionStatus"

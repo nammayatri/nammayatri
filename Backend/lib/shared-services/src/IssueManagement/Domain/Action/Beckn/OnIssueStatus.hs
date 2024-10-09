@@ -37,7 +37,7 @@ validateRequest req = QIGM.findByPrimaryKey (Id $ req.id) >>= fromMaybeM (Invali
 onIssueStatus :: (BeamFlow m r, EsqDBReplicaFlow m r, CoreMetrics m) => DOnIssueStatus -> DIGM.IGMIssue -> m ()
 onIssueStatus req issue = do
   let respondentAction = req.respondentAction
-  let respondentAction' = decode . (encode <$> respondentAction)
+  let respondentAction' = (decode . encode) =<< respondentAction
   issueStatus <- case respondentAction' >>= mapActionToStatus of
     Just status -> pure status
     Nothing -> throwError $ InvalidRequest "Invalid RespondentActionStatus"
