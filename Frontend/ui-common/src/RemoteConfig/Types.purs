@@ -213,3 +213,8 @@ type StuckRideFilterConfig = {
   buffer :: Number,
   enable :: Boolean
 }
+
+type BundleLottieConfig = {
+  lottieUrl :: String
+, enable :: Boolean
+}
