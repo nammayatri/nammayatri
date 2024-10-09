@@ -4887,10 +4887,10 @@ instance showCoinInfo :: Show CoinInfo where show = genericShow
 instance standardEncodeCoinInfo :: StandardEncode CoinInfo where standardEncode _ = standardEncode{} 
 instance decodeCoinInfo :: Decode CoinInfo where decode = defaultDecode
 instance encodeCoinInfo :: Encode CoinInfo where encode = defaultEncode
-data ScheduledBookingListRequest = ScheduledBookingListRequest String String String String String
+data ScheduledBookingListRequest = ScheduledBookingListRequest String String String String String String String
 
 instance makeScheduledBookingListRequest :: RestEndpoint ScheduledBookingListRequest where
-    makeRequest reqBody@(ScheduledBookingListRequest limit offset from to  tripCategory) headers = defaultMakeRequest GET (EP.getScheduledBookingList limit offset  from to  tripCategory) headers reqBody Nothing
+    makeRequest reqBody@(ScheduledBookingListRequest limit offset from to  tripCategory lat lon ) headers = defaultMakeRequest GET (EP.getScheduledBookingList limit offset  from to  tripCategory lat lon) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericScheduledBookingListRequest :: Generic ScheduledBookingListRequest _

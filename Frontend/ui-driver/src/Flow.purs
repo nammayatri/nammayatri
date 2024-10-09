@@ -2896,8 +2896,8 @@ homeScreenFlow = do
       homeScreenFlow
     GO_TO_EARNINGS_SCREEN -> driverEarningsFlow
     CLEAR_PENDING_DUES -> clearPendingDuesFlow true
-    GO_TO_RIDE_REQ_SCREEN state -> do
-      modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> RideRequestData.initData "")
+    GO_TO_RIDE_REQ_SCREEN state lat lon -> do
+      modifyScreenState $ RideRequestScreenStateType (\rideRequestScreen -> (RideRequestData.initData "") {data{driverLat = Just lat , driverLong = Just lon}})
       rideRequestScreenFlow
     GO_TO_RIDE_SUMMARY_SCREEN state -> do 
      case state.data.upcomingRide of 

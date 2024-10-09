@@ -1682,17 +1682,17 @@ payoutRegistration dummy = do
     where
         unwrapResponse (x) = x
 
-rideBooking :: String -> String -> String -> String -> String -> Flow GlobalState (Either ErrorResponse ScheduledBookingListResponse)
-rideBooking limit offset from to  tripCategory = do
+rideBooking :: String -> String -> String -> String -> String -> String -> String -> Flow GlobalState (Either ErrorResponse ScheduledBookingListResponse)
+rideBooking limit offset from to  tripCategory lat lon  = do
         headers <- getHeaders "" true
-        withAPIResult (EP.getScheduledBookingList limit offset from to  tripCategory) unwrapResponse $ callAPI headers (ScheduledBookingListRequest limit offset  from to  tripCategory)
+        withAPIResult (EP.getScheduledBookingList limit offset from to  tripCategory lat lon ) unwrapResponse $ callAPI headers (ScheduledBookingListRequest limit offset  from to  tripCategory lat lon )
     where
         unwrapResponse (x) = x
 
-rideBookingBT :: String -> String -> String -> String -> String -> FlowBT String ScheduledBookingListResponse
-rideBookingBT limit offset  from to  tripCategory= do
+rideBookingBT :: String -> String -> String -> String -> String -> String -> String -> FlowBT String ScheduledBookingListResponse
+rideBookingBT limit offset  from to  tripCategory lat lon = do
         headers <- lift $ lift $ getHeaders "" true
-        withAPIResultBT (EP.getScheduledBookingList limit offset from to  tripCategory) identity errorHandler (lift $ lift $ callAPI headers (ScheduledBookingListRequest limit offset from to tripCategory))
+        withAPIResultBT (EP.getScheduledBookingList limit offset from to  tripCategory lat lon ) identity errorHandler (lift $ lift $ callAPI headers (ScheduledBookingListRequest limit offset from to tripCategory lat lon ))
     where
     errorHandler (ErrorPayload errorPayload) =  do
         BackT $ pure GoBack

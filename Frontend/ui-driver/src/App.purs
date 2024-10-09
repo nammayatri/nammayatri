@@ -462,7 +462,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | GO_TO_ADD_UPI_SCREEN
                           | VERIFY_MANUAL_UPI HomeScreenState
                           | SWITCH_PLAN_FROM_HS PlanCardState HomeScreenState
-                          | GO_TO_RIDE_REQ_SCREEN HomeScreenState
+                          | GO_TO_RIDE_REQ_SCREEN HomeScreenState String String
                           | GO_TO_RIDE_SUMMARY
                           | GO_TO_RIDE_SUMMARY_SCREEN HomeScreenState
 

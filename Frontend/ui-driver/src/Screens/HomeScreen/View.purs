@@ -2772,7 +2772,7 @@ getScheduledRidecount  push action state   = do
        difference  =  (runFn2 JB.differenceBetweenTwoUTC (EHC.getCurrentUTC "") lastRespTime)
        checkApiCall =  if difference <= fiveMinInSec then false else true
   when checkApiCall $ do
-        (scheduledBookingListResponse) <- Remote.rideBooking "5" "0" (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "YYYY-MM-DD")  (EHC.convertUTCtoISC (getFutureDate (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "YYYY-MM-DD") 1) "YYYY-MM-DD") ""
+        (scheduledBookingListResponse) <- Remote.rideBooking "5" "0" (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "YYYY-MM-DD")  (EHC.convertUTCtoISC (getFutureDate (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "YYYY-MM-DD") 1) "YYYY-MM-DD") "" ( show state.data.currentDriverLat) (show state.data.currentDriverLon)
         case scheduledBookingListResponse of
           Right (ScheduledBookingListResponse listResp) -> do
             let count  = DA.length (listResp.bookings)

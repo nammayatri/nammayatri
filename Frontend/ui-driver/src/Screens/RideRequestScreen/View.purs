@@ -56,6 +56,7 @@ screen initialState listItem =
         , ( \push -> do
                 void $ launchAff $ EHC.flowRunner defaultGlobalState $ getRideList PastRideApiAC push initialState 
                 _ <- HU.storeCallBackForNotification push Notification
+                _ <- JB.getCurrentPosition push UpdateCurrentLocation
                 pure $ pure unit
           )
         ]
@@ -374,7 +375,7 @@ loadButtonView state push =
 getRideList :: forall action. (ScheduledBookingListResponse -> String -> action) -> (action -> Effect Unit) -> RideRequestScreenState -> Flow GlobalState Unit
 getRideList action push state = do
       when state.props.shouldCall $ do 
-        (scheduledBookingListResponse) <- Remote.rideBooking "5" (show state.data.offset) (state.data.date) (state.data.date) (state.data.tripCategory)
+        (scheduledBookingListResponse) <- Remote.rideBooking "5" (show state.data.offset) (state.data.date) (state.data.date) (state.data.tripCategory) ( fromMaybe "0.0" state.data.driverLat) ( fromMaybe "0.0" state.data.driverLong)
         case scheduledBookingListResponse of
           Right (ScheduledBookingListResponse listResp) -> do
             doAff do liftEffect $ push $ action (ScheduledBookingListResponse listResp) "success"
