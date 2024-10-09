@@ -28,6 +28,7 @@ import Screens.Types (SplashScreenState)
 import Styles.Colors as Color
 import Helpers.Utils
 import Engineering.Helpers.Commons
+import RemoteConfig as RemoteConfig
 
 screen :: SplashScreenState -> Screen Action SplashScreenState ScreenOutput
 screen initialState =
@@ -81,7 +82,8 @@ view push _ =
         , id (getNewIDWithTag "splashLottieAnimation")
         , afterRender
             ( \action -> do
-                void $ pure $ startLottieProcess lottieAnimationConfig { rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/ny_bundle_splash_lottie.json", lottieId = (getNewIDWithTag "splashLottieAnimation"), speed = 1.8, cacheEnabled = false }
+                let bundleLottieConfig = RemoteConfig.getBundleSplashConfig "lazy"
+                void $ pure $ startLottieProcess lottieAnimationConfig { rawJson = bundleLottieConfig.lottieUrl, lottieId = (getNewIDWithTag "splashLottieAnimation"), speed = 1.8, cacheEnabled = false }
                 push action
             )
             (const AfterRender)

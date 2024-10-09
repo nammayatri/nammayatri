@@ -30,6 +30,7 @@ import Common.RemoteConfig.Utils
 import Screens.Types as ST
 import Resource.Constants (oneDayInMS)
 import Debug(spy)
+import Common.RemoteConfig (BundleLottieConfig)
 
 foreign import getSubsRemoteConfig :: String -> Foreign
 foreign import getHVRemoteConfig :: String -> Foreign
@@ -171,3 +172,7 @@ defaultMetroCoinsEvent = {
   coins : 0,
   minDistance : 0
 }
+
+
+getBundleSplashConfig :: String -> BundleLottieConfig
+getBundleSplashConfig lazy = decodeForeignObject (parseJSON $ fetchRemoteConfigString "driver_bundle_splash_config") $ { lottieUrl : "https://assets.moving.tech/beckn/nammayatri/driver/lottie/ny_bundle_splash_lottie_new.json", enable : true}
