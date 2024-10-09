@@ -55,6 +55,7 @@ import Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
+import Kernel.Prelude hiding (whenJust)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
@@ -104,7 +105,8 @@ data QuoteAPIEntity = QuoteAPIEntity
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     createdAt :: UTCTime,
     isValueAddNP :: Bool,
-    validTill :: UTCTime
+    validTill :: UTCTime,
+    vehicleIconUrl :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -131,6 +133,7 @@ makeQuoteAPIEntity (Quote {..}) bppDetails isValueAddNP =
           discountWithCurrency = mkPriceAPIEntity <$> discount,
           vehicleVariant = vehicleServiceTierType,
           quoteFareBreakup = mkQuoteBreakupAPIEntity <$> quoteBreakupList,
+          vehicleIconUrl = showBaseUrl <$> vehicleIconUrl,
           ..
         }
 
