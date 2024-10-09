@@ -72,6 +72,15 @@
         ./Frontend/default.nix
       ];
 
+      perSystem = { self', ... }: {
+        cachix-push = {
+          pathsToCache = {
+            ny-backend-shell = self'.devShells.backend;
+            ny-frontend-shell = self'.devShells.frontend;
+          };
+        };
+      };
+
       flake = {
         # Configuration for https://github.com/juspay/nix-browser/tree/main/crates/nix_health#nix-health
         nix-health.default = {
