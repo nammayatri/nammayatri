@@ -145,17 +145,20 @@ verifyTag fullTag = do
   case T.splitOn "#" fullTag of
     [name, tagValueText] -> do
       tag <- QNT.findByPrimaryKey name >>= fromMaybeM (InvalidRequest "Tag not found in the system, please create the tag")
-      let mbTagValue = textToMaybeValue tagValueText
-      case tag.possibleValues of
-        Lib.Yudhishthira.Types.Tags values ->
-          case mbTagValue of
-            Just (A.String str) -> unless (str `elem` values) $ throwError (InvalidRequest $ "Tag value should be one of " <> show values)
-            _ -> throwError $ InvalidRequest "Tag value should be a string"
-        Lib.Yudhishthira.Types.Range start end ->
-          case mbTagValue of
-            Just (A.Number num) -> unless (num >= realToFrac start && num <= realToFrac end) $ throwError (InvalidRequest $ "Tag value should be between " <> show start <> " and " <> show end)
-            _ -> throwError $ InvalidRequest "Tag value should be a number"
-        Lib.Yudhishthira.Types.AnyText -> pure ()
+      if ("&" `T.isInfixOf` tagValueText) -- don't check for condition if value type is array
+        then pure ()
+        else do
+          let mbTagValue = textToMaybeValue tagValueText
+          case tag.possibleValues of
+            Lib.Yudhishthira.Types.Tags values ->
+              case mbTagValue of
+                Just (A.String str) -> unless (str `elem` values) $ throwError (InvalidRequest $ "Tag value should be one of " <> show values)
+                _ -> throwError $ InvalidRequest "Tag value should be a string"
+            Lib.Yudhishthira.Types.Range start end ->
+              case mbTagValue of
+                Just (A.Number num) -> unless (num >= realToFrac start && num <= realToFrac end) $ throwError (InvalidRequest $ "Tag value should be between " <> show start <> " and " <> show end)
+                _ -> throwError $ InvalidRequest "Tag value should be a number"
+            Lib.Yudhishthira.Types.AnyText -> pure ()
     [_] -> return ()
     _ -> throwError $ InvalidRequest "Tag should have format of name#value or just name"
 

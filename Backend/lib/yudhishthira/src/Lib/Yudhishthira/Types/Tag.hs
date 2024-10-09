@@ -6,6 +6,7 @@ import Kernel.Types.Common
 data TagValue
   = TextValue Text
   | NumberValue Double -- Int
+  | ArrayValue [Text]
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data NammaTagResponse = NammaTagResponse

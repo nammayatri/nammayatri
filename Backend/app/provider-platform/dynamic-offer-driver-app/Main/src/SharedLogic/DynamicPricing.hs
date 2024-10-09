@@ -34,6 +34,7 @@ data DynamicPricingData = DynamicPricingData
     distanceInKm :: Double,
     supplyDemandRatioFromLoc :: Double,
     supplyDemandRatioToLoc :: Double,
+    serviceTier :: DServiceTierType.ServiceTierType,
     toss :: Int --,
   }
   deriving (Generic, Show, FromJSON, ToJSON)
@@ -46,5 +47,6 @@ instance Default DynamicPricingData where
         distanceInKm = 1.1,
         supplyDemandRatioFromLoc = 1.1,
         supplyDemandRatioToLoc = 1.1,
+        serviceTier = DServiceTierType.TAXI,
         toss = 1 --,
       }

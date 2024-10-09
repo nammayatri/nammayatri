@@ -89,7 +89,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
         driversData :: [DriverPoolWithActualDistResult] <- mapM (createLogicData def . Just) req.inputData
         let logicData = TaggedDriverPoolInput driversData False
         YudhishthiraFlow.verifyDynamicLogic req.rules logicData
-      Lib.Yudhishthira.Types.DYNAMIC_PRICING _ -> do
+      Lib.Yudhishthira.Types.DYNAMIC_PRICING_UNIFIED -> do
         logicData :: DynamicPricingData <- createLogicData def (Prelude.listToMaybe req.inputData)
         YudhishthiraFlow.verifyDynamicLogic req.rules logicData
       _ -> throwError $ InvalidRequest "Logic Domain not supported"

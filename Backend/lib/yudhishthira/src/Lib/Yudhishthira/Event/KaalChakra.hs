@@ -305,6 +305,7 @@ showTag ::
   Text
 showTag (Yudhishthira.TagName tagName) (Yudhishthira.TextValue tagValueText) = tagName <> "#" <> tagValueText
 showTag (Yudhishthira.TagName tagName) (Yudhishthira.NumberValue tagValueDouble) = tagName <> "#" <> show tagValueDouble
+showTag (Yudhishthira.TagName tagName) (Yudhishthira.ArrayValue tagValueArray) = tagName <> "#" <> (T.intercalate "&" tagValueArray)
 
 parseTagValue :: A.Value -> Yudhishthira.TagValues -> Maybe Yudhishthira.TagValue
 parseTagValue (A.String txt) possibleValues = case possibleValues of
@@ -319,7 +320,12 @@ parseTagValue (A.Number sci) possibleValues = do
   case possibleValues of
     Yudhishthira.Range minDouble maxDouble | d >= minDouble && d <= maxDouble -> Just $ Yudhishthira.NumberValue d
     _ -> Nothing
+parseTagValue (A.Array arr') _ = Yudhishthira.ArrayValue <$> (mapM extractText (toList arr')) -- Add possible value checks
 parseTagValue _ _ = Nothing
+
+extractText :: A.Value -> Maybe Text
+extractText (A.String txt) = Just txt
+extractText _ = Nothing
 
 buildUserDataList ::
   (MonadFlow m) =>

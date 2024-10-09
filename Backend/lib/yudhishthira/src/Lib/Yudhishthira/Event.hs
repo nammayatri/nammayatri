@@ -2,6 +2,7 @@ module Lib.Yudhishthira.Event where
 
 import qualified Data.Aeson as A
 import Data.Scientific
+import qualified Data.Text as T
 import JsonLogic
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
@@ -57,6 +58,7 @@ yudhishthiraDecide req = do
         A.Number number -> do
           let doubleValue = toRealFloat number -- :: Maybe Int = toBoundedInteger number
           return $ Just (NumberValue doubleValue)
+        A.Array arr' -> return (ArrayValue <$> (mapM extractText (toList arr')))
         value -> do
           logError $ "Invalid value for tag: " <> show value
           return Nothing
@@ -70,6 +72,10 @@ yudhishthiraDecide req = do
                 tagCategory = tag.category,
                 tagValidity
               }
+
+    extractText :: A.Value -> Maybe Text
+    extractText (A.String txt) = Just txt
+    extractText _ = Nothing
 
 computeNammaTags ::
   ( MonadFlow m,
@@ -90,4 +96,5 @@ computeNammaTags event sourceData_ = do
     tagValue <- case tag.tagValue of
       TextValue text -> return text
       NumberValue number -> return $ show number
+      ArrayValue values -> return $ T.intercalate "&" values
     return $ tag.tagName <> "#" <> tagValue

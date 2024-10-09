@@ -41,7 +41,6 @@ import Control.Lens.Operators hiding ((.=))
 import Data.Aeson
 import Data.OpenApi as OpenApi hiding (description, name, tags, version)
 import qualified Data.Text as T
-import Domain.Types.ServiceTierType as DST
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.HideSecrets
@@ -124,16 +123,14 @@ newtype YudhishthiraDecideResp = YudhishthiraDecideResp
 data LogicDomain
   = POOLING
   | FARE_POLICY
-  | DYNAMIC_PRICING DST.ServiceTierType
+  | DYNAMIC_PRICING_UNIFIED
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
 
 generateLogicDomainShowInstances :: [String]
 generateLogicDomainShowInstances =
   [show POOLING]
     ++ [show FARE_POLICY]
-    ++ [show (DYNAMIC_PRICING vehicleType) | vehicleType <- vehicleTypes]
-  where
-    vehicleTypes = [COMFY, ECO, PREMIUM, SUV, AUTO_RICKSHAW, HATCHBACK, SEDAN, TAXI, TAXI_PLUS, PREMIUM_SEDAN, BLACK, BLACK_XL, BIKE, AMBULANCE_TAXI, AMBULANCE_TAXI_OXY, AMBULANCE_AC, AMBULANCE_AC_OXY, AMBULANCE_VENTILATOR, SUV_PLUS, DELIVERY_BIKE]
+    ++ [show DYNAMIC_PRICING_UNIFIED]
 
 instance ToParamSchema LogicDomain where
   toParamSchema _ =
@@ -146,8 +143,7 @@ instance ToParamSchema LogicDomain where
 instance Show LogicDomain where
   show POOLING = "POOLING"
   show FARE_POLICY = "FARE-POLICY"
-  show (DYNAMIC_PRICING vehicleType) =
-    "DYNAMIC-PRICING_" ++ show vehicleType
+  show DYNAMIC_PRICING_UNIFIED = "DYNAMIC_PRICING_UNIFIED"
 
 instance Read LogicDomain where
   readsPrec _ s =
@@ -157,12 +153,8 @@ instance Read LogicDomain where
             [(POOLING, drop 1 rest)]
           "FARE-POLICY" ->
             [(FARE_POLICY, drop 1 rest)]
-          "DYNAMIC-PRICING" ->
-            let (vehicleTypeStr, rest1) = break (== '_') (drop 1 rest)
-             in case readMaybe vehicleTypeStr of
-                  Just vehicleType ->
-                    [(DYNAMIC_PRICING vehicleType, rest1)]
-                  _ -> []
+          "DYNAMIC_PRICING_UNIFIED" ->
+            [(DYNAMIC_PRICING_UNIFIED, drop 1 rest)]
           _ -> []
 
 $(mkBeamInstancesForEnumAndList ''LogicDomain)
