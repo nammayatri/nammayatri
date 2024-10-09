@@ -347,3 +347,9 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN is_intercity_
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN vehicle_icon_url character varying(255) ;

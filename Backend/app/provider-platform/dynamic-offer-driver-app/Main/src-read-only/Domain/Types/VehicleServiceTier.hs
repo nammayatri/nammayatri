@@ -34,6 +34,7 @@ data VehicleServiceTier = VehicleServiceTier
     seatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     serviceTierType :: Domain.Types.Common.ServiceTierType,
     shortDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleIconUrl :: Kernel.Prelude.Maybe Kernel.Types.Common.BaseUrl,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,

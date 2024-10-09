@@ -97,7 +97,8 @@ data Pricing = Pricing
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
-    specialLocationName :: Maybe Text
+    specialLocationName :: Maybe Text,
+    vehicleIconUrl :: Maybe BaseUrl
   }
 
 data RateCardBreakupItem = RateCardBreakupItem
@@ -1244,8 +1245,8 @@ tfItemDescriptor booking =
         descriptorName = Just $ show booking.vehicleServiceTier
       }
 
-convertEstimateToPricing :: Maybe Text -> (DEst.Estimate, DVST.VehicleServiceTier, Maybe NearestDriverInfo) -> Pricing
-convertEstimateToPricing specialLocationName (DEst.Estimate {..}, serviceTier, mbDriverLocations) =
+convertEstimateToPricing :: Maybe Text -> (DEst.Estimate, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl) -> Pricing
+convertEstimateToPricing specialLocationName (DEst.Estimate {..}, serviceTier, mbDriverLocations, vehicleIconUrl) =
   Pricing
     { pricingId = id.getId,
       pricingMaxFare = maxFare,
@@ -1261,8 +1262,8 @@ convertEstimateToPricing specialLocationName (DEst.Estimate {..}, serviceTier, m
       ..
     }
 
-convertQuoteToPricing :: Maybe Text -> (DQuote.Quote, DVST.VehicleServiceTier, Maybe NearestDriverInfo) -> Pricing
-convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDriverLocations) =
+convertQuoteToPricing :: Maybe Text -> (DQuote.Quote, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl) -> Pricing
+convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDriverLocations, vehicleIconUrl) =
   Pricing
     { pricingId = id.getId,
       pricingMaxFare = estimatedFare,
@@ -1297,6 +1298,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       isCustomerPrefferedSearchRoute = Nothing,
       isBlockedRoute = Nothing,
       specialLocationName = Nothing,
+      vehicleIconUrl = Nothing,
       ..
     }
 
@@ -1484,6 +1486,38 @@ mkRateCardTag estimatedDistance tollCharges farePolicy = do
           tagGroupList = Just farePolicyBreakupsTags
         }
     ]
+
+mkVehicleIconTag :: Maybe BaseUrl -> Maybe [Spec.TagGroup]
+mkVehicleIconTag mbBaseUrl =
+  case mbBaseUrl of
+    Just baseUrl ->
+      Just $
+        [ Spec.TagGroup
+            { tagGroupDisplay = Just False,
+              tagGroupDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.VEHICLE_INFO,
+                      descriptorName = Just "Vehicle Icon",
+                      descriptorShortDesc = Nothing
+                    },
+              tagGroupList =
+                Just
+                  [ Spec.Tag
+                      { tagDisplay = Just False,
+                        tagDescriptor =
+                          Just
+                            Spec.Descriptor
+                              { descriptorCode = Just $ show Tags.VEHICLE_ICON_URL,
+                                descriptorName = Just "Vehicle Icon URL",
+                                descriptorShortDesc = Nothing
+                              },
+                        tagValue = Just $ showBaseUrl baseUrl
+                      }
+                  ]
+            }
+        ]
+    Nothing -> Nothing
 
 mkRateCardBreakupItem :: Text -> Text -> RateCardBreakupItem
 mkRateCardBreakupItem = RateCardBreakupItem

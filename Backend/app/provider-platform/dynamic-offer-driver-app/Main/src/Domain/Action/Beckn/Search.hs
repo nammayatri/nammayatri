@@ -148,8 +148,8 @@ data DSearchRes = DSearchRes
     toLocation :: Maybe LatLong,
     stops :: [LatLong],
     now :: UTCTime,
-    quotes :: [(DQuote.Quote, DVST.VehicleServiceTier, Maybe NearestDriverInfo)],
-    estimates :: [(DEst.Estimate, DVST.VehicleServiceTier, Maybe NearestDriverInfo)],
+    quotes :: [(DQuote.Quote, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl)],
+    estimates :: [(DEst.Estimate, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl)],
     transporterConfig :: DTMT.TransporterConfig,
     bapId :: Text
   }
@@ -357,11 +357,11 @@ addNearestDriverInfo ::
   Id DMOC.MerchantOperatingCity ->
   Maybe (NonEmpty DriverPoolResult) ->
   [a] ->
-  Flow [(a, DVST.VehicleServiceTier, Maybe NearestDriverInfo)]
+  Flow [(a, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl)]
 addNearestDriverInfo merchantOpCityId Nothing estdOrQuotes = do
   forM estdOrQuotes $ \estdOrQuote -> do
     vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId estdOrQuote.vehicleServiceTier merchantOpCityId >>= fromMaybeM (VehicleServiceTierNotFound (show estdOrQuote.vehicleServiceTier))
-    return (estdOrQuote, vehicleServiceTierItem, Nothing)
+    return (estdOrQuote, vehicleServiceTierItem, Nothing, vehicleServiceTierItem.vehicleIconUrl)
 addNearestDriverInfo merchantOpCityId (Just driverPool) estdOrQuotes = do
   let mapOfDPRByServiceTier = foldl (\m dpr -> M.insertWith (<>) dpr.serviceTier (pure dpr) m) mempty driverPool
   traverse (matchInputWithNearestDriver mapOfDPRByServiceTier) estdOrQuotes
@@ -370,18 +370,18 @@ addNearestDriverInfo merchantOpCityId (Just driverPool) estdOrQuotes = do
       (HasField "vehicleServiceTier" a ServiceTierType) =>
       M.Map ServiceTierType (NonEmpty DriverPoolResult) ->
       a ->
-      Flow (a, DVST.VehicleServiceTier, Maybe NearestDriverInfo)
+      Flow (a, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl)
     matchInputWithNearestDriver driverPools input = do
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId input.vehicleServiceTier merchantOpCityId >>= fromMaybeM (VehicleServiceTierNotFound (show input.vehicleServiceTier))
       let driverPool' = M.lookup input.vehicleServiceTier driverPools
       case driverPool' of
-        Nothing -> return (input, vehicleServiceTierItem, Nothing)
+        Nothing -> return (input, vehicleServiceTierItem, Nothing, vehicleServiceTierItem.vehicleIconUrl)
         Just dp -> do
           let driverLatLongs = fmap (\x -> LatLong x.lat x.lon) dp
               distanceToNearestDriver = NE.head dp & (.distanceToPickup)
               locationId = NE.head dp & (.driverId) & (.getId)
               nearestDriverInfo = NearestDriverInfo {..}
-          return (input, vehicleServiceTierItem, Just nearestDriverInfo)
+          return (input, vehicleServiceTierItem, Just nearestDriverInfo, vehicleServiceTierItem.vehicleIconUrl)
 
 selectDriversAndMatchFarePolicies :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DLoc.Location -> DTMT.TransporterConfig -> Bool -> SL.Area -> [DFP.FullFarePolicy] -> UTCTime -> Bool -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])
 selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocation transporterConfig isScheduled area farePolicies now isValueAddNP = do

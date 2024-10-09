@@ -411,6 +411,7 @@ data BecknTag
     OTHER_SELECT_ESTIMATES
   | -- Forward batching request info tags
     PREVIOUS_RIDE_DROP_LOCATION_LAT
+  | VEHICLE_ICON_URL
   | PREVIOUS_RIDE_DROP_LOCATION_LON
   | -- Toll related info tags
     TOLL_CONFIDENCE
