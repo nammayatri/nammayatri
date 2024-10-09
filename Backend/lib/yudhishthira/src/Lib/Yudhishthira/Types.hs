@@ -33,6 +33,7 @@ module Lib.Yudhishthira.Types
     CreateTimeBoundRequest (..),
     LogicRolloutReq,
     TimeBoundResp,
+    ConfigType (..),
     -- DynamicPricingResult (..),
   )
 where
@@ -56,6 +57,10 @@ import Lib.Yudhishthira.Types.KaalChakra as Reexport
 import Lib.Yudhishthira.Types.Manual as Reexport
 import Lib.Yudhishthira.Types.Tag as Reexport
 import qualified Text.Show (show)
+
+data ConfigType
+  = DriverPoolConfig
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded)
 
 data Source
   = Application ApplicationEvent
@@ -125,6 +130,7 @@ data LogicDomain
   = POOLING
   | FARE_POLICY
   | DYNAMIC_PRICING DST.ServiceTierType
+  | CONFIG ConfigType
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
 
 generateLogicDomainShowInstances :: [String]
@@ -132,8 +138,10 @@ generateLogicDomainShowInstances =
   [show POOLING]
     ++ [show FARE_POLICY]
     ++ [show (DYNAMIC_PRICING vehicleType) | vehicleType <- vehicleTypes]
+    ++ [show (CONFIG configType) | configType <- configTypes]
   where
     vehicleTypes = [COMFY, ECO, PREMIUM, SUV, AUTO_RICKSHAW, HATCHBACK, SEDAN, TAXI, TAXI_PLUS, PREMIUM_SEDAN, BLACK, BLACK_XL, BIKE, AMBULANCE_TAXI, AMBULANCE_TAXI_OXY, AMBULANCE_AC, AMBULANCE_AC_OXY, AMBULANCE_VENTILATOR, SUV_PLUS, DELIVERY_BIKE]
+    configTypes = [minBound .. maxBound]
 
 instance ToParamSchema LogicDomain where
   toParamSchema _ =
@@ -148,6 +156,7 @@ instance Show LogicDomain where
   show FARE_POLICY = "FARE-POLICY"
   show (DYNAMIC_PRICING vehicleType) =
     "DYNAMIC-PRICING_" ++ show vehicleType
+  show (CONFIG configType) = "CONFIG_" ++ show configType
 
 instance Read LogicDomain where
   readsPrec _ s =
@@ -163,6 +172,11 @@ instance Read LogicDomain where
                   Just vehicleType ->
                     [(DYNAMIC_PRICING vehicleType, rest1)]
                   _ -> []
+          "CONFIG" ->
+            let (configType', rest1) = break (== '_') (drop 1 rest)
+             in case readMaybe configType' of
+                  Just configType -> [(CONFIG configType, rest1)]
+                  Nothing -> []
           _ -> []
 
 $(mkBeamInstancesForEnumAndList ''LogicDomain)

@@ -38,7 +38,7 @@ data CacPrefix
   | FarePolicyInterCityDetailsPricingSlabs
   | MerchantServiceUsageConfig
   | Empty
-  deriving (Eq)
+  deriving (Eq, Bounded)
 
 instance Show CacPrefix where
   show DriverPoolConfig = "driverPoolConfig:"

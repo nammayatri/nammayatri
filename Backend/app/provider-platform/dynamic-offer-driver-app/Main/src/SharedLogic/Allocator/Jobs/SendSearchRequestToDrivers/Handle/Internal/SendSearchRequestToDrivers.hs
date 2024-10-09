@@ -247,6 +247,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 driverTags = Just dpRes.driverTags,
                 customerTags = dpRes.customerTags,
                 poolingLogicVersion = searchReq.poolingLogicVersion,
+                poolingConfigVersion = searchReq.poolingConfigVersion,
                 notificationSource = Nothing,
                 totalRides = fromMaybe (-1) (driverStats <&> (.totalRides)),
                 renderedAt = Nothing,

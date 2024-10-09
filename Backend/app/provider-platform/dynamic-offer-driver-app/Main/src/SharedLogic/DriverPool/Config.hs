@@ -24,20 +24,32 @@ module SharedLogic.DriverPool.Config
 where
 
 import Control.Applicative ((<|>))
+import Data.Aeson as A
 import Data.Text as Text hiding (filter, find)
 import qualified Domain.Types as DVST
 import Domain.Types.DriverPoolConfig
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.SearchRequest as DSR
+import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.Prelude as KP
+import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Tools.Metrics.CoreMetrics.Types
+import Kernel.Types.Cac (CACData (..))
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.TimeBound
 import Kernel.Utils.Common
 import qualified Lib.Types.SpecialLocation as SL
+import Lib.Yudhishthira.Storage.Beam.BeamFlow
+import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import qualified Lib.Yudhishthira.Types as LYT
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as CTC
 import Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
+import qualified Storage.Queries.SearchRequest as QSR
+import qualified Tools.DynamicLogic as TDL
+import Utils.Common.CacUtils
 
 getDriverPoolConfigFromDB' ::
   Maybe DVST.ServiceTierType ->
@@ -73,21 +85,67 @@ findDriverPoolConfig configs serviceTier tripCategory dist area = do
   find (filterByDistAndDvehAndArea serviceTier tripCategory dist area) configs
     <|> find (filterByDistAndDvehAndArea serviceTier tripCategory dist SL.Default) configs
 
+newtype Config = Config {config :: DriverPoolConfig} deriving (Generic, ToJSON, FromJSON, Show)
+
 getDriverPoolConfigFromDB ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    BeamFlow m r
+  ) =>
   Id MerchantOperatingCity ->
   Maybe DVST.ServiceTierType ->
   String ->
   SL.Area ->
   Maybe Meters ->
+  Maybe CacKey ->
+  DSR.SearchRequest ->
   m (Maybe DriverPoolConfig)
-getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist = do
+getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist stickeyKey sreq = do
   configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc -- bounds, all these params, timeDiffFromUTC
   let boundedConfigs = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded) configs) localTime
   let unboundedConfig = filter (\cfg -> cfg.timeBounds == Unbounded) configs
-  return $
-    ( getDriverPoolConfigFromDB' serviceTier tripCategory area mbDist boundedConfigs
-        <|> getDriverPoolConfigFromDB' serviceTier tripCategory area mbDist unboundedConfig
-    )
+  let dpc' = getDriverPoolConfigFromDB' serviceTier tripCategory area mbDist boundedConfigs <|> getDriverPoolConfigFromDB' serviceTier tripCategory area mbDist unboundedConfig
+  oldVersion <- getConfigVersion (getKeyValue <$> stickeyKey)
+  (allLogics, version) <- TDL.getAppDynamicLogic merchantOpCityId (LYT.CONFIG LYT.DriverPoolConfig) localTime oldVersion
+  case dpc' of
+    Just dpc -> do
+      let config = Config dpc
+      resp <- LYTU.runLogics allLogics config
+      case (fromJSON resp.result :: Result DriverPoolConfig) of
+        Success dpc'' -> do
+          when
+            (isJust version && isNothing oldVersion)
+            ( do
+                QSR.updatePoolingConfigVersion version sreq.id
+                cacheConfigVersion (getKeyValue <$> stickeyKey) (fromJust version)
+            )
+          whenJust
+            stickeyKey
+            ( \stickeyKey' -> do
+                let cacData = CACData (getKeyValue stickeyKey') (getKeyName stickeyKey') "" "driver_pool_config" (Text.pack (show version))
+                fork "push driver_pool_config data to kafka" $ pushToKafka cacData "driver-pool-config-data" ""
+            )
+          pure $ Just dpc''
+        A.Error e -> do
+          logError $ "Error in applying dynamic logic: " <> show e
+          incrementSystemConfigsFailedCounter "driver_pool_config_dynamic_logic_failure"
+          pure dpc'
+    Nothing -> pure Nothing
+
+makeConfigVersionKey :: Text -> Text
+makeConfigVersionKey id = "DRIVER_POOL_CONFIG:STKID" <> id
+
+getConfigVersion :: (CacheFlow m r) => Maybe Text -> m (Maybe Int)
+getConfigVersion mbStickyKey = do
+  case mbStickyKey of
+    Nothing -> pure Nothing
+    Just stId' -> Hedis.withCrossAppRedis (Hedis.safeGet (makeConfigVersionKey stId'))
+
+cacheConfigVersion :: (CacheFlow m r) => Maybe Text -> Int -> m ()
+cacheConfigVersion mbStickyKey version = do
+  expTime <- fromIntegral <$> asks (.cacConfig.cacExpTime)
+  case mbStickyKey of
+    Nothing -> pure ()
+    Just stId' -> Hedis.withCrossAppRedis (Hedis.setExp (makeConfigVersionKey stId') version expTime)
