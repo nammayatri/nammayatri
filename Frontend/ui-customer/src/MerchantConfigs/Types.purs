@@ -69,7 +69,7 @@ type AppConfigCustomer a =
   , shareAppConfig :: ShareAppConfig
   , homeScreen :: HomeScreen
   , locationTagBar :: LocationTagBarConfig
-  , cityConfig :: Array CityConfig
+  , cityConfig :: Object CityConfig
   , driverLocationPolling :: DriverLocationPollingConfig
   , banners :: Banners
   , tipDisplayDuration :: Int

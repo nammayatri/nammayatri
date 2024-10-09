@@ -105,6 +105,7 @@ import Data.Array as DA
 import Components.MessagingView.Controller (ChatContacts(..))
 import Services.API as API
 import JBridge as JB
+import Foreign.Object (Object, lookup)
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -953,9 +954,8 @@ getDistInfo savedLoc excludeLocation lat lon placeId = do
 getExistingTags :: Array LocationListItemState -> Array String 
 getExistingTags savedLoc = map (\item -> DS.toLower $ item.tag) savedLoc
 
-getCityConfig :: Array CityConfig -> String -> CityConfig
-getCityConfig cityConfigs cityName = do
-  fromMaybe defaultCityConfig $ find (\item -> item.cityName == cityName) cityConfigs
+getCityConfig :: Object CityConfig -> String -> CityConfig
+getCityConfig cityConfigs cityName = fromMaybe defaultCityConfig $ lookup cityName cityConfigs
   
 getDefaultPixelSize :: Int -> Int
 getDefaultPixelSize size =
