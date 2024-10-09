@@ -1321,7 +1321,7 @@ statsModel push state =
         , gravity CENTER_VERTICAL
         , background Color.blue600
         , cornerRadius 12.0
-        , padding $ Padding 16 2 8 2
+        , padding $ Padding 16 8 8 8
         ][ textView $
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
