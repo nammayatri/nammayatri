@@ -28,6 +28,7 @@ data RiderConfig = RiderConfig
     csAlertTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     cxAgentDetails :: Kernel.Prelude.Maybe [IssueManagement.Common.CxAgentDetails],
     distanceWeightage :: Kernel.Prelude.Int,
+    driverReferredSearchReqExpiry :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     emailOtpConfig :: Kernel.Prelude.Maybe Email.Types.EmailOTPConfig,
     enableEmergencyContactAddedMessage :: Kernel.Prelude.Bool,
     enableLocalPoliceSupport :: Kernel.Prelude.Bool,

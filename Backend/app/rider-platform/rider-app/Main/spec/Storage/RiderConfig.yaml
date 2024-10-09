@@ -52,6 +52,7 @@ RiderConfig:
     sensitiveWords: "Maybe [Text]"
     payoutBatchSize: Maybe Int
     payoutBatchDelay: NominalDiffTime
+    driverReferredSearchReqExpiry: Maybe Seconds
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

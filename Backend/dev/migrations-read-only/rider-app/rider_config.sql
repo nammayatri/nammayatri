@@ -117,3 +117,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN payout_batch_delay integer ;
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN execute_payment_delay integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN cancellation_payment_delay integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN driver_referred_search_req_expiry integer ;

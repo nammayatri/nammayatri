@@ -13,15 +13,21 @@
 -}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.RefereeLink where
 
 import Data.Aeson hiding (Success)
-import Data.OpenApi hiding (info, name)
+import qualified Data.Aeson.Text as AT
+import Data.OpenApi hiding (info, name, value)
+import qualified Data.Text.Lazy as LT
 import EulerHS.Prelude hiding (length, map, readMaybe)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnumAndList)
 import Kernel.Types.APISuccess
 import Kernel.Utils.Common
-import Kernel.Utils.JSON (removeNullFields)
+import Kernel.Utils.JSON (removeNullFields, stripPrefixUnderscoreIfAny)
+import qualified Kernel.Utils.Schema as Schema
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 
 data ReferrerInfo = ReferrerInfo
   { firstName :: Text,
@@ -51,3 +57,41 @@ instance ToJSON LinkRefereeRes where
   toJSON (LinkRefereeRes res) = case res of
     Left success -> toJSON success
     Right info -> toJSON info
+
+data DriverIdentifierType = REFERRAL_CODE | VEHICLE_NUMBER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+data DriverIdentifier = DriverIdentifier
+  { _type :: DriverIdentifierType,
+    value :: Text
+  }
+  deriving (Generic, Show, Read)
+
+instance FromJSON DriverIdentifier where
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+
+instance ToJSON DriverIdentifier where
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+
+instance ToSchema DriverIdentifier where
+  declareNamedSchema = genericDeclareNamedSchema Schema.stripPrefixUnderscoreIfAny
+
+mkDriverIdentifier :: Maybe DriverIdentifierType -> Maybe Text -> Maybe DriverIdentifier
+mkDriverIdentifier dIType dIValue = do
+  dIType' <- dIType
+  dIValue' <- dIValue
+  pure $
+    DriverIdentifier
+      { _type = dIType',
+        value = dIValue'
+      }
+
+-- TODO: Move to shared-kernel
+toJsonStr :: ToJSON a => a -> Text
+toJsonStr = LT.toStrict . AT.encodeToLazyText
+
+fromJsonStr :: FromJSON a => Text -> Maybe a
+fromJsonStr = Data.Aeson.decode . encodeUtf8
+
+$(mkBeamInstancesForEnumAndList ''DriverIdentifierType)
+
+$(mkHttpInstancesForEnum ''DriverIdentifierType)
