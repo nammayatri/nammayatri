@@ -88,6 +88,13 @@ updateCTEventData response = do
       void $ pure $ setValueInWindow logEventNames.y.auto logEventNames.y.auto
       logFirstRideEvent ((fromMaybe false $ response ^. _hasTakenValidBikeRide) && (getValueFromWindow logEventNames.y.bike) /= logEventNames.y.bike) logEventNames.y.bike
       void $ pure $ setValueInWindow logEventNames.y.bike logEventNames.y.bike
+    "Yatri Sathi" -> do
+      logFirstRideEvent ((fromMaybe false $ response ^. _hasTakenValidCabRide) && (getValueFromWindow logEventNames.ys.cab) /= logEventNames.ys.cab) logEventNames.ys.cab
+      void $ pure $ setValueInWindow logEventNames.ys.cab logEventNames.ys.cab
+      logFirstRideEvent ((fromMaybe false $ response ^. _hasTakenValidAutoRide) && (getValueFromWindow logEventNames.ys.auto) /= logEventNames.ys.auto) logEventNames.ys.auto
+      void $ pure $ setValueInWindow logEventNames.ys.auto logEventNames.ys.auto
+      logFirstRideEvent ((fromMaybe false $ response ^. _hasTakenValidBikeRide) && (getValueFromWindow logEventNames.ys.bike) /= logEventNames.ys.bike) logEventNames.ys.bike
+      void $ pure $ setValueInWindow logEventNames.ys.bike logEventNames.ys.bike
     _ -> pure unit
   where
     logFirstRideEvent :: Boolean -> String -> FlowBT String Unit
@@ -115,5 +122,10 @@ updateCTEventData response = do
           cab: "y_cab_firstride",
           auto: "y_auto_firstride",
           bike: "y_bike_firstride"
+        },
+        ys: {
+          cab: "ys_cab_firstride",
+          auto: "ys_auto_firstride",
+          bike: "ys_bike_firstride"
         }
       }

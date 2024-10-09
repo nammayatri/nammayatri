@@ -433,6 +433,7 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
   where    
     runDriverInfoFlow driverInfoRes updateFeatureFlags = do
       config <- getAppConfigFlowBT Constants.appConfig
+      logField_ <- lift $ lift $ getLogFields
       case driverInfoRes of
         Right (GetDriverInfoResp getDriverInfoResp) -> do
           let cityConfigFromCityCode = HU.getCityConfigFromCityCode config.cityConfig (fromMaybe "" getDriverInfoResp.operatingCity)
@@ -451,7 +452,12 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
                 then do
                   void $ pure $ firebaseLogEvent "ny_driver_enabled"
                   void $ pure $ metaLogEvent "ny_driver_enabled"
-              else pure unit
+                  let (Vehicle linkedVehicle) = fromMaybe dummyVehicleObject getDriverInfoResp.linkedVehicle
+                  let category = fromMaybe "" linkedVehicle.category
+                  when (category /= "") $ do
+                    void $ lift $ lift $ liftFlow $ logEvent logField_ $ "ny_driver_" <> toLower category <> "_enabled"  
+                    void $ pure $ metaLogEvent $ "ny_driver_" <> toLower category <> "_enabled"              
+                else pure unit
               setValueToLocalStore IS_DRIVER_ENABLED "true"
               if updateShowSubscription 
                 then updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) config
