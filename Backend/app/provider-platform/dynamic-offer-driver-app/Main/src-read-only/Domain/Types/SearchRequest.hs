@@ -48,6 +48,7 @@ data SearchRequest = SearchRequest
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     messageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pickupZoneGateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    poolingConfigVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     poolingLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     providerId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     returnTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

@@ -291,7 +291,7 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq 
     mkAppDynamicLogicRollout :: Id MerchantOperatingCity -> UTCTime -> Lib.Yudhishthira.Types.LogicDomain -> Text -> Lib.Yudhishthira.Types.RolloutVersion -> Environment.Flow AppDynamicLogicRollout
     mkAppDynamicLogicRollout merchantOperatingCityId now domain timeBounds Lib.Yudhishthira.Types.RolloutVersion {..} = do
       logicsObject <- CADLE.findByDomainAndVersion domain version
-      let _versionDescription = (Prelude.listToMaybe logicsObject) >>= (.description)
+      let _versionDescription = Prelude.listToMaybe logicsObject >>= (.description)
       when (null logicsObject) $ throwError $ InvalidRequest $ "Logic not found for version: " <> show version
       return $
         AppDynamicLogicRollout

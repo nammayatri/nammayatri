@@ -315,10 +315,9 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                   else do nonGoHomeDriversWithValidReqCount
           let fillSize = batchSize - length batch
           (batch <>)
-            <$> case sortingType of
-              _ -> do
-                (_, taggedPool) <- SDP.makeTaggedDriverPool merchantOpCityId transporterConfig.timeDiffFromUtc searchReq nonGoHomeNormalDriversWithValidReqCountWithServiceTier fillSize False searchReq.customerNammaTags mbVersion -- TODO: Fix isOnRidePool flag
-                return taggedPool
+            <$> do
+              (_, taggedPool) <- SDP.makeTaggedDriverPool merchantOpCityId transporterConfig.timeDiffFromUtc searchReq nonGoHomeNormalDriversWithValidReqCountWithServiceTier fillSize False searchReq.customerNammaTags mbVersion -- TODO: Fix isOnRidePool flag
+              return taggedPool
         cacheBatch batch consideOnRideDrivers = do
           logDebug $ "Caching batch-" <> show batch
           batches <- SDP.previouslyAttemptedDrivers searchTry.id consideOnRideDrivers
@@ -332,7 +331,6 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
           maxRadiusStep <= radiusStep
         -- util function
 
-        sortingType = driverPoolCfg.poolSortingType
         batchSize = driverPoolCfg.driverBatchSize
         batchSizeOnRide = driverPoolCfg.batchSizeOnRide
 

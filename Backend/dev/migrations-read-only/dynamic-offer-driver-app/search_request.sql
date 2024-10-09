@@ -76,3 +76,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN from_loc_geohash te
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN pooling_logic_version integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN pooling_config_version integer ;
