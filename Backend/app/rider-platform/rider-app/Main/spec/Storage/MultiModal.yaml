@@ -63,6 +63,9 @@ Journey:
       params: [legsDone]
       where: id
 
+  sqlType:
+    modes: "text[]"
+
 #passenger details
 JourneyBooking:
   fields:

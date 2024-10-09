@@ -29,6 +29,7 @@ imports:
   SubCategory: Kernel.External.Notification.Interface.Types
   PaymentService: Kernel.External.Payment.Types
   TripCategory: Domain.Types.Trip
+  MultiModalService: Kernel.External.MultiModal.Types
 
 Merchant:
   derives: "Generic,Show,'UsageSafety"
@@ -304,18 +305,22 @@ MerchantServiceUsageConfig:
     cancelPaymentIntent: PaymentService
     updatedAt: UTCTime
     createdAt: UTCTime
+    getMultiModalService: MultiModalService
 
   beamType:
     cancelPaymentIntent: Maybe PaymentService
     getFrfsAutocompleteDistances: Maybe MapsService
+    getMultiModalService: Maybe MultiModalService
 
   fromTType:
     cancelPaymentIntent: fromMaybe (Kernel.External.Payment.Types.Stripe) cancelPaymentIntent|E
     getFrfsAutocompleteDistances: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
+    getMultiModalService: fromMaybe (Kernel.External.MultiModal.Types.OTPTransit)|I
 
   toTType:
     cancelPaymentIntent: Kernel.Prelude.Just|I
     getFrfsAutocompleteDistances: Kernel.Prelude.Just|I
+    getMultiModalService: Kernel.Prelude.Just|I
 
   beamInstance:
     - MakeTableInstances
@@ -368,6 +373,7 @@ MerchantServiceUsageConfig:
     deleteCard: "'Stripe'"
     getDistancesForScheduledRides: "'OSRM'"
     getFrfsAutocompleteDistances: "'OSRM'"
+    getMultiModalService: "'OTPTransit'"
 
 MerchantPaymentMethod:
   derives: "Generic,'UsageSafety"
