@@ -4,7 +4,7 @@ import Prelude
 import DecodeUtil (decodeForeignObject, parseJSON)
 import Foreign (Foreign)
 import Foreign.Index (readProp)
-import Common.RemoteConfig (fetchRemoteConfigString, getCityBasedConfig, defaultRemoteConfig, defaultCityRemoteConfig, BundleLottieConfig)
+import Common.RemoteConfig (fetchRemoteConfigString, getCityBasedConfig, defaultRemoteConfig, BundleLottieConfig)
 import Data.Maybe (Maybe(..), maybe)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Data.Generic.Rep (class Generic)
