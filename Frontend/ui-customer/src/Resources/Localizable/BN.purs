@@ -1640,3 +1640,4 @@ getBN stringKey =
         ALLOW -> "অনুমতি দিন"
         INTERCITY_BUS -> "ইন্টারসিটি বাস"
         DRIVER_ASSIGNED -> "ড্রাইভার নিযুক্ত"
+        EXPLORE -> "অন্বেষণ করুন"

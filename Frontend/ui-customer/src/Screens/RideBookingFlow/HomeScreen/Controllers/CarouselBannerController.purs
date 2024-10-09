@@ -105,6 +105,7 @@ handleDynamicBannerAC action state =
       CRT.Rentals -> continueWithCmd state [pure $ LocationTagBarAC (LocationTagBarV2.TagClicked "RENTALS")]
       CRT.Intercity -> continueWithCmd state [pure $ LocationTagBarAC (LocationTagBarV2.TagClicked "INTER_CITY")]
       CRT.SafetyExplaination -> update state
+      CRT.SetupSafety -> exit $ GoToNammaSafety state false false
     Nothing -> update state
 
 
@@ -144,4 +145,3 @@ safetyBannerAction action state =
       else do 
         exit $ GoToNammaSafety state false $ state.props.sosBannerType == Just MOCK_DRILL_BANNER
     Banner.NoAction -> update state
-  

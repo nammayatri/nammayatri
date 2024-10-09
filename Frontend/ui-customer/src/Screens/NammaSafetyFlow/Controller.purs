@@ -164,6 +164,7 @@ getBannerConfigs state action = getRemoteBannerConfigs "Bangalore"
         , categoryFilter: Nothing
         , image_banner: Just "https://assets.moving.tech/beckn/common/common/images/ny_ic_trusted_contacts_carousel.png"
         , dynamic_action: Nothing
+        , showDuringRide : Nothing
         }
     , RC.RCCarousel
         { text_color: ""
@@ -183,6 +184,7 @@ getBannerConfigs state action = getRemoteBannerConfigs "Bangalore"
         , categoryFilter: Nothing
         , image_banner: Just "https://assets.moving.tech/beckn/common/common/images/ny_ic_safety_checks_carousel.png"
         , dynamic_action: Nothing
+        , showDuringRide : Nothing
         }
     , RC.RCCarousel
         { text_color: ""
@@ -202,6 +204,7 @@ getBannerConfigs state action = getRemoteBannerConfigs "Bangalore"
         , categoryFilter: Nothing
         , image_banner: Just "https://assets.moving.tech/beckn/common/common/images/ny_ic_emergency_actions_carousel.png"
         , dynamic_action: Nothing
+        , showDuringRide : Nothing
         }
     , RC.RCCarousel
         { text_color: ""
@@ -221,6 +224,7 @@ getBannerConfigs state action = getRemoteBannerConfigs "Bangalore"
         , categoryFilter: Nothing
         , image_banner: Just "https://assets.moving.tech/beckn/common/common/images/ny_ic_test_drill_carousel.png"
         , dynamic_action: Nothing
+        , showDuringRide : Nothing
         }
     ]
 

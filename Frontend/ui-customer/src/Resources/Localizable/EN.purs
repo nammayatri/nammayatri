@@ -1647,3 +1647,4 @@ getEN stringKey =
         ALLOW -> "Allow"
         INTERCITY_BUS -> "Intercity Bus" 
         DRIVER_ASSIGNED -> "Driver Assigned"
+        EXPLORE -> "Explore"

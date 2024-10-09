@@ -743,7 +743,7 @@ driverInfoView push state =
                       [ height WRAP_CONTENT
                       , width MATCH_PARENT
                       , orientation VERTICAL
-                      , margin $ MarginTop if rideStarted then 12 else 0
+                      , margin $ MarginTop if os == "IOS" && rideStarted then 12 else 0
                       ][addStopView push state
                       , rentalDetailsView push state
                       , driverDetailsView push (getDriverDetails state) "DriverDetailsView" "NumberPlate"
@@ -780,7 +780,7 @@ getCarouselConfig view state = {
   , onPageScrolled : Nothing
   , currentIndex : state.data.bannerData.currentBanner
   , showScrollIndicator : true
-  , layoutHeight : V 100
+  , layoutHeight : V 120
   , overlayScrollIndicator : false
 }
 
@@ -795,7 +795,7 @@ distanceView push state = let
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
   , onAnimationEnd push $ const $ NoAction
-  , padding $ Padding 16 8 16 14
+  , padding $ Padding 16 8 16 (if Array.length state.data.bannerArray > 0 then 0 else 14)
   ][linearLayout
     [ height WRAP_CONTENT
     , weight 1.0

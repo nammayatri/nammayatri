@@ -83,6 +83,7 @@ newtype RCCarousel
   , image_banner :: Maybe String
   , dynamic_action :: Maybe RemoteAC
   , accessibilityHint :: Maybe String
+  , showDuringRide :: Maybe Boolean
   }
 
 derive instance genericRCCarousel :: Generic RCCarousel _
@@ -164,7 +165,7 @@ type OfferBanner = {
   
 ---------------------------------Remote Config Dynamic AC-----------------------------------------------
 
-data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking | Rentals | Intercity | SafetyExplaination
+data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking | Rentals | Intercity | SafetyExplaination | SetupSafety
 
 instance eqRemoteAC :: Eq RemoteAC where eq = genericEq
 instance encodeJsonRemoteAC :: EncodeJson RemoteAC where encodeJson = genericEncodeJson
