@@ -66,7 +66,8 @@ data EstimateAPIEntity = EstimateAPIEntity
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
-    validTill :: UTCTime
+    validTill :: UTCTime,
+    vehicleIconUrl :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -115,6 +116,7 @@ mkEstimateAPIEntity Estimate {..} = do
         waitingCharges = mkWaitingChargesAPIEntity waitingCharges,
         totalFareRange = mkFareRangeAPIEntity totalFareRange,
         vehicleVariant = Vehicle.castServiceTierToVariant vehicleServiceTierType,
+        vehicleIconUrl = showBaseUrl <$> vehicleIconUrl,
         ..
       }
   where
