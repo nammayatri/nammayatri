@@ -114,7 +114,7 @@ INSERT INTO
     merchant_id,
     merchant_operating_city_id,
     type,
-    code,
+    provider_code,
     short_name,
     long_name,
     description

@@ -3,7 +3,6 @@
 
 module Storage.Queries.OrphanInstances.FRFSTicketBooking where
 
-import qualified BecknV2.FRFS.Enums
 import qualified Domain.Types.FRFSTicketBooking
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -54,11 +53,11 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             riderId = Kernel.Types.Id.Id riderId,
             routeId = Kernel.Types.Id.Id <$> routeId,
             searchId = Kernel.Types.Id.Id searchId,
-            serviceTierCode = Kernel.Prelude.fromMaybe "" serviceTierCode,
-            serviceTierDescription = Kernel.Prelude.fromMaybe "" serviceTierDescription,
-            serviceTierLongName = Kernel.Prelude.fromMaybe "" serviceTierLongName,
-            serviceTierShortName = Kernel.Prelude.fromMaybe "" serviceTierShortName,
-            serviceTierType = fromMaybe BecknV2.FRFS.Enums.AC serviceTierType,
+            serviceTierDescription = serviceTierDescription,
+            serviceTierLongName = serviceTierLongName,
+            serviceTierProviderCode = serviceTierProviderCode,
+            serviceTierShortName = serviceTierShortName,
+            serviceTierType = serviceTierType,
             stationsJson = stationsJson,
             status = status,
             toStationId = Kernel.Types.Id.Id toStationId,
@@ -95,7 +94,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.partnerOrgTransactionId = Kernel.Types.Id.getId <$> partnerOrgTransactionId,
         Beam.payerVpa = payerVpa,
         Beam.paymentTxnId = paymentTxnId,
-        Beam.currency = ((Kernel.Prelude.Just . (.currency))) price,
+        Beam.currency = (Kernel.Prelude.Just . (.currency)) price,
         Beam.price = (.amount) price,
         Beam.providerDescription = providerDescription,
         Beam.providerId = providerId,
@@ -106,11 +105,11 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.riderId = Kernel.Types.Id.getId riderId,
         Beam.routeId = Kernel.Types.Id.getId <$> routeId,
         Beam.searchId = Kernel.Types.Id.getId searchId,
-        Beam.serviceTierCode = Kernel.Prelude.Just serviceTierCode,
-        Beam.serviceTierDescription = Kernel.Prelude.Just serviceTierDescription,
-        Beam.serviceTierLongName = Kernel.Prelude.Just serviceTierLongName,
-        Beam.serviceTierShortName = Kernel.Prelude.Just serviceTierShortName,
-        Beam.serviceTierType = Kernel.Prelude.Just serviceTierType,
+        Beam.serviceTierDescription = serviceTierDescription,
+        Beam.serviceTierLongName = serviceTierLongName,
+        Beam.serviceTierProviderCode = serviceTierProviderCode,
+        Beam.serviceTierShortName = serviceTierShortName,
+        Beam.serviceTierType = serviceTierType,
         Beam.stationsJson = stationsJson,
         Beam.status = status,
         Beam.toStationId = Kernel.Types.Id.getId toStationId,

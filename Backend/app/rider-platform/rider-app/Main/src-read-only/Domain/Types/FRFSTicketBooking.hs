@@ -54,11 +54,11 @@ data FRFSTicketBooking = FRFSTicketBooking
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     routeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Route.Route),
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
-    serviceTierCode :: Kernel.Prelude.Text,
-    serviceTierDescription :: Kernel.Prelude.Text,
-    serviceTierLongName :: Kernel.Prelude.Text,
-    serviceTierShortName :: Kernel.Prelude.Text,
-    serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
+    serviceTierDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    serviceTierLongName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    serviceTierProviderCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    serviceTierShortName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     stationsJson :: Kernel.Prelude.Text,
     status :: Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
     toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
@@ -73,6 +73,6 @@ data CashbackStatus = PENDING | PROCESSING | SUCCESSFUL | CASHBACK_FAILED | MANU
 
 data FRFSTicketBookingStatus = NEW | APPROVED | PAYMENT_PENDING | CONFIRMING | FAILED | CONFIRMED | CANCELLED | COUNTER_CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CashbackStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CashbackStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSTicketBookingStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketBookingStatus)

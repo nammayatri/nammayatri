@@ -26,7 +26,7 @@ createMany = traverse_ create
 
 findAllByMerchantOperatingCityAndVehicleType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.FRFS.Enums.VehicleCategory -> m ([Domain.Types.Route.Route]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.FRFS.Enums.VehicleCategory -> m [Domain.Types.Route.Route])
 findAllByMerchantOperatingCityAndVehicleType merchantOperatingCityId vehicleType = do
   findAllWithKV
     [ Se.And
@@ -38,7 +38,7 @@ findAllByMerchantOperatingCityAndVehicleType merchantOperatingCityId vehicleType
 findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Route.Route))
 findByRouteCode code = do findOneWithKV [Se.Is Beam.code $ Se.Eq code]
 
-findByRouteCodes :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Prelude.Text] -> m ([Domain.Types.Route.Route]))
+findByRouteCodes :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Prelude.Text] -> m [Domain.Types.Route.Route])
 findByRouteCodes code = do findAllWithKV [Se.And [Se.Is Beam.code $ Se.In code]]
 
 findByRouteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Route.Route -> m (Maybe Domain.Types.Route.Route))

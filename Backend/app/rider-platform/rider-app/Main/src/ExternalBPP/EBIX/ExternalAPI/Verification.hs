@@ -35,6 +35,7 @@ import Tools.Error
 getVerificationDetails :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => IntegratedBPPConfig -> Text -> Seconds -> FRFSTicketBooking -> m (Text, Text, UTCTime, Text)
 getVerificationDetails integratedBppConfig txnUUID qrTtl booking = do
   routeId <- booking.routeId & fromMaybeM (InternalError "Route id not found.")
+  busTypeId <- booking.serviceTierProviderCode & fromMaybeM (InternalError "Bus Provider Code Not Found.")
   fromStation <- B.runInReplica $ QStation.findById booking.fromStationId >>= fromMaybeM (StationNotFound booking.fromStationId.getId)
   toStation <- B.runInReplica $ QStation.findById booking.toStationId >>= fromMaybeM (StationNotFound booking.toStationId.getId)
   route <- B.runInReplica $ QRoute.findByRouteId routeId >>= fromMaybeM (RouteNotFound routeId.getId)
@@ -45,7 +46,6 @@ getVerificationDetails integratedBppConfig txnUUID qrTtl booking = do
       childQuantity :: Int = 0
       amount = booking.price.amountInt
       paggId :: Int = 12613
-      busTypeId = booking.serviceTierCode
       qrValidityIST = addUTCTime (secondsToNominalDiffTime 19800) qrValidity
       ticket = "{tt: [{t: \"" <> fromRoute.code <> "," <> toRoute.code <> "," <> show adultQuantity <> "," <> show childQuantity <> "," <> busTypeId <> "," <> formatUtcTime qrValidityIST <> "," <> txnUUID <> "," <> show amount <> "," <> show paggId <> "\"}]}"
   cipherKey <- integratedBppConfig.qrGenerationKey & fromMaybeM (InternalError $ "QR Generation Key Not Found for txnUUID : " <> txnUUID)

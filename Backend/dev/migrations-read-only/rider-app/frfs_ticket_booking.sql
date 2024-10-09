@@ -92,4 +92,7 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN service_tier_type text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN service_tier_short_name text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN service_tier_long_name text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN service_tier_description text ;
-ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN service_tier_code text ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN service_tier_provider_code text ;

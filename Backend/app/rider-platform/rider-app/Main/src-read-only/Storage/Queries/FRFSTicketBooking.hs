@@ -26,10 +26,10 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking] -> m ())
 createMany = traverse_ create
 
-findAllByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking]))
+findAllByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
 findAllByRiderId limit offset riderId = do findAllWithOptionsKV [Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId)] (Se.Desc Beam.createdAt) limit offset
 
-findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus -> m ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking]))
+findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
 findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 
 findByBppOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.FRFSTicketBooking.FRFSTicketBooking))
@@ -90,7 +90,7 @@ updatePayoutStatusById cashbackStatus id = do
 updatePriceById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.Price -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updatePriceById price id = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) price), Se.Set Beam.price ((.amount) price), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateWithKV [Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price), Se.Set Beam.price ((.amount) price), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateRefundCancellationChargesAndIsCancellableByBookingId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -150,7 +150,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
       Se.Set Beam.payerVpa payerVpa,
       Se.Set Beam.paymentTxnId paymentTxnId,
-      Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) price),
+      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
       Se.Set Beam.price ((.amount) price),
       Se.Set Beam.providerDescription providerDescription,
       Se.Set Beam.providerId providerId,
@@ -161,11 +161,11 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.routeId (Kernel.Types.Id.getId <$> routeId),
       Se.Set Beam.searchId (Kernel.Types.Id.getId searchId),
-      Se.Set Beam.serviceTierCode (Kernel.Prelude.Just serviceTierCode),
-      Se.Set Beam.serviceTierDescription (Kernel.Prelude.Just serviceTierDescription),
-      Se.Set Beam.serviceTierLongName (Kernel.Prelude.Just serviceTierLongName),
-      Se.Set Beam.serviceTierShortName (Kernel.Prelude.Just serviceTierShortName),
-      Se.Set Beam.serviceTierType (Kernel.Prelude.Just serviceTierType),
+      Se.Set Beam.serviceTierDescription serviceTierDescription,
+      Se.Set Beam.serviceTierLongName serviceTierLongName,
+      Se.Set Beam.serviceTierProviderCode serviceTierProviderCode,
+      Se.Set Beam.serviceTierShortName serviceTierShortName,
+      Se.Set Beam.serviceTierType serviceTierType,
       Se.Set Beam.stationsJson stationsJson,
       Se.Set Beam.status status,
       Se.Set Beam.toStationId (Kernel.Types.Id.getId toStationId),

@@ -29,7 +29,7 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 
 findByMerchantOperatingCityIdAndVehicleType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.FRFS.Enums.VehicleCategory -> m ([Domain.Types.Station.Station]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.FRFS.Enums.VehicleCategory -> m [Domain.Types.Station.Station])
 findByMerchantOperatingCityIdAndVehicleType merchantOperatingCityId vehicleType = do
   findAllWithKV
     [ Se.And

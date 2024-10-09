@@ -98,11 +98,11 @@ parseFulfillments item fulfillments fulfillmentId = do
       { bppItemId = itemId,
         price,
         vehicleType,
-        serviceTierType = Spec.AC, -- TODO :: I'm hardcoded, when ONDC spec is defined for different variant level then fix me
-        serviceTierCode = "0", -- TODO :: I'm hardcoded, when ONDC spec is defined for different variant level then fix me
-        serviceTierShortName = "ONDC Metro/Bus", -- TODO :: I'm hardcoded, when ONDC spec is defined for different variant level then fix me
-        serviceTierDescription = "ONDC Metro/Bus", -- TODO :: I'm hardcoded, when ONDC spec is defined for different variant level then fix me
-        serviceTierLongName = "ONDC Metro/Bus", -- TODO :: I'm hardcoded, when ONDC spec is defined for different variant level then fix me
+        serviceTierType = Nothing,
+        serviceTierProviderCode = Nothing,
+        serviceTierShortName = Nothing,
+        serviceTierDescription = Nothing,
+        serviceTierLongName = Nothing,
         stations,
         routeCode = Nothing,
         _type = quoteType

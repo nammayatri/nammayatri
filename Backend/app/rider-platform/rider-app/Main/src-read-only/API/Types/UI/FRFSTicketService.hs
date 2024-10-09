@@ -83,10 +83,10 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     quantity :: Kernel.Prelude.Int,
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
-    serviceTierDescription :: Data.Text.Text,
-    serviceTierLongName :: Data.Text.Text,
-    serviceTierShortName :: Data.Text.Text,
-    serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
+    serviceTierDescription :: Data.Maybe.Maybe Data.Text.Text,
+    serviceTierLongName :: Data.Maybe.Maybe Data.Text.Text,
+    serviceTierShortName :: Data.Maybe.Maybe Data.Text.Text,
+    serviceTierType :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     stations :: [API.Types.UI.FRFSTicketService.FRFSStationAPI],
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
@@ -126,7 +126,7 @@ data FRFSStationAPI = FRFSStationAPI
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSTicketAPI = FRFSTicketAPI {qrData :: Data.Text.Text, status :: Domain.Types.FRFSTicket.FRFSTicketStatus, ticketNumber :: Data.Text.Text, validTill :: Kernel.Prelude.UTCTime}
+data FRFSTicketAPI = FRFSTicketAPI {createdAt :: Kernel.Prelude.UTCTime, qrData :: Data.Text.Text, status :: Domain.Types.FRFSTicket.FRFSTicketStatus, ticketNumber :: Data.Text.Text, validTill :: Kernel.Prelude.UTCTime}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -142,10 +142,10 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     quantity :: Kernel.Prelude.Int,
-    serviceTierDescription :: Data.Text.Text,
-    serviceTierLongName :: Data.Text.Text,
-    serviceTierShortName :: Data.Text.Text,
-    serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
+    serviceTierDescription :: Data.Maybe.Maybe Data.Text.Text,
+    serviceTierLongName :: Data.Maybe.Maybe Data.Text.Text,
+    serviceTierShortName :: Data.Maybe.Maybe Data.Text.Text,
+    serviceTierType :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     stations :: [API.Types.UI.FRFSTicketService.FRFSStationAPI],
     status :: Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
     tickets :: [API.Types.UI.FRFSTicketService.FRFSTicketAPI],
