@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Action.Dashboard.System (postSystemRunQuery) where
+module Domain.Action.Dashboard.System (postSystemRunQuery, generateInsertQuery) where
 
 import qualified API.Types.RiderPlatform.Management.System
 import Data.Aeson
@@ -52,10 +52,18 @@ import Tools.Auth
 postSystemRunQuery :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.System.QueryData -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postSystemRunQuery _ _ req = do
   let tableName = req.tableName
-  whereClause' <- getKeyNameAndValue req.whereClause
   setClause' <- getKeyNameAndValue req.setClause
-  _ <- queryTypeCheck tableName whereClause' setClause'
-  let query' = generateUpdateQuery tableName setClause' whereClause'
+  case req.queryType of
+    API.Types.RiderPlatform.Management.System.UPDATE -> do
+      whereClause' <- getKeyNameAndValue req.whereClause
+      _ <- queryTypeCheck tableName whereClause' setClause'
+      executeQuery $ generateUpdateQuery tableName setClause' whereClause'
+    API.Types.RiderPlatform.Management.System.INSERT -> do
+      _ <- queryTypeCheck tableName [] setClause'
+      executeQuery $ generateInsertQuery tableName setClause'
+
+executeQuery :: Maybe Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+executeQuery query' = do
   case query' of
     Just q -> do
       conn <- asks (.psqlConn)
@@ -87,6 +95,10 @@ valueToSQL (Array arr) = quote $ "{" <> Text.intercalate "," (map valueToSQL' (D
 
 quote :: Text -> Text
 quote t = "'" <> Text.replace "'" "''" t <> "'"
+
+generateInsertQuery :: Text -> [(Text, Value)] -> Maybe Text
+generateInsertQuery tableName setClause =
+  Just $ "INSERT INTO " <> tableName <> " (" <> Text.intercalate " , " (fst <$> setClause) <> ") VALUES (" <> Text.intercalate " , " (valueToSQL . snd <$> setClause) <> ");"
 
 generateUpdateQuery :: Text -> [(Text, Value)] -> [(Text, Value)] -> Maybe Text
 generateUpdateQuery tableName setClause whereClause = do
