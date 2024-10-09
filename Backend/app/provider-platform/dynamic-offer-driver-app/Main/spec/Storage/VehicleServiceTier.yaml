@@ -4,6 +4,7 @@ imports:
   Merchant: Domain.Types.Merchant
   Centesimal: Kernel.Types.Common
   ServiceTierType: Domain.Types.Common
+  BaseUrl: Kernel.Types.Common
 
 VehicleServiceTier:
   tableName: vehicle_service_tier
@@ -29,15 +30,23 @@ VehicleServiceTier:
     allowedVehicleVariant: '[VehicleVariant]'
     autoSelectedVehicleVariant: '[VehicleVariant]'
     defaultForVehicleVariant: '[VehicleVariant]'
+    vehicleIconUrl: Maybe BaseUrl
     priority: Int
   sqlType:
     allowedVehicleVariant: text[]
     defaultForVehicleVariant: text[]
     autoSelectedVehicleVariant: text[]
     driverRating: double precision
+    vehicleIconUrl: character varying(255)
   default:
     priority: '0'
     autoSelectedVehicleVariant: "'{}'"
+  beamType:
+    vehicleIconUrl: Maybe Text
+  fromTType:
+    vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
+  toTType:
+    vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
   constraints:
     id: PrimaryKey
   queries:

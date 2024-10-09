@@ -35,6 +35,7 @@ data VehicleServiceTierT f = VehicleServiceTierT
     seatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     serviceTierType :: B.C f Domain.Types.Common.ServiceTierType,
     shortDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    vehicleIconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     ventilator :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

@@ -10,6 +10,7 @@ import qualified Domain.Types.VehicleServiceTier
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -65,6 +66,7 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
       Se.Set Beam.seatingCapacity seatingCapacity,
       Se.Set Beam.serviceTierType serviceTierType,
       Se.Set Beam.shortDescription shortDescription,
+      Se.Set Beam.vehicleIconUrl (Kernel.Prelude.fmap showBaseUrl vehicleIconUrl),
       Se.Set Beam.vehicleRating vehicleRating,
       Se.Set Beam.ventilator ventilator,
       Se.Set Beam.createdAt createdAt,
@@ -74,6 +76,7 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
 
 instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.VehicleServiceTier where
   fromTType' (Beam.VehicleServiceTierT {..}) = do
+    vehicleIconUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) vehicleIconUrl
     pure $
       Just
         Domain.Types.VehicleServiceTier.VehicleServiceTier
@@ -96,6 +99,7 @@ instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehi
             seatingCapacity = seatingCapacity,
             serviceTierType = serviceTierType,
             shortDescription = shortDescription,
+            vehicleIconUrl = vehicleIconUrl',
             vehicleRating = vehicleRating,
             ventilator = ventilator,
             createdAt = createdAt,
@@ -124,6 +128,7 @@ instance ToTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehicl
         Beam.seatingCapacity = seatingCapacity,
         Beam.serviceTierType = serviceTierType,
         Beam.shortDescription = shortDescription,
+        Beam.vehicleIconUrl = Kernel.Prelude.fmap showBaseUrl vehicleIconUrl,
         Beam.vehicleRating = vehicleRating,
         Beam.ventilator = ventilator,
         Beam.createdAt = createdAt,
