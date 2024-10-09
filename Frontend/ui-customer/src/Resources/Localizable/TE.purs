@@ -1655,3 +1655,4 @@ getTE stringKey =
     ALLOW -> "అనుమతించు"
     INTERCITY_BUS -> "ఇంటర్‌సిటీ బస్సు"
     DRIVER_ASSIGNED -> "డ్రైవర్ కేటాయించారు"
+    EXPLORE -> "పరిశీలించండి"

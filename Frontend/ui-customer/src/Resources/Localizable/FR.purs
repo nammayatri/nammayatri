@@ -1643,3 +1643,4 @@ getFR stringKey =
         ALLOW -> "Autoriser"
         INTERCITY_BUS -> "Bus interurbain"
         DRIVER_ASSIGNED -> "Chauffeur attribué"
+        EXPLORE -> "Explore"

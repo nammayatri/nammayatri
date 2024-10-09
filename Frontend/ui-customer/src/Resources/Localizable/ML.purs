@@ -1640,3 +1640,4 @@ getML stringKey =
         ALLOW -> "അനുവദിക്കുക"
         INTERCITY_BUS -> "ഇൻ്റർസിറ്റി ബസ്"
         DRIVER_ASSIGNED -> "ഡ്രൈവർ നൽകിയിരിക്കുന്നു"
+        EXPLORE -> "പര്യവേക്ഷണം ചെയ്യുക"

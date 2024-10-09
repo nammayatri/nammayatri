@@ -332,7 +332,7 @@ nammaSafetyFlow = do
 updateSafetySettings :: ST.DataFetchScreenState -> FlowBT String Unit
 updateSafetySettings state = do
   let
-    setUpCompletedConditions = (not $ null state.data.emergencyContactsList) && (DataExplainWithFetchCC.getBooleanFromOptions state.data.postRideCheck || DataExplainWithFetchCC.getBooleanFromOptions state.data.unExpectedEventChecks) && (state.data.informPoliceSos || state.data.notifySafetyTeam) 
+    setUpCompletedConditions = (not $ null state.data.emergencyContactsList) && (DataExplainWithFetchCC.getBooleanFromOptions state.data.postRideCheck || DataExplainWithFetchCC.getBooleanFromOptions state.data.unExpectedEventChecks || (state.data.informPoliceSos || state.data.notifySafetyTeam))
     req =
       UpdateEmergencySettingsReq
         { shareEmergencyContacts: Nothing
