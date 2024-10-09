@@ -20,9 +20,9 @@ module RiderPlatformClient.RiderApp.Operations
 where
 
 import qualified "rider-app" API.Dashboard as BAP
-import qualified API.Types.RiderPlatform.Management.Booking as BookingDSL
-import qualified API.Types.RiderPlatform.Management.Invoice as InvoiceDSL
-import qualified API.Types.RiderPlatform.Management.Merchant as MerchantDSL
+-- import qualified API.Types.RiderPlatform.Management.Booking as BookingDSL
+-- import qualified API.Types.RiderPlatform.Management.Invoice as InvoiceDSL
+-- import qualified API.Types.RiderPlatform.Management.Merchant as MerchantDSL
 import qualified "rider-app" API.Types.UI.TicketService as DTB
 import qualified Beckn.Types.Core.Taxi.Search ()
 import qualified Dashboard.RiderPlatform.Customer as Customer
@@ -57,16 +57,46 @@ import Servant hiding (route)
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 
+-- import qualified API.Action.Dashboard.Management as ManagementDSL
+
+-- data ManagementAPIs = ManagementAPIs
+--   { bookingDSL :: BookingDSL.BookingAPIs,
+--     merchantDSL :: MerchantDSL.MerchantAPIs,
+--     invoiceDSL :: InvoiceDSL.InvoiceAPIs
+--   }
+
+-- mkManagementAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> ManagementAPIs
+-- mkManagementAPIs merchantId city token = do
+--   let bookingDSL = BookingDSL.mkBookingAPIs bookingClientDSL
+--   let invoiceDSL = InvoiceDSL.mkInvoiceAPIs invoiceClientDSL
+--   let merchantDSL = MerchantDSL.mkMerchantAPIs merchantClientDSL
+--   ManagementAPIs {..}
+--   where
+--     bookingClientDSL
+--       :<|> invoiceClientDSL
+--       :<|> merchantClientDSL =
+--         clientWithMerchantAndCity (Proxy :: Proxy ManagementDSL.API) merchantId city token
+
+-- -- TODO serverName=APP_BACKEND_MANAGEMENT should be configurable per folder. Then we can remove it from Auth spec
+-- callManagementAPI ::
+--   forall m r b c.
+--   Tools.Client.DashboardClient ManagementAPIs m r b c =>
+--   CheckedShortId DM.Merchant ->
+--   City.City ->
+--   (ManagementAPIs -> b) ->
+--   c
+-- callManagementAPI merchantId city = callServerAPI @_ @m @r APP_BACKEND_MANAGEMENT (mkManagementAPIs merchantId city) "callManagementAPI"
+
 data AppBackendAPIs = AppBackendAPIs
   { customers :: CustomerAPIs,
     rides :: RidesAPIs,
     issues :: ListIssueAPIs,
     issuesV2 :: IssueAPIs,
     tickets :: TicketAPIs,
-    hotSpot :: HotSpotAPIs,
-    bookingDSL :: BookingDSL.BookingAPIs,
-    merchantDSL :: MerchantDSL.MerchantAPIs,
-    invoiceDSL :: InvoiceDSL.InvoiceAPIs
+    hotSpot :: HotSpotAPIs
+    -- bookingDSL :: BookingDSL.BookingAPIs,
+    -- merchantDSL :: MerchantDSL.MerchantAPIs,
+    -- invoiceDSL :: InvoiceDSL.InvoiceAPIs
   }
 
 data CustomerAPIs = CustomerAPIs
@@ -138,9 +168,9 @@ mkAppBackendAPIs merchantId city token = do
   let tickets = TicketAPIs {..}
   let hotSpot = HotSpotAPIs {..}
 
-  let bookingDSL = BookingDSL.mkBookingAPIs bookingClientDSL
-  let merchantDSL = MerchantDSL.mkMerchantAPIs merchantClientDSL
-  let invoiceDSL = InvoiceDSL.mkInvoiceAPIs invoiceClientDSL
+  -- let bookingDSL = BookingDSL.mkBookingAPIs bookingClientDSL
+  -- let merchantDSL = MerchantDSL.mkMerchantAPIs merchantClientDSL
+  -- let invoiceDSL = InvoiceDSL.mkInvoiceAPIs invoiceClientDSL
   AppBackendAPIs {..}
   where
     customersClient
@@ -148,10 +178,10 @@ mkAppBackendAPIs merchantId city token = do
       :<|> issueClient
       :<|> issueV2Client
       :<|> ticketsClient
-      :<|> hotSpotClient
-      :<|> bookingClientDSL
-      :<|> merchantClientDSL
-      :<|> invoiceClientDSL =
+      :<|> hotSpotClient =
+        -- :<|> bookingClientDSL
+        -- :<|> merchantClientDSL
+        -- :<|> invoiceClientDSL =
         clientWithMerchantAndCity (Proxy :: Proxy BAP.OperationsAPI) merchantId city token
 
     customerList
