@@ -32,12 +32,20 @@ LmsModule:
     moduleCompletionCriteria : ModuleCompletionCriteria
     languagesAvailableForQuiz : "[Language]"
     languagesAvailableForVideos : "[Language]"
+    moduleSection : Maybe ModuleSection
 
   types:
     LmsCategory:
       enum : "Safety, Financial, Training"
     ModuleCompletionCriteria:
       enum : "ONLY_VIDEOS, VIDEOS_AND_QUIZ Int"
+    ModuleSection:
+      enum : "BENEFITS, DRIVER_SAFETY_SCORE"
+      derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
+
+  domainInstance:
+    - Custom Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList <ModuleSection>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <ModuleSection>
 
   sqlType:
     languagesAvailableForQuiz : "text[]"
@@ -47,6 +55,7 @@ LmsModule:
     category : "'Training'"
     languagesAvailableForQuiz : "'{}'"
     languagesAvailableForVideos : "'{}'"
+    moduleSection : "'BENEFITS'"
 
   queries:
     getAllModules:
@@ -55,6 +64,10 @@ LmsModule:
     findById:
       kvFunction: findOneWithKV
       where: id
+    getAllModulesWithModuleSection:
+      kvFunction: findAllWithOptionsKV
+      where:
+       and: [merchantOperatingCityId, moduleSection]
 
 LmsModuleTranslation:
   tableName : lms_module_translation

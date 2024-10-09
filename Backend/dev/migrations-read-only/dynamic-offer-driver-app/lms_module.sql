@@ -14,3 +14,8 @@ ALTER TABLE atlas_driver_offer_bpp.lms_module ADD COLUMN updated_at timestamp wi
 ALTER TABLE atlas_driver_offer_bpp.lms_module ADD COLUMN variant text ;
 ALTER TABLE atlas_driver_offer_bpp.lms_module ADD COLUMN merchant_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.lms_module ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.lms_module ADD COLUMN module_section text  default 'BENEFITS';

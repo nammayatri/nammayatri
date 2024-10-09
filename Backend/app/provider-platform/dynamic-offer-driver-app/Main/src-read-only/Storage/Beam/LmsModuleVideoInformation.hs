@@ -14,12 +14,12 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data LmsModuleVideoInformationT f = LmsModuleVideoInformationT
-  { createdAt :: B.C f Kernel.Prelude.UTCTime,
-    id :: B.C f Kernel.Prelude.Text,
-    moduleId :: B.C f Kernel.Prelude.Text,
-    rank :: B.C f Kernel.Prelude.Int,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    videoStatus :: B.C f Domain.Types.LmsModuleVideoInformation.VideoStatus
+  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    id :: (B.C f Kernel.Prelude.Text),
+    moduleId :: (B.C f Kernel.Prelude.Text),
+    rank :: (B.C f Kernel.Prelude.Int),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
+    videoStatus :: (B.C f Domain.Types.LmsModuleVideoInformation.VideoStatus)
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table LmsModuleVideoInformationT where
 
 type LmsModuleVideoInformation = LmsModuleVideoInformationT Identity
 
-$(enableKVPG ''LmsModuleVideoInformationT ['id] [])
+$(enableKVPG (''LmsModuleVideoInformationT) [('id)] [])
 
-$(mkTableInstances ''LmsModuleVideoInformationT "lms_module_video_information")
+$(mkTableInstances (''LmsModuleVideoInformationT) "lms_module_video_information")

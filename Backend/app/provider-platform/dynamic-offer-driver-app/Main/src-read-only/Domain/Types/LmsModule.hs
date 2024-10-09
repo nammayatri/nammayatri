@@ -11,6 +11,7 @@ import qualified Domain.Types.VehicleVariant
 import qualified Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data LmsModule = LmsModule
@@ -22,6 +23,7 @@ data LmsModule = LmsModule
     languagesAvailableForVideos :: [Kernel.External.Types.Language],
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     moduleCompletionCriteria :: Domain.Types.LmsModule.ModuleCompletionCriteria,
+    moduleSection :: Kernel.Prelude.Maybe Domain.Types.LmsModule.ModuleSection,
     noOfVideos :: Kernel.Prelude.Int,
     rank :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
@@ -34,6 +36,12 @@ data LmsCategory = Safety | Financial | Training deriving (Eq, Ord, Show, Read, 
 
 data ModuleCompletionCriteria = ONLY_VIDEOS | VIDEOS_AND_QUIZ Kernel.Prelude.Int deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''LmsCategory)
+data ModuleSection = BENEFITS | DRIVER_SAFETY_SCORE deriving (Read, (Show), (Eq), (Generic), (FromJSON), (ToJSON), (ToSchema), (ToParamSchema), (Ord))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ModuleCompletionCriteria)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''LmsCategory))
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ModuleCompletionCriteria))
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ModuleSection))
+
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''ModuleSection))

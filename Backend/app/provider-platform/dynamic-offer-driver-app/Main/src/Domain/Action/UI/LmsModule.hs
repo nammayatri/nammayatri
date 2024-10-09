@@ -46,12 +46,13 @@ import qualified Storage.Queries.Person as QPerson
 import Tools.Auth
 import Tools.Error
 
-getLmsListAllModules :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Domain.Types.VehicleVariant.VehicleVariant) -> Environment.Flow API.Types.UI.LmsModule.LmsGetModuleRes
-getLmsListAllModules (mbPersonId, _merchantId, merchantOpCityId) mbLanguage _mbLimit _mbOffset _mbVariant = do
+getLmsListAllModules :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant, Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Maybe (Kernel.External.Types.Language) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Domain.Types.LmsModule.ModuleSection) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Domain.Types.VehicleVariant.VehicleVariant) -> Environment.Flow API.Types.UI.LmsModule.LmsGetModuleRes
+getLmsListAllModules (mbPersonId, _merchantId, merchantOpCityId) mbLanguage _mbLimit mbModuleSection _mbOffset _mbVariant = do
   personId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   let language = fromMaybe ENGLISH mbLanguage
-  modules <- mapM (generateModuleInfo language driver.id) =<< SCQL.getAllModules Nothing Nothing merchantOpCityId -- todo :: mbLimit and mbOffset ( phase 2 of LMS)
+  let moduleSection = Just $ fromMaybe BENEFITS mbModuleSection
+  modules <- mapM (generateModuleInfo language driver.id) =<< SCQL.getAllModulesWithModuleSection Nothing Nothing merchantOpCityId moduleSection -- todo :: mbLimit and mbOffset ( phase 2 of LMS)
   return $
     API.Types.UI.LmsModule.LmsGetModuleRes
       { completed = sortOn (.completedAt) $ filter ((== DTDMC.MODULE_COMPLETED) . (.moduleCompletionStatus)) modules,

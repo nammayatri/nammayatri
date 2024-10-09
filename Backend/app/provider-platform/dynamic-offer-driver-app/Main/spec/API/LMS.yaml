@@ -20,6 +20,7 @@ imports:
   ReelButtonConfig: Domain.Types.ReelsData
   ModuleCompletionCriteria: Domain.Types.LmsModule
   OptionEntity: Domain.Types.QuestionInformation
+  ModuleSection : Domain.Types.LmsModule
 
 module: LmsModule
 
@@ -44,6 +45,7 @@ types:
     moduleCompletionCriteria : ModuleCompletionCriteria
     languagesAvailableForQuiz : "[Language]"
     languagesAvailableForVideos : "[Language]"
+    moduleSection: Maybe ModuleSection
 
   LmsGetVideosRes:
     completed: "[LmsVideoRes]"
@@ -156,6 +158,7 @@ apis:
         language: Language
         limit: Int
         offset: Int
+        moduleSection: ModuleSection
       response:
         type: API.Types.UI.LmsModule.LmsGetModuleRes
 
