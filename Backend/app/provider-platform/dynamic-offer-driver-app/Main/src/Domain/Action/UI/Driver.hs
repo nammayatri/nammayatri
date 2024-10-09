@@ -2120,8 +2120,9 @@ listScheduledBookings ::
   Maybe Day ->
   Maybe Day ->
   Maybe DTC.TripCategory ->
+  Maybe LatLong ->
   Flow ScheduledBookingRes
-listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay mbTripCategory = do
+listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay mbTripCategory mbDLoc = do
   case (mbFromDay, mbToDay) of
     (Just from, Just to) -> when (from > to) $ throwError $ InvalidRequest "From date should be less than to date"
     _ -> pure ()
@@ -2134,10 +2135,10 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
       -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
       cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId
       let availableServiceTiers = (.serviceTierType) <$> (map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers))
-      scheduledBookings <- runInReplica $ QBooking.findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay DRB.NEW mbTripCategory availableServiceTiers True cityId transporterConfig.timeDiffFromUtc
-      mbCurrentDriverLocation <- LTF.driversLocation [driverInfo.driverId]
-      dloc <- fromMaybeM LocationNotFound (listToMaybe mbCurrentDriverLocation)
-      let driverLocation = LatLong {lat = dloc.lat, lon = dloc.lon}
+      scheduledBookings <- runInReplica $ QBooking.findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay DRB.NEW mbTripCategory availableServiceTiers True merchantId transporterConfig.timeDiffFromUtc
+      let driverLocation = case mbDLoc of
+            Just dLoc -> dLoc
+            Nothing -> Nothing
       bookings <- mapM (buildBookingAPIEntityFromBooking driverLocation) scheduledBookings
       filteredBookings <- filterM (\booking -> isAbleToReach booking.bookingDetails vehicle.variant transporterConfig.avgSpeedOfVehicle) bookings
       let sortedBookings = sortBookingsByDistance filteredBookings

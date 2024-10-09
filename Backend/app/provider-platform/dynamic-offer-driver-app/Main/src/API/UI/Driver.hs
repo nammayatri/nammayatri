@@ -227,6 +227,7 @@ type API =
              :> QueryParam "from" Day
              :> QueryParam "to" Day
              :> QueryParam "tripCategory" TripCategory
+             :> QueryParam "currentLocation" LatLong
              :> Get '[JSON] DDriver.ScheduledBookingRes
            :<|> "accept"
              :> "scheduledBooking"
@@ -271,7 +272,7 @@ handler =
     :<|> getCity
     :<|> getDownloadInvoiceData
     :<|> getDummyRideRequest
-    :<|> listScheduledBookings -- add vehicle also in both, handle reallocation, onRide
+    :<|> listScheduledBookings
     :<|> acceptScheduledBooking
 
 getInformation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Int -> Maybe Text -> Maybe Text -> FlowHandler DDriver.DriverInformationRes
@@ -376,8 +377,8 @@ getDownloadInvoiceData (personId, merchantId, merchantOpCityId) fromDate = withF
 getDummyRideRequest :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
 getDummyRideRequest = withFlowHandlerAPI . DDriver.getDummyRideRequest
 
-listScheduledBookings :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Integer -> Maybe Integer -> Maybe Day -> Maybe Day -> Maybe TripCategory -> FlowHandler DDriver.ScheduledBookingRes
-listScheduledBookings (personId, merchantId, merchantOpCityId) mbLimit mbOffset mbFromDay mbToDay mbTripCategory = withFlowHandlerAPI $ DDriver.listScheduledBookings (personId, merchantId, merchantOpCityId) mbLimit mbOffset mbFromDay mbToDay mbTripCategory
+listScheduledBookings :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Integer -> Maybe Integer -> Maybe Day -> Maybe Day -> Maybe TripCategory -> Maybe LatLong -> FlowHandler DDriver.ScheduledBookingRes
+listScheduledBookings (personId, merchantId, merchantOpCityId) mbLimit mbOffset mbFromDay mbToDay mbTripCategory mbDLoc = withFlowHandlerAPI $ DDriver.listScheduledBookings (personId, merchantId, merchantOpCityId) mbLimit mbOffset mbFromDay mbToDay mbTripCategory mbDLoc
 
 acceptScheduledBooking :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe (Id DC.Client) -> Id DRB.Booking -> FlowHandler APISuccess
 acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId = withFlowHandlerAPI $ DDriver.acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId
