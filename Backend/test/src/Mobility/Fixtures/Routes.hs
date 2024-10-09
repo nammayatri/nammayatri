@@ -34,7 +34,8 @@ defaultSearchReq =
         isDestinationManuallyMoved = Nothing,
         quotesUnifiedFlow = Nothing,
         sessionToken = Nothing,
-        placeNameSource = Nothing
+        placeNameSource = Nothing,
+        driverIdentifier = Nothing
       }
 
 defaultSearchReqAddress :: LocationAddress
@@ -98,7 +99,8 @@ searchReqFromUpdatesList updList =
               isDestinationManuallyMoved = Nothing,
               quotesUnifiedFlow = Nothing,
               sessionToken = Nothing,
-              placeNameSource = Nothing
+              placeNameSource = Nothing,
+              driverIdentifier = Nothing
             }
    in (origin, destination, req)
 
@@ -117,7 +119,8 @@ mkSearchReqFromLocations origin destination =
               isDestinationManuallyMoved = Nothing,
               quotesUnifiedFlow = Nothing,
               sessionToken = Nothing,
-              placeNameSource = Nothing
+              placeNameSource = Nothing,
+              driverIdentifier = Nothing
             }
    in (origin, destination, req)
 

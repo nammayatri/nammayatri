@@ -4,6 +4,7 @@
 module Storage.Queries.OrphanInstances.SearchRequest where
 
 import qualified Data.Text
+import qualified Domain.Types.RefereeLink
 import qualified Domain.Types.SearchRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -47,6 +48,7 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             disabilityTag = disabilityTag,
             distance = Kernel.Utils.Common.mkDistanceWithDefault distanceUnit distanceValue . Kernel.Types.Common.HighPrecMeters <$> distance,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
+            driverIdentifier = Domain.Types.RefereeLink.mkDriverIdentifier driverIdentifierType driverIdentifierValue,
             estimatedRideDuration = estimatedRideDuration,
             estimatedRideStaticDuration = estimatedRideStaticDuration,
             fromLocation = fromLocation',
@@ -98,6 +100,8 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.distance = Kernel.Utils.Common.getHighPrecMeters . Kernel.Utils.Common.distanceToHighPrecMeters <$> distance,
         Beam.distanceValue = Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> distance,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
+        Beam.driverIdentifierType = driverIdentifier <&> (._type),
+        Beam.driverIdentifierValue = driverIdentifier <&> (.value),
         Beam.estimatedRideDuration = estimatedRideDuration,
         Beam.estimatedRideStaticDuration = estimatedRideStaticDuration,
         Beam.fromLocationId = Just $ Kernel.Types.Id.getId ((.id) fromLocation),

@@ -11,6 +11,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod
 import qualified Domain.Types.Person
+import qualified Domain.Types.RefereeLink
 import qualified Domain.Types.Trip
 import qualified Kernel.External.Maps
 import qualified Kernel.External.Payment.Interface.Types
@@ -39,6 +40,7 @@ data SearchRequest = SearchRequest
     disabilityTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
+    driverIdentifier :: Kernel.Prelude.Maybe Domain.Types.RefereeLink.DriverIdentifier,
     estimatedRideDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedRideStaticDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     fromLocation :: Domain.Types.Location.Location,

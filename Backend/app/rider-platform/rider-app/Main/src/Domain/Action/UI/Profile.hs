@@ -70,15 +70,13 @@ import Kernel.Types.Validation
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
-import qualified Kernel.Utils.Text as TU
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
 import SharedLogic.Cac
-import SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
-import qualified Storage.CachedQueries.Merchant as QMerchant
+import qualified SharedLogic.Referral as Referral
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.ClientPersonInfo as QCP
@@ -86,7 +84,6 @@ import qualified Storage.Queries.Disability as QD
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPersonDEN
 import qualified Storage.Queries.PersonDisability as PDisability
-import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.SafetySettings as QSafety
 import Tools.Error
 
@@ -262,16 +259,16 @@ updatePerson personId merchantId req mbBundleVersion mbClientVersion mbClientCon
   mPerson <- join <$> QPerson.findByEmailAndMerchantId merchantId `mapM` req.email
   whenJust mPerson (\_ -> throwError PersonEmailExists)
   mbEncEmail <- encrypt `mapM` req.email
-  refCode <- join <$> validateRefferalCode personId `mapM` req.referralCode
   deploymentVersion <- asks (.version)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- TODO: Remove this part from here once UI stops using updatePerson api to apply referral code
+  void $ Referral.applyReferralCode person False `mapM` req.referralCode
   void $
     QPerson.updatePersonalInfo
       personId
       req.firstName
       req.middleName
       req.lastName
-      refCode
       mbEncEmail
       req.deviceToken
       req.notificationToken
@@ -320,45 +317,6 @@ updateDisability hasDisability mbDisability personId = do
                 updatedAt = now
               }
   pure APISuccess.Success
-
-validateRefferalCode :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id Person.Person -> Text -> m (Maybe Text)
-validateRefferalCode personId refCode = do
-  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
-  when (person.hasTakenValidRide) do
-    throwError (InvalidRequest "You have been already referred by someone")
-  let isCustomerReferralCode = T.isPrefixOf "C" refCode
-  if isCustomerReferralCode
-    then do
-      logDebug $ "Came inside Customer Referral Code" <> show personId <> " " <> show refCode
-      unless (TU.validateAlphaNumericWithLength refCode 6) (throwError $ InvalidRequest "Referral Code must have 6 digits and must be Alphanumeric")
-      referredByPerson <- QPerson.findPersonByCustomerReferralCode (Just refCode) >>= fromMaybeM (InvalidRequest "Invalid ReferralCode")
-      when (personId == referredByPerson.id) (throwError $ InvalidRequest "Cannot refer yourself")
-      stats <- QPS.findByPersonId referredByPerson.id >>= fromMaybeM (PersonStatsNotFound personId.getId)
-      void $ QPS.updateReferralCount (stats.referralCount + 1) referredByPerson.id
-      void $ QPerson.updateReferredByCustomer personId referredByPerson.id.getId
-      return $ Just refCode
-    else do
-      unless (TU.validateAllDigitWithMinLength 6 refCode) (throwError $ InvalidRequest "Referral Code must have 6 digits")
-      case person.referralCode of
-        Just code ->
-          if code /= refCode
-            then throwError (InvalidRequest "Referral Code is not same")
-            else return Nothing -- idempotent behaviour
-        Nothing -> do
-          merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-          isMultipleDeviceIdExist <-
-            maybe
-              (return Nothing)
-              ( \deviceId -> do
-                  personsWithSameDeviceId <- QPerson.findAllByDeviceId (Just deviceId)
-                  return $ Just (length personsWithSameDeviceId > 1)
-              )
-              person.deviceId
-          case (person.mobileNumber, person.mobileCountryCode) of
-            (Just mobileNumber, Just countryCode) -> do
-              void $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode isMultipleDeviceIdExist
-              return $ Just refCode
-            _ -> throwError (PersonMobileNumberIsNULL person.id.getId)
 
 updateDefaultEmergencyNumbers ::
   Id Person.Person ->

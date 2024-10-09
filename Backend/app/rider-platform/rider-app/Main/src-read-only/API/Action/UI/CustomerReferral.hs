@@ -21,10 +21,16 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "CustomerRefferal" :> "count" :> Get '[JSON] API.Types.UI.CustomerReferral.ReferredCustomers)
+type API =
+  ( TokenAuth :> "CustomerRefferal" :> "count" :> Get '[JSON] API.Types.UI.CustomerReferral.ReferredCustomers :<|> TokenAuth :> "person" :> "applyReferral"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.CustomerReferral.ApplyCodeReq
+      :> Post '[JSON] API.Types.UI.CustomerReferral.ReferrerInfo
+  )
 
 handler :: Environment.FlowServer API
-handler = getCustomerRefferalCount
+handler = getCustomerRefferalCount :<|> postPersonApplyReferral
 
 getCustomerRefferalCount ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -33,3 +39,12 @@ getCustomerRefferalCount ::
     Environment.FlowHandler API.Types.UI.CustomerReferral.ReferredCustomers
   )
 getCustomerRefferalCount a1 = withFlowHandlerAPI $ Domain.Action.UI.CustomerReferral.getCustomerRefferalCount (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+
+postPersonApplyReferral ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.CustomerReferral.ApplyCodeReq ->
+    Environment.FlowHandler API.Types.UI.CustomerReferral.ReferrerInfo
+  )
+postPersonApplyReferral a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.CustomerReferral.postPersonApplyReferral (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

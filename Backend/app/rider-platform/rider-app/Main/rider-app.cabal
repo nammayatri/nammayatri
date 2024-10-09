@@ -281,6 +281,7 @@ library
       SharedLogic.Person
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.PublicTransport
+      SharedLogic.Referral
       SharedLogic.ScheduledNotifications
       SharedLogic.Scheduler.Jobs.CallPoliceApi
       SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP
