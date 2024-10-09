@@ -213,7 +213,6 @@ import SharedLogic.DriverOnboarding
 import SharedLogic.DriverPool as DP
 import SharedLogic.DriverPool as SDP
 import qualified SharedLogic.EventTracking as ET
-import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.Merchant as SMerchant
@@ -2136,10 +2135,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
       cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId
       let availableServiceTiers = (.serviceTierType) <$> (map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers))
       scheduledBookings <- runInReplica $ QBooking.findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay DRB.NEW mbTripCategory availableServiceTiers True merchantId transporterConfig.timeDiffFromUtc
-      let driverLocation = case mbDLoc of
-            Just dLoc -> dLoc
-            Nothing -> Nothing
-      bookings <- mapM (buildBookingAPIEntityFromBooking driverLocation) scheduledBookings
+      bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) scheduledBookings
       filteredBookings <- filterM (\booking -> isAbleToReach booking.bookingDetails vehicle.variant transporterConfig.avgSpeedOfVehicle) bookings
       let sortedBookings = sortBookingsByDistance filteredBookings
       return $ ScheduledBookingRes sortedBookings
