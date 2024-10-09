@@ -16,6 +16,8 @@ import Kernel.External.Call.Interface.Types
 import qualified Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
+import Kernel.External.MultiModal.Interface.Types as MultiModal
+import Kernel.External.MultiModal.Types as MultiModal
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types
 import Kernel.External.Payment.Interface as Payment
@@ -45,6 +47,7 @@ data ServiceName
   | TokenizationService Tokenize.TokenizationService
   | IncidentReportService IncidentReport.IncidentReportService
   | PayoutService Payout.PayoutService
+  | MultiModalService MultiModal.MultiModalService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -64,6 +67,7 @@ instance Show ServiceName where
   show (TokenizationService s) = "Tokenization_" <> show s
   show (IncidentReportService s) = "IncidentReport_" <> show s
   show (PayoutService s) = "Payout_" <> show s
+  show (MultiModalService s) = "MultiModal_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -122,6 +126,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Payout_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (MultiModalService v1, r2)
+                 | r1 <- stripPrefix "MultiModal_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -141,6 +149,7 @@ data ServiceConfigD (s :: UsageSafety)
   | TokenizationServiceConfig !Tokenize.TokenizationServiceConfig
   | IncidentReportServiceConfig !IncidentReport.IncidentReportServiceConfig
   | PayoutServiceConfig !PayoutServiceConfig
+  | MultiModalServiceConfig !MultiModal.MultiModalServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe

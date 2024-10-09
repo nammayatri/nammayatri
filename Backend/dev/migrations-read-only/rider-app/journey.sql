@@ -9,7 +9,7 @@ ALTER TABLE atlas_app.journey ADD COLUMN currency text ;
 ALTER TABLE atlas_app.journey ADD COLUMN fare double precision ;
 ALTER TABLE atlas_app.journey ADD COLUMN id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.journey ADD COLUMN legs_done integer NOT NULL;
-ALTER TABLE atlas_app.journey ADD COLUMN modes text NOT NULL;
+ALTER TABLE atlas_app.journey ADD COLUMN modes text[] NOT NULL;
 ALTER TABLE atlas_app.journey ADD COLUMN search_request_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.journey ADD COLUMN total_legs integer NOT NULL;
 ALTER TABLE atlas_app.journey ADD COLUMN merchant_id character varying(36) ;

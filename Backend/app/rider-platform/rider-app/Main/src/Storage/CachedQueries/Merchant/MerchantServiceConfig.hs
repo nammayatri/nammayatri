@@ -31,6 +31,8 @@ import qualified Kernel.External.Call as Call
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
+import Kernel.External.MultiModal.Interface.Types as MultiModal
+import Kernel.External.MultiModal.Types as MultiModal
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
@@ -117,6 +119,9 @@ cacheMerchantServiceConfig merchantServiceConfig = do
         Tokenize.GullakTokenizationServiceConfig _ -> TokenizationService Tokenize.Gullak
       PayoutServiceConfig payoutCfg -> case payoutCfg of
         Payout.JuspayConfig _ -> PayoutService Payout.Juspay
+      MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
+        MultiModal.GoogleTransitConfig _ -> MultiModalService MultiModal.GoogleTransit
+        MultiModal.OTPTransitConfig _ -> MultiModalService MultiModal.OTPTransit
 
 makeMerchantIdAndServiceKey :: Id Merchant -> Id DMOC.MerchantOperatingCity -> ServiceName -> Text
 makeMerchantIdAndServiceKey id mocId serviceName = "CachedQueries:MerchantServiceConfig:MerchantId-" <> id.getId <> ":MechantOperatingCityId:-" <> mocId.getId <> ":ServiceName-" <> show serviceName

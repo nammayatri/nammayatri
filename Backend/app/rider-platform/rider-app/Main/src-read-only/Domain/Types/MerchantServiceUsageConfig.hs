@@ -11,6 +11,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.External.AadhaarVerification
 import qualified Kernel.External.Call.Types
 import qualified Kernel.External.Maps.Types
+import qualified Kernel.External.MultiModal.Types
 import qualified Kernel.External.Notification.Types
 import qualified Kernel.External.Payment.Types
 import qualified Kernel.External.SMS.Types
@@ -38,6 +39,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     getDistancesForScheduledRides :: Kernel.External.Maps.Types.MapsService,
     getExophone :: Kernel.External.Call.Types.CallService,
     getFrfsAutocompleteDistances :: Kernel.External.Maps.Types.MapsService,
+    getMultiModalService :: Kernel.External.MultiModal.Types.MultiModalService,
     getPickupRoutes :: Kernel.External.Maps.Types.MapsService,
     getPlaceDetails :: Kernel.External.Maps.Types.MapsService,
     getPlaceName :: Kernel.External.Maps.Types.MapsService,
