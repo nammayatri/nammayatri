@@ -77,7 +77,6 @@
           dynamic-offer-driver-drainer.custom = cacConfig;
           lib-dashboard.custom = cacConfig;
           kafka-consumers.custom = cacConfig;
-          driver-tracking-healthcheck.custom = cacConfig;
           driver-offer-allocator.custom = cacConfig;
           beckn-test.custom = cacConfig;
           rider-dashboard.custom = cacConfig;

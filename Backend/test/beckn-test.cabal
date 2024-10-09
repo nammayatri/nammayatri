@@ -105,7 +105,6 @@ library
     , dashboard-helper-api
     , data-default-class
     , driver-offer-allocator
-    , driver-tracking-healthcheck
     , dynamic-offer-driver-app
     , euler-hs
     , generic-lens
@@ -202,7 +201,6 @@ test-suite beckn-integ-test
     , dashboard-helper-api
     , data-default-class
     , driver-offer-allocator
-    , driver-tracking-healthcheck
     , dynamic-offer-driver-app
     , euler-hs
     , generic-lens

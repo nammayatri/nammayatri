@@ -40,6 +40,7 @@ library
       DriverTrackingHealthCheck.API
       DriverTrackingHealthCheck.Service.Runner
       Environment
+      SystemConfigsOverride
   other-modules:
       Paths_kafka_consumers
   hs-source-dirs:

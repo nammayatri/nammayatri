@@ -22,7 +22,6 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.IOLogging (LoggerEnv)
 import Servant (Get, JSON)
-import "dynamic-offer-driver-app" Storage.Beam.SystemConfigs ()
 
 type HealthCheckAPI = Get '[JSON] Text
 
