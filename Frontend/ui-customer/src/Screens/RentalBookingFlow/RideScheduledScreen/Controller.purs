@@ -119,7 +119,7 @@ eval (GetBooking apiResp) state =
       , fareProductType = fareProductType
       }
     , props
-      { driverAllocationTime = "15" -- TODO-codex : Need to get the driver allocation time from the API 
+      { driverAllocationTime = "30" -- TODO-codex : Need to get the driver allocation time from the API 
       }
     }
 
