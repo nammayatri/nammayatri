@@ -16,10 +16,10 @@ module Common.RemoteConfig.Types where
 
 import Prelude
 import Data.Maybe (Maybe)
-import Foreign.Class  (class Decode, decode, class Encode, encode)
+import Foreign.Class (class Decode, decode, class Encode, encode)
 import Data.Generic.Rep (class Generic)
 import Data.Newtype (class Newtype)
-import Presto.Core.Utils.Encoding  (defaultDecode, defaultDecode, defaultEncode)
+import Presto.Core.Utils.Encoding (defaultDecode, defaultDecode, defaultEncode)
 import Control.Monad.Except (runExcept, except)
 import Foreign.Index (readProp)
 import Data.Either as Either
@@ -53,7 +53,7 @@ type RemoteConfig a
     , thanjavur :: Maybe a
     , tirunelveli :: Maybe a
     , salem :: Maybe a
-    , trichy :: Maybe a 
+    , trichy :: Maybe a
     , davanagere :: Maybe a
     , shivamogga :: Maybe a
     , hubli :: Maybe a
@@ -101,118 +101,174 @@ derive instance genericConfig :: Generic Config _
 instance decodeConfig :: Decode Config where
   decode = defaultDecode
 
-
-newtype ForwardBatchConfigData = ForwardBatchConfigData
-  { is_Forward_Dispatch_Feature_Enabled :: Boolean,
-    advancedRidePopUpYoutubeLink :: String,
-    callDriverInfoPost :: Boolean
+newtype ForwardBatchConfigData
+  = ForwardBatchConfigData
+  { is_Forward_Dispatch_Feature_Enabled :: Boolean
+  , advancedRidePopUpYoutubeLink :: String
+  , callDriverInfoPost :: Boolean
   }
+
 derive instance genericForwardBatchConfigData :: Generic ForwardBatchConfigData _
 
 instance decodeForwardBatchConfigData :: Decode ForwardBatchConfigData where
   decode = defaultDecode
 
 defaultForwardBatchConfigData :: ForwardBatchConfigData
-defaultForwardBatchConfigData = ForwardBatchConfigData
-  { is_Forward_Dispatch_Feature_Enabled: false,
-    advancedRidePopUpYoutubeLink: "",
-    callDriverInfoPost: false
-  }
+defaultForwardBatchConfigData =
+  ForwardBatchConfigData
+    { is_Forward_Dispatch_Feature_Enabled: false
+    , advancedRidePopUpYoutubeLink: ""
+    , callDriverInfoPost: false
+    }
 
 type TipsConfig
-  = { autoRickshaw :: Maybe (Array Int),
-      suv :: Maybe (Array Int),
-      sedan :: Maybe (Array Int),
-      hatchback :: Maybe (Array Int),
-      bookAny :: Maybe (Array Int),
-      taxi :: Maybe (Array Int),
-      taxiPlus :: Maybe (Array Int),
-      bike :: Maybe (Array Int),
-      default :: Maybe (Array Int)
+  = { autoRickshaw :: Maybe (Array Int)
+    , suv :: Maybe (Array Int)
+    , sedan :: Maybe (Array Int)
+    , hatchback :: Maybe (Array Int)
+    , bookAny :: Maybe (Array Int)
+    , taxi :: Maybe (Array Int)
+    , taxiPlus :: Maybe (Array Int)
+    , bike :: Maybe (Array Int)
+    , default :: Maybe (Array Int)
     }
 
-type SubscriptionConfigVariantLevel 
-  = { autoRickshaw :: Maybe SubscriptionConfigVariantLevelEntity,
-      suv :: Maybe SubscriptionConfigVariantLevelEntity,
-      sedan :: Maybe SubscriptionConfigVariantLevelEntity,
-      hatchback :: Maybe SubscriptionConfigVariantLevelEntity,
-      bookAny :: Maybe SubscriptionConfigVariantLevelEntity,
-      taxi :: Maybe SubscriptionConfigVariantLevelEntity,
-      taxiPlus :: Maybe SubscriptionConfigVariantLevelEntity,
-      default :: Maybe SubscriptionConfigVariantLevelEntity
+type SubscriptionConfigVariantLevel
+  = { autoRickshaw :: Maybe SubscriptionConfigVariantLevelEntity
+    , suv :: Maybe SubscriptionConfigVariantLevelEntity
+    , sedan :: Maybe SubscriptionConfigVariantLevelEntity
+    , hatchback :: Maybe SubscriptionConfigVariantLevelEntity
+    , bookAny :: Maybe SubscriptionConfigVariantLevelEntity
+    , taxi :: Maybe SubscriptionConfigVariantLevelEntity
+    , taxiPlus :: Maybe SubscriptionConfigVariantLevelEntity
+    , default :: Maybe SubscriptionConfigVariantLevelEntity
     }
 
+type SubscriptionConfigVariantLevelEntity
+  = { noChargesTillDate :: String
+    , lowestFeesFromDate :: String
+    , useFreeTrialLottie :: Maybe Boolean
+    , earnUptoAmout :: Maybe Int
+    , yatriPlansPlaylist :: Maybe String
+    , enableSubscriptionSupportPopup :: Maybe Boolean
+    , offerBannerConfig :: Maybe OfferBanner
+    , enableSubsV2 :: Maybe Boolean
+    , duesConfig :: Maybe RCSubscriptionDues
+    , freeTrialPopupDaysList :: Maybe (Array Int)
+    , freeTrialPopupOnRidesList :: Maybe (Array Int)
+    }
 
-type SubscriptionConfigVariantLevelEntity = {
-   noChargesTillDate :: String,
-   lowestFeesFromDate :: String,
-   useFreeTrialLottie :: Maybe Boolean,
-   earnUptoAmout :: Maybe Int,
-   yatriPlansPlaylist :: Maybe String,
-   enableSubscriptionSupportPopup :: Maybe Boolean,
-   offerBannerConfig :: Maybe OfferBanner,
-   enableSubsV2 :: Maybe Boolean,
-   duesConfig :: Maybe RCSubscriptionDues,
-   freeTrialPopupDaysList :: Maybe (Array Int),
-   freeTrialPopupOnRidesList :: Maybe (Array Int)
-}
+type OfferBanner
+  = { showOfferBanner :: Boolean
+    , offerBannerValidTill :: String
+    , offerBannerDeadline :: String
+    , offerBannerPlans :: Array String
+    , payAmount :: String
+    }
 
-type OfferBanner = {
-    showOfferBanner :: Boolean,
-    offerBannerValidTill :: String,
-    offerBannerDeadline :: String,
-    offerBannerPlans :: Array String,
-    payAmount :: String
-}
+type RCSubscriptionDues
+  = { max_dues_limit :: Number
+    , low_dues_warning_limit :: Number
+    , high_due_warning_limit :: Number
+    }
 
-type RCSubscriptionDues = {
-    max_dues_limit :: Number,
-    low_dues_warning_limit :: Number,
-    high_due_warning_limit :: Number
-}
-  
 ---------------------------------Remote Config Dynamic AC-----------------------------------------------
+data RemoteAC
+  = Destination DestinationParams
+  | WhereTo
+  | Profile
+  | MetroBooking
+  | WebLink WebLinkParams
+  | UpdateProfile
+  | NoAction
+  | Safety
+  | ZooBooking
+  | Rentals
+  | Intercity
+  | SafetyExplaination
+  | SetupSafety
 
-data RemoteAC = Destination DestinationParams | WhereTo | Profile | MetroBooking | WebLink WebLinkParams | UpdateProfile | NoAction | Safety | ZooBooking | Rentals | Intercity | SafetyExplaination | SetupSafety
+instance eqRemoteAC :: Eq RemoteAC where
+  eq = genericEq
 
-instance eqRemoteAC :: Eq RemoteAC where eq = genericEq
-instance encodeJsonRemoteAC :: EncodeJson RemoteAC where encodeJson = genericEncodeJson
-instance decodeJsonRemoteAC :: DecodeJson RemoteAC where decodeJson = genericDecodeJson
+instance encodeJsonRemoteAC :: EncodeJson RemoteAC where
+  encodeJson = genericEncodeJson
+
+instance decodeJsonRemoteAC :: DecodeJson RemoteAC where
+  decodeJson = genericDecodeJson
 
 derive instance genericRemoteAC :: Generic RemoteAC _
-instance decodeRemoteAC :: Decode RemoteAC where 
-  decode body = 
-    let default = runExcept $ defaultDecode body
-    in except $ if Either.isRight default then default else Either.Right $ NoAction
-instance encodeRemoteAC :: Encode RemoteAC where encode = defaultEncode
 
-newtype DestinationParams = DestinationParams {
-  lat :: Number,
-  lng :: Number,
-  description :: Maybe String,
-  fullAddress :: Maybe String,
-  placeId :: Maybe String
-}
+instance decodeRemoteAC :: Decode RemoteAC where
+  decode body =
+    let
+      default = runExcept $ defaultDecode body
+    in
+      except $ if Either.isRight default then default else Either.Right $ NoAction
+
+instance encodeRemoteAC :: Encode RemoteAC where
+  encode = defaultEncode
+
+newtype DestinationParams
+  = DestinationParams
+  { lat :: Number
+  , lng :: Number
+  , description :: Maybe String
+  , fullAddress :: Maybe String
+  , placeId :: Maybe String
+  }
 
 derive instance genericDestinationParams :: Generic DestinationParams _
-instance decodeDestinationParams :: Decode DestinationParams where decode = defaultDecode
-instance encodeDestinationParams :: Encode DestinationParams where encode = defaultEncode
-instance eqDestinationParams :: Eq DestinationParams where eq = genericEq
-instance encodeJsonDestinationParams:: EncodeJson DestinationParams where encodeJson = genericEncodeJson
-instance decodeJsonDestinationParams :: DecodeJson DestinationParams where decodeJson = genericDecodeJson
 
-newtype WebLinkParams = WebLinkParams {
-  url :: String
-}
+instance decodeDestinationParams :: Decode DestinationParams where
+  decode = defaultDecode
+
+instance encodeDestinationParams :: Encode DestinationParams where
+  encode = defaultEncode
+
+instance eqDestinationParams :: Eq DestinationParams where
+  eq = genericEq
+
+instance encodeJsonDestinationParams :: EncodeJson DestinationParams where
+  encodeJson = genericEncodeJson
+
+instance decodeJsonDestinationParams :: DecodeJson DestinationParams where
+  decodeJson = genericDecodeJson
+
+newtype WebLinkParams
+  = WebLinkParams
+  { url :: String
+  }
 
 derive instance genericWebLinkParams :: Generic WebLinkParams _
-instance decodeWebLinkParams :: Decode WebLinkParams where decode = defaultDecode
-instance encodeWebLinkParams :: Encode WebLinkParams where encode = defaultEncode
-instance eqWebLinkParams :: Eq WebLinkParams where eq = genericEq
-instance encodeJsonWebLinkParams:: EncodeJson WebLinkParams where encodeJson = genericEncodeJson
-instance decodeJsonWebLinkParams :: DecodeJson WebLinkParams where decodeJson = genericDecodeJson
 
-type GullakConfig = {
-  image :: String,
-  enabled :: Boolean
-}
+instance decodeWebLinkParams :: Decode WebLinkParams where
+  decode = defaultDecode
+
+instance encodeWebLinkParams :: Encode WebLinkParams where
+  encode = defaultEncode
+
+instance eqWebLinkParams :: Eq WebLinkParams where
+  eq = genericEq
+
+instance encodeJsonWebLinkParams :: EncodeJson WebLinkParams where
+  encodeJson = genericEncodeJson
+
+instance decodeJsonWebLinkParams :: DecodeJson WebLinkParams where
+  decodeJson = genericDecodeJson
+
+type GullakConfig
+  = { image :: String
+    , enabled :: Boolean
+    }
+
+type StuckRideFilterConfig
+  = { estimatedDurationFallback :: Int
+    , buffer :: Number
+    , enable :: Boolean
+    }
+
+type BundleLottieConfig
+  = { lottieUrl :: String
+    , enable :: Boolean
+    }
