@@ -21,7 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
+import Tools.Auth.ApiV2
 
 type API = ("message" :> (PostMessageUploadFile :<|> PostMessageAddLink :<|> PostMessageAdd :<|> PostMessageSend :<|> GetMessageList :<|> GetMessageInfo :<|> GetMessageDeliveryInfo :<|> GetMessageReceiverList))
 
@@ -29,65 +29,57 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = postMessageUploadFile merchantId city :<|> postMessageAddLink merchantId city :<|> postMessageAdd merchantId city :<|> postMessageSend merchantId city :<|> getMessageList merchantId city :<|> getMessageInfo merchantId city :<|> getMessageDeliveryInfo merchantId city :<|> getMessageReceiverList merchantId city
 
 type PostMessageUploadFile =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MESSAGE
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MESSAGE / 'API.Types.ProviderPlatform.Management.Message.POST_MESSAGE_UPLOAD_FILE)
       :> API.Types.ProviderPlatform.Management.Message.PostMessageUploadFile
   )
 
 type PostMessageAddLink =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MESSAGE
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MESSAGE / 'API.Types.ProviderPlatform.Management.Message.POST_MESSAGE_ADD_LINK)
       :> API.Types.ProviderPlatform.Management.Message.PostMessageAddLink
   )
 
 type PostMessageAdd =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MESSAGE
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MESSAGE / 'API.Types.ProviderPlatform.Management.Message.POST_MESSAGE_ADD)
       :> API.Types.ProviderPlatform.Management.Message.PostMessageAdd
   )
 
 type PostMessageSend =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MESSAGE
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MESSAGE / 'API.Types.ProviderPlatform.Management.Message.POST_MESSAGE_SEND)
       :> API.Types.ProviderPlatform.Management.Message.PostMessageSend
   )
 
 type GetMessageList =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MESSAGE
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MESSAGE / 'API.Types.ProviderPlatform.Management.Message.GET_MESSAGE_LIST)
       :> API.Types.ProviderPlatform.Management.Message.GetMessageList
   )
 
 type GetMessageInfo =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MESSAGE
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MESSAGE / 'API.Types.ProviderPlatform.Management.Message.GET_MESSAGE_INFO)
       :> API.Types.ProviderPlatform.Management.Message.GetMessageInfo
   )
 
 type GetMessageDeliveryInfo =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MESSAGE
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MESSAGE / 'API.Types.ProviderPlatform.Management.Message.GET_MESSAGE_DELIVERY_INFO)
       :> API.Types.ProviderPlatform.Management.Message.GetMessageDeliveryInfo
   )
 
 type GetMessageReceiverList =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MESSAGE
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MESSAGE / 'API.Types.ProviderPlatform.Management.Message.GET_MESSAGE_RECEIVER_LIST)
       :> API.Types.ProviderPlatform.Management.Message.GetMessageReceiverList
   )

@@ -13,7 +13,7 @@ apis:
       endpoint: /uploadFile
       multipart:
         type: UploadFileRequest
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
+      auth: ApiAuthV2 DRIVER_OFFER_BPP_MANAGEMENT
       response:
         type: UploadFileResponse
       migrate:
@@ -24,7 +24,7 @@ apis:
       endpoint: /addLink
       request:
         type: AddLinkAsMedia
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
+      auth: ApiAuthV2 DRIVER_OFFER_BPP_MANAGEMENT
       response:
         type: UploadFileResponse
       migrate:
@@ -35,7 +35,7 @@ apis:
       endpoint: /add
       request:
         type: AddMessageRequest
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
+      auth: ApiAuthV2 DRIVER_OFFER_BPP_MANAGEMENT
       response:
         type: AddMessageResponse
       migrate:
@@ -46,7 +46,7 @@ apis:
       endpoint: /send
       multipart:
         type: SendMessageRequest
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
+      auth: ApiAuthV2 DRIVER_OFFER_BPP_MANAGEMENT
       response:
         type: APISuccess
       migrate:
@@ -58,7 +58,7 @@ apis:
       query:
         - limit: Int
         - offset: Int
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
+      auth: ApiAuthV2 DRIVER_OFFER_BPP_MANAGEMENT
       response:
         type: MessageListResponse
       migrate:
@@ -67,7 +67,7 @@ apis:
       endpoint: /{messageId}/info
       params:
         messageId: Id Message
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
+      auth: ApiAuthV2 DRIVER_OFFER_BPP_MANAGEMENT
       response:
         type: MessageInfoResponse
       migrate:
@@ -76,7 +76,7 @@ apis:
       endpoint: /{messageId}/deliveryInfo
       params:
         messageId: Id Message
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
+      auth: ApiAuthV2 DRIVER_OFFER_BPP_MANAGEMENT
       response:
         type: MessageDeliveryInfoResponse
       migrate:
@@ -90,7 +90,7 @@ apis:
         - status: MessageDeliveryStatus
         - limit: Int
         - offset: Int
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
+      auth: ApiAuthV2 DRIVER_OFFER_BPP_MANAGEMENT
       response:
         type: MessageReceiverListResponse
       migrate:

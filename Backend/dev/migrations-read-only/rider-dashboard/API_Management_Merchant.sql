@@ -97,3 +97,39 @@ UPDATE atlas_bap_dashboard.transaction
 UPDATE atlas_bap_dashboard.transaction
   SET endpoint = 'RIDER_MANAGEMENT/MERCHANT/DELETE_MERCHANT_SPECIAL_LOCATION_GATES_DELETE'
   WHERE endpoint = 'MerchantAPI DeleteMerchantSpecialLocationGatesDeleteEndpoint';
+
+
+------- SQL updates -------
+
+-- {"api":"PostMerchantUpdate","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MERCHANT_UPDATE","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_UPDATE' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'MERCHANT' AND T1.user_action_type = 'MERCHANT_UPDATE' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"GetMerchantServiceUsageConfig","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT MERCHANT SERVICE_USAGE_CONFIG","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_SERVICE_USAGE_CONFIG' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'MERCHANT' AND T1.user_action_type = 'SERVICE_USAGE_CONFIG' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostMerchantServiceConfigMapsUpdate","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MAPS_SERVICE_CONFIG_UPDATE","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SERVICE_CONFIG_MAPS_UPDATE' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'MERCHANT' AND T1.user_action_type = 'MAPS_SERVICE_CONFIG_UPDATE' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostMerchantServiceUsageConfigMapsUpdate","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MAPS_SERVICE_USAGE_CONFIG_UPDATE","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SERVICE_USAGE_CONFIG_MAPS_UPDATE' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'MERCHANT' AND T1.user_action_type = 'MAPS_SERVICE_USAGE_CONFIG_UPDATE' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostMerchantServiceConfigSmsUpdate","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT MERCHANT SMS_SERVICE_CONFIG_UPDATE","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SERVICE_CONFIG_SMS_UPDATE' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'MERCHANT' AND T1.user_action_type = 'SMS_SERVICE_CONFIG_UPDATE' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostMerchantServiceUsageConfigSmsUpdate","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT MERCHANT SMS_SERVICE_USAGE_CONFIG_UPDATE","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SERVICE_USAGE_CONFIG_SMS_UPDATE' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'MERCHANT' AND T1.user_action_type = 'SMS_SERVICE_USAGE_CONFIG_UPDATE' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostMerchantConfigOperatingCityCreate","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_OPERATING_CITY_CREATE' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'MERCHANT' AND T1.user_action_type = 'CREATE_MERCHANT_OPERATING_CITY' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostMerchantSpecialLocationUpsert","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SPECIAL_LOCATION_UPSERT' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'MERCHANT' AND T1.user_action_type = 'UPSERT_SPECIAL_LOCATION' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"DeleteMerchantSpecialLocationDelete","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/MERCHANT/DELETE_MERCHANT_SPECIAL_LOCATION_DELETE' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'MERCHANT' AND T1.user_action_type = 'DELETE_SPECIAL_LOCATION' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostMerchantSpecialLocationGatesUpsert","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_GATE","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SPECIAL_LOCATION_GATES_UPSERT' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'MERCHANT' AND T1.user_action_type = 'UPSERT_SPECIAL_LOCATION_GATE' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"DeleteMerchantSpecialLocationGatesDelete","migration":"userActionType","param":"ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION_GATE","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bap_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'RIDER_MANAGEMENT/MERCHANT/DELETE_MERCHANT_SPECIAL_LOCATION_GATES_DELETE' FROM atlas_bap_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'MERCHANT' AND T1.user_action_type = 'DELETE_SPECIAL_LOCATION_GATE' ) ON CONFLICT DO NOTHING;

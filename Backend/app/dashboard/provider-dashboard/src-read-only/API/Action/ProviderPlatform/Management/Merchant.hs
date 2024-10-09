@@ -24,7 +24,7 @@ import Kernel.Utils.Common hiding (INFO)
 import qualified Lib.Types.SpecialLocation
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
+import Tools.Auth.ApiV2
 
 type API = ("merchant" :> (PostMerchantUpdate :<|> GetMerchantConfigCommon :<|> PostMerchantConfigCommonUpdate :<|> GetMerchantConfigDriverPool :<|> PostMerchantConfigDriverPoolUpdate :<|> PostMerchantConfigDriverPoolCreate :<|> GetMerchantConfigDriverIntelligentPool :<|> PostMerchantConfigDriverIntelligentPoolUpdate :<|> GetMerchantConfigOnboardingDocument :<|> PostMerchantConfigOnboardingDocumentUpdate :<|> PostMerchantConfigOnboardingDocumentCreate :<|> GetMerchantServiceUsageConfig :<|> PostMerchantServiceConfigMapsUpdate :<|> PostMerchantServiceUsageConfigMapsUpdate :<|> PostMerchantServiceConfigSmsUpdate :<|> PostMerchantServiceUsageConfigSmsUpdate :<|> PostMerchantServiceConfigVerificationUpdate :<|> PostMerchantConfigFarePolicyDriverExtraFeeBoundsCreate :<|> PostMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate :<|> PostMerchantConfigFarePolicyPerExtraKmRateUpdate :<|> PostMerchantConfigFarePolicyUpdate :<|> PostMerchantConfigFarePolicyUpsert :<|> PostMerchantConfigOperatingCityCreate :<|> PostMerchantSchedulerTrigger :<|> PostMerchantUpdateOnboardingVehicleVariantMapping :<|> PostMerchantSpecialLocationUpsert :<|> DeleteMerchantSpecialLocationDelete :<|> PostMerchantSpecialLocationGatesUpsert :<|> DeleteMerchantSpecialLocationGatesDelete :<|> PostMerchantConfigClearCacheSubscription))
 
@@ -32,241 +32,211 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = postMerchantUpdate merchantId city :<|> getMerchantConfigCommon merchantId city :<|> postMerchantConfigCommonUpdate merchantId city :<|> getMerchantConfigDriverPool merchantId city :<|> postMerchantConfigDriverPoolUpdate merchantId city :<|> postMerchantConfigDriverPoolCreate merchantId city :<|> getMerchantConfigDriverIntelligentPool merchantId city :<|> postMerchantConfigDriverIntelligentPoolUpdate merchantId city :<|> getMerchantConfigOnboardingDocument merchantId city :<|> postMerchantConfigOnboardingDocumentUpdate merchantId city :<|> postMerchantConfigOnboardingDocumentCreate merchantId city :<|> getMerchantServiceUsageConfig merchantId city :<|> postMerchantServiceConfigMapsUpdate merchantId city :<|> postMerchantServiceUsageConfigMapsUpdate merchantId city :<|> postMerchantServiceConfigSmsUpdate merchantId city :<|> postMerchantServiceUsageConfigSmsUpdate merchantId city :<|> postMerchantServiceConfigVerificationUpdate merchantId city :<|> postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate merchantId city :<|> postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate merchantId city :<|> postMerchantConfigFarePolicyPerExtraKmRateUpdate merchantId city :<|> postMerchantConfigFarePolicyUpdate merchantId city :<|> postMerchantConfigFarePolicyUpsert merchantId city :<|> postMerchantConfigOperatingCityCreate merchantId city :<|> postMerchantSchedulerTrigger merchantId city :<|> postMerchantUpdateOnboardingVehicleVariantMapping merchantId city :<|> postMerchantSpecialLocationUpsert merchantId city :<|> deleteMerchantSpecialLocationDelete merchantId city :<|> postMerchantSpecialLocationGatesUpsert merchantId city :<|> deleteMerchantSpecialLocationGatesDelete merchantId city :<|> postMerchantConfigClearCacheSubscription merchantId city
 
 type PostMerchantUpdate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_UPDATE)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantUpdate
   )
 
 type GetMerchantConfigCommon =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.GET_MERCHANT_CONFIG_COMMON)
       :> API.Types.ProviderPlatform.Management.Merchant.GetMerchantConfigCommon
   )
 
 type PostMerchantConfigCommonUpdate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_COMMON_UPDATE)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantConfigCommonUpdate
   )
 
 type GetMerchantConfigDriverPool =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.GET_MERCHANT_CONFIG_DRIVER_POOL)
       :> API.Types.ProviderPlatform.Management.Merchant.GetMerchantConfigDriverPool
   )
 
 type PostMerchantConfigDriverPoolUpdate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_DRIVER_POOL_UPDATE)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantConfigDriverPoolUpdate
   )
 
 type PostMerchantConfigDriverPoolCreate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_DRIVER_POOL_CREATE)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantConfigDriverPoolCreate
   )
 
 type GetMerchantConfigDriverIntelligentPool =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.GET_MERCHANT_CONFIG_DRIVER_INTELLIGENT_POOL)
       :> API.Types.ProviderPlatform.Management.Merchant.GetMerchantConfigDriverIntelligentPool
   )
 
 type PostMerchantConfigDriverIntelligentPoolUpdate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_DRIVER_INTELLIGENT_POOL_UPDATE)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantConfigDriverIntelligentPoolUpdate
   )
 
 type GetMerchantConfigOnboardingDocument =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.GET_MERCHANT_CONFIG_ONBOARDING_DOCUMENT)
       :> API.Types.ProviderPlatform.Management.Merchant.GetMerchantConfigOnboardingDocument
   )
 
 type PostMerchantConfigOnboardingDocumentUpdate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_ONBOARDING_DOCUMENT_UPDATE)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantConfigOnboardingDocumentUpdate
   )
 
 type PostMerchantConfigOnboardingDocumentCreate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_ONBOARDING_DOCUMENT_CREATE)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantConfigOnboardingDocumentCreate
   )
 
 type GetMerchantServiceUsageConfig =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.GET_MERCHANT_SERVICE_USAGE_CONFIG)
       :> API.Types.ProviderPlatform.Management.Merchant.GetMerchantServiceUsageConfig
   )
 
 type PostMerchantServiceConfigMapsUpdate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_SERVICE_CONFIG_MAPS_UPDATE)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantServiceConfigMapsUpdate
   )
 
 type PostMerchantServiceUsageConfigMapsUpdate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_SERVICE_USAGE_CONFIG_MAPS_UPDATE)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantServiceUsageConfigMapsUpdate
   )
 
 type PostMerchantServiceConfigSmsUpdate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_SERVICE_CONFIG_SMS_UPDATE)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantServiceConfigSmsUpdate
   )
 
 type PostMerchantServiceUsageConfigSmsUpdate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_SERVICE_USAGE_CONFIG_SMS_UPDATE)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantServiceUsageConfigSmsUpdate
   )
 
 type PostMerchantServiceConfigVerificationUpdate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_SERVICE_CONFIG_VERIFICATION_UPDATE)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantServiceConfigVerificationUpdate
   )
 
 type PostMerchantConfigFarePolicyDriverExtraFeeBoundsCreate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_FARE_POLICY_DRIVER_EXTRA_FEE_BOUNDS_CREATE)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantConfigFarePolicyDriverExtraFeeBoundsCreate
   )
 
 type PostMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_FARE_POLICY_DRIVER_EXTRA_FEE_BOUNDS_UPDATE)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate
   )
 
 type PostMerchantConfigFarePolicyPerExtraKmRateUpdate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_FARE_POLICY_PER_EXTRA_KM_RATE_UPDATE)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantConfigFarePolicyPerExtraKmRateUpdate
   )
 
 type PostMerchantConfigFarePolicyUpdate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_FARE_POLICY_UPDATE)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantConfigFarePolicyUpdate
   )
 
 type PostMerchantConfigFarePolicyUpsert =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_FARE_POLICY_UPSERT)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantConfigFarePolicyUpsert
   )
 
 type PostMerchantConfigOperatingCityCreate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_OPERATING_CITY_CREATE)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantConfigOperatingCityCreate
   )
 
 type PostMerchantSchedulerTrigger =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_SCHEDULER_TRIGGER)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantSchedulerTrigger
   )
 
 type PostMerchantUpdateOnboardingVehicleVariantMapping =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_UPDATE_ONBOARDING_VEHICLE_VARIANT_MAPPING)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantUpdateOnboardingVehicleVariantMapping
   )
 
 type PostMerchantSpecialLocationUpsert =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_SPECIAL_LOCATION_UPSERT)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantSpecialLocationUpsert
   )
 
 type DeleteMerchantSpecialLocationDelete =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.DELETE_MERCHANT_SPECIAL_LOCATION_DELETE)
       :> API.Types.ProviderPlatform.Management.Merchant.DeleteMerchantSpecialLocationDelete
   )
 
 type PostMerchantSpecialLocationGatesUpsert =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_SPECIAL_LOCATION_GATES_UPSERT)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantSpecialLocationGatesUpsert
   )
 
 type DeleteMerchantSpecialLocationGatesDelete =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.DELETE_MERCHANT_SPECIAL_LOCATION_GATES_DELETE)
       :> API.Types.ProviderPlatform.Management.Merchant.DeleteMerchantSpecialLocationGatesDelete
   )
 
 type PostMerchantConfigClearCacheSubscription =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'MERCHANT
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_CLEAR_CACHE_SUBSCRIPTION)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantConfigClearCacheSubscription
   )

@@ -16,7 +16,7 @@ module: Driver
 apis:
   - GET: # DriverOutstandingBalanceAPI
       endpoint: /paymentDue
-      auth: ApiAuth DRIVER_OFFER_BPP
+      auth: ApiAuthV2 DRIVER_OFFER_BPP
       query:
         - countryCode: Text
       mandatoryQuery:
@@ -27,7 +27,7 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS BALANCE_DUE
   - POST: # EnableDriverAPI
       endpoint: /{driverId}/enable
-      auth: ApiAuth DRIVER_OFFER_BPP
+      auth: ApiAuthV2 DRIVER_OFFER_BPP
       params:
         driverId: Id Driver
       response:
@@ -38,7 +38,7 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS ENABLE
   - POST: # DriverCashCollectionAPI
       endpoint: /{driverId}/collectCash
-      auth: ApiAuth DRIVER_OFFER_BPP
+      auth: ApiAuthV2 DRIVER_OFFER_BPP
       params:
         driverId: Id Driver
       response:
@@ -46,7 +46,7 @@ apis:
       helperApi:
         - POST:
             endpoint: /{driverId}/collectCash
-            auth: ApiAuth DRIVER_OFFER_BPP
+            auth: ApiAuthV2 DRIVER_OFFER_BPP
             params:
               driverId: Id Driver
             request:
@@ -59,7 +59,7 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS COLLECT_CASH
   - POST: # DriverCashCollectionAPIV2
       endpoint: /{driverId}/v2/collectCash/{serviceName}
-      auth: ApiAuth DRIVER_OFFER_BPP DRIVERS
+      auth: ApiAuthV2 DRIVER_OFFER_BPP
       params:
         driverId: Id Driver
         serviceName: ServiceNames
@@ -68,7 +68,7 @@ apis:
       helperApi:
         - POST:
             endpoint: /{driverId}/collectCash/v2/{token}/{serviceName}
-            auth: ApiAuth DRIVER_OFFER_BPP
+            auth: ApiAuthV2 DRIVER_OFFER_BPP
             params:
               driverId: Id Driver
               token: Text
@@ -81,7 +81,7 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS COLLECT_CASH_V2
   - POST: # DriverCashExemptionAPI
       endpoint: /{driverId}/exemptCash
-      auth: ApiAuth DRIVER_OFFER_BPP
+      auth: ApiAuthV2 DRIVER_OFFER_BPP
       params:
         driverId: Id Driver
       response:
@@ -89,7 +89,7 @@ apis:
       helperApi:
         - POST:
             endpoint: /{driverId}/exemptCash
-            auth: ApiAuth DRIVER_OFFER_BPP
+            auth: ApiAuthV2 DRIVER_OFFER_BPP
             params:
               driverId: Id Driver
             request:
@@ -102,7 +102,7 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_CASH
   - POST: # DriverCashExemptionAPIV2
       endpoint: /{driverId}/v2/exemptCash/{serviceName}
-      auth: ApiAuth DRIVER_OFFER_BPP
+      auth: ApiAuthV2 DRIVER_OFFER_BPP
       params:
         driverId: Id Driver
         serviceName: ServiceNames
@@ -111,7 +111,7 @@ apis:
       helperApi:
         - POST:
             endpoint: /{driverId}/exemptCash/v2/{token}/{serviceName}
-            auth: ApiAuth DRIVER_OFFER_BPP
+            auth: ApiAuthV2 DRIVER_OFFER_BPP
             params:
               driverId: Id Driver
               token: Text
@@ -124,7 +124,7 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_CASH_V2
   - GET: # DriverInfoAPI
       endpoint: /info
-      auth: ApiAuth DRIVER_OFFER_BPP
+      auth: ApiAuthV2 DRIVER_OFFER_BPP
       query:
         - mobileNumber: Text
         - mobileCountryCode: Text
@@ -140,7 +140,7 @@ apis:
       helperApi:
         - GET:
             endpoint: /info/{fleetOwnerId}/{mbFleet}
-            auth: ApiAuth DRIVER_OFFER_BPP
+            auth: ApiAuthV2 DRIVER_OFFER_BPP
             query:
               - mobileNumber: Text
               - mobileCountryCode: Text
@@ -156,7 +156,7 @@ apis:
               type: DriverInfoRes
   - POST: # UnlinkVehicleAPI
       endpoint: /{driverId}/unlinkVehicle
-      auth: ApiAuth DRIVER_OFFER_BPP DRIVERS
+      auth: ApiAuthV2 DRIVER_OFFER_BPP
       params:
         driverId: Id Driver
       response:
@@ -167,7 +167,7 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS UNLINK_VEHICLE
   - POST: # EndRCAssociationAPI
       endpoint: /{driverId}/endRCAssociation
-      auth: ApiAuth DRIVER_OFFER_BPP DRIVERS
+      auth: ApiAuthV2 DRIVER_OFFER_BPP
       params:
         driverId: Id Driver
       response:
@@ -178,7 +178,7 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS END_RC_ASSOCIATION
   - POST: # AddVehicleAPI
       endpoint: /{driverId}/addVehicle
-      auth: ApiAuth DRIVER_OFFER_BPP
+      auth: ApiAuthV2 DRIVER_OFFER_BPP
       params:
         driverId: Id Driver
       request:
@@ -192,7 +192,7 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS ADD_VEHICLE
   - POST: # SetRCStatusAPI
       endpoint: /{driverId}/setRCStatus
-      auth: ApiAuth DRIVER_OFFER_BPP
+      auth: ApiAuthV2 DRIVER_OFFER_BPP
       params:
         driverId: Id Driver
       request:

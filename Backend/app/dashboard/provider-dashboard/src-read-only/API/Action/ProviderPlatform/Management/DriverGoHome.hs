@@ -20,7 +20,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
+import Tools.Auth.ApiV2
 
 type API = ("driver" :> (GetDriverGoHomeGetHomeLocation :<|> PostDriverGoHomeUpdateHomeLocation :<|> PostDriverGoHomeIncrementGoToCount :<|> GetDriverGoHomeGetGoHomeInfo))
 
@@ -28,33 +28,29 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getDriverGoHomeGetHomeLocation merchantId city :<|> postDriverGoHomeUpdateHomeLocation merchantId city :<|> postDriverGoHomeIncrementGoToCount merchantId city :<|> getDriverGoHomeGetGoHomeInfo merchantId city
 
 type GetDriverGoHomeGetHomeLocation =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_GO_HOME / 'API.Types.ProviderPlatform.Management.DriverGoHome.GET_DRIVER_GO_HOME_GET_HOME_LOCATION)
       :> API.Types.ProviderPlatform.Management.DriverGoHome.GetDriverGoHomeGetHomeLocation
   )
 
 type PostDriverGoHomeUpdateHomeLocation =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_GO_HOME / 'API.Types.ProviderPlatform.Management.DriverGoHome.POST_DRIVER_GO_HOME_UPDATE_HOME_LOCATION)
       :> API.Types.ProviderPlatform.Management.DriverGoHome.PostDriverGoHomeUpdateHomeLocation
   )
 
 type PostDriverGoHomeIncrementGoToCount =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_GO_HOME / 'API.Types.ProviderPlatform.Management.DriverGoHome.POST_DRIVER_GO_HOME_INCREMENT_GO_TO_COUNT)
       :> API.Types.ProviderPlatform.Management.DriverGoHome.PostDriverGoHomeIncrementGoToCount
   )
 
 type GetDriverGoHomeGetGoHomeInfo =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_GO_HOME / 'API.Types.ProviderPlatform.Management.DriverGoHome.GET_DRIVER_GO_HOME_GET_GO_HOME_INFO)
       :> API.Types.ProviderPlatform.Management.DriverGoHome.GetDriverGoHomeGetGoHomeInfo
   )

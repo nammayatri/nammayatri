@@ -21,7 +21,7 @@ apis:
   - POST: # MultipleBookingSyncAPI
       endpoint: /sync
       name: PostBookingSyncMultiple
-      auth: ApiAuth APP_BACKEND_MANAGEMENT
+      auth: ApiAuthV2 APP_BACKEND_MANAGEMENT
       request:
         type: MultipleBookingSyncReq
       response:

@@ -13,7 +13,7 @@ module: System
 apis:
   - POST:
       endpoint: /runQuery
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
+      auth: ApiAuthV2 DRIVER_OFFER_BPP_MANAGEMENT
       request:
         type: QueryData
       response:

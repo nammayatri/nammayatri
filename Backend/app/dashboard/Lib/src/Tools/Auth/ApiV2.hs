@@ -94,7 +94,7 @@ instance
 verifyAccessLevelV2 :: BeamFlow m r => DMatrix.ApiV2AccessLevel -> Id DP.Person -> m (Id DP.Person)
 verifyAccessLevelV2 requiredApiAccessLevel personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntityAndActionType person.roleId Nothing $ DMatrix.UserActionTypeWrapper requiredApiAccessLevel.userActionType
+  mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntityAndActionType person.roleId (Just DMatrix.DSL) $ DMatrix.UserActionTypeWrapper requiredApiAccessLevel.userActionType
   let userAccessType = maybe DMatrix.USER_NO_ACCESS (.userAccessType) mbAccessMatrixItem
   unless (checkUserAccess userAccessType) $
     throwError AccessDenied

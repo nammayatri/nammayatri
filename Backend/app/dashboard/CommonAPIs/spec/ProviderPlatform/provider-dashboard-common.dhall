@@ -159,7 +159,7 @@ let defaultImports =
       , { _simpleImports =
           [ "EulerHS.Prelude hiding (sortOn)"
           , "Servant"
-          , "Tools.Auth.Api"
+          , "Tools.Auth.ApiV2"
           , "Kernel.Utils.Common hiding (INFO)"
           , "Storage.Beam.CommonInstances ()"
           ]
@@ -184,7 +184,7 @@ let defaultImports =
         }
       , { _simpleImports =
           [ "EulerHS.Prelude"
-          , "Tools.Auth.Api"
+          , "Tools.Auth.ApiV2"
           , "Tools.Auth.Merchant"
           , "Kernel.Utils.Common"
           , "Storage.Beam.CommonInstances ()"
@@ -317,6 +317,11 @@ let defaultConfigs =
       , _clientFunction = None
       , _endpointPrefix = Some "Provider"
       , _folderName = None Text
+      , _migrationParams =
+        [ { _migrationName = "localAccessForRoleId"
+          , _migrationParam = Some "37947162-3b5d-4ed6-bcac-08841be1534d"
+          }
+        ]
       }
 
 in  { defaultConfigs, ClientName, outputPrefixDriverApp }

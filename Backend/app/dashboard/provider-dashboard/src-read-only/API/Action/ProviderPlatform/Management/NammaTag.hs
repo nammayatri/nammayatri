@@ -21,7 +21,7 @@ import Kernel.Utils.Common hiding (INFO)
 import qualified Lib.Yudhishthira.Types
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
+import Tools.Auth.ApiV2
 
 type API = ("nammaTag" :> (PostNammaTagTagCreate :<|> PostNammaTagTagUpdate :<|> DeleteNammaTagTagDelete :<|> PostNammaTagQueryCreate :<|> PostNammaTagAppDynamicLogicVerify :<|> GetNammaTagAppDynamicLogic :<|> PostNammaTagRunJob :<|> GetNammaTagTimeBounds :<|> PostNammaTagTimeBoundsCreate :<|> DeleteNammaTagTimeBoundsDelete :<|> GetNammaTagAppDynamicLogicGetLogicRollout :<|> PostNammaTagAppDynamicLogicUpsertLogicRollout))
 
@@ -29,97 +29,85 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = postNammaTagTagCreate merchantId city :<|> postNammaTagTagUpdate merchantId city :<|> deleteNammaTagTagDelete merchantId city :<|> postNammaTagQueryCreate merchantId city :<|> postNammaTagAppDynamicLogicVerify merchantId city :<|> getNammaTagAppDynamicLogic merchantId city :<|> postNammaTagRunJob merchantId city :<|> getNammaTagTimeBounds merchantId city :<|> postNammaTagTimeBoundsCreate merchantId city :<|> deleteNammaTagTimeBoundsDelete merchantId city :<|> getNammaTagAppDynamicLogicGetLogicRollout merchantId city :<|> postNammaTagAppDynamicLogicUpsertLogicRollout merchantId city
 
 type PostNammaTagTagCreate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'NAMMA_TAG
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.NAMMA_TAG / 'API.Types.ProviderPlatform.Management.NammaTag.POST_NAMMA_TAG_TAG_CREATE)
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagTagCreate
   )
 
 type PostNammaTagTagUpdate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'NAMMA_TAG
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.NAMMA_TAG / 'API.Types.ProviderPlatform.Management.NammaTag.POST_NAMMA_TAG_TAG_UPDATE)
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagTagUpdate
   )
 
 type DeleteNammaTagTagDelete =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'NAMMA_TAG
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.NAMMA_TAG / 'API.Types.ProviderPlatform.Management.NammaTag.DELETE_NAMMA_TAG_TAG_DELETE)
       :> API.Types.ProviderPlatform.Management.NammaTag.DeleteNammaTagTagDelete
   )
 
 type PostNammaTagQueryCreate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'NAMMA_TAG
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.NAMMA_TAG / 'API.Types.ProviderPlatform.Management.NammaTag.POST_NAMMA_TAG_QUERY_CREATE)
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagQueryCreate
   )
 
 type PostNammaTagAppDynamicLogicVerify =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'NAMMA_TAG
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.NAMMA_TAG / 'API.Types.ProviderPlatform.Management.NammaTag.POST_NAMMA_TAG_APP_DYNAMIC_LOGIC_VERIFY)
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagAppDynamicLogicVerify
   )
 
 type GetNammaTagAppDynamicLogic =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'NAMMA_TAG
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.NAMMA_TAG / 'API.Types.ProviderPlatform.Management.NammaTag.GET_NAMMA_TAG_APP_DYNAMIC_LOGIC)
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagAppDynamicLogic
   )
 
 type PostNammaTagRunJob =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'NAMMA_TAG
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.NAMMA_TAG / 'API.Types.ProviderPlatform.Management.NammaTag.POST_NAMMA_TAG_RUN_JOB)
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagRunJob
   )
 
 type GetNammaTagTimeBounds =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'NAMMA_TAG
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.NAMMA_TAG / 'API.Types.ProviderPlatform.Management.NammaTag.GET_NAMMA_TAG_TIME_BOUNDS)
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagTimeBounds
   )
 
 type PostNammaTagTimeBoundsCreate =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'NAMMA_TAG
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.NAMMA_TAG / 'API.Types.ProviderPlatform.Management.NammaTag.POST_NAMMA_TAG_TIME_BOUNDS_CREATE)
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagTimeBoundsCreate
   )
 
 type DeleteNammaTagTimeBoundsDelete =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'NAMMA_TAG
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.NAMMA_TAG / 'API.Types.ProviderPlatform.Management.NammaTag.DELETE_NAMMA_TAG_TIME_BOUNDS_DELETE)
       :> API.Types.ProviderPlatform.Management.NammaTag.DeleteNammaTagTimeBoundsDelete
   )
 
 type GetNammaTagAppDynamicLogicGetLogicRollout =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'NAMMA_TAG
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.NAMMA_TAG / 'API.Types.ProviderPlatform.Management.NammaTag.GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_GET_LOGIC_ROLLOUT)
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagAppDynamicLogicGetLogicRollout
   )
 
 type PostNammaTagAppDynamicLogicUpsertLogicRollout =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'NAMMA_TAG
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.NAMMA_TAG / 'API.Types.ProviderPlatform.Management.NammaTag.POST_NAMMA_TAG_APP_DYNAMIC_LOGIC_UPSERT_LOGIC_ROLLOUT)
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagAppDynamicLogicUpsertLogicRollout
   )

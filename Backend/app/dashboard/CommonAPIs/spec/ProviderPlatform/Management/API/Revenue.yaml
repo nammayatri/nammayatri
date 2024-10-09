@@ -32,18 +32,18 @@ apis:
         place: Text
         from: UTCTime
         to: UTCTime
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
+      auth: ApiAuthV2 DRIVER_OFFER_BPP_MANAGEMENT
       response:
         type: CollectionList
+      migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT VOLUNTEER VOLUNTEER_COLLECTION_HISTORY
   - GET:
       endpoint: /allFeeHistory
       query:
         from: UTCTime
         to: UTCTime
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
+      auth: ApiAuthV2 DRIVER_OFFER_BPP_MANAGEMENT
       response:
         type: '[AllFees]'
+      migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT VOLUNTEER ALL_FEE_HISTORY

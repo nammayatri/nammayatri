@@ -88,7 +88,7 @@ instance Text.Read.Read UserActionTypeWrapper where
                ]
       )
     where
-      app_prec = 10 -- TODO check precedence in nested types
+      app_prec = 9
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
 -- TODO remove old
@@ -347,7 +347,8 @@ genSingletons [''UserActionType]
 
 -------- Required access levels for helper api --------
 
-data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT | MESSAGE | REFERRAL | ISSUE | VOLUNTEER | SPECIAL_ZONES | SUBSCRIPTION | FLEET | OVERLAY | NAMMA_TAG | MIGRATION
+-- TODO ApiEntity will be deprecated when we move all apis to DSL. For now we use DSL api entity for all generated apis
+data ApiEntity = DSL | CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT | MESSAGE | REFERRAL | ISSUE | VOLUNTEER | SPECIAL_ZONES | SUBSCRIPTION | FLEET | OVERLAY | NAMMA_TAG | MIGRATION
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''ApiEntity)

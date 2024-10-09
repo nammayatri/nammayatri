@@ -151,7 +151,7 @@ let defaultImports =
       , { _simpleImports =
           [ "EulerHS.Prelude"
           , "Servant"
-          , "Tools.Auth.Api"
+          , "Tools.Auth.ApiV2"
           , "Kernel.Utils.Common"
           , "Storage.Beam.CommonInstances ()"
           ]
@@ -177,7 +177,7 @@ let defaultImports =
         }
       , { _simpleImports =
           [ "EulerHS.Prelude"
-          , "Tools.Auth.Api"
+          , "Tools.Auth.ApiV2"
           , "Tools.Auth.Merchant"
           , "Kernel.Utils.Common"
           , "Storage.Beam.CommonInstances ()"
@@ -308,6 +308,11 @@ let defaultConfigs =
       , _apiKind = ApiKind.DASHBOARD
       , _clientFunction = None Text
       , _endpointPrefix = Some "Rider"
+      , _migrationParams =
+        [ { _migrationName = "localAccessForRoleId"
+          , _migrationParam = Some "37947162-3b5d-4ed6-bcac-08841be1534d"
+          }
+        ]
       }
 
 in  { defaultConfigs, ClientName, outputPrefixRiderApp }

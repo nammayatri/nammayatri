@@ -9,7 +9,7 @@ module: Booking
 apis:
   - POST: # StuckBookingsCancelAPI
       endpoint: /cancel/allStuck
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
+      auth: ApiAuthV2 DRIVER_OFFER_BPP_MANAGEMENT
       request:
         type: StuckBookingsCancelReq
       response:
@@ -21,7 +21,7 @@ apis:
   - POST: # MultipleBookingSyncAPI
       endpoint: /sync
       name: PostBookingSyncMultiple
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
+      auth: ApiAuthV2 DRIVER_OFFER_BPP_MANAGEMENT
       request:
         type: MultipleBookingSyncReq
       response:

@@ -21,7 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
+import Tools.Auth.ApiV2
 
 type API = ("payout" :> (GetPayoutPayoutReferralHistory :<|> GetPayoutPayoutHistory :<|> PostPayoutPayoutVerifyFraudStatus :<|> PostPayoutPayoutRetryFailed :<|> PostPayoutPayoutRetryAllWithStatus :<|> PostPayoutPayoutPendingPayout))
 
@@ -29,49 +29,43 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getPayoutPayoutReferralHistory merchantId city :<|> getPayoutPayoutHistory merchantId city :<|> postPayoutPayoutVerifyFraudStatus merchantId city :<|> postPayoutPayoutRetryFailed merchantId city :<|> postPayoutPayoutRetryAllWithStatus merchantId city :<|> postPayoutPayoutPendingPayout merchantId city
 
 type GetPayoutPayoutReferralHistory =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.GET_PAYOUT_PAYOUT_REFERRAL_HISTORY)
       :> API.Types.ProviderPlatform.Management.Payout.GetPayoutPayoutReferralHistory
   )
 
 type GetPayoutPayoutHistory =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.GET_PAYOUT_PAYOUT_HISTORY)
       :> API.Types.ProviderPlatform.Management.Payout.GetPayoutPayoutHistory
   )
 
 type PostPayoutPayoutVerifyFraudStatus =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_VERIFY_FRAUD_STATUS)
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutVerifyFraudStatus
   )
 
 type PostPayoutPayoutRetryFailed =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_RETRY_FAILED)
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutRetryFailed
   )
 
 type PostPayoutPayoutRetryAllWithStatus =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_RETRY_ALL_WITH_STATUS)
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutRetryAllWithStatus
   )
 
 type PostPayoutPayoutPendingPayout =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_PENDING_PAYOUT)
       :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutPendingPayout
   )

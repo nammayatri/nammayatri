@@ -21,7 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (INFO)
 import Servant
 import Storage.Beam.CommonInstances ()
-import Tools.Auth.Api
+import Tools.Auth.ApiV2
 
 type API = ("coins" :> (PostDriverCoinsBulkUploadCoins :<|> PostDriverCoinsBulkUploadCoinsV2 :<|> GetDriverCoinsCoinHistory))
 
@@ -29,25 +29,22 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = postDriverCoinsBulkUploadCoins merchantId city :<|> postDriverCoinsBulkUploadCoinsV2 merchantId city :<|> getDriverCoinsCoinHistory merchantId city
 
 type PostDriverCoinsBulkUploadCoins =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_COINS / 'API.Types.ProviderPlatform.Management.DriverCoins.POST_DRIVER_COINS_BULK_UPLOAD_COINS)
       :> API.Types.ProviderPlatform.Management.DriverCoins.PostDriverCoinsBulkUploadCoins
   )
 
 type PostDriverCoinsBulkUploadCoinsV2 =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_COINS / 'API.Types.ProviderPlatform.Management.DriverCoins.POST_DRIVER_COINS_BULK_UPLOAD_COINS_V2)
       :> API.Types.ProviderPlatform.Management.DriverCoins.PostDriverCoinsBulkUploadCoinsV2
   )
 
 type GetDriverCoinsCoinHistory =
-  ( ApiAuth
+  ( ApiAuthV2
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_COINS / 'API.Types.ProviderPlatform.Management.DriverCoins.GET_DRIVER_COINS_COIN_HISTORY)
       :> API.Types.ProviderPlatform.Management.DriverCoins.GetDriverCoinsCoinHistory
   )

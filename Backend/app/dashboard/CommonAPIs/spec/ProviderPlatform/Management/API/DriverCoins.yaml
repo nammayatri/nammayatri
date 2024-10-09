@@ -7,7 +7,7 @@ apiPrefix: coins
 apis:
   - POST: # BulkUploadCoinsAPI
       endpoint: bulkUploadCoins
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
+      auth: ApiAuthV2 DRIVER_OFFER_BPP_MANAGEMENT
       request:
         type: BulkUploadCoinsReq
       response:
@@ -16,7 +16,7 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BULK_UPLOAD
   - POST: # BulkUploadCoinsAPIV2
       endpoint: bulkUploadCoinsV2
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
+      auth: ApiAuthV2 DRIVER_OFFER_BPP_MANAGEMENT
       request:
         type: BulkUploadCoinsReqV2
       response:
@@ -25,7 +25,7 @@ apis:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BULK_UPLOAD_V2
   - GET: # CoinHistoryAPI
       endpoint: coinHistory/{driverId}
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT
+      auth: ApiAuthV2 DRIVER_OFFER_BPP_MANAGEMENT
       params:
         driverId: Id Driver
       query:
