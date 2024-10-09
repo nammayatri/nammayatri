@@ -45,10 +45,11 @@ handler ::
   m ()
 handler onIssueReq issue = do
   now <- UTCTimeRFC3339 <$> getCurrentTime
-  let issueStatus = fromMaybe issue.issueStatus $ do
-        respondentAction <- onIssueReq.respondentAction
-        respondentAction' <- decode (encode respondentAction)
-        mapActionToStatus respondentAction'
+  let respondentAction = onIssueReq.respondentAction
+  let respondentAction' = decode . (encode <$> respondentAction)
+  issueStatus <- case respondentAction' >>= mapActionToStatus of
+    Just status -> pure status
+    Nothing -> throwError $ InvalidRequest "Invalid RespondentActionStatus"
   let updatedIssue =
         issue
           { DIGM.respondentName = onIssueReq.respondentName,
@@ -62,7 +63,8 @@ handler onIssueReq issue = do
   QIGM.updateByPrimaryKey updatedIssue
   pure ()
 
-mapActionToStatus :: Maybe ResolutionAction -> Maybe DIGM.Status
-mapActionToStatus (Just RESOLVE) = Just DIGM.RESOLVED
-mapActionToStatus (Just REJECT) = Just DIGM.CLOSED
-mapActionToStatus _ = Nothing
+mapActionToStatus :: RespondentActions -> Maybe DIGM.Status
+mapActionToStatus RESOLVED = Just DIGM.RESOLVED
+mapActionToStatus CASCADED = Just DIGM.OPEN
+mapActionToStatus NEED_MORE_INFO = Just DIGM.OPEN
+mapActionToStatus PROCESSING = Just DIGM.OPEN
