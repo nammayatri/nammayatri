@@ -74,3 +74,7 @@ type EnableOtpRideConfig = {
 type EnableScheduledRides = {
   enableScheduledRides :: Boolean
 }
+
+type EnableHotspotsFeature = {
+  enableHotspotsFeature :: Boolean
+}

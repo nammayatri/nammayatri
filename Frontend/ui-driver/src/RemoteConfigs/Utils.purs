@@ -23,7 +23,7 @@ import Foreign (Foreign)
 import Foreign.Index (readProp)
 import Data.Newtype (class Newtype)
 import Presto.Core.Utils.Encoding (defaultDecode)
-import RemoteConfig.Types (RCSubscription, ReelItem, ReelButtonConfig, HVConfigs, ReferralPopUpDelays, CancellationRateConfig, CancellationRateEntity(..), CancellationThresholdConfig, MetroCoinsEvent, EnableOtpRideConfig , EnableScheduledRides , EnableScheduledRides)
+import RemoteConfig.Types (RCSubscription, ReelItem, ReelButtonConfig, HVConfigs, ReferralPopUpDelays, CancellationRateConfig, CancellationRateEntity(..), CancellationThresholdConfig, MetroCoinsEvent, EnableOtpRideConfig , EnableScheduledRides , EnableHotspotsFeature)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
 import Common.RemoteConfig.Utils
@@ -158,6 +158,18 @@ defaultScheduledRideConfigData :: EnableScheduledRides
 defaultScheduledRideConfigData = {
   enableScheduledRides : false
 }
+
+defaultEnableHotspotsFeature :: EnableHotspotsFeature
+defaultEnableHotspotsFeature = {
+  enableHotspotsFeature : false
+}
+
+getHotspotsFeatureData :: String -> EnableHotspotsFeature
+getHotspotsFeatureData city = 
+  let 
+    config = fetchRemoteConfigString "enable_hotspots_feature"
+    value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultEnableHotspotsFeature
+  in getCityBasedConfig value $ toLower city 
 
 getenableScheduledRideConfigData :: String -> EnableScheduledRides 
 getenableScheduledRideConfigData city = 
