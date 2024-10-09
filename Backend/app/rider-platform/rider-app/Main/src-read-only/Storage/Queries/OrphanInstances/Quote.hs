@@ -30,6 +30,7 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
     quoteBreakupList' <- Storage.Queries.QuoteBreakup.findAllByQuoteIdT id
     quoteDetails' <- Storage.Queries.Transformers.Quote.toQuoteDetails fareProductType tripCategory distanceToNearestDriver rentalDetailsId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue
     tripTerms' <- getTripTerms tripTermsId
+    vehicleIconUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) vehicleIconUrl
     pure $
       Just
         Domain.Types.Quote.Quote
@@ -66,6 +67,7 @@ instance FromTType' Beam.Quote Domain.Types.Quote.Quote where
             tripTerms = tripTerms',
             updatedAt = Kernel.Prelude.fromMaybe createdAt updatedAt,
             validTill = validTill,
+            vehicleIconUrl = vehicleIconUrl',
             vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
             vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
             vehicleServiceTierType = vehicleVariant
@@ -116,6 +118,7 @@ instance ToTType' Beam.Quote Domain.Types.Quote.Quote where
         Beam.tripTermsId = Kernel.Types.Id.getId <$> (tripTerms <&> (.id)),
         Beam.updatedAt = Kernel.Prelude.Just updatedAt,
         Beam.validTill = validTill,
+        Beam.vehicleIconUrl = Kernel.Prelude.fmap showBaseUrl vehicleIconUrl,
         Beam.vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned,
         Beam.vehicleServiceTierSeatingCapacity = vehicleServiceTierSeatingCapacity,
         Beam.vehicleVariant = vehicleServiceTierType

@@ -188,6 +188,7 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             specialLocationName = estimate.specialLocationName,
             quoteBreakupList = [], -- Not Handling as Rate Card details not required after Select stage
             tripCategory = Just tripCategory,
+            vehicleIconUrl = estimate.vehicleIconUrl,
             ..
           }
   pure quote

@@ -443,3 +443,13 @@ ALTER TABLE atlas_app.estimate ADD COLUMN trip_category text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.estimate ADD COLUMN estimated_static_duration integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN vehicle_icon_url text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ALTER COLUMN vehicle_icon_url TYPE character varying(255);

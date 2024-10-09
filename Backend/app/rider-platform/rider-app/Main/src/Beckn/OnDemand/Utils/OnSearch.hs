@@ -31,7 +31,7 @@ import Domain.Types.ServiceTierType as DVST
 import Domain.Types.VehicleVariant as VehicleVariant
 import EulerHS.Prelude hiding (id, view, (^?))
 import Kernel.External.Maps as Maps
-import Kernel.Prelude (roundToIntegral)
+import Kernel.Prelude (parseBaseUrl, roundToIntegral)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Common
@@ -226,6 +226,11 @@ getestimatedPickupDuration item = do
   tagValueStr <- Utils.getTagV2 Tag.INFO Tag.DURATION_TO_NEAREST_DRIVER_MINUTES item.itemTags
   parsedTagValue <- readMaybe tagValueStr :: Maybe Seconds
   return parsedTagValue
+
+getVehicleIconUrl :: Spec.Item -> Maybe BaseUrl
+getVehicleIconUrl item = do
+  tagValueStr <- Utils.getTagV2 Tag.VEHICLE_INFO Tag.VEHICLE_ICON_URL item.itemTags
+  parseBaseUrl tagValueStr
 
 buildNightShiftInfo :: Spec.Item -> Currency -> Maybe OnSearch.NightShiftInfo
 buildNightShiftInfo item currency = do

@@ -100,6 +100,7 @@ tfQuotesInfo provider fulfillments validTill item = do
       isBlockedRoute_ = Beckn.OnDemand.Utils.OnSearch.getIsBlockedRoute item
       tollChargesInfo_ = Beckn.OnDemand.Utils.OnSearch.buildTollChargesInfo item currency
       estimatedPickupDuration = Beckn.OnDemand.Utils.OnSearch.getestimatedPickupDuration item
+      vehicleIconUrl = Beckn.OnDemand.Utils.OnSearch.getVehicleIconUrl item
   quoteOrEstId_ <- Beckn.OnDemand.Utils.OnSearch.getQuoteFulfillmentId item
   fulfillment <- find (\f -> f.fulfillmentId == Just quoteOrEstId_) fulfillments & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing fulfillment for item")
   tripCategory <- (fulfillment.fulfillmentType >>= (Just . BecknV2.OnDemand.Utils.Common.fulfillmentTypeToTripCategory)) & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing fulfillment type")
@@ -140,7 +141,8 @@ tfQuotesInfo provider fulfillments validTill item = do
               vehicleServiceTierAirConditioned = vehicleServiceTierAirConditioned_,
               vehicleServiceTierSeatingCapacity = vehicleCapacity_,
               tripCategory = tripCategory,
-              vehicleCategory
+              vehicleCategory,
+              vehicleIconUrl = vehicleIconUrl
             }
     QuoteBased _ -> do
       quoteBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildQuoteBreakupList item currency
@@ -180,7 +182,8 @@ tfQuotesInfo provider fulfillments validTill item = do
               vehicleServiceTierSeatingCapacity = vehicleCapacity_,
               quoteBreakupList = quoteBreakupList_,
               tripCategory = tripCategory,
-              vehicleCategory
+              vehicleCategory,
+              vehicleIconUrl = vehicleIconUrl
             }
 
 getCurrency :: Kernel.Types.App.MonadFlow m => BecknV2.OnDemand.Types.Item -> m Currency
