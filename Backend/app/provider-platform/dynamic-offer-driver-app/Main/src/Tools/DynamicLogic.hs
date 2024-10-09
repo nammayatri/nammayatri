@@ -22,7 +22,7 @@ getAppDynamicLogic ::
   Maybe Int ->
   m ([A.Value], Maybe Int)
 getAppDynamicLogic merchantOpCityId domain localTime mbVersion = do
-  mbFinalVersion <- (pure mbVersion) |<|>| (selectAppDynamicLogicVersion merchantOpCityId domain localTime)
+  mbFinalVersion <- pure mbVersion |<|>| selectAppDynamicLogicVersion merchantOpCityId domain localTime
   case mbFinalVersion of
     Just version -> do
       logics <- DALE.findByDomainAndVersion domain version
@@ -54,7 +54,7 @@ selectAppDynamicLogicVersion merchantOpCityId domain localTime = do
   mbSelectedConfig <- chooseLogic applicapleConfigs
   return $ mbSelectedConfig <&> (.version)
   where
-    unboundedConfigs configs = filter (\cfg -> cfg.timeBounds == "Unbounded") configs
+    unboundedConfigs = filter (\cfg -> cfg.timeBounds == "Unbounded")
 
 cumulativeRollout :: [AppDynamicLogicRollout] -> [(AppDynamicLogicRollout, Int)]
 cumulativeRollout logics = scanl1 addPercentages $ zip logics (map (.percentageRollout) logics)

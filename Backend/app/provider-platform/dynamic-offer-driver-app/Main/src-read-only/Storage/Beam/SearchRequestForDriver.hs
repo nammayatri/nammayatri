@@ -70,6 +70,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     notificationSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource),
     parallelSearchRequestCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     pickupZone :: B.C f Kernel.Prelude.Bool,
+    poolingConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     poolingLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     previousDropGeoHash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     renderedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

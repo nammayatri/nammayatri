@@ -598,7 +598,7 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
       A.Error err -> do
         logError $ "Error in parsing sortedPoolData - " <> show err
         pure onlyNewDriversWithCustomerInfo
-  return $ (mbVersion, take batchSize sortedPool)
+  return (mbVersion, take batchSize sortedPool)
   where
     updateDriverPoolWithActualDistResult DriverPoolWithActualDistResult {..} =
       DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, searchTags = Just $ maybe A.emptyObject convertTags searchReq.searchTags, tripDistance = searchReq.estimatedDistance, ..}
