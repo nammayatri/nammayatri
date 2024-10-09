@@ -97,7 +97,6 @@ dependencies:
   - mock-public-transport-provider-platform
   - search-result-aggregator
   - public-transport-search-consumer
-  - driver-tracking-healthcheck
   - dynamic-offer-driver-app
   - location-updates
   - driver-offer-allocator

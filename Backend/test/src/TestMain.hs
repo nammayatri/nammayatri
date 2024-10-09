@@ -17,7 +17,6 @@ module TestMain where
 
 import qualified "beckn-gateway" App as Gateway
 import qualified "driver-offer-allocator" App as ARDUAllocator
-import qualified "driver-tracking-healthcheck" App as DriverHC
 import qualified "dynamic-offer-driver-app" App as DriverOfferBpp
 import qualified "mock-fcm" App as MockFcm
 import qualified "mock-google" App as MockGoogle
@@ -58,7 +57,6 @@ main = do
     [ "allocation-service",
       "rider-app",
       "beckn-gateway",
-      "driver-tracking-healthcheck-service",
       "mock-registry",
       "public-transport-rider-platform",
       "mock-public-transport-provider-platform",
@@ -139,8 +137,7 @@ specs' googleCfg trees = do
       ]
 
     secondWaveServers =
-      [ DriverHC.runDriverHealthcheck hideLogging,
-        Gateway.runGateway hideLogging,
+      [ Gateway.runGateway hideLogging,
         do
           AppBackendUtils.changeCachedMapsConfig googleCfg
           AppBackend.runRiderApp $
