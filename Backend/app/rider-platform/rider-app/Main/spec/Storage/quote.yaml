@@ -26,6 +26,8 @@ imports:
   Version: Kernel.Types.Version
   Device : Kernel.Types.Version
   DeviceType: Kernel.Types.Version
+  BaseUrl: Kernel.Types.Common
+
 
 
 Quote:
@@ -97,6 +99,7 @@ Quote:
     createdAt : UTCTime
     updatedAt : UTCTime
     validTill : UTCTime
+    vehicleIconUrl: Maybe BaseUrl
   derives: "Generic, Show"
 
   beamFields:
@@ -139,6 +142,7 @@ Quote:
     clientOsVersion: Maybe Text
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
+    vehicleIconUrl: Maybe Text
 
 
   fromTType:
@@ -158,6 +162,7 @@ Quote:
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
     clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
+    vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -186,9 +191,11 @@ Quote:
     clientModelName: (clientDevice <&> (.deviceModel))|E
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
     distanceUnit: Kernel.Prelude.Just|I
+    vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
 
   sqlType:
     requestId: character varying(255)
+    vehicleIconUrl: character varying(255)
     estimatedFare: numeric(30,10)
     discount: numeric(30,2)
     estimatedTotalFare: numeric(30,2)

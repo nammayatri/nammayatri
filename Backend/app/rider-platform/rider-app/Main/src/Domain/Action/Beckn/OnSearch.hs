@@ -130,7 +130,8 @@ data EstimateInfo = EstimateInfo
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     specialLocationName :: Maybe Text,
     tripCategory :: DT.TripCategory,
-    vehicleCategory :: Enums.VehicleCategory
+    vehicleCategory :: Enums.VehicleCategory,
+    vehicleIconUrl :: Maybe BaseUrl
   }
 
 data NightShiftInfo = NightShiftInfo
@@ -186,7 +187,8 @@ data QuoteInfo = QuoteInfo
     specialLocationName :: Maybe Text,
     quoteBreakupList :: [QuoteBreakupInfo],
     tripCategory :: DT.TripCategory,
-    vehicleCategory :: Enums.VehicleCategory
+    vehicleCategory :: Enums.VehicleCategory,
+    vehicleIconUrl :: Maybe BaseUrl
   }
 
 data QuoteDetails
