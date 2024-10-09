@@ -72,8 +72,7 @@ data AppBackendAPIs = AppBackendAPIs
   }
 
 data CustomerAPIs = CustomerAPIs
-  { customerCancellationDuesSync :: Id Customer.Customer -> Customer.CustomerCancellationDuesSyncReq -> Euler.EulerClient APISuccess,
-    getCancellationDuesDetails :: Id Customer.Customer -> Euler.EulerClient Customer.CancellationDuesDetailsRes,
+  { getCancellationDuesDetails :: Id Customer.Customer -> Euler.EulerClient Customer.CancellationDuesDetailsRes,
     updateSafetyCenterBlocking :: Id Customer.Customer -> Customer.UpdateSafetyCenterBlockingReq -> Euler.EulerClient APISuccess,
     postCustomersPersonNumbers :: (LBS.ByteString, Customer.PersonIdsReq) -> Euler.EulerClient [Customer.PersonRes],
     postCustomersPersonId :: (LBS.ByteString, Customer.PersonMobileNoReq) -> Euler.EulerClient [Customer.PersonRes]
@@ -153,8 +152,7 @@ mkAppBackendAPIs merchantId city token = do
       :<|> invoiceClientDSL =
         clientWithMerchantAndCity (Proxy :: Proxy BAP.OperationsAPI) merchantId city token
 
-    customerCancellationDuesSync
-      :<|> getCancellationDuesDetails
+    getCancellationDuesDetails
       :<|> updateSafetyCenterBlocking
       :<|> postCustomersPersonNumbers
       :<|> postCustomersPersonId =

@@ -1,6 +1,8 @@
 imports:
   Customer: Dashboard.Common
   Summary: Dashboard.Common
+  HighPrecMoney: Kernel.Types.Common
+  PriceAPIEntity: Kernel.Types.Common
 
 module: Customer
 
@@ -51,6 +53,17 @@ apis:
         customerId: Id Customer
       response:
         type: CustomerInfoRes
+  - POST:
+      endpoint: /{customerId}/cancellationDuesSync
+      auth: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_CANCELLATION_DUES_SYNC
+      params:
+        customerId: Id Customer
+      request:
+        type: CustomerCancellationDuesSyncReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: CustomerAPI CancellationDuesSyncCustomerEndpoint
 
 
 types:
@@ -71,3 +84,11 @@ types:
     - falseSafetyAlarmCount: Int
     - safetyCenterDisabledOnDate: Maybe UTCTime
     - totalSosCount: Int
+  CustomerCancellationDuesSyncReq:
+    - cancellationCharges: Maybe HighPrecMoney
+    - cancellationChargesWithCurrency: Maybe PriceAPIEntity
+    - disputeChancesUsed: Maybe Int
+    - paymentMadeToDriver: Bool
+
+CustomerCancellationDuesSyncReq:
+  - derive: "'HideSecrets"

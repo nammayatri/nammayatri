@@ -36,10 +36,8 @@ import Tools.Auth.Merchant
 
 type API =
   "customer"
-    :> ( ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'CUSTOMER_CANCELLATION_DUES_SYNC
-           :> Common.CustomerCancellationDuesSyncAPI
-           :<|> ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'CUSTOMER_CANCELLATION_DUES_DETAILS
-             :> Common.GetCancellationDuesDetailsAPI
+    :> ( ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'CUSTOMER_CANCELLATION_DUES_DETAILS
+           :> Common.GetCancellationDuesDetailsAPI
            :<|> ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'UPDATE_SAFETY_CENTER
              :> Common.UpdateSafetyCenterBlockingAPI
            :<|> ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'PERSON_NUMBERS
@@ -50,8 +48,7 @@ type API =
 
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
-  customerCancellationDuesSync merchantId city
-    :<|> getCancellationDuesDetails merchantId city
+  getCancellationDuesDetails merchantId city
     :<|> updateSafetyCenterBlocking merchantId city
     :<|> postCustomersPersonNumbers merchantId city
     :<|> postCustomersPersonId merchantId city
@@ -66,13 +63,6 @@ buildTransaction ::
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.CustomerAPI endpoint) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
-
-customerCancellationDuesSync :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Customer -> Common.CustomerCancellationDuesSyncReq -> FlowHandler APISuccess
-customerCancellationDuesSync merchantShortId opCity apiTokenInfo customerId req = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.CustomerCancellationDuesSyncEndpoint apiTokenInfo T.emptyRequest
-  T.withTransactionStoring transaction $
-    Client.callRiderAppOperations checkedMerchantId opCity (.customers.customerCancellationDuesSync) customerId req
 
 getCancellationDuesDetails :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Customer -> FlowHandler Common.CancellationDuesDetailsRes
 getCancellationDuesDetails merchantShortId opCity apiTokenInfo customerId = withFlowHandlerAPI' $ do

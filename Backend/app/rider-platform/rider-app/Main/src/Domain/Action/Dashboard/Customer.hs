@@ -18,7 +18,7 @@ module Domain.Action.Dashboard.Customer
     postCustomerUnblock,
     getCustomerList,
     getCustomerInfo,
-    customerCancellationDuesSync,
+    postCustomerCancellationDuesSync,
     getCancellationDuesDetails,
     updateSafetyCenterBlocking,
     getCustomerPersonNumbers,
@@ -181,12 +181,13 @@ buildCustomerListItem person = do
       }
 
 ---------------------------------------------------------------------
-customerCancellationDuesSync ::
+postCustomerCancellationDuesSync ::
   ShortId DM.Merchant ->
+  Context.City ->
   Id Common.Customer ->
   Common.CustomerCancellationDuesSyncReq ->
   Flow APISuccess
-customerCancellationDuesSync merchantShortId customerId req = do
+postCustomerCancellationDuesSync merchantShortId _ customerId req = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   let personId = cast @Common.Customer @DP.Person customerId
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)

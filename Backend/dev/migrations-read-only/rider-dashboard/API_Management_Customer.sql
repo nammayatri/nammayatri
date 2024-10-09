@@ -18,3 +18,11 @@ UPDATE atlas_bap_dashboard.transaction
 UPDATE atlas_bap_dashboard.transaction
   SET endpoint = 'RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_UNBLOCK'
   WHERE endpoint = 'CustomerAPI UnblockCustomerEndpoint';
+
+
+------- SQL updates -------
+
+-- {"api":"PostCustomerCancellationDuesSync","migration":"endpoint","param":"CustomerAPI CancellationDuesSyncCustomerEndpoint","schema":"atlas_bap_dashboard"}
+UPDATE atlas_bap_dashboard.transaction
+  SET endpoint = 'RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_CANCELLATION_DUES_SYNC'
+  WHERE endpoint = 'CustomerAPI CancellationDuesSyncCustomerEndpoint';

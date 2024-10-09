@@ -10,9 +10,19 @@ import qualified EulerHS.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
+
+data CustomerCancellationDuesSyncReq = CustomerCancellationDuesSyncReq
+  { cancellationCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationChargesWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    disputeChancesUsed :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    paymentMadeToDriver :: Kernel.Prelude.Bool
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data CustomerInfoRes = CustomerInfoRes
   { numberOfRides :: Kernel.Prelude.Int,
@@ -39,7 +49,7 @@ data CustomerListRes = CustomerListRes {totalItems :: Kernel.Prelude.Int, summar
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("customer" :> (GetCustomerList :<|> DeleteCustomerDelete :<|> PostCustomerBlock :<|> PostCustomerUnblock :<|> GetCustomerInfo))
+type API = ("customer" :> (GetCustomerList :<|> DeleteCustomerDelete :<|> PostCustomerBlock :<|> PostCustomerUnblock :<|> GetCustomerInfo :<|> PostCustomerCancellationDuesSync))
 
 type GetCustomerList =
   ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> QueryParam "enabled" Kernel.Prelude.Bool
@@ -63,18 +73,27 @@ type PostCustomerUnblock = (Capture "customerId" (Kernel.Types.Id.Id Dashboard.C
 
 type GetCustomerInfo = (Capture "customerId" (Kernel.Types.Id.Id Dashboard.Common.Customer) :> "info" :> Get '[JSON] API.Types.RiderPlatform.Management.Customer.CustomerInfoRes)
 
+type PostCustomerCancellationDuesSync =
+  ( Capture "customerId" (Kernel.Types.Id.Id Dashboard.Common.Customer) :> "cancellationDuesSync"
+      :> ReqBody
+           '[JSON]
+           API.Types.RiderPlatform.Management.Customer.CustomerCancellationDuesSyncReq
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
+
 data CustomerAPIs = CustomerAPIs
   { getCustomerList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Customer) -> EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.Customer.CustomerListRes,
     deleteCustomerDelete :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postCustomerBlock :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postCustomerUnblock :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getCustomerInfo :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.Customer.CustomerInfoRes
+    getCustomerInfo :: Kernel.Types.Id.Id Dashboard.Common.Customer -> EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.Customer.CustomerInfoRes,
+    postCustomerCancellationDuesSync :: Kernel.Types.Id.Id Dashboard.Common.Customer -> API.Types.RiderPlatform.Management.Customer.CustomerCancellationDuesSyncReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkCustomerAPIs :: (Client EulerHS.Types.EulerClient API -> CustomerAPIs)
 mkCustomerAPIs customerClient = (CustomerAPIs {..})
   where
-    getCustomerList :<|> deleteCustomerDelete :<|> postCustomerBlock :<|> postCustomerUnblock :<|> getCustomerInfo = customerClient
+    getCustomerList :<|> deleteCustomerDelete :<|> postCustomerBlock :<|> postCustomerUnblock :<|> getCustomerInfo :<|> postCustomerCancellationDuesSync = customerClient
 
 data CustomerEndpointDSL
   = GetCustomerListEndpoint
@@ -82,5 +101,6 @@ data CustomerEndpointDSL
   | PostCustomerBlockEndpoint
   | PostCustomerUnblockEndpoint
   | GetCustomerInfoEndpoint
+  | PostCustomerCancellationDuesSyncEndpoint
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -25,7 +25,7 @@ import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Storage.Esqueleto
 import Kernel.Types.APISuccess (APISuccess)
-import Kernel.Types.Common (HighPrecMoney, PriceAPIEntity)
+import Kernel.Types.Common (PriceAPIEntity)
 import Kernel.Types.Id
 import Servant hiding (Summary)
 
@@ -47,25 +47,10 @@ derivePersistField "CustomerEndpoint"
 ---------------------------------------------------------------------------
 -- customer cancellation dues sync ----------------------------------------
 
-type CustomerCancellationDuesSyncAPI =
-  Capture "customerId" (Id Customer)
-    :> "cancellationDuesSync"
-    :> ReqBody '[JSON] CustomerCancellationDuesSyncReq
-    :> Post '[JSON] APISuccess
+-- instance HideSecrets CustomerCancellationDuesSyncReq where
+--   hideSecrets = identity
 
-instance HideSecrets CustomerCancellationDuesSyncReq where
-  hideSecrets = identity
-
-data CustomerCancellationDuesSyncReq = CustomerCancellationDuesSyncReq
-  { cancellationCharges :: Maybe HighPrecMoney,
-    cancellationChargesWithCurrency :: Maybe PriceAPIEntity,
-    disputeChancesUsed :: Maybe Int,
-    paymentMadeToDriver :: Bool
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
----------------------------------------------------------------------------
+-------------------------------------------------------------------------
 -- get customer cancellation dues details ----------------------------------------
 
 type GetCancellationDuesDetailsAPI =
