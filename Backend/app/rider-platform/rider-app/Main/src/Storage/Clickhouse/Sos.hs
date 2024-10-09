@@ -58,7 +58,7 @@ sosTTable =
 
 type Sos = SosT Identity
 
-$(TH.mkClickhouseInstances ''SosT 'SELECT_FINAL_MODIFIER)
+$(TH.mkClickhouseInstances ''SosT)
 
 findAllByPersonId ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>

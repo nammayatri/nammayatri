@@ -63,7 +63,7 @@ driverFeeTTable =
 
 type DriverFee = DriverFeeT Identity
 
-$(TH.mkClickhouseInstances ''DriverFeeT 'SELECT_FINAL_MODIFIER)
+$(TH.mkClickhouseInstances ''DriverFeeT)
 
 data DriverFeeAggregated = DriverFeeAggregated
   { statusAgg :: Maybe Common.DriverFeeStatus,

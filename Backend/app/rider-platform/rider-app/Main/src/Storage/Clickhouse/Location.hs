@@ -41,7 +41,7 @@ locationTTable =
 
 type Location = LocationT Identity
 
-$(TH.mkClickhouseInstances ''LocationT 'SELECT_FINAL_MODIFIER)
+$(TH.mkClickhouseInstances ''LocationT)
 
 findLocationById ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>

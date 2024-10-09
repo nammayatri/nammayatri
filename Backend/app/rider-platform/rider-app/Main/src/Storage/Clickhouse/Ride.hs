@@ -58,7 +58,7 @@ rideTTable =
 
 type Ride = RideT Identity
 
-$(TH.mkClickhouseInstances ''RideT 'SELECT_FINAL_MODIFIER)
+$(TH.mkClickhouseInstances ''RideT)
 
 findRideByBookingId ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
