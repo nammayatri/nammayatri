@@ -229,11 +229,13 @@ import Components.MessagingView.Controller as CMC
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.Controller as ParcelDeliveryScreenController
 import Screens.Types (TripDetailsGoBackType(..))
 import DecodeUtil
+import RemoteConfig as RemoteConfig
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
   when callInitUI $ lift $ lift $ initUI 
-  if callInitUI then toggleSetupSplash true else pure unit
+  let bundleSplashConfig = RemoteConfig.getBundleSplashConfig "lazy"
+  if callInitUI && bundleSplashConfig.enable then toggleSetupSplash true else pure unit
   let _ = setKeyInWindow "forceAppToNoInternetScreen" true
   lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "v1-assets_downloader.jsa" "https://assets.moving.tech/beckn/bundles/mobility-core/0.0.8/v1-assets_downloader.jsa" (cb <<< Right) $> nonCanceler
   liftFlowBT $ markPerformance "BASE_APP_FLOW"

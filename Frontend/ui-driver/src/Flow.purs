@@ -167,13 +167,15 @@ import Screens.RideSummaryScreen.Controller as RSC
 import Screens.RideSummaryScreen.ScreenData (initData) as RideSummaryScreenData
 import DecodeUtil as DU
 import Helpers.SplashUtils (hideSplashAndCallFlow, toggleSetupSplash)
+import RemoteConfig as RemoteConfig
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
     lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "v1-assets_downloader.jsa" "https://assets.moving.tech/beckn/bundles/mobility-core/0.0.8/v1-assets_downloader.jsa" (cb <<< Right) $> nonCanceler
-    
     when baseFlow $ do 
       lift $ lift $ initUI
+    let bundleSplashConfig = RemoteConfig.getBundleSplashConfig "splash"
+    when (baseFlow && bundleSplashConfig.enable) $ do 
       toggleSetupSplash true
       let _ = DU.setKeyInWindow "forceAppToNoInternetScreen" true
       pure unit

@@ -26,6 +26,7 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Common.Types.App as CTA
 import Data.Maybe (Maybe(..))
+import RemoteConfig as RemoteConfig
 
 screen :: ST.SplashScreenState -> Screen Action ST.SplashScreenState ScreenOutput
 screen initialState =
@@ -81,8 +82,9 @@ view push _ =
         , id $ EHC.getNewIDWithTag "splashLottieAnimation"
         , afterRender
             ( \action -> do
+                let bundleSplashConfig = RemoteConfig.getBundleSplashConfig "lazy"
                 void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig { 
-                  rawJson = (HU.getAssetsBaseUrl CTA.FunctionCall) <> "lottie/ny_bundle_splash_lottie.json", 
+                  rawJson = bundleSplashConfig.lottieUrl, 
                   lottieId = EHC.getNewIDWithTag "splashLottieAnimation", 
                   speed = 1.8,
                   cacheEnabled = false 
