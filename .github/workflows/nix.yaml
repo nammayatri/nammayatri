@@ -23,6 +23,11 @@ jobs:
       - name: Build all flake outputs
         run: om ci
 
+      # Push and pin whitelisted paths to cachix
+      - name: Push to cachix
+        if: github.ref == 'refs/heads/main'
+        run: nix run .#cachix-push
+
       - name: Docker tasks
         id: docker
         if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/prodHotPush-Common')
