@@ -2141,7 +2141,7 @@ listScheduledBookings ::
   Maybe DTC.TripCategory ->
   Maybe LatLong ->
   Flow ScheduledBookingRes
-listScheduledBookings (personId, merchantId, cityId) mbLimit mbOffset mbFromDay mbToDay mbTripCategory mbDLoc = do
+listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay mbTripCategory mbDLoc = do
   case (mbFromDay, mbToDay) of
     (Just from, Just to) -> when (from > to) $ throwError $ InvalidRequest "From date should be less than to date"
     _ -> pure ()
@@ -2154,7 +2154,7 @@ listScheduledBookings (personId, merchantId, cityId) mbLimit mbOffset mbFromDay 
       -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
       cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId
       let availableServiceTiers = (.serviceTierType) <$> (map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers))
-      scheduledBookings <- runInReplica $ QBooking.findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay DRB.NEW mbTripCategory availableServiceTiers True merchantId transporterConfig.timeDiffFromUtc
+      scheduledBookings <- runInReplica $ QBooking.findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay DRB.NEW mbTripCategory availableServiceTiers True cityId transporterConfig.timeDiffFromUtc
       bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) scheduledBookings
       filteredBookings <- filterM (\booking -> isAbleToReach booking.bookingDetails vehicle.variant transporterConfig.avgSpeedOfVehicle) bookings
       let sortedBookings = sortBookingsByDistance filteredBookings
