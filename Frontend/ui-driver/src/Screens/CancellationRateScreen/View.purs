@@ -68,6 +68,7 @@ view push state =
     , orientation VERTICAL
     , padding $ PaddingVertical 16 16
     , background Color.white900
+    , onBackPressed push $ const BackPressed
     ]
     [ headerLayout state push
     , scrollView 
@@ -121,7 +122,7 @@ headerLayout state push =
         , textView
             $ [ width WRAP_CONTENT
               , height MATCH_PARENT
-              , text (getString RIDE_CANCELLATION_RATE)
+              , text $ getString RIDE_CANCELLATION_RATE
               , margin $ MarginLeft 10
               , color Color.black
               , weight 1.0
