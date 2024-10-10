@@ -34,6 +34,7 @@ import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Queries.RiderDriverCorrelation as QFavDrivers
 import Tools.Maps as Maps
 
 getNextDriverPoolBatch ::
@@ -56,6 +57,24 @@ getNextDriverPoolBatch driverPoolConfig searchReq searchTry tripQuoteDetails goH
   cityServiceTiers <- CQVST.findAllByMerchantOpCityId searchReq.merchantOperatingCityId
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound searchReq.providerId.getId)
   prepareDriverPoolBatch cityServiceTiers merchant driverPoolConfig searchReq searchTry tripQuoteDetails batchNum goHomeConfig
+
+assignTagsToDrivers :: [Id Driver] -> DriverPoolTags -> Bool -> [DriverPoolWithActualDistResult] -> [DriverPoolWithActualDistResult]
+assignTagsToDrivers driverIds driverTag checkNeeded =
+  map
+    ( \dp ->
+        if (not checkNeeded) || dp.driverPoolResult.driverId `elem` driverIds
+          then
+            dp
+              { driverPoolResult =
+                  (driverPoolResult dp :: DriverPoolResult)
+                    { driverTags =
+                        insertInObject
+                          (((driverTags :: DriverPoolResult -> Value) . (driverPoolResult)) dp)
+                          [driverTag]
+                    }
+              }
+          else dp
+    )
 
 prepareDriverPoolBatch ::
   ( EncFlow m r,
@@ -114,16 +133,17 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
           blockListedAndAlreadyAttemptedDrivers = blockListedDrivers <> previousBatchesDrivers
           onlyNewAndFilteredDrivers = filter (\dp -> dp.driverPoolResult.driverId `notElem` blockListedAndAlreadyAttemptedDrivers) allDriversNotOnRide'
           onlyNonBlockedDrivers = filter (\dp -> dp.driverPoolResult.driverId `notElem` blockListedDrivers) allDriversNotOnRide'
-
+      favDrivers <- maybe (pure []) (`QFavDrivers.findFavDriversForRider` True) searchReq.riderId
+      let newFilteredDriversWithFavourites = assignTagsToDrivers (favDrivers <&> (.driverId)) FavouriteDriver True onlyNewAndFilteredDrivers
       (driverPoolNotOnRide, driverPoolOnRide) <- do
         case batchNum of
           -1 -> do
-            gateTaggedDrivers <- assignDriverGateTags searchReq onlyNewAndFilteredDrivers
+            gateTaggedDrivers <- assignDriverGateTags searchReq newFilteredDriversWithFavourites
             goHomeTaggedDrivers <- assignDriverGoHomeTags gateTaggedDrivers searchReq searchTry tripQuoteDetails driverPoolCfg merchant goHomeConfig merchantOpCityId isValueAddNP transporterConfig
             logDebug $ "GoHomeDriverPool and GateTaggedPool-" <> show goHomeTaggedDrivers
             calculateNormalBatch merchantOpCityId transporterConfig onlyNonBlockedDrivers radiusStep blockListedDrivers (bookAnyFilters transporterConfig goHomeTaggedDrivers previousBatchesDrivers) txnId
           _ -> do
-            allNearbyNonGoHomeDrivers <- filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId merchantOpCityId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) onlyNewAndFilteredDrivers
+            allNearbyNonGoHomeDrivers <- filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId merchantOpCityId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) newFilteredDriversWithFavourites
             logDebug $ "Calculating Normal Batch for the pool " <> show allNearbyNonGoHomeDrivers
             calculateNormalBatch merchantOpCityId transporterConfig onlyNonBlockedDrivers radiusStep blockListedDrivers (bookAnyFilters transporterConfig allNearbyNonGoHomeDrivers previousBatchesDrivers) txnId
       cacheBatch driverPoolNotOnRide Nothing
