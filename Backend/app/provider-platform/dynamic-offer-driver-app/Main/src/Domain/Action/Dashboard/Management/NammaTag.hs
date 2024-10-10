@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -54,6 +55,7 @@ import Lib.Yudhishthira.Types.AppDynamicLogicRollout
 import qualified Lib.Yudhishthira.Types.ChakraQueries
 import Servant hiding (throwError)
 import SharedLogic.Allocator (AllocatorJobType (..))
+import SharedLogic.DriverPool.Config (Config (..))
 import SharedLogic.DriverPool.Types
 import SharedLogic.DynamicPricing
 import SharedLogic.Merchant
@@ -91,6 +93,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
         YudhishthiraFlow.verifyDynamicLogic req.rules logicData
       Lib.Yudhishthira.Types.DYNAMIC_PRICING _ -> do
         logicData :: DynamicPricingData <- createLogicData def (Prelude.listToMaybe req.inputData)
+        YudhishthiraFlow.verifyDynamicLogic req.rules logicData
+      Lib.Yudhishthira.Types.CONFIG Lib.Yudhishthira.Types.DriverPoolConfig -> do
+        logicData :: Config <- createLogicData def (Prelude.listToMaybe req.inputData)
         YudhishthiraFlow.verifyDynamicLogic req.rules logicData
       _ -> throwError $ InvalidRequest "Logic Domain not supported"
   (isRuleUpdated, version) <-
