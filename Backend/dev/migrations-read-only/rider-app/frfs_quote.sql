@@ -63,3 +63,17 @@ ALTER TABLE atlas_app.frfs_quote ADD COLUMN service_tier_description text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_quote ADD COLUMN service_tier_provider_code text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN delayed_interest integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN bpp_delayed_interest integer ;
+
+
+------- SQL updates -------
+

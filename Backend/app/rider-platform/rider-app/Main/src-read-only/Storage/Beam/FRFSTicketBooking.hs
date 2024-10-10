@@ -20,6 +20,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
   { _type :: B.C f Domain.Types.FRFSQuote.FRFSQuoteType,
     bppBankAccountNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bppBankCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    bppDelayedInterest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     bppItemId :: B.C f Kernel.Prelude.Text,
     bppOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bppSubscriberId :: B.C f Kernel.Prelude.Text,
