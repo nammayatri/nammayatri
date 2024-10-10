@@ -28,6 +28,8 @@ where
 import AWS.S3
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
+import qualified Data.Text as T
+import Database.PostgreSQL.Simple as PG
 import Domain.Types.FeedbackForm
 import EulerHS.Prelude (newEmptyTMVarIO)
 import Kernel.External.Encryption (EncTools)
@@ -225,13 +227,25 @@ data AppEnv = AppEnv
     isMetroTestTransaction :: Bool,
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
     passettoContext :: PassettoContext,
-    sosAlertsTopicARN :: Text
+    sosAlertsTopicARN :: Text,
+    psqlConn :: PG.Connection
   }
   deriving (Generic)
+
+toConnectInfo :: EsqDBConfig -> ConnectInfo
+toConnectInfo config =
+  ConnectInfo
+    { connectHost = T.unpack config.connectHost,
+      connectPort = config.connectPort,
+      connectUser = T.unpack config.connectUser,
+      connectPassword = T.unpack config.connectPassword,
+      connectDatabase = T.unpack config.connectDatabase
+    }
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv cfg@AppCfg {..} = do
   hostname <- getPodName
+  psqlConn <- PG.connect (toConnectInfo esqDBCfg)
   version <- lookupDeploymentVersion
   isShuttingDown <- newEmptyTMVarIO
   passettoContext <- (uncurry mkDefPassettoContext) encTools.service

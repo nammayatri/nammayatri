@@ -168,6 +168,7 @@ library
       Domain.Action.Dashboard.NammaTag.Handle
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.Route
+      Domain.Action.Dashboard.System
       Domain.Action.Internal.Cac
       Domain.Action.Internal.FRFS
       Domain.Action.Internal.Payout
@@ -450,6 +451,7 @@ library
       API.Action.Dashboard.Management.Invoice
       API.Action.Dashboard.Management.Merchant
       API.Action.Dashboard.Management.NammaTag
+      API.Action.Dashboard.Management.System
       API.Action.UI.Cac
       API.Action.UI.CustomerReferral
       API.Action.UI.EditLocation
@@ -915,7 +917,9 @@ library
     , record-dot-preprocessor
     , record-hasfield
     , regex-posix
+    , resource-pool
     , scheduler
+    , scientific
     , sequelize
     , servant
     , servant-client
@@ -932,6 +936,7 @@ library
     , template-haskell
     , text
     , text-conversions
+    , text-format
     , time
     , unliftio-core
     , unordered-containers
@@ -1041,8 +1046,10 @@ executable rider-app-exe
     , record-dot-preprocessor
     , record-hasfield
     , regex-posix
+    , resource-pool
     , rider-app
     , scheduler
+    , scientific
     , sequelize
     , servant
     , servant-client
@@ -1055,6 +1062,7 @@ executable rider-app-exe
     , template-haskell
     , text
     , text-conversions
+    , text-format
     , time
     , unliftio-core
     , unordered-containers

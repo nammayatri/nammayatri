@@ -26,6 +26,10 @@ HotSpotConfig:
     maxGeoHashToFilter : Int
     hotSpotExpiry : Int
 
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
   constraints:
     id: PrimaryKey
 

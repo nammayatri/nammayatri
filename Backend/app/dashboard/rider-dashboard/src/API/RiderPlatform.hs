@@ -25,6 +25,7 @@ import qualified API.Action.RiderPlatform.Management.FRFSTicket as ManagementFRF
 import qualified API.Action.RiderPlatform.Management.Invoice as ManagementInvoiceDSL
 import qualified API.Action.RiderPlatform.Management.Merchant as ManagementMerchantDSL
 import qualified API.Action.RiderPlatform.Management.NammaTag as ManagementNammaTagDSL
+import qualified API.Action.RiderPlatform.Management.System as ManagementSystemDSL
 import qualified API.RiderPlatform.Customer as Customer
 import qualified API.RiderPlatform.HotSpot as HotSpot
 import qualified API.RiderPlatform.Issue as Issue
@@ -96,6 +97,7 @@ type ManagementAPI =
     :<|> ManagementInvoiceDSL.API
     :<|> ManagementFRFSTicketAPI.API
     :<|> ManagementNammaTagDSL.API
+    :<|> ManagementSystemDSL.API
 
 managementHandler :: ShortId DMerchant.Merchant -> City.City -> FlowServer ManagementAPI
 managementHandler merchantId city =
@@ -104,3 +106,4 @@ managementHandler merchantId city =
     :<|> ManagementInvoiceDSL.handler merchantId city
     :<|> ManagementFRFSTicketAPI.handler merchantId city
     :<|> ManagementNammaTagDSL.handler merchantId city
+    :<|> ManagementSystemDSL.handler merchantId city
