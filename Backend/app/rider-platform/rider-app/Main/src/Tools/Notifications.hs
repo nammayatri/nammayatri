@@ -114,6 +114,9 @@ buildTemplate paramVars template =
     template
     paramVars
 
+buildTrackingUrl :: Id SRide.Ride -> [(Text, Text)] -> Text -> Text
+buildTrackingUrl rideId extraQueryParams trackingUrlPattern = (buildTemplate extraQueryParams trackingUrlPattern) <> rideId.getId
+
 notifyPerson ::
   ( ServiceFlow m r,
     ToJSON a,
@@ -434,8 +437,9 @@ notifyOnBookingCancelled ::
   SBCR.CancellationSource ->
   DBppDetails.BppDetails ->
   Maybe DRide.Ride ->
+  [Person.Person] ->
   m ()
-notifyOnBookingCancelled booking cancellationSource bppDetails mbRide = do
+notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParties = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let notificationSoundType = case cancellationSource of
         SBCR.ByDriver -> do
@@ -452,8 +456,7 @@ notifyOnBookingCancelled booking cancellationSource bppDetails mbRide = do
         Nothing -> "BOOKING_CANCEL_WITH_NO_RIDE"
       entity = Notification.Entity Notification.Product booking.id.getId (RideCancelParam booking.startTime booking.id)
       dynamicParams = RideCancelParam booking.startTime booking.id
-  allOtherBookingPartyPersons <- getAllOtherRelatedPartyPersons booking
-  forM_ (person : allOtherBookingPartyPersons) $ \person' -> do
+  forM_ (person : otherParties) $ \person' -> do
     tag <- getDisabilityTag person.hasDisability person'.id
     dynamicNotifyPerson
       person'
@@ -829,7 +832,7 @@ notifyRideStartToEmergencyContacts booking ride = do
   let shouldShare = not $ null followingContacts
   if shouldShare
     then do
-      let trackLink = riderConfig.trackingShortUrlPattern <> ride.id.getId
+      let trackLink = buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
       decEmContacts <- decrypt `mapM` followingContacts
       for_ decEmContacts \contact -> do
         case contact.contactPersonId of

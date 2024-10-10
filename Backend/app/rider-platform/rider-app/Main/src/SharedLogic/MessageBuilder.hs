@@ -242,7 +242,7 @@ data DeliveryMessageRequestType = SenderReq | ReceiverReq
 data BuildDeliveryMessageReq = BuildDeliveryMessageReq
   { driverName :: Text,
     driverNumber :: Text,
-    trackingUrl :: Text,
+    trackingUrl :: Maybe Text,
     senderName :: Text,
     receiverName :: Text,
     appUrl :: Text,
@@ -252,7 +252,7 @@ data BuildDeliveryMessageReq = BuildDeliveryMessageReq
     deliveryMessageType :: DeliveryMessageRequestType
   }
 
-buildDeliveryDetailsMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildDeliveryMessageReq -> m SmsReqBuilder
+buildDeliveryDetailsMessage :: (BuildMessageFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => Id DMOC.MerchantOperatingCity -> BuildDeliveryMessageReq -> m SmsReqBuilder
 buildDeliveryDetailsMessage merchantOperatingCityId req = do
   let merchantMessageKey = case req.deliveryMessageType of
         SenderReq -> bool DMM.SMS_DELIVERY_DETAILS_SENDER DMM.POST_DELIVERY_SENDER req.hasEnded
@@ -260,11 +260,12 @@ buildDeliveryDetailsMessage merchantOperatingCityId req = do
   merchantMessage <-
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId merchantMessageKey
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show merchantMessageKey))
+  shortTrackingUrl <- maybe (pure mempty) shortenTrackingUrl req.trackingUrl
   buildSendSmsReq
     merchantMessage
     [ ("driverName", req.driverName),
       ("driverNumber", req.driverNumber),
-      ("trackingUrl", req.trackingUrl),
+      ("trackingUrl", shortTrackingUrl),
       ("senderName", req.senderName),
       ("receiverName", req.receiverName),
       ("appUrl", req.appUrl),
