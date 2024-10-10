@@ -1,5 +1,5 @@
 INSERT INTO
-  atlas_app.igm_config (
+  atlas_driver_offer_bpp.igm_config (
     id,
     merchant_id,
     expected_resolution_time,
@@ -9,8 +9,9 @@ INSERT INTO
     gro_email
   )
 VALUES
-  ( atlas_app.uuid_generate_v4(),
-    (select merchant_id from atlas_app.merchant where short_id = 'NAMMA_YATRI'),
+  (
+    atlas_driver_offer_bpp.uuid_generate_v4(),
+    (select id from atlas_driver_offer_bpp.merchant where short_id = 'NAMMA_YATRI_PARTNER'),
     86400,
     3600,
     'Namma GRO',

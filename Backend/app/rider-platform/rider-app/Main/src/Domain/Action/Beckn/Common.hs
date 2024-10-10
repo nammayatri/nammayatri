@@ -382,9 +382,8 @@ rideAssignedReqHandler req = do
       m ()
     assignRideUpdate req'@ValidatedRideAssignedReq {..} mbMerchant rideStatus now = do
       let BookingDetails {..} = req'.bookingDetails
-      let fareParams = fromMaybe [] req'.fareBreakups
       ride <- buildRide req' mbMerchant now rideStatus
-      let applicationFeeAmount = applicationFeeAmountForRide fareParams
+      let applicationFeeAmount = applicationFeeAmountForRide $ fromMaybe [] fareBreakups
       whenJust req'.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do
         let createPaymentIntentReq =
               Payment.CreatePaymentIntentReq
@@ -402,8 +401,6 @@ rideAssignedReqHandler req = do
             Just _ -> "specialLocation"
             Nothing -> "normal"
       incrementRideCreatedRequestCount booking.merchantId.getId booking.merchantOperatingCityId.getId category
-      rideFareBreakups <- traverse (buildFareBreakupV2 req'.booking.id.getId DFareBreakup.BOOKING) fareParams
-      QFareBreakup.createMany rideFareBreakups
       QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
       QRide.createRide ride
       QPFS.clearCache booking.riderId
