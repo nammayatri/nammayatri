@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# OPTIONS_GHC -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module SharedLogic.DriverPool.Config
   {-# WARNING
@@ -25,9 +26,10 @@ where
 
 import Control.Applicative ((<|>))
 import Data.Aeson as A
+import Data.Default.Class
 import Data.Text as Text hiding (filter, find)
 import qualified Domain.Types as DVST
-import Domain.Types.DriverPoolConfig
+import Domain.Types.DriverPoolConfig as DDPC
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Beam.Lib.Utils (pushToKafka)
@@ -36,14 +38,17 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics.Types
 import Kernel.Types.Cac (CACData (..))
 import Kernel.Types.Common
+import qualified Kernel.Types.Common as Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.TimeBound
 import Kernel.Utils.Common
+import qualified Lib.Types.SpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config (PoolSortingType (..))
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as CTC
 import Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
@@ -85,7 +90,52 @@ findDriverPoolConfig configs serviceTier tripCategory dist area = do
   find (filterByDistAndDvehAndArea serviceTier tripCategory dist area) configs
     <|> find (filterByDistAndDvehAndArea serviceTier tripCategory dist SL.Default) configs
 
-newtype Config = Config {config :: DriverPoolConfig} deriving (Generic, ToJSON, FromJSON, Show)
+newtype Config = Config {config :: DriverPoolConfig} deriving (Generic, ToJSON, FromJSON, Show, Default)
+
+instance Default DriverPoolConfig where
+  def =
+    DDPC.DriverPoolConfig
+      { actualDistanceThreshold = Nothing,
+        actualDistanceThresholdOnRide = Nothing,
+        area = Lib.Types.SpecialLocation.Default,
+        batchSizeOnRide = 5,
+        batchSizeOnRideWithStraightLineDistance = Nothing,
+        createdAt = read "2023-09-18 12:34:56 UTC", -- Example timestamp, replace as needed
+        currentRideTripCategoryValidForForwardBatching = ["TripCategory1", "TripCategory2"],
+        distanceBasedBatchSplit = [],
+        distanceUnit = Common.Kilometer,
+        driverBatchSize = 3,
+        driverPositionInfoExpiry = Nothing,
+        driverQuoteLimit = 10,
+        driverRequestCountLimit = 15,
+        driverToDestinationDistanceThreshold = Common.Meters 1000,
+        driverToDestinationDuration = Common.Seconds 900,
+        enableForwardBatching = True,
+        enableUnifiedPooling = Just False,
+        id = Id "default-driver-pool-config-id",
+        maxDriverQuotesRequired = 5,
+        maxNumberOfBatches = 4,
+        maxParallelSearchRequests = 10,
+        maxParallelSearchRequestsOnRide = 5,
+        maxRadiusOfSearch = Common.Meters 5000,
+        merchantId = Id "default-merchant-id",
+        merchantOperatingCityId = Id "default-city-id",
+        minRadiusOfSearch = Common.Meters 500,
+        onRideBatchSplitConfig = [], -- Define default value
+        onRideRadiusConfig = [], -- Define default value
+        poolSortingType = Tagged, -- Example, replace with the actual default value
+        radiusShrinkValueForDriversOnRide = Common.Meters 200,
+        radiusStepSize = Common.Meters 50,
+        scheduleTryTimes = [1, 2, 3],
+        singleBatchProcessTime = Common.Seconds 120,
+        thresholdToIgnoreActualDistanceThreshold = Nothing,
+        timeBounds = Unbounded, -- Replace with actual default for `TimeBound`
+        tripCategory = "DefaultTripCategory",
+        tripDistance = Common.Meters 2000,
+        updatedAt = read "2023-09-19 15:30:00 UTC",
+        useOneToOneOsrmMapping = Nothing,
+        vehicleVariant = Nothing
+      }
 
 getDriverPoolConfigFromDB ::
   ( CacheFlow m r,
@@ -113,7 +163,7 @@ getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist 
     Just dpc -> do
       let config = Config dpc
       resp <- LYTU.runLogics allLogics config
-      case (fromJSON resp.result :: Result DriverPoolConfig) of
+      case (fromJSON resp.result :: Result Config) of
         Success dpc'' -> do
           when
             (isJust version && isNothing oldVersion)
@@ -127,7 +177,7 @@ getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist 
                 let cacData = CACData (getKeyValue stickeyKey') (getKeyName stickeyKey') "" "driver_pool_config" (Text.pack (show version))
                 fork "push driver_pool_config data to kafka" $ pushToKafka cacData "driver-pool-config-data" ""
             )
-          pure $ Just dpc''
+          pure $ Just dpc''.config
         A.Error e -> do
           logError $ "Error in applying dynamic logic: " <> show e
           incrementSystemConfigsFailedCounter "driver_pool_config_dynamic_logic_failure"
