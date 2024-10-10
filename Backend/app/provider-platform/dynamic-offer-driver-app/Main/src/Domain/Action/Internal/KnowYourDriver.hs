@@ -15,6 +15,7 @@
 module Domain.Action.Internal.KnowYourDriver where
 
 import qualified AWS.S3 as S3
+import Data.List (nub)
 import qualified Data.Text as T
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import Domain.Types.DriverModuleCompletion
@@ -52,7 +53,7 @@ data DriverReview = DriverReview
     rating :: Int,
     tripDate :: UTCTime
   }
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema, Eq)
 
 data DriverStatSummary = DriverStatSummary
   { avgRating :: Maybe Centesimal,
@@ -156,15 +157,15 @@ getDriverProfile withImages person = do
       ratingsWithDriverNames <- getBookingsAndRides ratings
       partialRatings <- QFeedback.findFeedbackFromRatings (ratings <&> (.rideId)) >>= constructPartialRatings ratingsWithDriverNames
       remRatings <- constructRemRatings ratingsWithDriverNames driverId
-      pure $ partialRatings <> remRatings
+      pure $ nub $ partialRatings <> remRatings
 
     constructPartialRatings ratings feedbacks =
       pure $ foldl (goFeedbacks feedbacks) [] ratings
 
-    goFeedbacks feedbacks fullRating (rating, driverName) =
+    goFeedbacks feedbacks fullRating (rating, riderName) =
       fullRating
         <> [ DriverReview
-               { riderName = driverName,
+               { riderName = riderName,
                  review = rating.feedbackDetails,
                  feedBackPills = filter (\feedback -> feedback.rideId == rating.rideId) feedbacks <&> (.badge), -- map () ratingFeedbacks,
                  rating = rating.ratingValue,
@@ -183,10 +184,10 @@ getDriverProfile withImages person = do
       lang -> lang
 
     constructRemRatings prevRatings driverId = do
-      feedbacks <- QFeedback.findOtherFeedbacks ((.rideId) <$> (fst <$> prevRatings)) driverId (Just 5)
-      ratings <- (mapM QRating.findRatingForRideIfPositive ((.rideId) <$> feedbacks)) <&> catMaybes
+      feedbacks <- QFeedback.findOtherFeedbacks ((.rideId) <$> (fst <$> prevRatings)) driverId (Just 10)
+      ratings <- (QRating.findRatingForRideIfPositive (nub ((.rideId) <$> feedbacks)))
       ratingsWithDriverNames <- getBookingsAndRides ratings
-      pure $ foldl (goFeedbacks feedbacks) [] ratingsWithDriverNames
+      pure $ take 5 $ foldl (goFeedbacks feedbacks) [] ratingsWithDriverNames
 
     extractFilePath url = case T.splitOn "filePath=" url of
       [_before, after] -> after
