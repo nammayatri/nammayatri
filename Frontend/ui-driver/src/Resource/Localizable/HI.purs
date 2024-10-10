@@ -1,7 +1,7 @@
 module Resources.Localizable.HI where
 
 import Language.Types (STR(..))
-import Prelude ((<>))
+import Prelude ((<>), (==))
 
 getHI :: STR -> String
 getHI stringKey =
@@ -1540,7 +1540,7 @@ getHI stringKey =
         RATING -> "रेटिंग"
         CANCELLATION -> "रद्दीकरण"
         I_SPEAK -> "मैं बोलता हूँ"
-        WITH_NAMMAYATRI_FOR -> "नम्मायात्री के साथ"
+        WITH_NAMMAYATRI_FOR years -> "नम्म यात्री के साथ " <> years <> "+ वर्षों से"
         YEARS -> "सालों से"
         VEHICLE_NUMBER -> "वाहन नंबर: "
         WHAT_PEOPLE_SAY -> "लोग क्या कहते हैं"
@@ -1603,7 +1603,7 @@ getHI stringKey =
         PET_FRIENDLY -> "पालतू जानवर के अनुकूल"
         FROM_WHERE -> "गृहनगर"
         DRIVING_SINCE -> "ड्राइविंग शुरू"
-        WHY_NY -> "मैंने ऑटो चलाना क्यों चुना?"
+        WHY_NY variant -> "मैंने "<> variant <>" चलाना क्यों चुना?"
         NEW_HOME -> "नया घर खरीदें"
         KID_EDUCATION -> "बच्चों की शिक्षा"
         NEW_VEHICLE -> "नया वाहन खरीदें"
@@ -1751,3 +1751,4 @@ getHI stringKey =
         GOOD_SERVICES -> "अच्छी सेवा"
         SMOOTH_DRIVING -> "स्मूद ड्राइविंग"
         NO_CANCELLATION -> "कोई रद्द नहीं"
+        CAB -> "कैब"

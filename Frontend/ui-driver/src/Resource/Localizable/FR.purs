@@ -1,7 +1,7 @@
 module Resources.Localizable.FR where
 
 import Language.Types (STR(..))
-import Prelude ((<>))
+import Prelude ((<>), (==))
 
 getFR :: STR -> String
 getFR stringKey =
@@ -1038,7 +1038,7 @@ getFR stringKey =
         RATING -> "Évaluation"
         CANCELLATION -> "Annulation"
         I_SPEAK -> "Je parle"
-        WITH_NAMMAYATRI_FOR -> "Avec NammaYatri depuis"
+        WITH_NAMMAYATRI_FOR years -> "Avec NammaYatri depuis plus de " <> years <> " ans"
         YEARS -> "ans"
         VEHICLE_NUMBER -> "Numéro de véhicule : "
         WHAT_PEOPLE_SAY -> "Ce que disent les gens"
@@ -1074,7 +1074,7 @@ getFR stringKey =
         PET_FRIENDLY -> "Acceptant les animaux"
         FROM_WHERE -> "Ville natale"
         DRIVING_SINCE -> "Conduite depuis"
-        WHY_NY -> "Pourquoi j'ai choisi de conduire un auto ?"
+        WHY_NY variant -> "Pourquoi j'ai choisi de conduire un "<> variant <>"?"
         NEW_HOME -> "Acheter une nouvelle maison"
         KID_EDUCATION -> "Éducation des enfants"
         NEW_VEHICLE -> "Acheter un nouveau véhicule"
@@ -1238,4 +1238,5 @@ getFR stringKey =
         GOOD_SERVICES -> "Bon Service"
         SMOOTH_DRIVING -> "Conduite Fluide"
         NO_CANCELLATION -> "Pas d'Annulation"
+        CAB -> "Cab"
         _ -> ""

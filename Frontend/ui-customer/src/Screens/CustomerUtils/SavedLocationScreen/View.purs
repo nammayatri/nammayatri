@@ -176,6 +176,7 @@ driverView push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ MarginTop 135
+    , onBackPressed push $ const Back
     ][
       linearLayout
       [

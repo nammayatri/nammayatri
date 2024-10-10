@@ -1368,7 +1368,7 @@ getHI stringKey =
         TRIPS -> "यात्राएँ"
         I_SPEAK -> "मैं बोलता हूँ"
         AND -> " और "
-        WITH_NAMMAYATRI_FOR -> "नम्मायात्री के साथ"
+        WITH_NAMMAYATRI_FOR years -> "नम्म यात्री के साथ " <> years <> "+ वर्षों से"
         YEARS -> "सालों से"
         VEHICLE_NUMBER -> "वाहन नंबर: "
         WHAT_PEOPLE_SAY -> "लोग क्या कहते हैं"

@@ -158,3 +158,4 @@ data FlowState = HelpAndSupportScreenFlow
                | GoToFavouritesScreenFlow
                | ChangeLanguageScreenFlow
                | RiderRideCompleted
+               | RiderRideEndScreen

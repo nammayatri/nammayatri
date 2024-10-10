@@ -573,14 +573,14 @@ makeFeedBackReq rating rideId feedback wasOfferedAssistance = FeedbackReq
     ,   "nightSafety" : Nothing
     }
 
-makeFeedBackReqs :: Int -> String -> String -> Maybe Boolean -> String -> FeedbackReq
-makeFeedBackReqs rating rideId feedback favDriver audio = FeedbackReq
+makeFeedBackReqs :: Int -> String -> String -> Maybe Boolean -> String -> Maybe Boolean -> Maybe Boolean -> FeedbackReq
+makeFeedBackReqs rating rideId feedback favDriver audio nightSafety wasOfferedAssistance = FeedbackReq
     {   "rating" : rating
     ,   "rideId" : rideId
     ,   "feedbackDetails" : feedback
     ,   "shouldFavDriver" : favDriver
-    ,   "nightSafety" : Nothing
-    ,   "wasOfferedAssistance" : Nothing
+    ,   "nightSafety" : nightSafety
+    ,   "wasOfferedAssistance" : wasOfferedAssistance
     ,   "mbAudio" : if audio == "" then Nothing else Just audio
     }
 

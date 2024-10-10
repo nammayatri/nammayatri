@@ -1,7 +1,7 @@
 module Resources.Localizable.ML where
 
 import Language.Types (STR(..))
-import Prelude ((<>))
+import Prelude ((<>), (==))
 
 getML :: STR -> String
 getML stringKey =
@@ -1540,7 +1540,7 @@ getML stringKey =
         RATING -> "റേറ്റിംഗ്"
         CANCELLATION -> "റദ്ദാക്കല്‍"
         I_SPEAK -> "ഞാന്‍ സംസാരിക്കുന്നു"
-        WITH_NAMMAYATRI_FOR -> "നമ്മയാത്രിയുമായി"
+        WITH_NAMMAYATRI_FOR years -> "നമ്മയാത്രിയോടൊപ്പം "<> years <>"+ വർഷങ്ങളായി"
         YEARS -> "വര്‍ഷങ്ങളായി"
         VEHICLE_NUMBER -> "വാഹന നമ്പര്‍: "
         WHAT_PEOPLE_SAY -> "ആള്‍ക്കാര്‍ പറയുന്നത്"
@@ -1603,7 +1603,7 @@ getML stringKey =
         PET_FRIENDLY -> "പാലത്തുകാർക്ക് സൗഹൃദം"
         FROM_WHERE -> "മൂലപ്രദേശം"
         DRIVING_SINCE -> "ഓടുന്ന കാലം"
-        WHY_NY -> "ഞാൻ ഓട്ടോ ഓടിക്കാൻ എന്തുകൊണ്ട് തിരഞ്ഞെടുക്കുന്നു?"
+        WHY_NY variant -> "ഞാൻ "<> variant <>" ഓടിക്കാൻ എന്തുകൊണ്ട് തിരഞ്ഞെടുക്കുന്നു?"
         NEW_HOME -> "പുതിയ വീട് വാങ്ങുക"
         KID_EDUCATION -> "മക്കളുടെ വിദ്യാഭ്യാസം"
         NEW_VEHICLE -> "പുതിയ വാഹന വാങ്ങുക"
@@ -1750,3 +1750,4 @@ getML stringKey =
         GOOD_SERVICES -> "നല്ല സേവനം"
         SMOOTH_DRIVING -> "മൃദുവായ ഡ്രൈവിംഗ്"
         NO_CANCELLATION -> "റദ്ദാക്കൽ ഇല്ല"
+        CAB -> "കാബ്"

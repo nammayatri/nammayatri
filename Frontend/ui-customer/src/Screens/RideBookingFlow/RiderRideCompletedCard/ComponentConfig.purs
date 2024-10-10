@@ -10,6 +10,11 @@ import PrestoDOM
 import Prelude
 import Data.Maybe
 import Components.FavouriteDriverInfoCard.Controller as FavouriteDriverInfoCard
+import CarouselHolder as CarouselHolder
+import Components.RideCompletedCard.Controller (IssueReportBannerProps(..), CustomerIssueCard(..), CustomerIssue(..), issueReportBannersTransformer)
+import Screens.RideBookingFlow.RiderRideCompletedCard.Controller (Action(..))
+import PrestoDOM.List (ListItem)
+import Engineering.Helpers.Commons
 
 primaryButtonConfig :: RiderRideCompletedScreenState -> PrimaryButton.Config
 primaryButtonConfig state = PrimaryButton.config
@@ -28,5 +33,40 @@ primaryButtonConfig state = PrimaryButton.config
     , isClickable = not state.ratingCard.recordAudioState.isRecording
     }
 
+primaryButtonConfigForCarousel :: PrimaryButton.Config
+primaryButtonConfigForCarousel = PrimaryButton.config
+    { textConfig
+        { text = getString LT.DONE
+        , color = Color.yellow900
+        , accessibilityHint = "Done with Carousel" 
+        }
+    , alpha = 1.0
+    , background = Color.black900
+    , margin = (Margin 0 0 0 0)
+    , id = "DoneWithCarousel"
+    , enableRipple = true
+    , rippleColor = Color.rippleShade
+    , isClickable = true
+    }
+
 driverInfoCardConfig :: RiderRideCompletedScreenState -> FavouriteDriverInfoCard.FavouriteDriverInfoCardState
 driverInfoCardConfig state = FavouriteDriverInfoCard.config 
+
+getCarouselConfig ∷ ListItem → CustomerIssue → CarouselHolder.CarouselHolderConfig IssueReportBannerProps Action
+getCarouselConfig view customerIssueConfig = {
+    view
+  , items : issueReportBannersTransformer customerIssueConfig.customerIssueCards
+  , orientation : HORIZONTAL
+  , currentPage: customerIssueConfig.currentPageIndex
+  , autoScroll : false
+  , autoScrollDelay : 0.0
+  , id : "bannerCarousel"
+  , autoScrollAction : Nothing 
+  , onPageSelected : Just BannerChanged
+  , onPageScrollStateChanged : Just BannerMoving
+  , onPageScrolled : Nothing
+  , currentIndex : customerIssueConfig.currentIndex
+  , showScrollIndicator : false
+  , layoutHeight : V 180
+  , overlayScrollIndicator : false
+}

@@ -3,10 +3,11 @@ module Screens.RideBookingFlow.RiderRideCompletedCard.Controller where
 import Prelude
 import Prim.TypeError as String
 import Screens.Types (RiderRideCompletedScreenState)
+import Components.RideCompletedCard.Controller ( CustomerIssueCard(..))
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, defaultPerformLog)
-import Common.Types.App (FeedbackAnswer(..))
-import Data.Array (filter, any, length, elem)
+import Common.Types.App (FeedbackAnswer(..), CustomerIssueTypes(..))
+import Data.Array (filter, any, length, elem, (!!), find, findIndex, updateAt)
 import Effect.Uncurried (runEffectFn1, runEffectFn7, runEffectFn3, runEffectFn5)
 import JBridge as JB
 import Timers(clearTimerWithId, waitingCountdownTimerV2)
@@ -25,6 +26,12 @@ import Engineering.Helpers.Commons (os)
 import Data.Function.Uncurried (runFn3, runFn4)
 import Timers (timeInMinFormat, startTimer, timeStringToSeconds)
 import Components.FavouriteDriverInfoCard.Controller as FavouriteDriverInfoCard
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import PrestoDOM.List (ListItem)
+import Components.BannerCarousel as BannerCarousel
+import Components.RideCompletedCard as RideCompletedCard
+import Common.Types.App as CTP
 
 data Action =
               RideDetails
@@ -53,6 +60,14 @@ data Action =
             | CountDown Int String String
             | DriverInfoCard
             | DriverInfocardAC FavouriteDriverInfoCard.Action
+            | SelectButton Boolean Int
+            | BannerChanged String
+            | BannerMoving String
+            | SetBannerItem ListItem
+            | BannerCarousel BannerCarousel.Action
+            | SetIssueReportBannerItems ListItem
+            | RideCompletedAC RideCompletedCard.Action
+            | PrimaryButtonCarousel PrimaryButton.Action
 
 instance showAction :: Show Action where
     show _ = ""
@@ -67,7 +82,9 @@ data ScreenOutput = NoOutput RiderRideCompletedScreenState
                   | GoToNammaSafety RiderRideCompletedScreenState Boolean Boolean 
                   | SubmitRating RiderRideCompletedScreenState String
                   | GoToDriversProfile RiderRideCompletedScreenState
+                  | GoToIssueReportChatScreenWithIssue RiderRideCompletedScreenState CTP.CustomerIssueTypes
                   | DriverInfoComponent
+                  
 
 data RentalRowView = RideTime | RideDistance | RideStartedAt | RideEndedAt | EstimatedFare | ExtraTimeFare | ExtraDistanceFare | TotalFare | Surcharges
 
@@ -84,9 +101,40 @@ type RentalTextConfig = {
 
 eval :: Action -> RiderRideCompletedScreenState -> Eval Action ScreenOutput RiderRideCompletedScreenState
 
+eval (SetBannerItem bannerItem) state = continue state{customerIssue{bannerComputedView = Just bannerItem}}
+
 eval (PrimaryButtonAC PrimaryButton.OnClick) state = do
   let audio = if state.ratingCard.recordAudioState.recordedAudioUrl == Nothing then "" else JB.convertAudioToBase64 (fromMaybe "" state.ratingCard.recordAudioState.recordedAudioUrl)
   updateAndExit state $ SubmitRating state audio
+
+eval (PrimaryButtonCarousel PrimaryButton.OnClick) state = do
+  let 
+    negativeResp = filter (\issueResp -> issueResp.selectedYes == Just false) state.customerIssue.customerResponse
+
+    hasAssistenceIssue = any (\issueResp -> issueResp.issueType == CTP.Accessibility) negativeResp 
+    hasSafetyIssue = any (\issueResp -> issueResp.issueType == CTP.NightSafety) negativeResp
+    hasTollIssue = any (\issueResp -> issueResp.issueType == CTP.TollCharge) negativeResp
+
+    priorityIssue = case hasSafetyIssue, hasTollIssue of
+      true, _ -> CTP.NightSafety
+      false, true -> CTP.TollCharge
+      _, _ -> CTP.NoIssue
+
+    ratingUpdatedState = state {
+      customerIssue {
+        showIssueBanners = false
+      }
+    , ratingViewState{
+      wasOfferedAssistance = Just $ not hasAssistenceIssue,
+      nightSafety = Just $ not hasSafetyIssue
+    }
+    }
+
+  if priorityIssue == CTP.NoIssue then
+    continue state {customerIssue {showIssueBanners = false}}
+  else 
+    exit $ GoToIssueReportChatScreenWithIssue ratingUpdatedState priorityIssue
+
 
 eval (RideDetails) state = exit $ RideDetailsScreen state 
 
@@ -119,7 +167,7 @@ eval (Back) state = do
     timerValue = "0:00", 
     ratingCard {  
     favDriver = false, 
-    rating = 0, 
+    rating = state.ratingCard.rating, 
     feedbackText = "", 
     feedbackList = [],
     recordAudioState { pauseLootie = false, recordedFile = Nothing, recordingDone = false, isRecording = false, openAddAudioModel = false, isUploading = false, timer = "00 : 00", recordedAudioUrl = Nothing, uploadedAudioId = Nothing, isListening = false } }, 
@@ -196,6 +244,46 @@ eval (OnClickClose) state = do
     pure $ UpdateState updatedState
   ]
 
+eval (RideCompletedAC (RideCompletedCard.SelectButton selectedYes pageIndex)) state = continueWithCmd state [pure $ SelectButton selectedYes pageIndex]
+
+eval (SelectButton selectedYes pageIndex) state = do 
+  let 
+    availableBanners = issueReportBannerConfigs state
+    noOfAvailableBanners = length availableBanners 
+    bannerAtIndex = availableBanners !! pageIndex
+
+  case bannerAtIndex of 
+    Just bannerObj -> do 
+      let 
+        issueType = bannerObj.issueType 
+        issueResponse = find (\obj -> obj.issueType == issueType) state.customerIssue.customerResponse 
+        issueResponseIndex = findIndex (\obj -> obj.issueType == issueType) state.customerIssue.customerResponse 
+      case issueResponse , issueResponseIndex of 
+        Just respObj, Just respIdx -> do
+          let 
+            updatedResponse = respObj {selectedYes = Just selectedYes}
+            updatedIssueResponseArr = updateAt respIdx updatedResponse state.customerIssue.customerResponse
+          case updatedIssueResponseArr of 
+            Just updatedIssueResponseArrObj -> do
+              let 
+                updatedState = state {customerIssue {customerResponse = updatedIssueResponseArrObj}}
+                userRespondedIssues = filter (\issueResp -> issueResp.selectedYes /= Nothing) updatedIssueResponseArrObj
+                userRespondedIssuesCount = length userRespondedIssues
+
+              if noOfAvailableBanners == userRespondedIssuesCount then do
+                continue updatedState{customerIssue {respondedValidIssues = true}}
+              else 
+                continue updatedState{customerIssue {currentPageIndex = if  (pageIndex + 1) < noOfAvailableBanners then pageIndex + 1 else pageIndex}}
+            Nothing -> update state
+        _ , _ -> update state
+    Nothing -> update state
+
+eval (SetIssueReportBannerItems bannerItem) state = continue state {
+  customerIssue {
+    bannerComputedView = Just bannerItem
+  }
+}
+
 eval _ state = update state
 
 handleMediaPlayerRestart :: RiderRideCompletedScreenState -> Eval Action ScreenOutput RiderRideCompletedScreenState
@@ -237,3 +325,50 @@ updateFeedback feedbackId feedbackItem feedbackList =
     addFeedbackAnswer fid newItem list = do
       let config = {questionId : fid, answer : [newItem]}
       list <> [config]
+
+issueReportBannerConfigs :: forall action. RiderRideCompletedScreenState -> Array (CustomerIssueCard)
+issueReportBannerConfigs state =
+  let 
+    tollIssue = state.customerIssue.hasTollIssue 
+    nightSafetyIssue = state.customerIssue.hasSafetyIssue
+    accessibilityIssue =  state.customerIssue.hasAccessibilityIssue
+    customerResposeArray = state.customerIssue.customerResponse
+
+
+    (tollIssueConfig :: CustomerIssueCard) = { 
+      issueType : TollCharge
+    , selectedYes : findYesNoState customerResposeArray TollCharge
+    , title : getString WAS_TOLL_EXP_SMOOTH   -- title should be one line
+    , subTitle : getString WAS_TOLL_EXP_SMOOTH_DESC  --- subtitle should be two lines
+    , yesText : getString YES
+    , noText : getString NO
+    }
+
+    (nightSafetyIssueConfig :: CustomerIssueCard) = { 
+      issueType : NightSafety
+    , selectedYes : findYesNoState customerResposeArray NightSafety
+    , title : getString WAS_RIDE_SAFE
+    , subTitle : getString WAS_RIDE_SAFE_DESC
+    , yesText :  getString YES
+    , noText : getString NO
+    }
+
+    (accessibilityIssueConfig :: CustomerIssueCard) = { 
+      issueType : Accessibility
+    , selectedYes : findYesNoState customerResposeArray Accessibility
+    , title : getString WAS_DRIVER_HELPFUL
+    , subTitle : getString WAS_DRIVER_HELPFUL_DESC
+    , yesText :  getString YES
+    , noText : getString NO
+    }
+
+  in
+    (if nightSafetyIssue then [nightSafetyIssueConfig] else [])
+    <> (if tollIssue then [tollIssueConfig] else [])
+    <> (if accessibilityIssue then [accessibilityIssueConfig] else [])
+
+  where 
+    findYesNoState customerResp issueType = 
+      case find (\x -> x.issueType == issueType) customerResp of 
+        Just issue -> issue.selectedYes
+        Nothing -> Nothing

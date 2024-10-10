@@ -55,6 +55,7 @@ import MerchantConfig.Types as MRC
 import Services.API as API
 import Common.RemoteConfig.Types as CRT
 import Common.Types.App (FeedbackAnswer)
+import Styles.Types
 
 type Contacts = {
   name :: String,
@@ -574,7 +575,27 @@ type RiderRideCompletedScreenState =
   , bookingId :: String
   , config :: AppConfig
   , rideDuration :: Maybe Int
+  , additionalCharges :: Array AdditionalCharges
+  , customerIssue :: CustomerIssueReportData
   }
+
+type CustomerIssueReportData = {
+  currentPageIndex :: Int
+, showIssueBanners :: Boolean
+, hasAccessibilityIssue :: Boolean
+, hasTollIssue :: Boolean
+, hasSafetyIssue :: Boolean
+, customerResponse :: Array {issueType :: CTA.CustomerIssueTypes, selectedYes :: Maybe Boolean}
+, respondedValidIssues :: Boolean
+, bannerComputedView :: Maybe ListItem
+}
+
+type AdditionalCharges = {
+  text :: String
+, visibility :: Visibility
+, textColor :: Color
+, image :: String
+}
 
 type RentalRowConfig = {
     rideTime :: String
@@ -1238,7 +1259,8 @@ type RatingViewState = {
     issueReason :: Maybe String,
     issueDescription :: String,
     rideBookingRes :: RideBookingRes,
-    wasOfferedAssistance :: Maybe Boolean
+    wasOfferedAssistance :: Maybe Boolean,
+    nightSafety :: Maybe Boolean
 }
 
 type CustomerTipProps = {

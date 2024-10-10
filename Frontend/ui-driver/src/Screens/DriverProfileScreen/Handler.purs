@@ -27,6 +27,7 @@ import Screens.DriverProfileScreen.ScreenData as DriverProfileScreenData
 import Screens.DriverProfileScreen.View as DriverProfileScreen
 import Screens.CancellationRateScreen.ScreenData as CancellationRateScreenData
 import Types.App (FlowBT, GlobalState(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), ScreenType(..))
+import Screens.DriverProfileScreen.View (getVehicleCategory)
 import Types.ModifyScreenState (modifyScreenState)
 import Data.Maybe (isJust)
 import Debug (spy)
@@ -110,7 +111,7 @@ driverProfileScreen = do
       App.BackT $ App.NoBack <$> pure (GO_HOME updatedState)
     GoToCompletingProfile updatedState -> do
       modifyScreenState $ DriverProfileScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> pure (DRIVER_COMPLETING_PROFILE_SCREEN)
+      App.BackT $ App.BackPoint <$> pure (DRIVER_COMPLETING_PROFILE_SCREEN (getVehicleCategory updatedState))
     GoToCancellationRateScreen state -> do
       modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
       let cancellationScreenState = CancellationRateScreenData.initData { data { cancellationRate = if isJust state.data.cancellationWindow then state.data.cancellationRate else state.data.analyticsData.cancellationRate

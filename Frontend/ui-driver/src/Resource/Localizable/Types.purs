@@ -1545,7 +1545,7 @@ data STR = LETS_GET_STARTED
         | RATING 
         | CANCELLATION 
         | I_SPEAK
-        | WITH_NAMMAYATRI_FOR 
+        | WITH_NAMMAYATRI_FOR String
         | YEARS 
         | VEHICLE_NUMBER 
         | WHAT_PEOPLE_SAY
@@ -1608,7 +1608,7 @@ data STR = LETS_GET_STARTED
         | BOOT_SPACE 
         | PET_FRIENDLY 
         | HOMETOWN 
-        | WHY_NY 
+        | WHY_NY String
         | NEW_HOME 
         | KID_EDUCATION 
         | NEW_VEHICLE
@@ -1729,3 +1729,4 @@ data STR = LETS_GET_STARTED
         | GOOD_SERVICES 
         | SMOOTH_DRIVING
         | NO_CANCELLATION 
+        | CAB

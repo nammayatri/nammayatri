@@ -1369,7 +1369,7 @@ getFR stringKey =
         TRIPS -> "Voyages"
         I_SPEAK -> "Je parle"
         AND -> " et "
-        WITH_NAMMAYATRI_FOR -> "Avec NammaYatri depuis"
+        WITH_NAMMAYATRI_FOR years -> "Avec NammaYatri depuis plus de " <> years <> " ans"
         YEARS -> "ans"
         VEHICLE_NUMBER -> "Numéro de véhicule : "
         WHAT_PEOPLE_SAY -> "Ce que disent les gens"
