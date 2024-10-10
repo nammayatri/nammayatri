@@ -2832,6 +2832,7 @@ instance eqLocationType :: Eq LocationType where eq = genericEq
 type GlobalFlowCache = {
     savedLocations :: Maybe SavedLocationsListRes
   , savedScheduledRides :: Maybe RideBookingListRes
+  , issueCategories :: Maybe (Array CTA.CategoryListType)
 }
 
 type LocateOnMapProps = {

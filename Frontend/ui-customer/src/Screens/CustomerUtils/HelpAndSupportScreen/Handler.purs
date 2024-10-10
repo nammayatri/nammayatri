@@ -48,18 +48,17 @@ import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
 import Debug (spy)
 import Language.Strings (getString)
 import Language.Types
+import Services.FlowCache as SF
 
 helpAndSupportScreen :: FlowBT String FlowState
 helpAndSupportScreen = do
   (GlobalState globalState) <- getState
   let helpAndSupportScreenState = globalState.helpAndSupportScreen
-  if DA.null helpAndSupportScreenState.data.categories then do 
-    let language = fetchLanguage $ getLanguageLocale languageKey 
-    (GetCategoriesRes response) <- Remote.getCategoriesBT language
-    filteredCategories <- pure $ DA.filter (\(Category catObj) -> catObj.categoryType == "Category") response.categories
-    let isFaqListEmpty' = DA.null $ DA.filter (\(Category catObj) -> catObj.categoryType == "FAQ") response.categories
-    let categories' = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : Just catObj.label, categoryImageUrl : Just catObj.logoUrl, isRideRequired : catObj.isRideRequired , maxAllowedRideAge : catObj.maxAllowedRideAge, categoryType : catObj.categoryType, allowedRideStatuses : catObj.allowedRideStatuses}) filteredCategories
-    modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data {categories = categories', isFaqListEmpty = isFaqListEmpty'} } )
+  if DA.null helpAndSupportScreenState.data.categories then do
+    categories <- SF.fetchIssueCategories
+    let filteredCategories = DA.filter (\cat -> "Category" == cat.categoryType) categories
+        isFaqListEmpty' = DA.null $ DA.filter (\cat -> "FAQ" == cat.categoryType) categories
+    modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data {categories = filteredCategories, isFaqListEmpty = isFaqListEmpty'} } )
   else pure unit
   modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueChatScreen -> reportIssueChatScreen { data { entryPoint = ReportIssueChatScreenData.HelpAndSupportScreenEntry }})
   (GlobalState updatedGlobalState) <- getState
