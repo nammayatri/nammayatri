@@ -38,7 +38,7 @@ import PrestoDOM.List (ListItem)
 import Prelude (class Show)
 import Data.Maybe (Maybe)
 
-import Screens.Types (BottomNavBarIcon, CallType, CancelSearchType, CardType, HomeScreenState, LocationListItemState, NewContacts, PermissionScreenStage, ReferralType, Trip,NotificationBody)
+import Screens.Types (BottomNavBarIcon, CallType, CancelSearchType, CardType, HomeScreenState, LocationListItemState, NewContacts, PermissionScreenStage, ReferralType, Trip,NotificationBody,LocationType)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 
 import Services.API (FollowRideRes, GetDriverLocationResp, GetEditLocResultResp, GetQuotesRes, RideBookingListRes, RideBookingRes,RideBookingStatusRes, SelectListRes, GetEmergencySettingsRes)
@@ -71,7 +71,7 @@ data ScreenOutput = LogoutUser
   | EditDestinationSoft HomeScreenState
   | SearchPlace String HomeScreenState
   | UpdateLocationName HomeScreenState Number Number
-  | UpdatePickupName HomeScreenState Number Number
+  | UpdatePickupName HomeScreenState Number Number LocationType
   | GoToHome HomeScreenState
   | GoToFavourites HomeScreenState
   | UpdatedSource HomeScreenState
@@ -112,7 +112,7 @@ data ScreenOutput = LogoutUser
   | GoToSafetyEducation HomeScreenState
   | RepeatSearch HomeScreenState
   | ChangeVehicleVarient HomeScreenState
-  | ExitToConfirmingLocationStage HomeScreenState
+  | ExitToConfirmingLocationStage HomeScreenState LocationType
   | UpdateReferralCode HomeScreenState String
   | GoToSafetySettingScreen 
   | GoToDriverProfiles HomeScreenState
@@ -130,6 +130,7 @@ data ScreenOutput = LogoutUser
   | UpdateChatScreen HomeScreenState
   | GoToTripSelectionScreen HomeScreenState
   | RideSummary HomeScreenState
+  | ExitToGoToConfirmLocationStage HomeScreenState
 
 data Action = NoAction
   | BackPressed
@@ -180,7 +181,7 @@ data Action = NoAction
   | UpdateCurrentLocation String String
   | UpdateCurrentStage String RideBookingRes
   | UpdateCurrentStageStatus String RideBookingStatusRes
-  | GoBackToSearchLocationModal
+  | GoBackToSearchLocationModal Boolean
   | SkipButtonActionController PrimaryButtonController.Action
   | SearchExpireCountDown Int String String
   | EstimatesTryAgain GetQuotesRes Int
@@ -305,7 +306,7 @@ data Action = NoAction
   | AllChatsLoaded
   | GoToSafetyEducationScreen
   | SpecialZoneInfoTag
-  | GoToConfirmingLocationStage
+  | GoToConfirmingLocationStage LocationType
   | ReferralComponentAction ReferralComponent.Action
   | GoToHomeScreen
   | ShowMultipleProvider Boolean
@@ -332,7 +333,7 @@ data Action = NoAction
   | ContactSupportAction PopUpModal.Action
   | TollChargeIncludedPopUpAction PopUpModal.Action
   | LocateOnMapCallBack String String String
-  | UpdatePickupLocation String String String
+  | UpdatePickupLocation String String String LocationType
   | ShakeActionCallback Int
   | UpdateSafetySettings GetEmergencySettingsRes
   | ServicesOnClick RemoteConfig.Service
