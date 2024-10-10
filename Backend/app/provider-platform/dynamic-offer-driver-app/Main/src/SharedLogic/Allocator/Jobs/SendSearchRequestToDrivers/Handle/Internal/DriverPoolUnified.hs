@@ -129,12 +129,9 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
       cacheBatch driverPoolNotOnRide Nothing
       cacheBatch driverPoolOnRide (Just True)
       let (poolNotOnRide, poolOnRide) =
-            if batchNum /= -1
-              then
-                ( addDistanceSplitConfigBasedDelaysForDriversWithinBatch driverPoolNotOnRide,
-                  addDistanceSplitConfigBasedDelaysForOnRideDriversWithinBatch driverPoolOnRide
-                )
-              else (driverPoolNotOnRide, driverPoolOnRide)
+            ( addDistanceSplitConfigBasedDelaysForDriversWithinBatch driverPoolNotOnRide,
+              addDistanceSplitConfigBasedDelaysForOnRideDriversWithinBatch driverPoolOnRide
+            )
       (poolWithSpecialZoneInfoNotOnRide, poolWithSpecialZoneInfoOnRide) <-
         if isJust searchReq.specialLocationTag
           then (,) <$> addSpecialZonePickupInfo poolNotOnRide <*> addSpecialZonePickupInfo poolOnRide
