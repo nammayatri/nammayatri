@@ -33,7 +33,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as Coins
-import qualified Lib.DriverCoins.Types as DCT
+import Lib.DriverCoins.Types
 import SharedLogic.DriverFee (delCoinAdjustedInSubscriptionByDriverIdKey, getCoinAdjustedInSubscriptionByDriverIdKey)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -50,7 +50,7 @@ import Utils.Common.Cac.KeyNameConstants
 
 data CoinTransactionHistoryItem = CoinTransactionHistoryItem
   { coins :: Int,
-    eventFunction :: DCT.DriverCoinsFunctionType,
+    eventFunction :: DriverCoinsFunctionType,
     bulkUploadTitle :: Maybe DCoins.Translations,
     createdAt :: UTCTime
   }

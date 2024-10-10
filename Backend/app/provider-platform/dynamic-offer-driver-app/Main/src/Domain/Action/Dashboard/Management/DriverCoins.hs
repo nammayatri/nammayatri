@@ -35,7 +35,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as Coins
-import qualified Lib.DriverCoins.Types as DCT
+import Lib.DriverCoins.Types
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.SystemConfigs ()
@@ -53,7 +53,7 @@ postDriverCoinsBulkUploadCoins merchantShortId opCity Common.BulkUploadCoinsReq 
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchant.id.getId
-  mapM_ (\Common.DriverIdListWithCoins {..} -> bulkUpdateByDriverId merchant.id merchantOpCityId (Id driverId :: Id SP.Person) DCT.BulkUploadFunction coins bulkUploadTitle expirationTime transporterConfig Nothing) driverIdListWithCoins
+  mapM_ (\Common.DriverIdListWithCoins {..} -> bulkUpdateByDriverId merchant.id merchantOpCityId (Id driverId :: Id SP.Person) BulkUploadFunction coins bulkUploadTitle expirationTime transporterConfig Nothing) driverIdListWithCoins
   pure Success
 
 bulkUpdateByDriverId ::
@@ -65,7 +65,7 @@ bulkUpdateByDriverId ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id SP.Person ->
-  DCT.DriverCoinsFunctionType ->
+  DriverCoinsFunctionType ->
   Int ->
   Common.Translations ->
   Maybe Int ->
@@ -81,7 +81,7 @@ bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsVal
       now <- getCurrentTime
       uuid <- generateGUIDText
       let expiryTime = fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
-          status_ = if coinsValue > 0 then DTCC.Remaining else DTCC.Used
+          status_ = if coinsValue > 0 then Remaining else Used
       let driverCoinEvent =
             DTCC.CoinHistory
               { id = Id uuid,
@@ -110,8 +110,7 @@ postDriverCoinsBulkUploadCoinsV2 merchantShortId opCity Common.BulkUploadCoinsRe
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchant.id.getId
   SMerchant.checkCurrencies merchantOpCity.currency $ driverIdListWithCoins <&> (.amountWithCurrency)
-  mapM_ (\Common.DriverIdListWithAmount {..} -> bulkUpdateByDriverIdV2 merchant.id merchantOpCity.id (Id driverId :: Id SP.Person) (castEventFunctionForCoinsReverse eventFunction) (fromMaybe amount $ amountWithCurrency <&> (.amount)) bulkUploadTitle expirationTime transporterConfig Nothing) driverIdListWithCoins
-  -- mapM_ (\Common.DriverIdListWithAmount {..} -> bulkUpdateByDriverIdV2 merchant.id merchantOpCity.id (Id driverId :: Id SP.Person) (castEventFunctionForCoinsReverse eventFunction) (maybe amount (. amount) amountWithCurrency) bulkUploadTitle expirationTime transporterConfig Nothing) driverIdListWithCoins
+  mapM_ (\Common.DriverIdListWithAmount {..} -> bulkUpdateByDriverIdV2 merchant.id merchantOpCity.id (Id driverId :: Id SP.Person) eventFunction (fromMaybe amount $ amountWithCurrency <&> (.amount)) bulkUploadTitle expirationTime transporterConfig Nothing) driverIdListWithCoins
   pure Success
 
 bulkUpdateByDriverIdV2 ::
@@ -123,7 +122,7 @@ bulkUpdateByDriverIdV2 ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id SP.Person ->
-  DCT.DriverCoinsFunctionType ->
+  DriverCoinsFunctionType ->
   HighPrecMoney ->
   Common.Translations ->
   Maybe Int ->
@@ -132,14 +131,14 @@ bulkUpdateByDriverIdV2 ::
   m ()
 bulkUpdateByDriverIdV2 merchantId merchantOpCityId driverId eventFunction amount bulkUploadTitle mbexpirationTime transporterConfig entityId = do
   case eventFunction of
-    DCT.BulkUploadFunctionV2 _ -> do
+    BulkUploadFunctionV2 _ -> do
       let coinsValue_ = amount.getHighPrecMoney / transporterConfig.coinConversionRate.getHighPrecMoney
           coinsValue = round coinsValue_
       Coins.updateDriverCoins driverId coinsValue transporterConfig.timeDiffFromUtc
       now <- getCurrentTime
       uuid <- generateGUIDText
       let expiryTime = fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
-          status_ = if coinsValue > 0 then DTCC.Remaining else DTCC.Used
+          status_ = if coinsValue > 0 then Remaining else Used
       let driverCoinEvent =
             DTCC.CoinHistory
               { id = Id uuid,
@@ -191,8 +190,8 @@ getDriverCoinsCoinHistory merchantShortId opCity reqDriverId mbLimit mbOffset = 
     toEarnHistoryItem DTCC.CoinHistory {driverId = _driverId, ..} =
       Common.CoinEarnHistoryItem
         { coins = coins,
-          status = castStatusForCoins status,
-          eventFunction = castEventFunctionForCoins eventFunction,
+          status = status,
+          eventFunction = eventFunction,
           createdAt = createdAt,
           expirationAt = expirationAt,
           coinsUsed = coinsUsed,
@@ -209,50 +208,3 @@ getDriverCoinsCoinHistory merchantShortId opCity reqDriverId mbLimit mbOffset = 
           createdAt = createdAt,
           updatedAt = updatedAt
         }
-
-castStatusForCoins :: DTCC.CoinStatus -> Common.CoinStatus
-castStatusForCoins s = case s of
-  DTCC.Used -> Common.Used
-  DTCC.Remaining -> Common.Remaining
-
-castCoinMessage :: DCT.CoinMessage -> Common.CoinMessage
-castCoinMessage msg = case msg of
-  DCT.CoinAdded -> Common.CoinAdded
-  DCT.FareRecomputation -> Common.FareRecomputation
-  DCT.CoinSubtracted -> Common.CoinSubtracted
-
-castEventFunctionForCoins :: DCT.DriverCoinsFunctionType -> Common.DriverCoinsFunctionType
-castEventFunctionForCoins e = case e of
-  DCT.BulkUploadFunction -> Common.BulkUploadFunction
-  DCT.OneOrTwoStarRating -> Common.OneOrTwoStarRating
-  DCT.FiveStarRating -> Common.FiveStarRating
-  DCT.BookingCancellation -> Common.BookingCancellation
-  DCT.CustomerReferral -> Common.CustomerReferral
-  DCT.DriverReferral -> Common.DriverReferral
-  DCT.PurpleRideCompleted -> Common.PurpleRideCompleted
-  DCT.LeaderBoardTopFiveHundred -> Common.LeaderBoardTopFiveHundred
-  DCT.TrainingCompleted -> Common.TrainingCompleted
-  DCT.RidesCompleted a -> Common.RidesCompleted a
-  DCT.BulkUploadFunctionV2 msg -> Common.BulkUploadFunctionV2 (castCoinMessage msg)
-  DCT.MetroRideCompleted -> Common.MetroRideCompleted
-
-castCoinMessageReverse :: Common.CoinMessage -> DCT.CoinMessage
-castCoinMessageReverse msg = case msg of
-  Common.CoinAdded -> DCT.CoinAdded
-  Common.FareRecomputation -> DCT.FareRecomputation
-  Common.CoinSubtracted -> DCT.CoinSubtracted
-
-castEventFunctionForCoinsReverse :: Common.DriverCoinsFunctionType -> DCT.DriverCoinsFunctionType
-castEventFunctionForCoinsReverse e = case e of
-  Common.BulkUploadFunction -> DCT.BulkUploadFunction
-  Common.OneOrTwoStarRating -> DCT.OneOrTwoStarRating
-  Common.FiveStarRating -> DCT.FiveStarRating
-  Common.BookingCancellation -> DCT.BookingCancellation
-  Common.CustomerReferral -> DCT.CustomerReferral
-  Common.DriverReferral -> DCT.DriverReferral
-  Common.PurpleRideCompleted -> DCT.PurpleRideCompleted
-  Common.LeaderBoardTopFiveHundred -> DCT.LeaderBoardTopFiveHundred
-  Common.TrainingCompleted -> DCT.TrainingCompleted
-  Common.RidesCompleted a -> DCT.RidesCompleted a
-  Common.BulkUploadFunctionV2 msg -> DCT.BulkUploadFunctionV2 (castCoinMessageReverse msg)
-  Common.MetroRideCompleted -> DCT.MetroRideCompleted

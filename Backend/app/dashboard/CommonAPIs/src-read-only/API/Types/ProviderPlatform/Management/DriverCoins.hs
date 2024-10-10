@@ -4,6 +4,7 @@
 module API.Types.ProviderPlatform.Management.DriverCoins where
 
 import qualified Dashboard.Common
+import qualified Dashboard.Common.DriverCoinsExtra
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
@@ -27,7 +28,7 @@ data BulkUploadCoinsReqV2 = BulkUploadCoinsReqV2
   { driverIdListWithCoins :: [API.Types.ProviderPlatform.Management.DriverCoins.DriverIdListWithAmount],
     bulkUploadTitle :: API.Types.ProviderPlatform.Management.DriverCoins.Translations,
     expirationTime :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    eventFunction :: API.Types.ProviderPlatform.Management.DriverCoins.DriverCoinsFunctionType
+    eventFunction :: Dashboard.Common.DriverCoinsExtra.DriverCoinsFunctionType
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -45,7 +46,7 @@ data CoinBurnHistoryItem = CoinBurnHistoryItem
 
 data CoinEarnHistoryItem = CoinEarnHistoryItem
   { coins :: Kernel.Prelude.Int,
-    eventFunction :: API.Types.ProviderPlatform.Management.DriverCoins.DriverCoinsFunctionType,
+    eventFunction :: Dashboard.Common.DriverCoinsExtra.DriverCoinsFunctionType,
     createdAt :: Kernel.Prelude.UTCTime,
     expirationAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     coinsUsed :: Kernel.Prelude.Int,
@@ -66,33 +67,10 @@ data CoinHistoryRes = CoinHistoryRes
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CoinMessage
-  = CoinAdded
-  | CoinSubtracted
-  | FareRecomputation
-  deriving stock (Eq, Show, Generic, Read)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data CoinStatus
   = Used
   | Remaining
-  deriving stock (Eq, Show, Generic, Read)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data DriverCoinsFunctionType
-  = OneOrTwoStarRating
-  | FiveStarRating
-  | BookingCancellation
-  | CustomerReferral
-  | DriverReferral
-  | PurpleRideCompleted
-  | LeaderBoardTopFiveHundred
-  | TrainingCompleted
-  | BulkUploadFunction
-  | BulkUploadFunctionV2 API.Types.ProviderPlatform.Management.DriverCoins.CoinMessage
-  | MetroRideCompleted
-  | RidesCompleted Kernel.Prelude.Int
-  deriving stock (Generic, Show, Read)
+  deriving stock (Eq, Show, Generic, Read, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverIdListWithAmount = DriverIdListWithAmount {driverId :: Kernel.Prelude.Text, amount :: Kernel.Types.Common.HighPrecMoney, amountWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity}
