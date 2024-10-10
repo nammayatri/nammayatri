@@ -24,7 +24,6 @@ import qualified API.Action.RiderPlatform.Management.Booking as ManagementBookin
 import qualified API.Action.RiderPlatform.Management.Customer as ManagementCustomerDSL
 import qualified API.Action.RiderPlatform.Management.Invoice as ManagementInvoiceDSL
 import qualified API.Action.RiderPlatform.Management.Merchant as ManagementMerchantDSL
-import qualified API.RiderPlatform.Customer as Customer
 import qualified API.RiderPlatform.HotSpot as HotSpot
 import qualified API.RiderPlatform.Issue as Issue
 import qualified API.RiderPlatform.IssueList as IssueList
@@ -50,8 +49,7 @@ type APIV2 =
     :> API'
 
 type API' =
-  Customer.API
-    :<|> Ride.API
+  Ride.API
     :<|> RideBooking.API
     :<|> IssueList.API
     :<|> Issue.API
@@ -63,8 +61,7 @@ type API' =
 handler :: FlowServer API
 handler merchantId = do
   let city = getCity merchantId.getShortId
-  Customer.handler merchantId city
-    :<|> Ride.handler merchantId city
+  Ride.handler merchantId city
     :<|> RideBooking.handler merchantId city
     :<|> IssueList.handler merchantId city
     :<|> Issue.handler merchantId city
@@ -80,8 +77,7 @@ handler merchantId = do
 
 handlerV2 :: FlowServer APIV2
 handlerV2 merchantId city =
-  Customer.handler merchantId city
-    :<|> Ride.handler merchantId city
+  Ride.handler merchantId city
     :<|> RideBooking.handler merchantId city
     :<|> IssueList.handler merchantId city
     :<|> Issue.handler merchantId city

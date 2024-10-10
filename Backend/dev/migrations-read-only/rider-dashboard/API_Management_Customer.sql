@@ -26,3 +26,27 @@ UPDATE atlas_bap_dashboard.transaction
 UPDATE atlas_bap_dashboard.transaction
   SET endpoint = 'RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_CANCELLATION_DUES_SYNC'
   WHERE endpoint = 'CustomerAPI CancellationDuesSyncCustomerEndpoint';
+
+
+------- SQL updates -------
+
+-- {"api":"PostCustomerUpdateSafetyCenterBlocking","migration":"endpoint","param":"CustomerAPI UpdateSafetyCenterBlockingCustomerEndpoint","schema":"atlas_bap_dashboard"}
+UPDATE atlas_bap_dashboard.transaction
+  SET endpoint = 'RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_UPDATE_SAFETY_CENTER_BLOCKING'
+  WHERE endpoint = 'CustomerAPI UpdateSafetyCenterBlockingCustomerEndpoint';
+
+
+------- SQL updates -------
+
+-- {"api":"PostCustomerPersonNumbers","migration":"endpoint","param":"CustomerAPI PersonNumbersCustomerEndpoint","schema":"atlas_bap_dashboard"}
+UPDATE atlas_bap_dashboard.transaction
+  SET endpoint = 'RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_PERSON_NUMBERS'
+  WHERE endpoint = 'CustomerAPI PersonNumbersCustomerEndpoint';
+
+
+------- SQL updates -------
+
+-- {"api":"PostCustomerPersonId","migration":"endpoint","param":"CustomerAPI PersonIdCustomerEndpoint","schema":"atlas_bap_dashboard"}
+UPDATE atlas_bap_dashboard.transaction
+  SET endpoint = 'RIDER_MANAGEMENT/CUSTOMER/POST_CUSTOMER_PERSON_ID'
+  WHERE endpoint = 'CustomerAPI PersonIdCustomerEndpoint';

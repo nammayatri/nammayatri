@@ -22,12 +22,7 @@ where
 
 import Dashboard.Common as Reexport
 import Kernel.Prelude
-import Kernel.ServantMultipart
 import Kernel.Storage.Esqueleto
-import Kernel.Types.APISuccess (APISuccess)
-import Kernel.Types.Common (PriceAPIEntity)
-import Kernel.Types.Id
-import Servant hiding (Summary)
 
 data CustomerEndpoint
   = DeleteCustomerEndpoint
@@ -43,49 +38,3 @@ derivePersistField "CustomerEndpoint"
 
 -- Do we need to use filters instead of customerId, like in driverInfo API?
 -- {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/driver/info?mobileNumber=6666666666
-
----------------------------------------------------------------------------
--- customer cancellation dues sync ----------------------------------------
-
--- instance HideSecrets CustomerCancellationDuesSyncReq where
---   hideSecrets = identity
-
--------------------------------------------------------------------------
--- get customer cancellation dues details ----------------------------------------
-
-type GetCancellationDuesDetailsAPI =
-  Capture "customerId" (Id Customer)
-    :> "getCancellationDuesDetails"
-    :> Get '[JSON] CancellationDuesDetailsRes
-
-data CancellationDuesDetailsRes = CancellationDuesDetailsRes
-  { cancellationDues :: Maybe PriceAPIEntity,
-    disputeChancesUsed :: Maybe Int,
-    canBlockCustomer :: Maybe Bool
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
------------------------------------------------------------------------------
--- safety center blocking api ----------------------------------------------
-
-type UpdateSafetyCenterBlockingAPI =
-  Capture "customerId" (Id Customer)
-    :> "updateSafetyCenterBlocking"
-    :> ReqBody '[JSON] UpdateSafetyCenterBlockingReq
-    :> Post '[JSON] APISuccess
-
-data UpdateSafetyCenterBlockingReq = UpdateSafetyCenterBlockingReq
-  { incrementCount :: Maybe Bool,
-    resetCount :: Maybe Bool
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-type PostCustomersPersonNumbersAPI =
-  ( "personNumbers" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp PersonIdsReq
-      :> Post '[JSON] [PersonRes]
-  )
-
-type PostDriverPersonIdAPI =
-  ( "personId" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp PersonMobileNoReq
-      :> Post '[JSON] [PersonRes]
-  )

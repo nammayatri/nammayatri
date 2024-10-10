@@ -19,10 +19,10 @@ module Domain.Action.Dashboard.Customer
     getCustomerList,
     getCustomerInfo,
     postCustomerCancellationDuesSync,
-    getCancellationDuesDetails,
-    updateSafetyCenterBlocking,
-    getCustomerPersonNumbers,
-    getCustomerPersonId,
+    getCustomerCancellationDuesDetails,
+    postCustomerUpdateSafetyCenterBlocking,
+    postCustomerPersonNumbers,
+    postCustomerPersonId,
   )
 where
 
@@ -195,11 +195,12 @@ postCustomerCancellationDuesSync merchantShortId _ customerId req = do
   void $ CallBPPInternal.customerCancellationDuesSync merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobNum (fromMaybe "+91" person.mobileCountryCode) req.cancellationCharges req.cancellationChargesWithCurrency req.disputeChancesUsed req.paymentMadeToDriver person.currentCity
   return Success
 
-getCancellationDuesDetails ::
+getCustomerCancellationDuesDetails ::
   ShortId DM.Merchant ->
+  Context.City ->
   Id Common.Customer ->
   Flow Common.CancellationDuesDetailsRes
-getCancellationDuesDetails merchantShortId personId = do
+getCustomerCancellationDuesDetails merchantShortId _ personId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   res <- DCancel.getCancellationDuesDetails Nothing (cast personId, merchant.id)
   return $
@@ -209,11 +210,13 @@ getCancellationDuesDetails merchantShortId personId = do
         canBlockCustomer = res.canBlockCustomer
       }
 
-updateSafetyCenterBlocking ::
+postCustomerUpdateSafetyCenterBlocking ::
+  ShortId DM.Merchant ->
+  Context.City ->
   Id Common.Customer ->
   Common.UpdateSafetyCenterBlockingReq ->
   Flow APISuccess
-updateSafetyCenterBlocking personId req = do
+postCustomerUpdateSafetyCenterBlocking _ _ personId req = do
   let personId' = cast @Common.Customer @DP.Person personId
   safetySettings <- QSafety.findSafetySettingsWithFallback personId' Nothing
   case req.resetCount of
@@ -229,8 +232,8 @@ updateSafetyCenterBlocking personId req = do
   where
     blockingDate now count = if (count + 1) == 3 || count + 1 >= 6 then Just now else Nothing
 
-getCustomerPersonNumbers :: ShortId DM.Merchant -> Context.City -> Common.PersonIdsReq -> Flow [Common.PersonRes]
-getCustomerPersonNumbers _ _ req = do
+postCustomerPersonNumbers :: ShortId DM.Merchant -> Context.City -> Common.PersonIdsReq -> Flow [Common.PersonRes]
+postCustomerPersonNumbers _ _ req = do
   csvData <- readCsvAndGetPersonIds req.file
   let chunks = chunksOf 100 csvData
   decryptedNumbers <- forM chunks processChunk
@@ -251,8 +254,8 @@ getCustomerPersonNumbers _ _ req = do
         return $ Common.PersonRes decPerson.id.getId decPerson.mobileNumber Nothing decPerson.merchantOperatingCityId.getId
       return decryptedPersons
 
-getCustomerPersonId :: ShortId DM.Merchant -> Context.City -> Common.PersonMobileNoReq -> Flow [Common.PersonRes]
-getCustomerPersonId _ _ req = do
+postCustomerPersonId :: ShortId DM.Merchant -> Context.City -> Common.PersonMobileNoReq -> Flow [Common.PersonRes]
+postCustomerPersonId _ _ req = do
   csvData <- readCsvAndGetPersonIds req.file
   let chunks = chunksOf 100 csvData
   decryptedNumbers <- forM chunks processChunk

@@ -8,6 +8,10 @@ module Domain.Action.RiderPlatform.Management.Customer
     postCustomerUnblock,
     getCustomerInfo,
     postCustomerCancellationDuesSync,
+    getCustomerCancellationDuesDetails,
+    postCustomerUpdateSafetyCenterBlocking,
+    postCustomerPersonNumbers,
+    postCustomerPersonId,
   )
 where
 
@@ -82,3 +86,32 @@ postCustomerCancellationDuesSync merchantShortId opCity apiTokenInfo customerId 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.RiderManagementAPI (API.Types.RiderPlatform.Management.CustomerAPI API.Types.RiderPlatform.Management.Customer.PostCustomerCancellationDuesSyncEndpoint)) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do RiderPlatformClient.RiderApp.Operations.callRiderAppOperations checkedMerchantId opCity (.customerDSL.postCustomerCancellationDuesSync) customerId req)
+
+getCustomerCancellationDuesDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.Flow API.Types.RiderPlatform.Management.Customer.CancellationDuesDetailsRes)
+getCustomerCancellationDuesDetails merchantShortId opCity apiTokenInfo customerId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  RiderPlatformClient.RiderApp.Operations.callRiderAppOperations checkedMerchantId opCity (.customerDSL.getCustomerCancellationDuesDetails) customerId
+
+postCustomerUpdateSafetyCenterBlocking :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> API.Types.RiderPlatform.Management.Customer.UpdateSafetyCenterBlockingReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postCustomerUpdateSafetyCenterBlocking merchantShortId opCity apiTokenInfo customerId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.RiderManagementAPI (API.Types.RiderPlatform.Management.CustomerAPI API.Types.RiderPlatform.Management.Customer.PostCustomerUpdateSafetyCenterBlockingEndpoint)) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do RiderPlatformClient.RiderApp.Operations.callRiderAppOperations checkedMerchantId opCity (.customerDSL.postCustomerUpdateSafetyCenterBlocking) customerId req)
+
+postCustomerPersonNumbers ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  Dashboard.Common.PersonIdsReq ->
+  Environment.Flow [Dashboard.Common.PersonRes]
+postCustomerPersonNumbers merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.RiderManagementAPI (API.Types.RiderPlatform.Management.CustomerAPI API.Types.RiderPlatform.Management.Customer.PostCustomerPersonNumbersEndpoint)) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+  SharedLogic.Transaction.withTransactionStoring transaction $
+    RiderPlatformClient.RiderApp.Operations.callRiderAppOperations checkedMerchantId opCity (Dashboard.Common.addMultipartBoundary "XXX00XXX" . (.customerDSL.postCustomerPersonNumbers)) req
+
+postCustomerPersonId :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.PersonMobileNoReq -> Environment.Flow [Dashboard.Common.PersonRes])
+postCustomerPersonId merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.RiderManagementAPI (API.Types.RiderPlatform.Management.CustomerAPI API.Types.RiderPlatform.Management.Customer.PostCustomerPersonIdEndpoint)) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do RiderPlatformClient.RiderApp.Operations.callRiderAppOperations checkedMerchantId opCity (Dashboard.Common.addMultipartBoundary "XXX00XXX" . (.customerDSL.postCustomerPersonId)) req)

@@ -26,7 +26,6 @@ import qualified API.Types.RiderPlatform.Management.Invoice as InvoiceDSL
 import qualified API.Types.RiderPlatform.Management.Merchant as MerchantDSL
 import qualified "rider-app" API.Types.UI.TicketService as DTB
 import qualified Beckn.Types.Core.Taxi.Search ()
-import qualified Dashboard.RiderPlatform.Customer as Customer
 import qualified Dashboard.RiderPlatform.Ride as Ride
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
@@ -59,8 +58,7 @@ import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 
 data AppBackendAPIs = AppBackendAPIs
-  { customers :: CustomerAPIs,
-    rides :: RidesAPIs,
+  { rides :: RidesAPIs,
     issues :: ListIssueAPIs,
     issuesV2 :: IssueAPIs,
     tickets :: TicketAPIs,
@@ -69,13 +67,6 @@ data AppBackendAPIs = AppBackendAPIs
     customerDSL :: CustomerDSL.CustomerAPIs,
     merchantDSL :: MerchantDSL.MerchantAPIs,
     invoiceDSL :: InvoiceDSL.InvoiceAPIs
-  }
-
-data CustomerAPIs = CustomerAPIs
-  { getCancellationDuesDetails :: Id Customer.Customer -> Euler.EulerClient Customer.CancellationDuesDetailsRes,
-    updateSafetyCenterBlocking :: Id Customer.Customer -> Customer.UpdateSafetyCenterBlockingReq -> Euler.EulerClient APISuccess,
-    postCustomersPersonNumbers :: (LBS.ByteString, Customer.PersonIdsReq) -> Euler.EulerClient [Customer.PersonRes],
-    postCustomersPersonId :: (LBS.ByteString, Customer.PersonMobileNoReq) -> Euler.EulerClient [Customer.PersonRes]
   }
 
 data RidesAPIs = RidesAPIs
@@ -127,7 +118,6 @@ newtype HotSpotAPIs = HotSpotAPIs
 
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> AppBackendAPIs
 mkAppBackendAPIs merchantId city token = do
-  let customers = CustomerAPIs {..}
   let rides = RidesAPIs {..}
   let issues = ListIssueAPIs {..}
   let issuesV2 = IssueAPIs {..}
@@ -140,8 +130,7 @@ mkAppBackendAPIs merchantId city token = do
   let invoiceDSL = InvoiceDSL.mkInvoiceAPIs invoiceClientDSL
   AppBackendAPIs {..}
   where
-    customersClient
-      :<|> ridesClient
+    ridesClient
       :<|> issueClient
       :<|> issueV2Client
       :<|> ticketsClient
@@ -151,12 +140,6 @@ mkAppBackendAPIs merchantId city token = do
       :<|> merchantClientDSL
       :<|> invoiceClientDSL =
         clientWithMerchantAndCity (Proxy :: Proxy BAP.OperationsAPI) merchantId city token
-
-    getCancellationDuesDetails
-      :<|> updateSafetyCenterBlocking
-      :<|> postCustomersPersonNumbers
-      :<|> postCustomersPersonId =
-        customersClient
 
     shareRideInfo
       :<|> shareRideInfoByShortId
