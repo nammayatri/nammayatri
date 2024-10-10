@@ -19,6 +19,7 @@ import qualified API.Action.Dashboard.Management.FRFSTicket as FRFSTicketDSL
 import qualified API.Action.Dashboard.Management.Invoice as InvoiceDSL
 import qualified API.Action.Dashboard.Management.Merchant as MerchantDSL
 import qualified API.Action.Dashboard.Management.NammaTag as NammaTagDSL
+import qualified API.Action.Dashboard.Management.System as SystemDSL
 import qualified API.Dashboard.Customer as Customer
 import qualified API.Dashboard.Exotel as Exotel
 import qualified API.Dashboard.HotSpot as HotSpot
@@ -67,6 +68,7 @@ type OperationsAPI =
            :<|> InvoiceDSL.API
            :<|> FRFSTicketDSL.API
            :<|> NammaTagDSL.API
+           :<|> SystemDSL.API
        )
 
 type RideBookingAPI =
@@ -110,6 +112,7 @@ operationHandler merchantId city _ = do
     :<|> InvoiceDSL.handler merchantId city
     :<|> FRFSTicketDSL.handler merchantId city
     :<|> NammaTagDSL.handler merchantId city
+    :<|> SystemDSL.handler merchantId city
 
 rideBookingHandler :: ShortId DM.Merchant -> Context.City -> FlowServer RideBookingAPI
 rideBookingHandler merchantId _ _ = RideBookings.handler merchantId

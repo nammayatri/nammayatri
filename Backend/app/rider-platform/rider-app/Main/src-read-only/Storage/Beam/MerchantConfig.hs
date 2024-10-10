@@ -7,6 +7,7 @@ module Storage.Beam.MerchantConfig where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -41,3 +42,5 @@ type MerchantConfig = MerchantConfigT Identity
 $(enableKVPG ''MerchantConfigT ['id] [])
 
 $(mkTableInstances ''MerchantConfigT "merchant_config")
+
+$(Domain.Types.UtilsTH.mkCacParseInstance ''MerchantConfigT)

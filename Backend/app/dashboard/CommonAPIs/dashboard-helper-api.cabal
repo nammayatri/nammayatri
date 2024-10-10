@@ -74,6 +74,7 @@ library
       API.Types.RiderPlatform.Management.Invoice
       API.Types.RiderPlatform.Management.Merchant
       API.Types.RiderPlatform.Management.NammaTag
+      API.Types.RiderPlatform.Management.System
   other-modules:
       Paths_dashboard_helper_api
   hs-source-dirs:
