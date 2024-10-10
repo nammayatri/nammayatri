@@ -7,6 +7,7 @@ import qualified Domain.Types.MerchantServiceUsageConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types
+import qualified Kernel.External.MultiModal.Types
 import qualified Kernel.External.Payment.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -37,6 +38,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             getDistancesForScheduledRides = getDistancesForScheduledRides,
             getExophone = getExophone,
             getFrfsAutocompleteDistances = fromMaybe Kernel.External.Maps.Types.OSRM getFrfsAutocompleteDistances,
+            getMultiModalService = fromMaybe Kernel.External.MultiModal.Types.OTPTransit getMultiModalService,
             getPickupRoutes = getPickupRoutes,
             getPlaceDetails = getPlaceDetails,
             getPlaceName = getPlaceName,
@@ -76,6 +78,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.getDistancesForScheduledRides = getDistancesForScheduledRides,
         Beam.getExophone = getExophone,
         Beam.getFrfsAutocompleteDistances = Kernel.Prelude.Just getFrfsAutocompleteDistances,
+        Beam.getMultiModalService = Kernel.Prelude.Just getMultiModalService,
         Beam.getPickupRoutes = getPickupRoutes,
         Beam.getPlaceDetails = getPlaceDetails,
         Beam.getPlaceName = getPlaceName,

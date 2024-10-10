@@ -12,6 +12,7 @@ import qualified Kernel.External.AadhaarVerification
 import qualified Kernel.External.Call.Types
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types
+import qualified Kernel.External.MultiModal.Types
 import qualified Kernel.External.Notification.Types
 import qualified Kernel.External.Payment.Types
 import qualified Kernel.External.SMS.Types
@@ -39,6 +40,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     getDistancesForScheduledRides :: B.C f Kernel.External.Maps.Types.MapsService,
     getExophone :: B.C f Kernel.External.Call.Types.CallService,
     getFrfsAutocompleteDistances :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
+    getMultiModalService :: B.C f (Kernel.Prelude.Maybe Kernel.External.MultiModal.Types.MultiModalService),
     getPickupRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
     getPlaceDetails :: B.C f Kernel.External.Maps.Types.MapsService,
     getPlaceName :: B.C f Kernel.External.Maps.Types.MapsService,

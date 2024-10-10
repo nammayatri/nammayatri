@@ -52,6 +52,7 @@ RiderConfig:
     sensitiveWords: "Maybe [Text]"
     payoutBatchSize: Maybe Int
     payoutBatchDelay: NominalDiffTime
+    makeMultiModalSearch: Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -64,6 +65,7 @@ RiderConfig:
     payoutBatchDelay: Maybe Seconds
     executePaymentDelay: Maybe Seconds
     cancellationPaymentDelay: Maybe Seconds
+    makeMultiModalSearch: Maybe Bool
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -79,6 +81,7 @@ RiderConfig:
     csAlertTriggerDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> csAlertTriggerDelay)|E
     avgSpeedInKmPerHr: fromMaybe 20 avgSpeedInKmPerHr|E
     payoutBatchDelay: fromMaybe 10 (Kernel.Utils.Common.secondsToNominalDiffTime <$> payoutBatchDelay)|E
+    makeMultiModalSearch: fromMaybe False makeMultiModalSearch|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -91,6 +94,7 @@ RiderConfig:
     csAlertTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     avgSpeedInKmPerHr: Just avgSpeedInKmPerHr|E
     payoutBatchDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    makeMultiModalSearch: Just makeMultiModalSearch|E
 
   default:
     enableLocalPoliceSupport: "false"
@@ -110,6 +114,7 @@ RiderConfig:
     kaptureConfig: "'{\"kaptureQueue\":\"\", \"disposition\":\"\"}'"
     exotelStatusCheckSchedulerDelay: "120"
     avgSpeedInKmPerHr: "20"
+    makeMultiModalSearch: "false"
 
   queries:
     findByMerchantOperatingCityId:
