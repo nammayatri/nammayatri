@@ -23,6 +23,10 @@ MerchantConfig:
     updatedAt : Maybe UTCTime
     enabled : Bool
 
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
   constraints:
     id: PrimaryKey
 
