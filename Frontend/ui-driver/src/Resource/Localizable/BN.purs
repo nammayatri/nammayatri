@@ -1,7 +1,7 @@
 module Resources.Localizable.BN where
 
 import Language.Types (STR(..))
-import Prelude ((<>))
+import Prelude ((<>), (==))
 
 getBN :: STR -> String
 getBN stringKey =
@@ -1541,7 +1541,7 @@ getBN stringKey =
         RATING -> "রেটিং"
         CANCELLATION -> "বাতিল"
         I_SPEAK -> "আমি বলি"
-        WITH_NAMMAYATRI_FOR -> "নামাযাত্রী সঙ্গে"
+        WITH_NAMMAYATRI_FOR years -> "নম্মা যাত্রীর সাথে " <> years <> "+ বছর"
         YEARS -> "বছর"
         VEHICLE_NUMBER -> "যানবাহন নম্বর: "
         WHAT_PEOPLE_SAY -> "মানুষ কি বলে"
@@ -1604,7 +1604,7 @@ getBN stringKey =
         PET_FRIENDLY -> "পোষ্য-বান্ধব"
         FROM_WHERE -> "জন্মস্থান"
         DRIVING_SINCE -> "ড্রাইভিং শুরু"
-        WHY_NY -> "আমি কেন অটো চালানোর সিদ্ধান্ত নিলাম?"
+        WHY_NY variant -> "আমি কেন "<> variant <>" চালানোর সিদ্ধান্ত নিলাম?"
         NEW_HOME -> "নতুন বাড়ি কেনা"
         KID_EDUCATION -> "শিশুর শিক্ষা"
         NEW_VEHICLE -> "নতুন গাড়ি কেনা"
@@ -1750,3 +1750,4 @@ getBN stringKey =
         GOOD_SERVICES -> "ভালো সেবা"
         SMOOTH_DRIVING -> "মসৃণ ড্রাইভিং"
         NO_CANCELLATION -> "কোন বাতিল নেই"
+        CAB -> "ক্যাব"

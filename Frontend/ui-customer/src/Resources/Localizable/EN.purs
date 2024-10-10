@@ -1372,7 +1372,7 @@ getEN stringKey =
         TRIPS -> "Trips"
         I_SPEAK -> "I Speak"
         AND -> " and "
-        WITH_NAMMAYATRI_FOR -> "With NammaYatri for"
+        WITH_NAMMAYATRI_FOR years -> "With NammaYatri for " <> years <> "+ years"
         YEARS -> "years"
         VEHICLE_NUMBER -> "Vehicle Number: "
         WHAT_PEOPLE_SAY -> "What People Say"

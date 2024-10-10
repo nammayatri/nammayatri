@@ -1,7 +1,7 @@
 module Resources.Localizable.TA where
 
 import Language.Types (STR(..))
-import Prelude ((<>))
+import Prelude ((<>), (==))
 
 getTA :: STR -> String 
 getTA stringKey =
@@ -1547,7 +1547,7 @@ getTA stringKey =
         RATING -> "மதிப்பீடு"
         CANCELLATION -> "ரத்தாக்கல்"
         I_SPEAK -> "நான் பேசுகிறேன்"
-        WITH_NAMMAYATRI_FOR -> "நம்மயாத்திரியுடன்"
+        WITH_NAMMAYATRI_FOR years -> "நம்மயாத்திரியுடன் "<> years <>"+ ஆண்டுகளாக"
         YEARS -> "ஆண்டுகளாக"
         VEHICLE_NUMBER -> "வாகன எண்: "
         WHAT_PEOPLE_SAY -> "மக்கள் என்ன கூறுகிறார்கள்"
@@ -1608,7 +1608,7 @@ getTA stringKey =
         PET_FRIENDLY -> "பிராணி நண்பரானது"
         FROM_WHERE -> "தாயக நகரம்"
         DRIVING_SINCE -> "ஓட்ட தொடங்கிய நாள்"
-        WHY_NY -> "நான் ஆட்டோ ஓட்டத் தேர்ந்தது ஏன்?"
+        WHY_NY variant -> "நான் ஏன் "<> variant <>" ஓட்ட தேர்வு செய்தேன்"
         NEW_HOME -> "சொந்த நகரம்"
         KID_EDUCATION -> "குழந்தைகளின் கல்வி"
         NEW_VEHICLE -> "புதிய வாகனம் வாங்க"
@@ -1751,3 +1751,4 @@ getTA stringKey =
         GOOD_SERVICES -> "நல்ல சேவை"
         SMOOTH_DRIVING -> "மென்மையான ஓட்டம்"
         NO_CANCELLATION -> "ரத்து இல்லை"
+        CAB -> "கேப்"

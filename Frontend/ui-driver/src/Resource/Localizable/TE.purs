@@ -1,7 +1,7 @@
 module Resources.Localizable.TE where
 
 import Language.Types (STR(..))
-import Prelude ((<>))
+import Prelude ((<>), (==))
 
 getTE :: STR -> String
 getTE stringKey =
@@ -1543,7 +1543,7 @@ getTE stringKey =
         RATING -> "రేటింగ్"
         CANCELLATION -> "రద్దు"
         I_SPEAK -> "నేను మాట్లాడతాను"
-        WITH_NAMMAYATRI_FOR -> "నమ్మయాత్రి తో"
+        WITH_NAMMAYATRI_FOR years -> "నమ్మయాత్రి తో "<> years <>"+ సంవత్సరాలు"
         YEARS -> "ఏళ్లుగా"
         VEHICLE_NUMBER -> "వాహన సంఖ్య: "
         WHAT_PEOPLE_SAY -> "మనం చెప్పేది"
@@ -1605,7 +1605,7 @@ getTE stringKey =
         PET_FRIENDLY -> "పిల్లి మరియు కుక్కలకు అనుకూలం"
         FROM_WHERE -> "జన్మస్థానం"
         DRIVING_SINCE -> "ఓడించడం ప్రారంభించిన సంవత్సరం"
-        WHY_NY -> "నేను ఆటో నడపడం ఎందుకు ఎంచుకున్నాను?"
+        WHY_NY variant -> "నేను " <> variant <> " నడపడం ఎందుకు ఎంచుకున్నాను?"
         NEW_HOME -> "కొత్త ఇల్లు కొనండి"
         KID_EDUCATION -> "పిల్లల విద్య"
         NEW_VEHICLE -> "కొత్త వాహనం కొనండి"
@@ -1751,3 +1751,4 @@ getTE stringKey =
         GOOD_SERVICES -> "మంచి సేవ"
         SMOOTH_DRIVING -> "మృదువైన డ్రైవింగ్"
         NO_CANCELLATION -> "రద్దు లేదు"
+        CAB -> "క్యాబ్"

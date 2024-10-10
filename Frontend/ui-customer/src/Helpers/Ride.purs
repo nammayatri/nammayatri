@@ -62,6 +62,10 @@ import Language.Strings (getVarString)
 import PrestoDOM
 import Screens.RideBookingFlow.HomeScreen.Config (getFareUpdatedStr)
 import DecodeUtil
+import Mobility.Prelude (boolToVisibility)
+import Styles.Colors as Color
+import ConfigProvider (getCurrency)
+import Constants (appConfig)
 
 customerFeedbackPillData :: RideBookingRes -> String -> Array (Array (Array ST.FeedbackItem))
 customerFeedbackPillData (RideBookingRes state) vehicalVariant = [ feedbackPillDataWithRating1 (RideBookingRes state), feedbackPillDataWithRating2 (RideBookingRes state), feedbackPillDataWithRating3 vehicalVariant, feedbackPillDataWithRating4 vehicalVariant, feedbackPillDataWithRating5 vehicalVariant ]
@@ -319,6 +323,9 @@ checkRideStatus rideAssigned prioritizeRating = do
                   hasTollIssue' =  (any (\(FareBreakupAPIEntity item) -> item.description == "TOLL_CHARGES") resp.estimatedFareBreakup) && not isBlindPerson
                   waitingChargesApplied = isJust $ DA.find (\entity  -> entity ^._description == "WAITING_OR_PICKUP_CHARGES") ((RideBookingRes resp) ^._fareBreakup)
                   isRecentRide = EHC.getExpiryTime (fromMaybe "" ((RideBookingRes resp) ^. _rideEndTime)) true / 60 < state.data.config.safety.pastRideInterval
+                  finalFareHasToll =  DA.any (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.fareBreakup)
+                  estimateFareHasToll =  DA.any (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.estimatedFareBreakup)
+                  parkingCharges = DA.find (\entity  -> entity ^._description == "PARKING_CHARGE") (resp.fareBreakup)
 
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
                     props { currentStage = RideCompleted
@@ -463,8 +470,28 @@ checkRideStatus rideAssigned prioritizeRating = do
                             , ratingViewState
                                 { rideBookingRes = (RideBookingRes resp)
                                 }
-                            , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
+                            , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled 
                             , bookingId = resp.id
+                            , additionalCharges = [
+                                {
+                                  text :  getString if ride.tollConfidence == (Just CTA.Unsure) then  STR.TOLL_ROAD_CHANGED else if finalFareHasToll then  STR.TOLL_CHARGES_INCLUDED else STR.TOLL_ROAD_CHANGED 
+                                , visibility : boolToVisibility $ finalFareHasToll || estimateFareHasToll
+                                , image :  fetchImage FF_COMMON_ASSET "ny_ic_grey_toll"
+                                , textColor : Color.black700
+                                },
+                                {
+                                  text : maybe "" (\parking ->  getString $ STR.PARKING_CHARGES_INCLUDED $ (getCurrency appConfig) <>  (show $ INT.ceil $ parking ^. _amount)) parkingCharges
+                                , visibility : boolToVisibility $ isJust parkingCharges 
+                                , image : fetchImage FF_COMMON_ASSET "ny_ic_parking_logo_grey"
+                                , textColor : Color.black700
+                                }
+                              ]
+                            , customerIssue = riderRideCompletedScreen.customerIssue
+                                { showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
+                                , hasAccessibilityIssue = hasAccessibilityIssue'
+                                , hasSafetyIssue = hasSafetyIssue'
+                                , hasTollIssue = hasTollIssue'
+                                }
                           }
                       )
                 updateLocalStage RideCompleted

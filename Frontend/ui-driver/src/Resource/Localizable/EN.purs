@@ -1,7 +1,7 @@
 module Resources.Localizable.EN where
 
 import Language.Types (STR(..))
-import Prelude ((<>))
+import Prelude ((<>), (==))
 
 
 getEN :: STR -> String
@@ -1540,7 +1540,7 @@ getEN stringKey =
         RATING ->"Rating"
         CANCELLATION -> "Cancellation"
         I_SPEAK -> "I Speak"
-        WITH_NAMMAYATRI_FOR -> "With NammaYatri for"
+        WITH_NAMMAYATRI_FOR years -> "With NammaYatri for " <> years <> "+ years"
         YEARS -> "years"
         VEHICLE_NUMBER -> "Vehicle Number: "
         WHAT_PEOPLE_SAY -> "What People Say"
@@ -1601,7 +1601,7 @@ getEN stringKey =
         PET_FRIENDLY -> "Pet Friendly"
         FROM_WHERE -> "HomeTown"
         DRIVING_SINCE -> "Driving Since"
-        WHY_NY -> "Why did i choose to drive auto?"
+        WHY_NY variant -> "Why did i choose to drive " <> variant <> "?"
         NEW_HOME -> "Buy New Home"
         KID_EDUCATION -> "Kid's Education"
         NEW_VEHICLE -> "Buy New Vehicle"
@@ -1752,3 +1752,4 @@ getEN stringKey =
         GOOD_SERVICES -> "Good Service"
         SMOOTH_DRIVING -> "Smooth Driving"
         NO_CANCELLATION -> "No Cancellation"
+        CAB -> "Cab"

@@ -1367,7 +1367,7 @@ getML stringKey =
         TRIPS -> "യാത്രകള്‍"
         I_SPEAK -> "ഞാന്‍ സംസാരിക്കുന്നു"
         AND -> " മറ്റും "
-        WITH_NAMMAYATRI_FOR -> "നമ്മയാത്രിയുമായി"
+        WITH_NAMMAYATRI_FOR years -> "നമ്മയാത്രിയോടൊപ്പം "<> years <>"+ വർഷങ്ങളായി"
         YEARS -> "വര്‍ഷങ്ങളായി"
         VEHICLE_NUMBER -> "വാഹന നമ്പര്‍: "
         WHAT_PEOPLE_SAY -> "ആള്‍ക്കാര്‍ പറയുന്നത്"

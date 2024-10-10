@@ -733,6 +733,17 @@ tabView state push =
     ]
 
 ------------------------------------------ TAB IMAGE VIEW ---------------------------------------------------------
+
+getVehicleCategory :: ST.DriverProfileScreenState -> ST.VehicleCategory
+getVehicleCategory state =
+  let
+    vehicles = state.data.vehicleDetails
+    mbVehicle = find (\item -> item.isActive == item.isVerified) vehicles
+  in
+    case mbVehicle of
+      Just vehicle -> fromMaybe state.data.cachedVehicleCategory vehicle.verifiedVehicleCategory
+      Nothing -> state.data.cachedVehicleCategory
+
 tabImageView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 tabImageView state push =
   let
@@ -849,15 +860,6 @@ tabImageView state push =
               ]
       ]
   where
-  getVehicleCategory :: ST.DriverProfileScreenState -> ST.VehicleCategory
-  getVehicleCategory state =
-    let
-      vehicles = state.data.vehicleDetails
-      mbVehicle = find (\item -> item.isActive == item.isVerified) vehicles
-    in
-      case mbVehicle of
-        Just vehicle -> fromMaybe state.data.cachedVehicleCategory vehicle.verifiedVehicleCategory
-        Nothing -> state.data.cachedVehicleCategory
 
   getVehicleImage :: ST.VehicleCategory -> String
   getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)

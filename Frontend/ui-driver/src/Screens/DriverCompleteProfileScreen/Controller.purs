@@ -26,7 +26,7 @@ import Components.ViewImageModel as ViewImageModel
 import Engineering.Helpers.Commons (getNewIDWithTag, getCurrentUTC)
 import Effect.Class (liftEffect)
 import Data.TraversableWithIndex (forWithIndex)
-import JBridge (addMediaFile, clearFocus, generatePDF, hideKeyboardOnNavigation, lottieAnimationConfig, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, scrollToEnd, startAudioRecording, startLottieProcess, stopAudioRecording, toast, uploadFile, uploadMultiPartData, openUrlInApp)
+import JBridge (addMediaFile, clearFocus, generatePDF, hideKeyboardOnNavigation, lottieAnimationConfig, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, scrollToEnd, startAudioRecording, startLottieProcess, stopAudioRecording, toast, uploadFile, uploadMultiPartData, openUrlInApp, displayBase64Image, displayBase64ImageConfig)
 import Data.Int(toNumber, fromString)
 import Components.InputTextView as InputTextView
 import Components.PrimaryButton.Controller as PrimaryButtonController
@@ -53,7 +53,6 @@ data Action = OnClickPledge String Boolean
             | GoBack 
             | NoAction
             | OnDateSelect Int Int
-            | Done
             | InputTextAC InputTextView.Action 
             | ProfileDataAPIResponseAction DriverProfileDataRes
 
@@ -212,15 +211,11 @@ eval (ViewImageModelAction (ViewImageModel.BackPressed)) state = do
 eval (OnClickDelete index) state = do
   let images'   = fromMaybe state.data.addImagesState.images        $ deleteAt index state.data.addImagesState.images
       imageIds' = fromMaybe state.data.addImagesState.imageMediaIds $ deleteAt index state.data.addImagesState.imageMediaIds
-  continueWithCmd state { data { addImagesState { images = images', stateChanged = not (imageIds' == state.data.uploadedImagesIds), imageMediaIds = imageIds' } } } [do -- continueWithCmd state { data { uploadedImagesIds = imageIds',  addedImages = images',  addImagesState { images = images', stateChanged = not (imageIds' == state.data.uploadedImagesIds), imageMediaIds = imageIds' } }, props  } [do
+  continueWithCmd state { data { addImagesState { images = images', stateChanged = not (imageIds' == state.data.uploadedImagesIds), imageMediaIds = imageIds' }, addedImages = images', uploadedImagesIds = imageIds' }, props { showImageModel = false } } [do 
     void $ forWithIndex images' \i x -> do
-      void $ runEffectFn4 renderBase64ImageFile x.image (getNewIDWithTag "add_image_component_image" <> (show i)) false "CENTER_CROP"
+      void $ runEffectFn1 displayBase64Image displayBase64ImageConfig {source =  x.image, id = getNewIDWithTag ("driverImages" <> show i), scaleType =  "FIT_XY", adjustViewBounds = false} 
       pure NoAction
-    pure $ Done
+    pure $ NoAction
   ]
-
-eval Done state = do
-  continue state { data  { uploadedImagesIds = state.data.addImagesState.imageMediaIds, addedImages = state.data.addImagesState.images }
-                 , props { showImageModel = false } }
 
 eval _ state = update state

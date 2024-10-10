@@ -1,7 +1,7 @@
 module Resources.Localizable.KN where
 
 import Language.Types (STR(..))
-import Prelude ((<>))
+import Prelude ((<>), (==))
 
 getKN :: STR -> String
 getKN stringKey =
@@ -1539,7 +1539,7 @@ getKN stringKey =
         RATING -> "ಮೌಲ್ಯಮಾಪನ"
         CANCELLATION -> "ರದ್ದತಿ"
         I_SPEAK -> "ನಾನು ಮಾತನಾಡುತ್ತೇನೆ"
-        WITH_NAMMAYATRI_FOR -> "ನಮ್ಮಯಾತ್ರಿಯೊಂದಿಗೆ"
+        WITH_NAMMAYATRI_FOR years -> "ನಮ್ಮಯಾತ್ರಿಯೊಂದಿಗೆ " <> years <> "+ ವರ್ಷಗಳಿಂದ"
         YEARS -> "ವರ್ಷಗಳಿಂದ"
         VEHICLE_NUMBER -> "ವಾಹನ ಸಂಖ್ಯೆ: "
         WHAT_PEOPLE_SAY -> "ಜನರು ಏನು ಹೇಳುತ್ತಾರೆ"
@@ -1601,7 +1601,7 @@ getKN stringKey =
         PET_FRIENDLY -> "ಪಾಲ್ತು ಮೃದುವಾದ"
         FROM_WHERE -> "ಮೂಲನಗರ"
         DRIVING_SINCE -> "ಮೂಡಲಿರುಳು"
-        WHY_NY -> "ನಾನು ಆटो ಓಡಿಸುವುದನ್ನು ಏಕೆ ಆಯ್ಕೆ ಮಾಡಿದೆ?"
+        WHY_NY variant -> "ನಾನು "<> variant <>" ಓಡಿಸುವುದನ್ನು ಏಕೆ ಆಯ್ಕೆ ಮಾಡಿದೆ?"
         NEW_HOME -> "ಹೊಸ ಮನೆ ಖರೀದಿಸಿ"
         KID_EDUCATION -> "ಮಕ್ಕಳ ಶಿಕ್ಷಣ"
         NEW_VEHICLE -> "ಹೊಸ ವಾಹನ ಖರೀದಿಸಿ"
@@ -1748,3 +1748,4 @@ getKN stringKey =
         GOOD_SERVICES -> "ಉತ್ತಮ ಸೇವೆ"
         SMOOTH_DRIVING -> "ನಾದ್ರು ಡ್ರೈವಿಂಗ್"
         NO_CANCELLATION -> "ಯಾವುದೇ ರದ್ದುಪಡಿಸಲು ಇಲ್ಲ"
+        CAB -> "ಕ್ಯಾಬ್"
