@@ -23,6 +23,7 @@ data FRFSTicketBooking = FRFSTicketBooking
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
     bppBankAccountNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bppBankCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bppDelayedInterest :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     bppItemId :: Kernel.Prelude.Text,
     bppOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bppSubscriberId :: Kernel.Prelude.Text,

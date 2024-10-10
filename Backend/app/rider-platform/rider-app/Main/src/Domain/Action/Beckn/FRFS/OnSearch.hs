@@ -16,6 +16,7 @@ module Domain.Action.Beckn.FRFS.OnSearch where
 
 import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
+import qualified Data.Text as T
 import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSSearch as Search
 import Domain.Types.Merchant
@@ -43,7 +44,8 @@ data DOnSearch = DOnSearch
     quotes :: [DQuote],
     validTill :: Maybe UTCTime,
     transactionId :: Text,
-    messageId :: Text
+    messageId :: Text,
+    bppDelayedInterest :: Maybe Text
   }
 
 data DQuote = DQuote
@@ -154,6 +156,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
         Quote.partnerOrgTransactionId = search.partnerOrgTransactionId,
         Quote.createdAt = now,
         Quote.updatedAt = now,
+        bppDelayedInterest = readMaybe . T.unpack =<< dOnSearch.bppDelayedInterest,
         ..
       }
 
