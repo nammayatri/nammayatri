@@ -42,7 +42,13 @@ data FeedbackReq = FeedbackReq
     feedbackDetails :: Maybe Text,
     wasOfferedAssistance :: Maybe Bool
   }
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+instance ToSchema FeedbackReq where
+  declareNamedSchema proxy = do
+    genericDeclareNamedSchema customSchemaOptions proxy
+    where
+      customSchemaOptions = defaultSchemaOptions {datatypeNameModifier = const "FeedbackReqInternal"}
 
 rating ::
   ( MonadFlow m,
