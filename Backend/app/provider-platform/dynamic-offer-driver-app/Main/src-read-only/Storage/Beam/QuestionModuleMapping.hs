@@ -12,7 +12,7 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
-data QuestionModuleMappingT f = QuestionModuleMappingT {moduleId :: B.C f Kernel.Prelude.Text, questionId :: B.C f Kernel.Prelude.Text, createdAt :: B.C f Kernel.Prelude.UTCTime, updatedAt :: B.C f Kernel.Prelude.UTCTime}
+data QuestionModuleMappingT f = QuestionModuleMappingT {moduleId :: (B.C f Kernel.Prelude.Text), questionId :: (B.C f Kernel.Prelude.Text), createdAt :: (B.C f Kernel.Prelude.UTCTime), updatedAt :: (B.C f Kernel.Prelude.UTCTime)}
   deriving (Generic, B.Beamable)
 
 instance B.Table QuestionModuleMappingT where
@@ -21,6 +21,6 @@ instance B.Table QuestionModuleMappingT where
 
 type QuestionModuleMapping = QuestionModuleMappingT Identity
 
-$(enableKVPG ''QuestionModuleMappingT ['moduleId, 'questionId] [])
+$(enableKVPG (''QuestionModuleMappingT) [('moduleId), ('questionId)] [])
 
-$(mkTableInstances ''QuestionModuleMappingT "question_module_mapping")
+$(mkTableInstances (''QuestionModuleMappingT) "question_module_mapping")

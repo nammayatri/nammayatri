@@ -9,6 +9,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -26,8 +27,22 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 
 getAllModules ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.LmsModule.LmsModule])
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.LmsModule.LmsModule]))
 getAllModules limit offset merchantOperatingCityId = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)] (Se.Desc Beam.createdAt) limit offset
+
+getAllModulesWithModuleSection ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Maybe Domain.Types.LmsModule.ModuleSection -> m ([Domain.Types.LmsModule.LmsModule]))
+getAllModulesWithModuleSection limit offset merchantOperatingCityId moduleSection = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.moduleSection $ Se.Eq moduleSection
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule -> m (Maybe Domain.Types.LmsModule.LmsModule))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -43,6 +58,7 @@ updateByPrimaryKey (Domain.Types.LmsModule.LmsModule {..}) = do
       Se.Set Beam.languagesAvailableForVideos languagesAvailableForVideos,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.moduleCompletionCriteria moduleCompletionCriteria,
+      Se.Set Beam.moduleSection moduleSection,
       Se.Set Beam.noOfVideos noOfVideos,
       Se.Set Beam.rank rank,
       Se.Set Beam.updatedAt _now,
@@ -64,6 +80,7 @@ instance FromTType' Beam.LmsModule Domain.Types.LmsModule.LmsModule where
             languagesAvailableForVideos = languagesAvailableForVideos,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             moduleCompletionCriteria = moduleCompletionCriteria,
+            moduleSection = moduleSection,
             noOfVideos = noOfVideos,
             rank = rank,
             updatedAt = updatedAt,
@@ -82,6 +99,7 @@ instance ToTType' Beam.LmsModule Domain.Types.LmsModule.LmsModule where
         Beam.languagesAvailableForVideos = languagesAvailableForVideos,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.moduleCompletionCriteria = moduleCompletionCriteria,
+        Beam.moduleSection = moduleSection,
         Beam.noOfVideos = noOfVideos,
         Beam.rank = rank,
         Beam.updatedAt = updatedAt,
