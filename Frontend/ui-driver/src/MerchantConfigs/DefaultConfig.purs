@@ -1097,46 +1097,6 @@ config =
         cab : "10",
         auto : "10"
       }
-    }
-  , coinsConfig : {
-      minCoinSliderValue : 250,
-      maxCoinSliderValue : 2500,
-      stepFunctionForCoinConversion : 250,
-      twoRidesCompletedThresholdForCoins : "2",
-      fiveRidesCompletedThresholdForCoins : "5",
-      tenRidesCompletedThresholdForCoins : "10",
-      numOfRideThresholdForCoins : "8+",
-      leaderBoardThresholdForCoins : "+500",
-      customerReferralCoins : "+200",
-      twoPlusRidesCoins : "+10",
-      fivePlusRidesCoins : "+30",
-      eightPlusRidesCoins : "+50",
-      tenPlusRidesCoins : "+60",
-      purpleRideCoins : "+5",
-      rideCompletedCoins : "+1",
-      fiveStarRatingCoins : "+1",
-      oneOrTwoStarRatingCoins : "-1",
-      rideCancellationCoins : "-5",
-      whatAreYatriCoinFAQ : "",
-      coinTermsAndConditions : "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9",
-      howToEarnYatriCoinFAQ : "",
-      howToRedeemYatriCoinFAQ : "",
-      rideCompletedCoinEvent : false,
-      twoRideCoinEvent : false,
-      fiveRideCoinEvent : false,
-      eightRideCoinEvent : false,
-      tenRideCoinEvent : false,
-      prupleRideCoinEvent : false,
-      bookingCancelCoinEvent : false,
-      fiveStarCoinEvent : false,
-      oneTwoStarCoinEvent : false,
-      driverToCustomerRefCoinEvent : false,
-      coinConversionPopupLottie : "",
-      driverToCustomerRefPopupEndDate : "",
-      rideMoreEarnCoinIntervalLimit : 7, 
-      rideMoreEarnCoinPopupMaxLimit : 2,
-      monsoonOfferDate : "",
-      coinsValidTill : 150
   }
   , inAppKeyboardModalConfig : {
       enableDeviceKeyboard : true

@@ -86,6 +86,7 @@ import Data.Int
 import Styles.Types (Color(..))
 import RemoteConfig as RemoteConfig
 import Components.SelectPlansModal.Controller as SelectPlansModal
+import RemoteConfig.Utils
 import Debug
 
 --------------------------------- rideActionModalConfig -------------------------------------
@@ -2461,17 +2462,19 @@ createCoinPopupConfig primary secondary secondaryVis opt1 optHtml optHtmlVis cov
   }
 
 getCoinEarnedPopupConfig :: ST.HomeScreenState -> CoinEarnedPopupConfig
-getCoinEarnedPopupConfig state = case state.props.coinPopupType of
-  ST.RIDE_MORE_EARN_COIN -> createCoinPopupConfig (getString RIDE_MORE_AND_EARN_POINTS) (getString TAKE_MORE_RIDES_TO_EARN_MORE_POINTS_AND_CONVERT_IT_TO_SUBSCRIPTION_DISCOUNTS) true (getString OKAY) (getString CHECK_YATRI_POINTS) true (HU.fetchImage HU.FF_ASSET "ny_ic_ride_more_earn_more") "" "" "" false false Nothing
-  ST.TWO_MORE_RIDES -> createCoinPopupConfig (getString TWO_MORE_RIDES_TO_GO) (getString $ TAKE_TWO_MORE_RIDES_TO_EARN_POINTS $ state.data.config.coinsConfig.eightPlusRidesCoins) true (getString OKAY) "" false (HU.fetchImage HU.FF_ASSET "ny_ic_two_more_rides") "" "" "" false false Nothing
-  ST.ONE_MORE_RIDE -> createCoinPopupConfig (getString ONE_MORE_RIDE_TO_GO) (getString $ TAKE_ONE_MORE_RIDE_TO_EARN_POINTS $ state.data.config.coinsConfig.eightPlusRidesCoins) true (getString OKAY) "" false (HU.fetchImage HU.FF_ASSET "ny_ic_one_more_ride") "" "" "" false false Nothing
-  ST.EIGHT_RIDE_COMPLETED -> createCoinPopupConfig (getString RIDE_MORE_EARN_MORE) (getString $ LIMITED_TIME_OFFER_UNTIL ((EHC.convertUTCtoISC (runFn2 EHC.getDateMinusNDays state.data.config.coinsConfig.monsoonOfferDate 1) "Do MMM"))) true (getString CHECK_YATRI_POINTS) (getString CHECK_YATRI_POINTS) false (HU.fetchImage HU.COMMON_ASSET "ny_ic_eight_rides_completed") "" (getString CONGRATULATIONS <> "🎉") "" true false Nothing
-  ST.FIVE_RIDE_COMPLETED -> createCoinPopupConfig (getString $ ONLY_5_MORE_RIDES_FOR_N_POINTS "50") (getString $ LIMITED_TIME_OFFER_UNTIL ((EHC.convertUTCtoISC (runFn2 EHC.getDateMinusNDays state.data.config.coinsConfig.monsoonOfferDate 1) "Do MMM"))) true (getString CHECK_YATRI_POINTS) (getString CHECK_YATRI_POINTS) false (HU.fetchImage HU.COMMON_ASSET "ny_ic_five_rides_completed_v4") "" (getString CONGRATULATIONS <> "🎉") (getString $ YOU_GOT_N_POINTS "20") true true (Just Color.blue800)
-  ST.TEN_RIDE_COMPLETED -> createCoinPopupConfig (getString RIDE_MORE_EARN_MORE) (getString $ LIMITED_TIME_OFFER_UNTIL ((EHC.convertUTCtoISC (runFn2 EHC.getDateMinusNDays state.data.config.coinsConfig.monsoonOfferDate 1) "Do MMM"))) true (getString CHECK_YATRI_POINTS) (getString CHECK_YATRI_POINTS) false (HU.fetchImage HU.COMMON_ASSET "ny_ic_ten_rides_completed_v4") "" (getString CONGRATULATIONS <> "🎉") "" true false (Just Color.blue800)
-  ST.TWO_RIDE_COMPLETED -> createCoinPopupConfig (getString $ ONLY_3_MORE_RIDES_FOR_N_POINTS "20") (getString $ LIMITED_TIME_OFFER_UNTIL ((EHC.convertUTCtoISC (runFn2 EHC.getDateMinusNDays state.data.config.coinsConfig.monsoonOfferDate 1) "Do MMM"))) true (getString CHECK_YATRI_POINTS) (getString CHECK_YATRI_POINTS) false (HU.fetchImage HU.COMMON_ASSET "ny_ic_two_rides_completed_v4") "" (getString CONGRATULATIONS <> "🎉") (getString $ YOU_GOT_N_POINTS "5") true true (Just Color.blue800)
-  ST.REFER_AND_EARN_COIN -> createCoinPopupConfig (getString $ REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_POINTS "REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_POINTS") "" false (getString REFER_NOW) (getString LATER) true (HU.fetchImage HU.FF_ASSET "ny_ic_refer_and_earn_coin") "" "" "" false false Nothing
-  ST.CONVERT_COINS_TO_CASH -> createCoinPopupConfig (getString CONVERT_YOUR_POINTS_TO_DISCOUNT) (getString CONVERT_YOUR_POINTS_TO_GET_DISCOUNT_ON_YOUR_SUBSCRIPTION) true (getString CONVERT_NOW) (getString LATER) true "" (state.data.config.coinsConfig.coinConversionPopupLottie) "" "" false false Nothing
-  _ -> defaultCoinPopupConfig
+getCoinEarnedPopupConfig state = do 
+  let coinsConfig = getCoinsConfigData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+  case state.props.coinPopupType of
+    ST.RIDE_MORE_EARN_COIN -> createCoinPopupConfig (getString RIDE_MORE_AND_EARN_POINTS) (getString TAKE_MORE_RIDES_TO_EARN_MORE_POINTS_AND_CONVERT_IT_TO_SUBSCRIPTION_DISCOUNTS) true (getString OKAY) (getString CHECK_YATRI_POINTS) true (HU.fetchImage HU.FF_ASSET "ny_ic_ride_more_earn_more") "" "" "" false false Nothing
+    ST.TWO_MORE_RIDES -> createCoinPopupConfig (getString TWO_MORE_RIDES_TO_GO) (getString $ TAKE_TWO_MORE_RIDES_TO_EARN_POINTS $ coinsConfig.eightPlusRidesCoins) true (getString OKAY) "" false (HU.fetchImage HU.FF_ASSET "ny_ic_two_more_rides") "" "" "" false false Nothing
+    ST.ONE_MORE_RIDE -> createCoinPopupConfig (getString ONE_MORE_RIDE_TO_GO) (getString $ TAKE_ONE_MORE_RIDE_TO_EARN_POINTS $ coinsConfig.eightPlusRidesCoins) true (getString OKAY) "" false (HU.fetchImage HU.FF_ASSET "ny_ic_one_more_ride") "" "" "" false false Nothing
+    ST.EIGHT_RIDE_COMPLETED -> createCoinPopupConfig (getString RIDE_MORE_EARN_MORE) (getString $ LIMITED_TIME_OFFER_UNTIL ((EHC.convertUTCtoISC (runFn2 EHC.getDateMinusNDays coinsConfig.monsoonOfferDate 1) "Do MMM"))) true (getString CHECK_YATRI_POINTS) (getString CHECK_YATRI_POINTS) false (HU.fetchImage HU.COMMON_ASSET "ny_ic_eight_rides_completed") "" (getString CONGRATULATIONS <> "🎉") "" true false Nothing
+    ST.FIVE_RIDE_COMPLETED -> createCoinPopupConfig (getString $ ONLY_5_MORE_RIDES_FOR_N_POINTS "50") (getString $ LIMITED_TIME_OFFER_UNTIL ((EHC.convertUTCtoISC (runFn2 EHC.getDateMinusNDays coinsConfig.monsoonOfferDate 1) "Do MMM"))) true (getString CHECK_YATRI_POINTS) (getString CHECK_YATRI_POINTS) false (HU.fetchImage HU.COMMON_ASSET "ny_ic_five_rides_completed_v4") "" (getString CONGRATULATIONS <> "🎉") (getString $ YOU_GOT_N_POINTS "20") true true (Just Color.blue800)
+    ST.TEN_RIDE_COMPLETED -> createCoinPopupConfig (getString RIDE_MORE_EARN_MORE) (getString $ LIMITED_TIME_OFFER_UNTIL ((EHC.convertUTCtoISC (runFn2 EHC.getDateMinusNDays coinsConfig.monsoonOfferDate 1) "Do MMM"))) true (getString CHECK_YATRI_POINTS) (getString CHECK_YATRI_POINTS) false (HU.fetchImage HU.COMMON_ASSET "ny_ic_ten_rides_completed_v4") "" (getString CONGRATULATIONS <> "🎉") "" true false (Just Color.blue800)
+    ST.TWO_RIDE_COMPLETED -> createCoinPopupConfig (getString $ ONLY_3_MORE_RIDES_FOR_N_POINTS "20") (getString $ LIMITED_TIME_OFFER_UNTIL ((EHC.convertUTCtoISC (runFn2 EHC.getDateMinusNDays coinsConfig.monsoonOfferDate 1) "Do MMM"))) true (getString CHECK_YATRI_POINTS) (getString CHECK_YATRI_POINTS) false (HU.fetchImage HU.COMMON_ASSET "ny_ic_two_rides_completed_v4") "" (getString CONGRATULATIONS <> "🎉") (getString $ YOU_GOT_N_POINTS "5") true true (Just Color.blue800)
+    ST.REFER_AND_EARN_COIN -> createCoinPopupConfig (getString $ REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_POINTS "REFER_NAMMA_YATRI_APP_TO_CUSTOMERS_AND_EARN_POINTS") "" false (getString REFER_NOW) (getString LATER) true (HU.fetchImage HU.FF_ASSET "ny_ic_refer_and_earn_coin") "" "" "" false false Nothing
+    ST.CONVERT_COINS_TO_CASH -> createCoinPopupConfig (getString CONVERT_YOUR_POINTS_TO_DISCOUNT) (getString CONVERT_YOUR_POINTS_TO_GET_DISCOUNT_ON_YOUR_SUBSCRIPTION) true (getString CONVERT_NOW) (getString LATER) true "" (coinsConfig.coinConversionPopupLottie) "" "" false false Nothing
+    _ -> defaultCoinPopupConfig
 
 isAcWorkingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
 isAcWorkingPopupConfig state = PopUpModal.config {
