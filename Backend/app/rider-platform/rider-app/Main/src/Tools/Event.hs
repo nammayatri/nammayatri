@@ -91,10 +91,13 @@ data Payload
         createdAt :: UTCTime,
         updatedAt :: UTCTime
       }
-  deriving (Show, Eq, Generic, FromJSON, ToSchema)
+  deriving (Show, Eq, Generic, ToSchema)
 
 instance ToJSON Payload where
   toJSON = genericToJSON constructorsWithSnakeCase
+
+instance FromJSON Payload where
+  parseJSON = genericParseJSON constructorsWithSnakeCase
 
 data RideEventData = RideEventData
   { ride :: DRide.Ride,

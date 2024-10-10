@@ -46,7 +46,8 @@ data Event p = Event
 instance ToJSON p => ToJSON (Event p) where
   toJSON = genericToJSON constructorsWithSnakeCase
 
-instance FromJSON p => FromJSON (Event p)
+instance FromJSON p => FromJSON (Event p) where
+  parseJSON = genericParseJSON constructorsWithSnakeCase
 
 data EventTriggeredBy = User | System
   deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)

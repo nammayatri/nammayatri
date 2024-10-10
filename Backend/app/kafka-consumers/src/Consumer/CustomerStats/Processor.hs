@@ -18,7 +18,7 @@ module Consumer.CustomerStats.Processor
 where
 
 import "rider-app" Domain.Types.BookingCancellationReason as SBCR
-import "dynamic-offer-driver-app" Domain.Types.Ride as DDR
+import "rider-app" Domain.Types.Ride as DDR
 import Environment
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -31,7 +31,7 @@ import "rider-app" Storage.CachedQueries.Merchant.RiderConfig as QRC
 import "rider-app" Storage.Queries.BookingCancellationReason as QBCR
 import "rider-app" Storage.Queries.PersonStats as QP
 import "rider-app" Tools.Error
-import qualified "dynamic-offer-driver-app" Tools.Event as TE
+import qualified "rider-app" Tools.Event as TE
 
 updateCustomerStats :: E.Event TE.Payload -> Text -> Flow ()
 updateCustomerStats event _ = do
@@ -46,6 +46,7 @@ updateCustomerStats event _ = do
             runInReplica $
               QP.findByPersonId personId >>= \case
                 Nothing -> do
+                  logDebug $ "PersonStats not found for personId: " <> personId.getId
                   personData <- getBackfillPersonStatsData personId merchantOperatingCityId
                   QP.createPersonStats personData
                 Just ps | isNotBackfilled ps -> do
@@ -59,7 +60,7 @@ updateCustomerStats event _ = do
             unless (isNotBackfilled personStats) do
               let eventCreatedAt = payload.cAt
               now <- getCurrentTime
-              if isJust maxTimevalue && (diffUTCTime (fromMaybe now maxTimevalue) eventCreatedAt < 0)
+              if isJust maxTimevalue && (diffUTCTime (fromMaybe now maxTimevalue) eventCreatedAt > 0)
                 then do
                   logInfo $ "Event is older than the last event of the same type for personId: " <> personId.getId
                 else do
@@ -91,6 +92,8 @@ updateCustomerStats event _ = do
                       -- Esq.runNoTransaction $ do
                       when (bookingCancellationReason.source == SBCR.ByUser) do QP.incrementUserCancelledRidesCount personId
                       when (bookingCancellationReason.source == SBCR.ByDriver) do QP.incrementDriverCancelledRidesCount personId
-                    _ -> pure ()
+                    _ -> do
+                      logError $ "Event type not handled for personId: " <> personId.getId <> " eventType: " <> show event.eventType
+                      pure ()
   where
     isNotBackfilled personStats_ = all (== 0) [personStats_.userCancelledRides, personStats_.completedRides, personStats_.weekendRides, personStats_.weekdayRides, personStats_.offPeakRides, personStats_.eveningPeakRides, personStats_.morningPeakRides, personStats_.weekendPeakRides]

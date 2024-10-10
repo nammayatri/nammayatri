@@ -85,10 +85,13 @@ data Payload
         merchantOperatingCityId :: Maybe (Id MerchantOperatingCity),
         updatedAt :: UTCTime
       }
-  deriving (Show, Eq, Generic, FromJSON)
+  deriving (Show, Eq, Generic)
 
 instance ToJSON Payload where
   toJSON = genericToJSON constructorsWithSnakeCase
+
+instance FromJSON Payload where
+  parseJSON = genericParseJSON constructorsWithSnakeCase
 
 data RideEventData = RideEventData
   { ride :: DRide.Ride,
