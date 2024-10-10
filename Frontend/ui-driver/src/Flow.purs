@@ -160,6 +160,7 @@ import Presto.Core.Types.Language.Flow (await)
 import Resource.Constants (hvSdkTokenExp)
 import PrestoDOM.Core(terminateUI)
 import Common.RemoteConfig.Utils as CommonRC
+import RemoteConfig.Utils
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenInitData
 import Engineering.Helpers.RippleCircles
 import Screens.RideRequestScreen.ScreenData as RideRequestData
@@ -3735,6 +3736,7 @@ updateBannerAndPopupFlags = do
   appConfig <- getAppConfigFlowBT Constants.appConfig
   rideAndEarnPopup <- callGetPastDaysData appConfig allState.homeScreen
   let
+    coinsConfig = getCoinsConfigData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
     cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
     autoPayNotActive = isNothing getDriverInfoResp.autoPayStatus || getDriverInfoResp.autoPayStatus /= Just "ACTIVE"
     pendingTotalManualDues = fromMaybe 0.0 getDriverInfoResp.manualDues
@@ -3785,7 +3787,7 @@ updateBannerAndPopupFlags = do
         && appConfig.feature.enableYatriCoins
         && cityConfig.enableYatriCoins
         && toBool (getValueToLocalNativeStore IS_RIDE_ACTIVE)  == false 
-        && fromMaybe 0 (fromString $ getValueToLocalStore INTRODUCING_YATRI_POINTS_POPUP_LIMIT) < appConfig.coinsConfig.rideMoreEarnCoinPopupMaxLimit
+        && fromMaybe 0 (fromString $ getValueToLocalStore INTRODUCING_YATRI_POINTS_POPUP_LIMIT) < coinsConfig.rideMoreEarnCoinPopupMaxLimit
         && isCoinPopupNotShownToday
 
     hsState = allState.homeScreen
@@ -3862,11 +3864,12 @@ updateBannerAndPopupFlags = do
 callGetPastDaysData :: AppConfig -> HomeScreenState -> FlowBT String ST.CoinEarnedPopupType
 callGetPastDaysData appConfig hsState = do
   let cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+      coinsConfig = getCoinsConfigData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
       coinPopupInfo = getValueFromCache "COIN_EARNED_POPUP_TYPE" getCoinPopupStatus
       checkCoinIsEnabled = appConfig.feature.enableYatriCoins && cityConfig.enableYatriCoins
       vehicleVariant = hsState.data.vehicleType 
       isAutoRicksaw = RC.getCategoryFromVariant vehicleVariant == Just ST.AutoCategory
-  if ((isPopupShownToday coinPopupInfo.rideMoreEarnCoin && (STR.null coinPopupInfo.rideMoreEarnCoin || (runFn2 isDateNDaysAgo coinPopupInfo.rideMoreEarnCoin appConfig.coinsConfig.rideMoreEarnCoinIntervalLimit))) && checkCoinIsEnabled && isAutoRicksaw && withinTimeRange RC.rideMoreEarnMorePopupStartTime RC.dayEndTime (convertUTCtoISC (getCurrentUTC "") "HH:mm:ss")) then do
+  if ((isPopupShownToday coinPopupInfo.rideMoreEarnCoin && (STR.null coinPopupInfo.rideMoreEarnCoin || (runFn2 isDateNDaysAgo coinPopupInfo.rideMoreEarnCoin coinsConfig.rideMoreEarnCoinIntervalLimit))) && checkCoinIsEnabled && isAutoRicksaw && withinTimeRange RC.rideMoreEarnMorePopupStartTime RC.dayEndTime (convertUTCtoISC (getCurrentUTC "") "HH:mm:ss")) then do
       resp <- lift $ lift $ Remote.getRideStatusPastDays ""
       case resp of
         Right (API.RideStatusPastDaysRes response) ->

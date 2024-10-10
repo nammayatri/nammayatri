@@ -333,25 +333,6 @@ window.getMerchantConfig = function () {
   , "waitTimeConfig" : {
     "enableWaitTime" : true
   }
-  , "coinsConfig" : {
-    "minCoinSliderValue" : 200,
-    "stepFunctionForCoinConversion" : 200,
-    "numOfRideThresholdForCoins" : "8+",
-    "eightPlusRidesCoins" : "+40",
-    "rideCompletedCoins" : "+4",
-    "fiveStarRatingCoins" : "+20",
-    "oneOrTwoStarRatingCoins" : "-40",
-    "rideCancellationCoins" : "-40",
-    "whatAreYatriCoinFAQ" : "",
-    "coinTermsAndConditions" : "https://docs.google.com/document/u/0/d/1hLnxlJLlC8bZIsm3WCoQFf7lsdffy-do",
-    "howToEarnYatriCoinFAQ" : "",
-    "howToRedeemYatriCoinFAQ" : "",
-    "rideCompletedCoinEvent" : true,
-    "eightRideCoinEvent" : true,
-    "bookingCancelCoinEvent" : true,
-    "fiveStarCoinEvent" : true,
-    "oneTwoStarCoinEvent" : true,
-  }
   , "cityConfig" : getAllCityConfig()
   })
 }

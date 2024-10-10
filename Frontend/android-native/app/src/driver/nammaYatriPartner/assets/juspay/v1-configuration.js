@@ -2289,29 +2289,6 @@ window.getMerchantConfig = function () {
         }
       }
   ]
-  , "coinsConfig" : {
-    "minCoinSliderValue" : 50,
-    "stepFunctionForCoinConversion" : 50,
-    "eightPlusRidesCoins" : "+25",
-    "purpleRideCoins" : "+5",
-    "customerReferralCoins" : "+200",
-    "whatAreYatriCoinFAQ" : "https://www.youtube.com/shorts/nc_oicjF9eI",
-    "coinTermsAndConditions" : "https://docs.google.com/document/u/0/d/1hLnxlJLlC8bZIsm3WCoQFf7lsdffy-do",
-    "howToEarnYatriCoinFAQ" : "https://www.youtube.com/shorts/hpmYpwfOG_E",
-    "howToRedeemYatriCoinFAQ" : "https://www.youtube.com/watch?v=XW4WSWQpq80",
-    "twoRideCoinEvent" : true,
-    "fiveRideCoinEvent" : true,
-    "eightRideCoinEvent" : false,
-    "tenRideCoinEvent" : true,
-    "prupleRideCoinEvent" : true,
-    "driverToCustomerRefCoinEvent" : true,
-    "coinConversionPopupLottie" : "https://assets.moving.tech/beckn/common/common/lotties/points_to_discount_points_lottie.json",
-    "driverToCustomerRefPopupEndDate" : "2024-08-01T00:00:00",
-    "monsoonOfferDate": "2024-11-01T00:00:00",
-    "twoPlusRidesCoins" : "+5",
-    "fivePlusRidesCoins" : "+15",
-    "tenPlusRidesCoins" : "+30"
-  }
   , "appUpdatePopupUrl" : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner&pcampaignid=web_share"
   , "dashboard" : {
         "enable" : true,

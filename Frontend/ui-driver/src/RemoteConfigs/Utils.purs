@@ -23,7 +23,7 @@ import Foreign (Foreign)
 import Foreign.Index (readProp)
 import Data.Newtype (class Newtype)
 import Presto.Core.Utils.Encoding (defaultDecode)
-import RemoteConfig.Types (RCSubscription, ReelItem, ReelButtonConfig, HVConfigs, ReferralPopUpDelays, CancellationRateConfig, CancellationRateEntity(..), CancellationThresholdConfig, MetroCoinsEvent, EnableOtpRideConfig , EnableScheduledRides , EnableScheduledRides)
+import RemoteConfig.Types
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
 import Common.RemoteConfig.Utils
@@ -173,6 +173,53 @@ defaultMetroCoinsEvent = {
   minDistance : 0
 }
 
-
 getBundleSplashConfig :: String -> BundleLottieConfig
 getBundleSplashConfig lazy = decodeForeignObject (parseJSON $ fetchRemoteConfigString "driver_bundle_splash_config") $ { lottieUrl : "https://assets.moving.tech/beckn/nammayatri/driver/lottie/ny_bundle_splash_lottie_new.json", enable : true}
+
+defaultCoinsConfig :: CoinsConfig
+defaultCoinsConfig = {
+  minCoinSliderValue : 250,
+  maxCoinSliderValue : 2500,
+  stepFunctionForCoinConversion : 250,
+  twoRidesCompletedThresholdForCoins : "2",
+  fiveRidesCompletedThresholdForCoins : "5",
+  tenRidesCompletedThresholdForCoins : "10",
+  numOfRideThresholdForCoins : "8+",
+  leaderBoardThresholdForCoins : "+500",
+  customerReferralCoins : "+200",
+  twoPlusRidesCoins : "+10",
+  fivePlusRidesCoins : "+30",
+  eightPlusRidesCoins : "+50",
+  tenPlusRidesCoins : "+60",
+  purpleRideCoins : "+5",
+  rideCompletedCoins : "+1",
+  fiveStarRatingCoins : "+1",
+  oneOrTwoStarRatingCoins : "-1",
+  rideCancellationCoins : "-5",
+  whatAreYatriCoinFAQ : "",
+  coinTermsAndConditions : "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9",
+  howToEarnYatriCoinFAQ : "",
+  howToRedeemYatriCoinFAQ : "",
+  rideCompletedCoinEvent : false,
+  twoRideCoinEvent : false,
+  fiveRideCoinEvent : false,
+  eightRideCoinEvent : false,
+  tenRideCoinEvent : false,
+  prupleRideCoinEvent : false,
+  bookingCancelCoinEvent : false,
+  fiveStarCoinEvent : false,
+  oneTwoStarCoinEvent : false,
+  driverToCustomerRefCoinEvent : false,
+  coinConversionPopupLottie : "",
+  driverToCustomerRefPopupEndDate : "",
+  rideMoreEarnCoinIntervalLimit : 7, 
+  rideMoreEarnCoinPopupMaxLimit : 2,
+  monsoonOfferDate : "",
+  coinsValidTill : 150
+}
+
+getCoinsConfigData :: String -> CoinsConfig
+getCoinsConfigData city = do
+    let config = fetchRemoteConfigString "coins_config"
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultCoinsConfig
+    getCityBasedConfig value $ toLower city
