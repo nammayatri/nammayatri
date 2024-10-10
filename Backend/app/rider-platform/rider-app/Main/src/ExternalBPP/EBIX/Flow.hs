@@ -57,7 +57,8 @@ search _merchant _merchantOperatingCity bapConfig searchReq = do
         quotes = quotes,
         validTill = validTill,
         transactionId = searchReq.id.getId,
-        messageId = messageId
+        messageId = messageId,
+        bppDelayedInterest = Nothing
       }
   where
     mkStations :: Station -> Station -> [RouteStopMapping] -> Maybe [DStation]

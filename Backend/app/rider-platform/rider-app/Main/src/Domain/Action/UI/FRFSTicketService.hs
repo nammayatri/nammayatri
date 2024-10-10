@@ -354,6 +354,7 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
   merchantOperatingCity <- Common.getMerchantOperatingCityFromBooking dConfirmRes
   stations <- decodeFromText dConfirmRes.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
   route <- getFRFSRouteAPIRespById dConfirmRes.routeId
+
   now <- getCurrentTime
   when (dConfirmRes.status == DFRFSTicketBooking.NEW && dConfirmRes.validTill > now) $ do
     bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
@@ -405,6 +406,7 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
                 payerVpa = Nothing,
                 cashbackPayoutOrderId = Nothing,
                 cashbackStatus = if isJust quote.discountedTickets then Just DFTB.PENDING else Nothing,
+                bppDelayedInterest = quote.bppDelayedInterest,
                 ..
               }
       QFRFSTicketBooking.create booking

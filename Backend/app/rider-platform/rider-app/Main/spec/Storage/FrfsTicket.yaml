@@ -159,6 +159,7 @@ FRFSQuote:
     partnerOrgId: Maybe (Id PartnerOrganization)
     eventDiscountAmount: Maybe HighPrecMoney
     discountedTickets: Maybe Int
+    bppDelayedInterest : Maybe Int
 
   beamFields:
     price:
@@ -190,7 +191,6 @@ FRFSQuote:
     findAllBySearchId:
       kvFunction: findAllWithKV
       where: searchId
-
 
 FRFSTicketBooking:
   tableName: frfs_ticket_booking
@@ -240,6 +240,7 @@ FRFSTicketBooking:
     payerVpa: Maybe Text
     cashbackStatus: Maybe CashbackStatus
     cashbackPayoutOrderId: Maybe Text
+    bppDelayedInterest : Maybe Int
 
   default:
     customerCancelled: "false"
@@ -346,6 +347,10 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [cashbackPayoutOrderId]
       where: id
+    updateInterestDelayedByQuoteId:
+      kvFunction: updateOneWithKV
+      params: [bppDelayedInterest]
+      where: quoteId
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -711,3 +716,4 @@ FRFSVehicleServiceTier:
     findById:
       kvFunction: findOneWithKV
       where: id
+

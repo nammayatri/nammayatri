@@ -37,6 +37,7 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam._type _type,
+      Se.Set Beam.bppDelayedInterest bppDelayedInterest,
       Se.Set Beam.bppItemId bppItemId,
       Se.Set Beam.bppSubscriberId bppSubscriberId,
       Se.Set Beam.bppSubscriberUrl bppSubscriberUrl,
@@ -76,6 +77,7 @@ instance FromTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
       Just
         Domain.Types.FRFSQuote.FRFSQuote
           { _type = _type,
+            bppDelayedInterest = bppDelayedInterest,
             bppItemId = bppItemId,
             bppSubscriberId = bppSubscriberId,
             bppSubscriberUrl = bppSubscriberUrl,
@@ -112,6 +114,7 @@ instance ToTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
   toTType' (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
     Beam.FRFSQuoteT
       { Beam._type = _type,
+        Beam.bppDelayedInterest = bppDelayedInterest,
         Beam.bppItemId = bppItemId,
         Beam.bppSubscriberId = bppSubscriberId,
         Beam.bppSubscriberUrl = bppSubscriberUrl,
