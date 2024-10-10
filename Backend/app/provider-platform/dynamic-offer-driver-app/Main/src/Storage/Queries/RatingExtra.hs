@@ -45,5 +45,5 @@ checkIfRatingExistsForDriver (Id driverId) = do findAllWithOptionsKV' [Se.Is Bea
 findTopRatingsForDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Types.Person.Person -> Maybe Int -> m [Domain.Types.Rating.Rating]
 findTopRatingsForDriver (Id driverId) limit = do findAllWithOptionsKV' [Se.Is Beam.driverId $ Se.Eq driverId, Se.Is Beam.ratingValue $ Se.In [4, 5], Se.Is Beam.feedbackDetails $ Se.Not $ Se.Eq (Just ""), Se.Is Beam.feedbackDetails $ Se.Not $ Se.Eq Nothing] limit Nothing
 
-findRatingForRideIfPositive :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Types.Ride.Ride -> m (Maybe Domain.Types.Rating.Rating)
-findRatingForRideIfPositive (Id ride) = do findOneWithKV [Se.Is Beam.rideId $ Se.Eq ride, Se.Is Beam.ratingValue $ Se.In [4, 5]]
+findRatingForRideIfPositive :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Domain.Types.Ride.Ride] -> m [Domain.Types.Rating.Rating]
+findRatingForRideIfPositive rideIds = do findAllWithKV [Se.And [Se.Is Beam.rideId $ Se.In (getId <$> rideIds), Se.Is Beam.ratingValue $ Se.In [4, 5]]]
