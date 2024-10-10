@@ -15,135 +15,17 @@
 
 module Lib.DriverCoins.Types
   ( DriverCoinsEventType (..),
-    DriverCoinsFunctionType (..),
-    CoinMessage (..),
+    DCoins.DriverCoinsFunctionType (..),
+    DCoins.CoinMessage (..),
+    DCoins.CoinStatus (..),
   )
 where
 
-import Data.Aeson
-import qualified Data.List as List
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverCoin as DCoins
 import Domain.Types.Ride
 import Kernel.Prelude
 import Kernel.Types.Common (Meters)
 import qualified Text.Show (show)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
-
-data DriverCoinsFunctionType
-  = OneOrTwoStarRating
-  | FiveStarRating
-  | BookingCancellation
-  | CustomerReferral
-  | DriverReferral
-  | RidesCompleted Int
-  | PurpleRideCompleted
-  | LeaderBoardTopFiveHundred
-  | TrainingCompleted
-  | BulkUploadFunction
-  | BulkUploadFunctionV2 CoinMessage
-  | MetroRideCompleted
-  deriving (Show, Eq, Generic, ToSchema, ToJSON, Ord, Typeable)
-
--- These instance are for backward compatibility of the Old Events stored in the DB.
-instance Read DriverCoinsFunctionType where
-  readsPrec d' =
-    readParen
-      (d' > app_prec)
-      ( \r ->
-          [ (RidesCompleted 1, r2)
-            | r1 <- stripPrefix "RideCompleted" r,
-              ((), r2) <- pure ((), r1)
-          ]
-            ++ [ (RidesCompleted 2, r2)
-                 | r1 <- stripPrefix "TwoRidesCompleted" r,
-                   ((), r2) <- pure ((), r1)
-               ]
-            ++ [ (RidesCompleted 5, r2)
-                 | r1 <- stripPrefix "FiveRidesCompleted" r,
-                   ((), r2) <- pure ((), r1)
-               ]
-            ++ [ (RidesCompleted 10, r2)
-                 | r1 <- stripPrefix "TenRidesCompleted" r,
-                   ((), r2) <- pure ((), r1)
-               ]
-            ++ [ (RidesCompleted 8, r2)
-                 | r1 <- stripPrefix "EightPlusRidesInOneDay" r,
-                   ((), r2) <- pure ((), r1)
-               ]
-            ++ [ (OneOrTwoStarRating, r2)
-                 | r1 <- stripPrefix "OneOrTwoStarRating" r,
-                   ((), r2) <- pure ((), r1)
-               ]
-            ++ [ (FiveStarRating, r2)
-                 | r1 <- stripPrefix "FiveStarRating" r,
-                   ((), r2) <- pure ((), r1)
-               ]
-            ++ [ (BookingCancellation, r2)
-                 | r1 <- stripPrefix "BookingCancellation" r,
-                   ((), r2) <- pure ((), r1)
-               ]
-            ++ [ (CustomerReferral, r2)
-                 | r1 <- stripPrefix "CustomerReferral" r,
-                   ((), r2) <- pure ((), r1)
-               ]
-            ++ [ (DriverReferral, r2)
-                 | r1 <- stripPrefix "DriverReferral" r,
-                   ((), r2) <- pure ((), r1)
-               ]
-            ++ [ (PurpleRideCompleted, r2)
-                 | r1 <- stripPrefix "PurpleRideCompleted" r,
-                   ((), r2) <- pure ((), r1)
-               ]
-            ++ [ (LeaderBoardTopFiveHundred, r2)
-                 | r1 <- stripPrefix "LeaderBoardTopFiveHundred" r,
-                   ((), r2) <- pure ((), r1)
-               ]
-            ++ [ (TrainingCompleted, r2)
-                 | r1 <- stripPrefix "TrainingCompleted" r,
-                   ((), r2) <- pure ((), r1)
-               ]
-            ++ [ (BulkUploadFunction, r2)
-                 | r1 <- stripPrefix "BulkUploadFunction" r,
-                   ((), r2) <- pure ((), r1)
-               ]
-            ++ [ (BulkUploadFunctionV2 msg, r2)
-                 | r1 <- stripPrefix "BulkUploadFunctionV2 " r,
-                   (msg, r2) <- readsPrec 10 r1
-               ]
-            ++ [ (MetroRideCompleted, r2)
-                 | r1 <- stripPrefix "MetroRideCompleted" r,
-                   ((), r2) <- pure ((), r1)
-               ]
-            ++ [ (RidesCompleted v1, r2)
-                 | r1 <- stripPrefix "RidesCompleted " r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1
-               ]
-      )
-    where
-      app_prec = 9
-      stripPrefix pref r = bool [] [List.drop (length pref) r] $ List.isPrefixOf pref r
-
-instance FromJSON DriverCoinsFunctionType where
-  parseJSON = withObject "DriverCoinsFunctionType" $ \obj -> do
-    tag <- obj .: "tag"
-    case tag :: String of
-      "RideCompleted" -> pure $ RidesCompleted 1
-      "TwoRidesCompleted" -> pure $ RidesCompleted 2
-      "FiveRidesCompleted" -> pure $ RidesCompleted 5
-      "EightPlusRidesInOneDay" -> pure $ RidesCompleted 8
-      "TenRidesCompleted" -> pure $ RidesCompleted 10
-      "OneOrTwoStarRating" -> pure OneOrTwoStarRating
-      "FiveStarRating" -> pure FiveStarRating
-      "BookingCancellation" -> pure BookingCancellation
-      "CustomerReferral" -> pure CustomerReferral
-      "DriverReferral" -> pure DriverReferral
-      "PurpleRideCompleted" -> pure PurpleRideCompleted
-      "LeaderBoardTopFiveHundred" -> pure LeaderBoardTopFiveHundred
-      "TrainingCompleted" -> pure TrainingCompleted
-      "BulkUploadFunction" -> pure BulkUploadFunction
-      "MetroRideCompleted" -> pure MetroRideCompleted
-      "RidesCompleted" -> RidesCompleted <$> obj .: "contents"
-      "BulkUploadFunctionV2" -> BulkUploadFunctionV2 <$> obj .: "contents"
-      _ -> fail $ "Unknown DriverCoinsFunctionType tag encountered from DB : " ++ tag
 
 data DriverCoinsEventType
   = Rating {ratingValue :: Int, ride :: Ride}
@@ -169,13 +51,3 @@ driverCoinsEventTypeToString = \case
 
 instance Show DriverCoinsEventType where
   show = driverCoinsEventTypeToString
-
-data CoinMessage
-  = CoinAdded
-  | CoinSubtracted
-  | FareRecomputation
-  deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
-
-$(mkBeamInstancesForEnum ''CoinMessage)
-
-$(mkBeamInstancesForEnum ''DriverCoinsFunctionType)

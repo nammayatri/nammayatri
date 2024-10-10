@@ -19,7 +19,6 @@ module Storage.Beam.Coins.CoinHistory where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverCoin as DCoins
 import qualified Database.Beam as B
-import qualified Domain.Types.Coins.CoinHistory as Domain
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common ()
@@ -35,7 +34,7 @@ data CoinHistoryT f = CoinHistoryT
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     expirationAt :: B.C f (Maybe UTCTime),
-    status :: B.C f Domain.CoinStatus,
+    status :: B.C f DCT.CoinStatus,
     coinsUsed :: B.C f Int,
     bulkUploadTitle :: B.C f (Maybe DCoins.Translations),
     entityId :: B.C f (Maybe Text)

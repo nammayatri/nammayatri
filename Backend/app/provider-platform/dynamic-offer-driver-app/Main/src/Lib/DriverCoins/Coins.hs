@@ -31,7 +31,6 @@ where
 
 import qualified Data.Text as T
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
-import Domain.Types.Coins.CoinHistory (CoinStatus (..))
 import qualified Domain.Types.Coins.CoinHistory as DTCC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -46,6 +45,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.DriverCoins.Types
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.CoinsConfig as CDCQ
@@ -233,7 +233,7 @@ sendCoinsNotification :: EventFlow m r => Id DMOC.MerchantOperatingCity -> Id DP
 sendCoinsNotification merchantOpCityId driverId coinsValue =
   B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
     let language = fromMaybe L.ENGLISH driver.language
-        queryType = if coinsValue > 0 then DCT.CoinAdded else DCT.CoinSubtracted
+        queryType = if coinsValue > 0 then CoinAdded else CoinSubtracted
      in MTQuery.findByErrorAndLanguage (T.pack (show queryType)) language >>= processMessage driver
   where
     processMessage driver mbCoinsMessage =
