@@ -48,7 +48,7 @@ import Data.Either (Either(..))
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM (FontWeight(..), fontStyle, lineHeight, textSize, fontWeight)
 import Font.Style (bold, semiBold, medium)
-import Resources.Localizable.EN (getEN)
+import Resource.Localizable.StringsV2 (getString) as StringsV2
 import Resource.Constants
 import Services.API (DriverInfoReq(..), GetDriverInfoResp(..), DriverRegistrationStatusReq(..), DriverProfileDataReq(..))
 
@@ -635,3 +635,6 @@ checkWhyNyOtherSelected state = if state.data.inputTextState.others.aspirations 
 
 checkPledgeOtherSelected :: ST.DriverCompleteProfileScreenState -> Boolean 
 checkPledgeOtherSelected state = if state.data.inputTextState.others.pledge == "" then false else true
+
+getEN :: STR -> String
+getEN = StringsV2.getString "EN_US" 
