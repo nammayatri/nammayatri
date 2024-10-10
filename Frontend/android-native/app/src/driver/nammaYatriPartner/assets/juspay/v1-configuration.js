@@ -778,7 +778,7 @@ window.getMerchantConfig = function () {
         "cityCode" : "std:0816",
         "showSubscriptions" : true,
         "enableAdvancedBooking" : false,
-        "enableGullak": false,
+        "enableGullak": true,
         "advancedRidePopUpYoutubeLink" : "" ,
       "callDriverInfoPost": false, // Dummy link need to change
         "cityLat" : 15.32383804957557,

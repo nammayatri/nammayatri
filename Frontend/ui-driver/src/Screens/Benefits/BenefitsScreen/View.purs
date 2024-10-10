@@ -145,7 +145,7 @@ separatorView push state =
 
 referralScreenInnerBody :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 referralScreenInnerBody push state = 
-  let loadDynamicModule = state.data.cityConfig.enableGullak && (fromMaybe false $ runFn3 getAnyFromWindow "loadDynamicModule" Nothing Just)
+  let loadDynamicModule = fromMaybe false $ runFn3 getAnyFromWindow "loadDynamicModule" Nothing Just
       gullakRemoteConfig = CRC.gullakConfig $ getValueToLocalStore DRIVER_LOCATION
   in linearLayout
   [ width $ MATCH_PARENT
