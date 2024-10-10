@@ -1,5 +1,6 @@
 imports:
   Driver: Dashboard.Common
+  DriverCoinsFunctionType: Dashboard.Common.DriverCoinsExtra
 
 module: DriverCoins # module: Driver.Coins TODO Driver.Coins.yaml should generate Driver.Coins.hs
 apiPrefix: coins
@@ -81,10 +82,5 @@ types:
     - updatedAt: UTCTime
   CoinStatus:
     - enum: "Used, Remaining"
-    - derive: "Read"
-  DriverCoinsFunctionType:
-    - enum: "OneOrTwoStarRating, FiveStarRating, BookingCancellation, CustomerReferral, DriverReferral, PurpleRideCompleted, LeaderBoardTopFiveHundred, TrainingCompleted, BulkUploadFunction, BulkUploadFunctionV2 CoinMessage, MetroRideCompleted, RidesCompleted Int"
-    - derive: "Show, Read"
-  CoinMessage:
-    - enum: "CoinAdded, CoinSubtracted, FareRecomputation"
-    - derive: "Read"
+    - derive: "Read, Ord"
+

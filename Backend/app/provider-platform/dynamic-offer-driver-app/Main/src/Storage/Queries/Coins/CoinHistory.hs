@@ -15,6 +15,7 @@
 
 module Storage.Queries.Coins.CoinHistory where
 
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverCoin as DCoins
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
 import Domain.Types.Coins.CoinHistory
 import qualified Domain.Types.Person as SP
@@ -22,6 +23,7 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.DriverCoins.Types
 import qualified Sequelize as Se
 import qualified Storage.Beam.Coins.CoinHistory as BeamDC
 
@@ -100,7 +102,7 @@ getDriverCoinInfo (Id driverId) timeDiffFromUtc = do
     Nothing
     Nothing
 
-updateStatusOfCoins :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> CoinStatus -> m ()
+updateStatusOfCoins :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> DCoins.CoinStatus -> m ()
 updateStatusOfCoins id coinsRemainingValue newStatus = do
   now <- getCurrentTime
   updateWithKV

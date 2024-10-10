@@ -21,6 +21,7 @@ where
 
 import API.Types.ProviderPlatform.Management.DriverCoins as Reexport
 import Dashboard.Common as Reexport
+import Dashboard.Common.DriverCoinsExtra as Reexport
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForJSON)
 
 $(mkBeamInstancesForEnum ''DriverCoinsFunctionType)
