@@ -120,6 +120,10 @@ RiderConfig:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId
 
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
   sqlType:
     emailOtpConfig: "json"
     kaptureConfig: "json"
