@@ -61,9 +61,7 @@ kaalChakraEvent ::
   m Yudhishthira.RunKaalChakraJobRes
 kaalChakraEvent req = do
   eventId <- getEventId req.chakra
-  if req.updateUserTags
-    then kaalChakraEventInternal eventId req
-    else kaalChakraEventInternal eventId req
+  kaalChakraEventInternal eventId req
 
 kaalChakraEventInternal ::
   (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
@@ -103,8 +101,8 @@ updateUserTagsHandler ::
   m Yudhishthira.RunKaalChakraJobRes
 updateUserTagsHandler h req = do
   if req.updateUserTags
-    then updateUserTagsHandlerInternal skipUpdateUserTagsHandler req
-    else updateUserTagsHandlerInternal h req
+    then updateUserTagsHandlerInternal h req
+    else updateUserTagsHandlerInternal skipUpdateUserTagsHandler req
 
 updateUserTagsHandlerInternal ::
   (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
@@ -403,11 +401,16 @@ clearEventData ::
   Maybe (Id Yudhishthira.Event) ->
   m ()
 clearEventData chakra (Just eventId) = do
+  logInfo $ "finished update tag job for event " <> show eventId
   resetChakraBatchNumber chakra
+  logInfo $ "batch number reset now"
   delChakraEventId chakra
   QUserDataE.deleteUserDataWithEventId eventId
+  logInfo $ "deleted all event user data"
 clearEventData chakra Nothing = do
+  logInfo $ "finished get uesr data job"
   resetChakraBatchNumber chakra
+  logInfo $ "batch number reset now"
 
 -- keeping chakra event in redis
 getEventId :: (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Yudhishthira.Chakra -> m (Id Yudhishthira.Event)
