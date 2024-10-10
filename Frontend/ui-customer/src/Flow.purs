@@ -1104,7 +1104,7 @@ homeScreenFlow = do
     GO_TO_TRIP_TYPE_SELECTION updatedState -> do 
       findEstimates updatedState
     GO_TO_RIDE_SUMMARY_SCREEN updatedState -> do 
-      modifyScreenState $ RideSummaryScreenStateType (\rideSummaryScreen -> RideSummaryScreenData.initData{ data { rideDetails = fetchRideDetails updatedState,extraFare = fetchExtraFares updatedState,fromScreen = (Screen.getScreen Screen.RIDE_SUMMARY_SCREEN)},props{pickUpOpen = true}} )
+      modifyScreenState $ RideSummaryScreenStateType (\rideSummaryScreen -> RideSummaryScreenData.initData{ data { rideDetails = fetchRideDetails updatedState,extraFare = fetchExtraFares updatedState,fromScreen = (Screen.getScreen Screen.RIDE_SUMMARY_SCREEN)},props{pickUpOpen = true,shimmerVisibility=false}} )
       rideSummaryScreenFlow 
     RETRY_FINDING_QUOTES showLoader -> do
       void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS) -- TODO : Handled Loader in IOS Side

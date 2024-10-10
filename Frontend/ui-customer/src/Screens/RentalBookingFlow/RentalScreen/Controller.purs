@@ -251,11 +251,12 @@ genericBackPressed state = case state.data.currentStage of
 openDateTimePicker :: RentalScreenState -> Eval Action ScreenOutput RentalScreenState
 openDateTimePicker state = do 
   let 
-    scheduledUTC = runFn2 EHC.getUTCAfterNSecondsImpl (EHC.getCurrentUTC "") 1860
+    scheduledUTC = runFn2 EHC.getUTCAfterNSecondsImpl (EHC.getCurrentUTC "") 1800
   continueWithCmd state
     [ do 
       push <- getPushFn Nothing "RentalScreen"
-      _ <- launchAff $ showDateTimePicker push DateTimePickerAction (Just scheduledUTC) Nothing true true
+      let maxDate = Just $ EHC.getUTCAfterNHours (EHC.getCurrentUTC "") 120
+      _ <- launchAff $ showDateTimePicker push DateTimePickerAction (Just scheduledUTC) maxDate true true
       pure NoAction
     ]
 
