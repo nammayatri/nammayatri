@@ -29,6 +29,7 @@ library
       Dashboard.Common
       Dashboard.Common.Booking
       Dashboard.Common.Driver
+      Dashboard.Common.DriverCoinsExtra
       Dashboard.Common.Exotel
       Dashboard.Common.Merchant
       Dashboard.Common.Ride
