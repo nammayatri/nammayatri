@@ -172,6 +172,11 @@ initData =
       , onRideBannerTimerID :""
       , onRideBannerTimer : 0
       , scheduleRideCount : Nothing
+      , favPopUp : {
+          visibility : false,
+          title : "",
+          message : ""
+        }
     }
   , props:
       { isFreeRide: false

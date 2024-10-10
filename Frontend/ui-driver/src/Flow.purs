@@ -2690,7 +2690,7 @@ homeScreenFlow = do
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps { gotoPopupType = ST.NO_POPUP_VIEW })
       removeChatService ""
       homeScreenFlow
-    FCM_NOTIFICATION notificationType state -> do
+    FCM_NOTIFICATION notificationType state notificationBody -> do
       if (notificationType /= "EDIT_LOCATION") then void $ pure $ removeAllPolylines "" else pure unit
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showGenericAccessibilityPopUp = false}})
       case notificationType of
@@ -2735,6 +2735,9 @@ homeScreenFlow = do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data {route = []}})
             baseAppFlow false Nothing Nothing
           else pure unit
+        "BECOME_FAVOURITE" -> do
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data {favPopUp {visibility = true}}})
+          homeScreenFlow
         _                   -> homeScreenFlow
     REFRESH_HOME_SCREEN_FLOW -> do
       void $ pure $ removeAllPolylines ""
