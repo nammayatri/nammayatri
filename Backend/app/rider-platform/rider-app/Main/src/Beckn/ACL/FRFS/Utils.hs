@@ -151,8 +151,10 @@ type TxnId = Text
 
 type Amount = Text
 
-mkPayment :: Spec.PaymentStatus -> Maybe Amount -> Maybe TxnId -> Maybe BknPaymentParams -> Maybe Text -> Maybe Currency -> Spec.Payment
-mkPayment paymentStatus mAmount mTxnId mPaymentParams mSettlementType mCurrency =
+type DelayInterest = Text
+
+mkPayment :: Spec.PaymentStatus -> Maybe Amount -> Maybe TxnId -> Maybe BknPaymentParams -> Maybe Text -> Maybe Currency -> Maybe DelayInterest -> Spec.Payment
+mkPayment paymentStatus mAmount mTxnId mPaymentParams mSettlementType mCurrency mbDelayInterest =
   Spec.Payment
     { paymentCollectedBy = Just $ show Enums.BAP,
       paymentId = mTxnId,
@@ -161,7 +163,7 @@ mkPayment paymentStatus mAmount mTxnId mPaymentParams mSettlementType mCurrency 
           then Just $ mkPaymentParams mPaymentParams mTxnId mAmount mCurrency
           else Nothing,
       paymentStatus = encodeToText' paymentStatus,
-      paymentTags = Just $ mkPaymentTags mSettlementType mAmount,
+      paymentTags = Just $ mkPaymentTags mSettlementType mAmount mbDelayInterest,
       paymentType = encodeToText' Spec.PRE_ORDER
     }
   where
@@ -178,11 +180,11 @@ mkPaymentParams mPaymentParams mTxnId mAmount mCurrency =
       paymentParamsVirtualPaymentAddress = mPaymentParams >>= (.vpa)
     }
 
-mkPaymentTags :: Maybe Text -> Maybe Amount -> [Spec.TagGroup]
-mkPaymentTags mSettlementType mAmount =
+mkPaymentTags :: Maybe Text -> Maybe Amount -> Maybe DelayInterest -> [Spec.TagGroup]
+mkPaymentTags mSettlementType mAmount mbDelayInterest =
   catMaybes
     [ Just mkBuyerFinderFeeTagGroup,
-      Just $ mkSettlementTagGroup mAmount mSettlementType,
+      Just $ mkSettlementTagGroup mAmount mSettlementType mbDelayInterest,
       mkSettlementDetailsTagGroup mSettlementType
     ]
 
@@ -212,8 +214,8 @@ mkBuyerFinderFeeTagGroup =
           tagValue = Just "0"
         }
 
-mkSettlementTagGroup :: Maybe Text -> Maybe Text -> Spec.TagGroup
-mkSettlementTagGroup mAmount mSettlementType =
+mkSettlementTagGroup :: Maybe Text -> Maybe Text -> Maybe Text -> Spec.TagGroup
+mkSettlementTagGroup mAmount mSettlementType mbDelayInterest =
   Spec.TagGroup
     { tagGroupDescriptor =
         Just $
@@ -261,7 +263,7 @@ mkSettlementTagGroup mAmount mSettlementType =
                       },
                 tagValue = Just "PT1D"
               },
-          Just $
+          mbDelayInterest <&> \delayInterest ->
             Spec.Tag
               { tagDescriptor =
                   Just $
@@ -270,7 +272,7 @@ mkSettlementTagGroup mAmount mSettlementType =
                         descriptorImages = Nothing,
                         descriptorName = Nothing
                       },
-                tagValue = Just "0"
+                tagValue = Just delayInterest
               },
           Just $
             Spec.Tag

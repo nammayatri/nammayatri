@@ -15,7 +15,7 @@
 module Domain.Action.Internal.Rating where
 
 import Data.Foldable ()
-import Data.OpenApi (ToSchema)
+import Data.OpenApi
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import Domain.Types.Ride (RideStatus (..))

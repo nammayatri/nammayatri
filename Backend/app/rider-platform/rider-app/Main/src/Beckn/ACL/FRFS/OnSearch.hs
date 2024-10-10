@@ -51,6 +51,21 @@ buildOnSearchReq onSearchReq = do
 
   items <- provider.providerItems & fromMaybeM (InvalidRequest "Items not found")
   fulfillments <- provider.providerFulfillments & fromMaybeM (InvalidRequest "Fulfillments not found")
+  payments <- provider.providerPayments & fromMaybeM (InvalidRequest "Payments not found")
+  interestTags <-
+    catMaybes
+      <$> mapM
+        ( \p ->
+            case p.paymentTags of
+              Nothing -> pure Nothing
+              Just paymentTags -> pure $ Utils.getTag "SETTLEMENT_TERMS" "DELAY_INTEREST" paymentTags
+        )
+        payments
+
+  when (null interestTags) $
+    throwError $ InvalidRequest "Payment tags are missing for all payments"
+
+  let bppDelayedInterest = listToMaybe interestTags
 
   quotes <- mkQuotes items fulfillments
 
@@ -64,7 +79,8 @@ buildOnSearchReq onSearchReq = do
         bppSubscriberUrl,
         validTill = ttl,
         transactionId,
-        messageId
+        messageId,
+        bppDelayedInterest
       }
 
 mkQuotes :: (MonadFlow m) => [Spec.Item] -> [Spec.Fulfillment] -> m [Domain.DQuote]
