@@ -42,6 +42,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (length, (..), foldl, filter, (!!), null, last, mapWithIndex, any, head)
 import Data.Either (Either(..), either)
+import RemoteConfig.Utils
 import Data.Function.Uncurried (runFn1, runFn2, runFn5)
 import Data.Int (ceil, floor, fromNumber, toNumber, fromString)
 import Data.String as DS
@@ -838,7 +839,7 @@ faqView push state =
           , margin $ Margin 16 12 0 12
           ]
         <> FontStyle.subHeading2 TypoGraphy
-    , questionsListView push (dummyQuestions state Language) state
+    , questionsListView push (dummyQuestions Language) state
     ]
 
 questionsListView :: forall w. (Action -> Effect Unit) -> Array ST.FaqQuestions -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
@@ -1482,16 +1483,12 @@ alertView push image messagePref message messageSuf showButton backgroundColor c
 convertView :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
 convertView push state =
   let
+    coinsConfig = getCoinsConfigData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
     bounds = runFn1 getLayoutBounds $ getNewIDWithTag "ConvertCoinsSliderView"
-
     marginLeft' = (state.data.coinsToUse * bounds.width) / 100
-
-    setVisibility = if state.data.coinBalance < state.data.config.coinsConfig.minCoinSliderValue || not state.data.hasActivePlan then VISIBLE else GONE
-
-    coinBalanceNearestCeil = ((state.data.coinBalance + state.data.config.coinsConfig.stepFunctionForCoinConversion - 1) / state.data.config.coinsConfig.stepFunctionForCoinConversion) * state.data.config.coinsConfig.stepFunctionForCoinConversion
-
-    coinsDefaultValue = (state.data.coinBalance / state.data.config.coinsConfig.stepFunctionForCoinConversion) * state.data.config.coinsConfig.stepFunctionForCoinConversion
-    
+    setVisibility = if state.data.coinBalance < coinsConfig.minCoinSliderValue || not state.data.hasActivePlan then VISIBLE else GONE
+    coinBalanceNearestCeil = ((state.data.coinBalance + coinsConfig.stepFunctionForCoinConversion - 1) / coinsConfig.stepFunctionForCoinConversion) * coinsConfig.stepFunctionForCoinConversion
+    coinsDefaultValue = (state.data.coinBalance / coinsConfig.stepFunctionForCoinConversion) * coinsConfig.stepFunctionForCoinConversion
     discountPoints = (toNumber coinsDefaultValue) * state.data.coinConversionRate
   in
     linearLayout
@@ -1519,8 +1516,8 @@ convertView push state =
               , onClick push $ const $ ShowCoinsUsagePopup
               ]
           ]
-     , if state.data.coinBalance < state.data.config.coinsConfig.minCoinSliderValue then
-          alertView push "ny_ic_info_yellow" (getString MINIMUM <> " " <> show state.data.config.coinsConfig.minCoinSliderValue <> " " <> getString POINTS_IS_REQUIRED_FOR_CONVERSION) "" "" false Color.yellowOpacity40 8.0 (MarginBottom 8)
+     , if state.data.coinBalance < coinsConfig.minCoinSliderValue then
+          alertView push "ny_ic_info_yellow" (getString MINIMUM <> " " <> show coinsConfig.minCoinSliderValue <> " " <> getString POINTS_IS_REQUIRED_FOR_CONVERSION) "" "" false Color.yellowOpacity40 8.0 (MarginBottom 8)
         else if not state.data.hasActivePlan then
           alertView push "ny_ic_info_yellow" (getString USING_POINTS_REQUIRES_AN_ACTIVE_PLAN <> " ") (getString CHOOSE_A_PLAN <> " ") (getString TO_GET_STARTED) false Color.yellowOpacity40 8.0 (MarginBottom 8)
         else

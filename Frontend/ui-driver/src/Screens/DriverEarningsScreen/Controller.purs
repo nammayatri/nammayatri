@@ -42,6 +42,7 @@ import Foreign.Generic (decodeJSON)
 import Helpers.Utils (checkSpecialPickupZone, getcurrentdate, getDayOfWeek, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag, transformBapName ,dummyLocationInfo )
 import JBridge (pauseYoutubeVideo)
 import Language.Strings (getString)
+import RemoteConfig.Utils
 import Language.Types
 import Log
 import PrestoDOM (Eval, update, continue, exit, ScrollState(..), updateAndExit, continueWithCmd)
@@ -219,6 +220,7 @@ eval (CoinTransactionResponseAction (CoinTransactionRes resp)) state = do
         resp.coinTransactionHistory
   let oldCoinValue = fromMaybe 0 $ fromString $ getValueToLocalStore OLD_COIN_BALANCE
       coinDifference = if oldCoinValue < resp.coinBalance then Just (resp.coinBalance - oldCoinValue) else Nothing
+      coinsConfig = getCoinsConfigData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
   void $ pure $ setValueToLocalNativeStore OLD_COIN_BALANCE $ show resp.coinBalance
   continue
     state
@@ -231,7 +233,7 @@ eval (CoinTransactionResponseAction (CoinTransactionRes resp)) state = do
         , coinsEarnedPreviousDay = resp.coinsEarnedPreviousDay
         , coinsEarnedToday = resp.todayCoinSummary
         , coinHistoryItems = events
-        , coinsToUse = (resp.coinBalance / state.data.config.coinsConfig.stepFunctionForCoinConversion) * state.data.config.coinsConfig.stepFunctionForCoinConversion
+        , coinsToUse = (resp.coinBalance / coinsConfig.stepFunctionForCoinConversion) * coinsConfig.stepFunctionForCoinConversion
         }
       , props { showShimmer = false, showCoinsEarnedAnim = coinDifference}
       }
@@ -634,17 +636,18 @@ updateToState state = do
             Nothing -> 0
   state { props { weekIndex = 3, selectedBarIndex = -1, currWeekData = currentWeekData, totalEarningsData = getTotalCurrentWeekData currentWeekData, currentWeekMaxEarning = currWeekMaxEarning }, data { coinBalance = state.data.coinBalance } }
 
-dummyQuestions :: DriverEarningsScreenState -> LazyCheck -> Array ST.FaqQuestions
-dummyQuestions state lazy =
-  let answer4 = getAnswerConfig (getString $ YATRI_POINTS_FAQS_QUES1_ANS4 "YATRI_POINTS_FAQS_QUES1_ANS4" )
+dummyQuestions :: LazyCheck -> Array ST.FaqQuestions
+dummyQuestions lazy =
+  let coinsConfig = getCoinsConfigData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+      answer4 = getAnswerConfig (getString $ YATRI_POINTS_FAQS_QUES1_ANS4 "YATRI_POINTS_FAQS_QUES1_ANS4" )
   in
     [ { question: getString $ YATRI_POINTS_FAQS_QUES1 "YATRI_POINTS_FAQS_QUES1"
-      , videoLink: videoLinkValue state.data.config.coinsConfig.whatAreYatriCoinFAQ
+      , videoLink: videoLinkValue coinsConfig.whatAreYatriCoinFAQ
       , answer:
           [ getAnswerConfig (getString $ YATRI_POINTS_FAQS_QUES1_ANS1 "YATRI_POINTS_FAQS_QUES1_ANS1")
           , getAnswerConfig (getString $ YATRI_POINTS_FAQS_QUES1_ANS2 "YATRI_POINTS_FAQS_QUES1_ANS2")
           , getAnswerConfig (getString $ YATRI_POINTS_FAQS_QUES1_ANS3 "YATRI_POINTS_FAQS_QUES1_ANS3")
-          , answer4{ hyperLinkText = Just $ getString $ YATRI_POINTS_TNC, hyperLinkUrl = videoLinkValue state.data.config.coinsConfig.coinTermsAndConditions, hyperLinkColor = Nothing}
+          , answer4{ hyperLinkText = Just $ getString $ YATRI_POINTS_TNC, hyperLinkUrl = videoLinkValue coinsConfig.coinTermsAndConditions, hyperLinkColor = Nothing}
           ]
       , showTable: false
       , tag : ST.DiscountPoints
@@ -652,15 +655,15 @@ dummyQuestions state lazy =
     , { question: getString $ YATRI_POINTS_FAQS_QUES2 "YATRI_POINTS_FAQS_QUES2"
       , videoLink: Nothing
       , answer:
-          [ getAnswerConfig $ getString $ YATRI_POINTS_FAQS_QUES2_ANS1 $ show state.data.config.coinsConfig.coinsValidTill
-          , getAnswerConfig $ getString $ YATRI_POINTS_FAQS_QUES2_ANS2 $ show state.data.config.coinsConfig.coinsValidTill
+          [ getAnswerConfig $ getString $ YATRI_POINTS_FAQS_QUES2_ANS1 $ show coinsConfig.coinsValidTill
+          , getAnswerConfig $ getString $ YATRI_POINTS_FAQS_QUES2_ANS2 $ show coinsConfig.coinsValidTill
           , getAnswerConfig $ getString $ YATRI_POINTS_FAQS_QUES2_ANS3
           ]
       , showTable: false
       , tag : ST.PointsValidity
       }
     , { question: getString $ YATRI_POINTS_FAQS_QUES3 "YATRI_POINTS_FAQS_QUES3"
-      , videoLink: videoLinkValue state.data.config.coinsConfig.howToEarnYatriCoinFAQ
+      , videoLink: videoLinkValue coinsConfig.howToEarnYatriCoinFAQ
       , answer:
           [ getAnswerConfig $ getString $ YATRI_POINTS_FAQS_QUES3_ANS1 "YATRI_POINTS_FAQS_QUES3_ANS1"
           , getAnswerConfig $ getString $ YATRI_POINTS_FAQS_QUES3_ANS2 "YATRI_POINTS_FAQS_QUES3_ANS2"
@@ -669,7 +672,7 @@ dummyQuestions state lazy =
       , tag : ST.HowEarnPoints
       }
     , { question: getString $ YATRI_POINTS_FAQS_QUES4 "YATRI_POINTS_FAQS_QUES4"
-      , videoLink: videoLinkValue state.data.config.coinsConfig.howToRedeemYatriCoinFAQ
+      , videoLink: videoLinkValue coinsConfig.howToRedeemYatriCoinFAQ
       , answer:
           [ getAnswerConfig $ getString $ YATRI_POINTS_FAQS_QUES4_ANS1 "YATRI_POINTS_FAQS_QUES4_ANS1"
           , getAnswerConfig $ getString $ YATRI_POINTS_FAQS_QUES4_ANS2 "YATRI_POINTS_FAQS_QUES4_ANS2"

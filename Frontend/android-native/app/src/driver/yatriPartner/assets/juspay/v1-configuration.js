@@ -1559,20 +1559,6 @@ window.getMerchantConfig = function () {
         , "rideStartAudio" : defaultStartAudioConfig
       }
   ]
-  , "coinsConfig" : {
-    "minCoinSliderValue" : 250,
-    "stepFunctionForCoinConversion" : 250,
-    "eightPlusRidesCoins" : "+25",
-    "purpleRideCoins" : "+5",
-    "customerReferralCoins" : "+200",
-    "whatAreYatriCoinFAQ" : "https://www.youtube.com/shorts/nc_oicjF9eI",
-    "coinTermsAndConditions" : "https://docs.google.com/document/u/0/d/1hLnxlJLlC8bZIsm3WCoQFf7lsdffy-do",
-    "howToEarnYatriCoinFAQ" : "https://www.youtube.com/shorts/hpmYpwfOG_E",
-    "howToRedeemYatriCoinFAQ" : "https://www.youtube.com/watch?v=XW4WSWQpq80",
-    "eightRideCoinEvent" : true,
-    "prupleRideCoinEvent" : true,
-    "driverToCustomerRefCoinEvent" : true
-  }
   , "dashboard" : {
         "enable" : true,
         "url" : "https://www.getyatri.com/open?source=in-app"
