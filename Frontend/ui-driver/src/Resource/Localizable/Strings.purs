@@ -22,18 +22,19 @@ import Common.Types.App (LazyCheck(..))
 import Prelude (($))
 import ConfigJBridge (getKeyInSharedPrefKeysConfig)
 import Data.Maybe (Maybe(..))
-import Resources.Localizable.BN (getBN)
-import Resources.Localizable.EN (getEN)
-import Resources.Localizable.HI (getHI)
-import Resources.Localizable.KN (getKN)
-import Resources.Localizable.ML (getML)
-import Resources.Localizable.TA (getTA)
+import Resources.Localizable.BN (getBN, getBnFromJS)
+import Resources.Localizable.EN (getEN, getEnFromJS)
+import Resources.Localizable.HI (getHI, getHiFromJS)
+import Resources.Localizable.KN (getKN, getKnFromJS)
+import Resources.Localizable.ML (getML, getMlFromJS)
+import Resources.Localizable.TA (getTA, getTaFromJs)
 import Resources.Localizable.FR (getFR)
-import Resources.Localizable.TE (getTE)
+import Resources.Localizable.TE (getTE, getTeFromJS)
 import Locale.Utils
 import Prelude
 import Data.String as DS
-
+import Language.Types2 
+import Debug 
 getString :: STR -> String
 getString key = 
   let language = getLanguageLocale languageKey
@@ -56,16 +57,15 @@ getStringFromConfigOrLocal language key =
     Nothing    -> getStringFromLocal language key
 
 getStringFromLocal :: String -> STR -> String
-getStringFromLocal language key = 
+getStringFromLocal language key = do
   case language of
-    "BN_IN" -> getBN key
-    "HI_IN" -> getHI key
-    "KN_IN" -> getKN key
-    "ML_IN" -> getML key
-    "TA_IN" -> getTA key
-    "TE_IN" -> getTE key
-    "FR_FR" -> getFR key
-    _       -> getEN key
+    "BN_IN" -> getBnFromJS $ getJSKey key
+    "HI_IN" -> getHiFromJS $ getJSKey key
+    "KN_IN" -> getKnFromJS $ getJSKey key
+    "ML_IN" -> getMlFromJS $ getJSKey key
+    "TA_IN" -> getTaFromJs $ getJSKey key
+    "TE_IN" -> getTeFromJS $ getJSKey key
+    _       -> getEnFromJS $ getJSKey key
 
 getVarString :: STR -> Array String -> String
 getVarString key vals = getStringWithVar (getString key) vals
