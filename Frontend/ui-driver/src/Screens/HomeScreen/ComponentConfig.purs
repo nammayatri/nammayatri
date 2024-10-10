@@ -87,6 +87,7 @@ import Styles.Types (Color(..))
 import RemoteConfig as RemoteConfig
 import Components.SelectPlansModal.Controller as SelectPlansModal
 import Debug
+import Components.FavouritePopUp.Controller as FavouritePopUp
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -2657,6 +2658,12 @@ referNowConfig state =
         }
   in
     requestInfoCardConfig'
+
+favouritePopUpConfig :: ST.HomeScreenState -> FavouritePopUp.Config
+favouritePopUpConfig state = FavouritePopUp.config {
+  title = state.data.favPopUp.title,
+  message = state.data.favPopUp.message
+}
 
 addUPIConfig :: ST.HomeScreenState -> PopUpModal.Config
 addUPIConfig state =

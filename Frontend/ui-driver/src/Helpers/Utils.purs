@@ -18,7 +18,7 @@ module Helpers.Utils
     , module ReExport
     ) where
 
-import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..))
+import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..), NotificationBody(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null, elemIndex) as DA
@@ -132,7 +132,7 @@ foreign import setRefreshing :: String -> Boolean -> Unit
 foreign import setEnabled :: String -> Boolean -> Unit
 foreign import decodeErrorCode :: String -> String
 foreign import decodeErrorMessage :: String -> String
-foreign import storeCallBackForNotification :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import storeCallBackForNotification :: forall action. (action -> Effect Unit) -> (String -> Maybe NotificationBody -> action) -> Effect Unit --type change
 foreign import storeCallBackForAddRideStop :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import secondsLeft :: String -> Int
 foreign import objectToAllocationType :: String -> AllocationData

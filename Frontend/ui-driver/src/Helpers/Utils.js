@@ -187,6 +187,12 @@ export const storeCallBackForNotification = function (cb) {
   return function (action) {
     return function () {
       try {
+        notificationCallBacks[screenName] = function(notificationType,notificationBody){
+          const parsedNotificationBody = JSON.parse(notificationBody || {});
+          const titleIfAvailable = (parsedNotificationBody.title) ? just (parsedNotificationBody.title) : nothing;
+          const messageIfAvailable = (parsedNotificationBody.message) ? just (parsedNotificationBody.message) : nothing;
+          cb(action(notificationType)({title : titleIfAvailable, message : messageIfAvailable}))();
+        }
         const callback = callbackMapper.map(function (notificationType) {
           if (window.whitelistedNotification.has(notificationType)) {
             cb(action(notificationType))();
