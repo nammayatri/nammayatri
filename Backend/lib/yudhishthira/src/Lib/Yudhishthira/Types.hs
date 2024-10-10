@@ -60,6 +60,7 @@ import qualified Text.Show (show)
 
 data ConfigType
   = DriverPoolConfig
+  | TransporterConfig
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded)
 
 data Source
