@@ -27,7 +27,6 @@ where
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.Beckn.Common as DCommon
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
@@ -46,7 +45,6 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import Tools.Metrics (HasBAPMetrics)
@@ -60,7 +58,7 @@ data OnConfirmReq
 data BookingConfirmedInfo = BookingConfirmedInfo
   { bppBookingId :: Id DRB.BPPBooking,
     specialZoneOtp :: Maybe Text,
-    fareParams :: Maybe [DCommon.DFareBreakup]
+    fareBreakups :: [DCommon.DFareBreakup]
   }
 
 data RideAssignedInfo = RideAssignedInfo
@@ -81,7 +79,7 @@ data RideAssignedInfo = RideAssignedInfo
     vehicleNumber :: Text,
     vehicleColor :: Maybe Text,
     vehicleModel :: Text,
-    fareParams :: Maybe [DCommon.DFareBreakup],
+    fareBreakups :: Maybe [DCommon.DFareBreakup],
     isAlreadyFav :: Bool,
     favCount :: Maybe Int,
     driverAccountId :: Maybe Payment.AccountId
@@ -95,34 +93,8 @@ data ValidatedBookingConfirmedReq = ValidatedBookingConfirmedReq
   { bppBookingId :: Id DRB.BPPBooking,
     specialZoneOtp :: Maybe Text,
     booking :: DRB.Booking,
-    fareParams :: Maybe [DCommon.DFareBreakup]
+    fareBreakups :: [DCommon.DFareBreakup]
   }
-
-createFareBreakup ::
-  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
-    CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m,
-    EncFlow m r,
-    SchedulerFlow r,
-    EsqDBReplicaFlow m r,
-    HasLongDurationRetryCfg r c,
-    HasShortDurationRetryCfg r c,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
-    HasField "storeRidesTimeLimit" r Int,
-    HasBAPMetrics m r,
-    EventStreamFlow m r
-  ) =>
-  Id DRB.Booking ->
-  Maybe [DCommon.DFareBreakup] ->
-  m ()
-createFareBreakup booking fareParams' = do
-  let fareParamsList = fromMaybe [] fareParams'
-  fareBreakups' <- traverse (DCommon.buildFareBreakupV2 booking.getId DFareBreakup.INITIAL_BOOKING) fareParamsList
-  fareBreakups <- traverse (DCommon.buildFareBreakupV2 booking.getId DFareBreakup.BOOKING) fareParamsList
-  QFareBreakup.createMany fareBreakups
-  QFareBreakup.createMany fareBreakups'
 
 onConfirm ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
@@ -143,7 +115,6 @@ onConfirm ::
   ValidatedOnConfirmReq ->
   m ()
 onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
-  createFareBreakup booking.id fareParams
   whenJust specialZoneOtp $ \otp -> do
     void $ QRB.updateOtpCodeBookingId booking.id otp
     when (booking.isDashboardRequest == Just True) $
@@ -193,4 +164,4 @@ validateRequest (RideAssigned RideAssignedInfo {..}) transactionId = do
         email <- mapM decrypt person.email
         return $ Just DCommon.OnlinePaymentParameters {driverAccountId = driverAccountId_, ..}
       else return Nothing
-  return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {onlinePaymentParameters, fareBreakups = Nothing, driverTrackingUrl = Nothing, ..}
+  return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {onlinePaymentParameters, driverTrackingUrl = Nothing, ..}

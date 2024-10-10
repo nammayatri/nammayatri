@@ -39,6 +39,7 @@ data DFareBreakup = DFareBreakup
   { amount :: Price,
     description :: Text
   }
+  deriving (Generic, Show)
 
 getCustomerPaymentId :: Domain.Types.Person.Person -> Environment.Flow CustomerId
 getCustomerPaymentId person =

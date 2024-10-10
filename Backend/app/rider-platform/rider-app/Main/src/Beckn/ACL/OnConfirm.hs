@@ -21,7 +21,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Data.Text as T
-import Domain.Action.Beckn.Common as Common
+import qualified Domain.Action.Beckn.Common as DCommon
 import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -41,9 +41,9 @@ buildOnConfirmReqV2 req isValueAddNP = do
   ContextV2.validateContext Context.ON_CONFIRM req.onConfirmReqContext
   handleErrorV2 req $ \message -> do
     let order = message.confirmReqMessageOrder
-    fareParamsQuotationBreakup <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "quote breakup is not present in RideAssigned Event.") --new
-    fareParams <- traverse ACL.mkDFareBreakup fareParamsQuotationBreakup
-    case parseData message (Just fareParams) of
+    fareParamsQuotationBreakup <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "Missing Quote Breakups.")
+    fareBreakups <- traverse ACL.mkDFareBreakup fareParamsQuotationBreakup
+    case parseData message fareBreakups of
       Right dReq -> do
         case dReq of
           DOnConfirm.BookingConfirmed _ | not isValueAddNP -> do
@@ -55,8 +55,8 @@ buildOnConfirmReqV2 req isValueAddNP = do
         return $ Just dReq
       Left err -> throwError . InvalidBecknSchema $ "on_confirm error:-" <> show err
   where
-    parseData :: Spec.ConfirmReqMessage -> Maybe [Common.DFareBreakup] -> Either Text DOnConfirm.OnConfirmReq
-    parseData message fareParams = do
+    parseData :: Spec.ConfirmReqMessage -> [DCommon.DFareBreakup] -> Either Text DOnConfirm.OnConfirmReq
+    parseData message fareBreakups = do
       let order = message.confirmReqMessageOrder
       bppBookingIdText <- order.orderId & maybe (Left "Missing OrderId") Right
       let bppBookingId = Id bppBookingIdText
@@ -91,7 +91,7 @@ buildOnConfirmReqV2 req isValueAddNP = do
           vehicleNumber <- fulf >>= (.fulfillmentVehicle) >>= (.vehicleRegistration) & maybe (Left "Missing fulfillment.vehicle.registration in on_confirm") Right
           let vehicleColor = fulf >>= (.fulfillmentVehicle) >>= (.vehicleColor)
           vehicleModel <- fulf >>= (.fulfillmentVehicle) >>= (.vehicleModel) & maybe (Left "Missing fulfillment.vehicle.model in on_confirm") Right
-          Right $ DOnConfirm.RideAssigned DOnConfirm.RideAssignedInfo {..}
+          Right $ DOnConfirm.RideAssigned DOnConfirm.RideAssignedInfo {fareBreakups = Just fareBreakups, ..}
         else Right $ DOnConfirm.BookingConfirmed DOnConfirm.BookingConfirmedInfo {specialZoneOtp = mbRideOtp, ..}
 
 handleErrorV2 ::
