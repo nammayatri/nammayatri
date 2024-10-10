@@ -135,7 +135,7 @@ handler merchantId req validatedReq = do
         lon = searchRequest.fromLocation.lon
         merchantOpCityId = searchRequest.merchantOperatingCityId
     transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    DemandHotspots.updateDemandHotspotsOnBooking merchantOpCityId transporterConfig (Maps.LatLong lat lon)
+    DemandHotspots.updateDemandHotspotsOnBooking searchRequest.id merchantOpCityId transporterConfig (Maps.LatLong lat lon)
   let paymentMethodInfo = req.paymentMethodInfo
       bppSubscriberId = req.bppSubscriberId
       estimateId = req.estimateId
