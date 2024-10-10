@@ -34,8 +34,10 @@ triggerEvent event = do
   forM_ streamNames $ \stream -> do
     case streamName stream of
       KAFKA_STREAM -> do
-        let KafkaStream matchedConfig = stream.streamConfig
-        fork "updating in kafka" $ streamUpdates event matchedConfig
+        case stream.streamConfig of
+          KafkaStream matchedConfig -> do
+            fork "updating in kafka" $ streamUpdates event matchedConfig
+          _ -> logDebug "Default stream"
       PROMETHEUS_STREAM -> do
         let merchantId = event.merchantId
         let eventType = show event.eventType
