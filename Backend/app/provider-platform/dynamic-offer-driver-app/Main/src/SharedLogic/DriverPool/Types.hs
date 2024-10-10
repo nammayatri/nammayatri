@@ -155,7 +155,7 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
-data DriverPoolTags = GoHomeDriverToDestination | GoHomeDriverNotToDestination | SpecialZoneQueueDriver | NormalDriver | OnRideDriver
+data DriverPoolTags = GoHomeDriverToDestination | GoHomeDriverNotToDestination | SpecialZoneQueueDriver | NormalDriver | OnRideDriver | FavouriteDriver
   deriving (Generic, Show, FromJSON, ToJSON)
 
 data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
