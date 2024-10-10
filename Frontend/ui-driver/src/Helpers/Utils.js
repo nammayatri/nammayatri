@@ -155,6 +155,19 @@ export const decodeErrorMessage = function (a) {
   }
 };
 
+export const decodeErrorPayload = function (a) {
+  try {
+    const errorPayload = JSON.parse(a).errorPayload;
+    if (errorPayload === null) {
+      return {};
+    }
+    return errorPayload;
+  } catch (e) {
+    console.log(e);
+    return {};
+  }
+};
+
 export const convertKmToM = function (dist) {
   try {
     const distance = parseInt(dist);

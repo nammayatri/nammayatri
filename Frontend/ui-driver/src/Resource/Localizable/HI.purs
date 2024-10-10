@@ -296,6 +296,7 @@ getHI stringKey =
         VEHICLE_ISSUE -> "वाहन का मामला"
         FARE_UPDATED -> "किराया अपडेट किया"
         FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES -> "बार-बार रद्द करने से सवारी कम होगी और रेटिंग कम होगी"
+        FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING -> "बार-बार रद्द करने से ब्लॉकिंग और रेटिंग कम हो जाएगी"
         CONTINUE -> "जारी रखें"
         CONFIRM_PASSWORD -> "पासवर्ड की पुष्टि कीजिये"
         DEMO_MODE -> "डेमो मोड"
@@ -1699,8 +1700,9 @@ getHI stringKey =
         CONTACT_SUPPORT_FOR_HELP -> "सहायता के लिए समर्थन से संपर्क करें"
         YOU_HAVE_SWITCHED_CITY_OR_VEHICLE -> "आपने अपना वाहन या शहर बदल लिया है। राइड्स प्राप्त करने के लिए एक योजना चुनें"
         XL_PLUS -> "XL प्लस"
-
         CURRENTLY_THERE_ARE_NO_RIDES_AVAILABLE -> "वर्तमान में, कोई सवारी उपलब्ध नहीं है।"
+        DUE_TO_HIGHER_CANCELLATION_RATE_YOU_ARE_BLOCKED -> "अधिक रद्दीकरण दर के कारण, आपको ऑनलाइन जाने से रोक दिया गया है"
+        BLOCKED_TILL time date -> date <> ", " <> time <> " तक ब्लॉक किया गया ⚠️"
         RIDE_REQUESTS -> "सवारी अनुरोध"
         SCHEDULED_RIDE_ACCEPTED -> "निर्धारित सवारी स्वीकार की गई!"
         YOU_CAN_ACCESS_SCHEDULED_RIDES -> "आप निर्धारित सवारी तक पहुंच सकते हैं"

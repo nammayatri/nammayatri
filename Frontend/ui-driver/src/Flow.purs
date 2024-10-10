@@ -2680,7 +2680,8 @@ homeScreenFlow = do
       void $ pure $ JB.exitLocateOnMap ""
       void $ pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       void $ pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
-      void $ lift $ lift $ Remote.driverActiveInactive "true" $ toUpper $ show Online
+      resp <- lift $ lift $ Remote.driverActiveInactive "true" $ toUpper $ show Online
+      handleDriverActivityResp resp
       void $ pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
       void $ updateStage $ HomeScreenStage HomeScreen
       when state.data.driverGotoState.isGotoEnabled do
@@ -2696,12 +2697,7 @@ homeScreenFlow = do
       case notificationType of
         "CANCELLED_PRODUCT" -> do
           resp <- lift $ lift $ Remote.driverActiveInactive "true" $ toUpper $ show Online
-          case resp of
-            Right (DriverActiveInactiveResp apiResp) -> do
-              void $ pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
-              void $ pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
-              pure unit
-            Left _ -> pure unit
+          handleDriverActivityResp resp
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
           void $ pure $ clearTimerWithId state.data.activeRide.waitTimerId
           removeChatService ""
@@ -4465,6 +4461,23 @@ rideRequestScreenFlow = do
       
     _                   -> rideRequestScreenFlow
 
+handleDriverActivityResp :: (Either ErrorResponse DriverActiveInactiveResp) -> FlowBT String Unit
+handleDriverActivityResp resp = do
+  case resp of
+    Left err -> do
+      let errResp = err.response
+          codeMessage = decodeErrorCode errResp.errorMessage
+          accountBlocked = err.code == 403 && codeMessage == "DRIVER_ACCOUNT_BLOCKED"
+      when accountBlocked do 
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {statusOnline = false, driverStatusSet = Offline}})
+        updateDriverStatusGlobal "OFFLINE" false
+        void $ setValueToLocalStore DRIVER_STATUS "false"
+        void $ setValueToLocalStore DRIVER_STATUS_N "Offline"
+      pure unit
+    Right _ -> do
+      void $ pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
+      void $ pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
+      pure unit
 
 rideSummaryScreenFlow :: FlowBT String Unit
 rideSummaryScreenFlow = do

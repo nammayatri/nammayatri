@@ -64,7 +64,6 @@ screen initialState listItem =
         ( \action state -> do
             let
               _ = spy "RideRequestScreen state -----" state
-            let
               _ = spy "RideRequestScreen action --------" action
             eval action state
         )
