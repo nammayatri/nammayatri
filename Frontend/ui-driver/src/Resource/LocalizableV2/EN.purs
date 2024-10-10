@@ -882,7 +882,7 @@ getEn =
     , retry_autopay: "Retry Autopay"
     , retry_str: "Retry"
     , ongoing_payment_execution: "There is ongoing manual payment pls wait"
-    , offer_card_banner_title: (\_ date price -> "Setup Autopay and pay only ₹" <> price <> "/day until  <> date")
+    , offer_card_banner_title: (\_ date price -> "Setup Autopay and pay only ₹" <> price <> "/day until  " <> date)
     , offer_card_banner_desc: "Pay only ₹15/Day until Nov 1"
     , offer_card_banner_alert: "Your Autopay Setup is Pending!"
     , or: "OR"
@@ -1265,8 +1265,8 @@ getEn =
     , malayalam: "Malayalam"
     , bengali: "Bengali"
     , english: "English"
-    , you_have_successfully_completed: (\moduleName -> "You have successfully completed  <> moduleName")
-    , all_answers_should_be_correct_to_complete: (\moduleName -> "All answers should be correct to complete  <> moduleName")
+    , you_have_successfully_completed: (\moduleName -> "You have successfully completed " <> moduleName)
+    , all_answers_should_be_correct_to_complete: (\moduleName -> "All answers should be correct to complete " <> moduleName)
     , questions_should_be_correct_to_complete: "questions should be correct to complete"
     , correct: "Correct"
     , retake_quiz: "Retake Quiz"
@@ -1382,7 +1382,7 @@ getEn =
     , we_will_use_this_info: "We will use this information to match with customer expectations regarding the AC"
     , you_can_always_change_this_from_profile: "(You can always change this later from your profile)"
     , is_your_car_ac_turned_on_and_working: "Is your car AC turned on and in working condition?"
-    , set_the_ac_on_to_enable: (\name -> "Set the AC on to enable  <> name")
+    , set_the_ac_on_to_enable: (\name -> "Set the AC on to enable  " <> name)
     , variants_are_switched: "Your preferred AC variants are enabled again"
     , non_ac_are_switched: "Non-AC mini is enabled by default"
     , network_error: "Network Error"
@@ -1429,8 +1429,8 @@ getEn =
     , inc_2b: (\startTime endTime -> " Night time charges: Driving between " <> startTime <> " and " <> endTime <> " will have a flat night time charge added to the fare.  ")
     , pickup_drop: "Pickup & Drop"
     , more_rides: "More rides"
-    , you_are_all_set_to_take_rides: (\merchant_name -> "You're all set to take rides on  <> merchant_name")
-    , top_ac_driver: (\appName -> "See how to be a top AC driver on  <> appName")
+    , you_are_all_set_to_take_rides: (\merchant_name -> "You're all set to take rides on " <> merchant_name)
+    , top_ac_driver: (\appName -> "See how to be a top AC driver on  " <> appName)
     , go_to_advanced_ride: "Go to Advanced Ride"
     , get_advanced_ride: "Get rides even before your current ride ends!"
     , advance: "Advance"
@@ -1452,14 +1452,14 @@ getEn =
     , some_features_may_not_be_available: "Some features may not be available."
     , why: "Why?"
     , some_features_are_not_available_for_third_party_rides: "Some features are not available for third party rides."
-    , booking_from: (\bapName -> "Booking from:  <> bapName")
+    , booking_from: (\bapName -> "Booking from:  " <> bapName)
     , you_are_on_a_intercity_ride: "You are on a intercity ride"
     , pick_up: "Pickup"
     , rate_card: "Rate Card"
     , toll_charges: "Toll Charges"
     , toll_charges_desc: "Any toll charge accrued during the trip is included in your fare."
     , parking_charge: "Parking Charges"
-    , fare_for: (\limit -> "Fare for  <> limit")
+    , fare_for: (\limit -> "Fare for  " <> limit)
     , waiting_charge_limit: (\timeLimit -> "Waiting Charges (after " <> timeLimit <> " mins)")
     , parking_charges_desc: "Parking charges accrued by the driver is not included in the fare. This is to be settled post ride between driver and passenger."
     , tip_can_be_added: (\maxTip -> "Tip of upto ₹" <> maxTip <> " can be added to the ride fare.")
@@ -1470,11 +1470,11 @@ getEn =
     , congestion_charges_desc: (\charges -> "*A Congestion Charge of " <> charges <> "% on your ride is applicable currently to compensate driver’s time in high traffic or to get more drivers available for you")
     , pickup_charge: "Pickup Charges"
     , night_time_charges: (\from till -> "Night-time Charges (" <> from <> " to   " <> till <> ")")
-    , min_fare_upto: (\val -> "Min. Fare upto  <> val")
+    , min_fare_upto: (\val -> "Min. Fare upto  " <> val)
     , more_than: "More than"
     , rate_above_min_fare: "Rate above Min. Fare"
     , driver_pickup_charges: (\_ -> "Driver Pickup Charges")
-    , daytime_charges_applicable_at_night: (\from till -> "x of daytime charges applicable at night from " <> from <> " to  <> till")
+    , daytime_charges_applicable_at_night: (\from till -> "x of daytime charges applicable at night from " <> from <> " to  " <> till)
     , daytime_charges_applied_at_night: (\percentage from till -> percentage <> "x of daytime charges applied to fare at night (🌙) from " <> from <> " to " <> till)
     , total_fare_may_change_due_to_change_in_route: "Total fare may change due to change in route"
     , driver_additions: "Driver Additions*"
@@ -1486,7 +1486,7 @@ getEn =
     , choose_ride_dist: "Choose Ride Distance"
     , rates_change_as_the_dist: "Rates change as the distance of your ride changes"
     , view_booking_pref: "View Booking Preferences"
-    , limited_time_offer_until: (\date -> "Limited time offer until  <> date")
+    , limited_time_offer_until: (\date -> "Limited time offer until " <> date)
     , register_your_bike: "Register your bike"
     , bike_taxi: "Bike Taxi"
     , select_facilities: "Select what facilities your Ambulance have to get rides based on that.\nNote: Ventilator includes AC and Oxygen"
@@ -1526,7 +1526,7 @@ getEn =
     , payout_history: "Payout History"
     , how_to_earn: "How to Earn"
     , received: (\amount -> amount <> " received")
-    , credited_on: (\date -> "Credited on:  <> date")
+    , credited_on: (\date -> "Credited on:  " <> date)
     , referral_bonus_earned: "Referral Bonus Earned"
     , no_activated_referral: "No Activated Referrals"
     , no_active_referral_on_date: "You did not have any activated referrals on the selected date"
@@ -1637,7 +1637,7 @@ getEn =
     , add_upi_id: "Add UPI ID"
     , linked_upi_id: "linked UPI ID"
     , to_get_money: "To get money"
-    , till: (\date -> "till  <> date")
+    , till: (\date -> "till  " <> date)
     , referral_bonus_will_be_credited_to_bank: "Referral bonus will be credited to your bank account"
     , expert_driving: "Expert Driving"
     , clean_vehicle: "Clean Vehicle"
@@ -1663,7 +1663,7 @@ getEn =
     , rental_ride_accepted: "Rental Ride Accepted"
     , points_earned_: (\points -> points <> " Points Earned ✨")
     , for_metro_ride: "For Metro Ride"
-    , continue_with: (\text -> "Continue with  <> text")
+    , continue_with: (\text -> "Continue with " <> text)
     , contact_support_for_help: "Contact support for help"
     , you_have_switched_city_or_vehicle: "You have switched your vehicle or city. Please select a plan to get rides"
     , xl_plus: "XL Plus"
@@ -1709,7 +1709,7 @@ getEn =
     , driver_allowance: "Driver allowance "
     , add_on_km_charge: "Addon km charge"
     , extra_distance_charges: "Extra distance charge*"
-    , base_charge: (\charge -> "Base Charge <> charge")
+    , base_charge: (\charge -> "Base Charge" <> charge)
     , the_customer_will_pay_post_scheduled_ride_start_time: (\amount -> "The customer will pay " <> amount <> " for every extra minute of wait post scheduled ride start time.")
     , clean_auto: "Clean Auto"
     , clean_cab: "Clean Cab"
