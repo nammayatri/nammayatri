@@ -20,7 +20,7 @@ import Screens.TicketBookingFlow.TicketBooking.Transformer
 import Services.API
 import Services.API as API
 import Common.Resources.Constants (zoomLevel)
-import Common.Types.App (ChatFCMData(..), GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate, ProviderType(..), CategoryListType(..),TicketType(..))
+import Common.Types.App (ChatFCMData(..), GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate, ProviderType(..), CategoryListType(..),TicketType(..), Confidence(..))
 import Common.Types.App as CTA
 import Components.ChatView.Controller (makeChatComponent')
 import Components.LocationListItem.Controller (locationListStateObj, dummyAddress)
@@ -154,7 +154,7 @@ import SuggestionUtils
 import ConfigProvider
 import Components.ChatView.Controller (makeChatComponent')
 import Components.MessagingView (ChatComponent)
-import Mobility.Prelude (capitalize)
+import Mobility.Prelude (capitalize, boolToVisibility)
 import Screens.HelpAndSupportScreen.Transformer (reportIssueMessageTransformer)
 import Timers
 import Screens.TicketBookingFlow.PlaceList.View as PlaceListS
@@ -229,6 +229,8 @@ import Components.MessagingView.Controller as CMC
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.Controller as ParcelDeliveryScreenController
 import Screens.Types (TripDetailsGoBackType(..))
 import DecodeUtil
+import Styles.Colors as Color
+import Data.Int (ceil)
 import RemoteConfig as RemoteConfig
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
@@ -560,6 +562,50 @@ riderRideCompletedScreenFlow = do
           modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props { reportPastRide = isRideCompleted }, data { lastRideDetails = if isRideCompleted then Arr.head $ myRideListTransformer true [ state.homeScreen.data.ratingViewState.rideBookingRes ] state.homeScreen.data.config Nothing else Nothing, fromScreen = "RideCompletedScreen" } })
           activateSafetyScreenFlow
         false -> nammaSafetyFlow
+    GO_TO_ISSUE_REPORT_CHAT_SCREEN_WITH_ISSUE updatedState issueType -> do
+      if issueType == CTA.Accessibility then 
+        homeScreenFlow
+      else do
+        let 
+          language = fetchLanguage $ getLanguageLocale languageKey
+          categoryId = case issueType of 
+            CTA.NightSafety -> "f01lail9-0hrg-elpj-skkm-2omgyhk3c2h0"
+            _ -> "ziig3kxh-v0xc-kh0t-q6p1-f1v2n8ucs0kj"
+
+          categoryName = case issueType of 
+            CTA.NightSafety -> "Safety Related Issue"
+            _ -> "Ride related"
+
+        (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language  categoryId "" updatedState.ratingCard.rideId  ""
+        let 
+          getOptionsRes' = mapWithIndex (\index (Option optionObj) -> optionObj {option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option) }) getOptionsRes.options
+          messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) currMessage.messageTitle currMessage.messageAction "Bot" (getCurrentUTC "") "Text" (500*(index + 1))) getOptionsRes.messages
+          chats' = map (\(Message currMessage) -> Chat {chatId : currMessage.id, chatType : "IssueMessage", timestamp : (getCurrentUTC "")} )getOptionsRes.messages
+
+        modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { 
+          data {
+            entryPoint = ReportIssueChatScreenData.RiderRideCompletedScreen
+          , chats = chats'
+          , tripId = Just updatedState.ratingCard.rideId 
+          , selectedCategory = {
+              categoryName : categoryName
+            , categoryId : categoryId
+            , categoryImageUrl : Nothing
+            , categoryAction : Nothing
+            , isRideRequired : false
+            , maxAllowedRideAge : Nothing
+            , categoryType : "Category"
+            , allowedRideStatuses : Nothing
+          }
+          , options = getOptionsRes'
+          , chatConfig {
+              messages = messages' 
+            }
+          , selectedRide = Nothing 
+          } 
+        })
+        void $ pure $ toggleBtnLoader "" false
+        flowRouter IssueReportChatScreenFlow
     GO_TO_DRIVER_PROFILE state -> do
       modifyScreenState $ DriverProfileScreenCommonStateType ( \driverProfileScreen -> driverProfileScreen { props { rideId = state.rideRatingState.rideId } } )
       driverProfileScreenFlow
@@ -3007,7 +3053,7 @@ rideSearchFlow flowType = do
 
 
 getfeedbackReqs :: RiderRideCompletedScreenState -> String -> FeedbackReq
-getfeedbackReqs state audio = (Remote.makeFeedBackReqs (state.ratingCard.rating) (state.rideRatingState.rideId) (state.ratingCard.feedbackText) (Just state.ratingCard.favDriver) audio )
+getfeedbackReqs state audio = (Remote.makeFeedBackReqs (state.ratingCard.rating) (state.rideRatingState.rideId) (state.ratingCard.feedbackText) (Just state.ratingCard.favDriver) audio state.ratingViewState.nightSafety state.ratingViewState.wasOfferedAssistance)
 
 dummyAddressGeometry :: AddressGeometry
 dummyAddressGeometry =
@@ -3167,6 +3213,7 @@ flowRouter flowState = case flowState of
     flowRouter nextFlow
   HomeScreenFlow -> homeScreenFlow
   RiderRideCompleted -> riderRideCompletedScreenFlow
+  RiderRideEndScreen -> riderRideCompletedScreenFlow
   ActivateSafetyScreenFlow -> activateSafetyScreenFlow
   TripDetailsScreenFlow -> tripDetailsScreenFlow
   ContactUsScreenFlow -> contactUsScreenFlow
@@ -3342,6 +3389,7 @@ aboutUsScreenFlow = do
   case flow of
     GO_TO_HOME_FROM_ABOUT -> homeScreenFlow
 
+driverProfileScreenFlow :: FlowBT String Unit
 driverProfileScreenFlow = do
   flow <- UI.driverProfileScreen
   case flow of
@@ -6475,6 +6523,10 @@ fcmHandler notification state notificationBody= do
                                 settings.enablePostRideSafetyCheck == ALWAYS_SHARE || showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime safetyCheckStartTime safetyCheckEndTime settings.enablePostRideSafetyCheck
                               Nothing -> false
           hasTollIssue' = (any (\(FareBreakupAPIEntity item) -> item.description == "TOLL_CHARGES") resp.fareBreakup) && not isBlindPerson
+          finalFareHasToll =  DA.any (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.fareBreakup)
+          estimateFareHasToll =  DA.any (\entity  -> entity ^._description == "TOLL_CHARGES") (resp.estimatedFareBreakup)
+          parkingCharges = DA.find (\entity  -> entity ^._description == "PARKING_CHARGE") (resp.fareBreakup)
+          
         updateScheduledRides true true
         modifyScreenState
           $ HomeScreenStateType
@@ -6586,11 +6638,32 @@ fcmHandler notification state notificationBody= do
                         }
                     , isSafetyCenterDisabled = state.props.isSafetyCenterDisabled
                     , bookingId = state.props.bookingId
+                    , additionalCharges = [
+                        {
+                          text :  getString if ride.tollConfidence == (Just Unsure) then  STR.TOLL_ROAD_CHANGED else if finalFareHasToll then  STR.TOLL_CHARGES_INCLUDED else STR.TOLL_ROAD_CHANGED 
+                        , visibility : boolToVisibility $ finalFareHasToll || estimateFareHasToll
+                        , image :  fetchImage FF_COMMON_ASSET "ny_ic_grey_toll"
+                        , textColor : Color.black700
+                        },
+                        {
+                          text : maybe "" (\parking ->  getString $ STR.PARKING_CHARGES_INCLUDED $ (getCurrency appConfig) <>  (show $ ceil $ parking ^. _amount)) parkingCharges
+                        , visibility : boolToVisibility $ isJust parkingCharges 
+                        , image : fetchImage FF_COMMON_ASSET "ny_ic_parking_logo_grey"
+                        , textColor : Color.black700
+                        }
+                      ]
+                    , customerIssue = riderRideCompletedScreen.customerIssue
+                        { showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
+                        , hasAccessibilityIssue = hasAccessibilityIssue'
+                        , hasSafetyIssue = hasSafetyIssue'
+                        , hasTollIssue = hasTollIssue'
+                        }
                   }
               )
         riderRideCompletedScreenFlow
       else
         riderRideCompletedScreenFlow
+
     "CANCELLED_PRODUCT" -> do -- REMOVE POLYLINES
       logStatus "ride_cancelled_notification" ("bookingId : " <> state.props.bookingId)
       updateScheduledRides true true
@@ -6697,6 +6770,7 @@ fcmHandler notification state notificationBody= do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { driverInfoCardState {destination = "" , destinationLat = 0.0, destinationLng =0.0, destinationAddress = getAddressFromBooking dummyBookingDetails} } }) 
       homeScreenFlow
     _ -> homeScreenFlow
+  
 
 pickupInstructionsScreenFlow :: FlowBT String Unit
 pickupInstructionsScreenFlow = do

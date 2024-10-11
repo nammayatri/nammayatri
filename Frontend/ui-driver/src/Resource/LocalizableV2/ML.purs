@@ -1537,7 +1537,6 @@ getMl =
     , rating: "റേറ്റിംഗ്"
     , cancellation: "റദ്ദാക്കല്‍"
     , i_speak: "ഞാന്‍ സംസാരിക്കുന്നു"
-    , with_nammayatri_for: "നമ്മയാത്രിയുമായി"
     , years: "വര്‍ഷങ്ങളായി"
     , vehicle_number: "വാഹന നമ്പര്‍: "
     , what_people_say: "ആള്‍ക്കാര്‍ പറയുന്നത്"
@@ -1600,7 +1599,8 @@ getMl =
     , pet_friendly: "പാലത്തുകാർക്ക് സൗഹൃദം"
     , from_where: "മൂലപ്രദേശം"
     , driving_since: "ഓടുന്ന കാലം"
-    , why_ny: "ഞാൻ ഓട്ടോ ഓടിക്കാൻ എന്തുകൊണ്ട് തിരഞ്ഞെടുക്കുന്നു?"
+    , why_ny: (\variant -> "ഞാൻ "<> variant <>" ഓടിക്കാൻ എന്തുകൊണ്ട് തിരഞ്ഞെടുക്കുന്നു?")
+    , cab: "കാബ്"
     , new_home: "പുതിയ വീട് വാങ്ങുക"
     , kid_education: "മക്കളുടെ വിദ്യാഭ്യാസം"
     , new_vehicle: "പുതിയ വാഹന വാങ്ങുക"
@@ -1719,4 +1719,5 @@ getMl =
     , good_services: "നല്ല സേവനം"
     , smooth_driving: "മൃദുവായ ഡ്രൈവിംഗ്"
     , no_cancellation: "റദ്ദാക്കൽ ഇല്ല"
+    , with_nammayatri_for: (\years -> "നമ്മയാത്രിയോടൊപ്പം "<> years <>"+ വർഷങ്ങളായി")
     }

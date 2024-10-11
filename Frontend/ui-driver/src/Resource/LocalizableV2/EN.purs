@@ -1537,7 +1537,6 @@ getEn =
     , rating: "Rating"
     , cancellation: "Cancellation"
     , i_speak: "I Speak"
-    , with_nammayatri_for: "With NammaYatri for"
     , years: "years"
     , vehicle_number: "Vehicle Number: "
     , what_people_say: "What People Say"
@@ -1595,7 +1594,8 @@ getEn =
     , pet_friendly: "Pet Friendly"
     , from_where: "HomeTown"
     , driving_since: "Driving Since"
-    , why_ny: "Why did i choose to drive auto?"
+    , why_ny: (\variant -> "Why did i choose to drive " <> variant <> "?")
+    , cab: "Cab"
     , new_home: "Buy New Home"
     , kid_education: "Kid's Education"
     , new_vehicle: "Buy New Vehicle"
@@ -1719,4 +1719,5 @@ getEn =
     , good_services: "Good Service"
     , smooth_driving: "Smooth Driving"
     , no_cancellation: "No Cancellation"
+    , with_nammayatri_for: (\years -> "With NammaYatri for " <> years <> "+ years")
     }

@@ -1370,7 +1370,7 @@ getKN stringKey =
         TRIPS -> "ಪ್ರಯಾಣಗಳು"
         I_SPEAK -> "ನಾನು ಮಾತನಾಡುತ್ತೇನೆ"
         AND -> " ಮತ್ತು "
-        WITH_NAMMAYATRI_FOR -> "ನಮ್ಮಯಾತ್ರಿಯೊಂದಿಗೆ"
+        WITH_NAMMAYATRI_FOR years -> "ನಮ್ಮಯಾತ್ರಿಯೊಂದಿಗೆ " <> years <> "+ ವರ್ಷಗಳಿಂದ"
         YEARS -> "ವರ್ಷಗಳಿಂದ"
         VEHICLE_NUMBER -> "ವಾಹನ ಸಂಖ್ಯೆ: "
         WHAT_PEOPLE_SAY -> "ಜನರು ಏನು ಹೇಳುತ್ತಾರೆ"

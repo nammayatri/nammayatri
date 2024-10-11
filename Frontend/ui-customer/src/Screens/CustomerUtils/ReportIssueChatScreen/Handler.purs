@@ -77,6 +77,13 @@ reportIssueChatScreen = do
 
     GoToFaqScreen updatedState -> goToFaqScreenHandler updatedState
 
+    RideEndScreen updatedState -> callRideEndScreen updatedState
+
+callRideEndScreen :: ReportIssueChatScreenState -> FlowBT String FlowState
+callRideEndScreen updatedState = do
+  modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> updatedState )
+  App.BackT $ App.NoBack <$> (pure $ RiderRideEndScreen)
+
 selectIssueOptionHandler :: ReportIssueChatScreenState -> FlowBT String FlowState
 selectIssueOptionHandler updatedState = do 
 

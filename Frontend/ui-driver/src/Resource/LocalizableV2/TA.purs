@@ -1538,7 +1538,6 @@ getTa =
     , rating: "மதிப்பீடு"
     , cancellation: "ரத்தாக்கல்"
     , i_speak: "நான் பேசுகிறேன்"
-    , with_nammayatri_for: "நம்மயாத்திரியுடன்"
     , years: "ஆண்டுகளாக"
     , vehicle_number: "வாகன எண்: "
     , what_people_say: "மக்கள் என்ன கூறுகிறார்கள்"
@@ -1599,7 +1598,8 @@ getTa =
     , pet_friendly: "பிராணி நண்பரானது"
     , from_where: "தாயக நகரம்"
     , driving_since: "ஓட்ட தொடங்கிய நாள்"
-    , why_ny: "நான் ஆட்டோ ஓட்டத் தேர்ந்தது ஏன்?"
+    , why_ny: (\variant -> "நான் ஏன் "<> variant <>" ஓட்ட தேர்வு செய்தேன்")
+    , cab: "கேப்"
     , new_home: "சொந்த நகரம்"
     , kid_education: "குழந்தைகளின் கல்வி"
     , new_vehicle: "புதிய வாகனம் வாங்க"
@@ -1719,4 +1719,5 @@ getTa =
     , good_services: "நல்ல சேவை"
     , smooth_driving: "மென்மையான ஓட்டம்"
     , no_cancellation: "ரத்து இல்லை"
+    , with_nammayatri_for: (\years -> "நம்மயாத்திரியுடன் "<> years <>"+ ஆண்டுகளாக")
     }

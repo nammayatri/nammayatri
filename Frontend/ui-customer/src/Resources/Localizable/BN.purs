@@ -1367,7 +1367,7 @@ getBN stringKey =
         TRIPS -> "যাত্রা"
         I_SPEAK -> "আমি বলি"
         AND -> " এবং "
-        WITH_NAMMAYATRI_FOR -> "নামাযাত্রী সঙ্গে"
+        WITH_NAMMAYATRI_FOR years -> "নম্মা যাত্রীর সাথে " <> years <> "+ বছর"
         YEARS -> "বছর"
         VEHICLE_NUMBER -> "যানবাহন নম্বর: "
         WHAT_PEOPLE_SAY -> "মানুষ কি বলে"

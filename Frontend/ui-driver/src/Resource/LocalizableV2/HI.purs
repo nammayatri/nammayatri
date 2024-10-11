@@ -1537,7 +1537,6 @@ getHi =
     , rating: "रेटिंग"
     , cancellation: "रद्दीकरण"
     , i_speak: "मैं बोलता हूँ"
-    , with_nammayatri_for: "नम्मायात्री के साथ"
     , years: "सालों से"
     , vehicle_number: "वाहन नंबर: "
     , what_people_say: "लोग क्या कहते हैं"
@@ -1600,7 +1599,8 @@ getHi =
     , pet_friendly: "पालतू जानवर के अनुकूल"
     , from_where: "गृहनगर"
     , driving_since: "ड्राइविंग शुरू"
-    , why_ny: "मैंने ऑटो चलाना क्यों चुना?"
+    , why_ny: (\variant -> "मैंने "<> variant <>" चलाना क्यों चुना?")
+    , cab: "कैब"
     , new_home: "नया घर खरीदें"
     , kid_education: "बच्चों की शिक्षा"
     , new_vehicle: "नया वाहन खरीदें"
@@ -1719,4 +1719,5 @@ getHi =
     , good_services: "अच्छी सेवा"
     , smooth_driving: "स्मूद ड्राइविंग"
     , no_cancellation: "कोई रद्द नहीं"
+    , with_nammayatri_for: (\years -> "नम्म यात्री के साथ " <> years <> "+ वर्षों से")
     }

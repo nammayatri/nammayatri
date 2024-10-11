@@ -1537,7 +1537,6 @@ getBn =
     , rating: "রেটিং"
     , cancellation: "বাতিল"
     , i_speak: "আমি বলি"
-    , with_nammayatri_for: "নামাযাত্রী সঙ্গে"
     , years: "বছর"
     , vehicle_number: "যানবাহন নম্বর: "
     , what_people_say: "মানুষ কি বলে"
@@ -1600,7 +1599,8 @@ getBn =
     , pet_friendly: "পোষ্য-বান্ধব"
     , from_where: "জন্মস্থান"
     , driving_since: "ড্রাইভিং শুরু"
-    , why_ny: "আমি কেন অটো চালানোর সিদ্ধান্ত নিলাম?"
+    , why_ny: (\variant -> "আমি কেন "<> variant <>" চালানোর সিদ্ধান্ত নিলাম?")
+    , cab: "ক্যাব"
     , new_home: "নতুন বাড়ি কেনা"
     , kid_education: "শিশুর শিক্ষা"
     , new_vehicle: "নতুন গাড়ি কেনা"
@@ -1719,4 +1719,5 @@ getBn =
     , good_services: "ভালো সেবা"
     , smooth_driving: "মসৃণ ড্রাইভিং"
     , no_cancellation: "কোন বাতিল নেই"
+    , with_nammayatri_for: (\years -> "নম্মা যাত্রীর সাথে " <> years <> "+ বছর")
     }

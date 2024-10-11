@@ -106,7 +106,7 @@ driverDetailsView push config uid nid = let
                 , maxLines 2
                 , ellipsize true
                 , accessibility DISABLE
-                , color Color.black800
+                , color Color.blue900
                 , width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , gravity LEFT
@@ -116,7 +116,7 @@ driverDetailsView push config uid nid = let
                 , width $ V 12
                 , margin $ Margin 3 3 0 0
                 , accessibilityHint $ "Go To Driver Profile"
-                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right"
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_blue"
                 ]
              ]
           

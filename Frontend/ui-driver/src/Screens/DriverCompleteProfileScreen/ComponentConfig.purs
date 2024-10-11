@@ -8,11 +8,11 @@ import Language.Strings (getString, getVarString)
 import Language.Types(STR(..))
 import Data.Maybe(isJust)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine, scrollView)
-import Prelude((<>), (/), unit, ($), (-), (==))
+import Prelude((<>), (/), unit, ($), (-), (==), show)
 import Engineering.Helpers.Utils as EHU
 import Components.AddImagesModel as AddImagesModel
 import Components.ViewImageModel as ViewImageModel
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getPastYears)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getPastYears, getVehicleVariantName)
 import Components.InputTextView as InputTextView
 import Data.Array((:))
 import Components.InputTextView.Controller
@@ -70,7 +70,7 @@ viewImageModelConfig state = let
 inputTextConfig :: ST.DriverCompleteProfileScreenState -> InputTextView.InputTextConfig
 inputTextConfig state =
   { data:
-    { title : if state.data.inputTextState.component == ST.Pledge then getString PLEDGE else getString WHY_NY
+    { title : if state.data.inputTextState.component == ST.Pledge then getString PLEDGE else getString $ WHY_NY $ getVehicleVariantName state.data.vehicleType
     , doneButtonConfig:
       PrimaryButton.config
         { textConfig

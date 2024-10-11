@@ -18,7 +18,7 @@ module Helpers.Utils
     , module ReExport
     ) where
 
-import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..))
+import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..), VehicleCategory(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null, elemIndex) as DA
@@ -1074,3 +1074,12 @@ vehicleVariantImage vehicle =
                   "TAXI"  ->  "ny_ic_taxi_left_view"
                   "SUV" ->     "ny_ic_suv_left_view"
                   _       ->  "ny_ic_auto_left_view"
+
+getVehicleVariantName :: VehicleCategory -> String
+getVehicleVariantName variant = 
+    case variant of 
+                  AutoCategory -> getString AUTO
+                  CarCategory -> getString CAB
+                  BikeCategory -> getString BIKE_TAXI
+                  AmbulanceCategory -> getString AMBULANCE
+                  UnKnown -> ""

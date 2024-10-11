@@ -1537,7 +1537,6 @@ getKn =
     , rating: "ಮೌಲ್ಯಮಾಪನ"
     , cancellation: "ರದ್ದತಿ"
     , i_speak: "ನಾನು ಮಾತನಾಡುತ್ತೇನೆ"
-    , with_nammayatri_for: "ನಮ್ಮಯಾತ್ರಿಯೊಂದಿಗೆ"
     , years: "ವರ್ಷಗಳಿಂದ"
     , vehicle_number: "ವಾಹನ ಸಂಖ್ಯೆ: "
     , what_people_say: "ಜನರು ಏನು ಹೇಳುತ್ತಾರೆ"
@@ -1599,7 +1598,8 @@ getKn =
     , pet_friendly: "ಪಾಲ್ತು ಮೃದುವಾದ"
     , from_where: "ಮೂಲನಗರ"
     , driving_since: "ಮೂಡಲಿರುಳು"
-    , why_ny: "ನಾನು ಆटो ಓಡಿಸುವುದನ್ನು ಏಕೆ ಆಯ್ಕೆ ಮಾಡಿದೆ?"
+    , why_ny: (\variant -> "ನಾನು "<> variant <>" ಓಡಿಸುವುದನ್ನು ಏಕೆ ಆಯ್ಕೆ ಮಾಡಿದೆ?")
+    , cab: "ಕ್ಯಾಬ್"
     , new_home: "ಹೊಸ ಮನೆ ಖರೀದಿಸಿ"
     , kid_education: "ಮಕ್ಕಳ ಶಿಕ್ಷಣ"
     , new_vehicle: "ಹೊಸ ವಾಹನ ಖರೀದಿಸಿ"
@@ -1719,4 +1719,5 @@ getKn =
     , good_services: "ಉತ್ತಮ ಸೇವೆ"
     , smooth_driving: "ನಾದ್ರು ಡ್ರೈವಿಂಗ್"
     , no_cancellation: "ಯಾವುದೇ ರದ್ದುಪಡಿಸಲು ಇಲ್ಲ"
+    , with_nammayatri_for: (\years -> "ನಮ್ಮಯಾತ್ರಿಯೊಂದಿಗೆ " <> years <> "+ ವರ್ಷಗಳಿಂದ")
     }
