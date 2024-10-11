@@ -140,7 +140,7 @@ rideSummaryCardConfig (BookingAPIEntity entity) =
     currency = entity.currency
     estimatedFare = entity.estimatedFare
     isAirConditioned = (fromMaybe false entity.isAirConditioned) || (fromMaybe false (map (\x -> x > 0.0) entity.vehicleServiceTierAirConditioned)) 
-    isVehicleAirConditioned = any (_ == vehicleServiceTier)["COMFY","ECO","SUV","HATCHBACK_TIER","TAXI_PLUS"]
+    isVehicleAirConditioned = any (_ == vehicleServiceTier)["COMFY","ECO","SUV","HATCHBACK_TIER","TAXI_PLUS","SUV_PLUS"]
     isVehicleNonAirConditioned = any (_ == vehicleServiceTier)["AUTO_RICKSHAW","SEDAN_TIER","PREMIUM","TAXI"]
     vehicleServiceTierAirConditioned = isAirConditioned || (isVehicleAirConditioned && not isVehicleNonAirConditioned)
     vehicleServiceTierSeatingCapacity = fromMaybe 4 entity.vehicleServiceTierSeatingCapacity
@@ -163,6 +163,7 @@ rideSummaryCardConfig (BookingAPIEntity entity) =
                                                                   "HATCHBACK_TIER" -> "ic_hatchback_ac"
                                                                   "TAXI" -> "ic_taxi"
                                                                   "TAXI_PLUS" -> "ny_ic_sedan_ac"
+                                                                  "SUV_PLUS" -> "ny_ic_suv_plus_side"
                                                                   _ -> "ny_ic_sedan")
       , rideAmount : (estimatedFare)
       , vehicleInfo :

@@ -172,15 +172,12 @@ scheduledDetailsView push state =
 primaryButtonView :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w
 primaryButtonView push state =
   linearLayout
-    [ height WRAP_CONTENT
+    [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , gravity BOTTOM
-    , margin (MarginBottom 24)
-    , alignParentBottom "true,-1"
-    ]
-    [ PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
-    ]
+  , margin $ MarginBottom $ if EHC.os == "IOS" then EHC.safeMarginBottom else 24
+    ][ PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
 
 rideDetailsView :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w
 rideDetailsView push state =

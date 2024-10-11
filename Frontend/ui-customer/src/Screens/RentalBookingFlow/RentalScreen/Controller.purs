@@ -255,7 +255,8 @@ openDateTimePicker state = do
   continueWithCmd state
     [ do 
       push <- getPushFn Nothing "RentalScreen"
-      _ <- launchAff $ showDateTimePicker push DateTimePickerAction (Just scheduledUTC) Nothing true true
+      let maxDate = Just $ EHC.getUTCAfterNHours (EHC.getCurrentUTC "") 120
+      _ <- launchAff $ showDateTimePicker push DateTimePickerAction (Just scheduledUTC) maxDate true true
       pure NoAction
     ]
 

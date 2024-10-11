@@ -793,7 +793,13 @@ oneWayTripView push state =
       width MATCH_PARENT,
       weight 1.0
     ][]
-  , viewFareButton state push
+  , linearLayout [
+    width MATCH_PARENT,
+    height $ V 1,
+    background Color.grey900,
+    margin $ MarginVertical 4 4
+    ][]
+   , PrimaryButton.view (push <<< PrimaryButtonActionController)(viewFareButtonConfig state "OneWayTripButton")
    ]
 
 roundTripView :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM ( Effect Unit) w
@@ -811,7 +817,13 @@ roundTripView push state =
       width MATCH_PARENT,
       weight 1.0
     ][]
-  , viewFareButton state push
+  , linearLayout [
+    width MATCH_PARENT,
+    height $ V 1,
+    background Color.grey900,
+    margin $ MarginVertical 4 4
+    ][]
+  , PrimaryButton.view (push <<< PrimaryButtonActionController)(viewFareButtonConfig state "RoundTripButton")
    ]
 
 selectorConfig' :: SearchLocationModelState -> SelectorController.BaseConfig
@@ -862,24 +874,6 @@ itemsArrayConfig' state = let
     ]
     in itemsArrayConfig
 
-viewFareButton :: forall w. SearchLocationModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-viewFareButton state push = linearLayout
-  [
-    width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation VERTICAL
-  , background Color.white900
-  ]
-  [
-  linearLayout [
-    width MATCH_PARENT,
-    height $ V 1,
-    background Color.grey900,
-    margin $ MarginVertical 4 4
-    ][]
-  , PrimaryButton.view (push <<< PrimaryButtonActionController)(viewFareButtonConfig state)
-  ]
-
 formatDuration :: Int -> String
 formatDuration duration =
   let days = duration / (60 * 60 * 24)
@@ -892,8 +886,8 @@ formatDuration duration =
       minutesStr = if minutes > 0 then show minutes <> " mins " else ""
   in daysStr <> hoursStr <> minutesStr
 
-viewFareButtonConfig :: SearchLocationModelState -> PrimaryButton.Config
-viewFareButtonConfig state =
+viewFareButtonConfig :: SearchLocationModelState -> String -> PrimaryButton.Config
+viewFareButtonConfig state id' =
   let 
     config = PrimaryButton.config
     viewFareButtonConfig' = config
@@ -908,7 +902,7 @@ viewFareButtonConfig state =
       , background = state.appConfig.primaryBackground
       , margin = (Margin 16 14 16 14)
       , isClickable = true
-      , id = "ViewFareButton"
+      , id = id' 
       , enableRipple = true
       , rippleColor = Color.rippleShade
       }
