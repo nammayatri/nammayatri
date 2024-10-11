@@ -172,6 +172,9 @@ import DecodeUtil as DU
 import Helpers.SplashUtils (hideSplashAndCallFlow, toggleSetupSplash)
 import RemoteConfig as RemoteConfig
 import Control.Apply as CA
+import Data.Function.Uncurried as UC
+import Screens.Benefits.BenefitsScreen.Controller as BSC
+import PrestoDOM.Core (getPushFn)
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -588,6 +591,7 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
               hideSplashAndCallFlow customerReferralTrackerFlow
             "alerts" -> do
               hideSplashAndCallFlow notificationFlow
+            _ | startsWith "ginit" e.data -> hideSplashAndCallFlow $ gullakDeeplinkFlow e.data
             _ -> pure unit
         Nothing -> pure unit
   (GlobalState allState) <- getState
@@ -598,6 +602,33 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
     ScreenNames.SUBSCRIPTION_SCREEN -> hideSplashAndCallFlow updateAvailableAppsAndGoToSubs
     _ -> pure unit
   checkPreRequisites activeRideResp isActiveRide
+
+gullakDeeplinkFlow :: String -> FlowBT String Unit
+gullakDeeplinkFlow event = do
+  let token = getValueToLocalStore GULLAK_TOKEN
+      gullakRemoteConfig = CommonRC.gullakConfig $ getValueToLocalStore DRIVER_LOCATION
+      splitLinkArr = split (Pattern "+") event
+      loadDynamicModule = fromMaybe false $ UC.runFn3 DU.getAnyFromWindow "loadDynamicModule" Nothing Just
+      showVideo = (fromMaybe "" (splitLinkArr !! 1)) == "true"
+      installOnly = (fromMaybe "" (splitLinkArr !! 2)) == "true"
+      videoLink = fromMaybe "" gullakRemoteConfig.videoUrl
+  if not loadDynamicModule then homeScreenFlow else do
+    push <- lift $ lift $ liftFlow $ getPushFn Nothing "BenefitsScreen"
+    if HU.isTokenWithExpValid token then do
+      void $ pure $ UC.runFn4 JB.emitJOSEventWithCb "gl_sdk" (JB.josEventInnerPayload {param1 = token, param2 = show installOnly}) push BSC.GullakSDKResponse
+      pure unit
+    else do
+      response <- lift $ lift $ HelpersAPI.callApi $ API.GetSdkTokenReq "0" API.Gullak
+      case response of
+        Left _ -> do
+          void $ pure $ JB.toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+          pure unit
+        Right (API.GetSdkTokenResp resp) -> do
+          void $ pure $ setValueToLocalStore GULLAK_TOKEN $ resp.token <> "<$>" <> fromMaybe "" resp.expiry
+          void $ pure $ UC.runFn4 JB.emitJOSEventWithCb "gl_sdk" (JB.josEventInnerPayload {param1 = resp.token, param2 = show installOnly}) push BSC.GullakSDKResponse
+          pure unit
+    if showVideo && (not (DS.null videoLink)) then void $ liftFlowBT $ JB.openUrlInApp videoLink else pure unit
+    homeScreenFlow
 
 
 checkPreRequisites :: Maybe GetRidesHistoryResp -> Maybe Boolean -> FlowBT String Unit
