@@ -53,6 +53,8 @@ RiderConfig:
     payoutBatchSize: Maybe Int
     payoutBatchDelay: NominalDiffTime
     makeMultiModalSearch: Bool
+    maximumWalkDistance: Meters
+
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -66,6 +68,7 @@ RiderConfig:
     executePaymentDelay: Maybe Seconds
     cancellationPaymentDelay: Maybe Seconds
     makeMultiModalSearch: Maybe Bool
+    maximumWalkDistance: Maybe Meters
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -82,6 +85,7 @@ RiderConfig:
     avgSpeedInKmPerHr: fromMaybe 20 avgSpeedInKmPerHr|E
     payoutBatchDelay: fromMaybe 10 (Kernel.Utils.Common.secondsToNominalDiffTime <$> payoutBatchDelay)|E
     makeMultiModalSearch: fromMaybe False makeMultiModalSearch|E
+    maximumWalkDistance: fromMaybe (600) maximumWalkDistance|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -95,6 +99,7 @@ RiderConfig:
     avgSpeedInKmPerHr: Just avgSpeedInKmPerHr|E
     payoutBatchDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     makeMultiModalSearch: Just makeMultiModalSearch|E
+    maximumWalkDistance: Just maximumWalkDistance|E
 
   default:
     enableLocalPoliceSupport: "false"
@@ -115,6 +120,7 @@ RiderConfig:
     exotelStatusCheckSchedulerDelay: "120"
     avgSpeedInKmPerHr: "20"
     makeMultiModalSearch: "false"
+    maximumWalkDistance: "600"
 
   queries:
     findByMerchantOperatingCityId:

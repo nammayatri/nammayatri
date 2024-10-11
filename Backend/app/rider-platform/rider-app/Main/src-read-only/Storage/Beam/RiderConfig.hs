@@ -42,6 +42,7 @@ data RiderConfigT f = RiderConfigT
     kaptureQueue :: B.C f Kernel.Prelude.Text,
     localPoliceNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     makeMultiModalSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    maximumWalkDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     payoutBatchDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     payoutBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

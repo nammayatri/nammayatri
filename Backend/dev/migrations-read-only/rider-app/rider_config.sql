@@ -123,3 +123,10 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN cancellation_payment_delay integer
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN make_multi_modal_search boolean  default false;
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN maximum_walk_distance integer  default 600;

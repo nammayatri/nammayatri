@@ -43,6 +43,7 @@ data RiderConfig = RiderConfig
     kaptureQueue :: Kernel.Prelude.Text,
     localPoliceNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     makeMultiModalSearch :: Kernel.Prelude.Bool,
+    maximumWalkDistance :: Kernel.Types.Common.Meters,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     payoutBatchDelay :: Kernel.Prelude.NominalDiffTime,
     payoutBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
