@@ -80,6 +80,7 @@ import qualified Domain.Types.MerchantMessage as DMM
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.MerchantPushNotification as DMPN
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.Overlay as DMO
@@ -140,6 +141,7 @@ import qualified Storage.CachedQueries.Merchant.LeaderBoardConfig as CQLBC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CQMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CQMPN
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.Overlay as CQMO
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
@@ -1608,108 +1610,219 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
   baseOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   now <- getCurrentTime
 
+  cityAlreadyCreated <- CQMOC.findByMerchantIdAndCity merchant.id req.city
+
+  newMerchantOperatingCityId :: Id MerchantOperatingCity <-
+    case cityAlreadyCreated of
+      Just newCity -> return newCity.id
+      Nothing -> generateGUID
+
   -- city
   baseOperatingCity <- CQMOC.findById baseOperatingCityId >>= fromMaybeM (InvalidRequest "Base Operating City not found")
-  newOperatingCity <- buildMerchantOperatingCity merchant.id baseOperatingCity
+  let mbNewOperatingCity =
+        case cityAlreadyCreated of
+          Nothing -> Just $ buildMerchantOperatingCity merchant.id baseOperatingCity newMerchantOperatingCityId
+          _ -> Nothing
 
   -- intelligent pool config
-  intelligentPoolConfig <- CDIPC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Intelligent Pool Config not found")
-  let newIntelligentPoolConfig = buildIntelligentPoolConfig newOperatingCity.id now intelligentPoolConfig
+  mbInteglligentPoolConfig <-
+    CDIPC.findByMerchantOpCityId newMerchantOperatingCityId Nothing >>= \case
+      Nothing -> do
+        intelligentPoolConfig <- CDIPC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Intelligent Pool Config not found")
+        let newIntelligentPoolConfig = buildIntelligentPoolConfig newMerchantOperatingCityId now intelligentPoolConfig
+        return $ Just newIntelligentPoolConfig
+      _ -> return Nothing
 
   -- driver pool config
-  driverPoolConfigs <- CQDPC.findAllByMerchantOpCityId baseOperatingCityId
-  newDriverPoolConfigs <- mapM (buildPoolConfig newOperatingCity.id now) driverPoolConfigs
+  mbDriverPoolConfigs <-
+    CQDPC.findAllByMerchantOpCityId newMerchantOperatingCityId >>= \case
+      [] -> do
+        driverPoolConfigs <- CQDPC.findAllByMerchantOpCityId baseOperatingCityId
+        newDriverPoolConfigs <- mapM (buildPoolConfig newMerchantOperatingCityId now) driverPoolConfigs
+        return $ Just newDriverPoolConfigs
+      _ -> return Nothing
 
   -- fare products
-  fareProducts <- CQFProduct.findAllFareProductByMerchantOpCityId baseOperatingCityId
-  newFareProducts <- mapM (buildFareProduct newOperatingCity.id) fareProducts
+  mbFareProducts <-
+    CQFProduct.findAllFareProductByMerchantOpCityId newMerchantOperatingCityId >>= \case
+      [] -> do
+        fareProducts <- CQFProduct.findAllFareProductByMerchantOpCityId baseOperatingCityId
+        newFareProducts <- mapM (buildFareProduct newMerchantOperatingCityId) fareProducts
+        return $ Just newFareProducts
+      _ -> return Nothing
 
   -- vehicle service tier
-  vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId baseOperatingCityId
-  newVehicleServiceTiers <- mapM (buildVehicleServiceTier newOperatingCity.id) vehicleServiceTiers
+  mbVehicleServiceTier <-
+    CQVST.findAllByMerchantOpCityId newMerchantOperatingCityId >>= \case
+      [] -> do
+        vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId baseOperatingCityId
+        newVehicleServiceTiers <- mapM (buildVehicleServiceTier newMerchantOperatingCityId) vehicleServiceTiers
+        return $ Just newVehicleServiceTiers
+      _ -> return Nothing
 
   -- go home config
-  goHomeConfig <- CGHC.findByMerchantOpCityId baseOperatingCityId Nothing
-  let newGoHomeConfig = buildGoHomeConfig newOperatingCity.id now goHomeConfig
+  mbGoHomeConfig <-
+    try @_ @SomeException (CGHC.findByMerchantOpCityId newMerchantOperatingCityId Nothing) >>= \case
+      Left _ -> do
+        goHomeConfig <- CGHC.findByMerchantOpCityId baseOperatingCityId Nothing
+        let newGoHomeConfig = buildGoHomeConfig newMerchantOperatingCityId now goHomeConfig
+        return $ Just newGoHomeConfig
+      Right _ -> return Nothing
 
   -- leader board configs
-  leaderBoardConfigs <- CQLBC.findAllByMerchantOpCityId baseOperatingCityId
-  newLeaderBoardConfigs <- mapM (buildLeaderBoardConfig newOperatingCity.id) leaderBoardConfigs
+  mbLeaderBoardConfig <-
+    CQLBC.findAllByMerchantOpCityId newMerchantOperatingCityId >>= \case
+      [] -> do
+        leaderBoardConfigs <- CQLBC.findAllByMerchantOpCityId baseOperatingCityId
+        newLeaderBoardConfigs <- mapM (buildLeaderBoardConfig newMerchantOperatingCityId) leaderBoardConfigs
+        return $ Just newLeaderBoardConfigs
+      _ -> return Nothing
 
   -- merchant message
-  merchantMessages <- CQMM.findAllByMerchantOpCityId baseOperatingCityId
-  let newMerchantMessages = map (buildMerchantMessage newOperatingCity.id now) merchantMessages
+  mbMerchantMessages <-
+    CQMM.findAllByMerchantOpCityId newMerchantOperatingCityId >>= \case
+      [] -> do
+        merchantMessages <- CQMM.findAllByMerchantOpCityId baseOperatingCityId
+        let newMerchantMessages = map (buildMerchantMessage newMerchantOperatingCityId now) merchantMessages
+        return $ Just newMerchantMessages
+      _ -> return Nothing
 
   -- merchant overlay
-  merchantOverlays <- CQMO.findAllByMerchantOpCityId baseOperatingCityId
-  newMerchantOverlays <- mapM (buildMerchantOverlay newOperatingCity.id) merchantOverlays
+  mbMerchantOverlays <-
+    CQMO.findAllByMerchantOpCityId newMerchantOperatingCityId >>= \case
+      [] -> do
+        merchantOverlays <- CQMO.findAllByMerchantOpCityId baseOperatingCityId
+        newMerchantOverlays <- mapM (buildMerchantOverlay newMerchantOperatingCityId) merchantOverlays
+        return $ Just newMerchantOverlays
+      _ -> return Nothing
 
   -- merchant payment method
-  merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId baseOperatingCityId
-  newMerchantPaymentMethods <- mapM (buildMerchantPaymentMethod newOperatingCity.id now) merchantPaymentMethods
+  mbMerchantPaymentMethods <-
+    CQMPM.findAllByMerchantOpCityId newMerchantOperatingCityId >>= \case
+      [] -> do
+        merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId baseOperatingCityId
+        newMerchantPaymentMethods <- mapM (buildMerchantPaymentMethod newMerchantOperatingCityId now) merchantPaymentMethods
+        return $ Just newMerchantPaymentMethods
+      _ -> return Nothing
 
   -- merchant service usage config
-  merchantServiceUsageConfig <- CQMSUC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Merchant Service Usage Config not found")
-  let newMerchantServiceUsageConfig = buildMerchantServiceUsageConfig newOperatingCity.id now merchantServiceUsageConfig
+  mbMerchantServiceUsageConfig <-
+    CQMSUC.findByMerchantOpCityId newMerchantOperatingCityId Nothing >>= \case
+      Nothing -> do
+        merchantServiceUsageConfig <- CQMSUC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Merchant Service Usage Config not found")
+        let newMerchantServiceUsageConfig = buildMerchantServiceUsageConfig newMerchantOperatingCityId now merchantServiceUsageConfig
+        return $ Just newMerchantServiceUsageConfig
+      _ -> return Nothing
 
   -- merchant service config
-  merchantServiceConfigs <- CQMSC.findAllMerchantOpCityId baseOperatingCityId
-  let newMerchantServiceConfigs = map (buildMerchantServiceConfig newOperatingCity.id now) merchantServiceConfigs
+  mbMerchantServiceConfigs <-
+    CQMSC.findAllMerchantOpCityId newMerchantOperatingCityId >>= \case
+      [] -> do
+        merchantServiceConfigs <- CQMSC.findAllMerchantOpCityId baseOperatingCityId
+        let newMerchantServiceConfigs = map (buildMerchantServiceConfig newMerchantOperatingCityId now) merchantServiceConfigs
+        return $ Just newMerchantServiceConfigs
+      _ -> return Nothing
+
+  -- merchant push notification
+  mbMerchantPushNotification <-
+    CQMPN.findAllByMerchantOpCityId newMerchantOperatingCityId >>= \case
+      [] -> do
+        merchantPushNotification <- CQMPN.findAllByMerchantOpCityId baseOperatingCityId
+        newMerchantPushNotifications <- mapM (buildMerchantPushNotification newMerchantOperatingCityId now) merchantPushNotification
+        return $ Just newMerchantPushNotifications
+      _ -> return Nothing
 
   -- onboarding document config
-  documentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId baseOperatingCityId
-  let newDocumentVerificationConfigs = map (buildNewDocumentVerificationConfig newOperatingCity.id now) documentVerificationConfigs
+  mbDocumentVerificationConfigs <-
+    CQDVC.findAllByMerchantOpCityId newMerchantOperatingCityId >>= \case
+      [] -> do
+        documentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId baseOperatingCityId
+        let newDocumentVerificationConfigs = map (buildNewDocumentVerificationConfig newMerchantOperatingCityId now) documentVerificationConfigs
+        return $ Just newDocumentVerificationConfigs
+      _ -> return Nothing
 
   -- payout config
-  payoutConfigs <- CPC.findAllByMerchantOpCityId baseOperatingCityId
-  let newPayoutConfigs = map (buildPayoutConfig newOperatingCity.id merchant.id now) payoutConfigs
+  mbPayoutConfigs <-
+    CPC.findAllByMerchantOpCityId newMerchantOperatingCityId >>= \case
+      [] -> do
+        payoutConfigs <- CPC.findAllByMerchantOpCityId baseOperatingCityId
+        let newPayoutConfigs = map (buildPayoutConfig newMerchantOperatingCityId merchant.id now) payoutConfigs
+        return $ Just newPayoutConfigs
+      _ -> return Nothing
 
   -- transporter config
-  transporterConfig <- CTC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Transporter Config not found")
-  let newTransporterConfig = buildTransporterConfig newOperatingCity.id now transporterConfig
+  mbTransporterConfig <-
+    CTC.findByMerchantOpCityId newMerchantOperatingCityId Nothing >>= \case
+      Nothing -> do
+        transporterConfig <- CTC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Transporter Config not found")
+        let newTransporterConfig = buildTransporterConfig newMerchantOperatingCityId now transporterConfig
+        return $ Just newTransporterConfig
+      Just _ -> return Nothing
 
   -- geometry
-  geometry <- buildGeometry
+  mbGeometry <-
+    QGEO.findGeometryByStateAndCity req.city req.state >>= \case
+      Nothing -> do
+        Just <$> buildGeometry
+      _ -> return Nothing
 
   -- call ride exophone
-  exophones <- CQExophone.findAllCallExophoneByMerchantOpCityId baseOperatingCityId
+  mbExophone <-
+    CQExophone.findAllCallExophoneByMerchantOpCityId newMerchantOperatingCityId >>= \case
+      [] -> do
+        exophones <- CQExophone.findAllCallExophoneByMerchantOpCityId baseOperatingCityId
+        return $ Just exophones
+      _ -> return Nothing
 
   -- issue config
-  issueConfig <- CQIssueConfig.findByMerchantOpCityId (cast baseOperatingCityId) ICommon.DRIVER >>= fromMaybeM (InvalidRequest "Issue Config not found")
-  newIssueConfig <- buildIssueConfig newOperatingCity.id now issueConfig
+  mbIssueConfig <-
+    CQIssueConfig.findByMerchantOpCityId (cast newMerchantOperatingCityId) ICommon.DRIVER >>= \case
+      Nothing -> do
+        issueConfig <- CQIssueConfig.findByMerchantOpCityId (cast baseOperatingCityId) ICommon.DRIVER >>= fromMaybeM (InvalidRequest "Issue Config not found")
+        newIssueConfig <- buildIssueConfig newMerchantOperatingCityId now issueConfig
+        return $ Just newIssueConfig
+      _ -> return Nothing
 
-  QGEO.create geometry
-  CQMOC.create newOperatingCity
-  CQDIPC.create newIntelligentPoolConfig
-  mapM_ CQDPC.create newDriverPoolConfigs
-  mapM_ CQFProduct.create newFareProducts
-  CQVST.createMany newVehicleServiceTiers
-  CQGHC.create newGoHomeConfig
-  mapM_ CQLBC.create newLeaderBoardConfigs
-  mapM_ CQMM.create newMerchantMessages
-  mapM_ CQMO.create newMerchantOverlays
-  mapM_ CQMPM.create newMerchantPaymentMethods
-  CQMSUC.create newMerchantServiceUsageConfig
-  mapM_ CQMSC.create newMerchantServiceConfigs
-  mapM_ CQDVC.create newDocumentVerificationConfigs
-  mapM_ CPC.create newPayoutConfigs
-  CQTC.create newTransporterConfig
-  whenJust (find (\exophone -> exophone.exophoneType == DExophone.CALL_RIDE) exophones) $ \exophone -> do
-    exophone' <- buildNewExophone newOperatingCity.id now exophone
-    CQExophone.create exophone'
-  CQIssueConfig.create newIssueConfig
+  whenJust mbGeometry $ \geometry -> QGEO.create geometry
+  whenJust mbNewOperatingCity $ \newOperatingCity -> CQMOC.create newOperatingCity
+  whenJust mbInteglligentPoolConfig $ \newIntelligentPoolConfig -> CQDIPC.create newIntelligentPoolConfig
+  whenJust mbDriverPoolConfigs $ \newDriverPoolConfigs -> mapM_ CQDPC.create newDriverPoolConfigs
+  whenJust mbFareProducts $ \newFareProducts -> mapM_ CQFProduct.create newFareProducts
+  whenJust mbVehicleServiceTier $ \newVehicleServiceTiers -> CQVST.createMany newVehicleServiceTiers
+  whenJust mbGoHomeConfig $ \newGoHomeConfig -> CQGHC.create newGoHomeConfig
+  whenJust mbLeaderBoardConfig $ \newLeaderBoardConfigs -> mapM_ CQLBC.create newLeaderBoardConfigs
+  whenJust mbMerchantMessages $ \newMerchantMessages -> mapM_ CQMM.create newMerchantMessages
+  whenJust mbMerchantOverlays $ \newMerchantOverlays -> mapM_ CQMO.create newMerchantOverlays
+  whenJust mbMerchantPaymentMethods $ \newMerchantPaymentMethods -> mapM_ CQMPM.create newMerchantPaymentMethods
+  whenJust mbMerchantServiceUsageConfig $ \newMerchantServiceUsageConfig -> CQMSUC.create newMerchantServiceUsageConfig
+  whenJust mbMerchantServiceConfigs $ \newMerchantServiceConfigs -> mapM_ CQMSC.create newMerchantServiceConfigs
+  whenJust mbMerchantPushNotification $ \newMerchantPushNotifications -> mapM_ CQMPN.create newMerchantPushNotifications
+  whenJust mbDocumentVerificationConfigs $ \newDocumentVerificationConfigs -> mapM_ CQDVC.create newDocumentVerificationConfigs
+  whenJust mbPayoutConfigs $ \newPayoutConfigs -> mapM_ CPC.create newPayoutConfigs
+  whenJust mbTransporterConfig $ \newTransporterConfig -> CQTC.create newTransporterConfig
+
+  whenJust mbExophone $ \exophones ->
+    whenJust (find (\exophone -> exophone.exophoneType == DExophone.CALL_RIDE) exophones) $ \exophone -> do
+      exophone' <- buildNewExophone newMerchantOperatingCityId now exophone
+      CQExophone.create exophone'
+  whenJust mbIssueConfig $ \newIssueConfig -> CQIssueConfig.create newIssueConfig
 
   when req.enableForMerchant $ do
     let newOrigin = updateGeoRestriction merchant.geofencingConfig.origin
         newDestination = updateGeoRestriction merchant.geofencingConfig.destination
-    CQM.updateGeofencingConfig merchant.id newOrigin newDestination
-    CQM.clearCache merchant
+    when (checkGeofencingConfig merchant.geofencingConfig.origin) $ do
+      CQM.updateGeofencingConfig merchant.id newOrigin newDestination
+      CQM.clearCache merchant
 
-  pure $ Common.CreateMerchantOperatingCityRes newOperatingCity.id.getId
+  pure $ Common.CreateMerchantOperatingCityRes newMerchantOperatingCityId.getId
   where
     updateGeoRestriction = \case
       Unrestricted -> Unrestricted
       Regions regions -> Regions $ regions <> [show req.city]
+
+    checkGeofencingConfig = \case
+      Regions regions -> notElem (show req.city) regions
+      Unrestricted -> True
 
     buildGeometry = do
       id <- generateGUID
@@ -1722,22 +1835,20 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             geom = Just req.geom
           }
 
-    buildMerchantOperatingCity merchantId baseCity = do
-      id <- generateGUID
-      pure
-        DMOC.MerchantOperatingCity
-          { id,
-            merchantId,
-            merchantShortId,
-            location = Maps.LatLong req.lat req.long,
-            city = req.city,
-            state = req.state,
-            country = req.country,
-            supportNumber = req.supportNumber <|> baseCity.supportNumber,
-            language = fromMaybe baseCity.language req.primaryLanguage,
-            currency = fromMaybe baseCity.currency req.currency,
-            distanceUnit = fromMaybe baseCity.distanceUnit req.distanceUnit
-          }
+    buildMerchantOperatingCity merchantId baseCity newCityId = do
+      DMOC.MerchantOperatingCity
+        { id = newCityId,
+          merchantId,
+          merchantShortId,
+          location = Maps.LatLong req.lat req.long,
+          city = req.city,
+          state = req.state,
+          country = req.country,
+          supportNumber = req.supportNumber <|> baseCity.supportNumber,
+          language = fromMaybe baseCity.language req.primaryLanguage,
+          currency = fromMaybe baseCity.currency req.currency,
+          distanceUnit = fromMaybe baseCity.distanceUnit req.distanceUnit
+        }
 
     buildIntelligentPoolConfig newCityId currentTime DDIPC.DriverIntelligentPoolConfig {..} =
       DDIPC.DriverIntelligentPoolConfig
@@ -1851,6 +1962,17 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
           updatedAt = currentTime,
           ..
         }
+
+    buildMerchantPushNotification newCityId currentTime DMPN.MerchantPushNotification {..} = do
+      newId <- generateGUID
+      return $
+        DMPN.MerchantPushNotification
+          { merchantOperatingCityId = newCityId,
+            createdAt = currentTime,
+            updatedAt = currentTime,
+            id = newId,
+            ..
+          }
 
     buildNewDocumentVerificationConfig newCityId currentTime DVC.DocumentVerificationConfig {..} =
       DVC.DocumentVerificationConfig
