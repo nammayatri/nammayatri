@@ -838,12 +838,11 @@ createPayoutService ::
   Id Person ->
   Maybe [Text] ->
   Maybe EntityName ->
-  Maybe Text ->
   Text ->
   PT.CreatePayoutOrderReq ->
   (PT.CreatePayoutOrderReq -> m PT.CreatePayoutOrderResp) ->
   m (Maybe PT.CreatePayoutOrderResp, Maybe Payment.PayoutOrder)
-createPayoutService merchantId _personId mbEntityIds mbEntityName mbPrevOrderId city createPayoutOrderReq createPayoutOrderCall = do
+createPayoutService merchantId _personId mbEntityIds mbEntityName city createPayoutOrderReq createPayoutOrderCall = do
   mbExistingPayoutOrder <- QPayoutOrder.findByOrderId createPayoutOrderReq.orderId
   case mbExistingPayoutOrder of
     Nothing -> do
@@ -875,7 +874,7 @@ createPayoutService merchantId _personId mbEntityIds mbEntityName mbPrevOrderId 
             status = resp.status,
             responseMessage = (.responseMessage) =<< txn,
             responseCode = (.responseCode) =<< txn,
-            retriedOrderId = mbPrevOrderId,
+            retriedOrderId = Nothing,
             accountDetailsType = (.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< resp.fulfillments, --- for now only one fullfillment supported
             vpa = Just req.customerVpa,
             customerEmail = customerEmail,

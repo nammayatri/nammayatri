@@ -75,6 +75,11 @@ PayoutOrder:
       kvFunction: updateOneWithKV
       params: [responseCode, responseMessage]
       where: orderId
+    updateRetriedOrderId:
+      kvFunction: updateOneWithKV
+      params: [retriedOrderId]
+      where: orderId
+
   extraOperations:
   - EXTRA_QUERY_FILE
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"

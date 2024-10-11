@@ -122,6 +122,7 @@ types:
     - payoutOrderId: Text
     - responseMessage: Maybe Text
     - responseCode: Maybe Text
+    - payoutRetriedOrderId: Maybe Text
   UpdateFraudStatusReq:
     - isFlagConfirmed: Bool # false means pay
     - firstRideId: Id Ride

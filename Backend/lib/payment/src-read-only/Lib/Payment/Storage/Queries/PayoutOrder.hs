@@ -46,6 +46,9 @@ updatePayoutOrderTxnRespInfo responseCode responseMessage orderId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.responseCode responseCode, Se.Set Beam.responseMessage responseMessage, Se.Set Beam.updatedAt _now] [Se.Is Beam.orderId $ Se.Eq orderId]
 
+updateRetriedOrderId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
+updateRetriedOrderId retriedOrderId orderId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.retriedOrderId retriedOrderId, Se.Set Beam.updatedAt _now] [Se.Is Beam.orderId $ Se.Eq orderId]
+
 findByPrimaryKey ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder -> Kernel.Prelude.Text -> m (Maybe Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder))
