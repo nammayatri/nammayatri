@@ -140,25 +140,33 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
     (Just windowSize, Just CancellationRateBasedNudgingAndBlockingConfig {..}) -> do
       (dailyCancellationRate, dailyAssignedCount) <- getCancellationRateOfDays 1 windowSize
       (weeklyCancellationRate, weeklyAssignedCount) <- getCancellationRateOfDays 7 windowSize
-      let cooldDownWeekly = driverInfo.weeklyCancellationRateBlockingCooldown
-      blockedOnWeekly <- blockDriverCondition cancellationRateThresholdWeekly weeklyMinRidesforBlocking weeklyCancellationRate weeklyAssignedCount weeklyOffenceSuspensionTimeHours cooldDownWeekly now CancellationRateWeekly
+      let mbCooldDownWeekly = driverInfo.weeklyCancellationRateBlockingCooldown
+          mbCooldDownDaily = driverInfo.dailyCancellationRateBlockingCooldown
+      blockedOnWeekly <- blockDriverCondition cancellationRateThresholdWeekly weeklyMinRidesforBlocking weeklyCancellationRate weeklyAssignedCount weeklyOffenceSuspensionTimeHours mbCooldDownWeekly now CancellationRateWeekly
       logDebug $ "All cancellation rate data: dailyCancellationRate: " <> show dailyCancellationRate <> " dailyAssignedCount: " <> show dailyAssignedCount <> " weeklyCancellationRate: " <> show weeklyCancellationRate <> " weeklyAssignedCount: " <> show weeklyAssignedCount
       if blockedOnWeekly
         then do
-          let cooldownTime = addUTCTime (secondsToNominalDiffTime $ 7 * 24 * 60 * 60) now -- one week
-          QDriverInformation.updateWeeklyCancellationRateBlockingCooldown (Just cooldownTime) driver.id
+          let calculatedCooldownTime = addUTCTime (fromIntegral weeklyConditionCooldownTimeHours * 60 * 60) now
+          let finalCooldown = whenFirstJustReturnMaxElseReturnSecond mbCooldDownWeekly calculatedCooldownTime
+          QDriverInformation.updateWeeklyCancellationRateBlockingCooldown (Just finalCooldown) driver.id
         else do
-          let cooldDownDaily = driverInfo.dailyCancellationRateBlockingCooldown
-          blockedOnDaily <- blockDriverCondition cancellationRateThresholdDaily dailyMinRidesforBlocking dailyCancellationRate dailyAssignedCount dailyOffenceSuspensionTimeHours cooldDownDaily now CancellationRateDaily
+          blockedOnDaily <- blockDriverCondition cancellationRateThresholdDaily dailyMinRidesforBlocking dailyCancellationRate dailyAssignedCount dailyOffenceSuspensionTimeHours mbCooldDownDaily now CancellationRateDaily
           if blockedOnDaily
             then do
-              let cooldownTime = addUTCTime (secondsToNominalDiffTime $ 24 * 60 * 60) now -- one day
-              QDriverInformation.updateDailyAndWeeklyCancellationRateBlockingCooldown (Just cooldownTime) (Just cooldownTime) driver.id
+              let calculatedCooldownTime = addUTCTime (fromIntegral dailyConditionCooldownTimeHours * 60 * 60) now
+                  finalDailyCoolDown = whenFirstJustReturnMaxElseReturnSecond mbCooldDownDaily calculatedCooldownTime
+                  finalyWeeklyCoolDown = whenFirstJustReturnMaxElseReturnSecond mbCooldDownWeekly calculatedCooldownTime
+              QDriverInformation.updateDailyAndWeeklyCancellationRateBlockingCooldown (Just finalDailyCoolDown) (Just finalyWeeklyCoolDown) driver.id
             else do
               nudgeDriverCondition cancellationRateThresholdWeekly weeklyMinRidesforNudging weeklyMinRidesforBlocking weeklyCancellationRate weeklyAssignedCount FCM.CANCELLATION_RATE_NUDGE_WEEKLY "CANCELLATION_RATE_NUDGE_WEEKLY"
               nudgeDriverCondition cancellationRateThresholdDaily dailyMinRidesforNudging dailyMinRidesforBlocking dailyCancellationRate dailyAssignedCount FCM.CANCELLATION_RATE_NUDGE_DAILY "CANCELLATION_RATE_NUDGE_DAILY"
     _ -> logInfo "cancellationRateWindow or cancellationRateBasedNudgingAndBlockingConfig not found in transporter config"
   where
+    whenFirstJustReturnMaxElseReturnSecond mbCooldown calculatedCooldown =
+      case mbCooldown of
+        Just cool -> max cool calculatedCooldown
+        Nothing -> calculatedCooldown
+
     getCancellationRateOfDays period windowSize = do
       let windowInt = toInteger windowSize
       cancelledCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideCancelledKey driver.id.getId) (SWC.SlidingWindowOptions windowInt SWC.Days)
@@ -205,4 +213,6 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
       weeklyMinRidesforNudging <- transporterConfig.weeklyMinRidesForNudging
       dailyOffenceSuspensionTimeHours <- transporterConfig.dailyOffenceSuspensionTimeHours
       weeklyOffenceSuspensionTimeHours <- transporterConfig.weeklyOffenceSuspensionTimeHours
+      dailyConditionCooldownTimeHours <- transporterConfig.dailyConditionCooldownTimeHours
+      weeklyConditionCooldownTimeHours <- transporterConfig.weeklyConditionCooldownTimeHours
       return CancellationRateBasedNudgingAndBlockingConfig {..}

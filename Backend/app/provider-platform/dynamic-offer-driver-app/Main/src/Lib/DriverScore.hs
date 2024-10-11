@@ -84,7 +84,7 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
   let windowSize = toInteger $ fromMaybe 7 merchantConfig.cancellationRateWindow
   void $ SCR.incrementCancelledCount driverId windowSize
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
-  when (doCancellationRateBasedBlocking == Just True) $
+  when (doCancellationRateBasedBlocking == Just True && not (driverInfo.onRide)) $
     SCR.nudgeOrBlockDriver merchantConfig driver driverInfo
   mbDriverStats <- B.runInReplica $ DSQ.findById (cast driverId)
   -- mbDriverStats <- DSQ.findById (cast driverId)

@@ -297,3 +297,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN daily_min_rides
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN daily_min_rides_for_blocking integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_rate_threshold_weekly integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_rate_threshold_daily integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN weekly_condition_cooldown_time_hours integer  default 168;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN daily_condition_cooldown_time_hours integer  default 24;

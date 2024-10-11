@@ -874,6 +874,7 @@ buildBlockedListAPIEntity :: DTDBT.DriverBlockTransactions -> Common.DriverBlock
 buildBlockedListAPIEntity DTDBT.DriverBlockTransactions {..} =
   Common.DriverBlockTransactions
     { blockedBy = show blockedBy,
+      blockReasonFlag = show <$> blockReasonFlag,
       ..
     }
 

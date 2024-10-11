@@ -208,6 +208,7 @@ updateBlockedState driverId isBlocked blockStateModifier merchantId merchantOper
   updateOneWithKV
     ( [ Se.Set BeamDI.blocked isBlocked,
         Se.Set BeamDI.blockStateModifier blockStateModifier,
+        Se.Set BeamDI.blockExpiryTime Nothing, --this prevents wrong date to be in this column because same is passed in error to frontend
         Se.Set BeamDI.updatedAt now
       ]
         <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])

@@ -272,6 +272,7 @@ types:
     - blockLiftTime : Maybe UTCTime
     - blockedBy : Text
     - requestorId : Maybe Text
+    - blockReasonFlag : Maybe Text
   DriverRCAssociationAPIEntity:
     - associatedOn: UTCTime
     - associatedTill: Maybe UTCTime

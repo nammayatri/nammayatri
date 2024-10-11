@@ -72,6 +72,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     createdAt :: Kernel.Prelude.UTCTime,
     crossTravelCities :: [Kernel.Types.Beckn.City.City],
     currency :: Kernel.Types.Common.Currency,
+    dailyConditionCooldownTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     dailyMinRidesForBlocking :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     dailyMinRidesForNudging :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     dailyOffenceSuspensionTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -195,6 +196,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     useWithSnapToRoadFallback :: Kernel.Prelude.Bool,
     variantsToEnableForSubscription :: [Domain.Types.VehicleVariant.VehicleVariant],
     volunteerSmsSendingLimit :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DashboardMediaSendingLimit,
+    weeklyConditionCooldownTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     weeklyMinRidesForBlocking :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     weeklyMinRidesForNudging :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     weeklyOffenceSuspensionTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int
@@ -241,9 +243,11 @@ data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
 data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgingAndBlockingConfig
   { cancellationRateThresholdDaily :: Kernel.Prelude.Int,
     cancellationRateThresholdWeekly :: Kernel.Prelude.Int,
+    dailyConditionCooldownTimeHours :: Kernel.Prelude.Int,
     dailyMinRidesforBlocking :: Kernel.Prelude.Int,
     dailyMinRidesforNudging :: Kernel.Prelude.Int,
     dailyOffenceSuspensionTimeHours :: Kernel.Prelude.Int,
+    weeklyConditionCooldownTimeHours :: Kernel.Prelude.Int,
     weeklyMinRidesforBlocking :: Kernel.Prelude.Int,
     weeklyMinRidesforNudging :: Kernel.Prelude.Int,
     weeklyOffenceSuspensionTimeHours :: Kernel.Prelude.Int
