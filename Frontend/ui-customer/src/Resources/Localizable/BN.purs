@@ -1190,7 +1190,7 @@ getBN stringKey =
         EXCESS_DISTANCE_CHARGE_DESCRIPTION charges -> "অতিরিক্ত দূরত্ব " <> charges <> " এ চার্জ করা হবে"
         ADDITIONAL_CHARGES_DESCRIPTION -> "চেক শেষ ভাড়া আসল ভ্রমণের অবধি এবং দূরত্বে ভিত্তি করা হবে"
         PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "পার্কিং ফি, <b> টোল চার্জ </b> এবং অন্যান্য সারচার্জ <b> অন্তর্ভুক্ত নয় </b>। অনুগ্রহ করে সেগুলি আলাদাভাবে ড্রাইভারকে পরিশোধ করুন।"
-        NIGHT_TIME_FEE_DESCRIPTION -> "আপনার ভ্রমণের কোনো অংশ যদি রাত 10:00 PM এবং 5:00 AM এর মধ্যে ঘটে থাকে তাহলে আপনার রাইডের জন্য একটি ফ্ল্যাট নাইট টাইম ফি {} প্রযোজ্য হবে"
+        NIGHT_TIME_FEE_DESCRIPTION nightChages start end -> "যদি আপনার যাত্রা যেকোনো সময় " <> start <> " থেকে " <> end <> " এর মধ্যে শুরু/শেষ হয়, তবে " <> nightChages <> " টাকা রাত্রিকালীন ফি চার্জ করা হবে"
         CHOOSE_YOUR_RENTAL_RIDE -> "আপনার ভাড়া রাইড চয়ন করুন"
         FIRST_STOP_OPTIONAL -> "প্রথম স্টপ (ঐচ্ছিক)"
         JANUARY -> "জানুয়ারি"

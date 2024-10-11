@@ -1192,7 +1192,7 @@ getHI stringKey =
         EXCESS_DISTANCE_CHARGE_DESCRIPTION charges -> "अतिरिक्त दूरी के लिए " <> charges <> " शुल्क लिया जाएगा"
         ADDITIONAL_CHARGES_DESCRIPTION -> "अंतिम किराया वास्तविक यात्रा की अवधि और दूरी पर आधारित होगा"
         PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "पार्किंग शुल्क, <b> टोल शुल्क </b> और अन्य अधिभार <b> शामिल नहीं हैं </b>। कृपया इनका भुगतान अलग से ड्राइवर को करें।"
-        NIGHT_TIME_FEE_DESCRIPTION -> "यदि आपकी यात्रा का कोई भी हिस्सा रात 10:00 बजे से सुबह 5:00 बजे के बीच होता है, तो आपकी सवारी पर एक समान नाइट टाइम शुल्क {} लागू किया जाएगा।"
+        NIGHT_TIME_FEE_DESCRIPTION nightChages start end -> "अगर आपकी यात्रा " <> start <> " और " <> end <> " के बीच किसी भी समय शुरू या समाप्त होती है, तो " <> nightChages <> " रुपये का रात का शुल्क लगेगा"
         CHOOSE_YOUR_RENTAL_RIDE -> "अपनी रेंटल राइड चुनें"
         FIRST_STOP_OPTIONAL -> "पहला स्टॉप (ऐच्छिक)"
         JANUARY -> "जनवरी"

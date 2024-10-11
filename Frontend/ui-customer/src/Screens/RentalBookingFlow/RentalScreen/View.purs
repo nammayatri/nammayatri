@@ -44,8 +44,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
 import Helpers.CommonView (emptyTextView)
-import Helpers.Utils (decodeError, fetchImage, getCityConfig, FetchImageFrom(..))
-import Helpers.Utils (fetchAndUpdateCurrentLocation)
+import Helpers.Utils (decodeError, fetchImage, getCityConfig, FetchImageFrom(..),fetchAndUpdateCurrentLocation,convertTo12HourFormat)
 import JBridge (renderSlider, sliderConfig, toast)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -55,9 +54,9 @@ import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..) , Accessiblity(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width, onBackPressed, visibility, shimmerFrameLayout, accessibility, imageView, imageWithFallback, alignParentBottom, singleLine, ellipsize, clickable, textFromHtml, accessibilityHint , accessibility)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig, locUnserviceablePopUpConfig, rentalPolicyInfoConfig,scheduledRideExistsPopUpConfig)
-import Screens.RentalBookingFlow.RentalScreen.Controller (Action(..), FareBreakupRowType(..), ScreenOutput, eval, dummyRentalQuote, DescriptionType(..))
+import Screens.RentalBookingFlow.RentalScreen.Controller (Action(..), FareBreakupRowType(..), ScreenOutput, eval, dummyRentalQuote, DescriptionType(..),dummyRentalQuote,dummyNightShiftInfo)
 import Screens.Types (RentalScreenState, RentalScreenStage(..))
-import Services.API (GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..))
+import Services.API (GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..),NightShiftInfoAPIEntity(..))
 import Services.Backend (getQuotes, rideBooking)
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
@@ -469,6 +468,10 @@ getDataFromDescType descriptionType state =
       selectedQuote = maybe dummyRentalQuote identity (state.data.selectedQuote)
       currency = getCurrency appConfig
       rideEndTime = formatDateInHHMM $ EHC.getUTCAfterNSeconds startTimeUTC $ (state.data.rentalBookingData.baseDuration) * 60 * 60
+      fareDetails = selectedQuote.fareDetails
+      (NightShiftInfoAPIEntity nightShiftInfo) = fromMaybe dummyNightShiftInfo fareDetails.nightShiftInfo
+      nightShiftStart = fromMaybe "" $ convertTo12HourFormat nightShiftInfo.nightShiftStart
+      nightShiftEnd = fromMaybe "" $ convertTo12HourFormat nightShiftInfo.nightShiftEnd
   in case descriptionType of 
         BookingTimeAndDist -> {
           title : "<b>Booking from " <> formatDateInHHMM startTimeUTC <> " - " <> rideEndTime <> "</b>",
@@ -504,9 +507,9 @@ getDataFromDescType descriptionType state =
             , accessibilityHintDesc : getEN PARKING_FEES_AND_TOLLS_NOT_INCLUDED
             },
             { title : getString NIGHT_TIME_FEES 
-            , description : getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton $ currency <> state.data.rentalBookingData.nightCharge
+            , description : getString $ NIGHT_TIME_FEE_DESCRIPTION (currency <> state.data.rentalBookingData.nightCharge) nightShiftStart nightShiftEnd
             , accessibilityHintTitle : getEN NIGHT_TIME_FEES
-            , accessibilityHintDesc : getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton $ currency <> state.data.rentalBookingData.nightCharge
+            , accessibilityHintDesc : getString $ NIGHT_TIME_FEE_DESCRIPTION (currency <> state.data.rentalBookingData.nightCharge) nightShiftStart nightShiftEnd
             }
           ],
           accessibilityHint : getEN ADDITIONAL_CHARGES

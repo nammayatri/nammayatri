@@ -23,6 +23,7 @@ import Services.API (PlaceName(..), LatLong(..))
 import Components.LocationListItem.Controller (locationListStateObj, dummyAddress)
 import Components.ChooseVehicle.Controller as ChooseVehicleController
 import Prelude (negate)
+import Services.API(NightShiftInfoAPIEntity(..))
  
 
 initData :: SearchLocationScreenState 
@@ -143,5 +144,12 @@ dummyFareQuoteDetails = {
   plannedPerKmRate : 0,
   nightShiftCharge : 0,
   tollCharges : Nothing,
-  deadKmFare: Nothing
+  deadKmFare: Nothing,
+  nightShiftInfo : Nothing
+}
+dummyNightShiftInfo = NightShiftInfoAPIEntity {
+  nightShiftCharge : 0.0
+, nightShiftStart : ""
+, nightShiftEnd : ""
+, nightShiftChargeWithCurrency : Nothing
 }

@@ -1193,7 +1193,7 @@ getKN stringKey =
         EXCESS_DISTANCE_CHARGE_DESCRIPTION charges -> "ಹೆಚ್ಚುವರಿ ದೂರವನ್ನು " <> charges <> " ನಲ್ಲಿ ವಿಧಿಸಲಾಗುತ್ತದೆ"
         ADDITIONAL_CHARGES_DESCRIPTION -> "ಕೊನೆಯ ವಾಯಿತು ನಿಜವಾದ ಪ್ರಯಾಣ ಅವಧಿ ಮತ್ತು ದೂರದ ಆಧಾರಿತವಾಗುತ್ತದೆ"
         PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕ, <b> ಟೋಲ್ ಶುಲ್ಕಗಳು </b> ಮತ್ತು ಇತರ ಶುಲ್ಕಗಳು <b> ಒಳಗೊಂಡಿಲ್ಲ </b> ದಯವಿಟ್ಟು ಅವುಗಳನ್ನು ಪ್ರತ್ಯೇಕವಾಗಿ ಚಾಲಕರಿಗೆ ಪಾವತಿಸಿ."
-        NIGHT_TIME_FEE_DESCRIPTION -> "ನಿಮ್ಮ ಪ್ರಯಾಣದ ಯಾವುದೇ ಭಾಗವು 10:00 PM ಮತ್ತು 5:00 AM ಗಂಟೆಯ ನಡುವೆ ಸಂಭವಿಸಿದಲ್ಲಿ ನಿಮ್ಮ ಸವಾರಿಗೆ ಸಮತಟ್ಟಾದ ರಾತ್ರಿ ಸಮಯದ ಶುಲ್ಕವನ್ನು {} ಅನ್ವಯಿಸಲಾಗುತ್ತದೆ" 
+        NIGHT_TIME_FEE_DESCRIPTION nightChages start end -> "ನಿಮ್ಮ ಪ್ರಯಾಣ ಯಾವುದೇ ಸಮಯದಲ್ಲಿ " <> start <> " ಮತ್ತು " <> end <> " ನಡುವೆ ಪ್ರಾರಂಭವಾಗಲಿ ಅಥವಾ ಅಂತ್ಯಗೊಳ್ಳಲಿ, " <> nightChages <> " ರಾತ್ರಿಯ ಶುಲ್ಕವಾಗಲಿದೆ"
         CHOOSE_YOUR_RENTAL_RIDE -> "ನಿಮ್ಮ ರೆಂಟಲ್ ರೈಡ್ ಆಯ್ಕೆಮಾಡಿ"
         FIRST_STOP_OPTIONAL -> "ಮೊದಲ ನಿಲ್ದಾಣ (ಐಚ್ಛಿಕ)"
         JANUARY -> "ಜನವರಿ"

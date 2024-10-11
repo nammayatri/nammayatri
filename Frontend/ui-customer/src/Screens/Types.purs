@@ -2958,7 +2958,8 @@ type FareDetails = {
   perHourCharge :: Int,
   nightShiftCharge :: Int,
   tollCharges :: Maybe Number,
-  deadKmFare :: Maybe DeadKmFare
+  deadKmFare :: Maybe DeadKmFare,
+  nightShiftInfo :: Maybe API.NightShiftInfoAPIEntity
 }
 
 data RentalScreenStage = RENTAL_SELECT_PACKAGE | RENTAL_SELECT_VARIANT | RENTAL_CONFIRMATION

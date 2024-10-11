@@ -20,6 +20,7 @@ module Screens.RentalBookingFlow.RentalScreen.Controller
   , ScreenOutput(..)
   , eval
   , dummyRentalQuote
+  , dummyNightShiftInfo
   )
   where
 
@@ -53,7 +54,7 @@ import PrestoDOM (class Loggable, Eval, continue, continueWithCmd, exit, updateA
 import PrestoDOM.Core (getPushFn)
 import Screens (getScreen, ScreenName(..))
 import Screens.Types (RentalScreenStage(..), RentalScreenState, BookingTime)
-import Services.API (GetQuotesRes(..), RideBookingRes(..), OfferRes(..), QuoteAPIEntity(..), QuoteAPIContents(..), RentalQuoteAPIDetails(..))
+import Services.API (GetQuotesRes(..), RideBookingRes(..), OfferRes(..), QuoteAPIEntity(..), QuoteAPIContents(..), RentalQuoteAPIDetails(..),NightShiftInfoAPIEntity(..))
 import Data.Number (fromString)
 import Data.Lens
 import Accessor
@@ -283,7 +284,8 @@ dummyFareQuoteDetails = {
   plannedPerKmRate : 0,
   nightShiftCharge : 0,
   tollCharges : Nothing,
-  deadKmFare : Nothing
+  deadKmFare : Nothing,
+  nightShiftInfo : Nothing
 }
 
 dummyRentalQuote = {
@@ -291,4 +293,10 @@ dummyRentalQuote = {
   index : 0 ,
   activeIndex : 0 ,
   fareDetails : dummyFareQuoteDetails
+}
+dummyNightShiftInfo = NightShiftInfoAPIEntity {
+  nightShiftCharge : 0.0
+, nightShiftStart : ""
+, nightShiftEnd : ""
+, nightShiftChargeWithCurrency : Nothing
 }

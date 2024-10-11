@@ -1205,7 +1205,7 @@ getTE stringKey =
     EXCESS_DISTANCE_CHARGE_DESCRIPTION charges -> "అదనపు దూరానికి " <> charges <> " ఛార్జీ విధించబడుతుంది"
     ADDITIONAL_CHARGES_DESCRIPTION -> "చివరి భాడా నిజమైన ప్రయాణ అవధి మరియు దూరం పై ఆధారితం అవుతుంది"
     PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "పార్కింగ్ ఫీజులు, <b> టోల్ చార్జీలు </b> మరియు ఇతర సర్‌చార్జీలు <b> చేర్చబడలేదు </b>. దయచేసి వాటిని వేరుగా డ్రైవర్‌కు చెల్లించండి."
-    NIGHT_TIME_FEE_DESCRIPTION -> "మీ ట్రిప్‌లో ఏదైనా భాగం రాత్రి 10:00 మరియు ఉదయం 5:00 గంటల మధ్య జరిగితే మీ రైడ్‌కి {} ఫ్లాట్ నైట్ టైమ్ రుసుము వర్తించబడుతుంది"
+    NIGHT_TIME_FEE_DESCRIPTION nightChages start end -> "మీ ప్రయాణం " <> start <> " మరియు " <> end <> " మధ్య ఎప్పుడు ప్రారంభం/ముగింపు అయినా, " <> nightChages <> " రూపాయల స్థిరమైన రాత్రి ఫీజు ఛార్జ్ చేయబడుతుంది"
     CHOOSE_YOUR_RENTAL_RIDE -> "మీ అద్దె రైడ్‌ని ఎంచుకోండి"
     FIRST_STOP_OPTIONAL -> "మొదటి స్టాప్ (ఐచ్ఛికం)"
     JANUARY -> "జనవరి"

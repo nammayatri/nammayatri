@@ -749,7 +749,8 @@ newtype RentalQuoteAPIDetails = RentalQuoteAPIDetails {
   plannedPerKmRate :: Maybe Int ,
   nightShiftCharge :: Maybe Int ,
   tollCharges :: Maybe Number ,
-  deadKmFare :: Maybe DeadKmFare
+  deadKmFare :: Maybe DeadKmFare,
+  nightShiftInfo :: Maybe NightShiftInfoAPIEntity
 }
 
 newtype DeadKmFare = DeadKmFare {

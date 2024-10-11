@@ -29,7 +29,7 @@ import Components.PrimaryButton as PrimaryButton
 import Components.RateCard as RateCard
 import Components.SeparatorView.View as SeparatorView
 import Data.Array as DA
-import Data.Maybe (isJust, maybe, Maybe(..)) as MB
+import Data.Maybe (isJust, maybe, Maybe(..),fromMaybe) as MB
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
@@ -46,13 +46,14 @@ import Prelude (show, (&&), identity)
 import PrestoDOM (Margin(..), Padding(..), Length(..), Orientation(..), Gravity(..), Visibility(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Types.DomAttributes as PTD
-import Screens.SearchLocationScreen.ScreenData (dummyQuote)
+import Screens.SearchLocationScreen.ScreenData (dummyQuote,dummyNightShiftInfo)
 import Screens.Types as ST
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Data.Lens ((^.))
 import Accessor (_amount)
 import Resources.Localizable.EN (getEN)
+import Services.API as API
 
 locationTagBarConfig :: ST.SearchLocationScreenState -> ST.GlobalProps -> LTB.LocationTagBarConfig
 locationTagBarConfig state globalProps = 
@@ -430,6 +431,10 @@ rentalRateCardConfig state =
       currency = getCurrency appConfig
       extraDistance = state.data.rideDetails.rideDistance - (state.data.rideDetails.rideDuration * 10)
       selectedQuote = MB.maybe dummyQuote identity (state.data.selectedQuote)
+      fareDetails = selectedQuote.fareDetails
+      (API.NightShiftInfoAPIEntity nightShiftInfo) = MB.fromMaybe dummyNightShiftInfo fareDetails.nightShiftInfo
+      nightShiftStart = MB.fromMaybe "" $ HU.convertTo12HourFormat nightShiftInfo.nightShiftStart
+      nightShiftEnd = MB.fromMaybe "" $ HU.convertTo12HourFormat nightShiftInfo.nightShiftEnd
       rentalRateCardConfig' = config
         { currentRateCardType = RentalRateCard
         , title = getString RATE_CARD
@@ -445,7 +450,7 @@ rentalRateCardConfig state =
             visibility = VISIBLE
           }
         , additionalStrings = [
-            {key : "NIGHT_TIME_FEE_DESCRIPTION", val : (getVarString NIGHT_TIME_FEE_DESCRIPTION $ DA.singleton $ currency <> (show selectedQuote.fareDetails.nightShiftCharge))}
+            {key : "NIGHT_TIME_FEE_DESCRIPTION", val : (getString $  NIGHT_TIME_FEE_DESCRIPTION (currency <> ( show selectedQuote.fareDetails.nightShiftCharge)) nightShiftStart nightShiftEnd)}
           , {key : "APPLICABLE_WAITING_CHARGES" , val : "Applicable waiting charges will be added to your final fare."}
           , {key : "PARKING_FEES_AND_TOLLS_NOT_INCLUDED", val : (getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED)}
           ]

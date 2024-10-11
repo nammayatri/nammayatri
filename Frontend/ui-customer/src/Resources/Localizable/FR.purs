@@ -1192,7 +1192,7 @@ getFR stringKey =
         EXCESS_DISTANCE_CHARGE_DESCRIPTION charges -> "Le dépassement de distance sera facturé à " <> charges
         ADDITIONAL_CHARGES_DESCRIPTION -> "Le tarif final sera basé sur la durée et la distance réelle du voyage"
         PARKING_FEES_AND_TOLLS_NOT_INCLUDED -> "Les frais de parking, <b> les péages </b> et autres surcharges ne sont <b> pas inclus </b>. Veuillez les payer séparément au chauffeur."
-        NIGHT_TIME_FEE_DESCRIPTION -> "Des frais de nuit de {} seront facturés si votre trajet commence/se termine à n'importe quel moment entre 22h et 5h"
+        NIGHT_TIME_FEE_DESCRIPTION nightChages start end -> "Un tarif fixe de nuit de " <> nightChages <> " sera facturé si votre trajet commence/se termine à tout moment entre " <> start <> " et " <> end
         CHOOSE_YOUR_RENTAL_RIDE -> "Choisissez votre trajet de location"
         FIRST_STOP_OPTIONAL -> "Premier arrêt (facultatif)"
         JANUARY -> "janvier"
