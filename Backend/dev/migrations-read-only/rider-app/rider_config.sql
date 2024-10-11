@@ -114,3 +114,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN sensitive_words text [] ;
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN payout_batch_size integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN payout_batch_delay integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN sensitive_words_for_exact_match text [] ;

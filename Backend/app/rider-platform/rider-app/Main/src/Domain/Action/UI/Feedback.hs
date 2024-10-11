@@ -41,6 +41,7 @@ import qualified Domain.Types.VehicleVariant as DVeh
 import Environment
 import qualified Environment as App
 import qualified EulerHS.Language as L
+import qualified IssueManagement.Common as IC
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -125,8 +126,7 @@ feedback request personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
-  let sensitiveWords = fromMaybe [] riderConfig.sensitiveWords
-  let isLOFeedback = maybe False (checkSensitiveWords sensitiveWords) feedbackDetails
+  let isLOFeedback = IC.checkForLOFeedback riderConfig.sensitiveWords riderConfig.sensitiveWordsForExactMatch feedbackDetails
   when isLOFeedback $
     fork "notify on slack" $ do
       sosAlertsTopicARN <- asks (.sosAlertsTopicARN)
@@ -152,10 +152,6 @@ feedback request personId = do
       case res of
         Just issue -> return $ Just issue.id.getId
         Nothing -> return Nothing
-
-    checkSensitiveWords sensitiveWords feedbackDetails =
-      let loweredcaseFeedback = T.toLower feedbackDetails
-       in not (T.null feedbackDetails) && any (\word -> T.toLower word `T.isInfixOf` loweredcaseFeedback) sensitiveWords
 
     createJsonMessage :: Text -> T.Text
     createJsonMessage descriptionText =
