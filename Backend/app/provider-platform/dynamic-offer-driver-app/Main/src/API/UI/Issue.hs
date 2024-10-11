@@ -250,7 +250,8 @@ buildMerchantConfig _merchantId merchantOpCityId mbPersonId = do
         kaptureQueue = transporterConfig.kaptureQueue,
         counterPartyUrl = appBackendBapInternal.url,
         counterPartyApiKey = appBackendBapInternal.apiKey,
-        sensitiveWords = Nothing
+        sensitiveWords = Nothing,
+        sensitiveWordsForExactMatch = Nothing
       }
   where
     mkCacKey = fmap (DriverId . cast) mbPersonId
