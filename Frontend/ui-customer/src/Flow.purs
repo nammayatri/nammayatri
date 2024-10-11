@@ -6748,11 +6748,11 @@ fcmHandler notification state notificationBody= do
         (GlobalState updatedState) <- getState
         let
           homeScreenState = updatedState.homeScreen { data { quoteListModelState = [] }, props { isBanner = state.props.isBanner, currentStage = ReAllocated, estimateId = updatedState.homeScreen.props.estimateId, reAllocation { showPopUp = true }, tipViewProps { isVisible = updatedState.homeScreen.props.tipViewProps.activeIndex >= 0 }, selectedQuote = Nothing, isCancelRide = false, cancelSearchCallDriver = false, showRateCard = false } }
-        let
+        let 
           updatedState = case (getTipViewData "LazyCheck") of
             Just (TipViewData tipView) -> homeScreenState { props { tipViewProps { stage = tipView.stage, activeIndex = tipView.activeIndex, isVisible = tipView.activeIndex >= 0 } } }
             Nothing -> homeScreenState { props { tipViewProps = HomeScreenData.initData.props.tipViewProps } }
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState)
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState {data {driverInfoCardState {driverArrived = false}}})
         void $ pure $ clearTimerWithId <$> state.props.waitingTimeTimerIds
         void $ pure $ setValueToLocalNativeStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
         updateLocalStage ReAllocated
