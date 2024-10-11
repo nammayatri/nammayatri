@@ -63,7 +63,8 @@ data PayoutHistoryItem = PayoutHistoryItem
     payoutEntity :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Payout.EntityName,
     payoutOrderId :: Kernel.Prelude.Text,
     responseMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    responseCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    responseCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    payoutRetriedOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

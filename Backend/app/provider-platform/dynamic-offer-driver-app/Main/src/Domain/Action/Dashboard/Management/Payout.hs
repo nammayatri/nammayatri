@@ -163,7 +163,8 @@ getPayoutPayoutHistory merchantShortId opCity mbDriverId mbDriverPhoneNo mbFrom 
             payoutEntity = castPayoutEntityName <$> payoutOrder.entityName,
             payoutOrderId = payoutOrder.orderId,
             responseMessage = payoutOrder.responseMessage,
-            responseCode = payoutOrder.responseCode
+            responseCode = payoutOrder.responseCode,
+            payoutRetriedOrderId = payoutOrder.retriedOrderId
           }
 
 postPayoutPayoutVerifyFraudStatus :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DTP.UpdateFraudStatusReq -> Environment.Flow APISuccess
@@ -207,7 +208,7 @@ postPayoutPayoutVerifyFraudStatus merchantShortId opCity req = do
               let serviceName = DEMSC.PayoutService PT.Juspay
               let entityName = DLP.DAILY_STATS_VIA_DASHBOARD
                   createPayoutOrderCall = TP.createPayoutOrder merchant.id merchantOpCity.id serviceName
-              void $ Payout.createPayoutService (Kernel.Types.Id.cast merchant.id) (Kernel.Types.Id.cast req.driverId) (Just [dailyStats.id]) (Just entityName) Nothing (show merchantOpCity.city) createOrderReq createPayoutOrderCall
+              void $ Payout.createPayoutService (Kernel.Types.Id.cast merchant.id) (Kernel.Types.Id.cast req.driverId) (Just [dailyStats.id]) (Just entityName) (show merchantOpCity.city) createOrderReq createPayoutOrderCall
             Nothing -> do
               Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey req.driverId.getId) 1 1 $ do
                 QDS.updatePayoutStatusById DDS.PendingForVpa dailyStats.id
@@ -291,6 +292,7 @@ postPayoutPayoutDeleteVPA _merchantShortId _opCity req = do
 
 callPayoutAndUpdateDailyStats :: Domain.Types.Merchant.Merchant -> DMOC.MerchantOperatingCity -> PO.PayoutOrder -> Environment.Flow ()
 callPayoutAndUpdateDailyStats merchant merchantOpCity payoutOrder = do
+  when (isJust payoutOrder.retriedOrderId) $ throwError $ InvalidRequest "Payout Order Already Retried"
   let driverId = Id payoutOrder.customerId
   dInfo <- QDI.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
   mbVehicle <- QVeh.findById (cast driverId)
@@ -304,7 +306,8 @@ callPayoutAndUpdateDailyStats merchant merchantOpCity payoutOrder = do
     let serviceName = DEMSC.PayoutService PT.Juspay
         entityName = DLP.RETRY_VIA_DASHBOARD
         createPayoutOrderCall = TP.createPayoutOrder merchant.id merchantOpCity.id serviceName
-    void $ Payout.createPayoutService (Kernel.Types.Id.cast merchant.id) (cast driverId) payoutOrder.entityIds (Just entityName) (Just payoutOrder.orderId) (show merchantOpCity.city) createOrderReq createPayoutOrderCall
+    QPayoutOrder.updateRetriedOrderId (Just uid) payoutOrder.orderId
+    void $ Payout.createPayoutService (Kernel.Types.Id.cast merchant.id) (cast driverId) payoutOrder.entityIds (Just entityName) (show merchantOpCity.city) createOrderReq createPayoutOrderCall
     updateDailyStatsStatus uid (Id payoutOrder.customerId) payoutOrder.entityIds
 
 updateDailyStatsStatus :: Text -> Id Dashboard.Common.Driver -> Maybe [Text] -> Environment.Flow ()
