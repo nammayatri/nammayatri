@@ -1393,7 +1393,7 @@ getHI stringKey =
         TRUSTED_CONTACT_DESC -> "ऐप चैट के माध्यम से अपनी यात्रा के दौरान अपने विश्वसनीय संपर्कों के संपर्क में रहें"
         ENABLE_LIVE_TRACKING -> "लाइव राइड ट्रैकिंग सक्षम करें"
         UNEXPECTED_EVENT_CHECK -> "अप्रत्याशित घटना जांच"
-        UNEXPECTED_EVENT_CHECK_DESC -> "रूट विचलन, असामान्य रोक, या असुरक्षित क्षेत्रों से गुजरते समय अधिसूचनाएँ प्राप्त करें"
+        UNEXPECTED_EVENT_CHECK_DESC -> "मार्ग विचलन पर चेक-इन सूचनाएं प्राप्त करें"
         UNEXPECTED_EVENT_CHECK_TIMINGS -> "अप्रत्याशित घटना जांच समय"
         NEXT -> "अगला"
         POST_RIDE_CHECK -> "राइड के बाद की जांच"

@@ -1460,7 +1460,7 @@ newtype FeedbackReq = FeedbackReq
   { rating :: Int
   , rideId :: String
   , feedbackDetails :: String
-  , nightSafety :: Maybe Boolean
+  , wasRideSafe :: Maybe Boolean
   , wasOfferedAssistance :: Maybe Boolean
   , mbAudio :: Maybe String
   , shouldFavDriver :: Maybe Boolean
