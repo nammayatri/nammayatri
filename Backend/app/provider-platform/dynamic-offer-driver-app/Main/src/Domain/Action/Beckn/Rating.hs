@@ -40,13 +40,16 @@ import qualified Lib.DriverCoins.Types as DCT
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.DriverStats as SQD
+import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDriverCorrelation as RDC
 import Tools.Error
+import Tools.Notifications
 
 data DRatingReq = DRatingReq
   { bookingId :: Id DBooking.Booking,
@@ -54,7 +57,8 @@ data DRatingReq = DRatingReq
     feedbackDetails :: [Maybe Text],
     shouldFavDriver :: Maybe Bool,
     riderPhoneNum :: Maybe Text,
-    filePath :: Maybe Text
+    filePath :: Maybe Text,
+    riderName :: Maybe Text
   }
 
 handler :: Id Merchant -> DRatingReq -> DRide.Ride -> Flow ()
@@ -70,6 +74,7 @@ handler merchantId req ride = do
       issueId = fromMaybe Nothing (req.feedbackDetails !? 2)
       isSafe = Just $ isNothing issueId
   mbBooking <- QRB.findById req.bookingId
+  driver <- SQP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   case mbBooking of
     Just booking -> do
       whenJust (liftA3 (,,) req.shouldFavDriver (getId <$> booking.riderId) req.riderPhoneNum) $ \(shouldFavDriver', riderId, riderPhoneNum) -> do
@@ -81,6 +86,11 @@ handler merchantId req ride = do
                 RDC.updateFavouriteDriverForRider True (Id riderId) ride.driverId
                 SQD.incFavouriteRiderCount ride.driverId
             Nothing -> do
+              mbMerchantPN_ <- CPN.findMatchingMerchantPN ride.merchantOperatingCityId "FAVOURITE_DRIVER_ALERT" Nothing Nothing driver.language
+              whenJust mbMerchantPN_ $ \merchantPN_ -> do
+                let title = T.replace "{#riderName#}" (fromMaybe "" req.riderName) merchantPN_.title
+                    entityData = NotifReq {entityId = driverId.getId, title = title, message = merchantPN_.body}
+                notifyDriverOnEvents ride.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN_.fcmNotificationType
               now <- getCurrentTime
               encPhoneNumber <- encrypt riderPhoneNum
               let riderDriverCorr =

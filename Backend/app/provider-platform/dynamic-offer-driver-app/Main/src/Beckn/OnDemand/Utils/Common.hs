@@ -1743,6 +1743,12 @@ getFilePath req = do
       tagValue = Utils.getTagV2 Tags.RATING_TAGS Tags.MEDIA_FILE_PATH tagGroups
    in tagValue
 
+getRiderName :: Spec.Rating -> Maybe Text
+getRiderName req = do
+  let tagGroups = req.ratingTag
+      tagValue = Utils.getTagV2 Tags.RATING_TAGS Tags.RIDER_NAME tagGroups
+   in tagValue
+
 mkFulfillmentState :: Enums.FulfillmentState -> Spec.FulfillmentState
 mkFulfillmentState stateCode =
   Spec.FulfillmentState
