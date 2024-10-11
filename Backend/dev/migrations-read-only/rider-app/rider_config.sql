@@ -130,3 +130,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN make_multi_modal_search boolean  d
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN maximum_walk_distance integer  default 600;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN sensitive_words_for_exact_match text [] ;

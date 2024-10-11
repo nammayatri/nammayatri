@@ -41,6 +41,7 @@ import qualified Domain.Types.VehicleVariant as DVeh
 import Environment
 import qualified Environment as App
 import qualified EulerHS.Language as L
+import qualified IssueManagement.Common as IC
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
@@ -129,8 +130,7 @@ feedback request personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
-  let sensitiveWords = fromMaybe [] riderConfig.sensitiveWords
-      isLOFeedback = maybe False (checkSensitiveWords sensitiveWords) feedbackDetails
+  let isLOFeedback = IC.checkForLOFeedback riderConfig.sensitiveWords riderConfig.sensitiveWordsForExactMatch feedbackDetails
   when isLOFeedback $
     fork "Creating ticket and notifying on slack" $ do
       phoneNumber <- mapM decrypt person.mobileNumber
@@ -164,10 +164,6 @@ feedback request personId = do
       case res of
         Just issue -> return $ Just issue.id.getId
         Nothing -> return Nothing
-
-    checkSensitiveWords sensitiveWords feedbackDetails =
-      let loweredcaseFeedback = T.toLower feedbackDetails
-       in not (T.null feedbackDetails) && any (\word -> T.toLower word `T.isInfixOf` loweredcaseFeedback) sensitiveWords
 
     createJsonMessage :: Text -> T.Text
     createJsonMessage descriptionText =
