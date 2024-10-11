@@ -908,6 +908,7 @@ data DriverCoinError
   | CoinUsedForConverting Text Int Int
   | NonBulkUploadCoinFunction Text
   | CoinInfoTranslationNotFound Text Text
+  | NoPlanAgaintsDriver Text
   deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverCoinError
@@ -920,6 +921,7 @@ instance IsBaseError DriverCoinError where
     CoinUsedForConverting driverId coins val -> Just ("Coins used for converting to cash should be multiple of " <> show val <> " for driverId : " <> show driverId <> ". Given coins value is : " <> show coins <> ".")
     CoinInfoTranslationNotFound key lang -> Just $ "Coin info translation not found for " <> key <> " in " <> lang <> " language."
     NonBulkUploadCoinFunction eventFunction -> Just ("Coin function " <> show eventFunction <> " is not bulk upload function.")
+    NoPlanAgaintsDriver driverId -> Just ("No plan found against driverId " <> show driverId <> ".")
 
 instance IsHTTPError DriverCoinError where
   toErrorCode = \case
@@ -929,6 +931,7 @@ instance IsHTTPError DriverCoinError where
     CoinUsedForConverting _ _ val -> "COINS_USED_FOR_CONVERTING_TO_CASH_SHOULD_BE_MULTIPLE_OF_" <> show val
     NonBulkUploadCoinFunction _ -> "NON_BULK_UPLOAD_COIN_FUNCTION"
     CoinInfoTranslationNotFound _ _ -> "COIN_INFO_TRANSLATION_NOT_FOUND"
+    NoPlanAgaintsDriver _ -> "NO_PLAN_AGAINST_DRIVER"
   toHttpCode = \case
     CoinServiceUnavailable _ -> E400
     InsufficientCoins _ _ -> E400
@@ -936,6 +939,7 @@ instance IsHTTPError DriverCoinError where
     CoinUsedForConverting _ _ _ -> E400
     NonBulkUploadCoinFunction _ -> E400
     CoinInfoTranslationNotFound _ _ -> E400
+    NoPlanAgaintsDriver _ -> E400
 
 instance IsAPIError DriverCoinError
 
