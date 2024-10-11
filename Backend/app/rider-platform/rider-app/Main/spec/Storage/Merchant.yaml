@@ -256,13 +256,16 @@ MerchantServiceConfig:
     serviceName: (fst $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig)|E
     configJSON: (snd $ Storage.Queries.Transformers.MerchantServiceConfig.getServiceNameConfigJson serviceConfig)|E
 
+  queries:
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
     - EXTRA_QUERY_FILE
 
   excludedDefaultQueries:
-    - create
-    - createMany
     - findByPrimaryKey
     - updateByPrimaryKey
 
