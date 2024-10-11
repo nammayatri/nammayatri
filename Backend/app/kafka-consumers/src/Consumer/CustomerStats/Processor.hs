@@ -36,7 +36,7 @@ import qualified "rider-app" Tools.Event as TE
 updateCustomerStats :: E.Event TE.Payload -> Text -> Flow ()
 updateCustomerStats event _ = do
   whenJust event.personId $ \pId -> do
-    when (event.service == RIDER_APP) do
+    when (event.service == RIDER_APP && (event.eventType == RideEnded || event.eventType == BookingCancelled)) do
       let personId = Id pId
           mbOperatingCityId = Id <$> event.merchantOperatingCityId
       case mbOperatingCityId of
@@ -72,18 +72,14 @@ updateCustomerStats event _ = do
                           riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
                           let minuteDiffFromUTC = (riderConfig.timeDiffFromUtc.getSeconds) `div` 60
                           -- Esq.runNoTransaction $ do
-                          if SP.isWeekend createdAt minuteDiffFromUTC
-                            then do QP.incrementWeekendRidesCount personId
-                            else do QP.incrementWeekdayRidesCount personId
-                          let isMorningPeak = SP.checkMorningPeakInWeekday createdAt minuteDiffFromUTC
+                          let ifIsWeekend = SP.isWeekend createdAt minuteDiffFromUTC
+                              isMorningPeak = SP.checkMorningPeakInWeekday createdAt minuteDiffFromUTC
                               isEveningPeak = SP.checkEveningPeakInWeekday createdAt minuteDiffFromUTC
                               isWeekendPeak = SP.checkWeekendPeak createdAt minuteDiffFromUTC
-                          when isMorningPeak do QP.incrementMorningPeakRidesCount personId
-                          when isEveningPeak do QP.incrementEveningPeakRidesCount personId
-                          when isWeekendPeak do QP.incrementWeekendPeakRidesCount personId
                           let isAnyPeak = isMorningPeak || isEveningPeak || isWeekendPeak
-                          unless isAnyPeak do QP.incrementOffpeakRidesCount personId
-                          QP.incrementCompletedRidesCount personId
+
+                          -- here we will increment all these in one function
+                          QP.incrementCompletedRidesEventCount personId ifIsWeekend isMorningPeak isEveningPeak isWeekendPeak isAnyPeak
                         _ -> pure ()
                     BookingCancelled -> do
                       let bookingId = cast payload.bId

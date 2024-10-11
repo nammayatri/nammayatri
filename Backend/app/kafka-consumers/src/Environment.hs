@@ -107,7 +107,11 @@ data AppCfg = AppCfg
     encTools :: EncTools,
     kafkaProducerCfg :: KafkaProducerCfg,
     sericeClickhouseCfg :: ClickhouseCfg,
-    kafkaClickhouseCfg :: ClickhouseCfg
+    kafkaClickhouseCfg :: ClickhouseCfg,
+    kafkaReadBatchSize :: Int,
+    kafkaReadBatchDelay :: Seconds,
+    consumerStartTime :: Maybe Integer,
+    consumerEndTime :: Maybe Integer
   }
   deriving (Generic, FromDhall)
 
@@ -145,7 +149,11 @@ data AppEnv = AppEnv
     encTools :: EncTools,
     kafkaProducerTools :: KafkaProducerTools,
     serviceClickhouseEnv :: ClickhouseEnv,
-    kafkaClickhouseEnv :: ClickhouseEnv
+    kafkaClickhouseEnv :: ClickhouseEnv,
+    kafkaReadBatchSize :: Int,
+    kafkaReadBatchDelay :: Seconds,
+    consumerStartTime :: Maybe Integer,
+    consumerEndTime :: Maybe Integer
   }
   deriving (Generic)
 

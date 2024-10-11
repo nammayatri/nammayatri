@@ -115,7 +115,7 @@ in  { hedisCfg
     , loggerConfig =
             common.loggerConfig
         //  { logFilePath = "/tmp/kafka-consumers-person-stats.log"
-            , logRawSql = False
+            , logRawSql = True
             }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
@@ -126,4 +126,8 @@ in  { hedisCfg
     , encTools
     , healthCheckAppCfg = None genericCommon.healthCheckAppCfgT
     , kafkaProducerCfg
+    , kafkaReadBatchDelay = +10
+    , kafkaReadBatchSize = +10
+    , consumerStartTime = Some +14
+    , consumerEndTime = Some +20
     }
