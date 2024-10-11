@@ -27,6 +27,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Function
 import qualified Data.List as DL
 import qualified Data.Map.Strict as Map
+import qualified Data.Time as T
 import Environment
 import qualified EulerHS.Runtime as L
 import qualified Kafka.Consumer as Consumer
@@ -34,8 +35,8 @@ import Kernel.Prelude
 import Kernel.Types.Flow
 import Kernel.Utils.Common hiding (id)
 import qualified Streamly.Internal.Data.Fold as SF
+import qualified Streamly.Internal.Data.Stream.IsStream as S
 import Streamly.Internal.Data.Stream.Serial (SerialT)
-import qualified Streamly.Prelude as S
 
 runConsumer :: L.FlowRuntime -> AppEnv -> ConsumerType -> Consumer.KafkaConsumer -> IO ()
 runConsumer flowRt appEnv consumerType kafkaConsumer = do
@@ -46,15 +47,15 @@ runConsumer flowRt appEnv consumerType kafkaConsumer = do
     LOCATION_UPDATE -> locationUpdateConsumer flowRt appEnv kafkaConsumer
 
 updateCustomerStatsConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
-updateCustomerStatsConsumer flowRt appEnv kafkaConsumer =
-  readMessages kafkaConsumer
+updateCustomerStatsConsumer flowRt appEnv kafkaConsumer = do
+  readMesssageWithWaitAndTimeRange kafkaConsumer appEnv
     & S.mapM updateCustomerStatsWithFlow
     & S.drain
   where
-    updateCustomerStatsWithFlow (messagePayload, personId, _) =
-      runFlowR flowRt appEnv . withLogTag personId $
+    updateCustomerStatsWithFlow (eventPayload, personId, _) =
+      runFlowR flowRt appEnv . withLogTag ("updating-person-stats-personId:" <> personId) $
         generateGUID
-          >>= flip withLogTag (PSProcessor.updateCustomerStats messagePayload personId)
+          >>= flip withLogTag (PSProcessor.updateCustomerStats eventPayload personId)
 
 broadcastMessageConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
 broadcastMessageConsumer flowRt appEnv kafkaConsumer =
@@ -148,6 +149,41 @@ readMessages kafkaConsumer = do
   S.mapMaybe (removeMaybeFromTuple . decodeRecord) records
   where
     pollMessageR kc = S.repeatM (Consumer.pollMessage kc (Consumer.Timeout 500))
+
+    -- convert ConsumerRecord into domain types of (Message, (MessageKey, ConsumerRecord))
+    decodeRecord =
+      (A.decode . LBS.fromStrict <=< Consumer.crValue)
+        &&& (pure . decodeUtf8 <=< Consumer.crKey)
+        &&& id
+
+    -- remove maybe messages and convert to tuple
+    removeMaybeFromTuple (mbMessage, (mbMessageKey, cr)) =
+      (\message messageKey -> (message, messageKey, cr)) <$> mbMessage <*> mbMessageKey
+
+readMesssageWithWaitAndTimeRange ::
+  (FromJSON message, ConvertUtf8 messageKey ByteString) =>
+  Consumer.KafkaConsumer ->
+  AppEnv ->
+  SerialT IO (message, messageKey, ConsumerRecordD)
+readMesssageWithWaitAndTimeRange kafkaConsumer appEnv = do
+  S.bracket (pure kafkaConsumer) Consumer.closeConsumer pollMessageR
+  where
+    pollMessageR kc = S.concat $ S.repeat pollRecords
+      where
+        pollRecords = do
+          currentHour <- liftIO getCurrentHour
+          let shouldPoll = maybe True (\(start, end) -> start <= currentHour && end > currentHour) timeRange
+          print (shouldPoll, currentHour)
+          when shouldPoll $ threadDelay $ batchDelayInMicroseconds appEnv.kafkaReadBatchDelay
+          let eitherRecords = S.replicateM appEnv.kafkaReadBatchSize (Consumer.pollMessage kc (Consumer.Timeout 500))
+          let records = S.mapMaybe hush eitherRecords
+          S.mapMaybe (removeMaybeFromTuple . decodeRecord) records
+
+        timeRange = (,) <$> appEnv.consumerStartTime <*> appEnv.consumerEndTime
+        getCurrentHour = do
+          (T.UTCTime _date secTillNow) <- T.getCurrentTime
+          return $ div (T.diffTimeToPicoseconds secTillNow) 3600000000000000
+        batchDelayInMicroseconds delay = fromIntegral $ delay * 1000000
 
     -- convert ConsumerRecord into domain types of (Message, (MessageKey, ConsumerRecord))
     decodeRecord =
