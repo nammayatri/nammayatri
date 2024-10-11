@@ -25,6 +25,10 @@ PlaceBasedServiceConfig:
   constraints:
     placeId: PrimaryKey
 
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
   sqlType:
     configValue: json
 

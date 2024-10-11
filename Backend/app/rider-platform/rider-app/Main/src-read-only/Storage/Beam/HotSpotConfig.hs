@@ -7,6 +7,7 @@ module Storage.Beam.HotSpotConfig where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -44,3 +45,5 @@ type HotSpotConfig = HotSpotConfigT Identity
 $(enableKVPG ''HotSpotConfigT ['id] [])
 
 $(mkTableInstances ''HotSpotConfigT "hot_spot_config")
+
+$(Domain.Types.UtilsTH.mkCacParseInstance ''HotSpotConfigT)
