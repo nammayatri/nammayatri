@@ -240,8 +240,7 @@ data ValidatedQuoteRepetitionReq = ValidatedQuoteRepetitionReq
     bppRideId :: Id DRide.BPPRide,
     cancellationSource :: DBCR.CancellationSource,
     booking :: DRB.Booking,
-    ride :: DRide.Ride,
-    searchReq :: DSR.SearchRequest
+    ride :: DRide.Ride
   }
 
 data NewMessageReq = NewMessageReq
@@ -447,12 +446,12 @@ onUpdate = \case
     newIsScheduled <-
       if booking.isScheduled
         then do
-          merchant <- QCM.findById searchReq.merchantId >>= fromMaybeM (MerchantNotFound searchReq.merchantId.getId)
-          return $ merchant.scheduleRideBufferTime `addUTCTime` now < searchReq.startTime
+          merchant <- QCM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+          return $ merchant.scheduleRideBufferTime `addUTCTime` now < booking.startTime
         else return False
     let newQuote = quote{id = Id quoteId_, createdAt = now, updatedAt = now}
         newBooking = booking{id = bookingId, quoteId = Just (Id quoteId_), status = SRB.CONFIRMED, isScheduled = newIsScheduled, bppBookingId = Just newBppBookingId, startTime = max now booking.startTime, createdAt = now, updatedAt = now}
-        flowStatus = if newIsScheduled then DPFS.IDLE else DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = bookingId, validTill = searchReq.validTill, fareProductType = Just $ STB.getFareProductType booking.bookingDetails, tripCategory = booking.tripCategory}
+        flowStatus = if newIsScheduled then DPFS.IDLE else DPFS.WAITING_FOR_DRIVER_ASSIGNMENT {bookingId = bookingId, validTill = addUTCTime 180 now, fareProductType = Just $ STB.getFareProductType booking.bookingDetails, tripCategory = booking.tripCategory}
     void $ SQQ.createQuote newQuote
     -- make all the booking parties inactive during rellocation
     oldBookingParties <- QBPL.findAllActiveByBookingId booking.id
@@ -468,7 +467,7 @@ onUpdate = \case
     void $ QBPL.createMany newBookingParties
     void $ QRB.updateStatus booking.id DRB.REALLOCATED
     void $ QRide.updateStatus ride.id DRide.CANCELLED
-    void $ QPFS.updateStatus searchReq.riderId flowStatus
+    void $ QPFS.updateStatus booking.riderId flowStatus
     void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId ride.id
     -- notify customer
     Notify.notifyOnEstOrQuoteReallocated cancellationSource booking quote.id.getId
@@ -592,7 +591,6 @@ validateRequest = \case
     return $ OUValidatedEstimateRepetitionReq ValidatedEstimateRepetitionReq {..}
   OUQuoteRepetitionReq QuoteRepetitionReq {..} -> do
     booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
-    searchReq <- QSR.findById searchRequestId >>= fromMaybeM (SearchRequestNotFound searchRequestId.getId)
     ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
     return $ OUValidatedQuoteRepetitionReq ValidatedQuoteRepetitionReq {..}
   OUSafetyAlertReq SafetyAlertReq {..} -> do
