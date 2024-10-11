@@ -7,6 +7,7 @@ import qualified API.Types.RiderPlatform.Management.Booking
 import qualified API.Types.RiderPlatform.Management.Customer
 import qualified API.Types.RiderPlatform.Management.Invoice
 import qualified API.Types.RiderPlatform.Management.Merchant
+import qualified API.Types.RiderPlatform.Management.Ride
 import qualified Dashboard.Common
 import qualified Data.List
 import Data.OpenApi (ToSchema)
@@ -19,6 +20,7 @@ data ManagementEndpoint
   | CustomerAPI API.Types.RiderPlatform.Management.Customer.CustomerEndpointDSL
   | InvoiceAPI API.Types.RiderPlatform.Management.Invoice.InvoiceEndpointDSL
   | MerchantAPI API.Types.RiderPlatform.Management.Merchant.MerchantEndpointDSL
+  | RideAPI API.Types.RiderPlatform.Management.Ride.RideEndpointDSL
   deriving stock (Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -28,6 +30,7 @@ instance Text.Show.Show ManagementEndpoint where
     CustomerAPI e -> "CUSTOMER/" <> Dashboard.Common.showUserActionType e
     InvoiceAPI e -> "INVOICE/" <> Dashboard.Common.showUserActionType e
     MerchantAPI e -> "MERCHANT/" <> Dashboard.Common.showUserActionType e
+    RideAPI e -> "RIDE/" <> Dashboard.Common.showUserActionType e
 
 instance Text.Read.Read ManagementEndpoint where
   readsPrec d' =
@@ -54,6 +57,15 @@ instance Text.Read.Read ManagementEndpoint where
                    r2
                  )
                  | r1 <- stripPrefix "MERCHANT/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Dashboard.Common.readUserActionTypeS r1
+               ]
+            ++ [ ( RideAPI v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "RIDE/" r,
                    ( v1,
                      r2
                      ) <-

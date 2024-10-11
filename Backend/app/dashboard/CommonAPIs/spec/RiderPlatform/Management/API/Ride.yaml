@@ -1,0 +1,65 @@
+imports:
+  Ride: Dashboard.Common
+  Summary: Dashboard.Common
+  ShortId: Kernel.Types.Id
+  UTCTime: Kernel.Prelude
+  FareProductType: Domain.Types
+  TripCategory: Domain.Types
+
+
+module: Ride
+
+apis:
+  - GET:
+      endpoint: /list
+      auth: ApiAuth APP_BACKEND_MANAGEMENT RIDES RIDE_LIST
+      query:
+        - limit: Int
+        - offset: Int
+        - bookingStatus: BookingStatus
+        - rideShortId: (ShortId Ride)
+        - customerPhoneNo: Text
+        - driverPhoneNo: Text
+        - from: UTCTime
+        - to: UTCTime
+      response:
+        type: RideListRes
+
+
+types:
+  RideListRes:
+    - totalItems: Int # for backward compatibility
+    - summary: Summary
+    - rides: [RideListItem]
+  RideListItem:
+    - rideShortId: ShortId Ride
+    - rideCreatedAt: UTCTime
+    - rideId: Id Ride
+    - customerName: Maybe Text
+    - customerPhoneNo: Maybe Text
+    - driverName: Text
+    - driverPhoneNo: Text
+    - vehicleNo: Text
+    - bookingStatus: BookingStatus
+    - nextStopLocation: Maybe Location
+    - rideScheduledAt: UTCTime
+    - fareProductType: FareProductType # TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+    - tripCategory: TripCategory
+    - endOtp: Maybe Text
+  BookingStatus:
+    - enum: UPCOMING, UPCOMING_6HRS, ONGOING, ONGOING_6HRS, RCOMPLETED, RCANCELLED
+  Location:
+    - id: Id Location
+    - lat: Double
+    - lon: Double
+    - address: LocationAddress
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  LocationAddress:
+    - street: Maybe Text
+    - city: Maybe Text
+    - state: Maybe Text
+    - country: Maybe Text
+    - building: Maybe Text
+    - areaCode: Maybe Text
+    - area: Maybe Text

@@ -16,7 +16,7 @@
 module Domain.Action.Dashboard.Ride
   ( shareRideInfo,
     shareRideInfoByShortId,
-    rideList,
+    getRideList,
     rideInfo,
     multipleRideCancel,
     MultipleRideCancelReq,
@@ -203,7 +203,7 @@ castSosStatus = \case
 
 ---------------------------------------------------------------------
 
-rideList ::
+getRideList ::
   ShortId DM.Merchant ->
   Maybe Int ->
   Maybe Int ->
@@ -214,7 +214,7 @@ rideList ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   Flow Common.RideListRes
-rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo = do
+getRideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo = do
   merchant <- findMerchantByShortId merchantShortId
   let limit_ = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset_ = fromMaybe 0 mbOffset

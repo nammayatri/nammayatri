@@ -207,52 +207,52 @@ data LocationAddress = LocationAddress
 ---------------------------------------------------------
 -- ride list --------------------------------------------
 
-type RideListAPI =
-  "list"
-    :> QueryParam "limit" Int
-    :> QueryParam "offset" Int
-    :> QueryParam "bookingStatus" BookingStatus
-    :> QueryParam "rideShortId" (ShortId Ride)
-    :> QueryParam "customerPhoneNo" Text
-    :> QueryParam "driverPhoneNo" Text
-    :> QueryParam "from" UTCTime
-    :> QueryParam "to" UTCTime
-    :> Get '[JSON] RideListRes
+-- type RideListAPI =
+--   "list"
+--     :> QueryParam "limit" Int
+--     :> QueryParam "offset" Int
+--     :> QueryParam "bookingStatus" BookingStatus
+--     :> QueryParam "rideShortId" (ShortId Ride)
+--     :> QueryParam "customerPhoneNo" Text
+--     :> QueryParam "driverPhoneNo" Text
+--     :> QueryParam "from" UTCTime
+--     :> QueryParam "to" UTCTime
+--     :> Get '[JSON] RideListRes
 
-data RideListRes = RideListRes
-  { totalItems :: Int, -- for backward compatibility
-    summary :: Summary,
-    rides :: [RideListItem]
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+-- data RideListRes = RideListRes
+--   { totalItems :: Int, -- for backward compatibility
+--     summary :: Summary,
+--     rides :: [RideListItem]
+--   }
+--   deriving stock (Show, Generic)
+--   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RideListItem = RideListItem
-  { rideShortId :: ShortId Ride,
-    rideCreatedAt :: UTCTime,
-    rideId :: Id Ride,
-    customerName :: Maybe Text,
-    customerPhoneNo :: Maybe Text,
-    driverName :: Text,
-    driverPhoneNo :: Text,
-    vehicleNo :: Text,
-    bookingStatus :: BookingStatus,
-    nextStopLocation :: Maybe Location,
-    rideScheduledAt :: UTCTime,
-    fareProductType :: FareProductType, -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
-    tripCategory :: TripCategory,
-    endOtp :: Maybe Text
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+-- data RideListItem = RideListItem
+--   { rideShortId :: ShortId Ride,
+--     rideCreatedAt :: UTCTime,
+--     rideId :: Id Ride,
+--     customerName :: Maybe Text,
+--     customerPhoneNo :: Maybe Text,
+--     driverName :: Text,
+--     driverPhoneNo :: Text,
+--     vehicleNo :: Text,
+--     bookingStatus :: BookingStatus,
+--     nextStopLocation :: Maybe Location,
+--     rideScheduledAt :: UTCTime,
+--     fareProductType :: FareProductType, -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+--     tripCategory :: TripCategory,
+--     endOtp :: Maybe Text
+--   }
+--   deriving stock (Show, Generic)
+--   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data BookingStatus = UPCOMING | UPCOMING_6HRS | ONGOING | ONGOING_6HRS | RCOMPLETED | RCANCELLED
-  deriving stock (Show, Read, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+-- data BookingStatus = UPCOMING | UPCOMING_6HRS | ONGOING | ONGOING_6HRS | RCOMPLETED | RCANCELLED
+--   deriving stock (Show, Read, Generic)
+--   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-derivePersistField "BookingStatus"
+-- derivePersistField "BookingStatus"
 
-$(mkHttpInstancesForEnum ''BookingStatus)
+-- $(mkHttpInstancesForEnum ''BookingStatus)
 
 ---------------------------------------------------------
 -- Trip Route--------------------------------------

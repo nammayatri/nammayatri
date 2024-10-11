@@ -24,6 +24,7 @@ import qualified API.Types.RiderPlatform.Management.Booking as BookingDSL
 import qualified API.Types.RiderPlatform.Management.Customer as CustomerDSL
 import qualified API.Types.RiderPlatform.Management.Invoice as InvoiceDSL
 import qualified API.Types.RiderPlatform.Management.Merchant as MerchantDSL
+import qualified API.Types.RiderPlatform.Management.Ride as RideDSL
 import qualified "rider-app" API.Types.UI.TicketService as DTB
 import qualified Beckn.Types.Core.Taxi.Search ()
 import qualified Dashboard.RiderPlatform.Ride as Ride
@@ -65,6 +66,7 @@ data AppBackendAPIs = AppBackendAPIs
     hotSpot :: HotSpotAPIs,
     bookingDSL :: BookingDSL.BookingAPIs,
     customerDSL :: CustomerDSL.CustomerAPIs,
+    rideDSL :: RideDSL.RideAPIs,
     merchantDSL :: MerchantDSL.MerchantAPIs,
     invoiceDSL :: InvoiceDSL.InvoiceAPIs
   }
@@ -126,6 +128,7 @@ mkAppBackendAPIs merchantId city token = do
 
   let bookingDSL = BookingDSL.mkBookingAPIs bookingClientDSL
   let customerDSL = CustomerDSL.mkCustomerAPIs customerClientDSL
+  let rideDSL = RideDSL.mkRideAPIs rideClientDSL
   let merchantDSL = MerchantDSL.mkMerchantAPIs merchantClientDSL
   let invoiceDSL = InvoiceDSL.mkInvoiceAPIs invoiceClientDSL
   AppBackendAPIs {..}
@@ -143,7 +146,6 @@ mkAppBackendAPIs merchantId city token = do
 
     shareRideInfo
       :<|> shareRideInfoByShortId
-      :<|> rideList
       :<|> tripRoute
       :<|> pickupRoute
       :<|> rideInfo

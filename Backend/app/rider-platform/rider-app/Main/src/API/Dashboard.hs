@@ -18,6 +18,7 @@ import qualified API.Action.Dashboard.Management.Booking as BookingDSL
 import qualified API.Action.Dashboard.Management.Customer as CustomerDSL
 import qualified API.Action.Dashboard.Management.Invoice as InvoiceDSL
 import qualified API.Action.Dashboard.Management.Merchant as MerchantDSL
+import qualified API.Action.Dashboard.Management.Ride as RideDSL
 import qualified API.Dashboard.Exotel as Exotel
 import qualified API.Dashboard.HotSpot as HotSpot
 import qualified API.Dashboard.Issue as Issue
@@ -61,6 +62,7 @@ type OperationsAPI =
            :<|> HotSpot.API
            :<|> BookingDSL.API
            :<|> CustomerDSL.API
+           :<|> RideDSL.API
            :<|> MerchantDSL.API
            :<|> InvoiceDSL.API
        )
@@ -102,6 +104,7 @@ operationHandler merchantId city _ = do
     :<|> HotSpot.handler merchantId
     :<|> BookingDSL.handler merchantId city
     :<|> CustomerDSL.handler merchantId city
+    :<|> RideDSL.handler merchantId city
     :<|> MerchantDSL.handler merchantId city
     :<|> InvoiceDSL.handler merchantId city
 

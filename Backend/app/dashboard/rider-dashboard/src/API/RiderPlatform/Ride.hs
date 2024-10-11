@@ -45,7 +45,6 @@ type API =
   "ride"
     :> ( Common.ShareRideInfoAPI
            :<|> Common.ShareRideInfoByShortIdAPI
-           :<|> RideListAPI
            :<|> Common.TripRouteAPI
            :<|> Common.PickupRouteAPI
            :<|> RideInfoAPI
@@ -53,10 +52,6 @@ type API =
            :<|> MultipleRideSyncAPI
            :<|> TicketRideListAPI
        )
-
-type RideListAPI =
-  ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'RIDE_LIST
-    :> Common.RideListAPI
 
 type RideInfoAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'RIDE_INFO_CUSTOMER
@@ -78,7 +73,6 @@ handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   shareRideInfo merchantId city
     :<|> shareRideInfoByShortId merchantId city
-    :<|> rideList merchantId city
     :<|> tripRoute merchantId city
     :<|> pickupRoute merchantId city
     :<|> rideInfo merchantId city
@@ -122,24 +116,6 @@ shareRideInfoByShortId merchantShortId opCity rideShortId = withFlowHandlerAPI' 
   checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey $ getShortId rideShortId) shareRideApiRateLimitOptions
   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
   Client.callRiderAppOperations checkedMerchantId opCity (.rides.shareRideInfoByShortId) rideShortId
-
-rideList ::
-  ShortId DM.Merchant ->
-  City.City ->
-  ApiTokenInfo ->
-  Maybe Int ->
-  Maybe Int ->
-  Maybe Common.BookingStatus ->
-  Maybe (ShortId Common.Ride) ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe UTCTime ->
-  Maybe UTCTime ->
-  FlowHandler Common.RideListRes
-rideList merchantShortId opCity _ mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo =
-  withFlowHandlerAPI' $ do
-    checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
-    Client.callRiderAppOperations checkedMerchantId opCity (.rides.rideList) mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo
 
 tripRoute ::
   ShortId DM.Merchant ->

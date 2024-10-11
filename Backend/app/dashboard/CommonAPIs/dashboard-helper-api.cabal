@@ -71,6 +71,7 @@ library
       API.Types.RiderPlatform.Management.Customer
       API.Types.RiderPlatform.Management.Invoice
       API.Types.RiderPlatform.Management.Merchant
+      API.Types.RiderPlatform.Management.Ride
   other-modules:
       Paths_dashboard_helper_api
   hs-source-dirs:
