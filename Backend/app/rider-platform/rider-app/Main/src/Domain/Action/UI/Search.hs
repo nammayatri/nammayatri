@@ -48,7 +48,6 @@ import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
 import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
 import Environment
-import GHC.Float (double2Int)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps
@@ -374,7 +373,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
   riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id >>= fromMaybeM (RiderConfigNotFound merchantOperatingCity.id.getId)
   when riderConfig.makeMultiModalSearch $ do
     case req of
-      OneWaySearch searchReq -> fork "multi-modal search" $ multiModalSearch personId person.merchantId searchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ searchRequest merchantOperatingCityId
+      OneWaySearch searchReq -> fork "multi-modal search" $ multiModalSearch personId person.merchantId searchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ searchRequest merchantOperatingCityId riderConfig.maximumWalkDistance
       _ -> pure ()
 
   return $
@@ -534,8 +533,9 @@ multiModalSearch ::
   Bool ->
   SearchRequest.SearchRequest ->
   Id DMOC.MerchantOperatingCity ->
+  Meters ->
   Flow ()
-multiModalSearch personId merchantId searchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ searchRequest merchantOperatingCityId = do
+multiModalSearch personId merchantId searchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ searchRequest merchantOperatingCityId maximumWalkDistance = do
   now <- getCurrentTime
 
   let transitRoutesReq =
@@ -560,15 +560,13 @@ multiModalSearch personId merchantId searchReq bundleVersion clientVersion clien
 
           let journeyPlannerLegs = route.legs
               journeyLegsCount = length journeyPlannerLegs
-              modes = map (\x -> convertMultiModalModeToTripMode x.mode) journeyPlannerLegs
-              totalDistance = Distance {value = HighPrecDistance {getHighPrecDistance = toRational route.distance}, unit = Meter}
-              totalDuration = Seconds {getSeconds = route.duration}
+              modes = map (\x -> convertMultiModalModeToTripMode x.mode (distanceToMeters x.distance) maximumWalkDistance) journeyPlannerLegs
 
           let journey =
                 DJourney.Journey
                   { convenienceCost = 0,
-                    estimatedDistance = totalDistance,
-                    estimatedDuration = Just totalDuration,
+                    estimatedDistance = route.distance,
+                    estimatedDuration = Just route.duration,
                     estimatedFare = Nothing,
                     fare = Nothing,
                     id = Id journeyId,
@@ -583,8 +581,10 @@ multiModalSearch personId merchantId searchReq bundleVersion clientVersion clien
                   }
           QJourney.create journey
 
+          logDebug $ "journey for multi-modal: " <> show journey
+
           when (idx == 0) $ do
-            makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest (Id journeyId) journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ now
+            fork "child searches for multi-modal journey" $ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest (Id journeyId) journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ now maximumWalkDistance
       )
       allRoutes.routes
 
@@ -603,12 +603,13 @@ makeChildSearchReqs ::
   Maybe Text ->
   Bool ->
   UTCTime ->
+  Meters ->
   Flow ()
-makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest journeyId journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ now = do
+makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest journeyId journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ now maximumWalkDistance = do
   void $
     mapWithIndex
       ( \idx journeyPlannerLeg -> do
-          let mode = convertMultiModalModeToTripMode journeyPlannerLeg.mode
+          let mode = convertMultiModalModeToTripMode journeyPlannerLeg.mode (distanceToMeters journeyPlannerLeg.distance) maximumWalkDistance
               journeySearchData =
                 JPT.JourneySearchData
                   { journeyId = journeyId.getId,
@@ -659,8 +660,8 @@ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchReque
               let walkLeg =
                     DWalkLeg.WalkLegMultimodal
                       { id = walkeLegid,
-                        estimatedDistance = Distance {value = HighPrecDistance {getHighPrecDistance = toRational journeyPlannerLeg.distance}, unit = Meter}, -- journeyPlannerLeg.estimatedDistance,
-                        estimatedDuration = Just $ Seconds {getSeconds = double2Int journeyPlannerLeg.duration},
+                        estimatedDistance = journeyPlannerLeg.distance,
+                        estimatedDuration = Just journeyPlannerLeg.duration,
                         fromLocation = fromLocation_,
                         toLocation = Just toLocation_,
                         journeyLegInfo = Just journeySearchData,
@@ -683,16 +684,12 @@ convertToFRFSStations journeyPlannerLeg journeySearchData_ = do
   _toStopCode <- toStopDetails.stopCode & fromMaybeM (InternalError "toStopCode dont exist")
   return $
     FRFSTicketService.FRFSSearchAPIReq
-      { fromStationCode = "_fromStopCode",
-        toStationCode = "_toStopCode",
+      { fromStationCode = _fromStopCode,
+        toStationCode = _toStopCode,
         quantity = 1,
         journeySearchData = journeySearchData_,
         routeCode = Nothing
       }
-
--- TODO(MultiModal)
--- checkIfMultModalRoutePossible :: SearchRequest.SearchRequest -> Flow MultiModalRoute
--- checkIfMultModalRoutePossible _ = throwError (InternalError "Not implemented")
 
 buildSearchRequest ::
   Id SearchRequest.SearchRequest ->
@@ -904,10 +901,10 @@ dummyAddress =
       extras = Nothing
     }
 
-convertMultiModalModeToTripMode :: String -> DTrip.TravelMode
-convertMultiModalModeToTripMode input = case input of
+convertMultiModalModeToTripMode :: String -> Meters -> Meters -> DTrip.TravelMode
+convertMultiModalModeToTripMode input distance maximumWalkDistance = case input of
   "METRO_RAIL" -> DTrip.Metro
-  "WALK" -> DTrip.Walk
+  "WALK" -> if (distance > maximumWalkDistance) then DTrip.Taxi else DTrip.Walk
   "BUS" -> DTrip.Bus
   _ -> DTrip.Taxi
 
