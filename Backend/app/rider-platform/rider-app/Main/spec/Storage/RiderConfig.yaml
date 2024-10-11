@@ -48,6 +48,7 @@ RiderConfig:
     csAlertTriggerDelay: NominalDiffTime
     avgSpeedInKmPerHr: Kilometers
     sensitiveWords: "Maybe [Text]"
+    sensitiveWordsForExactMatch : "Maybe [Text]"
     payoutBatchSize: Maybe Int
     payoutBatchDelay: NominalDiffTime
 
@@ -118,6 +119,7 @@ RiderConfig:
     exotelAppIdMapping: "json"
     cxAgentDetails: text []
     sensitiveWords: text []
+    sensitiveWordsForExactMatch: text []
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE

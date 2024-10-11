@@ -24,7 +24,7 @@ import Database.Beam.Backend
 import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField
 import Domain.Types.VehicleVariant
-import EulerHS.Prelude hiding (id, state)
+import EulerHS.Prelude hiding (any, elem, id, map, state)
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForEnumAndList)
 import Kernel.External.Encryption
 import Kernel.External.Types
@@ -233,7 +233,8 @@ data MerchantConfig = MerchantConfig
     kaptureQueue :: Text,
     counterPartyUrl :: BaseUrl,
     counterPartyApiKey :: Text,
-    sensitiveWords :: Maybe [Text]
+    sensitiveWords :: Maybe [Text],
+    sensitiveWordsForExactMatch :: Maybe [Text]
   }
 
 allLanguages :: [Language]
@@ -306,3 +307,22 @@ instance {-# OVERLAPPING #-} ToSQLObject CxAgentDetails where
   convertToSQLObject = SQLObjectValue . show
 
 $(mkHttpInstancesForEnum ''IssueReportType)
+
+checkForLOFeedback :: Maybe [Text] -> Maybe [Text] -> Maybe Text -> Bool
+checkForLOFeedback mbSensitiveWords mbSensitiveWordsForExactMatch mbFeedbackDetails =
+  let sensitiveWords = fromMaybe [] mbSensitiveWords
+      sensitiveWordsForExactMatch = fromMaybe [] mbSensitiveWordsForExactMatch
+   in maybe False (checkSensitiveWords sensitiveWords sensitiveWordsForExactMatch) mbFeedbackDetails
+
+checkSensitiveWords :: [Text] -> [Text] -> Text -> Bool
+checkSensitiveWords sensitiveWords sensitiveWordsForExactMatch feedbackDetails =
+  let loweredcaseFeedback = T.toLower feedbackDetails
+      splittedFeedback = filter (not . T.null) $ T.words (replacePunctuation loweredcaseFeedback)
+   in not (T.null feedbackDetails) && (any (\word -> T.toLower word `T.isInfixOf` loweredcaseFeedback) sensitiveWords || any (\word -> T.toLower word `elem` map T.toLower splittedFeedback) sensitiveWordsForExactMatch)
+  where
+    replacePunctuation :: T.Text -> T.Text
+    replacePunctuation = T.map replaceChar
+      where
+        replaceChar c
+          | c `elem` ['?', '.', ',', '/'] = ' '
+          | otherwise = c
