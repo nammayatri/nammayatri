@@ -26,7 +26,8 @@ data DriverBlockTransactions = DriverBlockTransactions
     reportedAt :: Kernel.Prelude.UTCTime,
     blockLiftTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     blockedBy :: Kernel.Prelude.Text,
-    requestorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    requestorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    blockReasonFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

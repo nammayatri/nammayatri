@@ -73,6 +73,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             createdAt = createdAt,
             crossTravelCities = crossTravelCities,
             currency = fromMaybe Kernel.Types.Common.INR currency,
+            dailyConditionCooldownTimeHours = dailyConditionCooldownTimeHours,
             dailyMinRidesForBlocking = dailyMinRidesForBlocking,
             dailyMinRidesForNudging = dailyMinRidesForNudging,
             dailyOffenceSuspensionTimeHours = dailyOffenceSuspensionTimeHours,
@@ -196,6 +197,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             useWithSnapToRoadFallback = useWithSnapToRoadFallback,
             variantsToEnableForSubscription = variantsToEnableForSubscription,
             volunteerSmsSendingLimit = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< volunteerSmsSendingLimit,
+            weeklyConditionCooldownTimeHours = weeklyConditionCooldownTimeHours,
             weeklyMinRidesForBlocking = weeklyMinRidesForBlocking,
             weeklyMinRidesForNudging = weeklyMinRidesForNudging,
             weeklyOffenceSuspensionTimeHours = weeklyOffenceSuspensionTimeHours
@@ -252,6 +254,7 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.createdAt = createdAt,
         Beam.crossTravelCities = crossTravelCities,
         Beam.currency = Just currency,
+        Beam.dailyConditionCooldownTimeHours = dailyConditionCooldownTimeHours,
         Beam.dailyMinRidesForBlocking = dailyMinRidesForBlocking,
         Beam.dailyMinRidesForNudging = dailyMinRidesForNudging,
         Beam.dailyOffenceSuspensionTimeHours = dailyOffenceSuspensionTimeHours,
@@ -377,6 +380,7 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.useWithSnapToRoadFallback = useWithSnapToRoadFallback,
         Beam.variantsToEnableForSubscription = variantsToEnableForSubscription,
         Beam.volunteerSmsSendingLimit = Kernel.Prelude.toJSON <$> volunteerSmsSendingLimit,
+        Beam.weeklyConditionCooldownTimeHours = weeklyConditionCooldownTimeHours,
         Beam.weeklyMinRidesForBlocking = weeklyMinRidesForBlocking,
         Beam.weeklyMinRidesForNudging = weeklyMinRidesForNudging,
         Beam.weeklyOffenceSuspensionTimeHours = weeklyOffenceSuspensionTimeHours

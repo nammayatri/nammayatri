@@ -651,6 +651,8 @@ TransporterConfig:
       weeklyMinRidesforNudging: Int
       dailyOffenceSuspensionTimeHours: Int
       weeklyOffenceSuspensionTimeHours: Int
+      dailyConditionCooldownTimeHours: Int
+      weeklyConditionCooldownTimeHours: Int
     DemandHotspotsConfig:
       enableDemandHotspots: Bool
       precisionOfGeohash: Int
@@ -876,6 +878,8 @@ TransporterConfig:
     weeklyMinRidesForNudging: Maybe Int
     dailyOffenceSuspensionTimeHours: Maybe Int
     weeklyOffenceSuspensionTimeHours: Maybe Int
+    dailyConditionCooldownTimeHours: Maybe Int
+    weeklyConditionCooldownTimeHours: Maybe Int
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1198,6 +1202,8 @@ TransporterConfig:
     exotelStatusCheckSchedulerDelay: "120"
     cachedDevicesOSForSearchRequest: "'{}'"
     scheduledRideSearchRepeatLimit: "10"
+    dailyConditionCooldownTimeHours: "24"
+    weeklyConditionCooldownTimeHours: "168"
 
   excludedDefaultQueries:
     - findByPrimaryKey
