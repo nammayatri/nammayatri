@@ -86,48 +86,14 @@ updatesubscriptionServiceRelatedDataInDriverPlan driverId subscriptionServiceRel
         ]
     ]
 
-updateCoinToCashByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMoney -> m ()
-updateCoinToCashByDriverId driverId amountToAdd = do
-  now <- getCurrentTime
-  mbDriverPlan <- findByDriverId driverId
-  case mbDriverPlan of
-    Just driverPlan -> do
-      updateWithKV
-        [ Se.Set BeamDF.coinCovertedToCashLeft $ driverPlan.coinCovertedToCashLeft + amountToAdd,
-          Se.Set BeamDF.updatedAt now
+findByDriverIdAndServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> DPlan.ServiceNames -> m (Maybe DriverPlan)
+findByDriverIdAndServiceName (Id driverId) serviceName =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamDF.driverId $ Se.Eq driverId,
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName)
         ]
-        [Se.Is BeamDF.driverId (Se.Eq (getId driverId))]
-    Nothing -> pure ()
-
-updateTotalCoinToCashByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMoney -> m ()
-updateTotalCoinToCashByDriverId driverId totalcoinToAdd = do
-  now <- getCurrentTime
-  mbDriverPlan <- findByDriverId driverId
-  case mbDriverPlan of
-    Just driverPlan -> do
-      updateWithKV
-        [ Se.Set BeamDF.totalCoinsConvertedCash $ driverPlan.totalCoinsConvertedCash + totalcoinToAdd,
-          Se.Set BeamDF.updatedAt now
-        ]
-        [Se.Is BeamDF.driverId (Se.Eq (getId driverId))]
-    Nothing -> pure ()
-
-updateCoinFieldsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMoney -> m ()
-updateCoinFieldsByDriverId driverId amount = do
-  now <- getCurrentTime
-  mbDriverPlan <- findByDriverId driverId
-  case mbDriverPlan of
-    Just driverPlan -> do
-      updateWithKV
-        [ Se.Set BeamDF.coinCovertedToCashLeft $ driverPlan.coinCovertedToCashLeft + amount,
-          Se.Set BeamDF.totalCoinsConvertedCash $ driverPlan.totalCoinsConvertedCash + amount,
-          Se.Set BeamDF.updatedAt now
-        ]
-        [Se.Is BeamDF.driverId (Se.Eq (getId driverId))]
-    Nothing -> pure ()
-
-findByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe DriverPlan)
-findByDriverId (Id driverId) = findOneWithKV [Se.Is BeamDF.driverId $ Se.Eq driverId]
+    ]
 
 findAllByDriverIdsPaymentModeAndServiceName ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
