@@ -22,6 +22,7 @@ import Domain.Types.Coins.CoinHistory
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Plan as DPlan
 import Domain.Types.PurchaseHistory
 import Domain.Types.TransporterConfig ()
 import Environment
@@ -40,7 +41,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.Queries.Coins.CoinHistory as CHistory
 import Storage.Queries.Coins.CoinsConfig as SQCC
 import Storage.Queries.DailyStatsExtra as DS
-import Storage.Queries.DriverPlan as DPlan
+import Storage.Queries.DriverPlan as SQPlan
 import Storage.Queries.DriverStats as QDS
 import Storage.Queries.Person as Person
 import Storage.Queries.PurchaseHistory as PHistory
@@ -232,7 +233,8 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
-  _ <- DPlan.findByDriverId driverId >>= fromMaybeM (InternalError $ "No plan against the driver id" <> driverId.getId <> "Please choose a plan")
+  whenM (noDriverPlan driverId) $
+    throwError $ NoPlanAgaintsDriver driverId.getId
   now <- getCurrentTime
   uuid <- generateGUIDText
   coinBalance <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
@@ -271,6 +273,9 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
     else do
       throwError $ InsufficientCoins driverId.getId coins
   pure Success
+  where
+    noDriverPlan :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> m Bool
+    noDriverPlan driverId_ = isNothing <$> SQPlan.findByDriverIdAndServiceName driverId_ DPlan.YATRI_SUBSCRIPTION
 
 getRideStatusPastDays :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow RideStatusPastDaysRes
 getRideStatusPastDays (driverId, merchantId_, merchantOpCityId) = do
