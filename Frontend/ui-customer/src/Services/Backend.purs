@@ -562,12 +562,12 @@ callDriverBT rideId = do
 ------------------------------------------------------------------------ Feedback Function --------------------------------------------------------------------------------------------
 
 makeFeedBackReqs :: Int -> String -> String -> Maybe Boolean -> String -> Maybe Boolean -> Maybe Boolean -> FeedbackReq
-makeFeedBackReqs rating rideId feedback favDriver audio nightSafety wasOfferedAssistance = FeedbackReq
+makeFeedBackReqs rating rideId feedback favDriver audio wasRideSafe wasOfferedAssistance = FeedbackReq
     {   "rating" : rating
     ,   "rideId" : rideId
     ,   "feedbackDetails" : feedback
     ,   "shouldFavDriver" : favDriver
-    ,   "nightSafety" : nightSafety
+    ,   "wasRideSafe" : wasRideSafe
     ,   "wasOfferedAssistance" : wasOfferedAssistance
     ,   "mbAudio" : if audio == "" then Nothing else Just audio
     }

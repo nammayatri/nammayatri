@@ -1406,7 +1406,7 @@ getTE stringKey =
     TRUSTED_CONTACT_DESC -> "మీ రైడ్ సమయంలో మీ నమ్మకమైన వ్యక్తులతో అప్‌లో చాట్ ద్వారా సంప్రదింపులు కొనసాగించండి."
     ENABLE_LIVE_TRACKING -> "లైవ్ ట్రాకింగ్ ప్రారంభించండి"
     UNEXPECTED_EVENT_CHECK -> "ఆకస్మిక ఘటన తనిఖీ"
-    UNEXPECTED_EVENT_CHECK_DESC -> "మార్గం మారడం, అనూహ్యంగా నిలిపివేయడం లేదా అసురక్షిత ప్రాంతాల్లో ప్రయాణిస్తే నోటిఫికేషన్‌లు పొందండి"
+    UNEXPECTED_EVENT_CHECK_DESC -> "మార్గం మరల్చినప్పుడు చెక్-ఇన్ నోటిఫికేషన్‌లను పొందండి"
     UNEXPECTED_EVENT_CHECK_TIMINGS -> "ఆకస్మిక ఘటన తనిఖీ సమయం"
     NEXT -> "తర్వాత"
     POST_RIDE_CHECK -> "రైడ్ అనంతరం తనిఖీ"

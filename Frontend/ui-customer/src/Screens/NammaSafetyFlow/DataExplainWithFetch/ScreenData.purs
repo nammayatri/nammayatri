@@ -134,21 +134,22 @@ stageData stage = case stage of
         , primaryButtonText: getString NEXT
         , primaryButtonAction: "PostRideCheck"
         }
-      , { dynamicViewData:
-            [ Title titleConfig { titleText = getString SAFETY_TEAM_NOTIFICATION }
-            , ImageComponent imageComponentConfig { imageUrl = "ny_ic_no_resp_checkin_rounded" }
-            , BoxContainer
-                boxContainerConfig
-                  { title = getString NOTIFY_SAFETY_TEAM
-                  , subTitle = getString NOTIFY_SAFETY_TEAM_SUB
-                  , noteText = getString NOTIFY_SAFETY_TEAM_NOTE
-                  , noteImageIcon = "ny_ic_police_siren"
-                  }
-            ]
-        , imageUrl: "ny_ic_safety_team_checkin"
-        , primaryButtonText: getString DONE
-        , primaryButtonAction: "NotifySafetyTeam"
-        }
+      -- REMOVED FOR NOW
+      --, { dynamicViewData:
+      --       [ Title titleConfig { titleText = getString SAFETY_TEAM_NOTIFICATION }
+      --       , ImageComponent imageComponentConfig { imageUrl = "ny_ic_no_resp_checkin_rounded" }
+      --       , BoxContainer
+      --           boxContainerConfig
+      --             { title = getString NOTIFY_SAFETY_TEAM
+      --             , subTitle = getString NOTIFY_SAFETY_TEAM_SUB
+      --             , noteText = getString NOTIFY_SAFETY_TEAM_NOTE
+      --             , noteImageIcon = "ny_ic_police_siren"
+      --             }
+      --       ]
+      --   , imageUrl: "ny_ic_safety_team_checkin"
+      --   , primaryButtonText: getString DONE
+      --   , primaryButtonAction: "NotifySafetyTeam"
+      --   }
       ]
   EmergencyActions _ -> do
     let appName = fromMaybe (getAppConfig appConfig).appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
