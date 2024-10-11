@@ -1936,9 +1936,6 @@ export const factoryResetApp = function (str) {
 export const uploadFile = function (aspectRatio) {
   return function () {
     try{
-      aspectRatio.showAccordingToAspectRatio = aspectRatio.showAccordingToAspectRatio.toString();
-      aspectRatio.imageAspectHeight = aspectRatio.imageAspectHeight.toString();
-      aspectRatio.imageAspectWidth = aspectRatio.imageAspectWidth.toString();
       return JBridge.uploadFile(JSON.stringify(aspectRatio));
     } catch (err2) {
       return JBridge.uploadFile();

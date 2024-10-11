@@ -149,6 +149,7 @@ data ScreenOutput = GoToHelpAndSupportScreen ReportIssueChatScreenState
                   | GoToSafetyScreen ReportIssueChatScreenState
                   | GoToHomeScreen ReportIssueChatScreenState
                   | GoToFaqScreen ReportIssueChatScreenState
+                  | RideEndScreen ReportIssueChatScreenState
 
 uploadFileConfig :: UploadFileConfig
 uploadFileConfig = UploadFileConfig {
@@ -184,6 +185,7 @@ eval BackPressed state =
                     OldChatEntry -> GoToHelpAndSupportScreen
                     SafetyScreen -> GoToSafetyScreen
                     FaqEntry -> GoToFaqScreen
+                    RiderRideCompletedScreen -> RideEndScreen
                     HomeScreenEntry -> GoToHomeScreen ) state {props {showSubmitComp = false}}
   ]
 

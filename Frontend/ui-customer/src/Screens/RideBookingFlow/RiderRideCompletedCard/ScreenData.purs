@@ -52,13 +52,42 @@ initData = let
       issueReason : Nothing,
       issueDescription : "",
       rideBookingRes : dummyRideBooking,
-      wasOfferedAssistance : Nothing
+      wasOfferedAssistance : Nothing,
+      nightSafety : Nothing
     }
   , rideRatingState : dummyPreviousRiderating
   , isSafetyCenterDisabled : false
   , bookingId : ""
   , config : config
   , rideDuration : Just 0
+  , additionalCharges : []
+  , customerIssue : {
+      currentPageIndex : 0
+    , showIssueBanners : true
+    , hasAccessibilityIssue : false
+    , hasTollIssue : false
+    , hasSafetyIssue : false 
+    , bannerComputedView : Nothing   
+    , customerResponse : [
+      {
+        issueType : CT.TollCharge
+      , selectedYes : Nothing
+      }
+    , {
+        issueType : CT.NightSafety
+      , selectedYes : Nothing
+      }
+    , {
+        issueType : CT.Accessibility
+      , selectedYes : Nothing
+      }
+    , {
+        issueType : CT.NoIssue
+      , selectedYes : Nothing
+      }
+    ]
+    , respondedValidIssues : false
+  }
 }
 
 dummyPreviousRiderating :: RatingCard

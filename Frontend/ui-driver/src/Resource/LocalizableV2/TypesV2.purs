@@ -1550,7 +1550,7 @@ newtype Keymap
   , rating :: String
   , cancellation :: String
   , i_speak :: String
-  , with_nammayatri_for :: String
+  , with_nammayatri_for :: String -> String
   , years :: String
   , vehicle_number :: String
   , what_people_say :: String
@@ -1613,7 +1613,8 @@ newtype Keymap
   , boot_space :: String
   , pet_friendly :: String
   , hometown :: String
-  , why_ny :: String
+  , why_ny :: String -> String
+  , cab :: String 
   , new_home :: String
   , kid_education :: String
   , new_vehicle :: String
@@ -6880,3 +6881,6 @@ no_cancellation = a
 
 lets_get_started :: Proxy "lets_get_started"
 lets_get_started = a
+
+cab :: Proxy "cab"
+cab = a

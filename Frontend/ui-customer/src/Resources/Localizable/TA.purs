@@ -1385,7 +1385,7 @@ getTA stringKey =
     TRIPS -> "பயணங்கள்"
     I_SPEAK -> "நான் பேசுகிறேன்"
     AND -> " மற்றும் "
-    WITH_NAMMAYATRI_FOR -> "நம்மயாத்திரியுடன்"
+    WITH_NAMMAYATRI_FOR years -> "நம்மயாத்திரியுடன் "<> years <>"+ ஆண்டுகளாக"
     YEARS -> "ஆண்டுகளாக"
     VEHICLE_NUMBER -> "வாகன எண்: "
     WHAT_PEOPLE_SAY -> "மக்கள் என்ன கூறுகிறார்கள்"

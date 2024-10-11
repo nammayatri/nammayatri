@@ -143,7 +143,8 @@ initData = let
         issueReason : Nothing,
         issueDescription : "",
         rideBookingRes : dummyRideBooking,
-        wasOfferedAssistance : Nothing
+        wasOfferedAssistance : Nothing,
+        nightSafety : Nothing
     }
     , config : config
     , currentCityConfig : MRC.defaultCityConfig

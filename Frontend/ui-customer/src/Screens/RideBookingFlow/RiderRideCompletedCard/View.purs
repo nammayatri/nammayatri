@@ -10,12 +10,12 @@ import Data.Functor (map)
 import PrestoDOM.Animation as PrestoAnim
 import Animation (fadeIn,fadeInWithDelay) as Anim
 import Effect (Effect)
-import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (+), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, max, mod )
+import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (+), (<<<), (<>), (==), (>), (>=), (||), (<$>), (<=), show, void, (/=), when, max, mod )
 import Common.Styles.Colors as Color
 import Components.SelectListModal as CancelRidePopUp
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Data.Array (mapWithIndex, length, (!!), null, any, (..))
-import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime, safeMarginTop, screenHeight, getNewIDWithTag)
+import Data.Array (mapWithIndex, length, (!!), null, any, (..), head)
+import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime, safeMarginTop, screenHeight, getNewIDWithTag, liftFlow)
 import Components.PrimaryButton as PrimaryButton
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Properties (cornerRadii)
@@ -46,7 +46,8 @@ import Debug
 import Data.String as DS
 import Common.Types.App (FeedbackAnswer)
 import Data.Array (filter, elem)
-import Screens.Types (RiderRideCompletedScreenState)
+import Screens.Types (RiderRideCompletedScreenState, AdditionalCharges(..))
+import Components.RideCompletedCard.Controller (CustomerIssue(..))
 import Components.RatingCard.Controller (FeedbackItem(..))
 import Debug (spy)
 import Effect.Uncurried (runEffectFn2)
@@ -57,6 +58,12 @@ import Animation (screenAnimation)
 import Components.FavouriteDriverInfoCard.FavouriteDriverInfoCard as FavouriteDriverInfoCard
 import Components.FavouriteDriverInfoCard.Controller as FavouriteDriverInfoCardController
 import Resources.Localizable.EN (getEN)
+import Components.BannerCarousel as BannerCarousel
+import Effect.Aff (Milliseconds(..), launchAff)
+import Presto.Core.Types.Language.Flow (callAPI, APIResult(..), Flow)
+import Types.App (defaultGlobalState, GlobalState(..))
+import Control.Monad.Except.Trans (lift)
+import Components.RideCompletedCard as RideCompletedCard
 
 screen :: RiderRideCompletedScreenState -> Screen Action RiderRideCompletedScreenState ScreenOutput
 screen initialState =
@@ -73,7 +80,13 @@ screen initialState =
     globalEvents' :: (Action -> Effect Unit) -> RiderRideCompletedScreenState -> Effect (Effect Unit)
     globalEvents' push state = do 
       void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
+      when (isNothing state.customerIssue.bannerComputedView) $ void $ launchAff $ flowRunner defaultGlobalState $ computeIssueReportBanners push
       pure $ pure unit
+
+computeIssueReportBanners :: (Action -> Effect Unit) -> Flow GlobalState Unit
+computeIssueReportBanners push = do
+  bannerItem <- preComputeListItem $ RideCompletedCard.customerIssueCarousalView (push <<< RideCompletedAC) 
+  void $ liftFlow $ push $ SetIssueReportBannerItems bannerItem
 
 view :: forall w.  (Action -> Effect Unit) -> RiderRideCompletedScreenState -> PrestoDOM (Effect Unit) w
 view push state  =
@@ -238,8 +251,38 @@ priceAndDistanceUpdateView state push =
               , visibility if state.topCard.fareUpdatedVisiblity then VISIBLE else GONE
               ] <> (FontStyle.title1 TypoGraphy)
           ]
+        , linearLayout [
+            height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity CENTER
+          , orientation VERTICAL
+          , margin $ MarginTop 10
+          ] $ additionalChargesView <$> state.additionalCharges
         , pillView state push
       ]
+
+additionalChargesView :: forall w. AdditionalCharges -> PrestoDOM (Effect Unit) w
+additionalChargesView config = 
+  linearLayout [
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , gravity CENTER
+  , margin $ MarginBottom 5
+  , visibility config.visibility
+  ][
+    imageView[
+      height $ V 20
+    , width $ V 20
+    , imageWithFallback config.image 
+    ]
+  , textView $
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , text config.text 
+    , color config.textColor
+    , margin $ MarginLeft 4
+    ] <> FontStyle.body1 TypoGraphy
+  ]
 
 pillView :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 pillView state push =
@@ -307,6 +350,15 @@ rideDetailsButtonView state push =
 
 bottomCardView :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 bottomCardView state push =
+  let customerIssue :: CustomerIssue
+      customerIssue = {
+        currentIndex : state.customerIssue.currentPageIndex
+      , currentPageIndex : state.customerIssue.currentPageIndex
+      , bannerComputedView : state.customerIssue.bannerComputedView
+      , customerIssueCards : issueReportBannerConfigs state
+      , showIssueBanners : state.customerIssue.showIssueBanners
+      }
+  in
   linearLayout
   [ width MATCH_PARENT
   , orientation VERTICAL
@@ -315,8 +367,167 @@ bottomCardView state push =
   , alignParentBottom "true,-1"
   , background Color.white900
   ] [
-      if state.showRentalRideDetails then rentalTripDetailsView state push else linearLayout[width $ V 0, height $ V 0][]
-    , rideCustomerExperienceView state push ]
+      if state.showRentalRideDetails then rentalTripDetailsView state push else customerIssueView push customerIssue ,
+      rideCustomerExperienceView state push
+    ]
+
+---------------------------------------------------- customerIssueView ------------------------------------------------------------------------------------------------------------------------------------------
+customerIssueView :: forall w. (Action -> Effect Unit) -> CustomerIssue ->  PrestoDOM (Effect Unit) w
+customerIssueView push config  = 
+  case config.bannerComputedView , config.showIssueBanners, (null config.customerIssueCards) of 
+    Just listView , true, false ->
+      linearLayout[
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , weight 1.0
+      ][
+        if length config.customerIssueCards == 1 then customerIssuePopupView push config else customerIssueCarouselView listView push config ,
+        linearLayout[weight 1.0][] ,
+        linearLayout[
+            width MATCH_PARENT
+          , height WRAP_CONTENT
+          , cornerRadii $ Corners 16.0 true true false false
+          , background Color.white900
+          , padding $ Padding 16 16 16 16
+          , adjustViewWithKeyboard "true"
+          ][PrimaryButton.view (push <<< PrimaryButtonCarousel) (primaryButtonConfigForCarousel)]
+      ]
+    _,_,_-> textView[
+        width $ V 0
+      , height $ V 0
+      ] 
+
+
+customerIssueCarouselView :: forall w. ListItem -> (Action -> Effect Unit) -> CustomerIssue ->  PrestoDOM (Effect Unit) w
+customerIssueCarouselView listView push config  = 
+    linearLayout[
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      ] [
+        linearLayout[
+          width MATCH_PARENT
+        , height WRAP_CONTENT
+        , cornerRadius 8.0
+        , stroke $ "1," <> Color.grey800
+        ][CarouselHolder.carouselView push $ getCarouselConfig listView config]
+      , linearLayout [
+          width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation HORIZONTAL
+        , gravity CENTER
+        , margin $ MarginTop 8
+        , visibility $ if length config.customerIssueCards > 1 then VISIBLE else GONE
+        ] $ mapWithIndex (\ idx elem -> 
+            linearLayout[
+              height $ V $ if idx == config.currentIndex then 8 else 6
+            , width $ V $ if idx == config.currentIndex then 8 else 6
+            , cornerRadius $ if idx == config.currentIndex then 4.0 else 3.0
+            , background $ if idx == config.currentIndex then Color.black900 else Color.rippleShade
+            , margin $ if idx > 0 then MarginLeft 4 else MarginLeft 0
+            ] []
+          ) $ 0 .. ((length config.customerIssueCards) -1)
+      ]
+
+customerIssuePopupView :: forall w. (Action -> Effect Unit) ->  CustomerIssue -> PrestoDOM (Effect Unit) w
+customerIssuePopupView  push config = 
+  let 
+    cardsArray = config.customerIssueCards
+    firstCard  = head cardsArray 
+    title      = maybe "" (\x -> x.title) firstCard
+    selectedYes = maybe Nothing (\x -> x.selectedYes) firstCard
+    yestext    = maybe "" (\x -> x.yesText) firstCard
+    notext     = maybe "" (\x -> x.noText) firstCard
+    subtitle   = maybe "" (\x -> x.subTitle) firstCard
+  in
+  linearLayout 
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , padding $ Padding 16 24 16 24
+  , cornerRadius 6.0
+  , backgroundColor Color.white900
+  , orientation VERTICAL
+  , stroke $ "1,"<>Color.grey800
+  ][
+    textView $ 
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , text title
+    , color Color.black800 
+    , gravity CENTER
+    , padding $ PaddingBottom 4
+    ] <> FontStyle.h3 TypoGraphy
+  , textView $ 
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , text subtitle 
+    , color  Color.black700
+    , gravity CENTER
+    ] <> FontStyle.paragraphText TypoGraphy 
+  , linearLayout 
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , margin $ MarginTop 16
+    ][
+      linearLayout
+      [ height WRAP_CONTENT
+      , weight 1.0
+      , gravity CENTER
+      , padding $ Padding 1 1 1 1
+      , cornerRadius 6.0
+      , background $ if selectedYes == Just true then Color.blue900 else Color.grey800
+      ][
+        linearLayout
+        [ height WRAP_CONTENT
+        ,  weight 1.0
+        , gravity CENTER
+        , padding $ PaddingVertical 14 14
+        , onClick push $ const $ SelectButton true 0
+        , accessibility ENABLE
+        , accessibilityHint $ if selectedYes == Just true then  "Yes : selected" else "Yes : unselected "
+        , cornerRadius 6.0
+        , background $ if selectedYes == Just true then Color.blue600 else Color.white900
+        ][
+          textView $ 
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ yestext 
+          , color Color.black800
+          ] <> FontStyle.subHeading1 TypoGraphy
+        ]
+      ]
+    , linearLayout
+      [ height WRAP_CONTENT
+      , weight 1.0
+      , gravity CENTER
+      , padding $ Padding 1 1 1 1
+      , margin $ MarginLeft 10
+      , cornerRadius 6.0
+      , background $ if selectedYes == Just false then Color.blue900 else Color.grey800
+      ][
+        linearLayout
+        [ height WRAP_CONTENT
+        , weight 1.0
+        , gravity CENTER
+        , onClick push $ const $ SelectButton false 0
+        , padding $ PaddingVertical 14 14
+        , accessibility ENABLE
+        , accessibilityHint $  if selectedYes == Just false then  "No : Selected" else "No : Unselected "
+        , cornerRadius 6.0
+        , background $ if selectedYes == Just false then Color.blue600 else Color.white900
+        ][
+          textView $ 
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ notext
+          , color   Color.black800 
+          ] <> FontStyle.subHeading1 TypoGraphy
+        ]
+      ]
+    ]
+  ]
 
 ---------------------------------------------- (Driver Card 7) rentalRideDetailsView  ------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -464,6 +675,7 @@ rideCustomerExperienceView state push =
   , width MATCH_PARENT
   , orientation VERTICAL
   , weight 1.0
+  , visibility $ boolToVisibility $ not state.customerIssue.showIssueBanners
   ]
   [
     linearLayout[
@@ -646,6 +858,7 @@ rideRatingView state push =
               , width MATCH_PARENT
               , orientation VERTICAL
               , visibility $ boolToVisibility state.isRatingCard
+              , onBackPressed push $ const Back
               ][ 
                 topPartView state push 
               , bottomPartView state push
@@ -737,6 +950,7 @@ profile state push =
           , cornerRadius 50.0
           , padding (Padding 7 0 7 3)
           , margin $ MarginTop 5
+          , visibility $ boolToVisibility $ state.driverInfoCardState.favCount > 0
           ][
             imageView [
               imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_blue_heart"
@@ -748,7 +962,7 @@ profile state push =
           , textView $
               [ 
                 accessibilityHint $ "liked by customers"
-              , text $ getString BY <> " " <> show state.driverInfoCardState.favCount <> " " <> getString CUSTOMERS    -- "by " <> show state.driverInfoCardState.favCount <> " customers"
+              , text $ getString BY <> " " <> show state.driverInfoCardState.favCount <> " " <> getString CUSTOMERS
               , color Color.blue800
               , maxLines 1
               , gravity CENTER
@@ -764,24 +978,24 @@ starRatingView state push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , margin $ MarginBottom 8
     , margin $ MarginLeft 8
     ][ 
       linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         ](mapWithIndex (\index item ->
-                          linearLayout
-                          [ height WRAP_CONTENT
-                          , width WRAP_CONTENT
-                          , margin (MarginHorizontal 5 5)
-                          ][imageView
-                              [ height $ V 22
-                              , width $ V 22
-                              , accessibilityHint (show item <> " Star : " <> (if item <= state.ratingCard.rating then "Selected" else "Un Selected") )
-                              , imageWithFallback  $ fetchImage FF_COMMON_ASSET $ if item <= state.ratingCard.rating then "ny_ic_yellowstar_active" else "ny_ic_yellowstar_inactive"
-                              ]
-                          ]) [1,2,3,4,5])
+            linearLayout
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , margin (MarginHorizontal 5 5)
+            , onClick push $ const $ RateClick item
+            ][imageView
+                [ height $ V 22
+                , width $ V 22
+                , accessibilityHint (show item <> " Star : " <> (if item <= state.ratingCard.rating then "Selected" else "Un Selected") )
+                , imageWithFallback  $ fetchImage FF_COMMON_ASSET $ if item <= state.ratingCard.rating then "ny_ic_yellowstar_active" else "ny_ic_yellowstar_inactive"
+                ]
+            ]) [1,2,3,4,5])
     ]
 
 driverRating :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -790,7 +1004,7 @@ driverRating state push =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , padding $ PaddingHorizontal 18 10
-    , margin $ MarginVertical 22 15
+    , margin $ MarginVertical 18 15
     , orientation HORIZONTAL
     ][
       textView $
@@ -799,6 +1013,7 @@ driverRating state push =
         , text  $ getString YOU_RATED <> ":"
         , color Color.black700
         , maxLines 1
+        , margin $ MarginTop 2
         ] <> FontStyle.body3 LanguageStyle
     , starRatingView state push
     ]
@@ -808,16 +1023,17 @@ favComponent state push =
   linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , padding $ Padding 10 12 10 12
+      , padding $ Padding 10 10 10 10
       , margin $ Margin 18 0 24 15
       , orientation HORIZONTAL
       , background $ Color.white900
       , cornerRadius 12.0
       , visibility $ boolToVisibility $ state.driverInfoCardState.isAlreadyFav
+      , gravity CENTER_VERTICAL
       ][
         textView $
           [ 
-            height MATCH_PARENT
+            height WRAP_CONTENT
           , accessibilityHint $ "Your Favourite Driver"
           , text $ getString YOU_FAVOURITED <> " " <> state.rideRatingState.driverName
           , color $ "#2F2935"
@@ -825,7 +1041,6 @@ favComponent state push =
           , fontWeight $ FontWeight 400
           , textSize $ FontSize.a_14
           , lineHeight "14"
-          , gravity CENTER_VERTICAL
           ]
       , linearLayout[weight 1.0][]
       , imageView [

@@ -1539,7 +1539,9 @@ driverProfileFlow = do
       modifyScreenState $ DriverSavedLocationScreenStateType (\_ ->  defaultEpassState'.driverSavedLocationScreen)
       goToLocationFlow 
 
-    DRIVER_COMPLETING_PROFILE_SCREEN -> driverCompleteProfileFlow
+    DRIVER_COMPLETING_PROFILE_SCREEN vehicleType -> do
+      modifyScreenState $ DriverCompleteProfileScreenStateType (\state -> state { data {vehicleType = vehicleType}})
+      driverCompleteProfileFlow
     
     VIEW_PENDING_VEHICLE rcNumber vehicleCategory -> do
       setValueToLocalStore ENTERED_RC rcNumber

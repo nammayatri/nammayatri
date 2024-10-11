@@ -1608,7 +1608,7 @@ getProxy str = case str of
   RATING -> \a -> a @~ rating
   CANCELLATION -> \a -> a @~ cancellation
   I_SPEAK -> \a -> a @~ i_speak
-  WITH_NAMMAYATRI_FOR -> \a -> a @~ with_nammayatri_for
+  WITH_NAMMAYATRI_FOR arg1 -> \a -> (a @~ with_nammayatri_for) arg1
   YEARS -> \a -> a @~ years
   VEHICLE_NUMBER -> \a -> a @~ vehicle_number
   WHAT_PEOPLE_SAY -> \a -> a @~ what_people_say
@@ -1671,7 +1671,8 @@ getProxy str = case str of
   BOOT_SPACE -> \a -> a @~ boot_space
   PET_FRIENDLY -> \a -> a @~ pet_friendly
   HOMETOWN -> \a -> a @~ hometown
-  WHY_NY -> \a -> a @~ why_ny
+  WHY_NY arg1-> \a -> (a @~ why_ny) arg1
+  CAB -> \a -> a @~ cab
   NEW_HOME -> \a -> a @~ new_home
   KID_EDUCATION -> \a -> a @~ kid_education
   NEW_VEHICLE -> \a -> a @~ new_vehicle

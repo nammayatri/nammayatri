@@ -1381,7 +1381,7 @@ getTE stringKey =
     TRIPS -> "ప్రయాణాలు"
     I_SPEAK -> "నేను మాట్లాడతాను"
     AND -> " మరియు "
-    WITH_NAMMAYATRI_FOR -> "నమ్మయాత్రి తో"
+    WITH_NAMMAYATRI_FOR years -> "నమ్మయాత్రి తో "<> years <>"+ సంవత్సరాలు"
     YEARS -> "ఏళ్లుగా"
     VEHICLE_NUMBER -> "వాహన సంఖ్య: "
     WHAT_PEOPLE_SAY -> "మనం చెప్పేది"

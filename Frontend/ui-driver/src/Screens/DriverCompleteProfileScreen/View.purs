@@ -8,7 +8,7 @@ import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getcurrentdate)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getcurrentdate, getVehicleVariantName)
 import Engineering.Helpers.Utils as EHU
 import Language.Types (STR(..))
 import Prelude (show, Unit, const, map, not, ($), (<<<), (<>), (==), (<>), (-), unit, (/=), (||), (+), bind, discard, void, pure, (/))
@@ -100,6 +100,7 @@ view push state =
         , width MATCH_PARENT
         , orientation VERTICAL
         , background Color.white900
+        , onBackPressed push $ const GoBack
         ]
         [ header push state
         , seperator push state
@@ -263,7 +264,8 @@ uploadMorePhoto push state =
               width MATCH_PARENT
             , height WRAP_CONTENT
             , margin $ MarginTop 25
-        ] $ (mapWithIndex(\idx item -> addedImage push idx item.image) state.data.addedImages) <> 
+        ] $ (mapWithIndex(\idx item -> do
+                addedImage push idx item.image) state.data.addedImages) <> 
             (mapWithIndex(\idx item -> leftImage push idx ) (1..(maxDriverImages - (DA.length state.data.addedImages))))
     ]
 
@@ -596,7 +598,7 @@ aspirations push state =
     ,   orientation VERTICAL
     ][
         textView
-        $ [   text $ getString WHY_NY
+        $ [   text $ getString $ WHY_NY $ getVehicleVariantName state.data.vehicleType
             , width MATCH_PARENT
             , height WRAP_CONTENT
             , color Color.black800

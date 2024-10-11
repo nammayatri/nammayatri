@@ -32,7 +32,7 @@ import Engineering.Helpers.BackTrack (liftFlowBT)
 import Presto.Core.Types.Language.Flow (delay)
 import Effect.Uncurried(runEffectFn1)
 import Debug (spy)
-import Data.Int (fromNumber, round)
+import Data.Int (fromNumber, round, fromString)
 import Engineering.Helpers.Commons
 import Language.Strings (getString)
 import Font.Size as FontSize
@@ -41,6 +41,8 @@ import Font.Style (bold, semiBold, regular)
 import Common.Types.App (LazyCheck(..))
 import PrestoDOM (FontWeight(..), fontStyle, lineHeight, textSize, fontWeight)
 import Language.Types (STR(..))
+import Common.Resources.Constants (secondsInOneYear)
+import Data.Function.Uncurried (runFn2)
 
 screen :: DriverProfileScreenCommonState -> Screen Action DriverProfileScreenCommonState ScreenOutput
 screen initialState =
@@ -99,7 +101,7 @@ view push state =
      , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
      ] $
      [  
-        linearLayout[
+        relativeLayout[
             height MATCH_PARENT
         ,   width MATCH_PARENT
         ][
@@ -109,13 +111,14 @@ view push state =
             ,   orientation VERTICAL
             ,   padding $ PaddingBottom 16
             ,   visibility $ boolToVisibility $ not $ state.data.shimmerView
+            ,   onBackPressed push $ const GoBack
             ][
                 back push state
             ,   header push state
             ,   driverStats push state
             ,   driverInfoCard push state
-            ,   reviews push state
             ,   ratings push state
+            ,   reviews push state
             ,   trainings push state
             ,   pledge push state
             ,   aboutMe push state
@@ -189,6 +192,7 @@ driverProfile push state =
             width MATCH_PARENT
         ,   height WRAP_CONTENT
         ,   margin $ MarginTop 150
+        ,   visibility $ boolToVisibility $ DA.length state.data.displayImages > 1
         ][
             linearLayout[
                 width WRAP_CONTENT
@@ -326,6 +330,7 @@ header push state =
                 , orientation HORIZONTAL
                 , background Color.lightGreyBlue1
                 , cornerRadius 24.0
+                , visibility $ boolToVisibility $ stats.likedByRidersNum > 0
                 ][
                     imageView [ 
                     width $ V 16
@@ -463,6 +468,8 @@ driverStats push state =
 
 driverInfoCard :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
 driverInfoCard push state =
+    let drivingYears = (runFn2 JB.differenceBetweenTwoUTC (EHC.getCurrentUTC "") state.data.onboardedAt)
+    in
     linearLayout[
         height WRAP_CONTENT
     ,   width MATCH_PARENT
@@ -479,9 +486,9 @@ driverInfoCard push state =
             ] <> FontStyle.body20 CT.TypoGraphy
     ,   linearLayout[
             height WRAP_CONTENT
-        ,   width MATCH_PARENT
+        ,   width WRAP_CONTENT
         ,   orientation VERTICAL
-        ,   margin $ Margin 0 0 0 15
+        ,   margin $ MarginBottom 15
         ,   visibility $ boolToVisibility $ not (DA.length state.data.languages == 0)
         ][
             textView $
@@ -495,7 +502,21 @@ driverInfoCard push state =
         ]
     ,   linearLayout[
             height WRAP_CONTENT
-        ,   width MATCH_PARENT
+        ,   width WRAP_CONTENT
+        ,   orientation VERTICAL
+        ,   margin $ MarginBottom 15
+        ,   visibility $ boolToVisibility $ (state.data.aboutMe == Nothing) && (drivingYears >= secondsInOneYear)
+        ][
+            textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text $ "🗓️    " <> (getString $ WITH_NAMMAYATRI_FOR $ show (drivingYears/secondsInOneYear))
+            , color Color.black700
+            ] <> FontStyle.body1 CT.TypoGraphy
+        ]
+    ,   linearLayout[
+            height WRAP_CONTENT
+        ,   width WRAP_CONTENT
         ,   margin $ Margin 0 0 0 0
         ,   visibility $ boolToVisibility $ not (state.data.vehicleNum == Nothing)
         ][
@@ -514,6 +535,7 @@ driverInfoCard push state =
             , lineHeight "30"
             , fontStyle $ bold LanguageStyle
             , fontWeight $ FontWeight 700
+            , margin $ MarginTop $ if os == "IOS" then 2 else 0
             ]
         ]
     ]
@@ -522,7 +544,7 @@ reviewItem :: forall w. DriverReview -> PrestoDOM (Effect Unit) w
 reviewItem (DriverReview item) =
     linearLayout[
         height $ V 173
-    ,   width $ V 290
+    ,   width $ V 300
     ,   background Color.white900
     ,   padding $ Padding 15 15 10 15
     ,   stroke $ "1,"<> Color.grey900
@@ -612,17 +634,9 @@ reviews push state =
         height WRAP_CONTENT
     ,   width MATCH_PARENT
     ,   orientation VERTICAL
-    ,   margin $ MarginTop 15 
     ,   visibility $ boolToVisibility $ not (DA.length state.data.topReviews == 0)
     ][
-        textView $
-            [ height WRAP_CONTENT
-            , width WRAP_CONTENT
-            , text $ getString WHAT_PEOPLE_SAY
-            , color Color.black800
-            , margin $ Margin 16 0 0 16
-            ] <> FontStyle.body7 CT.TypoGraphy
-    ,   horizontalScrollView[
+        horizontalScrollView[
             height WRAP_CONTENT
         ,   width MATCH_PARENT
         ,   background Color.blue600
@@ -633,6 +647,7 @@ reviews push state =
                 height WRAP_CONTENT
             ,   width MATCH_PARENT
             ,   padding $ PaddingLeft 16
+            ,   margin $ MarginBottom $ if os == "IOS" then 24 else 0
             ](
                 map(\item -> reviewItem item)state.data.topReviews
             )
@@ -647,8 +662,7 @@ ratings push state =
         height WRAP_CONTENT
     ,   width MATCH_PARENT
     ,   orientation VERTICAL
-    ,   margin $ MarginTop 15 
-    ,   visibility $ boolToVisibility $ not (DA.length state.data.topReviews /= 0)
+    ,   margin $ MarginTop 15
     ][
         textView $
             [ height WRAP_CONTENT
@@ -661,7 +675,7 @@ ratings push state =
             height WRAP_CONTENT
         ,   width MATCH_PARENT
         ,   background Color.blue600
-        ,   padding $ Padding 16 24 16 24
+        ,   padding $ Padding 16 24 16 0
         ,   orientation VERTICAL
         ][
             linearLayout[

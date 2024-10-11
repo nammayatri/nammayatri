@@ -2061,6 +2061,7 @@ type DriverCompleteProfileScreenData = {
   , uploadedImagesIds :: Array String
   , addedImages :: Array { image :: String, imageName :: String }
   , inputTextState :: InputTextState
+  , vehicleType :: VehicleCategory
 }
 
 data Component = Pledge | Aspirations | Empty

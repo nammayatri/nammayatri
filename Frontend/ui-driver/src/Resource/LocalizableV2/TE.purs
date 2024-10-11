@@ -1538,7 +1538,6 @@ getTe =
     , rating: "రేటింగ్"
     , cancellation: "రద్దు"
     , i_speak: "నేను మాట్లాడతాను"
-    , with_nammayatri_for: "నమ్మయాత్రి తో"
     , years: "ఏళ్లుగా"
     , vehicle_number: "వాహన సంఖ్య: "
     , what_people_say: "మనం చెప్పేది"
@@ -1600,7 +1599,8 @@ getTe =
     , pet_friendly: "పిల్లి మరియు కుక్కలకు అనుకూలం"
     , from_where: "జన్మస్థానం"
     , driving_since: "ఓడించడం ప్రారంభించిన సంవత్సరం"
-    , why_ny: "నేను ఆటో నడపడం ఎందుకు ఎంచుకున్నాను?"
+    , why_ny: (\variant -> "నేను " <> variant <> " నడపడం ఎందుకు ఎంచుకున్నాను?")
+    , cab: "క్యాబ్"
     , new_home: "కొత్త ఇల్లు కొనండి"
     , kid_education: "పిల్లల విద్య"
     , new_vehicle: "కొత్త వాహనం కొనండి"
@@ -1719,4 +1719,5 @@ getTe =
     , good_services: "మంచి సేవ"
     , smooth_driving: "మృదువైన డ్రైవింగ్"
     , no_cancellation: "రద్దు లేదు"
+    , with_nammayatri_for: (\years -> "నమ్మయాత్రి తో "<> years <>"+ సంవత్సరాలు")
     }

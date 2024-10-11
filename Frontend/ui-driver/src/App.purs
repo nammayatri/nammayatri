@@ -338,7 +338,7 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | SAVED_LOCATIONS_SCREEN
                                     | GO_HOME DriverProfileScreenState
                                     | VIEW_PENDING_VEHICLE String VehicleCategory
-                                    | DRIVER_COMPLETING_PROFILE_SCREEN
+                                    | DRIVER_COMPLETING_PROFILE_SCREEN VehicleCategory
                                     | CANCELLATION_RATE_SCREEN CancellationRateScreenState
 
 

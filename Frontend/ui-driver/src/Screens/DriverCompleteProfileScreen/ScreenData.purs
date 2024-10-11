@@ -1,6 +1,6 @@
 module Screens.DriverCompleteProfileScreen.ScreenData where
 
-import Screens.Types (DriverCompleteProfileScreenState, Component(..))
+import Screens.Types (DriverCompleteProfileScreenState, Component(..), VehicleCategory(..))
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons as EHC
 import Prelude
@@ -27,6 +27,7 @@ initData = {
   , addedImages: []
   , datePickerState : datePickerState'
   , inputTextState : inputTextState'
+  , vehicleType : AutoCategory
   }
 , props : {
   showImageModel : false,
