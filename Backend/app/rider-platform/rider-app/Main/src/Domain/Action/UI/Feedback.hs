@@ -91,7 +91,8 @@ data FeedbackRes = FeedbackRes
     shouldFavDriver :: Maybe Bool,
     riderPhoneNum :: Maybe Text,
     isValueAddNP :: Bool,
-    filePath :: Maybe Text
+    filePath :: Maybe Text,
+    riderName :: Text
   }
 
 data DriverProfileResponse = DriverProfileResponse
@@ -154,6 +155,7 @@ feedback request personId = do
         vehicleServiceTierType = booking.vehicleServiceTierType,
         shouldFavDriver = request.shouldFavDriver,
         riderPhoneNum = unencryptedMobileNumber,
+        riderName = fromMaybe "User" person.firstName,
         ..
       }
   where

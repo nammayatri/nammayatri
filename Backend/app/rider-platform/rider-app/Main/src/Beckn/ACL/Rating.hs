@@ -63,7 +63,7 @@ tfRating res@DFeedback.FeedbackRes {..} = do
       ratingValue = Just $ show ratingValue,
       ratingRatingCategory = Nothing,
       ratingFeedbackForm = Just $ tfFeedbackForm res,
-      ratingTag = guard isValueAddNP >> mkRatingTags res.shouldFavDriver res.riderPhoneNum res.filePath
+      ratingTag = guard isValueAddNP >> mkRatingTags res.shouldFavDriver res.riderPhoneNum res.filePath res.riderName
     }
 
 tfFeedbackForm :: DFeedback.FeedbackRes -> [Spec.FeedbackForm]
@@ -85,8 +85,8 @@ tfFeedbackForm DFeedback.FeedbackRes {..} = do
       }
     ]
 
-mkRatingTags :: Maybe Bool -> Maybe Text -> Maybe Text -> Maybe [Spec.TagGroup]
-mkRatingTags mbShouldFavDriver mbPhoneNum mbFilePath =
+mkRatingTags :: Maybe Bool -> Maybe Text -> Maybe Text -> Text -> Maybe [Spec.TagGroup]
+mkRatingTags mbShouldFavDriver mbPhoneNum mbFilePath riderName =
   Just
     [ Spec.TagGroup
         { tagGroupDescriptor =
@@ -97,7 +97,7 @@ mkRatingTags mbShouldFavDriver mbPhoneNum mbFilePath =
                   descriptorShortDesc = Nothing
                 },
           tagGroupDisplay = Just False,
-          tagGroupList = mkPersonTag mbShouldFavDriver <> mkPersonNumberTag mbPhoneNum <> mkFilePathTag mbFilePath
+          tagGroupList = mkPersonTag mbShouldFavDriver <> mkPersonNumberTag mbPhoneNum <> mkFilePathTag mbFilePath <> mkPersonName riderName
         }
     ]
 
@@ -146,5 +146,21 @@ mkFilePathTag mbFilePath =
                 },
           tagDisplay = Just False,
           tagValue = Just filePath
+        }
+    ]
+
+mkPersonName :: Text -> Maybe [Spec.Tag]
+mkPersonName riderName = do
+  Just
+    [ Spec.Tag
+        { tagDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just $ show Tags.RIDER_NAME,
+                  descriptorName = Just "Rider Name",
+                  descriptorShortDesc = Nothing
+                },
+          tagDisplay = Just False,
+          tagValue = Just riderName
         }
     ]
