@@ -96,18 +96,7 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN service_tier_description te
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN service_tier_provider_code text ;
-
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN delayed_interest integer ;
-
-
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN bpp_delayed_interest integer ;
-
-
-------- SQL updates -------
 

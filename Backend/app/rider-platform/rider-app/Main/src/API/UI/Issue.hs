@@ -435,10 +435,10 @@ getIssueOption (personId, merchantId) issueCategoryId issueOptionId issueReportI
 updateIssueStatus :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueReport -> Maybe Language -> Common.IssueStatusUpdateReq -> FlowHandler Common.IssueStatusUpdateRes
 updateIssueStatus (personId, merchantId) issueReportId language req = withFlowHandlerAPI $ do
   personCityInfo <- CQPerson.findCityInfoById personId >>= fromMaybeM (PersonCityInformationNotFound personId.getId)
-  let _ = case req.status of
-        CLOSED -> resolveIGMIssue (personId, merchantId) issueReportId req.customerResponse req.customerRating
-        RESOLVED -> resolveIGMIssue (personId, merchantId) issueReportId req.customerResponse req.customerRating
-        _ -> pure ()
+  case req.status of
+    CLOSED -> resolveIGMIssue (personId, merchantId) issueReportId req.customerResponse req.customerRating
+    RESOLVED -> resolveIGMIssue (personId, merchantId) issueReportId req.customerResponse req.customerRating
+    _ -> pure ()
   Common.updateIssueStatus (cast personId, cast merchantId, cast personCityInfo.merchantOperatingCityId) issueReportId language req customerIssueHandle CUSTOMER
 
 igmIssueStatus :: (Id SP.Person, Id DM.Merchant) -> FlowHandler APISuccess
@@ -463,8 +463,8 @@ igmIssueStatus (personId, merchantId) = withFlowHandlerAPI $ do
 
   pure Success
 
-resolveIGMIssue :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueReport -> Maybe CustomerResponse -> Maybe Common.CustomerRating -> FlowHandler ()
-resolveIGMIssue (personId, merchantId) issueReportId response rating = withFlowHandlerAPI $ do
+resolveIGMIssue :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueReport -> Maybe CustomerResponse -> Maybe Common.CustomerRating -> Flow ()
+resolveIGMIssue (personId, merchantId) issueReportId response rating = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   issueReport <- QIR.findById issueReportId >>= fromMaybeM (InternalError $ "Issue Report not found " <> show issueReportId.getId)
   becknIssueId <- maybe (throwError $ InvalidRequest "IGM Issue Id not found") return issueReport.becknIssueId
