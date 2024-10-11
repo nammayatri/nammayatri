@@ -51,6 +51,7 @@ data RiderConfig = RiderConfig
     safetyCheckEndTime :: Kernel.Types.Common.Seconds,
     safetyCheckStartTime :: Kernel.Types.Common.Seconds,
     sensitiveWords :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    sensitiveWordsForExactMatch :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     settleCancellationFeeBeforeNextRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     specialZoneRadius :: Kernel.Prelude.Int,
     timeDiffFromUtc :: Kernel.Types.Common.Seconds,

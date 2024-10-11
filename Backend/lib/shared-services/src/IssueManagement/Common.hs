@@ -258,7 +258,8 @@ data MerchantConfig = MerchantConfig
     kaptureQueue :: Text,
     counterPartyUrl :: BaseUrl,
     counterPartyApiKey :: Text,
-    sensitiveWords :: Maybe [Text]
+    sensitiveWords :: Maybe [Text],
+    sensitiveWordsForExactMatch :: Maybe [Text]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

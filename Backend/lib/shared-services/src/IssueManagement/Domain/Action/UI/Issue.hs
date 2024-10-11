@@ -398,7 +398,9 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
   processIssueReportTypeActions (personId, merchantId) mbOption mbRide (Just config) True identifier issueHandle
   issueReport <- mkIssueReport mocId updatedChats shouldCreateTicket now
   let sensitiveWords = fromMaybe [] config.sensitiveWords
-  let isLOFeedback = (identifier == CUSTOMER) && not (T.null description) && any (\word -> T.toLower word `T.isInfixOf` T.toLower description) sensitiveWords
+  let sensitiveWordsForExactMatch = fromMaybe [] config.sensitiveWordsForExactMatch
+  let splittedDesc = filter (not . T.null) $ T.words (replacePunctuation description)
+  let isLOFeedback = (identifier == CUSTOMER) && not (T.null description) && (any (\word -> T.toLower word `T.isInfixOf` T.toLower description) sensitiveWords || any (\word -> T.toLower word `elem` map T.toLower splittedDesc) sensitiveWordsForExactMatch)
   when isLOFeedback $
     fork "notify on slack" $ do
       sosAlertsTopicARN <- asks (.sosAlertsTopicARN)
@@ -419,6 +421,13 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
         logTagInfo "Create Ticket API failed - " $ show err
   pure $ Common.IssueReportRes {issueReportId = issueReport.id, issueReportShortId = issueReport.shortId, messages}
   where
+    replacePunctuation :: T.Text -> T.Text
+    replacePunctuation str = T.map replaceChar str
+      where
+        replaceChar c
+          | c `elem` ['?', '.', ',', '/'] = ' '
+          | otherwise = c
+
     mkIssueReport mocId updatedChats shouldCreateTicket now = do
       id <- generateGUID
       shortId <- generateShortId

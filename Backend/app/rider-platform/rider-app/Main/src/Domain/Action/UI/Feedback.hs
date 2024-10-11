@@ -129,7 +129,8 @@ feedback request personId = do
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
   let sensitiveWords = fromMaybe [] riderConfig.sensitiveWords
-      isLOFeedback = maybe False (checkSensitiveWords sensitiveWords) feedbackDetails
+  let sensitiveWordsForExactMatch = fromMaybe [] riderConfig.sensitiveWordsForExactMatch
+      isLOFeedback = maybe False (checkSensitiveWords sensitiveWords sensitiveWordsForExactMatch) feedbackDetails
   when isLOFeedback $
     fork "Creating ticket and notifying on slack" $ do
       phoneNumber <- mapM decrypt person.mobileNumber
@@ -163,9 +164,17 @@ feedback request personId = do
         Just issue -> return $ Just issue.id.getId
         Nothing -> return Nothing
 
-    checkSensitiveWords sensitiveWords feedbackDetails =
+    checkSensitiveWords sensitiveWords sensitiveWordsForExactMatch feedbackDetails =
       let loweredcaseFeedback = T.toLower feedbackDetails
-       in not (T.null feedbackDetails) && any (\word -> T.toLower word `T.isInfixOf` loweredcaseFeedback) sensitiveWords
+          splittedFeedback = filter (not . T.null) $ T.words (replacePunctuation loweredcaseFeedback)
+       in not (T.null feedbackDetails) && (any (\word -> T.toLower word `T.isInfixOf` loweredcaseFeedback) sensitiveWords || any (\word -> T.toLower word `elem` map T.toLower splittedFeedback) sensitiveWordsForExactMatch)
+
+    replacePunctuation :: T.Text -> T.Text
+    replacePunctuation str = T.map replaceChar str
+      where
+        replaceChar c
+          | c `elem` ['?', '.', ',', '/'] = ' '
+          | otherwise = c
 
     createJsonMessage :: Text -> T.Text
     createJsonMessage descriptionText =
