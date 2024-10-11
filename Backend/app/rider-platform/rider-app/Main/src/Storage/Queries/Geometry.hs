@@ -22,15 +22,26 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import qualified Sequelize as Se
 import Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Geometry.Geometry as BeamG
 import qualified Storage.Beam.Geometry.GeometryGeom as BeamGeomG
 
 create :: (MonadFlow m, EsqDBFlow m r) => Geometry -> m ()
 create = createWithKV
+
+findGeometryByStateAndCity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Context.City -> Context.IndianState -> m (Maybe Geometry)
+findGeometryByStateAndCity cityParam stateParam = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamG.city (Se.Eq cityParam),
+          Se.Is BeamG.state (Se.Eq stateParam)
+        ]
+    ]
 
 findGeometriesContaining :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LatLong -> [Text] -> m [Geometry]
 findGeometriesContaining gps regions = do
