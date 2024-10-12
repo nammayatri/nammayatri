@@ -695,8 +695,8 @@ configureMessageProviderFailover :: DMOC.MerchantOperatingCity -> Common.ConfigF
 configureMessageProviderFailover merchantOperatingCity req = do
   case req.priorityOrder of
     Just priorityOrder -> do
-      when (notIsEmpty priorityOrder.smsProviders) do CQMSUC.updateSmsProvidersPriorityList priorityOrder.smsProviders merchantOperatingCity.id
-      when (notIsEmpty priorityOrder.whatsappProviders) do CQMSUC.updateWhatsappProvidersPriorityList priorityOrder.whatsappProviders merchantOperatingCity.id
+      when (notEmpty priorityOrder.smsProviders) do CQMSUC.updateSmsProvidersPriorityList priorityOrder.smsProviders merchantOperatingCity.id
+      when (notEmpty priorityOrder.whatsappProviders) do CQMSUC.updateWhatsappProvidersPriorityList priorityOrder.whatsappProviders merchantOperatingCity.id
     Nothing -> do
       merchantServiceUsageConfig <- CQMSUC.findByMerchantOperatingCityId merchantOperatingCity.id >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCity.id.getId)
       let messageProviderPriorityList = reorderList merchantServiceUsageConfig.smsProvidersPriorityList
@@ -709,9 +709,9 @@ reorderList :: [a] -> [a]
 reorderList [] = []
 reorderList (x : xs) = xs ++ [x]
 
-notIsEmpty :: [a] -> Bool
-notIsEmpty [] = True
-notIsEmpty _ = False
+notEmpty :: [a] -> Bool
+notEmpty [] = True
+notEmpty _ = False
 
 castNetworkEnums :: Common.NetworkEnums -> Domain.Types.GatewayAndRegistryService
 castNetworkEnums Common.ONDC = Domain.Types.ONDC

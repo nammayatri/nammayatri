@@ -43,6 +43,7 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantSpecialLocationGatesUpsert,
     deleteMerchantSpecialLocationGatesDelete,
     postMerchantConfigClearCacheSubscription,
+    postMerchantConfigFailover,
   )
 where
 
@@ -415,3 +416,9 @@ postMerchantConfigClearCacheSubscription merchantShortId opCity apiTokenInfo req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigClearCacheSubscription) req
+
+postMerchantConfigFailover :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.ConfigNames -> Common.ConfigFailoverReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postMerchantConfigFailover merchantShortId opCity apiTokenInfo configName req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigFailover) configName req

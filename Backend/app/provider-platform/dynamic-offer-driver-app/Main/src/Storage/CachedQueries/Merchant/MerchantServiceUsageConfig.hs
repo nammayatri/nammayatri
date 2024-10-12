@@ -18,6 +18,9 @@ module Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
     findByMerchantOpCityId,
     clearCache,
     updateMerchantServiceUsageConfig,
+    updateSmsProvidersPriorityList,
+    updateWhatsappProvidersPriorityList,
+    updateSnapToRoadProvidersPriorityList,
   )
 where
 
@@ -25,6 +28,9 @@ import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.MerchantServiceUsageConfig
+import qualified Kernel.External.Maps.Types
+import qualified Kernel.External.SMS.Types
+import qualified Kernel.External.Whatsapp.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -56,3 +62,18 @@ clearCache merchantId = do
 
 updateMerchantServiceUsageConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceUsageConfig -> m ()
 updateMerchantServiceUsageConfig = Queries.updateMerchantServiceUsageConfig
+
+updateSmsProvidersPriorityList :: (CacheFlow m r, EsqDBFlow m r) => [Kernel.External.SMS.Types.SmsService] -> Id MerchantOperatingCity -> m ()
+updateSmsProvidersPriorityList smsProvidersPriorityList merchantOperatingCityId = do
+  Queries.updateSmsProvidersPriorityList smsProvidersPriorityList merchantOperatingCityId
+  clearCache merchantOperatingCityId
+
+updateWhatsappProvidersPriorityList :: (CacheFlow m r, EsqDBFlow m r) => [Kernel.External.Whatsapp.Types.WhatsappService] -> Id MerchantOperatingCity -> m ()
+updateWhatsappProvidersPriorityList whatsappProvidersPriorityList merchantOperatingCityId = do
+  Queries.updateWhatsappProvidersPriorityList whatsappProvidersPriorityList merchantOperatingCityId
+  clearCache merchantOperatingCityId
+
+updateSnapToRoadProvidersPriorityList :: (CacheFlow m r, EsqDBFlow m r) => [Kernel.External.Maps.Types.MapsService] -> Id MerchantOperatingCity -> m ()
+updateSnapToRoadProvidersPriorityList snapToRoadProvidersPriorityList merchantOperatingCityId = do
+  Queries.updateSnapToRoadProvidersPriorityList snapToRoadProvidersPriorityList merchantOperatingCityId
+  clearCache merchantOperatingCityId
