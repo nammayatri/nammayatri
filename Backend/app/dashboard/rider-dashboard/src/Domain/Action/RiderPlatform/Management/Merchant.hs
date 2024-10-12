@@ -201,5 +201,5 @@ mkGeom kmlFile = do
 postMerchantConfigFailover :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Common.ConfigNames -> Common.ConfigFailoverReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postMerchantConfigFailover merchantShortId opCity apiTokenInfo configName req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.PostMerchantConfigFailoverEndpoint apiTokenInfo (Just req)
-  T.withTransactionStoring transaction $ do Client.callRiderAppOperations checkedMerchantId opCity (.merchantDSL.postMerchantConfigFailover) configName req
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigFailover) configName req

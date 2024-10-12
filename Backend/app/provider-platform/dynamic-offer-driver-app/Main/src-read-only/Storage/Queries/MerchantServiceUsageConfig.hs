@@ -9,6 +9,9 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantServiceUsageConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps.Types
+import qualified Kernel.External.SMS.Types
+import qualified Kernel.External.Whatsapp.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
@@ -41,6 +44,31 @@ updateMerchantServiceUsageConfig (Domain.Types.MerchantServiceUsageConfig.Mercha
       Se.Set Beam.autoComplete autoComplete,
       Se.Set Beam.smsProvidersPriorityList smsProvidersPriorityList,
       Se.Set Beam.snapToRoadProvidersList snapToRoadProvidersList,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
+updateSmsProvidersPriorityList ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ([Kernel.External.SMS.Types.SmsService] -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
+updateSmsProvidersPriorityList smsProvidersPriorityList merchantOperatingCityId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.smsProvidersPriorityList smsProvidersPriorityList, Se.Set Beam.updatedAt _now] [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
+updateSnapToRoadProvidersPriorityList ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ([Kernel.External.Maps.Types.MapsService] -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
+updateSnapToRoadProvidersPriorityList snapToRoadProvidersList merchantOperatingCityId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.snapToRoadProvidersList snapToRoadProvidersList, Se.Set Beam.updatedAt _now] [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
+updateWhatsappProvidersPriorityList ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ([Kernel.External.Whatsapp.Types.WhatsappService] -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
+updateWhatsappProvidersPriorityList whatsappProvidersPriorityList merchantOperatingCityId = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.whatsappProvidersPriorityList whatsappProvidersPriorityList,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
