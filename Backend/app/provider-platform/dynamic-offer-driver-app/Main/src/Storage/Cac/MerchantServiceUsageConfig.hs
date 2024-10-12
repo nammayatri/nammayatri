@@ -67,5 +67,9 @@ clearCache = CMMSUC.clearCache
 updateMerchantServiceUsageConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceUsageConfig -> m ()
 updateMerchantServiceUsageConfig = CMMSUC.updateMerchantServiceUsageConfig
 
+-- updateSmsProvidersPriorityList,
+-- updateWhatsappProvidersPriorityList,
+-- updateSnapToRoadProvidersPriorityList,
+
 instance KBF.FromCacType SBMSUC.MerchantServiceUsageConfig MerchantServiceUsageConfig where
   fromCacType = fromTType'
