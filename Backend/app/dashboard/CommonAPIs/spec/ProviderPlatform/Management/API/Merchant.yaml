@@ -25,6 +25,8 @@ imports:
   UpsertSpecialLocationGateReq: Dashboard.Common.Merchant
   UpsertSpecialLocationGateReqT: Dashboard.Common.Merchant
   ServiceNames: Dashboard.Common.Merchant
+  ConfigFailoverReq: Dashboard.Common.Merchant
+  ConfigNames: Dashboard.Common.Merchant
 
 module: Merchant
 
@@ -418,6 +420,16 @@ apis:
         type: ClearCacheSubscriptionReq
       response:
         type: APISuccess
+  - POST: #ToggleConfigPriorityAPI
+      endpoint: /config/{configName}/failover
+      params:
+        configName: ConfigNames
+      request:
+        type: ConfigFailoverReq
+      response:
+        type: APISuccess
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT TOGGLE_CONFIG_PRIORITY
 
 
 types:

@@ -280,6 +280,7 @@ data UserActionType
   | LIST_FRFS_STATION
   | ADD_FRFS_STATION
   | DELETE_FRFS_STATION
+  | TOGGLE_CONFIG_PRIORITY
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)

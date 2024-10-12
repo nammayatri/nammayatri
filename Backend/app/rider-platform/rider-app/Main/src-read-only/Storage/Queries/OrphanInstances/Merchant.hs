@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.Merchant where
 
+import qualified Domain.Types
 import qualified Domain.Types.Merchant
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -44,6 +45,7 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
             fakeOtpEmails = fakeOtpEmails,
             fakeOtpMobileNumbers = fakeOtpMobileNumbers,
             fallbackShortId = Kernel.Types.Id.ShortId fallbackShortId,
+            gatewayAndRegistryPriorityList = fromMaybe [Domain.Types.ONDC, Domain.Types.NY] gatewayAndRegistryPriorityList,
             gatewayUrl = gatewayUrl',
             geoHashPrecisionValue = geoHashPrecisionValue,
             geofencingConfig = mkGeofencingConfig destinationRestriction originRestriction,
@@ -94,6 +96,7 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
         Beam.fakeOtpEmails = fakeOtpEmails,
         Beam.fakeOtpMobileNumbers = fakeOtpMobileNumbers,
         Beam.fallbackShortId = Kernel.Types.Id.getShortId fallbackShortId,
+        Beam.gatewayAndRegistryPriorityList = Kernel.Prelude.Just gatewayAndRegistryPriorityList,
         Beam.gatewayUrl = Kernel.Prelude.showBaseUrl gatewayUrl,
         Beam.geoHashPrecisionValue = geoHashPrecisionValue,
         Beam.destinationRestriction = (.destination) geofencingConfig,

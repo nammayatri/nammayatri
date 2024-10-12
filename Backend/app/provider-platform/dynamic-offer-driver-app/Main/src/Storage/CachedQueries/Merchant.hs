@@ -22,10 +22,12 @@ module Storage.CachedQueries.Merchant
     clearCache,
     findAllShortIdById,
     updateGeofencingConfig,
+    updateGatewayAndRegistryPriorityList,
   )
 where
 
 import Data.Coerce (coerce)
+import qualified Domain.Types
 import Domain.Types.Common
 import Domain.Types.Merchant
 import Kernel.Prelude
@@ -101,3 +103,8 @@ loadAllProviders = Queries.loadAllProviders
 
 findAllShortIdById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Merchant] -> m [ShortId Merchant]
 findAllShortIdById = Queries.findAllShortIdById
+
+updateGatewayAndRegistryPriorityList :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> [Domain.Types.GatewayAndRegistryService] -> m ()
+updateGatewayAndRegistryPriorityList merchant gatewayAndRegistryPriorityList = do
+  Queries.updateGatewayAndRegistryPriorityList gatewayAndRegistryPriorityList merchant.id
+  clearCache merchant

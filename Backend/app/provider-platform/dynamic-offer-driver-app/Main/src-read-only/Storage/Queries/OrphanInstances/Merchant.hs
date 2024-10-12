@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.Merchant where
 
+import qualified Domain.Types
 import qualified Domain.Types.Merchant
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -26,6 +27,7 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
             description = description,
             enabled = enabled,
             fromTime = fromTime,
+            gatewayAndRegistryPriorityList = fromMaybe [Domain.Types.ONDC, Domain.Types.NY] gatewayAndRegistryPriorityList,
             geoHashPrecisionValue = geoHashPrecisionValue,
             geofencingConfig = Kernel.Types.Geofencing.GeofencingConfig originRestriction destinationRestriction,
             gstin = gstin,
@@ -58,6 +60,7 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
         Beam.description = description,
         Beam.enabled = enabled,
         Beam.fromTime = fromTime,
+        Beam.gatewayAndRegistryPriorityList = Kernel.Prelude.Just gatewayAndRegistryPriorityList,
         Beam.geoHashPrecisionValue = geoHashPrecisionValue,
         Beam.destinationRestriction = Kernel.Types.Geofencing.destination geofencingConfig,
         Beam.originRestriction = Kernel.Types.Geofencing.origin geofencingConfig,
