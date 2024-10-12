@@ -34,6 +34,11 @@ module Lib.Yudhishthira.Types
     LogicRolloutReq,
     TimeBoundResp,
     ConfigType (..),
+    allValues,
+    AppDynamicLogicVersionResp,
+    AppDynamicLogicVersion (..),
+    AppDynamicLogicDomainResp,
+    ChakraQueryResp,
     -- DynamicPricingResult (..),
   )
 where
@@ -56,6 +61,9 @@ import Lib.Yudhishthira.Types.KaalChakra as Reexport
 import Lib.Yudhishthira.Types.Manual as Reexport
 import Lib.Yudhishthira.Types.Tag as Reexport
 import qualified Text.Show (show)
+
+class Enumerable a where
+  allValues :: [a]
 
 data ConfigType
   = DriverPoolConfig
@@ -132,6 +140,14 @@ data LogicDomain
   | DYNAMIC_PRICING_UNIFIED
   | CONFIG ConfigType
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
+
+instance Enumerable LogicDomain where
+  allValues =
+    [ POOLING,
+      FARE_POLICY,
+      DYNAMIC_PRICING_UNIFIED
+    ]
+      ++ map CONFIG [minBound .. maxBound]
 
 generateLogicDomainShowInstances :: [String]
 generateLogicDomainShowInstances =
@@ -248,6 +264,18 @@ data RolloutVersion = RolloutVersion
 
 instance HideSecrets RolloutVersion where
   hideSecrets = identity
+
+type AppDynamicLogicVersionResp = [AppDynamicLogicVersion]
+
+data AppDynamicLogicVersion = AppDynamicLogicVersion
+  { version :: Int,
+    description :: Maybe Text
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+type AppDynamicLogicDomainResp = [LogicDomain]
+
+type ChakraQueryResp = [ChakraQueriesAPIEntity]
 
 instance HideSecrets AppDynamicLogicReq where
   hideSecrets = identity

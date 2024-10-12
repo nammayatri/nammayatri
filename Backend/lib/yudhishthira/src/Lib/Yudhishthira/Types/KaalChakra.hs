@@ -4,11 +4,13 @@
 
 module Lib.Yudhishthira.Types.KaalChakra where
 
+import Data.Aeson
 import Data.Singletons.TH
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Utils.Dhall (FromDhall)
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Lib.Scheduler
 import Lib.Yudhishthira.Types.Common
 
@@ -30,8 +32,9 @@ data Chakra
   | Weekly
   | Monthly
   | Quarterly
-  deriving (Eq, Ord, Show, Read, FromDhall, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Eq, Ord, Show, Read, FromDhall, Generic, ToJSON, FromJSON, ToParamSchema, ToSchema)
 
+$(mkHttpInstancesForEnum ''Chakra)
 $(mkBeamInstancesForEnum ''Chakra)
 genSingletons [''Chakra]
 showSingInstance ''Chakra

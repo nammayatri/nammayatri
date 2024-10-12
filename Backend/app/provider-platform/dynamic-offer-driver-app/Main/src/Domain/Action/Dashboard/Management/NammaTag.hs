@@ -16,6 +16,9 @@ module Domain.Action.Dashboard.Management.NammaTag
     getNammaTagAppDynamicLogicGetLogicRollout,
     postNammaTagAppDynamicLogicUpsertLogicRollout,
     getNammaTagTimeBounds,
+    getNammaTagAppDynamicLogicVersions,
+    getNammaTagAppDynamicLogicDomains,
+    getNammaTagQueryAll,
   )
 where
 
@@ -49,10 +52,12 @@ import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as CADLE
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
 import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElement as QADLE
+import qualified Lib.Yudhishthira.Storage.Queries.ChakraQueries as QChakraQueries
 import qualified Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types.AppDynamicLogicElement as DTADLE
 import Lib.Yudhishthira.Types.AppDynamicLogicRollout
 import qualified Lib.Yudhishthira.Types.ChakraQueries
+import qualified Lib.Yudhishthira.Types.ChakraQueries as LYTCQ
 import Servant hiding (throwError)
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.DriverPool.Config (Config (..))
@@ -314,3 +319,16 @@ postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity rolloutReq 
       all (\obj -> obj.domain == x.domain) xs && length timeBoundsList == length (nub timeBoundsList)
       where
         timeBoundsList = map (.timeBounds) (x : xs)
+
+getNammaTagAppDynamicLogicVersions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Maybe Prelude.Int -> Prelude.Maybe Prelude.Int -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow Lib.Yudhishthira.Types.AppDynamicLogicVersionResp
+getNammaTagAppDynamicLogicVersions _merchantShortId _opCity mbLimit mbOffset domain_ = do
+  elements <- QADLE.findLatestVersion mbLimit mbOffset domain_
+  return $ (\DTADLE.AppDynamicLogicElement {..} -> Lib.Yudhishthira.Types.AppDynamicLogicVersion {..}) <$> elements
+
+getNammaTagAppDynamicLogicDomains :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow Lib.Yudhishthira.Types.AppDynamicLogicDomainResp
+getNammaTagAppDynamicLogicDomains _merchantShortId _opCity = return $ Lib.Yudhishthira.Types.allValues
+
+getNammaTagQueryAll :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.Chakra -> Environment.Flow Lib.Yudhishthira.Types.ChakraQueryResp
+getNammaTagQueryAll _merchantShortId _opCity chakra_ = do
+  chakraQueries <- QChakraQueries.findAllByChakra chakra_
+  return $ (\LYTCQ.ChakraQueries {..} -> Lib.Yudhishthira.Types.ChakraQueriesAPIEntity {..}) <$> chakraQueries

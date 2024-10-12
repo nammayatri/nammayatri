@@ -14,6 +14,10 @@ imports:
   LogicRolloutObject: Lib.Yudhishthira.Types
   LogicRolloutReq: Lib.Yudhishthira.Types
   TimeBoundResp: Lib.Yudhishthira.Types
+  Chakra: Lib.Yudhishthira.Types
+  ChakraQueryResp: Lib.Yudhishthira.Types
+  AppDynamicLogicDomainResp: Lib.Yudhishthira.Types
+  AppDynamicLogicVersionResp: Lib.Yudhishthira.Types
 
 module: NammaTag
 
@@ -101,7 +105,7 @@ apis:
         type: APISuccess
   - GET:
       endpoint: /appDynamicLogic/getLogicRollout
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_ROLLOUT
       mandatoryQuery:
         domain: LogicDomain
       query:
@@ -110,8 +114,30 @@ apis:
         type: "[LogicRolloutObject]"
   - POST:
       endpoint: /appDynamicLogic/upsertLogicRollout
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_ROLLOUT
       request:
         type: LogicRolloutReq
       response:
         type: APISuccess
+  - GET:
+      endpoint: /appDynamicLogic/versions
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+      mandatoryQuery:
+        domain: LogicDomain
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: AppDynamicLogicVersionResp
+  - GET:
+      endpoint: /appDynamicLogic/domains
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+      response:
+        type: AppDynamicLogicDomainResp
+  - GET:
+      endpoint: /query/all
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG GET_CHAKRA_QUERY
+      mandatoryQuery:
+        chakra: Chakra
+      response:
+        type: ChakraQueryResp
