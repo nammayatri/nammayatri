@@ -7,6 +7,7 @@ import qualified Dashboard.Common
 import qualified Dashboard.Common.Merchant
 import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
+import qualified Data.Vector
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -209,7 +210,8 @@ data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
     radiusShrinkValueForDriversOnRideWithUnit :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     driverToDestinationDistanceThresholdWithUnit :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     driverToDestinationDuration :: Kernel.Types.Common.Seconds,
-    enableUnifiedPooling :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    enableUnifiedPooling :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    dynamicBatchSize :: Data.Vector.Vector Kernel.Prelude.Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

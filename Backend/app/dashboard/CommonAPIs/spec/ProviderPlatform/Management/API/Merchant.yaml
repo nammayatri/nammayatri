@@ -25,6 +25,7 @@ imports:
   UpsertSpecialLocationGateReq: Dashboard.Common.Merchant
   UpsertSpecialLocationGateReqT: Dashboard.Common.Merchant
   ServiceNames: Dashboard.Common.Merchant
+  Vector: Data.Vector
 
 module: Merchant
 
@@ -591,6 +592,7 @@ types:
     - driverToDestinationDuration: Seconds
     - derive: "'HideSecrets"
     - enableUnifiedPooling: Maybe Bool
+    - dynamicBatchSize: Vector Int
   OnRideRadiusConfig:
     - onRideRadius: Meters
     - onRideRadiusWithUnit: Maybe Distance

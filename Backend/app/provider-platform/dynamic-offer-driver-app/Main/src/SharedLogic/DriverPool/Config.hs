@@ -28,6 +28,7 @@ import Control.Applicative ((<|>))
 import Data.Aeson as A
 import Data.Default.Class
 import Data.Text as Text hiding (filter, find)
+import qualified Data.Vector as V
 import qualified Domain.Types as DVST
 import Domain.Types.DriverPoolConfig as DDPC
 import Domain.Types.MerchantOperatingCity
@@ -134,7 +135,8 @@ instance Default DriverPoolConfig where
         tripDistance = Common.Meters 2000,
         updatedAt = read "2023-09-19 15:30:00 UTC",
         useOneToOneOsrmMapping = Nothing,
-        vehicleVariant = Nothing
+        vehicleVariant = Nothing,
+        dynamicBatchSize = V.singleton 1
       }
 
 getDriverPoolConfigFromDB ::

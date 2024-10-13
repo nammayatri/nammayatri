@@ -10,11 +10,13 @@ imports:
   ServiceTierType: Domain.Types.Common
   Area: Lib.Types.SpecialLocation
   Common: Domain.Types.Common
+  Common: Kernel.Types.Common
   TimeBound : Kernel.Types.TimeBound
   Currency: Kernel.Utils.Common
   DayOfWeek: Data.Time
   Centesimal: Kernel.Types.Common
   HighPrecMoney: Kernel.Types.Common
+  Vector: Data.Vector
 
 DriverPoolConfig:
   tableName: driver_pool_config
@@ -60,17 +62,21 @@ DriverPoolConfig:
     currentRideTripCategoryValidForForwardBatching : "[Text]"
     distanceUnit: DistanceUnit
     enableUnifiedPooling: Maybe Bool
+    dynamicBatchSize: Vector Int
 
   beamFields:
+    dynamicBatchSize:
+      dynamicBatchSize: Maybe [Int]
     distanceUnit:
       distanceUnit: Maybe DistanceUnit
 
   fromTType:
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+    dynamicBatchSize: Kernel.Prelude.maybe (Data.Vector.singleton driverBatchSize) Data.Vector.fromList|I
 
   toTType:
     distanceUnit: Kernel.Prelude.Just|I
-
+    dynamicBatchSize: Kernel.Prelude.Just $ Data.Vector.toList|I
 
   beamInstance:
     - MakeTableInstances
@@ -84,6 +90,7 @@ DriverPoolConfig:
     scheduleTryTimes: integer[]
     timeBounds: Text
     onRideBatchSplitConfig: text[]
+    dynamicBatchSize: integer[]
 
   default:
     tripCategory: "'All'"

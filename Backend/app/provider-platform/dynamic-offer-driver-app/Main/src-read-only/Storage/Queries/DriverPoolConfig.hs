@@ -4,6 +4,7 @@
 
 module Storage.Queries.DriverPoolConfig where
 
+import qualified Data.Vector
 import qualified Domain.Types.DriverPoolConfig
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
@@ -50,6 +51,7 @@ updateByPrimaryKey (Domain.Types.DriverPoolConfig.DriverPoolConfig {..}) = do
       Se.Set Beam.driverRequestCountLimit driverRequestCountLimit,
       Se.Set Beam.driverToDestinationDistanceThreshold driverToDestinationDistanceThreshold,
       Se.Set Beam.driverToDestinationDuration driverToDestinationDuration,
+      Se.Set Beam.dynamicBatchSize (Kernel.Prelude.Just $ Data.Vector.toList dynamicBatchSize),
       Se.Set Beam.enableForwardBatching enableForwardBatching,
       Se.Set Beam.enableUnifiedPooling enableUnifiedPooling,
       Se.Set Beam.maxDriverQuotesRequired maxDriverQuotesRequired,
@@ -97,6 +99,7 @@ instance FromTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPo
             driverRequestCountLimit = driverRequestCountLimit,
             driverToDestinationDistanceThreshold = driverToDestinationDistanceThreshold,
             driverToDestinationDuration = driverToDestinationDuration,
+            dynamicBatchSize = Kernel.Prelude.maybe (Data.Vector.singleton driverBatchSize) Data.Vector.fromList dynamicBatchSize,
             enableForwardBatching = enableForwardBatching,
             enableUnifiedPooling = enableUnifiedPooling,
             id = Kernel.Types.Id.Id id,
@@ -142,6 +145,7 @@ instance ToTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPool
         Beam.driverRequestCountLimit = driverRequestCountLimit,
         Beam.driverToDestinationDistanceThreshold = driverToDestinationDistanceThreshold,
         Beam.driverToDestinationDuration = driverToDestinationDuration,
+        Beam.dynamicBatchSize = Kernel.Prelude.Just $ Data.Vector.toList dynamicBatchSize,
         Beam.enableForwardBatching = enableForwardBatching,
         Beam.enableUnifiedPooling = enableUnifiedPooling,
         Beam.id = Kernel.Types.Id.getId id,
