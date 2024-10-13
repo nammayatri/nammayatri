@@ -78,6 +78,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     straightLineDistanceToPickup :: Kernel.Types.Common.Meters,
     totalRides :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    upgradeCabRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleAge :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
     vehicleServiceTier :: Domain.Types.Common.ServiceTierType,
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

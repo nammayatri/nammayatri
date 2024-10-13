@@ -115,5 +115,29 @@ castVehicleVariantToVehicleCategory = \case
   DELIVERY_BIKE -> DVC.MOTORCYCLE
   DELIVERY_LIGHT_GOODS_VEHICLE -> DVC.TRUCK
 
+castServiceTierToVehicleCategory :: DVST.ServiceTierType -> DVC.VehicleCategory
+castServiceTierToVehicleCategory = \case
+  DVST.SEDAN -> DVC.CAR
+  DVST.ECO -> DVC.CAR
+  DVST.COMFY -> DVC.CAR
+  DVST.PREMIUM -> DVC.CAR
+  DVST.HATCHBACK -> DVC.CAR
+  DVST.TAXI -> DVC.CAR
+  DVST.SUV -> DVC.CAR
+  DVST.TAXI_PLUS -> DVC.CAR
+  DVST.AUTO_RICKSHAW -> DVC.AUTO_CATEGORY
+  DVST.PREMIUM_SEDAN -> DVC.CAR
+  DVST.BLACK -> DVC.CAR
+  DVST.BLACK_XL -> DVC.CAR
+  DVST.BIKE -> DVC.MOTORCYCLE
+  DVST.AMBULANCE_TAXI -> DVC.AMBULANCE
+  DVST.AMBULANCE_TAXI_OXY -> DVC.AMBULANCE
+  DVST.AMBULANCE_AC -> DVC.AMBULANCE
+  DVST.AMBULANCE_AC_OXY -> DVC.AMBULANCE
+  DVST.AMBULANCE_VENTILATOR -> DVC.AMBULANCE
+  DVST.SUV_PLUS -> DVC.CAR
+  DVST.DELIVERY_BIKE -> DVC.MOTORCYCLE
+  DVST.DELIVERY_LIGHT_GOODS_VEHICLE -> DVC.TRUCK
+
 getVehicleCategory :: Maybe DVC.VehicleCategory -> VehicleVariant -> Maybe DVC.VehicleCategory
 getVehicleCategory mbVehicleCategory variant = mbVehicleCategory <|> (Just $ castVehicleVariantToVehicleCategory variant)

@@ -29,6 +29,16 @@ createMany = traverse_ create
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
 findById id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
+findEligibleForCabUpgrade :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Kernel.Prelude.Bool -> m [Domain.Types.Estimate.Estimate])
+findEligibleForCabUpgrade requestId eligibleForUpgrade = do
+  findAllWithKVAndConditionalDB
+    [ Se.And
+        [ Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId),
+          Se.Is Beam.eligibleForUpgrade $ Se.Eq (Kernel.Prelude.Just eligibleForUpgrade)
+        ]
+    ]
+    Nothing
+
 updateSupplyDemandRatioByReqIdAndServiceTier ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Domain.Types.Common.ServiceTierType -> m ())
@@ -56,6 +66,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.dpVersion dpVersion,
+      Se.Set Beam.eligibleForUpgrade (Kernel.Prelude.Just eligibleForUpgrade),
       Se.Set Beam.estimatedDistance estimatedDistance,
       Se.Set Beam.fareParamsId ((Kernel.Types.Id.getId . (.id) <$>) fareParams),
       Se.Set Beam.farePolicyId ((Kernel.Types.Id.getId . (.id) <$>) farePolicy),
@@ -89,6 +100,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             dpVersion = dpVersion,
+            eligibleForUpgrade = Kernel.Prelude.fromMaybe False eligibleForUpgrade,
             estimatedDistance = estimatedDistance,
             fareParams = fareParams',
             farePolicy = farePolicy',
@@ -116,6 +128,7 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.currency = Kernel.Prelude.Just currency,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.dpVersion = dpVersion,
+        Beam.eligibleForUpgrade = Kernel.Prelude.Just eligibleForUpgrade,
         Beam.estimatedDistance = estimatedDistance,
         Beam.fareParamsId = (Kernel.Types.Id.getId . (.id) <$>) fareParams,
         Beam.farePolicyId = (Kernel.Types.Id.getId . (.id) <$>) farePolicy,

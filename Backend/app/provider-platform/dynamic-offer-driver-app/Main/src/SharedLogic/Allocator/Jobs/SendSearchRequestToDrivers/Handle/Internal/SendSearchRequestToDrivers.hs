@@ -257,6 +257,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 totalRides = fromMaybe (-1) (driverStats <&> (.totalRides)),
                 renderedAt = Nothing,
                 respondedAt = Nothing,
+                upgradeCabRequest = Just tripQuoteDetail.eligibleForUpgrade,
                 ..
               }
       pure searchRequestForDriver

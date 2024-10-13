@@ -26,6 +26,7 @@ DriverOffer:
     distanceUnit : DistanceUnit
     validTill : UTCTime
     bppQuoteId : Text
+    isUpgradedToCab: Maybe Bool
     rating : Maybe Centesimal
     status : DriverOfferStatus
     createdAt: UTCTime

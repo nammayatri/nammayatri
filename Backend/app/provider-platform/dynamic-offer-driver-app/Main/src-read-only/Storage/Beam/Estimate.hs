@@ -19,6 +19,7 @@ data EstimateT f = EstimateT
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     dpVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    eligibleForUpgrade :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     fareParamsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     farePolicyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -48,6 +49,6 @@ instance B.Table EstimateT where
 
 type Estimate = EstimateT Identity
 
-$(enableKVPG ''EstimateT ['id] [])
+$(enableKVPG ''EstimateT ['id] [['requestId]])
 
 $(mkTableInstancesWithTModifier ''EstimateT "estimate" [])

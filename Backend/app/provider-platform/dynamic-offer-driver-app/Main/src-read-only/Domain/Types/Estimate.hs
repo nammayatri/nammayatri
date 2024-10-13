@@ -19,6 +19,7 @@ data Estimate = Estimate
     currency :: Kernel.Types.Common.Currency,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     dpVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    eligibleForUpgrade :: Kernel.Prelude.Bool,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     fareParams :: Kernel.Prelude.Maybe Domain.Types.FareParameters.FareParameters,
     farePolicy :: Kernel.Prelude.Maybe Domain.Types.FarePolicy.FarePolicy,

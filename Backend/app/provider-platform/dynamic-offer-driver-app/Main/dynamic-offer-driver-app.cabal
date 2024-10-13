@@ -599,6 +599,7 @@ library
       Tools.BackgroundVerification
       Tools.Beam.UtilsTH
       Tools.Call
+      Tools.Constants
       Tools.DriverBackgroundVerification
       Tools.DynamicLogic
       Tools.Error

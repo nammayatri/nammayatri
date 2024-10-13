@@ -26,6 +26,7 @@ data DriverOfferT f = DriverOfferT
     estimateId :: B.C f Kernel.Prelude.Text,
     fareProductType :: B.C f (Kernel.Prelude.Maybe Domain.Types.FarePolicy.FareProductType.FareProductType),
     id :: B.C f Kernel.Prelude.Text,
+    isUpgradedToCab :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     rating :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),

@@ -305,6 +305,11 @@ Person:
       kvFunction: findAllWithKV
       where: deviceId
 
+    updateCustomerTags:
+      kvFunction: updateWithKV
+      params: [customerNammaTags]
+      where: id
+
   extraOperations:
     - EXTRA_QUERY_FILE
 

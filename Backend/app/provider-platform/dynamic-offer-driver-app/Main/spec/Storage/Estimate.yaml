@@ -35,6 +35,7 @@ Estimate:
       isCustomerPrefferedSearchRoute: Maybe Bool
       isBlockedRoute: Maybe Bool
       tollNames: Maybe [Text]
+      eligibleForUpgrade: Bool
       createdAt: UTCTime
       updatedAt: UTCTime
 
@@ -62,6 +63,11 @@ Estimate:
       isScheduled: Maybe Bool
       tripCategory: Maybe TripCategory
       distanceUnit: Maybe DistanceUnit
+      eligibleForUpgrade: Maybe Bool
+
+    constraints:
+      id: PrimaryKey
+      requestId: SecondaryKey
 
     fromTType:
       updatedAt: Kernel.Prelude.fromMaybe createdAt|I
@@ -72,6 +78,7 @@ Estimate:
       maxFare: Kernel.Types.Common.mkAmountWithDefault maxFareAmount maxFare|E
       currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
       distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+      eligibleForUpgrade: Kernel.Prelude.fromMaybe False|I
 
     toTType:
       updatedAt: Kernel.Prelude.Just|I
@@ -84,6 +91,7 @@ Estimate:
       maxFare:  Kernel.Prelude.roundToIntegral|I
       maxFareAmount: Kernel.Prelude.Just|I
       distanceUnit: Kernel.Prelude.Just|I
+      eligibleForUpgrade: Kernel.Prelude.Just|I
 
     queries:
       findById:
@@ -95,3 +103,7 @@ Estimate:
         params: [supplyDemandRatioFromLoc, supplyDemandRatioToLoc]
         where:
           and: [requestId,vehicleServiceTier]
+      findEligibleForCabUpgrade:
+        kvFunction: findAllWithKVAndConditionalDB
+        where:
+          and: [requestId, eligibleForUpgrade]

@@ -233,7 +233,8 @@ data TripQuoteDetail = TripQuoteDetail
     driverDefaultStepFee :: Maybe HighPrecMoney,
     driverPickUpCharge :: Maybe HighPrecMoney,
     driverParkingCharge :: Maybe HighPrecMoney,
-    estimateOrQuoteId :: Text
+    estimateOrQuoteId :: Text,
+    eligibleForUpgrade :: Bool
   }
 
 data DriverSearchBatchInput m = DriverSearchBatchInput

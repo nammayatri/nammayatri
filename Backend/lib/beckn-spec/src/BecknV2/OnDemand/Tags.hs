@@ -309,6 +309,7 @@ data BecknTag
     DISTANCE_TO_NEAREST_DRIVER_METER
   | DURATION_TO_NEAREST_DRIVER_MINUTES
   | ETA_TO_NEAREST_DRIVER_MIN
+  | UPGRADE_TO_CAB
   | BUYER_FINDER_FEES_TYPE
   | BUYER_FINDER_FEES_PERCENTAGE
   | BUYER_FINDER_FEES_AMOUNT
@@ -471,6 +472,10 @@ instance CompleteTag BecknTag where
     RECEIVER_LOCATION_INSTRUCTIONS -> (Just "Delivery Receiver Location Instructions", Nothing)
     INITIATED_AS -> (Just "Delivery Initiated As", Nothing)
     DRIVER_REACHED_DESTINATION -> (Just "Destination Reached Time", Nothing)
+    DISTANCE_TO_NEAREST_DRIVER_METER -> (Just "Distance To Nearest Driver In Meters", Nothing)
+    ETA_TO_NEAREST_DRIVER_MIN -> (Just "Agent Duration to Pickup in Seconds", Nothing)
+    SPECIAL_LOCATION_TAG -> (Just "Special Zone Tag", Nothing)
+    UPGRADE_TO_CAB -> (Just "Request upgraded to cab", Nothing)
     _ -> (Just $ convertToSentence tag, Nothing) -- TODO: move all the tags to this function and remove (_ -> case statement)
 
   getFullTag tag = Spec.Tag (Just $ getTagDescriptor tag) (Just $ getTagDisplay tag)
@@ -503,6 +508,10 @@ instance CompleteTag BecknTag where
     RECEIVER_NAME -> DELIVERY
     RECEIVER_LOCATION_INSTRUCTIONS -> DELIVERY
     DRIVER_REACHED_DESTINATION -> DRIVER_REACHED_DESTINATION_INFO
+    DISTANCE_TO_NEAREST_DRIVER_METER -> GENERAL_INFO
+    ETA_TO_NEAREST_DRIVER_MIN -> GENERAL_INFO
+    SPECIAL_LOCATION_TAG -> GENERAL_INFO
+    UPGRADE_TO_CAB -> GENERAL_INFO
     a -> error $ "getTagGroup function of CompleteTag class is not defined for " <> T.pack (show a) <> " tag" -- TODO: add all here dheemey dheemey (looks risky but can be catched in review and testing of feature, will be removed once all are moved to this)
 
 convertToSentence :: Show a => a -> Text

@@ -85,6 +85,7 @@ data DriverOfferQuoteDetails = DriverOfferQuoteDetails
     distanceToPickup :: Maybe HighPrecMeters,
     validTill :: UTCTime,
     rating :: Maybe Centesimal,
+    isUpgradedToCab :: Maybe Bool,
     bppDriverQuoteId :: Text
   }
   deriving (Generic, Show)
@@ -107,13 +108,13 @@ onSelect OnSelectValidatedReq {..} = do
   quotes <- traverse (buildSelectedQuote estimate providerInfo now searchRequest) quotesInfo
   forM_ quotes $ \quote -> do
     triggerQuoteEvent QuoteEventData {quote = quote, person = person, merchantId = searchRequest.merchantId}
-  _ <- QQuote.createMany quotes
+  QQuote.createMany quotes
   void $ QEstimate.updateStatus DEstimate.GOT_DRIVER_QUOTE estimate.id
   if searchRequest.autoAssignEnabledV2 == Just True
     then do
       let lowestFareQuote = selectLowestFareQuote quotes
       case lowestFareQuote of
-        Just autoAssignQuote -> do
+        Just (autoAssignQuote, False) -> do
           isLockAcquired <- SConfirm.tryInitTriggerLock autoAssignQuote.requestId
           when isLockAcquired $ do
             let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, quote = autoAssignQuote, paymentMethodId = searchRequest.selectedPaymentMethodId}
@@ -122,7 +123,7 @@ onSelect OnSelectValidatedReq {..} = do
             handle (errHandler dConfirmRes.booking) $ do
               Metrics.startMetricsBap Metrics.INIT dConfirmRes.merchant.name searchRequest.id.getId dConfirmRes.booking.merchantOperatingCityId.getId
               void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq searchRequest.merchantId
-        Nothing -> do
+        _ -> do
           bppDetails <- forM ((.providerId) <$> quotes) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
           Notify.notifyOnDriverOfferIncoming estimate.id estimate.tripCategory quotes person bppDetails
     else do
@@ -134,13 +135,19 @@ onSelect OnSelectValidatedReq {..} = do
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancelBooking booking
       | otherwise = throwM exc
 
-selectLowestFareQuote :: [DQuote.Quote] -> Maybe DQuote.Quote
-selectLowestFareQuote (quoteInfo : quoteInfoArray) =
-  if null quoteInfoArray
-    then Just quoteInfo
-    else do
-      restQuoteResult <- selectLowestFareQuote quoteInfoArray
-      Just $ comparator quoteInfo restQuoteResult
+selectLowestFareQuote :: [DQuote.Quote] -> Maybe (DQuote.Quote, Bool)
+selectLowestFareQuote (quoteInfo : quoteInfoArray) = do
+  quote <-
+    if null quoteInfoArray
+      then Just quoteInfo
+      else do
+        (restQuoteResult, _) <- selectLowestFareQuote quoteInfoArray
+        Just $ comparator quoteInfo restQuoteResult
+  let isUpgradedToCab =
+        case quote.quoteDetails of
+          DQuote.DriverOfferDetails details -> fromMaybe False details.isUpgradedToCab
+          _ -> False
+  Just (quote, isUpgradedToCab)
 selectLowestFareQuote [] = Nothing
 
 comparator :: DQuote.Quote -> DQuote.Quote -> DQuote.Quote

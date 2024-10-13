@@ -108,3 +108,8 @@ ALTER TABLE atlas_app.person ADD COLUMN inform_police_sos boolean ;
 
 ALTER TABLE atlas_app.person ADD COLUMN android_id text ;
 ALTER TABLE atlas_app.person ADD COLUMN customer_namma_tags text[] ;
+
+
+
+------- SQL updates -------
+

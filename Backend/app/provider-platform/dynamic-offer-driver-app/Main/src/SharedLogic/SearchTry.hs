@@ -247,8 +247,9 @@ buildTripQuoteDetail ::
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   Text ->
+  Bool ->
   m TripQuoteDetail
-buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId = do
+buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId eligibleForUpgrade = do
   vehicleServiceTierName <-
     case mbVehicleServiceTierName of
       Just name -> return name

@@ -6,6 +6,7 @@ import qualified Data.Text as T
 import qualified Data.Vector as Vector
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Ride as DR
+import qualified Domain.Types.SearchRequest as SR
 import qualified Domain.Types.TransporterConfig as DTConf
 import Kernel.External.Maps.HasCoordinates (getCoordinates)
 import Kernel.External.Maps.Types
@@ -13,6 +14,7 @@ import Kernel.Prelude
 import Kernel.Types.Distance (metersToHighPrecMeters)
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Lib.Yudhishthira.Tools.Utils
+import Tools.Constants
 
 convertTags :: [Text] -> A.Value
 convertTags input = A.object $ map toObject pairs
@@ -37,4 +39,7 @@ isDropInsideThreshold booking thresholdConfig currLoation = do
    in locationDiff <= dropLocThreshold
 
 isValidRide :: DR.Ride -> Bool
-isValidRide ride = maybe True (elem "ValidRide#Yes") ride.rideTags -- TODO: How to remove hardcode string
+isValidRide ride = maybe True (elem validRideTag) ride.rideTags -- TODO: How to remove hardcode string
+
+isRiderEligibleForCabUpgrade :: SR.SearchRequest -> Bool
+isRiderEligibleForCabUpgrade searchReq = maybe False (elem riderEligibleForCabUpgradeTag) searchReq.searchTags

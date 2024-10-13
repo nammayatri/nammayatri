@@ -53,11 +53,13 @@ import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
+import Data.Default.Class
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.List as DL
 import Data.String.Conversions (cs)
@@ -677,7 +679,7 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show transporter.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier))
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback driverQuote.id.getId
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId driverQuote.vehicleServiceTier searchTry.merchantOperatingCityId >>= fromMaybeM (VehicleServiceTierNotFound $ show driverQuote.vehicleServiceTier)
-  callOnSelectV2 transporter searchReq srfd searchTry =<< (buildOnSelectReq transporter vehicleServiceTierItem searchReq driverQuote <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter farePolicy)
+  callOnSelectV2 transporter searchReq srfd searchTry =<< (buildOnSelectReq transporter vehicleServiceTierItem searchReq driverQuote isValueAddNP <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter farePolicy)
   where
     buildOnSelectReq ::
       (MonadTime m, HasPrettyLogger m r) =>
@@ -685,8 +687,9 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
       DVST.VehicleServiceTier ->
       DSR.SearchRequest ->
       DDQ.DriverQuote ->
+      Bool ->
       m ACL.DOnSelectReq
-    buildOnSelectReq org vehicleServiceTierItem searchRequest quotes = do
+    buildOnSelectReq org vehicleServiceTierItem searchRequest quotes isValueAddNP = do
       now <- getCurrentTime
       logDebug $ "on_select: searchRequest " <> show searchRequest
       logDebug $ "on_select: quotes " <> show quotes
@@ -704,9 +707,20 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
           { transporterInfo,
             vehicleServiceTierItem,
             driverQuote,
+            taggings = getTags isValueAddNP,
             now,
             searchRequest
           }
+
+    getTags :: Bool -> Tags.Taggings
+    getTags isValueAddNP = do
+      def{Tags.itemTags =
+            [ (Tags.DISTANCE_TO_NEAREST_DRIVER_METER, Just $ show driverQuote.distanceToPickup.getMeters),
+              (Tags.ETA_TO_NEAREST_DRIVER_MIN, Just . show $ driverQuote.durationToPickup.getSeconds `div` 60),
+              (Tags.UPGRADE_TO_CAB, show <$> srfd.upgradeCabRequest)
+            ]
+              <> if isJust driverQuote.specialLocationTag && isValueAddNP then [(Tags.SPECIAL_LOCATION_TAG, driverQuote.specialLocationTag)] else []
+         }
 
 sendDriverArrivalUpdateToBAP ::
   ( CacheFlow m r,

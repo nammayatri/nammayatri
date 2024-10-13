@@ -48,7 +48,9 @@ import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RideRoute
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.TransporterConfig as DTMT
+import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.VehicleVariant as VehicleVariant
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Maps.Google.PolyLinePoints
@@ -133,7 +135,7 @@ data ValidatedDSearchReq = ValidatedDSearchReq
     possibleTripOption :: TripOption,
     bapCity :: Context.City,
     merchantOpCityId :: Id DMOC.MerchantOperatingCity,
-    distanceUnit :: DistanceUnit,
+    cityDistanceUnit :: DistanceUnit,
     merchant :: DM.Merchant,
     isValueAddNP :: Bool
   }
@@ -209,11 +211,11 @@ handler ValidatedDSearchReq {..} sReq = do
   (mbSetRouteInfo, mbToLocation, mbDistance, mbDuration, mbIsCustomerPrefferedSearchRoute, mbIsBlockedRoute, mbTollCharges, mbTollNames, mbIsAutoRickshawAllowed) <-
     case sReq.dropLocation of
       Just dropLoc -> do
-        serviceableRoute <- getRouteServiceability merchant.id merchantOpCityId distanceUnit sReq.pickupLocation dropLoc sReq.routePoints sReq.routeDistance sReq.routeDuration sReq.multipleRoutes
+        serviceableRoute <- getRouteServiceability merchant.id merchantOpCityId cityDistanceUnit sReq.pickupLocation dropLoc sReq.routePoints sReq.routeDistance sReq.routeDuration sReq.multipleRoutes
         let estimatedDistance = serviceableRoute.routeDistance
             estimatedDuration = serviceableRoute.routeDuration
         logDebug $ "distance: " <> show estimatedDistance
-        let routeInfo = RouteInfo {distance = Just estimatedDistance, distanceWithUnit = Just $ convertMetersToDistance distanceUnit estimatedDistance, duration = Just estimatedDuration, points = Just serviceableRoute.routePoints}
+        let routeInfo = RouteInfo {distance = Just estimatedDistance, distanceWithUnit = Just $ convertMetersToDistance cityDistanceUnit estimatedDistance, duration = Just estimatedDuration, points = Just serviceableRoute.routePoints}
         --------------build stops locations ---------------
         toLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.dropAddrress sReq.customerLanguage dropLoc
         let setRouteInfo transactionId =
@@ -230,10 +232,10 @@ handler ValidatedDSearchReq {..} sReq = do
   now <- getCurrentTime
   (mbSpecialZoneGateId, mbDefaultDriverExtra) <- getSpecialPickupZoneInfo allFarePoliciesProduct.specialLocationTag fromLocation
   logDebug $ "Pickingup Gate info result : " <> show (mbSpecialZoneGateId, mbDefaultDriverExtra)
-  let specialLocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> allFarePoliciesProduct.specialLocationTag <&> (<> "_PickupZone")) mbSpecialZoneGateId
+  let spcllocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> allFarePoliciesProduct.specialLocationTag <&> (<> "_PickupZone")) mbSpecialZoneGateId
       specialLocationName = allFarePoliciesProduct.specialLocationName
-  currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
-  searchReq <- buildSearchRequest sReq bapCity mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag allFarePoliciesProduct.area mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute currency distanceUnit fromLocGeohash toLocGeohash stops
+  cityCurrency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
+  searchReq <- buildSearchRequest sReq bapCity mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration spcllocationTag allFarePoliciesProduct.area mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohash toLocGeohash stops
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo sReq.transactionId
   triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
   void $ QSR.createDSReq searchReq
@@ -249,22 +251,26 @@ handler ValidatedDSearchReq {..} sReq = do
           TagData
             { searchRequest = searchReq,
               area = show allFarePoliciesProduct.area,
-              specialLocationTag = allFarePoliciesProduct.specialLocationTag,
+              specialLocationTag = spcllocationTag,
               specialLocationName = allFarePoliciesProduct.specialLocationName
             }
     addNammaTags tagData
   fork "Updating Demand Hotspots on search" $ do
     DemandHotspots.updateDemandHotspotsOnSearch searchReq.id merchantOpCityId transporterConfig sReq.pickupLocation
-  let buildEstimateHelper = buildEstimate merchantOpCityId currency distanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance specialLocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (length stops) searchReq.estimatedDuration
-  let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration specialLocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute
-  (estimates, quotes) <- foldrM (processPolicy buildEstimateHelper buildQuoteHelper) ([], []) selectedFarePolicies
+  let buildEstimateHelper = buildEstimate merchantOpCityId cityCurrency cityDistanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance spcllocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (length stops) searchReq.estimatedDuration
+  let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration spcllocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute
+  (estimates', quotes) <- foldrM (processPolicy buildEstimateHelper buildQuoteHelper) ([], []) selectedFarePolicies
+
+  let mbAutoMaxFare = (find (\est -> est.vehicleServiceTier == AUTO_RICKSHAW) estimates') <&> (.maxFare)
+  let estimates = maybe estimates' (\autFare -> map (\DEst.Estimate {..} -> DEst.Estimate {eligibleForUpgrade = (maxFare <= autFare) && (VehicleVariant.castServiceTierToVehicleCategory vehicleServiceTier) == DVC.CAR, ..}) estimates') mbAutoMaxFare
+
   QEst.createMany estimates
   for_ quotes QQuote.create
 
   forM_ estimates $ \est -> triggerEstimateEvent EstimateEventData {estimate = est, merchantId = merchantId}
   driverInfoQuotes <- addNearestDriverInfo merchantOpCityId driverPool quotes
   driverInfoEstimates <- addNearestDriverInfo merchantOpCityId driverPool estimates
-  buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) specialLocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocationName now
+  buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) spcllocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocationName now
   where
     stopsLatLong = map (.gps)
     getSpecialPickupZoneInfo :: Maybe Text -> DLoc.Location -> Flow (Maybe Text, Maybe HighPrecMoney)
@@ -640,6 +646,7 @@ buildEstimate _ currency distanceUnit mbSearchReq startTime isScheduled returnTi
         dpVersion = fullFarePolicy.dpVersion,
         createdAt = now,
         updatedAt = now,
+        eligibleForUpgrade = False,
         supplyDemandRatioToLoc = fullFarePolicy.mbSupplyDemandRatioToLoc,
         supplyDemandRatioFromLoc = fullFarePolicy.mbSupplyDemandRatioFromLoc,
         ..
@@ -652,7 +659,7 @@ validateRequest merchant sReq = do
   NearestOperatingAndSourceCity {nearestOperatingCity, sourceCity} <- getNearestOperatingAndSourceCity merchant sReq.pickupLocation
   let bapCity = nearestOperatingCity.city
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just bapCity)
-  let (distanceUnit, merchantOpCityId) = (merchantOpCity.distanceUnit, merchantOpCity.id)
+  let (cityDistanceUnit, merchantOpCityId) = (merchantOpCity.distanceUnit, merchantOpCity.id)
   transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId (Just (TransactionId (Id sReq.transactionId))) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   (isInterCity, isCrossCity, destinationTravelCityName) <-
     case sReq.dropLocation of

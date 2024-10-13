@@ -50,8 +50,10 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Auth
+import Tools.Constants
 import Tools.Error
 
 -------- Select Flow --------
@@ -79,6 +81,10 @@ type API =
              :> Capture "estimateId" (Id DEstimate.Estimate)
              :> "cancel"
              :> Post '[JSON] DSelect.CancelAPIResponse
+           :<|> TokenAuth
+             :> Capture "estimateId" (Id DEstimate.Estimate)
+             :> "rejectUpgrade"
+             :> Post '[JSON] DSelect.CancelAPIResponse
        )
 
 handler :: FlowServer API
@@ -88,6 +94,7 @@ handler =
     :<|> selectList
     :<|> selectResult
     :<|> cancelSearch
+    :<|> rejectUpgrade
 
 select :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler DSelect.DSelectResultRes
 select (personId, merchantId) estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
@@ -127,7 +134,17 @@ selectResult :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estima
 selectResult (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSelect.selectResult
 
 cancelSearch :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
-cancelSearch (personId, merchantId) estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+cancelSearch (personId, merchantId) estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ cancelSearchUtil (personId, merchantId) estimateId
+
+rejectUpgrade :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
+rejectUpgrade (personId, merchantId) estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let personTags = fromMaybe [] person.customerNammaTags
+  unless (rejectUpgradeTag `elem` personTags) $ QP.updateCustomerTags (Just $ personTags <> [rejectUpgradeTag]) person.id
+  cancelSearchUtil (personId, merchantId) estimateId
+
+cancelSearchUtil :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> Flow DSelect.CancelAPIResponse
+cancelSearchUtil (personId, merchantId) estimateId = do
   activeBooking <- B.runInReplica $ QRB.findBookingIdAssignedByEstimateId estimateId activeBookingStatus
   -- activeBooking <- QRB.findLatestByRiderIdAndStatus personId SRB.activeBookingStatus
   if isJust activeBooking

@@ -91,6 +91,7 @@ SearchRequestForDriver:
     poolingLogicVersion: Maybe Int
     poolingConfigVersion: Maybe Int
     previousDropGeoHash : Maybe Text
+    upgradeCabRequest: Maybe Bool
     renderedAt : Maybe UTCTime
     respondedAt: Maybe UTCTime
 

@@ -86,6 +86,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     straightLineDistanceToPickup :: B.C f Kernel.Types.Common.Meters,
     totalRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    upgradeCabRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     vehicleAge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Months),
     vehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType),
     vehicleServiceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

@@ -26,9 +26,6 @@ imports:
   Version: Kernel.Types.Version
   Device : Kernel.Types.Version
   DeviceType: Kernel.Types.Version
-  BaseUrl: Kernel.Types.Common
-
-
 
 Quote:
   dataName: quote
