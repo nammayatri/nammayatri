@@ -223,7 +223,7 @@ getQuotes searchRequestId = do
   let lockKey = estimateBuildLockKey searchRequestId.getId
   Redis.withLockRedisAndReturnValue lockKey 5 $ do
     offers <- getOffers searchRequest
-    estimates <- getEstimates searchRequestId -- TODO(MultiModal): only check for estimates which are done
+    estimates <- getEstimates searchRequestId (isJust searchRequest.driverIdentifier) -- TODO(MultiModal): only check for estimates which are done
     return $
       GetQuotesRes
         { fromLocation = DL.makeLocationAPIEntity searchRequest.fromLocation,
@@ -305,10 +305,10 @@ getOffers searchRequest = do
     creationTime (OnRentalCab QuoteAPIEntity {createdAt}) = createdAt
     creationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
 
-getEstimates :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m [UEstimate.EstimateAPIEntity]
-getEstimates searchRequestId = do
+getEstimates :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> Bool -> m [UEstimate.EstimateAPIEntity]
+getEstimates searchRequestId isReferredRide = do
   estimateList <- runInReplica $ QEstimate.findAllBySRId searchRequestId
-  estimates <- mapM UEstimate.mkEstimateAPIEntity (sortByEstimatedFare estimateList)
+  estimates <- mapM (UEstimate.mkEstimateAPIEntity isReferredRide) (sortByEstimatedFare estimateList)
   return . sortBy (compare `on` (.createdAt)) $ estimates
 
 sortByEstimatedFare :: (HasField "estimatedFare" r Price) => [r] -> [r]

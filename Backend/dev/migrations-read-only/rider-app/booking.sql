@@ -161,3 +161,9 @@ ALTER TABLE atlas_app.booking ADD COLUMN has_stops boolean ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN is_referred_ride boolean ;

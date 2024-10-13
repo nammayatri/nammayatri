@@ -339,7 +339,7 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbDevic
       _ <- RegistrationToken.create regToken
       mbEncEmail <- encrypt `mapM` reqWithMobileNumebr.email
       _ <- RegistrationToken.setDirectAuth regToken.id SR.SIGNATURE
-      _ <- Person.updatePersonalInfo person.id (reqWithMobileNumebr.firstName <|> person.firstName <|> Just "User") reqWithMobileNumebr.middleName reqWithMobileNumebr.lastName Nothing mbEncEmail deviceToken notificationToken (reqWithMobileNumebr.language <|> person.language <|> Just Language.ENGLISH) (reqWithMobileNumebr.gender <|> Just person.gender) (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion person.enableOtpLessRide Nothing Nothing person
+      _ <- Person.updatePersonalInfo person.id (reqWithMobileNumebr.firstName <|> person.firstName <|> Just "User") reqWithMobileNumebr.middleName reqWithMobileNumebr.lastName mbEncEmail deviceToken notificationToken (reqWithMobileNumebr.language <|> person.language <|> Just Language.ENGLISH) (reqWithMobileNumebr.gender <|> Just person.gender) (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion person.enableOtpLessRide Nothing Nothing person
       personAPIEntity <- verifyFlow person regToken reqWithMobileNumebr.whatsappNotificationEnroll deviceToken
       return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked
     else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked

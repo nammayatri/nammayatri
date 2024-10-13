@@ -7,6 +7,7 @@ module Storage.Beam.SearchRequest where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.RefereeLink
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.Trip
 import Kernel.External.Encryption
@@ -42,6 +43,8 @@ data SearchRequestT f = SearchRequestT
     distance :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Centesimal),
     distanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
+    driverIdentifierType :: B.C f (Kernel.Prelude.Maybe Domain.Types.RefereeLink.DriverIdentifierType),
+    driverIdentifierValue :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     estimatedRideDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedRideStaticDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

@@ -1,8 +1,23 @@
+{-
+ Copyright 2022-23, Juspay India Pvt Ltd
+
+ This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+
+ as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+
+ is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+
+ the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+-}
+
 module SharedLogic.CallBPPInternal where
 
 import API.Types.UI.FavouriteDriver
 import qualified Data.HashMap.Strict as HM
 import Domain.Types.FeedbackForm
+import qualified Domain.Types.RefereeLink as LibTypes
 import EulerHS.Types (EulerClient, client)
 import IssueManagement.Common (IssueReportType)
 import qualified Kernel.External.Maps.Types as Maps
@@ -19,7 +34,9 @@ data RefereeLinkInfoReq = RefereeLinkInfoReq
   { referralCode :: Text,
     customerMobileNumber :: Text,
     customerMobileCountryCode :: Text,
-    isMultipleDeviceIdExist :: Maybe Bool
+    isMultipleDeviceIdExist :: Maybe Bool,
+    alreadyReferred :: Maybe Bool,
+    shareReferrerInfo :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -29,9 +46,9 @@ type LinkRefereeAPI =
     :> "referee"
     :> Header "token" Text
     :> ReqBody '[JSON] RefereeLinkInfoReq
-    :> Post '[JSON] APISuccess
+    :> Post '[JSON] LibTypes.LinkRefereeRes
 
-linkRefereeClient :: Text -> Maybe Text -> RefereeLinkInfoReq -> EulerClient APISuccess
+linkRefereeClient :: Text -> Maybe Text -> RefereeLinkInfoReq -> EulerClient LibTypes.LinkRefereeRes
 linkRefereeClient = client likeRefereeApi
 
 likeRefereeApi :: Proxy LinkRefereeAPI
@@ -49,10 +66,19 @@ linkReferee ::
   Text ->
   Text ->
   Maybe Bool ->
-  m APISuccess
-linkReferee apiKey internalUrl merchantId referralCode phoneNumber countryCode isMultipleDeviceIdExist = do
+  Maybe Bool ->
+  Maybe Bool ->
+  m LibTypes.LinkRefereeRes
+linkReferee apiKey internalUrl merchantId referralCode phoneNumber countryCode isMultipleDeviceIdExist alreadyReferred shareReferrerInfo = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (linkRefereeClient merchantId (Just apiKey) (RefereeLinkInfoReq referralCode phoneNumber countryCode isMultipleDeviceIdExist)) "LinkReferee" likeRefereeApi
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (linkRefereeClient merchantId (Just apiKey) buildLinkRefereeReq) "LinkReferee" likeRefereeApi
+  where
+    buildLinkRefereeReq = do
+      RefereeLinkInfoReq
+        { customerMobileNumber = phoneNumber,
+          customerMobileCountryCode = countryCode,
+          ..
+        }
 
 type CallCustomerFCMAPI =
   "internal"

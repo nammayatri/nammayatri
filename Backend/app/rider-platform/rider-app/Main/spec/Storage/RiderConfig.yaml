@@ -55,7 +55,7 @@ RiderConfig:
     payoutBatchDelay: NominalDiffTime
     makeMultiModalSearch: Bool
     maximumWalkDistance: Meters
-
+    driverReferredSearchReqExpiry: Maybe Seconds
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

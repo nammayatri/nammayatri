@@ -963,8 +963,9 @@ instance IsHTTPError DriverCoinError where
 
 instance IsAPIError DriverCoinError
 
-newtype DriverReferralError
+data DriverReferralError
   = InvalidReferralCode Text
+  | DriverNotFoundForReferralCode Text
   deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverReferralError
@@ -972,12 +973,15 @@ instanceExceptionWithParent 'HTTPException ''DriverReferralError
 instance IsBaseError DriverReferralError where
   toMessage = \case
     InvalidReferralCode referralCode -> Just ("Invalid referral code " <> show referralCode <> ".")
+    DriverNotFoundForReferralCode referralCode -> Just ("Driver not found for referral code " <> show referralCode <> ".")
 
 instance IsHTTPError DriverReferralError where
   toErrorCode = \case
     InvalidReferralCode _ -> "INVALID_REFERRAL_CODE"
+    DriverNotFoundForReferralCode _ -> "DRIVER_NOT_FOUND_FOR_REFERRAL_CODE"
   toHttpCode = \case
     InvalidReferralCode _ -> E400
+    DriverNotFoundForReferralCode _ -> E400
 
 instance IsAPIError DriverReferralError
 

@@ -67,7 +67,8 @@ data EstimateAPIEntity = EstimateAPIEntity
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     validTill :: UTCTime,
-    vehicleIconUrl :: Maybe Text
+    vehicleIconUrl :: Maybe Text,
+    isReferredRide :: Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -85,8 +86,8 @@ data EstimateBreakupAPIEntity = EstimateBreakupAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Estimate -> m EstimateAPIEntity
-mkEstimateAPIEntity Estimate {..} = do
+mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Bool -> Estimate -> m EstimateAPIEntity
+mkEstimateAPIEntity isReferredRide (Estimate {..}) = do
   valueAddNPRes <- QNP.isValueAddNP providerId
   (bppDetails :: BppDetails) <- CQBppDetails.findBySubscriberIdAndDomain providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found " <> providerId)
   let mbBaseFareEB = find (\x -> x.title == show Enums.BASE_FARE) estimateBreakupList

@@ -47,6 +47,7 @@ data Booking = Booking
     initiatedAs :: Kernel.Prelude.Maybe Domain.Types.Trip.TripParty,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDashboardRequest :: Kernel.Prelude.Bool,
+    isReferredRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
     maxEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,

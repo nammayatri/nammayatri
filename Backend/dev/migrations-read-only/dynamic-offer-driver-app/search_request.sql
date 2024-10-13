@@ -86,3 +86,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN has_stops boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN pooling_config_version integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN driver_id_for_search character varying(36) ;

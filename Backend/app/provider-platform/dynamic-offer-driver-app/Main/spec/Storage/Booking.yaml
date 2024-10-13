@@ -80,6 +80,7 @@ Booking:
     senderDetails: Maybe DeliveryPersonDetails
     receiverDetails: Maybe DeliveryPersonDetails
     initiatedAs: Maybe TripParty
+    isReferredRide: Maybe Bool
 
   excludedFields:
     - merchantId

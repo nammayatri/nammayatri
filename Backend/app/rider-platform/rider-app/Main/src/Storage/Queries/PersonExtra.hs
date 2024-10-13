@@ -74,7 +74,6 @@ updatePersonalInfo ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
-  Maybe Text ->
   Maybe (EncryptedHashed Text) ->
   Maybe Text ->
   Maybe Text ->
@@ -90,7 +89,7 @@ updatePersonalInfo ::
   Maybe Text ->
   Person ->
   m ()
-updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralCode mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId person = do
+updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId person = do
   now <- getCurrentTime
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
@@ -103,8 +102,6 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralC
         <> [Se.Set BeamP.emailHash mbEmailHash | isJust mbEmailHash]
         <> [Se.Set BeamP.deviceToken mbDeviceToken | isJust mbDeviceToken]
         <> [Se.Set BeamP.notificationToken mbNotificationToken | isJust mbNotificationToken]
-        <> [Se.Set BeamP.referralCode mbReferralCode | isJust mbReferralCode]
-        <> [Se.Set BeamP.referredAt (Just now) | isJust mbReferralCode]
         <> [Se.Set BeamP.language mbLanguage | isJust mbLanguage]
         <> [Se.Set BeamP.gender (fromJust mbGender) | isJust mbGender]
         <> [Se.Set BeamP.clientSdkVersion (versionToText <$> mbClientVersion) | isJust mbClientVersion]
@@ -120,6 +117,29 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbReferralC
         <> [Se.Set BeamP.androidId mbAndroidId | isJust mbAndroidId]
     )
     [Se.Is BeamP.id (Se.Eq personId)]
+
+updateRefCode :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Text -> m ()
+updateRefCode (Id personId) refCode = do
+  now <- getCurrentTime
+  updateWithKV
+    ( [Se.Set BeamP.updatedAt now]
+        <> [Se.Set BeamP.referralCode (Just refCode)]
+        <> [Se.Set BeamP.referredAt (Just now)]
+    )
+    [Se.Is BeamP.id (Se.Eq personId)]
+
+updateAndroidIdAndDeviceId :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Maybe Text -> Maybe Text -> m ()
+updateAndroidIdAndDeviceId (Id personId) mbAndroidId mbDeviceId =
+  case (mbAndroidId, mbDeviceId) of
+    (Nothing, Nothing) -> pure ()
+    _ -> do
+      now <- getCurrentTime
+      updateWithKV
+        ( [Se.Set BeamP.updatedAt now]
+            <> [Se.Set BeamP.deviceId mbDeviceId | isJust mbDeviceId]
+            <> [Se.Set BeamP.androidId mbAndroidId | isJust mbAndroidId]
+        )
+        [Se.Is BeamP.id (Se.Eq personId)]
 
 findBlockedByDeviceToken :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Maybe Text -> m [Person]
 findBlockedByDeviceToken Nothing = return [] -- return empty array in case device token is Nothing (WARNING: DON'T REMOVE IT)

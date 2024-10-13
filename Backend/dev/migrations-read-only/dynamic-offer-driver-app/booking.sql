@@ -106,3 +106,8 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN to_loc_geohash text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN has_stops boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_referred_ride boolean ;

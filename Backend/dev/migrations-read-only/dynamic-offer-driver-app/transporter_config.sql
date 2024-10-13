@@ -303,3 +303,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_ra
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN weekly_condition_cooldown_time_hours integer  default 168;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN daily_condition_cooldown_time_hours integer  default 24;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_driven_search_req_expiry integer ;
