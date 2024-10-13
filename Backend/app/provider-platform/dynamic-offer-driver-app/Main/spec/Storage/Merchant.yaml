@@ -880,6 +880,7 @@ TransporterConfig:
     weeklyOffenceSuspensionTimeHours: Maybe Int
     dailyConditionCooldownTimeHours: Maybe Int
     weeklyConditionCooldownTimeHours: Maybe Int
+    driverDrivenSearchReqExpiry: Maybe NominalDiffTime
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -921,6 +922,7 @@ TransporterConfig:
     arrivalTimeBufferOfVehicle: Maybe Value
     demandHotspotsConfig: Maybe Value
     scheduledRideSearchRepeatLimit: Maybe Int
+    driverDrivenSearchReqExpiry: Maybe Seconds
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -971,6 +973,7 @@ TransporterConfig:
     arrivalTimeBufferOfVehicle: Kernel.Prelude.toJSON <$> arrivalTimeBufferOfVehicle|E
     demandHotspotsConfig: Kernel.Prelude.toJSON <$> demandHotspotsConfig|E
     scheduledRideSearchRepeatLimit: Just scheduledRideSearchRepeatLimit|E
+    driverDrivenSearchReqExpiry: Kernel.Utils.Common.nominalDiffTimeToSeconds <$> driverDrivenSearchReqExpiry|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1025,6 +1028,7 @@ TransporterConfig:
     demandHotspotsConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< demandHotspotsConfig|E
     scheduledRideSearchRepeatLimit: fromMaybe 10 scheduledRideSearchRepeatLimit|E
+    driverDrivenSearchReqExpiry: Kernel.Utils.Common.secondsToNominalDiffTime <$> driverDrivenSearchReqExpiry|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey

@@ -135,3 +135,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN maximum_walk_distance integer  def
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN sensitive_words_for_exact_match text [] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN driver_referred_search_req_expiry integer ;

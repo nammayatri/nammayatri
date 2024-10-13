@@ -54,6 +54,7 @@ data Booking = Booking
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isBookingUpdated :: Kernel.Prelude.Bool,
     isDashboardRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isReferredRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,

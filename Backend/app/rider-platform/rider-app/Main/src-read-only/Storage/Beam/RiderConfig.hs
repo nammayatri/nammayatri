@@ -27,6 +27,7 @@ data RiderConfigT f = RiderConfigT
     csAlertTriggerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     cxAgentDetails :: B.C f (Kernel.Prelude.Maybe [IssueManagement.Common.CxAgentDetails]),
     distanceWeightage :: B.C f Kernel.Prelude.Int,
+    driverReferredSearchReqExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     emailOtpConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailOTPConfig),
     enableEmergencyContactAddedMessage :: B.C f Kernel.Prelude.Bool,
     enableLocalPoliceSupport :: B.C f Kernel.Prelude.Bool,

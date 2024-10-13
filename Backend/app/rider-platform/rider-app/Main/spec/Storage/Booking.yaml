@@ -214,6 +214,7 @@ Booking:
     backendAppVersion: Maybe Text
     tripCategory: Maybe TripCategory
     initiatedBy: Maybe TripParty
+    isReferredRide: Maybe Bool
 
   beamFields:
     estimatedDistance:

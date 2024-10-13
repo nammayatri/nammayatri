@@ -38,7 +38,8 @@ data IOSSearchRequestForDriverAPIEntity = IOSSearchRequestForDriverAPIEntity
     baseFare :: Money,
     searchRequestValidTill :: UTCTime,
     distanceWithUnit :: Maybe Distance,
-    duration :: Maybe Seconds
+    duration :: Maybe Seconds,
+    isReferredRideReq :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -94,7 +95,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     useSilentFCMForForwardBatch :: Bool,
     isOnRide :: Bool,
     tollNames :: Maybe [Text],
-    parkingCharge :: Maybe HighPrecMoney
+    parkingCharge :: Maybe HighPrecMoney,
+    isReferredRideReq :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -158,6 +160,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           tollNames = if isTollApplicable then searchRequest.tollNames else Nothing,
           useSilentFCMForForwardBatch = useSilentFCMForForwardBatch,
           isOnRide = nearbyReq.isForwardRequest,
+          isReferredRideReq = searchRequest.driverIdForSearch $> True,
           ..
         }
   where

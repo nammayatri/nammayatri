@@ -85,6 +85,7 @@ data TransporterConfigT f = TransporterConfigT
     driverAutoPayNotificationTime :: B.C f Kernel.Types.Common.Seconds,
     driverDistanceToPickupThresholdOnCancel :: B.C f Kernel.Types.Common.Meters,
     driverDistanceTravelledOnPickupThresholdOnCancel :: B.C f Kernel.Types.Common.Meters,
+    driverDrivenSearchReqExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     driverFeeCalculationTime :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     driverFeeCalculatorBatchGap :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     driverFeeCalculatorBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

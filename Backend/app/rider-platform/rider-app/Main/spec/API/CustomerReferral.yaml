@@ -1,8 +1,29 @@
 imports:
+  Centesimal: Kernel.Utils.Common
+  UTCTime: Kernel.Prelude
+  LatLong: Kernel.External.Maps.Types
+
 module: CustomerReferral
 types:
   ReferredCustomers:
     count: Int
+
+  ApplyCodeReq:
+    code: Text
+    deviceId: Maybe Text
+    androidId: Maybe Text
+    gps: Maybe LatLong
+  ReferrerInfo:
+    firstName : Maybe Text
+    middleName : Maybe Text
+    lastName : Maybe Text
+    rating : Maybe Centesimal
+    registeredAt : UTCTime
+    totalRides : Int
+    vehicleNumber : Maybe Text
+    vehicleVariant: Maybe Text
+    applicableServiceTiers: "Maybe [Text]"
+    referrerImageUri : Maybe Text
 
 apis:
   # GET /customerReferralCount
@@ -11,3 +32,12 @@ apis:
       auth: TokenAuth
       response:
         type: "API.Types.UI.CustomerReferral.ReferredCustomers"
+
+  # POST apply code and get referrer info
+  - POST:
+      endpoint: /person/applyReferral
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.CustomerReferral.ApplyCodeReq
+      response:
+        type: API.Types.UI.CustomerReferral.ReferrerInfo

@@ -16,6 +16,7 @@ imports:
   DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
   DbHash: Kernel.External.Encryption
   TripCategory: Domain.Types.Trip
+  Person: Domain.Types.Person
 
 SearchRequest:
   derives: Generic,Show,ToJSON,FromJSON
@@ -68,6 +69,7 @@ SearchRequest:
     tripCategory: Maybe TripCategory
     poolingLogicVersion: Maybe Int
     poolingConfigVersion: Maybe Int
+    driverIdForSearch: Maybe (Id Person)
 
   beamType:
     startTime: Maybe UTCTime

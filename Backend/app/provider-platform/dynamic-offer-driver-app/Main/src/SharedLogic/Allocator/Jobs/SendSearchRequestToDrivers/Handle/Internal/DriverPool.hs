@@ -84,8 +84,7 @@ import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
 
 isBatchNumExceedLimit ::
-  ( EsqDBFlow m r,
-    CacheFlow m r
+  ( CacheFlow m r
   ) =>
   DriverPoolConfig ->
   Id DST.SearchTry ->

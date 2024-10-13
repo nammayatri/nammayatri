@@ -64,6 +64,7 @@ data BecknTagGroup
   | ROUTE_INFO
   | -- Custom tag groups
     REALLOCATION_INFO
+  | DRIVER_IDENTIFIER
   | CUSTOMER_INFO
   | ESTIMATIONS
   | CURRENT_LOCATION
@@ -362,6 +363,8 @@ data BecknTag
   | ROUND_TRIP
   | -- Reallocation tags
     IS_REALLOCATION_ENABLED
+  | -- Driver identifier tags
+    DRIVER_IDENTITY
   | -- Customer info tags
     CUSTOMER_LANGUAGE
   | CUSTOMER_DISABILITY
@@ -454,6 +457,7 @@ instance CompleteTag BecknTag where
     ROUND_TRIP -> (Just "Round trip", Nothing)
     WAYPOINTS -> (Just "WAYPOINTS", Nothing)
     MULTIPLE_ROUTES -> (Just "Multiple Routes", Nothing)
+    DRIVER_IDENTITY -> (Just "Driver Identity", Nothing)
     BUYER_FINDER_FEES_PERCENTAGE -> (Just "Buyer Finder Fees", Nothing)
     SETTLEMENT_AMOUNT -> (Just "Settlement amount", Nothing)
     SETTLEMENT_WINDOW -> (Just "Settlement window", Nothing)
@@ -487,6 +491,7 @@ instance CompleteTag BecknTag where
     ROUND_TRIP -> ROUTE_INFO
     WAYPOINTS -> ROUTE_INFO
     MULTIPLE_ROUTES -> ROUTE_INFO
+    DRIVER_IDENTITY -> DRIVER_IDENTIFIER
     BUYER_FINDER_FEES_PERCENTAGE -> BUYER_FINDER_FEES
     SETTLEMENT_AMOUNT -> SETTLEMENT_TERMS
     SETTLEMENT_WINDOW -> SETTLEMENT_TERMS
