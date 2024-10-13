@@ -351,7 +351,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
           maxRadiusStep <= radiusStep
         -- util function
 
-        batchSize = driverPoolCfg.driverBatchSize
+        batchSize = getBatchSize driverPoolCfg.dynamicBatchSize batchNum driverPoolCfg.driverBatchSize
         batchSizeOnRide = driverPoolCfg.batchSizeOnRide
 
 assignDriverGateTags ::

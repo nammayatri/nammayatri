@@ -67,3 +67,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN batch_size_on_r
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN enable_unified_pooling boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN dynamic_batch_size integer[];

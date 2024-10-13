@@ -5,6 +5,7 @@
 module Domain.Types.DriverPoolConfig where
 
 import Data.Aeson
+import qualified Data.Vector
 import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -32,6 +33,7 @@ data DriverPoolConfig = DriverPoolConfig
     driverRequestCountLimit :: Kernel.Prelude.Int,
     driverToDestinationDistanceThreshold :: Kernel.Types.Common.Meters,
     driverToDestinationDuration :: Kernel.Types.Common.Seconds,
+    dynamicBatchSize :: Data.Vector.Vector Kernel.Prelude.Int,
     enableForwardBatching :: Kernel.Prelude.Bool,
     enableUnifiedPooling :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.DriverPoolConfig.DriverPoolConfig,

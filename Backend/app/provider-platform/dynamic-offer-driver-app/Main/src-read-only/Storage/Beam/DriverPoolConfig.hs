@@ -34,6 +34,7 @@ data DriverPoolConfigT f = DriverPoolConfigT
     driverRequestCountLimit :: B.C f Kernel.Prelude.Int,
     driverToDestinationDistanceThreshold :: B.C f Kernel.Types.Common.Meters,
     driverToDestinationDuration :: B.C f Kernel.Types.Common.Seconds,
+    dynamicBatchSize :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Int]),
     enableForwardBatching :: B.C f Kernel.Prelude.Bool,
     enableUnifiedPooling :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,

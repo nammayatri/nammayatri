@@ -49,6 +49,7 @@ module SharedLogic.DriverPool
     module Reexport,
     scheduledRideFilter,
     getVehicleAvgSpeed,
+    getBatchSize,
   )
 where
 
@@ -61,6 +62,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.List.NonEmpty.Extra as NE
 import qualified Data.Text as T
 import Data.Tuple.Extra (snd3)
+import qualified Data.Vector as V
 import Domain.Action.UI.Route as DRoute
 import Domain.Types as DVST
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
@@ -128,6 +130,11 @@ windowFromIntelligentPoolConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =
 windowFromIntelligentPoolConfig merchantOpCityId windowKey = maybe defaultWindow windowKey <$> CDIP.findByMerchantOpCityId merchantOpCityId Nothing
   where
     defaultWindow = SWC.SlidingWindowOptions 7 SWC.Days
+
+getBatchSize :: V.Vector Int -> Int -> Int -> Int
+getBatchSize dynamicBatchSize index driverBatchSize =
+  let size = min (V.length dynamicBatchSize - 1) index
+   in bool (dynamicBatchSize V.! size) driverBatchSize (size == -1)
 
 withAcceptanceRatioWindowOption ::
   ( Redis.HedisFlow m r,
@@ -587,7 +594,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
   let goHomeDriverIdsToDest = map (\(driver, _, _, _) -> driver.driverId) driversOnWayToHome
   let goHomeDriverIdsNotToDest = map (\(_, driver, _) -> driver.driverId) $ filter (\(_, driver, _) -> driver.driverId `notElem` goHomeDriverIdsToDest) driverGoHomePoolWithActualDistance
   let goHomeDriverPoolWithActualDist = makeDriverPoolWithActualDistResult <$> driversOnWayToHome
-  return $ (take driverPoolCfg.driverBatchSize goHomeDriverPoolWithActualDist, goHomeDriverIdsNotToDest)
+  return (take (getBatchSize driverPoolCfg.dynamicBatchSize 0 driverPoolCfg.driverBatchSize) goHomeDriverPoolWithActualDist, goHomeDriverIdsNotToDest)
   where
     filterFunc threshold estDist distanceToPickup =
       case driverPoolCfg.thresholdToIgnoreActualDistanceThreshold of

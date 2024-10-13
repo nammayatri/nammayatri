@@ -206,9 +206,9 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                   _ -> pure ([], [])
               logDebug $ "SpecialPickupZonePoolBatch goHomeDriversInQueue -" <> show goHomeDriversInQueue
               let goHomeDriversInQueueId = map (\d -> d.driverPoolResult.driverId) goHomeDriversInQueue
-              let normalDriversInQueue = filter (\d -> not (d.driverPoolResult.driverId `elem` goHomeDriversInQueueId)) driversInQueue
+              let normalDriversInQueue = filter (\d -> d.driverPoolResult.driverId `notElem` goHomeDriversInQueueId) driversInQueue
               let normalDriversInQueue' = bookAnyFilters transporterConfig normalDriversInQueue []
-              (_, normalDriversInQueueBatch) <- mkDriverPoolBatch merchantOpCityId_ (take driverPoolCfg.driverBatchSize normalDriversInQueue') intelligentPoolConfig transporterConfig batchSize False
+              (_, normalDriversInQueueBatch) <- mkDriverPoolBatch merchantOpCityId_ (take (getBatchSize driverPoolCfg.dynamicBatchSize batchNum driverPoolCfg.driverBatchSize) normalDriversInQueue') intelligentPoolConfig transporterConfig batchSize False
               let (finalNormalDriversInQueue, scheduleIn) =
                     if notNull goHomeDriversInQueue
                       then (addKeepHiddenInSeconds goHomeConfig.goHomeBatchDelay normalDriversInQueueBatch, Seconds 2 * goHomeConfig.goHomeBatchDelay)
@@ -543,7 +543,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
         bimapM fna fnb (a, b) = (,) <$> fna a <*> fnb b
 
         sortingType = driverPoolCfg.poolSortingType
-        batchSize = driverPoolCfg.driverBatchSize
+        batchSize = getBatchSize driverPoolCfg.dynamicBatchSize batchNum driverPoolCfg.driverBatchSize
         batchSizeOnRide = driverPoolCfg.batchSizeOnRide
 
 splitSilentDriversAndSortWithDistance :: [DriverPoolWithActualDistResult] -> [DriverPoolWithActualDistResult]

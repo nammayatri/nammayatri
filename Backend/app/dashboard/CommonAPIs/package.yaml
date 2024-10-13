@@ -86,6 +86,7 @@ dependencies:
   - special-zone-a
   - yudhishthira
   - casing
+  - vector
 
 ghc-options:
   - -Wall
