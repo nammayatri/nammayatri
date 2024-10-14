@@ -21,20 +21,33 @@ import Data.Maybe (Maybe)
 import Screens.Types (TipViewProps, QuoteListItemState(..), City(..))
 import MerchantConfig.Types (AppConfig)
 import Components.TipsView as TipsView
-import Components.ChooseVehicle.Controller as CVC
 import Components.ProviderModel as PM
+import Components.ChooseVehicle as ChooseVehicle
+import Components.ChooseYourRide (BookAnyProps(..))
+import ConfigProvider
+import Prelude
+import Data.Maybe
+import Data.Array (length)
 
 data Action = GoBack
             | NoAction
             | PrimaryButtonActionController PrimaryButtonController.Action
             | QuoteListItemActionController QuoteListItemController.Action
             | CancelAutoAssigning
+            | BoostSearchButtonClick PrimaryButtonController.Action
             | TipViewPrimaryButtonClick PrimaryButtonController.Action
             | HidePopUp
             | ChangeTip
             | TipsViewActionController TipsView.Action
             | ProviderModelAC PM.Action
             | CancelTimer
+            | ServicesOnClick ChooseVehicle.Config String
+            | TipBtnClick Int Int
+            | ChooseVehicleAC ChooseVehicle.Action
+            | BoostSearchAction PrimaryButtonController.Action
+            | GotItAction PrimaryButtonController.Action
+            | ShowBookAnyInfo
+            | CloseBoostSearch 
 
 type QuoteListModelState = {
      source :: String
@@ -53,11 +66,29 @@ type QuoteListModelState = {
   , customerTipArray :: Array String
   , customerTipArrayWithValues :: Array Int
   , providerSelectionStage :: Boolean
-  , quoteList :: Array CVC.Config
+  , quoteList :: Array ChooseVehicle.Config
   , selectProviderTimer :: String
-  , selectedEstimatesObject :: CVC.Config
+  , selectedEstimatesObject :: ChooseVehicle.Config
   , showAnim :: Boolean
   , animEndTime :: Int
   , isRentalSearch :: Boolean
   , hasToll :: Boolean
+  , showBookAnyOptions :: Boolean
+  , showBoostSearch :: Boolean
 }
+
+getPriceWithTip :: BookAnyProps -> ChooseVehicle.Config -> Array ChooseVehicle.Config -> Int -> String
+getPriceWithTip bookAnyProps estimate estimates tip = 
+  let currency = getCurrency appConfig
+      minPrice = bookAnyProps.minPrice + tip
+      maxPrice = bookAnyProps.maxPrice + tip
+      estimateMinPrice = fromMaybe 0 estimate.minPrice
+      estimateMaxPrice = fromMaybe 0 estimate.maxPrice
+  in case (length estimates), estimate.vehicleVariant == "BOOK_ANY" of 
+      0, true -> "-"
+      _, true -> if minPrice == maxPrice then (currency <> (show minPrice))
+                 else (currency <> (show minPrice) <> " - " <> currency <> (show maxPrice))
+      _ , false -> if (isNothing estimate.minPrice) && (isNothing estimate.maxPrice) then (show $ (estimate.basePrice + tip)) 
+                   else if estimateMinPrice == estimateMaxPrice then (currency <> (show $ estimateMinPrice + tip))
+                   else (currency <> (show $ estimateMinPrice + tip) <> " - " <> currency <> (show $ estimateMaxPrice + tip))
+      _,_ -> "-"

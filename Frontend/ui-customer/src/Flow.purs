@@ -250,6 +250,7 @@ baseAppFlow gPayload callInitUI = do
     showSplashScreen = fromMaybe false $ gPayload ^. _payload ^. _show_splash
   tokenValidity <- validateToken signatureAuthData
   lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
+  -- homeScreenFlow
   if tokenValidity then
     if isJust (gPayload ^. _payload ^. _chatMessageData) 
       then handleChatMessage $ gPayload ^. _payload ^. _chatMessageData

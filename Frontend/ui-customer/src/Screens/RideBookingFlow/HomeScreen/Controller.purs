@@ -952,7 +952,9 @@ eval BackPressed state = do
                       continue state{props{isSource = Just false,isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation}}
     FindingQuotes ->  do
                       void $ pure $ performHapticFeedback unit
-                      continue $ state { props{isPopUp = ConfirmBack}}
+                      if state.props.showBookAnyOptions then continue state{props{showBookAnyOptions = false}}
+                      else if state.props.showBoostSearch then continue state{props{showBoostSearch = false}}
+                      else continue $ state { props{isPopUp = ConfirmBack}}
     FavouriteLocationModel -> do
                       void $ pure $ performHapticFeedback unit
                       _ <- pure $ updateLocalStage (if state.props.isSearchLocation == NoView then HomeScreen else SearchLocationModel)
@@ -1815,8 +1817,20 @@ eval (QuoteListModelActionController (QuoteListModelController.CancelAutoAssigni
   _ <- pure $ setValueToLocalStore AUTO_SELECTING "CANCELLED_AUTO_ASSIGN"
   continue state
 
+eval (QuoteListModelActionController (QuoteListModelController.CloseBoostSearch)) state = 
+  if state.props.showBookAnyOptions then continue state{props{showBookAnyOptions = false}}
+  else continue state{props{showBoostSearch = false}}
 
-eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryButtonClick PrimaryButtonController.OnClick)) state = do
+eval (QuoteListModelActionController (QuoteListModelController.ShowBookAnyInfo)) state = do
+  void $ pure $ performHapticFeedback unit
+  continue state{props{showBookAnyOptions = true}}
+
+eval (QuoteListModelActionController (QuoteListModelController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config))) state =
+  continueWithCmd state [do 
+    pure $ ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config))
+  ]
+
+eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryButtonClick PrimaryButtonController.OnClick)) state = do --TODO: Do these action in the boost search also
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".Tip") "true"
   let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
       customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
@@ -1825,6 +1839,10 @@ eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryBut
   let newState = state{ props{rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }, findingRidesAgain = true ,searchExpire = (getSearchExpiryTime true), currentStage = TryAgain, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 0 (customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex, isTipSelected = true } }, data{nearByDrivers = Nothing}}
   _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
   updateAndExit newState $ RetryFindingQuotes false newState
+
+eval (QuoteListModelActionController (QuoteListModelController.TipBtnClick index value)) state = do
+  let check = index == state.props.tipViewProps.activeIndex
+  continue state { props {tipViewProps { stage = (if check then DEFAULT else TIP_AMOUNT_SELECTED) , isprimaryButtonVisible = not check , activeIndex = (if check then -1 else index)}}}
 
 eval (QuoteListModelActionController (QuoteListModelController.TipsViewActionController (TipsView.TipBtnClick index value))) state = do
   let check = index == state.props.tipViewProps.activeIndex
@@ -1861,6 +1879,10 @@ eval (QuoteListModelActionController (QuoteListModelController.PrimaryButtonActi
         newState = state { props { currentStage = ConfirmingRide } }
       updateAndExit newState $ ConfirmRide newState
     _, _ -> continue state
+
+eval (QuoteListModelActionController (QuoteListModelController.GotItAction PrimaryButtonController.OnClick)) state = do
+  void $ pure $ performHapticFeedback unit
+  continue state{props{showBookAnyOptions = false}}
 
 eval (QuoteListModelActionController (QuoteListModelController.GoBack)) state = do
   void $ pure $ performHapticFeedback unit
@@ -2484,6 +2506,16 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
       else item
     ) state.data.specialZoneQuoteList 
 
+eval (QuoteListModelActionController (QuoteListModelController.ServicesOnClick config item)) state = do 
+  let bookAnyEstimate = DA.find (\estimate -> estimate.vehicleVariant == "BOOK_ANY") state.data.specialZoneQuoteList
+  case bookAnyEstimate of
+    Just estimate -> do 
+      let updatedEstimate = estimate{selectedServices = [fromMaybe "" state.data.selectedEstimatesObject.serviceTierName], activeIndex = config.index, id = config.id}
+      let newState = if state.data.selectedEstimatesObject.vehicleVariant /= "BOOK_ANY" then 
+                       state { data { selectedEstimatesObject =  updatedEstimate} }
+                     else state 
+      continueWithCmd newState [pure (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ServicesOnClick newState.data.selectedEstimatesObject item)))]
+    Nothing -> continue state
 
 eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".ChooseVehicle") "true"

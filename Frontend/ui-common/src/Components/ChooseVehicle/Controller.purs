@@ -68,6 +68,7 @@ type Config
     , hasTollCharges :: Boolean
     , hasParkingCharges :: Boolean
     , specialLocationTag :: Maybe String
+    , currentStage :: String 
     }
 
 data SearchResultType = QUOTES FareProductType | ESTIMATES
@@ -137,4 +138,5 @@ config =
   , hasTollCharges : false 
   , hasParkingCharges : false
   , specialLocationTag : Nothing
+  , currentStage : ""
   }

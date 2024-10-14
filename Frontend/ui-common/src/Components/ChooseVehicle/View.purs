@@ -66,7 +66,17 @@ view push config =
           , gravity RIGHT
           , afterRender push $ const $ NoAction config
           , accessibility DISABLE
+          , visibility $ boolToVisibility $ not $ config.currentStage == "FindingQuotes"
           ] <> if os == "IOS" then [] else [pivotY 1.0])[]
+        , linearLayout
+          [ width MATCH_PARENT
+          , height $ if os == "IOS" then (if isBookAny then V currentEstimateHeight else V selectedEstimateHeight) else MATCH_PARENT
+          , cornerRadius 12.0
+          , stroke $ "1," <> Color.grey900
+          , afterRender push $ const $ NoAction config
+          , accessibility DISABLE
+          , visibility $ boolToVisibility $ config.currentStage == "FindingQuotes"
+          ][]
         , linearLayout
             [ width MATCH_PARENT
           , height WRAP_CONTENT
@@ -299,7 +309,7 @@ priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Ef
 priceDetailsView push config =
   let isActiveIndex = config.index == config.activeIndex
       infoIcon ="ny_ic_info_blue_lg"
-      enableRateCard = config.showInfo && (isActiveIndex || config.singleVehicle) && config.vehicleVariant /= "BOOK_ANY" && config.searchResultType /= QUOTES OneWaySpecialZoneAPIDetails
+      enableRateCard = config.currentStage == "FindingQuotes" || (config.showInfo && (isActiveIndex || config.singleVehicle) && config.vehicleVariant /= "BOOK_ANY" && config.searchResultType /= QUOTES OneWaySpecialZoneAPIDetails)
       isBookAny = config.vehicleVariant == "BOOK_ANY"
   in
   linearLayout

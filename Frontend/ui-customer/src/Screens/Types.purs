@@ -1128,6 +1128,8 @@ type HomeScreenStateProps =
   , showEditPickupPopupOnCancel :: Boolean
   , isIntercityFlow :: Boolean 
   , isTripSchedulable :: Boolean
+  , showBookAnyOptions :: Boolean
+  , showBoostSearch :: Boolean
   }
 
 type EditedLocation = {

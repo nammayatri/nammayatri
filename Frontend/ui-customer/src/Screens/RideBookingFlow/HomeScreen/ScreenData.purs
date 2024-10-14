@@ -214,6 +214,7 @@ initData = let
     , isSearchLocation : NoView
     , bookingUpdateRequestId : Nothing
     , showConfirmEditDestPopUp : false
+    -- , currentStage : QuoteList
     , currentStage : HomeScreen
     , stageBeforeChatScreen : RideAccepted
     , showCallPopUp : false
@@ -412,6 +413,8 @@ initData = let
     , safetySettings : Nothing
     , isIntercityFlow : false
     , isTripSchedulable : false
+    , showBookAnyOptions : false
+    , showBoostSearch : true -- TODO: Change to false
   }
 }
 
