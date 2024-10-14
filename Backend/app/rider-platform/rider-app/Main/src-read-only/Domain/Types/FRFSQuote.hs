@@ -50,7 +50,6 @@ data FRFSQuote = FRFSQuote
     toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
-    vehicleVariant :: BecknV2.FRFS.Enums.VehicleVariant,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

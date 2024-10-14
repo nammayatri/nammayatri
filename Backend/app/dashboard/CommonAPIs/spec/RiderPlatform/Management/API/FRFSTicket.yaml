@@ -4,6 +4,7 @@ imports:
   VehicleCategory: BecknV2.FRFS.Enums
   LatLong: Kernel.External.Maps.Types
   FilePath: EulerHS.Prelude
+  TimeBound: Kernel.Types.TimeBound
 
 module: FRFSTicket
 types:
@@ -19,6 +20,7 @@ types:
     longName: Text
     startPoint: LatLong
     endPoint: LatLong
+    timeBounds: TimeBound
     derive: "'HideSecrets"
 
   FRFSStartStopsAPI:
@@ -48,8 +50,8 @@ types:
   FRFSStationAPI:
     name: Text
     code: Text
-    lat: Double
-    lon: Double
+    lat: Maybe Double
+    lon: Maybe Double
     address: Maybe Text
 
   FRFSStationReq:
@@ -63,6 +65,11 @@ types:
     recordType: NewType
     file: FilePath
     derive: "'HideSecrets"
+
+  UpsertRouteFareResp:
+    unprocessedRouteFares: [Text]
+    success: Text
+
 apis:
   - GET: # Get list of all the FRFS routes
       endpoint: /frfs/routes
@@ -72,6 +79,8 @@ apis:
         vehicleType: VehicleCategory
         limit: Int
         offset: Int
+      query:
+        searchStr: Text
       response:
         type: "[FRFSRouteAPI]"
   - POST: # Add new route
@@ -105,7 +114,7 @@ apis:
       auth:
         ApiAuth APP_BACKEND FRFS LIST_FRFS_ROUTE_FARE
       response:
-        type: "[FRFSRouteFareAPI]"
+        type: "FRFSRouteFareAPI"
   - PUT: # Upsert fares for Route through CSV
       endpoint: /frfs/route/fare/{routeCode}/upsert
       mandatoryQuery:
@@ -117,7 +126,7 @@ apis:
       auth:
         ApiAuth APP_BACKEND FRFS UPSERT_FRFS_ROUTE_FARE
       response:
-        type: APISuccess
+        type: UpsertRouteFareResp
   - GET: # List all stations
       endpoint: /frfs/route/stations
       mandatoryQuery:

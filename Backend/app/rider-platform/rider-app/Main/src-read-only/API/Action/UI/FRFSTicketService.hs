@@ -30,11 +30,17 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "frfs" :> "routes" :> QueryParam "endStationCode" Data.Text.Text :> QueryParam "startStationCode" Data.Text.Text
+  ( TokenAuth :> "frfs" :> "routes" :> QueryParam "endStationCode" Data.Text.Text :> QueryParam "limit" Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
+      :> QueryParam "startStationCode" Data.Text.Text
       :> MandatoryQueryParam
            "city"
            Kernel.Types.Beckn.Context.City
-      :> MandatoryQueryParam "vehicleType" BecknV2.FRFS.Enums.VehicleCategory
+      :> MandatoryQueryParam
+           "vehicleType"
+           BecknV2.FRFS.Enums.VehicleCategory
       :> Get
            '[JSON]
            [API.Types.UI.FRFSTicketService.FRFSRouteAPI]
@@ -44,6 +50,12 @@ type API =
       :> QueryParam
            "city"
            Kernel.Types.Beckn.Context.City
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
       :> QueryParam
            "routeCode"
            Data.Text.Text
@@ -173,6 +185,12 @@ type API =
       :> QueryParam
            "input"
            Data.Text.Text
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
       :> MandatoryQueryParam
            "city"
            Kernel.Types.Beckn.Context.City
@@ -195,24 +213,28 @@ getFrfsRoutes ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Types.Beckn.Context.City ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSRouteAPI]
   )
-getFrfsRoutes a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsRoutes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+getFrfsRoutes a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsRoutes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
 
 getFrfsStations ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Prelude.Maybe Data.Text.Text ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSStationAPI]
   )
-getFrfsStations a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsStations (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+getFrfsStations a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsStations (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
 
 postFrfsSearch ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -318,9 +340,11 @@ getFrfsAutocomplete ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Types.Beckn.Context.City ->
     Kernel.External.Maps.Types.LatLong ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler API.Types.UI.FRFSTicketService.AutocompleteRes
   )
-getFrfsAutocomplete a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsAutocomplete (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+getFrfsAutocomplete a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsAutocomplete (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1

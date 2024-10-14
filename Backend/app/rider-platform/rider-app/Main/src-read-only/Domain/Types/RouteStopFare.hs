@@ -26,7 +26,6 @@ data RouteStopFare = RouteStopFare
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
     vehicleServiceTierId :: Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
-    vehicleVariant :: BecknV2.FRFS.Enums.VehicleVariant,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

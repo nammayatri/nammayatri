@@ -94,11 +94,13 @@ import qualified Tools.Payment as Payment
 getFrfsRoutes ::
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
   Maybe Text ->
+  Maybe Int ->
+  Maybe Int ->
   Maybe Text ->
   Context.City ->
   Spec.VehicleCategory ->
   Environment.Flow [API.Types.UI.FRFSTicketService.FRFSRouteAPI]
-getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehicleType = do
+getFrfsRoutes (_personId, _mId) mbEndStationCode _limit _offset mbStartStationCode _city _vehicleType = do
   case (mbStartStationCode, mbEndStationCode) of
     (Just startStationCode, Just endStationCode) -> do
       routesWithStop <- B.runInReplica $ QRouteStopMapping.findByStopCode startStationCode
@@ -132,7 +134,7 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehic
           routes
     _ -> do
       merchantOpCity <- CQMOC.findByMerchantIdAndCity _mId _city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> _mId.getId <> "-city-" <> show _city)
-      routes <- B.runInReplica $ QRoute.findAllByMerchantOperatingCityAndVehicleType merchantOpCity.id _vehicleType
+      routes <- B.runInReplica $ QRoute.findAllByMerchantOperatingCityAndVehicleType _limit _offset merchantOpCity.id _vehicleType
       return $
         map
           ( \Route.Route {..} -> FRFSTicketService.FRFSRouteAPI {totalStops = Nothing, ..}
@@ -144,11 +146,13 @@ getFrfsStations ::
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Kernel.Prelude.Maybe Context.City ->
+  Maybe Int ->
+  Maybe Int ->
   Kernel.Prelude.Maybe Text ->
   Kernel.Prelude.Maybe Text ->
   Spec.VehicleCategory ->
   Environment.Flow [API.Types.UI.FRFSTicketService.FRFSStationAPI]
-getFrfsStations (_personId, mId) mbCity mbRouteCode mbStartStationCode vehicleType_ = do
+getFrfsStations (_personId, mId) mbCity _limit _offset mbRouteCode mbStartStationCode vehicleType_ = do
   merchantOpCity <-
     case mbCity of
       Nothing ->
@@ -241,7 +245,7 @@ getFrfsStations (_personId, mId) mbCity mbRouteCode mbStartStationCode vehicleTy
           possibleEndStops
     -- Return all the Stops
     _ -> do
-      stations <- B.runInReplica $ QStation.findByMerchantOperatingCityIdAndVehicleType merchantOpCity.id vehicleType_
+      stations <- B.runInReplica $ QStation.findByMerchantOperatingCityIdAndVehicleType _limit _offset merchantOpCity.id vehicleType_
       return $
         map
           ( \Station {..} ->
@@ -802,18 +806,20 @@ getFrfsAutocomplete ::
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Kernel.Prelude.Maybe Text ->
+  Maybe Int ->
+  Maybe Int ->
   Context.City ->
   Kernel.External.Maps.Types.LatLong ->
   BecknV2.FRFS.Enums.VehicleCategory ->
   Environment.Flow API.Types.UI.FRFSTicketService.AutocompleteRes
-getFrfsAutocomplete (_, mId) mbInput opCity origin vehicle = do
+getFrfsAutocomplete (_, mId) mbInput _limit _offset opCity origin vehicle = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity mId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> mId.getId <> " ,city: " <> show opCity)
   frfsConfig <-
     CQFRFSConfig.findByMerchantOperatingCityId merchantOpCity.id
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show merchantOpCity.id)
   case mbInput of
     Nothing -> do
-      allStops <- QStation.findByMerchantOperatingCityIdAndVehicleType merchantOpCity.id vehicle
+      allStops <- QStation.findByMerchantOperatingCityIdAndVehicleType _limit _offset merchantOpCity.id vehicle
       currentTime <- getCurrentTime
       let serviceableStops = DTB.findBoundedDomain allStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) allStops
           stopsWithinRadius =
