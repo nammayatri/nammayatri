@@ -307,11 +307,12 @@ public class RideRequestActivity extends AppCompatActivity {
                     return;
                 }
                 holder.reqButton.setClickable(false);
-                if (service.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
-                    lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
-                }else if(service.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
-                    lottieAnimationView.setAnimation(R.raw.waiting_for_customer_lottie_cab);
-                }
+                // Deprecated as a generic loader is used irrespective of the vehicle variant
+                // if (service.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
+                //     lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
+                // }else if(service.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
+                //     lottieAnimationView.setAnimation(R.raw.waiting_for_customer_lottie_cab);
+                // }
                 ExecutorService executor = Executors.newSingleThreadExecutor();
                 executor.execute(() -> {
                     Boolean isApiSuccess = RideRequestUtils.driverRespondApi(model, true, RideRequestActivity.this, sheetArrayList.indexOf(model));
@@ -470,21 +471,23 @@ public class RideRequestActivity extends AppCompatActivity {
         View progressDialog = findViewById(R.id.progress_loader);
         int rawResource;
         if (ackType.equals(getString(R.string.DRIVER_ASSIGNMENT))){
-            if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
-                rawResource = R.raw.yatri_auto_accepted_lottie;
-            }else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
-                rawResource = R.raw.ride_accepted_lottie_cab;
-            }else
-                rawResource = R.raw.ride_accepted_lottie;
+            // Deprecated as a generic lottie loader is used irrespective of the vehicle variant or merchant
+            // if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
+            //     rawResource = R.raw.yatri_auto_accepted_lottie;
+            // }else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
+            //     rawResource = R.raw.ride_accepted_lottie_cab;
+            // }else
+            rawResource = R.raw.ride_accepted_lottie;
         }
         else{
-            if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
-                rawResource = R.raw.yatri_auto_declined;
-            }else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
-                rawResource = R.raw.accepted_by_another_driver_lottie_cab;
-            }
-            else
-                rawResource = R.raw.accepted_by_another_driver_lottie;
+            // Deprecated as a generic lottie loader is used irrespective of the vehicle variant or merchant
+            // if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
+            //     rawResource = R.raw.yatri_auto_declined;
+            // }else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
+            //     rawResource = R.raw.accepted_by_another_driver_lottie_cab;
+            // }
+            // else
+            rawResource = R.raw.accepted_by_another_driver_lottie;
         }
         mainLooper.post(() -> {
             TextView loaderText = progressDialog.findViewById(R.id.text_waiting_for_customer);
