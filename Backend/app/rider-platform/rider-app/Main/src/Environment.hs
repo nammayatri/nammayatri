@@ -156,6 +156,8 @@ data AppEnv = AppEnv
     coreVersion :: Text,
     serviceClickhouseEnv :: ClickhouseEnv,
     kafkaClickhouseEnv :: ClickhouseEnv,
+    serviceClickhouseCfg :: ClickhouseCfg,
+    kafkaClickhouseCfg :: ClickhouseCfg,
     loggerConfig :: LoggerConfig,
     internalAPIKey :: Text,
     googleTranslateUrl :: BaseUrl,
@@ -261,6 +263,7 @@ buildAppEnv cfg@AppCfg {..} = do
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   serviceClickhouseEnv <- createConn riderClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
+  let serviceClickhouseCfg = riderClickhouseCfg
   -- let tokenMap :: (M.Map Text (Text, BaseUrl)) = M.map (\TokenConfig {..} -> (token, ondcUrl)) ondcTokenMap
   let ondcTokenHashMap = HM.fromList $ M.toList ondcTokenMap
   return AppEnv {minTripDistanceForReferralCfg = convertHighPrecMetersToDistance Meter <$> minTripDistanceForReferralCfg, ..}

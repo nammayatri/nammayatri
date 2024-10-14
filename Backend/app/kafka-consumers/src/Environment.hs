@@ -106,7 +106,7 @@ data AppCfg = AppCfg
     metricsPort :: Int,
     encTools :: EncTools,
     kafkaProducerCfg :: KafkaProducerCfg,
-    sericeClickhouseCfg :: ClickhouseCfg,
+    serviceClickhouseCfg :: ClickhouseCfg,
     kafkaClickhouseCfg :: ClickhouseCfg,
     kafkaReadBatchSize :: Int,
     kafkaReadBatchDelay :: Seconds,
@@ -150,6 +150,8 @@ data AppEnv = AppEnv
     kafkaProducerTools :: KafkaProducerTools,
     serviceClickhouseEnv :: ClickhouseEnv,
     kafkaClickhouseEnv :: ClickhouseEnv,
+    serviceClickhouseCfg :: ClickhouseCfg,
+    kafkaClickhouseCfg :: ClickhouseCfg,
     kafkaReadBatchSize :: Int,
     kafkaReadBatchDelay :: Seconds,
     consumerStartTime :: Maybe Integer,
@@ -197,7 +199,7 @@ buildAppEnv AppCfg {..} consumerType = do
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   isShuttingDown <- mkShutdown
-  serviceClickhouseEnv <- createConn sericeClickhouseCfg
+  serviceClickhouseEnv <- createConn serviceClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   pure $ AppEnv {..}
 

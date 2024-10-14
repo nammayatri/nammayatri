@@ -226,7 +226,9 @@ data AppEnv = AppEnv
     passettoContext :: PassettoContext,
     quoteRespondCoolDown :: Int,
     sosAlertsTopicARN :: Text,
-    psqlConn :: PG.Connection
+    psqlConn :: PG.Connection,
+    serviceClickhouseCfg :: ClickhouseCfg,
+    kafkaClickhouseCfg :: ClickhouseCfg
   }
   deriving (Generic)
 
@@ -283,6 +285,7 @@ buildAppEnv cfg@AppCfg {..} = do
   let internalEndPointHashMap = HMS.fromList $ M.toList internalEndPointMap
   -- let tokenMap :: (M.Map KeyConfig (Text, BaseUrl)) = M.map (\TokenConfig {..} -> (token, ondcUrl)) ondcTokenMap
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
+      serviceClickhouseCfg = driverClickhouseCfg
   return AppEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()

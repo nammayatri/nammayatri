@@ -65,15 +65,17 @@ let kafkaClickhouseCfg =
       , password = sec.clickHousePassword
       , database = "atlas_kafka"
       , tls = False
+      , retryInterval = [ +0 ]
       }
 
-let sericeClickhouseCfg =
+let serviceClickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "localhost"
       , port = 8123
       , password = sec.clickHousePassword
       , database = "atlas_app"
       , tls = False
+      , retryInterval = [ +0 ]
       }
 
 let kafkaConsumerCfg =
@@ -122,7 +124,7 @@ in  { hedisCfg
     , kvConfigUpdateFrequency
     , cacConfig
     , kafkaClickhouseCfg
-    , sericeClickhouseCfg
+    , serviceClickhouseCfg
     , encTools
     , healthCheckAppCfg = None genericCommon.healthCheckAppCfgT
     , kafkaProducerCfg
