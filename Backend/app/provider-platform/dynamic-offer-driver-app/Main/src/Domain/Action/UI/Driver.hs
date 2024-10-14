@@ -1107,7 +1107,8 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referral
 getNearbySearchRequests ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    MonadFlow m
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe (Id DST.SearchTry) ->
@@ -1135,7 +1136,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       let useSilentFCMForForwardBatch = transporterConfig.useSilentFCMForForwardBatch
       let driverPickUpCharges = USRD.extractDriverPickupCharges farePolicy.farePolicyDetails
           parkingCharges = farePolicy.parkingCharge
-      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
