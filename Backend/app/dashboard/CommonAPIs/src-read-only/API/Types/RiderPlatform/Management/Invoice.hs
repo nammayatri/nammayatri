@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -5,6 +6,7 @@ module API.Types.RiderPlatform.Management.Invoice where
 
 import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
 import qualified Data.Text
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types
@@ -52,14 +54,16 @@ mkInvoiceAPIs invoiceClient = (InvoiceAPIs {..})
   where
     getInvoiceInvoice = invoiceClient
 
-data InvoiceEndpointDSL
-  = GetInvoiceInvoiceEndpoint
+data InvoiceUserActionType
+  = GET_INVOICE_INVOICE
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToSchema)
 
-instance ToJSON InvoiceEndpointDSL where
-  toJSON GetInvoiceInvoiceEndpoint = Data.Aeson.String "GetInvoiceInvoiceEndpoint"
+instance ToJSON InvoiceUserActionType where
+  toJSON GET_INVOICE_INVOICE = Data.Aeson.String "GET_INVOICE_INVOICE"
 
-instance FromJSON InvoiceEndpointDSL where
-  parseJSON (Data.Aeson.String "GetInvoiceInvoiceEndpoint") = pure GetInvoiceInvoiceEndpoint
-  parseJSON _ = fail "GetInvoiceInvoiceEndpoint expected"
+instance FromJSON InvoiceUserActionType where
+  parseJSON (Data.Aeson.String "GET_INVOICE_INVOICE") = pure GET_INVOICE_INVOICE
+  parseJSON _ = fail "GET_INVOICE_INVOICE expected"
+
+$(Data.Singletons.TH.genSingletons [''InvoiceUserActionType])

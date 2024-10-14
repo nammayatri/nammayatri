@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -6,6 +7,7 @@ module API.Types.RiderPlatform.Management.FRFSTicket where
 import qualified BecknV2.FRFS.Enums
 import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
 import qualified Data.Text
 import qualified Domain.Types.StationType
 import EulerHS.Prelude hiding (id)
@@ -195,14 +197,16 @@ mkFRFSTicketAPIs fRFSTicketClient = (FRFSTicketAPIs {..})
   where
     getFRFSTicketFrfsRoutes :<|> postFRFSTicketFrfsRouteAdd :<|> postFRFSTicketFrfsRouteDelete :<|> getFRFSTicketFrfsRouteFareList :<|> putFRFSTicketFrfsRouteFareUpsert :<|> getFRFSTicketFrfsRouteStations :<|> postFRFSTicketFrfsStationAdd :<|> postFRFSTicketFrfsStationDelete = fRFSTicketClient
 
-data FRFSTicketEndpointDSL
-  = GetFRFSTicketFrfsRoutesEndpoint
-  | PostFRFSTicketFrfsRouteAddEndpoint
-  | PostFRFSTicketFrfsRouteDeleteEndpoint
-  | GetFRFSTicketFrfsRouteFareListEndpoint
-  | PutFRFSTicketFrfsRouteFareUpsertEndpoint
-  | GetFRFSTicketFrfsRouteStationsEndpoint
-  | PostFRFSTicketFrfsStationAddEndpoint
-  | PostFRFSTicketFrfsStationDeleteEndpoint
+data FRFSTicketUserActionType
+  = GET_FRFS_TICKET_FRFS_ROUTES
+  | POST_FRFS_TICKET_FRFS_ROUTE_ADD
+  | POST_FRFS_TICKET_FRFS_ROUTE_DELETE
+  | GET_FRFS_TICKET_FRFS_ROUTE_FARE_LIST
+  | PUT_FRFS_TICKET_FRFS_ROUTE_FARE_UPSERT
+  | GET_FRFS_TICKET_FRFS_ROUTE_STATIONS
+  | POST_FRFS_TICKET_FRFS_STATION_ADD
+  | POST_FRFS_TICKET_FRFS_STATION_DELETE
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(Data.Singletons.TH.genSingletons [''FRFSTicketUserActionType])

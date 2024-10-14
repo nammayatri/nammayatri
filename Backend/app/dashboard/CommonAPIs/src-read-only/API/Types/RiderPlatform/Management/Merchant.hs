@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -5,6 +6,7 @@ module API.Types.RiderPlatform.Management.Merchant where
 
 import qualified Dashboard.Common.Merchant
 import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -159,17 +161,19 @@ mkMerchantAPIs merchantClient = (MerchantAPIs {..})
   where
     postMerchantUpdate :<|> getMerchantServiceUsageConfig :<|> postMerchantServiceConfigMapsUpdate :<|> postMerchantServiceUsageConfigMapsUpdate :<|> postMerchantServiceConfigSmsUpdate :<|> postMerchantServiceUsageConfigSmsUpdate :<|> postMerchantConfigOperatingCityCreate :<|> postMerchantSpecialLocationUpsert :<|> deleteMerchantSpecialLocationDelete :<|> postMerchantSpecialLocationGatesUpsert :<|> deleteMerchantSpecialLocationGatesDelete = merchantClient
 
-data MerchantEndpointDSL
-  = PostMerchantUpdateEndpoint
-  | GetMerchantServiceUsageConfigEndpoint
-  | PostMerchantServiceConfigMapsUpdateEndpoint
-  | PostMerchantServiceUsageConfigMapsUpdateEndpoint
-  | PostMerchantServiceConfigSmsUpdateEndpoint
-  | PostMerchantServiceUsageConfigSmsUpdateEndpoint
-  | PostMerchantConfigOperatingCityCreateEndpoint
-  | PostMerchantSpecialLocationUpsertEndpoint
-  | DeleteMerchantSpecialLocationDeleteEndpoint
-  | PostMerchantSpecialLocationGatesUpsertEndpoint
-  | DeleteMerchantSpecialLocationGatesDeleteEndpoint
+data MerchantUserActionType
+  = POST_MERCHANT_UPDATE
+  | GET_MERCHANT_SERVICE_USAGE_CONFIG
+  | POST_MERCHANT_SERVICE_CONFIG_MAPS_UPDATE
+  | POST_MERCHANT_SERVICE_USAGE_CONFIG_MAPS_UPDATE
+  | POST_MERCHANT_SERVICE_CONFIG_SMS_UPDATE
+  | POST_MERCHANT_SERVICE_USAGE_CONFIG_SMS_UPDATE
+  | POST_MERCHANT_CONFIG_OPERATING_CITY_CREATE
+  | POST_MERCHANT_SPECIAL_LOCATION_UPSERT
+  | DELETE_MERCHANT_SPECIAL_LOCATION_DELETE
+  | POST_MERCHANT_SPECIAL_LOCATION_GATES_UPSERT
+  | DELETE_MERCHANT_SPECIAL_LOCATION_GATES_DELETE
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(Data.Singletons.TH.genSingletons [''MerchantUserActionType])

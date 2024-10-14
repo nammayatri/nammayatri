@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -5,6 +6,7 @@ module API.Types.ProviderPlatform.Management.DriverGoHome where
 
 import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -84,10 +86,12 @@ mkDriverGoHomeAPIs driverGoHomeClient = (DriverGoHomeAPIs {..})
   where
     getDriverGoHomeGetHomeLocation :<|> postDriverGoHomeUpdateHomeLocation :<|> postDriverGoHomeIncrementGoToCount :<|> getDriverGoHomeGetGoHomeInfo = driverGoHomeClient
 
-data DriverGoHomeEndpointDSL
-  = GetDriverGoHomeGetHomeLocationEndpoint
-  | PostDriverGoHomeUpdateHomeLocationEndpoint
-  | PostDriverGoHomeIncrementGoToCountEndpoint
-  | GetDriverGoHomeGetGoHomeInfoEndpoint
+data DriverGoHomeUserActionType
+  = GET_DRIVER_GO_HOME_GET_HOME_LOCATION
+  | POST_DRIVER_GO_HOME_UPDATE_HOME_LOCATION
+  | POST_DRIVER_GO_HOME_INCREMENT_GO_TO_COUNT
+  | GET_DRIVER_GO_HOME_GET_GO_HOME_INFO
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(Data.Singletons.TH.genSingletons [''DriverGoHomeUserActionType])

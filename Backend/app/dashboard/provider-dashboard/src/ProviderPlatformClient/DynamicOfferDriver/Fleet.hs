@@ -19,7 +19,6 @@ module ProviderPlatformClient.DynamicOfferDriver.Fleet
 where
 
 import "dynamic-offer-driver-app" API.Dashboard.Fleet as BPP
-import qualified API.Types.ProviderPlatform.Fleet.Driver as DriverDSL
 import Data.Time
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as Fleet
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Ride as DARide
@@ -50,8 +49,7 @@ data FleetRegistrationAPIs = FleetRegistrationAPIs
 
 data FleetAPIs = FleetAPIs
   { operations :: FleetOperationsAPIs,
-    registration :: FleetRegistrationAPIs,
-    driverDSL :: DriverDSL.DriverAPIs
+    registration :: FleetRegistrationAPIs
   }
 
 mkDynamicOfferDriverAppFleetAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> FleetAPIs
@@ -60,12 +58,10 @@ mkDynamicOfferDriverAppFleetAPIs merchantId city token = do
       registration = FleetRegistrationAPIs {..}
 
   -- TODO rename to operations
-  let driverDSL = DriverDSL.mkDriverAPIs driverClientDSL
   FleetAPIs {..}
   where
     fleetOperationsClient
-      :<|> fleetRegisterationClient
-      :<|> driverClientDSL = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
+      :<|> fleetRegisterationClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
 
     listDriverRidesForFleet = fleetOperationsClient
 

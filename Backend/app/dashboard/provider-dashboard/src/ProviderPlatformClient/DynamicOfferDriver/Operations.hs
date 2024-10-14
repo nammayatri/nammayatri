@@ -20,19 +20,6 @@ where
 
 import "dynamic-offer-driver-app" API.Dashboard.Management as BPP
 import qualified API.Dashboard.Management.Subscription as MSubscription
-import qualified API.Types.ProviderPlatform.Management.Booking as BookingDSL
-import qualified API.Types.ProviderPlatform.Management.Driver as DriverDSL
-import qualified API.Types.ProviderPlatform.Management.DriverCoins as DriverCoinsDSL
-import qualified API.Types.ProviderPlatform.Management.DriverGoHome as DriverGoHomeDSL
-import qualified API.Types.ProviderPlatform.Management.DriverReferral as DriverReferralDSL
-import qualified API.Types.ProviderPlatform.Management.DriverRegistration as DriverRegistrationDSL
-import qualified API.Types.ProviderPlatform.Management.Merchant as MerchantDSL
-import qualified API.Types.ProviderPlatform.Management.Message as MessageDSL
-import qualified API.Types.ProviderPlatform.Management.NammaTag as NammaTagDSL
-import qualified API.Types.ProviderPlatform.Management.Payout as PayoutDSL
-import qualified API.Types.ProviderPlatform.Management.Revenue as RevenueDSL
-import qualified API.Types.ProviderPlatform.Management.Ride as RideDSL
-import qualified API.Types.ProviderPlatform.Management.System as SystemDSL
 import qualified Dashboard.ProviderPlatform.Management.Driver as Driver
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
@@ -63,20 +50,7 @@ import Tools.Client
 data DriverOperationAPIs = DriverOperationAPIs
   { subscription :: SubscriptionAPIs,
     overlay :: OverlayAPIs,
-    issue :: IssueAPIs,
-    merchantDSL :: MerchantDSL.MerchantAPIs,
-    messageDSL :: MessageDSL.MessageAPIs,
-    revenueDSL :: RevenueDSL.RevenueAPIs,
-    rideDSL :: RideDSL.RideAPIs,
-    nammaTagDSL :: NammaTagDSL.NammaTagAPIs,
-    driverDSL :: DriverDSL.DriverAPIs,
-    driverCoinsDSL :: DriverCoinsDSL.DriverCoinsAPIs,
-    driverGoHomeDSL :: DriverGoHomeDSL.DriverGoHomeAPIs,
-    driverReferralDSL :: DriverReferralDSL.DriverReferralAPIs,
-    driverRegistrationDSL :: DriverRegistrationDSL.DriverRegistrationAPIs,
-    bookingDSL :: BookingDSL.BookingAPIs,
-    payoutDSL :: PayoutDSL.PayoutAPIs,
-    systemDSL :: SystemDSL.SystemAPIs
+    issue :: IssueAPIs
   }
 
 data OverlayAPIs = OverlayAPIs
@@ -129,38 +103,11 @@ mkDriverOperationAPIs merchantId city token = do
   let subscription = SubscriptionAPIs {..}
   let issue = IssueAPIs {..}
   let overlay = OverlayAPIs {..}
-
-  let merchantDSL = MerchantDSL.mkMerchantAPIs merchantClientDSL
-  let messageDSL = MessageDSL.mkMessageAPIs messageClientDSL
-  let revenueDSL = RevenueDSL.mkRevenueAPIs revenueClientDSL
-  let rideDSL = RideDSL.mkRideAPIs rideClientDSL
-  let nammaTagDSL = NammaTagDSL.mkNammaTagAPIs nammaTagClientDSL
-  let driverDSL = DriverDSL.mkDriverAPIs driverClientDSL
-  let driverCoinsDSL = DriverCoinsDSL.mkDriverCoinsAPIs driverCoinsClientDSL
-  let driverGoHomeDSL = DriverGoHomeDSL.mkDriverGoHomeAPIs driverGoHomeClientDSL
-  let driverReferralDSL = DriverReferralDSL.mkDriverReferralAPIs driverReferralClientDSL
-  let driverRegistrationDSL = DriverRegistrationDSL.mkDriverRegistrationAPIs driverRegistrationClientDSL
-  let bookingDSL = BookingDSL.mkBookingAPIs bookingClientDSL
-  let payoutDSL = PayoutDSL.mkPayoutAPIs payoutClientDSL
-  let systemDSL = SystemDSL.mkSystemAPIs systemClientDSL
   DriverOperationAPIs {..}
   where
     subscriptionClient
       :<|> overlayClient
-      :<|> issueClient
-      :<|> merchantClientDSL
-      :<|> messageClientDSL
-      :<|> revenueClientDSL
-      :<|> rideClientDSL
-      :<|> nammaTagClientDSL
-      :<|> driverClientDSL
-      :<|> driverCoinsClientDSL
-      :<|> driverGoHomeClientDSL
-      :<|> driverReferralClientDSL
-      :<|> driverRegistrationClientDSL
-      :<|> bookingClientDSL
-      :<|> payoutClientDSL
-      :<|> systemClientDSL = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
+      :<|> issueClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
 
     planListV2
       :<|> planSelectV2

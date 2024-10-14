@@ -14,13 +14,14 @@ let outputPath =
           , _domainHandler = common.outputPrefixRiderApp ++ "/" ++ folderName
           , _servantApiDashboard =
               defaultOutput._servantApiDashboard ++ "/" ++ folderName
+          , _servantApiClient =
+              defaultOutput._servantApiClient ++ "/" ++ folderName
           }
 
-let clientFunction =
-      Some "RiderPlatformClient.RiderApp.RideBooking.callRiderApp"
+let serverName = Some "APP_BACKEND"
 
 in      common.defaultConfigs
     //  { _output = outputPath
-        , _clientFunction = clientFunction
+        , _serverName = serverName
         , _folderName = Some folderName
         }

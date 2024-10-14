@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -7,6 +8,7 @@ import qualified Dashboard.Common
 import qualified Dashboard.Common.Booking
 import qualified Dashboard.Common.Ride
 import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
 import qualified Domain.Types
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
@@ -370,14 +372,16 @@ mkRideAPIs rideClient = (RideAPIs {..})
   where
     getRideList :<|> postRideEndMultiple :<|> postRideCancelMultiple :<|> getRideInfo :<|> postRideSync :<|> postRideSyncMultiple :<|> postRideRoute :<|> getRideKaptureList = rideClient
 
-data RideEndpointDSL
-  = GetRideListEndpoint
-  | PostRideEndMultipleEndpoint
-  | PostRideCancelMultipleEndpoint
-  | GetRideInfoEndpoint
-  | PostRideSyncEndpoint
-  | PostRideSyncMultipleEndpoint
-  | PostRideRouteEndpoint
-  | GetRideKaptureListEndpoint
+data RideUserActionType
+  = GET_RIDE_LIST
+  | POST_RIDE_END_MULTIPLE
+  | POST_RIDE_CANCEL_MULTIPLE
+  | GET_RIDE_INFO
+  | POST_RIDE_SYNC
+  | POST_RIDE_SYNC_MULTIPLE
+  | POST_RIDE_ROUTE
+  | GET_RIDE_KAPTURE_LIST
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(Data.Singletons.TH.genSingletons [''RideUserActionType])
