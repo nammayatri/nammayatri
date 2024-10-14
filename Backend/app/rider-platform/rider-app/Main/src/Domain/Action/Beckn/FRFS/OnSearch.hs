@@ -21,7 +21,7 @@ import qualified Data.Text as T
 import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSSearch as Search
 import Domain.Types.Merchant
-import qualified Domain.Types.Station as Station
+import qualified Domain.Types.StationType as Station
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types

@@ -17,6 +17,7 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.RouteStopMapping
 import Domain.Types.Station
+import Domain.Types.StationType
 import ExternalBPP.Bus.ExternalAPI.CallAPI as CallAPI
 import Kernel.Beam.Functions as B
 import Kernel.Prelude

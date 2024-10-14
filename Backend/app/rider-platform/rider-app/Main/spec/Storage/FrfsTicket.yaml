@@ -28,6 +28,7 @@ imports:
   TimeBound: Kernel.Types.TimeBound
   LatLong: Kernel.External.Maps.Types
   JourneySearchData: Lib.JourneyPlannerTypes
+  StationType: Domain.Types.StationType
 
 FRFSSearch:
   tableName: frfs_search
@@ -97,10 +98,6 @@ Station:
     possibleTypes: Maybe [StationType]
     merchantOperatingCityId: Id MerchantOperatingCity
 
-  types:
-    StationType:
-      enum: "START, END, TRANSIT, INTERMEDIATE"
-
   default:
     timeBounds: "'Unbounded'"
 
@@ -119,7 +116,7 @@ Station:
 
   queries:
     findByMerchantOperatingCityIdAndVehicleType:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where:
         and: [merchantOperatingCityId, vehicleType]
     findById:
@@ -127,6 +124,9 @@ Station:
       where: id
     findByStationCode:
       kvFunction: findOneWithKV
+      where: code
+    deleteByStationCode:
+      kvFunction: deleteWithKV
       where: code
 
   extraOperations:
@@ -630,7 +630,7 @@ Route:
       kvFunction: findOneWithKV
       where: id
     findAllByMerchantOperatingCityAndVehicleType:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where:
         and: [merchantOperatingCityId, vehicleType]
     findByRouteCodes:
@@ -638,6 +638,9 @@ Route:
       where:
         and:
           - in: [code]
+    deleteByRouteCode:
+      kvFunction: deleteWithKV
+      where: code
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -706,8 +709,16 @@ RouteStopFare:
     startStopCode: PrimaryKey
     endStopCode: PrimaryKey
   queries:
+    findByRouteCode:
+      kvFunction: findAllWithKV
+      where: routeCode
     findByRouteStartAndStopCode:
       kvFunction: findAllWithKV
+      where:
+        and: [routeCode, startStopCode, endStopCode]
+    updateFareByRouteCodeAndStopCodes:
+      kvFunction: updateWithKV
+      params: [amount]
       where:
         and: [routeCode, startStopCode, endStopCode]
 

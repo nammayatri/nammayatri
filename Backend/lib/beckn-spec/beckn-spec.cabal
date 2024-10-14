@@ -215,6 +215,7 @@ library
       Domain.Types.FareProductType
       Domain.Types.RefereeLink
       Domain.Types.ServiceTierType
+      Domain.Types.StationType
       Domain.Types.Trip
       Domain.Types.VehicleCategory
       Domain.Types.VehicleVariant

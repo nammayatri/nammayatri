@@ -16,38 +16,283 @@ where
 import qualified API.Types.RiderPlatform.Management.FRFSTicket
 import qualified BecknV2.FRFS.Enums
 import Dashboard.RiderPlatform.FRFSTicket
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
+import Data.Csv
+import Data.List (groupBy)
+import qualified Data.List.NonEmpty as NE
+import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
+import Data.Ord (comparing)
 import qualified Data.Text
+import qualified Data.Vector as V
 import qualified Domain.Types.Merchant
+import Domain.Types.Route
+import Domain.Types.Station
 import qualified Environment
-import EulerHS.Prelude hiding (id)
+import qualified EulerHS.Language as L
+import EulerHS.Prelude hiding (groupBy, id)
+import Kernel.External.Maps.Types
 import qualified Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
+import Kernel.Types.Common
+import Kernel.Types.Error
+import Kernel.Types.GuidLike (generateGUID)
 import qualified Kernel.Types.Id
-import Servant
+import Kernel.Types.Time (getCurrentTime)
+import Kernel.Types.TimeBound
+import Kernel.Utils.Common (fromMaybeM, throwError)
+import Kernel.Utils.Logging (logInfo)
+import Servant hiding (Header, throwError)
+import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.Queries.Route as QRoute
+import Storage.Queries.RouteExtra as RE
+import Storage.Queries.RouteStopFare as QRSF
+import Storage.Queries.RouteStopMapping as QRSM
+import Storage.Queries.Station as QStation
+import Storage.Queries.StationExtra as SE
 import Tools.Auth
 
-getFRFSTicketFrfsRoutes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.FRFSRouteAPI])
-getFRFSTicketFrfsRoutes _merchantShortId _opCity limit offset vehicleType = do error "Logic yet to be decided" limit offset vehicleType
+getFRFSTicketFrfsRoutes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.FRFSRouteAPI])
+getFRFSTicketFrfsRoutes merchantShortId opCity searchStr limit offset vehicleType = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+
+  routes <- case searchStr of
+    Just str -> RE.findAllMatchingRoutes (Just str) (Just $ fromIntegral limit) (Just $ fromIntegral offset) merchantOpCity.id vehicleType
+    Nothing -> QRoute.findAllByMerchantOperatingCityAndVehicleType (Just limit) (Just offset) merchantOpCity.id vehicleType
+
+  frfsRoutes <- forM routes $ \rte -> do
+    pure $
+      API.Types.RiderPlatform.Management.FRFSTicket.FRFSRouteAPI
+        { code = rte.code,
+          shortName = rte.shortName,
+          longName = rte.longName,
+          startPoint = rte.startPoint,
+          endPoint = rte.startPoint
+        }
+  pure frfsRoutes
 
 postFRFSTicketFrfsRouteAdd :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.FRFSRouteReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postFRFSTicketFrfsRouteAdd _merchantShortId _opCity code vehicleType req = do error "Logic yet to be decided" code vehicleType req
+postFRFSTicketFrfsRouteAdd merchantShortId opCity code vehicleType req = do
+  existingRoute <- QRoute.findByRouteCode code
+  case existingRoute of
+    Just _ -> throwError $ InvalidRequest "Route code already exists"
+    Nothing -> do
+      merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+
+      merchantOpCity <-
+        CQMOC.findByMerchantIdAndCity merchant.id opCity
+          >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+
+      newId <- generateGUID
+      now <- getCurrentTime
+
+      let newRoute =
+            Domain.Types.Route.Route
+              { id = newId,
+                code = code,
+                color = req.color,
+                shortName = req.shortName,
+                longName = req.longName,
+                startPoint = req.startPoint,
+                endPoint = req.endPoint,
+                vehicleType = vehicleType,
+                timeBounds = req.timeBounds,
+                merchantId = merchant.id,
+                merchantOperatingCityId = merchantOpCity.id,
+                createdAt = now,
+                updatedAt = now
+              }
+      QRoute.create newRoute
+      pure Success
 
 postFRFSTicketFrfsRouteDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postFRFSTicketFrfsRouteDelete _merchantShortId _opCity code vehicleType = do error "Logic yet to be decided" code vehicleType
+postFRFSTicketFrfsRouteDelete _merchantShortId _opCity code _vehicleType = do
+  _ <- QRoute.findByRouteCode code >>= fromMaybeM (InvalidRequest "This route code can't be deleted")
+  routeMappings <- QRSM.findByRouteCode code
+  unless (null routeMappings) $ throwError InvalidAction
+  QRoute.deleteByRouteCode code
+  pure Success
 
-getFRFSTicketFrfsRouteFareList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.FRFSRouteFareAPI])
-getFRFSTicketFrfsRouteFareList _merchantShortId _opCity routeCode vehicleType = do error "Logic yet to be decided" routeCode vehicleType
+getFRFSTicketFrfsRouteFareList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow API.Types.RiderPlatform.Management.FRFSTicket.FRFSRouteFareAPI)
+getFRFSTicketFrfsRouteFareList _merchantShortId _opCity routeCode _vehicleType = do
+  fetchedRoute <- QRoute.findByRouteCode routeCode >>= fromMaybeM (InvalidRequest "Invalid route code")
 
-putFRFSTicketFrfsRouteFareUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteFareReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-putFRFSTicketFrfsRouteFareUpsert _merchantShortId _opCity routeCode vehicleType req = do error "Logic yet to be decided" routeCode vehicleType req
+  routeFares <- QRSF.findByRouteCode routeCode
+
+  let groupedFares = groupBy (\a b -> a.startStopCode == b.startStopCode) routeFares
+  let sortedGroupedFares = sortBy (comparing (negate . length)) groupedFares
+  stopFares <- forM sortedGroupedFares $ \fares -> do
+    let maybeFirstFare = listToMaybe fares
+    case maybeFirstFare of
+      Nothing -> throwError (InvalidRequest "No fares found for the start stop")
+      Just firstFare -> do
+        startStop <- QStation.findByStationCode firstFare.startStopCode >>= fromMaybeM (InvalidRequest "Invalid from station id")
+
+        endStops <- forM fares $ \fare -> do
+          endStop <- QStation.findByStationCode fare.endStopCode >>= fromMaybeM (InvalidRequest "Invalid to station id")
+          return
+            API.Types.RiderPlatform.Management.FRFSTicket.FRFSEndStopsFareAPI
+              { name = endStop.name,
+                code = endStop.code,
+                amount = fare.amount,
+                currency = fare.currency,
+                lat = endStop.lat,
+                lon = endStop.lon
+              }
+
+        return
+          API.Types.RiderPlatform.Management.FRFSTicket.FRFSStopFareMatrixAPI
+            { startStop =
+                API.Types.RiderPlatform.Management.FRFSTicket.FRFSStartStopsAPI
+                  { name = startStop.name,
+                    code = startStop.code,
+                    lat = startStop.lat,
+                    lon = startStop.lon
+                  },
+              endStops = endStops
+            }
+
+  let frfsRouteFare =
+        API.Types.RiderPlatform.Management.FRFSTicket.FRFSRouteFareAPI
+          { code = fetchedRoute.code,
+            shortName = fetchedRoute.shortName,
+            longName = fetchedRoute.longName,
+            fares = stopFares
+          }
+
+  return frfsRouteFare
+
+data FareUpdateCSVRow = FareUpdateCSVRow
+  { routeCode :: Text,
+    startStopCode :: Text,
+    endStopCode :: Text,
+    amount :: Text
+  }
+
+instance FromNamedRecord FareUpdateCSVRow where
+  parseNamedRecord r =
+    FareUpdateCSVRow
+      <$> r .: "Route ID"
+      <*> r .: "Start Stop ID"
+      <*> r .: "End Stop ID"
+      <*> r .: "Price (In Rupees)"
+
+data UpsertRouteFareResp = UpsertRouteFareResp {unprocessedRouteFares :: [Kernel.Prelude.Text], success :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+putFRFSTicketFrfsRouteFareUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteFareReq -> Environment.Flow API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteFareResp)
+putFRFSTicketFrfsRouteFareUpsert _merchantShortId _opCity _routeCode _vehicleType req = do
+  fareUpdates <- readCsv req.file
+
+  unprocessedFares <- forM fareUpdates $ \row -> do
+    let amountVal = row.amount
+    case highPrecMoneyFromText amountVal of
+      Nothing -> do
+        let message = "Invalid amount format for route " <> row.routeCode <> " (" <> row.startStopCode <> " -> " <> row.endStopCode <> ")"
+        throwError (InvalidRequest message)
+      Just value -> do
+        existingFares <- QRSF.findByRouteStartAndStopCode row.routeCode row.startStopCode row.endStopCode
+        case existingFares of
+          [] -> do
+            logInfo $ "No matching fare found for route " <> row.routeCode <> " with startStopCode " <> row.startStopCode <> " and endStopCode " <> row.endStopCode
+            pure [(row.routeCode, row.startStopCode, row.endStopCode)]
+          _ -> do
+            QRSF.updateFareByRouteCodeAndStopCodes value row.routeCode row.startStopCode row.endStopCode
+            logInfo $ "Updated fare for route " <> row.routeCode <> " from " <> row.startStopCode <> " to " <> row.endStopCode <> " with amount " <> show value
+            pure []
+
+  let allUnprocessedFares = concat unprocessedFares
+
+  let totalUpdates = length fareUpdates
+  let successfulUpdates = totalUpdates - length allUnprocessedFares
+
+  if successfulUpdates == totalUpdates
+    then do
+      pure $
+        API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteFareResp
+          { unprocessedRouteFares = [],
+            success = "All fields updated successfully"
+          }
+    else do
+      let unprocessedRouteFares =
+            map
+              ( \(routeCode, startStopCode, endStopCode) ->
+                  "Route: " <> routeCode <> ", Start Stop: " <> startStopCode <> ", End Stop: " <> endStopCode
+              )
+              allUnprocessedFares
+      pure $
+        API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteFareResp
+          { unprocessedRouteFares = unprocessedRouteFares,
+            success = "Partial update completed"
+          }
+  where
+    readCsv :: FilePath -> Environment.Flow [FareUpdateCSVRow]
+    readCsv csvFile = do
+      csvData <- L.runIO $ BS.readFile csvFile
+      case (decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector FareUpdateCSVRow)) of
+        Left err -> throwError (InvalidRequest $ show err)
+        Right (_, v) -> return $ V.toList v
 
 getFRFSTicketFrfsRouteStations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Data.Text.Text) -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.FRFSStationAPI])
-getFRFSTicketFrfsRouteStations _merchantShortId _opCity searchStr limit offset vehicleType = do error "Logic yet to be decided" searchStr limit offset vehicleType
+getFRFSTicketFrfsRouteStations merchantShortId opCity searchStr limit offset vehicleType = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+
+  stations <- case searchStr of
+    Just str -> findAllMatchingStations (Just str) (Just $ fromIntegral limit) (Just $ fromIntegral offset) merchantOpCity.id vehicleType
+    Nothing -> QStation.findByMerchantOperatingCityIdAndVehicleType (Just limit) (Just offset) merchantOpCity.id vehicleType
+
+  frfsStations <- forM stations $ \station -> do
+    pure $
+      API.Types.RiderPlatform.Management.FRFSTicket.FRFSStationAPI
+        { name = station.name,
+          code = station.code,
+          lat = station.lat,
+          lon = station.lon,
+          address = station.address
+        }
+
+  pure frfsStations
 
 postFRFSTicketFrfsStationAdd :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.FRFSStationReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postFRFSTicketFrfsStationAdd _merchantShortId _opCity code vehicleType req = do error "Logic yet to be decided" code vehicleType req
+postFRFSTicketFrfsStationAdd merchantShortId opCity code vehicleType req = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+  stationExists <- QStation.findByStationCode code
+  newId <- generateGUID
+  now <- getCurrentTime
+  case stationExists of
+    Just _ -> throwError $ InvalidRequest "Station code already exists"
+    Nothing -> do
+      let newStation =
+            Domain.Types.Station.Station
+              { id = newId,
+                vehicleType = vehicleType,
+                name = req.name,
+                possibleTypes = req.possibleTypes,
+                code = code,
+                lat = Just req.lat,
+                lon = Just req.lon,
+                address = req.address,
+                merchantId = merchant.id,
+                timeBounds = Kernel.Types.TimeBound.Unbounded,
+                merchantOperatingCityId = merchantOpCity.id,
+                createdAt = now,
+                updatedAt = now
+              }
+      QStation.create newStation
+      pure Success
 
 postFRFSTicketFrfsStationDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postFRFSTicketFrfsStationDelete _merchantShortId _opCity code vehicleType = do error "Logic yet to be decided" code vehicleType
+postFRFSTicketFrfsStationDelete _merchantShortId _opCity code _vehicleType = do
+  _ <- QStation.findByStationCode code >>= fromMaybeM (InvalidRequest "This station code can't be deleted")
+  stopMappings <- QRSM.findByStopCode code
+  unless (null stopMappings) $ throwError InvalidAction
+  QStation.deleteByStationCode code
+  pure Success
