@@ -477,7 +477,10 @@ onUpdate = \case
     riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
     void $ QRide.updateSafetyJourneyStatus ride.id (DRide.UnexpectedCondition DRide.DriverDeviated)
     safetySettings <- QSafety.findSafetySettingsWithFallback booking.riderId Nothing
-    when (safetySettings.informPoliceSos || safetySettings.notifySafetyTeamForSafetyCheckFailure) $ do
+    let triggerIVRFlow
+          | riderConfig.useUserSettingsForSafetyIVR = safetySettings.informPoliceSos || safetySettings.notifySafetyTeamForSafetyCheckFailure
+          | otherwise = True
+    when triggerIVRFlow $ do
       logDebug $ "Safety alert triggered for merchantOperatingCityId : " <> show merchantOperatingCityId <> " with config : " <> show riderConfig
       maxShards <- asks (.maxShards)
       let scheduleAfter = riderConfig.ivrTriggerDelay

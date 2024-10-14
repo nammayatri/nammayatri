@@ -112,6 +112,7 @@ Ride:
     destinationReachedAt: Maybe UTCTime
     estimatedEndTimeRange: Maybe EstimatedEndTimeRange
     tipAmount: Maybe Price
+    wasRideSafe: Maybe Bool
 
   sqlType:
     allowedEditLocationAttempts: int

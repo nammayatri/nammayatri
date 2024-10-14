@@ -135,6 +135,10 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN maximum_walk_distance integer  def
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN sensitive_words_for_exact_match text [] ;
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN post_ride_safety_notification_delay integer  default 60;
+
 
 
 ------- SQL updates -------
@@ -147,3 +151,4 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN dynamic_logic_update_password text
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN feedback_alert_rating_threshold integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN use_user_settings_for_safety_ivr boolean  default false;

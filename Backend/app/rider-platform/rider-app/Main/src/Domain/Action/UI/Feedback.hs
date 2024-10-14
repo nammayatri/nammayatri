@@ -69,7 +69,7 @@ data FeedbackReq = FeedbackReq
   { rideId :: Id DRide.Ride,
     rating :: Int,
     feedbackDetails :: Maybe Text,
-    nightSafety :: Maybe Bool,
+    wasRideSafe :: Maybe Bool,
     shouldFavDriver :: Maybe Bool,
     wasOfferedAssistance :: Maybe Bool,
     mbAudio :: Maybe Text
@@ -124,7 +124,7 @@ feedback request personId = do
       return Nothing
   issueId' <- getIssueIdForRide booking
   _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
-  _ <- QRide.updateRideRating rideId ratingValue
+  _ <- QRide.updateRideRating rideId ratingValue request.wasRideSafe
   let merchantOperatingCityId = booking.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
