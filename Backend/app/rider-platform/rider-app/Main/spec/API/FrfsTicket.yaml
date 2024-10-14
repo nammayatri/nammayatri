@@ -2,7 +2,7 @@ imports:
   Text: Data.Text
   Maybe: Data.Maybe
   Station: Domain.Types.Station
-  StationType: Domain.Types.Station
+  StationType: Domain.Types.StationType
   FRFSQuoteType: Domain.Types.FRFSQuote
   FRFSQuote: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBooking
