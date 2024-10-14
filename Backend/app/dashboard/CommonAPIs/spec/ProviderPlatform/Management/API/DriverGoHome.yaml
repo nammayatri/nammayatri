@@ -9,14 +9,16 @@ apiPrefix: driver
 apis:
   - GET: # GetDriverHomeLocationAPI
       endpoint: /{driverId}/getHomeLocation
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GET_DRIVER_HOME_LOCATION
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       response:
         type: GetHomeLocationsRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GET_DRIVER_HOME_LOCATION
   - POST: # UpdateDriverHomeLocationAPI
       endpoint: /{driverId}/updateHomeLocation
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DRIVER_HOME_LOCATION
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       request:
@@ -26,9 +28,10 @@ apis:
       migrate:
         endpoint: DriverAPI UpdateDriverHomeLocationEndpoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DRIVER_HOME_LOCATION
   - POST: # IncrementDriverGoToCountAPI
       endpoint: /{driverId}/incrementGoToCount
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS INCREMENT_DRIVER_GO_TO_COUNT
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       response:
@@ -36,13 +39,16 @@ apis:
       migrate:
         endpoint: DriverAPI IncrementDriverGoToCountEndPoint
         endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS INCREMENT_DRIVER_GO_TO_COUNT
   - GET: # GetDriverGoHomeInfoAPI
       endpoint: /{driverId}/getGoHomeInfo
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GET_DRIVER_GO_HOME_INFO
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       response:
         type: CachedGoHomeRequestInfoRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS GET_DRIVER_GO_HOME_INFO
 types:
   DriverHomeLocationAPIEntity:
     - id: Id DriverHomeLocation

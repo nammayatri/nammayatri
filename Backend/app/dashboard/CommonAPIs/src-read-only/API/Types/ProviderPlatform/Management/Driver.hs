@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -7,6 +8,7 @@ import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
 import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
 import qualified Data.Time.Calendar
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
@@ -597,44 +599,46 @@ mkDriverAPIs driverClient = (DriverAPIs {..})
   where
     getDriverDocumentsInfo :<|> postDriverPersonNumbers :<|> postDriverDriverDataDecryption :<|> postDriverPersonId :<|> getDriverAadhaarInfo :<|> getDriverAadhaarInfobyMobileNumber :<|> getDriverList :<|> getDriverActivity :<|> postDriverDisable :<|> postDriverAcRestrictionUpdate :<|> postDriverBlockWithReason :<|> postDriverBlock :<|> getDriverBlockReasonList :<|> postDriverUnblock :<|> getDriverLocation :<|> deleteDriverPermanentlyDelete :<|> postDriverUnlinkDL :<|> postDriverUnlinkAadhaar :<|> postDriverUpdatePhoneNumber :<|> postDriverUpdateByPhoneNumber :<|> postDriverUpdateName :<|> postDriverDeleteRC :<|> getDriverClearStuckOnRide :<|> postDriverSendDummyNotification :<|> postDriverChangeOperatingCity :<|> getDriverGetOperatingCity :<|> postDriverPauseOrResumeServiceCharges :<|> postDriverUpdateRCInvalidStatus :<|> postDriverUpdateVehicleVariant :<|> postDriverBulkReviewRCVariant :<|> postDriverUpdateDriverTag :<|> postDriverClearFee :<|> getDriverPanAadharSelfieDetails :<|> postDriverSyncDocAadharPan :<|> postDriverUpdateVehicleManufacturing :<|> postDriverRefundByPayout :<|> getDriverSecurityDepositStatus :<|> getDriverPanAadharSelfieDetailsList = driverClient
 
-data DriverEndpointDSL
-  = GetDriverDocumentsInfoEndpoint
-  | PostDriverPersonNumbersEndpoint
-  | PostDriverDriverDataDecryptionEndpoint
-  | PostDriverPersonIdEndpoint
-  | GetDriverAadhaarInfoEndpoint
-  | GetDriverAadhaarInfobyMobileNumberEndpoint
-  | GetDriverListEndpoint
-  | GetDriverActivityEndpoint
-  | PostDriverDisableEndpoint
-  | PostDriverAcRestrictionUpdateEndpoint
-  | PostDriverBlockWithReasonEndpoint
-  | PostDriverBlockEndpoint
-  | GetDriverBlockReasonListEndpoint
-  | PostDriverUnblockEndpoint
-  | GetDriverLocationEndpoint
-  | DeleteDriverPermanentlyDeleteEndpoint
-  | PostDriverUnlinkDLEndpoint
-  | PostDriverUnlinkAadhaarEndpoint
-  | PostDriverUpdatePhoneNumberEndpoint
-  | PostDriverUpdateByPhoneNumberEndpoint
-  | PostDriverUpdateNameEndpoint
-  | PostDriverDeleteRCEndpoint
-  | GetDriverClearStuckOnRideEndpoint
-  | PostDriverSendDummyNotificationEndpoint
-  | PostDriverChangeOperatingCityEndpoint
-  | GetDriverGetOperatingCityEndpoint
-  | PostDriverPauseOrResumeServiceChargesEndpoint
-  | PostDriverUpdateRCInvalidStatusEndpoint
-  | PostDriverUpdateVehicleVariantEndpoint
-  | PostDriverBulkReviewRCVariantEndpoint
-  | PostDriverUpdateDriverTagEndpoint
-  | PostDriverClearFeeEndpoint
-  | GetDriverPanAadharSelfieDetailsEndpoint
-  | PostDriverSyncDocAadharPanEndpoint
-  | PostDriverUpdateVehicleManufacturingEndpoint
-  | PostDriverRefundByPayoutEndpoint
-  | GetDriverSecurityDepositStatusEndpoint
-  | GetDriverPanAadharSelfieDetailsListEndpoint
+data DriverUserActionType
+  = GET_DRIVER_DOCUMENTS_INFO
+  | POST_DRIVER_PERSON_NUMBERS
+  | POST_DRIVER_DRIVER_DATA_DECRYPTION
+  | POST_DRIVER_PERSON_ID
+  | GET_DRIVER_AADHAAR_INFO
+  | GET_DRIVER_AADHAAR_INFOBY_MOBILE_NUMBER
+  | GET_DRIVER_LIST
+  | GET_DRIVER_ACTIVITY
+  | POST_DRIVER_DISABLE
+  | POST_DRIVER_AC_RESTRICTION_UPDATE
+  | POST_DRIVER_BLOCK_WITH_REASON
+  | POST_DRIVER_BLOCK
+  | GET_DRIVER_BLOCK_REASON_LIST
+  | POST_DRIVER_UNBLOCK
+  | GET_DRIVER_LOCATION
+  | DELETE_DRIVER_PERMANENTLY_DELETE
+  | POST_DRIVER_UNLINK_DL
+  | POST_DRIVER_UNLINK_AADHAAR
+  | POST_DRIVER_UPDATE_PHONE_NUMBER
+  | POST_DRIVER_UPDATE_BY_PHONE_NUMBER
+  | POST_DRIVER_UPDATE_NAME
+  | POST_DRIVER_DELETE_RC
+  | GET_DRIVER_CLEAR_STUCK_ON_RIDE
+  | POST_DRIVER_SEND_DUMMY_NOTIFICATION
+  | POST_DRIVER_CHANGE_OPERATING_CITY
+  | GET_DRIVER_GET_OPERATING_CITY
+  | POST_DRIVER_PAUSE_OR_RESUME_SERVICE_CHARGES
+  | POST_DRIVER_UPDATE_RC_INVALID_STATUS
+  | POST_DRIVER_UPDATE_VEHICLE_VARIANT
+  | POST_DRIVER_BULK_REVIEW_RC_VARIANT
+  | POST_DRIVER_UPDATE_DRIVER_TAG
+  | POST_DRIVER_CLEAR_FEE
+  | GET_DRIVER_PAN_AADHAR_SELFIE_DETAILS
+  | POST_DRIVER_SYNC_DOC_AADHAR_PAN
+  | POST_DRIVER_UPDATE_VEHICLE_MANUFACTURING
+  | POST_DRIVER_REFUND_BY_PAYOUT
+  | GET_DRIVER_SECURITY_DEPOSIT_STATUS
+  | GET_DRIVER_PAN_AADHAR_SELFIE_DETAILS_LIST
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(Data.Singletons.TH.genSingletons [''DriverUserActionType])

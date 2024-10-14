@@ -7,6 +7,7 @@ module API.Action.ProviderPlatform.RideBooking.Driver
   )
 where
 
+import qualified API.Types.ProviderPlatform.RideBooking
 import qualified API.Types.ProviderPlatform.RideBooking.Driver
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
@@ -29,29 +30,101 @@ type API = ("driver" :> (GetDriverPaymentDue :<|> PostDriverEnable :<|> PostDriv
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
 handler merchantId city = getDriverPaymentDue merchantId city :<|> postDriverEnable merchantId city :<|> postDriverCollectCash merchantId city :<|> postDriverV2CollectCash merchantId city :<|> postDriverExemptCash merchantId city :<|> postDriverV2ExemptCash merchantId city :<|> getDriverInfo merchantId city :<|> postDriverUnlinkVehicle merchantId city :<|> postDriverEndRCAssociation merchantId city :<|> postDriverAddVehicle merchantId city :<|> postDriverSetRCStatus merchantId city :<|> postDriverExemptDriverFee merchantId city
 
-type GetDriverPaymentDue = (ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'BALANCE_DUE :> API.Types.ProviderPlatform.RideBooking.Driver.GetDriverPaymentDue)
+type GetDriverPaymentDue =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.GET_DRIVER_PAYMENT_DUE)
+      :> API.Types.ProviderPlatform.RideBooking.Driver.GetDriverPaymentDue
+  )
 
-type PostDriverEnable = (ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'ENABLE :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverEnable)
+type PostDriverEnable =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.POST_DRIVER_ENABLE)
+      :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverEnable
+  )
 
-type PostDriverCollectCash = (ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'COLLECT_CASH :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverCollectCash)
+type PostDriverCollectCash =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.POST_DRIVER_COLLECT_CASH)
+      :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverCollectCash
+  )
 
-type PostDriverV2CollectCash = (ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'COLLECT_CASH_V2 :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverV2CollectCash)
+type PostDriverV2CollectCash =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.POST_DRIVER_V2_COLLECT_CASH)
+      :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverV2CollectCash
+  )
 
-type PostDriverExemptCash = (ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'EXEMPT_CASH :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverExemptCash)
+type PostDriverExemptCash =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.POST_DRIVER_EXEMPT_CASH)
+      :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverExemptCash
+  )
 
-type PostDriverV2ExemptCash = (ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'EXEMPT_CASH_V2 :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverV2ExemptCash)
+type PostDriverV2ExemptCash =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.POST_DRIVER_V2_EXEMPT_CASH)
+      :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverV2ExemptCash
+  )
 
-type GetDriverInfo = (ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'INFO :> API.Types.ProviderPlatform.RideBooking.Driver.GetDriverInfo)
+type GetDriverInfo =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.GET_DRIVER_INFO)
+      :> API.Types.ProviderPlatform.RideBooking.Driver.GetDriverInfo
+  )
 
-type PostDriverUnlinkVehicle = (ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'UNLINK_VEHICLE :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverUnlinkVehicle)
+type PostDriverUnlinkVehicle =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.POST_DRIVER_UNLINK_VEHICLE)
+      :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverUnlinkVehicle
+  )
 
-type PostDriverEndRCAssociation = (ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'END_RC_ASSOCIATION :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverEndRCAssociation)
+type PostDriverEndRCAssociation =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.POST_DRIVER_END_RC_ASSOCIATION)
+      :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverEndRCAssociation
+  )
 
-type PostDriverAddVehicle = (ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'ADD_VEHICLE :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverAddVehicle)
+type PostDriverAddVehicle =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.POST_DRIVER_ADD_VEHICLE)
+      :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverAddVehicle
+  )
 
-type PostDriverSetRCStatus = (ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'SET_RC_STATUS :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverSetRCStatus)
+type PostDriverSetRCStatus =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.POST_DRIVER_SET_RC_STATUS)
+      :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverSetRCStatus
+  )
 
-type PostDriverExemptDriverFee = (ApiAuth 'DRIVER_OFFER_BPP 'DRIVERS 'EXEMPT_DRIVER_FEE :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverExemptDriverFee)
+type PostDriverExemptDriverFee =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.ProviderPlatform.RideBooking.DRIVER / 'API.Types.ProviderPlatform.RideBooking.Driver.POST_DRIVER_EXEMPT_DRIVER_FEE)
+      :> API.Types.ProviderPlatform.RideBooking.Driver.PostDriverExemptDriverFee
+  )
 
 getDriverPaymentDue :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler [API.Types.ProviderPlatform.RideBooking.Driver.DriverOutstandingBalanceResp])
 getDriverPaymentDue merchantShortId opCity apiTokenInfo countryCode phone = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.RideBooking.Driver.getDriverPaymentDue merchantShortId opCity apiTokenInfo countryCode phone

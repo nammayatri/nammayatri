@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -6,6 +7,7 @@ module API.Types.ProviderPlatform.Management.DriverCoins where
 import qualified Dashboard.Common
 import qualified Dashboard.Common.DriverCoinsExtra
 import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -124,9 +126,11 @@ mkDriverCoinsAPIs driverCoinsClient = (DriverCoinsAPIs {..})
   where
     postDriverCoinsBulkUploadCoins :<|> postDriverCoinsBulkUploadCoinsV2 :<|> getDriverCoinsCoinHistory = driverCoinsClient
 
-data DriverCoinsEndpointDSL
-  = PostDriverCoinsBulkUploadCoinsEndpoint
-  | PostDriverCoinsBulkUploadCoinsV2Endpoint
-  | GetDriverCoinsCoinHistoryEndpoint
+data DriverCoinsUserActionType
+  = POST_DRIVER_COINS_BULK_UPLOAD_COINS
+  | POST_DRIVER_COINS_BULK_UPLOAD_COINS_V2
+  | GET_DRIVER_COINS_COIN_HISTORY
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(Data.Singletons.TH.genSingletons [''DriverCoinsUserActionType])

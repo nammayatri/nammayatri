@@ -25,9 +25,7 @@ where
 
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Char
 import qualified Data.Csv as Csv
-import Data.List (isSuffixOf)
 import Data.OpenApi
 import qualified Data.Text as T
 import Domain.Types.VehicleCategory
@@ -37,7 +35,6 @@ import Kernel.ServantMultipart
 import Kernel.Types.HideSecrets
 import Kernel.Types.HideSecrets as Reexport
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
-import Text.Casing
 
 data Customer
 
@@ -175,24 +172,6 @@ instance FromMultipart Tmp PersonMobileNoReq where
 instance ToMultipart Tmp PersonMobileNoReq where
   toMultipart form =
     MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
-
--- TODO will be removed when we will use the same type for Endpoint and UserActionType
-showUserActionType :: Show endpoint => endpoint -> String
-showUserActionType = map Data.Char.toUpper . quietSnake . Dashboard.Common.stripSuffix "Endpoint" . show
-
-readUserActionType :: Read endpoint => String -> Maybe endpoint
-readUserActionType = readMaybe . (<> "Endpoint") . pascal . map Data.Char.toLower
-
-readUserActionTypeS :: Read endpoint => String -> [(endpoint, String)]
-readUserActionTypeS str = case readUserActionType str of
-  Nothing -> []
-  Just userActionType -> [(userActionType, "")]
-
-stripSuffix :: String -> String -> String
-stripSuffix suffix str =
-  if suffix `isSuffixOf` str
-    then take (length str - length suffix) str
-    else str
 
 data ServiceNames = YATRI_SUBSCRIPTION | YATRI_RENTAL
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)

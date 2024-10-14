@@ -7,6 +7,7 @@ module API.Action.ProviderPlatform.Management.Revenue
   )
 where
 
+import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.Revenue
 import qualified Domain.Action.ProviderPlatform.Management.Revenue
 import qualified "lib-dashboard" Domain.Types.Merchant
@@ -25,9 +26,21 @@ type API = ("revenue" :> (GetRevenueCollectionHistory :<|> GetRevenueAllFeeHisto
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
 handler merchantId city = getRevenueCollectionHistory merchantId city :<|> getRevenueAllFeeHistory merchantId city
 
-type GetRevenueCollectionHistory = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'VOLUNTEER 'VOLUNTEER_COLLECTION_HISTORY :> API.Types.ProviderPlatform.Management.Revenue.GetRevenueCollectionHistory)
+type GetRevenueCollectionHistory =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.REVENUE / 'API.Types.ProviderPlatform.Management.Revenue.GET_REVENUE_COLLECTION_HISTORY)
+      :> API.Types.ProviderPlatform.Management.Revenue.GetRevenueCollectionHistory
+  )
 
-type GetRevenueAllFeeHistory = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'VOLUNTEER 'ALL_FEE_HISTORY :> API.Types.ProviderPlatform.Management.Revenue.GetRevenueAllFeeHistory)
+type GetRevenueAllFeeHistory =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.REVENUE / 'API.Types.ProviderPlatform.Management.Revenue.GET_REVENUE_ALL_FEE_HISTORY)
+      :> API.Types.ProviderPlatform.Management.Revenue.GetRevenueAllFeeHistory
+  )
 
 getRevenueCollectionHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Revenue.CollectionList)
 getRevenueCollectionHistory merchantShortId opCity apiTokenInfo from place to volunteerId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Revenue.getRevenueCollectionHistory merchantShortId opCity apiTokenInfo from place to volunteerId

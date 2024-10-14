@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -5,6 +6,7 @@ module API.Types.ProviderPlatform.Management.System where
 
 import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -38,14 +40,16 @@ mkSystemAPIs systemClient = (SystemAPIs {..})
   where
     postSystemRunQuery = systemClient
 
-data SystemEndpointDSL
-  = PostSystemRunQueryEndpoint
+data SystemUserActionType
+  = POST_SYSTEM_RUN_QUERY
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToSchema)
 
-instance ToJSON SystemEndpointDSL where
-  toJSON PostSystemRunQueryEndpoint = Data.Aeson.String "PostSystemRunQueryEndpoint"
+instance ToJSON SystemUserActionType where
+  toJSON POST_SYSTEM_RUN_QUERY = Data.Aeson.String "POST_SYSTEM_RUN_QUERY"
 
-instance FromJSON SystemEndpointDSL where
-  parseJSON (Data.Aeson.String "PostSystemRunQueryEndpoint") = pure PostSystemRunQueryEndpoint
-  parseJSON _ = fail "PostSystemRunQueryEndpoint expected"
+instance FromJSON SystemUserActionType where
+  parseJSON (Data.Aeson.String "POST_SYSTEM_RUN_QUERY") = pure POST_SYSTEM_RUN_QUERY
+  parseJSON _ = fail "POST_SYSTEM_RUN_QUERY expected"
+
+$(Data.Singletons.TH.genSingletons [''SystemUserActionType])

@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -7,6 +8,7 @@ import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
 import qualified Dashboard.ProviderPlatform.Fleet.Driver
 import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -333,18 +335,20 @@ mkDriverAPIs driverClient = (DriverAPIs {..})
   where
     getDriverPaymentDue :<|> postDriverEnable :<|> postDriverCollectCash :<|> postDriverV2CollectCash :<|> postDriverExemptCash :<|> postDriverV2ExemptCash :<|> getDriverInfo :<|> postDriverUnlinkVehicle :<|> postDriverEndRCAssociation :<|> postDriverAddVehicle :<|> postDriverSetRCStatus :<|> postDriverExemptDriverFee = driverClient
 
-data DriverEndpointDSL
-  = GetDriverPaymentDueEndpoint
-  | PostDriverEnableEndpoint
-  | PostDriverCollectCashEndpoint
-  | PostDriverV2CollectCashEndpoint
-  | PostDriverExemptCashEndpoint
-  | PostDriverV2ExemptCashEndpoint
-  | GetDriverInfoEndpoint
-  | PostDriverUnlinkVehicleEndpoint
-  | PostDriverEndRCAssociationEndpoint
-  | PostDriverAddVehicleEndpoint
-  | PostDriverSetRCStatusEndpoint
-  | PostDriverExemptDriverFeeEndpoint
+data DriverUserActionType
+  = GET_DRIVER_PAYMENT_DUE
+  | POST_DRIVER_ENABLE
+  | POST_DRIVER_COLLECT_CASH
+  | POST_DRIVER_V2_COLLECT_CASH
+  | POST_DRIVER_EXEMPT_CASH
+  | POST_DRIVER_V2_EXEMPT_CASH
+  | GET_DRIVER_INFO
+  | POST_DRIVER_UNLINK_VEHICLE
+  | POST_DRIVER_END_RC_ASSOCIATION
+  | POST_DRIVER_ADD_VEHICLE
+  | POST_DRIVER_SET_RC_STATUS
+  | POST_DRIVER_EXEMPT_DRIVER_FEE
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(Data.Singletons.TH.genSingletons [''DriverUserActionType])

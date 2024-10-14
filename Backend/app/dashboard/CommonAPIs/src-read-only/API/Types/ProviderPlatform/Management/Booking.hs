@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -5,6 +6,7 @@ module API.Types.ProviderPlatform.Management.Booking where
 
 import qualified Dashboard.Common.Booking
 import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import Kernel.Types.Common
@@ -27,8 +29,10 @@ mkBookingAPIs bookingClient = (BookingAPIs {..})
   where
     postBookingCancelAllStuck :<|> postBookingSyncMultiple = bookingClient
 
-data BookingEndpointDSL
-  = PostBookingCancelAllStuckEndpoint
-  | PostBookingSyncMultipleEndpoint
+data BookingUserActionType
+  = POST_BOOKING_CANCEL_ALL_STUCK
+  | POST_BOOKING_SYNC_MULTIPLE
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(Data.Singletons.TH.genSingletons [''BookingUserActionType])

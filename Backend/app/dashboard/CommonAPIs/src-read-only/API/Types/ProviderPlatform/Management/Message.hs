@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -7,6 +8,7 @@ import qualified AWS.S3
 import qualified Dashboard.Common
 import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.External.Types
@@ -216,14 +218,16 @@ mkMessageAPIs messageClient = (MessageAPIs {..})
   where
     postMessageUploadFile :<|> postMessageAddLink :<|> postMessageAdd :<|> postMessageSend :<|> getMessageList :<|> getMessageInfo :<|> getMessageDeliveryInfo :<|> getMessageReceiverList = messageClient
 
-data MessageEndpointDSL
-  = PostMessageUploadFileEndpoint
-  | PostMessageAddLinkEndpoint
-  | PostMessageAddEndpoint
-  | PostMessageSendEndpoint
-  | GetMessageListEndpoint
-  | GetMessageInfoEndpoint
-  | GetMessageDeliveryInfoEndpoint
-  | GetMessageReceiverListEndpoint
+data MessageUserActionType
+  = POST_MESSAGE_UPLOAD_FILE
+  | POST_MESSAGE_ADD_LINK
+  | POST_MESSAGE_ADD
+  | POST_MESSAGE_SEND
+  | GET_MESSAGE_LIST
+  | GET_MESSAGE_INFO
+  | GET_MESSAGE_DELIVERY_INFO
+  | GET_MESSAGE_RECEIVER_LIST
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(Data.Singletons.TH.genSingletons [''MessageUserActionType])

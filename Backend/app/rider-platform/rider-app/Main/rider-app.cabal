@@ -459,6 +459,7 @@ library
       Tools.Streaming.Kafka
       Tools.Ticket
       Tools.Whatsapp
+      API.Action.Dashboard.Management
       API.Action.Dashboard.Management.Booking
       API.Action.Dashboard.Management.FRFSTicket
       API.Action.Dashboard.Management.Invoice

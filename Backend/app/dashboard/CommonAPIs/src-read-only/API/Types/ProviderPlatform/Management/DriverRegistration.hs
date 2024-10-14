@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -5,6 +6,7 @@ module API.Types.ProviderPlatform.Management.DriverRegistration where
 
 import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -410,16 +412,18 @@ mkDriverRegistrationAPIs driverRegistrationClient = (DriverRegistrationAPIs {..}
   where
     getDriverRegistrationDocumentsList :<|> getDriverRegistrationGetDocument :<|> postDriverRegistrationDocumentUpload :<|> postDriverRegistrationRegisterDl :<|> postDriverRegistrationRegisterRc :<|> postDriverRegistrationRegisterGenerateAadhaarOtp :<|> postDriverRegistrationRegisterVerifyAadhaarOtp :<|> getDriverRegistrationUnderReviewDrivers :<|> getDriverRegistrationDocumentsInfo :<|> postDriverRegistrationDocumentsUpdate = driverRegistrationClient
 
-data DriverRegistrationEndpointDSL
-  = GetDriverRegistrationDocumentsListEndpoint
-  | GetDriverRegistrationGetDocumentEndpoint
-  | PostDriverRegistrationDocumentUploadEndpoint
-  | PostDriverRegistrationRegisterDlEndpoint
-  | PostDriverRegistrationRegisterRcEndpoint
-  | PostDriverRegistrationRegisterGenerateAadhaarOtpEndpoint
-  | PostDriverRegistrationRegisterVerifyAadhaarOtpEndpoint
-  | GetDriverRegistrationUnderReviewDriversEndpoint
-  | GetDriverRegistrationDocumentsInfoEndpoint
-  | PostDriverRegistrationDocumentsUpdateEndpoint
+data DriverRegistrationUserActionType
+  = GET_DRIVER_REGISTRATION_DOCUMENTS_LIST
+  | GET_DRIVER_REGISTRATION_GET_DOCUMENT
+  | POST_DRIVER_REGISTRATION_DOCUMENT_UPLOAD
+  | POST_DRIVER_REGISTRATION_REGISTER_DL
+  | POST_DRIVER_REGISTRATION_REGISTER_RC
+  | POST_DRIVER_REGISTRATION_REGISTER_GENERATE_AADHAAR_OTP
+  | POST_DRIVER_REGISTRATION_REGISTER_VERIFY_AADHAAR_OTP
+  | GET_DRIVER_REGISTRATION_UNDER_REVIEW_DRIVERS
+  | GET_DRIVER_REGISTRATION_DOCUMENTS_INFO
+  | POST_DRIVER_REGISTRATION_DOCUMENTS_UPDATE
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(Data.Singletons.TH.genSingletons [''DriverRegistrationUserActionType])

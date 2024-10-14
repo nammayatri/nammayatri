@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -5,6 +6,7 @@ module API.Types.ProviderPlatform.Management.Revenue where
 
 import qualified Dashboard.ProviderPlatform.RideBooking.Driver
 import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
 import qualified Data.Time
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
@@ -70,8 +72,10 @@ mkRevenueAPIs revenueClient = (RevenueAPIs {..})
   where
     getRevenueCollectionHistory :<|> getRevenueAllFeeHistory = revenueClient
 
-data RevenueEndpointDSL
-  = GetRevenueCollectionHistoryEndpoint
-  | GetRevenueAllFeeHistoryEndpoint
+data RevenueUserActionType
+  = GET_REVENUE_COLLECTION_HISTORY
+  | GET_REVENUE_ALL_FEE_HISTORY
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(Data.Singletons.TH.genSingletons [''RevenueUserActionType])

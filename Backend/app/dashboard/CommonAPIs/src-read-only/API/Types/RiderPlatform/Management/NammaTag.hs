@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -5,6 +6,7 @@ module API.Types.RiderPlatform.Management.NammaTag where
 
 import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -105,22 +107,24 @@ mkNammaTagAPIs nammaTagClient = (NammaTagAPIs {..})
   where
     postNammaTagTagCreate :<|> postNammaTagTagUpdate :<|> deleteNammaTagTagDelete :<|> postNammaTagQueryCreate :<|> postNammaTagAppDynamicLogicVerify :<|> getNammaTagAppDynamicLogic :<|> postNammaTagRunJob :<|> getNammaTagTimeBounds :<|> postNammaTagTimeBoundsCreate :<|> deleteNammaTagTimeBoundsDelete :<|> getNammaTagAppDynamicLogicGetLogicRollout :<|> postNammaTagAppDynamicLogicUpsertLogicRollout :<|> getNammaTagAppDynamicLogicVersions :<|> getNammaTagAppDynamicLogicDomains :<|> getNammaTagQueryAll :<|> postNammaTagUpdateCustomerTag = nammaTagClient
 
-data NammaTagEndpointDSL
-  = PostNammaTagTagCreateEndpoint
-  | PostNammaTagTagUpdateEndpoint
-  | DeleteNammaTagTagDeleteEndpoint
-  | PostNammaTagQueryCreateEndpoint
-  | PostNammaTagAppDynamicLogicVerifyEndpoint
-  | GetNammaTagAppDynamicLogicEndpoint
-  | PostNammaTagRunJobEndpoint
-  | GetNammaTagTimeBoundsEndpoint
-  | PostNammaTagTimeBoundsCreateEndpoint
-  | DeleteNammaTagTimeBoundsDeleteEndpoint
-  | GetNammaTagAppDynamicLogicGetLogicRolloutEndpoint
-  | PostNammaTagAppDynamicLogicUpsertLogicRolloutEndpoint
-  | GetNammaTagAppDynamicLogicVersionsEndpoint
-  | GetNammaTagAppDynamicLogicDomainsEndpoint
-  | GetNammaTagQueryAllEndpoint
-  | PostNammaTagUpdateCustomerTagEndpoint
+data NammaTagUserActionType
+  = POST_NAMMA_TAG_TAG_CREATE
+  | POST_NAMMA_TAG_TAG_UPDATE
+  | DELETE_NAMMA_TAG_TAG_DELETE
+  | POST_NAMMA_TAG_QUERY_CREATE
+  | POST_NAMMA_TAG_APP_DYNAMIC_LOGIC_VERIFY
+  | GET_NAMMA_TAG_APP_DYNAMIC_LOGIC
+  | POST_NAMMA_TAG_RUN_JOB
+  | GET_NAMMA_TAG_TIME_BOUNDS
+  | POST_NAMMA_TAG_TIME_BOUNDS_CREATE
+  | DELETE_NAMMA_TAG_TIME_BOUNDS_DELETE
+  | GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_GET_LOGIC_ROLLOUT
+  | POST_NAMMA_TAG_APP_DYNAMIC_LOGIC_UPSERT_LOGIC_ROLLOUT
+  | GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_VERSIONS
+  | GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_DOMAINS
+  | GET_NAMMA_TAG_QUERY_ALL
+  | POST_NAMMA_TAG_UPDATE_CUSTOMER_TAG
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(Data.Singletons.TH.genSingletons [''NammaTagUserActionType])
