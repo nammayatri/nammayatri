@@ -17,6 +17,7 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.RouteStopMapping
 import Domain.Types.Station
+import Domain.Types.StationType
 import ExternalBPP.EBIX.ExternalAPI.Order as EBIXOrder
 import ExternalBPP.EBIX.ExternalAPI.Payment as EBIXPayment
 import ExternalBPP.EBIX.ExternalAPI.Status as EBIXStatus

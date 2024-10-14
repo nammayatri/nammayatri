@@ -20,7 +20,7 @@ import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
 import qualified Domain.Types.FRFSQuote as DQuote
-import Domain.Types.Station
+import Domain.Types.StationType
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.TimeRFC339
