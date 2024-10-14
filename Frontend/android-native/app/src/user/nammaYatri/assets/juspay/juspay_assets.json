@@ -218,6 +218,8 @@
       "ny_ic_bent_right_arrow" : true,
       "ny_ic_big_blue_star" : true,
       "ny_ic_bike_left_side" : true,
+      "ny_ic_bike_nav_on_map" : true,
+      "ny_ic_bike_pickup_nav_on_map" : true,
       "ny_ic_bike_taxi_service" : true,
       "ny_ic_black_auto" : true,
       "ny_ic_black_auto_quote_list" : true,
