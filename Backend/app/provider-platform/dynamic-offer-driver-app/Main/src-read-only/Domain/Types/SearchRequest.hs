@@ -1,15 +1,18 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.SearchRequest where
 
 import Data.Aeson
+import Domain.Types.Extra.LocationInstance ()
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.RiderDetails
 import qualified Domain.Types.Trip
+import qualified Domain.Types.YudhishthiraTH as T
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
@@ -68,3 +71,27 @@ data SearchRequest = SearchRequest
     validTill :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON)
+
+data T = T
+  { lon :: Double,
+    lat :: Double
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+data TT = TT
+  { lon :: Double,
+    lat :: Double,
+    name :: String
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+$(T.generateAllDefault ''Lib.Types.SpecialLocation.Area [("Area", ["Default"])])
+$(T.generateAllDefault ''Kernel.Types.Beckn.Context.City [("City", ["Bangalore"])])
+$(T.generateAllDefault ''Kernel.Types.Beckn.Context.Country [("Country", ["India"])])
+$(T.generateAllDefault ''Kernel.Types.Common.Currency [("Currency", ["INR"])])
+$(T.generateAllDefault ''Tools.Maps.Language [("Language", ["ENGLISH"])])
+$(T.generateAllDefault ''Kernel.Types.Common.DistanceUnit [("DistanceUnit", ["Meter"])])
+$(T.generateAllDefault ''Domain.Types.Trip.TripMode [("TripMode", ["RideOtp"])])
+$(T.generateAllDefault ''Domain.Types.Trip.OneWayMode [("OneWayMode", ["OneWayRideOtp"])])
+$(T.generateAllDefault ''Domain.Types.Trip.TripCategory [])
+$(T.generateAllDefault ''SearchRequest [("tripCategory", ["Just (OneWay_OneWayRideOtp)"])])

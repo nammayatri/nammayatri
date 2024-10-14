@@ -8,6 +8,7 @@ module Domain.Types.Location (module Domain.Types.Location, module ReExport) whe
 import Data.Aeson
 import qualified Data.OpenApi
 import Domain.Types.Extra.Location as ReExport
+import qualified Domain.Types.YudhishthiraTH as T
 import qualified Kernel.External.Maps.HasCoordinates
 import Kernel.Prelude
 import qualified Kernel.Types.Id

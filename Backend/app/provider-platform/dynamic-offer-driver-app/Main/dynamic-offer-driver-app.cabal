@@ -262,6 +262,7 @@ library
       Domain.Types.Extra.DriverPlan
       Domain.Types.Extra.Feedback
       Domain.Types.Extra.Location
+      Domain.Types.Extra.LocationInstance
       Domain.Types.Extra.MerchantMessage
       Domain.Types.Extra.MerchantPaymentMethod
       Domain.Types.Extra.MerchantServiceConfig
@@ -293,6 +294,8 @@ library
       Domain.Types.Quote
       Domain.Types.RideRoute
       Domain.Types.UtilsTH
+      Domain.Types.Yudhishthira
+      Domain.Types.YudhishthiraTH
       Environment
       Lib.DriverCoins.Coins
       Lib.DriverCoins.Types
