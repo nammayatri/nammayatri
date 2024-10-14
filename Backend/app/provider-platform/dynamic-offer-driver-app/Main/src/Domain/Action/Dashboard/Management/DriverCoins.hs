@@ -96,10 +96,11 @@ bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsVal
                 expirationAt = expiryTime,
                 coinsUsed = 0,
                 bulkUploadTitle = Just bulkUploadTitle,
-                entityId = entityId
+                entityId = entityId,
+                category = Nothing
               }
       CHistory.updateCoinEvent driverCoinEvent
-      Coins.sendCoinsNotification merchantOpCityId driverId coinsValue
+      Coins.sendCoinsNotification merchantOpCityId driverId coinsValue eventFunction
       pure ()
 
 postDriverCoinsBulkUploadCoinsV2 :: ShortId DM.Merchant -> Context.City -> Common.BulkUploadCoinsReqV2 -> Flow APISuccess
@@ -154,7 +155,8 @@ bulkUpdateByDriverIdV2 merchantId merchantOpCityId driverId eventFunction amount
                 expirationAt = expiryTime,
                 coinsUsed = 0,
                 bulkUploadTitle = Just bulkUploadTitle,
-                entityId = entityId
+                entityId = entityId,
+                category = Nothing
               }
       CHistory.updateCoinEvent driverCoinEvent
       Coins.sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue eventFunction

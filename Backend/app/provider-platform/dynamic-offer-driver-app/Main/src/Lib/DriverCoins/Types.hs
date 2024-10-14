@@ -154,7 +154,7 @@ data DriverCoinsEventType
   | LeaderBoard
   | Training
   | BulkUploadEvent
-  deriving (Generic)
+  deriving (Generic, ToJSON, FromJSON)
 
 driverCoinsEventTypeToString :: DriverCoinsEventType -> String
 driverCoinsEventTypeToString = \case

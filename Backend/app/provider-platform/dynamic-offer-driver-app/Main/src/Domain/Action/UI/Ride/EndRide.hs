@@ -48,6 +48,7 @@ import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.TransporterConfig as DTConf
 import Environment (Flow)
 import EulerHS.Prelude hiding (id, pi)
+import Kernel.Beam.Functions as B
 import Kernel.External.Maps
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
@@ -87,6 +88,7 @@ import Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
+import Storage.Queries.Vehicle as SQV
 import Tools.Error
 import qualified Tools.Maps as TM
 import qualified Tools.Notifications as TN
@@ -427,7 +429,9 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
       let metroRide = checkSplLocation booking.specialLocationTag "SureMetro" || checkSplLocation booking.specialLocationTag "SureWarriorMetro"
       when (DTC.isDynamicOfferTrip booking.tripCategory && validRideTaken) $ do
         DC.incrementValidRideCount driverId expirationPeriod 1
-        DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) updRide metroRide) (Just ride.id.getId)
+        mbVehicleCategory <- B.runInReplica $ SQV.findById driverId
+        let category = maybe Nothing (.category) mbVehicleCategory
+        DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) updRide metroRide) (Just ride.id.getId) category
 
     mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
       findPaymentMethodByIdAndMerchantId paymentMethodId booking.merchantOperatingCityId

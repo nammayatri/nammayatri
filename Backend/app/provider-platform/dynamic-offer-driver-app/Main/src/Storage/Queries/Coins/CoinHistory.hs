@@ -137,7 +137,8 @@ instance FromTType' BeamDC.CoinHistory CoinHistory where
             status = status,
             coinsUsed = coinsUsed,
             bulkUploadTitle = bulkUploadTitle,
-            entityId = entityId
+            entityId = entityId,
+            category = category
           }
 
 instance ToTType' BeamDC.CoinHistory CoinHistory where
@@ -155,5 +156,6 @@ instance ToTType' BeamDC.CoinHistory CoinHistory where
         BeamDC.status = status,
         BeamDC.coinsUsed = coinsUsed,
         BeamDC.bulkUploadTitle = bulkUploadTitle,
-        BeamDC.entityId = entityId
+        BeamDC.entityId = entityId,
+        BeamDC.category = category
       }

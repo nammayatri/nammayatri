@@ -36,6 +36,7 @@ import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.SearchTry as ST
 import Environment
 import EulerHS.Prelude
+import Kernel.Beam.Functions as B
 import Kernel.External.Maps
 import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -68,6 +69,7 @@ import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
+import Storage.Queries.Vehicle as SQV
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Event
@@ -116,7 +118,9 @@ cancel req merchant booking mbActiveSearchTry = do
       whenJust mbRide $ \ride -> do
         logDebug $ "RideCancelled Coin Event by customer distance to pickup" <> show disToPickup
         logDebug "RideCancelled Coin Event by customer"
-        DC.driverCoinsEvent ride.driverId merchant.id booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup) (Just $ ride.id.getId)
+        mbVehicleCategory <- B.runInReplica $ SQV.findById ride.driverId
+        let category = maybe Nothing (.category) mbVehicleCategory
+        DC.driverCoinsEvent ride.driverId merchant.id booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup) (Just $ ride.id.getId) category
 
         whenJust booking.riderId (DP.addDriverToRiderCancelledList ride.driverId)
 

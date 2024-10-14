@@ -68,6 +68,7 @@ import qualified Domain.Types.VehicleCategory as DVC
 import EulerHS.Prelude hiding (elem, foldr, id, length, mapM_, null)
 import GHC.Float (double2Int)
 import GHC.Num.Integer (integerFromInt, integerToInt)
+import Kernel.Beam.Functions as B
 import Kernel.External.Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude hiding (find, forM_, map, whenJust)
@@ -114,6 +115,7 @@ import qualified Storage.Queries.FareParameters as QFare
 import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
+import Storage.Queries.Vehicle as SQV
 import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
 import Tools.Event
@@ -220,7 +222,10 @@ sendReferralFCM validRide ride mbRiderDetails transporterConfig = do
             let referralMessage = "Congratulations!"
             let referralTitle = "Your referred customer has completed their first Namma Yatri ride"
             sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage driver driver.deviceToken
-            fork "DriverToCustomerReferralCoin Event : " $ DC.driverCoinsEvent driver.id driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride) (Just ride.id.getId)
+            fork "DriverToCustomerReferralCoin Event : " $ do
+              mbVehicleCategory <- B.runInReplica $ SQV.findById driver.id
+              let category = maybe Nothing (.category) mbVehicleCategory
+              DC.driverCoinsEvent driver.id driver.merchantId driver.merchantOperatingCityId (DCT.DriverToCustomerReferral ride) (Just ride.id.getId) category
           mbVehicle <- QV.findById referredDriverId
           let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
           payoutConfig <- CPC.findByPrimaryKey driver.merchantOperatingCityId vehicleCategory >>= fromMaybeM (InternalError "Payout config not present")

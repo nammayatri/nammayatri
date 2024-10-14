@@ -46,6 +46,7 @@ import qualified Storage.Queries.DriverStats as SQD
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDriverCorrelation as RDC
+import Storage.Queries.Vehicle as SQV
 import Tools.Error
 
 data DRatingReq = DRatingReq
@@ -122,13 +123,19 @@ handler merchantId req ride = do
       newRating <- buildRating ride.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance req.shouldFavDriver mediaId
       QRating.create newRating
       logDebug "Driver Rating Coin Event"
-      fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride) (Just ride.id.getId)
+      fork "DriverCoinRating Event" $ do
+        mbVehicleCategory <- B.runInReplica $ SQV.findById driverId
+        let category = maybe Nothing (.category) mbVehicleCategory
+        DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride) (Just ride.id.getId) category
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
       QRating.updateRating ratingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver mediaId rideRating.id driverId
       logDebug "Driver Rating Coin Event"
-      fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride) (Just ride.id.getId)
+      fork "DriverCoinRating Event" $ do
+        mbVehicleCategory <- B.runInReplica $ SQV.findById driverId
+        let category = maybe Nothing (.category) mbVehicleCategory
+        DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride) (Just ride.id.getId) category
   calculateAverageRating driverId merchant.minimumDriverRatesCount ratingValue ratingCount ratingsSum
 
 calculateAverageRating ::

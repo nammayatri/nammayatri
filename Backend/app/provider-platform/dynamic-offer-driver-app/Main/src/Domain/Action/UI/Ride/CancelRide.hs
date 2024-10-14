@@ -62,6 +62,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.Vehicle as SQV
 import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
@@ -227,7 +228,10 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
 
           let currentDriverLocation = getCoordinates <$> mbLocation
           logDebug "RideCancelled Coin Event by driver"
-          fork "DriverRideCancelledCoin Event : " $ DC.driverCoinsEvent driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup) (Just ride.id.getId)
+          fork "DriverRideCancelledCoin Event : " $ do
+            mbVehicleCategory <- B.runInReplica $ SQV.findById driverId
+            let category = maybe Nothing (.category) mbVehicleCategory
+            DC.driverCoinsEvent driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup) (Just ride.id.getId) category
           buildRideCancelationReason currentDriverLocation updatedDisToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId) >>= \res -> return (res, cancellationCount, isGoToDisabled, DRide.Driver)
       return (rideCancellationReason, mbCancellationCnt, isGoToDisabled, rideEndedBy)
     DashboardRequestorId (reqMerchantId, _) -> do
