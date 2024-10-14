@@ -8,6 +8,7 @@ import Data.Aeson
 import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleVariant
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -18,8 +19,10 @@ data VehicleServiceTier = VehicleServiceTier
   { airConditionedThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     allowedVehicleVariant :: [Domain.Types.VehicleVariant.VehicleVariant],
     autoSelectedVehicleVariant :: [Domain.Types.VehicleVariant.VehicleVariant],
+    baseVehicleServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     defaultForVehicleVariant :: [Domain.Types.VehicleVariant.VehicleVariant],
     driverRating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
+    fareAdditionPerKmOverBaseServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.VehicleServiceTier.VehicleServiceTier,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isIntercityEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -34,6 +37,7 @@ data VehicleServiceTier = VehicleServiceTier
     seatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     serviceTierType :: Domain.Types.Common.ServiceTierType,
     shortDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     vehicleIconUrl :: Kernel.Prelude.Maybe Kernel.Types.Common.BaseUrl,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

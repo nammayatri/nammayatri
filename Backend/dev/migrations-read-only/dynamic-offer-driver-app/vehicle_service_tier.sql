@@ -357,3 +357,30 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN vehicle_icon_
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN vehicle_category text ;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN fare_addition_per_km_over_base_service_tier integer ;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN base_vehicle_service_tier boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

@@ -291,12 +291,13 @@ calculateFareParameters params = do
           let duration = params.actualRideDuration <|> params.estimatedRideDuration
            in duration >>= \dur -> Just $ HighPrecMoney (realToFrac (fromIntegral dur / 60 * congestionChargePerMin))
       congestionChargeResult = congestionChargeByPerMin <|> congestionChargeByMultiplier
+      congestionChargeResultWithAddition = fromMaybe 0.0 congestionChargeResult + fp.additionalCongestionCharge
       insuranceChargeResult = countInsuranceChargeForDistance fp.distanceUnit params.actualDistance fp.perDistanceUnitInsuranceCharge
       fullRideCostN {-without govtCharges, platformFee, cardChargeOnFare and fixedCharge-} =
         fullRideCost
           + fromMaybe 0.0 resultNightShiftCharge
           + fromMaybe 0.0 resultWaitingCharge
-          + fromMaybe 0.0 congestionChargeResult ----------Needs to be changed to congestionChargeResult
+          + congestionChargeResultWithAddition ----------Needs to be changed to congestionChargeResult
           + fromMaybe 0.0 fp.serviceCharge
           + fromMaybe 0.0 insuranceChargeResult
           + notPartOfNightShiftCharge
@@ -317,7 +318,7 @@ calculateFareParameters params = do
             customerExtraFee = params.customerExtraFee,
             serviceCharge = fp.serviceCharge,
             parkingCharge = fp.parkingCharge,
-            congestionCharge = congestionChargeResult, ----------Needs to be changed to congestionChargeResult
+            congestionCharge = Just congestionChargeResultWithAddition, ----------Needs to be changed to congestionChargeResult
             congestionChargeViaDp = congestionChargeByPerMin,
             stopCharges = stopCharges, --(\charges -> Just $ HighPrecMoney (toRational params.noOfStops * charges))=<< fp.perStopCharge,
             waitingCharge = resultWaitingCharge,

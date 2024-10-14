@@ -27,6 +27,8 @@ import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FareProduct as FareProduct
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.VehicleCategory as DVC
+import qualified Domain.Types.VehicleServiceTier as DVST
 import GHC.Float (int2Double)
 import Kernel.Prelude
 import Kernel.Randomizer
@@ -42,12 +44,15 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.DynamicPricing
+import qualified SharedLogic.FareCalculator as SFC
 import qualified SharedLogic.FareProduct as FareProduct
+import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.FarePolicy as QFP
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.CancellationFarePolicy as QCCFP
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Tools.DynamicLogic
 import Tools.Error
 import Tools.Maps
@@ -110,32 +115,46 @@ getFarePolicyOnEndRide mbFromLocation mbFromLocGeohash mbToLocGeohash mbDistance
       return selectedFarePolicy'
 
 getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Id DMOC.MerchantOperatingCity -> Bool -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Maybe UTCTime -> Maybe CacKey -> m FarePolicyD.FullFarePolicy
-getFarePolicy _mbFromlocaton mbFromLocGeohash mbToLocGeohash mbDistance mbDuration merchantOpCityId isDashboard tripCategory serviceTier Nothing mbBookingStartTime txnId = do
-  let searchSources = FareProduct.getSearchSources isDashboard
-  fareProduct <-
-    FareProduct.getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTier SL.Default
-      |<|>| QFareProduct.findUnboundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier SL.Default
-      >>= fromMaybeM NoFareProduct
-  getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mbBookingStartTime fareProduct
-getFarePolicy _mbFromlocaton mbFromLocGeohash mbToLocGeohash mbDistance mbDuration merchantOpCityId isDashboard tripCategory serviceTier (Just area) mbBookingStartTime txnId = do
-  let searchSources = FareProduct.getSearchSources isDashboard
-  mbFareProduct <-
-    FareProduct.getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTier area
-      |<|>| QFareProduct.findUnboundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area
-  case mbFareProduct of
-    Just fareProduct -> getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mbBookingStartTime fareProduct
+getFarePolicy _mbFromlocaton mbFromLocGeohash mbToLocGeohash mbDistance mbDuration merchantOpCityId isDashboard tripCategory serviceTier mbArea mbBookingStartTime txnId = do
+  case mbArea of
     Nothing -> do
-      fareProduct <-
-        FareProduct.getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTier SL.Default
-          |<|>| QFareProduct.findUnboundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier SL.Default
-          >>= fromMaybeM NoFareProduct
-      getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mbBookingStartTime fareProduct
+      fareProduct <- getFareProduct' SL.Default serviceTier >>= fromMaybeM NoFareProduct
+      getFarePolicyWithArea SL.Default fareProduct
+    Just area -> do
+      mbFareProduct <- getFareProduct' area serviceTier
+      case mbFareProduct of
+        Just fareProduct ->
+          getFarePolicyWithArea area fareProduct
+        Nothing -> do
+          fareProduct <- getFareProduct' SL.Default serviceTier >>= fromMaybeM NoFareProduct
+          getFarePolicyWithArea SL.Default fareProduct
+  where
+    getFareProduct' areaName serviceTierName = do
+      FareProduct.getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTierName areaName
+        |<|>| QFareProduct.findUnboundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTierName areaName
+    searchSources = FareProduct.getSearchSources isDashboard
+    getFarePolicyWithArea areaName fareProduct = do
+      mbVehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityId serviceTier merchantOpCityId
+      (mbBaseVariantCarFareProduct :: Maybe FareProduct.FareProduct) <- case mbVehicleServiceTierItem of
+        Just vehicleServiceTierItem -> do
+          if vehicleServiceTierItem.vehicleCategory == Just DVC.CAR
+            then do
+              maybe (return Nothing) (\vehicleServiceTier -> getFareProduct' areaName vehicleServiceTier.serviceTierType)
+                =<< CQVST.findBaseServiceTierTypeByCategoryAndCityId (Just DVC.CAR) merchantOpCityId
+            else return Nothing
+        Nothing -> return Nothing
+      baseVariantFareAmountCar <- getBaseVariantFarePolicy merchantOpCityId mbBaseVariantCarFareProduct txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration
+      getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mbBookingStartTime baseVariantFareAmountCar fareProduct
 
 getAllFarePoliciesProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> LatLong -> Maybe LatLong -> Maybe CacKey -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> DTC.TripCategory -> m FarePoliciesProduct
 getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mbToLocation txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration tripCategory = do
   let searchSources = FareProduct.getSearchSources isDashboard
   allFareProducts <- FareProduct.getAllFareProducts merchantId merchantOpCityId searchSources fromlocaton mbToLocation tripCategory
-  farePolicies <- mapM (getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId Nothing) allFareProducts.fareProducts
+  (mbBaseVariantCarFareProduct :: Maybe FareProduct.FareProduct) <-
+    return . getFareProduct allFareProducts
+      =<< CQVST.findBaseServiceTierTypeByCategoryAndCityId (Just DVC.CAR) merchantOpCityId
+  baseVariantFareAmountCar <- getBaseVariantFarePolicy merchantOpCityId mbBaseVariantCarFareProduct txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration
+  farePolicies <- mapM (getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId Nothing baseVariantFareAmountCar) allFareProducts.fareProducts
   return $
     FarePoliciesProduct
       { farePolicies,
@@ -144,12 +163,28 @@ getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mb
         specialLocationName = allFareProducts.specialLocationName
       }
 
-getFullFarePolicy :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe CacKey -> Maybe UTCTime -> FareProduct.FareProduct -> m FarePolicyD.FullFarePolicy
-getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mbBookingStartTime fareProduct = do
+getBaseVariantFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe FareProduct.FareProduct -> Maybe CacKey -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> m (Maybe HighPrecMoney)
+getBaseVariantFarePolicy merchantOpCityId mbBaseVariantCarFareProduct txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration = do
+  mbBaseVariantFarePolicy <- traverse (getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId Nothing Nothing) mbBaseVariantCarFareProduct
+  case mbBaseVariantFarePolicy of
+    Just baseVariantFullFarePolicy -> do
+      estimatedFare <- calculateFareForFarePolicy baseVariantFullFarePolicy mbDistance mbDuration merchantOpCityId
+      return $ Just estimatedFare
+    Nothing -> return Nothing
+
+getFareProduct :: FareProduct.FareProducts -> Maybe DVST.VehicleServiceTier -> Maybe FareProduct.FareProduct
+getFareProduct _ Nothing = Nothing
+getFareProduct fareProducts (Just vehicleServiceTier) = List.find (\fareProduct -> fareProduct.vehicleServiceTier == vehicleServiceTier.serviceTierType) fareProducts.fareProducts
+
+getFullFarePolicy :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe CacKey -> Maybe UTCTime -> Maybe HighPrecMoney -> FareProduct.FareProduct -> m FarePolicyD.FullFarePolicy
+getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mbBookingStartTime mbBaseVaraintCarPrice fareProduct = do
   transporterConfig <- CTC.findByMerchantOpCityId fareProduct.merchantOperatingCityId txnId >>= fromMaybeM (TransporterConfigNotFound fareProduct.merchantOperatingCityId.getId)
+  mbVehicleServiceTierItem <-
+    CQVST.findByServiceTierTypeAndCityId fareProduct.vehicleServiceTier fareProduct.merchantOperatingCityId
   let whiteListedGeohashes = fromMaybe [] transporterConfig.dpWhiteListedGeohash
       blackListedGeohashes = fromMaybe [] transporterConfig.dpBlackListedGeohash
-  _bookingStartTime <- maybe getCurrentTime return mbBookingStartTime
+  now <- getCurrentTime
+  let _bookingStartTime = fromMaybe now mbBookingStartTime
   let localTimeZoneSeconds = 19800 -- fix this
   congestionChargeMultiplierFromModel <-
     case fareProduct.tripCategory of
@@ -168,7 +203,23 @@ getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mb
   let farePolicy = updateCongestionChargeMultiplier farePolicy' updatedCongestionChargeMultiplier
   let congestionChargeDetails = FarePolicyD.CongestionChargeDetails version supplyDemandRatioToLoc supplyDemandRatioFromLoc updatedCongestionChargePerMin
   cancellationFarePolicy <- maybe (return Nothing) QCCFP.findById farePolicy.cancellationFarePolicyId
-  return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy congestionChargeDetails farePolicy
+  let fullFarePolicy = FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy congestionChargeDetails farePolicy
+  case mbVehicleServiceTierItem of
+    Just vehicleServiceTierItem -> do
+      if vehicleServiceTierItem.vehicleCategory == Just DVC.CAR && isJust mbBaseVaraintCarPrice && not (fromMaybe True vehicleServiceTierItem.baseVehicleServiceTier)
+        then do
+          let addtionalFarePerKm = toRational $ fromMaybe 0 vehicleServiceTierItem.fareAdditionPerKmOverBaseServiceTier
+          let mbAdditionalFare = mbDistance <&> \distance -> toHighPrecMoney ((fromIntegral distance.getMeters / 1000 :: Rational) * addtionalFarePerKm)
+          let fareWithAddition = fromMaybe 0.0 mbBaseVaraintCarPrice + fromMaybe 0.0 mbAdditionalFare
+          estimatedFare <- calculateFareForFarePolicy fullFarePolicy mbDistance mbDuration fareProduct.merchantOperatingCityId
+          if fareWithAddition > estimatedFare
+            then do
+              logWarning $ "Fare with addition: " <> show fareWithAddition <> " is greater than estimated fare: " <> show estimatedFare
+              let fullFarePolicy' = fullFarePolicy{additionalCongestionCharge = fromMaybe 0.0 mbAdditionalFare}
+              return fullFarePolicy'
+            else return fullFarePolicy
+        else return fullFarePolicy
+    Nothing -> return fullFarePolicy
   where
     checkGeoHashAndCalculate localTimeZoneSeconds whiteListedGeohashes blackListedGeohashes fromLocGeohash =
       if elem fromLocGeohash whiteListedGeohashes || notElem fromLocGeohash blackListedGeohashes
@@ -177,6 +228,38 @@ getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mb
 
 updateCongestionChargeMultiplier :: FarePolicyD.FarePolicy -> Maybe FarePolicyD.CongestionChargeMultiplier -> FarePolicyD.FarePolicy
 updateCongestionChargeMultiplier FarePolicyD.FarePolicy {..} congestionMultiplier = FarePolicyD.FarePolicy {congestionChargeMultiplier = congestionMultiplier, ..}
+
+calculateFareForFarePolicy :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => FarePolicyD.FullFarePolicy -> Maybe Meters -> Maybe Seconds -> Id DMOC.MerchantOperatingCity -> m HighPrecMoney
+calculateFareForFarePolicy fullFarePolicy mbDistance mbDuration merchantOperatingCityId = do
+  currency <- SMerchant.getCurrencyByMerchantOpCity merchantOperatingCityId
+  distanceUnit <- SMerchant.getDistanceUnitByMerchantOpCity merchantOperatingCityId
+  now <- getCurrentTime
+  let params =
+        SFC.CalculateFareParametersParams
+          { farePolicy = fullFarePolicy,
+            actualDistance = mbDistance,
+            rideTime = now, ----------assumption as this logic should work only for one way book now trips
+            returnTime = Nothing,
+            roundTrip = False,
+            waitingTime = Nothing,
+            actualRideDuration = Nothing,
+            vehicleAge = Nothing,
+            avgSpeedOfVehicle = Nothing,
+            driverSelectedFare = Nothing,
+            customerExtraFee = Nothing,
+            nightShiftCharge = Nothing,
+            customerCancellationDues = Nothing,
+            nightShiftOverlapChecking = False, ---------considered only for one way
+            estimatedDistance = mbDistance,
+            estimatedRideDuration = mbDuration,
+            timeDiffFromUtc = Nothing,
+            tollCharges = Nothing, ------fix it in future
+            noOfStops = 0, ------fix it in future
+            currency,
+            distanceUnit
+          }
+  parameters <- SFC.calculateFareParameters params
+  return $ SFC.fareSum parameters
 
 mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> FarePolicyD.FarePolicy -> [breakupItem]
 mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy = do
