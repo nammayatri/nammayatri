@@ -56,6 +56,7 @@ RiderConfig:
     makeMultiModalSearch: Bool
     maximumWalkDistance: Meters
     driverReferredSearchReqExpiry: Maybe Seconds
+    dynamicLogicUpdatePassword: Text
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -70,6 +71,7 @@ RiderConfig:
     cancellationPaymentDelay: Maybe Seconds
     makeMultiModalSearch: Maybe Bool
     maximumWalkDistance: Maybe Meters
+    dynamicLogicUpdatePassword: Maybe Text
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -87,6 +89,7 @@ RiderConfig:
     payoutBatchDelay: fromMaybe 10 (Kernel.Utils.Common.secondsToNominalDiffTime <$> payoutBatchDelay)|E
     makeMultiModalSearch: fromMaybe False makeMultiModalSearch|E
     maximumWalkDistance: fromMaybe (600) maximumWalkDistance|E
+    dynamicLogicUpdatePassword: fromMaybe "dummy-password" dynamicLogicUpdatePassword|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -101,6 +104,7 @@ RiderConfig:
     payoutBatchDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     makeMultiModalSearch: Just makeMultiModalSearch|E
     maximumWalkDistance: Just maximumWalkDistance|E
+    dynamicLogicUpdatePassword: Just dynamicLogicUpdatePassword|E
 
   default:
     enableLocalPoliceSupport: "false"

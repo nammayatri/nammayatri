@@ -191,6 +191,14 @@ let RiderJobType =
       | CancelExecutePaymentIntent
       | OtherJobTypes
       | MetroIncentivePayout
+      | Daily
+      | Weekly
+      | Monthly
+      | Quarterly
+      | DailyUpdateTag
+      | WeeklyUpdateTag
+      | MonthlyUpdateTag
+      | QuarterlyUpdateTag
       >
 
 let jobInfoMapx =
@@ -209,6 +217,14 @@ let jobInfoMapx =
         }
       , { mapKey = RiderJobType.OtherJobTypes, mapValue = False }
       , { mapKey = RiderJobType.MetroIncentivePayout, mapValue = True }
+      , { mapKey = RiderJobType.Daily, mapValue = True }
+      , { mapKey = RiderJobType.Weekly, mapValue = True }
+      , { mapKey = RiderJobType.Monthly, mapValue = True }
+      , { mapKey = RiderJobType.Quarterly, mapValue = True }
+      , { mapKey = RiderJobType.DailyUpdateTag, mapValue = True }
+      , { mapKey = RiderJobType.WeeklyUpdateTag, mapValue = True }
+      , { mapKey = RiderJobType.MonthlyUpdateTag, mapValue = True }
+      , { mapKey = RiderJobType.QuarterlyUpdateTag, mapValue = True }
       ]
 
 let cacConfig =

@@ -1,7 +1,7 @@
-module SharedLogic.KaalChakra.Chakras where
+module SharedLogic.Scheduler.Jobs.Chakras where
 
 import qualified Data.Map as M
-import Domain.Action.Dashboard.Management.NammaTag (kaalChakraHandle)
+import Domain.Action.Dashboard.NammaTag.Handle (kaalChakraHandle)
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -14,8 +14,9 @@ import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified Lib.Yudhishthira.Event.KaalChakra as Event
 import qualified Lib.Yudhishthira.Types as LYT
-import SharedLogic.Allocator
+import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
+import Storage.Beam.Yudhishthira ()
 import qualified Tools.Metrics as Metrics
 
 type ChakraJobs m r c =

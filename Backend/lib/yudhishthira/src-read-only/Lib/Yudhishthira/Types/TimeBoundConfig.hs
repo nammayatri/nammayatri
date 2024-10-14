@@ -2,10 +2,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Types.TimeBoundConfig where
+module Lib.Yudhishthira.Types.TimeBoundConfig where
 
 import Data.Aeson
-import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound
@@ -13,7 +12,7 @@ import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 
 data TimeBoundConfig = TimeBoundConfig
-  { merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+  { merchantOperatingCityId :: Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity,
     name :: Kernel.Prelude.Text,
     timeBoundDomain :: Lib.Yudhishthira.Types.LogicDomain,
     timeBounds :: Kernel.Types.TimeBound.TimeBound,

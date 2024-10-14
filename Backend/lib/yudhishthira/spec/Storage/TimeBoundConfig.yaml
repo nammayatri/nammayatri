@@ -1,0 +1,33 @@
+imports:
+  TimeBound: Kernel.Types.TimeBound
+  Merchant: Lib.Yudhishthira.Types
+  MerchantOperatingCity: Lib.Yudhishthira.Types
+  LogicDomain: Lib.Yudhishthira.Types
+
+TimeBoundConfig:
+  tableName: time_bound_config
+
+  fields:
+    merchantOperatingCityId: Id MerchantOperatingCity
+    timeBoundDomain: LogicDomain
+    name: Text
+    timeBounds: TimeBound|NoRelation
+
+  constraints:
+    name: PrimaryKey
+    merchantOperatingCityId: PrimaryKey
+    timeBoundDomain: PrimaryKey
+
+  queries:
+    findByCityAndDomain:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, timeBoundDomain]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantId]
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"

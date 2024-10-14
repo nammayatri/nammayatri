@@ -24,6 +24,7 @@ import qualified API.Types.RiderPlatform.Management.Booking as BookingDSL
 import qualified API.Types.RiderPlatform.Management.FRFSTicket as FRFSTicketDSL
 import qualified API.Types.RiderPlatform.Management.Invoice as InvoiceDSL
 import qualified API.Types.RiderPlatform.Management.Merchant as MerchantDSL
+import qualified API.Types.RiderPlatform.Management.NammaTag as NammaTagDSL
 import qualified "rider-app" API.Types.UI.TicketService as DTB
 import qualified Beckn.Types.Core.Taxi.Search ()
 import qualified Dashboard.RiderPlatform.Customer as Customer
@@ -68,7 +69,8 @@ data AppBackendAPIs = AppBackendAPIs
     bookingDSL :: BookingDSL.BookingAPIs,
     merchantDSL :: MerchantDSL.MerchantAPIs,
     invoiceDSL :: InvoiceDSL.InvoiceAPIs,
-    fRFSTicketDSL :: FRFSTicketDSL.FRFSTicketAPIs
+    fRFSTicketDSL :: FRFSTicketDSL.FRFSTicketAPIs,
+    nammaTagDSL :: NammaTagDSL.NammaTagAPIs
   }
 
 data CustomerAPIs = CustomerAPIs
@@ -144,6 +146,7 @@ mkAppBackendAPIs merchantId city token = do
   let merchantDSL = MerchantDSL.mkMerchantAPIs merchantClientDSL
   let invoiceDSL = InvoiceDSL.mkInvoiceAPIs invoiceClientDSL
   let fRFSTicketDSL = FRFSTicketDSL.mkFRFSTicketAPIs fRFSTicketClientDSL
+  let nammaTagDSL = NammaTagDSL.mkNammaTagAPIs nammaTagClientDSL
   AppBackendAPIs {..}
   where
     customersClient
@@ -155,7 +158,8 @@ mkAppBackendAPIs merchantId city token = do
       :<|> bookingClientDSL
       :<|> merchantClientDSL
       :<|> invoiceClientDSL
-      :<|> fRFSTicketClientDSL =
+      :<|> fRFSTicketClientDSL
+      :<|> nammaTagClientDSL =
         clientWithMerchantAndCity (Proxy :: Proxy BAP.OperationsAPI) merchantId city token
 
     customerList

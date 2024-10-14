@@ -11,6 +11,8 @@ type LLMContext = Text
 
 data MerchantOperatingCity
 
+data Merchant
+
 data User
 
 data Event

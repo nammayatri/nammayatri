@@ -9,7 +9,7 @@ import qualified Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout
 
 findByMerchantOpCityAndDomain ::
-  (BeamFlow.BeamFlow m r) =>
+  BeamFlow.BeamFlow m r =>
   Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
   Lib.Yudhishthira.Types.LogicDomain ->
   m [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout]
@@ -34,5 +34,5 @@ clearCache :: BeamFlow.BeamFlow m r => Kernel.Types.Id.Id Lib.Yudhishthira.Types
 clearCache cityId domain =
   Hedis.withCrossAppRedis $ Hedis.del $ "driverOfferCachedQueries:AppDynamicLogicRollout:" <> ":MerchantOperatingCityId-" <> show (Kernel.Types.Id.getId cityId) <> ":Domain-" <> show domain
 
-createMany :: (BeamFlow.BeamFlow m r) => [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout] -> m ()
+createMany :: BeamFlow.BeamFlow m r => [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout] -> m ()
 createMany = Queries.createMany

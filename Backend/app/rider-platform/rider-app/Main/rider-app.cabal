@@ -164,6 +164,8 @@ library
       Domain.Action.Dashboard.Invoice
       Domain.Action.Dashboard.IssueList
       Domain.Action.Dashboard.Merchant
+      Domain.Action.Dashboard.NammaTag
+      Domain.Action.Dashboard.NammaTag.Handle
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.Route
       Domain.Action.Internal.Cac
@@ -284,6 +286,7 @@ library
       SharedLogic.Referral
       SharedLogic.ScheduledNotifications
       SharedLogic.Scheduler.Jobs.CallPoliceApi
+      SharedLogic.Scheduler.Jobs.Chakras
       SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
       SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
@@ -303,6 +306,7 @@ library
       Storage.Beam.Payment
       Storage.Beam.SchedulerJob
       Storage.Beam.SystemConfigs
+      Storage.Beam.Yudhishthira
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.BppDetails
@@ -440,6 +444,7 @@ library
       API.Action.Dashboard.Management.FRFSTicket
       API.Action.Dashboard.Management.Invoice
       API.Action.Dashboard.Management.Merchant
+      API.Action.Dashboard.Management.NammaTag
       API.Action.UI.Cac
       API.Action.UI.CustomerReferral
       API.Action.UI.EditLocation
@@ -886,6 +891,7 @@ library
     , http-client-tls
     , http-media
     , http-types
+    , json-logic-hs
     , lens
     , lens-aeson
     , memory
@@ -931,6 +937,7 @@ library
     , wai-middleware-prometheus
     , warp
     , x509
+    , yudhishthira
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -1010,6 +1017,7 @@ executable rider-app-exe
     , http-client-tls
     , http-media
     , http-types
+    , json-logic-hs
     , lens
     , lens-aeson
     , memory
@@ -1050,6 +1058,7 @@ executable rider-app-exe
     , wai-middleware-prometheus
     , warp
     , x509
+    , yudhishthira
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4

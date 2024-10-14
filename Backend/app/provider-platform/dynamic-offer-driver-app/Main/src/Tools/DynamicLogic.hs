@@ -10,9 +10,9 @@ import Kernel.Utils.Common
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as DALE
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as DALR
+import qualified Lib.Yudhishthira.Storage.CachedQueries.TimeBoundConfig as CTBC
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.AppDynamicLogicRollout
-import qualified Storage.CachedQueries.TimeBoundConfig as CTBC
 
 getAppDynamicLogic ::
   BeamFlow m r =>
@@ -41,7 +41,7 @@ selectAppDynamicLogicVersion ::
 selectAppDynamicLogicVersion merchantOpCityId domain localTime = do
   mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
   configs <- if null mbConfigs then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
-  allTimeBoundConfigs <- CTBC.findByCityAndDomain merchantOpCityId domain
+  allTimeBoundConfigs <- CTBC.findByCityAndDomain (cast merchantOpCityId) domain
   let boundedTimeBoundConfigs = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded) allTimeBoundConfigs) localTime
   let applicapleConfigs =
         case boundedTimeBoundConfigs of -- if not bounded config found, return all configs with Unbounded timeBounds

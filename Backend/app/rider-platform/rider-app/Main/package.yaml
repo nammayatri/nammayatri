@@ -125,6 +125,8 @@ dependencies:
   - http-client
   - http-client-tls
   - hashable
+  - json-logic-hs
+  - yudhishthira
 
 ghc-options:
   - -fwrite-ide-info

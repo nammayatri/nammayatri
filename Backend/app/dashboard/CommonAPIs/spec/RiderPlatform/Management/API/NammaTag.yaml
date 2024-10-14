@@ -1,0 +1,137 @@
+imports:
+  CreateNammaTagRequest: Lib.Yudhishthira.Types
+  UpdateNammaTagRequest: Lib.Yudhishthira.Types
+  APISuccess: Kernel.Types.APISuccess
+  ChakraQueriesAPIEntity: Lib.Yudhishthira.Types
+  AppDynamicLogicReq: Lib.Yudhishthira.Types
+  AppDynamicLogicResp: Lib.Yudhishthira.Types
+  LogicDomain: Lib.Yudhishthira.Types
+  AppDynamicLogic: Lib.Yudhishthira.Types.AppDynamicLogic
+  RunKaalChakraJobReq: Lib.Yudhishthira.Types
+  RunKaalChakraJobRes: Lib.Yudhishthira.Types
+  GetLogicsResp: Lib.Yudhishthira.Types
+  CreateTimeBoundRequest: Lib.Yudhishthira.Types
+  LogicRolloutObject: Lib.Yudhishthira.Types
+  LogicRolloutReq: Lib.Yudhishthira.Types
+  TimeBoundResp: Lib.Yudhishthira.Types
+  Chakra: Lib.Yudhishthira.Types
+  ChakraQueryResp: Lib.Yudhishthira.Types
+  AppDynamicLogicDomainResp: Lib.Yudhishthira.Types
+  AppDynamicLogicVersionResp: Lib.Yudhishthira.Types
+
+module: NammaTag
+
+types: {}
+
+apis:
+  - POST:
+      endpoint: /tag/create
+      auth: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
+      request:
+        type: CreateNammaTagRequest
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /tag/update
+      auth: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
+      request:
+        type: UpdateNammaTagRequest
+      response:
+        type: APISuccess
+  - DELETE:
+      endpoint: /tag/delete
+      auth: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
+      mandatoryQuery:
+        tagName: Text
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /query/create
+      auth: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG CREATE_CHAKRA_QUERY
+      request:
+        type: ChakraQueriesAPIEntity
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /appDynamicLogic/verify
+      auth: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+      request:
+        type: AppDynamicLogicReq
+      response:
+        type: AppDynamicLogicResp
+  - GET:
+      endpoint: /appDynamicLogic
+      auth: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+      mandatoryQuery:
+        domain: LogicDomain
+      query:
+        version: Int
+      response:
+        type: "[GetLogicsResp]"
+  - POST:
+      endpoint: /runJob
+      auth: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG RUN_KAAL_CHAKRA_JOB
+      request:
+        type: RunKaalChakraJobReq
+      response:
+        type: RunKaalChakraJobRes
+  - GET:
+      endpoint: /timeBounds
+      auth: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG TIME_BOUNDS
+      mandatoryQuery:
+        domain: LogicDomain
+      response:
+        type: TimeBoundResp
+  - POST:
+      endpoint: /timeBounds/create
+      auth: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG TIME_BOUNDS
+      request:
+        type: CreateTimeBoundRequest
+      response:
+        type: APISuccess
+  - DELETE:
+      endpoint: /timeBounds/delete
+      auth: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG TIME_BOUNDS
+      mandatoryQuery:
+        domain: LogicDomain
+        name: Text
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /appDynamicLogic/getLogicRollout
+      auth: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_ROLLOUT
+      mandatoryQuery:
+        domain: LogicDomain
+      query:
+        timeBound: Text
+      response:
+        type: "[LogicRolloutObject]"
+  - POST:
+      endpoint: /appDynamicLogic/upsertLogicRollout
+      auth: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_ROLLOUT
+      request:
+        type: LogicRolloutReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /appDynamicLogic/versions
+      auth: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+      mandatoryQuery:
+        domain: LogicDomain
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: AppDynamicLogicVersionResp
+  - GET:
+      endpoint: /appDynamicLogic/domains
+      auth: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+      response:
+        type: AppDynamicLogicDomainResp
+  - GET:
+      endpoint: /query/all
+      auth: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG GET_CHAKRA_QUERY
+      mandatoryQuery:
+        chakra: Chakra
+      response:
+        type: ChakraQueryResp

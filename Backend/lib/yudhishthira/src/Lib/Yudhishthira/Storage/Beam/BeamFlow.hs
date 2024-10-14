@@ -21,6 +21,7 @@ import qualified Lib.Yudhishthira.Storage.Beam.AppDynamicLogicElement as BeamADL
 import qualified Lib.Yudhishthira.Storage.Beam.AppDynamicLogicRollout as BeamADLR
 import qualified Lib.Yudhishthira.Storage.Beam.ChakraQueries as BeamCQ
 import qualified Lib.Yudhishthira.Storage.Beam.NammaTag as BeamNT
+import qualified Lib.Yudhishthira.Storage.Beam.TimeBoundConfig as BeamTMC
 import qualified Lib.Yudhishthira.Storage.Beam.UserData as BeamUD
 
 type BeamFlow m r =
@@ -35,5 +36,6 @@ type HasYudhishthiraTablesSchema =
     HasSchemaName BeamADLE.AppDynamicLogicElementT,
     HasSchemaName BeamCQ.ChakraQueriesT,
     HasSchemaName BeamNT.NammaTagT,
-    HasSchemaName BeamUD.UserDataT
+    HasSchemaName BeamUD.UserDataT,
+    HasSchemaName BeamTMC.TimeBoundConfigT
   )
