@@ -341,7 +341,7 @@ rideAssignedReqHandler req = do
   mbMerchant <- CQM.findById booking.merchantId
   now <- getCurrentTime
   case mbMerchant of
-    Just merchant | diffUTCTime now booking.startTime > merchant.scheduleRideBufferTime -> do
+    Just merchant | diffUTCTime booking.startTime now > merchant.scheduleRideBufferTime -> do
       mbRide <- QRide.findByBPPRideId bppRideId
       case mbRide of
         Just ride -> do
