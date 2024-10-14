@@ -577,7 +577,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     case tripEndLocation of
       Just location -> frequencyUpdator booking.merchantId location Nothing TripEnd
       Nothing -> return ()
-  fork "updating total rides count" $ SMC.updateTotalRidesCounters booking.riderId
+  fork "updating total rides count" $ SMC.updateTotalRidesCounters person
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
   mbDriverPhoneNumber <- mapM decrypt ride.driverPhoneNumber
