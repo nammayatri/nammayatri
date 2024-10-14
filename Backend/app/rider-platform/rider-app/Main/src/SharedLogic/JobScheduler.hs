@@ -55,6 +55,7 @@ data RiderJobType
   | WeeklyUpdateTag
   | MonthlyUpdateTag
   | QuarterlyUpdateTag
+  | PostRideSafetyNotification
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -81,6 +82,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SWeeklyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SWeeklyUpdateTag jobData
   restoreAnyJobInfo SMonthlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SMonthlyUpdateTag jobData
   restoreAnyJobInfo SQuarterlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SQuarterlyUpdateTag jobData
+  restoreAnyJobInfo SPostRideSafetyNotification jobData = AnyJobInfo <$> restoreJobInfo SPostRideSafetyNotification jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -250,3 +252,13 @@ data CancelExecutePaymentIntentJobData = CancelExecutePaymentIntentJobData
 instance JobInfoProcessor 'CancelExecutePaymentIntent
 
 type instance JobContent 'CancelExecutePaymentIntent = CancelExecutePaymentIntentJobData
+
+data PostRideSafetyNotificationJobData = PostRideSafetyNotificationJobData
+  { rideId :: Id DRide.Ride,
+    personId :: Id Person
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'PostRideSafetyNotification
+
+type instance JobContent 'PostRideSafetyNotification = PostRideSafetyNotificationJobData

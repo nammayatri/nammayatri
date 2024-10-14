@@ -21,7 +21,6 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
-import Domain.Types.Person as Person
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
@@ -143,12 +142,6 @@ onInit req = do
   where
     prependZero :: Text -> Text
     prependZero str = "0" <> str
-
-    checkSafetySettingConstraint item riderConfig now =
-      case item of
-        Just ALWAYS_SHARE -> True
-        Just SHARE_WITH_TIME_CONSTRAINTS -> checkTimeConstraintForFollowRide riderConfig now
-        _ -> False
 
     getToLocationFromBookingDetails = \case
       DRB.RentalDetails _ -> Nothing

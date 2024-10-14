@@ -52,18 +52,47 @@ sendSafetyIVR Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       personId = jobData.personId
       rideId = jobData.rideId
   ride <- B.runInReplica $ QR.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  case ride.safetyJourneyStatus of
-    Just (DRide.UnexpectedCondition _) -> do
+  if shouldTriggerPostRideCheckCall ride
+    then triggerIVRAndCreateCsAlertJob personId ride
+    else handleRideJourneyStatus personId ride
+  return Complete
+  where
+    shouldTriggerPostRideCheckCall ride = ride.status == DRide.COMPLETED && isNothing ride.wasRideSafe
+
+    handleRideJourneyStatus ::
+      ( EncFlow m r,
+        CacheFlow m r,
+        MonadFlow m,
+        EsqDBFlow m r,
+        SchedulerFlow r
+      ) =>
+      Id DP.Person ->
+      DRide.Ride ->
+      m ()
+    handleRideJourneyStatus personId ride =
+      case ride.safetyJourneyStatus of
+        Just (DRide.UnexpectedCondition _) -> triggerIVRAndCreateCsAlertJob personId ride
+        Nothing -> logError $ "No safety journey status found during IVR calling stage for ride : " <> show ride.id
+        _ -> logDebug $ "Ride status is : " <> show ride.safetyJourneyStatus <> ". Skipping IVR call : " <> show ride.id
+
+    triggerIVRAndCreateCsAlertJob ::
+      ( EncFlow m r,
+        CacheFlow m r,
+        MonadFlow m,
+        EsqDBFlow m r,
+        SchedulerFlow r
+      ) =>
+      Id DP.Person ->
+      DRide.Ride ->
+      m ()
+    triggerIVRAndCreateCsAlertJob personId ride = do
       person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
       merchantOperatingCityId <- maybe (QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId) >>= pure . (.merchantOperatingCityId)) pure ride.merchantOperatingCityId
       riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
-      logDebug $ "Triggering IVR for ride with unexpected condition: " <> show rideId
+      logDebug $ "Triggering IVR for ride with unexpected condition: " <> show ride.id
       triggerIVR person ride riderConfig
       createSafetyCSAlertJob person ride riderConfig
-    Nothing -> logError $ "No safety journey status found during IVR calling stage for ride : " <> show rideId
-    _ -> logDebug $ "Ride status is : " <> show ride.safetyJourneyStatus <> ". Skipping IVR call : " <> show rideId
-  return Complete
-  where
+
     triggerIVR ::
       ( EncFlow m r,
         CacheFlow m r,
@@ -76,7 +105,8 @@ sendSafetyIVR Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       RiderConfig ->
       m ()
     triggerIVR person ride riderConfig = do
-      let maybeAppId = (HM.lookup SosAppletID . exotelMap) =<< riderConfig.exotelAppIdMapping
+      let appletType = if ride.status == DRide.COMPLETED then PostRideSafetyCheckAppletID else SosAppletID
+      let maybeAppId = (HM.lookup appletType . exotelMap) =<< riderConfig.exotelAppIdMapping
       logDebug $ "Applet ID for SOS call : " <> show maybeAppId
       mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
       countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
@@ -93,6 +123,7 @@ sendSafetyIVR Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       callStatus <- buildCallStatus callStatusId exotelResponse ride
       QCallStatus.create callStatus
       void $ QR.updateSafetyJourneyStatus ride.id DRide.IVRCallInitiated
+
     buildCallStatus callStatusId exotelResponse ride = do
       now <- getCurrentTime
       return $
@@ -113,6 +144,7 @@ sendSafetyIVR Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             updatedAt = now,
             customerIvrResponse = Nothing
           }
+
     createSafetyCSAlertJob ::
       ( EncFlow m r,
         CacheFlow m r,

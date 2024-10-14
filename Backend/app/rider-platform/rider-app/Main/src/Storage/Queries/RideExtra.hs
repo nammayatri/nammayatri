@@ -86,11 +86,12 @@ updateTrackingUrl rideId url = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-updateRideRating :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Int -> m ()
-updateRideRating rideId rideRating = do
+updateRideRating :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Int -> Maybe Bool -> m ()
+updateRideRating rideId rideRating wasRideSafe = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamR.rideRating (Just rideRating),
+      Se.Set BeamR.wasRideSafe wasRideSafe,
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
