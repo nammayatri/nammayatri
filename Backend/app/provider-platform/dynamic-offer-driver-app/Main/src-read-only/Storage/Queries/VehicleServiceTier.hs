@@ -6,6 +6,7 @@ module Storage.Queries.VehicleServiceTier where
 
 import qualified Domain.Types.Common
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleServiceTier
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -27,6 +28,18 @@ findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.VehicleServiceTier.VehicleServiceTier])
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
+findBaseServiceTierTypeByCategoryAndCityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier))
+findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOperatingCityId = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.baseVehicleServiceTier $ Se.Eq (Just True)
+        ]
+    ]
 
 findByServiceTierTypeAndCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -51,8 +64,10 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
     [ Se.Set Beam.airConditionedThreshold airConditionedThreshold,
       Se.Set Beam.allowedVehicleVariant allowedVehicleVariant,
       Se.Set Beam.autoSelectedVehicleVariant autoSelectedVehicleVariant,
+      Se.Set Beam.baseVehicleServiceTier baseVehicleServiceTier,
       Se.Set Beam.defaultForVehicleVariant defaultForVehicleVariant,
       Se.Set Beam.driverRating driverRating,
+      Se.Set Beam.fareAdditionPerKmOverBaseServiceTier fareAdditionPerKmOverBaseServiceTier,
       Se.Set Beam.isAirConditioned isAirConditioned,
       Se.Set Beam.isIntercityEnabled isIntercityEnabled,
       Se.Set Beam.isRentalsEnabled isRentalsEnabled,
@@ -66,6 +81,7 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
       Se.Set Beam.seatingCapacity seatingCapacity,
       Se.Set Beam.serviceTierType serviceTierType,
       Se.Set Beam.shortDescription shortDescription,
+      Se.Set Beam.vehicleCategory vehicleCategory,
       Se.Set Beam.vehicleIconUrl (Kernel.Prelude.fmap showBaseUrl vehicleIconUrl),
       Se.Set Beam.vehicleRating vehicleRating,
       Se.Set Beam.ventilator ventilator,
@@ -83,8 +99,10 @@ instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehi
           { airConditionedThreshold = airConditionedThreshold,
             allowedVehicleVariant = allowedVehicleVariant,
             autoSelectedVehicleVariant = autoSelectedVehicleVariant,
+            baseVehicleServiceTier = baseVehicleServiceTier,
             defaultForVehicleVariant = defaultForVehicleVariant,
             driverRating = driverRating,
+            fareAdditionPerKmOverBaseServiceTier = fareAdditionPerKmOverBaseServiceTier,
             id = Kernel.Types.Id.Id id,
             isAirConditioned = isAirConditioned,
             isIntercityEnabled = isIntercityEnabled,
@@ -99,6 +117,7 @@ instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehi
             seatingCapacity = seatingCapacity,
             serviceTierType = serviceTierType,
             shortDescription = shortDescription,
+            vehicleCategory = vehicleCategory,
             vehicleIconUrl = vehicleIconUrl',
             vehicleRating = vehicleRating,
             ventilator = ventilator,
@@ -112,8 +131,10 @@ instance ToTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehicl
       { Beam.airConditionedThreshold = airConditionedThreshold,
         Beam.allowedVehicleVariant = allowedVehicleVariant,
         Beam.autoSelectedVehicleVariant = autoSelectedVehicleVariant,
+        Beam.baseVehicleServiceTier = baseVehicleServiceTier,
         Beam.defaultForVehicleVariant = defaultForVehicleVariant,
         Beam.driverRating = driverRating,
+        Beam.fareAdditionPerKmOverBaseServiceTier = fareAdditionPerKmOverBaseServiceTier,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAirConditioned = isAirConditioned,
         Beam.isIntercityEnabled = isIntercityEnabled,
@@ -128,6 +149,7 @@ instance ToTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehicl
         Beam.seatingCapacity = seatingCapacity,
         Beam.serviceTierType = serviceTierType,
         Beam.shortDescription = shortDescription,
+        Beam.vehicleCategory = vehicleCategory,
         Beam.vehicleIconUrl = Kernel.Prelude.fmap showBaseUrl vehicleIconUrl,
         Beam.vehicleRating = vehicleRating,
         Beam.ventilator = ventilator,

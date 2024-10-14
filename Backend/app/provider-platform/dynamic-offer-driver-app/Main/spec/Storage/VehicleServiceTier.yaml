@@ -5,6 +5,7 @@ imports:
   Centesimal: Kernel.Types.Common
   ServiceTierType: Domain.Types.Common
   BaseUrl: Kernel.Types.Common
+  VehicleCategory : Domain.Types.VehicleCategory
 
 VehicleServiceTier:
   tableName: vehicle_service_tier
@@ -24,6 +25,9 @@ VehicleServiceTier:
     ventilator: Maybe Int
     luggageCapacity: Maybe Int
     driverRating: Maybe Centesimal
+    vehicleCategory: Maybe VehicleCategory
+    baseVehicleServiceTier : Maybe Bool
+    fareAdditionPerKmOverBaseServiceTier : Maybe Int
     vehicleRating: Maybe Double
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
@@ -57,3 +61,10 @@ VehicleServiceTier:
       kvFunction: findOneWithKV
       where:
         and: [serviceTierType, merchantOperatingCityId]
+    findBaseServiceTierTypeByCategoryAndCityId:
+      kvFunction: findOneWithKV
+      where:
+        and:
+          - vehicleCategory
+          - merchantOperatingCityId
+          - baseVehicleServiceTier: "(Just True)|CIM"

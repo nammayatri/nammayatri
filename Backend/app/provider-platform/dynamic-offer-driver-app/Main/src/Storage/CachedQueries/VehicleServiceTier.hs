@@ -17,6 +17,7 @@ module Storage.CachedQueries.VehicleServiceTier where
 
 import Domain.Types.Common
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.VehicleCategory
 import Domain.Types.VehicleServiceTier
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -44,6 +45,11 @@ cacheByMerchantOpCityId merchanOperatingCityId cityServiceTiers = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantOpCityIdKey merchanOperatingCityId) cityServiceTiers expTime
 
+cacheByMerchantOpCityIdAndVehicleCategory :: (CacheFlow m r) => Maybe VehicleCategory -> Id DMOC.MerchantOperatingCity -> Maybe VehicleServiceTier -> m ()
+cacheByMerchantOpCityIdAndVehicleCategory vehicleCategory merchanOperatingCityId serviceTier = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeVehicleCategoryAndCityIdKey vehicleCategory merchanOperatingCityId) serviceTier expTime
+
 cacheByMerchantOpCityIdAndServiceTier :: (CacheFlow m r) => Id DMOC.MerchantOperatingCity -> ServiceTierType -> Maybe VehicleServiceTier -> m ()
 cacheByMerchantOpCityIdAndServiceTier merchanOperatingCityId serviceTier cityServiceTier = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
@@ -54,3 +60,12 @@ makeMerchantOpCityIdKey merchantOpCityId = "CachedQueries:VehicleServiceTier:Mer
 
 makeServiceTierTypeAndCityIdKey :: Id DMOC.MerchantOperatingCity -> ServiceTierType -> Text
 makeServiceTierTypeAndCityIdKey merchantOpCityId serviceTier = "CachedQueries:VehicleServiceTier:MerchantOpCityId-" <> merchantOpCityId.getId <> ":ServiceTier-" <> show serviceTier
+
+makeVehicleCategoryAndCityIdKey :: Maybe VehicleCategory -> Id DMOC.MerchantOperatingCity -> Text
+makeVehicleCategoryAndCityIdKey vehicleCategory merchantOpCityId = "CachedQueries:VehicleServiceTier:MerchantOpCityId-" <> merchantOpCityId.getId <> ":vehicleCategory-" <> show vehicleCategory
+
+findBaseServiceTierTypeByCategoryAndCityId :: (CacheFlow m r, EsqDBFlow m r) => Maybe VehicleCategory -> Id DMOC.MerchantOperatingCity -> m (Maybe VehicleServiceTier)
+findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOpCityId = do
+  Hedis.safeGet (makeVehicleCategoryAndCityIdKey vehicleCategory merchantOpCityId) >>= \case
+    Just a -> return a
+    Nothing -> cacheByMerchantOpCityIdAndVehicleCategory vehicleCategory merchantOpCityId /=<< Queries.findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOpCityId
