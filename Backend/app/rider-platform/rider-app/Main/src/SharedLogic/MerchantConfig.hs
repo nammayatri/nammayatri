@@ -93,7 +93,9 @@ updateTotalRidesInWindowCounters riderId merchantConfigs = Redis.withNonCritical
 getTotalRidesCountForEndRide :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Person.Person -> m (Maybe Int)
 getTotalRidesCountForEndRide rider
   | Just totalRidesCount <- rider.totalRidesCount = pure (Just totalRidesCount)
-  | otherwise = CHP.findTotalRidesCountByPersonId rider.id
+  | otherwise = do
+    totalCount <- CHP.findTotalRidesCountByPersonId rider.id
+    maybe (pure Nothing) (pure $ CHB.findCountByRiderIdAndStatus rider.id BT.COMPLETED rider.createdAt) totalCount
 
 getRidesCountInWindow ::
   (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) =>
@@ -129,7 +131,7 @@ checkFraudDetected riderId merchantOperatingCityId factors merchantConfigs mSear
         MoreSearching -> do
           searchCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkSearchCounterKey mc.id.getId riderId.getId) mc.fraudSearchCountWindow
           pure $ searchCount >= mc.fraudSearchCountThreshold
-        TotalRides -> pure $ maybe False (<= mc.fraudBookingTotalCountThreshold) (mSearchReq >>= DSR.totalRidesCount)
+        TotalRides -> pure $ maybe False (\count' -> count' <= mc.fraudBookingTotalCountThreshold && count' > 0) (mSearchReq >>= DSR.totalRidesCount)
         TotalRidesInWindow -> do
           windowValueList <- SWC.getCurrentWindowValues (mkRideWindowCountKey mc.id.getId riderId.getId) mc.fraudRideCountWindow
           let timeInterval = SWC.convertPeriodTypeToSeconds mc.fraudRideCountWindow.periodType
