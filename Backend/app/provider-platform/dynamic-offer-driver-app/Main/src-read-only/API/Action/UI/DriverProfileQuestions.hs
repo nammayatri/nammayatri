@@ -24,15 +24,15 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "DriverProfileQues" :> ReqBody ('[JSON]) API.Types.UI.DriverProfileQuestions.DriverProfileQuesReq
+  ( TokenAuth :> "DriverProfileQues" :> ReqBody '[JSON] API.Types.UI.DriverProfileQuestions.DriverProfileQuesReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "DriverProfileQues"
       :> QueryParam "isImages" Kernel.Prelude.Bool
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
   )
 
@@ -54,7 +54,7 @@ getDriverProfileQues ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
   )
 getDriverProfileQues a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverProfileQuestions.getDriverProfileQues (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

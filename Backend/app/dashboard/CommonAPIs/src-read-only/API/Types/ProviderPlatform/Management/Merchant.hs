@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -7,6 +8,7 @@ import qualified Dashboard.Common
 import qualified Dashboard.Common.Merchant
 import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
 import qualified Data.Vector
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
@@ -881,36 +883,38 @@ mkMerchantAPIs merchantClient = (MerchantAPIs {..})
   where
     postMerchantUpdate :<|> getMerchantConfigCommon :<|> postMerchantConfigCommonUpdate :<|> getMerchantConfigDriverPool :<|> postMerchantConfigDriverPoolUpdate :<|> postMerchantConfigDriverPoolCreate :<|> getMerchantConfigDriverIntelligentPool :<|> postMerchantConfigDriverIntelligentPoolUpdate :<|> getMerchantConfigOnboardingDocument :<|> postMerchantConfigOnboardingDocumentUpdate :<|> postMerchantConfigOnboardingDocumentCreate :<|> getMerchantServiceUsageConfig :<|> postMerchantServiceConfigMapsUpdate :<|> postMerchantServiceUsageConfigMapsUpdate :<|> postMerchantServiceConfigSmsUpdate :<|> postMerchantServiceUsageConfigSmsUpdate :<|> postMerchantServiceConfigVerificationUpdate :<|> postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate :<|> postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate :<|> postMerchantConfigFarePolicyPerExtraKmRateUpdate :<|> postMerchantConfigFarePolicyUpdate :<|> postMerchantConfigFarePolicyUpsert :<|> postMerchantConfigOperatingCityCreate :<|> postMerchantSchedulerTrigger :<|> postMerchantUpdateOnboardingVehicleVariantMapping :<|> postMerchantSpecialLocationUpsert :<|> deleteMerchantSpecialLocationDelete :<|> postMerchantSpecialLocationGatesUpsert :<|> deleteMerchantSpecialLocationGatesDelete :<|> postMerchantConfigClearCacheSubscription = merchantClient
 
-data MerchantEndpointDSL
-  = PostMerchantUpdateEndpoint
-  | GetMerchantConfigCommonEndpoint
-  | PostMerchantConfigCommonUpdateEndpoint
-  | GetMerchantConfigDriverPoolEndpoint
-  | PostMerchantConfigDriverPoolUpdateEndpoint
-  | PostMerchantConfigDriverPoolCreateEndpoint
-  | GetMerchantConfigDriverIntelligentPoolEndpoint
-  | PostMerchantConfigDriverIntelligentPoolUpdateEndpoint
-  | GetMerchantConfigOnboardingDocumentEndpoint
-  | PostMerchantConfigOnboardingDocumentUpdateEndpoint
-  | PostMerchantConfigOnboardingDocumentCreateEndpoint
-  | GetMerchantServiceUsageConfigEndpoint
-  | PostMerchantServiceConfigMapsUpdateEndpoint
-  | PostMerchantServiceUsageConfigMapsUpdateEndpoint
-  | PostMerchantServiceConfigSmsUpdateEndpoint
-  | PostMerchantServiceUsageConfigSmsUpdateEndpoint
-  | PostMerchantServiceConfigVerificationUpdateEndpoint
-  | PostMerchantConfigFarePolicyDriverExtraFeeBoundsCreateEndpoint
-  | PostMerchantConfigFarePolicyDriverExtraFeeBoundsUpdateEndpoint
-  | PostMerchantConfigFarePolicyPerExtraKmRateUpdateEndpoint
-  | PostMerchantConfigFarePolicyUpdateEndpoint
-  | PostMerchantConfigFarePolicyUpsertEndpoint
-  | PostMerchantConfigOperatingCityCreateEndpoint
-  | PostMerchantSchedulerTriggerEndpoint
-  | PostMerchantUpdateOnboardingVehicleVariantMappingEndpoint
-  | PostMerchantSpecialLocationUpsertEndpoint
-  | DeleteMerchantSpecialLocationDeleteEndpoint
-  | PostMerchantSpecialLocationGatesUpsertEndpoint
-  | DeleteMerchantSpecialLocationGatesDeleteEndpoint
-  | PostMerchantConfigClearCacheSubscriptionEndpoint
+data MerchantUserActionType
+  = POST_MERCHANT_UPDATE
+  | GET_MERCHANT_CONFIG_COMMON
+  | POST_MERCHANT_CONFIG_COMMON_UPDATE
+  | GET_MERCHANT_CONFIG_DRIVER_POOL
+  | POST_MERCHANT_CONFIG_DRIVER_POOL_UPDATE
+  | POST_MERCHANT_CONFIG_DRIVER_POOL_CREATE
+  | GET_MERCHANT_CONFIG_DRIVER_INTELLIGENT_POOL
+  | POST_MERCHANT_CONFIG_DRIVER_INTELLIGENT_POOL_UPDATE
+  | GET_MERCHANT_CONFIG_ONBOARDING_DOCUMENT
+  | POST_MERCHANT_CONFIG_ONBOARDING_DOCUMENT_UPDATE
+  | POST_MERCHANT_CONFIG_ONBOARDING_DOCUMENT_CREATE
+  | GET_MERCHANT_SERVICE_USAGE_CONFIG
+  | POST_MERCHANT_SERVICE_CONFIG_MAPS_UPDATE
+  | POST_MERCHANT_SERVICE_USAGE_CONFIG_MAPS_UPDATE
+  | POST_MERCHANT_SERVICE_CONFIG_SMS_UPDATE
+  | POST_MERCHANT_SERVICE_USAGE_CONFIG_SMS_UPDATE
+  | POST_MERCHANT_SERVICE_CONFIG_VERIFICATION_UPDATE
+  | POST_MERCHANT_CONFIG_FARE_POLICY_DRIVER_EXTRA_FEE_BOUNDS_CREATE
+  | POST_MERCHANT_CONFIG_FARE_POLICY_DRIVER_EXTRA_FEE_BOUNDS_UPDATE
+  | POST_MERCHANT_CONFIG_FARE_POLICY_PER_EXTRA_KM_RATE_UPDATE
+  | POST_MERCHANT_CONFIG_FARE_POLICY_UPDATE
+  | POST_MERCHANT_CONFIG_FARE_POLICY_UPSERT
+  | POST_MERCHANT_CONFIG_OPERATING_CITY_CREATE
+  | POST_MERCHANT_SCHEDULER_TRIGGER
+  | POST_MERCHANT_UPDATE_ONBOARDING_VEHICLE_VARIANT_MAPPING
+  | POST_MERCHANT_SPECIAL_LOCATION_UPSERT
+  | DELETE_MERCHANT_SPECIAL_LOCATION_DELETE
+  | POST_MERCHANT_SPECIAL_LOCATION_GATES_UPSERT
+  | DELETE_MERCHANT_SPECIAL_LOCATION_GATES_DELETE
+  | POST_MERCHANT_CONFIG_CLEAR_CACHE_SUBSCRIPTION
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(Data.Singletons.TH.genSingletons [''MerchantUserActionType])

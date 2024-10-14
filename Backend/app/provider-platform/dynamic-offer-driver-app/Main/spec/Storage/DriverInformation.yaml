@@ -255,7 +255,8 @@ DriverInformation:
     updateDailyAndWeeklyCancellationRateBlockingCooldown:
       kvFunction: updateOneWithKV
       params: [dailyCancellationRateBlockingCooldown, weeklyCancellationRateBlockingCooldown]
-      where: driverId    updatePayoutRegAmountRefunded:
+      where: driverId
+    updatePayoutRegAmountRefunded:
       kvFunction: updateOneWithKV
       params: [payoutRegAmountRefunded]
       where: driverId

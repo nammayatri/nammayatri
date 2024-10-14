@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -5,6 +6,7 @@ module API.Types.ProviderPlatform.Management.DriverReferral where
 
 import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -68,8 +70,10 @@ mkDriverReferralAPIs driverReferralClient = (DriverReferralAPIs {..})
   where
     postDriverReferralReferralOpsPassword :<|> postDriverReferralLinkReferral = driverReferralClient
 
-data DriverReferralEndpointDSL
-  = PostDriverReferralReferralOpsPasswordEndpoint
-  | PostDriverReferralLinkReferralEndpoint
+data DriverReferralUserActionType
+  = POST_DRIVER_REFERRAL_REFERRAL_OPS_PASSWORD
+  | POST_DRIVER_REFERRAL_LINK_REFERRAL
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(Data.Singletons.TH.genSingletons [''DriverReferralUserActionType])

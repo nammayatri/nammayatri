@@ -29,7 +29,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (encodeToText, throwError)
+import Kernel.Utils.Common (encodeToText, logError, throwError)
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Transaction as QT
 import Tools.Auth
@@ -114,6 +114,8 @@ withResponseTransactionStoring' ::
   m response ->
   m response
 withResponseTransactionStoring' responseModifier transaction clientCall = handle errorHandler $ do
+  when (transaction.endpoint == DT.UnknownEndpoint) $
+    logError $ "Unknown endpoint: transactionId: " <> transaction.id.getId
   response <- clientCall
   QT.create $ transaction{response = encodeToText <$> responseModifier response}
   pure response

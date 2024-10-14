@@ -22,21 +22,9 @@ module API.ProviderPlatform.DynamicOfferDriver
   )
 where
 
-import qualified API.Action.ProviderPlatform.Fleet.Driver as FleetDriverDSL
-import qualified API.Action.ProviderPlatform.Management.Booking as ManagementBookingDSL
-import qualified API.Action.ProviderPlatform.Management.Driver as ManagementDriverDSL
-import qualified API.Action.ProviderPlatform.Management.DriverCoins as ManagementDriverCoinsDSL
-import qualified API.Action.ProviderPlatform.Management.DriverGoHome as ManagementDriverGoHomeDSL
-import qualified API.Action.ProviderPlatform.Management.DriverReferral as ManagementDriverReferralDSL
-import qualified API.Action.ProviderPlatform.Management.DriverRegistration as ManagementDriverRegistrationDSL
-import qualified API.Action.ProviderPlatform.Management.Merchant as ManagementMerchantDSL
-import qualified API.Action.ProviderPlatform.Management.Message as ManagementMessageDSL
-import qualified API.Action.ProviderPlatform.Management.NammaTag as NammaTagDSL
-import qualified API.Action.ProviderPlatform.Management.Payout as ManagementPayoutDSL
-import qualified API.Action.ProviderPlatform.Management.Revenue as ManagementRevenueDSL
-import qualified API.Action.ProviderPlatform.Management.Ride as ManagementRideDSL
-import qualified API.Action.ProviderPlatform.Management.System as SystemDSL
-import qualified API.Action.ProviderPlatform.RideBooking.Driver as RideBookingDriverDSL
+import qualified API.Action.ProviderPlatform.Fleet as FleetDSL
+import qualified API.Action.ProviderPlatform.Management as ManagementDSL
+import qualified API.Action.ProviderPlatform.RideBooking as RideBookingDSL
 import qualified API.ProviderPlatform.DynamicOfferDriver.CacAuth as CacAuth
 import qualified API.ProviderPlatform.DynamicOfferDriver.Driver as Driver
 import qualified API.ProviderPlatform.DynamicOfferDriver.Driver.Registration as DriverRegistration
@@ -77,9 +65,9 @@ type API' =
     :<|> Volunteer.API
     :<|> Overlay.API
     :<|> Maps.API
-    :<|> FleetAPI
-    :<|> ManagementAPI
-    :<|> RideBookingAPI
+    :<|> FleetDSL.API
+    :<|> ManagementDSL.API
+    :<|> RideBookingDSL.API
 
 -- TODO: Deprecated, Remove after successful deployment
 handler :: FlowServer API
@@ -93,9 +81,9 @@ handler merchantId = do
     :<|> Volunteer.handler merchantId city
     :<|> Overlay.handler merchantId city
     :<|> Maps.handler merchantId city
-    :<|> fleetHandler merchantId city
-    :<|> managementHandler merchantId city
-    :<|> rideBookingHandler merchantId city
+    :<|> FleetDSL.handler merchantId city
+    :<|> ManagementDSL.handler merchantId city
+    :<|> RideBookingDSL.handler merchantId city
   where
     getCity = \case
       "NAMMA_YATRI_PARTNER" -> City.Bangalore
@@ -113,53 +101,9 @@ handlerV2 merchantId city =
     :<|> Volunteer.handler merchantId city
     :<|> Overlay.handler merchantId city
     :<|> Maps.handler merchantId city
-    :<|> fleetHandler merchantId city
-    :<|> managementHandler merchantId city
-    :<|> rideBookingHandler merchantId city
+    :<|> FleetDSL.handler merchantId city
+    :<|> ManagementDSL.handler merchantId city
+    :<|> RideBookingDSL.handler merchantId city
 
 handlerV3 :: FlowServer CacAPI
 handlerV3 = CacAuth.handler
-
-type FleetAPI =
-  FleetDriverDSL.API
-
-fleetHandler :: ShortId DM.Merchant -> City.City -> FlowServer FleetAPI
-fleetHandler =
-  FleetDriverDSL.handler
-
-type ManagementAPI =
-  ManagementBookingDSL.API
-    :<|> ManagementDriverDSL.API
-    :<|> ManagementDriverCoinsDSL.API
-    :<|> ManagementDriverGoHomeDSL.API
-    :<|> ManagementDriverReferralDSL.API
-    :<|> ManagementDriverRegistrationDSL.API
-    :<|> ManagementMerchantDSL.API
-    :<|> ManagementMessageDSL.API
-    :<|> ManagementRevenueDSL.API
-    :<|> ManagementRideDSL.API
-    :<|> NammaTagDSL.API
-    :<|> ManagementPayoutDSL.API
-    :<|> SystemDSL.API
-
-managementHandler :: ShortId DM.Merchant -> City.City -> FlowServer ManagementAPI
-managementHandler merchantId city =
-  ManagementBookingDSL.handler merchantId city
-    :<|> ManagementDriverDSL.handler merchantId city
-    :<|> ManagementDriverCoinsDSL.handler merchantId city
-    :<|> ManagementDriverGoHomeDSL.handler merchantId city
-    :<|> ManagementDriverReferralDSL.handler merchantId city
-    :<|> ManagementDriverRegistrationDSL.handler merchantId city
-    :<|> ManagementMerchantDSL.handler merchantId city
-    :<|> ManagementMessageDSL.handler merchantId city
-    :<|> ManagementRevenueDSL.handler merchantId city
-    :<|> ManagementRideDSL.handler merchantId city
-    :<|> NammaTagDSL.handler merchantId city
-    :<|> ManagementPayoutDSL.handler merchantId city
-    :<|> SystemDSL.handler merchantId city
-
-type RideBookingAPI =
-  RideBookingDriverDSL.API
-
-rideBookingHandler :: ShortId DM.Merchant -> City.City -> FlowServer RideBookingAPI
-rideBookingHandler = RideBookingDriverDSL.handler

@@ -5,6 +5,7 @@ imports:
 module: PriceBreakup
 types:
   QuoteBreakupRes:
+    recordType: NewType
     quoteBreakup: "[QuoteBreakupAPIEntity]"
 apis:
   - GET:

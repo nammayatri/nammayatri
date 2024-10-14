@@ -14,14 +14,14 @@ let outputPath =
           , _servantApi = defaultOutput._servantApi ++ "/" ++ folderName
           , _servantApiDashboard =
               defaultOutput._servantApiDashboard ++ "/" ++ folderName
+          , _servantApiClient =
+              defaultOutput._servantApiClient ++ "/" ++ folderName
           }
 
-let clientFunction =
-      Some
-        "ProviderPlatformClient.DynamicOfferDriver.Operations.callDriverOfferBPPOperations"
+let serverName = Some "DRIVER_OFFER_BPP_MANAGEMENT"
 
 in      common.defaultConfigs
     //  { _output = outputPath
-        , _clientFunction = clientFunction
+        , _serverName = serverName
         , _folderName = Some folderName
         }

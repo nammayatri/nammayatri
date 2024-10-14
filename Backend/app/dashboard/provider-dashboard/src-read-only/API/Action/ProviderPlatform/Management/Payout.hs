@@ -7,6 +7,7 @@ module API.Action.ProviderPlatform.Management.Payout
   )
 where
 
+import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.Payout
 import qualified Dashboard.Common
 import qualified Domain.Action.ProviderPlatform.Management.Payout
@@ -27,19 +28,61 @@ type API = ("payout" :> (GetPayoutPayoutReferralHistory :<|> GetPayoutPayoutHist
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
 handler merchantId city = getPayoutPayoutReferralHistory merchantId city :<|> getPayoutPayoutHistory merchantId city :<|> postPayoutPayoutVerifyFraudStatus merchantId city :<|> postPayoutPayoutRetryFailed merchantId city :<|> postPayoutPayoutRetryAllWithStatus merchantId city :<|> postPayoutPayoutPendingPayout merchantId city :<|> postPayoutPayoutDeleteVPA merchantId city
 
-type GetPayoutPayoutReferralHistory = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'PAYOUT_MANAGEMENT :> API.Types.ProviderPlatform.Management.Payout.GetPayoutPayoutReferralHistory)
+type GetPayoutPayoutReferralHistory =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.GET_PAYOUT_PAYOUT_REFERRAL_HISTORY)
+      :> API.Types.ProviderPlatform.Management.Payout.GetPayoutPayoutReferralHistory
+  )
 
-type GetPayoutPayoutHistory = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'PAYOUT_MANAGEMENT :> API.Types.ProviderPlatform.Management.Payout.GetPayoutPayoutHistory)
+type GetPayoutPayoutHistory =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.GET_PAYOUT_PAYOUT_HISTORY)
+      :> API.Types.ProviderPlatform.Management.Payout.GetPayoutPayoutHistory
+  )
 
-type PostPayoutPayoutVerifyFraudStatus = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'PAYOUT_MANAGEMENT :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutVerifyFraudStatus)
+type PostPayoutPayoutVerifyFraudStatus =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_VERIFY_FRAUD_STATUS)
+      :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutVerifyFraudStatus
+  )
 
-type PostPayoutPayoutRetryFailed = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'PAYOUT_MANAGEMENT :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutRetryFailed)
+type PostPayoutPayoutRetryFailed =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_RETRY_FAILED)
+      :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutRetryFailed
+  )
 
-type PostPayoutPayoutRetryAllWithStatus = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'PAYOUT_MANAGEMENT :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutRetryAllWithStatus)
+type PostPayoutPayoutRetryAllWithStatus =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_RETRY_ALL_WITH_STATUS)
+      :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutRetryAllWithStatus
+  )
 
-type PostPayoutPayoutPendingPayout = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'PAYOUT_MANAGEMENT :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutPendingPayout)
+type PostPayoutPayoutPendingPayout =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_PENDING_PAYOUT)
+      :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutPendingPayout
+  )
 
-type PostPayoutPayoutDeleteVPA = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'PAYOUT_MANAGEMENT :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutDeleteVPA)
+type PostPayoutPayoutDeleteVPA =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.PAYOUT / 'API.Types.ProviderPlatform.Management.Payout.POST_PAYOUT_PAYOUT_DELETE_VPA)
+      :> API.Types.ProviderPlatform.Management.Payout.PostPayoutPayoutDeleteVPA
+  )
 
 getPayoutPayoutReferralHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Payout.PayoutReferralHistoryRes)
 getPayoutPayoutReferralHistory merchantShortId opCity apiTokenInfo areActivatedRidesOnly customerPhoneNo driverId driverPhoneNo from limit offset to = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Payout.getPayoutPayoutReferralHistory merchantShortId opCity apiTokenInfo areActivatedRidesOnly customerPhoneNo driverId driverPhoneNo from limit offset to

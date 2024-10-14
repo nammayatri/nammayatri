@@ -7,6 +7,7 @@ module API.Action.ProviderPlatform.Management.DriverGoHome
   )
 where
 
+import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.DriverGoHome
 import qualified Dashboard.Common
 import qualified Domain.Action.ProviderPlatform.Management.DriverGoHome
@@ -29,28 +30,34 @@ handler merchantId city = getDriverGoHomeGetHomeLocation merchantId city :<|> po
 type GetDriverGoHomeGetHomeLocation =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
-      'GET_DRIVER_HOME_LOCATION
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_GO_HOME / 'API.Types.ProviderPlatform.Management.DriverGoHome.GET_DRIVER_GO_HOME_GET_HOME_LOCATION)
       :> API.Types.ProviderPlatform.Management.DriverGoHome.GetDriverGoHomeGetHomeLocation
   )
 
 type PostDriverGoHomeUpdateHomeLocation =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
-      'UPDATE_DRIVER_HOME_LOCATION
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_GO_HOME / 'API.Types.ProviderPlatform.Management.DriverGoHome.POST_DRIVER_GO_HOME_UPDATE_HOME_LOCATION)
       :> API.Types.ProviderPlatform.Management.DriverGoHome.PostDriverGoHomeUpdateHomeLocation
   )
 
 type PostDriverGoHomeIncrementGoToCount =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
-      'INCREMENT_DRIVER_GO_TO_COUNT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_GO_HOME / 'API.Types.ProviderPlatform.Management.DriverGoHome.POST_DRIVER_GO_HOME_INCREMENT_GO_TO_COUNT)
       :> API.Types.ProviderPlatform.Management.DriverGoHome.PostDriverGoHomeIncrementGoToCount
   )
 
-type GetDriverGoHomeGetGoHomeInfo = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'GET_DRIVER_GO_HOME_INFO :> API.Types.ProviderPlatform.Management.DriverGoHome.GetDriverGoHomeGetGoHomeInfo)
+type GetDriverGoHomeGetGoHomeInfo =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_GO_HOME / 'API.Types.ProviderPlatform.Management.DriverGoHome.GET_DRIVER_GO_HOME_GET_GO_HOME_INFO)
+      :> API.Types.ProviderPlatform.Management.DriverGoHome.GetDriverGoHomeGetGoHomeInfo
+  )
 
 getDriverGoHomeGetHomeLocation :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverGoHome.GetHomeLocationsRes)
 getDriverGoHomeGetHomeLocation merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.DriverGoHome.getDriverGoHomeGetHomeLocation merchantShortId opCity apiTokenInfo driverId

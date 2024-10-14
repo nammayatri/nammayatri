@@ -7,6 +7,7 @@ module API.Action.RiderPlatform.Management.Merchant
   )
 where
 
+import qualified API.Types.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.Merchant
 import qualified Dashboard.Common.Merchant
 import qualified Domain.Action.RiderPlatform.Management.Merchant
@@ -28,61 +29,91 @@ type API = ("merchant" :> (PostMerchantUpdate :<|> GetMerchantServiceUsageConfig
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
 handler merchantId city = postMerchantUpdate merchantId city :<|> getMerchantServiceUsageConfig merchantId city :<|> postMerchantServiceConfigMapsUpdate merchantId city :<|> postMerchantServiceUsageConfigMapsUpdate merchantId city :<|> postMerchantServiceConfigSmsUpdate merchantId city :<|> postMerchantServiceUsageConfigSmsUpdate merchantId city :<|> postMerchantConfigOperatingCityCreate merchantId city :<|> postMerchantSpecialLocationUpsert merchantId city :<|> deleteMerchantSpecialLocationDelete merchantId city :<|> postMerchantSpecialLocationGatesUpsert merchantId city :<|> deleteMerchantSpecialLocationGatesDelete merchantId city
 
-type PostMerchantUpdate = (ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'MERCHANT_UPDATE :> API.Types.RiderPlatform.Management.Merchant.PostMerchantUpdate)
+type PostMerchantUpdate =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MERCHANT / 'API.Types.RiderPlatform.Management.Merchant.POST_MERCHANT_UPDATE)
+      :> API.Types.RiderPlatform.Management.Merchant.PostMerchantUpdate
+  )
 
-type GetMerchantServiceUsageConfig = (ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'SERVICE_USAGE_CONFIG :> API.Types.RiderPlatform.Management.Merchant.GetMerchantServiceUsageConfig)
+type GetMerchantServiceUsageConfig =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MERCHANT / 'API.Types.RiderPlatform.Management.Merchant.GET_MERCHANT_SERVICE_USAGE_CONFIG)
+      :> API.Types.RiderPlatform.Management.Merchant.GetMerchantServiceUsageConfig
+  )
 
 type PostMerchantServiceConfigMapsUpdate =
   ( ApiAuth
       'APP_BACKEND_MANAGEMENT
-      'MERCHANT
-      'MAPS_SERVICE_CONFIG_UPDATE
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MERCHANT / 'API.Types.RiderPlatform.Management.Merchant.POST_MERCHANT_SERVICE_CONFIG_MAPS_UPDATE)
       :> API.Types.RiderPlatform.Management.Merchant.PostMerchantServiceConfigMapsUpdate
   )
 
 type PostMerchantServiceUsageConfigMapsUpdate =
   ( ApiAuth
       'APP_BACKEND_MANAGEMENT
-      'MERCHANT
-      'MAPS_SERVICE_USAGE_CONFIG_UPDATE
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MERCHANT / 'API.Types.RiderPlatform.Management.Merchant.POST_MERCHANT_SERVICE_USAGE_CONFIG_MAPS_UPDATE)
       :> API.Types.RiderPlatform.Management.Merchant.PostMerchantServiceUsageConfigMapsUpdate
   )
 
-type PostMerchantServiceConfigSmsUpdate = (ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'SMS_SERVICE_CONFIG_UPDATE :> API.Types.RiderPlatform.Management.Merchant.PostMerchantServiceConfigSmsUpdate)
+type PostMerchantServiceConfigSmsUpdate =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MERCHANT / 'API.Types.RiderPlatform.Management.Merchant.POST_MERCHANT_SERVICE_CONFIG_SMS_UPDATE)
+      :> API.Types.RiderPlatform.Management.Merchant.PostMerchantServiceConfigSmsUpdate
+  )
 
 type PostMerchantServiceUsageConfigSmsUpdate =
   ( ApiAuth
       'APP_BACKEND_MANAGEMENT
-      'MERCHANT
-      'SMS_SERVICE_USAGE_CONFIG_UPDATE
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MERCHANT / 'API.Types.RiderPlatform.Management.Merchant.POST_MERCHANT_SERVICE_USAGE_CONFIG_SMS_UPDATE)
       :> API.Types.RiderPlatform.Management.Merchant.PostMerchantServiceUsageConfigSmsUpdate
   )
 
 type PostMerchantConfigOperatingCityCreate =
   ( ApiAuth
       'APP_BACKEND_MANAGEMENT
-      'MERCHANT
-      'CREATE_MERCHANT_OPERATING_CITY
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MERCHANT / 'API.Types.RiderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_OPERATING_CITY_CREATE)
       :> API.Types.RiderPlatform.Management.Merchant.PostMerchantConfigOperatingCityCreate
   )
 
-type PostMerchantSpecialLocationUpsert = (ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'UPSERT_SPECIAL_LOCATION :> API.Types.RiderPlatform.Management.Merchant.PostMerchantSpecialLocationUpsert)
+type PostMerchantSpecialLocationUpsert =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MERCHANT / 'API.Types.RiderPlatform.Management.Merchant.POST_MERCHANT_SPECIAL_LOCATION_UPSERT)
+      :> API.Types.RiderPlatform.Management.Merchant.PostMerchantSpecialLocationUpsert
+  )
 
-type DeleteMerchantSpecialLocationDelete = (ApiAuth 'APP_BACKEND_MANAGEMENT 'MERCHANT 'DELETE_SPECIAL_LOCATION :> API.Types.RiderPlatform.Management.Merchant.DeleteMerchantSpecialLocationDelete)
+type DeleteMerchantSpecialLocationDelete =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MERCHANT / 'API.Types.RiderPlatform.Management.Merchant.DELETE_MERCHANT_SPECIAL_LOCATION_DELETE)
+      :> API.Types.RiderPlatform.Management.Merchant.DeleteMerchantSpecialLocationDelete
+  )
 
 type PostMerchantSpecialLocationGatesUpsert =
   ( ApiAuth
       'APP_BACKEND_MANAGEMENT
-      'MERCHANT
-      'UPSERT_SPECIAL_LOCATION_GATE
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MERCHANT / 'API.Types.RiderPlatform.Management.Merchant.POST_MERCHANT_SPECIAL_LOCATION_GATES_UPSERT)
       :> API.Types.RiderPlatform.Management.Merchant.PostMerchantSpecialLocationGatesUpsert
   )
 
 type DeleteMerchantSpecialLocationGatesDelete =
   ( ApiAuth
       'APP_BACKEND_MANAGEMENT
-      'MERCHANT
-      'DELETE_SPECIAL_LOCATION_GATE
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MERCHANT / 'API.Types.RiderPlatform.Management.Merchant.DELETE_MERCHANT_SPECIAL_LOCATION_GATES_DELETE)
       :> API.Types.RiderPlatform.Management.Merchant.DeleteMerchantSpecialLocationGatesDelete
   )
 
