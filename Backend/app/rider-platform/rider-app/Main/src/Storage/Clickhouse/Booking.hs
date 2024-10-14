@@ -99,7 +99,7 @@ findCountByRiderIdAndStatus ::
   Id DP.Person ->
   DB.BookingStatus ->
   UTCTime ->
-  m Int
+  m (Maybe Int)
 findCountByRiderIdAndStatus riderId status createdAt = do
   res <-
     CH.findAll $
@@ -111,7 +111,7 @@ findCountByRiderIdAndStatus riderId status createdAt = do
                 CH.&&. booking.createdAt >=. createdAt
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)
-  pure $ fromMaybe 0 (listToMaybe res)
+  pure (listToMaybe res)
 
 findAllCancelledBookingIdsByRider ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
