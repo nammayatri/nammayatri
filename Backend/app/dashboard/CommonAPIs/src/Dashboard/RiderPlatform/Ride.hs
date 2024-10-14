@@ -246,13 +246,13 @@ data LocationAddress = LocationAddress
 --   deriving stock (Show, Generic)
 --   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
--- data BookingStatus = UPCOMING | UPCOMING_6HRS | ONGOING | ONGOING_6HRS | RCOMPLETED | RCANCELLED
---   deriving stock (Show, Read, Generic)
---   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+data BookingStatus = UPCOMING | UPCOMING_6HRS | ONGOING | ONGOING_6HRS | RCOMPLETED | RCANCELLED
+  deriving stock (Show, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
--- derivePersistField "BookingStatus"
+derivePersistField "BookingStatus"
 
--- $(mkHttpInstancesForEnum ''BookingStatus)
+$(mkHttpInstancesForEnum ''BookingStatus)
 
 ---------------------------------------------------------
 -- Trip Route--------------------------------------

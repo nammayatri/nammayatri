@@ -25,6 +25,7 @@ module Domain.Action.Dashboard.Ride
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride as Common
 import qualified Beckn.ACL.Common as Common
 import Beckn.ACL.Status
 import qualified BecknV2.OnDemand.Utils.Common as Utils
@@ -55,6 +56,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (count, isNothing, on)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -205,6 +207,7 @@ castSosStatus = \case
 
 getRideList ::
   ShortId DM.Merchant ->
+  Context.City ->
   Maybe Int ->
   Maybe Int ->
   Maybe Common.BookingStatus ->
@@ -214,7 +217,7 @@ getRideList ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   Flow Common.RideListRes
-getRideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo = do
+getRideList merchantShortId _ mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo = do
   merchant <- findMerchantByShortId merchantShortId
   let limit_ = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset_ = fromMaybe 0 mbOffset
