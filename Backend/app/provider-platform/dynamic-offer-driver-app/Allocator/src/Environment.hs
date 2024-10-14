@@ -108,7 +108,9 @@ data HandlerEnv = HandlerEnv
     modelNamesHashMap :: HMS.HashMap Text Text,
     searchRequestExpirationSeconds :: NominalDiffTime,
     s3Env :: S3Env Flow,
-    passettoContext :: PassettoContext
+    passettoContext :: PassettoContext,
+    serviceClickhouseCfg :: ClickhouseCfg,
+    kafkaClickhouseCfg :: ClickhouseCfg
   }
   deriving (Generic)
 
@@ -144,6 +146,7 @@ buildHandlerEnv HandlerCfg {..} = do
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
   let s3Env = buildS3Env s3Config
   let searchRequestExpirationSeconds' = fromIntegral appCfg.searchRequestExpirationSeconds
+      serviceClickhouseCfg = driverClickhouseCfg
   return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, searchRequestExpirationSeconds = searchRequestExpirationSeconds', ..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()

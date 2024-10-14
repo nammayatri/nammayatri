@@ -30,6 +30,7 @@ type ChakraJobs m r c =
     EsqDBReplicaFlow m r,
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasField "serviceClickhouseEnv" r ClickhouseEnv,
+    HasField "serviceClickhouseCfg" r ClickhouseCfg,
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,

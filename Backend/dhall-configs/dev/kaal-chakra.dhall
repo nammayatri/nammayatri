@@ -51,6 +51,7 @@ let driverClickhouseCfg =
       , password = sec.clickHousePassword
       , database = "atlas_driver_offer_bpp"
       , tls = False
+      , retryInterval = [ +0 ]
       }
 
 let kafkaProducerCfg =

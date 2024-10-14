@@ -255,6 +255,7 @@ let kafkaClickhouseCfg =
       , password = sec.clickHousePassword
       , database = "atlas_kafka"
       , tls = False
+      , retryInterval = [ +0 ]
       }
 
 let riderClickhouseCfg =
@@ -264,6 +265,7 @@ let riderClickhouseCfg =
       , password = sec.clickHousePassword
       , database = "atlas_app"
       , tls = False
+      , retryInterval = [ +0 ]
       }
 
 in  { esqDBCfg
