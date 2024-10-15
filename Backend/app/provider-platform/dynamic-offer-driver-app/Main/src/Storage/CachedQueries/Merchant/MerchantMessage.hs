@@ -53,7 +53,7 @@ makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:MerchantMessage:Merchan
 cacheMerchantMessage :: CacheFlow m r => MerchantMessage -> m ()
 cacheMerchantMessage merchantMessage = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantOpCityIdAndMessageKey merchantMessage.merchantOperatingCityId merchantMessage.messageKey Nothing
+  let idKey = makeMerchantOpCityIdAndMessageKey merchantMessage.merchantOperatingCityId merchantMessage.messageKey merchantMessage.vehicleCategory
   Hedis.setExp idKey (coerce @MerchantMessage @(MerchantMessageD 'Unsafe) merchantMessage) expTime
 
 makeMerchantOpCityIdAndMessageKey :: Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> Text
@@ -69,7 +69,9 @@ findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey vehicleCategory
         Just a -> do
           cacheMerchantMessage a
           return $ Just a
-        Nothing -> findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey Nothing
+        Nothing -> case vehicleCategory of
+          Nothing -> return Nothing
+          _ -> findByMerchantOpCityIdAndMessageKeyVehicleCategory id messageKey Nothing
 
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> MessageKey -> Maybe DVC.VehicleCategory -> m ()

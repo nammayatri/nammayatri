@@ -55,7 +55,15 @@ findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory :: (CacheFlow m r, EsqDBFl
 findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory id pnKey language udf1 vehicleCategory =
   Hedis.safeGet (makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1 vehicleCategory) >>= \case
     Just a -> return . Just $ coerce @(OverlayD 'Unsafe) @Overlay a
-    Nothing -> flip whenJust cacheOverlay /=<< Queries.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory id pnKey language udf1 vehicleCategory
+    Nothing -> do
+      res <- Queries.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory id pnKey language udf1 vehicleCategory
+      case res of
+        Just a -> do
+          cacheOverlay a
+          return $ Just a
+        Nothing -> case vehicleCategory of
+          Nothing -> return Nothing
+          _ -> findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory id pnKey language udf1 Nothing
 
 cacheOverlay :: CacheFlow m r => Overlay -> m ()
 cacheOverlay pn = do
