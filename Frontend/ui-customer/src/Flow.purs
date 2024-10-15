@@ -6891,8 +6891,12 @@ rideSummaryScreenFlow = do
           void $ pure $ toast "Failed To Cancel Ride"
           rideSummaryScreenFlow
     GO_TO_RIDE_REQUEST -> homeScreenFlow
-    NOTIFICATION_LISTENER notification notificationBody -> do                     
-      fcmHandler notification newState.homeScreen notificationBody
+    NOTIFICATION_LISTENER notification notificationBody -> do   
+      if notification == "DRIVER_ASSIGNMENT" then do 
+        let state = newState.homeScreen
+        updateUserInfoToState state
+        currentFlowStatus false
+      else fcmHandler notification newState.homeScreen notificationBody
     REFRESH_RIDE_SUMMARY_SCREEN bookingId -> do 
       modifyScreenState $ RideSummaryScreenStateType (\rideSummaryScreen -> RideSummaryScreenData.initData{data{fromScreen = (Screen.getScreen Screen.MY_RIDES_SCREEN),bookingId = bookingId}})
       rideSummaryScreenFlow 
