@@ -35,7 +35,7 @@ type API =
            :<|> Common.ShareRideInfoByShortIdAPI
            :<|> Common.TripRouteAPI
            :<|> Common.PickupRouteAPI
-           :<|> Common.RideInfoAPI
+           --      :<|> Common.RideInfoAPI
            :<|> MultipleRideCancelAPI
            :<|> Common.MultipleRideSyncAPI
            :<|> Common.TicketRideListAPI
@@ -54,7 +54,7 @@ handler merchantId =
     :<|> shareRideInfoByShortId merchantId
     :<|> callGetTripRoute merchantId
     :<|> callGetPickupRoute merchantId
-    :<|> callRideInfo merchantId
+    --  :<|> callRideInfo merchantId
     :<|> multipleRideCancel -- FIXME merchantId ?
     :<|> multipleRideSync merchantId
     :<|> ticketRideList merchantId
@@ -82,13 +82,13 @@ callGetPickupRoute ::
   FlowHandler Maps.GetRoutesResp
 callGetPickupRoute merchantShortId rideId currLocationLat currLocationLon = withFlowHandlerAPI $ mkGetLocation merchantShortId rideId currLocationLat currLocationLon True
 
-callRideInfo ::
-  ShortId DM.Merchant ->
-  Id Common.Ride ->
-  FlowHandler Common.RideInfoRes
-callRideInfo merchantShortId rideId = withFlowHandlerAPI $ do
-  merchant <- findMerchantByShortId merchantShortId
-  DRide.rideInfo merchant.id rideId
+-- callRideInfo ::
+--   ShortId DM.Merchant ->
+--   Id Common.Ride ->
+--   FlowHandler Common.RideInfoRes
+-- callRideInfo merchantShortId rideId = withFlowHandlerAPI $ do
+--   merchant <- findMerchantByShortId merchantShortId
+--   DRide.rideInfo merchant.id rideId
 
 multipleRideCancel ::
   DRide.MultipleRideCancelReq ->

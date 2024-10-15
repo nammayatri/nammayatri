@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Action.RiderPlatform.Management.Ride (getRideList) where
+module Domain.Action.RiderPlatform.Management.Ride
+  ( getRideList,
+    getRideRideinfo,
+  )
+where
 
 import qualified API.Types.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.Ride
@@ -35,3 +39,13 @@ getRideList ::
 getRideList merchantShortId opCity apiTokenInfo limit offset bookingStatus rideShortId customerPhoneNo driverPhoneNo from to = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   RiderPlatformClient.RiderApp.Operations.callRiderAppOperations checkedMerchantId opCity (.rideDSL.getRideList) limit offset bookingStatus rideShortId customerPhoneNo driverPhoneNo from to
+
+getRideRideinfo ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  Kernel.Types.Id.Id Dashboard.Common.Ride ->
+  Environment.Flow API.Types.RiderPlatform.Management.Ride.RideInfoRes
+getRideRideinfo merchantShortId opCity apiTokenInfo rideId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  RiderPlatformClient.RiderApp.Operations.callRiderAppOperations checkedMerchantId opCity (.rideDSL.getRideRideinfo) rideId

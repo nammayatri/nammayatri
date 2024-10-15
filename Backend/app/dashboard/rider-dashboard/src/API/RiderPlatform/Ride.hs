@@ -47,15 +47,15 @@ type API =
            :<|> Common.ShareRideInfoByShortIdAPI
            :<|> Common.TripRouteAPI
            :<|> Common.PickupRouteAPI
-           :<|> RideInfoAPI
+           --   :<|> RideInfoAPI
            :<|> MultipleRideCancelAPI
            :<|> MultipleRideSyncAPI
            :<|> TicketRideListAPI
        )
 
-type RideInfoAPI =
-  ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'RIDE_INFO_CUSTOMER
-    :> Common.RideInfoAPI
+-- type RideInfoAPI =
+--   ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'RIDE_INFO_CUSTOMER
+--     :> Common.RideInfoAPI
 
 type MultipleRideCancelAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'MULTIPLE_RIDE_CANCEL
@@ -75,7 +75,7 @@ handler merchantId city =
     :<|> shareRideInfoByShortId merchantId city
     :<|> tripRoute merchantId city
     :<|> pickupRoute merchantId city
-    :<|> rideInfo merchantId city
+    --   :<|> rideInfo merchantId city
     :<|> multipleRideCancel merchantId city
     :<|> multipleRideSync merchantId city
     :<|> ticketRideList merchantId city
@@ -139,15 +139,15 @@ pickupRoute merchantShortId opCity rideId pickupLocationLat pickupLocationLon = 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
   Client.callRiderAppOperations checkedMerchantId opCity (.rides.pickupRoute) rideId pickupLocationLat pickupLocationLon
 
-rideInfo ::
-  ShortId DM.Merchant ->
-  City.City ->
-  ApiTokenInfo ->
-  Id Common.Ride ->
-  FlowHandler Common.RideInfoRes
-rideInfo merchantShortId opCity apiTokenInfo rideId = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity opCity
-  Client.callRiderAppOperations checkedMerchantId opCity (.rides.rideInfo) rideId
+-- rideInfo ::
+--   ShortId DM.Merchant ->
+--   City.City ->
+--   ApiTokenInfo ->
+--   Id Common.Ride ->
+--   FlowHandler Common.RideInfoRes
+-- rideInfo merchantShortId opCity apiTokenInfo rideId = withFlowHandlerAPI' $ do
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity opCity
+--   Client.callRiderAppOperations checkedMerchantId opCity (.rides.rideInfo) rideId
 
 multipleRideCancel :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Domain.MultipleRideCancelReq -> FlowHandler APISuccess
 multipleRideCancel merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do

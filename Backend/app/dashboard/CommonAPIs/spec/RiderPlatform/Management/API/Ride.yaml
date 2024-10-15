@@ -1,14 +1,24 @@
 imports:
+  Booking: Dashboard.Common
   Ride: Dashboard.Common
   Summary: Dashboard.Common
+  Distance: Kernel.Types.Distance
+  HighPrecMeters : Kernel.Types.Distance
   ShortId: Kernel.Types.Id
+  Money: Kernel.Types.Price
+  PriceAPIEntity: Kernel.Types.Price
+  HighPrecMoney: Kernel.Types.Price
+  Seconds: Kernel.Types.Time
   UTCTime: Kernel.Prelude
   FareProductType: Domain.Types
   TripCategory: Domain.Types
   BookingStatus: Dashboard.RiderPlatform.Ride
   Location: Dashboard.RiderPlatform.Ride
-
-
+  RideStatus: Dashboard.RiderPlatform.Ride
+  VehicleVariant: Domain.Types.VehicleVariant
+  CancellationSource: Dashboard.RiderPlatform.Ride
+  EstimateBreakup: Dashboard.RiderPlatform.Ride
+  FareBreakup: Dashboard.RiderPlatform.Ride
 
 module: Ride
 
@@ -27,6 +37,15 @@ apis:
         - to: UTCTime
       response:
         type: RideListRes
+  - GET:
+      endpoint: /rideinfo/{rideId}
+      auth: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS RIDE_INFO_CUSTOMER
+      params:
+        rideId: Id Ride
+      response:
+        type: RideInfoRes
+
+
 
 
 types:
@@ -46,11 +65,58 @@ types:
     - bookingStatus: BookingStatus
     - nextStopLocation: Maybe Location
     - rideScheduledAt: UTCTime
-    - fareProductType: FareProductType # TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+    - fareProductType: FareProductType # TODO: For backward compatibility  please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
     - tripCategory: TripCategory
     - endOtp: Maybe Text
+  RideInfoRes:
+    - rideId: Id Ride
+    - bookingId: Id Booking
+    - rideStatus: RideStatus
+    - customerName: Maybe Text
+    - customerPhoneNo: Maybe Text
+    - rideOtp: Text
+    - customerPickupLocation: Location
+    - customerDropLocation: Maybe Location
+    - driverName: Text
+    - driverPhoneNo: Maybe Text
+    - driverRegisteredAt: Maybe UTCTime
+    - vehicleNo: Text
+    - vehicleModel: Text
+    - vehicleVariant: VehicleVariant
+    - vehicleServiceTierName: Maybe Text
+    - rideBookingTime: UTCTime
+    - actualDriverArrivalTime: Maybe UTCTime
+    - rideStartTime: Maybe UTCTime
+    - rideEndTime: Maybe UTCTime
+    - rideDistanceEstimated: Maybe HighPrecMeters
+    - rideDistanceActual: Maybe HighPrecMeters
+    - chargeableDistance: Maybe HighPrecMeters
+    - rideDistanceEstimatedWithUnit: Maybe Distance
+    - rideDistanceActualWithUnit: Maybe Distance
+    - chargeableDistanceWithUnit: Maybe Distance
+    - estimatedFare: Money
+    - actualFare: Maybe Money
+    - estimatedFareWithCurrency: PriceAPIEntity
+    - actualFareWithCurrency: Maybe PriceAPIEntity
+    - estimatedRideDuration: Maybe Seconds
+    - rideDuration: Maybe Seconds
+    - cancelledTime: Maybe UTCTime
+    - cancelledBy: Maybe CancellationSource
+    - nextStopLocation: Maybe Location
+    - rideScheduledAt: UTCTime
+    - fareProductType: FareProductType  # TODO: Deprecated  please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+    - tripCategory: TripCategory
+    - endOtp: Maybe Text
+    - estimateFareBP: Maybe [EstimateBreakup]
+    - merchantOperatingCityId: Maybe Text
+    - estimatedDistance: Maybe HighPrecMeters
+    - computedPrice: Maybe HighPrecMoney
+    - fareBreakup: [FareBreakup]
+    - rideCreatedAt: UTCTime
+
+
   # BookingStatus:
-  #   - enum: UPCOMING, UPCOMING_6HRS, ONGOING, ONGOING_6HRS, RCOMPLETED, RCANCELLED
+  #   - enum: UPCOMING  UPCOMING_6HRS  ONGOING  ONGOING_6HRS  RCOMPLETED  RCANCELLED
   # Location:
   #   - id: Id Location
   #   - lat: Double

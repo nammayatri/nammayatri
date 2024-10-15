@@ -53,11 +53,6 @@ type ShareRideInfoByShortIdAPI =
     :> "rideInfo"
     :> Get '[JSON] ShareRideInfoRes
 
-type RideInfoAPI =
-  "rideinfo"
-    :> Capture "rideId" (Id DP.Ride)
-    :> Get '[JSON] RideInfoRes
-
 data ShareRideInfoRes = ShareRideInfoRes
   { id :: Id Ride,
     bookingId :: Id Booking,
@@ -88,53 +83,53 @@ data ShareRideInfoRes = ShareRideInfoRes
   }
   deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
 
-data RideInfoRes = RideInfoRes
-  { rideId :: Id Ride,
-    bookingId :: Id Booking,
-    rideStatus :: RideStatus,
-    customerName :: Maybe Text,
-    customerPhoneNo :: Maybe Text,
-    rideOtp :: Text,
-    customerPickupLocation :: Location,
-    customerDropLocation :: Maybe Location,
-    driverName :: Text,
-    driverPhoneNo :: Maybe Text,
-    driverRegisteredAt :: Maybe UTCTime,
-    vehicleNo :: Text,
-    vehicleModel :: Text,
-    vehicleVariant :: VehicleVariant,
-    vehicleServiceTierName :: Maybe Text,
-    rideBookingTime :: UTCTime,
-    actualDriverArrivalTime :: Maybe UTCTime,
-    rideStartTime :: Maybe UTCTime,
-    rideEndTime :: Maybe UTCTime,
-    rideDistanceEstimated :: Maybe HighPrecMeters,
-    rideDistanceActual :: Maybe HighPrecMeters,
-    chargeableDistance :: Maybe HighPrecMeters,
-    rideDistanceEstimatedWithUnit :: Maybe Distance,
-    rideDistanceActualWithUnit :: Maybe Distance,
-    chargeableDistanceWithUnit :: Maybe Distance,
-    estimatedFare :: Money,
-    actualFare :: Maybe Money,
-    estimatedFareWithCurrency :: PriceAPIEntity,
-    actualFareWithCurrency :: Maybe PriceAPIEntity,
-    estimatedRideDuration :: Maybe Seconds,
-    rideDuration :: Maybe Seconds,
-    cancelledTime :: Maybe UTCTime,
-    cancelledBy :: Maybe CancellationSource,
-    nextStopLocation :: Maybe Location,
-    rideScheduledAt :: UTCTime,
-    fareProductType :: FareProductType, -- TODO :: Deprecated, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
-    tripCategory :: TripCategory,
-    endOtp :: Maybe Text,
-    estimateFareBP :: Maybe [EstimateBreakup],
-    merchantOperatingCityId :: Maybe Text,
-    estimatedDistance :: Maybe HighPrecMeters,
-    computedPrice :: Maybe HighPrecMoney,
-    fareBreakup :: [FareBreakup],
-    rideCreatedAt :: UTCTime
-  }
-  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+-- data RideInfoRes = RideInfoRes
+--   { rideId :: Id Ride,
+--     bookingId :: Id Booking,
+--     rideStatus :: RideStatus,
+--     customerName :: Maybe Text,
+--     customerPhoneNo :: Maybe Text,
+--     rideOtp :: Text,
+--     customerPickupLocation :: Location,
+--     customerDropLocation :: Maybe Location,
+--     driverName :: Text,
+--     driverPhoneNo :: Maybe Text,
+--     driverRegisteredAt :: Maybe UTCTime,
+--     vehicleNo :: Text,
+--     vehicleModel :: Text,
+--     vehicleVariant :: VehicleVariant,
+--     vehicleServiceTierName :: Maybe Text,
+--     rideBookingTime :: UTCTime,
+--     actualDriverArrivalTime :: Maybe UTCTime,
+--     rideStartTime :: Maybe UTCTime,
+--     rideEndTime :: Maybe UTCTime,
+--     rideDistanceEstimated :: Maybe HighPrecMeters,
+--     rideDistanceActual :: Maybe HighPrecMeters,
+--     chargeableDistance :: Maybe HighPrecMeters,
+--     rideDistanceEstimatedWithUnit :: Maybe Distance,
+--     rideDistanceActualWithUnit :: Maybe Distance,
+--     chargeableDistanceWithUnit :: Maybe Distance,
+--     estimatedFare :: Money,
+--     actualFare :: Maybe Money,
+--     estimatedFareWithCurrency :: PriceAPIEntity,
+--     actualFareWithCurrency :: Maybe PriceAPIEntity,
+--     estimatedRideDuration :: Maybe Seconds,
+--     rideDuration :: Maybe Seconds,
+--     cancelledTime :: Maybe UTCTime,
+--     cancelledBy :: Maybe CancellationSource,
+--     nextStopLocation :: Maybe Location,
+--     rideScheduledAt :: UTCTime,
+--     fareProductType :: FareProductType, -- TODO :: Deprecated, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+--     tripCategory :: TripCategory,
+--     endOtp :: Maybe Text,
+--     estimateFareBP :: Maybe [EstimateBreakup],
+--     merchantOperatingCityId :: Maybe Text,
+--     estimatedDistance :: Maybe HighPrecMeters,
+--     computedPrice :: Maybe HighPrecMoney,
+--     fareBreakup :: [FareBreakup],
+--     rideCreatedAt :: UTCTime
+--   }
+--   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 data CancellationSource
   = ByUser

@@ -1,5 +1,6 @@
 module API.UI.Issue where
 
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride as DRR
 import qualified Dashboard.RiderPlatform.Ride as DRR
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as DRPR
 import qualified Domain.Action.Dashboard.Ride as DRide

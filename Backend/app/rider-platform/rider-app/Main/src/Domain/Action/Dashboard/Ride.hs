@@ -18,6 +18,7 @@ module Domain.Action.Dashboard.Ride
     shareRideInfoByShortId,
     getRideList,
     rideInfo,
+    getRideRideinfo,
     multipleRideCancel,
     MultipleRideCancelReq,
     rideSync,
@@ -324,6 +325,15 @@ ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
           tripCategory = detail.tripCategory,
           endOtp = ride.endOtp
         }
+
+getRideRideinfo ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Ride ->
+  Flow Common.RideInfoRes
+getRideRideinfo merchantShortId _ rideId = do
+  merchant <- findMerchantByShortId merchantShortId
+  rideInfo merchant.id rideId
 
 rideInfo :: Id DM.Merchant -> Id Common.Ride -> Flow Common.RideInfoRes
 rideInfo merchantId reqRideId = do
