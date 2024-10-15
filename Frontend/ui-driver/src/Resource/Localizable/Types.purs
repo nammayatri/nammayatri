@@ -1741,6 +1741,8 @@ data STR = LETS_GET_STARTED
         | CAB
         | N_FREE_RIDES_COMPLETED String
         | N_MORE_FREE_RIDES String
+        | ONDC_INCENTIVE_BODY String
+        | ONDC_INCENTIVE_HEADER String
 
 
 

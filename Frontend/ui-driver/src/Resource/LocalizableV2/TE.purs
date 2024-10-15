@@ -1722,4 +1722,6 @@ getTe =
     , free_trial_ending_in_n_days: (\days -> "ఉచిత ప్రయత్నం " <> days <> " రోజుల్లో ముగిస్తుంది")
     , n_free_rides_completed : (\n -> n <> " ఉచిత రైడ్లను పూర్తిచేసారు")
     , n_more_free_rides_left : (\n -> n <> " మరిన్ని ఉచిత రైడ్లు ఉన్నాయి")
+    , ondc_incentive_body: (\ondcIncentiveValue -> "మీరు మూడవ పార్టీ రైడ్‌ను పూర్తిచేయడానికి ₹ " <> ondcIncentiveValue <> " ప్రోత్సాహాన్ని పొందడానికి అర్హులు.")
+    , ondc_incentive_header: (\ondcIncentiveValue -> "₹ " <> ondcIncentiveValue <> " ప్రోత్సాహం అన్‌లాక్ చేయబడింది!")
     }

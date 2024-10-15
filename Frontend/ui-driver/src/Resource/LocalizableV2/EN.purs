@@ -1722,4 +1722,6 @@ getEn =
     , free_trial_ending_in_n_days: (\days -> "Free trial ending in " <> days <> " days!")
     , n_free_rides_completed: (\n -> n <> " free Rides Completed")
     , n_more_free_rides_left: (\n -> n <> " more free rides left!")
+    , ondc_incentive_body: (\ondcIncentiveValue ->  "You are eligible to get ₹ "<>ondcIncentiveValue<>" incentive for completing a third party ride.")
+    , ondc_incentive_header : (\ondcIncentiveValue -> "₹ " <>ondcIncentiveValue<>" Incentive Unlocked!")
     }

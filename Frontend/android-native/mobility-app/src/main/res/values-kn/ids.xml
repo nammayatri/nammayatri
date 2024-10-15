@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="ondcIncentiveTag" type="id" />
+    <item name="thirdPartyTagImage" type="id" />
+    <item name="ondcIncentiveValue" type="id" />
+</resources>

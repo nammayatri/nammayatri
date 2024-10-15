@@ -1722,4 +1722,6 @@ getBn =
     , free_trial_ending_in_n_days : (\days -> "ফ্রি ট্রায়াল শেষ হচ্ছে " <> days <> " দিনে")
     , n_free_rides_completed : (\n -> n <> " ফ্রি রাইড সম্পন্ন")
     , n_more_free_rides_left: (\n -> n <> " আরও ফ্রি রাইড বাকি")
+    , ondc_incentive_body: (\ondcIncentiveValue -> "তৃতীয় পক্ষের যাত্রা সম্পূর্ণ করার জন্য আপনি ₹ " <> ondcIncentiveValue <> " প্রণোদনা পাওয়ার যোগ্য।")
+    , ondc_incentive_header: (\ondcIncentiveValue -> "₹ " <> ondcIncentiveValue <> " প্রণোদনা আনলক হয়েছে!")
     }

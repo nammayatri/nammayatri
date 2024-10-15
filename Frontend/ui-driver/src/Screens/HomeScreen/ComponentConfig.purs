@@ -89,6 +89,7 @@ import Components.SelectPlansModal.Controller as SelectPlansModal
 import RemoteConfig.Utils
 import Debug
 import Control.Apply as CA
+import RemoteConfig.Utils as RCUtils
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -2845,3 +2846,146 @@ selectPlansModalState state = SelectPlansModal.config
                   Just justPlan -> map (\plan -> plan {isSelected = plan.id == justPlan.id }) state.data.plansState.plansList
                   Nothing -> state.data.plansState.plansList
   }
+
+ondcIncentivePopUpModalConfig :: ST.HomeScreenState -> PopUpModal.Config
+ondcIncentivePopUpModalConfig state = let 
+  ondcIncentiveConfig = RCUtils.getOndcIncentiveConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+  ondcIncentiveValue = ondcIncentiveConfig.ondcIncentiveValue
+  config' = PopUpModal.config 
+  popUpConfig' = config'{
+    backgroundClickable = false,
+    gravity = CENTER,
+    buttonLayoutMargin =(Margin 0 0 0 0),
+    cornerRadius = (PTD.Corners 16.0 true true true true), 
+    padding = Padding 16 0 16 16,
+    optionButtonOrientation = "VERTICAL",
+    margin = MarginHorizontal 24 24, 
+    primaryText {
+      text = (getString $ ONDC_INCENTIVE_HEADER $ show ondcIncentiveValue), 
+      margin = MarginTop 16 
+    }, 
+    secondaryText {
+      text =(getString $ ONDC_INCENTIVE_BODY $ show ondcIncentiveValue), 
+      color = Color.black700,
+      margin = (Margin 0 0 0 0)
+    } ,
+    option1 {
+      background = Color.black900,
+      text = "Setup UPI",
+      color = Color.yellow900, 
+      margin = MarginTop 24,
+      width = MATCH_PARENT, 
+      padding = Padding 16 6 16 6,
+      height = WRAP_CONTENT 
+    } , 
+    option2 {
+      background = Color.white900, 
+      text = "Skip",
+      width = MATCH_PARENT, 
+      height = WRAP_CONTENT ,
+      color =  Color.black650,
+      strokeColor = Color.white900, 
+      padding = Padding 16 6 16 6, 
+      margin = Margin 0 8 0 0
+    }, 
+    coverImageConfig {
+      visibility = VISIBLE,
+      imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_incentive",
+      height = WRAP_CONTENT,
+      width = WRAP_CONTENT
+    }
+  }
+  in popUpConfig' 
+
+
+setupReferralUPISuccessPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
+setupReferralUPISuccessPopUpConfig _ =
+  let
+    config = PopUpModal.config
+    requestInfoCardConfig' =
+      config
+        { primaryText
+          { text = getString PAYMENT_SUCCESSFUL
+          , margin = MarginLeft 0
+          , textStyle = Heading2
+          }
+        , coverImageConfig
+          { imageUrl = HU.fetchImage HU.COMMON_ASSET "ny_ic_check_circle_green"
+          , height = V 114
+          , width = V 114
+          , visibility = VISIBLE
+          , margin = MarginBottom 32
+          }
+        , option2
+          { visibility = false
+          }
+        , option1 { 
+            text = getString GOT_IT
+          , width = MATCH_PARENT
+          , margin = MarginTop 24
+          , background = Color.black900
+          , color = Color.yellow900
+          }
+        , secondaryText { 
+            visibility = GONE 
+          }
+        , backgroundColor = Color.greyBG
+        , gravity = CENTER
+        , padding = Padding 16 32 16 16
+        , cornerRadius = Corners 16.0 true true true true
+        , margin = MarginHorizontal 16 16
+        , buttonLayoutMargin = MarginLeft 0
+        , dismissPopup = true
+        }
+  in
+    requestInfoCardConfig'
+
+setupReferralUPIFailurePopUpConfig :: ST.HomeScreenState -> PopUpModal.Config
+setupReferralUPIFailurePopUpConfig _ =
+  let
+    config = PopUpModal.config
+    requestInfoCardConfig' =
+      config
+        { primaryText 
+          { text = getString PAYMENT_FAILED
+          , margin = MarginLeft 0
+          , textStyle = Heading2
+          }
+        , secondaryText 
+          { text = getString YOUR_PAYMENT_WAS_UNSUCCESSFUL
+          , margin = MarginTop 8
+          , textStyle = SubHeading2
+          }
+        , coverImageConfig
+          { imageUrl = HU.fetchImage HU.COMMON_ASSET "ny_ic_failed"
+          , height = V 200
+          , width = MATCH_PARENT
+          , visibility = VISIBLE
+          , margin = MarginBottom 24
+          }
+        , option1 { 
+            text = getString RETRY_PAYMENT_STR
+          , width = MATCH_PARENT
+          , margin = MarginTop 24
+          , background = Color.black900
+          , color = Color.yellow900
+          }
+        , option2
+          { text = getString CLOSE
+          , width = MATCH_PARENT
+          , margin = MarginTop 8
+          , background = Color.transparent
+          , color = Color.black650
+          , strokeColor = Color.transparent
+          }
+        , backgroundColor = Color.greyBG
+        , gravity = CENTER
+        , padding = Padding 16 32 16 16
+        , cornerRadius = Corners 16.0 true true true true
+        , margin = MarginHorizontal 16 16
+        , buttonLayoutMargin = MarginLeft 0
+        , optionButtonOrientation = "VERTICAL"
+        , dismissPopup = true
+        }
+  in
+    requestInfoCardConfig'

@@ -1722,4 +1722,6 @@ getTa =
     , free_trial_ending_in_n_days: (\days -> "இலவச சோதனை "<> days <> " நாட்களில் முடிகிறது")
     , n_free_rides_completed : (\n -> n <> " இலவச சவாரிகள் முடிந்தன")
     , n_more_free_rides_left : (\n -> n <> " மேலும் இலவச சவாரிகள் உள்ளன")
+    , ondc_incentive_body: (\ondcIncentiveValue -> "நீங்கள் மூன்றாம் தரப்பு பயணத்தை முடிப்பதற்காக ₹ " <> ondcIncentiveValue <> " ஊக்கத்தை பெற தகுதியானவர்.")
+    , ondc_incentive_header: (\ondcIncentiveValue -> "₹ " <> ondcIncentiveValue <> " ஊக்கத்தை திறக்கப்பட்டது!")
     }

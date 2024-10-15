@@ -1722,4 +1722,6 @@ getMl =
     , free_trial_ending_in_n_days : (\days -> "സൗജന്യ പരീക്ഷണം അവസാനിക്കുന്നത് "<> days <>" ദിവസങ്ങൾ!")
     , n_free_rides_completed : (\n -> n <> " റൈഡുകൾ പൂർത്തിയാക്കി")
     , n_more_free_rides_left : (\n -> n <> " കൂടുതൽ സൗജന്യ റൈഡുകൾ ഉള്ളത്")
+    , ondc_incentive_body: (\ondcIncentiveValue -> "മൂന്നാം കക്ഷിയുടെ യാത്ര പൂർത്തിയാക്കുന്നതിന് നിങ്ങൾ ₹ " <> ondcIncentiveValue <> " പ്രോത്സാഹനം നേടാൻ അർഹരാണ്.")
+    , ondc_incentive_header: (\ondcIncentiveValue -> "₹ " <> ondcIncentiveValue <> " പ്രോത്സാഹനം ലഭ്യമായി!")
     }

@@ -465,6 +465,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | GO_TO_RIDE_REQ_SCREEN HomeScreenState String String
                           | GO_TO_RIDE_SUMMARY
                           | GO_TO_RIDE_SUMMARY_SCREEN HomeScreenState
+                          | ADD_REFERRAL_UPI HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 

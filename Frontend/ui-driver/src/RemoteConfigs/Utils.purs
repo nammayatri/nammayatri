@@ -209,3 +209,17 @@ getCoinsConfigData city = do
     let config = fetchRemoteConfigString "coins_config"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultCoinsConfig
     getCityBasedConfig value $ toLower city
+
+
+getOndcIncentiveConfig :: String -> OndcIncentiveConfig
+getOndcIncentiveConfig city =  
+  let 
+    config = fetchRemoteConfigString "ondc_incentive_config"
+    value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultOndcInitiativeConfig
+  in getCityBasedConfig value $ toLower city 
+    
+defaultOndcInitiativeConfig :: OndcIncentiveConfig
+defaultOndcInitiativeConfig = {
+  ondcIncentiveValue : 0,
+  showOndcIncentiveTag : false
+}

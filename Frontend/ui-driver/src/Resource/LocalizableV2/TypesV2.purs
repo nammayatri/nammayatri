@@ -1736,6 +1736,8 @@ newtype Keymap
   , free_trial_ending_in_n_days :: String -> String
   , n_free_rides_completed :: String -> String
   , n_more_free_rides_left :: String -> String
+  , ondc_incentive_header :: String -> String
+  , ondc_incentive_body :: String -> String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -6892,3 +6894,9 @@ n_free_rides_completed = a
 
 n_more_free_rides_left :: Proxy "n_more_free_rides_left"
 n_more_free_rides_left = a
+
+ondc_incentive_body :: Proxy "ondc_incentive_body"
+ondc_incentive_body = a
+
+ondc_incentive_header :: Proxy "ondc_incentive_header"
+ondc_incentive_header = a

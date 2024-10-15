@@ -525,6 +525,7 @@
       "ny_ic_image_file" : true,
       "ny_ic_image_wrong" : true,
       "ny_ic_in_app_chat" : true,
+      "ny_ic_incentive" : true,
       "ny_ic_india_cash" : true,
       "ny_ic_induspay" : true,
       "ny_ic_info_black" : true,

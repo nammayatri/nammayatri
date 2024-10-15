@@ -314,7 +314,8 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | VerifyManualUPI ST.HomeScreenState
                     | SwitchPlan ST.PlanCardState ST.HomeScreenState
                     | GoToRideSummary ST.HomeScreenState
-                    | GoToRideSummaryScreen  ST.HomeScreenState                 
+                    | GoToRideSummaryScreen  ST.HomeScreenState    
+                    | AddReferralUPI ST.HomeScreenState             
 
 
 data Action = NoAction
@@ -461,6 +462,10 @@ data Action = NoAction
             | HomeScreenBannerCountDownTimer Int String String
             | OnRideBannerCountDownTimer Int String String
             | GetRideCount Int
+            | OndcIncentiveAction PopUpModal.Action
+            | SetupReferralUPISuccessAction PopUpModal.Action
+            | SetupReferralUPIFailureAction PopUpModal.Action
+            | AddReferralUPIAction
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -490,6 +495,30 @@ eval (BgLocationPopupAC PopUpModal.OnButton1Click) state =
     void $ JB.requestBackgroundLocation unit
     pure NoAction
   ]
+
+eval (OndcIncentiveAction PopUpModal.OnButton1Click) state = do
+  let newState = state{props{showOndcIncentivePopUp = false}}
+  continueWithCmd newState [ do 
+    pure AddReferralUPIAction
+  ]
+
+eval (OndcIncentiveAction PopUpModal.OnButton2Click) state = 
+  continue state{props{showOndcIncentivePopUp = false}}
+
+eval (SetupReferralUPISuccessAction (PopUpModal.OnButton1Click)) state = do 
+  continue state{props{showUPISuccesInfoPopUp = false}}
+
+eval (SetupReferralUPISuccessAction (PopUpModal.OnButton2Click)) state = continue state {props {showUPISuccesInfoPopUp = false}}
+
+eval (SetupReferralUPIFailureAction (PopUpModal.OnButton1Click)) state = do 
+  let newState = state{props{showUPIFailureInfoPopUp = false}}
+  continueWithCmd newState [ do 
+      pure AddReferralUPIAction
+  ]
+
+eval (SetupReferralUPIFailureAction (PopUpModal.OnButton2Click)) state = continue state {props {showUPIFailureInfoPopUp = false}}
+
+eval AddReferralUPIAction state = exit $ AddReferralUPI state
 
 eval (ReferralPopUpAction popUpType storageKey PopUpModal.OnButton1Click) state = do 
   case storageKey of 
