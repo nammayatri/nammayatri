@@ -18,7 +18,7 @@ module Screens.SearchLocationScreen.ComponentConfig where
 import ConfigProvider
 import Helpers.TipConfig
 import Screens
-
+import Debug
 import Common.Types.App (LazyCheck(..), RateCardType(..))
 import Components.ChooseYourRide as ChooseYourRide
 import Components.InputView as InputView
@@ -265,6 +265,7 @@ mapInputViewConfig state isEditable =
           , padding : Padding 0 0 0 0 
           }
       , stroke : if item.isFocussed && state.props.actionType == ST.BusStopSelectionAction then "1," <> Color.yellow900 else "0," <> Color.yellow900
+      , alpha : item.alpha
       , imageSeparator : separatorConfig 
       , fontStyle : FontStyle.subHeading2 TypoGraphy
       , clearTextIcon : 
@@ -305,6 +306,7 @@ mapInputViewConfig state isEditable =
           , canClearText : DS.length (if addressOnMap /= "" && pickUpFocussed then addressOnMap else srcLoc) > 2
           , id : ST.SearchLocPickup
           , isEditable :  state.props.actionType /= ST.BusStopSelectionAction && (not $ (state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN) || (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN)))
+          , alpha : if state.props.actionType /= ST.BusStopSelectionAction then 1.0 else 0.3
           }] <> (if state.props.routeSearch then [] else 
           [{ textValue : destLoc
           , isFocussed : dropLocFocussed
@@ -313,6 +315,7 @@ mapInputViewConfig state isEditable =
           , placeHolder : getInputView.destPlaceHolder
           , canClearText : DS.length (if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc) > 2
           , id : ST.SearchLocDrop
+          , alpha : 1.0
           , isEditable : true
           }])
       

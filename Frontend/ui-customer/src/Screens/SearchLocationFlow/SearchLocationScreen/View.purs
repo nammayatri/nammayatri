@@ -252,7 +252,7 @@ mapViewLayout push state globalProps =
       void $ fetchAndUpdateCurrentLocation push (UpdateLocAndLatLong globalProps.cachedSearches) RecenterCurrentLocation
       pure unit
 
-    isForMetroTicketBooking = DA.elem state.data.fromScreen $ getScreen <$> [ METRO_TICKET_BOOKING_SCREEN , BUS_TICKET_BOOKING_SCREEN]
+    isForMetroTicketBooking = DA.elem state.data.fromScreen $ getScreen <$> [ METRO_TICKET_BOOKING_SCREEN , BUS_TICKET_BOOKING_SCREEN , BUS_ROUTE_STOPS_SEARCH_SCREEN]
 
 confirmLocationView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
 confirmLocationView push state = let 
@@ -737,7 +737,7 @@ predictionsView push state globalProps = let
                                                                                 then "Recent Bus Stops"
                                                                                 else "Recent Route Stops"
                 else if state.props.actionType == BusRouteSelectionAction || state.props.actionType == BusStopSelectionAction then "Bus Search"
-                else if state.props.actionType == NoBusRouteSelectionAction then "Bus Search"
+                else if state.props.actionType == NoBusRouteSelectionAction then "NearBy Places"
                 else
                   MB.maybe "" (\ currField -> if currField == SearchLocPickup then (getString PAST_SEARCHES) else (getString SUGGESTED_DESTINATION)) state.props.focussedTextField
   in
@@ -753,7 +753,16 @@ predictionsView push state globalProps = let
         , width MATCH_PARENT
         , orientation VERTICAL
         , padding $ PaddingHorizontal 16 16
-        ][  textView $
+        ][ textView $ [
+          height MATCH_PARENT
+        , width MATCH_PARENT
+        , margin $ Margin 0 20 0 10 
+        , gravity CENTER
+        , color Color.black800
+        , visibility $ boolToVisibility $ state.props.actionType == NoBusRouteSelectionAction
+        , text "No Route & Stop found!"
+        ] <> FontStyle.subHeading1 TypoGraphy
+          ,textView $
               [ text headerText
               , color Color.black700
               , margin $ MarginVertical 14 8

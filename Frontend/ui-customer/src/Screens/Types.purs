@@ -2028,7 +2028,7 @@ type MetroTicketDetailsScreenData = {
 , ticketPrice :: Int
 , noOfTickets :: Int
 , vehicleType :: String
-, route :: Maybe GetBusRouteResp
+, route :: Maybe (Array GetBusRouteResp)
 }
 
 type MetroTicketInfo = {
@@ -2108,6 +2108,7 @@ type MetroMyTicketsScreenProps = {
 , showShimmer :: Boolean
 , entryPoint :: MetroMyTicketsEntry
 , fromScreen :: Maybe String
+, ticketServiceType :: API.TicketServiceType
 }
 
 type MetroTicketCardData = {

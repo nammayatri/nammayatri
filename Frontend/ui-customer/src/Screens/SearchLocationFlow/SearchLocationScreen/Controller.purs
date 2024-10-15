@@ -63,7 +63,7 @@ import Screens (getScreen, ScreenName(..))
 import Screens.HomeScreen.Transformer (getQuotesTransformer, getFilteredQuotes, transformQuote, getFareProductType, extractFareProductType)
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationConfig)
 import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo, initData) as SearchLocationScreenData
-import Services.API (QuoteAPIEntity(..), GetQuotesRes(..), OfferRes(..), RentalQuoteAPIDetails(..), QuoteAPIContents(..), Snapped(..), LatLong(..), Route(..), GetBusRouteResp(..),SearchRideType(..),GetMetroStationResp(..))
+import Services.API (QuoteAPIEntity(..), GetQuotesRes(..), OfferRes(..), RentalQuoteAPIDetails(..), QuoteAPIContents(..), Snapped(..), LatLong(..), Route(..), GetBusRouteResp(..),SearchRideType(..),GetMetroStationResp(..), TicketServiceType(..))
 import Services.Backend (walkCoordinates, walkCoordinate)
 import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..))
 import Types.App (GlobalState(..), defaultGlobalState, FlowBT, ScreenType(..))
@@ -139,6 +139,7 @@ data ScreenOutput = NoOutput SearchLocationScreenState
                   | GoToRouteBusSearch SearchLocationScreenState String
                   | BusTicketBookingScreen SearchLocationScreenState
                   | GO_TO_BUS_SEARCH SearchLocationScreenState
+                  | BusRouteStopSearchScreen SearchLocationScreenState
 
 eval :: Action -> SearchLocationScreenState -> Eval Action ScreenOutput SearchLocationScreenState
 
@@ -596,7 +597,9 @@ handleBackPress state = do
           continue state {props {searchLocStage = PredictionsStage}, data{latLonOnMap = SearchLocationScreenData.dummyLocationInfo}}
         PredictionsStage -> do 
           void $ pure $ hideKeyboardOnNavigation true
-          if state.data.fromScreen == getScreen HOME_SCREEN then exit $ HomeScreen state 
+          if DA.elem state.props.actionType [BusRouteSelectionAction,NoBusRouteSelectionAction,BusStopSelectionAction] then exit $ BusRouteStopSearchScreen state
+          else if state.data.fromScreen == getScreen HOME_SCREEN then exit $ HomeScreen state 
+          else if state.data.fromScreen == getScreen BUS_ROUTE_STOPS_SEARCH_SCREEN then continue state {props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = MB.Just SearchLocPickup , routeSearch = true , isAutoComplete = false }, data {fromScreen =(getScreen BUS_TICKET_BOOKING_SCREEN),ticketServiceType = BUS , srcLoc = MB.Nothing, destLoc = MB.Nothing }} 
           else if state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN then exit $ RideScheduledScreen state
           else if state.data.fromScreen == getScreen BUS_TICKET_BOOKING_SCREEN then exit $ BusTicketBookingScreen state
           else exit $ RentalsScreen state 

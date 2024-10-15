@@ -3266,7 +3266,8 @@ newtype GetBusRouteResp = GetBusRouteResp {
   endPoint :: LatLong ,
   longName :: String,
   shortName :: String,
-  startPoint :: LatLong
+  startPoint :: LatLong,
+  totalStops :: Maybe Int
 }
 
 derive instance genericGetBusRoutesResponse :: Generic GetBusRoutesResponse _
@@ -3359,7 +3360,7 @@ newtype MetroQuote = MetroQuote {
   , validTill :: String
   , discountedTickets :: Maybe Int
   , eventDiscountAmount :: Maybe Number
-  , _route :: GetBusRouteResp
+  , routeStations :: Maybe (Array GetBusRouteResp)
 }
 
 -- For understanding and debugging types 
@@ -3418,7 +3419,7 @@ newtype MetroTicketBookingStatus = MetroTicketBookingStatus {
   , tickets :: Array FRFSTicketAPI
   , stations :: Array FRFSStationAPI
   , createdAt :: String
-  , _route :: Maybe GetBusRouteResp
+  , routeStations :: Maybe (Array GetBusRouteResp)
 }
 
 newtype FRFSBookingPaymentAPI = FRFSBookingPaymentAPI {

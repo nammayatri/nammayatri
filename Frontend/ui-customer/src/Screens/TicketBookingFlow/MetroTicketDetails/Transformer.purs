@@ -42,7 +42,7 @@ metroTicketDetailsTransformer (MetroTicketBookingStatus metroTicketBookingStatus
       , noOfTickets = metroTicketBookingStatus.quantity
       , ticketPrice = metroTicketBookingStatus.price
       , vehicleType = metroTicketBookingStatus.vehicleType
-      , route = metroTicketBookingStatus._route
+      , route = metroTicketBookingStatus.routeStations
       }
     , props {
         stage = MetroTicketDetailsStage

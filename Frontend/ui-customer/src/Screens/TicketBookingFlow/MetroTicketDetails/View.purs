@@ -1080,7 +1080,11 @@ busRouteAndStopsView push state =
   , orientation VERTICAL
   ]
   [ textView $
-    [ text $ "Route No: " <> (maybe "" (\(GetBusRouteResp route) -> fromMaybe "" route.code) state.data.route)
+    [ text $ "Route No: " <> maybe "" (\routes -> 
+                                        case head routes of
+                                          Just (GetBusRouteResp route) -> fromMaybe "" route.code
+                                          Nothing -> ""
+                                      ) state.data.route
     , color Color.grey900
     ] <> FontStyle.tags TypoGraphy
   , busStopsView push state

@@ -57,5 +57,5 @@ dummyMetroBookingStatus =
     tickets: [],
     vehicleType: "Metro_",
     validTill: "2024-01-26T19:37:12.516Z",
-    _route : Nothing
+    routeStations : Nothing
     }

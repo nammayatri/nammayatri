@@ -183,19 +183,20 @@ routeListView state push =
     , width MATCH_PARENT
     , gravity CENTER_VERTICAL
     , orientation VERTICAL
-    , margin $ Margin 10 5 10 5
+    , margin $ Margin 0 5 0 5
     , visibility $ boolToVisibility $ (state.props.routeList && not (DA.null state.data.routeList))
     , stroke ("1," <> Color.borderColorLight)
     , cornerRadius 5.0
     , onAnimationEnd push $ const ListExpandAinmationEnd
     ](DA.mapWithIndex (\index (GetBusRouteResp route) ->
         let
-          routeCode = fromMaybe "No Code" route.code 
+          routeCode = fromMaybe "No Code" route.code
+          routeTotalStops = fromMaybe 0 route.totalStops
         in
         linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , padding $ Padding 16 10 16 10
+        , padding $ Padding 16 15 16 10
         , onClick push $ const $ SelectRoutes routeCode 
         , orientation VERTICAL
         ][  
@@ -208,7 +209,15 @@ routeListView state push =
                 [ accessibilityHint $ routeCode <> " : Button"
                 , textFromHtml routeCode 
                 , color Color.darkCharcoal
+                , weight 1.0
                 ] <> FontStyle.paragraphText LanguageStyle
+          ,   textView $ 
+                [
+                  text $ (show routeTotalStops)<> " stops"
+                ,  gravity RIGHT
+                , color Color.darkCharcoal
+                , weight 0.0
+                ]
             ]
           , linearLayout
               [ height $ V 1

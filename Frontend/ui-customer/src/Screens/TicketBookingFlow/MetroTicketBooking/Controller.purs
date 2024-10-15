@@ -71,7 +71,9 @@ data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | SelectSrcDest ST.LocationActionId ST.MetroTicketBookingScreenState
                   | Refresh ST.MetroTicketBookingScreenState
                   | GotoPaymentPage CreateOrderRes String
-                  | GO_TO_ROUTE_SEARCH ST.MetroTicketBookingScreenState
+                  | GotoPreviosStopScreen ST.MetroTicketBookingScreenState
+                  | GoToBusSearchScreen ST.MetroTicketBookingScreenState
+                  | GotoSearchScreen ST.MetroTicketBookingScreenState
                   -- | GET_ROUTES ST.MetroTicketBookingScreenState
 
 eval :: Action -> ST.MetroTicketBookingScreenState -> Eval Action ScreenOutput ST.MetroTicketBookingScreenState
@@ -80,7 +82,7 @@ eval (MetroBookingConfigAction resp) state = do
   let updatedState = state { data {metroBookingConfigResp = resp}, props { showShimmer = false }}
   continue updatedState
 
-eval BackPressed state =  if state.props.ticketServiceType == BUS then exit $ GO_TO_ROUTE_SEARCH state else exit $ GoToHome
+eval BackPressed state =  if state.props.ticketServiceType == BUS then exit $ GotoSearchScreen state else exit $ GoToHome
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
     if state.props.ticketServiceType == BUS && state.props.isEmptyRoute == "" then do
      void $ pure $ toast $ "Please Select Route"
@@ -116,7 +118,10 @@ eval (ChangeTicketTab ticketType cityMetroConfig) state = do
 eval (SelectLocation loc) state = 
   if state.props.ticketServiceType == BUS
     then do
-      continue state
+      if loc == ST.Dest then do
+          exit $ GotoPreviosStopScreen state
+      else 
+          exit $ GoToBusSearchScreen state
     else updateAndExit state { props { currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection }} $ SelectSrcDest loc state { props { currentStage = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection }}
 
 eval (GetMetroQuotesAction resp) state = do 
