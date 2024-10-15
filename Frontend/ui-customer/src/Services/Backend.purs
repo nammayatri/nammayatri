@@ -567,6 +567,7 @@ makeFeedBackReq rating rideId feedback wasOfferedAssistance = FeedbackReq
     ,   "rideId" : rideId
     ,   "feedbackDetails" : feedback
     ,   "wasOfferedAssistance" : wasOfferedAssistance
+    ,   "wasRideSafe" : Nothing
     }
 
 

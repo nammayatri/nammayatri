@@ -53,9 +53,7 @@ import Helpers.Utils as HU
 
 ---------------------------------- driverDetailsView ---------------------------------------
 driverDetailsView :: forall w. DriverDetailsType -> String -> String -> PrestoDOM (Effect Unit) w
-driverDetailsView config uid nid = let 
- mxWidth = (screenWidth unit - 64) / 2
- in 
+driverDetailsView config uid nid =
  linearLayout
   [ orientation HORIZONTAL
   , height WRAP_CONTENT 
@@ -69,7 +67,7 @@ driverDetailsView config uid nid = let
   ][  linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT
-      , width WRAP_CONTENT
+      , weight 1.0
       , gravity CENTER_VERTICAL
       , background Color.white900
       , padding $ PaddingRight 16
@@ -95,23 +93,19 @@ driverDetailsView config uid nid = let
           ]
         , linearLayout[
             height WRAP_CONTENT
-          , width $ V mxWidth
-          , orientation VERTICAL
-          ][ linearLayout
-             [ height WRAP_CONTENT
-             , width MATCH_PARENT
-             ][ textView $
-                [ text config.driverName 
-                , maxLines 2
-                , ellipsize true
-                , accessibility DISABLE
-                , color Color.black800
-                , width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , gravity LEFT
-                ] <> FontStyle.body27 TypoGraphy
-             ]
-          
+          , width WRAP_CONTENT
+          ][
+            textView $
+            [ text config.driverName
+            , maxLines 2
+            , ellipsize true
+            , accessibility DISABLE
+            , color Color.blue900
+            , width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , gravity LEFT
+            ] <> FontStyle.body27 TypoGraphy
+          ]
         , textView (
           [ text $ spaceSeparatedPascalCase $ config.vehicleColor <> " " <> if config.vehicleModel == "Unkown" then HU.getVariantRideType config.vehicleVariant else config.vehicleModel
           , color Color.black700
@@ -124,12 +118,10 @@ driverDetailsView config uid nid = let
           , gravity LEFT
           , margin $ MarginBottom 6
           ] <> FontStyle.captions TypoGraphy)
-        ]
         , case config.serviceTierName of
             Just name -> ServiceTierCard.view $ serviceTierConfig name
             Nothing -> linearLayout [] []
       ]
-    , linearLayout [weight 1.0][]
     , linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
@@ -188,14 +180,13 @@ driverDetailsView config uid nid = let
                         ]
                         , textView $
                         [ margin $ Margin 2 2 2 2
-                        , width WRAP_CONTENT
+                        , weight 1.0
                         , height MATCH_PARENT
                         , text $ (makeNumber config.registrationNumber)
                         , color Color.black800
                         , fontStyle $ FontStyle.feFont LanguageStyle
                         , gravity CENTER
                         , textSize FontSize.a_14
-                        , maxLines 1
                         ]
                         , imageView
                         [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_number_plate_suffix"

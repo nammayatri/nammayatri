@@ -1343,6 +1343,7 @@ newtype FeedbackReq = FeedbackReq
   { rating :: Int
   , rideId :: String
   , feedbackDetails :: String
+  , wasRideSafe :: Maybe Boolean
   , wasOfferedAssistance :: Maybe Boolean
   }
 

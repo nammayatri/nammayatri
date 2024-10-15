@@ -1376,7 +1376,7 @@ getBN stringKey =
         TRUSTED_CONTACT_DESC -> "অ্যাপের মাধ্যমে আপনার বিশ্বস্ত যোগাযোগের সাথে সংযুক্ত থাকুন"
         ENABLE_LIVE_TRACKING -> "লাইভ রাইড ট্র্যাকিং সক্ষম করুন"
         UNEXPECTED_EVENT_CHECK -> "অপ্রত্যাশিত ঘটনা পরীক্ষা"
-        UNEXPECTED_EVENT_CHECK_DESC -> "রুট বিচ্যুতি, অস্বাভাবিক থামা বা অরক্ষিত এলাকায় ভ্রমণের সময় নোটিফিকেশন পান"
+        UNEXPECTED_EVENT_CHECK_DESC -> "পথ বিচ্যুতির জন্য চেক-ইন বিজ্ঞপ্তি পান"
         UNEXPECTED_EVENT_CHECK_TIMINGS -> "অপ্রত্যাশিত ঘটনা পরীক্ষা সময়সূচী"
         NEXT -> "পরবর্তী"
         POST_RIDE_CHECK -> "রাইড শেষে পরীক্ষা"

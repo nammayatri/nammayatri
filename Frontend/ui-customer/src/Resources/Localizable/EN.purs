@@ -1378,7 +1378,7 @@ getEN stringKey =
         TRUSTED_CONTACT_DESC -> "Stay in touch with your trusted contacts throughout your ride with in app chat"
         ENABLE_LIVE_TRACKING -> "Enable Live Ride Tracking"
         UNEXPECTED_EVENT_CHECK -> "Unexpected Event Checks"
-        UNEXPECTED_EVENT_CHECK_DESC -> "Get check in notifications on route deviations, unusual stops or when travelling through unsafe areas"
+        UNEXPECTED_EVENT_CHECK_DESC -> "Get check in notifications on route deviations"
         UNEXPECTED_EVENT_CHECK_TIMINGS -> "Unexpected Event Check Timings"
         NEXT -> "Next"
         POST_RIDE_CHECK -> "Post Ride Check"
