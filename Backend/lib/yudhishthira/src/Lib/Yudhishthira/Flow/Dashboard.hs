@@ -359,7 +359,9 @@ upsertLogicRollout merchantOpCityId rolloutReq = do
 getAppDynamicLogicVersions :: BeamFlow m r => Maybe Int -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> m Lib.Yudhishthira.Types.AppDynamicLogicVersionResp
 getAppDynamicLogicVersions mbLimit mbOffset domain_ = do
   elements <- QADLE.findLatestVersion mbLimit mbOffset domain_
-  return $ (\DTADLE.AppDynamicLogicElement {..} -> Lib.Yudhishthira.Types.AppDynamicLogicVersion {..}) <$> elements
+  let groupedElements = DLNE.groupBy ((==) `on` (.version)) elements
+  let firstElementArr = map DLNE.head groupedElements
+  return $ (\DTADLE.AppDynamicLogicElement {..} -> Lib.Yudhishthira.Types.AppDynamicLogicVersion {..}) <$> firstElementArr
 
 getNammaTagQueryAll :: BeamFlow m r => Lib.Yudhishthira.Types.Chakra -> m Lib.Yudhishthira.Types.ChakraQueryResp
 getNammaTagQueryAll chakra_ = do

@@ -7,7 +7,6 @@ import JsonLogic
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Utils.Common
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTag as SQNT
@@ -48,17 +47,23 @@ yudhishthiraDecide req = do
       let tagValidity = case tag.info of
             DNT.KaalChakra (DNT.KaalChakraTagInfo _ validity) -> validity
             _ -> Nothing
-      respValue <-
+      mbRespValue <-
         case tag.rule of
-          LLM context -> throwError $ InternalError $ "LLM not supported yet: " <> show context
-          RuleEngine rule -> jsonLogic rule req.sourceData
-      logDebug $ "Tag: " <> show tag <> " jsonResp: " <> show respValue
-      mbTagValue <- case respValue of
-        A.String text -> return $ Just (TextValue text)
-        A.Number number -> do
+          LLM _ -> return Nothing
+          RuleEngine rule -> do
+            let resp = jsonLogicEither rule req.sourceData
+            case resp of
+              Left err -> do
+                logError $ "Invalid tag rule: " <> show err
+                return Nothing
+              Right val -> return $ Just val
+      logDebug $ "Tag: " <> show tag <> " jsonResp: " <> show mbRespValue
+      mbTagValue <- case mbRespValue of
+        Just (A.String text) -> return $ Just (TextValue text)
+        Just (A.Number number) -> do
           let doubleValue = toRealFloat number -- :: Maybe Int = toBoundedInteger number
           return $ Just (NumberValue doubleValue)
-        A.Array arr' -> return (ArrayValue <$> (mapM extractText (toList arr')))
+        Just (A.Array arr') -> return (ArrayValue <$> (mapM extractText (toList arr')))
         value -> do
           logError $ "Invalid value for tag: " <> show value
           return Nothing

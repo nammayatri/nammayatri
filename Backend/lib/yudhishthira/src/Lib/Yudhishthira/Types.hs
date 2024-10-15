@@ -169,7 +169,7 @@ instance ToParamSchema LogicDomain where
 instance Show LogicDomain where
   show POOLING = "POOLING"
   show FARE_POLICY = "FARE-POLICY"
-  show DYNAMIC_PRICING_UNIFIED = "DYNAMIC_PRICING_UNIFIED"
+  show DYNAMIC_PRICING_UNIFIED = "DYNAMIC-PRICING-UNIFIED"
   show (CONFIG configType) = "CONFIG_" ++ show configType
 
 instance Read LogicDomain where
@@ -180,7 +180,7 @@ instance Read LogicDomain where
             [(POOLING, drop 1 rest)]
           "FARE-POLICY" ->
             [(FARE_POLICY, drop 1 rest)]
-          "DYNAMIC_PRICING_UNIFIED" ->
+          "DYNAMIC-PRICING-UNIFIED" ->
             [(DYNAMIC_PRICING_UNIFIED, drop 1 rest)]
           "CONFIG" ->
             let (configType', rest1) = break (== '_') (drop 1 rest)
