@@ -445,8 +445,9 @@ bottomSheetView ::
   (Action -> Effect Unit) ->
   FollowRideScreenState ->
   Layout w
-bottomSheetView push state =
-  linearLayout
+bottomSheetView push state = let
+  isRideData = isJust state.data.driverInfoCardState
+  in linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , alignParentBottom "true,-1"
@@ -487,7 +488,16 @@ bottomSheetView push state =
                         , emergencyActionsView push state
                         ]
                     , addressView push state
-                    , driverInfoView push state
+                    , if isJust state.data.driverInfoCardState 
+                        then driverInfoView push state
+                        else PrestoAnim.animationSet [ fadeOut isRideData ]
+                              $ linearLayout
+                                  [ width MATCH_PARENT
+                                  , height WRAP_CONTENT
+                                  , visibility $ boolToVisibility $ not $ isJust state.data.driverInfoCardState
+                                  ]
+                                  [ driverInfoShimmer
+                                  ]
                     ]
                 ]
             ]
@@ -628,14 +638,29 @@ driverInfoView push state =
               ]
               [ driverDetailsView (push <<< DriverInfoCardAction) (getDriverDetails state) "FollowRideDriverDetailsView" "FollowNumberPlate"
               ]
-      , PrestoAnim.animationSet [ fadeOut isRideData ]
-          $ linearLayout
-              [ width MATCH_PARENT
-              , height WRAP_CONTENT
-              , visibility $ boolToVisibility $ not isRideData
-              ]
-              [ driverInfoShimmer
-              ]
+      ]
+
+driverInfoViewShimmer ::
+  forall w.
+  (Action -> Effect Unit) ->
+  FollowRideScreenState ->
+  Layout w
+driverInfoViewShimmer push state =
+  let
+    isRideData = isJust state.data.driverInfoCardState
+  in
+    relativeLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      ]
+      [ PrestoAnim.animationSet [ fadeOut isRideData ]
+        $ linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , visibility $ boolToVisibility $ not $ isJust state.data.driverInfoCardState
+            ]
+            [ driverInfoShimmer
+            ]
       ]
 
 addressView ::
