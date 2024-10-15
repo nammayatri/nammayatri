@@ -175,7 +175,7 @@ mkItemV2 fulfillment vehicleServiceTierItem quote mbFarePolicy taggings = do
     { itemId = Just quote.estimateId.getId,
       itemFulfillmentIds = Just [fulfillmentId],
       itemPrice = Just $ mkPriceV2 quote,
-      itemTags = mkItemTagsV2 mbFarePolicy taggings,
+      itemTags = mkItemTagsV2 quote.estimatedFare quote.fareParams.congestionChargeViaDp mbFarePolicy taggings,
       itemDescriptor = mkItemDescriptor vehicleServiceTierItem,
       itemLocationIds = Nothing,
       itemPaymentIds = Nothing
@@ -201,9 +201,9 @@ mkPriceV2 quote =
       priceComputedValue = Nothing
     }
 
-mkItemTagsV2 :: Maybe FarePolicyD.FullFarePolicy -> Tags.Taggings -> Maybe [Spec.TagGroup]
-mkItemTagsV2 mbFarePolicy taggings = do
-  let farePolicyTag = Utils.mkRateCardTag Nothing Nothing . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
+mkItemTagsV2 :: HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FullFarePolicy -> Tags.Taggings -> Maybe [Spec.TagGroup]
+mkItemTagsV2 estimatedFare congestionChargeViaDp mbFarePolicy taggings = do
+  let farePolicyTag = Utils.mkRateCardTag Nothing Nothing estimatedFare congestionChargeViaDp . Just . FarePolicyD.fullFarePolicyToFarePolicy =<< mbFarePolicy
   Tags.convertToTagGroup taggings.itemTags <> farePolicyTag
 
 mkQuoteV2 :: DQuote.DriverQuote -> UTCTime -> Spec.Quotation

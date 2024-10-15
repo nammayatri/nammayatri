@@ -1200,7 +1200,7 @@ tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
           itemPrice = tfItemPrice $ booking.estimatedFare,
-          itemTags = mkRateCardTag estimatedDistance Nothing mbFarePolicy
+          itemTags = mkRateCardTag estimatedDistance Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy
         }
     ]
 
@@ -1215,7 +1215,7 @@ tfItemsSoftUpdate booking shortId estimatedDistance mbFarePolicy mbPaymentId upd
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
           itemPrice = tfItemPrice updatedBooking.estimatedFare,
-          itemTags = mkRateCardTag estimatedDistance' Nothing mbFarePolicy
+          itemTags = mkRateCardTag estimatedDistance' Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy
         }
     ]
 
@@ -1469,9 +1469,9 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP
                 estimatedTimeTakenInSeconds :: Int = ceiling $ (distanceInMeters / avgSpeedInMetersPerSec)
             Just $ show estimatedTimeTakenInSeconds
 
-mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.TagGroup]
-mkRateCardTag estimatedDistance tollCharges farePolicy = do
-  let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance tollCharges) farePolicy
+mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe [Spec.TagGroup]
+mkRateCardTag estimatedDistance tollCharges estimatedFare congestionChargeViaDp farePolicy = do
+  let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance tollCharges estimatedFare congestionChargeViaDp) farePolicy
       farePolicyBreakupsTags = buildRateCardTags <$> farePolicyBreakups
   Just
     [ Spec.TagGroup

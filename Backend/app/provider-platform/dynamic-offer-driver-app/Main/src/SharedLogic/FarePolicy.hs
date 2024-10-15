@@ -261,8 +261,8 @@ calculateFareForFarePolicy fullFarePolicy mbDistance mbDuration merchantOperatin
   parameters <- SFC.calculateFareParameters params
   return $ SFC.fareSum parameters
 
-mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> FarePolicyD.FarePolicy -> [breakupItem]
-mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy = do
+mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> FarePolicyD.FarePolicy -> [breakupItem]
+mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges estimatedTotalFare congestionChargeViaDp farePolicy = do
   let distance = fromMaybe 0 mbDistance -- TODO: Fix Later
       driverExtraFeeBounds = FarePolicyD.findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
       nightShiftBounds = farePolicy.nightShiftBounds
@@ -271,11 +271,13 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges farePolicy =
       tollChargesItem = mkBreakupItem tollChargesCaption . (mkValue . show) <$> mbTollCharges
 
       congestionChargePercentageCaption = show Tags.CONGESTION_CHARGE_PERCENTAGE
-      congestionChargePercentageItem =
+      congestionChargePercentageItemMultiplier =
         farePolicy.congestionChargeMultiplier <&> \case
           FarePolicyD.BaseFareAndExtraDistanceFare congestionChargeMultiplier -> mkBreakupItem congestionChargePercentageCaption (mkValue $ show ((congestionChargeMultiplier - 1) * 100))
           FarePolicyD.ExtraDistanceFare congestionChargeMultiplier -> mkBreakupItem congestionChargePercentageCaption (mkValue $ show ((congestionChargeMultiplier - 1) * 100))
-
+      congestionChargePercentageItemDp =
+        congestionChargeViaDp <&> \congestionCharge -> mkBreakupItem congestionChargePercentageCaption (mkValue $ show (congestionCharge / estimatedTotalFare * 100))
+      congestionChargePercentageItem = congestionChargePercentageItemDp <|> congestionChargePercentageItemMultiplier
       parkingChargeCaption = show Tags.PARKING_CHARGE
       parkingChargeItem = mkBreakupItem parkingChargeCaption . (mkValue . show) <$> farePolicy.parkingCharge
 
