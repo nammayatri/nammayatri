@@ -39,6 +39,7 @@ module Lib.Yudhishthira.Types
     AppDynamicLogicVersion (..),
     AppDynamicLogicDomainResp,
     ChakraQueryResp,
+    UpdateTagReq (..),
     -- DynamicPricingResult (..),
   )
 where
@@ -318,6 +319,15 @@ data RunKaalChakraJobReq = RunKaalChakraJobReq
     completeOldJob :: Maybe (Id AnyJob)
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data UpdateTagReq = UpdateTagReq
+  { tag :: Text,
+    isAddingTag :: Bool
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpdateTagReq where
+  hideSecrets = identity
 
 data KaalChakraJobData = KaalChakraJobData
   { updateUserTags :: Bool,

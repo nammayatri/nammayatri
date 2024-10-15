@@ -1,4 +1,5 @@
 imports:
+  User: Dashboard.Common
   CreateNammaTagRequest: Lib.Yudhishthira.Types
   UpdateNammaTagRequest: Lib.Yudhishthira.Types
   APISuccess: Kernel.Types.APISuccess
@@ -18,6 +19,7 @@ imports:
   ChakraQueryResp: Lib.Yudhishthira.Types
   AppDynamicLogicDomainResp: Lib.Yudhishthira.Types
   AppDynamicLogicVersionResp: Lib.Yudhishthira.Types
+  UpdateTagReq: Lib.Yudhishthira.Types
 
 module: NammaTag
 
@@ -135,3 +137,12 @@ apis:
         chakra: Chakra
       response:
         type: ChakraQueryResp
+  - POST:
+      endpoint: /{customerId}/updateCustomerTag
+      auth: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG MANUAL_TAG_UPDATE
+      params:
+        customerId: Id User
+      request:
+        type: UpdateTagReq
+      response:
+        type: APISuccess

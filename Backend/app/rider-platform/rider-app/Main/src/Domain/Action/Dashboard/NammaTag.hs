@@ -19,9 +19,11 @@ module Domain.Action.Dashboard.NammaTag
     getNammaTagAppDynamicLogicVersions,
     getNammaTagAppDynamicLogicDomains,
     getNammaTagQueryAll,
+    postNammaTagUpdateCustomerTag,
   )
 where
 
+import qualified Dashboard.Common as Common
 import qualified Data.Aeson as A
 import Data.Default.Class (Default (..))
 import Data.List (nub)
@@ -31,11 +33,13 @@ import Data.Singletons
 import qualified Domain.Action.Dashboard.NammaTag.Handle as Handle
 import qualified Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person as DPerson
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import JsonLogic
 import qualified Kernel.Prelude as Prelude
+import Kernel.Types.APISuccess
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
@@ -63,6 +67,7 @@ import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.Queries.Person as QPerson
 import Tools.Auth
 import Tools.Error
 
@@ -174,3 +179,28 @@ getNammaTagAppDynamicLogicDomains _merchantShortId _opCity = return $ Lib.Yudhis
 
 getNammaTagQueryAll :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.Chakra -> Environment.Flow Lib.Yudhishthira.Types.ChakraQueryResp
 getNammaTagQueryAll _merchantShortId _opCity = YudhishthiraFlow.getNammaTagQueryAll
+
+postNammaTagUpdateCustomerTag :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Common.User -> Lib.Yudhishthira.Types.UpdateTagReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postNammaTagUpdateCustomerTag merchantShortId opCity userId req = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let merchantOpCityId = merchantOperatingCity.id
+  let personId = cast @Common.User @DP.Person userId
+  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  when (req.isAddingTag && maybe False (elem req.tag) person.customerNammaTags) $ throwError (InvalidRequest "Tag already exists")
+  -- merchant access checking
+  unless (merchantOpCityId == person.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  YudhishthiraFlow.verifyTag req.tag
+  let tag =
+        if req.isAddingTag
+          then addCustomerTag person.customerNammaTags req.tag
+          else removeCustomerTag person.customerNammaTags req.tag
+  QPerson.updateCustomerTags (Just tag) personId
+  pure Success
+
+addCustomerTag :: Maybe [Text] -> Text -> [Text]
+addCustomerTag Nothing tag = [tag]
+addCustomerTag (Just tags) tag = tags ++ [tag]
+
+removeCustomerTag :: Maybe [Text] -> Text -> [Text]
+removeCustomerTag Nothing _ = []
+removeCustomerTag (Just tags) tag = filter (/= tag) tags
