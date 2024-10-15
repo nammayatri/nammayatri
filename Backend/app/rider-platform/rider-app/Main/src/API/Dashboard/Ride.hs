@@ -31,17 +31,14 @@ import Storage.Beam.SystemConfigs ()
 
 type API =
   "ride"
-    :> ( ShareRideInfoAPI
-           :<|> Common.ShareRideInfoByShortIdAPI
-           :<|> Common.TripRouteAPI
+    :> ( Common.TripRouteAPI
            :<|> Common.PickupRouteAPI
-           --      :<|> Common.RideInfoAPI
            :<|> MultipleRideCancelAPI
            :<|> Common.MultipleRideSyncAPI
            :<|> Common.TicketRideListAPI
        )
 
-type ShareRideInfoAPI = Common.ShareRideInfoAPI
+-- type ShareRideInfoAPI = Common.ShareRideInfoAPI
 
 type MultipleRideCancelAPI =
   "cancel"
@@ -50,26 +47,23 @@ type MultipleRideCancelAPI =
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
-  shareRideInfo merchantId
-    :<|> shareRideInfoByShortId merchantId
-    :<|> callGetTripRoute merchantId
+  callGetTripRoute merchantId
     :<|> callGetPickupRoute merchantId
-    --  :<|> callRideInfo merchantId
     :<|> multipleRideCancel -- FIXME merchantId ?
     :<|> multipleRideSync merchantId
     :<|> ticketRideList merchantId
 
-shareRideInfo ::
-  ShortId DM.Merchant ->
-  Id Common.Ride ->
-  FlowHandler Common.ShareRideInfoRes
-shareRideInfo merchantShortId reqRideId = withFlowHandlerAPI $ DRide.shareRideInfo merchantShortId reqRideId
+-- shareRideInfo ::
+--   ShortId DM.Merchant ->
+--   Id Common.Ride ->
+--   FlowHandler Common.ShareRideInfoRes
+-- shareRideInfo merchantShortId reqRideId = withFlowHandlerAPI $ DRide.shareRideInfo merchantShortId reqRideId
 
-shareRideInfoByShortId ::
-  ShortId DM.Merchant ->
-  ShortId Common.Ride ->
-  FlowHandler Common.ShareRideInfoRes
-shareRideInfoByShortId merchantShortId reqRideShortId = withFlowHandlerAPI $ DRide.shareRideInfoByShortId merchantShortId reqRideShortId
+-- shareRideInfoByShortId ::
+--   ShortId DM.Merchant ->
+--   ShortId Common.Ride ->
+--   FlowHandler Common.ShareRideInfoRes
+-- shareRideInfoByShortId merchantShortId reqRideShortId = withFlowHandlerAPI $ DRide.shareRideInfoByShortId merchantShortId reqRideShortId
 
 callGetTripRoute :: ShortId DM.Merchant -> Id Common.Ride -> Double -> Double -> FlowHandler Maps.GetRoutesResp
 callGetTripRoute merchantShortId rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI $ mkGetLocation merchantShortId rideId pickupLocationLat pickupLocationLon False

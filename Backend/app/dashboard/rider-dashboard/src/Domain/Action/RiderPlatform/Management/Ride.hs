@@ -4,6 +4,8 @@
 module Domain.Action.RiderPlatform.Management.Ride
   ( getRideList,
     getRideRideinfo,
+    getRideInfo,
+    getRideRideInfo,
   )
 where
 
@@ -49,3 +51,13 @@ getRideRideinfo ::
 getRideRideinfo merchantShortId opCity apiTokenInfo rideId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   RiderPlatformClient.RiderApp.Operations.callRiderAppOperations checkedMerchantId opCity (.rideDSL.getRideRideinfo) rideId
+
+getRideInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.Flow Dashboard.RiderPlatform.Ride.ShareRideInfoRes)
+getRideInfo merchantShortId opCity apiTokenInfo rideId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  RiderPlatformClient.RiderApp.Operations.callRiderAppOperations checkedMerchantId opCity (.rideDSL.getRideInfo) rideId
+
+getRideRideInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.ShortId Dashboard.Common.Ride -> Environment.Flow Dashboard.RiderPlatform.Ride.ShareRideInfoRes)
+getRideRideInfo merchantShortId opCity apiTokenInfo rideShortId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  RiderPlatformClient.RiderApp.Operations.callRiderAppOperations checkedMerchantId opCity (.rideDSL.getRideRideInfo) rideShortId

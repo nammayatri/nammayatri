@@ -12,13 +12,14 @@ imports:
   UTCTime: Kernel.Prelude
   FareProductType: Domain.Types
   TripCategory: Domain.Types
+  VehicleVariant: Domain.Types.VehicleVariant
   BookingStatus: Dashboard.RiderPlatform.Ride
   Location: Dashboard.RiderPlatform.Ride
   RideStatus: Dashboard.RiderPlatform.Ride
-  VehicleVariant: Domain.Types.VehicleVariant
   CancellationSource: Dashboard.RiderPlatform.Ride
   EstimateBreakup: Dashboard.RiderPlatform.Ride
   FareBreakup: Dashboard.RiderPlatform.Ride
+  ShareRideInfoRes: Dashboard.RiderPlatform.Ride
 
 module: Ride
 
@@ -44,8 +45,20 @@ apis:
         rideId: Id Ride
       response:
         type: RideInfoRes
-
-
+  - GET:
+      endpoint: /{rideId}/info
+      auth:  ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS RIDE_INFO_CUSTOMER   # FIXME, wrong auth, need to be changed
+      params:
+        rideId: Id Ride
+      response:
+        type: ShareRideInfoRes
+  - GET:
+      endpoint: /{rideShortId}/rideInfo
+      auth:  ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS RIDE_INFO_CUSTOMER   # FIXME, wrong auth, need to be changed
+      params:
+        rideShortId: ShortId Ride
+      response:
+        type: ShareRideInfoRes
 
 
 types:

@@ -14,8 +14,8 @@
 {-# LANGUAGE DerivingStrategies #-}
 
 module Domain.Action.Dashboard.Ride
-  ( shareRideInfo,
-    shareRideInfoByShortId,
+  ( getRideInfo,
+    getRideRideInfo,
     getRideList,
     rideInfo,
     getRideRideinfo,
@@ -113,16 +113,21 @@ mkCommonBookingLocation Location {..} =
 mkAddressRes :: LocationAddress -> Common.LocationAddress
 mkAddressRes LocationAddress {..} = Common.LocationAddress {..}
 
-shareRideInfo ::
+getRideInfo ::
   ShortId DM.Merchant ->
+  Context.City ->
   Id Common.Ride ->
   Flow Common.ShareRideInfoRes
-shareRideInfo merchantId rideId = do
+getRideInfo merchantId _ rideId = do
   ride <- B.runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   buildShareRideInfo merchantId ride
 
-shareRideInfoByShortId :: ShortId DM.Merchant -> ShortId Common.Ride -> Flow Common.ShareRideInfoRes
-shareRideInfoByShortId merchantId rideId = do
+getRideRideInfo ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  ShortId Common.Ride ->
+  Flow Common.ShareRideInfoRes
+getRideRideInfo merchantId _ rideId = do
   let rideShortId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) rideId
   ride <- QRide.findRideByRideShortId rideShortId >>= fromMaybeM (InvalidRequest "Ride ShortId Not Found")
   buildShareRideInfo merchantId ride

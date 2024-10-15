@@ -91,7 +91,7 @@ data RideListRes = RideListRes {totalItems :: Kernel.Prelude.Int, summary :: Das
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("ride" :> (GetRideList :<|> GetRideRideinfo))
+type API = ("ride" :> (GetRideList :<|> GetRideRideinfo :<|> GetRideInfo :<|> GetRideRideInfo))
 
 type GetRideList =
   ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
@@ -118,18 +118,26 @@ type GetRideList =
 
 type GetRideRideinfo = ("rideinfo" :> Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> Get '[JSON] API.Types.RiderPlatform.Management.Ride.RideInfoRes)
 
+type GetRideInfo = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "info" :> Get '[JSON] Dashboard.RiderPlatform.Ride.ShareRideInfoRes)
+
+type GetRideRideInfo = (Capture "rideShortId" (Kernel.Types.Id.ShortId Dashboard.Common.Ride) :> "rideInfo" :> Get '[JSON] Dashboard.RiderPlatform.Ride.ShareRideInfoRes)
+
 data RideAPIs = RideAPIs
   { getRideList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Dashboard.RiderPlatform.Ride.BookingStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.Ride.RideListRes,
-    getRideRideinfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.Ride.RideInfoRes
+    getRideRideinfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.Ride.RideInfoRes,
+    getRideInfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient Dashboard.RiderPlatform.Ride.ShareRideInfoRes,
+    getRideRideInfo :: Kernel.Types.Id.ShortId Dashboard.Common.Ride -> EulerHS.Types.EulerClient Dashboard.RiderPlatform.Ride.ShareRideInfoRes
   }
 
 mkRideAPIs :: (Client EulerHS.Types.EulerClient API -> RideAPIs)
 mkRideAPIs rideClient = (RideAPIs {..})
   where
-    getRideList :<|> getRideRideinfo = rideClient
+    getRideList :<|> getRideRideinfo :<|> getRideInfo :<|> getRideRideInfo = rideClient
 
 data RideEndpointDSL
   = GetRideListEndpoint
   | GetRideRideinfoEndpoint
+  | GetRideInfoEndpoint
+  | GetRideRideInfoEndpoint
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

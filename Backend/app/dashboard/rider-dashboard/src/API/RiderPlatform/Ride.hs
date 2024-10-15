@@ -32,7 +32,6 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified RiderPlatformClient.RiderApp.Operations as Client
 import Servant
@@ -43,11 +42,8 @@ import Tools.Auth.Merchant
 
 type API =
   "ride"
-    :> ( Common.ShareRideInfoAPI
-           :<|> Common.ShareRideInfoByShortIdAPI
-           :<|> Common.TripRouteAPI
+    :> ( Common.TripRouteAPI
            :<|> Common.PickupRouteAPI
-           --   :<|> RideInfoAPI
            :<|> MultipleRideCancelAPI
            :<|> MultipleRideSyncAPI
            :<|> TicketRideListAPI
@@ -71,17 +67,14 @@ type TicketRideListAPI =
 
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
-  shareRideInfo merchantId city
-    :<|> shareRideInfoByShortId merchantId city
-    :<|> tripRoute merchantId city
+  tripRoute merchantId city
     :<|> pickupRoute merchantId city
-    --   :<|> rideInfo merchantId city
     :<|> multipleRideCancel merchantId city
     :<|> multipleRideSync merchantId city
     :<|> ticketRideList merchantId city
 
-rideInfoHitsCountKey :: Text -> Text
-rideInfoHitsCountKey rideId = "RideInfoHits:" <> rideId <> ":hitsCount"
+-- rideInfoHitsCountKey :: Text -> Text
+-- rideInfoHitsCountKey rideId = "RideInfoHits:" <> rideId <> ":hitsCount"
 
 -- merchantCityAccessChecks can be removed from this file?
 buildTransaction ::
@@ -95,27 +88,27 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.RideAPI endpoint) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
-shareRideInfo ::
-  ShortId DM.Merchant ->
-  City.City ->
-  Id Common.Ride ->
-  FlowHandler Common.ShareRideInfoRes
-shareRideInfo merchantShortId opCity rideId = withFlowHandlerAPI' $ do
-  shareRideApiRateLimitOptions <- asks (.shareRideApiRateLimitOptions)
-  checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey $ getId rideId) shareRideApiRateLimitOptions
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
-  Client.callRiderAppOperations checkedMerchantId opCity (.rides.shareRideInfo) rideId
+-- shareRideInfo ::
+--   ShortId DM.Merchant ->
+--   City.City ->
+--   Id Common.Ride ->
+--   FlowHandler Common.ShareRideInfoRes
+-- shareRideInfo merchantShortId opCity rideId = withFlowHandlerAPI' $ do
+--   shareRideApiRateLimitOptions <- asks (.shareRideApiRateLimitOptions)
+--   checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey $ getId rideId) shareRideApiRateLimitOptions
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
+--   Client.callRiderAppOperations checkedMerchantId opCity (.rides.shareRideInfo) rideId
 
-shareRideInfoByShortId ::
-  ShortId DM.Merchant ->
-  City.City ->
-  ShortId Common.Ride ->
-  FlowHandler Common.ShareRideInfoRes
-shareRideInfoByShortId merchantShortId opCity rideShortId = withFlowHandlerAPI' $ do
-  shareRideApiRateLimitOptions <- asks (.shareRideApiRateLimitOptions)
-  checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey $ getShortId rideShortId) shareRideApiRateLimitOptions
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
-  Client.callRiderAppOperations checkedMerchantId opCity (.rides.shareRideInfoByShortId) rideShortId
+-- shareRideInfoByShortId ::
+--   ShortId DM.Merchant ->
+--   City.City ->
+--   ShortId Common.Ride ->
+--   FlowHandler Common.ShareRideInfoRes
+-- shareRideInfoByShortId merchantShortId opCity rideShortId = withFlowHandlerAPI' $ do
+--   shareRideApiRateLimitOptions <- asks (.shareRideApiRateLimitOptions)
+--   checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey $ getShortId rideShortId) shareRideApiRateLimitOptions
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
+--   Client.callRiderAppOperations checkedMerchantId opCity (.rides.shareRideInfoByShortId) rideShortId
 
 tripRoute ::
   ShortId DM.Merchant ->

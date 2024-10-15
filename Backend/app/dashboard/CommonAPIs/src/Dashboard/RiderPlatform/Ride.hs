@@ -43,15 +43,15 @@ import Servant hiding (Summary)
 ---------------------------------------------------------
 -- share ride info--------------------------------------
 
-type ShareRideInfoAPI =
-  Capture "rideId" (Id DP.Ride)
-    :> "info"
-    :> Get '[JSON] ShareRideInfoRes
+-- type ShareRideInfoAPI =
+--   Capture "rideId" (Id DP.Ride)
+--     :> "info"
+--     :> Get '[JSON] ShareRideInfoRes
 
-type ShareRideInfoByShortIdAPI =
-  Capture "rideShortId" (ShortId DP.Ride)
-    :> "rideInfo"
-    :> Get '[JSON] ShareRideInfoRes
+-- type ShareRideInfoByShortIdAPI =
+--   Capture "rideShortId" (ShortId DP.Ride)
+--     :> "rideInfo"
+--     :> Get '[JSON] ShareRideInfoRes
 
 data ShareRideInfoRes = ShareRideInfoRes
   { id :: Id Ride,
