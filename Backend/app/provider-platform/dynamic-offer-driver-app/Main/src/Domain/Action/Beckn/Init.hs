@@ -224,6 +224,7 @@ handler merchantId req validatedReq = do
             toLocGeohash = searchRequest.toLocGeohash,
             hasStops = searchRequest.hasStops,
             isReferredRide = searchRequest.driverIdForSearch $> True,
+            dynamicPricingLogicVersion = searchRequest.dynamicPricingLogicVersion,
             ..
           }
     makeBookingDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DSR.SearchRequest -> DTDD.DeliveryDetails -> Id DM.Merchant -> m (Maybe TripParty, Maybe DTDPD.DeliveryPersonDetails, Maybe DTDPD.DeliveryPersonDetails)
