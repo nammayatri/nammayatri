@@ -1130,12 +1130,13 @@ referralView push state =
     ]
 
 sosView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-sosView push state =
+sosView push state = do
+  let sosViewVisibility = boolToVisibility $ (state.props.currentStage == RideStarted || (state.props.currentStage == RideAccepted && state.data.driverInfoCardState.driverArrived )) && state.data.config.feature.enableSafetyFlow 
   relativeLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , gravity CENTER
-    , visibility $ boolToVisibility $ Arr.elem state.props.currentStage [RideAccepted, RideStarted] && state.data.config.feature.enableSafetyFlow
+    , visibility sosViewVisibility
     , margin $ MarginRight 16
     ]
     [ linearLayout

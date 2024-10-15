@@ -189,7 +189,7 @@ import Screens.TicketBookingFlow.MetroTicketStatus.Transformer
 import Screens.TicketBookingFlow.MetroTicketDetails.Transformer
 import Screens.TicketBookingFlow.MetroMyTickets.Transformer
 import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
-import Screens.NammaSafetyFlow.ScreenData (defaultTimerValue)
+import Screens.NammaSafetyFlow.ScreenData (defaultTimerValue, initData) as SafetyScreenData
 import Services.Config (getNumbersToWhiteList)
 import SessionCache (getValueFromWindow, setValueInWindow)
 import LocalStorage.Cache (clearCache, setInCache)
@@ -283,7 +283,7 @@ dataFetchScreenFlow stageConfig stepVal = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetySettings = Nothing } })
       nammaSafetyFlow
     DataExplainWithFetchC.GoToSafetyDrill state -> do
-      modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { triggeringSos = false, timerValue = defaultTimerValue, showTestDrill = true, showShimmer = true, confirmTestDrill = false, isAudioRecordingActive = false, showMenu = false, isFromSafetyCenter = true, recordedAudioUrl = Nothing, audioRecordingStatus = CTA.NOT_RECORDING, recordingTimer = "00 : 00", defaultCallPopup = false } })
+      modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { triggeringSos = false, timerValue = SafetyScreenData.defaultTimerValue, showTestDrill = true, showShimmer = true, confirmTestDrill = false, isAudioRecordingActive = false, showMenu = false, isFromSafetyCenter = true, recordedAudioUrl = Nothing, audioRecordingStatus = CTA.NOT_RECORDING, recordingTimer = "00 : 00", defaultCallPopup = false } })
       activateSafetyScreenFlow
     _ -> homeScreenFlow
 
@@ -2309,7 +2309,7 @@ homeScreenFlow = do
       rentalScreenFlow
     GO_TO_SCHEDULED_RIDES -> rideScheduledFlow
     GO_TO_NAMMASAFETY state triggerSos showtestDrill -> do
-      updateSafetyScreenState state defaultTimerValue showtestDrill triggerSos
+      updateSafetyScreenState state SafetyScreenData.defaultTimerValue showtestDrill triggerSos
       case (triggerSos || showtestDrill) of
         true -> do
           let
@@ -2357,7 +2357,7 @@ homeScreenFlow = do
               void $ pure $ toast $ getString STR.GLAD_TO_KNOW_YOU_ARE_SAFE
               pure unit
           else do
-            updateSafetyScreenState state defaultTimerValue false true
+            updateSafetyScreenState state SafetyScreenData.defaultTimerValue false true
             activateSafetyScreenFlow
         Left err -> do
           void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
@@ -2487,8 +2487,13 @@ homeScreenFlow = do
           void $ pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
           homeScreenFlow
     GO_TO_ISSUE_REPORT_CHAT_SCREEN_WITH_ISSUE updatedState issueType -> do
+      let (RideBookingRes resp) = updatedState.data.ratingViewState.rideBookingRes
+          checkIfSafetyEnabled = EHC.getExpiryTime (fromMaybe "" resp.rideEndTime) true / 60 < updatedState.data.config.safety.pastRideInterval
       if issueType == CTA.Accessibility then 
         homeScreenFlow
+      else if checkIfSafetyEnabled && issueType == CTA.NightSafety then do
+        modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> SafetyScreenData.initData { props { reportPastRide = true }, data { lastRideDetails = Arr.head $ myRideListTransformer true [ updatedState.data.ratingViewState.rideBookingRes ] updatedState.data.config Nothing  } })
+        activateSafetyScreenFlow
       else do
         let 
           language = fetchLanguage $ getLanguageLocale languageKey

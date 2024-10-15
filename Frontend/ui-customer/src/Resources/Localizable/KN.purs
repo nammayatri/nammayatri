@@ -1380,7 +1380,7 @@ getKN stringKey =
         TRUSTED_CONTACT_DESC -> "ಅಪ್ಲಿಕೇಶನ್‌ನಲ್ಲಿ ಚಾಟ್ ಮೂಲಕ ನಿಮ್ಮ ಭರವಸೆಯ ಸಂಪರ್ಕಗಳೊಂದಿಗೆ ಸಂಪರ್ಕದಲ್ಲಿರಿ"
         ENABLE_LIVE_TRACKING -> "ಲೈವ್ ರೈಡ್ ಟ್ರ್ಯಾಕಿಂಗ್ ಸಕ್ರಿಯಗೊಳಿಸಿ"
         UNEXPECTED_EVENT_CHECK -> "ಅನಪೇಕ್ಷಿತ ಘಟನೆ ಪರಿಶೀಲನೆ"
-        UNEXPECTED_EVENT_CHECK_DESC -> "ಮಾರ್ಗ ವಿನ್ಯಾಸ, ಅಸಾಮಾನ್ಯ ನಿಲ್ಲಿಕೆ, ಅಥವಾ ಅಪಾಯದ ಪ್ರದೇಶಗಳಲ್ಲಿ ಪ್ರಯಾಣಿಸುವಾಗ ಅಧಿಸೂಚನೆಗಳನ್ನು ಪಡೆಯಿರಿ"
+        UNEXPECTED_EVENT_CHECK_DESC -> "ಮಾರ್ಗ ವಿಭ್ರಂಶದ ಬಗ್ಗೆ ಚೆಕ್-ಇನ್ ಸೂಚನೆಗಳನ್ನು ಪಡೆಯಿರಿ"
         UNEXPECTED_EVENT_CHECK_TIMINGS -> "ಅನಪೇಕ್ಷಿತ ಘಟನೆಗಳ ಪರಿಶೀಲನೆ ಸಮಯ"
         NEXT -> "ಮುಂದಿನದು"
         POST_RIDE_CHECK -> "ರೈಡ್ ನಂತರ ಪರಿಶೀಲನೆ"

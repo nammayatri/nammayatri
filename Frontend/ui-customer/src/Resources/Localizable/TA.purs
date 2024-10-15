@@ -1394,7 +1394,7 @@ getTA stringKey =
     TRUSTED_CONTACT_DESC -> "நம்பகமான தொடர்புகளுடன் தொடர்பு வைக்கவும்"
     ENABLE_LIVE_TRACKING -> "நிகழ்நேர சின்னமிடலை இயக்கவும்"
     UNEXPECTED_EVENT_CHECK -> "எதிர்பாராத நிகழ்வு சோதனை"
-    UNEXPECTED_EVENT_CHECK_DESC -> "பாதை மாற்றம், தவறான நிறுத்தம், அல்லது பாதுகாப்பானவல்ல பகுதிகளில் பயணம் செய்தால் அறிவிப்புகள் பெறவும்"
+    UNEXPECTED_EVENT_CHECK_DESC -> "பாதை மாற்றங்களில் செக்-இன் அறிவிப்புகளைப் பெறுங்கள்"
     UNEXPECTED_EVENT_CHECK_TIMINGS -> "எதிர்பாராத நிகழ்வு சோதனை நேரம்"
     NEXT -> "அடுத்தது"
     POST_RIDE_CHECK -> "பயணத்திற்குப் பிறகு சோதனை"
