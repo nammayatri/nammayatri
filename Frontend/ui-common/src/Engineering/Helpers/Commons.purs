@@ -122,6 +122,8 @@ foreign import getDateMinusNDays :: Fn2 String Int String
 
 foreign import getUTCBeforeNSecondsImpl :: Fn2 String Int String
 
+foreign import loadWebViewWithURL :: EffectFn2 String String Unit
+
 os :: String
 os = getOs unit
 

@@ -211,6 +211,23 @@ function setTextImpl(id, text, pos) {
   }
 }
 
+export const loadWebViewWithURL = (id, url) => {
+  if(window.__OS === "ANDROID") {
+    let cmd = "set_view=ctx->findViewById:i_" + id + ";";
+    cmd += "get_view->loadUrl:s_" + handleSpecialChars(url) + ";";
+    Android.runInUI(cmd, null);
+  }
+} 
+
+function handleSpecialChars(value) {
+  value =  value.indexOf(',')>-1?value.replace(/\,/g, '\\\\,'):value;
+  value =  value.indexOf(':')>-1?value.replace(/\:/g, '\\\\:'):value;
+  value =  value.indexOf(':')>-1?value.replace(/\=/g, '\\\\='):value;
+  value =  value.indexOf(';')>-1?value.replace(/\;/g, '\\\\;'):value;
+
+  return value;
+}
+
 export const setText = function (id) {
   return function (text) {
     setTextImpl(id, text, text.length);

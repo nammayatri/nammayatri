@@ -200,6 +200,7 @@ import Screens.HomeScreen.Controllers.Types
 import Helpers.Utils as HU
 import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
 import Screens.HomeScreen.ScreenData (dummyNewContacts)
+import Engineering.Helpers.Commons as EHC
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -647,7 +648,7 @@ view push state =
             , if state.props.showEditPickupPopupOnCancel then PopUpModal.view (push <<< EditPickupPopupOnCancelAC) (editPickupPopupOnCancel state) else emptyTextView state
             , if state.props.searchLocationModelProps.showRideInfo then rideInfoCardView push state  else emptyTextView state
             , if state.data.intercityBus.showPermissionPopUp then PopUpModal.view (push <<< IntercityBusPermissionAction) (PopUpConfigs.intercityBusPhoneNumberPermission state) else emptyTextView state
-            , if state.data.intercityBus.showWebView && isJust state.data.intercityBus.url then intercityWebView push state.data.intercityBus.url else emptyTextView state 
+            , if state.data.intercityBus.showWebView && isJust state.data.intercityBus.url then intercityWebView push state else emptyTextView state 
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -3860,13 +3861,16 @@ homescreenHeader push state =
     ][ pickupLocationView push state]
 
 
+getHeaderLogo :: HomeScreenState -> String
+getHeaderLogo state = 
+  fetchImage FF_ASSET $ if DS.null state.data.config.appData.logoLight then do 
+    if DS.null state.data.currentCityConfig.appLogoLight then "ny_ic_logo_dark" 
+    else state.data.currentCityConfig.appLogoLight   
+  else state.data.config.appData.logoLight 
+
 pickupLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 pickupLocationView push state = 
-  let headerLogo =  if DS.null state.data.config.appData.logoLight then do 
-                      if DS.null state.data.currentCityConfig.appLogoLight then "ny_ic_logo_dark" 
-                      else state.data.currentCityConfig.appLogoLight   
-                    else state.data.config.appData.logoLight 
-  in linearLayout
+  linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
@@ -3930,7 +3934,7 @@ pickupLocationView push state =
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
               ][ imageView
-                  [ imageWithFallback $ fetchImage FF_ASSET headerLogo 
+                  [ imageWithFallback $ getHeaderLogo state 
                   , height $ V 32
                   , width $ V 93
                   , margin $ MarginRight 12
@@ -3967,79 +3971,6 @@ pickupLocationView push state =
             ]
         ]
 
-mapView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> PrestoDOM (Effect Unit) w
-mapView push state idTag = 
-  let mapDimensions = getMapDimensions state
-      bottomPadding = if state.props.currentStage == ConfirmingLocation then getDefaultPixelSize extraBottomPadding else 0
-      -- banners = getBannerConfigs state BannerCarousel
-      isVisible = spy "Insdie mapView" $ if isHomeScreenView state then (not state.props.showShimmer)
-                      else (not (state.props.currentStage == SearchLocationModel && state.props.isSearchLocation == SearchLocation ))
-    
-  in
-  PrestoAnim.animationSet [ fadeInWithDelay 20 true ] $
-  relativeLayout
-    [ height if (isHomeScreenView state && state.props.showShimmer) then V 0 else mapDimensions.height
-    , width mapDimensions.width 
-    -- , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
-    , margin $ if isHomeScreenView state then MarginTop 16 else MarginTop 0
-    , visibility $ boolToInvisibility isVisible
-    , padding $ PaddingBottom $ bottomPadding
-    , onAnimationEnd
-            ( \action -> do
-                _ <- push action
-                if state.props.sourceLat == 0.0 && state.props.sourceLong == 0.0 then do
-                  void $ getCurrentPosition push CurrentLocation
-                else pure unit
-                _ <- showMap (getNewIDWithTag idTag) isCurrentLocationEnabled "satellite" zoomLevel state.props.sourceLat state.props.sourceLong push MAPREADY
-                if os == "IOS" then
-                  case state.props.currentStage of  
-                    HomeScreen -> void $ setMapPadding 0 0 0 0
-                    ConfirmingLocation -> void $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = state.props.sourceLat, lon = state.props.sourceLong, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapPin" }
-                    _ -> pure unit
-                else pure unit
-                if state.props.openChatScreen && state.props.currentStage == RideAccepted then push OpenChatScreen
-                else pure unit
-                case state.props.currentStage of
-                  HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
-                  _ -> pure unit
-                pure unit
-            )
-            (const MapReadyAction)
-    ]$[  linearLayout
-          ([ height mapDimensions.height
-          , width $ mapDimensions.width 
-          , accessibility DISABLE_DESCENDANT
-          , id (getNewIDWithTag idTag)
-          , visibility if (state.props.isSrcServiceable && not state.props.userBlocked) then VISIBLE else GONE
-          , cornerRadius if state.props.currentStage == HomeScreen && os == "IOS" then 16.0 else 0.0
-          , clickable $ not isHomeScreenView state 
-          ] <> if state.props.currentStage == HomeScreen then [stroke $ "1,"<> Color.grey900 ] else [])[]
-    --  , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][] -- TODO :: Mercy Once rentals is enabled.
-     , linearLayout 
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , alignParentBottom "true,-1"
-        , gravity RIGHT
-        , padding $ Padding 16 0 22 16
-        , visibility $ boolToVisibility $ isHomeScreenView state
-        ][ imageView
-            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_recenter_btn"
-            , accessibility DISABLE
-            , onClick
-                ( \action -> do
-                    _ <- push action
-                    _ <- getCurrentPosition push UpdateCurrentLocation
-                    _ <- pure $ logEvent state.data.logField "ny_user_recenter_btn_click"
-                    pure unit
-                )
-                (const $ RecenterCurrentLocation)
-            , height $ V 40
-            , width $ V 40
-            ]
-
-        ]
-    ]
-
 
 mapView' :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> PrestoDOM (Effect Unit) w
 mapView' push state idTag = 
@@ -4063,6 +3994,7 @@ mapView' push state idTag =
           , id (getNewIDWithTag idTag)
           , visibility if (state.props.isSrcServiceable && not state.props.userBlocked) then VISIBLE else GONE
           , cornerRadius if state.props.currentStage == HomeScreen && os == "IOS" then 16.0 else 0.0
+          , background Color.white900
           , afterRender
             ( \action -> do
                 _ <- push action
@@ -5292,23 +5224,77 @@ rideInfoCardView push state =
 
 
 --- Intercity Confirmation view----
-intercityWebView :: forall w . (Action -> Effect Unit) -> Maybe String -> PrestoDOM (Effect Unit) w
-intercityWebView push url' = 
- linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , background Color.grey800
-  , afterRender
-        ( \action -> do
-            initialWebViewSetUp push (getNewIDWithTag "intercityWebView") HideIntercityBusView
-            pure unit
-        )
-        (const NoAction)
-  ] [
-  webView
-    [ url $ spy "RS_URL" $ fromMaybe "" url'
-    , height MATCH_PARENT
-    , width MATCH_PARENT
-    , id $ getNewIDWithTag "intercityWebView"
-    ]
-  ]
+intercityWebView :: forall w . (Action -> Effect Unit) -> HomeScreenState-> PrestoDOM (Effect Unit) w
+intercityWebView push state  = 
+  case state.data.intercityBus.url of 
+    Just url' -> 
+      linearLayout [
+        height MATCH_PARENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , background Color.white900
+      , clickable true
+      ][
+        linearLayout[
+          width MATCH_PARENT
+        , height WRAP_CONTENT
+        , margin $ Margin 16 10 16 10
+        , orientation HORIZONTAL
+        , gravity CENTER_VERTICAL
+        ][
+          linearLayout[
+            height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , stroke $ "1," <> Color.grey900
+          , gravity CENTER
+          , padding $ Padding 4 4 4 4
+          , rippleColor Color.rippleShade
+          , onClick push $ const $ HideIntercityBusView ""
+          , cornerRadius 8.0
+          ][
+            imageView [
+              imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left"
+            , height $ V 24
+            , width $ V 24
+            ]
+          ]
+        , imageView [
+            imageWithFallback $ getHeaderLogo state  
+          , height $ V 32
+          , width $ V 93
+          , margin $ MarginLeft 10
+          ]
+        , linearLayout[
+            height WRAP_CONTENT
+          , weight 1.0
+          ][]
+        , linearLayout[
+            width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , padding $ Padding 2 2 2 2
+          , cornerRadius 1.0
+          ][
+            imageView [
+                imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_refresh_black"
+              , onClick (\_ ->  runEffectFn2 EHC.loadWebViewWithURL (getNewIDWithTag "intercityWebView")  url') (const NoAction)
+              , height $ V 24
+              , width $ V 24
+              , rippleColor Color.rippleShade
+            ]
+          ]
+        ]
+      , linearLayout[ 
+          weight 1.0
+        , width MATCH_PARENT
+        , background Color.grey800
+        , afterRender( \_ ->initialWebViewSetUp push (getNewIDWithTag "intercityWebView") HideIntercityBusView) (const NoAction)
+        ][
+          webView[ 
+            url $ url'
+          , height MATCH_PARENT
+          , width MATCH_PARENT
+          , id $ getNewIDWithTag "intercityWebView"
+          ]
+        ]
+      ]
+    Nothing -> emptyTextView state
