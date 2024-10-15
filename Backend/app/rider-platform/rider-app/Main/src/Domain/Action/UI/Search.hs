@@ -693,15 +693,17 @@ convertToFRFSStations :: MultiModal.MultiModalLeg -> Maybe JPT.JourneySearchData
 convertToFRFSStations journeyPlannerLeg journeySearchData_ = do
   fromStopDetails <- journeyPlannerLeg.fromStopDetails & fromMaybeM (InternalError "fromStopDetails dont exist")
   toStopDetails <- journeyPlannerLeg.toStopDetails & fromMaybeM (InternalError "toStopDetails dont exist")
-  _fromStopCode <- fromStopDetails.stopCode & fromMaybeM (InternalError "fromStopCode dont exist")
-  _toStopCode <- toStopDetails.stopCode & fromMaybeM (InternalError "toStopCode dont exist")
+  routeDetails <- journeyPlannerLeg.routeDetails & fromMaybeM (InternalError "routeDetails dont exist")
+  _fromStopCode <- fromStopDetails.gtfsId & fromMaybeM (InternalError "fromStopCode doesnt exist")
+  _toStopCode <- toStopDetails.gtfsId & fromMaybeM (InternalError "toStopCode doesnt exist")
+  let _routeCode = routeDetails.gtfsId
   return $
     FRFSTicketService.FRFSSearchAPIReq
       { fromStationCode = _fromStopCode,
         toStationCode = _toStopCode,
         quantity = 1,
         journeySearchData = journeySearchData_,
-        routeCode = Nothing
+        routeCode = _routeCode
       }
 
 buildSearchRequest ::
@@ -921,12 +923,12 @@ dummyAddress =
       extras = Nothing
     }
 
-convertMultiModalModeToTripMode :: String -> Meters -> Meters -> DTrip.TravelMode
+convertMultiModalModeToTripMode :: MultiModal.GeneralVehicleType -> Meters -> Meters -> DTrip.TravelMode
 convertMultiModalModeToTripMode input distance maximumWalkDistance = case input of
-  "METRO_RAIL" -> DTrip.Metro
-  "WALK" -> if (distance > maximumWalkDistance) then DTrip.Taxi else DTrip.Walk
-  "BUS" -> DTrip.Bus
-  _ -> DTrip.Taxi
+  MultiModal.MetroRail -> DTrip.Metro
+  MultiModal.Walk -> if (distance > maximumWalkDistance) then DTrip.Taxi else DTrip.Walk
+  MultiModal.Bus -> DTrip.Bus
+  MultiModal.Unspecified -> DTrip.Taxi
 
 mapWithIndex :: (MonadFlow m) => (Int -> a -> m b) -> [a] -> m [b]
 mapWithIndex f xs = go 0 xs
