@@ -416,7 +416,10 @@ view push state =
         state.props.showReferralEarnedPopUp,
         state.props.showReferNowPopUp,
         state.props.showAddUPIPopUp,
-        state.props.showVerifyUPIPopUp
+        state.props.showVerifyUPIPopUp,
+        state.props.showOndcIncentivePopUp,
+        state.props.showUPISuccesInfoPopUp,
+        state.props.showUPIFailureInfoPopUp
       ])
     onRide = DA.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer, ST.RideCompleted]
     showEnterOdometerReadingModalView = state.props.isOdometerReadingsRequired && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal )
@@ -2325,6 +2328,9 @@ popupModals push state =
           ST.ReferNow -> referNowConfig state
           ST.AddUPI -> addUPIConfig state 
           ST.VerifyUPI -> verifyUPI state
+          ST.OndcIncentive -> ondcIncentivePopUpModalConfig state
+          ST.SetupReferralUPISuccess -> setupReferralUPISuccessPopUpConfig state
+          ST.SetupReferralUPIFailure -> setupReferralUPIFailurePopUpConfig state
       ]
   where 
   
@@ -2339,6 +2345,9 @@ popupModals push state =
       else if state.props.showReferNowPopUp then ST.ReferNow
       else if state.props.showAddUPIPopUp then ST.AddUPI
       else if state.props.showVerifyUPIPopUp then ST.VerifyUPI
+      else if state.props.showOndcIncentivePopUp then ST.OndcIncentive
+      else if state.props.showUPISuccesInfoPopUp then ST.SetupReferralUPISuccess
+      else if state.props.showUPIFailureInfoPopUp then ST.SetupReferralUPIFailure
       else ST.KnowMore
 
     clickAction popupType = case popupType of
@@ -2353,6 +2362,9 @@ popupModals push state =
           ST.ReferNow -> (ReferralPopUpAction popupType (Just REFER_NOW_LAST_SHOWN))
           ST.AddUPI -> (ReferralPopUpAction popupType (Just ADD_UPI_LAST_SHOWN))
           ST.VerifyUPI -> (ReferralPopUpAction popupType (Just VERIFY_UPI_LAST_SHOWN))
+          ST.OndcIncentive -> OndcIncentiveAction
+          ST.SetupReferralUPISuccess -> SetupReferralUPISuccessAction
+          ST.SetupReferralUPIFailure -> SetupReferralUPIFailureAction
 
 enableCurrentLocation :: HomeScreenState -> Boolean
 enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true

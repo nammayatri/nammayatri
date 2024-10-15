@@ -109,3 +109,8 @@ type CoinsConfig = {
   monsoonOfferDate :: String,
   coinsValidTill :: Int
 }
+
+type OndcIncentiveConfig = {
+  ondcIncentiveValue :: Int,
+  showOndcIncentiveTag :: Boolean
+}

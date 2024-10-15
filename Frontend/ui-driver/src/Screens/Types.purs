@@ -70,7 +70,7 @@ import Common.Types.App (CalendarDate)
 import Common.RemoteConfig.Types as CommonRC
 import Common.RemoteConfig.Types (OfferBanner(..)) as ReExport
 import Data.Tuple(Tuple(..))
-
+import Screens.CustomerReferralTrackerScreen.Types(OrderStatus(..))
 
 type EditTextInLabelState =
  {
@@ -1386,7 +1386,11 @@ type HomeScreenProps =  {
   homeScreenBannerVisibility :: Boolean,
   rideRequestPill :: RideRequestPill,
   showIntercityRateCard :: Boolean,
-  intercityInfoPopUp :: Boolean
+  intercityInfoPopUp :: Boolean,
+  showOndcIncentivePopUp :: Boolean,
+  referralUPISetupData :: ReferralUPISetupData,
+  showUPISuccesInfoPopUp :: Boolean,
+  showUPIFailureInfoPopUp :: Boolean
  }
 
 type RideRequestPill = {
@@ -2592,7 +2596,7 @@ instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where stand
 instance decodeGoToPopUpType :: Decode GoToPopUpType where decode = defaultDecode
 instance encodeGoToPopUpType  :: Encode GoToPopUpType where encode = defaultEncode
 
-data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver | ReferralEarned | ReferNow | AddUPI | VerifyUPI
+data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported | BgLocationPopup | TopAcDriver | ReferralEarned | ReferNow | AddUPI | VerifyUPI | OndcIncentive | SetupReferralUPISuccess | SetupReferralUPIFailure
 
 derive instance genericHomeScreenPopUpTypes :: Generic HomeScreenPopUpTypes _
 instance showHomeScreenPopUpTypes :: Show HomeScreenPopUpTypes where show = genericShow
@@ -3202,4 +3206,11 @@ type GullakSDKResp = {
   responseMessage :: String,
   responseCode :: Int,
   isNewUser :: Boolean
+}
+
+------------------------------------ homeScreen Referral UPI Setup Flow --------------------------------------
+
+type ReferralUPISetupData = {
+  referralUPIOrderStatus :: Maybe OrderStatus,
+  referralUPIOrderId :: Maybe String
 }

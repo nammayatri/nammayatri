@@ -2897,6 +2897,11 @@ homeScreenFlow = do
       (GlobalState globalstate) <- getState
       (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalstate) false
       let (API.DriverGoHomeInfo driverGoHomeInfo) = getDriverInfoResp.driverGoHomeInfo
+      let 
+        ondcIncentiveConfig = RemoteConfig.getOndcIncentiveConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+        ondcIncentiveEnabled = ondcIncentiveConfig.showOndcIncentiveTag
+        isReferralUPINotAdded = isNothing state.data.payoutVpa
+        isBookingFromAnotherPlatform = state.data.activeRide.bookingFromOtherPlatform
       when state.data.driverGotoState.isGotoEnabled do
         modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { 
             gotoPopupType = case globalstate.globalProps.gotoPopupType of
@@ -2905,6 +2910,8 @@ homeScreenFlow = do
       void $ updateStage $ HomeScreenStage HomeScreen
       updateDriverDataToStates
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps { gotoPopupType = ST.NO_POPUP_VIEW })
+      when (isReferralUPINotAdded && ondcIncentiveEnabled && isBookingFromAnotherPlatform) do 
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{showOndcIncentivePopUp = true}})
       homeScreenFlow
     GO_TO_EARNINGS_SCREEN -> driverEarningsFlow
     CLEAR_PENDING_DUES -> clearPendingDuesFlow true
@@ -3036,6 +3043,7 @@ homeScreenFlow = do
           void $ lift $ lift $ toggleLoader false
           pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
       homeScreenFlow
+    ADD_REFERRAL_UPI state -> addReferralUPIFlow state
   homeScreenFlow
 
 clearPendingDuesFlow :: Boolean -> FlowBT String Unit
@@ -4544,3 +4552,42 @@ rideAcceptScreenFlow = do
    
   
 
+addReferralUPIFlow :: HomeScreenState -> FlowBT String Unit 
+addReferralUPIFlow state = do 
+  void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT)
+  void $ lift $ lift $ toggleLoader true
+  liftFlowBT $ initiatePaymentPage
+  response <- lift $ lift $ Remote.payoutRegistration "dummy"
+  case response of
+    Right (API.PayoutRegisterRes payoutRegisterRes) -> do
+      let (CreateOrderRes createOrderRes) = payoutRegisterRes.orderResp 
+          (PaymentPagePayload sdk_payload) = createOrderRes.sdk_payload
+          (PayPayload innerpayload) = sdk_payload.payload
+          finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getLanguageLocale languageKey)) }
+          sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{referralUPISetupData{referralUPIOrderId = Just payoutRegisterRes.orderId}}})
+      lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
+      void $ paymentPageUI sdkPayload
+      checkONDCPaymentStatus payoutRegisterRes.orderId
+    Left (errorPayload) -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+  void $ lift $ lift $ toggleLoader true
+  homeScreenFlow
+
+checkONDCPaymentStatus :: String -> FlowBT String Unit
+checkONDCPaymentStatus orderId = do
+  orderStatus <- lift $ lift $ Remote.paymentOrderStatus orderId
+  case orderStatus of
+    Right (OrderStatusRes statusResp) -> do
+      let orderStatus = getOrderStatus statusResp.status
+      setReferralUPIPaymentStatus orderStatus
+    Left err -> setReferralUPIPaymentStatus CRST.PENDING
+
+
+setReferralUPIPaymentStatus :: CRST.OrderStatus -> FlowBT String Unit
+setReferralUPIPaymentStatus status = do
+  (GlobalState globalState) <- getState
+  case status of
+    CRST.CHARGED -> modifyScreenState $ HomeScreenStateType (\homeScreenState -> homeScreenState{props{referralUPISetupData{referralUPIOrderStatus = Just status},showUPISuccesInfoPopUp = true}})
+    CRST.FAILED -> modifyScreenState $ HomeScreenStateType (\homeScreenState -> homeScreenState{props{referralUPISetupData{referralUPIOrderStatus = Just status},showUPIFailureInfoPopUp = true}})
+    CRST.PENDING -> modifyScreenState $ HomeScreenStateType (\homeScreenState -> homeScreenState{props{referralUPISetupData{referralUPIOrderStatus = Just status}}})
+    _ -> pure unit

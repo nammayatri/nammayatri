@@ -1794,3 +1794,5 @@ getProxy str = case str of
   FREE_TRIAL_ENDING_IN_N_DAYS arg1 -> \a -> (a @~ free_trial_ending_in_n_days) arg1
   N_MORE_FREE_RIDES arg1 -> \a -> (a @~ n_more_free_rides_left) arg1
   N_FREE_RIDES_COMPLETED arg1 -> \a -> (a @~ n_free_rides_completed) arg1
+  ONDC_INCENTIVE_HEADER arg1 -> \a -> (a @~ ondc_incentive_header) arg1
+  ONDC_INCENTIVE_BODY arg1 -> \a -> (a @~ ondc_incentive_body) arg1

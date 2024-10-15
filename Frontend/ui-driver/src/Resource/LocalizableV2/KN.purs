@@ -1722,4 +1722,6 @@ getKn =
     , free_trial_ending_in_n_days: (\days -> "ಉಚಿತ ಪ್ರಯೋಗ ಕೊನೆಯಾಗುತ್ತಿದೆ "<> days <>" ದಿನಗಳಲ್ಲಿ!")
     , n_free_rides_completed : (\n -> n <> " ಉಚಿತ ಸವಾರಿಗಳನ್ನು ಪೂರೈಸಿದ್ದೀರಿ!")
     , n_more_free_rides_left : (\n -> n <> " ಉಚಿತ ಸವಾರಿಗಳು ಉಳಿದಿವೆ!")
+    , ondc_incentive_body: (\ondcIncentiveValue -> "ನೀವು ಮೂರನೇ ಪಕ್ಷದ ಪ್ರಯಾಣವನ್ನು ಪೂರೈಸಿದಕ್ಕಾಗಿ ₹ " <> ondcIncentiveValue <> " ಪ್ರೋತ್ಸಾಹ ನೀಡಲಾಗುತ್ತದೆ.")
+    , ondc_incentive_header: (\ondcIncentiveValue -> "₹ " <> ondcIncentiveValue <> " ಪ್ರೋತ್ಸಾಹ ಲಭ್ಯವಾಗಿದೆ!")
     }

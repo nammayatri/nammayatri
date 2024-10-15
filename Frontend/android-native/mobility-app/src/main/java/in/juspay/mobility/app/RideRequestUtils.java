@@ -694,12 +694,39 @@ public class RideRequestUtils {
 
     public static void updateExtraChargesString(SheetAdapter.SheetViewHolder holder, SheetModel model, Context context) {
         if (model.isThirdPartyBooking()) {
+            int ondcIncentiveVal = 0;
+            boolean showOndcIncentiveTag = false;
+            JSONObject ondcIncentiveConfig = currentCityObject("ondc_incentive_config", context);
+            try {
+                if (ondcIncentiveConfig.has("ondcIncentiveValue")) {
+                    ondcIncentiveVal = ondcIncentiveConfig.getInt("ondcIncentiveValue");
+                }
+                if (ondcIncentiveConfig.has("showOndcIncentiveTag")) {
+                    showOndcIncentiveTag = ondcIncentiveConfig.getBoolean("showOndcIncentiveTag");
+                }
+            } catch (JSONException e) {
+                Log.e("JSONParsingError", "Error parsing JSON: " + e.getMessage());
+            }
             holder.thirdPartyTag.setVisibility(View.VISIBLE);
             holder.thirdPartyTagText.setText(context.getString(R.string.third_party_booking));
-            holder.rateText.setVisibility(View.GONE);
-            holder.rateViewDot.setVisibility(View.GONE);
-            holder.textIncludesCharges.setText(context.getString(R.string.no_additional_fare_tips_and_waiting_charges));
-            holder.textIncludesCharges.setTextColor(context.getColor(R.color.red900));
+            Log.e("ondcIncentiveConfig",ondcIncentiveConfig.toString());
+            if (ondcIncentiveVal > 0 && showOndcIncentiveTag){
+                holder.ondcIncentiveTag.setVisibility(View.VISIBLE);
+                holder.thirdPartyTagImage.setVisibility(View.GONE);
+                holder.thirdPartyTag.setBackgroundColor(context.getColor(R.color.orange600));
+                String ondcIncentiveValue = "₹"+ ondcIncentiveVal;
+                holder.ondcIncentiveValue.setText(ondcIncentiveValue);
+                holder.thirdPartyTagText.setTextColor(context.getColor(R.color.quantum_black_100));
+                holder.rateViewDot.setVisibility(View.GONE);
+                holder.textIncludesCharges.setVisibility(View.GONE);
+            }else{
+                holder.ondcIncentiveTag.setVisibility(View.GONE);
+                holder.thirdPartyTagImage.setVisibility(View.VISIBLE);
+                holder.rateText.setVisibility(View.GONE);
+                holder.rateViewDot.setVisibility(View.GONE);
+                holder.textIncludesCharges.setText(context.getString(R.string.no_additional_fare_tips_and_waiting_charges));
+                holder.textIncludesCharges.setTextColor(context.getColor(R.color.red900));
+            }
             return ;
         }
 

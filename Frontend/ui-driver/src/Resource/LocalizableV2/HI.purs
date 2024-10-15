@@ -1722,4 +1722,6 @@ getHi =
     , free_trial_ending_in_n_days: (\days -> "मुफ्त परीक्षण का समापन " <> days <> " दिनों में!")
     , n_free_rides_completed: (\n -> n <> " मुफ्त सवारियां पूरी हुईं")
     , n_more_free_rides_left: (\n -> n <> " और मुफ्त सवारियां बाकी हैं!")
+    , ondc_incentive_body: (\ondcIncentiveValue -> "आप तीसरे पक्ष की सवारी पूरी करने पर ₹ " <> ondcIncentiveValue <> " का प्रोत्साहन प्राप्त करने के पात्र हैं।")
+    , ondc_incentive_header: (\ondcIncentiveValue -> "₹ " <> ondcIncentiveValue <> " प्रोत्साहन अनलॉक हो गया है!")
     }

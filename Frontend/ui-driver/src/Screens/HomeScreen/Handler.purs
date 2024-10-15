@@ -205,4 +205,6 @@ homeScreen = do
     GoToRideSummaryScreen  updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_SUMMARY_SCREEN  updatedState)
-       
+    AddReferralUPI updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ ADD_REFERRAL_UPI  updatedState)

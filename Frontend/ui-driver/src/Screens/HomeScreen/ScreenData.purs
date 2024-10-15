@@ -268,6 +268,13 @@ initData =
       }
       , showIntercityRateCard : false
       , intercityInfoPopUp : false
+      , showOndcIncentivePopUp : false
+      , referralUPISetupData : {
+          referralUPIOrderId : Nothing,
+          referralUPIOrderStatus : Nothing
+        }
+      , showUPISuccesInfoPopUp : false
+      , showUPIFailureInfoPopUp : false
       }
   }
 
