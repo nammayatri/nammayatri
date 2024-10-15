@@ -1008,11 +1008,10 @@ eval BackPressed state = do
                           else if state.props.showSpecialZoneInfoPopup then continue state { props{ showSpecialZoneInfoPopup = false } }
                           else if state.props.zoneOtpExpired then continue state {props {zoneOtpExpired = false}}
                           else if state.props.showScheduledRideExistsPopUp then continue state { props { showScheduledRideExistsPopUp = false }}
-                          else if state.data.intercityBus.showWebView 
-                            then continueWithCmd state 
-                                  [do
-                                  void $ goBackPrevWebPage (getNewIDWithTag "intercityWebView")
-                                  pure $ HideIntercityBusView ""]
+                          else if state.data.intercityBus.showWebView then continueWithCmd state [ do
+                            void $ goBackPrevWebPage (getNewIDWithTag "intercityWebView")
+                            pure NoAction
+                          ]
                           else do
                               pure $ terminateApp state.props.currentStage true
                               continue state{props{showShimmer = false}}

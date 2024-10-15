@@ -663,11 +663,12 @@ eval TriggerMaps state = continueWithCmd state[ do
                                                 pure $ openNavigation nextStopLat nextStopLon "DRIVE"
         _,_ -> pure unit
   else 
-    if state.props.currentStage == ST.RideAccepted && ((state.data.vehicleType == "AUTO_RICKSHAW" && state.data.cityConfig.cityName == "Chennai") || (state.data.vehicleType == "BIKE"))
-      then
-        pure $ openNavigation state.data.activeRide.dest_lat state.data.activeRide.dest_lon "TWOWHEELER"
-      else
-        void $ openUrlInApp $ "https://maps.google.com?saddr=&daddr="<> show state.data.activeRide.dest_lat <>","<> show state.data.activeRide.dest_lon <> "&dirflg=d"
+    if getDistanceBwCordinates state.data.currentDriverLat state.data.currentDriverLon state.data.activeRide.dest_lat state.data.activeRide.dest_lon  > 0.200 then do
+      let driveMode =  if state.props.currentStage == ST.RideAccepted && ((state.data.vehicleType == "AUTO_RICKSHAW" && state.data.cityConfig.cityName == "Chennai") || (state.data.vehicleType == "BIKE")) then  "TWOWHEELER" else "DRIVE"
+      pure $ openNavigation state.data.activeRide.dest_lat state.data.activeRide.dest_lon driveMode
+    else 
+      void $ openUrlInApp $ "https://maps.google.com?saddr=&daddr="<> show state.data.activeRide.dest_lat <>","<> show state.data.activeRide.dest_lon <> "&dirflg=d"
+
   _ <- pure $ setValueToLocalStore TRIGGER_MAPS "false"
   pure NoAction
   ]
@@ -985,15 +986,15 @@ eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
   else action state.data.activeRide.dest_lat state.data.activeRide.dest_lon
   where 
     action lat lon = 
-          if state.props.currentStage == ST.RideAccepted && ((state.data.vehicleType == "AUTO_RICKSHAW" && state.data.cityConfig.cityName == "Chennai") || (state.data.vehicleType == "BIKE"))
-            then do
-              void $ pure $ openNavigation lat lon "TWOWHEELER" 
-              continue state
-            else 
-              continueWithCmd state [do
-                void $ openUrlInApp $ "https://maps.google.com?saddr=&daddr="<> show lat <>","<> show lon <> "&dirflg=d"
-                pure NoAction
-              ]
+      if getDistanceBwCordinates state.data.currentDriverLat state.data.currentDriverLon lat lon > 0.200 then do
+        let driveMode = if state.props.currentStage == ST.RideAccepted && ((state.data.vehicleType == "AUTO_RICKSHAW" && state.data.cityConfig.cityName == "Chennai") || (state.data.vehicleType == "BIKE")) then "TWOWHEELER" else "DRIVE"
+        void $ pure $ openNavigation lat lon driveMode
+        continue state
+      else 
+        continueWithCmd state [do
+          void $ openUrlInApp $ "https://maps.google.com?saddr=&daddr="<> show lat <>","<> show lon <> "&dirflg=d"
+          pure NoAction
+        ]
           
   
 eval (RideActionModalAction (RideActionModal.CancelRide)) state = do
