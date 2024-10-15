@@ -754,8 +754,11 @@ getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocGeohash) to
           return Nothing
         Right resp ->
           case (A.fromJSON resp.result :: Result DynamicPricingResult) of
-            A.Success result ->
-              return $ (fmap (T.pack . show) mbVersion <|> result.version) <&> \version -> FarePolicyD.CongestionChargeDetails (Just version) (Just dynamicPricingData.supplyDemandRatioToLoc) (Just dynamicPricingData.supplyDemandRatioFromLoc) result.congestionFeePerMin
+            A.Success result -> do
+              maybe
+                (return $ Just $ FarePolicyD.CongestionChargeDetails Nothing (Just dynamicPricingData.supplyDemandRatioToLoc) (Just dynamicPricingData.supplyDemandRatioFromLoc) Nothing)
+                (\congestionFee -> return $ (fmap (T.pack . show) mbVersion <|> result.version) <&> \version -> FarePolicyD.CongestionChargeDetails (Just version) (Just dynamicPricingData.supplyDemandRatioToLoc) (Just dynamicPricingData.supplyDemandRatioFromLoc) (Just congestionFee))
+                result.congestionFeePerMin
             A.Error err -> do
               logError $ "Error in parsing DynamicPricingResult - " <> show err <> " - " <> show resp <> " - " <> show dynamicPricingData <> " - " <> show allLogics
               return $ Just $ FarePolicyD.CongestionChargeDetails Nothing (Just dynamicPricingData.supplyDemandRatioToLoc) (Just dynamicPricingData.supplyDemandRatioFromLoc) Nothing
