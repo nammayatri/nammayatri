@@ -9,6 +9,7 @@ import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Plan
+import qualified Domain.Types.VehicleCategory
 import qualified Kernel.External.Notification.FCM.Types
 import qualified Kernel.External.Types
 import Kernel.Prelude
@@ -39,7 +40,8 @@ data OverlayD (s :: UsageSafety) = Overlay
     socialMediaLinks :: Kernel.Prelude.Maybe [Kernel.External.Notification.FCM.Types.FCMMediaLink],
     title :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     toastMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    udf1 :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    udf1 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory
   }
   deriving (Generic, Show)
 

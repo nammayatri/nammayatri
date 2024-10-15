@@ -15,3 +15,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD PRIMARY KEY ( merchant_o
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN sender_header text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_message ADD COLUMN vehicle_category text ;
