@@ -313,7 +313,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | SELECT_ESTIMATE_AND_QUOTES HomeScreenState
                         | UPDATE_CHAT
                         | PARCEL ParcelAction
-                        | GO_TO_BUS_TICKET_BOOKING_SCREEN
+                        | GO_TO_BUS_TICKET_BOOKING_SCREEN HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_BACK_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
@@ -389,6 +389,7 @@ data METRO_TICKET_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_METRO_TICKET MetroTicke
                                  | REFRESH_METRO_TICKET_SCREEN MetroTicketBookingScreenState
                                  | GO_TO_METRO_PAYMENT_PAGE CreateOrderRes String
                                  | GO_TO_ROUTE_SEARCH_SCREEN MetroTicketBookingScreenState
+                                --  | GO_TO_ROUTE_SEARCH_METRO_SCREEN MetroTicketBookingScreenState
 
 data PICKUP_INSTRUCTIONS_SCREEN_OP = GO_TO_HOME_SCREEN_FROM_PICKUP_INSTRUCTIONS
 

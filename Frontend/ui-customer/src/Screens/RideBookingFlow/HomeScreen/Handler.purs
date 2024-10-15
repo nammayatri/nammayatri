@@ -295,4 +295,4 @@ homeScreen = do
       App.BackT $ App.NoBack <$> (pure $ PARCEL (GO_TO_DELIVERY_DETAILS updatedState))
     GoToBusTicketBookingFlow state -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> state) 
-      App.BackT $ App.NoBack <$> (pure $ GO_TO_BUS_TICKET_BOOKING_SCREEN)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_BUS_TICKET_BOOKING_SCREEN state)

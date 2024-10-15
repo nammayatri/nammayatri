@@ -59,4 +59,7 @@ metroTicketBookingScreen = do
             App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_PAYMENT_PAGE orderResp bookingId)
         GO_TO_ROUTE_SEARCH  updatedState-> 
             App.BackT $ App.BackPoint <$> (pure $ GO_TO_ROUTE_SEARCH_SCREEN updatedState)
+        -- GET_ROUTES state -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_ROUTE_SEARCH_METRO_SCREEN state)
+        
+       
         

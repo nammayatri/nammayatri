@@ -183,10 +183,10 @@ routeListView state push =
     , width MATCH_PARENT
     , gravity CENTER_VERTICAL
     , orientation VERTICAL
-    , margin $ MarginTop 15
-    , visibility $ boolToVisibility $ state.props.routeList
+    , margin $ Margin 10 5 10 5
+    , visibility $ boolToVisibility $ (state.props.routeList && not (DA.null state.data.routeList))
     , stroke ("1," <> Color.borderColorLight)
-    , cornerRadius 4.0
+    , cornerRadius 5.0
     , onAnimationEnd push $ const ListExpandAinmationEnd
     ](DA.mapWithIndex (\index (GetBusRouteResp route) ->
         let
@@ -195,21 +195,30 @@ routeListView state push =
         linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , padding $ Padding 16 13 16 13
+        , padding $ Padding 16 10 16 10
         , onClick push $ const $ SelectRoutes routeCode 
         , orientation VERTICAL
-        ][  linearLayout
+        ][  
+          linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , orientation HORIZONTAL
-            ][  textView $
+            ][  
+              textView $
                 [ accessibilityHint $ routeCode <> " : Button"
                 , textFromHtml routeCode 
                 , color Color.darkCharcoal
                 ] <> FontStyle.paragraphText LanguageStyle
-
-              ]
+            ]
+          , linearLayout
+              [ height $ V 1
+              , width MATCH_PARENT
+              , background Color.grey900
+              , visibility if index == DA.length (state.data.routeList) - 1  then GONE else VISIBLE
+              , margin $ Margin 0 20 0 0
+              ][]
           ]) state.data.routeList)
+
 
 
 
@@ -217,7 +226,7 @@ infoSelectioView :: forall w . ST.MetroTicketBookingScreenState -> (Action -> Ef
 infoSelectioView state push city cityMetroConfig metroConfig =
   let
     isBusTicketService = state.props.ticketServiceType == BUS
-    showRouteList = (state.data.srcLoc /= "" && state.data.destLoc /="") && state.props.isEmptyRoute == ""
+    showRouteList = DA.null state.data.routeList
   in
     scrollView
       [ height MATCH_PARENT
@@ -285,12 +294,13 @@ infoSelectioView state push city cityMetroConfig metroConfig =
                                   , weight 4.0
                                   , cornerRadius 6.0
                                   , stroke ("3," <> Color.white900)
-                                  ]
+                                  , alpha if state.props.isEmptyRoute == "" then 0.2 else 1.0
+                                  ] <> FontStyle.subHeading2 TypoGraphy
                                   , linearLayout
                                     [ width WRAP_CONTENT
                                     , height WRAP_CONTENT
                                     , gravity CENTER_VERTICAL
-                                    , visibility $ boolToVisibility $ showRouteList
+                                    , visibility $ boolToVisibility $ DA.length state.data.routeList > 0 || (state.props.isEmptyRoute == "")
                                     ][ imageView
                                         [ width (V 20)
                                         , height (V 20)
@@ -432,10 +442,14 @@ termsAndConditionsView push (CityMetroConfig cityMetroConfig) isMarginTop =
            , height WRAP_CONTENT
            , orientation HORIZONTAL
            ][ textView $
-              [ textFromHtml $ " &#8226;&ensp; " <> item
-              , color Color.black700
-              ] <> FontStyle.paragraphText TypoGraphy
-           ]
+                  [ textFromHtml $ "&#8226;&ensp;"
+                  , color Color.black700
+                  ] <> FontStyle.paragraphText TypoGraphy
+                , textView $
+                  [ textFromHtml $ item
+                  , color Color.black700
+                  ] <> FontStyle.paragraphText TypoGraphy
+              ]
        ) cityMetroConfig.termsAndConditions )
   ]
 
@@ -505,15 +519,17 @@ incrementDecrementView push state metroConfig busClicked=
               ] <> FontStyle.subHeading1 TypoGraphy
           ]
         , linearLayout 
+          [ weight 1.0][]
+        , linearLayout 
           [ height WRAP_CONTENT
           , width WRAP_CONTENT
           , orientation HORIZONTAL
-          , margin $ MarginLeft 50  
+          -- , gravity RIGHT
           ][  imageView  
               [ background Color.grey700
               , height $ V 30 
               , width $ V 30  
-              , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_decrement"
+              , imageWithFallback $ fetchImage FF_COMMON_ASSET if state.data.ticketCount < 2 then "ny_ic_disable_decrement" else "ny_ic_decrement"
               , rippleColor Color.rippleShade
               , cornerRadius 50.0  
               , onClick push $ const (DecrementTicket)
@@ -523,7 +539,7 @@ incrementDecrementView push state metroConfig busClicked=
               , text $ show state.data.ticketCount
               , height WRAP_CONTENT
               , color Color.black800
-              , weight 1.0
+              -- , weight 1.0
               , gravity CENTER
               , padding $ Padding 14 4 10 0
               ] 
@@ -531,7 +547,7 @@ incrementDecrementView push state metroConfig busClicked=
               [ background Color.black900
               , height $ V 30 
               , width $ V 30  
-              , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_increment"
+              , imageWithFallback $ fetchImage FF_COMMON_ASSET if metroBookingConfigResp.oneWayTicketLimit == state.data.ticketCount then "ny_ic_disable_increment" else "ny_ic_increment"
               , rippleColor Color.rippleShade
               , cornerRadius 50.0  
               , margin $ MarginLeft 10
@@ -550,14 +566,14 @@ limitReachedView push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation HORIZONTAL
-  , visibility $ boolToVisibility  $ limitReached && ( state.props.ticketServiceType /= BUS)
+  , visibility $ boolToVisibility  $ limitReached
   , margin $ MarginTop 6
   ][  imageView $
       [ width $ V 16
       , height $ V 16
       , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_grey" 
       , layoutGravity "center_vertical"
-      -- , visibility $ boolToVisibility ( state.props.ticketServiceType /= BUS)
+      , visibility $ boolToVisibility ( state.props.ticketServiceType /= BUS)
       , margin $ MarginRight 4
       ]
     , textView $

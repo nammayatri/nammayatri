@@ -2246,6 +2246,9 @@ type SearchLocationScreenProps =
   , routeSelected :: String
   , stopCodeSelected :: String
   , stopNameSelected :: String
+  , autoCompleteBusStop :: Boolean
+  , srcLat :: Number 
+  , srcLong :: Number
   , selectedEstimateHeight :: Int }
 
 data SearchLocationActionType = AddingStopAction 
@@ -2621,7 +2624,7 @@ type MetroTicketBookingScreenData = {
 type MetroTicketBookingScreenProps = {
   isLimitExceeded :: Boolean
 , termsAndConditionsSelected :: Boolean
-, currentStage :: MetroTicketBookingStage
+, currentStage :: TicketBookingStage
 , isButtonActive :: Boolean
 , showMetroBookingTimeError :: Boolean
 , showShimmer :: Boolean
@@ -2630,13 +2633,15 @@ type MetroTicketBookingScreenProps = {
 , showRouteOptions :: Boolean
 , isEmptyRoute :: String
 , ticketServiceType :: API.TicketServiceType
+, srcLat :: Number 
+, srcLong :: Number
 }
 
-data MetroTicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote | PaymentSDKPooling
+data TicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote | PaymentSDKPooling | BusTicketSelection
 
-derive instance genericMetroTicketBookingStage :: Generic MetroTicketBookingStage _
-instance eqMetroTicketBookingStage :: Eq MetroTicketBookingStage where eq = genericEq
-instance showMetroTicketBookingStage :: Show MetroTicketBookingStage where show = genericShow
+derive instance genericTicketBookingStage :: Generic TicketBookingStage _
+instance eqMetroTicketBookingStage :: Eq TicketBookingStage where eq = genericEq
+instance showTicketBookingStage :: Show TicketBookingStage where show = genericShow
 
 data TicketType = ONE_WAY_TICKET | ROUND_TRIP_TICKET
 
@@ -2985,5 +2990,6 @@ type BusTicketBookingData = {
 }
 
 type BusTicketBookingProps = {
-
+   srcLat :: Number
+ , srcLong :: Number
 }

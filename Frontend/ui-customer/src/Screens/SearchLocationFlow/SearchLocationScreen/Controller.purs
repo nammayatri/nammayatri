@@ -52,7 +52,7 @@ import Effect.Uncurried (runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isTrue, flowRunner, liftFlow)
 import Helpers.Utils (updateLocListWithDistance, setText, getSavedLocationByTag, getCurrentLocationMarker, normalRoute)
-import JBridge (currentPosition, toast, hideKeyboardOnNavigation, updateInputString, locateOnMap, locateOnMapConfig, scrollViewFocus, showKeyboard, scrollViewFocus, animateCamera, hideKeyboardOnNavigation, exitLocateOnMap, removeMarker, Location, setMapPadding, getExtendedPath, drawRoute, defaultMarkerConfig, getLayoutBounds, mkRouteConfig, removeAllPolylines)
+import JBridge (currentPosition,getKeyInSharedPrefKeys, toast, hideKeyboardOnNavigation, updateInputString, locateOnMap, locateOnMapConfig, scrollViewFocus, showKeyboard, scrollViewFocus, animateCamera, hideKeyboardOnNavigation, exitLocateOnMap, removeMarker, Location, setMapPadding, getExtendedPath, drawRoute, defaultMarkerConfig, getLayoutBounds, mkRouteConfig, removeAllPolylines)
 import JBridge as JB
 import Log (trackAppActionClick)
 import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
@@ -71,6 +71,10 @@ import Language.Strings (getString)
 import Components.ChooseYourRide.Controller as ChooseYourRideController
 import Language.Types (STR(..))
 import Helpers.TipConfig
+import LocalStorage.Cache (clearCache, setInCache,setValueToCache,getValueFromCache)
+import Data.Function.Uncurried (runFn3, runFn2, runFn1, mkFn1)
+import DecodeUtil (stringifyJSON, decodeForeignAny, parseJSON, decodeForeignAnyImpl)
+import Foreign.Class (encode)
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -194,8 +198,29 @@ eval (LocationListItemAC savedLocations (LocationListItemController.FavClick ite
     continue state
     else exit $ SaveFavLoc state{data{saveFavouriteCard{ address = item.description , selectedItem = item, tag = "", tagExists = false, isBtnActive = false }}} savedLocations
 
-eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state =
-  if state.props.actionType == NoBusRouteSelectionAction then do
+eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
+ let mbStops = filterStopsForCache item.title state.data.updatedStopsSearchedList
+     mbRoutes = filterRoutesForCache item.title state.data.updatedRouteSearchedList
+     cachedStops = getKeyInSharedPrefKeys (show RECENT_BUS_STOPS)
+     cachedRoutes = getKeyInSharedPrefKeys (show RECENT_BUS_ROUTES)
+     (decodedCachedStops :: MB.Maybe (Array GetMetroStationResp)) = (decodeForeignAny (parseJSON cachedStops) MB.Nothing)
+     (decodedCachedRoutes :: MB.Maybe (Array GetBusRouteResp)) = (decodeForeignAny (parseJSON cachedRoutes) MB.Nothing)
+     validDecodedStops = MB.fromMaybe [] decodedCachedStops
+     validDecodedRoutes = MB.fromMaybe [] decodedCachedRoutes
+ case mbStops of
+   (MB.Just stops) -> do
+    if DA.elem stops validDecodedStops && state.props.actionType /= BusStationSelectionAction
+      then pure unit 
+    else void $ pure $ setValueToCache (show RECENT_BUS_STOPS) ([stops] <> validDecodedStops) (stringifyJSON <<< encode)
+   _ -> pure unit
+ case mbRoutes of
+   (MB.Just routes) -> do
+    if DA.elem routes validDecodedRoutes && state.props.actionType /= BusStationSelectionAction
+      then pure unit 
+    else void $ pure $ setValueToCache (show RECENT_BUS_ROUTES) ([routes] <> validDecodedRoutes) (stringifyJSON <<< encode)
+   _ -> pure unit
+
+ if state.props.actionType == NoBusRouteSelectionAction then do
       exit $ PredictionClicked item state
  else  if state.props.actionType == MetroStationSelectionAction || state.props.actionType == BusStationSelectionAction then do
       let metroLocInfo = {stationName: item.title, stationCode : item.tag }
@@ -221,7 +246,7 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state =
           void $ pure $ hideKeyboardOnNavigation true
           updateAndExit newState $ PredictionClicked item newState
   else if state.props.actionType == BusSearchSelectionAction then do
-          if DA.length state.data.routeSearchedList /= 0 && DA.length state.data.stopsSearchedList /= 0 then do
+          if( DA.length state.data.routeSearchedList /= 0 && DA.length state.data.stopsSearchedList /= 0) || (DA.length validDecodedRoutes /= 0 && DA.length validDecodedStops /= 0) then do
               if state.data.rideType == ROUTES then do 
                   let busRouteSelected = item.title
                       newState = state {props {routeSelected = busRouteSelected , isAutoComplete = false}, data {searchRideType = BUS_ROUTE}}
@@ -562,7 +587,8 @@ removeDuplicates arr = DA.nubByEq (\item1 item2 -> (item1.lat == item2.lat && it
 
 
 handleBackPress state = do 
-  if state.data.fromScreen == getScreen METRO_TICKET_BOOKING_SCREEN then exit $ MetroTicketBookingScreen state 
+  if state.data.fromScreen == getScreen METRO_TICKET_BOOKING_SCREEN then exit $ MetroTicketBookingScreen state
+  else if state.data.fromScreen == getScreen BUS_TICKET_BOOKING_SCREEN then exit $ BusTicketBookingScreen state
     else do
       case state.props.searchLocStage of 
         ConfirmLocationStage -> do 
@@ -728,3 +754,9 @@ filterStopsBySequence title updatedStopsSearchedList =
       in DA.filter (\(GetMetroStationResp stop) -> stop.sequenceNum > foundSequence) updatedStopsSearchedList
     MB.Nothing -> 
       updatedStopsSearchedList
+
+filterStopsForCache :: String -> Array GetMetroStationResp -> MB.Maybe GetMetroStationResp
+filterStopsForCache title updatedStopsSearchedList =  DA.find (\(GetMetroStationResp stop) -> stop.name == title) updatedStopsSearchedList
+
+filterRoutesForCache :: String -> Array GetBusRouteResp -> MB.Maybe GetBusRouteResp
+filterRoutesForCache title updatedRouteSearchedList =  DA.find (\(GetBusRouteResp route) -> (MB.fromMaybe "" route.code) == title) updatedRouteSearchedList

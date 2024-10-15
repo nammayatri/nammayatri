@@ -86,6 +86,7 @@ initData = {
     fareProductType : RENTAL,
     currentEstimateHeight : 84 ,
     selectedEstimateHeight : 84 ,
+    autoCompleteBusStop : false,
     tipViewProps : {
         stage : DEFAULT
       , isVisible : false
@@ -107,7 +108,9 @@ initData = {
    routeSearch : false,
    routeSelected : "",
    stopCodeSelected : "",
-   stopNameSelected : ""
+   stopNameSelected : "",
+   srcLat : 0.000,
+   srcLong : 0.000
   },
   appConfig : getAppConfig appConfig
 }

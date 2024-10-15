@@ -753,8 +753,8 @@ bottomNavBarView push state = let
 
               ]
             ) ([  {text : "Mobility" , image : "ny_ic_vehicle_unfilled_black", id : MOBILITY}
-                , {text : "Ticketing" , image : "ny_ic_ticket_black", id : TICKETING }
-                , {text : "Bus" , image : "ny_ic_bus_ticket_black", id : BUS_}]))
+                , {text : "Bus" , image : "ny_ic_bus_black", id : BUS_}
+                , {text : "Ticketing" , image : "ny_ic_ticket_black", id : TICKETING }]))
     ]
 getMapHeight :: HomeScreenState -> Length
 getMapHeight state = V (if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then (((screenHeight unit)/ 4)*3) 

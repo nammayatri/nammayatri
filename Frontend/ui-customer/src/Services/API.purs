@@ -3210,7 +3210,7 @@ newtype GetMetroStationResp = GetMetroStationResp {
     address :: Maybe String,
     code :: String,
     color :: Maybe String,
-    distance :: Maybe Number,
+    distance :: Maybe Int,
     lat :: Maybe Number,
     lon :: Maybe Number,
     name :: String,
@@ -3220,6 +3220,7 @@ newtype GetMetroStationResp = GetMetroStationResp {
 
 derive instance genericGetMetroStationResponse :: Generic GetMetroStationResponse _
 derive instance newtypeGetMetroStationResponse :: Newtype GetMetroStationResponse _
+instance eqGetMetroStationResponse :: Eq GetMetroStationResponse where eq = genericEq
 instance showGetMetroStationResponse :: Show GetMetroStationResponse where show = genericShow
 instance decodeGetMetroStationResponse :: Decode GetMetroStationResponse where decode = defaultDecode
 
@@ -3238,6 +3239,7 @@ instance encodeGetMetroStationReq   :: Encode GetMetroStationReq where encode = 
 derive instance genericGetMetroStationResp :: Generic GetMetroStationResp _
 instance showGetMetroStationResp        :: Show GetMetroStationResp where show     = genericShow
 instance standardEncodeGetMetroStationResp :: StandardEncode GetMetroStationResp where standardEncode (GetMetroStationResp res) = standardEncode res
+instance eqGetMetroStationResp        :: Eq GetMetroStationResp where eq     = genericEq
 instance decodeGetMetroStationResp         :: Decode GetMetroStationResp where decode = defaultDecode
 instance encodeGetMetroStationResp         :: Encode GetMetroStationResp where encode = defaultEncode
 

@@ -41,6 +41,7 @@ import Storage
 import Services.API (MetroBookingConfigRes(..),TicketServiceType(..))
 import Mobility.Prelude (getNumberWithSuffix)
 import Debug
+import Data.Array as DA
 
 metroTicketBookingHeaderConfig :: ST.MetroTicketBookingScreenState -> GenericHeader.Config
 metroTicketBookingHeaderConfig state = let
@@ -78,7 +79,7 @@ updateButtonConfig state = let
     discountText = if price /= priceWithoutDiscount then ("&nbsp;&nbsp; " <> " ₹" <> "<strike> " <> "<span style='color:#7F6A34;'>"<> (show priceWithoutDiscount)  <> " </span>" <> " </strike>" <> " ") else ""
     cashbackText = if eventDiscountAmount > 0 then (" (" <> "₹" <> show eventDiscountAmount <> " cashback)") else ""
     updateButtonConfig' = config 
-        { textConfig { textFromHtml = Just $ if (state.props.currentStage /= ST.MetroTicketSelection) then ((getString PAY) <> discountText <> " ₹" <> (show price) <> cashbackText) else (getString GET_FARE)}
+        { textConfig { textFromHtml = Just $ if (state.props.currentStage /= ST.MetroTicketSelection && state.props.currentStage /= ST.BusTicketSelection ) then ("Book & Pay" <> discountText <> " ₹" <> (show price) <> cashbackText) else (getString GET_FARE)}
         , height = (V 48)
         , cornerRadius = 8.0
         , margin = (Margin 16 0 16 0)

@@ -837,34 +837,34 @@ getAutoRickshawStartedImage  =
 getCityFromString :: String -> City
 getCityFromString cityString =
   case cityString of 
-    -- "Bangalore" -> Bangalore
-    -- "Kolkata" -> Kolkata
-    -- "Paris" -> Paris
-    -- "Kochi" -> Kochi
-    -- "Delhi" -> Delhi
-    -- "Hyderabad" -> Hyderabad
-    -- "Mumbai" -> Mumbai
-    -- "Chennai" -> Chennai
-    -- "Coimbatore" -> Coimbatore
-    -- "Pondicherry" -> Pondicherry
-    -- "Goa" -> Goa
-    -- "Pune" -> Pune
-    -- "Mysore" -> Mysore
-    -- "Tumakuru" -> Tumakuru
-    -- "Noida" -> Noida
-    -- "Gurugram" -> Gurugram
-    -- "Siliguri" -> Siliguri
-    -- "Trivandrum" -> Trivandrum
-    -- "Thrissur" -> Thrissur
-    -- "Kozhikode" -> Kozhikode
-    -- "Vellore" -> Vellore
-    -- "Hosur" -> Hosur
-    -- "Madurai" -> Madurai
-    -- "Thanjavur" -> Thanjavur
-    -- "Tirunelveli" -> Tirunelveli
-    -- "Salem" -> Salem
-    -- "Trichy" -> Trichy
-    _ -> Kochi
+    "Bangalore" -> Bangalore
+    "Kolkata" -> Kolkata
+    "Paris" -> Paris
+    "Kochi" -> Kochi
+    "Delhi" -> Delhi
+    "Hyderabad" -> Hyderabad
+    "Mumbai" -> Mumbai
+    "Chennai" -> Chennai
+    "Coimbatore" -> Coimbatore
+    "Pondicherry" -> Pondicherry
+    "Goa" -> Goa
+    "Pune" -> Pune
+    "Mysore" -> Mysore
+    "Tumakuru" -> Tumakuru
+    "Noida" -> Noida
+    "Gurugram" -> Gurugram
+    "Siliguri" -> Siliguri
+    "Trivandrum" -> Trivandrum
+    "Thrissur" -> Thrissur
+    "Kozhikode" -> Kozhikode
+    "Vellore" -> Vellore
+    "Hosur" -> Hosur
+    "Madurai" -> Madurai
+    "Thanjavur" -> Thanjavur
+    "Tirunelveli" -> Tirunelveli
+    "Salem" -> Salem
+    "Trichy" -> Trichy
+    _ -> AnyCity
 
 getCityNameFromCode :: Maybe String -> City
 getCityNameFromCode mbCityCode =

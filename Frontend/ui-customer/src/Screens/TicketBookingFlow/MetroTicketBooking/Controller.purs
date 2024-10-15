@@ -72,6 +72,7 @@ data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | Refresh ST.MetroTicketBookingScreenState
                   | GotoPaymentPage CreateOrderRes String
                   | GO_TO_ROUTE_SEARCH ST.MetroTicketBookingScreenState
+                  -- | GET_ROUTES ST.MetroTicketBookingScreenState
 
 eval :: Action -> ST.MetroTicketBookingScreenState -> Eval Action ScreenOutput ST.MetroTicketBookingScreenState
 
@@ -81,18 +82,22 @@ eval (MetroBookingConfigAction resp) state = do
 
 eval BackPressed state =  if state.props.ticketServiceType == BUS then exit $ GO_TO_ROUTE_SEARCH state else exit $ GoToHome
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
-    updateAndExit state $ UpdateAction state
+    if state.props.ticketServiceType == BUS && state.props.isEmptyRoute == "" then do
+     void $ pure $ toast $ "Please Select Route"
+     void $ pure $ toggleBtnLoader "" false
+     continue state 
+    else updateAndExit state $ UpdateAction state
 
 eval MyMetroTicketAction state = exit $ MyMetroTicketScreen
 
 eval IncrementTicket state = do
   if state.data.ticketCount < 6
-    then continue state { data {ticketCount = state.data.ticketCount + 1 }, props {currentStage  = ST.MetroTicketSelection}}
+    then continue state { data {ticketCount = state.data.ticketCount + 1 }, props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
     else continue state
 
 eval DecrementTicket state = do
   if state.data.ticketCount > 1
-    then continue state { data {ticketCount = state.data.ticketCount - 1 }, props {currentStage  = ST.MetroTicketSelection}}
+    then continue state { data {ticketCount = state.data.ticketCount - 1 }, props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
     else continue state
 
 eval MetroRouteMapAction state = exit $ GoToMetroRouteMap
@@ -106,19 +111,19 @@ eval (ChangeTicketTab ticketType cityMetroConfig) state = do
     let updatedTicketCount = case ticketType of
           ST.ONE_WAY_TICKET -> if state.data.ticketCount > metroBookingConfigResp.oneWayTicketLimit then metroBookingConfigResp.oneWayTicketLimit else state.data.ticketCount
           ST.ROUND_TRIP_TICKET -> if state.data.ticketCount > metroBookingConfigResp.roundTripTicketLimit then metroBookingConfigResp.roundTripTicketLimit else state.data.ticketCount
-    continue state { data {ticketType = ticketType, ticketCount = updatedTicketCount}, props {currentStage  = ST.MetroTicketSelection}}
+    continue state { data {ticketType = ticketType, ticketCount = updatedTicketCount}, props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
 
 eval (SelectLocation loc) state = 
   if state.props.ticketServiceType == BUS
     then do
       continue state
-    else updateAndExit state { props { currentStage = ST.MetroTicketSelection }} $ SelectSrcDest loc state { props { currentStage = ST.MetroTicketSelection }}
+    else updateAndExit state { props { currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection }} $ SelectSrcDest loc state { props { currentStage = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection }}
 
 eval (GetMetroQuotesAction resp) state = do 
   void $ pure $ toggleBtnLoader "" false
   if null resp then do
     void $ pure $ toast $ getString NO_QOUTES_AVAILABLE
-    continue state{ props{currentStage = ST.MetroTicketSelection}}
+    continue state{ props{currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
   else updateQuotes resp state
 
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
@@ -138,14 +143,14 @@ eval (InfoCardAC (InfoCard.Close)) state =
   }
 eval ListExpandAinmationEnd state = continue state {props {showRouteOptions = false }}
 eval SelectRouteslistView state = do
- if state.props.isEmptyRoute /= "" then do continue state
- else do 
+--  if state.props.isEmptyRoute == "" then do exit $ GET_ROUTES state
+--  else do 
     let old = state.props.routeList
     _ <- pure $ hideKeyboardOnNavigation true
     
     continue state{props{routeList = not old , showRouteOptions = true}}
   -- updateAndExit state{props{routeList = not old , showRouteOptions = true}} $ SearchRoute state
-eval (SelectRoutes route) state = continue state{props{isEmptyRoute = route ,routeList = not state.props.routeList , showRouteOptions = true}}
+eval (SelectRoutes route) state = continue state{props{isEmptyRoute = route ,routeList = not state.props.routeList , showRouteOptions = false,currentStage = ST.BusTicketSelection}}
 eval (GetSDKPollingAC createOrderRes) state = exit $ GotoPaymentPage createOrderRes state.data.bookingId
 
 eval _ state = update state
@@ -156,7 +161,7 @@ updateQuotes quotes state = do
   case quoteData of
     Nothing -> do
       void $ pure $ toast $ getString NO_QOUTES_AVAILABLE
-      continue state { props {currentStage = ST.MetroTicketSelection}}
+      continue state { props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
     Just (MetroQuote quoteData) -> do
       let updatedState = state { data {ticketPrice = quoteData.price, quoteId = quoteData.quoteId, quoteResp = quotes, eventDiscountAmount = DI.round <$> quoteData.eventDiscountAmount}, props { currentStage = ST.ConfirmMetroQuote}}
       updateAndExit updatedState $ Refresh updatedState
