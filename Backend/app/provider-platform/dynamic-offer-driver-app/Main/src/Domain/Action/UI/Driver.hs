@@ -2156,7 +2156,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
       let availableServiceTiers = (.serviceTierType) <$> (map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers))
       scheduledBookings <- runInReplica $ QBooking.findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay DRB.NEW mbTripCategory availableServiceTiers True cityId transporterConfig.timeDiffFromUtc
       bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) scheduledBookings
-      filteredBookings <- filterM (\booking -> isAbleToReach booking.bookingDetails vehicle.variant transporterConfig.avgSpeedOfVehicle) bookings
+      filteredBookings <- filterM (\booking -> isAbleToReach booking.bookingDetails vehicle.variant transporterConfig.avgSpeedOfVehicle) (catMaybes bookings)
       let sortedBookings = sortBookingsByDistance filteredBookings
       return $ ScheduledBookingRes sortedBookings
   where
@@ -2183,8 +2183,13 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
       let pickup = LatLong {lat = fromLocation.lat, lon = fromLocation.lon}
           distanceToPickup' = highPrecMetersToMeters . (`distanceBetweenInMeters` pickup) <$> mbDriverLocation
       mbQuote <- QQuote.findById (Id quoteId)
-      let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkBreakupItem estimatedDistance Nothing) (mbQuote >>= (.farePolicy))
-      return $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', ..} (catMaybes farePolicyBreakups)
+      case mbQuote of
+        Nothing -> do
+          fork "Error in case of no quote - Potential drainer lag" $ throwError (ShouldNotHappen $ "Quote with quoteId = \"" <> quoteId <> "\" not found.")
+          pure Nothing
+        Just quote -> do
+          let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkBreakupItem estimatedDistance Nothing) quote.farePolicy
+          return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', ..} (catMaybes farePolicyBreakups)
 
     mkBreakupItem :: Text -> Text -> Maybe DOVT.RateCardItem
     mkBreakupItem title valueInText = do
