@@ -36,6 +36,7 @@ data SearchRequest = SearchRequest
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverDefaultExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     driverIdForSearch :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    dynamicPricingLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     fromLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

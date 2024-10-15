@@ -26,6 +26,7 @@ SearchRequest:
     transactionId: Text
     messageId: Maybe Text
     hasStops : Maybe Bool
+    dynamicPricingLogicVersion: Maybe Int
     providerId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     riderId: Maybe (Id RiderDetails)

@@ -32,6 +32,7 @@ Booking:
     quoteId: Text
     status: BookingStatus
     hasStops : Maybe Bool
+    dynamicPricingLogicVersion : Maybe Int
     tripCategory: TripCategory
     specialZoneOtpCode: Maybe Text
     specialLocationTag: Maybe Text

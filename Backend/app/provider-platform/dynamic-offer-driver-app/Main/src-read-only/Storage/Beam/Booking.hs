@@ -30,6 +30,7 @@ data BookingT f = BookingT
     disabilityTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     distanceToPickup :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
+    dynamicPricingLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     estimateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     estimatedDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),

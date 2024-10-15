@@ -40,7 +40,7 @@ getCalculateFare ::
 getCalculateFare (_, merchantId, merchanOperatingCityId) distanceWeightage dropLatLong pickupLatlong = do
   now <- getCurrentTime
   (_, mbDistance, mbDuration, mbRoute, _) <- calculateDistanceAndRoutes merchantId merchanOperatingCityId distanceWeightage [pickupLatlong, dropLatLong] -----------------if you want congestionCharges to be considered then pass geohash imstead of nothing
-  fareProducts <- FP.getAllFarePoliciesProduct merchantId merchanOperatingCityId False pickupLatlong (Just dropLatLong) Nothing Nothing Nothing mbDistance mbDuration (DTC.OneWay DTC.OneWayOnDemandDynamicOffer)
+  fareProducts <- FP.getAllFarePoliciesProduct merchantId merchanOperatingCityId False pickupLatlong (Just dropLatLong) Nothing Nothing Nothing mbDistance mbDuration Nothing (DTC.OneWay DTC.OneWayOnDemandDynamicOffer)
   mbTollChargesAndNames <- TD.getTollInfoOnRoute merchanOperatingCityId Nothing (maybe [] (\x -> x.points) mbRoute)
   let mbTollCharges = (\(tollCharges, _, _) -> tollCharges) <$> mbTollChargesAndNames
   let mbTollNames = (\(_, tollNames, _) -> tollNames) <$> mbTollChargesAndNames

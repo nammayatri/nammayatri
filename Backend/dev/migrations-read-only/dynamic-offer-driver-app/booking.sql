@@ -111,3 +111,9 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN has_stops boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_referred_ride boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN dynamic_pricing_logic_version integer ;

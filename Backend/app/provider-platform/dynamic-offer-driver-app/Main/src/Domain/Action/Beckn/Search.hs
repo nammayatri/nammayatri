@@ -71,6 +71,7 @@ import Kernel.Utils.Common
 import Lib.Queries.GateInfo (findGateInfoByLatLongWithoutGeoJson)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Event as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SharedLogic.BlockedRouteDetector
 import SharedLogic.DriverPool
@@ -97,6 +98,7 @@ import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.Vehicle as QVeh
+import Tools.DynamicLogic
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
@@ -234,7 +236,10 @@ handler ValidatedDSearchReq {..} sReq = do
         mbTollChargesAndNames <- getTollInfoOnRoute merchantOpCityId Nothing serviceableRoute.routePoints
         return (Just setRouteInfo, Just toLocation, Just estimatedDistance, Just estimatedDuration, Just serviceableRoute.isCustomerPrefferedSearchRoute, Just serviceableRoute.isBlockedRoute, (\(charges, _, _) -> charges) <$> mbTollChargesAndNames, (\(_, names, _) -> names) <$> mbTollChargesAndNames, (\(_, _, isAutoRickshawAllowed) -> isAutoRickshawAllowed) <$> mbTollChargesAndNames)
       _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration, Nothing, Nothing, Nothing, Nothing, Nothing) -- estimate distance and durations by user
-  allFarePoliciesProduct <- combineFarePoliciesProducts <$> ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation (Just (TransactionId (Id sReq.transactionId))) fromLocGeohash toLocGeohash mbDistance mbDuration) `mapM` possibleTripOption.tripCategories)
+  let localTimeZoneSeconds = 19800 -- fix this ------once live in another country
+  localTime <- getLocalCurrentTime localTimeZoneSeconds
+  (_, mbVersion) <- getAppDynamicLogic (cast merchantOpCityId) LYT.DYNAMIC_PRICING_UNIFIED localTime Nothing
+  allFarePoliciesProduct <- combineFarePoliciesProducts <$> ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation (Just (TransactionId (Id sReq.transactionId))) fromLocGeohash toLocGeohash mbDistance mbDuration mbVersion) `mapM` possibleTripOption.tripCategories)
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed allFarePoliciesProduct.farePolicies
   now <- getCurrentTime
   (mbSpecialZoneGateId, mbDefaultDriverExtra) <- getSpecialPickupZoneInfo allFarePoliciesProduct.specialLocationTag fromLocation
@@ -243,7 +248,7 @@ handler ValidatedDSearchReq {..} sReq = do
       specialLocationName = allFarePoliciesProduct.specialLocationName
   cityCurrency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   let mbDriverInfo = liftA2 (,) driverIdForSearch transporterConfig.driverDrivenSearchReqExpiry
-  searchReq <- buildSearchRequest sReq bapCity mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration spcllocationTag allFarePoliciesProduct.area mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohash toLocGeohash stops mbDriverInfo
+  searchReq <- buildSearchRequest sReq bapCity mbSpecialZoneGateId mbDefaultDriverExtra possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration spcllocationTag allFarePoliciesProduct.area mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute cityCurrency cityDistanceUnit fromLocGeohash toLocGeohash mbVersion stops mbDriverInfo
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo sReq.transactionId
   triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
   void $ QSR.createDSReq searchReq
@@ -468,10 +473,11 @@ buildSearchRequest ::
   DistanceUnit ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Int ->
   [DLoc.Location] ->
   Maybe (Id DP.Person, NominalDiffTime) ->
   m DSR.SearchRequest
-buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverExtra startTime isScheduled providerId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag area tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute currency distanceUnit fromLocGeohash toLocGeohash stops' mbDriverInfo = do
+buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverExtra startTime isScheduled providerId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration specialLocationTag area tollCharges tollNames isCustomerPrefferedSearchRoute isBlockedRoute currency distanceUnit fromLocGeohash toLocGeohash dynamicPricingLogicVersion stops' mbDriverInfo = do
   uuid <- generateGUID
   now <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)

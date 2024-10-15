@@ -139,8 +139,8 @@ data ServiceHandle m = ServiceHandle
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
     endRideTransaction :: Id DP.Driver -> SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> FareParameters -> DTConf.TransporterConfig -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Maybe LatLong -> m (),
-    getFarePolicyByEstOrQuoteId :: Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe UTCTime -> Maybe Bool -> Maybe CacKey -> m DFP.FullFarePolicy,
-    getFarePolicyOnEndRide :: Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> LatLong -> Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe UTCTime -> Maybe Bool -> Maybe CacKey -> m DFP.FullFarePolicy,
+    getFarePolicyByEstOrQuoteId :: Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe UTCTime -> Maybe Bool -> Maybe Int -> Maybe CacKey -> m DFP.FullFarePolicy,
+    getFarePolicyOnEndRide :: Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> LatLong -> Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe UTCTime -> Maybe Bool -> Maybe Int -> Maybe CacKey -> m DFP.FullFarePolicy,
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> HighPrecMoney -> Meters -> m (),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
@@ -492,8 +492,8 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
   tripEndTime <- getCurrentTime
   farePolicy <-
     if recomputeWithLatestPricing
-      then getFarePolicyOnEndRide (Just $ getCoordinates booking.fromLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) duration (getCoordinates tripEndPoint) booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) (Just (TransactionId (Id booking.transactionId)))
-      else getFarePolicyByEstOrQuoteId (Just $ getCoordinates booking.fromLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) duration booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) (Just (TransactionId (Id booking.transactionId)))
+      then getFarePolicyOnEndRide (Just $ getCoordinates booking.fromLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) duration (getCoordinates tripEndPoint) booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId)))
+      else getFarePolicyByEstOrQuoteId (Just $ getCoordinates booking.fromLocation) booking.fromLocGeohash booking.toLocGeohash (Just recalcDistance) duration booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier booking.area booking.quoteId (Just booking.startTime) (Just booking.isDashboardRequest) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId)))
   fareParams <-
     calculateFareParameters
       Fare.CalculateFareParametersParams

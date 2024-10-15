@@ -35,6 +35,7 @@ data SearchRequestT f = SearchRequestT
     driverDefaultExtraFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
     driverDefaultExtraFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     driverIdForSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    dynamicPricingLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     estimatedDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     fromLocGeohash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
