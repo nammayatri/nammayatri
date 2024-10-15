@@ -27,6 +27,7 @@ data BookingT f = BookingT
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     distance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     fareProductType :: B.C f Domain.Types.FarePolicy.FareProductType.FareProductType,
+    isUpgradedToCab :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     otpCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     stopLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

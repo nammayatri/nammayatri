@@ -79,6 +79,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideExtra as QERIDE
 import qualified Storage.Queries.RiderConfig as QRC
+import Tools.Constants
 import Tools.Error
 import Tools.Event
 import Tools.Maps (LatLong)
@@ -758,7 +759,9 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
     case mbRide of
       Just ride -> do
         case cancellationSource of
-          DBCR.ByUser -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
+          DBCR.ByUser -> do
+            handleUpgradedToCabRideCancellation
+            SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
           DBCR.ByDriver -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
           _ -> pure ()
         triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = booking.riderId, merchantId = booking.merchantId}
@@ -793,6 +796,15 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
   -- notify customer
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
   Notify.notifyOnBookingCancelled booking cancellationSource bppDetails mbRide
+  where
+    handleUpgradedToCabRideCancellation =
+      case booking.bookingDetails of
+        DRB.OneWayDetails details ->
+          when (details.isUpgradedToCab == Just True) $ do
+            person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+            let personTags = fromMaybe [] person.customerNammaTags
+            unless (rejectUpgradeTag `elem` personTags) $ QP.updateCustomerTags (Just $ personTags <> [rejectUpgradeTag]) person.id
+        _ -> pure ()
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>

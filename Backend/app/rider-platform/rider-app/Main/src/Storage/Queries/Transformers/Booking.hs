@@ -52,6 +52,16 @@ getOtpCode = \case
   DRB.AmbulanceDetails _ -> Nothing
   DRB.DeliveryDetails details -> details.otpCode
 
+getIsUpgradedToCab :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Bool
+getIsUpgradedToCab = \case
+  DRB.OneWayDetails details -> details.isUpgradedToCab
+  DRB.RentalDetails _ -> Nothing
+  DRB.DriverOfferDetails _ -> Nothing
+  DRB.OneWaySpecialZoneDetails _ -> Nothing
+  DRB.InterCityDetails _ -> Nothing
+  DRB.AmbulanceDetails _ -> Nothing
+  DRB.DeliveryDetails _ -> Nothing
+
 getStopLocationId :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe Kernel.Prelude.Text
 getStopLocationId = \case
   DRB.OneWayDetails _ -> Nothing
@@ -105,11 +115,12 @@ toBookingDetailsAndFromLocation ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Bool ->
   Maybe DistanceUnit ->
   Maybe HighPrecDistance ->
   Maybe Bool ->
   m (DL.Location, BookingDetails)
-toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType mbTripCategory toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue hasStops = do
+toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType mbTripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops = do
   logTagDebug ("bookingId:-" <> id) $ "Location Mappings:-" <> show mappings
   if null mappings
     then do
@@ -184,9 +195,8 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
       distance' <- (mkDistanceWithDefault distanceUnit distanceValue <$> distance) & fromMaybeM (InternalError "distance is null for one way booking")
       pure
         DRB.OneWayBookingDetails
-          { toLocation = toLocation,
-            distance = distance',
-            stops = stops
+          { distance = distance',
+            ..
           }
     buildInterCityDetails mbToLocid = do
       toLocid <- mbToLocid & fromMaybeM (InternalError $ "toLocationId is null for one way bookingId:-" <> id)

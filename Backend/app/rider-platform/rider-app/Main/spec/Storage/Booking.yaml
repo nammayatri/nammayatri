@@ -134,6 +134,7 @@ Booking:
       stops: "[Location]"
       toLocation: Location
       distance: Distance
+      isUpgradedToCab: Maybe Bool
       derive': Show
     RentalBookingDetails:
       stopLocation: Maybe Location
@@ -233,6 +234,7 @@ Booking:
       distance: Maybe HighPrecMeters
       stopLocationId: Maybe Text
       otpCode: Maybe Text
+      isUpgradedToCab: Maybe Bool
       stops: {}
     fromLocation:
       fromLocationId: Maybe Text
@@ -331,6 +333,7 @@ Booking:
     estimatedDistanceValue: (Kernel.Utils.Common.distanceToHighPrecDistance distanceUnit <$> estimatedDistance)|E
     stopLocationId: getStopLocationId
     otpCode: getOtpCode
+    isUpgradedToCab: getIsUpgradedToCab
     isBookingUpdated: (Just isBookingUpdated)|E
     providerUrl: (showBaseUrl providerUrl)|E
     fromLocationId: (Just $ Kernel.Types.Id.getId $ (.id) fromLocation)|E
@@ -356,7 +359,7 @@ Booking:
       - distance: getDistance bookingDetails|E
     fromTType:
       - mappings: Storage.Queries.LocationMapping.findByEntityId id|EM
-      - toBookingDetailsAndFromLocation': Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode distanceUnit distanceValue hasStops|EM
+      - toBookingDetailsAndFromLocation': Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops|EM
   fromTType:
     providerUrl: parseBaseUrl providerUrl|EM
     isBookingUpdated: (fromMaybe False isBookingUpdated)|E

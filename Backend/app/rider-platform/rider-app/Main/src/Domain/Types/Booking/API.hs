@@ -175,7 +175,8 @@ data OneWayBookingAPIDetails = OneWayBookingAPIDetails
   { toLocation :: LocationAPIEntity,
     stops :: [LocationAPIEntity],
     estimatedDistance :: HighPrecMeters,
-    estimatedDistanceWithUnit :: Distance
+    estimatedDistanceWithUnit :: Distance,
+    isUpgradedToCab :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -318,6 +319,7 @@ mkBookingAPIDetails booking requesterId = case booking.bookingDetails of
         { toLocation = SLoc.makeLocationAPIEntity toLocation,
           estimatedDistance = distanceToHighPrecMeters distance,
           estimatedDistanceWithUnit = distance,
+          isUpgradedToCab = isUpgradedToCab,
           stops = map SLoc.makeLocationAPIEntity stops
         }
     mkRentalAPIDetails RentalBookingDetails {..} =
