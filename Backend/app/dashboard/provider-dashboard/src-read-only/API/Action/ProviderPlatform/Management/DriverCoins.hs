@@ -7,6 +7,7 @@ module API.Action.ProviderPlatform.Management.DriverCoins
   )
 where
 
+import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.DriverCoins
 import qualified Dashboard.Common
 import qualified Domain.Action.ProviderPlatform.Management.DriverCoins
@@ -27,17 +28,29 @@ type API = ("coins" :> (PostDriverCoinsBulkUploadCoins :<|> PostDriverCoinsBulkU
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
 handler merchantId city = postDriverCoinsBulkUploadCoins merchantId city :<|> postDriverCoinsBulkUploadCoinsV2 merchantId city :<|> getDriverCoinsCoinHistory merchantId city
 
-type PostDriverCoinsBulkUploadCoins = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'DRIVER_COIN_BULK_UPLOAD :> API.Types.ProviderPlatform.Management.DriverCoins.PostDriverCoinsBulkUploadCoins)
+type PostDriverCoinsBulkUploadCoins =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_COINS / 'API.Types.ProviderPlatform.Management.DriverCoins.POST_DRIVER_COINS_BULK_UPLOAD_COINS)
+      :> API.Types.ProviderPlatform.Management.DriverCoins.PostDriverCoinsBulkUploadCoins
+  )
 
 type PostDriverCoinsBulkUploadCoinsV2 =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
-      'DRIVERS
-      'DRIVER_COIN_BULK_UPLOAD_V2
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_COINS / 'API.Types.ProviderPlatform.Management.DriverCoins.POST_DRIVER_COINS_BULK_UPLOAD_COINS_V2)
       :> API.Types.ProviderPlatform.Management.DriverCoins.PostDriverCoinsBulkUploadCoinsV2
   )
 
-type GetDriverCoinsCoinHistory = (ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'DRIVER_COIN_HISTORY :> API.Types.ProviderPlatform.Management.DriverCoins.GetDriverCoinsCoinHistory)
+type GetDriverCoinsCoinHistory =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_COINS / 'API.Types.ProviderPlatform.Management.DriverCoins.GET_DRIVER_COINS_COIN_HISTORY)
+      :> API.Types.ProviderPlatform.Management.DriverCoins.GetDriverCoinsCoinHistory
+  )
 
 postDriverCoinsBulkUploadCoins :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.DriverCoins.BulkUploadCoinsReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverCoinsBulkUploadCoins merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.DriverCoins.postDriverCoinsBulkUploadCoins merchantShortId opCity apiTokenInfo req

@@ -19,7 +19,6 @@ module ProviderPlatformClient.DynamicOfferDriver.RideBooking
 where
 
 import "dynamic-offer-driver-app" API.Dashboard.RideBooking as BPP
-import qualified API.Types.ProviderPlatform.RideBooking.Driver as DriverDSL
 import qualified Dashboard.ProviderPlatform.Management.DriverRegistration as Registration
 import qualified Dashboard.ProviderPlatform.Management.Ride as Ride
 import qualified Dashboard.ProviderPlatform.Volunteer as Volunteer
@@ -42,8 +41,7 @@ data DriverRideBookingAPIs = DriverRideBookingAPIs
   { driverRegistration :: DriverRegistrationAPIs,
     rides :: RidesAPIs,
     volunteer :: VolunteerAPIs,
-    maps :: MapsAPIs,
-    driverDSL :: DriverDSL.DriverAPIs
+    maps :: MapsAPIs
   }
 
 data RidesAPIs = RidesAPIs
@@ -77,14 +75,12 @@ mkDriverRideBookingAPIs merchantId city token = do
   let volunteer = VolunteerAPIs {..}
   let maps = MapsAPIs {..}
 
-  let driverDSL = DriverDSL.mkDriverAPIs driverClientDSL
   DriverRideBookingAPIs {..}
   where
     driverRegistrationClient
       :<|> ridesClient
       :<|> volunteerClient
-      :<|> mapsClient
-      :<|> driverClientDSL = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
+      :<|> mapsClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
 
     rideStart
       :<|> rideEnd

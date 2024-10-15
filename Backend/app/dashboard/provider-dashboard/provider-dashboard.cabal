@@ -64,7 +64,9 @@ library
       ProviderPlatformClient.SpecialZone
       RiderPlatformClient.RiderApp
       Storage.Beam.CommonInstances
+      API.Action.ProviderPlatform.Fleet
       API.Action.ProviderPlatform.Fleet.Driver
+      API.Action.ProviderPlatform.Management
       API.Action.ProviderPlatform.Management.Booking
       API.Action.ProviderPlatform.Management.Driver
       API.Action.ProviderPlatform.Management.DriverCoins
@@ -78,7 +80,11 @@ library
       API.Action.ProviderPlatform.Management.Revenue
       API.Action.ProviderPlatform.Management.Ride
       API.Action.ProviderPlatform.Management.System
+      API.Action.ProviderPlatform.RideBooking
       API.Action.ProviderPlatform.RideBooking.Driver
+      API.Client.ProviderPlatform.Fleet
+      API.Client.ProviderPlatform.Management
+      API.Client.ProviderPlatform.RideBooking
   other-modules:
       Paths_provider_dashboard
   hs-source-dirs:

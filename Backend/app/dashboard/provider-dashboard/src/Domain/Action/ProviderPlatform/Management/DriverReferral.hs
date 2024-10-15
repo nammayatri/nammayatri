@@ -18,7 +18,7 @@ module Domain.Action.ProviderPlatform.Management.DriverReferral
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as Common
+import qualified API.Client.ProviderPlatform.Management as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverReferral as Common
 import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -29,7 +29,6 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow)
-import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Tools.Auth
@@ -39,12 +38,11 @@ buildTransaction ::
   ( MonadFlow m,
     Common.HideSecrets request
   ) =>
-  Common.DriverReferralEndpointDSL ->
   ApiTokenInfo ->
   Maybe request ->
   m DT.Transaction
-buildTransaction endpoint apiTokenInfo =
-  T.buildTransaction (DT.ProviderManagementAPI $ Common.DriverReferralAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
+buildTransaction apiTokenInfo =
+  T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 postDriverReferralReferralOpsPassword ::
   ShortId DM.Merchant ->
@@ -54,9 +52,9 @@ postDriverReferralReferralOpsPassword ::
   Flow APISuccess
 postDriverReferralReferralOpsPassword merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.PostDriverReferralReferralOpsPasswordEndpoint apiTokenInfo (Just req)
+  transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverReferralDSL.postDriverReferralReferralOpsPassword) req
+    Client.callManagementAPI checkedMerchantId opCity (.driverReferralDSL.postDriverReferralReferralOpsPassword) req
 
 postDriverReferralLinkReferral ::
   ShortId DM.Merchant ->
@@ -66,8 +64,8 @@ postDriverReferralLinkReferral ::
   Flow Common.LinkReport
 postDriverReferralLinkReferral merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction Common.PostDriverReferralLinkReferralEndpoint apiTokenInfo (Just req)
+  transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPPOperations checkedMerchantId opCity (addMultipartBoundary . (.driverReferralDSL.postDriverReferralLinkReferral)) req
+    Client.callManagementAPI checkedMerchantId opCity (addMultipartBoundary . (.driverReferralDSL.postDriverReferralLinkReferral)) req
   where
     addMultipartBoundary clientFn reqBody = clientFn ("xxxxxxx", reqBody)

@@ -26,6 +26,7 @@ let outputPath =
       , _domainType = outputPrefixReadOnly ++ "Lib/Yudhishthira/Types"
       , _servantApi = outputPrefixReadOnly ++ "Lib/Yudhishthira/API/Action"
       , _servantApiDashboard = ""
+      , _servantApiClient = ""
       , _sql =
         [ { _1 = driverMigrationPath, _2 = "atlas_driver_offer_bpp" }
         , { _1 = riderMigrationPath, _2 = "atlas_app" }
@@ -36,7 +37,10 @@ let outputPath =
 let GeneratorType =
       < SERVANT_API
       | SERVANT_API_DASHBOARD
-      | SERVANT_API_TREE
+      | API_TREE
+      | API_TREE_DASHBOARD
+      | API_TREE_COMMON
+      | API_TREE_CLIENT
       | API_TYPES
       | DOMAIN_HANDLER
       | DOMAIN_HANDLER_DASHBOARD
@@ -202,7 +206,9 @@ in  { _output = outputPath
       , GeneratorType.CACHED_QUERIES
       ]
     , _apiKind = ApiKind.UI
-    , _clientFunction = None Text
+    , _serverName = None Text
     , _folderName = None Text
+    , _migrationParams =
+        [] : List { _migrationName : Text, _migrationParam : Optional Text }
     , _endpointPrefix = None Text
     }

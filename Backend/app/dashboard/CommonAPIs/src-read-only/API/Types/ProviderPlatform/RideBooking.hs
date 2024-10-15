@@ -1,27 +1,29 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.ProviderPlatform.RideBooking where
 
 import qualified API.Types.ProviderPlatform.RideBooking.Driver
-import qualified Dashboard.Common
 import qualified Data.List
 import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
 import EulerHS.Prelude
 import qualified Text.Read
 import qualified Text.Show
 
-newtype RideBookingEndpoint
-  = DriverAPI API.Types.ProviderPlatform.RideBooking.Driver.DriverEndpointDSL
+newtype RideBookingUserActionType
+  = DRIVER API.Types.ProviderPlatform.RideBooking.Driver.DriverUserActionType
   deriving stock (Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-instance Text.Show.Show RideBookingEndpoint where
+instance Text.Show.Show RideBookingUserActionType where
   show = \case
-    DriverAPI e -> "DRIVER/" <> Dashboard.Common.showUserActionType e
+    DRIVER e -> "DRIVER/" <> show e
 
-instance Text.Read.Read RideBookingEndpoint where
-  readsPrec d' = Text.Read.readParen (d' > app_prec) (\r -> [(DriverAPI v1, r2) | r1 <- stripPrefix "DRIVER/" r, (v1, r2) <- Dashboard.Common.readUserActionTypeS r1])
+instance Text.Read.Read RideBookingUserActionType where
+  readsPrec d' = Text.Read.readParen (d' > app_prec) (\r -> [(DRIVER v1, r2) | r1 <- stripPrefix "DRIVER/" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1])
     where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
+
+$(Data.Singletons.TH.genSingletons [''RideBookingUserActionType])

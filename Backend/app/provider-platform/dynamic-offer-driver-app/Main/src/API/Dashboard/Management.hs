@@ -14,19 +14,6 @@
 
 module API.Dashboard.Management where
 
-import qualified API.Action.Dashboard.Management.Booking as BookingDSL
-import qualified API.Action.Dashboard.Management.Driver as DriverDSL
-import qualified API.Action.Dashboard.Management.DriverCoins as DriverCoinsDSL
-import qualified API.Action.Dashboard.Management.DriverGoHome as DriverGoHomeDSL
-import qualified API.Action.Dashboard.Management.DriverReferral as DriverReferralDSL
-import qualified API.Action.Dashboard.Management.DriverRegistration as DriverRegistrationDSL
-import qualified API.Action.Dashboard.Management.Merchant as MerchantDSL
-import qualified API.Action.Dashboard.Management.Message as MessageDSL
-import qualified API.Action.Dashboard.Management.NammaTag as NammaTagDSL
-import qualified API.Action.Dashboard.Management.Payout as PayoutDSL
-import qualified API.Action.Dashboard.Management.Revenue as RevenueDSL
-import qualified API.Action.Dashboard.Management.Ride as RideDSL
-import qualified API.Action.Dashboard.Management.System as SystemDSL
 import qualified API.Dashboard.Management.Issue as Issue
 import qualified API.Dashboard.Management.Overlay as Overlay
 import qualified API.Dashboard.Management.Subscription as Subscription
@@ -42,19 +29,6 @@ type API =
     :> ( Subscription.API
            :<|> Overlay.API
            :<|> Issue.API
-           :<|> MerchantDSL.API
-           :<|> MessageDSL.API
-           :<|> RevenueDSL.API
-           :<|> RideDSL.API
-           :<|> NammaTagDSL.API
-           :<|> DriverDSL.API
-           :<|> DriverCoinsDSL.API
-           :<|> DriverGoHomeDSL.API
-           :<|> DriverReferralDSL.API
-           :<|> DriverRegistrationDSL.API
-           :<|> BookingDSL.API
-           :<|> PayoutDSL.API
-           :<|> SystemDSL.API
        )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
@@ -62,16 +36,3 @@ handler merchantId city _ =
   Subscription.handler merchantId city
     :<|> Overlay.handler merchantId city
     :<|> Issue.handler merchantId city
-    :<|> MerchantDSL.handler merchantId city
-    :<|> MessageDSL.handler merchantId city
-    :<|> RevenueDSL.handler merchantId city
-    :<|> RideDSL.handler merchantId city
-    :<|> NammaTagDSL.handler merchantId city
-    :<|> DriverDSL.handler merchantId city
-    :<|> DriverCoinsDSL.handler merchantId city
-    :<|> DriverGoHomeDSL.handler merchantId city
-    :<|> DriverReferralDSL.handler merchantId city
-    :<|> DriverRegistrationDSL.handler merchantId city
-    :<|> BookingDSL.handler merchantId city
-    :<|> PayoutDSL.handler merchantId city
-    :<|> SystemDSL.handler merchantId city

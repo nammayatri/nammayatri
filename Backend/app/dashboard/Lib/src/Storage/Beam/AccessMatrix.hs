@@ -22,11 +22,12 @@ import qualified Domain.Types.AccessMatrix as Domain
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 
+-- TODO ApiEntity will be deprecated when we move all apis to DSL
 data AccessMatrixT f = AccessMatrixT
   { id :: B.C f Text,
     roleId :: B.C f Text,
     apiEntity :: B.C f Domain.ApiEntity,
-    userActionType :: B.C f Domain.UserActionType,
+    userActionType :: B.C f Domain.UserActionTypeWrapper,
     userAccessType :: B.C f Domain.UserAccessType,
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime

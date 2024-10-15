@@ -47,3 +47,6 @@ validateUpdateDriverNameReq UpdateDriverNameReq {..} =
 
 instance HideSecrets ClearDriverFeeReq where
   hideSecrets = identity
+
+instance HideSecrets [DriverEncDataReq] where
+  hideSecrets = identity

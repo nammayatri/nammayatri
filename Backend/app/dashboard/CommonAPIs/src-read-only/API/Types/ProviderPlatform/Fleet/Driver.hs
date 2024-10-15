@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -7,6 +8,7 @@ import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
 import qualified Dashboard.ProviderPlatform.Management.DriverRegistration
 import Data.OpenApi (ToSchema)
+import qualified Data.Singletons.TH
 import qualified Data.Time
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
@@ -668,25 +670,27 @@ mkDriverAPIs driverClient = (DriverAPIs {..})
   where
     postDriverFleetAddVehicle :<|> postDriverFleetAddRCWithoutDriver :<|> getDriverFleetGetAllVehicle :<|> getDriverFleetGetAllDriver :<|> postDriverFleetUnlink :<|> postDriverFleetRemoveVehicle :<|> postDriverFleetRemoveDriver :<|> getDriverFleetTotalEarning :<|> getDriverFleetVehicleEarning :<|> getDriverFleetDriverEarning :<|> getDriverFleetDriverVehicleAssociation :<|> getDriverFleetDriverAssociation :<|> getDriverFleetVehicleAssociation :<|> postDriverFleetVehicleDriverRcStatus :<|> postDriverUpdateFleetOwnerInfo :<|> getDriverFleetOwnerInfo :<|> postDriverFleetSendJoiningOtp :<|> postDriverFleetVerifyJoiningOtp :<|> postDriverFleetLinkRCWithDriver = driverClient
 
-data DriverEndpointDSL
-  = PostDriverFleetAddVehicleEndpoint
-  | PostDriverFleetAddRCWithoutDriverEndpoint
-  | GetDriverFleetGetAllVehicleEndpoint
-  | GetDriverFleetGetAllDriverEndpoint
-  | PostDriverFleetUnlinkEndpoint
-  | PostDriverFleetRemoveVehicleEndpoint
-  | PostDriverFleetRemoveDriverEndpoint
-  | GetDriverFleetTotalEarningEndpoint
-  | GetDriverFleetVehicleEarningEndpoint
-  | GetDriverFleetDriverEarningEndpoint
-  | GetDriverFleetDriverVehicleAssociationEndpoint
-  | GetDriverFleetDriverAssociationEndpoint
-  | GetDriverFleetVehicleAssociationEndpoint
-  | PostDriverFleetVehicleDriverRcStatusEndpoint
-  | PostDriverUpdateFleetOwnerInfoEndpoint
-  | GetDriverFleetOwnerInfoEndpoint
-  | PostDriverFleetSendJoiningOtpEndpoint
-  | PostDriverFleetVerifyJoiningOtpEndpoint
-  | PostDriverFleetLinkRCWithDriverEndpoint
+data DriverUserActionType
+  = POST_DRIVER_FLEET_ADD_VEHICLE
+  | POST_DRIVER_FLEET_ADD_RC_WITHOUT_DRIVER
+  | GET_DRIVER_FLEET_GET_ALL_VEHICLE
+  | GET_DRIVER_FLEET_GET_ALL_DRIVER
+  | POST_DRIVER_FLEET_UNLINK
+  | POST_DRIVER_FLEET_REMOVE_VEHICLE
+  | POST_DRIVER_FLEET_REMOVE_DRIVER
+  | GET_DRIVER_FLEET_TOTAL_EARNING
+  | GET_DRIVER_FLEET_VEHICLE_EARNING
+  | GET_DRIVER_FLEET_DRIVER_EARNING
+  | GET_DRIVER_FLEET_DRIVER_VEHICLE_ASSOCIATION
+  | GET_DRIVER_FLEET_DRIVER_ASSOCIATION
+  | GET_DRIVER_FLEET_VEHICLE_ASSOCIATION
+  | POST_DRIVER_FLEET_VEHICLE_DRIVER_RC_STATUS
+  | POST_DRIVER_UPDATE_FLEET_OWNER_INFO
+  | GET_DRIVER_FLEET_OWNER_INFO
+  | POST_DRIVER_FLEET_SEND_JOINING_OTP
+  | POST_DRIVER_FLEET_VERIFY_JOINING_OTP
+  | POST_DRIVER_FLEET_LINK_RC_WITH_DRIVER
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(Data.Singletons.TH.genSingletons [''DriverUserActionType])
