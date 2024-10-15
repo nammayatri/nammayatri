@@ -2182,8 +2182,8 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
     buildBookingAPIEntityFromBooking mbDriverLocation DRB.Booking {..} = do
       let pickup = LatLong {lat = fromLocation.lat, lon = fromLocation.lon}
           distanceToPickup' = highPrecMetersToMeters . (`distanceBetweenInMeters` pickup) <$> mbDriverLocation
-      quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
-      let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkBreakupItem estimatedDistance Nothing) quote.farePolicy
+      mbQuote <- QQuote.findById (Id quoteId)
+      let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkBreakupItem estimatedDistance Nothing) (mbQuote >>= (.farePolicy))
       return $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', ..} (catMaybes farePolicyBreakups)
 
     mkBreakupItem :: Text -> Text -> Maybe DOVT.RateCardItem
