@@ -335,6 +335,9 @@ initData = let
     , suggestionsListExpanded : false
     , repeatRideTimer : ""
     , repeatRideTimerId : ""
+    , upgradeRideTimerId : ""
+    , upgradeRideTimer : ""
+    , upgradeRideTimerStopped : true
     , reAllocation : {
         showPopUp : false
       }
@@ -590,6 +593,7 @@ dummyDriverOfferAPIEntity =
         , validTill: ""
         , driverName: ""
         , distanceToPickup: Nothing
+        , isUpgradedToCab: false
         , durationToPickup: Nothing
         }
 

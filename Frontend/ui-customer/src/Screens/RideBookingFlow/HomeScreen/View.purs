@@ -280,6 +280,11 @@ screen initialState =
                   void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   let pollingCount = ceil ((toNumber initialState.props.searchExpire)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) / 1000.0))
                   void $ launchAff $ flowRunner defaultGlobalState $ getQuotesPolling (getValueToLocalStore TRACKING_ID) GetQuotesList Restart pollingCount (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
+                void $ pure $ spy "Inside finding quotes" (isLocalStageOn QuoteList)
+              QuoteList -> do
+                void $ pure $ spy "Inside QuoteList" ""
+                let isBlindPerson = getValueToLocalStore DISABILITY_NAME == "BLIND_LOW_VISION"
+                when (DS.null initialState.props.upgradeRideTimerId && initialState.props.upgradeRideTimerStopped == false && not isBlindPerson) $  startTimer 10 "upgradeRide" "1" push UpgradeRideCountDown
               ConfirmingRide -> do
                 void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                 void $ launchAff $ flowRunner defaultGlobalState $ confirmRide (getValueToLocalStore TRACKING_ID) GetRideConfirmation CheckFlowStatusAction GoToHomeScreen 5 3000.0 push initialState

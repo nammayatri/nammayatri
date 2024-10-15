@@ -436,6 +436,20 @@ eval StopRepeatRideTimer state =  do
   void $ pure $ clearTimerWithId state.props.repeatRideTimerId
   continue state{props{repeatRideTimer = "", repeatRideTimerId = "", repeateRideTimerStoped = true}}
 
+eval (UpgradeRideCountDown seconds status timerID) state = do
+  if status == "EXPIRED" then do
+    void $ pure $ clearTimerWithId timerID
+    void $ pure $ performHapticFeedback unit
+    if (id == fromMaybe "" state.props.selectedQuote && (state.props.currentStage == QuoteList || state.props.currentStage == FindingQuotes) ) then do
+      continueWithCmd state [ pure $ (QuoteListModelActionController (QuoteListModelController.PrimaryButtonActionController PrimaryButtonController.OnClick)) ]
+    let updatedState = state{props{upgradeRideTimer = "", upgradeRideTimerId = "", upgradeRideTimerStopped = true, searchExpire = (getSearchExpiryTime true)}}
+    exit $ SelectEstimateAndQuotes updatedState
+  else continue state{props{upgradeRideTimer = (show seconds), upgradeRideTimerId = timerID, upgradeRideTimerStopped = false}}
+
+eval StopUpgradeRideTimer state =  do
+  void $ pure $ clearTimerWithId state.props.upgradeRideTimerId
+  continue state{props{upgradeRideTimer = "", upgradeRideTimerId = "", upgradeRideTimerStopped = true}}
+
 eval (AutoScrollCountDown seconds status timerID) state = do
   if status == "EXPIRED" then do
     void $ pure $ clearTimerWithId timerID
@@ -2128,15 +2142,20 @@ eval (EstimatesTryAgain (GetQuotesRes quotesRes) count ) state = do
 
 
 eval (GetQuotesList (SelectListRes resp)) state = do
-  if flowWithoutOffers WithoutOffers then
+  let allQuotes = getQuoteList ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes) state.props.city
+  let hasUpgradedQuote = isJust (find(\item -> item.isUpgradedToCab) allQuotes)
+  if hasUpgradedQuote then 
+    void $ pure $ setValueToLocalStore AUTO_SELECTING "false"
+  else pure unit    
+  void $ pure $ spy "Here Inside SelectListRes" resp
+  if (flowWithoutOffers WithoutOffers) && (not hasUpgradedQuote) then
     continueWithCmd state [pure $ ContinueWithoutOffers (SelectListRes resp)]
   else do
-    let allQuotes = getQuoteList ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes) state.props.city
-        existingQuotes = state.data.quoteListModelState
+    let existingQuotes = state.data.quoteListModelState
         newQuotes = filter (\quote -> quote.seconds > 0) (filter (\a -> length (filter (\b -> a.id == b.id ) existingQuotes) == 0 ) allQuotes) --filter (\quote -> quote.seconds > 0) (union allQuotes existingQuotes)
         updatedQuotes = existingQuotes <> newQuotes
         newState = state{data{quoteListModelState = updatedQuotes },props{isSearchLocation = NoView, isSource = Nothing, currentStage = FindingQuotes}}
-        
+
     if getValueToLocalStore GOT_ONE_QUOTE == "FALSE" && length updatedQuotes > 0 then do
       void $ pure $ firebaseLogEvent "ny_user_received_quotes"
       void $ pure $ setValueToLocalStore GOT_ONE_QUOTE "TRUE"
@@ -2566,6 +2585,13 @@ eval (ChooseYourRideAction ChooseYourRideController.NoAction) state = do
 eval (QuoteListModelActionController (QuoteListModelController.CancelTimer)) state = do
   void $ pure $ clearTimerWithId state.data.iopState.timerId
   continue state { data { iopState { timerVal = "0"}}}
+
+eval (QuoteListModelActionController (QuoteListModelController.UpgradeRidePrimaryButtonAction PrimaryButtonController.OnClick)) state =
+  exit $ ConfirmRide state { props { selectedQuote = if state.data.quoteListModelState == [] then Nothing else state.props.selectedQuote } }
+
+eval (QuoteListModelActionController (QuoteListModelController.RejectUpgradePrimaryButtonAction PrimaryButtonController.OnClick)) state = do
+  void $ pure $ clearTimerWithId state.props.upgradeRideTimerId
+  exit $ RetrySearchWithoutUpgrade true state{props{upgradeRideTimer = "", upgradeRideTimerId = "", upgradeRideTimerStopped = true, selectedQuote = Nothing}, data{quoteListModelState = []}}
 
 eval (QuoteListModelActionController (QuoteListModelController.ProviderModelAC (PM.ButtonClick (PrimaryButtonController.OnClick)))) state = do
   void $ pure $ clearTimerWithId state.data.iopState.timerId
