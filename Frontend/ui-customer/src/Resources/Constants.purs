@@ -411,6 +411,11 @@ cancelReasons showAcReason =
     , subtext: Just $ getString THE_PICKUP_LOCATION_ENTERED_WAS_WRONG
     , textBoxRequired : false
     }
+  , { reasonCode: "DIFFERENT_VEHICLE_NUMBER"
+    , description: getString DIFFERENT_VEHICLE_NUMBER
+    , subtext: Just $ getString VEHICLE_NUMBER_IS_DIFFERENT_FROM_WHAT_IS_SHOWN_IN_THE_APP
+    , textBoxRequired : false
+    }
   , { reasonCode: "OTHER"
     , description: getString OTHER
     , subtext: Just $ getString SOME_OTHER_REASON

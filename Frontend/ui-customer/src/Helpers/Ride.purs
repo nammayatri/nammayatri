@@ -99,13 +99,14 @@ feedbackPillDataWithRating2 (RideBookingRes state) = feedbackPillDataWithRating1
 feedbackPillDataWithRating3 :: String -> Array (Array ST.FeedbackItem)
 feedbackPillDataWithRating3 vehicalVariant =
   [ [ { id: "8", text: getString LT.UNPROFESSIONAL_DRIVER }
-    , { id: "8", text: getString LT.RASH_DRIVING }
+    , { id: "8", text: getString LT.DRIVER_CHARGED_MORE }
     ]
-  , [ { id: "8", text: getString LT.DRIVER_CHARGED_MORE }
-    , { id: "11", text: if vehicalVariant == "AUTO_RICKSHAW" then getString LT.UNCOMFORTABLE_AUTO else getString LT.UNCOMFORTABLE_CAB }
+  , [ { id: "3", text: getString LT.FELT_UNSAFE }
+    , { id: "8", text: getString LT.RASH_DRIVING }
+    , { id: "3", text: if vehicalVariant == "AUTO_RICKSHAW" then getString LT.DIFFERENT_AUTO else getString LT.DIFFERENT_CAB }
     ]
   , [ { id: "3", text: getString LT.TRIP_GOT_DELAYED }
-    , { id: "3", text: getString LT.FELT_UNSAFE }
+    , { id: "11", text: if vehicalVariant == "AUTO_RICKSHAW" then getString LT.UNCOMFORTABLE_AUTO else getString LT.UNCOMFORTABLE_CAB }
     ]
   ]
 
@@ -113,12 +114,13 @@ feedbackPillDataWithRating4 :: String -> Array (Array ST.FeedbackItem)
 feedbackPillDataWithRating4 vehicalVariant =
   [ [ { id: "9", text: getString LT.POLITE_DRIVER }
     , { id: "9", text: getString LT.EXPERT_DRIVING }
+    , { id: "4", text: getString LT.SAFE_RIDE }
     ]
   , [ { id: "9", text: getString LT.ASKED_FOR_EXTRA_FARE }
     , { id: "11", text: if vehicalVariant == "AUTO_RICKSHAW" then getString LT.UNCOMFORTABLE_AUTO else getString LT.UNCOMFORTABLE_CAB }
     ]
   , [ { id: "4", text: getString LT.TRIP_GOT_DELAYED }
-    , { id: "4", text: getString LT.SAFE_RIDE }
+    , { id: "3", text: if vehicalVariant == "AUTO_RICKSHAW" then getString LT.DIFFERENT_AUTO else getString LT.DIFFERENT_CAB }
     ]
   ]
 
