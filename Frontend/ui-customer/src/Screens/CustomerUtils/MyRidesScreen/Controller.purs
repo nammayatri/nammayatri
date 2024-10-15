@@ -184,7 +184,9 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
   case status of
     "success" -> do
                   let 
-                      filteredList = if state.props.fromBanner then filter (\item -> (any (_ == item ^. _status) ["CONFIRMED" , "TRIP_ASSIGNED"]) && item ^._isScheduled) (rideList^._list) else (rideList ^. _list)
+                      filteredList = if state.props.fromBanner then filter (\(RideBookingRes item) -> do
+                                  let rideScheduledTime = fromMaybe (getCurrentUTC "") item.rideScheduledTime
+                                  (any (_ == item.status) ["CONFIRMED" , "TRIP_ASSIGNED"]) && (item.isScheduled ||(rideScheduledTime > (getCurrentUTC "")))) (rideList^._list) else rideList ^. _list
                       bufferCardDataPrestoList = myRideListTransformerProp filteredList
                       bufferCardData = myRideListTransformer state filteredList
                       loaderBtnDisabled = length (filteredList) == 0
