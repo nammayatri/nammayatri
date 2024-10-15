@@ -3802,11 +3802,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1728983129,
-        "narHash": "sha256-BIE/orNoNIAjArVvVuyubBmIxet66jeKtsxX/SvsKdg=",
+        "lastModified": 1728983421,
+        "narHash": "sha256-t+VZxgBn0kquyBNbIEG6VHCH7yP9/0Bqe9Gn7dDGNX4=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "dfb45ea512527d3b53cbf6c5ee313a025519f6e5",
+        "rev": "6fbaf371b9405f0555164633dea805825412b991",
         "type": "github"
       },
       "original": {
