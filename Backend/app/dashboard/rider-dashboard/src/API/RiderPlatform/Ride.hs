@@ -109,7 +109,7 @@ shareRideInfo ::
 shareRideInfo merchantShortId opCity rideId = withFlowHandlerAPI' $ do
   shareRideApiRateLimitOptions <- asks (.shareRideApiRateLimitOptions)
   checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey $ getId rideId) shareRideApiRateLimitOptions
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
+  let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   Client.callRiderAppOperations checkedMerchantId opCity (.rides.shareRideInfo) rideId
 
 shareRideInfoByShortId ::
@@ -120,7 +120,7 @@ shareRideInfoByShortId ::
 shareRideInfoByShortId merchantShortId opCity rideShortId = withFlowHandlerAPI' $ do
   shareRideApiRateLimitOptions <- asks (.shareRideApiRateLimitOptions)
   checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey $ getShortId rideShortId) shareRideApiRateLimitOptions
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
+  let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   Client.callRiderAppOperations checkedMerchantId opCity (.rides.shareRideInfoByShortId) rideShortId
 
 rideList ::
@@ -138,7 +138,7 @@ rideList ::
   FlowHandler Common.RideListRes
 rideList merchantShortId opCity _ mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo =
   withFlowHandlerAPI' $ do
-    checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
+    let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
     Client.callRiderAppOperations checkedMerchantId opCity (.rides.rideList) mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo
 
 tripRoute ::
@@ -149,7 +149,7 @@ tripRoute ::
   Double ->
   FlowHandler Maps.GetRoutesResp
 tripRoute merchantShortId opCity rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
+  let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   Client.callRiderAppOperations checkedMerchantId opCity (.rides.tripRoute) rideId pickupLocationLat pickupLocationLon
 
 pickupRoute ::
@@ -160,7 +160,7 @@ pickupRoute ::
   Double ->
   FlowHandler Maps.GetRoutesResp
 pickupRoute merchantShortId opCity rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
+  let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   Client.callRiderAppOperations checkedMerchantId opCity (.rides.pickupRoute) rideId pickupLocationLat pickupLocationLon
 
 rideInfo ::

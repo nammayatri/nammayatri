@@ -14,7 +14,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Tools.Auth.Merchant (merchantCityAccessCheck, merchantServerAccessCheck, CheckedShortId) where
+module Tools.Auth.Merchant (merchantCityAccessCheck, merchantServerAccessCheck, CheckedShortId, skipMerchantCityAccessCheck) where
 
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.ServerName as DTServer
@@ -29,6 +29,9 @@ merchantCityAccessCheck :: MonadFlow m => ShortId DMerchant.Merchant -> ShortId 
 merchantCityAccessCheck (ShortId userMerchantId) (ShortId merchantId) userCity city = do
   unless (userMerchantId == merchantId && userCity == city) $ throwError AccessDenied
   pure $ CheckedShortId merchantId
+
+skipMerchantCityAccessCheck :: ShortId DMerchant.Merchant -> CheckedShortId DMerchant.Merchant
+skipMerchantCityAccessCheck (ShortId merchantId) = CheckedShortId merchantId
 
 -- CheckedShortId constructor should not be exported for type safety
 newtype CheckedShortId domain = CheckedShortId Text
