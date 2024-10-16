@@ -563,7 +563,6 @@ type RiderRideCompletedScreenState =
   , needHelpText :: String
   , recordedView :: Boolean
   , timerId :: String
-  , showSafetyCenter :: Boolean
   , timerValue :: String
   , countDownValue :: String
   , showRentalRideDetails :: Boolean
@@ -577,6 +576,7 @@ type RiderRideCompletedScreenState =
   , rideDuration :: Maybe Int
   , additionalCharges :: Array AdditionalCharges
   , customerIssue :: CustomerIssueReportData
+  , showSafetyCenter :: Boolean
   }
 
 type CustomerIssueReportData = {
@@ -588,6 +588,7 @@ type CustomerIssueReportData = {
 , customerResponse :: Array {issueType :: CTA.CustomerIssueTypes, selectedYes :: Maybe Boolean}
 , respondedValidIssues :: Boolean
 , bannerComputedView :: Maybe ListItem
+, buttonActive :: Boolean
 }
 
 type AdditionalCharges = {
@@ -2564,7 +2565,6 @@ type NammaSafetyScreenData =  {
   shareOptionCurrent :: RideShareOptions,
   hasCompletedSafetySetup :: Boolean,
   emergencyContactsList :: Array NewContacts,
-  fromScreen :: String,
   sosId :: String,
   rideId :: String,
   videoPath :: String,
@@ -2618,7 +2618,8 @@ type NammaSafetyScreenProps =  {
   showMenu :: Boolean,
   policeCallTimerValue :: Int,
   policeCallTimerId :: String,
-  defaultCallPopup :: Boolean
+  defaultCallPopup :: Boolean,
+  fromScreen :: Maybe TripDetailsGoBackType
 }
 
 type DataFetchScreenState = {

@@ -36,7 +36,6 @@ initData = let
   , needHelpText : getString NEED_HELP
   , recordedView : false
   , timerId : ""
-  , showSafetyCenter : false
   , timerValue : "0:00"
   , countDownValue : "0:00"
   , rentalRowDetails : dummyRentalRowConfig
@@ -61,6 +60,7 @@ initData = let
   , config : config
   , rideDuration : Just 0
   , additionalCharges : []
+  , showSafetyCenter : false
   , customerIssue : {
       currentPageIndex : 0
     , showIssueBanners : true
@@ -87,6 +87,7 @@ initData = let
       }
     ]
     , respondedValidIssues : false
+    , buttonActive : false
   }
 }
 

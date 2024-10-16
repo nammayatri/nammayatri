@@ -192,7 +192,6 @@ driverProfile push state =
             width MATCH_PARENT
         ,   height WRAP_CONTENT
         ,   margin $ MarginTop 150
-        ,   visibility $ boolToVisibility $ DA.length state.data.displayImages > 1
         ][
             linearLayout[
                 width WRAP_CONTENT
@@ -206,6 +205,7 @@ driverProfile push state =
                 , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left_white"
                 , onClick push $ const PrevImg
                 , gravity LEFT
+                , visibility $ boolToVisibility $ state.data.imgIdx > 0
                 ]
             ]
         ,   imageView [
@@ -214,6 +214,7 @@ driverProfile push state =
             , margin $ MarginRight 5
             , onClick push $ const NextImg
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right_white"
+            , visibility $ boolToVisibility $ state.data.imgIdx < DA.length state.data.displayImages - 1
             ]
         ]
     ]

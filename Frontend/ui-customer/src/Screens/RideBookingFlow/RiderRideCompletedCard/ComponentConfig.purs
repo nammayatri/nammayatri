@@ -33,20 +33,20 @@ primaryButtonConfig state = PrimaryButton.config
     , isClickable = not state.ratingCard.recordAudioState.isRecording
     }
 
-primaryButtonConfigForCarousel :: PrimaryButton.Config
-primaryButtonConfigForCarousel = PrimaryButton.config
+primaryButtonConfigForCarousel :: RiderRideCompletedScreenState -> PrimaryButton.Config
+primaryButtonConfigForCarousel state = PrimaryButton.config
     { textConfig
         { text = getString LT.DONE
         , color = Color.yellow900
         , accessibilityHint = "Done with Carousel" 
         }
-    , alpha = 1.0
+    , alpha = if state.customerIssue.buttonActive then 1.0 else 0.5
     , background = Color.black900
     , margin = (Margin 0 0 0 0)
     , id = "DoneWithCarousel"
     , enableRipple = true
     , rippleColor = Color.rippleShade
-    , isClickable = true
+    , isClickable = state.customerIssue.buttonActive
     }
 
 driverInfoCardConfig :: RiderRideCompletedScreenState -> FavouriteDriverInfoCard.FavouriteDriverInfoCardState
