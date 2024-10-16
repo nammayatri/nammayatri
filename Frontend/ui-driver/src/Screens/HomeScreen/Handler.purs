@@ -108,9 +108,9 @@ homeScreen = do
     UpdateRoute updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> pure (UPDATE_ROUTE updatedState)
-    FcmNotification notificationType screenState -> do 
+    FcmNotification notificationType notificationBody screenState -> do 
       modifyScreenState $ HomeScreenStateType (\_ → screenState)
-      App.BackT $ App.BackPoint <$> (pure $ FCM_NOTIFICATION notificationType screenState)
+      App.BackT $ App.BackPoint <$> (pure $ FCM_NOTIFICATION notificationType screenState notificationBody)
     NotifyDriverArrived updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ NOTIFY_CUSTOMER updatedState)

@@ -1089,6 +1089,13 @@ type HomeScreenData =  {
 , onRideBannerTimerID :: String
 , onRideBannerTimer :: Int
 , scheduleRideCount :: Maybe (Tuple Int String)
+, favPopUp :: FavouritePopUp
+}
+
+type FavouritePopUp = {
+  visibility :: Boolean,
+  title :: String,
+  message :: String
 }
 
 type PlansState = {
@@ -1923,6 +1930,7 @@ data NotificationType =  DRIVER_REACHED
                       | RIDE_REQUESTED
                       | TRIP_STARTED
                       | EDIT_LOCATION
+                      | USER_FAVOURITE_DRIVER
 
 derive instance genericNotificationType :: Generic NotificationType _
 instance showNotificationType :: Show NotificationType where show = genericShow
@@ -3202,4 +3210,8 @@ type GullakSDKResp = {
   responseMessage :: String,
   responseCode :: Int,
   isNewUser :: Boolean
+}
+type NotificationBody = {
+  title :: String,
+  message :: String
 }
