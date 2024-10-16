@@ -23,7 +23,7 @@ import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
 import Data.Maybe (Maybe)
 import PrestoDOM
-import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), NavigationMode(..),  FareProductType(..), SpecialTags(..))
+import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), NavigationMode(..),  FareProductType(..), SpecialTags(..), LocationType)
 import Components.BannerCarousel as BannerCarousel
 import Common.Types.App as CTP
 import MerchantConfig.Types
@@ -132,5 +132,3 @@ type DriverInfoCardData =
   , addressWard :: Maybe String
   , hasToll :: Boolean
   }
-
-data LocationType = SOURCE | DESTINATION

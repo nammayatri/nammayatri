@@ -38,7 +38,7 @@ import PrestoDOM.List (ListItem)
 import Prelude (class Show)
 import Data.Maybe (Maybe)
 
-import Screens.Types (BottomNavBarIcon, CallType, CancelSearchType, CardType, HomeScreenState, LocationListItemState, NewContacts, PermissionScreenStage, ReferralType, Trip,NotificationBody)
+import Screens.Types (BottomNavBarIcon, CallType, CancelSearchType, CardType, HomeScreenState, LocationListItemState, NewContacts, PermissionScreenStage, ReferralType, Trip,NotificationBody, LocationType, LocationType(..))
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 
 import Services.API (FollowRideRes, GetDriverLocationResp, GetEditLocResultResp, GetQuotesRes, RideBookingListRes, RideBookingRes,RideBookingStatusRes, SelectListRes, GetEmergencySettingsRes)
@@ -278,7 +278,7 @@ data Action = NoAction
   | UpdateRepeatTrips RideBookingListRes 
   | RemoveShimmer 
   | ReportIssueClick
-  | EditLocation DriverInfoCardController.LocationType
+  | EditLocation LocationType
   | DateTimePickerAction String Int Int Int String Int Int
   | ChooseSingleVehicleAction ChooseVehicleController.Action
   | LocationTagBarAC LocationTagBarV2Controller.Action
