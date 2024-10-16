@@ -515,10 +515,10 @@ fetchPreferredVariant state estimates =
 filterWithFareAndVariant :: HomeScreenState -> Array EstimateAPIEntity -> EstimateAndQuoteConfig -> String  -> (Array EstimateAPIEntity) 
 filterWithFareAndVariant state estimates estimateAndQuoteConfig preferredVariantConfig =
   let
-    estimatesOrder = RC.getEstimatesOrder $ toLower $ getValueToLocalStore CUSTOMER_LOCATION
-    preferedVariant = if not null preferredVariantConfig then  (fetchPreferredVariant state estimates) else preferredVariantConfig
+    estimatesOrder = RC.getEstimatesOrderBaseOnServiceTier  $ toLower $ getValueToLocalStore CUSTOMER_LOCATION
+    preferedVariant =  if not null preferredVariantConfig then  (fetchPreferredVariant state estimates) else preferredVariantConfig
     preferredEstimatesOrder = maybe [] (\service -> service.preferredEstimateOrder) state.data.selectedService
-    finalList = DA.nub $ [preferedVariant] <> preferredEstimatesOrder <> estimatesOrder
+    finalList =  DA.nub $ [preferedVariant] <> preferredEstimatesOrder <> estimatesOrder
     filteredEstimate = 
       case (getMerchant FunctionCall) of
         YATRISATHI -> DA.concat (map (\variant -> filterEstimateByVariants variant estimates) (estimateAndQuoteConfig.variantTypes :: Array (Array String)))
@@ -534,7 +534,7 @@ filterWithFareAndVariant state estimates estimateAndQuoteConfig preferredVariant
           map
             ( \(EstimateAPIEntity estimate) ->
                 let
-                  orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex estimate.vehicleVariant orderList)
+                  orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex (fromMaybe "" estimate.serviceTierName) orderList)
                   isNY = if estimate.isValueAddNP /= Just false then 0 else 1
                 in
                   { item: (EstimateAPIEntity estimate), order: orderNumber * 10 + isNY }
@@ -545,7 +545,7 @@ filterWithFareAndVariant state estimates estimateAndQuoteConfig preferredVariant
         map (\sortedEstimate -> sortedEstimate.item) sortedEstimates
 
   filterEstimateByVariants :: Array String -> Array EstimateAPIEntity -> Array EstimateAPIEntity
-  filterEstimateByVariants variant estimates = DA.take 1 (sortEstimateWithVariantOrder (DA.filter (\(EstimateAPIEntity item) -> DA.any (_ == item.vehicleVariant) variant) estimates) variant)
+  filterEstimateByVariants variant estimates = DA.take 1 (sortEstimateWithVariantOrder (DA.filter (\(EstimateAPIEntity item) -> DA.any (_ == fromMaybe "" item.serviceTierName) variant) estimates) variant)
 
 
 getFareFromEstimate :: EstimateAPIEntity -> Int
@@ -579,13 +579,13 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
                 let
                   (QuoteAPIEntity quoteEntity) = body.onDemandCab
 
-                  orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex quoteEntity.vehicleVariant orderList)
+                  orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex (fromMaybe "" (quoteEntity.serviceTierName)) orderList)
                 in
                   { item: Just quote, order: orderNumber }
               RentalQuotes body -> 
                 let (QuoteAPIEntity quoteEntity) = body.onRentalCab
 
-                    orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex quoteEntity.vehicleVariant orderList)
+                    orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex  (fromMaybe "" (quoteEntity.serviceTierName)) orderList)
 
                 in {item : Just quote, order : orderNumber}
               _ -> { item: Nothing, order: orderListLength }
@@ -607,11 +607,11 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
                   Quotes body -> do
                     let
                       (QuoteAPIEntity quoteEntity) = body.onDemandCab
-                    DA.any (_ == quoteEntity.vehicleVariant) variant
+                    DA.any (_ == fromMaybe "" (quoteEntity.serviceTierName)) variant
                   RentalQuotes body -> do
                     let 
                       (QuoteAPIEntity quoteEntity) = body.onRentalCab
-                    DA.any (_ == quoteEntity.vehicleVariant) variant
+                    DA.any (_ == fromMaybe "" (quoteEntity.serviceTierName)) variant
                   _ -> false
               )
               quotes
@@ -624,7 +624,7 @@ getEstimates  state (EstimateAPIEntity estimate) estimates variant index activeI
   let currency = getCurrency appConfig
       variant = if not null preferredVariantConfig then  (fetchPreferredVariant state estimates) else preferredVariantConfig
       userCity = toLower $ getValueToLocalStore CUSTOMER_LOCATION
-      allSelectedServices =     if variant /= "AUTO_RICKSHAW" && userCity == "bangalore"  then (getServiceNames estimates variant) else  RC.getBookAnySelectedServices userCity 
+      allSelectedServices =     if variant /= "Auto" && userCity == "bangalore"  then (getServiceNames estimates variant) else  RC.getBookAnySelectedServices userCity 
       estimateAndQuoteConfig = (getAppConfig appConfig).estimateAndQuoteConfig
       config = getCityConfig (getAppConfig appConfig).cityConfig userCity
       tipConfig = getTipConfig estimate.vehicleVariant
@@ -634,9 +634,9 @@ getEstimates  state (EstimateAPIEntity estimate) estimates variant index activeI
       additionalFare = maybe 20 calculateFareRangeDifference (estimate.totalFareRange)
       extractFare f =  estimate.totalFareRange >>= \(FareRange fareRange) -> Just (f fareRange)
       calculateFareRangeDifference fareRange = fareRange ^. _maxFare - fareRange ^. _minFare
-      selectedServices = if estimate.vehicleVariant == "BOOK_ANY" then intersection allSelectedServices availableServices else []
+      selectedServices = if estimate.serviceTierName == Just "Book Any" then intersection allSelectedServices availableServices else []
       availableServices =
-        if estimate.vehicleVariant == "BOOK_ANY" then
+        if estimate.serviceTierName == Just "Book Any" then
           foldl
             ( \acc (EstimateAPIEntity item) -> case item.serviceTierName of
                 Just service -> acc <> [ service ]
@@ -680,8 +680,8 @@ getEstimates  state (EstimateAPIEntity estimate) estimates variant index activeI
       , availableServices = availableServices
       , selectedServices = selectedServices
       , validTill = estimate.validTill
-      , hasTollCharges = if estimate.vehicleVariant == "BOOK_ANY" then checkSelectedServicesHasFareKey estimates selectedServices "TOLL_CHARGES" else checkFareBreakupHasKey (EstimateAPIEntity estimate) "TOLL_CHARGES"
-      , hasParkingCharges = if estimate.vehicleVariant == "BOOK_ANY" then checkSelectedServicesHasFareKey estimates selectedServices "PARKING_CHARGE" else checkFareBreakupHasKey (EstimateAPIEntity estimate) "PARKING_CHARGE"
+      , hasTollCharges = if estimate.serviceTierName == Just "Book Any" then checkSelectedServicesHasFareKey estimates selectedServices "TOLL_CHARGES" else checkFareBreakupHasKey (EstimateAPIEntity estimate) "TOLL_CHARGES"
+      , hasParkingCharges = if estimate.serviceTierName == Just "Book Any" then checkSelectedServicesHasFareKey estimates selectedServices "PARKING_CHARGE" else checkFareBreakupHasKey (EstimateAPIEntity estimate) "PARKING_CHARGE"
       , specialLocationTag = estimate.specialLocationTag
       }
     
@@ -703,7 +703,7 @@ updateBookAnyEstimate :: Array ChooseVehicle.Config  -> Array ChooseVehicle.Conf
 updateBookAnyEstimate estimates  =
     map
       ( \estimate -> 
-          if estimate.vehicleVariant == "BOOK_ANY" then
+          if estimate.serviceTierName == Just "Book Any" then
             let availableServices = foldl
                                       ( \acc item -> case item.serviceTierName of
                                           Just service -> acc <> [ service ]
@@ -1049,6 +1049,6 @@ getFareProductType fareProductType =
 
 getServiceNames :: Array EstimateAPIEntity -> String -> Array String
 getServiceNames estimate  prefervariant =
-  let filter = if prefervariant == "AUTO_RICKSHAW" then  ["AUTO_RICKSHAW" , "TAXI"] else ["SEDAN", "TAXI", "TAXI_PLUS"]
-      array  =  foldl (\acc (EstimateAPIEntity  estimate) -> if  DA.elem estimate.vehicleVariant filter then acc <> [fromMaybe "" estimate.serviceTierName] else acc ) [] estimate 
+  let filter = if prefervariant == "Auto" then  ["Auto" , "Non-AC Mini"] else ["Sedan", "Non-AC Mini", "AC Mini"]
+      array  =  foldl (\acc (EstimateAPIEntity  estimate) -> if  DA.elem (fromMaybe "" estimate.serviceTierName) filter then acc <> [fromMaybe "" estimate.serviceTierName] else acc ) [] estimate 
   in array
