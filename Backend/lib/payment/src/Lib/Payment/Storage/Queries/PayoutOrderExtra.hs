@@ -51,8 +51,6 @@ findAllWithOptions limit offset mbDriverId mbMobileNumberHash mbFrom mbTo isFail
             <> [Se.Is Beam.mobileNoHash $ Se.Eq (fromJust mbMobileNumberHash) | isJust mbMobileNumberHash]
             <> [Se.Is Beam.customerId $ Se.Eq (fromJust mbDriverId) | isJust mbDriverId]
             <> [Se.Is Beam.status $ Se.Eq Payout.FULFILLMENTS_FAILURE | isFailedOnly]
-            <> [Se.Is Beam.retriedOrderId $ Se.Eq Nothing | isFailedOnly]
-            <> [Se.Is Beam.entityName $ Se.Not $ Se.Eq (Just RETRY_VIA_DASHBOARD) | isFailedOnly]
             <> [Se.Is Beam.city $ Se.Eq (show city)]
         )
     ]
