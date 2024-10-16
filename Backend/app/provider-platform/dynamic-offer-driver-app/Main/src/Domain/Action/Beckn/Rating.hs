@@ -83,6 +83,11 @@ handler merchantId req ride = do
           case mbCorrelationRes of
             Just correlationRes -> do
               when (not correlationRes.favourite) $ do
+                mbMerchantPN_ <- CPN.findMatchingMerchantPN ride.merchantOperatingCityId "FAVOURITE_DRIVER_ALERT" Nothing Nothing driver.language
+                whenJust mbMerchantPN_ $ \merchantPN_ -> do
+                  let title = T.replace "{#riderName#}" (fromMaybe "" req.riderName) merchantPN_.title
+                      entityData = NotifReq {entityId = driverId.getId, title = title, message = merchantPN_.body}
+                  notifyDriverOnEvents ride.merchantOperatingCityId driver.id driver.deviceToken entityData merchantPN_.fcmNotificationType
                 RDC.updateFavouriteDriverForRider True (Id riderId) ride.driverId
                 SQD.incFavouriteRiderCount ride.driverId
             Nothing -> do
