@@ -341,8 +341,8 @@ eval (MarkerLabelOnClick markerName) state =
     let isSource = Just (markerName == "ny_ic_src_marker")
     let updatedState = state{props{isSource = isSource, hasEstimateBackpoint = true, currentStage = SearchLocationModel}}
     continue updatedState
-  else if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) && state.data.config.feature.enableEditPickupLocation then continueWithCmd state [pure $ EditLocation DriverInfoCardController.SOURCE]
-  else if state.props.currentStage == RideStarted && state.data.config.feature.enableEditDestination && (not state.props.isOtpRideFlow) && not (DA.any (_ == state.data.fareProductType) [FPT.RENTAL, FPT.ONE_WAY_SPECIAL_ZONE, FPT.INTER_CITY]) then continueWithCmd state [pure $ EditLocation DriverInfoCardController.DESTINATION]
+  else if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) && state.data.config.feature.enableEditPickupLocation then continueWithCmd state [pure $ EditLocation ST.Source]
+  else if state.props.currentStage == RideStarted && state.data.config.feature.enableEditDestination && (not state.props.isOtpRideFlow) && not (DA.any (_ == state.data.fareProductType) [FPT.RENTAL, FPT.ONE_WAY_SPECIAL_ZONE, FPT.INTER_CITY]) then continueWithCmd state [pure $ EditLocation ST.Destination]
   else continue state
 
 eval (Scroll item) state = do
@@ -477,7 +477,7 @@ eval (UpdateCurrentStageStatus stage (RideBookingStatusRes resp)) newState = do
 
 eval (EditLocation isEditingPickup) state = do
   case isEditingPickup of
-    DriverInfoCardController.SOURCE -> do
+    ST.Source -> do
       if (state.data.driverInfoCardState.editPickupAttemptsLeft <= 0) then do
         void $ pure $ toast $ getString MAXIMUM_EDIT_PICKUP_ATTEMPTS_REACHED
         continue state
@@ -487,7 +487,7 @@ eval (EditLocation isEditingPickup) state = do
       else do 
         void $ pure $ updateLocalStage EditPickUpLocation
         exit $ EditLocationScreenOutput state{props{currentStage = EditPickUpLocation}}
-    DriverInfoCardController.DESTINATION -> do
+    ST.Destination -> do
       void $ pure $ deleteValueFromLocalStore TRACKING_ID
       continue state {props {currentStage = EditingDestinationLoc, isSource = Just false, isSearchLocation = SearchLocation}}
 
@@ -1587,7 +1587,7 @@ eval (CancelRidePopUpAction (CancelRidePopUp.Button2 PrimaryButtonController.OnC
 
 eval (EditPickupPopupOnCancelAC (PopUpModal.OnButton2Click)) state = exit $ CancelRide state NORMAL_RIDE_CANCEL
 
-eval (EditPickupPopupOnCancelAC (PopUpModal.OnButton1Click)) state = continueWithCmd state{ props { showEditPickupPopupOnCancel = false}} [pure $ EditLocation DriverInfoCardController.SOURCE]
+eval (EditPickupPopupOnCancelAC (PopUpModal.OnButton1Click)) state = continueWithCmd state{ props { showEditPickupPopupOnCancel = false}} [pure $ EditLocation ST.Source]
 
 eval (EditPickupPopupOnCancelAC (PopUpModal.DismissPopup)) state = continue state { props {showEditPickupPopupOnCancel = false } }
 

@@ -1542,9 +1542,9 @@ getTripDetails state = {
   , enablePaddingBottom : true
   , fareProductType : state.data.fareProductType
   , enableEditDestination : state.data.config.feature.enableEditDestination
-  , editingDestinationLoc : EditingLocation Controller.DESTINATION
+  , editingDestinationLoc : EditingLocation ST.Destination
   , rideAccepted : state.props.currentStage == RideAccepted
-  , editingPickupLocation : EditingLocation Controller.SOURCE
+  , editingPickupLocation : EditingLocation ST.Source
   , isEditPickupEnabled : state.data.config.feature.enableEditPickupLocation
   , isOtpRideFlow : state.props.isOtpRideFlow
 }
