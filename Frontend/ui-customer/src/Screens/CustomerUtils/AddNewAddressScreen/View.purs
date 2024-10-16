@@ -488,6 +488,7 @@ bottomBtnsData state =
     , recencyDate : Nothing
     , locationScore : Nothing
     , dynamicAction : Nothing
+    , types : Nothing
     }
   , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_current_location"
     , title :  (getString USE_CURRENT_LOCATION)
@@ -517,6 +518,7 @@ bottomBtnsData state =
   , recencyDate : Nothing
   , locationScore : Nothing
   , dynamicAction : Nothing
+  , types : Nothing
     }
 
   ]

@@ -75,6 +75,7 @@ data ScreenOutput = GoToHomeScreen
                   | RefreshPaymentStatus MetroTicketStatusScreenState
                   | GoToTryAgainPayment MetroTicketStatusScreenState
                   | GoToMyMetroTicketsScreen
+                  | GoToBusTicketBookingScreen
 
 eval :: Action -> MetroTicketStatusScreenState -> Eval Action ScreenOutput MetroTicketStatusScreenState
 
@@ -82,6 +83,7 @@ eval (BackPressed) state =
   case state.props.entryPoint of 
     HomescreenToMetroTicketStatus -> exit GoToHomeScreen 
     MyMetroTicketsToMetroTicketStatus -> exit GoToMyMetroTicketsScreen
+    BusTicketToMetroTicketStatus -> exit GoToBusTicketBookingScreen
 
 eval (MetroPaymentStatusAction (MetroTicketBookingStatus metroTicketBookingStatus)) state = do
   case metroTicketBookingStatus.status of 
