@@ -215,7 +215,7 @@ getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mb
           if fareWithAddition > estimatedFare
             then do
               logWarning $ "Fare with addition: " <> show fareWithAddition <> " is greater than estimated fare: " <> show estimatedFare
-              let fullFarePolicy' = fullFarePolicy{additionalCongestionCharge = fromMaybe 0.0 mbAdditionalFare}
+              let fullFarePolicy' = fullFarePolicy{additionalCongestionCharge = fareWithAddition - estimatedFare}
               return fullFarePolicy'
             else return fullFarePolicy
         else return fullFarePolicy
