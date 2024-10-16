@@ -295,6 +295,7 @@ getTa =
     , vehicle_issue: "வாகனப் பிரச்சினை"
     , fare_updated: "கட்டணம் புதுப்பிக்கப்பட்டது"
     , frequent_cancellations_will_lead_to_less_rides: "சவாரிகளை அடிக்கடி ரத்து செய்வது குறைவான சவாரிகளுக்கு வழிவகுக்கும் மற்றும் மதிப்பீட்டைக் குறைக்கும்."
+    , frequent_cancellations_will_lead_to_blocking: "அடிக்கடி ரத்து செய்வது ஆன்லைன் செல்வதைப் தடுப்பதற்கும் , குறைந்த மதிப்பீட்டிற்கும் வலி வகுக்கும்"
     , continue: "தொடரவும்"
     , more: "more"
     , less: "less"
@@ -1668,6 +1669,8 @@ getTa =
     , you_have_switched_city_or_vehicle: "நீங்கள் உங்கள் வாகனம் அல்லது நகரத்தை மாற்றியுள்ளீர்கள். சவாரிகளைப் பெற திட்டத்தைத் தேர்ந்தெடுக்கவும்"
     , xl_plus: "XL பிளஸ்"
     , currently_there_are_no_rides_available: "தற்போது, ​​சவாரிகள் எதுவும் இல்லை."
+    , due_to_higher_cancellation_rate_you_are_blocked: "அதிக ரத்து விகிதம் காரணமாக, நீங்கள்ஆன்லைன் செல்வதற்கு தடுக்கப்பட்டுள்ளீர்கள்"
+    , blocked_till: (\time date ->  date <> ", " <> time <> " வரை தடுக்கப்பட்டுள்ளீர்கள் ⚠️")
     , ride_requests: "சவாரி கோரிக்கைகள்"
     , scheduled_ride_accepted: "திட்டமிடப்பட்ட சவாரி ஏற்றுக்கொள்ளப்பட்டது!"
     , you_can_access_scheduled_rides: "திட்டமிடப்பட்ட சவாரிகளை நீங்கள் அணுகலாம்"

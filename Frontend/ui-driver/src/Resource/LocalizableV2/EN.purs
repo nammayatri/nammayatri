@@ -297,6 +297,7 @@ getEn =
     , vehicle_issue: "Vehicle issue"
     , fare_updated: "Fare updated"
     , frequent_cancellations_will_lead_to_less_rides: "Frequent cancellations will lead to less rides and lower rating"
+    , frequent_cancellations_will_lead_to_blocking: "Frequent cancellations will lead to blocking and lower rating"
     , continue: "Continue"
     , confirm_password: "Confirm Password"
     , demo_mode: "Demo Mode"
@@ -1668,6 +1669,8 @@ getEn =
     , xl_plus: "XL Plus"
     , sort_by: "Sort By"
     , currently_there_are_no_rides_available: "Currently, there are no rides available."
+    , due_to_higher_cancellation_rate_you_are_blocked: "Due to a higher cancellation rate, you are blocked from going online"
+    , blocked_till: (\time date -> "Blocked till " <> time <> ", " <> date <> " ⚠️")
     , ride_requests: "Ride Requests"
     , scheduled_ride_accepted: "Scheduled Ride Accepted!"
     , you_can_access_scheduled_rides: "You can access scheduled rides"

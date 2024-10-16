@@ -267,6 +267,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                 }
                             }
                             break;
+                        case NotificationTypes.CANCELLATION_RATE_NUDGE_DAILY :
+                            cancellationNudgeOverlay(remoteMessage, NotificationTypes.CANCELLATION_RATE_NUDGE_DAILY);
+                            break;
+                        case NotificationTypes.CANCELLATION_RATE_NUDGE_WEEKLY :
+                            cancellationNudgeOverlay(remoteMessage, NotificationTypes.CANCELLATION_RATE_NUDGE_WEEKLY);
+                            break;
                         case NotificationTypes.TRIGGER_SERVICE:
                             if (merchantType.equals("DRIVER")) {
                                 if (title!=null && title.equals("You were inactive")) FirebaseAnalytics.getInstance(this).logEvent("notification_trigger_service_inactive", new Bundle());
@@ -551,6 +557,42 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             Log.e("MyFirebaseMessagingService", "Error in EDIT_LOCATION " + e);
         }
     }
+    public void  cancellationNudgeOverlay(RemoteMessage remoteMessage, String overlayKey) {
+        try {
+            if (remoteMessage.getData().containsKey("driver_notification_payload")) {
+                String driverNotification = remoteMessage.getData().get("driver_notification_payload");
+                JSONObject driverNotificationModel = new JSONObject(driverNotification);
+                if (driverNotificationModel != null) {
+                    cancellationRateNudgeOverlay(driverNotificationModel, overlayKey);
+                }
+            }
+        } catch (JSONException e) {
+            Log.e("MyFirebaseMessagingService", "Error in cancellationNudgeOverlay -> " + overlayKey + " : " + e);
+        }
+    }
+
+    public void cancellationRateNudgeOverlay(JSONObject driverNotification, String overlayKey) {
+        try {
+            JSONObject cancellationNudge = new JSONObject();
+            cancellationNudge.put("okButtonText", driverNotification.getString("okButtonText"));
+            cancellationNudge.put("buttonOkVisibility",true);
+            cancellationNudge.put("imageVisibility",true);
+            cancellationNudge.put("imageUrl",driverNotification.getString("imageUrl"));
+            cancellationNudge.put("buttonLayoutVisibility",true);
+            cancellationNudge.put("titleVisibility",true);
+            JSONArray arr = new JSONArray();
+            arr.put(overlayKey);
+            cancellationNudge.put("actions",arr);
+            cancellationNudge.put("title",driverNotification.getString("title"));
+            cancellationNudge.put("description", driverNotification.getString("description"));
+            cancellationNudge.put("descriptionVisibility", driverNotification.getString("descriptionVisibility"));
+            showOverlayMessage(cancellationNudge);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e("MyFirebaseMessagingService", "Error in " + overlayKey + " : " + e);
+        }
+    }
+
     public void startFCMBundleUpdateService(RemoteMessage remoteMessage, String merchantType) {
         try {
             Context context = getApplicationContext();
@@ -802,5 +844,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         public static final String FOLLOW_RIDE = "FOLLOW_RIDE";
         public static final String DRIVER_HAS_REACHED = "DRIVER_HAS_REACHED";
         public static final String SAFETY_ALERT = "SAFETY_ALERT";
+        public static final String CANCELLATION_RATE_NUDGE_DAILY = "CANCELLATION_RATE_NUDGE_DAILY";
+        public static final String CANCELLATION_RATE_NUDGE_WEEKLY = "CANCELLATION_RATE_NUDGE_WEEKLY";
     }
 }
