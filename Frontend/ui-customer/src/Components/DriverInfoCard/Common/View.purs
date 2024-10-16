@@ -126,6 +126,7 @@ driverDetailsView push config uid nid =
         , case config.serviceTierName of
             Just name -> ServiceTierCard.view $ serviceTierConfig name
             Nothing -> linearLayout [] []
+        ] 
       ]
     , linearLayout
       [ height WRAP_CONTENT
@@ -205,8 +206,7 @@ driverDetailsView push config uid nid =
                  ]
               ]
             ]
-        ]
-    ]
+        ]   
   ]
     where
         vehicleMargin = do 
