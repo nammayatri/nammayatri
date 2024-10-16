@@ -47,7 +47,6 @@ initData =
         , updateActionType: ""
         , videoPath: ""
         , emergencyContactsList: []
-        , fromScreen : getScreen HOME_SCREEN
         , removedContactDetail:
             { isSelected: false
             , name: ""
@@ -164,6 +163,7 @@ initData =
         , policeCallTimerValue : 5
         , policeCallTimerId : ""
         , defaultCallPopup : false
+        , fromScreen : Nothing
         }
     }
 

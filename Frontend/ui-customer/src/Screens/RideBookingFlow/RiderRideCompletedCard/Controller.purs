@@ -32,6 +32,7 @@ import PrestoDOM.List (ListItem)
 import Components.BannerCarousel as BannerCarousel
 import Components.RideCompletedCard as RideCompletedCard
 import Common.Types.App as CTP
+import Data.Int (fromString)
 
 data Action =
               RideDetails
@@ -271,9 +272,9 @@ eval (SelectButton selectedYes pageIndex) state = do
                 userRespondedIssuesCount = length userRespondedIssues
 
               if noOfAvailableBanners == userRespondedIssuesCount then do
-                continue updatedState{customerIssue {respondedValidIssues = true}}
+                continue updatedState{customerIssue {respondedValidIssues = true, buttonActive = true}}
               else 
-                continue updatedState{customerIssue {currentPageIndex = if  (pageIndex + 1) < noOfAvailableBanners then pageIndex + 1 else pageIndex}}
+                continue updatedState{customerIssue {currentPageIndex = if  (pageIndex + 1) < noOfAvailableBanners then pageIndex + 1 else pageIndex} }
             Nothing -> update state
         _ , _ -> update state
     Nothing -> update state
@@ -283,6 +284,8 @@ eval (SetIssueReportBannerItems bannerItem) state = continue state {
     bannerComputedView = Just bannerItem
   }
 }
+
+eval (BannerChanged item) state = continue state{customerIssue{currentPageIndex = fromMaybe 0 (fromString item)}}
 
 eval _ state = update state
 
@@ -363,9 +366,9 @@ issueReportBannerConfigs state =
     }
 
   in
-    (if nightSafetyIssue then [nightSafetyIssueConfig] else [])
-    <> (if tollIssue then [tollIssueConfig] else [])
-    <> (if accessibilityIssue then [accessibilityIssueConfig] else [])
+    if accessibilityIssue then [accessibilityIssueConfig] else
+      (if nightSafetyIssue then [nightSafetyIssueConfig] else [])
+      <> (if tollIssue then [tollIssueConfig] else [])
 
   where 
     findYesNoState customerResp issueType = 

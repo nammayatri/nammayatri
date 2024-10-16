@@ -549,9 +549,8 @@ riderRideCompletedScreenFlow = do
       void $ pure $ currentPosition ""
       void $ updateLocalStage HomeScreen
       updateUserInfoToState state.homeScreen
-      currentFlowStatus false
       modifyScreenState $ RiderRideCompletedScreenStateType (\_ -> RiderRideCompletedScreenData.initData)
-      homeScreenFlow
+      currentFlowStatus false
     GOTO_NAMMASAFETY _ triggerSos showtestDrill -> do
       (GlobalState state) <- getState
       updateSafetyScreenState state.homeScreen SafetyScreenData.defaultTimerValue showtestDrill triggerSos
@@ -559,7 +558,7 @@ riderRideCompletedScreenFlow = do
         true -> do
           let
             isRideCompleted = state.homeScreen.props.currentStage == RideCompleted
-          modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props { reportPastRide = isRideCompleted }, data { lastRideDetails = if isRideCompleted then Arr.head $ myRideListTransformer true [ state.homeScreen.data.ratingViewState.rideBookingRes ] state.homeScreen.data.config Nothing else Nothing, fromScreen = "RideCompletedScreen" } })
+          modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props { reportPastRide = isRideCompleted, fromScreen = Just RideCompletedScreen }, data { lastRideDetails = if isRideCompleted then Arr.head $ myRideListTransformer true [ state.homeScreen.data.ratingViewState.rideBookingRes ] state.homeScreen.data.config Nothing else Nothing } })
           activateSafetyScreenFlow
         false -> nammaSafetyFlow
     GO_TO_ISSUE_REPORT_CHAT_SCREEN_WITH_ISSUE updatedState issueType -> do
@@ -581,7 +580,7 @@ riderRideCompletedScreenFlow = do
             CTA.NightSafety -> "Safety Related Issue"
             _ -> "Ride related"
 
-        (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language  categoryId "" updatedState.ratingCard.rideId  ""
+        (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language  categoryId "" updatedState.rideRatingState.rideId  ""
         let 
           getOptionsRes' = mapWithIndex (\index (Option optionObj) -> optionObj {option = (show (index + 1)) <> ". " <> (reportIssueMessageTransformer optionObj.option) }) getOptionsRes.options
           messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) currMessage.messageTitle currMessage.messageAction "Bot" (getCurrentUTC "") "Text" (500*(index + 1))) getOptionsRes.messages
@@ -591,7 +590,7 @@ riderRideCompletedScreenFlow = do
           data {
             entryPoint = ReportIssueChatScreenData.RiderRideCompletedScreen
           , chats = chats'
-          , tripId = Just updatedState.ratingCard.rideId 
+          , tripId = Just updatedState.rideRatingState.rideId 
           , selectedCategory = {
               categoryName : categoryName
             , categoryId : categoryId
@@ -657,7 +656,7 @@ riderRideCompletedScreenFlow = do
         pure unit
       modifyScreenState $ RiderRideCompletedScreenStateType (\_ -> RiderRideCompletedScreenData.initData)
       currentFlowStatus false
-      homeScreenFlow
+      
 
 currentFlowStatus :: Boolean -> FlowBT String Unit
 currentFlowStatus prioritizeRating = do
@@ -5742,7 +5741,7 @@ activateSafetyScreenFlow = do
   flow <- UI.activateSafetyScreen
   case flow of
     ActivateSafetyScreen.GoBack state -> do
-      if state.data.fromScreen == "RideCompletedScreen" then riderRideCompletedScreenFlow
+      if state.props.fromScreen == Just RideCompletedScreen then riderRideCompletedScreenFlow
       else if state.props.isFromSafetyCenter 
         then do
           modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { isFromSafetyCenter = false } })
@@ -5774,8 +5773,8 @@ activateSafetyScreenFlow = do
           void $ pure $ cleverTapCustomEvent "ny_user_call_police_activated"
         setValueToLocalStore IS_SOS_ACTIVE "true"
       modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { props { shouldCallAutomatically = true }, data { sosType = Just flow } })
-      if flow /= SafetyFlow then activateSafetyScreenFlow else sosActiveFlow state.props.isFromSafetyCenter
-    ActivateSafetyScreen.GoToSosScreen state -> sosActiveFlow false
+      if flow /= SafetyFlow then activateSafetyScreenFlow else sosActiveFlow state state.props.isFromSafetyCenter
+    ActivateSafetyScreen.GoToSosScreen state -> sosActiveFlow state false
     ActivateSafetyScreen.GoToEducationScreen state -> safetyEducationFlow
     ActivateSafetyScreen.GoToIssueScreen state -> do
       let
@@ -5854,8 +5853,8 @@ setupSafetySettingsFlow = do
       modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen { props { fromSosFlow = false, appName = state.props.appName }, data { emergencyContactsList = state.data.emergencyContactsList } })
       emergencyScreenFlow
 
-sosActiveFlow :: Boolean -> FlowBT String Unit
-sosActiveFlow isFromSafetyCenter = do
+sosActiveFlow :: NammaSafetyScreenState -> Boolean -> FlowBT String Unit
+sosActiveFlow state isFromSafetyCenter = do
   flow <- UI.sosActiveScreen
   case flow of
     SosActiveScreen.UpdateAsSafe state -> do
@@ -5871,14 +5870,13 @@ sosActiveFlow isFromSafetyCenter = do
       if isFromSafetyCenter then do
         modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { isFromSafetyCenter = false } })
         nammaSafetyFlow
-      else
-        homeScreenFlow
+      else if state.props.fromScreen == Just RideCompletedScreen then riderRideCompletedScreenFlow else homeScreenFlow
     SosActiveScreen.UpdateAction state comment -> do
       res <- Remote.userSosStatusBT state.data.sosId (Remote.makeSosStatus "Pending" comment)
-      sosActiveFlow isFromSafetyCenter
+      sosActiveFlow state isFromSafetyCenter
     SosActiveScreen.GoToEducationScreen state -> safetyEducationFlow
-    SosActiveScreen.GoBack state -> homeScreenFlow
-    _ -> sosActiveFlow isFromSafetyCenter
+    SosActiveScreen.GoBack state -> if state.props.fromScreen == Just RideCompletedScreen then riderRideCompletedScreenFlow else homeScreenFlow
+    _ -> sosActiveFlow state isFromSafetyCenter
   pure unit
 
 safetyEducationFlow :: FlowBT String Unit
@@ -6600,7 +6598,6 @@ fcmHandler notification state notificationBody= do
                           isAlreadyFav = state.data.driverInfoCardState.isAlreadyFav,
                           favCount = state.data.driverInfoCardState.favCount
                         }
-                    , showSafetyCenter = state.data.config.feature.enableSafetyFlow && isRecentRide && not state.props.isSafetyCenterDisabled
                     , rideDuration = resp.duration 
                     , rentalRowDetails
                       { rideTime = getString LT.RIDE_TIME
@@ -6663,6 +6660,7 @@ fcmHandler notification state notificationBody= do
                         , hasSafetyIssue = hasSafetyIssue'
                         , hasTollIssue = hasTollIssue'
                         }
+                    , showSafetyCenter = state.data.config.feature.enableSafetyFlow && isRecentRide && not state.props.isSafetyCenterDisabled
                   }
               )
         riderRideCompletedScreenFlow

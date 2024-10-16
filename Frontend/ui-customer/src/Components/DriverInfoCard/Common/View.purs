@@ -95,25 +95,22 @@ driverDetailsView push config uid nid =
         , linearLayout[
             height WRAP_CONTENT
           , width WRAP_CONTENT
-          ][
-            textView $
-            [ text config.driverName
-            , maxLines 2
-            , ellipsize true
-            , accessibility DISABLE
-            , color Color.blue900
-            , width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , gravity LEFT
-            ] <> FontStyle.body27 TypoGraphy
-          , imageView
-            [ height $ V 12
-            , width $ V 12
-            , margin $ Margin 3 3 0 0
-            , accessibilityHint $ "Go To Driver Profile"
-            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right_blue"
-            ]
-          ]
+          , orientation VERTICAL
+          ][ linearLayout
+             [ height WRAP_CONTENT
+             , width MATCH_PARENT
+             ][ textView $
+                [ text $ config.driverName <> " >"
+                , maxLines 2
+                , ellipsize true
+                , accessibility DISABLE
+                , color Color.blue900
+                , width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , gravity LEFT
+                ] <> FontStyle.body27 TypoGraphy
+             ]
+          
         , textView (
           [ text $ spaceSeparatedPascalCase $ config.vehicleColor <> " " <> if config.vehicleModel == "Unkown" then HU.getVariantRideType config.vehicleVariant else config.vehicleModel
           , color Color.black700
@@ -210,6 +207,7 @@ driverDetailsView push config uid nid =
             ]
         ]
     ]
+  ]
     where
         vehicleMargin = do 
           let width = (runFn1 getLayoutBounds $ getNewIDWithTag nid).width

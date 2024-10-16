@@ -211,6 +211,7 @@ priceAndDistanceUpdateView state push =
           , linearLayout[
               width WRAP_CONTENT
             , height WRAP_CONTENT
+            , visibility $ boolToVisibility $ state.showSafetyCenter
             ][
               sosButtonView state push  
             ]
@@ -367,13 +368,13 @@ bottomCardView state push =
   , alignParentBottom "true,-1"
   , background Color.white900
   ] [
-      if state.showRentalRideDetails then rentalTripDetailsView state push else customerIssueView push customerIssue ,
+      if state.showRentalRideDetails then rentalTripDetailsView state push else customerIssueView push customerIssue state,
       rideCustomerExperienceView state push
     ]
 
 ---------------------------------------------------- customerIssueView ------------------------------------------------------------------------------------------------------------------------------------------
-customerIssueView :: forall w. (Action -> Effect Unit) -> CustomerIssue ->  PrestoDOM (Effect Unit) w
-customerIssueView push config  = 
+customerIssueView :: forall w. (Action -> Effect Unit) -> CustomerIssue -> RiderRideCompletedScreenState -> PrestoDOM (Effect Unit) w
+customerIssueView push config state = 
   case config.bannerComputedView , config.showIssueBanners, (null config.customerIssueCards) of 
     Just listView , true, false ->
       linearLayout[
@@ -391,7 +392,7 @@ customerIssueView push config  =
           , background Color.white900
           , padding $ Padding 16 16 16 16
           , adjustViewWithKeyboard "true"
-          ][PrimaryButton.view (push <<< PrimaryButtonCarousel) (primaryButtonConfigForCarousel)]
+          ][PrimaryButton.view (push <<< PrimaryButtonCarousel) (primaryButtonConfigForCarousel state)]
       ]
     _,_,_-> textView[
         width $ V 0

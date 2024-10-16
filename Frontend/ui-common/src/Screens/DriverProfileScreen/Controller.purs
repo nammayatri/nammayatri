@@ -61,10 +61,6 @@ eval (NextImg) state = do
     pure NoAction
   ]
 
-eval PrevImg state = continue state{data{ imgIdx = if state.data.imgIdx /= 0 then state.data.imgIdx - 1 else 0 }}
-
-eval NextImg state = continue state{data{ imgIdx = if DA.length state.data.displayImages - 1 /= state.data.imgIdx then state.data.imgIdx + 1 else state.data.imgIdx }}
-
 eval GoBack state = exit $ GoToBack
 
 eval _ state = update state
