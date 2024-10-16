@@ -160,6 +160,7 @@ getFR stringKey =
         WE_WILL_DELETE_YOUR_ACCOUNT -> "Nous sommes désolés de vous voir quitter notre plateforme. Nous supprimerons votre compte dans les 30 prochains jours. Si vous souhaitez conserver votre compte, veuillez nous appeler au numéro de support."
         YES_DELETE_IT -> "Oui, supprimez-le"
         REQUEST_TO_DELETE_ACCOUNT -> "Demande de supprimer le compte"
+        DELETE_ACCOUNT -> "Supprimer le compte"
         CANCEL_STR -> "Annuler"
         LOADING -> "Chargement"
         PLEASE_WAIT_WHILE_IN_PROGRESS -> "Veuillez patienter pendant que cela est en cours."

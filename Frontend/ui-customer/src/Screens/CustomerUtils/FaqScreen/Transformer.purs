@@ -43,21 +43,6 @@ import Foreign (unsafeToForeign)
 import Data.Array as DA
 import Data.String as DS
 
-topicsList :: FaqScreenState -> Array CategoryListType
-topicsList state =
-  state.data.categories
-  <> [ { categoryAction: Just "DELETE_ACCOUNT"
-          , categoryName: getString REQUEST_TO_DELETE_ACCOUNT
-          , categoryImageUrl: Just $ fetchImage FF_COMMON_ASSET "ny_ic_delete_account"
-          , categoryId: "7"
-          , isRideRequired: false
-          , maxAllowedRideAge: Nothing
-          , categoryType: "Category"
-          , allowedRideStatuses: Nothing
-          }
-        ]
-
-
 dropDownStringTransform :: String -> FaqStringType
 dropDownStringTransform str =
   let 
