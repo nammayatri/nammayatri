@@ -1626,7 +1626,7 @@ getTA stringKey =
     STATE_PERMIT_CHARGES -> "மாநில அனுமதி கட்டணங்கள்"
     DRIVER_ALLOWANCE_DESCRIPTION driverAllowance driverMaxAllowance-> "ஒவ்வொரு மணித்தியாலத்திற்கும் ஓட்டுநருக்கு "<>driverAllowance<>" ரூபாய்கள் அளிக்கப்படும். இருப்பினும், 24 மணிநேரங்களில், ஓட்டுநரின் அதிகபட்ச உரிமம் "<>driverAllowance<>" ரூபாய்களால் வரம்பு."
     DRIVER_ALLOWANCE_REQUIRED -> "ஓட்டுனர் உரிமம் *"
-    TOLL_AND_PARKING_CHARGES -> "டோல்/பர்கிங் மற்றும் அனுமதி கட்டணங்கள்"
+    TOLL_AND_PARKING_CHARGES -> "டோல்/பார்கிங் மற்றும் அனுமதி கட்டணங்கள்"
     NIGHT_SHIFT_CHARGES -> "இரவு நேர கட்டணம்"
     ROUND_TRIP_EXPLAINER -> "(இந்த தேதியில் மற்றும் நேரத்தில் உங்கள் மூல இடத்திற்கு திரும்ப நீங்கள் விட்டுவிடப்படும்)"
     RESERVE -> "ரிசர்வ் செய்யவும்"

@@ -15,6 +15,8 @@ import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), layoutGravity, Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..),Accessiblity(..),accessibility,accessibilityHint, alpha, clickable, imageWithFallback, background, color, fontStyle, gravity, height, linearLayout, imageView, margin, orientation, padding, text, textSize, textView, weight, width, onClick, alpha, cornerRadius, id, visibility, stroke)
 import Styles.Colors as Color
 import Mobility.Prelude (noView,boolToVisibility)
+import Locale.Utils (getLanguageLocale)
+import Constants (languageKey)
 
 
 view :: forall w. (Action -> Effect Unit) -> DateSelectorConfig -> PrestoDOM (Effect Unit) w
@@ -123,7 +125,7 @@ leaveNowButtonConfig state  = let
         , buttonWidth = V 8
         , buttonHeight = V 8
         , buttonColor = Color.black900
-        , margin = (MarginRight 15)
+        , margin = MarginRight $ if ((getLanguageLocale languageKey) == "TA_IN") then 2 else 15
         , activeStroke = ("2," <> Color.black900)
       }
       , leftsidebutton = true

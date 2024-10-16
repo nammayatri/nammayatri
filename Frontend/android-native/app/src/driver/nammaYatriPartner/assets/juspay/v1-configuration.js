@@ -2338,7 +2338,7 @@ let defWaitingChargesConfig = {
 let defRentalWaitingChargesConfig = {
   "cab" : {
     "freeSeconds" : 180,
-    "perMinCharges" : 2.0
+    "perMinCharges" : 1.0
   },
   "auto" : {
     "freeSeconds" : 180,

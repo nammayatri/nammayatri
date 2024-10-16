@@ -82,13 +82,13 @@ sourceToDestinationConfig state =
           , color = Color.black800
           }
       , sourceImageConfig
-          { imageUrl = "ny_ic_pickup"
+          { imageUrl = fetchImage FF_ASSET "ny_ic_pickup"
           , margin = MarginTop 7
           , height = V 16
           , width = V 16
           }
       , destinationImageConfig
-          { imageUrl = maybe ("ny_ic_plus_circle") (\_ -> "ny_ic_drop") state.data.destination
+          { imageUrl = fetchImage FF_ASSET $ maybe ("ny_ic_plus_circle") (\_ -> "ny_ic_drop") state.data.destination
           , margin = MarginTop 5
           , height = V 16
           , width = V 16
