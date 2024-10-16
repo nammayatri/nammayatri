@@ -56,6 +56,8 @@ import Components.Safety.SafetyAudioRecording as SafetyAudioRecording
 import Effect.Uncurried (runEffectFn2)
 import Components.PopupWithCheckbox.View as PopupWithCheckbox
 import Data.Function.Uncurried (runFn2)
+import Components.CommonComponentConfig as CommonComponentConfig
+import Components.PopUpModal as PopUpModal
 
 screen :: NammaSafetyScreenState -> Screen Action NammaSafetyScreenState ScreenOutput
 screen initialState =
@@ -141,6 +143,7 @@ view push state =
         ]
         <> if state.props.showMenu then [menuOptionModal push state] else []
         <> if state.props.defaultCallPopup then [contactsPopupView push state] else []
+        <> if state.props.showContactSupportPopUp then [contactSupportPopUpView push state] else []
 
   where
   padding' = if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 16 else EHC.safeMarginBottom)) else (PaddingLeft 0)
@@ -1127,3 +1130,10 @@ contactsPopupView push state =
     , background Color.blackLessTrans
     ]
     [ PopupWithCheckbox.view (push <<< PopupWithCheckboxAction) (defaultCallContactPopupConfig state) ]
+
+contactSupportPopUpView :: forall w.  (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w 
+contactSupportPopUpView push state =
+  linearLayout [
+    width MATCH_PARENT,
+    height MATCH_PARENT
+  ][PopUpModal.view (push <<< ContactSupportAction) $ CommonComponentConfig.contactSupportPopUpConfig state.data.config] 

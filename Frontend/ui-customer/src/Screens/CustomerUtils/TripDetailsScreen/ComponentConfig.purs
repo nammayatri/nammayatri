@@ -131,32 +131,6 @@ sourceToDestinationConfig state = let
     }
   in sourceToDestinationConfig'
 
-topicsList :: ST.TripDetailsScreenState -> Array CategoryListType
-topicsList state =
-  let appConfig = getAppConfig Const.appConfig
-  in
-  if appConfig.feature.enableSelfServe then
-    filter (_.isRideRequired) state.data.categories
-  else
-      [{ categoryAction : Just "CONTACT_US"
-      , categoryName : getString FOR_OTHER_ISSUES_WRITE_TO_US
-      , categoryImageUrl : Just $ fetchImage FF_COMMON_ASSET "ny_ic_clip_board"
-      , categoryId : "5"
-      , isRideRequired : false
-      , maxAllowedRideAge : Nothing
-      , allowedRideStatuses : Nothing
-      , categoryType: "Category"
-      },
-      { categoryAction : Just "CALL_SUPPORT"
-      , categoryName : getString CONTACT_SUPPORT
-      , categoryImageUrl : Just $ fetchImage FF_COMMON_ASSET "ny_ic_help"
-      , categoryId : "6"
-      , isRideRequired : false
-      , maxAllowedRideAge : Nothing
-      , allowedRideStatuses : Nothing
-      , categoryType: "Category"
-      }]
-
 listExpandingAnimationConfig :: Boolean -> AnimConfig
 listExpandingAnimationConfig isExpanded = let
   config = getConfig isExpanded

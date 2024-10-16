@@ -64,6 +64,7 @@ import Presto.Core.Types.Language.Flow (callAPI, APIResult(..), Flow)
 import Types.App (defaultGlobalState, GlobalState(..))
 import Control.Monad.Except.Trans (lift)
 import Components.RideCompletedCard as RideCompletedCard
+import Components.CommonComponentConfig as CommonComponentConfig
 
 screen :: RiderRideCompletedScreenState -> Screen Action RiderRideCompletedScreenState ScreenOutput
 screen initialState =
@@ -133,6 +134,9 @@ view push state  =
                 , background Color.white900
                 ][FavouriteDriverInfoCard.view (push <<< DriverInfocardAC) (FavouriteDriverInfoCardController.config)]
             ]
+          else [])
+          <> (if state.showContactSupportPopUp then
+            [contactSupportPopUpView push state]
           else [])
 
 rideCompletedView :: forall w. RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -1405,3 +1409,10 @@ audioRecorder state push =
         ]
         ]
     ]
+
+contactSupportPopUpView :: forall w.  (Action -> Effect Unit) -> RiderRideCompletedScreenState -> PrestoDOM (Effect Unit) w
+contactSupportPopUpView push state =
+  linearLayout [
+    width MATCH_PARENT,
+    height MATCH_PARENT
+  ][PopUpModal.view (push <<< ContactSupportAction) $ CommonComponentConfig.contactSupportPopUpConfig state.config]
