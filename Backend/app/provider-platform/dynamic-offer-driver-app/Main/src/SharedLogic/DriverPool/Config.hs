@@ -26,6 +26,7 @@ where
 
 import Control.Applicative ((<|>))
 import Data.Aeson as A
+import qualified Data.Aeson.KeyMap as KM
 import Data.Default.Class
 import Data.Text as Text hiding (filter, find)
 import qualified Domain.Types as DVST
@@ -90,7 +91,14 @@ findDriverPoolConfig configs serviceTier tripCategory dist area = do
   find (filterByDistAndDvehAndArea serviceTier tripCategory dist area) configs
     <|> find (filterByDistAndDvehAndArea serviceTier tripCategory dist SL.Default) configs
 
-newtype Config = Config {config :: DriverPoolConfig} deriving (Generic, ToJSON, FromJSON, Show, Default)
+data Config = Config
+  { config :: DriverPoolConfig,
+    extraDimensions :: Maybe Value
+  }
+  deriving (Generic, ToJSON, FromJSON, Show, Default)
+
+-- instance Default Config where
+--   def = Config def (Object KM.empty)
 
 instance Default DriverPoolConfig where
   def =
@@ -159,9 +167,10 @@ getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist 
   let dpc' = getDriverPoolConfigFromDB' serviceTier tripCategory area mbDist boundedConfigs <|> getDriverPoolConfigFromDB' serviceTier tripCategory area mbDist unboundedConfig
   oldVersion <- getConfigVersion (getKeyValue <$> stickeyKey)
   (allLogics, version) <- TDL.getAppDynamicLogic merchantOpCityId (LYT.CONFIG LYT.DriverPoolConfig) localTime oldVersion
+  let otherDimensions = A.Object $ KM.fromList [("serviceTier", toJSON serviceTier), ("tripCategory", toJSON tripCategory), ("area", toJSON area), ("tripDistance", toJSON mbDist)]
   case dpc' of
     Just dpc -> do
-      let config = Config dpc
+      let config = Config dpc (Just otherDimensions)
       resp <- LYTU.runLogics allLogics config
       case (fromJSON resp.result :: Result Config) of
         Success dpc'' -> do
