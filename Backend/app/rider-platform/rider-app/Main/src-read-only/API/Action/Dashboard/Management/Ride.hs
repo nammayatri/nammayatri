@@ -30,8 +30,8 @@ getRideList a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.
 getRideRideinfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.RideInfoRes)
 getRideRideinfo a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Ride.getRideRideinfo a3 a2 a1
 
-getRideInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler Dashboard.RiderPlatform.Ride.ShareRideInfoRes)
+getRideInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.ShareRideInfoRes)
 getRideInfo a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Ride.getRideInfo a3 a2 a1
 
-getRideRideInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.ShortId Dashboard.Common.Ride -> Environment.FlowHandler Dashboard.RiderPlatform.Ride.ShareRideInfoRes)
+getRideRideInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.ShortId Dashboard.Common.Ride -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.ShareRideInfoRes)
 getRideRideInfo a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Ride.getRideRideInfo a3 a2 a1

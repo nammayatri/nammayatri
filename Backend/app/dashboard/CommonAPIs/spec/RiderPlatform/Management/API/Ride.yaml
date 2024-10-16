@@ -15,11 +15,9 @@ imports:
   VehicleVariant: Domain.Types.VehicleVariant
   BookingStatus: Dashboard.RiderPlatform.Ride
   Location: Dashboard.RiderPlatform.Ride
-  RideStatus: Dashboard.RiderPlatform.Ride
-  CancellationSource: Dashboard.RiderPlatform.Ride
-  EstimateBreakup: Dashboard.RiderPlatform.Ride
-  FareBreakup: Dashboard.RiderPlatform.Ride
-  ShareRideInfoRes: Dashboard.RiderPlatform.Ride
+  Centesimal: Kernel.Types.Centesimal
+  BaseUrl: Kernel.Prelude
+
 
 module: Ride
 
@@ -47,14 +45,14 @@ apis:
         type: RideInfoRes
   - GET:
       endpoint: /{rideId}/info
-      auth:  ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS RIDE_INFO_CUSTOMER   # FIXME, wrong auth, need to be changed
+      auth:  ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS RIDE_INFO_CUSTOMER   # FIXME wrong auth need to be changed
       params:
         rideId: Id Ride
       response:
         type: ShareRideInfoRes
   - GET:
       endpoint: /{rideShortId}/rideInfo
-      auth:  ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS RIDE_INFO_CUSTOMER   # FIXME, wrong auth, need to be changed
+      auth:  ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS RIDE_INFO_CUSTOMER   # FIXME wrong auth need to be changed
       params:
         rideShortId: ShortId Ride
       response:
@@ -126,10 +124,58 @@ types:
     - computedPrice: Maybe HighPrecMoney
     - fareBreakup: [FareBreakup]
     - rideCreatedAt: UTCTime
+  ShareRideInfoRes:
+    - id: Id Ride
+    - bookingId: Id Booking
+    - status: RideStatus
+    - driverName: Text
+    - driverNumber: Maybe Text
+    - driverRating: Maybe Centesimal
+    - vehicleNumber: Text
+    - vehicleModel: Text
+    - vehicleColor: Text
+    - trackingUrl: Maybe BaseUrl
+    - estimatedDistance: Maybe HighPrecMeters
+    - estimatedDistanceWithUnit: Maybe Distance
+    - rideStartTime: Maybe UTCTime
+    - rideEndTime: Maybe UTCTime
+    - userFirstName: Maybe Text
+    - userLastName: Maybe Text
+    - fromLocation: Location
+    - toLocation: Maybe Location
+    - sosStatus: Maybe SosStatus
+    - vehicleVariant: VehicleVariant
+    - nextStopLocation: Maybe Location
+    - rideScheduledAt: UTCTime
+    - fareProductType: FareProductType    # TODO: For backward compatibility please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+    - tripCategory: TripCategory
+    - estimatedEndTimeRange: Maybe (Kernel.Prelude.UTCTime, Kernel.Prelude.UTCTime) # FIXME qualified name does not generate inside of tuple
+    - destinationReachedAt: Maybe UTCTime
+  CancellationSource:
+    - enum: ByUser, ByDriver, ByMerchant, ByAllocator, ByApplication
+  RideStatus:
+    - enum: UPCOMING_RIDE, NEW, INPROGRESS, COMPLETED, CANCELLED
+  SosStatus:
+    - enum: NotResolved, Pending, Resolved, MockPending, MockResolved
+  EstimateBreakup:
+    - title: Text
+    - price: EstimateBreakupPrice
+  EstimateBreakupPrice:
+    - recordType: NewType
+    - value: PriceAPIEntity
+  FareBreakup:
+    - amount: Price
+    - description: Text
+    - entityId: Text
+    - entityType: FareBreakupEntityType
+  FareBreakupEntityType:
+    - enum: BOOKING_UPDATE_REQUEST, BOOKING, RIDE, INITIAL_BOOKING
+
+
 
 
   # BookingStatus:
-  #   - enum: UPCOMING  UPCOMING_6HRS  ONGOING  ONGOING_6HRS  RCOMPLETED  RCANCELLED
+  #   - enum: UPCOMING, UPCOMING_6HRS, ONGOING, ONGOING_6HRS, RCOMPLETED, RCANCELLED
   # Location:
   #   - id: Id Location
   #   - lat: Double

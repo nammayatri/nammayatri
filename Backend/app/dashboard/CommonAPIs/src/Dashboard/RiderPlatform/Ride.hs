@@ -30,7 +30,6 @@ import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
-import Kernel.Types.Centesimal
 import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Types.Price
@@ -53,35 +52,35 @@ import Servant hiding (Summary)
 --     :> "rideInfo"
 --     :> Get '[JSON] ShareRideInfoRes
 
-data ShareRideInfoRes = ShareRideInfoRes
-  { id :: Id Ride,
-    bookingId :: Id Booking,
-    status :: RideStatus,
-    driverName :: Text,
-    driverNumber :: Maybe Text,
-    driverRating :: Maybe Centesimal,
-    vehicleNumber :: Text,
-    vehicleModel :: Text,
-    vehicleColor :: Text,
-    trackingUrl :: Maybe BaseUrl,
-    estimatedDistance :: Maybe HighPrecMeters,
-    estimatedDistanceWithUnit :: Maybe Distance,
-    rideStartTime :: Maybe UTCTime,
-    rideEndTime :: Maybe UTCTime,
-    userFirstName :: Maybe Text,
-    userLastName :: Maybe Text,
-    fromLocation :: Location,
-    toLocation :: Maybe Location,
-    sosStatus :: Maybe SosStatus,
-    vehicleVariant :: VehicleVariant,
-    nextStopLocation :: Maybe Location,
-    rideScheduledAt :: UTCTime,
-    fareProductType :: FareProductType, -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
-    tripCategory :: TripCategory,
-    estimatedEndTimeRange :: Maybe (UTCTime, UTCTime),
-    destinationReachedAt :: Maybe UTCTime
-  }
-  deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
+-- data ShareRideInfoRes = ShareRideInfoRes
+--   { id :: Id Ride,
+--     bookingId :: Id Booking,
+--     status :: RideStatus,
+--     driverName :: Text,
+--     driverNumber :: Maybe Text,
+--     driverRating :: Maybe Centesimal,
+--     vehicleNumber :: Text,
+--     vehicleModel :: Text,
+--     vehicleColor :: Text,
+--     trackingUrl :: Maybe BaseUrl,
+--     estimatedDistance :: Maybe HighPrecMeters,
+--     estimatedDistanceWithUnit :: Maybe Distance,
+--     rideStartTime :: Maybe UTCTime,
+--     rideEndTime :: Maybe UTCTime,
+--     userFirstName :: Maybe Text,
+--     userLastName :: Maybe Text,
+--     fromLocation :: Location,
+--     toLocation :: Maybe Location,
+--     sosStatus :: Maybe SosStatus,
+--     vehicleVariant :: VehicleVariant,
+--     nextStopLocation :: Maybe Location,
+--     rideScheduledAt :: UTCTime,
+--     fareProductType :: FareProductType, -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+--     tripCategory :: TripCategory,
+--     estimatedEndTimeRange :: Maybe (UTCTime, UTCTime),
+--     destinationReachedAt :: Maybe UTCTime
+--   }
+--   deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
 
 -- data RideInfoRes = RideInfoRes
 --   { rideId :: Id Ride,
@@ -131,52 +130,52 @@ data ShareRideInfoRes = ShareRideInfoRes
 --   }
 --   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
-data CancellationSource
-  = ByUser
-  | ByDriver
-  | ByMerchant
-  | ByAllocator
-  | ByApplication
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+-- data CancellationSource
+--   = ByUser
+--   | ByDriver
+--   | ByMerchant
+--   | ByAllocator
+--   | ByApplication
+--   deriving stock (Show, Generic)
+--   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RideStatus
-  = UPCOMING_RIDE
-  | NEW
-  | INPROGRESS
-  | COMPLETED
-  | CANCELLED
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+-- data RideStatus
+--   = UPCOMING_RIDE
+--   | NEW
+--   | INPROGRESS
+--   | COMPLETED
+--   | CANCELLED
+--   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data SosStatus
-  = NotResolved
-  | Pending
-  | Resolved
-  | MockPending
-  | MockResolved
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+-- data SosStatus
+--   = NotResolved
+--   | Pending
+--   | Resolved
+--   | MockPending
+--   | MockResolved
+--   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data EstimateBreakup = EstimateBreakup
-  { title :: Text,
-    price :: EstimateBreakupPrice
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+-- data EstimateBreakup = EstimateBreakup
+--   { title :: Text,
+--     price :: EstimateBreakupPrice
+--   }
+--   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-newtype EstimateBreakupPrice = EstimateBreakupPrice
-  { value :: PriceAPIEntity
-  }
-  deriving (Generic, Show, ToSchema, ToJSON, FromJSON)
+-- newtype EstimateBreakupPrice = EstimateBreakupPrice
+--   { value :: PriceAPIEntity
+--   }
+--   deriving (Generic, Show, ToSchema, ToJSON, FromJSON)
 
-data FareBreakup = FareBreakup
-  { amount :: Price,
-    description :: Text,
-    entityId :: Text,
-    entityType :: FareBreakupEntityType
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+-- data FareBreakup = FareBreakup
+--   { amount :: Price,
+--     description :: Text,
+--     entityId :: Text,
+--     entityType :: FareBreakupEntityType
+--   }
+--   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-data FareBreakupEntityType = BOOKING_UPDATE_REQUEST | BOOKING | RIDE | INITIAL_BOOKING
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+-- data FareBreakupEntityType = BOOKING_UPDATE_REQUEST | BOOKING | RIDE | INITIAL_BOOKING
+--   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data Location = Location
   { id :: Id Location,
