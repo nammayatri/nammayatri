@@ -56,6 +56,7 @@ initData = let
     }
   , rideRatingState : dummyPreviousRiderating
   , isSafetyCenterDisabled : false
+  , showContactSupportPopUp : false
   , bookingId : ""
   , config : config
   , rideDuration : Just 0

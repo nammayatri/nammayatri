@@ -17,13 +17,13 @@ import Resources.Constants as Constants
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import JBridge (hideKeyboardOnNavigation, requestKeyboardShow ,firebaseLogEvent, pauseYoutubeVideo, toggleBtnLoader)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, pure, unit, ($), discard, bind, not, void, (<>), (<), (==), (&&), (/=), (||), (>=))
+import Prelude
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (MyProfileScreenState, DeleteStatus(..), FieldType(..), ErrorType(..), Gender(..), DisabilityT(..), DisabilityData(..))
 import Services.API (GetProfileRes(..))
-import Helpers.Utils (validateEmail, emitTerminateApp, isParentView)
+import Helpers.Utils (validateEmail, emitTerminateApp, isParentView, strLenWithSpecificCharacters)
 import Data.String(length,trim)
 import Storage(KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Engineering.Helpers.Commons(getNewIDWithTag, setText)
@@ -32,6 +32,7 @@ import Engineering.Helpers.LogEvent (logEvent)
 import Data.Array as DA
 import Data.Lens ((^.))
 import Common.Types.App (LazyCheck(..))
+import Debug
 
 instance showAction :: Show Action where
   show _ = ""
@@ -69,9 +70,57 @@ instance loggableAction :: Loggable Action where
     SpecialAssistanceListAC _ -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "special_assistance_list_click"
     GenericRadioButtonAC _ -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "disability_radio_btn_click"
     MoreInfo _ ->  trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "learn_more_button_click"
+    DeleteAccountAction _ -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "in_screen" "delete_account"
+    DeleteGenericHeaderAC act -> case act of
+      GenericHeader.PrefixImgOnClick -> do
+        trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "generic_header_action" "back_icon"
+        trackAppEndScreen appId (getScreen MY_PROFILE_SCREEN)
+      GenericHeader.SuffixImgOnClick -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "generic_header_action" "forward_icon"
+    PopUpModalAction act -> case act of
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "show_delete_popup_modal_action" "delete_account_cancel"
+      PopUpModal.OnButton2Click -> do
+        trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "show_delete_popup_modal_action" "delete_account_accept"
+        trackAppEndScreen appId (getScreen MY_PROFILE_SCREEN)
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "show_delete_popup_modal_action" "no_action"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "show_delete_popup_modal_action" "image"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "show_delete_popup_modal_action" "primary_edit_text"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "secondary_text_clicked"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "show_delete_popup_modal_action" "countdown_updated"
+      PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "youtube_video_status"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "option_with_html_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "show_delete_popup_modal_action" "popup_dismissed"
+      _ -> pure unit
+    PrimaryButtonAC act -> case act of
+      PrimaryButton.OnClick -> do
+          trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "primary_button_action" "go_to_home/submit"
+          trackAppEndScreen appId (getScreen MY_PROFILE_SCREEN)
+      PrimaryButton.NoAction -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "primary_button" "no_action"
+    AccountDeletedModalAction act -> case act of
+      PopUpModal.OnButton1Click -> do
+        trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "delete_account_popup_modal_action" "account_deleted"
+        trackAppEndScreen appId (getScreen MY_PROFILE_SCREEN)
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "delete_account_popup_modal_action" "button_2"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "delete_account_popup_modal_action" "no_action"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "delete_account_popup_modal_action" "image"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "delete_account_popup_modal_action" "primary_edit_text"
+      PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "secondary_text_clicked"
+      PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "youtube_video_status"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "delete_account_popup_modal_action" "countdown_updated"
+      PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "option_with_html_clicked"
+      PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen MY_PROFILE_SCREEN) "delete_account_popup_modal_action" "popup_dismissed"
+      _ -> pure unit
+    EmailEditTextAC act -> case act of
+      PrimaryEditText.TextChanged _ _-> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "email_edit_text_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "email_edit_text_clicked" "primary_edit_text"
+      PrimaryEditText.FocusChanged _-> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "email_edit_text_focus_changed" "primary_edit_text"
+    DescriptionEditTextAC act -> case act of
+      PrimaryEditText.TextChanged _ _-> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "description_edit_text_changed" "primary_edit_text"
+      PrimaryEditText.FocusChanged _-> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "description_edit_text_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked -> trackAppTextInput appId (getScreen MY_PROFILE_SCREEN) "description_edit_text_image_clicked" "primary_edit_text"
     AccessibilityPopUpAC act -> case act of 
       PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen MY_PROFILE_SCREEN) "popup_modal_action" "select_disability_option"
       _ -> pure unit
+
 data Action = GenericHeaderActionController GenericHeader.Action
             | BackPressed MyProfileScreenState
             | AfterRender
@@ -88,8 +137,15 @@ data Action = GenericHeaderActionController GenericHeader.Action
             | SpecialAssistanceListAC SelectListModal.Action
             | AccessibilityPopUpAC PopUpModal.Action
             | MoreInfo FieldType
+            | DeleteAccountAction PrimaryButton.Action
+            | DeleteGenericHeaderAC GenericHeader.Action
+            | PopUpModalAction PopUpModal.Action
+            | PrimaryButtonAC PrimaryButton.Action
+            | AccountDeletedModalAction PopUpModal.Action
+            | EmailEditTextAC PrimaryEditText.Action
+            | DescriptionEditTextAC PrimaryEditText.Action
 
-data ScreenOutput = UpdateProfile MyProfileScreenState | GoToHome MyProfileScreenState
+data ScreenOutput = UpdateProfile MyProfileScreenState | GoToHome MyProfileScreenState | ConfirmDeleteAccount MyProfileScreenState 
 eval :: Action -> MyProfileScreenState -> Eval Action ScreenOutput MyProfileScreenState
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure $ BackPressed state]
 
@@ -101,6 +157,12 @@ eval (BackPressed backpressState) state = do
     else if state.props.updateProfile then do
       _ <- pure $ hideKeyboardOnNavigation true
       continue state { props { updateProfile = false, genderOptionExpanded = false , expandEnabled = false, isEmailValid = true} }
+    else if state.props.accountStatus == CONFIRM_REQ then
+      continue state { props {accountStatus = ACTIVE} }
+    else if state.props.showDeleteAccountView && state.props.accountStatus == DEL_REQUESTED then 
+      updateAndExit (state {props{accountStatus = ACTIVE, showDeleteAccountView = false}} ) $ GoToHome state
+    else if state.props.showDeleteAccountView then do
+      continue state {props {showDeleteAccountView = false} }
         else 
           if isParentView FunctionCall 
             then do 
@@ -194,9 +256,51 @@ eval (SpecialAssistanceListAC action) state = do
 
 eval (MoreInfo fieldType) state = continue state {props { showAccessibilityPopUp = true}}
 
-eval (AccessibilityPopUpAC (PopUpModal.OnButton1Click)) state = do 
+eval (AccessibilityPopUpAC (PopUpModal.OnButton1Click)) state = do
   _ <- pure $ pauseYoutubeVideo unit
   continue state {props{showAccessibilityPopUp = false}}
+
+eval (DeleteAccountAction PrimaryButton.OnClick) state = do
+  _ <- pure $ hideKeyboardOnNavigation true
+  continue state{ props { accountStatus = CONFIRM_REQ } }
+
+eval (DeleteGenericHeaderAC(GenericHeader.PrefixImgOnClick )) state = do
+  _ <- pure $ hideKeyboardOnNavigation true
+  continue state {props {showDeleteAccountView = false}}
+
+eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = do
+  continue state { props { accountStatus= ACTIVE } }
+
+eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do
+  let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else state.data.delAccEmail
+  continue state { props {showDeleteAccountView = true, accountStatus = DEL_PENDING} }
+
+eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
+  _ <- pure $ hideKeyboardOnNavigation true
+  let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else state.data.delAccEmail
+  exit $ ConfirmDeleteAccount state {data { delAccEmail = email } }
+
+eval (AccountDeletedModalAction (PopUpModal.OnButton2Click)) state =
+  exit $ GoToHome state { props { accountStatus = ACTIVE, showDeleteAccountView = false } }
+
+eval (EmailEditTextAC (PrimaryEditText.TextChanged _ a)) state =
+  continue state {
+    "data" { delAccEmail = trim(a) },
+    props{ btnActive = length (trim a) > 0
+      && (strLenWithSpecificCharacters (trim state.data.description) "[a-zA-Z]") > 9
+      && validateEmail a
+    }
+  }
+
+eval (DescriptionEditTextAC (PrimaryEditText.TextChanged id a)) state = do
+  let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else state.data.delAccEmail
+  continue state {
+    data { description = a },
+    props { btnActive = length email > 0
+      && (strLenWithSpecificCharacters (trim a) "[a-zA-Z]")  > 9
+      && validateEmail email
+    }
+  }
 
 eval _ state = update state
 
@@ -256,3 +360,6 @@ updateProfile (GetProfileRes profile) state = do
                         , editedDisabilityOptions = disabilityOptions
                         , disabilityOptions = disabilityOptions } 
                 , props { profileLoaded = true }}
+
+isEmailPresent :: LazyCheck -> Boolean
+isEmailPresent _ = not (getValueToLocalStore USER_EMAIL == "__failed" || getValueToLocalStore USER_EMAIL == "(null)")

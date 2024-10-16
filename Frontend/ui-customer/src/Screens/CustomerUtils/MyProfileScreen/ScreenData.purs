@@ -34,7 +34,10 @@ initData = {
         showAccessibilityPopUp : false,
         changeAccessibility : false,
         isSpecialAssistList : false,
-        profileLoaded : false
+        profileLoaded : false,
+        accountStatus : ACTIVE,
+        showDeleteAccountView : false,
+        btnActive : false
     },
     data : {
         name : "",
@@ -46,10 +49,12 @@ initData = {
         editedEmailId  : Nothing,
         nameErrorMessage : Nothing,
         emailErrorMessage : Nothing,
+        delAccEmail : "",
         config : getAppConfig appConfig,
         logField : empty,
         disabilityType : Nothing,
         hasDisability : Nothing,
+        description : "",
         editedDisabilityOptions : {
           activeIndex : 0
         , specialAssistActiveIndex : 0

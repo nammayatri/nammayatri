@@ -365,24 +365,29 @@ shareAudioButtonConfig state = let
     }
 
 optionsMenuConfig :: NammaSafetyScreenState -> OptionsMenuConfig.Config
-optionsMenuConfig state = OptionsMenuConfig.config {
-  menuItems = [
-    {image : fetchImage FF_ASSET "ny_ic_issue_box", textdata : getString REPORT_SAFETY_ISSUE, action : "report_safety_issue", isVisible : not state.props.showTestDrill, color : Color.white900},
-    {image : fetchImage COMMON_ASSET "ny_ic_safety_drill", textdata : getString START_TEST_DRILL, action : "start_test_drill", isVisible : not state.props.showTestDrill, color : Color.white900},
-    {image : fetchImage COMMON_ASSET "ny_ic_board_menu", textdata : getString LEARN_ABOUT_NAMMA_SAFETY, action : "learn_about_safety", isVisible : true, color : Color.white900}
-  ],
-  backgroundColor = Color.blackLessTrans,
-  menuBackgroundColor = Color.black900,
-  gravity = RIGHT,
-  menuExpanded = true,
-  width = WRAP_CONTENT,
-  marginRight = 16,
-  itemHeight = V 50,
-  itemPadding = Padding 16 16 16 16,
-  cornerRadius = 4.0,
-  enableAnim = true,
-  showStroke = false
-}
+optionsMenuConfig state =
+  let reportSafetyIssueAction = if state.data.config.feature.enableHelpAndSupport 
+    then "report_safety_issue"
+    else "show_contact_support_popup"
+  in
+  OptionsMenuConfig.config {
+    menuItems = [
+      {image : fetchImage FF_ASSET "ny_ic_issue_box", textdata : getString REPORT_SAFETY_ISSUE, action : reportSafetyIssueAction, isVisible : not state.props.showTestDrill, color : Color.white900},
+      {image : fetchImage COMMON_ASSET "ny_ic_safety_drill", textdata : getString START_TEST_DRILL, action : "start_test_drill", isVisible : not state.props.showTestDrill, color : Color.white900},
+      {image : fetchImage COMMON_ASSET "ny_ic_board_menu", textdata : getString LEARN_ABOUT_NAMMA_SAFETY, action : "learn_about_safety", isVisible : true, color : Color.white900}
+    ],
+    backgroundColor = Color.blackLessTrans,
+    menuBackgroundColor = Color.black900,
+    gravity = RIGHT,
+    menuExpanded = true,
+    width = WRAP_CONTENT,
+    marginRight = 16,
+    itemHeight = V 50,
+    itemPadding = Padding 16 16 16 16,
+    cornerRadius = 4.0,
+    enableAnim = true,
+    showStroke = false
+  }
 
 safetyAudioRecordingConfig :: NammaSafetyScreenState -> SafetyAudioRecording.Config
 safetyAudioRecordingConfig state = {

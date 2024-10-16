@@ -76,11 +76,6 @@ instance loggableAction :: Loggable Action where
           trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "generic_header_action" "back_icon"
           trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
         GenericHeader.SuffixImgOnClick -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "generic_header_action" "forward_icon"
-      DeleteGenericHeaderAC act -> case act of
-        GenericHeader.PrefixImgOnClick -> do
-          trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "generic_header_action" "back_icon"
-          trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
-        GenericHeader.SuffixImgOnClick -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "generic_header_action" "forward_icon"
       ContactUs -> do
         trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "contact_us"
         trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
@@ -118,48 +113,6 @@ instance loggableAction :: Loggable Action where
       FAQs -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "faq_action"
       RideBookingListAPIResponseAction rideList status -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "ride_booking_list_api_response"
       CallSupport -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "call_support"
-      DeleteAccount -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "delete_account"
-      EmailEditTextAC act -> case act of
-        PrimaryEditText.TextChanged _ _-> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "email_edit_text_changed" "primary_edit_text"
-        PrimaryEditText.FocusChanged _-> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "email_edit_text_focus_changed" "primary_edit_text"
-        PrimaryEditText.TextImageClicked -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "email_edit_text_image_onclick" "primary_edit_text"
-      DescriptionEditTextAC act -> case act of
-        PrimaryEditText.TextChanged _ _-> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "description_edit_text_changed" "primary_edit_text"
-        PrimaryEditText.FocusChanged _-> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "description_edit_text_focus_changed" "primary_edit_text"
-        PrimaryEditText.TextImageClicked -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "description_edit_text_image_onclick" "primary_edit_text"
-      PrimaryButtonAC act -> case act of
-        PrimaryButton.OnClick -> do
-            trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "primary_button_action" "go_to_home/submit"
-            trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
-        PrimaryButton.NoAction -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "primary_button" "no_action"
-      PopUpModalAction act -> case act of
-        PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "delete_account_cancel"
-        PopUpModal.OnButton2Click -> do
-          trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "delete_account_accept"
-          trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
-        PopUpModal.NoAction -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "no_action"
-        PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "image"
-        PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "primary_edit_text"
-        PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "secondary_text_clicked"
-        PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "countdown_updated"
-        PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "youtube_video_status"
-        PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "option_with_html_clicked"
-        PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "popup_dismissed"
-        _ -> pure unit
-      AccountDeletedModalAction act -> case act of
-        PopUpModal.OnButton1Click -> do
-          trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "account_deleted"
-          trackAppEndScreen appId (getScreen HELP_AND_SUPPORT_SCREEN)
-        PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "button_2"
-        PopUpModal.NoAction -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "no_action"
-        PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "image"
-        PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "primary_edit_text"
-        PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "secondary_text_clicked"
-        PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "youtube_video_status"
-        PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "countdown_updated"
-        PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "option_with_html_clicked"
-        PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "popup_dismissed"
-        _ -> pure unit
       FetchIssueListApiCall issueList -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "fetch_issue_list_api_call"
       ReportedIssue -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "reported_issue"
       ResolvedIssue -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "in_screen" "resolved_issue"
@@ -189,13 +142,6 @@ data Action = BackPressed Boolean
             | PopupModelActionController PopUpModal.Action
             | AfterRender
             | CallSupport
-            | DeleteAccount
-            | DeleteGenericHeaderAC GenericHeader.Action
-            | EmailEditTextAC PrimaryEditText.Action
-            | DescriptionEditTextAC PrimaryEditText.Action
-            | PrimaryButtonAC PrimaryButton.Action
-            | PopUpModalAction PopUpModal.Action
-            | AccountDeletedModalAction PopUpModal.Action
             | FetchIssueListApiCall (Array IssueReportCustomerListItem)
             | ReportedIssue
             | ResolvedIssue
@@ -214,7 +160,6 @@ data ScreenOutput = GoBack HelpAndSupportScreenState
                   | GoToChatScreen CategoryListType HelpAndSupportScreenState
                   | GoToSelectFaqScreen CategoryListType HelpAndSupportScreenState
                   | GoToHelpAndSupportScreen HelpAndSupportScreenState 
-                  | ConfirmDeleteAccount HelpAndSupportScreenState 
                   | GoToOldChatScreen IssueInfo HelpAndSupportScreenState
 
 eval :: Action -> HelpAndSupportScreenState -> Eval Action ScreenOutput HelpAndSupportScreenState
@@ -222,9 +167,6 @@ eval :: Action -> HelpAndSupportScreenState -> Eval Action ScreenOutput HelpAndS
 eval (BackPressed _ ) state = 
   if state.data.issueListType == REPORTED_ISSUES_MODAL || state.data.issueListType == RESOLVED_ISSUES_MODAL then continue state {data {issueListType = HELP_AND_SUPPORT_SCREEN_MODAL}}
   else if state.props.isCallConfirmation then continue state{props{isCallConfirmation = false}}
-  else if state.data.accountStatus == CONFIRM_REQ then continue state{data{accountStatus = ACTIVE}}
-  else if state.data.accountStatus == DEL_REQUESTED then updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome state
-  else if state.props.showDeleteAccountView then continue state{props {showDeleteAccountView = false}}
   else 
     if isParentView FunctionCall 
       then do 
@@ -298,28 +240,6 @@ eval (PopupModelActionController (PopUpModal.OnButton2Click)) state = do
 eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit $ GoBack state
 
 eval (NoRidesActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit $ GoHome state
-
-eval (EmailEditTextAC (PrimaryEditText.TextChanged _ a)) state = continue state{data {email = trim(a)},props{btnActive = length (trim a) > 0  && (strLenWithSpecificCharacters (trim state.data.description) "[a-zA-Z]") > 9 && validateEmail a}}
-
-eval (DescriptionEditTextAC (PrimaryEditText.TextChanged id a)) state = do 
-  let email= if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else state.data.email
-  continue state{data {description = a},props{btnActive = length email > 0 && (strLenWithSpecificCharacters (trim a) "[a-zA-Z]")  > 9 && validateEmail email}}
-
-eval DeleteAccount state = do
- continue state {props {showDeleteAccountView = true}, data{description = "", email = ""}}
-
-eval (DeleteGenericHeaderAC(GenericHeader.PrefixImgOnClick )) state = continue state {props {showDeleteAccountView = false}}
-
-eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do
-  _ <- pure $ hideKeyboardOnNavigation true
-  continue state{ data { accountStatus = CONFIRM_REQ} }
-
-eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state {data{ accountStatus= ACTIVE}}
-eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = do 
-  let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else state.data.email
-  exit $ ConfirmDeleteAccount state{data{email=email}}
-
-eval (AccountDeletedModalAction (PopUpModal.OnButton2Click)) state =  exit $ GoHome state {data{accountStatus = ACTIVE}, props {showDeleteAccountView = false}} 
 
 eval (FetchIssueListApiCall issueList) state = do
      let apiIssueList = getApiIssueList issueList

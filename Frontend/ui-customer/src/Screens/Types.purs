@@ -571,6 +571,7 @@ type RiderRideCompletedScreenState =
   , rideRatingState :: RatingCard
   , ratingViewState :: RatingViewState
   , isSafetyCenterDisabled :: Boolean
+  , showContactSupportPopUp :: Boolean
   , bookingId :: String
   , config :: AppConfig
   , rideDuration :: Maybe Int
@@ -1460,7 +1461,7 @@ type MyProfileScreenState = {
   props :: MyProfileScreenProps,
   data :: MyProfileScreenData
 }
-data DeleteStatus = CONFIRM_REQ | DEL_REQUESTED | ACTIVE
+data DeleteStatus = CONFIRM_REQ | DEL_PENDING | DEL_REQUESTED | ACTIVE
 
 derive instance genericDeleteStatus :: Generic DeleteStatus _
 instance showDeleteStatus :: Show DeleteStatus where show = genericShow
@@ -1481,7 +1482,10 @@ type MyProfileScreenProps = {
   showAccessibilityPopUp :: Boolean,
   changeAccessibility :: Boolean,
   isSpecialAssistList :: Boolean,
-  profileLoaded :: Boolean
+  profileLoaded :: Boolean,
+  accountStatus :: DeleteStatus,
+  showDeleteAccountView :: Boolean,
+  btnActive :: Boolean
 }
 
 data FieldType = NAME | EMAILID_ | GENDER_ | MOBILE | DISABILITY_TYPE
@@ -1504,7 +1508,9 @@ type MyProfileScreenData = {
   disabilityType :: Maybe DisabilityT,
   disabilityOptions :: DisabilityData,
   editedDisabilityOptions :: DisabilityData,
-  hasDisability :: Maybe Boolean
+  hasDisability :: Maybe Boolean,
+  delAccEmail :: String,
+  description :: String
 }
 
 data ErrorType = INVALID_EMAIL | EMAIL_EXISTS | EMAIL_CANNOT_BE_BLANK | INVALID_NAME | NAME_CANNOT_BE_BLANK
@@ -2634,7 +2640,8 @@ type NammaSafetyScreenProps =  {
   policeCallTimerValue :: Int,
   policeCallTimerId :: String,
   defaultCallPopup :: Boolean,
-  fromScreen :: Maybe TripDetailsGoBackType
+  fromScreen :: Maybe TripDetailsGoBackType,
+  showContactSupportPopUp :: Boolean
 }
 
 type DataFetchScreenState = {
@@ -2870,6 +2877,7 @@ instance eqLocationType :: Eq LocationType where eq = genericEq
 type GlobalFlowCache = {
     savedLocations :: Maybe SavedLocationsListRes
   , savedScheduledRides :: Maybe RideBookingListRes
+  , issueCategories :: Maybe (Array CTA.CategoryListType)
 }
 
 type LocateOnMapProps = {

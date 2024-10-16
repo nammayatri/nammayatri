@@ -160,8 +160,6 @@ myRideListTransform state listRes =
                   , config: config
                   , email: ""
                   , fromScreen: state.data.fromScreen
-                  , description: ""
-                  , accountStatus: ACTIVE
                   , vehicleVariant: fetchVehicleVariant ((fromMaybe dummyRideAPIEntity (ride.rideList !! 0)) ^. _vehicleVariant)
                   , logField: empty
                   , issueList: state.data.issueList
@@ -177,8 +175,6 @@ myRideListTransform state listRes =
               , props:
                   { apiFailure: false
                   , isCallConfirmation: false
-                  , showDeleteAccountView: false
-                  , btnActive: false
                   , needIssueListApiCall: false
                   }
               }
@@ -243,45 +239,6 @@ getExactTime sec createdAt =
 
 getUpdatedIssueList :: Array String -> Array IssueInfo -> Array IssueInfo
 getUpdatedIssueList statusList list = filter (\(issue) -> elem issue.status statusList) list
-
-topicsList :: HelpAndSupportScreenState -> Array CategoryListType
-topicsList state =
-  ( if state.data.config.feature.enableSelfServe then
-      state.data.categories
-    else
-      [ { categoryAction: Just "CONTACT_US"
-        , categoryName: getString FOR_OTHER_ISSUES_WRITE_TO_US
-        , categoryImageUrl: Just $ fetchImage FF_COMMON_ASSET "ny_ic_clip_board"
-        , categoryId: "5"
-        , isRideRequired: false
-        , maxAllowedRideAge: Nothing
-        , allowedRideStatuses : Nothing
-        , categoryType: "Category"
-        }
-      , { categoryAction: Just "CALL_SUPPORT"
-        , categoryName: getString CONTACT_SUPPORT
-        , categoryImageUrl: Just $ fetchImage FF_COMMON_ASSET "ny_ic_help"
-        , categoryId: "6"
-        , isRideRequired: false
-        , maxAllowedRideAge: Nothing
-        , allowedRideStatuses : Nothing
-        , categoryType: "Category"
-        }
-      ]
-  )
-    <> if state.data.config.showDeleteAccount then
-        [ { categoryAction: Just "DELETE_ACCOUNT"
-          , categoryName: getString REQUEST_TO_DELETE_ACCOUNT
-          , categoryImageUrl: Just $ fetchImage FF_COMMON_ASSET "ny_ic_delete_account"
-          , categoryId: "7"
-          , isRideRequired: false
-          , maxAllowedRideAge: Nothing
-          , categoryType: "Category"
-          , allowedRideStatuses: Nothing
-          }
-        ]
-      else
-        []
 
 reportsList :: HelpAndSupportScreenState -> Array CategoryListType
 reportsList state =

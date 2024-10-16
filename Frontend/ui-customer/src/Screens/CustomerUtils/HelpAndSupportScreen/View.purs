@@ -97,7 +97,7 @@ view push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , background Color.white900
-    , accessibility if state.props.showDeleteAccountView || state.props.isCallConfirmation || DA.any (_ == state.data.accountStatus) [ ST.CONFIRM_REQ , ST.DEL_REQUESTED ] then DISABLE_DESCENDANT else DISABLE
+    , accessibility if state.props.isCallConfirmation then DISABLE_DESCENDANT else DISABLE
     , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
     , onBackPressed push $ const BackPressed state.props.isCallConfirmation
     , afterRender push (const AfterRender)
@@ -140,8 +140,8 @@ view push state =
                 ]
                   <> [ headingView state $ getString REPORT_AN_ISSUE
                    , if state.data.isFaqListEmpty
-                      then allTopicsView state push $ topicsList state
-                      else allTopicsView state push $ addFaqSection $ topicsList state]
+                      then allTopicsView state push state.data.categories
+                      else allTopicsView state push $ addFaqSection state.data.categories]
                   <> ( if state.data.config.feature.enableSelfServe then [
                           if DA.null state.data.ongoingIssueList && DA.null state.data.resolvedIssueList then textView[height $ V 0, visibility GONE] else headingView state $ getString YOUR_REPORTS
                           , allTopicsView state push $ reportsList state
@@ -150,10 +150,7 @@ view push state =
             ]
       , apiFailureView state push
       ]
-    , deleteAccountView state push
   ] <> (if state.props.isCallConfirmation then [PopUpModal.view (push <<< PopupModelActionController) (callConfirmationPopup state)] else [])
-    <> (if state.data.accountStatus == ST.CONFIRM_REQ then [PopUpModal.view (push <<<  PopUpModalAction) (requestDeletePopUp state )] else [])
-    <> (if state.data.accountStatus == ST.DEL_REQUESTED then [PopUpModal.view (push <<< AccountDeletedModalAction) (accountDeletedPopUp state)] else [])
     <> (if state.data.issueListType /= ST.HELP_AND_SUPPORT_SCREEN_MODAL then [issueListModal push state] else [])
 
 ------------------------------- recentRide --------------------------
@@ -301,8 +298,6 @@ addFaqSection topicList = topicList <> [{ categoryAction : Just "FAQ"
 ------------------------------- allTopics --------------------------
 allTopicsView :: HelpAndSupportScreenState -> (Action -> Effect Unit) -> Array CategoryListType -> forall w . PrestoDOM (Effect Unit) w
 allTopicsView state push topicList =
-  let _ = spy "hello world allTopicsView" topicList
-  in 
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -319,12 +314,11 @@ allTopicsView state push topicList =
                     "REPORTED"           -> const $ ReportedIssue
                     "CONTACT_US"         -> const $ ContactUs
                     "CALL_SUPPORT"       -> const $ CallSupport
-                    "DELETE_ACCOUNT"     -> const $ DeleteAccount
                     "FAQ"                -> const $ SelectFaqCategory item
                     _ | item.isRideRequired 
                                          -> const $ SelectRide item
                     _                    -> const $ OpenChat item
-                  
+
         , orientation VERTICAL
         ][  linearLayout
             [ height WRAP_CONTENT
@@ -362,101 +356,6 @@ allTopicsView state push topicList =
               , visibility $ boolToVisibility $ not $ index == (DA.length (topicList)) - 1
               ][]
           ]) (topicList))
-
-deleteAccountView :: HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-deleteAccountView state push=
-  linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , visibility if state.props.showDeleteAccountView then VISIBLE else GONE
-  , padding $ PaddingTop EHC.safeMarginTop
-  , background Color.white900
-  , accessibility if DA.any (_ == state.data.accountStatus) [ ST.CONFIRM_REQ , ST.DEL_REQUESTED ] then DISABLE_DESCENDANT else DISABLE
-  , clickable true
-  ][
-    GenericHeader.view (push <<< DeleteGenericHeaderAC) (deleteGenericHeaderConfig state) 
-  , linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , padding (Padding 16 12 16 12)
-    , background Color.blue600
-    ][ 
-      textView
-      [ text if state.props.btnActive || state.data.accountStatus == ST.DEL_REQUESTED then (getString WE_WOULD_APPRECIATE_YOUR_REASONING) else (getString WE_WOULD_APPRECIATE_YOUR_FEEDBACK)
-      , textSize FontSize.a_12
-      , fontStyle $ FontStyle.regular LanguageStyle
-      , color Color.black650
-      ]
-    ]
-  , relativeLayout
-    [ width MATCH_PARENT
-    , height MATCH_PARENT
-    , adjustViewWithKeyboard "true"
-    ][  editTextView state push
-      , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , background Color.white900
-        , alignParentBottom "true,-1"
-        , weight 1.0 
-        ][PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfigSubmitRequest state)]
-      ]
-    ]
-
-editTextView :: HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-editTextView state push =
-  linearLayout[
-    height MATCH_PARENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  ][
-    scrollView[
-      width MATCH_PARENT
-    , orientation VERTICAL
-    ]
-    [ linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , padding (Padding 6 0 6 60)
-      , orientation VERTICAL
-      ][
-          PrimaryEditText.view (push <<< EmailEditTextAC) (primaryEditTextConfigEmail state)
-        , linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , orientation VERTICAL
-          ][  PrimaryEditText.view (push <<< DescriptionEditTextAC) (primaryEditTextConfigDescription state)
-            , linearLayout
-              [ height WRAP_CONTENT
-              , width MATCH_PARENT
-              , orientation HORIZONTAL
-              , gravity CENTER_VERTICAL
-              , padding $ PaddingLeft 10
-              , margin $ MarginTop 5
-              , visibility $ boolToVisibility $ (strLenWithSpecificCharacters state.data.description  "[a-zA-Z]") < 10 
-              ][  imageView $
-                  [ width $ V 24
-                  , height $ V 24
-                  , padding $ PaddingVertical 5 3
-                  , margin $ MarginRight 3
-                  , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
-                  ]
-                , textView $
-                  [ height WRAP_CONTENT
-                  , width WRAP_CONTENT
-                  , text $ getString DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS
-                  , color Color.black600
-                  , gravity LEFT
-                  , margin $ Margin 0 0 0 0
-                  , lineHeight "28"
-                  , singleLine true
-                  , alpha 1.0
-                  ]  <> FontStyle.body3 TypoGraphy
-              ] ]
-      ]
-    ]
-  ]
 
 headingView :: HelpAndSupportScreenState -> String -> forall w . PrestoDOM (Effect Unit) w
 headingView state title =

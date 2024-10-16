@@ -33,6 +33,10 @@ import Components.BannerCarousel as BannerCarousel
 import Components.RideCompletedCard as RideCompletedCard
 import Common.Types.App as CTP
 import Data.Int (fromString)
+import Components.PopUpModal.Controller as PopUpModal
+import Resources.Constants (mailToLink)
+import ConfigProvider
+import Services.Config (getSupportNumber)
 
 data Action =
               RideDetails
@@ -69,6 +73,7 @@ data Action =
             | SetIssueReportBannerItems ListItem
             | RideCompletedAC RideCompletedCard.Action
             | PrimaryButtonCarousel PrimaryButton.Action
+            | ContactSupportAction PopUpModal.Action
             | PrimaryBtnRentalTripDetailsAC PrimaryButton.Action
 
 instance showAction :: Show Action where
@@ -160,7 +165,26 @@ eval (FeedbackChanged value) state = continue state { ratingCard { feedbackText 
 eval ( RateClick index ) state = do
   continue state { ratingCard { rating = index }, isRatingCard = true }
 
-eval (HelpAndSupportAC) state = exit $ GoToHelpAndSupport state
+eval (HelpAndSupportAC) state = do
+  if state.config.feature.enableHelpAndSupport
+    then
+      exit $ GoToHelpAndSupport state
+    else
+      continue state {showContactSupportPopUp = true}
+
+eval (ContactSupportAction (PopUpModal.DismissPopup)) state = continue state{showContactSupportPopUp = false}
+
+eval (ContactSupportAction (PopUpModal.OnSecondaryTextClick)) state =
+    continueWithCmd state{showContactSupportPopUp = false} [do
+        void $ JB.openUrlInMailApp $ mailToLink <> (getAppConfig appConfig).appData.supportMail
+        pure NoAction
+    ]
+
+eval (ContactSupportAction (PopUpModal.OnButton1Click)) state = do
+    void $ pure $ JB.showDialer (getSupportNumber "") false
+    continue state{showContactSupportPopUp = false}
+
+eval (ContactSupportAction (PopUpModal.OnButton2Click)) state = continueWithCmd state [pure $ ContactSupportAction (PopUpModal.DismissPopup)]
 
 eval (GoToSOS) state = exit $ GoToNammaSafety state true false 
 

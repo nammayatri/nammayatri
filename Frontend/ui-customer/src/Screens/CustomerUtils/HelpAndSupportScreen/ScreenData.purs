@@ -49,8 +49,6 @@ initData = {
     bookingId : "",
     faresList : [],
     email : "",
-    description : "",
-    accountStatus : ACTIVE,
     config : getAppConfig appConfig,
     vehicleVariant : Nothing,
     logField : empty,
@@ -65,8 +63,6 @@ initData = {
   props:{
     apiFailure : false
   , isCallConfirmation : false
-  , showDeleteAccountView : false
-  , btnActive : false
   , needIssueListApiCall : true
   }
 
@@ -102,8 +98,6 @@ type HelpAndSupportScreenData =
     tripId :: String,
     bookingId :: String,
     email :: String,
-    description :: String,
-    accountStatus :: DeleteStatus ,
     config :: AppConfig,
     vehicleVariant :: Maybe VehicleVariant,
     issueList :: Array IssueInfo,
@@ -120,7 +114,5 @@ type HelpAndSuportScreenProps =
   {
     apiFailure :: Boolean
   , isCallConfirmation :: Boolean
-  , showDeleteAccountView :: Boolean
-  , btnActive :: Boolean
   , needIssueListApiCall :: Boolean
   }

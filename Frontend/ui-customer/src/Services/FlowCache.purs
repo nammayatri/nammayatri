@@ -35,6 +35,10 @@ import Screens.Types (FareProductType(..)) as FPT
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils(checkOverLap)
 import Engineering.Helpers.Commons(getCurrentUTC)
+import Common.Types.App as CTA
+import Engineering.Helpers.Utils as EHU
+import Locale.Utils
+
 -------------------------------- GET Saved Location List API--------------------------
 updateAndFetchSavedLocations :: Boolean -> FlowBT String SavedLocationsListRes
 updateAndFetchSavedLocations needApiCall = do
@@ -113,3 +117,27 @@ overlappingRides rideStartTime maybeRideEndTime overlappingPollingTime = do
              Nothing   -> { overLapping : false, overLappedBooking : Nothing }
       Nothing -> {overLapping : false , overLappedBooking : Nothing}
   
+-------------------------------- GET Issue Category List API--------------------------
+fetchIssueCategories :: FlowBT String (Array CTA.CategoryListType)
+fetchIssueCategories = do
+  let language = EHU.fetchLanguage $ getLanguageLocale languageKey
+  (GlobalState state) <- getState
+  case state.globalFlowCache.issueCategories of
+    Just issueCategoryList -> pure issueCategoryList
+    Nothing -> do
+      GetCategoriesRes response <- Remote.getCategoriesBT language
+      let issueCategoryList =
+            map
+              (\(Category catObj) ->
+                { categoryName : catObj.category,
+                  categoryId : catObj.issueCategoryId,
+                  categoryAction : Just catObj.label,
+                  categoryImageUrl : Just catObj.logoUrl,
+                  isRideRequired : catObj.isRideRequired,
+                  maxAllowedRideAge : catObj.maxAllowedRideAge,
+                  categoryType: catObj.categoryType,
+                  allowedRideStatuses: catObj.allowedRideStatuses
+                }
+            ) response.categories
+      modifyScreenState $ GlobalFlowCacheType (\globalFlowCache -> globalFlowCache { issueCategories = Just issueCategoryList})
+      pure issueCategoryList

@@ -26,7 +26,6 @@ import Common.Types.App
 import Prelude
 import Data.Maybe (Maybe(..))
 import Data.String as DS
-import Screens.SelectFaqScreen.Transformer 
 import Screens.SelectFaqScreen.ScreenData
 import Helpers.Utils (fetchImage, FetchImageFrom(..), isParentView, showTitle)
 

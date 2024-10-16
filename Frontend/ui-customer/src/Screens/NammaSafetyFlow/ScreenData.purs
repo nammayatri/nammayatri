@@ -164,6 +164,7 @@ initData =
         , policeCallTimerId : ""
         , defaultCallPopup : false
         , fromScreen : Nothing
+        , showContactSupportPopUp : false
         }
     }
 
