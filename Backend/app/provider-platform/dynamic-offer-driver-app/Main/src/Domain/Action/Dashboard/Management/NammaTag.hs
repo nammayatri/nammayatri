@@ -90,13 +90,13 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   case req.domain of
     Lib.Yudhishthira.Types.POOLING -> do
       driversData :: [DriverPoolWithActualDistResult] <- mapM (YudhishthiraFlow.createLogicData def . Just) req.inputData
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic transporterConfig.referralLinkPassword req (TaggedDriverPoolInput driversData False)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic (Proxy :: Proxy TaggedDriverPoolInput) transporterConfig.referralLinkPassword req (TaggedDriverPoolInput driversData False)
     Lib.Yudhishthira.Types.DYNAMIC_PRICING_UNIFIED -> do
       logicData :: DynamicPricingData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic transporterConfig.referralLinkPassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic (Proxy :: Proxy DynamicPricingResult) transporterConfig.referralLinkPassword req logicData
     Lib.Yudhishthira.Types.CONFIG Lib.Yudhishthira.Types.DriverPoolConfig -> do
       logicData :: Config <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic transporterConfig.referralLinkPassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic (Proxy :: Proxy Config) transporterConfig.referralLinkPassword req logicData
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
 getNammaTagAppDynamicLogic :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow [Lib.Yudhishthira.Types.GetLogicsResp]

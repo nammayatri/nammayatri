@@ -195,23 +195,28 @@ createLogicData defaultVal (Just inputValue) = do
     A.Error err -> throwError $ InvalidRequest ("Not able to merge input data into default value. Getting error: " <> show err)
 
 verifyAndUpdateDynamicLogic ::
-  (BeamFlow m r, ToJSON a) =>
+  forall m r a b.
+  (BeamFlow m r, ToJSON a, FromJSON b) =>
+  Proxy b ->
   Text ->
   Lib.Yudhishthira.Types.AppDynamicLogicReq ->
   a ->
   m Lib.Yudhishthira.Types.AppDynamicLogicResp
-verifyAndUpdateDynamicLogic referralLinkPassword req logicData = do
+verifyAndUpdateDynamicLogic _ referralLinkPassword req logicData = do
   resp <- runLogics req.rules logicData
+  let shouldUpdateRule = fromMaybe False req.shouldUpdateRule
+  let shouldVerifyOutput = fromMaybe False req.verifyOutput
+  let errors = resp.errors <> (bool [] (verifyOutput resp.result) (shouldUpdateRule || shouldVerifyOutput))
   (isRuleUpdated, version) <-
-    if fromMaybe False req.shouldUpdateRule
+    if shouldUpdateRule
       then do
-        if null resp.errors
+        if null errors
           then do
             verifyPassword req.updatePassword -- Using referralLinkPassword as updatePassword, could be changed to a new field in future
             updateDynamicLogic req.rules req.domain
-          else throwError $ InvalidRequest $ "Errors found in the rules" <> show resp.errors
+          else throwError $ InvalidRequest $ "Errors found in the rules" <> show errors
       else return (False, Nothing)
-  return $ Lib.Yudhishthira.Types.AppDynamicLogicResp resp.result isRuleUpdated req.domain version resp.errors
+  return $ Lib.Yudhishthira.Types.AppDynamicLogicResp resp.result isRuleUpdated req.domain version errors
   where
     verifyPassword :: BeamFlow m r => Maybe Text -> m ()
     verifyPassword Nothing = throwError $ InvalidRequest "Password not provided"
@@ -236,6 +241,12 @@ verifyAndUpdateDynamicLogic referralLinkPassword req logicData = do
               description = req.description,
               ..
             }
+
+    verifyOutput :: Value -> [String]
+    verifyOutput respResult = do
+      case (A.fromJSON respResult :: A.Result b) of
+        A.Success _ -> []
+        A.Error err -> [show err]
 
 getAppDynamicLogicForDomain :: BeamFlow m r => Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.GetLogicsResp]
 getAppDynamicLogicForDomain mbVersion domain = do

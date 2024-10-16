@@ -199,6 +199,7 @@ data AppDynamicLogicReq = AppDynamicLogicReq
     description :: Maybe Text,
     shouldUpdateRule :: Maybe Bool,
     updatePassword :: Maybe Text,
+    verifyOutput :: Maybe Bool,
     domain :: LogicDomain
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
