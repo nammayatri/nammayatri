@@ -42,8 +42,7 @@ import Tools.Auth.Merchant
 
 type API =
   "ride"
-    :> ( Common.TripRouteAPI
-           :<|> Common.PickupRouteAPI
+    :> ( Common.PickupRouteAPI
            :<|> MultipleRideCancelAPI
            :<|> MultipleRideSyncAPI
            :<|> TicketRideListAPI
@@ -67,8 +66,7 @@ type TicketRideListAPI =
 
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
-  tripRoute merchantId city
-    :<|> pickupRoute merchantId city
+  pickupRoute merchantId city
     :<|> multipleRideCancel merchantId city
     :<|> multipleRideSync merchantId city
     :<|> ticketRideList merchantId city
@@ -110,16 +108,16 @@ buildTransaction endpoint apiTokenInfo =
 --   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
 --   Client.callRiderAppOperations checkedMerchantId opCity (.rides.shareRideInfoByShortId) rideShortId
 
-tripRoute ::
-  ShortId DM.Merchant ->
-  City.City ->
-  Id Common.Ride ->
-  Double ->
-  Double ->
-  FlowHandler Maps.GetRoutesResp
-tripRoute merchantShortId opCity rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
-  Client.callRiderAppOperations checkedMerchantId opCity (.rides.tripRoute) rideId pickupLocationLat pickupLocationLon
+-- tripRoute ::
+--   ShortId DM.Merchant ->
+--   City.City ->
+--   Id Common.Ride ->
+--   Double ->
+--   Double ->
+--   FlowHandler Maps.GetRoutesResp
+-- tripRoute merchantShortId opCity rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI' $ do
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
+--   Client.callRiderAppOperations checkedMerchantId opCity (.rides.tripRoute) rideId pickupLocationLat pickupLocationLon
 
 pickupRoute ::
   ShortId DM.Merchant ->

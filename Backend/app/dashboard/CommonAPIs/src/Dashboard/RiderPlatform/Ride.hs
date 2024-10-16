@@ -251,13 +251,13 @@ $(mkHttpInstancesForEnum ''BookingStatus)
 ---------------------------------------------------------
 -- Trip Route--------------------------------------
 
-type TripRouteAPI =
-  "trip"
-    :> "route"
-    :> Capture "rideId" (Id DP.Ride)
-    :> MandatoryQueryParam "lat" Double
-    :> MandatoryQueryParam "lon" Double
-    :> Get '[JSON] Maps.GetRoutesResp
+-- type TripRouteAPI =
+--   "trip"
+--     :> "route"
+--     :> Capture "rideId" (Id DP.Ride)
+--     :> MandatoryQueryParam "lat" Double
+--     :> MandatoryQueryParam "lon" Double
+--     :> Get '[JSON] Maps.GetRoutesResp
 
 type PickupRouteAPI =
   "pickup"

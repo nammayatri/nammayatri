@@ -31,8 +31,7 @@ import Storage.Beam.SystemConfigs ()
 
 type API =
   "ride"
-    :> ( Common.TripRouteAPI
-           :<|> Common.PickupRouteAPI
+    :> ( Common.PickupRouteAPI
            :<|> MultipleRideCancelAPI
            :<|> Common.MultipleRideSyncAPI
            :<|> Common.TicketRideListAPI
@@ -47,8 +46,8 @@ type MultipleRideCancelAPI =
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
-  callGetTripRoute merchantId
-    :<|> callGetPickupRoute merchantId
+  -- callGetTripRoute merchantId
+  callGetPickupRoute merchantId
     :<|> multipleRideCancel -- FIXME merchantId ?
     :<|> multipleRideSync merchantId
     :<|> ticketRideList merchantId
@@ -65,8 +64,8 @@ handler merchantId =
 --   FlowHandler Common.ShareRideInfoRes
 -- shareRideInfoByShortId merchantShortId reqRideShortId = withFlowHandlerAPI $ DRide.shareRideInfoByShortId merchantShortId reqRideShortId
 
-callGetTripRoute :: ShortId DM.Merchant -> Id Common.Ride -> Double -> Double -> FlowHandler Maps.GetRoutesResp
-callGetTripRoute merchantShortId rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI $ mkGetLocation merchantShortId rideId pickupLocationLat pickupLocationLon False
+-- callGetTripRoute :: ShortId DM.Merchant -> Id Common.Ride -> Double -> Double -> FlowHandler Maps.GetRoutesResp
+-- callGetTripRoute merchantShortId rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI $ mkGetLocation merchantShortId rideId pickupLocationLat pickupLocationLon False
 
 callGetPickupRoute ::
   ShortId DM.Merchant ->

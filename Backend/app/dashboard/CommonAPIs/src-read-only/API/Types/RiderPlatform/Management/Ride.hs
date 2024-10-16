@@ -10,6 +10,7 @@ import qualified Domain.Types
 import qualified Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types
+import qualified Kernel.External.Maps
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Centesimal
 import Kernel.Types.Common
@@ -171,7 +172,7 @@ data SosStatus
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("ride" :> (GetRideList :<|> GetRideRideinfo :<|> GetRideInfo :<|> GetRideRideInfo))
+type API = ("ride" :> (GetRideList :<|> GetRideRideinfo :<|> GetRideInfo :<|> GetRideRideInfo :<|> GetRideTripRoute))
 
 type GetRideList =
   ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
@@ -202,22 +203,32 @@ type GetRideInfo = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) 
 
 type GetRideRideInfo = (Capture "rideShortId" (Kernel.Types.Id.ShortId Dashboard.Common.Ride) :> "rideInfo" :> Get '[JSON] API.Types.RiderPlatform.Management.Ride.ShareRideInfoRes)
 
+type GetRideTripRoute =
+  ( "trip" :> "route" :> Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> MandatoryQueryParam "lat" Kernel.Prelude.Double
+      :> MandatoryQueryParam
+           "lon"
+           Kernel.Prelude.Double
+      :> Get '[JSON] Kernel.External.Maps.GetRoutesResp
+  )
+
 data RideAPIs = RideAPIs
   { getRideList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Dashboard.RiderPlatform.Ride.BookingStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.Ride.RideListRes,
     getRideRideinfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.Ride.RideInfoRes,
     getRideInfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.Ride.ShareRideInfoRes,
-    getRideRideInfo :: Kernel.Types.Id.ShortId Dashboard.Common.Ride -> EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.Ride.ShareRideInfoRes
+    getRideRideInfo :: Kernel.Types.Id.ShortId Dashboard.Common.Ride -> EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.Ride.ShareRideInfoRes,
+    getRideTripRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> EulerHS.Types.EulerClient Kernel.External.Maps.GetRoutesResp
   }
 
 mkRideAPIs :: (Client EulerHS.Types.EulerClient API -> RideAPIs)
 mkRideAPIs rideClient = (RideAPIs {..})
   where
-    getRideList :<|> getRideRideinfo :<|> getRideInfo :<|> getRideRideInfo = rideClient
+    getRideList :<|> getRideRideinfo :<|> getRideInfo :<|> getRideRideInfo :<|> getRideTripRoute = rideClient
 
 data RideEndpointDSL
   = GetRideListEndpoint
   | GetRideRideinfoEndpoint
   | GetRideInfoEndpoint
   | GetRideRideInfoEndpoint
+  | GetRideTripRouteEndpoint
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

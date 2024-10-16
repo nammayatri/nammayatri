@@ -72,9 +72,7 @@ data AppBackendAPIs = AppBackendAPIs
   }
 
 data RidesAPIs = RidesAPIs
-  { tripRoute :: Id Ride.Ride -> Double -> Double -> Euler.EulerClient Maps.GetRoutesResp,
-    pickupRoute :: Id Ride.Ride -> Double -> Double -> Euler.EulerClient Maps.GetRoutesResp,
-    --    rideInfo :: Id Ride.Ride -> Euler.EulerClient Ride.RideInfoRes,
+  { pickupRoute :: Id Ride.Ride -> Double -> Double -> Euler.EulerClient Maps.GetRoutesResp,
     multipleRideCancel :: DCM.MultipleRideCancelReq -> Euler.EulerClient APISuccess,
     multipleRideSync :: Ride.MultipleRideSyncReq -> Euler.EulerClient Ride.MultipleRideSyncResp,
     ticketRideList :: Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.TicketRideListRes
@@ -142,8 +140,7 @@ mkAppBackendAPIs merchantId city token = do
       :<|> invoiceClientDSL =
         clientWithMerchantAndCity (Proxy :: Proxy BAP.OperationsAPI) merchantId city token
 
-    tripRoute
-      :<|> pickupRoute
+    pickupRoute
       :<|> multipleRideCancel
       :<|> multipleRideSync
       :<|> ticketRideList = ridesClient

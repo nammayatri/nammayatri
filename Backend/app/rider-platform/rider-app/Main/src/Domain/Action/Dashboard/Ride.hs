@@ -23,6 +23,7 @@ module Domain.Action.Dashboard.Ride
     MultipleRideCancelReq,
     rideSync,
     ticketRideList,
+    getRideTripRoute,
   )
 where
 
@@ -35,6 +36,7 @@ import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import Data.Coerce (coerce)
 import qualified Data.List as DL
 import qualified Data.Text as T
+import Domain.Action.Dashboard.Route (mkGetLocation)
 import qualified Domain.Action.UI.EstimateBP as EstimateBP
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Booking as DTB
@@ -52,6 +54,7 @@ import qualified Domain.Types.Sos as DSos
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (count, isNothing, on)
@@ -533,3 +536,13 @@ rideSync merchant reqRideId = do
   Hedis.setExp (Common.makeContextMessageIdStatusSyncKey messageId) True 3600
   void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq booking.merchantId
   pure Success
+
+getRideTripRoute ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Ride ->
+  Double ->
+  Double ->
+  Flow Maps.GetRoutesResp
+getRideTripRoute merchantShortId _ rideId pickupLocationLat pickupLocationLon =
+  mkGetLocation merchantShortId rideId pickupLocationLat pickupLocationLon False

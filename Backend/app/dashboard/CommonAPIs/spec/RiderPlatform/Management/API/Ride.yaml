@@ -17,6 +17,7 @@ imports:
   Location: Dashboard.RiderPlatform.Ride
   Centesimal: Kernel.Types.Centesimal
   BaseUrl: Kernel.Prelude
+  GetRoutesResp: Kernel.External.Maps
 
 
 module: Ride
@@ -57,6 +58,28 @@ apis:
         rideShortId: ShortId Ride
       response:
         type: ShareRideInfoRes
+  - GET:
+      endpoint: /trip/route/{rideId}
+      auth:  ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS RIDE_INFO_CUSTOMER   # FIXME wrong auth need to be changed
+      params:
+        rideId: Id Ride
+      mandatoryQuery:
+        - lat: Double
+        - lon: Double
+      response:
+        type: GetRoutesResp
+
+
+
+
+# type TripRouteAPI =
+#   "trip"
+#     :> "route"
+#     :> Capture "rideId" (Id DP.Ride)
+#     :> MandatoryQueryParam "lat" Double
+#     :> MandatoryQueryParam "lon" Double
+#     :> Get '[JSON] Maps.GetRoutesResp
+
 
 
 types:
