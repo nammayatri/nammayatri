@@ -87,7 +87,7 @@ getNextScheduleTime driverPoolConfig searchRequest now = do
         else return $ Just $ max 2 (searchRequest.startTime `diffUTCTime` (scheduleTryTime `addUTCTime` now))
   where
     scheduleSearchKey = "ScheduleSearch-" <> searchRequest.id.getId
-    setKey scheduleTryTimes = Redis.withCrossAppRedis $ Redis.setExp scheduleSearchKey scheduleTryTimes 432000
+    setKey scheduleTryTimes = Redis.withCrossAppRedis $ Redis.setExp scheduleSearchKey scheduleTryTimes 1800
     getKey = Redis.withCrossAppRedis $ Redis.safeGet scheduleSearchKey
 
 initiateDriverSearchBatch ::
