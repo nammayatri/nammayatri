@@ -137,19 +137,20 @@ callOnStatus currBooking = do
 checkBookingsForStatus :: [SRB.Booking] -> Flow ()
 checkBookingsForStatus (currBooking : bookings) = do
   riderConfig <- QRC.findByMerchantOperatingCityId currBooking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist currBooking.merchantOperatingCityId.getId)
-  case (riderConfig.bookingSyncStatusCallSecondsDiffThreshold, currBooking.estimatedDuration) of
-    (Just timeDiffThreshold, Just estimatedEndDuration) -> do
+  case currBooking.estimatedDuration of
+    Just estimatedEndDuration -> do
       now <- getCurrentTime
       let estimatedEndTime = DT.addUTCTime (fromIntegral estimatedEndDuration.getSeconds) currBooking.startTime
       let diff = DT.diffUTCTime now estimatedEndTime
-      let callStatusConditionNew = (currBooking.status == SRB.NEW && diff > fromIntegral timeDiffThreshold) || (currBooking.status == SRB.CONFIRMED && diff > fromIntegral timeDiffThreshold)
-          callStatusConditionTripAssigned = currBooking.status == SRB.TRIP_ASSIGNED && diff > fromIntegral timeDiffThreshold
+      let timeDiffThreshold = fromIntegral (estimatedEndDuration.getSeconds) * realToFrac riderConfig.onStatusEstimatedDurationMultiplier
+      let callStatusConditionNew = (currBooking.status == SRB.NEW && diff > timeDiffThreshold) || (currBooking.status == SRB.CONFIRMED && diff > timeDiffThreshold)
+          callStatusConditionTripAssigned = currBooking.status == SRB.TRIP_ASSIGNED && diff > timeDiffThreshold
       when callStatusConditionNew $ do
         callOnStatus currBooking
       when callStatusConditionTripAssigned $ do
         callOnStatus currBooking
       checkBookingsForStatus bookings
-    (_, _) -> logError "Nothing values for time diff threshold or booking end duration"
+    _ -> logError "Nothing values for time diff threshold or booking end duration"
 checkBookingsForStatus [] = pure ()
 
 bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Flow BookingListRes
