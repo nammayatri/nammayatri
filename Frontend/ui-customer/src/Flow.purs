@@ -6807,4 +6807,7 @@ busTicketBookingFlow = do
         metroTicketStatusFlow
       else
         metroMyTicketsFlow
+    BusTicketBookingController.GoToMetroTicketDetailsScreen metroTicketStatusApiResp -> do
+      modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { props { ticketServiceType = API.BUS, currentStage  = ST.BusTicketSelection} })
+      metroTicketBookingFlow
     _ -> pure unit

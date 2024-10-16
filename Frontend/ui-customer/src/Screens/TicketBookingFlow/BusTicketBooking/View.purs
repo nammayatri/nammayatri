@@ -1,4 +1,8 @@
-module Screens.TicketBookingFlow.BusTicketBooking.View where
+module Screens.TicketBookingFlow.BusTicketBooking.View 
+  ( busTicketBookingScreen
+  , view
+  )
+  where
 
 import Prelude
 
@@ -51,6 +55,7 @@ import Services.API
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
+import Helpers.CommonView
 
 busTicketBookingScreen :: ST.BusTicketBookingState -> Screen Action ST.BusTicketBookingState ScreenOutput
 busTicketBookingScreen initialState =
@@ -165,7 +170,7 @@ headerView push state =
       [ imageView
         [ width $ V 42
         , height $ V 42
-        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_bus_icon_light_blue"
+        , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET "ny_ic_bus_icon_light_blue"
         , margin $ MarginRight 16
         ]
       , linearLayout
@@ -278,7 +283,7 @@ ticketCardView push ticketData =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , stroke $ "1," <> Color.grey900
-  , padding $ Padding 16 16 16 16
+  , padding $ Padding 16 16 16 0
   , margin $ MarginTop 12
   , orientation VERTICAL
   , background Color.white900
@@ -296,7 +301,7 @@ ticketCardView push ticketData =
       [ width $ V 42
       , height $ V 42
       , margin $ MarginRight 12
-      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_bus_icon_light_blue"
+      , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET "ny_ic_bus_icon_light_blue"
       ]
     , linearLayout
       [ height WRAP_CONTENT
@@ -328,12 +333,7 @@ ticketCardView push ticketData =
       , layoutGravity "right"
       ] <> FontStyle.tags TypoGraphy
     ]
-  , imageView
-    [ height $ V 1
-    , width MATCH_PARENT
-    , margin $ MarginVertical 18 18
-    , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET "ny_ic_dotted_line"
-    ]
+  , linearLayout [ margin $ MarginVertical 18 18 ] [ horizontalDottedSeparatorView ]
   , linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -349,6 +349,34 @@ ticketCardView push ticketData =
       ]
     , singleStopView push ticketData false
     ]
+  , linearLayout 
+    [ margin $ MarginVertical 18 0 
+    , visibility $ boolToVisibility isTicketExpired
+    ] 
+    [ horizontalDottedSeparatorView ]
+  , linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER
+    , visibility $ boolToVisibility isTicketExpired
+    , padding $ Padding 16 12 16 16
+    , onClick push $ const $ RepeatRideClicked ticketData.metroTicketStatusApiResp
+    , rippleColor Color.rippleShade
+    ]
+    [ imageView
+      [ width $ V 16
+      , height $ V 16
+      , imageWithFallback $ fetchImage GLOBAL_COMMON_ASSET "ny_ic_repeat_icon_blue"
+      , gravity CENTER_VERTICAL
+      ]
+    , textView $
+      [ text "Repeat Ride"
+      , color Color.blue900
+      , singleLine true
+      , maxLines 1
+      , padding $ Padding 3 3 3 3
+      ] <> FontStyle.body1 TypoGraphy
+    ]
   ]
   where
     isActive :: Boolean
@@ -363,8 +391,8 @@ ticketCardView push ticketData =
           ticketStatus = DA.head $ map (\(FRFSTicketAPI ticketD) -> ticketD.status) ticketBookingStatusResp.tickets
       (DA.any (_ == ticketStatus) [Just "USED"])
 
-    isTicketExpired :: String -> Boolean
-    isTicketExpired validTill =  (DFU.runFn2 JB.differenceBetweenTwoUTC validTill (EHC.getCurrentUTC "")) < 0
+    isTicketExpired :: Boolean
+    isTicketExpired = not $ isActive || isVerified
 
     extractTicketNumber :: String
     extractTicketNumber = do

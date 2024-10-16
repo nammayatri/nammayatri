@@ -59,6 +59,7 @@ data Action
   | SourceToDestinationAC SourceToDestinationController.Action
   | BusTicketBookingListRespAC (Array API.MetroTicketBookingStatus)
   | TicketPressed API.MetroTicketBookingStatus
+  | RepeatRideClicked API.MetroTicketBookingStatus
 
 data ScreenOutput
   = GoToHomeScreen ST.BusTicketBookingState
@@ -68,6 +69,7 @@ data ScreenOutput
   | GoToConfirmgDelivery ST.BusTicketBookingState
   | GoToSearchLocationScreenForRoutes ST.BusTicketBookingState ST.LocationActionId
   | GoToMetroTicketDetailsFlow String
+  | GoToMetroTicketDetailsScreen API.MetroTicketBookingStatus
 
 eval :: Action -> ST.BusTicketBookingState -> Eval Action ScreenOutput ST.BusTicketBookingState
 
@@ -82,5 +84,8 @@ eval TicketIconClicked state = updateAndExit state $ GoToMyTicketsScreen state
 
 eval (TicketPressed (API.MetroTicketBookingStatus ticketApiResp)) state = do 
   updateAndExit state $ GoToMetroTicketDetailsFlow ticketApiResp.bookingId
+
+eval (RepeatRideClicked ticketApiResp) state = 
+  updateAndExit state $ GoToMetroTicketDetailsScreen ticketApiResp
 
 eval _ state = continue state
