@@ -16,6 +16,7 @@ import qualified Tools.Beam.UtilsTH
 
 data Route = Route
   { code :: Kernel.Prelude.Text,
+    color :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     endPoint :: Kernel.External.Maps.Types.LatLong,
     id :: Kernel.Types.Id.Id Domain.Types.Route.Route,
     longName :: Kernel.Prelude.Text,

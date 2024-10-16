@@ -26,7 +26,6 @@ data BecknConfig = BecknConfig
     id :: Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig,
     initTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     paymentParamsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    provider :: Domain.Types.BecknConfig.Provider,
     ratingTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     registryUrl :: Servant.Client.Core.BaseUrl,
     searchTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -46,7 +45,3 @@ data BecknConfig = BecknConfig
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON)
-
-data Provider = ONDC | EBIX deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Provider)

@@ -16,6 +16,7 @@ import Tools.Beam.UtilsTH
 
 data RouteT f = RouteT
   { code :: B.C f Kernel.Prelude.Text,
+    color :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     endLat :: B.C f Kernel.Prelude.Double,
     endLon :: B.C f Kernel.Prelude.Double,
     id :: B.C f Kernel.Prelude.Text,

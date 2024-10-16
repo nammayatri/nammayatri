@@ -55,6 +55,7 @@ updateByPrimaryKey (Domain.Types.Station.Station {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.name name,
+      Se.Set Beam.possibleTypes possibleTypes,
       Se.Set Beam.timeBounds (Kernel.Prelude.Just timeBounds),
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.createdAt createdAt,

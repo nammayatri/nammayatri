@@ -2,6 +2,7 @@ imports:
   Text: Data.Text
   Maybe: Data.Maybe
   Station: Domain.Types.Station
+  StationType: Domain.Types.Station
   FRFSQuoteType: Domain.Types.FRFSQuote
   FRFSQuote: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBooking
@@ -43,8 +44,8 @@ types:
     quantity: Int
     price: HighPrecMoney
     priceWithCurrency: PriceAPIEntity
-    _route: Maybe FRFSRouteAPI
     stations: [FRFSStationAPI]
+    routeStations: "Maybe [FRFSRouteStationsAPI]"
     validTill: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
@@ -66,11 +67,22 @@ types:
     validTill: UTCTime
     payment: Maybe FRFSBookingPaymentAPI
     tickets: [FRFSTicketAPI]
-    _route: Maybe FRFSRouteAPI
     stations: [FRFSStationAPI]
+    routeStations: "Maybe [FRFSRouteStationsAPI]"
     createdAt: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
+
+  FRFSRouteStationsAPI:
+    code: Text
+    shortName: Text
+    longName: Text
+    startPoint: LatLong
+    endPoint: LatLong
+    color: Maybe Text
+    stations: [FRFSStationAPI]
+    sequenceNum: Maybe Int
+    derive: "Show"
 
   FRFSTicketAPI:
     status: FRFSTicketStatus
@@ -98,10 +110,8 @@ types:
     color: Maybe Text
     distance: Maybe Meters
     sequenceNum: Maybe Int
+    towards: Maybe Text
     derive: "Show"
-
-  StationType:
-    enum: "START, END, TRANSIT, INTERMEDIATE"
 
   FRFSCanCancelStatus:
     cancellationCharges : Maybe HighPrecMoney
@@ -134,6 +144,7 @@ types:
     longName: Text
     startPoint: LatLong
     endPoint: LatLong
+    totalStops: Maybe Int
     derive: "Show"
 
   AutocompleteRes:

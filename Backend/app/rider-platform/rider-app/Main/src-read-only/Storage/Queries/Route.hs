@@ -52,6 +52,7 @@ updateByPrimaryKey (Domain.Types.Route.Route {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.code code,
+      Se.Set Beam.color color,
       Se.Set Beam.endLat ((.lat) endPoint),
       Se.Set Beam.endLon ((.lon) endPoint),
       Se.Set Beam.longName longName,

@@ -12,7 +12,6 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
-import qualified Domain.Types.Route
 import qualified Domain.Types.Station
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -53,7 +52,8 @@ data FRFSTicketBooking = FRFSTicketBooking
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     refundAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    routeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Route.Route),
+    routeId :: Kernel.Prelude.Maybe Domain.Types.FRFSQuote.FRFSRoutes,
+    routeStationsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
     serviceTierDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierLongName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

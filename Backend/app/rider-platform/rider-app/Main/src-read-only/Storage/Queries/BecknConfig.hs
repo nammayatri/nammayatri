@@ -61,7 +61,6 @@ updateByPrimaryKey (Domain.Types.BecknConfig.BecknConfig {..}) = do
       Se.Set Beam.gatewayUrl (Kernel.Prelude.showBaseUrl gatewayUrl),
       Se.Set Beam.initTTLSec initTTLSec,
       Se.Set Beam.paymentParamsJson paymentParamsJson,
-      Se.Set Beam.provider (Kernel.Prelude.Just provider),
       Se.Set Beam.ratingTTLSec ratingTTLSec,
       Se.Set Beam.registryUrl (Kernel.Prelude.showBaseUrl registryUrl),
       Se.Set Beam.searchTTLSec searchTTLSec,

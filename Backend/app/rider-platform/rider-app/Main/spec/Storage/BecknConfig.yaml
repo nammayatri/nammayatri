@@ -7,6 +7,7 @@ imports:
   parseBaseUrl: Kernel.Prelude
   VehicleCategory: BecknV2.OnDemand.Enums
   Network: BecknV2.FRFS.Enums
+  EBIXConfig: Domain.Types.Extra.IntegratedBPPConfig
 
 BecknConfig:
   tableName: beckn_config
@@ -36,17 +37,11 @@ BecknConfig:
     trackTTLSec: Maybe Int
     ratingTTLSec: Maybe Int
     cancelTTLSec: Maybe Int
-    provider: Provider
 
   derives: "Generic,Show,FromJSON,ToJSON"
 
-  types:
-    Provider:
-      enum: "ONDC, EBIX"
-
   default:
     vehicleCategory: "'CAB'"
-    provider: "'ONDC'"
     collectedBy: "'BPP'"
 
   queries:
@@ -70,7 +65,6 @@ BecknConfig:
     gatewayUrl: Text
     registryUrl: Text
     staticTermsUrl: Maybe Text
-    provider: Maybe Provider
     verifiedBy: Maybe Network
 
   toTType:
@@ -78,35 +72,54 @@ BecknConfig:
     gatewayUrl: showBaseUrl|I
     registryUrl: showBaseUrl|I
     staticTermsUrl: (Kernel.Prelude.fmap showBaseUrl)|I
-    provider: Kernel.Prelude.Just|I
 
   fromTType:
     subscriberUrl: parseBaseUrl|MI
     gatewayUrl: parseBaseUrl|IM
     registryUrl: parseBaseUrl|MI
-    provider: Kernel.Prelude.fromMaybe Domain.Types.BecknConfig.ONDC|I
     staticTermsUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
 
 IntegratedBPPConfig:
   tableName: integrated_bpp_config
 
   fields:
-    id: Id IntegratedBPPConfig
     domain: Text
+    providerConfig: ProviderConfig
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
     vehicleCategory: VehicleCategory|NoRelation
-    qrGeneratedBy: Network
-    qrGenerationKey: Maybe Base64
-    qrVerifiedBy: Network
-    qrVerificationKey: Maybe Base64
 
-  derives: "Generic,Show,FromJSON,ToJSON"
+  beamFields:
+    providerConfig:
+      configJSON: Data.Aeson.Value
+
+  types:
+    ProviderConfig:
+      enum: "EBIX EBIXConfig, CUMTA EBIXConfig"
+      derive': "Generic, FromJSON, ToJSON, Eq"
+
+  fromTType:
+    providerConfig: Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfig configJSON|EM
+
+  toTType:
+    configJSON: Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfigJson providerConfig|E
+
+  sqlType:
+    configJSON: json
+
+  constraints:
+    merchantId: PrimaryKey
+    merchantOperatingCityId: PrimaryKey
+    vehicleCategory: PrimaryKey
+    domain: PrimaryKey
+
+  extraOperations:
+    - EXTRA_DOMAIN_TYPE_FILE
+
+  derives: "Generic,FromJSON,ToJSON"
 
   default:
     vehicleCategory: "'BUS'"
-    qrGeneratedBy: "'BAP'"
-    qrVerifiedBy: "'BPP'"
 
   queries:
     findByDomainAndCityAndVehicleCategory:

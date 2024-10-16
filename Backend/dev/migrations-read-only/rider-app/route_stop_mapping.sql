@@ -1,8 +1,8 @@
 CREATE TABLE atlas_app.route_stop_mapping ();
 
-ALTER TABLE atlas_app.route_stop_mapping ADD COLUMN code text NOT NULL;
 ALTER TABLE atlas_app.route_stop_mapping ADD COLUMN merchant_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.route_stop_mapping ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.route_stop_mapping ADD COLUMN provider_code text NOT NULL;
 ALTER TABLE atlas_app.route_stop_mapping ADD COLUMN route_code text NOT NULL;
 ALTER TABLE atlas_app.route_stop_mapping ADD COLUMN sequence_num integer NOT NULL;
 ALTER TABLE atlas_app.route_stop_mapping ADD COLUMN stop_code text NOT NULL;

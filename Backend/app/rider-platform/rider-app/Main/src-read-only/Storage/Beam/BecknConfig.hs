@@ -8,7 +8,6 @@ module Storage.Beam.BecknConfig where
 import qualified BecknV2.FRFS.Enums
 import qualified BecknV2.OnDemand.Enums
 import qualified Database.Beam as B
-import qualified Domain.Types.BecknConfig
 import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -27,7 +26,6 @@ data BecknConfigT f = BecknConfigT
     id :: B.C f Kernel.Prelude.Text,
     initTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     paymentParamsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    provider :: B.C f (Kernel.Prelude.Maybe Domain.Types.BecknConfig.Provider),
     ratingTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     registryUrl :: B.C f Kernel.Prelude.Text,
     searchTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

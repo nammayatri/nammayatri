@@ -84,6 +84,7 @@ dependencies:
   - uuid
   - wai-extra
   - http-types
+  - http-api-data
   - warp
   - time
   - record-hasfield

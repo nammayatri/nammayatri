@@ -5,25 +5,20 @@
 
 module Storage.Beam.IntegratedBPPConfig where
 
-import qualified BecknV2.FRFS.Enums
 import qualified BecknV2.OnDemand.Enums
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.Base64
 import Tools.Beam.UtilsTH
 
 data IntegratedBPPConfigT f = IntegratedBPPConfigT
   { domain :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    qrGeneratedBy :: B.C f BecknV2.FRFS.Enums.Network,
-    qrGenerationKey :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Base64.Base64),
-    qrVerificationKey :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Base64.Base64),
-    qrVerifiedBy :: B.C f BecknV2.FRFS.Enums.Network,
+    configJSON :: B.C f Data.Aeson.Value,
     vehicleCategory :: B.C f BecknV2.OnDemand.Enums.VehicleCategory,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
@@ -31,11 +26,13 @@ data IntegratedBPPConfigT f = IntegratedBPPConfigT
   deriving (Generic, B.Beamable)
 
 instance B.Table IntegratedBPPConfigT where
-  data PrimaryKey IntegratedBPPConfigT f = IntegratedBPPConfigId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = IntegratedBPPConfigId . id
+  data PrimaryKey IntegratedBPPConfigT f
+    = IntegratedBPPConfigId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) (B.C f BecknV2.OnDemand.Enums.VehicleCategory)
+    deriving (Generic, B.Beamable)
+  primaryKey = IntegratedBPPConfigId <$> domain <*> merchantId <*> merchantOperatingCityId <*> vehicleCategory
 
 type IntegratedBPPConfig = IntegratedBPPConfigT Identity
 
-$(enableKVPG ''IntegratedBPPConfigT ['id] [])
+$(enableKVPG ''IntegratedBPPConfigT ['domain, 'merchantId, 'merchantOperatingCityId, 'vehicleCategory] [])
 
 $(mkTableInstances ''IntegratedBPPConfigT "integrated_bpp_config")
