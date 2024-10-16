@@ -706,6 +706,8 @@ data Stage = HomeScreen
            | RevisedEstimate
            | FavouriteLocationModelEditDest
            | GoToTripSelect
+           | GoToConfirmDropLocation
+           | ConfirmingDropLocation
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -828,12 +830,14 @@ type HomeScreenStateData =
   , upcomingRideDetails :: Maybe UpcomingRideDetails
   , selectedService :: Maybe RC.Service
   , intercityBus :: IntercityBusData
+  , nearByDropOfPoints :: Array Location
+  , dropPolygonCoordinates :: String
 }
 
 type UpcomingRideDetails = {
   bookingId :: String,
   rideScheduledAt :: String
-  }
+}
 
 type TollData = {
   confidence :: Maybe CTA.Confidence
@@ -1038,6 +1042,7 @@ type HomeScreenStateProps =
   , isBanner :: Boolean
   , callSupportPopUp :: Boolean
   , defaultPickUpPoint :: String
+  , defaultDropOfPoint :: String
   , isSpecialZone :: Boolean
   , showChatNotification :: Boolean
   , cancelSearchCallDriver :: Boolean
@@ -2863,6 +2868,10 @@ type LocateOnMapProps = {
   , sourceGates :: Maybe (Array Location)
   , isSpecialPickUpGate :: Boolean
   , cameraAnimatedToSource :: Boolean
+  , destLocationName :: Maybe String 
+  , destGeoJson :: Maybe String 
+  , destGates :: Maybe (Array Location)
+  , isSpecialDropOfGate :: Boolean
 }
 
 data NavigationMode = WALK | DRIVE
@@ -2873,6 +2882,7 @@ instance showNavigationMode :: Show NavigationMode where show = genericShow
 type HotSpotProps = {
     selectedSpot :: Maybe Location
   , centroidPoint :: Maybe CTA.Paths
+  , dropCentroidPoint :: Maybe CTA.Paths
 }
 
 type HotSpotData = {

@@ -203,6 +203,8 @@ initData = let
     , upcomingRideDetails : Nothing
     , selectedService : Nothing
     , intercityBus : initialIntercityBusData
+    , nearByDropOfPoints : []
+    , dropPolygonCoordinates : ""
     },
     props: {
       rideRequestFlow : false
@@ -281,6 +283,7 @@ initData = let
     , isMockLocation: false
     , isSpecialZone : false
     , defaultPickUpPoint : ""
+    , defaultDropOfPoint : ""
     , markerLabel : ""
     , showChatNotification : false
     , cancelSearchCallDriver : false
@@ -374,9 +377,18 @@ initData = let
     , selectedEstimateHeight : 0
     , isSafetyCenterDisabled : false
     , suggestedRideFlow : false
-    , locateOnMapProps : { sourceLocationName : Nothing, sourceGeoJson : Nothing, sourceGates : Nothing, isSpecialPickUpGate : false, cameraAnimatedToSource : true }
+    , locateOnMapProps : { 
+          sourceLocationName : Nothing
+        , sourceGeoJson : Nothing
+        , sourceGates : Nothing   
+        , isSpecialPickUpGate : false
+        , cameraAnimatedToSource : true 
+        , destLocationName : Nothing
+        , destGeoJson : Nothing
+        , destGates : Nothing
+        , isSpecialDropOfGate : false}
     , showSpecialZoneInfoPopup : false
-    , hotSpot : { selectedSpot : Nothing, centroidPoint : Nothing }
+    , hotSpot : { selectedSpot : Nothing, centroidPoint : Nothing ,dropCentroidPoint : Nothing }
     , repeatRideVariant : ""
     , repeatRideServiceTierName : Nothing
     , hasEstimateBackpoint : false

@@ -88,7 +88,7 @@ import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
 import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreenData
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType)
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType,LocationType)
 import Services.API (BookingStatus(..))
 import Screens.DriverProfileScreenCommon.ScreenData (DriverProfileScreenCommonState(..))
 import Screens.CustomerUtils.FavouriteDriverTrips.ScreenData as FavouriteDriverTripsData
@@ -232,7 +232,7 @@ data TICKET_INFO_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_TICKET_INFO
 
 data HOME_SCREEN_OUTPUT = LOGOUT
                         | RELOAD Boolean
-                        | UPDATE_PICKUP_NAME HomeScreenState Number Number
+                        | UPDATE_PICKUP_NAME HomeScreenState Number Number LocationType
                         | REFRESH_HOME_SCREEN
                         | RETRY
                         | NO_OUTPUT
@@ -299,7 +299,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_SAFETY_EDUCATION
                         | REPEAT_SEARCH HomeScreenState
                         | CHANGE_VEHICLE_VARIANT HomeScreenState
-                        | GOTO_CONFIRMING_LOCATION_STAGE HomeScreenState
+                        | GOTO_CONFIRMING_LOCATION_STAGE HomeScreenState LocationType
                         | UPDATE_REFERRAL_CODE String
                         | GO_TO_SAFETY_SETTING_SCREEN
                         | GO_TO_RIDE_RELATED_ISSUES HomeScreenState
@@ -317,6 +317,8 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | UPDATE_CHAT
                         | GO_TO_TRIP_TYPE_SELECTION HomeScreenState
                         | GO_TO_RIDE_SUMMARY_SCREEN HomeScreenState
+                        | UPDATE_DROP_NAME HomeScreenState Number Number
+                        | GO_TO_CONFIRM_PICKUP HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_BACK_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

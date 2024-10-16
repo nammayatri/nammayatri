@@ -402,7 +402,7 @@ primaryButtonConfirmPickupConfig :: ST.HomeScreenState -> PrimaryButton.Config
 primaryButtonConfirmPickupConfig state =
   let
     config = PrimaryButton.config
-    isBtnClickable = (state.props.currentStage == EditPickUpLocation && state.props.markerLabel /= getString(LOCATION_IS_TOO_FAR)) || state.props.currentStage == ConfirmingLocation
+    isBtnClickable = (state.props.currentStage == EditPickUpLocation && state.props.markerLabel /= getString(LOCATION_IS_TOO_FAR)) || DA.any (_ == state.props.currentStage) [ ConfirmingLocation, ConfirmingDropLocation ]
     primaryButtonConfig' =
       config
         { textConfig
@@ -1547,7 +1547,12 @@ menuButtonConfig :: ST.HomeScreenState -> JB.Location -> MenuButton.Config
 menuButtonConfig state item =
   let
     config = MenuButton.config
-
+    defaultSelectedItem = if state.props.currentStage == ConfirmingLocation 
+                            then state.props.defaultPickUpPoint
+                            else state.props.defaultDropOfPoint
+    activeRadioButtonColor = if state.props.currentStage == ConfirmingLocation
+                              then Color.positive
+                              else Color.yellow900
     menuButtonConfig' =
       config
         { titleConfig
@@ -1561,9 +1566,9 @@ menuButtonConfig state item =
           , cornerRadius = 8.0
           , buttonWidth = V 8
           , buttonHeight = V 8
-          , buttonColor = Color.positive
+          , buttonColor = activeRadioButtonColor
           , margin = (MarginRight 15)
-          , activeStroke = ("2," <> Color.positive)
+          , activeStroke = ("2," <> activeRadioButtonColor)
           }
         , id = item.place
         , lat = item.lat
@@ -1573,9 +1578,9 @@ menuButtonConfig state item =
         , cornerRadius = 6.0
         , height = WRAP_CONTENT
         , width = MATCH_PARENT
-        , isSelected = item.place == state.props.defaultPickUpPoint
-        , layoutStroke = ("1," <> if item.place == state.props.defaultPickUpPoint then Color.blue700' else Color.grey900)
-        , layoutBg = if item.place == state.props.defaultPickUpPoint then Color.blue600 else Color.white900
+        , isSelected = item.place == defaultSelectedItem
+        , layoutStroke = ("1," <> if item.place == defaultSelectedItem then Color.blue700' else Color.grey900)
+        , layoutBg = if item.place == defaultSelectedItem then Color.blue600 else Color.white900
         }
   in
     menuButtonConfig'
