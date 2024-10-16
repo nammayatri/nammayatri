@@ -14,13 +14,13 @@
 
 module Beckn.ACL.FRFS.OnSearch where
 
-import API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Enums
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
 import qualified Domain.Types.FRFSQuote as DQuote
+import Domain.Types.Station
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.TimeRFC339
@@ -119,8 +119,8 @@ parseFulfillments item fulfillments fulfillmentId = do
         serviceTierShortName = Nothing,
         serviceTierDescription = Nothing,
         serviceTierLongName = Nothing,
+        routeStations = [],
         stations,
-        routeCode = Nothing,
         _type = quoteType
       }
 
@@ -138,7 +138,8 @@ mkDStation stop seqNumber = do
         stationType,
         stopSequence = seqNumber,
         stationLat = fst <$> mLatLon,
-        stationLon = snd <$> mLatLon
+        stationLon = snd <$> mLatLon,
+        towards = Nothing
       }
 
 sequenceStops :: [Spec.Stop] -> [Spec.Stop]
@@ -183,12 +184,12 @@ castVehicleVariant = \case
   "BUS" -> Just Enums.BUS
   _ -> Nothing
 
-castStationType :: Text -> Maybe API.StationType
+castStationType :: Text -> Maybe StationType
 castStationType = \case
-  "START" -> Just API.START
-  "END" -> Just API.END
-  "TRANSIT_STOP" -> Just API.TRANSIT
-  "INTERMEDIATE_STOP" -> Just API.INTERMEDIATE
+  "START" -> Just START
+  "END" -> Just END
+  "TRANSIT_STOP" -> Just TRANSIT
+  "INTERMEDIATE_STOP" -> Just INTERMEDIATE
   _ -> Nothing
 
 castQuoteType :: MonadFlow m => Text -> m DQuote.FRFSQuoteType

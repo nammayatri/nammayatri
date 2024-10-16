@@ -16,12 +16,15 @@ module Domain.Action.Beckn.FRFS.OnSearch where
 
 import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
+import Data.List (sortOn)
 import qualified Data.Text as T
 import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSSearch as Search
 import Domain.Types.Merchant
+import qualified Domain.Types.Station as Station
 import Environment
 import Kernel.Beam.Functions
+import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -57,9 +60,20 @@ data DQuote = DQuote
     serviceTierShortName :: Maybe Text,
     serviceTierDescription :: Maybe Text,
     serviceTierLongName :: Maybe Text,
+    routeStations :: [DRouteStation],
     stations :: [DStation],
-    routeCode :: Maybe Text,
     _type :: Quote.FRFSQuoteType
+  }
+
+data DRouteStation = DRouteStation
+  { routeCode :: Text,
+    routeLongName :: Text,
+    routeShortName :: Text,
+    routeStartPoint :: LatLong,
+    routeEndPoint :: LatLong,
+    routeStations :: [DStation],
+    routeSequenceNum :: Maybe Int,
+    routeColor :: Maybe Text
   }
 
 data DStation = DStation
@@ -67,8 +81,9 @@ data DStation = DStation
     stationName :: Text,
     stationLat :: Maybe Double,
     stationLon :: Maybe Double,
-    stationType :: API.StationType,
-    stopSequence :: Maybe Int
+    stationType :: Station.StationType,
+    stopSequence :: Maybe Int,
+    towards :: Maybe Text
   }
 
 data ValidatedDOnSearch = ValidatedDOnSearch
@@ -109,15 +124,25 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   startStation <- QStation.findByStationCode dStartStation.stationCode >>= fromMaybeM (InternalError $ "Station not found: " <> dStartStation.stationCode)
   endStation <- QStation.findByStationCode dEndStation.stationCode >>= fromMaybeM (InternalError $ "Station not found: " <> dEndStation.stationCode)
   routeId <-
-    maybe
-      (pure Nothing)
-      ( \rCode -> do
-          route <- QRoute.findByRouteCode rCode >>= fromMaybeM (RouteNotFound rCode)
-          return $ Just route.id
-      )
-      routeCode
+    case vehicleType of
+      Spec.BUS -> do
+        maybe
+          (pure Nothing)
+          ( \rStation -> do
+              route <- QRoute.findByRouteCode rStation.routeCode >>= fromMaybeM (RouteNotFound rStation.routeCode)
+              return $ Just (Quote.Bus route.id)
+          )
+          $ listToMaybe routeStations
+      Spec.METRO -> do
+        routes <-
+          mapM
+            ( \rStation -> QRoute.findByRouteCode rStation.routeCode >>= fromMaybeM (RouteNotFound rStation.routeCode)
+            )
+            $ sortOn (.routeSequenceNum) routeStations
+        return $ Just (Quote.Metro (map (.id) routes))
   let freeTicketInterval = fromMaybe (maxBound :: Int) mbFreeTicketInterval
   let stationsJSON = stations & map castStationToAPI & encodeToText
+  let routeStationsJSON = routeStations & map castRouteStationToAPI & encodeToText
   let maxFreeTicketCashback = fromMaybe 0 mbMaxFreeTicketCashback
   uid <- generateGUID
   now <- getCurrentTime
@@ -146,6 +171,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
         Quote.riderId = search.riderId,
         Quote.searchId = search.id,
         Quote.stationsJson = stationsJSON,
+        Quote.routeStationsJson = Just routeStationsJSON,
         Quote.toStationId = endStation.id,
         Quote.routeId = routeId,
         Quote.validTill,
@@ -161,10 +187,10 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
       }
 
 getStartStation :: [DStation] -> Maybe DStation
-getStartStation = find (\station -> station.stationType == API.START)
+getStartStation = find (\station -> station.stationType == Station.START)
 
 getEndStation :: [DStation] -> Maybe DStation
-getEndStation = find (\station -> station.stationType == API.END)
+getEndStation = find (\station -> station.stationType == Station.END)
 
 castStationToAPI :: DStation -> API.FRFSStationAPI
 castStationToAPI DStation {..} =
@@ -177,5 +203,19 @@ castStationToAPI DStation {..} =
       API.name = stationName,
       API.stationType = Just stationType,
       API.sequenceNum = stopSequence,
-      API.distance = Nothing
+      API.distance = Nothing,
+      API.towards = Nothing
+    }
+
+castRouteStationToAPI :: DRouteStation -> API.FRFSRouteStationsAPI
+castRouteStationToAPI DRouteStation {..} =
+  API.FRFSRouteStationsAPI
+    { API.code = routeCode,
+      API.color = routeColor,
+      API.startPoint = routeStartPoint,
+      API.endPoint = routeEndPoint,
+      API.longName = routeLongName,
+      API.shortName = routeShortName,
+      API.sequenceNum = routeSequenceNum,
+      API.stations = map castStationToAPI routeStations
     }

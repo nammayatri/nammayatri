@@ -19,7 +19,6 @@ INSERT INTO
     bap_ifsc,
     buyer_finder_fee,
     collected_by,
-    provider,
     confirm_buffer_ttl_sec,
     confirm_ttl_sec,
     domain,
@@ -51,7 +50,6 @@ VALUES
     null,
     null,
     'BAP',
-    'EBIX',
     10,
     120,
     'FRFS',
@@ -86,10 +84,7 @@ INSERT INTO
     merchant_id,
     merchant_operating_city_id,
     vehicle_category,
-    qr_generated_by,
-    qr_generation_key,
-    qr_verified_by,
-    qr_verification_key,
+    config_json,
     created_at,
     updated_at
   )
@@ -100,10 +95,7 @@ VALUES
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     'BUS',
-    'BAP',
-    'VGhpc0lzVGVzdEVuY3J5cHRpb25LZXkh',
-    'BPP',
-    NULL,
+    '{"tag": "EBIX", "contents": {"agentId": "5185", "username": "ATKT", "password": "0.1.0|0|QXWuKw1yei1Pn8G/PcGhwzaRtAWh47owbNnEYNZc0Gbo1qnDmJtwONUzNoPImof7Mw48OQrwdgZsG1I=", "networkHostUrl": "https://app.pmpml.in/CstcTestApi"}}',
     now(),
     now()
   );
@@ -329,7 +321,7 @@ VALUES
 
 INSERT INTO
   atlas_app.route_stop_mapping (
-    code,
+    provider_code,
     route_code,
     stop_code,
     stop_name,

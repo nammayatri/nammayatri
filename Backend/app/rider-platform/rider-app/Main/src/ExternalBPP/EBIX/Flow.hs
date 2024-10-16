@@ -1,8 +1,6 @@
 module ExternalBPP.EBIX.Flow where
 
-import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
-import BecknV2.FRFS.Utils
 import Data.List (sortOn)
 import Domain.Action.Beckn.FRFS.Common
 import Domain.Action.Beckn.FRFS.OnInit
@@ -14,20 +12,22 @@ import Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.RouteStopMapping
 import Domain.Types.Station
 import ExternalBPP.EBIX.ExternalAPI.Order as EBIXOrder
 import ExternalBPP.EBIX.ExternalAPI.Payment as EBIXPayment
+import ExternalBPP.EBIX.ExternalAPI.Status as EBIXStatus
 import ExternalBPP.EBIX.ExternalAPI.Verification as EBIXVerification
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto.Config as DB
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common
-import Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import Storage.Queries.FRFSTicket as QFRFSTicket
 import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import Storage.Queries.Route as QRoute
@@ -36,7 +36,7 @@ import Storage.Queries.RouteStopMapping as QRouteStopMapping
 import Storage.Queries.Station as QStation
 import Tools.Error
 
-search :: (CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> DFRFSSearch.FRFSSearch -> m DOnSearch
+search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> DFRFSSearch.FRFSSearch -> m DOnSearch
 search _merchant _merchantOperatingCity bapConfig searchReq = do
   fromStation <- QStation.findById searchReq.fromStationId >>= fromMaybeM (StationNotFound searchReq.fromStationId.getId)
   toStation <- QStation.findById searchReq.toStationId >>= fromMaybeM (StationNotFound searchReq.toStationId.getId)
@@ -44,7 +44,19 @@ search _merchant _merchantOperatingCity bapConfig searchReq = do
   route <- QRoute.findByRouteId routeId >>= fromMaybeM (RouteNotFound routeId.getId)
   stops <- QRouteStopMapping.findByRouteCode route.code
   stations <- mkStations fromStation toStation stops & fromMaybeM (StationsNotFound fromStation.id.getId toStation.id.getId)
-  quotes <- mkQuote stations searchReq.vehicleType route.code fromStation.code toStation.code
+  let routeStations =
+        [ DRouteStation
+            { routeCode = route.code,
+              routeLongName = route.longName,
+              routeShortName = route.shortName,
+              routeStartPoint = route.startPoint,
+              routeEndPoint = route.endPoint,
+              routeStations = stations,
+              routeSequenceNum = Nothing,
+              routeColor = Nothing
+            }
+        ]
+  quotes <- mkQuote routeStations stations searchReq.vehicleType route.code fromStation.code toStation.code
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
   messageId <- generateGUID
   return $
@@ -66,14 +78,14 @@ search _merchant _merchantOperatingCity bapConfig searchReq = do
       ((,) <$> find (\stop -> stop.stopCode == fromStation.code) stops <*> find (\stop -> stop.stopCode == toStation.code) stops)
         <&> \(startStop, endStop) ->
           do
-            let startStation = DStation startStop.stopCode startStop.stopName (Just startStop.stopPoint.lat) (Just startStop.stopPoint.lon) API.START (Just startStop.sequenceNum)
-                endStation = DStation endStop.stopCode endStop.stopName (Just endStop.stopPoint.lat) (Just endStop.stopPoint.lon) API.END (Just endStop.sequenceNum)
+            let startStation = DStation startStop.stopCode startStop.stopName (Just startStop.stopPoint.lat) (Just startStop.stopPoint.lon) START (Just startStop.sequenceNum) Nothing
+                endStation = DStation endStop.stopCode endStop.stopName (Just endStop.stopPoint.lat) (Just endStop.stopPoint.lon) END (Just endStop.sequenceNum) Nothing
                 intermediateStations =
                   (sortOn (.sequenceNum) $ filter (\stop -> stop.sequenceNum > startStop.sequenceNum && stop.sequenceNum < endStop.sequenceNum) stops)
-                    <&> (\stop -> DStation stop.stopCode stop.stopName (Just stop.stopPoint.lat) (Just stop.stopPoint.lon) API.INTERMEDIATE (Just stop.sequenceNum))
+                    <&> (\stop -> DStation stop.stopCode stop.stopName (Just stop.stopPoint.lat) (Just stop.stopPoint.lon) INTERMEDIATE (Just stop.sequenceNum) Nothing)
             [startStation] ++ intermediateStations ++ [endStation]
 
-    mkQuote stations vehicleType routeCode startStopCode endStopCode = do
+    mkQuote routeStations stations vehicleType routeCode startStopCode endStopCode = do
       currentTime <- getCurrentTime
       farePolicies <- QRouteStopFare.findByRouteStartAndStopCode routeCode startStopCode endStopCode
       let serviceableFarePolicies = DTB.findBoundedDomain farePolicies currentTime ++ filter (\farePolicy -> farePolicy.timeBounds == DTB.Unbounded) farePolicies
@@ -90,7 +102,7 @@ search _merchant _merchantOperatingCity bapConfig searchReq = do
               DQuote
                 { bppItemId = "Kolkata Buses Item - " <> show vehicleServiceTier._type <> " - " <> vehicleServiceTier.providerCode,
                   _type = DFRFSQuote.SingleJourney,
-                  routeCode = Just routeCode,
+                  routeStations = routeStations,
                   serviceTierType = Just vehicleServiceTier._type,
                   serviceTierProviderCode = Just vehicleServiceTier.providerCode,
                   serviceTierShortName = Just vehicleServiceTier.shortName,
@@ -101,7 +113,7 @@ search _merchant _merchantOperatingCity bapConfig searchReq = do
         )
         serviceableFarePolicies
 
-init :: (CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit
+init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit
 init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking = do
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.initTTLSec
   paymentDetails <- mkPaymentDetails bapConfig.collectedBy
@@ -126,11 +138,10 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
         paymentParams & fromMaybeM (InternalError "BknPaymentParams Not Found")
       Spec.BPP -> EBIXPayment.getPaymentDetails merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
 
-confirm :: (CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> FRFSConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
-confirm _merchant merchantOperatingCity frfsConfig bapConfig (_mRiderName, _mRiderNumber) booking = do
-  integratedBppConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) >>= fromMaybeM (InternalError "Integrated BPP Config not found")
-  bppOrderId <- EBIXOrder.getOrderId booking
-  ticket <- mkTicket bppOrderId integratedBppConfig
+confirm :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> FRFSConfig -> EBIXConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
+confirm _merchant _merchantOperatingCity frfsConfig config bapConfig (_mRiderName, _mRiderNumber) booking = do
+  (bppOrderId, ticketNum) <- EBIXOrder.getOrderId config booking
+  ticket <- mkTicket bppOrderId ticketNum
   return $
     DOrder
       { providerId = bapConfig.uniqueKeyId,
@@ -144,11 +155,8 @@ confirm _merchant merchantOperatingCity frfsConfig bapConfig (_mRiderName, _mRid
         tickets = [ticket]
       }
   where
-    mkTicket bppOrderId integratedBppConfig = do
-      (qrData, qrStatus, qrValidity, ticketNumber) <-
-        case integratedBppConfig.qrGeneratedBy of
-          Spec.BAP -> throwError (InternalError "Verification can only be done by the Provider")
-          Spec.BPP -> EBIXVerification.getVerificationDetails integratedBppConfig bppOrderId frfsConfig.busStationTtl booking
+    mkTicket bppOrderId ticketNum = do
+      (qrData, qrStatus, qrValidity, ticketNumber) <- EBIXVerification.generateQRByProvider config bppOrderId ticketNum frfsConfig.busStationTtl booking
       return $
         DTicket
           { qrData = qrData,
@@ -158,16 +166,20 @@ confirm _merchant merchantOperatingCity frfsConfig bapConfig (_mRiderName, _mRid
             status = qrStatus
           }
 
-status :: (CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Id Merchant -> MerchantOperatingCity -> BecknConfig -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
-status _merchantId _merchantOperatingCity bapConfig booking = do
+status :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Id Merchant -> MerchantOperatingCity -> EBIXConfig -> BecknConfig -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
+status _merchantId _merchantOperatingCity config bapConfig booking = do
   tickets' <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
-  bppOrderId <- EBIXOrder.getOrderId booking
+  (bppOrderId, _) <- EBIXOrder.getOrderId config booking
+  ticketStatus <-
+    if any (\ticket -> ticket.status == DFRFSTicket.ACTIVE) tickets'
+      then EBIXStatus.getTicketStatus config booking bppOrderId
+      else return "UNCLAIMED"
   let tickets =
         map
           ( \DFRFSTicket.FRFSTicket {status = _status, ..} ->
               DTicket
                 { bppFulfillmentId = "Kolkata Buses Fulfillment",
-                  status = "UNCLAIMED",
+                  status = ticketStatus,
                   ..
                 }
           )

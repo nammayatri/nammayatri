@@ -27,3 +27,8 @@ ALTER TABLE atlas_app.station ALTER COLUMN merchant_id SET NOT NULL;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.station ADD COLUMN time_bounds text  default 'Unbounded';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.station ADD COLUMN possible_types text ;

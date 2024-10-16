@@ -11,6 +11,7 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
+import qualified Domain.Types.Station
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Payment.Juspay.Types.CreateOrder
@@ -75,14 +76,14 @@ data FRFSConfigAPIRes = FRFSConfigAPIRes
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
-  { _route :: Data.Maybe.Maybe API.Types.UI.FRFSTicketService.FRFSRouteAPI,
-    _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
+  { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     quantity :: Kernel.Prelude.Int,
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
+    routeStations :: Data.Maybe.Maybe [API.Types.UI.FRFSTicketService.FRFSRouteStationsAPI],
     serviceTierDescription :: Data.Maybe.Maybe Data.Text.Text,
     serviceTierLongName :: Data.Maybe.Maybe Data.Text.Text,
     serviceTierShortName :: Data.Maybe.Maybe Data.Text.Text,
@@ -94,7 +95,27 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSRouteAPI = FRFSRouteAPI {code :: Data.Text.Text, endPoint :: Kernel.External.Maps.Types.LatLong, longName :: Data.Text.Text, shortName :: Data.Text.Text, startPoint :: Kernel.External.Maps.Types.LatLong}
+data FRFSRouteAPI = FRFSRouteAPI
+  { code :: Data.Text.Text,
+    endPoint :: Kernel.External.Maps.Types.LatLong,
+    longName :: Data.Text.Text,
+    shortName :: Data.Text.Text,
+    startPoint :: Kernel.External.Maps.Types.LatLong,
+    totalStops :: Data.Maybe.Maybe Kernel.Prelude.Int
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSRouteStationsAPI = FRFSRouteStationsAPI
+  { code :: Data.Text.Text,
+    color :: Data.Maybe.Maybe Data.Text.Text,
+    endPoint :: Kernel.External.Maps.Types.LatLong,
+    longName :: Data.Text.Text,
+    sequenceNum :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    shortName :: Data.Text.Text,
+    startPoint :: Kernel.External.Maps.Types.LatLong,
+    stations :: [API.Types.UI.FRFSTicketService.FRFSStationAPI]
+  }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -121,7 +142,8 @@ data FRFSStationAPI = FRFSStationAPI
     lon :: Data.Maybe.Maybe Kernel.Prelude.Double,
     name :: Data.Text.Text,
     sequenceNum :: Data.Maybe.Maybe Kernel.Prelude.Int,
-    stationType :: Data.Maybe.Maybe API.Types.UI.FRFSTicketService.StationType
+    stationType :: Data.Maybe.Maybe Domain.Types.Station.StationType,
+    towards :: Data.Maybe.Maybe Data.Text.Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -131,8 +153,7 @@ data FRFSTicketAPI = FRFSTicketAPI {createdAt :: Kernel.Prelude.UTCTime, qrData 
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
-  { _route :: Data.Maybe.Maybe API.Types.UI.FRFSTicketService.FRFSRouteAPI,
-    _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
+  { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
     bookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     city :: Kernel.Types.Beckn.Context.City,
     createdAt :: Kernel.Prelude.UTCTime,
@@ -142,6 +163,7 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     quantity :: Kernel.Prelude.Int,
+    routeStations :: Data.Maybe.Maybe [API.Types.UI.FRFSTicketService.FRFSRouteStationsAPI],
     serviceTierDescription :: Data.Maybe.Maybe Data.Text.Text,
     serviceTierLongName :: Data.Maybe.Maybe Data.Text.Text,
     serviceTierShortName :: Data.Maybe.Maybe Data.Text.Text,
@@ -154,12 +176,4 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
   deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data StationType
-  = START
-  | END
-  | TRANSIT
-  | INTERMEDIATE
-  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

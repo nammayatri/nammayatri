@@ -19,6 +19,7 @@ instance FromTType' Beam.Route Domain.Types.Route.Route where
       Just
         Domain.Types.Route.Route
           { code = code,
+            color = color,
             endPoint = Kernel.External.Maps.Types.LatLong endLat endLon,
             id = Kernel.Types.Id.Id id,
             longName = longName,
@@ -36,6 +37,7 @@ instance ToTType' Beam.Route Domain.Types.Route.Route where
   toTType' (Domain.Types.Route.Route {..}) = do
     Beam.RouteT
       { Beam.code = code,
+        Beam.color = color,
         Beam.endLat = (.lat) endPoint,
         Beam.endLon = (.lon) endPoint,
         Beam.id = Kernel.Types.Id.getId id,

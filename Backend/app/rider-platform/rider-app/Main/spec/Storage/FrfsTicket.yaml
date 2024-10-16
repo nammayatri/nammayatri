@@ -17,6 +17,7 @@ imports:
   FRFSTicketBookingPayment: Domain.Types.FRFSTicketBookingPayment
   Station: Domain.Types.Station
   FRFSQuoteType: Domain.Types.FRFSQuote
+  FRFSRoutes: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBooking
   FRFSTicketStatus: Domain.Types.FRFSTicket
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
@@ -93,7 +94,12 @@ Station:
     address: Maybe Text
     merchantId: Id Merchant
     timeBounds: TimeBound
+    possibleTypes: Maybe [StationType]
     merchantOperatingCityId: Id MerchantOperatingCity
+
+  types:
+    StationType:
+      enum: "START, END, TRANSIT, INTERMEDIATE"
 
   default:
     timeBounds: "'Unbounded'"
@@ -136,9 +142,10 @@ FRFSQuote:
     _type: FRFSQuoteType
     fromStationId: Id Station
     toStationId: Id Station
-    routeId: Maybe (Id Route)
+    routeId: Maybe FRFSRoutes
     quantity: Int
     stationsJson: Text
+    routeStationsJson: Maybe Text
     vehicleType: VehicleCategory
     serviceTierProviderCode: Maybe Text
     serviceTierType: Maybe ServiceTierType
@@ -172,6 +179,9 @@ FRFSQuote:
   types:
     FRFSQuoteType:
       enum: "SingleJourney, ReturnJourney, Pass, SpecialFareSingleJourney"
+    # For Bus it would be one route per leg, but for Metro it can be more than one route with transit stations for a single Journey leg.
+    FRFSRoutes:
+      enum: "Bus (Id Route), Metro [Id Route]"
 
   fromTType:
     price: Kernel.Types.Common.mkPrice currency price|E
@@ -203,11 +213,12 @@ FRFSTicketBooking:
     status: FRFSTicketBookingStatus
     riderId: Id Person
     stationsJson: Text
+    routeStationsJson: Maybe Text
     bppItemId: Text
     _type: FRFSQuoteType
     fromStationId: Id Station
     toStationId: Id Station
-    routeId: Maybe (Id Route)
+    routeId: Maybe FRFSRoutes
     quantity: Int
     vehicleType: VehicleCategory
     serviceTierProviderCode: Maybe Text
@@ -582,6 +593,7 @@ Route:
     startPoint: LatLong
     endPoint: LatLong
     vehicleType: VehicleCategory
+    color: Maybe Text
     timeBounds: TimeBound
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -634,7 +646,7 @@ RouteStopMapping:
   fields:
     routeCode: Text
     stopCode: Text
-    code: Text
+    providerCode: Text
     stopName: Text
     stopPoint: LatLong
     sequenceNum: Int
