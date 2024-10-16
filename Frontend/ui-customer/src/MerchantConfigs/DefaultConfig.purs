@@ -259,7 +259,7 @@ config =
     enableSafetyFlow : true, 
     shareWithEmergencyContacts: true,
     enableAutoReferral : true,
-    enableEditPickupLocation : false,
+    enableEditPickupLocation : true,
     enableCustomerSupportForSafety : false,
     enableSpecialPickup : EHC.jBridgeMethodExists "locateOnMapV2",
     enableAcPopup : false,
