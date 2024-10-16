@@ -137,7 +137,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
           mbExtraKmFare = det.extraKmFare <&> HighPrecMoney . (* toRational dayPartRate) . (.getHighPrecMoney) -- temp fix :: have to fix properly
           extraDistanceFareItem =
             mbExtraKmFare <&> \extraKmFareRounded ->
-              mkBreakupItem extraDistanceFareCaption (mkPrice (extraKmFareRounded + fromMaybe 0.0 fareParams.congestionCharge)) -- temp fix :: MOVE CONGESTION CHARGE TO PROPER PLACE
+              mkBreakupItem extraDistanceFareCaption (mkPrice extraKmFareRounded) -- temp fix :: MOVE CONGESTION CHARGE TO PROPER PLACE
           rideDurationFareCaption = show Enums.RIDE_DURATION_FARE
           mbRideDurationFareItem = det.rideDurationFare <&> mkBreakupItem rideDurationFareCaption . mkPrice
 
