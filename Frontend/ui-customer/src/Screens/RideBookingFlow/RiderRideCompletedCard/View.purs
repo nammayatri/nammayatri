@@ -224,8 +224,7 @@ priceAndDistanceUpdateView state push =
           , weight 1.0
           , color Color.black800
           , singleLine false
-          , padding $ PaddingHorizontal 75 75
-          , margin $ MarginTop 12
+          , margin $ Margin 75 12 75 0
           ] <> FontStyle.h3 TypoGraphy 
         , linearLayout
           [ width WRAP_CONTENT
@@ -1157,6 +1156,7 @@ riderFeedback state push =
         width WRAP_CONTENT
       , height WRAP_CONTENT
       , orientation VERTICAL
+      , weight 1.0
       , margin $ MarginTop 10
       ][
         linearLayout[
@@ -1181,12 +1181,13 @@ riderFeedback state push =
       , textView $ [ 
           text  $ getString PREFER_DRIVER
           , color Color.black700
-          , maxLines 1
+          , maxLines 2
           , margin $ MarginTop 3
+          , weight 1.0
           ] <> FontStyle.body3 LanguageStyle
       ]
     , linearLayout[
-        width MATCH_PARENT
+        width WRAP_CONTENT
       , height WRAP_CONTENT
       , gravity $ RIGHT
       ][
