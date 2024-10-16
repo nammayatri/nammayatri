@@ -132,3 +132,16 @@ getInterCityBusConfig lazy = decodeForeignObject (parseJSON $ fetchRemoteConfigS
 
 getBundleSplashConfig :: String -> BundleLottieConfig
 getBundleSplashConfig lazy = decodeForeignObject (parseJSON $ fetchRemoteConfigString "customer_bundle_splash_config") $ { lottieUrl : "https://assets.moving.tech/beckn/nammayatri/user/lottie/ny_bundle_splash_lottie_new.json", enable : true}
+
+defaultSelfServeCategoryConfig :: SelfServeCategoryConfig
+defaultSelfServeCategoryConfig = {
+    safetyIssueCategoryConfig : {categoryLabel : "SAFETY", optionLabels : Nothing},
+    tollRelatedIssueCategoryConfig : {categoryLabel : "PAYMENT_AND_FARE_RELATED", optionLabels : Just ["TOLL_RELATED_ISSUE", "DRIVER_TOLL_RELATED_ISSUE"]},
+    acRelatedIssueCategoryConfig : {categoryLabel : "RIDE_RELATED", optionLabels : Just ["RIDE_RELATED"]}
+}
+
+getSelfServeCategoryConfig :: String -> SelfServeCategoryConfig
+getSelfServeCategoryConfig city = do
+    let config = fetchRemoteConfigString "self_serve_category"
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultSelfServeCategoryConfig
+    getCityBasedConfig value city

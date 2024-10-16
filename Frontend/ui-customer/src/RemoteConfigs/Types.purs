@@ -93,3 +93,14 @@ instance showServiceType :: Show ServiceType where show = genericShow
 type InterCityBusConfig = {
   baseUrl :: String
 }
+
+type SelfServeCategoryConfig = {
+  safetyIssueCategoryConfig :: CategoryConfig,
+  tollRelatedIssueCategoryConfig :: CategoryConfig,
+  acRelatedIssueCategoryConfig :: CategoryConfig
+}
+
+type CategoryConfig = {
+  categoryLabel :: String,
+  optionLabels :: Maybe (Array String)
+}

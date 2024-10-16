@@ -38,7 +38,6 @@ import ConfigProvider
 import Components.IssueList as IssueList
 import Data.Function.Uncurried (runFn2)
 import Locale.Utils
-import Screens.SelectFaqScreen.Transformer
 
 instance showAction :: Show Action where
     show _ = ""

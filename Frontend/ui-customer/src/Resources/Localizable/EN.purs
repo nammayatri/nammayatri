@@ -162,6 +162,7 @@ getEN stringKey =
         WE_WILL_DELETE_YOUR_ACCOUNT -> "We are sorry to see you leave our platform. Your account will be deleted within the next 30 days. Meanwhile if you wish to retain your account, please call to our customer support number"
         YES_DELETE_IT -> "Yes, Delete It"
         REQUEST_TO_DELETE_ACCOUNT -> "Request to delete account"
+        DELETE_ACCOUNT -> "Delete Account"
         CANCEL_STR -> "Cancel"
         LOADING -> "Loading"
         PLEASE_WAIT_WHILE_IN_PROGRESS -> "Please wait while in progress"

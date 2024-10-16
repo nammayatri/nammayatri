@@ -27,7 +27,6 @@ import ModifyScreenState (modifyScreenState, FlowState(..))
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Storage (getValueToLocalStore, KeyStore(..))
 import Common.Types.App (LazyCheck(..), CategoryListType)
-import Screens.SelectFaqScreen.Transformer
 import Data.Array as DA
 import Data.String as DS 
 import Services.Backend as Remote
@@ -40,23 +39,21 @@ import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.Types as ST
 import Data.Maybe
 import Components.ChatView (makeChatComponent')
-import Screens.SelectFaqScreen.Transformer
 import Engineering.Helpers.Commons (getCurrentUTC)
 import Screens.SelectFaqScreen.ScreenData
 import Components.IssueView (IssueInfo)
 import Debug (spy)
 import Common.Types.App (FaqCardDropDownInfo)
+import Services.FlowCache as SF
 
 selectFaqScreen :: FlowBT String FlowState
 selectFaqScreen = do
   (GlobalState globalState) <- getState
   let selectFaqScreenState = globalState.selectFaqScreen
-  if DA.null selectFaqScreenState.data.categories then do 
-    let language = fetchLanguage $ getLanguageLocale languageKey 
-    (GetCategoriesRes response) <- Remote.getCategoriesBT language
-    filteredCategories <- pure $ DA.filter (\(Category catObj) -> catObj.categoryType == "FAQ") response.categories
-    let categories' = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : Just catObj.label, categoryImageUrl : Just catObj.logoUrl, isRideRequired : catObj.isRideRequired , maxAllowedRideAge : catObj.maxAllowedRideAge, categoryType : catObj.categoryType, allowedRideStatuses: catObj.allowedRideStatuses}) filteredCategories
-    modifyScreenState $ SelectFaqScreenStateType (\selectFaqScreen -> selectFaqScreen { data {categories = categories' } } )
+  if DA.null selectFaqScreenState.data.categories then do
+    categories <- SF.fetchIssueCategories
+    filteredCategories <- pure $ DA.filter (\cat -> cat.categoryType == "FAQ") categories
+    modifyScreenState $ SelectFaqScreenStateType (\selectFaqScreen -> selectFaqScreen { data {categories = filteredCategories } } )
   else pure unit
   (GlobalState updatedGlobalState) <- getState
   act <- lift $ lift $ runScreen $ SelectFaqScreen.screen updatedGlobalState.selectFaqScreen

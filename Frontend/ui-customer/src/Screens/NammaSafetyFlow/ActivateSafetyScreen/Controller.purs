@@ -56,7 +56,11 @@ import Effect.Aff (launchAff)
 import Types.App (defaultGlobalState)
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
-import Debug 
+import Debug
+import Components.PopUpModal.Controller as PopUpModal
+import Resources.Constants (mailToLink)
+import ConfigProvider
+import Services.Config (getSupportNumber)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -115,6 +119,7 @@ data Action
   | OnPauseCallback
   | AudioPermission Boolean
   | Exit ScreenOutput
+  | ContactSupportAction PopUpModal.Action
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 eval AddContacts state = updateAndExit state $ GoToEmergencyContactScreen state
@@ -300,9 +305,24 @@ eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
   let newState = state{props{showMenu = false}}
   case item of
     "report_safety_issue" -> exit $ GoToIssueScreen state
+    "show_contact_support_popup" -> continue newState { props {showContactSupportPopUp = true} }
     "start_test_drill" -> continueWithCmd newState [pure $ GoToTestDrill]
     "learn_about_safety" -> continueWithCmd newState [pure $ GoToEducationView]
     _ -> continue newState
+
+eval (ContactSupportAction (PopUpModal.DismissPopup)) state = continue state{ props {showContactSupportPopUp = false}}
+
+eval (ContactSupportAction (PopUpModal.OnSecondaryTextClick)) state =
+    continueWithCmd state{ props {showContactSupportPopUp = false}} [do
+        void $ JB.openUrlInMailApp $ mailToLink <> (getAppConfig appConfig).appData.supportMail
+        pure NoAction
+    ]
+
+eval (ContactSupportAction (PopUpModal.OnButton1Click)) state = do
+    void $ pure $ JB.showDialer (getSupportNumber "") false
+    continue state{ props {showContactSupportPopUp = false}}
+
+eval (ContactSupportAction (PopUpModal.OnButton2Click)) state = continueWithCmd state [pure $ ContactSupportAction (PopUpModal.DismissPopup)]
 
 eval (SafetyAudioRecordingAction SafetyAudioRecording.StartRecord) state = 
   continueWithCmd state { props { recordingTimer = "00 : 00", audioRecordingStatus = CTA.RECORDING  } }  [do
