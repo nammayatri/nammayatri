@@ -28,6 +28,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSQuote as QQuote
@@ -127,7 +128,16 @@ onSearch ::
 onSearch onSearchReq validatedReq = do
   quotes <- traverse (mkQuotes onSearchReq validatedReq) (onSearchReq.quotes)
   QQuote.createMany quotes
+
+  let search = validatedReq.search
+      mbRequiredQuote = filterQuotes quotes
+  whenJust mbRequiredQuote $ \requiredQuote -> do
+    SLCF.createFares search.journeyLegInfo requiredQuote.price (QSearch.updatePricingId validatedReq.search.id (Just requiredQuote.id.getId))
+
   return ()
+
+filterQuotes :: [Quote.FRFSQuote] -> Maybe Quote.FRFSQuote
+filterQuotes quotes = listToMaybe quotes
 
 mkQuotes :: DOnSearch -> ValidatedDOnSearch -> DQuote -> Flow Quote.FRFSQuote
 mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do

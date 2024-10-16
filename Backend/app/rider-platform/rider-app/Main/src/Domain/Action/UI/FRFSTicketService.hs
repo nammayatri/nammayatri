@@ -378,10 +378,6 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
   unless (personId == search.riderId) $ throwError AccessDenied
   (quotes :: [DFRFSQuote.FRFSQuote]) <- B.runInReplica $ QFRFSQuote.findAllBySearchId searchId_
 
-  let mbRequiredQuote = filterQuotes quotes
-  whenJust mbRequiredQuote $ \requiredQuote -> do
-    SLCF.createFares search.journeyLegInfo requiredQuote.price (QFRFSSearch.updatePricingId searchId_ (Just requiredQuote.id.getId))
-
   mapM
     ( \quote -> do
         (stations :: [FRFSStationAPI]) <- decodeFromText quote.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
@@ -402,9 +398,6 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
             }
     )
     quotes
-
-filterQuotes :: [DFRFSQuote.FRFSQuote] -> Maybe DFRFSQuote.FRFSQuote
-filterQuotes quotes = listToMaybe quotes
 
 -- /{jouneryId}/confirm
 -- => create JourneyBooking
