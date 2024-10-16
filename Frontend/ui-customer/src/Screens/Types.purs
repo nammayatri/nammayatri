@@ -914,6 +914,7 @@ type QuoteListItemState =
   , city :: City
   , vehicleImage :: String
   , serviceTierName :: Maybe String
+  , isUpgradedToCab :: Boolean
   }
 
 
@@ -1073,6 +1074,9 @@ type HomeScreenStateProps =
   , suggestionsListExpanded :: Boolean
   , repeatRideTimer :: String
   , repeatRideTimerId :: String
+  , upgradeRideTimerId :: String
+  , upgradeRideTimer :: String
+  , upgradeRideTimerStopped :: Boolean
   , showShimmer :: Boolean
   , reAllocation :: ReAllocationProp
   , homeScreenSheetState :: BottomSheetState

@@ -127,6 +127,7 @@ data ScreenOutput = LogoutUser
   | EditDestBackPressed HomeScreenState
   | ExitAndEnterHomeScreen HomeScreenState
   | SelectEstimateAndQuotes HomeScreenState
+  | RetrySearchWithoutUpgrade Boolean HomeScreenState
   | UpdateChatScreen HomeScreenState
   | GoToTripSelectionScreen HomeScreenState
   | RideSummary HomeScreenState
@@ -270,6 +271,8 @@ data Action = NoAction
   | SuggestedDestinationClicked LocationListItemState Boolean
   | RepeatRideCountDown Int String String
   | StopRepeatRideTimer 
+  | UpgradeRideCountDown Int String String
+  | StopUpgradeRideTimer
   | OpenLiveDashboard
   | UpdatePeekHeight 
   | ReAllocate

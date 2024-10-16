@@ -1406,6 +1406,8 @@ quoteListModelViewState state =
     , animEndTime: state.data.currentCityConfig.iopConfig.autoSelectTime
     , isRentalSearch: isLocalStageOn ConfirmingQuotes
     , hasToll : state.data.selectedEstimatesObject.hasTollCharges
+    , upgradeRideTimer : state.props.upgradeRideTimer
+    , upgradeRideTimerId : state.props.upgradeRideTimerId
     }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig

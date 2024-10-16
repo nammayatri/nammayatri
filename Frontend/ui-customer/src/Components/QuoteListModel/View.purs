@@ -22,9 +22,9 @@ import Components.QuoteListModel.Controller (Action(..), QuoteListModelState)
 import Components.SeparatorView.View as SeparatorView
 import Components.TipsView as TipsView
 import Data.Array (filter, head, null, (!!), mapWithIndex, slice, length, cons, findIndex, elem, sortBy)
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe, isJust)
 import Effect (Effect)
-import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenWidth)
+import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenWidth, screenHeight)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, getCityFromString, quoteModalVariantImage)
@@ -39,7 +39,7 @@ import Screens.Types (Stage(..), QuoteListItemState(..), City(..))
 import Storage 
 import Styles.Colors as Color
 import Data.String (replaceAll, Pattern(..), Replacement(..))
-import Data.String (null) as DS
+import Data.String as DS
 import Locale.Utils
 import Mobility.Prelude
 import Engineering.Helpers.Utils(splitIntoEqualParts)
@@ -51,6 +51,11 @@ import Animation as Anim
 import Animation.Config as AnimConfig
 import Data.Function
 import Data.Ord
+import Data.Int (fromString)
+import Resources.Constants
+import Screens.Types (FareProductType(..))
+import Animation.Config (AnimConfig, animConfig)
+import Data.Array
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -71,6 +76,7 @@ view push state =
         , offersView push state
         ]
       , paymentView state
+      , surpriseRideView push state
     ]
 
 offersView :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
@@ -89,6 +95,128 @@ offersView push state =
       ][]
     , quotesView state push
   ]
+
+surpriseRideView :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
+surpriseRideView push state =
+  let mbUpgradedQuote = find(\ item -> item.isUpgradedToCab) state.quoteListModel
+      upgradedQuote = fromMaybe dummyQuoteList mbUpgradedQuote
+  in
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , background "#CC2C2F3A"
+  , gravity CENTER
+  , orientation VERTICAL
+  , visibility $ boolToVisibility $ isJust mbUpgradedQuote
+  ][ linearLayout
+     [ height WRAP_CONTENT
+     , width MATCH_PARENT
+     , margin $ MarginHorizontal 24 24
+     , padding $ Padding 16 20 16 16
+     , cornerRadius 16.0
+     , orientation VERTICAL
+     , gravity CENTER
+     , background Color.white900
+     ][ imageView $
+        [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_surprise_ride"
+        , height $ V ((screenHeight unit) * 24 / 100)
+        , width MATCH_PARENT
+        ]
+      , textView $ 
+        [ text $ "Here’s a surprise upgrade! 🎉"
+        , color Color.black800
+        , margin $ MarginTop 16
+        ] <> FontStyle.h2 TypoGraphy
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , cornerRadius 8.0
+        , background Color.blue600
+        , padding $ Padding 16 12 16 12
+        , margin $ MarginTop 8
+        , gravity CENTER
+        ][ linearLayout
+           [ height WRAP_CONTENT
+           , width MATCH_PARENT
+           , orientation VERTICAL
+           ][ linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , gravity CENTER
+              ][ serviceTierNameView (fromMaybe "" state.selectedEstimatesObject.serviceTierName) state.selectedEstimatesObject.airConditioned
+               , imageView 
+                 [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_arrow_right_black800"
+                 , height $ V 10
+                 , width $ V 10
+                 , margin $ MarginHorizontal 8 8
+                 ]
+               , serviceTierNameView (fromMaybe "" state.selectedEstimatesObject.serviceTierName) state.selectedEstimatesObject.airConditioned
+              ]
+            , linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , gravity CENTER
+              , margin $ MarginTop 12
+              ][ textView $ 
+                 [ text $ "New Fare: "
+                 , color Color.black700
+                 ] <> FontStyle.body1 TypoGraphy
+               , textView $ 
+                 [ text $ state.appConfig.currency <> (show upgradedQuote.price)
+                 , color Color.black800
+                 ] <> FontStyle.body4 TypoGraphy
+               , linearLayout
+                 [ height $ V 24
+                 , width WRAP_CONTENT
+                 , cornerRadius 12.0
+                 , padding $ PaddingHorizontal 8 8
+                 , margin $ MarginLeft 4
+                 , background "#E3F4E8"
+                 , gravity CENTER_VERTICAL
+                 ][ imageView $ 
+                    [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_arrow_down_green"
+                    , height $ V 16
+                    , width $ V 16
+                    ]
+                  , textView $ 
+                    [ text $ state.appConfig.currency <> "20"
+                    , color Color.green900
+                    , padding $ PaddingBottom $ if getLanguageLocale languageKey == "EN_US" then 2 else 0
+                    ] <> FontStyle.body20 TypoGraphy
+                 ]
+              ]
+           ]
+        ]
+      , upgradeRideButtonView push state 
+      , PrimaryButton.view (push <<< RejectUpgradePrimaryButtonAction) (rejectUpgradeButtonConfig state)
+     ]
+  ]
+
+upgradeRideButtonView :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
+upgradeRideButtonView push state = 
+  let animationDuration = (10) * 1000 - 100
+      isUpgradeRideTimerNonZero = state.upgradeRideTimer /= "0"
+  in
+  relativeLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  ][ PrimaryButton.view (push <<< UpgradeRidePrimaryButtonAction) (confirmUpgradedRideButtonConfig state)
+   , PrestoAnim.animationSet
+     [ Anim.translateOutXBackwardAnimY animConfig
+       { duration = animationDuration
+       , toX = (screenWidth unit)
+       , fromY = 0
+       , ifAnim = isUpgradeRideTimerNonZero
+       }
+     ] $ linearLayout
+         [ height $ V 50
+         , width MATCH_PARENT
+         , alpha 0.5
+         , background Color.white900
+         , visibility $ boolToVisibility (not DS.null state.upgradeRideTimerId)
+         , margin $ MarginTop 16
+         ][]
+    ]
 
 paymentView :: forall w . QuoteListModelState -> PrestoDOM (Effect Unit) w
 paymentView state =
@@ -569,6 +697,49 @@ noQuotesErrorModel state =
         ] <> FontStyle.paragraphText TypoGraphy
     ]
     ]  
+
+serviceTierNameView :: forall w . String -> Maybe Boolean -> PrestoDOM (Effect Unit) w
+serviceTierNameView serviceTierName isAC = 
+  let icon = if isAC == Just true then fetchImage COMMON_ASSET "ny_ic_ac_white" else fetchImage COMMON_ASSET "ny_ic_non_ac"
+      primaryColor = if isAC == Just true then Color.blue800 else Color.black700
+      serviceTierArr = spy "Here is serviceTierName " $ DS.split (DS.Pattern " ") serviceTierName
+      primaryText = fromMaybe "" $ serviceTierArr !! 0
+      secondaryText = fromMaybe "" $ serviceTierArr !! 1
+      showSecondaryText = (secondaryText == "" && primaryText /= "") || (secondaryText /= "")
+  in
+  linearLayout
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , cornerRadius 12.0
+  , padding $ Padding 12 4 12 4
+  , gravity CENTER
+  , background Color.white900
+  ][ linearLayout
+     [ height MATCH_PARENT
+     , width WRAP_CONTENT
+     , margin $ Margin 4 4 4 4
+     , padding $ Padding 4 2 4 2
+     , cornerRadius 8.0
+     , visibility $ boolToVisibility $ isJust isAC && serviceTierName /= "Auto"
+     , background primaryColor
+     ][ imageView $ 
+        [ imageWithFallback icon
+        , height $ V 12 
+        , width $ V 12
+        ]
+      , textView $ 
+        [ text $ primaryText 
+        , color Color.white900
+        , margin $ MarginLeft 2
+        ] <> FontStyle.tags TypoGraphy
+     ]
+   , textView $ 
+     [ text $ if secondaryText == "" then primaryText else secondaryText
+     , visibility $ boolToVisibility showSecondaryText
+     , color Color.black700
+     ] <> FontStyle.tags TypoGraphy
+  ]
+
 ---------------------------- quoteListView ---------------------------------
 quoteListView :: forall w . QuoteListModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 quoteListView state push =
@@ -603,6 +774,59 @@ quoteListView state push =
 --       , gravity CENTER
 --       ]
 --     ]
+
+---------------------------- confirmUpgradedRideButtonConfig ---------------------------------
+confirmUpgradedRideButtonConfig :: QuoteListModelState -> PrimaryButton.Config
+confirmUpgradedRideButtonConfig state = let
+    config = PrimaryButton.config
+    confirmUpgradedRideButtonConfig' = config
+      { textConfig
+        { text = getBtnTextWithTimer state
+        , color = Color.yellow900
+        , textStyle = FontStyle.Body25
+        , accessibilityHint = "Confirming Upgraded Ride : Button"
+        }
+      , id = "confirmUpgradedRideButton"
+      , height = WRAP_CONTENT
+      , width = MATCH_PARENT
+      , padding = Padding 16 16 16 16
+      , margin = MarginTop 12
+      , cornerRadius = 12.0
+      , background = state.appConfig.primaryBackground
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
+      }
+  in confirmUpgradedRideButtonConfig'
+  where
+    getBtnTextWithTimer state = 
+      if state.upgradeRideTimer /= "0" && not DS.null state.upgradeRideTimerId then
+        (("Confirming Ride in") <> " " <> state.upgradeRideTimer <> "s")
+      else if state.upgradeRideTimer == "0" then
+        ("Confirming Ride") <> "..."
+      else
+        ("Confirm Ride")
+
+---------------------------- rejectUpgradeButtonConfig ---------------------------------
+rejectUpgradeButtonConfig :: QuoteListModelState -> PrimaryButton.Config
+rejectUpgradeButtonConfig state = let
+    config = PrimaryButton.config
+    rejectUpgradeButtonConfig' = config
+      { textConfig
+        { text = "No, continue search for Auto"
+        , color = Color.black650
+        , textStyle = FontStyle.SubHeading2
+        , accessibilityHint = "Reject Upgraded Ride"
+        }
+      , id = "rejectUpgradeButton"
+      , height = WRAP_CONTENT
+      , width = MATCH_PARENT
+      , padding = Padding 16 6 16 6
+      , cornerRadius = 8.0
+      , margin = MarginTop 10
+      , background = Color.white900
+      , enableRipple = false
+      }
+  in rejectUpgradeButtonConfig'
 
 ---------------------------- continueWithTipButtonConfig ---------------------------------
 continueWithTipButtonConfig :: QuoteListModelState -> PrimaryButton.Config

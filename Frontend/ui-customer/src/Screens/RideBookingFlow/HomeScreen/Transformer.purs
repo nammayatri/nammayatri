@@ -165,6 +165,7 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
           , serviceTierName : quoteEntity.serviceTierName
           , appConfig : getAppConfig appConfig
           , city : city
+          , isUpgradedToCab : true--quoteDetails.isUpgradedToCab
         }
     (RENTAL contents) -> QLI.config
     (INTER_CITY contents) -> QLI.config

@@ -26,7 +26,7 @@ view config = let
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , padding $ Padding 4 4 8 4
-    , background Color.blue600
+    , background Color.white900
     , gravity CENTER_VERTICAL
     , cornerRadius if EHC.os == "IOS" then 13.0 else 18.0
     ]

@@ -35,6 +35,8 @@ data Action = GoBack
             | TipsViewActionController TipsView.Action
             | ProviderModelAC PM.Action
             | CancelTimer
+            | UpgradeRidePrimaryButtonAction PrimaryButtonController.Action
+            | RejectUpgradePrimaryButtonAction PrimaryButtonController.Action
 
 type QuoteListModelState = {
      source :: String
@@ -60,4 +62,6 @@ type QuoteListModelState = {
   , animEndTime :: Int
   , isRentalSearch :: Boolean
   , hasToll :: Boolean
+  , upgradeRideTimer :: String
+  , upgradeRideTimerId :: String
 }
