@@ -96,11 +96,18 @@ view push state =
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , visibility GONE
       , visibility $ boolToVisibility $ not $ DA.null $ getAllBusTickets state
       ]
-      [ recentTicketsView push state
-      -- , recentSearchesView push state -- To be done in v2
+      [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , padding $ PaddingBottom 28
+        ]
+        [ recentTicketsView push state
+        -- , recentSearchesView push state -- To be done in v2
+        , viewMoreButton push state
+        ]
       ]
     ]
 
@@ -260,7 +267,6 @@ recentTicketsView push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , margin $ Margin 16 24 16 16
-  , padding $ PaddingBottom 32
   , orientation VERTICAL
   ]
   [ textView $
@@ -274,8 +280,11 @@ recentTicketsView push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     ] $
-    map (\ticketData -> ticketCardView push ticketData) $ getAllBusTickets state
+    map (\ticketData -> ticketCardView push ticketData) $ showAllOrTrimmed $ getAllBusTickets state
   ]
+  where 
+    showAllOrTrimmed :: Array ST.MetroTicketCardData -> Array ST.MetroTicketCardData
+    showAllOrTrimmed ticketData = if state.props.showAllTickets then ticketData else DA.take 3 ticketData
 
 ticketCardView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketCardData -> PrestoDOM (Effect Unit) w
 ticketCardView push ticketData =
@@ -427,5 +436,23 @@ singleStopView push ticketData isSourceView =
     ] <> FontStyle.body1 TypoGraphy
   ]
 
+viewMoreButton :: forall w. (Action -> Effect Unit) -> ST.BusTicketBookingState -> PrestoDOM (Effect Unit) w
+viewMoreButton push state = 
+  linearLayout  
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , padding $ Padding 8 0 8 8
+  , layoutGravity "center_horizontal"
+  , onClick push $ const ViewMoreClicked
+  , rippleColor Color.rippleShade
+  , visibility $ boolToVisibility $ (not $ state.props.showAllTickets) && (DA.length $ getAllBusTickets state) > 3
+  ]
+  [ textView $
+    [ text "View More"
+    , color Color.blue900
+    ] <> FontStyle.body1 TypoGraphy
+  ]
+
 getAllBusTickets :: ST.BusTicketBookingState -> Array ST.MetroTicketCardData
-getAllBusTickets state = maybe [] (\ticketDetailsState -> ticketDetailsState.data.activeTickets <> ticketDetailsState.data.pastTickets) state.data.ticketDetailsState
+getAllBusTickets state =
+  maybe [] (\ticketDetailsState -> ticketDetailsState.data.activeTickets <> ticketDetailsState.data.pastTickets) state.data.ticketDetailsState

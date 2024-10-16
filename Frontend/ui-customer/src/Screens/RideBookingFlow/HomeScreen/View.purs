@@ -80,7 +80,7 @@ import Constants (defaultDensity)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (any, length, mapWithIndex, take, (!!), head, filter, cons, null, tail, drop)
+import Data.Array (any, length, mapWithIndex, take, (!!), head, filter, cons, null, tail, drop, elem)
 import Data.Array as Arr
 import Data.Either (Either(..),either)
 import Data.Function.Uncurried (runFn1)
@@ -675,7 +675,7 @@ view push state =
                          || (runFn2 differenceBetweenTwoUTCInMinutes (getCurrentUTC "") state.data.startedAtUTC > acPopupConfig.showAfterTime)))
                         && state.props.showAcWorkingPopup
                         && ((isAcRide && acPopupConfig.enableAcPopup) || (not isAcRide && acPopupConfig.enableNonAcPopup))
-                        && state.data.driverInfoCardState.serviceTierName /= Just "Auto"
+                        && (not $ state.data.driverInfoCardState.serviceTierName `Arr.elem` [Just "Auto", Just "Bike Taxi"])
                         && state.data.currentCityConfig.enableAcViews
                         && state.data.fareProductType /= FPT.DELIVERY
 

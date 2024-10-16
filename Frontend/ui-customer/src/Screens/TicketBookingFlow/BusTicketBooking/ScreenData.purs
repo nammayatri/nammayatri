@@ -29,7 +29,7 @@ initData =
     }
   , props: {
     srcLat :  0.0000,
-    srcLong :  0.0000
-
+    srcLong :  0.0000,
+    showAllTickets : false
   }
   }

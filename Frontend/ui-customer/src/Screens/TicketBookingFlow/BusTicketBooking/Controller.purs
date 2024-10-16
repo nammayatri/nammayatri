@@ -60,6 +60,7 @@ data Action
   | BusTicketBookingListRespAC (Array API.MetroTicketBookingStatus)
   | TicketPressed API.MetroTicketBookingStatus
   | RepeatRideClicked API.MetroTicketBookingStatus
+  | ViewMoreClicked
 
 data ScreenOutput
   = GoToHomeScreen ST.BusTicketBookingState
@@ -87,5 +88,8 @@ eval (TicketPressed (API.MetroTicketBookingStatus ticketApiResp)) state = do
 
 eval (RepeatRideClicked ticketApiResp) state = 
   updateAndExit state $ GoToMetroTicketDetailsScreen ticketApiResp
+
+eval (ViewMoreClicked) state =
+  continue state { props { showAllTickets = not state.props.showAllTickets }}
 
 eval _ state = continue state

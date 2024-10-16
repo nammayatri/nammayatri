@@ -2992,4 +2992,5 @@ type BusTicketBookingData = {
 type BusTicketBookingProps = {
    srcLat :: Number
  , srcLong :: Number
+ , showAllTickets :: Boolean
 }
