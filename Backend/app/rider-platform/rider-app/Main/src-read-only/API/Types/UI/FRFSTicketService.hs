@@ -87,7 +87,7 @@ data FRFSDiscountRes = FRFSDiscountRes
     title :: Data.Text.Text,
     tnc :: Data.Text.Text
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
@@ -104,7 +104,7 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSQuoteConfirmReq = FRFSQuoteConfirmReq {discounts :: [FRFSDiscountReq]}

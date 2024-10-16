@@ -19,7 +19,6 @@ module SharedLogic.PublicTransport
   )
 where
 
-import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
@@ -29,13 +28,14 @@ import Kernel.Streaming.Kafka.Topic.PublicTransportSearch
 import Kernel.Streaming.MonadProducer
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Search as SLS
 
 sendPublicTransportSearchRequest ::
   MonadProducer PublicTransportSearch m =>
   Id Person.Person ->
-  DSearch.SearchRes ->
+  SLS.SearchRes ->
   m ()
-sendPublicTransportSearchRequest personId DSearch.SearchRes {..} = do
+sendPublicTransportSearchRequest personId SLS.SearchRes {..} = do
   producePublicTransportSearchMessage publicTransportSearch
   where
     publicTransportSearch =
