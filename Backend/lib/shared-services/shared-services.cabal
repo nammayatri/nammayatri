@@ -45,6 +45,7 @@ library
       IssueManagement.Domain.Action.Dashboard.Issue
       IssueManagement.Domain.Action.UI.Issue
       IssueManagement.Domain.Types.Issue.Comment
+      IssueManagement.Domain.Types.Issue.Common
       IssueManagement.Domain.Types.Issue.IGMConfig
       IssueManagement.Domain.Types.Issue.IGMIssue
       IssueManagement.Domain.Types.Issue.IssueCategory

@@ -2,9 +2,10 @@
 
 module IssueManagement.Domain.Types.Issue.IssueCategory where
 
-import Data.OpenApi
+import Data.OpenApi hiding (description)
 import EulerHS.Prelude hiding (id)
-import IssueManagement.Common
+import IssueManagement.Common hiding (description)
+import IssueManagement.Domain.Types.Issue.Common
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -24,7 +25,9 @@ data IssueCategory = IssueCategory
     label :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    igmCategory :: Maybe Text
+    igmCategory :: Maybe Text,
+    description :: Maybe Text,
+    filterOptionFn :: [FilterFn]
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq)
 

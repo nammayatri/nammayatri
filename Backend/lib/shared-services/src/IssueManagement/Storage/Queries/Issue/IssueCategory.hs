@@ -88,6 +88,7 @@ instance FromTType' BeamIC.IssueCategory IssueCategory where
           { id = Id id,
             merchantId = Id merchantId,
             merchantOperatingCityId = Id merchantOperatingCityId,
+            filterOptionFn = fromMaybe [] filterOptionFn,
             ..
           }
 
@@ -108,5 +109,7 @@ instance ToTType' BeamIC.IssueCategory IssueCategory where
         BeamIC.isActive = isActive,
         BeamIC.createdAt = createdAt,
         BeamIC.updatedAt = updatedAt,
-        BeamIC.igmCategory = igmCategory
+        BeamIC.igmCategory = igmCategory,
+        BeamIC.description = description,
+        BeamIC.filterOptionFn = if null filterOptionFn then Nothing else Just filterOptionFn
       }

@@ -23,6 +23,8 @@ import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import qualified IGM.Enums as Spec
 import qualified IssueManagement.Common as Common
+import qualified IssueManagement.Domain.Types.Issue.Common as DIC
+import qualified IssueManagement.Domain.Types.Issue.IssueOption as DIO
 import IssueManagement.Tools.UtilsTH hiding (label)
 
 data IssueOptionT f = IssueOptionT
@@ -40,7 +42,11 @@ data IssueOptionT f = IssueOptionT
     showOnlyWhenUserBlocked :: B.C f Bool,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
-    igmSubCategory :: B.C f (Maybe Spec.IssueSubCategory)
+    igmSubCategory :: B.C f (Maybe Spec.IssueSubCategory),
+    allowedAttachements :: B.C f (Maybe [DIO.AllowedAttachment]),
+    uiAction :: B.C f (Maybe DIO.UIAction),
+    onInputAction :: B.C f (Maybe DIO.OnInputAction),
+    filterTags :: B.C f (Maybe [DIC.FilterOptionTags])
   }
   deriving (Generic, B.Beamable)
 

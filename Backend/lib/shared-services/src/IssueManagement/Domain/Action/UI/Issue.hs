@@ -17,6 +17,7 @@ import GHC.IO.Handle (hFileSize)
 import GHC.IO.IOMode (IOMode (..))
 import IssueManagement.Common as Reexport
 import qualified IssueManagement.Common.UI.Issue as Common
+import qualified IssueManagement.Domain.Types.Issue.Common as D
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as D
 import qualified IssueManagement.Domain.Types.Issue.IssueConfig as D
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage as D
@@ -117,6 +118,19 @@ getIssueCategory (personId, _, merchantOpCityId) mbLanguage issueHandle identifi
       DRIVER -> ShortId "NAMMA_YATRI_PARTNER"
       CUSTOMER -> ShortId "NAMMA_YATRI"
 
+getIssueOptionV2 ::
+  ( BeamFlow m r,
+    EsqDBReplicaFlow m r,
+    CoreMetrics m
+  ) =>
+  (Id Person, Id Merchant, Id MerchantOperatingCity) ->
+  Common.GetIssueOptionReq ->
+  ServiceHandle m ->
+  Identifier ->
+  m Common.IssueOptionListRes
+getIssueOptionV2 (personId, merchantId, merchantOpCityId) req issueHandle identifier =
+  getIssueOption (personId, merchantId, merchantOpCityId) req.categoryId req.selectedOptionId req.issueReportId req.rideId req.language issueHandle identifier
+
 getIssueOption ::
   ( BeamFlow m r,
     EsqDBReplicaFlow m r,
@@ -147,6 +161,9 @@ getIssueOption (personId, merchantId, merchantOpCityId) issueCategoryId issueOpt
   issueMessageTranslationList <- case issueOptionId of
     Nothing -> CQIM.findAllActiveByCategoryIdAndLanguage issueCategoryId language identifier
     Just optionId -> CQIM.findAllActiveByOptionIdAndLanguage optionId language identifier
+
+  let msgFilterFns = concat $ map (\(iM, _, _) -> iM.filterOptionFn) issueMessageTranslationList
+  let filterFns = msgFilterFns ++ category.filterOptionFn
   let issueMessages = mkIssueMessageList (Just issueMessageTranslationList) language issueConfig mbRideInfoRes
   issueOptionTranslationList <- do
     case (issueOptionId, issueReportId) of
@@ -160,7 +177,7 @@ getIssueOption (personId, merchantId, merchantOpCityId) issueCategoryId issueOpt
       _ -> return ()
     if null issueMessages
       then pure []
-      else (filterOptions mbRideInfoRes category.label issueHandle) =<< CQIO.findAllActiveByMessageAndLanguage ((.id) $ last issueMessages) language identifier
+      else (filterOptions mbRideInfoRes category.label issueHandle filterFns) =<< CQIO.findAllActiveByMessageAndLanguage ((.id) $ last issueMessages) language identifier
   pure $
     Common.IssueOptionListRes
       { options = map (mkIssueOptionList issueConfig language mbRideInfoRes) issueOptionTranslationList,
@@ -170,10 +187,10 @@ getIssueOption (personId, merchantId, merchantOpCityId) issueCategoryId issueOpt
     utctimeToSeconds :: UTCTime -> Seconds
     utctimeToSeconds utcTime = Seconds . floor $ diffUTCTime utcTime (posixSecondsToUTCTime 0)
 
-    filterOptions :: BeamFlow m r => Maybe RideInfoRes -> Maybe Text -> ServiceHandle m -> [(D.IssueOption, Maybe D.IssueTranslation)] -> m [(D.IssueOption, Maybe D.IssueTranslation)]
-    filterOptions mbRideInfoRes mbCategoryLabel iHandle optionsWithTranslations =
+    filterOptions :: BeamFlow m r => Maybe RideInfoRes -> Maybe Text -> ServiceHandle m -> [D.FilterFn] -> [(D.IssueOption, Maybe D.IssueTranslation)] -> m [(D.IssueOption, Maybe D.IssueTranslation)]
+    filterOptions mbRideInfoRes mbCategoryLabel iHandle mFilterFns optionsWithTranslations =
       filterOptionsBasedOnVariantsAndRideStatus mbRideInfoRes
-        <$> filterOptionsBasedOnCategoryLabel mbCategoryLabel iHandle mbRideInfoRes optionsWithTranslations
+        <$> filterOptionsBaseOnTags mbCategoryLabel iHandle mbRideInfoRes optionsWithTranslations mFilterFns
 
     filterOptionsBasedOnVariantsAndRideStatus :: Maybe RideInfoRes -> [(D.IssueOption, Maybe D.IssueTranslation)] -> [(D.IssueOption, Maybe D.IssueTranslation)]
     filterOptionsBasedOnVariantsAndRideStatus mbRideInfoRes = do
@@ -184,6 +201,29 @@ getIssueOption (personId, merchantId, merchantOpCityId) issueCategoryId issueOpt
             (isNothing mbRideVariant || maybe True (\variant -> variant `notElem` (.restrictedVariants) (fst optionWithTranslation)) mbRideVariant)
               && (isNothing mbRideStatus || maybe True (\rideStatus -> rideStatus `notElem` (.restrictedRideStatuses) (fst optionWithTranslation)) mbRideStatus)
         )
+
+    filterOptionsBaseOnTags :: BeamFlow m r => Maybe Text -> ServiceHandle m -> Maybe RideInfoRes -> [(D.IssueOption, Maybe D.IssueTranslation)] -> [D.FilterFn] -> m [(D.IssueOption, Maybe D.IssueTranslation)]
+    filterOptionsBaseOnTags mbCategoryLabel iHandle mbRideInfoRes optionsWithTranslations aFilterFns = case aFilterFns of
+      [] -> filterOptionsBasedOnCategoryLabel mbCategoryLabel iHandle mbRideInfoRes optionsWithTranslations -- ToDo: Kept for backward compatibility, remove once UI rollout
+      filterFns ->
+        filterM
+          ( \(option, _) ->
+              and <$> mapM (\filterFn -> runFilterFn filterFn option iHandle mbRideInfoRes) filterFns
+          )
+          optionsWithTranslations
+
+    runFilterFn :: BeamFlow m r => D.FilterFn -> D.IssueOption -> ServiceHandle m -> Maybe RideInfoRes -> m Bool
+    runFilterFn filterFn option iHandle mbRideInfoRes = do
+      case filterFn of
+        D.UserBlocked -> do
+          person <- iHandle.findPersonById personId >>= fromMaybeM (PersonNotFound personId.getId)
+          case person.blocked of
+            Just True -> return $ D.OnUserBlocked `notElem` option.filterTags
+            _ -> return $ D.OnUserBlocked `elem` option.filterTags
+        D.NoFareDiscrepancy ->
+          if ((.computedPrice) =<< mbRideInfoRes) == ((.estimatedFare) <$> mbRideInfoRes)
+            then return $ D.OnNoFareDiscrepancy `notElem` option.filterTags
+            else return True
 
     filterOptionsBasedOnCategoryLabel :: BeamFlow m r => Maybe Text -> ServiceHandle m -> Maybe RideInfoRes -> [(D.IssueOption, Maybe D.IssueTranslation)] -> m [(D.IssueOption, Maybe D.IssueTranslation)]
     filterOptionsBasedOnCategoryLabel mbCategoryLabel iHandle mbRideInfoRes optionsWithTranslations = case mbCategoryLabel of

@@ -136,6 +136,7 @@ instance FromTType' BeamIM.IssueMessage IssueMessage where
             referenceCategoryId = Id <$> referenceCategoryId,
             referenceOptionId = Id <$> referenceOptionId,
             mediaFiles = Id <$> mediaFiles,
+            filterOptionFn = fromMaybe [] filterOptionFn,
             ..
           }
 
@@ -158,5 +159,6 @@ instance ToTType' BeamIM.IssueMessage IssueMessage where
         BeamIM.merchantId = getId merchantId,
         BeamIM.label = label,
         BeamIM.createdAt = createdAt,
-        BeamIM.updatedAt = updatedAt
+        BeamIM.updatedAt = updatedAt,
+        BeamIM.filterOptionFn = if null filterOptionFn then Nothing else Just filterOptionFn
       }

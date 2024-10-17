@@ -76,6 +76,7 @@ handler = externalHandler
         :<|> fetchMedia (personId, merchantId)
         :<|> getIssueCategory (personId, merchantId)
         :<|> getIssueOption (personId, merchantId)
+        :<|> getIssueOptionV2 (personId, merchantId)
         :<|> issueInfo (personId, merchantId)
         :<|> updateIssueOption (personId, merchantId)
         :<|> deleteIssue (personId, merchantId)
@@ -432,6 +433,12 @@ getIssueOption (personId, merchantId) issueCategoryId issueOptionId issueReportI
   personCityInfo <- CQPerson.findCityInfoById personId >>= fromMaybeM (PersonCityInformationNotFound personId.getId)
 
   Common.getIssueOption (cast personId, cast merchantId, cast personCityInfo.merchantOperatingCityId) issueCategoryId issueOptionId issueReportId mbRideId language customerIssueHandle CUSTOMER
+
+getIssueOptionV2 :: (Id SP.Person, Id DM.Merchant) -> Common.GetIssueOptionReq -> FlowHandler Common.IssueOptionListRes
+getIssueOptionV2 (personId, merchantId) req = withFlowHandlerAPI $ do
+  personCityInfo <- CQPerson.findCityInfoById personId >>= fromMaybeM (PersonCityInformationNotFound personId.getId)
+
+  Common.getIssueOptionV2 (cast personId, cast merchantId, cast personCityInfo.merchantOperatingCityId) req customerIssueHandle CUSTOMER
 
 updateIssueStatus :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueReport -> Maybe Language -> Common.IssueStatusUpdateReq -> FlowHandler Common.IssueStatusUpdateRes
 updateIssueStatus (personId, merchantId) issueReportId language req = withFlowHandlerAPI $ do
