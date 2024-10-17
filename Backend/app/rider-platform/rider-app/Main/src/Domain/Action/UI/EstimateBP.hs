@@ -3,7 +3,7 @@
 
 module Domain.Action.UI.EstimateBP where
 
---import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride as Common
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride as Common
 import API.Types.UI.EstimateBP as DTEst
 import qualified API.Types.UI.EstimateBP
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride

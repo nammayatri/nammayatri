@@ -19,7 +19,7 @@ module Domain.Action.Dashboard.Ride
     getRideList,
     rideInfo,
     getRideRideinfo,
-    multipleRideCancel,
+    postRideCancel,
     --   MultipleRideCancelReq,
     rideSync,
     ticketRideList,
@@ -471,9 +471,10 @@ castCancellationSource = \case
 
 bookingCancel ::
   (CacheFlow m r, EsqDBFlow m r) =>
-  BookingCancelledReq ->
+  Common.BookingCancelledReq ->
   m ()
-bookingCancel BookingCancelledReq {..} = do
+bookingCancel Common.BookingCancelledReq {bookingId = reqBookingId} = do
+  let bookingId = cast @Common.Booking @DTB.Booking reqBookingId
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bookingId.getId)
   unless (isBookingCancellable booking) $
     throwError (BookingInvalidStatus (show booking.status))
@@ -512,10 +513,13 @@ buildBookingCancellationReason booking mbRideId = do
         updatedAt = now
       }
 
-multipleRideCancel ::
-  MultipleRideCancelReq ->
+-- TODO rename
+postRideCancel ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.MultipleRideCancelReq ->
   Flow APISuccess
-multipleRideCancel req = do
+postRideCancel _ _ req = do
   mapM_ bookingCancel req.multipleRideCancelInfo
   pure Success
 

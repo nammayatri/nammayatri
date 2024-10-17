@@ -20,10 +20,7 @@ imports:
   GetRoutesResp: Kernel.External.Maps
   MultipleRideSyncResp: Dashboard.Common.Ride
   CancellationReasonCode: Dashboard.Common.Booking
-  Booking: Domain.Types.Booking
-  CancellationStage: Domain.Types.CancellationReason
-
-
+  Booking: Dashboard.Common
 
 module: Ride
 
@@ -244,6 +241,8 @@ types:
     - recordType: NewType
     - multipleRideCancelInfo: [BookingCancelledReq]
     - derive: "'HideSecrets"
+  CancellationStage:
+    - enum: "OnSearch, OnInit, OnConfirm, OnAssign"
 
 
   # BookingStatus:

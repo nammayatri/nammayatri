@@ -9,8 +9,6 @@ import qualified Dashboard.Common.Ride
 import qualified Dashboard.RiderPlatform.Ride
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types
-import qualified Domain.Types.Booking
-import qualified Domain.Types.CancellationReason
 import qualified Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types
@@ -29,9 +27,9 @@ import Servant
 import Servant.Client
 
 data BookingCancelledReq = BookingCancelledReq
-  { bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
+  { bookingId :: Kernel.Types.Id.Id Dashboard.Common.Booking,
     cancellationReasonCode :: Dashboard.Common.Booking.CancellationReasonCode,
-    cancellationStage :: Domain.Types.CancellationReason.CancellationStage,
+    cancellationStage :: API.Types.RiderPlatform.Management.Ride.CancellationStage,
     additionalInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
@@ -43,6 +41,14 @@ data CancellationSource
   | ByMerchant
   | ByAllocator
   | ByApplication
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CancellationStage
+  = OnSearch
+  | OnInit
+  | OnConfirm
+  | OnAssign
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -86,7 +92,7 @@ instance Kernel.Types.HideSecrets.HideSecrets MultipleRideSyncReq where
 
 data RideInfoRes = RideInfoRes
   { rideId :: Kernel.Types.Id.Id Dashboard.Common.Ride,
-    bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
+    bookingId :: Kernel.Types.Id.Id Dashboard.Common.Booking,
     rideStatus :: API.Types.RiderPlatform.Management.Ride.RideStatus,
     customerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     customerPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -167,7 +173,7 @@ data RideStatus
 
 data ShareRideInfoRes = ShareRideInfoRes
   { id :: Kernel.Types.Id.Id Dashboard.Common.Ride,
-    bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
+    bookingId :: Kernel.Types.Id.Id Dashboard.Common.Booking,
     status :: API.Types.RiderPlatform.Management.Ride.RideStatus,
     driverName :: Kernel.Prelude.Text,
     driverNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
