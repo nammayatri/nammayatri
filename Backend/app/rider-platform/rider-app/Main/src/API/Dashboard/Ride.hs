@@ -27,24 +27,22 @@ import Storage.Beam.SystemConfigs ()
 
 type API =
   "ride"
-    :> ( MultipleRideCancelAPI
-           :<|> Common.TicketRideListAPI
-       )
+    :> Common.TicketRideListAPI
 
 -- type ShareRideInfoAPI = Common.ShareRideInfoAPI
 
-type MultipleRideCancelAPI =
-  "cancel"
-    :> ReqBody '[JSON] DRide.MultipleRideCancelReq
-    :> Post '[JSON] APISuccess
+-- type MultipleRideCancelAPI =
+--   "cancel"
+--     :> ReqBody '[JSON] DRide.MultipleRideCancelReq
+--     :> Post '[JSON] APISuccess
 
 handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
+handler =
   -- callGetTripRoute merchantId
   -- callGetPickupRoute merchantId
-  multipleRideCancel -- FIXME merchantId ?
+  -- multipleRideCancel -- FIXME merchantId ?
   --   :<|> multipleRideSync merchantId
-    :<|> ticketRideList merchantId
+  ticketRideList
 
 -- shareRideInfo ::
 --   ShortId DM.Merchant ->
@@ -77,10 +75,10 @@ handler merchantId =
 --   merchant <- findMerchantByShortId merchantShortId
 --   DRide.rideInfo merchant.id rideId
 
-multipleRideCancel ::
-  DRide.MultipleRideCancelReq ->
-  FlowHandler APISuccess
-multipleRideCancel = withFlowHandlerAPI . DRide.multipleRideCancel
+-- multipleRideCancel ::
+--   DRide.MultipleRideCancelReq ->
+--   FlowHandler APISuccess
+-- multipleRideCancel = withFlowHandlerAPI . DRide.multipleRideCancel
 
 -- multipleRideSync ::
 --   ShortId DM.Merchant ->

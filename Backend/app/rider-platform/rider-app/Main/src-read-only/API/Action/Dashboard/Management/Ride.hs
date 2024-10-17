@@ -17,6 +17,7 @@ import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Maps
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
@@ -24,7 +25,7 @@ import Servant
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.RiderPlatform.Management.Ride.API)
-handler merchantId city = getRideList merchantId city :<|> getRideRideinfo merchantId city :<|> getRideInfo merchantId city :<|> getRideRideInfo merchantId city :<|> getRideTripRoute merchantId city :<|> getRidePickupRoute merchantId city :<|> postRideSync merchantId city
+handler merchantId city = getRideList merchantId city :<|> getRideRideinfo merchantId city :<|> getRideInfo merchantId city :<|> getRideRideInfo merchantId city :<|> getRideTripRoute merchantId city :<|> getRidePickupRoute merchantId city :<|> postRideSync merchantId city :<|> postRideCancel merchantId city
 
 getRideList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Dashboard.RiderPlatform.Ride.BookingStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.RideListRes)
 getRideList a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Ride.getRideList a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
@@ -46,3 +47,6 @@ getRidePickupRoute a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard
 
 postRideSync :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.Ride.MultipleRideSyncReq -> Environment.FlowHandler Dashboard.Common.Ride.MultipleRideSyncResp)
 postRideSync a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Ride.postRideSync a3 a2 a1
+
+postRideCancel :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.Ride.MultipleRideCancelReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postRideCancel a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Ride.postRideCancel a3 a2 a1

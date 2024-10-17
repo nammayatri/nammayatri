@@ -19,6 +19,10 @@ imports:
   BaseUrl: Kernel.Prelude
   GetRoutesResp: Kernel.External.Maps
   MultipleRideSyncResp: Dashboard.Common.Ride
+  CancellationReasonCode: Dashboard.Common.Booking
+  Booking: Domain.Types.Booking
+  CancellationStage: Domain.Types.CancellationReason
+
 
 
 module: Ride
@@ -88,6 +92,29 @@ apis:
         type: MultipleRideSyncResp
       migrate:
         endpoint: RideAPI MultipleRideSyncRideEndpoint
+  - POST:
+      endpoint: /cancel
+      auth: ApiAuth APP_BACKEND_MANAGEMENT RIDES MULTIPLE_RIDE_CANCEL
+      request:
+        type: MultipleRideCancelReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: RideAPI MultipleRideCancelRideEndpoint
+
+
+# type MultipleRideCancelAPI =
+#   "cancel"
+#     :> ReqBody '[JSON] DRide.MultipleRideCancelReq
+#     :> Post '[JSON] APISuccess
+
+
+# type MultipleRideSyncAPI =
+#   "sync"
+#     :> ReqBody '[JSON] MultipleRideSyncReq
+#     :> Post '[JSON] MultipleRideSyncResp
+
+
 
 
 types:
@@ -208,6 +235,15 @@ types:
   MultipleRideItem:
     - recordType: NewType
     - rideId: Id Ride
+  BookingCancelledReq:
+    - bookingId: Id Booking
+    - cancellationReasonCode: CancellationReasonCode
+    - cancellationStage: CancellationStage
+    - additionalInfo: Maybe Text
+  MultipleRideCancelReq:
+    - recordType: NewType
+    - multipleRideCancelInfo: [BookingCancelledReq]
+    - derive: "'HideSecrets"
 
 
   # BookingStatus:

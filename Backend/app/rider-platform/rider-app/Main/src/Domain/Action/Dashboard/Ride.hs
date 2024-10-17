@@ -20,7 +20,7 @@ module Domain.Action.Dashboard.Ride
     rideInfo,
     getRideRideinfo,
     multipleRideCancel,
-    MultipleRideCancelReq,
+    --   MultipleRideCancelReq,
     rideSync,
     ticketRideList,
     getRideTripRoute,
@@ -82,22 +82,22 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 
-data BookingCancelledReq = BookingCancelledReq
-  { bookingId :: Id DTB.Booking,
-    cancellationReasonCode :: CancellationReasonCode,
-    cancellationStage :: CancellationStage,
-    additionalInfo :: Maybe Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+-- data BookingCancelledReq = BookingCancelledReq
+--   { bookingId :: Id DTB.Booking,
+--     cancellationReasonCode :: CancellationReasonCode,
+--     cancellationStage :: CancellationStage,
+--     additionalInfo :: Maybe Text
+--   }
+--   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-newtype MultipleRideCancelReq = MultipleRideCancelReq
-  { multipleRideCancelInfo :: [BookingCancelledReq]
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+-- newtype MultipleRideCancelReq = MultipleRideCancelReq
+--   { multipleRideCancelInfo :: [BookingCancelledReq]
+--   }
+--   deriving stock (Show, Generic)
+--   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-instance Common.HideSecrets MultipleRideCancelReq where
-  hideSecrets = identity
+-- instance Common.HideSecrets MultipleRideCancelReq where
+--   hideSecrets = identity
 
 ---------------------------------------------------------------------
 

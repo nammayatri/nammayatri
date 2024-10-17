@@ -4,15 +4,19 @@
 module API.Types.RiderPlatform.Management.Ride where
 
 import qualified Dashboard.Common
+import qualified Dashboard.Common.Booking
 import qualified Dashboard.Common.Ride
 import qualified Dashboard.RiderPlatform.Ride
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types
+import qualified Domain.Types.Booking
+import qualified Domain.Types.CancellationReason
 import qualified Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types
 import qualified Kernel.External.Maps
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Centesimal
 import Kernel.Types.Common
 import qualified Kernel.Types.Common
@@ -23,6 +27,15 @@ import qualified Kernel.Types.Price
 import qualified Kernel.Types.Time
 import Servant
 import Servant.Client
+
+data BookingCancelledReq = BookingCancelledReq
+  { bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
+    cancellationReasonCode :: Dashboard.Common.Booking.CancellationReasonCode,
+    cancellationStage :: Domain.Types.CancellationReason.CancellationStage,
+    additionalInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data CancellationSource
   = ByUser
@@ -53,6 +66,13 @@ data FareBreakupEntityType
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+newtype MultipleRideCancelReq = MultipleRideCancelReq {multipleRideCancelInfo :: [API.Types.RiderPlatform.Management.Ride.BookingCancelledReq]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets MultipleRideCancelReq where
+  hideSecrets = Kernel.Prelude.identity
+
 newtype MultipleRideItem = MultipleRideItem {rideId :: Kernel.Types.Id.Id Dashboard.Common.Ride}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -66,7 +86,7 @@ instance Kernel.Types.HideSecrets.HideSecrets MultipleRideSyncReq where
 
 data RideInfoRes = RideInfoRes
   { rideId :: Kernel.Types.Id.Id Dashboard.Common.Ride,
-    bookingId :: Kernel.Types.Id.Id Dashboard.Common.Booking,
+    bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     rideStatus :: API.Types.RiderPlatform.Management.Ride.RideStatus,
     customerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     customerPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -147,7 +167,7 @@ data RideStatus
 
 data ShareRideInfoRes = ShareRideInfoRes
   { id :: Kernel.Types.Id.Id Dashboard.Common.Ride,
-    bookingId :: Kernel.Types.Id.Id Dashboard.Common.Booking,
+    bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     status :: API.Types.RiderPlatform.Management.Ride.RideStatus,
     driverName :: Kernel.Prelude.Text,
     driverNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -185,7 +205,7 @@ data SosStatus
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("ride" :> (GetRideList :<|> GetRideRideinfo :<|> GetRideInfo :<|> GetRideRideInfo :<|> GetRideTripRoute :<|> GetRidePickupRoute :<|> PostRideSync))
+type API = ("ride" :> (GetRideList :<|> GetRideRideinfo :<|> GetRideInfo :<|> GetRideRideInfo :<|> GetRideTripRoute :<|> GetRidePickupRoute :<|> PostRideSync :<|> PostRideCancel))
 
 type GetRideList =
   ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
@@ -234,6 +254,8 @@ type GetRidePickupRoute =
 
 type PostRideSync = ("sync" :> ReqBody '[JSON] API.Types.RiderPlatform.Management.Ride.MultipleRideSyncReq :> Post '[JSON] Dashboard.Common.Ride.MultipleRideSyncResp)
 
+type PostRideCancel = ("cancel" :> ReqBody '[JSON] API.Types.RiderPlatform.Management.Ride.MultipleRideCancelReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
 data RideAPIs = RideAPIs
   { getRideList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Dashboard.RiderPlatform.Ride.BookingStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.Ride.RideListRes,
     getRideRideinfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.Ride.RideInfoRes,
@@ -241,13 +263,14 @@ data RideAPIs = RideAPIs
     getRideRideInfo :: Kernel.Types.Id.ShortId Dashboard.Common.Ride -> EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.Ride.ShareRideInfoRes,
     getRideTripRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> EulerHS.Types.EulerClient Kernel.External.Maps.GetRoutesResp,
     getRidePickupRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> EulerHS.Types.EulerClient Kernel.External.Maps.GetRoutesResp,
-    postRideSync :: API.Types.RiderPlatform.Management.Ride.MultipleRideSyncReq -> EulerHS.Types.EulerClient Dashboard.Common.Ride.MultipleRideSyncResp
+    postRideSync :: API.Types.RiderPlatform.Management.Ride.MultipleRideSyncReq -> EulerHS.Types.EulerClient Dashboard.Common.Ride.MultipleRideSyncResp,
+    postRideCancel :: API.Types.RiderPlatform.Management.Ride.MultipleRideCancelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkRideAPIs :: (Client EulerHS.Types.EulerClient API -> RideAPIs)
 mkRideAPIs rideClient = (RideAPIs {..})
   where
-    getRideList :<|> getRideRideinfo :<|> getRideInfo :<|> getRideRideInfo :<|> getRideTripRoute :<|> getRidePickupRoute :<|> postRideSync = rideClient
+    getRideList :<|> getRideRideinfo :<|> getRideInfo :<|> getRideRideInfo :<|> getRideTripRoute :<|> getRidePickupRoute :<|> postRideSync :<|> postRideCancel = rideClient
 
 data RideEndpointDSL
   = GetRideListEndpoint
@@ -257,5 +280,6 @@ data RideEndpointDSL
   | GetRideTripRouteEndpoint
   | GetRidePickupRouteEndpoint
   | PostRideSyncEndpoint
+  | PostRideCancelEndpoint
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

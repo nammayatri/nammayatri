@@ -71,8 +71,7 @@ data AppBackendAPIs = AppBackendAPIs
   }
 
 data RidesAPIs = RidesAPIs
-  { multipleRideCancel :: DCM.MultipleRideCancelReq -> Euler.EulerClient APISuccess,
-    ticketRideList :: Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.TicketRideListRes
+  { ticketRideList :: Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.TicketRideListRes
   }
 
 data ListIssueAPIs = ListIssueAPIs
@@ -137,8 +136,7 @@ mkAppBackendAPIs merchantId city token = do
       :<|> invoiceClientDSL =
         clientWithMerchantAndCity (Proxy :: Proxy BAP.OperationsAPI) merchantId city token
 
-    multipleRideCancel
-      :<|> ticketRideList = ridesClient
+    ticketRideList = ridesClient
 
     listIssue
       :<|> ticketStatusCallBack = issueClient
