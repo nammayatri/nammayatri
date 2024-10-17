@@ -1,9 +1,6 @@
-module ExternalBPP.CallAPI
-  ( module ExternalBPP.CallAPI,
-    module Reexport,
-  )
-where
+module ExternalBPP.CallAPI where
 
+import qualified Beckn.ACL.FRFS.Cancel as ACL
 import qualified Beckn.ACL.FRFS.Confirm as ACL
 import qualified Beckn.ACL.FRFS.Init as ACL
 import qualified Beckn.ACL.FRFS.Search as ACL
@@ -11,7 +8,8 @@ import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import BecknV2.OnDemand.Enums
-import qualified Domain.Action.Beckn.FRFS.OnConfirm as DOnConfirm
+import Domain.Action.Beckn.FRFS.Common
+import qualified Domain.Action.Beckn.FRFS.OnCancel as DOnCancel
 import qualified Domain.Action.Beckn.FRFS.OnInit as DOnInit
 import qualified Domain.Action.Beckn.FRFS.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.FRFS.OnStatus as DOnStatus
@@ -22,9 +20,9 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Environment
 import qualified ExternalBPP.Bus.Flow as BusFlow
-import ExternalBPP.Common.Cancel as Reexport
 import qualified ExternalBPP.Metro.Flow as MetroFlow
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
@@ -82,8 +80,27 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       (merchant', booking') <- DOnInit.validateRequest onInitReq
       DOnInit.onInit onInitReq merchant' booking'
 
-confirm :: Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> Flow ()
-confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking = do
+cancel :: Merchant -> MerchantOperatingCity -> BecknConfig -> Spec.CancellationType -> DBooking.FRFSTicketBooking -> Flow ()
+cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
+  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) >>= return . fmap (.providerConfig)
+  case (bapConfig.vehicleCategory, integratedBPPConfig) of
+    (METRO, Nothing) -> do
+      fork "FRFS ONDC Cancel Req" $ do
+        frfsConfig <-
+          CQFRFSConfig.findByMerchantOperatingCityId merchantOperatingCity.id
+            >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
+        providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
+        ttl <- bapConfig.cancelTTLSec & fromMaybeM (InternalError "Invalid ttl")
+        when (cancellationType == Spec.CONFIRM_CANCEL) $ Redis.setExp (DOnCancel.makecancelledTtlKey booking.id) True ttl
+        bknCancelReq <- ACL.buildCancelReq booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} frfsConfig.cancellationReasonId cancellationType merchantOperatingCity.city
+        logDebug $ "FRFS CancelReq " <> encodeToText bknCancelReq
+        void $ CallFRFSBPP.cancel providerUrl bknCancelReq merchant.id
+    (METRO, Just _config) -> return ()
+    (BUS, Just _config) -> return ()
+    _ -> throwError $ InternalError ("Unsupported FRFS Flow vehicleCategory : " <> show bapConfig.vehicleCategory)
+
+confirm :: (DOrder -> Flow ()) -> Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> Flow ()
+confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking = do
   integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) >>= return . fmap (.providerConfig)
   case (bapConfig.vehicleCategory, integratedBPPConfig) of
     (METRO, Nothing) -> do
@@ -99,19 +116,15 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
           CQFRFSConfig.findByMerchantOperatingCityId merchantOperatingCity.id
             >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
         onConfirmReq <- MetroFlow.confirm merchant merchantOperatingCity frfsConfig config bapConfig (mRiderName, mRiderNumber) booking
-        processOnConfirm onConfirmReq
+        onConfirmHandler onConfirmReq
     (BUS, Just config) -> do
       fork "FRFS EBIX Confirm Req" $ do
         frfsConfig <-
           CQFRFSConfig.findByMerchantOperatingCityId merchantOperatingCity.id
             >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
         onConfirmReq <- BusFlow.confirm merchant merchantOperatingCity frfsConfig config bapConfig (mRiderName, mRiderNumber) booking
-        processOnConfirm onConfirmReq
+        onConfirmHandler onConfirmReq
     _ -> throwError $ InternalError ("Unsupported FRFS Flow vehicleCategory : " <> show bapConfig.vehicleCategory)
-  where
-    processOnConfirm onConfirmReq = do
-      (merchant', booking') <- DOnConfirm.validateRequest onConfirmReq
-      DOnConfirm.onConfirm merchant' booking' onConfirmReq
 
 status :: Id Merchant -> MerchantOperatingCity -> BecknConfig -> DBooking.FRFSTicketBooking -> Flow ()
 status merchantId merchantOperatingCity bapConfig booking = do
