@@ -15,3 +15,8 @@ ALTER TABLE atlas_driver_offer_bpp.purchase_history ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.purchase_history ADD COLUMN currency character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.purchase_history ADD COLUMN vehicle_category text ;

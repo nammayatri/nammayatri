@@ -25,6 +25,7 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Plan as DPlan
 import Domain.Types.PurchaseHistory
 import Domain.Types.TransporterConfig ()
+import qualified Domain.Types.VehicleCategory as DTVehCategory
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
@@ -46,6 +47,7 @@ import Storage.Queries.DriverStats as QDS
 import Storage.Queries.Person as Person
 import Storage.Queries.PurchaseHistory as PHistory
 import Storage.Queries.TranslationsExtra as SQT
+import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Utils.Common.Cac.KeyNameConstants
 
@@ -247,6 +249,10 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
   let istTime = addUTCTime timeDiffFromUtc now
       currentDate = show $ utctDay istTime
       calculatedAmount = fromIntegral coins * transporterConfig.coinConversionRate
+  vehCategory <-
+    QVeh.findById driverId
+      >>= fromMaybeM (DriverWithoutVehicle driverId.getId)
+      <&> (\vehicle -> fromMaybe DTVehCategory.AUTO_CATEGORY (vehicle.category))
   if coinBalance >= coins
     then do
       let history =
@@ -260,7 +266,8 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
                 currency,
                 createdAt = now,
                 updatedAt = now,
-                title = "converted from coins"
+                title = "converted from coins",
+                vehicleCategory = Just vehCategory
               }
       histories <- CHistory.getDriverCoinInfo driverId timeDiffFromUtc
       let result = accumulateCoins coins histories

@@ -28,7 +28,8 @@ instance FromTType' Beam.PurchaseHistory Domain.Types.PurchaseHistory.PurchaseHi
             merchantOptCityId = merchantOptCityId,
             numCoins = numCoins,
             title = title,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            vehicleCategory = vehicleCategory
           }
 
 instance ToTType' Beam.PurchaseHistory Domain.Types.PurchaseHistory.PurchaseHistory where
@@ -43,5 +44,6 @@ instance ToTType' Beam.PurchaseHistory Domain.Types.PurchaseHistory.PurchaseHist
         Beam.merchantOptCityId = merchantOptCityId,
         Beam.numCoins = numCoins,
         Beam.title = title,
-        Beam.updatedAt = updatedAt
+        Beam.updatedAt = updatedAt,
+        Beam.vehicleCategory = vehicleCategory
       }
