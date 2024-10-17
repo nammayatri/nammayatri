@@ -1,33 +1,65 @@
 module ExternalBPP.Metro.ExternalAPI.CallAPI where
 
-import Domain.Types
-import Domain.Types.BecknConfig
-import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
-import Domain.Types.Merchant
-import Domain.Types.MerchantOperatingCity
+import qualified ExternalBPP.Metro.ExternalAPI.CMRL.BusinessHour as CMRLBusinessHour
+import qualified ExternalBPP.Metro.ExternalAPI.CMRL.DurationDetails as CMRLDurationDetails
+import qualified ExternalBPP.Metro.ExternalAPI.CMRL.FareByOriginDest as CMRLFareByOriginDest
+import qualified ExternalBPP.Metro.ExternalAPI.CMRL.FareMatrix as CMRLFareMatrix
+import qualified ExternalBPP.Metro.ExternalAPI.CMRL.PassengerViewStatus as CMRLPassengerViewStatus
+import qualified ExternalBPP.Metro.ExternalAPI.CMRL.QR as CMRLQR
+import qualified ExternalBPP.Metro.ExternalAPI.CMRL.StationList as CMRLStationList
+import qualified ExternalBPP.Metro.ExternalAPI.CMRL.TicketStatus as CMRLTicketStatus
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Config
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
 import Kernel.Types.CacheFlow
-import Kernel.Types.Time
+import Kernel.Types.Common
 
-getOrderId :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => ProviderConfig -> FRFSTicketBooking -> m Text
-getOrderId config _booking = do
+getBusinessHour :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, CacheFlow m r, EncFlow m r) => ProviderConfig -> m CMRLBusinessHour.BusinessHourResult
+getBusinessHour config = do
   case config of
+    CMRL config' -> CMRLBusinessHour.getBusinessHour config'
     _ -> error "Unimplemented!"
 
-getPaymentDetails :: Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m BknPaymentParams
-getPaymentDetails _merchant _merchantOperatingCity _bapConfig (_mRiderName, _mRiderNumber) _booking = error "Unimplemented!"
-
-getTicketStatus :: (CoreMetrics m, MonadFlow m, EncFlow m r, CacheFlow m r) => ProviderConfig -> FRFSTicketBooking -> Text -> m Text
-getTicketStatus config _booking _txnUUID = do
+getDurationDetails :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => ProviderConfig -> CMRLDurationDetails.DurationDetailsReq -> m [CMRLDurationDetails.DurationDetailsResult]
+getDurationDetails config req = do
   case config of
+    CMRL config' -> CMRLDurationDetails.getDurationDetails config' req
     _ -> error "Unimplemented!"
 
-generateQRByProvider :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => ProviderConfig -> Text -> Seconds -> FRFSTicketBooking -> m [(Text, Text, UTCTime, Text)]
-generateQRByProvider config _txnUUID _qrTtl _booking = do
+getFareByOriginDest :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => ProviderConfig -> CMRLFareByOriginDest.FareByOriginDestReq -> m HighPrecMoney
+getFareByOriginDest config fareReq = do
   case config of
+    CMRL config' -> CMRLFareByOriginDest.getFareByOriginDest config' fareReq
+    _ -> error "Unimplemented!"
+
+getFareMatrix :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => ProviderConfig -> m [CMRLFareMatrix.FareMatrixRes]
+getFareMatrix config = do
+  case config of
+    CMRL config' -> CMRLFareMatrix.getFareMatrix config'
+    _ -> error "Unimplemented!"
+
+generateQRTickets :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => ProviderConfig -> CMRLQR.GenerateQRReq -> m [CMRLQR.TicketInfo]
+generateQRTickets config qrReq = do
+  case config of
+    CMRL config' -> CMRLQR.generateQRTickets config' qrReq
+    _ -> error "Unimplemented!"
+
+getPassengerViewStatus :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => ProviderConfig -> CMRLPassengerViewStatus.PassengerViewStatusReq -> m [CMRLPassengerViewStatus.TicketDetails]
+getPassengerViewStatus config req = do
+  case config of
+    CMRL config' -> CMRLPassengerViewStatus.getPassengerViewStatus config' req
+    _ -> error "Unimplemented!"
+
+getStationList :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => ProviderConfig -> m [CMRLStationList.Station]
+getStationList config = do
+  case config of
+    CMRL config' -> CMRLStationList.getStationList config'
+    _ -> error "Unimplemented!"
+
+getTicketStatus :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) => ProviderConfig -> CMRLTicketStatus.TicketStatusReq -> m CMRLTicketStatus.TicketStatusResult
+getTicketStatus config req = do
+  case config of
+    CMRL config' -> CMRLTicketStatus.getTicketStatus config' req
     _ -> error "Unimplemented!"

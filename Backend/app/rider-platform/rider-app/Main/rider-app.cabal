@@ -263,10 +263,14 @@ library
       ExternalBPP.CallAPI
       ExternalBPP.Metro.ExternalAPI.CallAPI
       ExternalBPP.Metro.ExternalAPI.CMRL.Auth
-      ExternalBPP.Metro.ExternalAPI.CMRL.Order
-      ExternalBPP.Metro.ExternalAPI.CMRL.Payment
-      ExternalBPP.Metro.ExternalAPI.CMRL.Status
-      ExternalBPP.Metro.ExternalAPI.CMRL.Verification
+      ExternalBPP.Metro.ExternalAPI.CMRL.BusinessHour
+      ExternalBPP.Metro.ExternalAPI.CMRL.DurationDetails
+      ExternalBPP.Metro.ExternalAPI.CMRL.FareByOriginDest
+      ExternalBPP.Metro.ExternalAPI.CMRL.FareMatrix
+      ExternalBPP.Metro.ExternalAPI.CMRL.PassengerViewStatus
+      ExternalBPP.Metro.ExternalAPI.CMRL.QR
+      ExternalBPP.Metro.ExternalAPI.CMRL.StationList
+      ExternalBPP.Metro.ExternalAPI.CMRL.TicketStatus
       ExternalBPP.Metro.Flow
       Lib.JourneyPlannerTypes
       Lib.Mesh
