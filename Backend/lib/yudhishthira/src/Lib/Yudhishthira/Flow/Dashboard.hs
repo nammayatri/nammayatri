@@ -194,6 +194,9 @@ createLogicData defaultVal (Just inputValue) = do
     A.Success a -> return a
     A.Error err -> throwError $ InvalidRequest ("Not able to merge input data into default value. Getting error: " <> show err)
 
+verifyDynamicLogic :: (BeamFlow m r, ToJSON a) => [Value] -> a -> m Lib.Yudhishthira.Types.RunLogicResp
+verifyDynamicLogic logics data_ = runLogics logics data_
+
 verifyAndUpdateDynamicLogic ::
   forall m r a b.
   (BeamFlow m r, ToJSON a, FromJSON b) =>

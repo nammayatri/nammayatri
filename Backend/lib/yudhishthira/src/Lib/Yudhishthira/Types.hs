@@ -6,6 +6,11 @@ module Lib.Yudhishthira.Types
     Source (..),
     SourceData,
     CreateNammaTagRequest (..),
+    CreateNammaTagResponse (..),
+    CreateNammaApplicationTagResponse (..),
+    CreateTagResp (..),
+    VerifyNammaTagRequest (..),
+    VerifyNammaTagResponse (..),
     LogicDomain (..),
     AppDynamicLogicReq (..),
     UpdateKaalBasedTagsJobReq (..),
@@ -243,6 +248,48 @@ data RunLogicResp = RunLogicResp
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type LogicRolloutReq = [LogicRolloutObject]
+
+data CreateTagResp = ApplicationTagRes CreateNammaApplicationTagResponse | Success deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets CreateTagResp where
+  hideSecrets = identity
+
+data CreateNammaTagResponse = CreateNammaTagResponse
+  { result :: CreateTagResp
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets CreateNammaTagResponse where
+  hideSecrets = identity
+
+data CreateNammaApplicationTagResponse = CreateNammaApplicationTagResponse
+  { executionResultOnDefaultData :: RunLogicResp,
+    defaultDataUsed :: Value
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets CreateNammaApplicationTagResponse where
+  hideSecrets = identity
+
+data VerifyNammaTagRequest = VerifyNammaTagRequest
+  { logic :: Value,
+    logicData :: Maybe Value,
+    source :: Source,
+    useDefaultData :: Bool
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets VerifyNammaTagRequest where
+  hideSecrets = identity
+
+data VerifyNammaTagResponse = VerifyNammaTagResponse
+  { executionResult :: RunLogicResp,
+    dataUsed :: Value
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets VerifyNammaTagResponse where
+  hideSecrets = identity
 
 instance HideSecrets LogicRolloutReq where
   hideSecrets = identity
