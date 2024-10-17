@@ -9,6 +9,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -21,9 +22,24 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RouteStopFare.RouteStopFare] -> m ())
 createMany = traverse_ create
 
+findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RouteStopFare.RouteStopFare])
+findByRouteCode routeCode = do findAllWithKV [Se.Is Beam.routeCode $ Se.Eq routeCode]
+
 findByRouteStartAndStopCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m [Domain.Types.RouteStopFare.RouteStopFare])
 findByRouteStartAndStopCode routeCode startStopCode endStopCode = do
   findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.routeCode $ Se.Eq routeCode,
+          Se.Is Beam.startStopCode $ Se.Eq startStopCode,
+          Se.Is Beam.endStopCode $ Se.Eq endStopCode
+        ]
+    ]
+
+updateFareByRouteCodeAndStopCodes :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
+updateFareByRouteCodeAndStopCodes amount routeCode startStopCode endStopCode = do
+  _now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.amount amount, Se.Set Beam.updatedAt _now]
     [ Se.And
         [ Se.Is Beam.routeCode $ Se.Eq routeCode,
           Se.Is Beam.startStopCode $ Se.Eq startStopCode,

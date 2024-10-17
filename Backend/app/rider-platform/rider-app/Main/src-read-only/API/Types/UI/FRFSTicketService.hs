@@ -11,7 +11,7 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
-import qualified Domain.Types.Station
+import qualified Domain.Types.StationType
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Payment.Juspay.Types.CreateOrder
@@ -142,7 +142,7 @@ data FRFSStationAPI = FRFSStationAPI
     lon :: Data.Maybe.Maybe Kernel.Prelude.Double,
     name :: Data.Text.Text,
     sequenceNum :: Data.Maybe.Maybe Kernel.Prelude.Int,
-    stationType :: Data.Maybe.Maybe Domain.Types.Station.StationType,
+    stationType :: Data.Maybe.Maybe Domain.Types.StationType.StationType,
     towards :: Data.Maybe.Maybe Data.Text.Text
   }
   deriving stock (Generic, Show)

@@ -24,16 +24,22 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Route.Route] -> m ())
 createMany = traverse_ create
 
+deleteByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ())
+deleteByRouteCode code = do deleteWithKV [Se.Is Beam.code $ Se.Eq code]
+
 findAllByMerchantOperatingCityAndVehicleType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.FRFS.Enums.VehicleCategory -> m [Domain.Types.Route.Route])
-findAllByMerchantOperatingCityAndVehicleType merchantOperatingCityId vehicleType = do
-  findAllWithKV
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.FRFS.Enums.VehicleCategory -> m [Domain.Types.Route.Route])
+findAllByMerchantOperatingCityAndVehicleType limit offset merchantOperatingCityId vehicleType = do
+  findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.vehicleType $ Se.Eq vehicleType
         ]
     ]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset
 
 findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Route.Route))
 findByRouteCode code = do findOneWithKV [Se.Is Beam.code $ Se.Eq code]
