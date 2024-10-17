@@ -33,7 +33,7 @@ import qualified Domain.Action.Dashboard.Management.NammaTag.Handle as Handle
 import qualified Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as DPerson
-import Domain.Types.Yudhishthira ()
+import qualified Domain.Types.Yudhishthira
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import JsonLogic
@@ -88,7 +88,7 @@ postNammaTagTagCreate _merchantShortId _opCity req = do
               case defVal of
                 Nothing -> throwError $ InvalidRequest $ "No data supplied and failed to get default for the specified event, check if `getLogicInputDef` is defined for your event in `instance YTC.LogicInputLink YA.ApplicationEvent`"
                 Just defaultVal -> do
-                  result <- YudhishthiraFlow.verifyDynamicLogic [rule] defaultVal
+                  result <- YudhishthiraFlow.verifyDynamicLogic tagPossibleValues [rule] defaultVal
                   pure $ Lib.Yudhishthira.Types.CreateNammaTagResponse {result = Lib.Yudhishthira.Types.ApplicationTagRes (Lib.Yudhishthira.Types.CreateNammaApplicationTagResponse result defaultVal)}
             _ -> throwError $ InvalidRequest "LLMContext not supported yet"
         _ -> pure $ Lib.Yudhishthira.Types.CreateNammaTagResponse {result = Lib.Yudhishthira.Types.Success}
@@ -104,21 +104,30 @@ postNammaTagTagVerify _merchantShortId _opCity Lib.Yudhishthira.Types.VerifyNamm
             if useDefaultData
               then C.getLogicInputDef tagStage
               else logicData <|> C.getLogicInputDef tagStage
-          parsedInputData =
-            case tagStage of
-              Lib.Yudhishthira.Types.Application.Search -> A.fromJSON val :: A.Result Domain.Types.Yudhishthira.TagData
-              Lib.Yudhishthira.Types.Application.RideEnd -> A.fromJSON val :: A.Result Domain.Types.Yudhishthira.EndRideTagData
-              _ -> throwError $ InvalidRequest $ "Only supported for Search and EndRide event for now"
-      case parsedInputData of
-        A.Success val -> A.toJSON val
-        A.Error err -> throwError $ InvalidRequest $ "wrong input data type for the given stage: " <> show tagStage <> ", error: " <> show err
       case val of
         Just value -> do
+          -- validating data provided gets parsed to Stage InputData type.
+          validateInputType tagStage value
           result <- YudhishthiraFlow.verifyEventLogic tagStage [logic] value
           pure $ Lib.Yudhishthira.Types.VerifyNammaTagResponse {executionResult = result, dataUsed = value}
         Nothing -> throwError $ InvalidRequest $ "No data supplied and failed to get default for the specified event, check if `getLogicInputDef` is defined for your event in `instance YTC.LogicInputLink YA.ApplicationEvent`"
     _ -> do
       throwError $ InvalidRequest $ "Available only for Application events currenlty"
+  where
+    validateInputType tagStage value =
+      case tagStage of
+        Lib.Yudhishthira.Types.Search -> do
+          _ :: Domain.Types.Yudhishthira.TagData <- parseOrThrowError value
+          pure ()
+        Lib.Yudhishthira.Types.RideEnd -> do
+          _ :: Domain.Types.Yudhishthira.EndRideTagData <- parseOrThrowError value
+          pure ()
+        _ -> throwError $ InvalidRequest $ "Only supported for Search and EndRide event for now"
+
+    parseOrThrowError value =
+      case A.fromJSON value of
+        A.Success res -> pure res
+        A.Error err -> throwError $ InvalidRequest $ show err
 
 deleteNammaTagTagDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 deleteNammaTagTagDelete _merchantShortId _opCity tagName = YudhishthiraFlow.deleteTag tagName

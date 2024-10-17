@@ -4,6 +4,7 @@ import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import Data.List (nub, sortBy)
 import qualified Data.List.NonEmpty as DLNE
+import Data.Scientific (toRealFloat)
 import qualified Data.Text as T
 import JsonLogic
 import Kernel.Prelude
@@ -193,19 +194,39 @@ createLogicData defaultVal (Just inputValue) = do
     A.Success a -> return a
     A.Error err -> throwError $ InvalidRequest ("Not able to merge input data into default value. Getting error: " <> show err)
 
+verifyDynamicLogic :: (BeamFlow m r, ToJSON a) => Lib.Yudhishthira.Types.TagValues -> [Value] -> a -> m Lib.Yudhishthira.Types.RunLogicResp
+verifyDynamicLogic tagPossibleValues logics data_ = do
+  result <- runLogics logics data_
+  let validResult =
+        case tagPossibleValues of
+          Lib.Yudhishthira.Types.Tags possibletags -> result.result `elem` map A.toJSON possibletags
+          Lib.Yudhishthira.Types.AnyText -> isString result.result
+          Lib.Yudhishthira.Types.Range start end -> inRange result.result (start, end)
+  if validResult
+    then pure result
+    else throwError $ InvalidRequest $ "Returned result is not in possible tag values, got -> " <> show result
+
+data VerifyTagData = VerifyTagData
+  { possibleTags :: [Value],
+    isAnyTextSupported :: Bool,
+    possibleRanges :: [(Double, Double)]
+  }
+
 verifyEventLogic :: (BeamFlow m r, ToJSON a) => Lib.Yudhishthira.Types.ApplicationEvent -> [Value] -> a -> m Lib.Yudhishthira.Types.RunLogicResp
 verifyEventLogic event logics data_ = do
   result <- runLogics logics data_
   nammaTags <- QNT.findAllByApplicationEvent event
-  let allTags :: [Text] =
-        concatMap
-          ( \x ->
+  let allTags =
+        foldl'
+          ( \(VerifyTagData tagsAcc isAnyText rangeAcc) x ->
               case x.possibleValues of
-                Lib.Yudhishthira.Types.Tags pvs -> pvs
-                _ -> []
+                Lib.Yudhishthira.Types.Tags pvs -> VerifyTagData (A.toJSON pvs : tagsAcc) isAnyText rangeAcc
+                Lib.Yudhishthira.Types.AnyText -> VerifyTagData tagsAcc True rangeAcc
+                Lib.Yudhishthira.Types.Range start end -> VerifyTagData tagsAcc isAnyText ((start, end) : rangeAcc)
           )
+          (VerifyTagData [] False [])
           nammaTags
-  if result.result `elem` (map A.toJSON allTags)
+  if result.result `elem` allTags.possibleTags || isString result.result || any (inRange result.result) allTags.possibleRanges
     then return result
     else throwError $ InvalidRequest $ "Returned result is not possible tag values, got -> " <> show result
 
@@ -393,3 +414,11 @@ getNammaTagQueryAll :: BeamFlow m r => Lib.Yudhishthira.Types.Chakra -> m Lib.Yu
 getNammaTagQueryAll chakra_ = do
   chakraQueries <- QChakraQueries.findAllByChakra chakra_
   return $ (\LYTCQ.ChakraQueries {..} -> Lib.Yudhishthira.Types.ChakraQueriesAPIEntity {..}) <$> chakraQueries
+
+isString :: A.Value -> Bool
+isString (A.String _) = True
+isString _ = False
+
+inRange :: A.Value -> (Double, Double) -> Bool
+inRange (A.Number num) (rangeStart, rangeEnd) = (toRealFloat num) >= rangeStart && (toRealFloat num) <= rangeEnd
+inRange _ _ = False
