@@ -254,6 +254,15 @@ library
       Domain.Types.UtilsTH
       Environment
       ExternalBPP.CallAPI
+      ExternalBPP.CMRL.ExternalAPI.Auth
+      ExternalBPP.CMRL.ExternalAPI.BusinessHour
+      ExternalBPP.CMRL.ExternalAPI.DurationDetails
+      ExternalBPP.CMRL.ExternalAPI.FareByOriginDest
+      ExternalBPP.CMRL.ExternalAPI.FareMatrix
+      ExternalBPP.CMRL.ExternalAPI.GenerateQR
+      ExternalBPP.CMRL.ExternalAPI.PassengerViewStatus
+      ExternalBPP.CMRL.ExternalAPI.StationList
+      ExternalBPP.CMRL.ExternalAPI.TicketStatus
       ExternalBPP.Common.Cancel
       ExternalBPP.Common.Confirm
       ExternalBPP.Common.Init
