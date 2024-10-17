@@ -233,10 +233,11 @@ import Styles.Colors as Color
 import Data.Int (ceil)
 import RemoteConfig as RemoteConfig
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ScreenData as ParcelDeliveryScreenData
+import Helpers.PrestoUtils
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
-  when callInitUI $ lift $ lift $ initUI 
+  when callInitUI $ initUIWrapper ""
   let bundleSplashConfig = RemoteConfig.getBundleSplashConfig "lazy"
   if callInitUI && bundleSplashConfig.enable then toggleSetupSplash true else pure unit
   let _ = setKeyInWindow "forceAppToNoInternetScreen" true
