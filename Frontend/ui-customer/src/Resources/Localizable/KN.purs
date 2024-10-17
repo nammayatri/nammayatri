@@ -1716,3 +1716,4 @@ getKN stringKey =
         ENTER_A_ADDRESS -> "ವಿಳಾಸವನ್ನು ನಮೂದಿಸಿ"        
         EXPLORE -> "ಅನ್ವೇಷಿಸಿ"
         DELIVERED_IN_JUST time -> "ಕೇವಲ " <> time <> " ನಲ್ಲಿ ಡೆಲಿವರಿ ಮಾಡಲಾಗಿದೆ"
+        LIMIT_REACHED -> "ಮಿತಿ ತಲುಪಿದೆ!"

@@ -1665,4 +1665,5 @@ getFR stringKey =
         MINIMAL_CALLING -> "Appels minimaux"
         RUDE_BEHAVIOUR -> "Comportement impoli"
         EXPLORE -> "Explore"
+        LIMIT_REACHED -> "Limite atteinte !"
         _ -> ""
