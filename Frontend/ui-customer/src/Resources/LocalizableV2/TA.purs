@@ -1676,5 +1676,7 @@ getTa = Keymap {
 , odisha : "ஒடிஷா"
 , bhubaneswar : "புவனேஸ்வர்"
 , different_bike : "வேறு பைக்"
+, limit_reached : "வரம்பு எட்டியது!"
+, confirm_contacts : "தொடர்புகளை உறுதிப்படுத்தவும்"
 , max_parcel_size : (\l b h -> "அதிகபட்ச பார்சல் அளவு: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
 }

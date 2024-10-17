@@ -66,3 +66,4 @@ import Screens.RideBookingFlow.PickupInstructionsScreen.Handler (pickupInstructi
 import Screens.NammaSafetyFlow.Handler (nammaSafetyScreen) as UI
 import Screens.DataExplainWithFetch.Handler (dataFetchScreen) as UI
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.View (parcelDeliveryScreen) as UI
+import Screens.SelectContactsFlow.SelectContactsScreen.Handler (selectContactsScreen) as UI

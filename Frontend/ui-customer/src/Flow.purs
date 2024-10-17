@@ -74,7 +74,7 @@ import MerchantConfig.Types (AppConfig(..), MetroConfig(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, identity, otherwise, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*), max, min, (>>>), flip, (<#>))
-import Mobility.Prelude (capitalize)
+import Mobility.Prelude (capitalize, boolToInt)
 import ModifyScreenState (modifyScreenState, updateSafetyScreenState, updateRepeatRideDetails, FlowState(..))
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField)
 import Helpers.Pooling (delay)
@@ -3285,30 +3285,7 @@ emergencyScreenFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetySettings = Nothing, currentStage = newHomeScreenStage homeScreen, chatcallbackInitiated = false}, data{contactList = Nothing } })
       modifyScreenState $ DataFetchScreenStateType (\ dataFetchScreen -> dataFetchScreen { data { emergencyContactsList = state.data.selectedContacts } })
       emergencyScreenFlow --dataFetchScreenFlow  (DataExplainWithFetchSD.stageData $ TrustedContacts []) 0
-    POST_CONTACTS state shouldGoToSafetyScreen -> do
-      void $ Remote.emergencyContactsBT $ Remote.postContactsReq state.data.selectedContacts
-      when (not shouldGoToSafetyScreen)
-        $ if state.props.showInfoPopUp then
-            pure $ toast $ getString STR.CONTACT_REMOVED_SUCCESSFULLY
-          else
-            pure $ toast $ getString STR.TRUSTED_CONTACS_ADDED_SUCCESSFULLY
-      let contactsCount = length state.data.selectedContacts
-      if contactsCount < 1 
-        then 
-          modifyScreenState $ EmergencyContactsScreenStateType (\_ -> EmergencyContactsScreenData.initData{props { fromNewSafetyFlow= true, saveEmergencyContacts = true } })
-        else do
-          modifyScreenState $ EmergencyContactsScreenStateType (\_ -> state { data { emergencyContactsList = state.data.selectedContacts }, props { showInfoPopUp = false } })
-          modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { emergencyContactsList = state.data.selectedContacts }, props { setupStage = ST.SetDefaultEmergencyContacts, showShimmer = true } })
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetySettings = Nothing, currentStage = newHomeScreenStage homeScreen, chatcallbackInitiated = false}, data{contactList = Nothing } })
-          modifyScreenState $ DataFetchScreenStateType (\ dataFetchScreen -> dataFetchScreen { data { emergencyContactsList = state.data.selectedContacts } })
-      (GlobalState globalState) <- getState
-      case globalState.nammaSafetyScreen.data.hasCompletedSafetySetup, shouldGoToSafetyScreen, state.props.fromSosFlow, state.props.fromNewSafetyFlow of
-        _, _, true, _ -> activateSafetyScreenFlow
-        -- false, true, _, true -> dataFetchScreenFlow  (DataExplainWithFetchSD.stageData $ TrustedContacts []) 1
-        -- false, true, _, _ -> setupSafetySettingsFlow
-        true, true, _, _ -> safetySettingsFlow
-        -- _, _, _, true -> dataFetchScreenFlow  (DataExplainWithFetchSD.stageData $ TrustedContacts []) 1
-        _, _, _, _ -> emergencyScreenFlow
+    POST_CONTACTS state shouldGoToSafetyScreen -> updateEmergencyContacts state shouldGoToSafetyScreen
     GET_CONTACTS state -> do
       (GetEmergContactsResp res) <- Remote.getEmergencyContactsBT GetEmergContactsReq
       let
@@ -3335,6 +3312,48 @@ emergencyScreenFlow = do
     REFRESH_EMERGECY_CONTACTS_SCREEN state -> do
       modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactsScreen -> state)
       emergencyScreenFlow
+    GO_TO_SELECT_CONTACT state -> do
+      selectContactsFlow (\contacts -> do
+          let validSelectedContacts =
+                ( mapWithIndex
+                    ( \index contact ->
+                        if ((DS.length contact.number) > 10 && (DS.length contact.number) <= 12 && ((DS.take 1 contact.number) == "0" || (DS.take 2 contact.number) == "91")) then
+                          contact { number = DS.drop ((DS.length contact.number) - 10) contact.number, priority = boolToInt $ index /= 0 }
+                        else
+                          contact { priority = boolToInt $ index /= 0 }
+                    )
+                    contacts
+                )
+          void $ pure $ hideKeyboardOnNavigation true
+          let updatedState = state { data { editedText = "", selectedContacts = getDefaultPriorityList validSelectedContacts }, props { showContactList = false } }
+          updateEmergencyContacts updatedState false
+          pure unit
+        ) state.data.selectedContacts 3
+      emergencyScreenFlow
+  where
+    updateEmergencyContacts :: ST.EmergencyContactsScreenState -> Boolean -> FlowBT String Unit
+    updateEmergencyContacts state shouldGoToSafetyScreen = do
+      let newHomeScreenStage homescreenState = if homescreenState.props.currentStage == ChatWithDriver then homescreenState.props.stageBeforeChatScreen else homescreenState.props.currentStage
+      void $ Remote.emergencyContactsBT $ Remote.postContactsReq state.data.selectedContacts
+      when (not shouldGoToSafetyScreen)
+        $ if state.props.showInfoPopUp then
+            pure $ toast $ getString STR.CONTACT_REMOVED_SUCCESSFULLY
+          else
+            pure $ toast $ getString STR.TRUSTED_CONTACS_ADDED_SUCCESSFULLY
+      let contactsCount = length state.data.selectedContacts
+      if contactsCount < 1 
+        then 
+          modifyScreenState $ EmergencyContactsScreenStateType (\_ -> EmergencyContactsScreenData.initData{props { fromNewSafetyFlow= true, saveEmergencyContacts = true } })
+        else do
+          modifyScreenState $ EmergencyContactsScreenStateType (\_ -> state { data { emergencyContactsList = state.data.selectedContacts }, props { showInfoPopUp = false } })
+          modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { emergencyContactsList = state.data.selectedContacts }, props { setupStage = ST.SetDefaultEmergencyContacts, showShimmer = true } })
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { safetySettings = Nothing, currentStage = newHomeScreenStage homeScreen, chatcallbackInitiated = false}, data{contactList = Nothing } })
+          modifyScreenState $ DataFetchScreenStateType (\ dataFetchScreen -> dataFetchScreen { data { emergencyContactsList = state.data.selectedContacts } })
+      (GlobalState globalState) <- getState
+      case globalState.nammaSafetyScreen.data.hasCompletedSafetySetup, shouldGoToSafetyScreen, state.props.fromSosFlow, state.props.fromNewSafetyFlow of
+        _, _, true, _ -> activateSafetyScreenFlow
+        true, true, _, _ -> safetySettingsFlow
+        _, _, _, _ -> emergencyScreenFlow
 
 aboutUsScreenFlow :: FlowBT String Unit
 aboutUsScreenFlow = do
@@ -6607,6 +6626,23 @@ parcelDeliveryFlow = do
         mkPersonLocation details = API.PersonLocationAndInstruction { name : details.name, phoneNumber : details.phone, address : mkInstruction details}
         mkInstruction :: ST.PersonDeliveryDetails -> API.InstructionAndAddress
         mkInstruction details = API.InstructionAndAddress { instructions : details.instructions, extras : details.extras}
+    ParcelDeliveryScreenController.GoToSelectContact state -> do
+      modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> state)
+      selectContactsFlow (\contacts -> do
+        case contacts !! 0 of
+          Just contact -> do
+            let updatedState = 
+                  case state.data.currentStage of
+                    ST.SENDER_DETAILS -> 
+                      state { props { editDetails { name = contact.name, phone =  contact.number } }
+                            , data { senderDetails { name = contact.name, phone =  contact.number } } }
+                    _ ->
+                      state { props { editDetails { name = contact.name, phone = contact.number } }
+                            , data { receiverDetails { name = contact.name, phone = contact.number } } }
+            modifyScreenState $ ParcelDeliveryScreenStateType (\_ -> updatedState)
+          Nothing -> pure unit
+        ) [] 1
+      parcelDeliveryFlow
     _ -> pure unit
   where
     drawMapRoute' :: ST.ParcelDeliveryScreenState -> FlowBT String (Maybe Route)
@@ -6615,6 +6651,15 @@ parcelDeliveryFlow = do
           srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker}
           destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker}
       in Remote.drawMapRoute state.data.sourceLat state.data.sourceLong state.data.destinationLat state.data.destinationLong srcMarkerConfig destMarkerConfig "NORMAL" state.data.route "pickup" (specialLocationConfig "" "" false getPolylineAnimationConfig)
+
+selectContactsFlow ::  (Array NewContacts -> FlowBT String Unit) -> Array NewContacts -> Int -> FlowBT String Unit
+selectContactsFlow callback selectedContacts selectionLimit = do
+  modifyScreenState $ SelectContactsScreenStateType (\state -> state{ data{ contactSelectionLimit = selectionLimit
+                                                                          , selectedContacts = selectedContacts 
+                                                                          , alreadySelectedContacts = selectedContacts } })
+  action <- UI.selectContactsScreen
+  case action of
+    EXECUTE_CALLBACK state ->
+      callback state.data.selectedContacts
+    SELECT_CONTACTS_BACK_PRESSED -> pure unit
   
-
-

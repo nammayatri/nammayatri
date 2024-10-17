@@ -52,8 +52,6 @@ screen initialState listItemm =
   , globalEvents:
       [ globalOnScroll "EmergencyContactsScreen"
       , ( \push -> do
-            void $ storeCallBackContacts push ContactsCallback
-            void $ runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
             pure (pure unit)
         )
       ]
@@ -107,7 +105,6 @@ view listItemm push state =
                       [ PrimaryButton.view (push <<< PrimaryButtonActionControll) (primaryButtonConfig state) ]
                   ]
               ]
-          , if state.props.showContactList then (contactListView listItemm push state) else emptyTextView state
           , if state.props.showAddContactOptions then (addContactsOptionView push state) else emptyTextView state
           ]
             <> if state.props.showInfoPopUp then [ removeContactPopUpView push state ] else [ emptyTextView state ]
@@ -242,155 +239,6 @@ addContactOptions push state =
 ------------------------ EmptyTextView ---------------------------
 emptyTextView :: forall w. EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
 emptyTextView state = textView []
-
------------------------- ContactsListView ---------------------------
-contactListView :: forall w. PrestoList.ListItem -> (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
-contactListView listItemm push state =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    ]
-    [ linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , background Color.white900
-        ]
-        [ GenericHeader.view (push <<< ContactListGenericHeaderActionController) (genericHeaderConfig state)
-        , horizontalLine
-        ]
-    , linearLayout
-        [ width MATCH_PARENT
-        , height $ V 44
-        , orientation HORIZONTAL
-        , cornerRadius 8.0
-        , padding (Padding 2 2 2 2)
-        , margin (Margin 16 16 16 16)
-        , gravity LEFT
-        , stroke ("1," <> Color.borderColorLight)
-        ]
-        [ editText
-            [ height MATCH_PARENT
-            , width WRAP_CONTENT
-            , weight 1.0
-            , textSize FontSize.a_16
-            , padding (Padding 14 10 0 10)
-            , color Color.black800
-            , gravity LEFT
-            , id (getNewIDWithTag "contactEditText")
-            , background Color.white900
-            , fontStyle $ FontStyle.semiBold LanguageStyle
-            , text ""
-            , hint $ getString SEARCH_CONTACTS
-            , pattern "[^\n]*,255"
-            , onChange push $ ContactTextChanged
-            ]
-        , imageView
-            [ height $ V 17
-            , width $ V 17
-            , accessibilityHint "Cancel Search : Button"
-            , accessibility ENABLE
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_cancel"
-            , gravity CENTER
-            , margin (Margin 10 10 10 10)
-            , onClick push $ const ContactListClearText
-            ]
-        ]
-    , showEmergencyContact listItemm push state
-    , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , background Color.white900
-        , padding (Padding 16 16 16 0)
-        , stroke $ "1," <> Color.grey900
-        , alignParentBottom "true,-1"
-        , margin (Margin 0 0 0 0)
-        , adjustViewWithKeyboard "true"
-        , alignParentBottom "true,-1"
-        ]
-        [ linearLayout
-            [ width MATCH_PARENT
-            , height if os == "IOS" then (V 68) else WRAP_CONTENT
-            , gravity BOTTOM
-            , padding $ PaddingBottom 16
-            ]
-            [ PrimaryButton.view getPushFn $ contactListPrimaryButtonConfig state
-            ]
-        ]
-    ]
-  where
-  getPushFn =
-    ( \action -> do
-        void $ terminateLoader ""
-        push $ PrimaryButtonAC action
-    )
-
-showEmergencyContact :: forall w. PrestoList.ListItem -> (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
-showEmergencyContact listitemm push config =
-  linearLayout
-    [ width MATCH_PARENT
-    , background Color.blue600
-    , weight 1.0
-    ]
-    [ showEmergencyContactData listitemm push config
-    ]
-
-showEmergencyContactData :: forall w. PrestoList.ListItem -> (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
-showEmergencyContactData listItemm push state =
-  Keyed.linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    ]
-    [ Tuple "contacts"
-        $ PrestoList.list
-            [ height MATCH_PARENT
-            , scrollBarY false
-            , width MATCH_PARENT
-            , PrestoList.listItem listItemm
-            , background Color.white900
-            , PrestoList.listDataV2 $ state.data.prestoListArrayItems
-            ]
-    ]
-
-startsWith :: String -> String -> Boolean
-startsWith prefix str = DS.take (DS.length prefix) str == prefix
-
-contactListPrimaryButtonConfig :: EmergencyContactsScreenState -> PrimaryButtonConfig.Config
-contactListPrimaryButtonConfig state =
-  let
-    config' = PrimaryButtonConfig.config
-
-    uniqueContacts = length $ difference state.data.selectedContacts state.data.emergencyContactsList
-
-    enableBtn = if (uniqueContacts == 0) && (length state.data.selectedContacts) < (length state.data.emergencyContactsList) then true else uniqueContacts > 0
-
-    primaryButtonConfig' =
-      config'
-        { textConfig
-          { text = if enableBtn then (getString CONFIRM_EMERGENCY_CONTACTS) else (getString SELECT_CONTACTS)
-          , accessibilityHint = (if enableBtn then (getString CONFIRM_EMERGENCY_CONTACTS) else (getString SELECT_CONTACTS)) <> " : Button"
-          , color = if enableBtn then Color.yellow900 else Color.yellow800
-          }
-        , background = if enableBtn then Color.black900 else Color.black600
-        , isClickable = if enableBtn then true else false
-        , id = "ContactListPrimaryButton"
-        , enableRipple = if enableBtn then true else false
-        , margin = (MarginBottom 0)
-        }
-  in
-    primaryButtonConfig'
-
-horizontalLine :: forall w. PrestoDOM (Effect Unit) w
-horizontalLine =
-  linearLayout
-    [ height $ V 1
-    , width MATCH_PARENT
-    , background Color.grey900
-    ]
-    []
 
 --------------------------------------------------- emergencyContactsView -----------------------------------------------------
 emergencyContactsView :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w

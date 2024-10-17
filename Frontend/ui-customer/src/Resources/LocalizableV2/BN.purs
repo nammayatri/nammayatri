@@ -1676,5 +1676,7 @@ getBn = Keymap {
 , odisha : "ওডিশা"
 , bhubaneswar : "ভুবনেশ্বর"
 , different_bike : "বিভিন্ন বাইক"
+, limit_reached : "সীমা পৌঁছেছে!"
+, confirm_contacts : "কনফার্ম কন্ট্যাক্টস"
 , max_parcel_size : (\l b h -> "সর্বাধিক পার্সেল আকার: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
 }

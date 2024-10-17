@@ -1676,5 +1676,7 @@ getEn = Keymap {
 , odisha : "Odisha"
 , bhubaneswar : "Bhubaneswar"
 , different_bike : "Different Bike"
+, limit_reached : "Limit reached!"
+, confirm_contacts :  "Confirm Contacts"
 , max_parcel_size : (\l b h -> "Max parcel size: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
 }

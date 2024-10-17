@@ -1676,5 +1676,7 @@ getHi = Keymap {
 , odisha : "ओडिशा"
 , bhubaneswar : "भुवनेश्वर"
 , different_bike : "अलग बाइक"
+, limit_reached : "सीमा पार हो गई है!"
+, confirm_contacts : "संपर्कों की पुष्टि करें"
 , max_parcel_size : (\l b h -> "अधिकतम पार्सल आकार: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
 }

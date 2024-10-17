@@ -1676,5 +1676,7 @@ getKn = Keymap {
 , odisha : "ಒಡಿಶಾ"
 , bhubaneswar : "ಭುವನೇಶ್ವರ"
 , different_bike : "ವಿಭಿನ್ನ ಬೈಕ್"
+, limit_reached : "ಮಿತಿ ತಲುಪಿದೆ!"
+, confirm_contacts : "ಸಂಪರ್ಕಗಳನ್ನು ದೃಢೀಕರಿಸಿ"
 , max_parcel_size : (\l b h -> "ಗರಿಷ್ಠ ಪಾರ್ಸೆಲ್ ಗಾತ್ರ: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
 }

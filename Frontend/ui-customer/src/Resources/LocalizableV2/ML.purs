@@ -1677,5 +1677,7 @@ getMl = Keymap {
 , odisha : "ഒഡിഷ"
 , bhubaneswar : "ഭുവനേശ്വർ"
 , different_bike : "വിവിധ ബൈക്കുകൾ"
+, limit_reached : "പരിധി എത്തി!"
+, confirm_contacts : "ബന്ധങ്ങളെ സ്ഥിരീകരിക്കുക"
 , max_parcel_size : (\l b h -> "പരമാവധി പാർസൽ വലിപ്പം: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
 }

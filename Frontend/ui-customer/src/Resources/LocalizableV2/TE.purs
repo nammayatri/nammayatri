@@ -1676,5 +1676,7 @@ getTe = Keymap {
 , odisha : "ఒడిషా"
 , bhubaneswar : "భువనేశ్వర్"
 , different_bike : "వివిధ బైక్"
+, limit_reached : "పరిమితి చేరుకుంది!"
+, confirm_contacts : "పరిచయాలను నిర్ధారించండి"
 , max_parcel_size : (\l b h -> "గరిష్ట పార్సల్ పరిమాణం: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
 }

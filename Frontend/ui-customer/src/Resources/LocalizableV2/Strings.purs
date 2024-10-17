@@ -1771,4 +1771,6 @@ getProxy str =
     DIFFERENT_BIKE -> \a -> a @~ different_bike
     ODISHA -> \a -> a @~ odisha
     BHUBANESWAR -> \a -> a @~ bhubaneswar
+    LIMIT_REACHED -> \a -> a @~ limit_reached
+    CONFIRM_CONTACTS -> \a -> a @~ confirm_contacts
     MAX_PARCEL_SIZE arg1 arg2 arg3 -> \a -> (a @~ max_parcel_size) arg1 arg2 arg3 
