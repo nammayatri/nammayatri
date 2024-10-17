@@ -225,7 +225,7 @@ eval GoToEducationView state = do
   exit $ GoToEducationScreen state { props { triggeringSos = false, timerValue = defaultTimerValue, timerId = "" } }
 
 eval CallSupport state = do
-  void $ pure $ JB.showDialer (getSupportNumber "") false
+  void $ pure $ JB.showDialer "08069724911" false
   continue state
 
 eval _ state = update state
