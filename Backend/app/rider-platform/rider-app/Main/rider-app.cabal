@@ -218,6 +218,7 @@ library
       Domain.Action.UI.RidePayment
       Domain.Action.UI.Route
       Domain.Action.UI.SavedReqLocation
+      Domain.Action.UI.ScheduledTrips
       Domain.Action.UI.Search
       Domain.Action.UI.Select
       Domain.Action.UI.Serviceability
@@ -461,6 +462,7 @@ library
       API.Action.UI.MultimodalConfirm
       API.Action.UI.PriceBreakup
       API.Action.UI.RidePayment
+      API.Action.UI.ScheduledTrips
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
       API.Action.UI.TicketService
