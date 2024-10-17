@@ -12,6 +12,9 @@ import qualified Lib.Yudhishthira.Storage.Queries.TimeBoundConfig as Queries
 import Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types.TimeBoundConfig
 
+create :: BeamFlow.BeamFlow m r => Lib.Yudhishthira.Types.TimeBoundConfig.TimeBoundConfig -> m ()
+create = Queries.create
+
 findByCityAndDomain ::
   BeamFlow.BeamFlow m r =>
   (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ([Lib.Yudhishthira.Types.TimeBoundConfig.TimeBoundConfig]))
@@ -49,5 +52,5 @@ delete = Queries.delete
 
 clearCache :: BeamFlow.BeamFlow m r => Id MerchantOperatingCity -> LogicDomain -> Text -> m ()
 clearCache merchantOperatingCityId timeBoundDomain name = do
-  Hedis.withCrossAppRedis $ Hedis.del ("driverOfferCachedQueries:TimeBoundConfig:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":TimeBoundDomain-" <> show timeBoundDomain)
-  Hedis.withCrossAppRedis $ Hedis.del ("driverOfferCachedQueries:TimeBoundConfig:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":Name-" <> show name <> ":TimeBoundDomain-" <> show timeBoundDomain)
+  Hedis.withCrossAppRedis $ Hedis.del ("yudhishthiraCachedQueries:TimeBoundConfig:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":TimeBoundDomain-" <> show timeBoundDomain)
+  Hedis.withCrossAppRedis $ Hedis.del ("yudhishthiraCachedQueries:TimeBoundConfig:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":Name-" <> show name <> ":TimeBoundDomain-" <> show timeBoundDomain)

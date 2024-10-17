@@ -22,7 +22,6 @@ import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElement as QADL
 import qualified Lib.Yudhishthira.Storage.Queries.ChakraQueries as QChakraQueries
 import qualified Lib.Yudhishthira.Storage.Queries.ChakraQueries as SQCQ
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTag as QNT
-import qualified Lib.Yudhishthira.Storage.Queries.TimeBoundConfig as QTBC
 import Lib.Yudhishthira.Tools.Error
 import Lib.Yudhishthira.Tools.Utils
 import qualified Lib.Yudhishthira.Types
@@ -282,19 +281,19 @@ getAppDynamicLogicForDomain mbVersion domain = do
 
 getTimeBounds :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m Lib.Yudhishthira.Types.TimeBoundResp
 getTimeBounds merchantOpCityId domain = do
-  allTimeBounds <- QTBC.findByCityAndDomain merchantOpCityId domain
+  allTimeBounds <- CQTBC.findByCityAndDomain merchantOpCityId domain
   return $ (\TimeBoundConfig {..} -> Lib.Yudhishthira.Types.CreateTimeBoundRequest {..}) <$> allTimeBounds
 
 createTimeBounds :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.CreateTimeBoundRequest -> m Kernel.Types.APISuccess.APISuccess
 createTimeBounds merchantOpCityId req = do
   when (req.timeBounds == Unbounded) $ throwError $ InvalidRequest "Unbounded time bounds not allowed"
-  allTimeBounds <- QTBC.findByCityAndDomain merchantOpCityId req.timeBoundDomain
+  allTimeBounds <- CQTBC.findByCityAndDomain merchantOpCityId req.timeBoundDomain
   forM_ allTimeBounds $ \existingTimeBound -> do
     when (timeBoundsOverlap existingTimeBound.timeBounds req.timeBounds) $ do
       throwError (InvalidRequest $ "Time bounds overlap with existing time bound: " <> existingTimeBound.name)
   now <- getCurrentTime
   let timeBound = mkTimeBound merchantOpCityId now req
-  QTBC.create timeBound
+  CQTBC.create timeBound
   CQTBC.clearCache merchantOpCityId timeBound.timeBoundDomain timeBound.name
   return Kernel.Types.APISuccess.Success
   where
