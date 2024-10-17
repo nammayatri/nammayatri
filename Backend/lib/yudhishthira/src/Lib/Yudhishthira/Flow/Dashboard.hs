@@ -193,8 +193,21 @@ createLogicData defaultVal (Just inputValue) = do
     A.Success a -> return a
     A.Error err -> throwError $ InvalidRequest ("Not able to merge input data into default value. Getting error: " <> show err)
 
-verifyDynamicLogic :: (BeamFlow m r, ToJSON a) => [Value] -> a -> m Lib.Yudhishthira.Types.RunLogicResp
-verifyDynamicLogic logics data_ = runLogics logics data_
+verifyEventLogic :: (BeamFlow m r, ToJSON a) => Lib.Yudhishthira.Types.ApplicationEvent -> [Value] -> a -> m Lib.Yudhishthira.Types.RunLogicResp
+verifyEventLogic event logics data_ = do
+  result <- runLogics logics data_
+  nammaTags <- QNT.findAllByApplicationEvent event
+  let allTags :: [Text] =
+        concatMap
+          ( \x ->
+              case x.possibleValues of
+                Lib.Yudhishthira.Types.Tags pvs -> pvs
+                _ -> []
+          )
+          nammaTags
+  if result.result `elem` (map A.toJSON allTags)
+    then return result
+    else throwError $ InvalidRequest $ "Returned result is not possible tag values, got -> " <> show result
 
 verifyAndUpdateDynamicLogic ::
   forall m r a b.
