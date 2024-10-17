@@ -140,8 +140,6 @@ public class MainActivity extends AppCompatActivity {
     private Activity activity;
     @Nullable
     private SharedPreferences sharedPref;
-    @SuppressLint("StaticFieldLeak")
-    private static InAppNotification inAppNotification;
     ShowNotificationCallBack inappCallBack;
     private Future<JSONObject> driverInfoFutureTask;
     private Future<JSONObject> preInitFutureTask;
@@ -428,9 +426,8 @@ public class MainActivity extends AppCompatActivity {
             preInitFutureTaskResult = preInitFlow();
         }
 
-        initApp();
-
         handleSplashScreen();
+        initApp();
 
         WebView.setWebContentsDebuggingEnabled(true);
 
@@ -438,7 +435,6 @@ public class MainActivity extends AppCompatActivity {
         String clientId = context.getResources().getString(R.string.client_id);
 
         mFirebaseAnalytics.logEvent(isMigrated ?"migrate_local_store_success" : "migrate_local_store_failed",new Bundle());
-        initNotificationChannel();
         CleverTapAPI cleverTap = CleverTapAPI.getDefaultInstance(context);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             CleverTapAPI.createNotificationChannel(context,clientId,"Promotion","Notifications Related to promotion",NotificationManager.IMPORTANCE_MAX, "4_promotional",true);
@@ -462,7 +458,6 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         registerCallBack();
-        inAppNotification = new InAppNotification(this);
 
         if (BuildConfig.DEBUG) {
             FirebaseMessaging.getInstance().subscribeToTopic("test");
@@ -647,61 +642,6 @@ public class MainActivity extends AppCompatActivity {
         MyFirebaseMessagingService.registerShowNotificationCallBack(inappCallBack);
     }
 
-    private void initNotificationChannel() {
-        NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            try {
-                notificationManager.deleteNotificationChannel("RINGING_ALERT");
-                notificationManager.deleteNotificationChannel("TRIP_STARTED");
-                notificationManager.deleteNotificationChannel("General");
-                notificationManager.deleteNotificationChannel("FLOATING_NOTIFICATION");
-                notificationManager.deleteNotificationChannel("DRIVER_QUOTE_INCOMING");
-                notificationManager.deleteNotificationChannel("DRIVER_ASSIGNMENT");
-                notificationManager.deleteNotificationChannel("REALLOCATE_PRODUCT");
-                notificationManager.deleteNotificationChannel("GENERAL_NOTIFICATION");
-                notificationManager.deleteNotificationChannel("RIDE_STARTED");
-                notificationManager.deleteNotificationChannel("CANCELLED_PRODUCT");
-                notificationManager.deleteNotificationChannel("DRIVER_HAS_REACHED");
-                notificationManager.deleteNotificationChannel("TRIP_FINISHED");
-                notificationManager.deleteNotificationChannel("SOS_TRIGGERED");
-                notificationManager.deleteNotificationChannel("SOS_RESOLVED"); 
-            } catch(Exception e) {
-                System.out.println("Notification Channel doesn't exists");
-            }
-        }
-
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannelGroup safetyGroup = new NotificationChannelGroup("1_safety", "Enhanced Safety");
-            NotificationChannelGroup rideRelatedGroup = new NotificationChannelGroup("2_ride_related", "Essential - Ride related");
-            NotificationChannelGroup serviceGroup = new NotificationChannelGroup("3_services", "Services");
-            NotificationChannelGroup promotionalGroup = new NotificationChannelGroup("4_promotional", "Promotional");
-
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P){
-                safetyGroup.setDescription("Notifications related to Safety");
-                rideRelatedGroup.setDescription("Notifications related to ride starts, end");
-                serviceGroup.setDescription("Notifications related to Services");
-                promotionalGroup.setDescription("Notifications related to promotional");
-            }
-
-            notificationManager.createNotificationChannelGroup(safetyGroup);
-            notificationManager.createNotificationChannelGroup(rideRelatedGroup);
-            notificationManager.createNotificationChannelGroup(serviceGroup);
-            notificationManager.createNotificationChannelGroup(promotionalGroup);
-        }
-
-
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_QUOTE_INCOMING);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_ASSIGNMENT);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.REALLOCATE_PRODUCT);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.GENERAL_NOTIFICATION);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.RIDE_STARTED);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.CANCELLED_PRODUCT);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_HAS_REACHED);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.SOS_TRIGGERED);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.SOS_RESOLVED);
-        NotificationUtils.createNotificationChannel(this, NotificationUtils.NOSOUND_NOTIFICATION);
-    }
 
     public void updateConfigURL() {
         String key = MERCHANT_TYPE;
@@ -1162,7 +1102,6 @@ public class MainActivity extends AppCompatActivity {
         ChatService.deRegisterInAppCallback(inappCallBack);
         MyFirebaseMessagingService.deRegisterBundleUpdateCallback(bundleUpdateCallBack);
         MyFirebaseMessagingService.deRegisterShowNotificationCallBack(inappCallBack);
-        inAppNotification = null;
         super.onDestroy();
     }
 
@@ -1215,9 +1154,7 @@ public class MainActivity extends AppCompatActivity {
             Handler handler = new Handler(context.getMainLooper());
             handler.postDelayed(() -> {
                 try {
-                    if (inAppNotification != null){
-                        inAppNotification.generateNotification(payload);
-                    }
+                    InAppNotification.getInstance(activity,activity.findViewById(R.id.cl_dui_container)).generateNotification(payload);
                 } catch (JSONException e) {
                     Log.e(LOG_TAG, "Error in In App Notification Handler " + e);
                 }
@@ -1241,9 +1178,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void hideInAppNotificationApp (String channelId) {
-        if (inAppNotification!= null) {
-            inAppNotification.hideInAppNotification(channelId);
-        }
+        InAppNotification.getInstance(activity, activity.findViewById(R.id.cl_dui_container)).hideInAppNotification(channelId);
     }
     private class GetGAIDTask extends AsyncTask<String, Integer, String> {
         @Override
