@@ -79,7 +79,6 @@ VALUES
 
 INSERT INTO
   atlas_app.integrated_bpp_config(
-    id,
     domain,
     merchant_id,
     merchant_operating_city_id,
@@ -90,7 +89,6 @@ INSERT INTO
   )
 VALUES
   (
-    md5(random() :: text || clock_timestamp() :: text) :: uuid,
     'FRFS',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
