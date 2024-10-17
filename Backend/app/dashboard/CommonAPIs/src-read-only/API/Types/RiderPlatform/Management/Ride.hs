@@ -25,6 +25,7 @@ import qualified Kernel.Types.Price
 import qualified Kernel.Types.Time
 import Servant
 import Servant.Client
+import qualified Ticket
 
 data BookingCancelledReq = BookingCancelledReq
   { bookingId :: Kernel.Types.Id.Id Dashboard.Common.Booking,
@@ -72,6 +73,29 @@ data FareBreakupEntityType
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data Location = Location
+  { id :: Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Ride.Location,
+    lat :: Kernel.Prelude.Double,
+    lon :: Kernel.Prelude.Double,
+    address :: API.Types.RiderPlatform.Management.Ride.LocationAddress,
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data LocationAddress = LocationAddress
+  { street :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    city :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    state :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    country :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    building :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    areaCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    area :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 newtype MultipleRideCancelReq = MultipleRideCancelReq {multipleRideCancelInfo :: [API.Types.RiderPlatform.Management.Ride.BookingCancelledReq]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -90,6 +114,45 @@ newtype MultipleRideSyncReq = MultipleRideSyncReq {rides :: [API.Types.RiderPlat
 instance Kernel.Types.HideSecrets.HideSecrets MultipleRideSyncReq where
   hideSecrets = Kernel.Prelude.identity
 
+data RideInfo = RideInfo
+  { rideShortId :: Kernel.Types.Id.ShortId Dashboard.Common.Ride,
+    customerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    customerPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverName :: Kernel.Prelude.Text,
+    driverPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleNo :: Kernel.Prelude.Text,
+    status :: Dashboard.RiderPlatform.Ride.BookingStatus,
+    rideCreatedAt :: Kernel.Prelude.UTCTime,
+    pickupLocationLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    pickupLocationLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    pickupLocationStreet :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    pickupLocationCity :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    pickupLocationState :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    pickupLocationCountry :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    pickupLocationBuilding :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    pickupLocationAreaCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    pickupLocationArea :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dropLocationLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    dropLocationLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    dropLocationStreet :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dropLocationCity :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dropLocationState :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dropLocationCountry :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dropLocationBuilding :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dropLocationAreaCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    dropLocationArea :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fare :: Kernel.Prelude.Maybe Kernel.Types.Price.Money,
+    fareWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Price.PriceAPIEntity,
+    personId :: Kernel.Types.Id.Id Dashboard.Common.Customer,
+    nextStopLocation :: Kernel.Prelude.Maybe API.Types.RiderPlatform.Management.Ride.Location,
+    rideScheduledAt :: Kernel.Prelude.UTCTime,
+    fareProductType :: Domain.Types.FareProductType,
+    tripCategory :: Domain.Types.TripCategory,
+    endOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    classification :: Ticket.Classification
+  }
+  deriving anyclass (FromJSON, ToJSON)
+
 data RideInfoRes = RideInfoRes
   { rideId :: Kernel.Types.Id.Id Dashboard.Common.Ride,
     bookingId :: Kernel.Types.Id.Id Dashboard.Common.Booking,
@@ -97,8 +160,8 @@ data RideInfoRes = RideInfoRes
     customerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     customerPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rideOtp :: Kernel.Prelude.Text,
-    customerPickupLocation :: Dashboard.RiderPlatform.Ride.Location,
-    customerDropLocation :: Kernel.Prelude.Maybe Dashboard.RiderPlatform.Ride.Location,
+    customerPickupLocation :: API.Types.RiderPlatform.Management.Ride.Location,
+    customerDropLocation :: Kernel.Prelude.Maybe API.Types.RiderPlatform.Management.Ride.Location,
     driverName :: Kernel.Prelude.Text,
     driverPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverRegisteredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -124,7 +187,7 @@ data RideInfoRes = RideInfoRes
     rideDuration :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
     cancelledTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     cancelledBy :: Kernel.Prelude.Maybe API.Types.RiderPlatform.Management.Ride.CancellationSource,
-    nextStopLocation :: Kernel.Prelude.Maybe Dashboard.RiderPlatform.Ride.Location,
+    nextStopLocation :: Kernel.Prelude.Maybe API.Types.RiderPlatform.Management.Ride.Location,
     rideScheduledAt :: Kernel.Prelude.UTCTime,
     fareProductType :: Domain.Types.FareProductType,
     tripCategory :: Domain.Types.TripCategory,
@@ -149,7 +212,7 @@ data RideListItem = RideListItem
     driverPhoneNo :: Kernel.Prelude.Text,
     vehicleNo :: Kernel.Prelude.Text,
     bookingStatus :: Dashboard.RiderPlatform.Ride.BookingStatus,
-    nextStopLocation :: Kernel.Prelude.Maybe Dashboard.RiderPlatform.Ride.Location,
+    nextStopLocation :: Kernel.Prelude.Maybe API.Types.RiderPlatform.Management.Ride.Location,
     rideScheduledAt :: Kernel.Prelude.UTCTime,
     fareProductType :: Domain.Types.FareProductType,
     tripCategory :: Domain.Types.TripCategory,
@@ -188,11 +251,11 @@ data ShareRideInfoRes = ShareRideInfoRes
     rideEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     userFirstName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     userLastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    fromLocation :: Dashboard.RiderPlatform.Ride.Location,
-    toLocation :: Kernel.Prelude.Maybe Dashboard.RiderPlatform.Ride.Location,
+    fromLocation :: API.Types.RiderPlatform.Management.Ride.Location,
+    toLocation :: Kernel.Prelude.Maybe API.Types.RiderPlatform.Management.Ride.Location,
     sosStatus :: Kernel.Prelude.Maybe API.Types.RiderPlatform.Management.Ride.SosStatus,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant,
-    nextStopLocation :: Kernel.Prelude.Maybe Dashboard.RiderPlatform.Ride.Location,
+    nextStopLocation :: Kernel.Prelude.Maybe API.Types.RiderPlatform.Management.Ride.Location,
     rideScheduledAt :: Kernel.Prelude.UTCTime,
     fareProductType :: Domain.Types.FareProductType,
     tripCategory :: Domain.Types.TripCategory,
@@ -211,7 +274,14 @@ data SosStatus
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("ride" :> (GetRideList :<|> GetRideRideinfo :<|> GetRideInfo :<|> GetRideRideInfo :<|> GetRideTripRoute :<|> GetRidePickupRoute :<|> PostRideSync :<|> PostRideCancelMultiple))
+newtype TicketRideListRes = TicketRideListRes {rides :: [API.Types.RiderPlatform.Management.Ride.RideInfo]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets TicketRideListRes where
+  hideSecrets = Kernel.Prelude.identity
+
+type API = ("ride" :> (GetRideList :<|> GetRideRideinfo :<|> GetRideInfo :<|> GetRideRideInfo :<|> GetRideTripRoute :<|> GetRidePickupRoute :<|> PostRideSyncMultiple :<|> PostRideCancelMultiple :<|> GetRideKaptureList))
 
 type GetRideList =
   ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
@@ -258,9 +328,20 @@ type GetRidePickupRoute =
       :> Get '[JSON] Kernel.External.Maps.GetRoutesResp
   )
 
-type PostRideSync = ("sync" :> ReqBody '[JSON] API.Types.RiderPlatform.Management.Ride.MultipleRideSyncReq :> Post '[JSON] Dashboard.Common.Ride.MultipleRideSyncResp)
+type PostRideSyncMultiple = ("sync" :> ReqBody '[JSON] API.Types.RiderPlatform.Management.Ride.MultipleRideSyncReq :> Post '[JSON] Dashboard.Common.Ride.MultipleRideSyncResp)
 
 type PostRideCancelMultiple = ("cancel" :> ReqBody '[JSON] API.Types.RiderPlatform.Management.Ride.MultipleRideCancelReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type GetRideKaptureList =
+  ( "kapture" :> "list" :> QueryParam "rideShortId" (Kernel.Types.Id.ShortId Dashboard.Common.Ride) :> QueryParam "countryCode" Kernel.Prelude.Text
+      :> QueryParam
+           "phoneNumber"
+           Kernel.Prelude.Text
+      :> QueryParam "supportPhoneNumber" Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           API.Types.RiderPlatform.Management.Ride.TicketRideListRes
+  )
 
 data RideAPIs = RideAPIs
   { getRideList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Dashboard.RiderPlatform.Ride.BookingStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.Ride.RideListRes,
@@ -269,14 +350,15 @@ data RideAPIs = RideAPIs
     getRideRideInfo :: Kernel.Types.Id.ShortId Dashboard.Common.Ride -> EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.Ride.ShareRideInfoRes,
     getRideTripRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> EulerHS.Types.EulerClient Kernel.External.Maps.GetRoutesResp,
     getRidePickupRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> EulerHS.Types.EulerClient Kernel.External.Maps.GetRoutesResp,
-    postRideSync :: API.Types.RiderPlatform.Management.Ride.MultipleRideSyncReq -> EulerHS.Types.EulerClient Dashboard.Common.Ride.MultipleRideSyncResp,
-    postRideCancelMultiple :: API.Types.RiderPlatform.Management.Ride.MultipleRideCancelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postRideSyncMultiple :: API.Types.RiderPlatform.Management.Ride.MultipleRideSyncReq -> EulerHS.Types.EulerClient Dashboard.Common.Ride.MultipleRideSyncResp,
+    postRideCancelMultiple :: API.Types.RiderPlatform.Management.Ride.MultipleRideCancelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getRideKaptureList :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.Ride.TicketRideListRes
   }
 
 mkRideAPIs :: (Client EulerHS.Types.EulerClient API -> RideAPIs)
 mkRideAPIs rideClient = (RideAPIs {..})
   where
-    getRideList :<|> getRideRideinfo :<|> getRideInfo :<|> getRideRideInfo :<|> getRideTripRoute :<|> getRidePickupRoute :<|> postRideSync :<|> postRideCancelMultiple = rideClient
+    getRideList :<|> getRideRideinfo :<|> getRideInfo :<|> getRideRideInfo :<|> getRideTripRoute :<|> getRidePickupRoute :<|> postRideSyncMultiple :<|> postRideCancelMultiple :<|> getRideKaptureList = rideClient
 
 data RideEndpointDSL
   = GetRideListEndpoint
@@ -285,7 +367,8 @@ data RideEndpointDSL
   | GetRideRideInfoEndpoint
   | GetRideTripRouteEndpoint
   | GetRidePickupRouteEndpoint
-  | PostRideSyncEndpoint
+  | PostRideSyncMultipleEndpoint
   | PostRideCancelMultipleEndpoint
+  | GetRideKaptureListEndpoint
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -12,32 +12,32 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.RiderPlatform.Ride
-  ( API,
-    handler,
-  )
-where
+module API.RiderPlatform.Ride where
 
-import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
-import "lib-dashboard" Domain.Types.AccessMatrix
-import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import "lib-dashboard" Domain.Types.ServerName
-import qualified Domain.Types.Transaction as DT
-import "lib-dashboard" Environment
-import Kernel.Prelude
-import qualified Kernel.Types.Beckn.City as City
-import Kernel.Types.Id
-import Kernel.Utils.Common
-import qualified RiderPlatformClient.RiderApp.Operations as Client
-import Servant
-import qualified SharedLogic.Transaction as T
-import Storage.Beam.CommonInstances ()
-import "lib-dashboard" Tools.Auth hiding (DRIVER_OFFER_BPP)
-import Tools.Auth.Merchant
+-- ( API,
+--   handler,
+-- )
 
-type API =
-  "ride"
-    :> TicketRideListAPI
+-- import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
+-- import "lib-dashboard" Domain.Types.AccessMatrix
+-- import qualified "lib-dashboard" Domain.Types.Merchant as DM
+-- import "lib-dashboard" Domain.Types.ServerName
+-- import qualified Domain.Types.Transaction as DT
+-- import "lib-dashboard" Environment
+-- import Kernel.Prelude
+-- import qualified Kernel.Types.Beckn.City as City
+-- import Kernel.Types.Id
+-- import Kernel.Utils.Common
+-- import qualified RiderPlatformClient.RiderApp.Operations as Client
+-- import Servant
+-- import qualified SharedLogic.Transaction as T
+-- import Storage.Beam.CommonInstances ()
+-- import "lib-dashboard" Tools.Auth hiding (DRIVER_OFFER_BPP)
+-- import Tools.Auth.Merchant
+
+-- type API =
+--   "ride"
+--     :> TicketRideListAPI
 
 -- type RideInfoAPI =
 --   ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'RIDE_INFO_CUSTOMER
@@ -51,27 +51,27 @@ type API =
 --   ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'MULTIPLE_RIDE_SYNC
 --     :> Common.MultipleRideSyncAPI
 
-type TicketRideListAPI =
-  ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'TICKET_RIDE_LIST_API
-    :> Common.TicketRideListAPI
+-- type TicketRideListAPI =
+--   ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'TICKET_RIDE_LIST_API
+--     :> Common.TicketRideListAPI
 
-handler :: ShortId DM.Merchant -> City.City -> FlowServer API
-handler = ticketRideList
+-- handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+-- handler = ticketRideList
 
 -- rideInfoHitsCountKey :: Text -> Text
 -- rideInfoHitsCountKey rideId = "RideInfoHits:" <> rideId <> ":hitsCount"
 
 -- merchantCityAccessChecks can be removed from this file?
-buildTransaction ::
-  ( MonadFlow m,
-    Common.HideSecrets request
-  ) =>
-  Common.RideEndpoint ->
-  ApiTokenInfo ->
-  Maybe request ->
-  m DT.Transaction
-buildTransaction endpoint apiTokenInfo =
-  T.buildTransaction (DT.RideAPI endpoint) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
+-- buildTransaction ::
+--   ( MonadFlow m,
+--     Common.HideSecrets request
+--   ) =>
+--   Common.RideEndpoint ->
+--   ApiTokenInfo ->
+--   Maybe request ->
+--   m DT.Transaction
+-- buildTransaction endpoint apiTokenInfo =
+--   T.buildTransaction (DT.RideAPI endpoint) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 -- shareRideInfo ::
 --   ShortId DM.Merchant ->
@@ -142,9 +142,9 @@ buildTransaction endpoint apiTokenInfo =
 --   T.withResponseTransactionStoring transaction $
 --     Client.callRiderAppOperations checkedMerchantId opCity (.rides.multipleRideSync) req
 
-ticketRideList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.TicketRideListRes
-ticketRideList merchantShortId opCity apiTokenInfo mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity opCity
-  transaction <- buildTransaction Common.TicketRideListEndpoint apiTokenInfo T.emptyRequest
-  T.withTransactionStoring transaction $
-    Client.callRiderAppOperations checkedMerchantId opCity (.rides.ticketRideList) mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber
+-- ticketRideList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.TicketRideListRes
+-- ticketRideList merchantShortId opCity apiTokenInfo mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI' $ do
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity opCity
+--   transaction <- buildTransaction Common.TicketRideListEndpoint apiTokenInfo T.emptyRequest
+--   T.withTransactionStoring transaction $
+--     Client.callRiderAppOperations checkedMerchantId opCity (.rides.ticketRideList) mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber

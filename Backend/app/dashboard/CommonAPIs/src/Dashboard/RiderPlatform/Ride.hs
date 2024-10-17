@@ -172,26 +172,26 @@ import Servant hiding (Summary)
 -- data FareBreakupEntityType = BOOKING_UPDATE_REQUEST | BOOKING | RIDE | INITIAL_BOOKING
 --   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data Location = Location
-  { id :: Id Location,
-    lat :: Double,
-    lon :: Double,
-    address :: LocationAddress,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime
-  }
-  deriving (Generic, Show, Eq, HasCoordinates, ToSchema, FromJSON, ToJSON)
+-- data Location = Location
+--   { id :: Id Location,
+--     lat :: Double,
+--     lon :: Double,
+--     address :: LocationAddress,
+--     createdAt :: UTCTime,
+--     updatedAt :: UTCTime
+--   }
+--   deriving (Generic, Show, Eq, HasCoordinates, ToSchema, FromJSON, ToJSON)
 
-data LocationAddress = LocationAddress
-  { street :: Maybe Text,
-    city :: Maybe Text,
-    state :: Maybe Text,
-    country :: Maybe Text,
-    building :: Maybe Text,
-    areaCode :: Maybe Text,
-    area :: Maybe Text
-  }
-  deriving (Generic, Show, Eq, ToSchema, FromJSON, ToJSON)
+-- data LocationAddress = LocationAddress
+--   { street :: Maybe Text,
+--     city :: Maybe Text,
+--     state :: Maybe Text,
+--     country :: Maybe Text,
+--     building :: Maybe Text,
+--     areaCode :: Maybe Text,
+--     area :: Maybe Text
+--   }
+--   deriving (Generic, Show, Eq, ToSchema, FromJSON, ToJSON)
 
 ---------------------------------------------------------
 -- ride list --------------------------------------------
@@ -292,66 +292,66 @@ $(mkHttpInstancesForEnum ''BookingStatus)
 ---------------------------------------------------------
 -- Ticket Ride List--------------------------------------
 
-type TicketRideListAPI =
-  "kapture"
-    :> "list"
-    :> QueryParam "rideShortId" (ShortId Ride)
-    :> QueryParam "countryCode" Text
-    :> QueryParam "phoneNumber" Text
-    :> QueryParam "supportPhoneNumber" Text
-    :> Get '[JSON] TicketRideListRes
+-- type TicketRideListAPI =
+--   "kapture"
+--     :> "list"
+--     :> QueryParam "rideShortId" (ShortId Ride)
+--     :> QueryParam "countryCode" Text
+--     :> QueryParam "phoneNumber" Text
+--     :> QueryParam "supportPhoneNumber" Text
+--     :> Get '[JSON] TicketRideListRes
 
-newtype TicketRideListRes = TicketRideListRes
-  { rides :: [RideInfo]
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
+-- newtype TicketRideListRes = TicketRideListRes
+--   { rides :: [RideInfo]
+--   }
+--   deriving stock (Show, Generic)
+--   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-instance HideSecrets TicketRideListRes where
-  hideSecrets = identity
+-- instance HideSecrets TicketRideListRes where
+--   hideSecrets = identity
 
-data RideInfo = RideInfo
-  { rideShortId :: ShortId Ride,
-    customerName :: Maybe Text,
-    customerPhoneNo :: Maybe Text,
-    driverName :: Text,
-    driverPhoneNo :: Maybe Text,
-    vehicleNo :: Text,
-    status :: BookingStatus,
-    rideCreatedAt :: UTCTime,
-    pickupLocationLat :: Maybe Double,
-    pickupLocationLon :: Maybe Double,
-    pickupLocationStreet :: Maybe Text,
-    pickupLocationCity :: Maybe Text,
-    pickupLocationState :: Maybe Text,
-    pickupLocationCountry :: Maybe Text,
-    pickupLocationBuilding :: Maybe Text,
-    pickupLocationAreaCode :: Maybe Text,
-    pickupLocationArea :: Maybe Text,
-    dropLocationLat :: Maybe Double,
-    dropLocationLon :: Maybe Double,
-    dropLocationStreet :: Maybe Text,
-    dropLocationCity :: Maybe Text,
-    dropLocationState :: Maybe Text,
-    dropLocationCountry :: Maybe Text,
-    dropLocationBuilding :: Maybe Text,
-    dropLocationAreaCode :: Maybe Text,
-    dropLocationArea :: Maybe Text,
-    fare :: Maybe Money,
-    fareWithCurrency :: Maybe PriceAPIEntity,
-    personId :: Id Customer,
-    nextStopLocation :: Maybe Location,
-    rideScheduledAt :: UTCTime,
-    fareProductType :: FareProductType, -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
-    tripCategory :: TripCategory,
-    endOtp :: Maybe Text,
-    classification :: Ticket.Classification
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToSchema)
+-- data RideInfo = RideInfo
+--   { rideShortId :: ShortId Ride,
+--     customerName :: Maybe Text,
+--     customerPhoneNo :: Maybe Text,
+--     driverName :: Text,
+--     driverPhoneNo :: Maybe Text,
+--     vehicleNo :: Text,
+--     status :: BookingStatus,
+--     rideCreatedAt :: UTCTime,
+--     pickupLocationLat :: Maybe Double,
+--     pickupLocationLon :: Maybe Double,
+--     pickupLocationStreet :: Maybe Text,
+--     pickupLocationCity :: Maybe Text,
+--     pickupLocationState :: Maybe Text,
+--     pickupLocationCountry :: Maybe Text,
+--     pickupLocationBuilding :: Maybe Text,
+--     pickupLocationAreaCode :: Maybe Text,
+--     pickupLocationArea :: Maybe Text,
+--     dropLocationLat :: Maybe Double,
+--     dropLocationLon :: Maybe Double,
+--     dropLocationStreet :: Maybe Text,
+--     dropLocationCity :: Maybe Text,
+--     dropLocationState :: Maybe Text,
+--     dropLocationCountry :: Maybe Text,
+--     dropLocationBuilding :: Maybe Text,
+--     dropLocationAreaCode :: Maybe Text,
+--     dropLocationArea :: Maybe Text,
+--     fare :: Maybe Money,
+--     fareWithCurrency :: Maybe PriceAPIEntity,
+--     personId :: Id Customer,
+--     nextStopLocation :: Maybe Location,
+--     rideScheduledAt :: UTCTime,
+--     fareProductType :: FareProductType, -- TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+--     tripCategory :: TripCategory,
+--     endOtp :: Maybe Text,
+--     classification :: Ticket.Classification
+--   }
+--   deriving stock (Show, Generic)
+--   deriving anyclass (ToSchema)
 
-instance FromJSON RideInfo where
-  parseJSON = genericParseJSON constructorsWithLowerCase
+-- instance FromJSON RideInfo where
+--   parseJSON = genericParseJSON constructorsWithLowerCase
 
-instance ToJSON RideInfo where
-  toJSON = genericToJSON constructorsWithLowerCase
+-- instance ToJSON RideInfo where
+--   toJSON = genericToJSON constructorsWithLowerCase

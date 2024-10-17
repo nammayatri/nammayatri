@@ -14,20 +14,20 @@
 
 module API.Dashboard.Ride where
 
-import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
-import qualified Domain.Action.Dashboard.Ride as DRide
-import qualified Domain.Types.Merchant as DM
-import Environment
-import Kernel.Prelude
--- import Kernel.Types.APISuccess (APISuccess)
-import Kernel.Types.Id
-import Kernel.Utils.Common
-import Servant hiding (throwError)
-import Storage.Beam.SystemConfigs ()
+-- import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
+-- import qualified Domain.Action.Dashboard.Ride as DRide
+-- import qualified Domain.Types.Merchant as DM
+-- import Environment
+-- import Kernel.Prelude
+-- -- import Kernel.Types.APISuccess (APISuccess)
+-- import Kernel.Types.Id
+-- import Kernel.Utils.Common
+-- import Servant hiding (throwError)
+-- import Storage.Beam.SystemConfigs ()
 
-type API =
-  "ride"
-    :> Common.TicketRideListAPI
+-- type API =
+--   "ride"
+--     :> Common.TicketRideListAPI
 
 -- type ShareRideInfoAPI = Common.ShareRideInfoAPI
 
@@ -36,13 +36,13 @@ type API =
 --     :> ReqBody '[JSON] DRide.MultipleRideCancelReq
 --     :> Post '[JSON] APISuccess
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler =
-  -- callGetTripRoute merchantId
-  -- callGetPickupRoute merchantId
-  -- multipleRideCancel -- FIXME merchantId ?
-  --   :<|> multipleRideSync merchantId
-  ticketRideList
+-- handler :: ShortId DM.Merchant -> FlowServer API
+-- handler =
+-- callGetTripRoute merchantId
+-- callGetPickupRoute merchantId
+-- multipleRideCancel -- FIXME merchantId ?
+--   :<|> multipleRideSync merchantId
+--  ticketRideList
 
 -- shareRideInfo ::
 --   ShortId DM.Merchant ->
@@ -95,5 +95,5 @@ handler =
 --     pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
 --   pure $ Common.MultipleRideSyncResp {list = respItems}
 
-ticketRideList :: ShortId DM.Merchant -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.TicketRideListRes
-ticketRideList merchantShortId mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI $ DRide.ticketRideList merchantShortId mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber
+-- ticketRideList :: ShortId DM.Merchant -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.TicketRideListRes
+-- ticketRideList merchantShortId mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI $ DRide.ticketRideList merchantShortId mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber

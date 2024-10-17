@@ -22,10 +22,10 @@ module Domain.Action.Dashboard.Ride
     postRideCancelMultiple,
     --   MultipleRideCancelReq,
     rideSync,
-    ticketRideList,
+    getRideKaptureList,
     getRideTripRoute,
     getRidePickupRoute,
-    postRideSync,
+    postRideSyncMultiple,
   )
 where
 
@@ -272,8 +272,8 @@ buildRideListItem QRide.RideItem {..} = do
         ..
       }
 
-ticketRideList :: ShortId DM.Merchant -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.TicketRideListRes
-ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
+getRideKaptureList :: ShortId DM.Merchant -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.TicketRideListRes
+getRideKaptureList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
   merchant <- findMerchantByShortId merchantShortId
   let totalRides = 5
   let mbShortId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbRideShortId
@@ -564,12 +564,12 @@ getRidePickupRoute ::
 getRidePickupRoute merchantShortId _ rideId currLocationLat currLocationLon =
   mkGetLocation merchantShortId rideId currLocationLat currLocationLon True
 
-postRideSync ::
+postRideSyncMultiple ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.MultipleRideSyncReq ->
   Flow Common.MultipleRideSyncResp
-postRideSync merchantShortId _ req = do
+postRideSyncMultiple merchantShortId _ req = do
   runRequestValidation validateMultipleRideSyncReq req
   merchant <- findMerchantByShortId merchantShortId
   logTagInfo "dashboard -> multipleRideSync : " $ show (req.rides <&> (.rideId))

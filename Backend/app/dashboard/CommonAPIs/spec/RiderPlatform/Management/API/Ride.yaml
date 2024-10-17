@@ -1,5 +1,6 @@
 imports:
   Booking: Dashboard.Common
+  Customer: Dashboard.Common
   Ride: Dashboard.Common
   Summary: Dashboard.Common
   Distance: Kernel.Types.Distance
@@ -13,14 +14,13 @@ imports:
   FareProductType: Domain.Types
   TripCategory: Domain.Types
   VehicleVariant: Domain.Types.VehicleVariant
-  BookingStatus: Dashboard.RiderPlatform.Ride
-  Location: Dashboard.RiderPlatform.Ride
   Centesimal: Kernel.Types.Centesimal
   BaseUrl: Kernel.Prelude
   GetRoutesResp: Kernel.External.Maps
   MultipleRideSyncResp: Dashboard.Common.Ride
   CancellationReasonCode: Dashboard.Common.Booking
   Booking: Dashboard.Common
+  BookingStatus: Dashboard.RiderPlatform.Ride
 
 module: Ride
 
@@ -82,6 +82,7 @@ apis:
         type: GetRoutesResp
   - POST:
       endpoint: /sync
+      name: PostRideSyncMultiple
       auth: ApiAuth APP_BACKEND_MANAGEMENT RIDES MULTIPLE_RIDE_SYNC
       request:
         type: MultipleRideSyncReq
@@ -99,19 +100,26 @@ apis:
         type: APISuccess
       migrate:
         endpoint: RideAPI MultipleRideCancelRideEndpoint
+  - GET:
+      endpoint: /kapture/list
+      auth: ApiAuth APP_BACKEND_MANAGEMENT RIDES TICKET_RIDE_LIST_API
+      query:
+        - rideShortId: (ShortId Ride)
+        - countryCode: Text
+        - phoneNumber: Text
+        - supportPhoneNumber: Text
+      response:
+        type: TicketRideListRes
 
 
-# type MultipleRideCancelAPI =
-#   "cancel"
-#     :> ReqBody '[JSON] DRide.MultipleRideCancelReq
-#     :> Post '[JSON] APISuccess
-
-
-# type MultipleRideSyncAPI =
-#   "sync"
-#     :> ReqBody '[JSON] MultipleRideSyncReq
-#     :> Post '[JSON] MultipleRideSyncResp
-
+# type TicketRideListAPI =
+#   "kapture"
+#     :> "list"
+#     :> QueryParam "rideShortId" (ShortId Ride)
+#     :> QueryParam "countryCode" Text
+#     :> QueryParam "phoneNumber" Text
+#     :> QueryParam "supportPhoneNumber" Text
+#     :> Get '[JSON] TicketRideListRes
 
 
 
@@ -244,22 +252,62 @@ types:
     - derive: "'HideSecrets"
   CancellationStage:
     - enum: "OnSearch, OnInit, OnConfirm, OnAssign"
-
+  TicketRideListRes:
+    - recordType: NewType
+    - rides: [RideInfo]
+    - derive: "'HideSecrets"
+  RideInfo:
+     - rideShortId: ShortId Ride
+     - customerName: Maybe Text
+     - customerPhoneNo: Maybe Text
+     - driverName: Text
+     - driverPhoneNo: Maybe Text
+     - vehicleNo: Text
+     - status: BookingStatus
+     - rideCreatedAt: UTCTime
+     - pickupLocationLat: Maybe Double
+     - pickupLocationLon: Maybe Double
+     - pickupLocationStreet: Maybe Text
+     - pickupLocationCity: Maybe Text
+     - pickupLocationState: Maybe Text
+     - pickupLocationCountry: Maybe Text
+     - pickupLocationBuilding: Maybe Text
+     - pickupLocationAreaCode: Maybe Text
+     - pickupLocationArea: Maybe Text
+     - dropLocationLat: Maybe Double
+     - dropLocationLon: Maybe Double
+     - dropLocationStreet: Maybe Text
+     - dropLocationCity: Maybe Text
+     - dropLocationState: Maybe Text
+     - dropLocationCountry: Maybe Text
+     - dropLocationBuilding: Maybe Text
+     - dropLocationAreaCode: Maybe Text
+     - dropLocationArea: Maybe Text
+     - fare: Maybe Money
+     - fareWithCurrency: Maybe PriceAPIEntity
+     - personId: Id Customer
+     - nextStopLocation: Maybe Location
+     - rideScheduledAt: UTCTime
+     - fareProductType: FareProductType   # TODO :: For backward compatibility  please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+     - tripCategory: TripCategory
+     - endOtp: Maybe Text
+     - classification: Ticket.Classification
+     - derive': "FromJSON, ToJSON"
+  Location:
+    - id: Id Location
+    - lat: Double
+    - lon: Double
+    - address: LocationAddress
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  LocationAddress:
+    - street: Maybe Text
+    - city: Maybe Text
+    - state: Maybe Text
+    - country: Maybe Text
+    - building: Maybe Text
+    - areaCode: Maybe Text
+    - area: Maybe Text
 
   # BookingStatus:
-  #   - enum: UPCOMING, UPCOMING_6HRS, ONGOING, ONGOING_6HRS, RCOMPLETED, RCANCELLED
-  # Location:
-  #   - id: Id Location
-  #   - lat: Double
-  #   - lon: Double
-  #   - address: LocationAddress
-  #   - createdAt: UTCTime
-  #   - updatedAt: UTCTime
-  # LocationAddress:
-  #   - street: Maybe Text
-  #   - city: Maybe Text
-  #   - state: Maybe Text
-  #   - country: Maybe Text
-  #   - building: Maybe Text
-  #   - areaCode: Maybe Text
-  #   - area: Maybe Text
+  #   - enum: UPCOMING  UPCOMING_6HRS  ONGOING  ONGOING_6HRS  RCOMPLETED  RCANCELLED

@@ -57,7 +57,7 @@ import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 
 data AppBackendAPIs = AppBackendAPIs
-  { rides :: RidesAPIs,
+  { --rides :: RidesAPIs,
     issues :: ListIssueAPIs,
     issuesV2 :: IssueAPIs,
     tickets :: TicketAPIs,
@@ -69,9 +69,9 @@ data AppBackendAPIs = AppBackendAPIs
     invoiceDSL :: InvoiceDSL.InvoiceAPIs
   }
 
-data RidesAPIs = RidesAPIs
-  { ticketRideList :: Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.TicketRideListRes
-  }
+-- data RidesAPIs = RidesAPIs
+--   { ticketRideList :: Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.TicketRideListRes
+--   }
 
 data ListIssueAPIs = ListIssueAPIs
   { listIssue :: Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient DI.IssueListRes,
@@ -110,7 +110,7 @@ newtype HotSpotAPIs = HotSpotAPIs
 
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> AppBackendAPIs
 mkAppBackendAPIs merchantId city token = do
-  let rides = RidesAPIs {..}
+  -- let rides = RidesAPIs {..}
   let issues = ListIssueAPIs {..}
   let issuesV2 = IssueAPIs {..}
   let tickets = TicketAPIs {..}
@@ -123,8 +123,7 @@ mkAppBackendAPIs merchantId city token = do
   let invoiceDSL = InvoiceDSL.mkInvoiceAPIs invoiceClientDSL
   AppBackendAPIs {..}
   where
-    ridesClient
-      :<|> issueClient
+    issueClient
       :<|> issueV2Client
       :<|> ticketsClient
       :<|> hotSpotClient
@@ -134,8 +133,6 @@ mkAppBackendAPIs merchantId city token = do
       :<|> merchantClientDSL
       :<|> invoiceClientDSL =
         clientWithMerchantAndCity (Proxy :: Proxy BAP.OperationsAPI) merchantId city token
-
-    ticketRideList = ridesClient
 
     listIssue
       :<|> ticketStatusCallBack = issueClient
