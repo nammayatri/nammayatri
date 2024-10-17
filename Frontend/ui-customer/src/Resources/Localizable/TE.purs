@@ -503,6 +503,7 @@ getTE stringKey =
     DIFFERENT_VEHICLE_NUMBER -> "వేర్వేరు వాహన సంఖ్య"
     VEHICLE_NUMBER_IS_DIFFERENT_FROM_WHAT_IS_SHOWN_IN_THE_APP -> "యాప్‌లో చూపిన దానికి భిన్నంగా వాహనం నంబర్ ఉంది"
     DIFFERENT_AUTO -> "వివిధ ఆటో"
+    DIFFERENT_BIKE -> "వివిధ బైక్"
     DIFFERENT_CAB -> "వివిధ క్యాబ్"
     DRIVER_MIGHT_BE_TAKING_ALTERNATE_ROUTE -> "డ్రైవర్ ప్రత్యామ్నాయ మార్గంలో ఉండవచ్చు."
     DRIVER_IS_NOT_MOVING_Q -> "డ్రైవర్ కదలడం లేదా?"

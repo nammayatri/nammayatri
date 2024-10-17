@@ -485,6 +485,7 @@ getBN stringKey =
         DIFFERENT_VEHICLE_NUMBER -> "বিভিন্ন যানবাহন নম্বর"
         VEHICLE_NUMBER_IS_DIFFERENT_FROM_WHAT_IS_SHOWN_IN_THE_APP -> "গাড়ির নম্বর অ্যাপে যা দেখানো হয়েছে তার থেকে আলাদা"
         DIFFERENT_AUTO -> "ভিন্ন অটো"
+        DIFFERENT_BIKE -> "বিভিন্ন বাইক"
         DIFFERENT_CAB -> "ভিন্ন ক্যাব"
         DRIVER_MIGHT_BE_TAKING_ALTERNATE_ROUTE  -> "চালক হয়তো বিকল্প পথ নিচ্ছেন।"
         DRIVER_IS_NOT_MOVING_Q  -> "চালক নড়ছে না?"
