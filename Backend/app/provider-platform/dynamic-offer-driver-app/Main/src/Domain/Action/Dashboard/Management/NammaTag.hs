@@ -108,6 +108,7 @@ postNammaTagTagVerify _merchantShortId _opCity Lib.Yudhishthira.Types.VerifyNamm
             case tagStage of
               Lib.Yudhishthira.Types.Application.Search -> A.fromJSON val :: A.Result Domain.Types.Yudhishthira.TagData
               Lib.Yudhishthira.Types.Application.RideEnd -> A.fromJSON val :: A.Result Domain.Types.Yudhishthira.EndRideTagData
+              _ -> throwError $ InvalidRequest $ "Only supported for Search and EndRide event for now"
       case parsedInputData of
         A.Success val -> A.toJSON val
         A.Error err -> throwError $ InvalidRequest $ "wrong input data type for the given stage: " <> show tagStage <> ", error: " <> show err
