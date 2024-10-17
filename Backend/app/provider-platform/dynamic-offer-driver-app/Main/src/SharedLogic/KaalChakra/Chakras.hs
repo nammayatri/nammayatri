@@ -130,7 +130,7 @@ getNextChakraTime now chakra = do
 
   -- adding n - 1 days below due to above.
   flip addUTCTime endOfDayToday $ case chakra of
-    LYT.Daily -> 3600 - 19800
+    LYT.Daily -> 86400 + 3600 - 19800
     LYT.Weekly -> 7 * 86400 + 7200 - 19800
     LYT.Monthly -> 30 * 86400 + 10800 - 19800
     LYT.Quarterly -> 90 * 86400 + 14400 - 19800
