@@ -350,3 +350,9 @@ _isScheduled = lens (unwrap >>> _.isScheduled) (\oldRec newVal -> wrap ((unwrap 
 
 _types :: forall a b c. Newtype a { types :: b | c } => Lens' a b
 _types = lens (unwrap >>> _.types) (\oldRec newVal -> wrap ((unwrap oldRec) { types = newVal }))
+
+_fragmentViewGroups :: forall a b c. Newtype a { fragmentViewGroups :: b | c } => Lens' a b
+_fragmentViewGroups = lens (unwrap >>> _.fragmentViewGroups) (\oldRec newVal -> wrap ((unwrap oldRec) { fragmentViewGroups = newVal }))
+
+_main :: forall a b c. Newtype a { main :: b | c } => Lens' a b
+_main = lens (unwrap >>> _.main) (\oldRec newVal -> wrap ((unwrap oldRec) { main = newVal }))
