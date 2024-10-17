@@ -138,6 +138,15 @@ derive instance genericGlobalPayload :: Generic GlobalPayload _
 instance decodeGlobalPayload :: Decode GlobalPayload where decode = defaultDecode
 instance encodeGlobalPayload :: Encode GlobalPayload where encode = defaultEncode
 
+newtype FragmentViewGroup = FragmentViewGroup {
+  main :: Maybe String
+}
+
+derive instance newFragmentViewGroup :: Newtype FragmentViewGroup _
+derive instance genericFragmentViewGroup :: Generic FragmentViewGroup _
+instance decodeFragmentViewGroup :: Decode FragmentViewGroup where decode = defaultDecode
+instance encodeFragmentViewGroup :: Encode FragmentViewGroup where encode = defaultEncode
+
 newtype Payload = Payload
   { service :: Maybe String
   , environment :: Maybe String
@@ -152,6 +161,7 @@ newtype Payload = Payload
   , deeplinkOptions :: Maybe DeeplinkOptions
   , deepLinkJSON :: Maybe QueryParam
   , chatMessageData :: Maybe ChatFCMData
+  , fragmentViewGroups :: Maybe FragmentViewGroup
   }
 
 newtype QueryParam = QueryParam {

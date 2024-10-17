@@ -8,37 +8,49 @@ import android.net.Uri;
 import android.os.Handler;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.ContentFrameLayout;
 import androidx.constraintlayout.widget.ConstraintLayout;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.mobility.app.callbacks.CallBack;
 
 public class InAppNotification extends AppCompatActivity {
-    private final ConstraintLayout mainLayout;
+    private static InAppNotification instance;
+    private final FrameLayout mainLayout;
     private final ArrayList<String> notificationStack = new ArrayList<>();
     private final JSONObject notificationChannels = new JSONObject();
-    private final Activity activity;
+    private final WeakReference<Activity> activity;
     private final Context context;
     private final String LOG_TAG = "InAppNotification";
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
 
-    public InAppNotification(Activity activity) {
-        this.activity = activity;
+    private InAppNotification(Activity activity, FrameLayout layout) {
+        this.activity = new WeakReference<>(activity);
         this.context = activity.getApplicationContext();
-        mainLayout = activity.findViewById(R.id.main_layout);
+        mainLayout = layout;
+    }
+
+    public static InAppNotification getInstance(Activity activity,FrameLayout layout) {
+        if (instance == null) {
+            instance = new InAppNotification(activity,layout);
+        }
+        return instance;
     }
 
     public static void registerCallback(CallBack notificationCallBack) {
@@ -62,7 +74,7 @@ public class InAppNotification extends AppCompatActivity {
         String onTapAction = jsonObject.optString("onTapAction");
         boolean showLoader = jsonObject.optBoolean("showLoader", false);
         int durationInMilliSeconds = Integer.parseInt(jsonObject.optString("durationInMilliSeconds"));
-         if (!notificationChannels.has(channelId) && mainLayout != null) {
+        if (!notificationChannels.has(channelId) && mainLayout != null) {
             notification = new Notification(channelId);
             notification.attachEventListenerToNotification(onTapAction);
 
@@ -147,9 +159,7 @@ public class InAppNotification extends AppCompatActivity {
         private final int paddingRight;
 
         private Notification(String channelId) {
-            this.view = activity.getLayoutInflater().inflate(R.layout.app_notification, null);
-            ConstraintLayout.LayoutParams layoutParams = new ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.WRAP_CONTENT, ConstraintLayout.LayoutParams.WRAP_CONTENT);
-            this.view.setLayoutParams(layoutParams);
+            this.view = activity.get().getLayoutInflater().inflate(R.layout.app_notification, null);
             this.handler = new Handler();
             this.channelId = channelId;
             this.paddingTop = view.getPaddingBottom();
