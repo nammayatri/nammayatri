@@ -293,6 +293,7 @@ library
       Domain.Types.Quote
       Domain.Types.RideRoute
       Domain.Types.UtilsTH
+      Domain.Types.Yudhishthira
       Environment
       Lib.DriverCoins.Coins
       Lib.DriverCoins.Types

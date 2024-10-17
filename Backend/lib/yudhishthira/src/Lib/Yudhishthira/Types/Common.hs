@@ -34,3 +34,6 @@ $(mkBeamInstancesForEnumAndList ''TagValues)
 
 newtype TagName = TagName Text
   deriving newtype (Eq, Ord, Show)
+
+class LogicInputLink a where
+  getLogicInputDef :: a -> Maybe Value
