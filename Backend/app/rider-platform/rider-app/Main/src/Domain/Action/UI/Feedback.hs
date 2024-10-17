@@ -130,7 +130,7 @@ feedback request personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   unencryptedMobileNumber <- mapM decrypt person.mobileNumber
-  let isLOFeedback = IC.checkForLOFeedback riderConfig.sensitiveWords riderConfig.sensitiveWordsForExactMatch feedbackDetails
+  let isLOFeedback = ratingValue <= riderConfig.feedbackAlertRatingThreshold && IC.checkForLOFeedback riderConfig.sensitiveWords riderConfig.sensitiveWordsForExactMatch feedbackDetails
   when isLOFeedback $
     fork "Creating ticket and notifying on slack" $ do
       phoneNumber <- mapM decrypt person.mobileNumber
