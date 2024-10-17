@@ -19,6 +19,7 @@ import com.finternet.sdk.MyEventPackage;
 import com.google.firebase.FirebaseApp;
 import com.google.gson.Gson;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
+import com.google.android.play.core.splitcompat.SplitCompat;
 
 import java.util.List;
 
@@ -28,6 +29,7 @@ public class DynamicActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        SplitCompat.installActivity(this);
         setContentView(R.layout.activity_resource);
         try{
             System.loadLibrary("turbomodulejsijni");
