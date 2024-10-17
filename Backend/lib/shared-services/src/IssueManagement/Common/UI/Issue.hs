@@ -12,6 +12,7 @@ import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as T hiding (count, map)
 import EulerHS.Prelude hiding (id)
 import IssueManagement.Common as Reexport hiding (Audio, Image)
+import IssueManagement.Domain.Types.Issue.Common
 import IssueManagement.Domain.Types.Issue.IssueCategory
 import IssueManagement.Domain.Types.Issue.IssueMessage
 import IssueManagement.Domain.Types.Issue.IssueOption
@@ -217,6 +218,23 @@ data Message = Message
 data IssueOptionListRes = IssueOptionListRes
   { options :: [IssueOptionRes],
     messages :: [Message]
+  }
+  deriving (Generic, Show, ToJSON, ToSchema, Eq, FromJSON)
+
+-------------------------------------------------------------------------
+
+type IssueOptionAPIV2 =
+  ReqBody '[JSON] GetIssueOptionReq
+    :> Post '[JSON] IssueOptionListRes
+
+data GetIssueOptionReq = GetIssueOptionReq
+  { categoryId :: Id IssueCategory,
+    selectedOptionId :: Maybe (Id IssueOption),
+    issueReportId :: Maybe (Id IssueReport),
+    rideId :: Maybe (Id Ride),
+    language :: Maybe Language,
+    userInput :: Maybe UserInput,
+    uploadedMediaFiles :: [Id MediaFile]
   }
   deriving (Generic, Show, ToJSON, ToSchema, Eq, FromJSON)
 

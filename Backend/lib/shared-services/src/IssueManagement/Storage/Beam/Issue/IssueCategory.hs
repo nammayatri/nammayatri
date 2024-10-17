@@ -19,6 +19,7 @@ module IssueManagement.Storage.Beam.Issue.IssueCategory where
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import qualified IssueManagement.Common as Common
+import qualified IssueManagement.Domain.Types.Issue.Common as DIC
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as IC
 import IssueManagement.Tools.UtilsTH hiding (label)
 
@@ -37,7 +38,9 @@ data IssueCategoryT f = IssueCategoryT
     label :: B.C f (Maybe Text),
     isActive :: B.C f Bool,
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    filterOptionFn :: B.C f (Maybe [DIC.FilterFn]),
+    description :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
