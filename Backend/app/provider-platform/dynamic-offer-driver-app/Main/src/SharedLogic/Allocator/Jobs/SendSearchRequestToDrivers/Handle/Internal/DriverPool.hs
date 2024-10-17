@@ -590,15 +590,21 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
   updateVersionInSearchReq mbVersion
   let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
   let taggedDriverPoolInput = TaggedDriverPoolInput {drivers = onlyNewDriversWithCustomerInfo, needOnRideDrivers = isOnRidePool}
-  resp <- LYTU.runLogics allLogics taggedDriverPoolInput
+  (resp, scores) <- LYTU.runLogics' allLogics taggedDriverPoolInput
   sortedPool <-
     case (A.fromJSON resp.result :: Result TaggedDriverPoolInput) of
-      A.Success sortedPoolData -> pure sortedPoolData.drivers
+      A.Success sortedPoolData -> do
+        let drivers = sortedPoolData.drivers
+        when (length drivers /= length scores) $ logError "Mismatch between number of drivers and scores"
+        let updatedDrivers = zipWith updateDriverScore drivers scores
+        pure updatedDrivers
       A.Error err -> do
         logError $ "Error in parsing sortedPoolData - " <> show err
         pure onlyNewDriversWithCustomerInfo
   return (mbVersion, take batchSize sortedPool)
   where
+    updateDriverScore driver score = driver {driverPoolResult = (driverPoolResult driver) {driverTagScore = score}}
+
     updateDriverPoolWithActualDistResult DriverPoolWithActualDistResult {..} =
       DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, searchTags = Just $ maybe A.emptyObject convertTags searchReq.searchTags, tripDistance = searchReq.estimatedDistance, ..}
 
