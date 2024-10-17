@@ -1,6 +1,7 @@
 imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  VehicleCategory: Domain.Types.VehicleCategory
 
 PurchaseHistory:
   tableName: purchase_history
@@ -17,6 +18,7 @@ PurchaseHistory:
     title : Text
     createdAt : UTCTime
     updatedAt : UTCTime
+    vehicleCategory : Maybe VehicleCategory
 
   beamFields:
     currency:

@@ -37,6 +37,7 @@ updateByPrimaryKey (Domain.Types.PurchaseHistory.PurchaseHistory {..}) = do
       Se.Set Beam.merchantOptCityId merchantOptCityId,
       Se.Set Beam.numCoins numCoins,
       Se.Set Beam.title title,
-      Se.Set Beam.updatedAt _now
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.vehicleCategory vehicleCategory
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

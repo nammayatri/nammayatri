@@ -18,6 +18,7 @@ module Storage.Queries.Coins.CoinsConfig where
 import Domain.Types.Coins.CoinsConfig
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.VehicleCategory as DTV
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -35,15 +36,16 @@ fetchCoins eventFunction (Id merchantId) =
         ]
     ]
 
-fetchFunctionsOnEventbasis :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m [CoinsConfig]
-fetchFunctionsOnEventbasis eventType (Id merchantId) (Id merchantOptCityId) = do
+fetchFunctionsOnEventbasis :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DCT.DriverCoinsEventType -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DTV.VehicleCategory -> m [CoinsConfig]
+fetchFunctionsOnEventbasis eventType (Id merchantId) (Id merchantOptCityId) vehicleCategory = do
   let dbEventName = show eventType
   findAllWithKV
     [ Se.And
         [ Se.Is BeamDC.eventName $ Se.Eq dbEventName,
           Se.Is BeamDC.merchantId $ Se.Eq merchantId,
           Se.Is BeamDC.merchantOptCityId $ Se.Eq merchantOptCityId,
-          Se.Is BeamDC.active $ Se.Eq True
+          Se.Is BeamDC.active $ Se.Eq True,
+          Se.Is BeamDC.vehicleCategory $ Se.Eq vehicleCategory
         ]
     ]
 
@@ -72,7 +74,8 @@ instance FromTType' BeamDC.CoinsConfig CoinsConfig where
             merchantOptCityId = merchantOptCityId,
             coins = coins,
             expirationAt = expirationAt,
-            active = active
+            active = active,
+            vehicleCategory = vehicleCategory
           }
 
 instance ToTType' BeamDC.CoinsConfig CoinsConfig where
@@ -85,5 +88,6 @@ instance ToTType' BeamDC.CoinsConfig CoinsConfig where
         BeamDC.merchantOptCityId = merchantOptCityId,
         BeamDC.coins = coins,
         BeamDC.expirationAt = expirationAt,
-        BeamDC.active = active
+        BeamDC.active = active,
+        BeamDC.vehicleCategory = vehicleCategory
       }
