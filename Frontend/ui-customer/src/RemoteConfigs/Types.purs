@@ -93,3 +93,7 @@ instance showServiceType :: Show ServiceType where show = genericShow
 type InterCityBusConfig = {
   baseUrl :: String
 }
+
+type MetroConfig = {
+  tnc :: String
+}

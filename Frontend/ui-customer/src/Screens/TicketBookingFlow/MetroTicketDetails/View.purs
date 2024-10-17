@@ -496,6 +496,7 @@ metroHeaderView push state headerFontStyle detailVisibility =
           , height WRAP_CONTENT
           , text $ (show $ state.data.noOfTickets) <> " " <> (getString $ if state.data.noOfTickets > 1 then TICKETS else TICKET)
           , color Color.black800
+          , visibility $ boolToVisibility $ state.data.noOfTickets > 1
           ] <> FontStyle.tags TypoGraphy
         , linearLayout [
             width $ V 4
@@ -503,6 +504,7 @@ metroHeaderView push state headerFontStyle detailVisibility =
           , cornerRadius 2.0
           , margin $ MarginHorizontal 6 6
           , background Color.black500
+          , visibility $ boolToVisibility $ state.data.noOfTickets > 1
           , gravity CENTER_VERTICAL
           ][]
         , textView $ [
