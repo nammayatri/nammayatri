@@ -646,14 +646,14 @@ termsAndConditionCard state push =
             , textView $ 
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
-                , text $ if tripCategory.tag == CTA.OneWay then (getString TERM_2A) else (getString $ TERM_2B "15")
+                , text $ if tripCategory.tag == CTA.OneWay then (getString TERM_2A) else (getString $ TERM_2B "40")
                 , color Color.black600
                 , margin $ MarginBottom 12
                 ] <> FontStyle.paragraphText TypoGraphy
             , textView $ 
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
-                , text $ if tripCategory.tag == CTA.OneWay then (getString TERM_3A) else (getString $ TERM_3B "45")
+                , text $ if tripCategory.tag == CTA.OneWay then (getString TERM_3A) else (getString $ TERM_3B "10km" "30")
                 , color Color.black600
 
                 ] <> FontStyle.paragraphText TypoGraphy

@@ -77,7 +77,7 @@ callOnClickTracker rideId = do
   createJobIn @_ @'CheckExotelCallStatusAndNotifyBAP (fromIntegral transporterConfig.exotelStatusCheckSchedulerDelay) maxShards $
     CheckExotelCallStatusAndNotifyBAPJobData
       { rideId = ride.id,
-        merchantOperatingCityId = booking.merchantOperatingCityId
+        merchantOperatingCityId = Just (booking.merchantOperatingCityId)
       }
   return ()
   where

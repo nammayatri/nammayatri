@@ -1415,13 +1415,13 @@ getEn =
     , term_1a: "1. Total fare will be calculated depending on the actual final distance of ride."
     , term_2a: "2. Toll will be applicable only if toll road is taken."
     , term_3a: "3. Parking charges if any will have to be settled separately with the driver."
-    , term_1b: (\time -> "1. Cancellation before " <> time <> " hr from the scheduled ride start will lead to penalties on the platform. ")
-    , term_2b: (\time -> "2. Be online before " <> time <> " minutes of Scheduled Ride Start. ")
-    , term_3b: (\time -> "3. Reach Customer pickup location before " <> time <> " minutes from scheduled ride start time.        ")
+    , term_1b: (\time -> "1. Repeated Cancellations will lead to penalties or being blocked. ")
+    , term_2b: (\time -> "2. Be online before " <> time <> " minutes from ride starts. ")
+    , term_3b: (\distance time  -> "3. Be within " <> distance <> " of pickup before " <> time <> " minutes of ride starts.")
     , excluded_charges: "Excluded charges"
     , tolls: "Tolls"
     , state_permit: "State Permits"
-    , excluded_footer: "These fare components are NOT included in the fare and must be settled separately with the customer"
+    , excluded_footer: "Please settle these charges directly with the customer."
     , included_charges: "Included charges"
     , inc_1: "*Extra Charges are only applicable if you exceed the included distance / time."
     , inc_2a: (\startTime endTime multiplier -> "Night time charges: Driving between " <> " " <> startTime <> " and " <> " " <> endTime <> " " <> " will have a " <> " " <> multiplier <> " " <> " multiplier to final fare.")

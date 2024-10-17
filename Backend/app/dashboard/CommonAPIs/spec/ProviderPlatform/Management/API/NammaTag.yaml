@@ -18,6 +18,9 @@ imports:
   ChakraQueryResp: Lib.Yudhishthira.Types
   AppDynamicLogicDomainResp: Lib.Yudhishthira.Types
   AppDynamicLogicVersionResp: Lib.Yudhishthira.Types
+  CreateNammaTagResponse: Lib.Yudhishthira.Types
+  VerifyNammaTagRequest: Lib.Yudhishthira.Types
+  VerifyNammaTagResponse: Lib.Yudhishthira.Types
 
 module: NammaTag
 
@@ -30,9 +33,16 @@ apis:
       request:
         type: CreateNammaTagRequest
       response:
-        type: APISuccess
+        type: CreateNammaTagResponse
       migrate:
         endpointV2:
+  - POST:
+      endpoint: /tag/verify
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
+      request:
+        type: VerifyNammaTagRequest
+      response:
+        type: VerifyNammaTagResponse
   - POST:
       endpoint: /tag/update
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG

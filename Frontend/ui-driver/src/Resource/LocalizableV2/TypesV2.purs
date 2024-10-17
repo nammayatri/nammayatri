@@ -1426,7 +1426,7 @@ newtype Keymap
   , term_3a :: String
   , term_1b :: String -> String
   , term_2b :: String -> String
-  , term_3b :: String -> String
+  , term_3b :: String -> String -> String
   , excluded_charges :: String
   , tolls :: String
   , state_permit :: String

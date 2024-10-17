@@ -1431,7 +1431,7 @@ data STR = LETS_GET_STARTED
         | TERM_3A
         | TERM_1B String
         | TERM_2B String
-        | TERM_3B String
+        | TERM_3B String String
         | EXCLUDED_CHARGES
         | TOLLS 
         | STATE_PERMIT 

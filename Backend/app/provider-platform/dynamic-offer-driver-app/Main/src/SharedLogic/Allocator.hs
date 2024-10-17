@@ -312,7 +312,7 @@ type instance JobContent 'ScheduledRideAssignedOnUpdate = ScheduledRideAssignedO
 
 data CheckExotelCallStatusAndNotifyBAPJobData = CheckExotelCallStatusAndNotifyBAPJobData
   { rideId :: Id DRide.Ride,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
   deriving (Generic, FromJSON, ToJSON)
 

@@ -4,6 +4,7 @@
 
 module Domain.Action.Dashboard.Management.NammaTag
   ( postNammaTagTagCreate,
+    postNammaTagTagVerify,
     postNammaTagTagUpdate,
     deleteNammaTagTagDelete,
     postNammaTagQueryCreate,
@@ -32,6 +33,7 @@ import qualified Domain.Action.Dashboard.Management.NammaTag.Handle as Handle
 import qualified Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as DPerson
+import Domain.Types.Yudhishthira ()
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import JsonLogic
@@ -57,6 +59,7 @@ import qualified Lib.Yudhishthira.Types.AppDynamicLogicElement as DTADLE
 import Lib.Yudhishthira.Types.AppDynamicLogicRollout
 import qualified Lib.Yudhishthira.Types.ChakraQueries
 import qualified Lib.Yudhishthira.Types.ChakraQueries as LYTCQ
+import qualified Lib.Yudhishthira.Types.Common as C
 import Servant hiding (throwError)
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.DriverPool.Config (Config (..))
@@ -70,11 +73,44 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Person as QPerson
 import Tools.Auth
 
-postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.CreateNammaTagRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-postNammaTagTagCreate _merchantShortId _opCity req = YudhishthiraFlow.postTagCreate req
+postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.CreateNammaTagRequest -> Environment.Flow Lib.Yudhishthira.Types.CreateNammaTagResponse)
+postNammaTagTagCreate _merchantShortId _opCity req = do
+  defaultRunResult <- runAgainstDefault
+  void $ YudhishthiraFlow.postTagCreate req
+  pure defaultRunResult
+  where
+    runAgainstDefault = do
+      case req of
+        Lib.Yudhishthira.Types.ApplicationTag Lib.Yudhishthira.Types.NammaTagApplication {..} -> do
+          case tagRule of
+            C.RuleEngine rule -> do
+              let defVal = C.getLogicInputDef tagStage
+              case defVal of
+                Nothing -> throwError $ InvalidRequest $ "No data supplied and failed to get default for the specified event, check if `getLogicInputDef` is defined for your event in `instance YTC.LogicInputLink YA.ApplicationEvent`"
+                Just defaultVal -> do
+                  result <- YudhishthiraFlow.verifyDynamicLogic [rule] defaultVal
+                  pure $ Lib.Yudhishthira.Types.CreateNammaTagResponse {result = Lib.Yudhishthira.Types.ApplicationTagRes (Lib.Yudhishthira.Types.CreateNammaApplicationTagResponse result defaultVal)}
+            _ -> throwError $ InvalidRequest "LLMContext not supported yet"
+        _ -> pure $ Lib.Yudhishthira.Types.CreateNammaTagResponse {result = Lib.Yudhishthira.Types.Success}
 
 postNammaTagTagUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.UpdateNammaTagRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNammaTagTagUpdate _merchantShortId _opCity req = YudhishthiraFlow.postTagUpdate req
+
+postNammaTagTagVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Lib.Yudhishthira.Types.VerifyNammaTagRequest -> Environment.Flow Lib.Yudhishthira.Types.VerifyNammaTagResponse)
+postNammaTagTagVerify _merchantShortId _opCity Lib.Yudhishthira.Types.VerifyNammaTagRequest {..} = do
+  case source of
+    Lib.Yudhishthira.Types.Application tagStage -> do
+      let val =
+            if useDefaultData
+              then C.getLogicInputDef tagStage
+              else logicData <|> C.getLogicInputDef tagStage
+      case val of
+        Just value -> do
+          result <- YudhishthiraFlow.verifyDynamicLogic [logic] value
+          pure $ Lib.Yudhishthira.Types.VerifyNammaTagResponse {executionResult = result, dataUsed = value}
+        Nothing -> throwError $ InvalidRequest $ "No data supplied and failed to get default for the specified event, check if `getLogicInputDef` is defined for your event in `instance YTC.LogicInputLink YA.ApplicationEvent`"
+    _ -> do
+      throwError $ InvalidRequest $ "Available only for Application events currenlty"
 
 deleteNammaTagTagDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Prelude.Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 deleteNammaTagTagDelete _merchantShortId _opCity tagName = YudhishthiraFlow.deleteTag tagName

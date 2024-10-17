@@ -46,6 +46,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.TransporterConfig as DTConf
+import qualified Domain.Types.Yudhishthira as Y
 import Environment (Flow)
 import EulerHS.Prelude hiding (id, pi)
 import Kernel.External.Maps
@@ -126,12 +127,6 @@ data CronJobEndRideReq = CronJobEndRideReq
 newtype CallBasedEndRideReq = CallBasedEndRideReq
   { requestor :: DP.Person
   }
-
-data EndRideTagData = EndRideTagData
-  { ride :: DRide.Ride,
-    booking :: SRB.Booking
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
 
 data ServiceHandle m = ServiceHandle
   { findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
@@ -409,7 +404,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
                endOdometerReading = mbOdometer
               }
-    newRideTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.RideEnd (EndRideTagData updRide' booking))
+    newRideTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.RideEnd (Y.EndRideTagData updRide' booking))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
     fork "updating time and latlong in advance ride if any" $ do
       advanceRide <- QRide.getActiveAdvancedRideByDriverId driverId

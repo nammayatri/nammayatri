@@ -549,6 +549,9 @@
       "ny_ic_id_filled": true,
       "ny_ic_bike_delivery_nav_on_map": true,
       "ny_ic_wallet_outline": true,
-      "ny_ic_refresh" : true
+      "ny_ic_refresh" : true,
+      "zone_curve" : true,
+      "ny_ic_bike_nav_on_map" : true,
+      "ny_ic_bike_pickup_nav_on_map" : true
    }
 }

@@ -3,6 +3,7 @@
 
 module Domain.Action.ProviderPlatform.Management.NammaTag
   ( postNammaTagTagCreate,
+    postNammaTagTagVerify,
     postNammaTagQueryCreate,
     postNammaTagAppDynamicLogicVerify,
     getNammaTagAppDynamicLogic,
@@ -39,11 +40,17 @@ import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 
-postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.CreateNammaTagRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.CreateNammaTagRequest -> Environment.Flow Lib.Yudhishthira.Types.CreateNammaTagResponse)
 postNammaTagTagCreate merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ProviderManagementAPI $ API.Types.ProviderPlatform.Management.NammaTagAPI API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagTagCreateEndpoint) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do ProviderPlatformClient.DynamicOfferDriver.Operations.callDriverOfferBPPOperations checkedMerchantId opCity (.nammaTagDSL.postNammaTagTagCreate) req)
+
+postNammaTagTagVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.VerifyNammaTagRequest -> Environment.Flow Lib.Yudhishthira.Types.VerifyNammaTagResponse)
+postNammaTagTagVerify merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ProviderManagementAPI $ API.Types.ProviderPlatform.Management.NammaTagAPI API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagTagCreateEndpoint) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do ProviderPlatformClient.DynamicOfferDriver.Operations.callDriverOfferBPPOperations checkedMerchantId opCity (.nammaTagDSL.postNammaTagTagVerify) req)
 
 postNammaTagQueryCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Lib.Yudhishthira.Types.ChakraQueriesAPIEntity -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNammaTagQueryCreate merchantShortId opCity apiTokenInfo req = do

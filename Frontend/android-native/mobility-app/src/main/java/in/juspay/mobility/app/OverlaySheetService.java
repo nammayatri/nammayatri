@@ -376,11 +376,13 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             holder.reqButton.setClickable(false);
             if (key != null && key.equals("nammayatriprovider"))
                 startApiLoader();
-            if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
-                lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
-            }else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
-                lottieAnimationView.setAnimation(R.raw.waiting_for_customer_lottie_cab);
-            }
+            // Deprecated as a generic loader is used irrespective of the vehicle variant
+            // if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
+            //     lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
+            // }
+            // else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
+            //     lottieAnimationView.setAnimation(R.raw.waiting_for_customer_lottie_cab);
+            // }
 
             ExecutorService executor = Executors.newSingleThreadExecutor();
             Handler handler = new Handler(Looper.getMainLooper());
@@ -780,10 +782,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         progressDialog = inflater.inflate(R.layout.loading_screen_overlay, null);
         apiLoader = inflater.inflate(R.layout.api_loader, null);
         String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", "null");
-        LottieAnimationView apiLoaderlottieAnimationView = apiLoader.findViewById(R.id.lottie_view_waiting);
-        if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
-            apiLoaderlottieAnimationView.setAnimation(R.raw.ic_cab_vehicle_processing);
-        }
+        // Deprecated as a generic loader is used irrespective of the vehicle variant
+        // LottieAnimationView apiLoaderlottieAnimationView = apiLoader.findViewById(R.id.lottie_view_waiting);
+        // if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
+        //     apiLoaderlottieAnimationView.setAnimation(R.raw.ic_cab_vehicle_processing);
+        // }
         View dismissLoader = progressDialog.findViewById(R.id.loaderOverlay);
         dismissLoader.setOnClickListener(view -> {
             Handler handler = new Handler(Looper.getMainLooper());
@@ -1068,22 +1071,25 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
         int rawResource;
         if (ackType.equals(getString(R.string.DRIVER_ASSIGNMENT))){
-            if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
-                rawResource = R.raw.yatri_auto_accepted_lottie;
-            }else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
-                rawResource = R.raw.ride_accepted_lottie_cab;
-            }
-            else
-                rawResource = R.raw.ride_accepted_lottie;
+            // Deprecated as a generic lottie loader is used irrespective of the vehicle variant or merchant
+            // if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
+            //     rawResource = R.raw.yatri_auto_accepted_lottie;
+            // }
+            // else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
+            //     rawResource = R.raw.ride_accepted_lottie_cab;
+            // }
+            // else
+            rawResource = R.raw.ride_accepted_lottie;
         }
         else{
-            if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
-                rawResource = R.raw.yatri_auto_declined;
-            }else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
-                rawResource = R.raw.accepted_by_another_driver_lottie_cab;
-            }
-            else
-                rawResource = R.raw.accepted_by_another_driver_lottie;
+            // Deprecated as a generic lottie loader is used irrespective of the vehicle variant or merchant
+            // if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")) {
+            //     rawResource = R.raw.yatri_auto_declined;
+            // }else if(key != null && key.equals("nammayatriprovider") && !vehicleVariant.equals("AUTO_RICKSHAW")){
+            //     rawResource = R.raw.accepted_by_another_driver_lottie_cab;
+            // }
+            // else
+            rawResource = R.raw.accepted_by_another_driver_lottie;
         }
 
         handler.post(() -> {
