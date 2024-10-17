@@ -487,6 +487,7 @@ getHI stringKey =
         DIFFERENT_VEHICLE_NUMBER -> "अलग वाहन संख्या"
         VEHICLE_NUMBER_IS_DIFFERENT_FROM_WHAT_IS_SHOWN_IN_THE_APP -> "वाहन नंबर ऐप में दिखाए गए नंबर से अलग है"
         DIFFERENT_AUTO -> "अलग ऑटो"
+        DIFFERENT_BIKE -> "अलग बाइक"
         DIFFERENT_CAB -> "अलग कैब"
         DRIVER_MIGHT_BE_TAKING_ALTERNATE_ROUTE -> "हो सकता है ड्राइवर किसी और रास्ते से आ रहा हो।"
         DRIVER_IS_NOT_MOVING_Q -> "कया आपका ड्राइवर स्थिर है?"
