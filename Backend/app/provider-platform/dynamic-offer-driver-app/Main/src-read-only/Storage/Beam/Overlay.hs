@@ -9,6 +9,7 @@ import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.UtilsTH
+import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
 import qualified Kernel.External.Types
 import Kernel.Prelude
@@ -39,7 +40,8 @@ data OverlayT f = OverlayT
     socialMediaLinks :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     title :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toastMessage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    udf1 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
+    udf1 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory)
   }
   deriving (Generic, B.Beamable)
 
