@@ -1,6 +1,7 @@
 module ExternalBPP.Metro.Flow where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import qualified Data.Text as T
 import Domain.Action.Beckn.FRFS.Common
 import Domain.Action.Beckn.FRFS.OnInit
 import Domain.Action.Beckn.FRFS.OnSearch
@@ -15,7 +16,10 @@ import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Station
-import ExternalBPP.Metro.ExternalAPI.CallAPI as CallAPI
+import qualified ExternalBPP.Metro.ExternalAPI.CMRL.FareByOriginDest as CallAPIFareByOriginDest
+import qualified ExternalBPP.Metro.ExternalAPI.CMRL.QR as CallAPIQR
+import qualified ExternalBPP.Metro.ExternalAPI.CMRL.TicketStatus as CallAPITicketStatus
+import qualified ExternalBPP.Metro.ExternalAPI.CallAPI as CallAPI
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto.Config as DB
@@ -26,13 +30,16 @@ import Storage.Queries.FRFSTicket as QFRFSTicket
 import Storage.Queries.Station as QStation
 import Tools.Error
 
-search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> DFRFSSearch.FRFSSearch -> m DOnSearch
-search _merchant _merchantOperatingCity bapConfig searchReq = do
+getStationCode :: Text -> Text
+getStationCode stationCode = fromMaybe stationCode (listToMaybe $ T.splitOn "|" stationCode)
+
+search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> ProviderConfig -> BecknConfig -> DFRFSSearch.FRFSSearch -> m DOnSearch
+search _merchant _merchantOperatingCity providerConfig bapConfig searchReq = do
   fromStation <- QStation.findById searchReq.fromStationId >>= fromMaybeM (StationNotFound searchReq.fromStationId.getId)
   toStation <- QStation.findById searchReq.toStationId >>= fromMaybeM (StationNotFound searchReq.toStationId.getId)
   let stations = mkStations fromStation toStation
   let routeStations = []
-  quote <- mkQuote routeStations stations searchReq.vehicleType
+  quote <- mkQuote fromStation toStation routeStations stations searchReq.vehicleType
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
   messageId <- generateGUID
   return $
@@ -55,8 +62,14 @@ search _merchant _merchantOperatingCity bapConfig searchReq = do
           endStation = DStation toStation.code toStation.name toStation.lat toStation.lon END Nothing Nothing
       [startStation] ++ [endStation]
 
-    mkQuote routeStations stations vehicleType = do
-      let amount = HighPrecMoney 20.0 -- call external api
+    mkQuote fromStation toStation routeStations stations vehicleType = do
+      let req =
+            CallAPIFareByOriginDest.FareByOriginDestReq
+              { origin = getStationCode fromStation.code,
+                destination = getStationCode toStation.code,
+                ticketType = "SJT"
+              }
+      amount <- CallAPI.getFareByOriginDest providerConfig req
       let price =
             Price
               { amountInt = round amount,
@@ -75,8 +88,8 @@ search _merchant _merchantOperatingCity bapConfig searchReq = do
             ..
           }
 
-init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit
-init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking = do
+init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> ProviderConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit
+init _merchant _merchantOperatingCity _providerConfig bapConfig (_mRiderName, _mRiderNumber) booking = do
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.initTTLSec
   paymentDetails <- mkPaymentDetails bapConfig.collectedBy
   bankAccountNumber <- paymentDetails.bankAccNumber & fromMaybeM (InternalError "Bank Account Number Not Found")
@@ -98,11 +111,11 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       Spec.BAP -> do
         let paymentParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson
         paymentParams & fromMaybeM (InternalError "BknPaymentParams Not Found")
-      Spec.BPP -> CallAPI.getPaymentDetails merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
+      Spec.BPP -> throwError $ InternalError "BPP payments not supported"
 
 confirm :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> FRFSConfig -> ProviderConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
-confirm _merchant _merchantOperatingCity frfsConfig config bapConfig (_mRiderName, _mRiderNumber) booking = do
-  bppOrderId <- CallAPI.getOrderId config booking
+confirm _merchant _merchantOperatingCity _frfsConfig config bapConfig (_mRiderName, mRiderNumber) booking = do
+  bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError $ "Bpp Order Id Missing")
   tickets <- mkTickets bppOrderId
   return $
     DOrder
@@ -118,35 +131,52 @@ confirm _merchant _merchantOperatingCity frfsConfig config bapConfig (_mRiderNam
       }
   where
     mkTickets bppOrderId = do
-      ticketsData <- CallAPI.generateQRByProvider config bppOrderId frfsConfig.busStationTtl booking
-      ticketsData `forM` \(qrData, qrStatus, qrValidity, ticketNumber) -> do
+      paymentTxnId <- booking.paymentTxnId & fromMaybeM (InternalError $ "Payment Transaction Id Missing")
+      fromStation <- QStation.findById booking.fromStationId >>= fromMaybeM (StationNotFound booking.fromStationId.getId)
+      toStation <- QStation.findById booking.toStationId >>= fromMaybeM (StationNotFound booking.toStationId.getId)
+      let req =
+            CallAPIQR.GenerateQRReq
+              { origin = getStationCode fromStation.code,
+                destination = getStationCode toStation.code,
+                ticketType = "SJT", -- TODO: FIX THIS
+                noOfTickets = booking.quantity,
+                ticketFare = getMoney (maybe booking.price.amountInt (.amountInt) booking.finalPrice),
+                customerMobileNo = fromMaybe "9999999999" mRiderNumber,
+                uniqueTxnRefNo = bppOrderId,
+                bankRefNo = paymentTxnId,
+                paymentMode = "UPI" -- TODO: fix this
+              }
+      ticketsData <- CallAPI.generateQRTickets config req
+      ticketsData `forM` \CallAPIQR.TicketInfo {..} -> do
         return $
           DTicket
-            { qrData = qrData,
+            { qrData = qrBytes,
               bppFulfillmentId = "Metro Fulfillment",
               ticketNumber = ticketNumber,
-              validTill = qrValidity,
-              status = qrStatus
+              validTill = expiryTime,
+              status = "UNCLAIMED" -- TODO: Fix this
             }
 
 status :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Id Merchant -> MerchantOperatingCity -> ProviderConfig -> BecknConfig -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
 status _merchantId _merchantOperatingCity config bapConfig booking = do
   tickets' <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
-  bppOrderId <- CallAPI.getOrderId config booking
-  ticketStatus <-
-    if any (\ticket -> ticket.status == DFRFSTicket.ACTIVE) tickets'
-      then CallAPI.getTicketStatus config booking bppOrderId
-      else return "UNCLAIMED"
-  let tickets =
-        map
-          ( \DFRFSTicket.FRFSTicket {status = _status, ..} ->
-              DTicket
-                { bppFulfillmentId = "Metro Fulfillment",
-                  status = ticketStatus,
-                  ..
-                }
-          )
-          tickets'
+  bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError $ "Bpp Order Id Missing")
+  tickets <-
+    tickets' `forM` \DFRFSTicket.FRFSTicket {status = _status, ..} -> do
+      ticketStatus <-
+        if _status == DFRFSTicket.ACTIVE
+          then do
+            cmrlStatus <- (.ticketStatus) <$> CallAPI.getTicketStatus config (CallAPITicketStatus.TicketStatusReq ticketNumber)
+            case cmrlStatus of
+              "Used" -> return "CLAIMED"
+              _ -> return "UNCLAIMED"
+          else return "UNCLAIMED"
+      return $
+        DTicket
+          { bppFulfillmentId = "Metro Fulfillment",
+            status = ticketStatus,
+            ..
+          }
   return $
     DOrder
       { providerId = bapConfig.uniqueKeyId,

@@ -44,9 +44,9 @@ search merchant merchantOperatingCity bapConfig searchReq = do
         logDebug $ "FRFS SearchReq " <> encodeToText bknSearchReq
         Metrics.startMetrics Metrics.SEARCH_FRFS merchant.name searchReq.id.getId merchantOperatingCity.id.getId
         void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id
-    (METRO, Just _config) -> do
+    (METRO, Just config) -> do
       fork "FRFS External METRO SearchReq" $ do
-        onSearchReq <- MetroFlow.search merchant merchantOperatingCity bapConfig searchReq
+        onSearchReq <- MetroFlow.search merchant merchantOperatingCity config bapConfig searchReq
         processOnSearch onSearchReq
     (BUS, Just _config) -> do
       fork "FRFS External SearchReq" $ do
@@ -68,8 +68,8 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       logDebug $ "FRFS InitReq " <> encodeToText bknInitReq
       Metrics.startMetrics Metrics.INIT_FRFS merchant.name booking.searchId.getId merchantOperatingCity.id.getId
       void $ CallFRFSBPP.init providerUrl bknInitReq merchant.id
-    (METRO, Just _config) -> do
-      onInitReq <- MetroFlow.init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
+    (METRO, Just config) -> do
+      onInitReq <- MetroFlow.init merchant merchantOperatingCity config bapConfig (mRiderName, mRiderNumber) booking
       processOnInit onInitReq
     (BUS, Just _config) -> do
       onInitReq <- BusFlow.init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking

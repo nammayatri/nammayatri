@@ -24,7 +24,9 @@ data CUMTAConfig = CUMTAConfig
   deriving anyclass (FromJSON, ToJSON)
 
 data CMRLConfig = CMRLConfig
-  { cmrlNetworkHostUrl :: BaseUrl
+  { networkHostUrl :: BaseUrl,
+    username :: Text,
+    password :: EncryptedField 'AsEncrypted Text
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)

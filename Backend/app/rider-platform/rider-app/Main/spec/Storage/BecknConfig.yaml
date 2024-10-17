@@ -27,7 +27,7 @@ BecknConfig:
     vehicleCategory: VehicleCategory|NoRelation
     collectedBy: Network
     staticTermsUrl: Maybe BaseUrl
-    buyerFinderFee: Maybe Text # becomes redundant
+    buyerFinderFee: Maybe Text # Becomes Redundant
     settlementWindow: Maybe Text
     searchTTLSec: Maybe Int
     selectTTLSec: Maybe Int
