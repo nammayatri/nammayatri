@@ -57,6 +57,7 @@ data Action
   | UpdateNameAndNumber String String Boolean
   | ValidateInputFields
   | Refresh
+  | GoToSelectContactScreen
 
 data ScreenOutput
   = GoToHomeScreen ST.ParcelDeliveryScreenState
@@ -64,6 +65,7 @@ data ScreenOutput
   | GoToSelectLocation ST.ParcelDeliveryScreenState
   | GoToChooseYourRide ST.ParcelDeliveryScreenState
   | GoToConfirmgDelivery ST.ParcelDeliveryScreenState
+  | GoToSelectContact ST.ParcelDeliveryScreenState
 
 eval :: Action -> ST.ParcelDeliveryScreenState -> Eval Action ScreenOutput ST.ParcelDeliveryScreenState
 
@@ -127,24 +129,14 @@ eval (DeliveryDetailAction (PopUpModalController.PersonName (PrimaryEditTextCont
   continue $ state { props { editDetails { name = newVal }}}
 
 eval (DeliveryDetailAction (PopUpModalController.PersonName PrimaryEditTextController.TextImageClicked)) state = do
-  continueWithCmd state $ [do
-    isPickContact <- runEffectFn1 JB.pickContact ""
-    if not isPickContact then
-      void $ pure $ JB.toast "Unable to pick contact, update app"
-    else
-      void $ pure unit
-    pure NoAction
-    ]
+  let updatedState = if state.data.currentStage == ST.SENDER_DETAILS then state {data { senderDetails { name = state.props.editDetails.name, phone = state.props.editDetails.phone}}} else state {data { receiverDetails { name = state.props.editDetails.name, phone = state.props.editDetails.phone}}}
+  continueWithCmd updatedState $ [do pure $ GoToSelectContactScreen]
 
 eval (DeliveryDetailAction (PopUpModalController.PersonMobile PrimaryEditTextController.TextImageClicked)) state = do
-  continueWithCmd state $ [do
-    isPickContact <- runEffectFn1 JB.pickContact ""
-    if not isPickContact then
-      void $ pure $ JB.toast "Unable to pick contact, update app"
-    else
-      void $ pure unit
-    pure NoAction
-  ]
+  let updatedState = if state.data.currentStage == ST.SENDER_DETAILS then state {data { senderDetails { name = state.props.editDetails.name, phone = state.props.editDetails.phone}}} else state {data { receiverDetails { name = state.props.editDetails.name, phone = state.props.editDetails.phone}}}
+  continueWithCmd updatedState $ [do pure $ GoToSelectContactScreen]
+  
+eval GoToSelectContactScreen state = updateAndExit state $ GoToSelectContact state
 
 eval (DeliveryDetailAction (PopUpModalController.PersonAddress (PrimaryEditTextController.TextChanged valId newVal))) state = do
   continue $ state { props { editDetails { extras = newVal } } }

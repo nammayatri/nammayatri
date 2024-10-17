@@ -1690,6 +1690,8 @@ newtype Keymap = Keymap {
 , odisha :: String 
 , bhubaneswar :: String
 , different_bike :: String
+, limit_reached :: String
+, confirm_contacts :: String
 }
 
 
@@ -6731,3 +6733,9 @@ bhubaneswar = a
 
 different_bike :: Proxy "different_bike"
 different_bike = a
+
+limit_reached :: Proxy "limit_reached"
+limit_reached = a
+
+confirm_contacts :: Proxy "confirm_contacts"
+confirm_contacts = a

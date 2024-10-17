@@ -1771,3 +1771,5 @@ getProxy str =
     DIFFERENT_BIKE -> \a -> a @~ different_bike
     ODISHA -> \a -> a @~ odisha
     BHUBANESWAR -> \a -> a @~ bhubaneswar
+    LIMIT_REACHED -> \a -> a @~ limit_reached
+    CONFIRM_CONTACTS -> \a -> a @~ confirm_contacts

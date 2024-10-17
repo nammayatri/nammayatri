@@ -1676,4 +1676,6 @@ getEn = Keymap {
 , odisha : "Odisha"
 , bhubaneswar : "Bhubaneswar"
 , different_bike : "Different Bike"
+, limit_reached : "Limit reached!"
+, confirm_contacts :  "Confirm Contacts"
 }

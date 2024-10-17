@@ -1676,4 +1676,6 @@ getHi = Keymap {
 , odisha : "ओडिशा"
 , bhubaneswar : "भुवनेश्वर"
 , different_bike : "अलग बाइक"
+, limit_reached : "सीमा पार हो गई है!"
+, confirm_contacts : "संपर्कों की पुष्टि करें"
 }
