@@ -16,3 +16,15 @@ data EBIXConfig = EBIXConfig
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
+
+data CUMTAConfig = CUMTAConfig
+  { cumtaNetworkHostUrl :: BaseUrl
+  }
+  deriving stock (Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+data CMRLConfig = CMRLConfig
+  { cmrlNetworkHostUrl :: BaseUrl
+  }
+  deriving stock (Eq, Generic)
+  deriving anyclass (FromJSON, ToJSON)

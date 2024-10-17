@@ -8,6 +8,8 @@ imports:
   VehicleCategory: BecknV2.OnDemand.Enums
   Network: BecknV2.FRFS.Enums
   EBIXConfig: Domain.Types.Extra.IntegratedBPPConfig
+  CUMTAConfig: Domain.Types.Extra.IntegratedBPPConfig
+  CMRLConfig: Domain.Types.Extra.IntegratedBPPConfig
 
 BecknConfig:
   tableName: beckn_config
@@ -95,7 +97,7 @@ IntegratedBPPConfig:
 
   types:
     ProviderConfig:
-      enum: "EBIX EBIXConfig, CUMTA EBIXConfig"
+      enum: "EBIX EBIXConfig, CUMTA CUMTAConfig, CMRL CMRLConfig"
       derive': "Generic, FromJSON, ToJSON, Eq"
 
   fromTType:

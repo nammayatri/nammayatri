@@ -253,18 +253,22 @@ library
       Domain.Types.LocationAddress
       Domain.Types.UtilsTH
       Environment
+      ExternalBPP.Bus.ExternalAPI.CallAPI
+      ExternalBPP.Bus.ExternalAPI.EBIX.Auth
+      ExternalBPP.Bus.ExternalAPI.EBIX.Order
+      ExternalBPP.Bus.ExternalAPI.EBIX.Payment
+      ExternalBPP.Bus.ExternalAPI.EBIX.Status
+      ExternalBPP.Bus.ExternalAPI.EBIX.Verification
+      ExternalBPP.Bus.Flow
       ExternalBPP.CallAPI
       ExternalBPP.Common.Cancel
-      ExternalBPP.Common.Confirm
-      ExternalBPP.Common.Init
-      ExternalBPP.Common.Search
-      ExternalBPP.Common.Status
-      ExternalBPP.EBIX.ExternalAPI.Auth
-      ExternalBPP.EBIX.ExternalAPI.Order
-      ExternalBPP.EBIX.ExternalAPI.Payment
-      ExternalBPP.EBIX.ExternalAPI.Status
-      ExternalBPP.EBIX.ExternalAPI.Verification
-      ExternalBPP.EBIX.Flow
+      ExternalBPP.Metro.ExternalAPI.CallAPI
+      ExternalBPP.Metro.ExternalAPI.CMRL.Auth
+      ExternalBPP.Metro.ExternalAPI.CMRL.Order
+      ExternalBPP.Metro.ExternalAPI.CMRL.Payment
+      ExternalBPP.Metro.ExternalAPI.CMRL.Status
+      ExternalBPP.Metro.ExternalAPI.CMRL.Verification
+      ExternalBPP.Metro.Flow
       Lib.JourneyPlannerTypes
       Lib.Mesh
       SharedLogic.Cac
