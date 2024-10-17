@@ -36,6 +36,7 @@ data RiderConfigT f = RiderConfigT
     executePaymentDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     exotelAppIdMapping :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.RiderConfig.ExotelMapping),
     exotelStatusCheckSchedulerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    feedbackAlertRatingThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     hardLimitForSafetyJobs :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     incidentReportSupport :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isAvoidToll :: B.C f Kernel.Prelude.Bool,
