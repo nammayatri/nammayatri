@@ -472,36 +472,39 @@ rideStartedReqHandler ::
   ValidatedRideStartedReq ->
   m ()
 rideStartedReqHandler ValidatedRideStartedReq {..} = do
-  let BookingDetails {..} = bookingDetails
-  fork "ride start geohash frequencyUpdater" $ do
-    case tripStartLocation of
-      Just location -> frequencyUpdator booking.merchantId location Nothing TripStart
-      Nothing -> return ()
-  let updRideForStartReq =
-        ride{status = DRide.INPROGRESS,
-             rideStartTime,
-             rideEndTime = Nothing,
-             endOtp = endOtp_,
-             driverArrivalTime,
-             startOdometerReading,
-             estimatedEndTimeRange
-            }
-  triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
-  _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
-  QPFS.clearCache booking.riderId
-  now <- getCurrentTime
-  rideRelatedNotificationConfigList <- CRRN.findAllByMerchantOperatingCityIdAndTimeDiffEvent booking.merchantOperatingCityId DRN.START_TIME
-  forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updRideForStartReq (fromMaybe now rideStartTime))
-  unless isInitiatedByCronJob $ do
-    fork "notify emergency contacts" $ Notify.notifyRideStartToEmergencyContacts booking ride
-    Notify.notifyOnRideStarted booking ride
-  case booking.bookingDetails of
-    DRB.RentalDetails _ -> when (booking.isDashboardRequest == Just True) sendRideEndOTPMessage
-    DRB.InterCityDetails _ -> when (booking.isDashboardRequest == Just True) sendRideEndOTPMessage
-    DRB.DeliveryDetails _ -> do
-      deliveryInitiatedAs <- fromMaybeM (InternalError "DeliveryInitiatedBy not found") booking.initiatedBy
-      when (deliveryInitiatedAs /= Trip.DeliveryParty Trip.Receiver) $ sendDeliveryDetailsToReceiver
-    _ -> pure ()
+  case ride.status of
+    DRide.INPROGRESS -> pure ()
+    _ -> do
+      let BookingDetails {..} = bookingDetails
+      fork "ride start geohash frequencyUpdater" $ do
+        case tripStartLocation of
+          Just location -> frequencyUpdator booking.merchantId location Nothing TripStart
+          Nothing -> return ()
+      let updRideForStartReq =
+            ride{status = DRide.INPROGRESS,
+                 rideStartTime,
+                 rideEndTime = Nothing,
+                 endOtp = endOtp_,
+                 driverArrivalTime,
+                 startOdometerReading,
+                 estimatedEndTimeRange
+                }
+      triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
+      _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
+      QPFS.clearCache booking.riderId
+      now <- getCurrentTime
+      rideRelatedNotificationConfigList <- CRRN.findAllByMerchantOperatingCityIdAndTimeDiffEvent booking.merchantOperatingCityId DRN.START_TIME
+      forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updRideForStartReq (fromMaybe now rideStartTime))
+      unless isInitiatedByCronJob $ do
+        fork "notify emergency contacts" $ Notify.notifyRideStartToEmergencyContacts booking ride
+        Notify.notifyOnRideStarted booking ride
+      case booking.bookingDetails of
+        DRB.RentalDetails _ -> when (booking.isDashboardRequest == Just True) sendRideEndOTPMessage
+        DRB.InterCityDetails _ -> when (booking.isDashboardRequest == Just True) sendRideEndOTPMessage
+        DRB.DeliveryDetails _ -> do
+          deliveryInitiatedAs <- fromMaybeM (InternalError "DeliveryInitiatedBy not found") booking.initiatedBy
+          when (deliveryInitiatedAs /= Trip.DeliveryParty Trip.Receiver) $ sendDeliveryDetailsToReceiver
+        _ -> pure ()
   where
     sendDeliveryDetailsToReceiver = fork "Sending Delivery Details SMS to Receiver" $ do
       riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
@@ -881,7 +884,7 @@ validateRideStartedReq RideStartedReq {..} = do
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (booking.status == DRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
-  unless (ride.status == DRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
+  -- unless (ride.status == DRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
   let estimatedEndTimeRange = mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd
   return $ ValidatedRideStartedReq {..}
   where
@@ -920,8 +923,8 @@ validateRideCompletedReq RideCompletedReq {..} = do
   let BookingDetails {..} = bookingDetails
   booking <- QRB.findByBPPBookingId bookingDetails.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bookingDetails.bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
-  let bookingCanBeCompleted = booking.status == DRB.TRIP_ASSIGNED
-      rideCanBeCompleted = ride.status == DRide.INPROGRESS
+  let bookingCanBeCompleted = booking.status `elem` [DRB.NEW, DRB.TRIP_ASSIGNED]
+      rideCanBeCompleted = ride.status `elem` [DRide.UPCOMING, DRide.NEW, DRide.INPROGRESS]
       bookingAlreadyCompleted = booking.status == DRB.COMPLETED
       rideAlreadyCompleted = ride.status == DRide.COMPLETED
   if bookingAlreadyCompleted && rideAlreadyCompleted

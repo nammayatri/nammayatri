@@ -141,3 +141,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN sensitive_words_for_exact_match te
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN driver_referred_search_req_expiry integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN dynamic_logic_update_password text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN on_status_estimated_duration_multiplier double precision ;

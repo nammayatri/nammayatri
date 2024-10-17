@@ -47,6 +47,7 @@ data RiderConfig = RiderConfig
     makeMultiModalSearch :: Kernel.Prelude.Bool,
     maximumWalkDistance :: Kernel.Types.Common.Meters,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    onStatusEstimatedDurationMultiplier :: Kernel.Prelude.Double,
     payoutBatchDelay :: Kernel.Prelude.NominalDiffTime,
     payoutBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
