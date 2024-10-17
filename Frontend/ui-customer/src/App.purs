@@ -26,6 +26,7 @@ import Foreign (Foreign)
 import Foreign.Object (Object(..), empty)
 import Language.Types (STR(..))
 import LoaderOverlay.ScreenData as LoaderScreenScreenData
+import Screens.SelectContactsFlow.SelectContactsScreen.ScreenData (SelectContactsScreenState)
 import MerchantConfig.Types (AppConfig)
 import Presto.Core.Types.Language.Flow (FlowWrapper)
 import Screens.AccountSetUpScreen.ScreenData as AccountSetUpScreenData
@@ -57,6 +58,7 @@ import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBoo
 import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType, PickupInstructionsScreenState, RiderRideCompletedScreenState, DataFetchScreenState, SelectFaqScreenState, FaqScreenState, FavouriteDriverTripsState,NotificationBody, ParcelDeliveryScreenState) 
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
+import Screens.SelectContactsFlow.SelectContactsScreen.ScreenData as SelectContactsScreenData
 import Foreign.Object ( Object(..), empty)
 import Services.API (BookingStatus(..))
 import Foreign (Foreign)
@@ -144,6 +146,7 @@ newtype GlobalState = GlobalState {
   , favouriteDriverListScreen :: FavouriteDriverTripsState
   , parcelDeliveryScreen :: ParcelDeliveryScreenState
   , rideSummaryScreen :: RideSummaryScreenData.RideSummaryScreenState
+  , selectContactsScreen :: SelectContactsScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -195,6 +198,7 @@ defaultGlobalState = GlobalState {
   , favouriteDriverListScreen : FavouriteDriverTripsData.initData
   , parcelDeliveryScreen : ParcelDeliveryScreenData.initData
   , rideSummaryScreen : RideSummaryScreenData.initData
+  , selectContactsScreen : SelectContactsScreenData.initData
   }
 
 defaultGlobalProps :: GlobalProps 
@@ -227,6 +231,7 @@ data EMERGECY_CONTACTS_SCREEN_OUTPUT = POST_CONTACTS EmergencyContactsScreenStat
                                       | POST_CONTACTS_SAFETY EmergencyContactsScreenState Boolean
                                       | UPDATE_DEFAULT_CONTACTS EmergencyContactsScreenState
                                       | REFRESH_EMERGECY_CONTACTS_SCREEN EmergencyContactsScreenState
+                                      | GO_TO_SELECT_CONTACT EmergencyContactsScreenState
 
 data TICKET_INFO_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_TICKET_INFO
 
@@ -414,6 +419,9 @@ data RIDE_SUMMARY_SCREEN_OUTPUT =     GO_TO_RIDE_REQUEST
                                     | NOTIFICATION_LISTENER String NotificationBody
                                     | REFRESH_RIDE_SUMMARY_SCREEN (Maybe String)
                                     | CALL_DRIVER RideSummaryScreenData.RideSummaryScreenState CallType String
+                                    
+data SELECT_CONTACT_SCREEN_OUTPUT = SELECT_CONTACTS_BACK_PRESSED
+                                  | EXECUTE_CALLBACK SelectContactsScreenState
 
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
@@ -460,3 +468,4 @@ data ScreenType =
   | FavouriteDriverTripsStateType (FavouriteDriverTripsState -> FavouriteDriverTripsState)
   | ParcelDeliveryScreenStateType (ParcelDeliveryScreenState -> ParcelDeliveryScreenState)
   | RideSummaryScreenStateType (RideSummaryScreenData.RideSummaryScreenState -> RideSummaryScreenData.RideSummaryScreenState)
+  | SelectContactsScreenStateType (SelectContactsScreenState -> SelectContactsScreenState)

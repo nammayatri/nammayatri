@@ -41,6 +41,9 @@ emergencyContactsScreen = do
       modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactsScreen -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ GET_CONTACTS updatedState)
     Refresh updatedState -> App.BackT $ App.NoBack <$> (pure $ REFRESH_EMERGECY_CONTACTS_SCREEN updatedState)
+    GoToSelectContacts updatedState -> do
+      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactsScreen -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_SELECT_CONTACT updatedState)
 
 listItem1 :: NewContacts
 listItem1 = {
