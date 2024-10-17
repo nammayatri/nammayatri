@@ -473,6 +473,7 @@ getFR stringKey =
         DIFFERENT_VEHICLE_NUMBER ->  ""
         VEHICLE_NUMBER_IS_DIFFERENT_FROM_WHAT_IS_SHOWN_IN_THE_APP -> ""
         DIFFERENT_AUTO -> ""
+        DIFFERENT_BIKE -> "Vélo Différent"
         DIFFERENT_CAB -> ""
         SOME_OTHER_REASON -> "Une autre raison."
         WAIT_FOR_DRIVER -> "Attendre le chauffeur"

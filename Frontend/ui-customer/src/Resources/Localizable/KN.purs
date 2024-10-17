@@ -486,6 +486,7 @@ getKN stringKey =
         DIFFERENT_VEHICLE_NUMBER -> "ವಿಭಿನ್ನ ವಾಹನ ಸಂಖ್ಯೆ"
         VEHICLE_NUMBER_IS_DIFFERENT_FROM_WHAT_IS_SHOWN_IN_THE_APP -> "ವಾಹನ ಸಂಖ್ಯೆಯು ಅಪ್ಲಿಕೇಶನ್‌ನಲ್ಲಿ ತೋರಿಸಿದ್ದಕ್ಕಿಂತ ಭಿನ್ನವಾಗಿದೆ"
         DIFFERENT_AUTO -> "ವಿಭಿನ್ನ ಆಟೋ"
+        DIFFERENT_BIKE -> "ಭಿನ್ನ ಬೈಕ್"
         DIFFERENT_CAB -> "ವಿಭಿನ್ನ ಕ್ಯಾಬ್"
         DRIVER_MIGHT_BE_TAKING_ALTERNATE_ROUTE -> "ಚಾಲಕ ಬೇರೆ ದಾರಿಯಿಂದ ಬರುತ್ತಿರಬಹುದು."
         DRIVER_IS_NOT_MOVING_Q -> "ಚಾಲಕ ಚಲಿಸುತ್ತಿಲ್ಲವೇ?"
