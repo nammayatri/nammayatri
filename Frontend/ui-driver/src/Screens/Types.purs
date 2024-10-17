@@ -2248,7 +2248,8 @@ type GlobalProps = {
   gotoPopupType :: GoToPopUpType,
   addTimestamp :: Boolean,
   bgLocPopupShown :: Boolean,
-  onBoardingDocs :: Maybe API.OnboardingDocsRes
+  onBoardingDocs :: Maybe API.OnboardingDocsRes,
+  firstTimeOnboardingStatus :: Boolean
 }
 
 --------------------------------------------------------------- SubscriptionScreenState ---------------------------------------------------
