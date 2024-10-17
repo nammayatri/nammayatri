@@ -1718,3 +1718,4 @@ getEN stringKey =
         ENTER_A_NAME -> "Enter a name"
         ENTER_A_ADDRESS -> "Enter an address"
         DELIVERED_IN_JUST time -> "Yay! Delivered in just " <> time
+        LIMIT_REACHED -> "Limit reached!"
