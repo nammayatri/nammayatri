@@ -79,9 +79,10 @@ handleCallStatus ::
   ) =>
   DCallStatus.CallStatus ->
   Id DRide.Ride ->
-  Id MOC.MerchantOperatingCity ->
+  Maybe (Id MOC.MerchantOperatingCity) ->
   m ExecutionResult
 handleCallStatus callStatus rideId mOpCityId = do
+  let mOpCityId' = maybe "UNKNOWN_MERCHANT" getId mOpCityId
   deploymentVersion <- asks (.version)
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound $ getId rideId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound $ getId ride.bookingId)
@@ -91,7 +92,7 @@ handleCallStatus callStatus rideId mOpCityId = do
     Just DCallStatus.Failed -> do
       return Complete
     Just DCallStatus.Attempted -> do
-      fork "updating in prometheus" $ incrementCounter (getId mOpCityId) "call_attempt" deploymentVersion.getDeploymentVersion
+      fork "updating in prometheus" $ incrementCounter mOpCityId' "call_attempt" deploymentVersion.getDeploymentVersion
       -- attempted to call or unregistered Call Stuck
       CallBAP.sendPhoneCallRequestUpdateToBAP booking ride
       return Complete
