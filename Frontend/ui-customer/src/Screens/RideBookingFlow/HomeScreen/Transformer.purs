@@ -502,8 +502,8 @@ fetchPreferredVariant state estimates =
     currentGeoHash = runFn3 encodeGeohash lat lon state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
     suggestionsMap = getSuggestionsMapFromLocal FunctionCall
 
-    fetchVariant1 = fromMaybe "" $ fetchLocationBasedPreferredVariant currentGeoHash suggestionsMap
-    fetchVariant2 = fromMaybe "" $ getPreferredVariant suggestionsMap
+    fetchVariant1 = spy "fetchVariant1--->"$ fromMaybe "" $ fetchLocationBasedPreferredVariant currentGeoHash suggestionsMap
+    fetchVariant2 = spy "fetchVariant2--->"$ fromMaybe "" $ getPreferredVariant suggestionsMap
 
     preferredVariant
       | not (null fetchVariant1) = fetchVariant1
