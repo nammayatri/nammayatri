@@ -104,9 +104,16 @@ postNammaTagTagVerify _merchantShortId _opCity Lib.Yudhishthira.Types.VerifyNamm
             if useDefaultData
               then C.getLogicInputDef tagStage
               else logicData <|> C.getLogicInputDef tagStage
+          parsedInputData =
+            case tagStage of
+              Lib.Yudhishthira.Types.Application.Search -> A.fromJSON val :: A.Result Domain.Types.Yudhishthira.TagData
+              Lib.Yudhishthira.Types.Application.RideEnd -> A.fromJSON val :: A.Result Domain.Types.Yudhishthira.EndRideTagData
+      case parsedInputData of
+        A.Success val -> A.toJSON val
+        A.Error err -> throwError $ InvalidRequest $ "wrong input data type for the given stage: " <> show tagStage <> ", error: " <> show err
       case val of
         Just value -> do
-          result <- YudhishthiraFlow.verifyDynamicLogic [logic] value
+          result <- YudhishthiraFlow.verifyEventLogic tagStage [logic] value
           pure $ Lib.Yudhishthira.Types.VerifyNammaTagResponse {executionResult = result, dataUsed = value}
         Nothing -> throwError $ InvalidRequest $ "No data supplied and failed to get default for the specified event, check if `getLogicInputDef` is defined for your event in `instance YTC.LogicInputLink YA.ApplicationEvent`"
     _ -> do
