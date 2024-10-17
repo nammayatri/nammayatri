@@ -1484,7 +1484,7 @@ getProxy str = case str of
   TERM_3A -> \a -> a @~ term_3a
   TERM_1B arg1 -> \a -> (a @~ term_1b) arg1
   TERM_2B arg1 -> \a -> (a @~ term_2b) arg1
-  TERM_3B arg1 -> \a -> (a @~ term_3b) arg1
+  TERM_3B arg1 arg2 -> \a -> (a @~ term_3b) arg1 arg2
   EXCLUDED_CHARGES -> \a -> a @~ excluded_charges
   TOLLS -> \a -> a @~ tolls
   STATE_PERMIT -> \a -> a @~ state_permit
