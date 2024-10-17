@@ -132,3 +132,14 @@ getInterCityBusConfig lazy = decodeForeignObject (parseJSON $ fetchRemoteConfigS
 
 getBundleSplashConfig :: String -> BundleLottieConfig
 getBundleSplashConfig lazy = decodeForeignObject (parseJSON $ fetchRemoteConfigString "customer_bundle_splash_config") $ { lottieUrl : "https://assets.moving.tech/beckn/nammayatri/user/lottie/ny_bundle_splash_lottie_new.json", enable : true}
+
+getMetroConfig :: String -> MetroConfig
+getMetroConfig city = do
+    let config = fetchRemoteConfigString "metro_configs"
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultMetroConfig
+    getCityBasedConfig value city
+
+defaultMetroConfig :: MetroConfig
+defaultMetroConfig = {
+  tnc : ""
+}
