@@ -1,4 +1,4 @@
-module ExternalBPP.EBIX.ExternalAPI.Verification where
+module ExternalBPP.Metro.ExternalAPI.CMRL.Verification where
 
 import Crypto.Cipher.TripleDES
 import Crypto.Cipher.Types
@@ -14,7 +14,7 @@ import Domain.Types.FRFSQuote
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET
-import ExternalBPP.EBIX.ExternalAPI.Auth
+import ExternalBPP.Metro.ExternalAPI.CMRL.Auth
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config

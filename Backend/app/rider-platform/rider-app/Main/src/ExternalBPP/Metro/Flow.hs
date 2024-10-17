@@ -1,4 +1,4 @@
-module ExternalBPP.EBIX.Flow where
+module ExternalBPP.Metro.Flow where
 
 import qualified BecknV2.FRFS.Enums as Spec
 import Data.List (sortOn)
@@ -17,10 +17,7 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.RouteStopMapping
 import Domain.Types.Station
-import ExternalBPP.EBIX.ExternalAPI.Order as EBIXOrder
-import ExternalBPP.EBIX.ExternalAPI.Payment as EBIXPayment
-import ExternalBPP.EBIX.ExternalAPI.Status as EBIXStatus
-import ExternalBPP.EBIX.ExternalAPI.Verification as EBIXVerification
+import ExternalBPP.Metro.ExternalAPI.CallAPI as CallAPI
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto.Config as DB
@@ -136,11 +133,11 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       Spec.BAP -> do
         let paymentParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson
         paymentParams & fromMaybeM (InternalError "BknPaymentParams Not Found")
-      Spec.BPP -> EBIXPayment.getPaymentDetails merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
+      Spec.BPP -> CallAPI.getPaymentDetails merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
 
-confirm :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> FRFSConfig -> EBIXConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
+confirm :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> FRFSConfig -> ProviderConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
 confirm _merchant _merchantOperatingCity frfsConfig config bapConfig (_mRiderName, _mRiderNumber) booking = do
-  (bppOrderId, ticketNum) <- EBIXOrder.getOrderId config booking
+  (bppOrderId, ticketNum) <- CallAPI.getOrderId config booking
   ticket <- mkTicket bppOrderId ticketNum
   return $
     DOrder
@@ -156,7 +153,7 @@ confirm _merchant _merchantOperatingCity frfsConfig config bapConfig (_mRiderNam
       }
   where
     mkTicket bppOrderId ticketNum = do
-      (qrData, qrStatus, qrValidity, ticketNumber) <- EBIXVerification.generateQRByProvider config bppOrderId ticketNum frfsConfig.busStationTtl booking
+      (qrData, qrStatus, qrValidity, ticketNumber) <- CallAPI.generateQRByProvider config bppOrderId ticketNum frfsConfig.busStationTtl booking
       return $
         DTicket
           { qrData = qrData,
@@ -166,13 +163,13 @@ confirm _merchant _merchantOperatingCity frfsConfig config bapConfig (_mRiderNam
             status = qrStatus
           }
 
-status :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Id Merchant -> MerchantOperatingCity -> EBIXConfig -> BecknConfig -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
+status :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Id Merchant -> MerchantOperatingCity -> ProviderConfig -> BecknConfig -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
 status _merchantId _merchantOperatingCity config bapConfig booking = do
   tickets' <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
-  (bppOrderId, _) <- EBIXOrder.getOrderId config booking
+  (bppOrderId, _) <- CallAPI.getOrderId config booking
   ticketStatus <-
     if any (\ticket -> ticket.status == DFRFSTicket.ACTIVE) tickets'
-      then EBIXStatus.getTicketStatus config booking bppOrderId
+      then CallAPI.getTicketStatus config booking bppOrderId
       else return "UNCLAIMED"
   let tickets =
         map

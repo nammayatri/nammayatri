@@ -8,7 +8,6 @@ import BecknV2.OnDemand.Enums
 import qualified Domain.Action.Beckn.FRFS.OnCancel as DOnCancel
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicketBooking as DBooking
-import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Environment
@@ -24,7 +23,7 @@ cancel :: Merchant -> MerchantOperatingCity -> BecknConfig -> Spec.CancellationT
 cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
   integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) >>= return . fmap (.providerConfig)
   case (bapConfig.vehicleCategory, integratedBPPConfig) of
-    (METRO, _) -> do
+    (METRO, Nothing) -> do
       fork "FRFS ONDC Cancel Req" $ do
         frfsConfig <-
           CQFRFSConfig.findByMerchantOperatingCityId merchantOperatingCity.id
@@ -35,5 +34,6 @@ cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
         bknCancelReq <- ACL.buildCancelReq booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} frfsConfig.cancellationReasonId cancellationType merchantOperatingCity.city
         logDebug $ "FRFS CancelReq " <> encodeToText bknCancelReq
         void $ CallFRFSBPP.cancel providerUrl bknCancelReq merchant.id
-    (BUS, Just (EBIX _)) -> return ()
+    (METRO, Just _config) -> return ()
+    (BUS, Just _config) -> return ()
     _ -> throwError $ InternalError ("Unsupported FRFS Flow vehicleCategory : " <> show bapConfig.vehicleCategory)

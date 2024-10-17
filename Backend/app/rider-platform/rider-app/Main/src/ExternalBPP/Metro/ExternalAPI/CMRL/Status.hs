@@ -1,10 +1,10 @@
-module ExternalBPP.EBIX.ExternalAPI.Status where
+module ExternalBPP.Metro.ExternalAPI.CMRL.Status where
 
 import Data.Aeson
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET
-import ExternalBPP.EBIX.ExternalAPI.Auth
+import ExternalBPP.Metro.ExternalAPI.CMRL.Auth
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Utils.Common
