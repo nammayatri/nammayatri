@@ -21,22 +21,17 @@ module Dashboard.RiderPlatform.Ride
 where
 
 import Dashboard.Common as Reexport
-import qualified Dashboard.Common as DP
 import Dashboard.Common.Ride as Reexport
 import Data.Aeson
 import Domain.Types
 import Kernel.External.Maps
-import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.Id
-import Kernel.Types.Predicate
 import Kernel.Types.Price
-import Kernel.Utils.Common
 import Kernel.Utils.JSON (constructorsWithLowerCase)
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
-import Kernel.Utils.Validation
 import Servant hiding (Summary)
 
 ---------------------------------------------------------
@@ -259,40 +254,40 @@ $(mkHttpInstancesForEnum ''BookingStatus)
 --     :> MandatoryQueryParam "lon" Double
 --     :> Get '[JSON] Maps.GetRoutesResp
 
-type PickupRouteAPI =
-  "pickup"
-    :> "route"
-    :> Capture "rideId" (Id DP.Ride)
-    :> MandatoryQueryParam "lat" Double
-    :> MandatoryQueryParam "lon" Double
-    :> Get '[JSON] Maps.GetRoutesResp
+-- type PickupRouteAPI =
+--   "pickup"
+--     :> "route"
+--     :> Capture "rideId" (Id DP.Ride)
+--     :> MandatoryQueryParam "lat" Double
+--     :> MandatoryQueryParam "lon" Double
+--     :> Get '[JSON] Maps.GetRoutesResp
 
 ---------------------------------------------------------
 -- multiple ride sync -----------------------------
 
-type MultipleRideSyncAPI =
-  "sync"
-    :> ReqBody '[JSON] MultipleRideSyncReq
-    :> Post '[JSON] MultipleRideSyncResp
+-- type MultipleRideSyncAPI =
+--   "sync"
+--     :> ReqBody '[JSON] MultipleRideSyncReq
+--     :> Post '[JSON] MultipleRideSyncResp
 
-newtype MultipleRideSyncReq = MultipleRideSyncReq
-  { rides :: [MultipleRideItem]
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+-- newtype MultipleRideSyncReq = MultipleRideSyncReq
+--   { rides :: [MultipleRideItem]
+--   }
+--   deriving stock (Show, Generic)
+--   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-newtype MultipleRideItem = MultipleRideItem
-  { rideId :: Id Ride
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+-- newtype MultipleRideItem = MultipleRideItem
+--   { rideId :: Id Ride
+--   }
+--   deriving stock (Show, Generic)
+--   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-instance HideSecrets MultipleRideSyncReq where
-  hideSecrets = identity
+-- instance HideSecrets MultipleRideSyncReq where
+--   hideSecrets = identity
 
-validateMultipleRideSyncReq :: Validate MultipleRideSyncReq
-validateMultipleRideSyncReq MultipleRideSyncReq {..} = do
-  validateField "rides" rides $ UniqueField @"rideId"
+-- validateMultipleRideSyncReq :: Validate MultipleRideSyncReq
+-- validateMultipleRideSyncReq MultipleRideSyncReq {..} = do
+--   validateField "rides" rides $ UniqueField @"rideId"
 
 ---------------------------------------------------------
 -- Ticket Ride List--------------------------------------

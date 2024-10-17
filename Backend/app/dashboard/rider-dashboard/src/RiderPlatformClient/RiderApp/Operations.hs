@@ -46,7 +46,6 @@ import IssueManagement.Domain.Types.Issue.IssueCategory
 import IssueManagement.Domain.Types.Issue.IssueMessage
 import IssueManagement.Domain.Types.Issue.IssueOption
 import IssueManagement.Domain.Types.Issue.IssueReport
-import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess (APISuccess)
@@ -72,9 +71,7 @@ data AppBackendAPIs = AppBackendAPIs
   }
 
 data RidesAPIs = RidesAPIs
-  { pickupRoute :: Id Ride.Ride -> Double -> Double -> Euler.EulerClient Maps.GetRoutesResp,
-    multipleRideCancel :: DCM.MultipleRideCancelReq -> Euler.EulerClient APISuccess,
-    multipleRideSync :: Ride.MultipleRideSyncReq -> Euler.EulerClient Ride.MultipleRideSyncResp,
+  { multipleRideCancel :: DCM.MultipleRideCancelReq -> Euler.EulerClient APISuccess,
     ticketRideList :: Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.TicketRideListRes
   }
 
@@ -140,9 +137,7 @@ mkAppBackendAPIs merchantId city token = do
       :<|> invoiceClientDSL =
         clientWithMerchantAndCity (Proxy :: Proxy BAP.OperationsAPI) merchantId city token
 
-    pickupRoute
-      :<|> multipleRideCancel
-      :<|> multipleRideSync
+    multipleRideCancel
       :<|> ticketRideList = ridesClient
 
     listIssue

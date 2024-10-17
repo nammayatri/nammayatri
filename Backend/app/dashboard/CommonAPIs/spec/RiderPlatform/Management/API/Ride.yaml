@@ -18,6 +18,7 @@ imports:
   Centesimal: Kernel.Types.Centesimal
   BaseUrl: Kernel.Prelude
   GetRoutesResp: Kernel.External.Maps
+  MultipleRideSyncResp: Dashboard.Common.Ride
 
 
 module: Ride
@@ -68,18 +69,25 @@ apis:
         - lon: Double
       response:
         type: GetRoutesResp
-
-
-
-
-# type TripRouteAPI =
-#   "trip"
-#     :> "route"
-#     :> Capture "rideId" (Id DP.Ride)
-#     :> MandatoryQueryParam "lat" Double
-#     :> MandatoryQueryParam "lon" Double
-#     :> Get '[JSON] Maps.GetRoutesResp
-
+  - GET:
+      endpoint: /pickup/route/{rideId}
+      auth:  ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS RIDE_INFO_CUSTOMER   # FIXME wrong auth need to be changed
+      params:
+        rideId: Id Ride
+      mandatoryQuery:
+        - lat: Double
+        - lon: Double
+      response:
+        type: GetRoutesResp
+  - POST:
+      endpoint: /sync
+      auth: ApiAuth APP_BACKEND_MANAGEMENT RIDES MULTIPLE_RIDE_SYNC
+      request:
+        type: MultipleRideSyncReq
+      response:
+        type: MultipleRideSyncResp
+      migrate:
+        endpoint: RideAPI MultipleRideSyncRideEndpoint
 
 
 types:
@@ -193,8 +201,13 @@ types:
     - entityType: FareBreakupEntityType
   FareBreakupEntityType:
     - enum: BOOKING_UPDATE_REQUEST, BOOKING, RIDE, INITIAL_BOOKING
-
-
+  MultipleRideSyncReq:
+    - recordType: NewType
+    - rides: [MultipleRideItem]
+    - derive: "'HideSecrets"
+  MultipleRideItem:
+    - recordType: NewType
+    - rideId: Id Ride
 
 
   # BookingStatus:

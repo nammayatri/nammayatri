@@ -9,6 +9,7 @@ where
 
 import qualified API.Types.RiderPlatform.Management.Ride
 import qualified Dashboard.Common
+import qualified Dashboard.Common.Ride
 import qualified Dashboard.RiderPlatform.Ride
 import qualified Domain.Action.Dashboard.Ride as Domain.Action.Dashboard.Ride
 import qualified Domain.Types.Merchant
@@ -23,7 +24,7 @@ import Servant
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.RiderPlatform.Management.Ride.API)
-handler merchantId city = getRideList merchantId city :<|> getRideRideinfo merchantId city :<|> getRideInfo merchantId city :<|> getRideRideInfo merchantId city :<|> getRideTripRoute merchantId city
+handler merchantId city = getRideList merchantId city :<|> getRideRideinfo merchantId city :<|> getRideInfo merchantId city :<|> getRideRideInfo merchantId city :<|> getRideTripRoute merchantId city :<|> getRidePickupRoute merchantId city :<|> postRideSync merchantId city
 
 getRideList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Dashboard.RiderPlatform.Ride.BookingStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.RideListRes)
 getRideList a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Ride.getRideList a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
@@ -39,3 +40,9 @@ getRideRideInfo a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Ride.get
 
 getRideTripRoute :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> Environment.FlowHandler Kernel.External.Maps.GetRoutesResp)
 getRideTripRoute a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Ride.getRideTripRoute a5 a4 a3 a2 a1
+
+getRidePickupRoute :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> Environment.FlowHandler Kernel.External.Maps.GetRoutesResp)
+getRidePickupRoute a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Ride.getRidePickupRoute a5 a4 a3 a2 a1
+
+postRideSync :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.Ride.MultipleRideSyncReq -> Environment.FlowHandler Dashboard.Common.Ride.MultipleRideSyncResp)
+postRideSync a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Ride.postRideSync a3 a2 a1

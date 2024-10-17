@@ -26,13 +26,11 @@ import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Domain.Types.ServerName
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
-import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Validation (runRequestValidation)
 import qualified RiderPlatformClient.RiderApp.Operations as Client
 import Servant
 import qualified SharedLogic.Transaction as T
@@ -42,9 +40,7 @@ import Tools.Auth.Merchant
 
 type API =
   "ride"
-    :> ( Common.PickupRouteAPI
-           :<|> MultipleRideCancelAPI
-           :<|> MultipleRideSyncAPI
+    :> ( MultipleRideCancelAPI
            :<|> TicketRideListAPI
        )
 
@@ -56,9 +52,9 @@ type MultipleRideCancelAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'MULTIPLE_RIDE_CANCEL
     :> BAP.MultipleRideCancelAPI
 
-type MultipleRideSyncAPI =
-  ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'MULTIPLE_RIDE_SYNC
-    :> Common.MultipleRideSyncAPI
+-- type MultipleRideSyncAPI =
+--   ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'MULTIPLE_RIDE_SYNC
+--     :> Common.MultipleRideSyncAPI
 
 type TicketRideListAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'RIDES 'TICKET_RIDE_LIST_API
@@ -66,9 +62,7 @@ type TicketRideListAPI =
 
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
-  pickupRoute merchantId city
-    :<|> multipleRideCancel merchantId city
-    :<|> multipleRideSync merchantId city
+  multipleRideCancel merchantId city
     :<|> ticketRideList merchantId city
 
 -- rideInfoHitsCountKey :: Text -> Text
@@ -119,16 +113,16 @@ buildTransaction endpoint apiTokenInfo =
 --   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
 --   Client.callRiderAppOperations checkedMerchantId opCity (.rides.tripRoute) rideId pickupLocationLat pickupLocationLon
 
-pickupRoute ::
-  ShortId DM.Merchant ->
-  City.City ->
-  Id Common.Ride ->
-  Double ->
-  Double ->
-  FlowHandler Maps.GetRoutesResp
-pickupRoute merchantShortId opCity rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI' $ do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
-  Client.callRiderAppOperations checkedMerchantId opCity (.rides.pickupRoute) rideId pickupLocationLat pickupLocationLon
+-- pickupRoute ::
+--   ShortId DM.Merchant ->
+--   City.City ->
+--   Id Common.Ride ->
+--   Double ->
+--   Double ->
+--   FlowHandler Maps.GetRoutesResp
+-- pickupRoute merchantShortId opCity rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI' $ do
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
+--   Client.callRiderAppOperations checkedMerchantId opCity (.rides.pickupRoute) rideId pickupLocationLat pickupLocationLon
 
 -- rideInfo ::
 --   ShortId DM.Merchant ->
@@ -147,13 +141,13 @@ multipleRideCancel merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI'
   T.withTransactionStoring transaction $
     Client.callRiderAppOperations checkedMerchantId opCity (.rides.multipleRideCancel) req
 
-multipleRideSync :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.MultipleRideSyncReq -> FlowHandler Common.MultipleRideSyncResp
-multipleRideSync merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
-  runRequestValidation Common.validateMultipleRideSyncReq req
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity opCity
-  transaction <- buildTransaction Common.MultipleRideSyncEndpoint apiTokenInfo (Just req)
-  T.withResponseTransactionStoring transaction $
-    Client.callRiderAppOperations checkedMerchantId opCity (.rides.multipleRideSync) req
+-- multipleRideSync :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.MultipleRideSyncReq -> FlowHandler Common.MultipleRideSyncResp
+-- multipleRideSync merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+--   runRequestValidation Common.validateMultipleRideSyncReq req
+--   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity opCity
+--   transaction <- buildTransaction Common.MultipleRideSyncEndpoint apiTokenInfo (Just req)
+--   T.withResponseTransactionStoring transaction $
+--     Client.callRiderAppOperations checkedMerchantId opCity (.rides.multipleRideSync) req
 
 ticketRideList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.TicketRideListRes
 ticketRideList merchantShortId opCity apiTokenInfo mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI' $ do

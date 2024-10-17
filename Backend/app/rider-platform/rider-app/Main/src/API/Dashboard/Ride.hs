@@ -16,24 +16,18 @@ module API.Dashboard.Ride where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
 import qualified Domain.Action.Dashboard.Ride as DRide
-import Domain.Action.Dashboard.Route (mkGetLocation)
 import qualified Domain.Types.Merchant as DM
 import Environment
-import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Validation (runRequestValidation)
 import Servant hiding (throwError)
-import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.SystemConfigs ()
 
 type API =
   "ride"
-    :> ( Common.PickupRouteAPI
-           :<|> MultipleRideCancelAPI
-           :<|> Common.MultipleRideSyncAPI
+    :> ( MultipleRideCancelAPI
            :<|> Common.TicketRideListAPI
        )
 
@@ -47,9 +41,9 @@ type MultipleRideCancelAPI =
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   -- callGetTripRoute merchantId
-  callGetPickupRoute merchantId
-    :<|> multipleRideCancel -- FIXME merchantId ?
-    :<|> multipleRideSync merchantId
+  -- callGetPickupRoute merchantId
+  multipleRideCancel -- FIXME merchantId ?
+  --   :<|> multipleRideSync merchantId
     :<|> ticketRideList merchantId
 
 -- shareRideInfo ::
@@ -67,13 +61,13 @@ handler merchantId =
 -- callGetTripRoute :: ShortId DM.Merchant -> Id Common.Ride -> Double -> Double -> FlowHandler Maps.GetRoutesResp
 -- callGetTripRoute merchantShortId rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI $ mkGetLocation merchantShortId rideId pickupLocationLat pickupLocationLon False
 
-callGetPickupRoute ::
-  ShortId DM.Merchant ->
-  Id Common.Ride ->
-  Double ->
-  Double ->
-  FlowHandler Maps.GetRoutesResp
-callGetPickupRoute merchantShortId rideId currLocationLat currLocationLon = withFlowHandlerAPI $ mkGetLocation merchantShortId rideId currLocationLat currLocationLon True
+-- callGetPickupRoute ::
+--   ShortId DM.Merchant ->
+--   Id Common.Ride ->
+--   Double ->
+--   Double ->
+--   FlowHandler Maps.GetRoutesResp
+-- callGetPickupRoute merchantShortId rideId currLocationLat currLocationLon = withFlowHandlerAPI $ mkGetLocation merchantShortId rideId currLocationLat currLocationLon True
 
 -- callRideInfo ::
 --   ShortId DM.Merchant ->
@@ -88,20 +82,20 @@ multipleRideCancel ::
   FlowHandler APISuccess
 multipleRideCancel = withFlowHandlerAPI . DRide.multipleRideCancel
 
-multipleRideSync ::
-  ShortId DM.Merchant ->
-  Common.MultipleRideSyncReq ->
-  FlowHandler Common.MultipleRideSyncResp
-multipleRideSync merchantShortId req = withFlowHandlerAPI $ do
-  runRequestValidation Common.validateMultipleRideSyncReq req
-  merchant <- findMerchantByShortId merchantShortId
-  logTagInfo "dashboard -> multipleRideSync : " $ show (req.rides <&> (.rideId))
-  respItems <- forM req.rides $ \reqItem -> do
-    info <- handle Common.listItemErrHandler $ do
-      void $ DRide.rideSync merchant reqItem.rideId
-      pure Common.SuccessItem
-    pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
-  pure $ Common.MultipleRideSyncResp {list = respItems}
+-- multipleRideSync ::
+--   ShortId DM.Merchant ->
+--   Common.MultipleRideSyncReq ->
+--   FlowHandler Common.MultipleRideSyncResp
+-- multipleRideSync merchantShortId req = withFlowHandlerAPI $ do
+--   runRequestValidation Common.validateMultipleRideSyncReq req
+--   merchant <- findMerchantByShortId merchantShortId
+--   logTagInfo "dashboard -> multipleRideSync : " $ show (req.rides <&> (.rideId))
+--   respItems <- forM req.rides $ \reqItem -> do
+--     info <- handle Common.listItemErrHandler $ do
+--       void $ DRide.rideSync merchant reqItem.rideId
+--       pure Common.SuccessItem
+--     pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
+--   pure $ Common.MultipleRideSyncResp {list = respItems}
 
 ticketRideList :: ShortId DM.Merchant -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.TicketRideListRes
 ticketRideList merchantShortId mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI $ DRide.ticketRideList merchantShortId mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber
