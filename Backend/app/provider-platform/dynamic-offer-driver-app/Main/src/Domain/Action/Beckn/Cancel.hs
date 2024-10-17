@@ -25,15 +25,18 @@ module Domain.Action.Beckn.Cancel
   )
 where
 
+import Data.Either.Extra (eitherToMaybe)
 import Data.Maybe (listToMaybe)
 import Domain.Action.UI.Ride.CancelRide (driverDistanceToPickup)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.BookingUpdateRequest as DBUR
 import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.SearchTry as ST
+import qualified Domain.Types.TagRequests as TR
 import Environment
 import EulerHS.Prelude
 import Kernel.External.Maps
@@ -46,7 +49,10 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
+import qualified Lib.Yudhishthira.Event as Yudhishthira
+import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SharedLogic.Cancel
+import qualified SharedLogic.CancellationRate as SCR
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.FareCalculator as FareCalculator
@@ -59,6 +65,8 @@ import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.BookingUpdateRequest as QBUR
+import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as QPers
@@ -69,6 +77,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.Vehicle as QVeh
+import Tools.Constants
 import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
@@ -98,6 +107,7 @@ cancel ::
 cancel req merchant booking mbActiveSearchTry = do
   CS.whenBookingCancellable booking.id $ do
     mbRide <- QRide.findActiveByRBId req.bookingId
+    transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
     whenJust mbRide $ \ride -> do
       void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
       updateOnRideStatusWithAdvancedRideCheck ride.driverId mbRide
@@ -123,13 +133,32 @@ cancel req merchant booking mbActiveSearchTry = do
     whenJust mbRide $ \ride -> do
       triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
       triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
+      fork "Adding namma tags" $ do
+        now <- getCurrentTime
+        mbCallStatus <- QCallStatus.findOneByEntityId (Just ride.id.getId)
+        bookingUpdateRequests <- QBUR.findAllByBookingId Nothing Nothing booking.id
+        let callAtemptByDriver = isJust mbCallStatus
+            isDestinationEdited = any (\x -> x.status == DBUR.DRIVER_ACCEPTED) bookingUpdateRequests
+            tagData =
+              TR.CancelRideTagData
+                { ride = ride{status = SRide.CANCELLED},
+                  booking = booking{status = SRB.CANCELLED},
+                  cancellationReason = bookingCR,
+                  currentTime = now,
+                  ..
+                }
+        nammaTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.RideCancel tagData)
+        let allTags = ride.rideTags <> eitherToMaybe nammaTags
+        QRide.updateRideTags allTags ride.id
+        when (validDriverCancellation `elem` (fromMaybe [] allTags)) $ do
+          let windowSize = toInteger $ fromMaybe 7 transporterConfig.cancellationRateWindow
+          void $ SCR.incrementCancelledCount ride.driverId windowSize
 
     logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
 
     cancellationCharge <- do
       case mbRide of
         Just ride -> do
-          transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
           case (transporterConfig.canAddCancellationFee, ride.cancellationFeeIfCancelled) of
             (False, _) -> return Nothing
             (True, Just cancellationCharges) -> return $ Just PriceAPIEntity {amount = cancellationCharges, currency = booking.currency}

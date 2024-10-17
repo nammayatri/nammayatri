@@ -49,6 +49,7 @@ import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RefereeLink as DRL
 import Domain.Types.RideRoute
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.TagRequests as TR
 import qualified Domain.Types.TransporterConfig as DTMT
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -165,14 +166,6 @@ data DSearchRes = DSearchRes
     bapId :: Text
   }
 
-data TagData = TagData
-  { searchRequest :: DSR.SearchRequest,
-    area :: Text,
-    specialLocationTag :: Maybe Text,
-    specialLocationName :: Maybe Text
-  }
-  deriving (Generic, Show, ToJSON)
-
 data NearestDriverInfo = NearestDriverInfo
   { locationId :: Text,
     distanceToNearestDriver :: Meters,
@@ -255,7 +248,7 @@ handler ValidatedDSearchReq {..} sReq = do
 
   fork "Add Namma Tags" $ do
     let tagData =
-          TagData
+          TR.SearchTagData
             { searchRequest = searchReq,
               area = show allFarePoliciesProduct.area,
               specialLocationTag = spcllocationTag,
@@ -361,7 +354,7 @@ handler ValidatedDSearchReq {..} sReq = do
                   maxAllowed = min (min det.maxAdditionalKmsLimit.getKilometers includedKm) (det.totalAdditionalKmsLimit.getKilometers - includedKm)
                in distInKm - includedKm <= maxAllowed
 
-    addNammaTags :: TagData -> Flow ()
+    addNammaTags :: TR.SearchTagData -> Flow ()
     addNammaTags tagData = do
       newSearchTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.Search tagData)
       let tags = tagData.searchRequest.searchTags <> eitherToMaybe newSearchTags

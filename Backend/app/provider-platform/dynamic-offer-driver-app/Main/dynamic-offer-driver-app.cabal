@@ -292,6 +292,7 @@ library
       Domain.Types.OnUpdate
       Domain.Types.Quote
       Domain.Types.RideRoute
+      Domain.Types.TagRequests
       Domain.Types.UtilsTH
       Environment
       Lib.DriverCoins.Coins
