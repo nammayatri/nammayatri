@@ -112,6 +112,7 @@ import Data.Foldable (foldl)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Data.Function (flip)
 import Data.Ord (compare)
+import JBridge as JB
 
 
 type AffSuccess s = (s -> Effect Unit)
@@ -1087,3 +1088,10 @@ getVehicleVariantName variant =
                   BikeCategory -> getString BIKE_TAXI
                   AmbulanceCategory -> getString AMBULANCE
                   UnKnown -> ""
+
+isTokenWithExpValid :: String -> Boolean
+isTokenWithExpValid token = do
+  let tokenWithExp = DS.split (DS.Pattern "<$>") token
+      cachedToken = fromMaybe "" (tokenWithExp DA.!! 0)
+      isTokenValid = (runFn2 JB.differenceBetweenTwoUTC (fromMaybe "" (tokenWithExp DA.!! 1)) (ReExport.getCurrentUTC "")) > 0
+  isTokenValid && not (DS.null cachedToken)
