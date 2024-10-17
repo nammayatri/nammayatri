@@ -28,7 +28,7 @@ import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPaym
 import Domain.Types.Merchant as Merchant
 import Environment
 import EulerHS.Prelude ((+||), (||+))
-import ExternalBPP.Common.Cancel
+import ExternalBPP.CallAPI
 import Kernel.Beam.Functions
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -192,7 +192,7 @@ mkTicket :: Booking.FRFSTicketBooking -> DTicket -> Bool -> Flow Ticket.FRFSTick
 mkTicket booking dTicket isTicketFree = do
   now <- getCurrentTime
   ticketId <- generateGUID
-  (_, status) <- Utils.getTicketStatus booking dTicket
+  (_, status_) <- Utils.getTicketStatus booking dTicket
 
   return
     Ticket.FRFSTicket
@@ -200,7 +200,7 @@ mkTicket booking dTicket isTicketFree = do
         Ticket.id = ticketId,
         Ticket.qrData = dTicket.qrData,
         Ticket.riderId = booking.riderId,
-        Ticket.status = status,
+        Ticket.status = status_,
         Ticket.ticketNumber = dTicket.ticketNumber,
         Ticket.validTill = dTicket.validTill,
         Ticket.merchantId = booking.merchantId,

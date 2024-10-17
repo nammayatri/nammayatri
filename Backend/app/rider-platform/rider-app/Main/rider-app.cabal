@@ -261,7 +261,6 @@ library
       ExternalBPP.Bus.ExternalAPI.EBIX.Verification
       ExternalBPP.Bus.Flow
       ExternalBPP.CallAPI
-      ExternalBPP.Common.Cancel
       ExternalBPP.Metro.ExternalAPI.CallAPI
       ExternalBPP.Metro.ExternalAPI.CMRL.Auth
       ExternalBPP.Metro.ExternalAPI.CMRL.Order
