@@ -1,4 +1,4 @@
-module ExternalBPP.EBIX.ExternalAPI.Payment where
+module ExternalBPP.Bus.ExternalAPI.EBIX.Payment where
 
 import Domain.Types
 import Domain.Types.BecknConfig

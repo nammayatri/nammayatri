@@ -26,4 +26,8 @@ data IntegratedBPPConfig = IntegratedBPPConfig
   }
   deriving (Generic, FromJSON, ToJSON)
 
-data ProviderConfig = EBIX Domain.Types.Extra.IntegratedBPPConfig.EBIXConfig | CUMTA Domain.Types.Extra.IntegratedBPPConfig.EBIXConfig deriving (Generic, FromJSON, ToJSON, Eq)
+data ProviderConfig
+  = EBIX Domain.Types.Extra.IntegratedBPPConfig.EBIXConfig
+  | CUMTA Domain.Types.Extra.IntegratedBPPConfig.CUMTAConfig
+  | CMRL Domain.Types.Extra.IntegratedBPPConfig.CMRLConfig
+  deriving (Generic, FromJSON, ToJSON, Eq)

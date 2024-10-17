@@ -1,4 +1,4 @@
-module ExternalBPP.EBIX.ExternalAPI.Order where
+module ExternalBPP.Bus.ExternalAPI.EBIX.Order where
 
 import Data.Aeson
 import qualified Data.Text as T
@@ -9,7 +9,7 @@ import Domain.Types.FRFSQuote
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET
-import ExternalBPP.EBIX.ExternalAPI.Auth
+import ExternalBPP.Bus.ExternalAPI.EBIX.Auth
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
