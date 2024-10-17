@@ -120,3 +120,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN payout_batch_delay integer ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN sensitive_words_for_exact_match text [] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN feedback_alert_rating_threshold integer ;

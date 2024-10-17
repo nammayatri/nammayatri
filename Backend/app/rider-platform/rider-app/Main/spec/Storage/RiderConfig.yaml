@@ -51,6 +51,7 @@ RiderConfig:
     sensitiveWordsForExactMatch : "Maybe [Text]"
     payoutBatchSize: Maybe Int
     payoutBatchDelay: NominalDiffTime
+    feedbackAlertRatingThreshold: Int
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -61,6 +62,7 @@ RiderConfig:
     csAlertTriggerDelay: Maybe Seconds
     avgSpeedInKmPerHr: Maybe Kilometers
     payoutBatchDelay: Maybe Seconds
+    feedbackAlertRatingThreshold: Maybe Int
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -74,6 +76,7 @@ RiderConfig:
     csAlertTriggerDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> csAlertTriggerDelay)|E
     avgSpeedInKmPerHr: fromMaybe 20 avgSpeedInKmPerHr|E
     payoutBatchDelay: fromMaybe 10 (Kernel.Utils.Common.secondsToNominalDiffTime <$> payoutBatchDelay)|E
+    feedbackAlertRatingThreshold: fromMaybe 3 feedbackAlertRatingThreshold|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -84,6 +87,7 @@ RiderConfig:
     csAlertTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     avgSpeedInKmPerHr: Just avgSpeedInKmPerHr|E
     payoutBatchDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    feedbackAlertRatingThreshold: Just feedbackAlertRatingThreshold|E
 
   default:
     enableLocalPoliceSupport: "false"
