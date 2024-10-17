@@ -18,16 +18,13 @@ module API.RiderPlatform.Ride
   )
 where
 
-import qualified "rider-app" API.Dashboard.Ride as BAP
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
-import qualified "rider-app" Domain.Action.Dashboard.Ride as Domain
 import "lib-dashboard" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Domain.Types.ServerName
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
-import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common

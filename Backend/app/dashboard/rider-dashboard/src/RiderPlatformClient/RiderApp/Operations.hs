@@ -32,7 +32,6 @@ import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import Data.Time
 import qualified "rider-app" Domain.Action.Dashboard.IssueList as DI
-import qualified Domain.Action.Dashboard.Ride as DCM
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
 import qualified "rider-app" Domain.Types.TicketBooking as DTB

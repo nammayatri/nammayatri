@@ -91,6 +91,7 @@ apis:
         endpoint: RideAPI MultipleRideSyncRideEndpoint
   - POST:
       endpoint: /cancel
+      name: PostRideCancelMultiple
       auth: ApiAuth APP_BACKEND_MANAGEMENT RIDES MULTIPLE_RIDE_CANCEL
       request:
         type: MultipleRideCancelReq

@@ -19,7 +19,7 @@ module Domain.Action.Dashboard.Ride
     getRideList,
     rideInfo,
     getRideRideinfo,
-    postRideCancel,
+    postRideCancelMultiple,
     --   MultipleRideCancelReq,
     rideSync,
     ticketRideList,
@@ -513,13 +513,12 @@ buildBookingCancellationReason booking mbRideId = do
         updatedAt = now
       }
 
--- TODO rename
-postRideCancel ::
+postRideCancelMultiple ::
   ShortId DM.Merchant ->
   Context.City ->
   Common.MultipleRideCancelReq ->
   Flow APISuccess
-postRideCancel _ _ req = do
+postRideCancelMultiple _ _ req = do
   mapM_ bookingCancel req.multipleRideCancelInfo
   pure Success
 
