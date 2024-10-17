@@ -18,7 +18,7 @@ data TagData = TagData
     specialLocationTag :: Maybe Text,
     specialLocationName :: Maybe Text
   }
-  deriving (Generic, Show, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data EndRideTagData = EndRideTagData
   { ride :: DRide.Ride,
