@@ -258,6 +258,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
                 renderedAt = Nothing,
                 respondedAt = Nothing,
                 upgradeCabRequest = Just tripQuoteDetail.eligibleForUpgrade,
+                driverTagScore = dpRes.driverTagScore,
                 ..
               }
       pure searchRequestForDriver
