@@ -76,6 +76,13 @@ getEstimatesOrder city = do
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig ["AUTO_RICKSHAW", "BOOK_ANY"]
     getCityBasedConfig value city
 
+getEstimatesOrderBaseOnServiceTier :: String -> Array String
+getEstimatesOrderBaseOnServiceTier city = do 
+    let config = fetchRemoteConfigString "estimates_order_service_tier"
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig ["Auto", "Book Any"]
+    getCityBasedConfig value city
+
+
 getPreferredVariant :: String -> String
 getPreferredVariant city = do
     let config = fetchRemoteConfigString "preferred_estimate_order"
@@ -106,6 +113,12 @@ getEnabledServices city = do
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig []
     getCityBasedConfig value city
 
+getPreferredOrderInBookAny :: String -> Boolean
+getPreferredOrderInBookAny city = do
+    let config = fetchRemoteConfigString "preferred_book_any_options"
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig false
+    getCityBasedConfig value city
+    
 defaultTipConfig :: TipsConfigRC
 defaultTipConfig = {
   sedan : [0, 20, 30, 50],
