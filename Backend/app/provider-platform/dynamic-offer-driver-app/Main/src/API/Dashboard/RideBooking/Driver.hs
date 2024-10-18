@@ -44,7 +44,7 @@ authHandler merchantId city =
     :<|> verify
 
 auth :: ShortId DM.Merchant -> Context.City -> Common.AuthReq -> FlowHandler Common.AuthRes
-auth merchantShortId opCity = withFlowHandlerAPI . DReg.auth merchantShortId opCity
+auth merchantShortId opCity = withDashboardFlowHandlerAPI . DReg.auth merchantShortId opCity
 
 verify :: Text -> Bool -> Text -> Common.AuthVerifyReq -> FlowHandler APISuccess
-verify authId mbFleet fleetOwnerId req = withFlowHandlerAPI $ DReg.verify authId mbFleet fleetOwnerId req
+verify authId mbFleet fleetOwnerId req = withDashboardFlowHandlerAPI $ DReg.verify authId mbFleet fleetOwnerId req

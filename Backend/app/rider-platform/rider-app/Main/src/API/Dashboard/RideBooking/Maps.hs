@@ -70,15 +70,15 @@ handler merchantId =
 
 callAutoComplete :: ShortId DM.Merchant -> Id DP.Person -> DMaps.AutoCompleteReq -> FlowHandler DMaps.AutoCompleteResp
 callAutoComplete merchantId personId req = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantId
   UM.autoComplete (personId, m.id) req
 
 callGetPlaceDetails :: ShortId DM.Merchant -> Id DP.Person -> DMaps.GetPlaceDetailsReq -> FlowHandler DMaps.GetPlaceDetailsResp
 callGetPlaceDetails merchantId personId req = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantId
   UM.getPlaceDetails (personId, m.id) req
 
 callGetPlaceName :: ShortId DM.Merchant -> Id DP.Person -> DMaps.GetPlaceNameReq -> FlowHandler DMaps.GetPlaceNameResp
 callGetPlaceName merchantId personId req = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantId
   UM.getPlaceName (personId, m.id) req
