@@ -2014,7 +2014,7 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
   let 
     alreadyGotEstimates = not $ null $ state.data.specialZoneQuoteList 
     estimates = getEstimateList state quotesRes.estimates state.data.config.estimateAndQuoteConfig state.data.selectedEstimatesObject.activeIndex
-    quotes = filter filterNonAcAsPerGates $ getSpecialZoneQuotes quotesRes.quotes state.data.config.estimateAndQuoteConfig (state.data.fareProductType == FPT.INTER_CITY) (Just state.props.searchLocationModelProps.tripType)
+    quotes = filter (\quote -> filterNonAcAsPerGates quote && filterOutBikesAsPerConfig quote) $ getSpecialZoneQuotes quotesRes.quotes state.data.config.estimateAndQuoteConfig (state.data.fareProductType == FPT.INTER_CITY) (Just state.props.searchLocationModelProps.tripType)
     filteredAllQuoteList = filter (\item -> item.providerType == ONUS || (item.providerType == OFFUS && state.data.currentCityConfig.iopConfig.enable)) (estimates <> quotes)
     quoteList = mapWithIndex (\index item -> item{ index = index }) filteredAllQuoteList
     repeatRideFailCheck =  not $ checkRecentRideVariantInEstimates quoteList state.props.repeatRideServiceTierName -- check if the repeat ride variant is available in the estimates
@@ -2087,7 +2087,9 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
       let filteredEstimates = foldl(\acc item -> if elem (fromMaybe "" item.serviceTierName) quote.selectedServices then acc <> [item.id] else acc) [] quotes
       in (Tuple (fromMaybe "" $ head filteredEstimates) (fromMaybe [] $ tail filteredEstimates))
 
-    filterNonAcAsPerGates quote = not $ quote.vehicleVariant == "TAXI" && (STR.contains (STR.Pattern "(ac only)") $ spy "filterNonAcAsPerGates" DS.toLower state.props.defaultPickUpPoint)
+    filterNonAcAsPerGates quote = not $ quote.vehicleVariant == "TAXI" && (STR.contains (STR.Pattern "(ac only)") $ DS.toLower state.props.defaultPickUpPoint)
+
+    filterOutBikesAsPerConfig quote = not $ quote.vehicleVariant == "BIKE" && state.data.config.feature.disableBike
 
 eval (GetEditLocResult (GetEditLocResultResp resp)) state = do
   logStatus "bookingUpdateRequestDetails" resp

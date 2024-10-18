@@ -193,6 +193,7 @@ window.getMerchantConfig = function () {
       "enableEmergencyContacts": false,
       "enableReferral": false,
       "enableSupport": false,
+      "disableBike" : true
     }, 
     "loaderConfig" : {
       "color": "#EB0055"

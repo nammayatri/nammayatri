@@ -242,6 +242,7 @@ window.getMerchantConfig = function () {
       "enableEmergencyContacts": false,
       "enableReferral": false,
       "enableSupport": false,
+      "disableBike": false
     }
     , "dashboard" : {
       "enable" : false

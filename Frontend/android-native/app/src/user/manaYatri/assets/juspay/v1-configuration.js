@@ -280,6 +280,7 @@ window.getMerchantConfig = function () {
       , "enableSuggestions" : true
       , "enableEditDestination" : true
       , "enableEditPickupLocation" : true
+      , "disableBike" : true
     }
     , "appData" : {
       "link" : getAppLink(window.__OS)
