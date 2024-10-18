@@ -380,3 +380,5 @@ verifyUPI dummy = (getBaseUrl "") <> "/driver/profile/verify/vpaStatus"
 
 getCoinInfo :: String -> String
 getCoinInfo _ = (getBaseUrl "") <> "/coins/info"
+updateHVSdkCallLog :: String -> String
+updateHVSdkCallLog _ = (getBaseUrl "") <> "/driver/register/logHvSdkCall"

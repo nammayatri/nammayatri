@@ -72,7 +72,7 @@ import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, 
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.API (callApiBT, callApi)
-import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus, getLatestAndroidVersion)
+import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig, getDriverStatus, getDriverStatusFromMode, updateDriverStatus, getLatestAndroidVersion, getHvErrorMsg)
 import Helpers.Utils as HU
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getAndroidVersion, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange, mkRouteConfig)
 import JBridge as JB
@@ -4394,24 +4394,3 @@ getSrcDestConfig state =
       destination : fromMaybe "" state.data.activeRide.destination
   }
 
-getHvErrorMsg :: Maybe String -> String
-getHvErrorMsg errorCode = 
-  case errorCode of
-    Just "112" -> getString AADHAAR_FRONT_NOT_DETECTED
-    Just "113" -> getString AADHAAR_BACK_NOT_DETECTED
-    Just "151" -> getString UNABLE_TO_EXTRACT_NAME
-    Just "152" -> getString UNABLE_TO_EXTRACT_DOB
-    Just "134" -> getString UNABLE_TO_EXTRACT_ID
-    Just "128" -> getString IMAGE_B_W
-    Just "136" -> getString PARTIAL_DOC_DETECTED
-    Just "127" -> getString DOC_IS_BLURRED
-    Just "165" -> getString FACE_MATCH_FAILED
-    Just "114" -> getString PAN_NOT_DETECTED
-    Just "120" -> getString UNABLE_TO_VERIFY_SELFIE
-    Just "123" -> getString BLURRED_SELFIE
-    Just "124" -> getString EYES_CLOSED_SELFIE
-    Just "125" -> getString MULTIPLE_FACES_IN_SELFIE
-    Just "126" -> getString FACE_BLOCKED
-    Just "140" -> getString REMOVE_EYEWERE
-    Just "170" -> getString DB_CHECK_AND_NAME_MATCH_FAILED
-    _ -> getString UNKNOWN_ERROR
