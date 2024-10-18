@@ -21,12 +21,19 @@ data AuthReq = AuthReq
   deriving (Generic, Show, ToJSON, FromJSON)
 
 data AuthRes = AuthRes
-  { accessToken :: Text
+  { statusCode :: Int,
+    message :: Text,
+    result :: TokenResult
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+newtype TokenResult = TokenResult
+  { access_token :: Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
 type AuthAPI =
-  "authenticate"
+  "cumta" :> "authenticate"
     :> ReqBody '[JSON] AuthReq
     :> Post '[JSON] AuthRes
 
@@ -42,8 +49,8 @@ getAuthToken config = do
       auth <-
         callAPI config.networkHostUrl (ET.client authAPI $ AuthReq config.username password) "authCMRL" authAPI
           >>= fromEitherM (ExternalAPICallError (Just "CMRL_AUTH_API") config.networkHostUrl)
-      Hedis.setExp authTokenKey auth.accessToken (7 * 3600)
-      return auth.accessToken
+      Hedis.setExp authTokenKey auth.result.access_token (7 * 3600)
+      return auth.result.access_token
     Just token -> return token
   where
     authTokenKey = "CMRLAuth:Token"
