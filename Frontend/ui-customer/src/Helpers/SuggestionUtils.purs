@@ -522,8 +522,8 @@ fetchLocationBasedPreferredVariant sourceGeohash suggestionsMap =
     monthInSecond = convertMonthsToSeconds 1
     tripSuggestionsOfLast30days = filter (\x -> (runFn2 JB.differenceBetweenTwoUTC (fromMaybe "" x.recencyDate) (getCurrentUTC "")) <= monthInSecond) suggestion.tripSuggestions
     sortedRecencyGroup = DA.sortBy (\a b -> compare b.recencyDate a.recencyDate) tripSuggestionsOfLast30days
-    lastFiveTrips  = getLast5Trips sortedRecencyGroup dummyFreqencyCount 
-    sortedTripList = ( (DA.sortBy (\(Tuple varient frequency) (Tuple varient1 frequency1) ->compare frequency1 frequency ) lastFiveTrips.vehicleVariant))
+    lastFiveTrips  =  getLast5Trips sortedRecencyGroup dummyFreqencyCount 
+    sortedTripList =  ( (DA.sortBy (\(Tuple varient frequency) (Tuple varient1 frequency1) ->compare frequency1 frequency ) lastFiveTrips.serviceTierNameV2))
   in 
     case head sortedTripList of 
       Just (Tuple varient frequency) -> varient 
@@ -540,7 +540,7 @@ getPreferredVariant suggestionsMap =
     suggestionsOfLast30days = filter (\x -> (runFn2 JB.differenceBetweenTwoUTC (fromMaybe "" x.recencyDate) (getCurrentUTC "")) <= monthInSecond) tripSuggestion
     sortedRecencyGroup =  DA.sortBy (\a b -> compare b.recencyDate a.recencyDate) suggestionsOfLast30days
     lastFiveTrips  = getLast5Trips sortedRecencyGroup dummyFreqencyCount 
-    sortedTripList = ( (DA.sortBy (\(Tuple varient frequency) (Tuple varient1 frequency1) ->compare frequency1 frequency ) lastFiveTrips.vehicleVariant))
+    sortedTripList = ( (DA.sortBy (\(Tuple varient frequency) (Tuple varient1 frequency1) ->compare frequency1 frequency ) lastFiveTrips.serviceTierNameV2))
   in 
     case head sortedTripList of 
       Just (Tuple varient frequency) -> varient 
@@ -591,20 +591,37 @@ getFamousCityDestination (FamousDestination destnData)  =
 
 type FrequencyCount = {
   frequency :: Int,
-  vehicleVariant :: Array (Tuple (Maybe String) Int)
+  serviceTierNameV2 :: Array (Tuple (Maybe String) Int)
 }
 
 dummyFreqencyCount :: FrequencyCount 
 dummyFreqencyCount = {
   frequency: 5, 
-  vehicleVariant: []
+  serviceTierNameV2: []
 }
 
+findAndUpdate :: Array (Tuple (Maybe String) Int) -> Maybe String -> Int -> Array (Tuple (Maybe String) Int)
+findAndUpdate serviceTierList serviceTierNameV2 freq =
+  case DA.find (\(Tuple tierName _) -> tierName == serviceTierNameV2) serviceTierList of
+    Just (Tuple tierName oldFreq) ->
+      map (\(Tuple tn f) -> if tn == serviceTierNameV2 then Tuple tn (f + freq) else Tuple tn f) serviceTierList
+    Nothing ->
+      serviceTierList <> [Tuple serviceTierNameV2 freq]
+
 getLast5Trips :: Array Trip -> FrequencyCount -> FrequencyCount
-getLast5Trips  sortedRecencyGroup dummyFreqencyCount = do
-          foldl  (\acc item -> do
-                                  let frequency = fromMaybe 0 item.frequencyCount
-                                  if frequency >= acc.frequency then acc {frequency = 0, vehicleVariant = acc.vehicleVariant <> [(Tuple item.vehicleVariant acc.frequency)]}
-                                  else if frequency <= acc.frequency then acc {frequency = acc.frequency - frequency, vehicleVariant = acc.vehicleVariant <> [(Tuple item.vehicleVariant frequency)]}
-                                  else acc  
-                  ) dummyFreqencyCount sortedRecencyGroup
+getLast5Trips sortedRecencyGroup dummyFrequencyCount = 
+  foldl (\acc item -> 
+    let
+      frequency = fromMaybe 0 item.frequencyCount
+      serviceTierNameV2 = item.serviceTierNameV2 
+      updatedServiceTierNameV2 = if frequency >= acc.frequency then
+        findAndUpdate acc.serviceTierNameV2 serviceTierNameV2 acc.frequency
+      else
+        findAndUpdate acc.serviceTierNameV2 serviceTierNameV2 frequency
+
+      updatedFrequency = if frequency >= acc.frequency then 0 else acc.frequency - frequency  
+
+    in
+      acc { frequency = updatedFrequency, serviceTierNameV2 = updatedServiceTierNameV2 }
+  ) dummyFrequencyCount sortedRecencyGroup
+
