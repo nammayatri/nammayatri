@@ -56,6 +56,7 @@ import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Tools.Error
 import Tools.Maps as Maps
@@ -75,6 +76,7 @@ sendSearchRequestToDrivers ::
     LT.HasLocationService m r,
     JobCreator r m
   ) =>
+  Bool ->
   [SDP.TripQuoteDetail] ->
   DSR.SearchRequest ->
   DST.SearchTry ->
@@ -83,8 +85,14 @@ sendSearchRequestToDrivers ::
   [Id Driver] ->
   GoHomeConfig ->
   m ()
-sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig driverPool prevBatchDrivers goHomeConfig = do
+sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq searchTry driverPoolConfig driverPool prevBatchDrivers goHomeConfig = do
   logInfo $ "Send search requests to driver pool batch-" <> show driverPool
+
+  -- We update few things during 1st batch in searchReq table which is not being passed in above Search request, hence fetch search request again if it is first batch
+  -- isAllocatorBatch is false if it is first batch because 1st batch is always triggered from application, not allocator
+  mbSearchReq <- if isAllocatorBatch then pure Nothing else QSR.findById oldSearchReq.id
+  let searchReq = fromMaybe oldSearchReq mbSearchReq
+
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id searchReq.bapId) Domain.MOBILITY
   validTill <- getSearchRequestValidTill
   batchNumber <- getPoolBatchNum searchTry.id
@@ -102,7 +110,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
       }
 
   transporterConfig <- SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver tripQuoteDetailsHashMap batchNumber validTill transporterConfig) driverPool
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
@@ -131,12 +139,13 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
         Esq.EsqDBReplicaFlow m r,
         CacheFlow m r
       ) =>
+      DSR.SearchRequest ->
       DFP.FullFarePolicy ->
       Maybe Months ->
       SDP.TripQuoteDetail ->
       DTR.TransporterConfig ->
       m HighPrecMoney
-    getBaseFare farePolicy vehicleAge tripQuoteDetail transporterConfig = do
+    getBaseFare searchReq farePolicy vehicleAge tripQuoteDetail transporterConfig = do
       fareParams <-
         Fare.calculateFareParameters
           Fare.CalculateFareParametersParams
@@ -176,13 +185,14 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
         Esq.EsqDBReplicaFlow m r,
         CacheFlow m r
       ) =>
+      DSR.SearchRequest ->
       HashMap.HashMap DVST.ServiceTierType SDP.TripQuoteDetail ->
       Int ->
       UTCTime ->
       DTR.TransporterConfig ->
       SDP.DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig dpwRes = do
+    buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig dpwRes = do
       let currency = searchTry.currency
       guid <- generateGUID
       now <- getCurrentTime
@@ -193,7 +203,7 @@ sendSearchRequestToDrivers tripQuoteDetails searchReq searchTry driverPoolConfig
       baseFare <- case tripQuoteDetail.tripCategory of
         DTC.Ambulance _ -> do
           farePolicy <- getFarePolicyByEstOrQuoteId (Just $ EMaps.getCoordinates searchReq.fromLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory dpRes.serviceTier searchReq.area searchTry.estimateId Nothing Nothing searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId)))
-          getBaseFare farePolicy dpRes.vehicleAge tripQuoteDetail transporterConfig
+          getBaseFare searchReq farePolicy dpRes.vehicleAge tripQuoteDetail transporterConfig
         _ -> pure tripQuoteDetail.baseFare
       deploymentVersion <- asks (.version)
       let searchRequestForDriver =
