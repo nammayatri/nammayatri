@@ -304,6 +304,7 @@ window.getMerchantConfig = function () {
     , "feature" : {
         "enableSupport" : false
       , "enableSuggestions" : true
+      , "disableBike" : true
     }
     , "appData" : {
       "link" : getAppLink(window.__OS)

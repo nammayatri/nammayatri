@@ -384,7 +384,8 @@ window.getMerchantConfig = function () {
       "enableCustomerSupportForSafety" : true, 
       "enableSupport" : false,
       "enableHelpAndSupport" : false,
-      "enableEditDestination" : true
+      "enableEditDestination" : true ,
+      "disableBike" : false
     } 
     , "suggestedTripsAndLocationConfig" : {
       "minLocationsToBeShown" : 1,
