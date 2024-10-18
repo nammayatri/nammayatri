@@ -355,8 +355,8 @@ window.getMerchantConfig = function () {
           },
           "bike" : {
             "name" : "Bike",
-            "image": "ny_ic_bike_side,https://assets.juspay.in/beckn/jatrisaathi/driver/images/ny_ic_bike_side.png",
-            "leftViewImage" : "ny_ic_bike_left_side,"
+            "image": "ny_ic_bike_side,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_bike_side.png",
+            "leftViewImage" : "ny_ic_bike_left_side,https://assets.moving.tech/beckn/jatrisaathi/user/images/ny_ic_bike_left_side.png"
           },
           "bookAny" : {
             "name" : "Book Any",
