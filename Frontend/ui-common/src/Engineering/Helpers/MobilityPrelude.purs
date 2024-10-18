@@ -146,3 +146,27 @@ convertMonthsToSeconds months = months * daysPerMonth * secondsPerDay
   where
     daysPerMonth = 30 
     secondsPerDay = 24 * 60 * 60
+
+-- Insert an element at a particular position in an array
+insertAtPosition :: forall a. Int -> a -> Array a -> Array a
+insertAtPosition pos value arr =
+  if pos < 0 || pos > DA.length arr 
+    then arr 
+  else
+    let
+      before = DA.slice 0 pos arr
+      after = DA.slice pos (DA.length arr) arr
+    in
+      DA.concat [before, [value], after]
+
+-- Insert an array at a particular position in an array
+insertArrayAtPosition :: forall a. Int -> Array a -> Array a -> Array a
+insertArrayAtPosition pos value arr =
+  if pos < 0 || pos > DA.length arr 
+    then arr 
+  else
+    let
+      before = DA.slice 0 pos arr
+      after = DA.slice pos (DA.length arr) arr
+    in
+      DA.concat [before, value, after]

@@ -3036,3 +3036,18 @@ export const launchCustomTab = (url, cb) => {
     window.JBridge.launchCustomTab(url, callback);
   }
 }
+
+export const executeJS = (params, codeString) => {
+  try {
+    const dynamicFunction = new Function(`
+      const args = arguments; 
+      ${codeString} 
+    `);
+  
+    return dynamicFunction(...params);
+  } catch (error) {
+    console.log(error);
+    return ""
+  }
+  
+}

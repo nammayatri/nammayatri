@@ -93,3 +93,10 @@ instance showServiceType :: Show ServiceType where show = genericShow
 type InterCityBusConfig = {
   baseUrl :: String
 }
+
+type SafetyConfig = {
+  bannerAction :: String,
+  bannerUrl :: String,
+  bannerPosition :: Int,
+  showOnRide :: String
+}
