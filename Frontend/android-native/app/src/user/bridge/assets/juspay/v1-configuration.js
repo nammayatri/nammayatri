@@ -291,7 +291,7 @@ window.getMerchantConfig = function () {
         },
         "bike" : {
           "name" : "Bike",
-          "image" : "ny_ic_bike_side,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_bike_side.png"
+          "image" : "ny_ic_bike_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_bike_side.png"
         }
 
       }
