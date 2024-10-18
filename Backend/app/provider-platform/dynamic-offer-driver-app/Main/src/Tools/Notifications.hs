@@ -43,7 +43,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Version as Version
 import Kernel.Utils.Common
-import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Storage.Cac.MerchantServiceUsageConfig as QMSUC
 import Storage.Cac.TransporterConfig
@@ -1118,9 +1117,3 @@ runWithServiceConfigForProviders merchantOpCityId req iosModifier = Notification
       case merchantNotificationServiceConfig.serviceConfig of
         DMSC.NotificationServiceConfig nsc -> pure nsc
         _ -> throwError $ InternalError "Unknow Service Config"
-
-data CoinsNotificationData = CoinsNotificationData
-  { coins :: Int,
-    event :: DCT.DriverCoinsFunctionType
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)

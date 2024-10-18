@@ -45,4 +45,4 @@ makeCoinConfigKey eventType merchantOpCityId vehicleCategory =
     <> ":EventType-"
     <> pack (show eventType)
     <> ":vehicleCategory-"
-    <> (show vehicleCategory)
+    <> show vehicleCategory
