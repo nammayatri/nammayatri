@@ -134,6 +134,7 @@
           gdal
           postgis
           newman
+          yamlfmt
         ];
         # cf. https://haskell.flake.page/devshell#composing-devshells
         inputsFrom = [
