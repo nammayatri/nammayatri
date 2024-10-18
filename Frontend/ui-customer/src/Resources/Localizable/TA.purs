@@ -1733,3 +1733,4 @@ getTA stringKey =
     ENTER_A_ADDRESS -> "முகவரியை உள்ளிடவும்"    
     EXPLORE -> "ஆராயுங்கள்"
     DELIVERED_IN_JUST time -> "உடன் விநியோகம் செய்யப்பட்டது " <> time
+    MAX_PARCEL_SIZE l b h -> "அதிகபட்ச பார்சல் அளவு: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm"
