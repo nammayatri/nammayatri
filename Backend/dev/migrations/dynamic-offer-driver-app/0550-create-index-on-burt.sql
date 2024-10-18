@@ -1,0 +1,1 @@
+CREATE INDEX idx_booking_id_burt ON atlas_driver_offer_bpp.booking_update_request USING btree (booking_id);
