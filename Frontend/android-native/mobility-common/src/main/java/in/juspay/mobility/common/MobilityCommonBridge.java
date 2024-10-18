@@ -16,6 +16,7 @@ import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.app.Activity.RESULT_OK;
 import static android.content.Context.MODE_PRIVATE;
+import static in.juspay.hyper.core.JuspayCoreLib.getApplicationContext;
 import static in.juspay.mobility.common.utils.Utils.captureImage;
 import static in.juspay.mobility.common.utils.Utils.drawableToBitmap;
 import static in.juspay.mobility.common.utils.Utils.encodeImageToBase64;
@@ -127,6 +128,14 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.clevertap.android.sdk.CleverTapInstanceConfig;
+import com.clevertap.android.signedcall.exception.CallException;
+import com.clevertap.android.signedcall.exception.InitException;
+import com.clevertap.android.signedcall.init.SignedCallAPI;
+import com.clevertap.android.sdk.CleverTapAPI;
+import com.clevertap.android.signedcall.init.SignedCallInitConfiguration;
+import com.clevertap.android.signedcall.interfaces.OutgoingCallResponse;
+import com.clevertap.android.signedcall.interfaces.SignedCallInitResponse;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -4148,17 +4157,63 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public void showDialer(String phoneNum, boolean call) {
-        Intent intent = new Intent(call ? Intent.ACTION_CALL : Intent.ACTION_DIAL);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        intent.setData(Uri.parse("tel:" + phoneNum));
-        if (call && ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
-            phoneNumber = phoneNum;
-            ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL);
-        } else {
-            bridgeComponents.getContext().startActivity(intent);
-        }
+        System.out.println("Inside show dialer function -------------------------------------------------------------------------------------------");
+        showDialerVoip(phoneNum, call);
+//        Intent intent = new Intent(call ? Intent.ACTION_CALL : Intent.ACTION_DIAL);
+//        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//        intent.setData(Uri.parse("tel:" + phoneNum));
+//        if (call && ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+//            phoneNumber = phoneNum;
+//            ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL);
+//        } else {
+//            bridgeComponents.getContext().startActivity(intent);
+//        }
     }
 
+ @JavascriptInterface
+    public void showDialerVoip(String phoneNum, boolean call) {
+       // new function can be created that will be used later for passing CUID of receiver for making outgoing the call
+      callOutgoing();
+ }
+    public static void callOutgoing() {
+        // v.imp we need to have receiver CUID before proceeding with the outgoing call
+        // to get that we need to have it stored somewhere when the ride is booked ( for both rider and driver ), by passing in some existing API calls
+        // this may fail if the user has not given mic and other permission
+        // that has to be handled in initialisation step by passing extra build param for push primer notifications
+        // also checking for call quality can be done here
+        OutgoingCallResponse outgoingCallResponseListener = new OutgoingCallResponse() {
+            @Override
+            public void onSuccess() {
+                //App is notified on the main thread when the call-request is accepted and being processed by the signalling channel
+                // clevertap UI is shown no need to handle here
+            }
+            @Override
+            public void onFailure(CallException callException) {
+                //App is notified on the main thread when the call is failed
+                Log.d("SignedCall: ", "error code: " + callException.getErrorCode()
+                    + "\n error message: " + callException.getMessage()
+                    + "\n error explanation: " + callException.getExplanation());
+
+                if (callException.getErrorCode() == CallException.BadNetworkException.getErrorCode()) {
+                    //Handle this error here
+                         Log.d("SignedCall: ", "error code: " + callException.getErrorCode()
+                    + "\n error message: " + callException.getMessage()
+                    + "\n error explanation: " + callException.getExplanation());
+
+                }
+            }
+        };
+        JSONObject callOptions = new JSONObject();
+        try {
+            // Add optional properties to the callOptions JSON object
+            callOptions.put("receiver_image", "https://example.com/path/to/receiver/image.jpg"); // Optional
+            callOptions.put("initiator_image", "https://example.com/path/to/initiator/image.jpg"); // Optional
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        // receiver id required here to make the call
+        SignedCallAPI.getInstance().call(getApplicationContext(), "receiver_id", "test", callOptions, outgoingCallResponseListener);
+    }
     @JavascriptInterface
     public void openUrlInApp(String url) {
         ExecutorManager.runOnMainThread(() -> {

@@ -164,6 +164,7 @@ foreign import generatePDF :: forall invoiceScreenState. invoiceScreenState -> S
 foreign import requestKeyboardShow :: String -> Effect Unit
 foreign import showKeyboard :: String -> Effect Unit
 foreign import showDialer :: String -> Boolean -> Unit
+foreign import showDialerVoip :: String -> Boolean -> Unit
 foreign import getAAID :: String -> String
 -- -- foreign import removePolyLineById :: Int -> Effect Unit
 foreign import removeAllPolylinesAndMarkers :: Fn2 (Array String) Unit Unit

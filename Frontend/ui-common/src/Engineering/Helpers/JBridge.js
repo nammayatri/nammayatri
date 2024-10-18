@@ -1605,6 +1605,16 @@ export const showDialer = function (str) {
   }
 };
 
+export const showDialerVoip = function (str) {
+  return function (call) {
+    try {
+      window.JBridge.showDialerVoip(str, call);
+    } catch (error) {
+      window.JBridge.showDialerVoip(str);
+    }
+  }
+};
+
 export const startLocationPollingAPI = function () {
   if (locationPollingTimer) {
     clearTimeout(locationPollingTimer);
@@ -2984,4 +2994,16 @@ export const launchCustomTab = (url, cb) => {
     });
     window.JBridge.launchCustomTab(url, callback);
   }
+}
+
+export const initSignedCall = () => {
+  // java , ios func call 
+  // return what?
+  // params ??
+}
+
+export const makeSignedCall = () => {
+  // java , ios func call 
+  // return what?
+  // params ??
 }
