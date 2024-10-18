@@ -218,4 +218,5 @@ getFavouritesItem item = {
   , recencyDate : Nothing
   , locationScore : Nothing
   , dynamicAction : Nothing
+  , types : Nothing
 }

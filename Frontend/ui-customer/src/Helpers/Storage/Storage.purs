@@ -119,6 +119,8 @@ data KeyStore
   | POST_RIDE_CHECK_SETTINGS
   | PARCEL_INSTRUCTIONS_VISITED
   | DRIVER_REACHED_DESTINATION_ACTION
+  | RECENT_BUS_STOPS
+  | RECENT_BUS_ROUTES
 
 derive instance genericKeyStore :: Generic KeyStore _
 

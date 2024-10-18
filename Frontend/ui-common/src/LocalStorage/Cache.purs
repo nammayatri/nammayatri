@@ -6,6 +6,7 @@ import Data.Maybe (Maybe(..))
 import Prelude
 import Data.Function.Uncurried (Fn2(..), Fn3(..), runFn2, runFn3)
 import DecodeUtil
+import Debug
 
 foreign import getFromCache :: forall a.Fn3 String (Maybe a) (a -> (Maybe a)) (Maybe a)
 foreign import setInCache ::forall a. Fn2 String a a
@@ -25,6 +26,8 @@ getValueFromCache key getIfNothing = do
 setValueToCache :: forall a. String -> a -> (a -> String) -> a
 setValueToCache key value (getValue) = 
   let _ =  runFn2 setKeyInSharedPref key $ getValue value
+      _ = spy "key ::" key 
+      _ = spy "value :: " value
   in runFn2 setInCache key value
 
 removeValueFromCache :: String -> Unit

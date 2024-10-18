@@ -179,6 +179,7 @@ getSavedLocation (savedLocation) = (map (\(SavedReqLocationAPIEntity item) ->
   , recencyDate : Nothing
   , locationScore : Nothing
   , dynamicAction : Nothing
+  , types : Nothing
   }
   )savedLocation)
 
@@ -212,6 +213,7 @@ getSavedLocationForAddNewAddressScreen (savedLocation) = (map (\ (item) ->
   , recencyDate : Nothing
   , locationScore : Nothing
   , dynamicAction : Nothing
+  , types : Nothing
   }
   ) (savedLocation) ) 
 

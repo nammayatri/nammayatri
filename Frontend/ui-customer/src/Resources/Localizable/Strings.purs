@@ -22,14 +22,14 @@ import Prelude (($))
 import Data.Maybe (Maybe(..))
 import Debug (spy)
 import ConfigJBridge (getKeyInSharedPrefKeysConfig)
-import Resources.Localizable.BN (getBN)
+-- import Resources.Localizable.BN (getBN)
 import Resources.Localizable.EN (getEN)
-import Resources.Localizable.HI (getHI)
-import Resources.Localizable.KN (getKN)
-import Resources.Localizable.ML (getML)
-import Resources.Localizable.FR (getFR)
-import Resources.Localizable.TA (getTA)
-import Resources.Localizable.TE (getTE)
+-- import Resources.Localizable.HI (getHI)
+-- import Resources.Localizable.KN (getKN)
+-- import Resources.Localizable.ML (getML)
+-- import Resources.Localizable.FR (getFR)
+-- import Resources.Localizable.TA (getTA)
+-- import Resources.Localizable.TE (getTE)
 import Locale.Utils
 import Data.String as DS
 
@@ -50,13 +50,13 @@ getVarString key vals = getStringWithVar (getString key) vals
 getStringFromLocal :: String -> STR -> String
 getStringFromLocal language key = 
   case language of
-    "BN_IN" -> getBN key
-    "HI_IN" -> getHI key
-    "KN_IN" -> getKN key
-    "ML_IN" -> getML key
-    "FR_FR" -> getFR key
-    "TA_IN" -> getTA key
-    "TE_IN" -> getTE key
+    -- "BN_IN" -> getBN key
+    -- "HI_IN" -> getHI key
+    -- "KN_IN" -> getKN key
+    -- "ML_IN" -> getML key
+    -- "FR_FR" -> getFR key
+    -- "TA_IN" -> getTA key
+    -- "TE_IN" -> getTE key
     _       -> getEN key
 
 getStringWithoutNewLine :: STR -> String

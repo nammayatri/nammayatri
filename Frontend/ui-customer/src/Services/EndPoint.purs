@@ -15,7 +15,7 @@
 
 module Types.EndPoint where
 
-import Prelude ((<>),show, (==))
+import Prelude ((<>),show, (==),(&&),(/=))
 import Data.Maybe (maybe, Maybe(..), fromMaybe)
 import Services.Config (getBaseUrl)
 import Data.String
@@ -240,11 +240,13 @@ shareRide dummy = (getBaseUrl "54") <> "/share/ride"
 followRide :: String -> String
 followRide _ = (getBaseUrl "47") <> "/follow/ride"
 
-getMetroStations :: String -> String
-getMetroStations city = (getBaseUrl "47") <> "/frfs/stations?vehicleType=\"METRO\"" <> "&city=" <> city  
+getMetroStations :: String -> String -> String -> String -> String
+getMetroStations vehicleType city routeCode startStationCode= (getBaseUrl "47") <> "/frfs/stations?vehicleType=\"" <> vehicleType <> "\"&city=" <> city <> (if (vehicleType == "BUS" && routeCode /= "") then "&routeCode=" <> routeCode else "") <> (if (vehicleType == "BUS" && startStationCode /= "") then "&startStationCode=" <> startStationCode else "")
 
 searchMetro :: String -> String
-searchMetro dummy = (getBaseUrl "48") <> "/frfs/search?vehicleType=\"METRO\""
+searchMetro vehicleType = (getBaseUrl "48") <> "/frfs/search?vehicleType=\"" <> vehicleType <> "\""
+getBusRoutes :: String -> String -> String -> String
+getBusRoutes city startStationCode endStationCode = (getBaseUrl "47") <> "/frfs/routes?vehicleType=\"BUS\"" <> "&city=" <> city <> "&startStationCode=" <> startStationCode <> "&endStationCode=" <> endStationCode
 
 getMetroQuotes :: String -> String
 getMetroQuotes searchId = (getBaseUrl "49") <> "/frfs/search/" <> searchId <> "/quote"
@@ -312,3 +314,8 @@ multiChat _ = (getBaseUrl "61") <> "/triggerFCM/message"
 
 getDeliveryImage :: String -> String
 getDeliveryImage rideId = (getBaseUrl "61") <> "/ride/" <> rideId <> "/deliveryImage"
+
+busAutoComplete :: String -> String -> String -> Maybe String -> String
+busAutoComplete vehicleType city location input = 
+  (getBaseUrl "48") <> "/frfs/autocomplete?vehicleType=\"" <> vehicleType <> "\"&city=" <> city <> "&location=" <> location <>
+  maybe "" (\i -> "&input=" <> i) input
