@@ -69,6 +69,14 @@ type EnableScheduledRides = {
   enableScheduledRides :: Boolean
 }
 
+type LocationUpdateServiceConfig = {
+  minDisplacement :: String,
+  rideGFrequencyWithFrequentUpdates :: String,
+  rideTFrequency :: String,
+  stage :: String,
+  rideGFrequencyWithoutFrequentUpdates :: String
+}
+
 type CoinsConfig = {
   minCoinSliderValue :: Int,
   maxCoinSliderValue :: Int,
