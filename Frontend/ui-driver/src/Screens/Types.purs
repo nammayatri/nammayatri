@@ -311,7 +311,9 @@ type RegistrationScreenData = {
   vehicleCategory :: Maybe VehicleCategory,
   vehicleTypeMismatch :: Boolean,
   linkedRc :: Maybe String,
-  accessToken :: String
+  accessToken :: String,
+  hvTxnId :: Maybe String,
+  hvFlowId :: Maybe String
 }
 
 type DocumentStatus = {
@@ -3139,8 +3141,9 @@ data HyperVergeKycResult = HyperVergeKycResult
     errorMessage :: Maybe String
   }
 derive instance genericHyperVergeKycResult :: Generic HyperVergeKycResult _
-instance decodeHyperVergeKycReult :: Decode HyperVergeKycResult where decode = defaultDecode
-instance encodeHyperVergeKycReult  :: Encode HyperVergeKycResult where encode = defaultEncode
+instance decodeHyperVergeKycResult :: Decode HyperVergeKycResult where decode = defaultDecode
+instance encodeHyperVergeKycResult  :: Encode HyperVergeKycResult where encode = defaultEncode
+instance showHyperVergeKycResult :: Show HyperVergeKycResult where show = genericShow
 
 data Details =
   LIVE_SELFIE LiveSelfie
@@ -3152,6 +3155,7 @@ instance decodeDetails :: Decode Details
   where
    decode body = (AADHAAR_DETAILS <$> decode body) <|> (PAN_DETAILS <$> decode body) <|> (LIVE_SELFIE <$> decode body) <|> (fail $ ForeignError "Unknown response")
 instance encodeDetails  :: Encode Details where encode = defaultEncode
+instance showDetails :: Show Details where show = genericShow
 
 data LiveSelfie = LiveSelfie
   { selfieImage :: String,
@@ -3163,6 +3167,7 @@ data LiveSelfie = LiveSelfie
 derive instance genericLiveSelfie :: Generic LiveSelfie _
 instance decodeLiveSelfie :: Decode LiveSelfie where decode = defaultDecode
 instance encodeLiveSelfie  :: Encode LiveSelfie where encode = defaultEncode
+instance showLiveSelfie :: Show LiveSelfie where show = genericShow
 
 
 data PanDetails = PanDetails
@@ -3180,6 +3185,8 @@ data PanDetails = PanDetails
 derive instance genericPanDetails :: Generic PanDetails _
 instance decodePanDetails :: Decode PanDetails where decode = defaultDecode
 instance encodePanDetails  :: Encode PanDetails where encode = defaultEncode
+instance showPanDetails :: Show PanDetails where show = genericShow
+
 
 data AadhaarCardDetails = AadhaarCardDetails
   { aadhaarFrontImage :: String,
@@ -3199,6 +3206,7 @@ data AadhaarCardDetails = AadhaarCardDetails
 derive instance genericAadhaarCardDetails :: Generic AadhaarCardDetails _
 instance decodeAadhaarCardDetails :: Decode AadhaarCardDetails where decode = defaultDecode
 instance encodeAadhaarCardDetails  :: Encode AadhaarCardDetails where encode = defaultEncode
+instance showAadhaarCardDetails :: Show AadhaarCardDetails where show = genericShow
 
 data HvErrorCode = HvErrorCode
   { errorCode :: Int

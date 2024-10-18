@@ -5236,3 +5236,35 @@ instance standardEncodeScheduleBookingAcceptRes :: StandardEncode ScheduleBookin
 instance showScheduleBookingAcceptRes :: Show ScheduleBookingAcceptRes where show = genericShow
 instance decodeScheduleBookingAcceptRes :: Decode ScheduleBookingAcceptRes where decode = defaultDecode
 instance encodeScheduleBookingAcceptRes :: Encode ScheduleBookingAcceptRes where encode = defaultEncode
+
+
+
+------------------------------------------------------ HyperVerge Sdk Calls logging -----------------------------------------------------------------------------
+
+newtype HVSdkCallLogReq = HVSdkCallLogReq
+  { callbackResponse :: Maybe String,
+    docType :: Maybe String,
+    failureReason :: Maybe String,
+    hvFlowId :: Maybe String,
+    status :: Maybe String,
+    txnId :: String
+  }
+
+newtype HVSdkCallLogResp = HVSdkCallLogResp ApiSuccessResult
+
+instance makeHVSdkCallLogReq :: RestEndpoint HVSdkCallLogReq where
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.updateHVSdkCallLog "") headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericHVSdkCallLogReq :: Generic HVSdkCallLogReq _
+instance showHVSdkCallLogReq :: Show HVSdkCallLogReq where show = genericShow
+instance standardHVSdkCallLogReq :: StandardEncode HVSdkCallLogReq where standardEncode (HVSdkCallLogReq req) = standardEncode req
+instance decodeHVSdkCallLogReq :: Decode HVSdkCallLogReq where decode = defaultDecode
+instance encodeHVSdkCallLogReq :: Encode HVSdkCallLogReq where encode = defaultEncode
+
+derive instance genericHVSdkCallLogResp :: Generic HVSdkCallLogResp _
+derive instance newtypeHVSdkCallLogResp :: Newtype HVSdkCallLogResp _
+instance standardEncodeHVSdkCallLogResp :: StandardEncode HVSdkCallLogResp where standardEncode (HVSdkCallLogResp body) = standardEncode body
+instance showHVSdkCallLogResp :: Show HVSdkCallLogResp where show = genericShow
+instance decodeHVSdkCallLogResp:: Decode HVSdkCallLogResp where decode = defaultDecode
+instance encodeHVSdkCallLogResp  :: Encode HVSdkCallLogResp where encode = defaultEncode
