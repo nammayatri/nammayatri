@@ -32,7 +32,7 @@ import Foreign (ForeignError(..), fail,unsafeFromForeign)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Foreign.Generic (decodeJSON)
 import Prelude (class Show, class Eq, show, ($), (<$>), (>>=))
-import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode, defaultMakeRequestString)
+import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequestWithoutLogs, standardEncode, defaultMakeRequestString)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Types.EndPoint as EP
 import Foreign.Index (readProp)
@@ -89,7 +89,7 @@ newtype TriggerOTPReq = TriggerOTPReq {
 }
 
 instance makeTriggerOTPReq :: RestEndpoint TriggerOTPReq  where
- makeRequest reqBody headers = defaultMakeRequest POST (EP.triggerOTP "") headers reqBody Nothing
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.triggerOTP "") headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericTriggerOTPResp :: Generic TriggerOTPResp _
@@ -158,7 +158,7 @@ newtype ResendOTPResp = ResendOTPResp {
 data ResendOTPRequest = ResendOTPRequest String
 
 instance makeResendOTPRequest :: RestEndpoint ResendOTPRequest  where
- makeRequest reqBody@(ResendOTPRequest authId) headers = defaultMakeRequest POST (EP.resendOTP authId) headers reqBody Nothing
+ makeRequest reqBody@(ResendOTPRequest authId) headers = defaultMakeRequestWithoutLogs POST (EP.resendOTP authId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericResendOTPResp :: Generic ResendOTPResp _
@@ -198,7 +198,7 @@ newtype User = User {
   }
 
 instance makeVerifyTokenReq :: RestEndpoint VerifyTokenRequest  where
- makeRequest reqBody@(VerifyTokenRequest token (VerifyTokenReq rqBody)) headers = defaultMakeRequest POST (EP.verifyToken token) headers reqBody Nothing
+ makeRequest reqBody@(VerifyTokenRequest token (VerifyTokenReq rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.verifyToken token) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericWhatsappOptMethods :: Generic WhatsappOptMethods _
@@ -240,7 +240,7 @@ instance encodeUser :: Encode User where encode = defaultEncode
 data LogOutReq = LogOutReq
 
 instance makeLogOutReq  :: RestEndpoint LogOutReq  where
- makeRequest reqBody headers = defaultMakeRequest POST (EP.logout "") headers reqBody Nothing
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.logout "") headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericLogOutReq :: Generic LogOutReq _
@@ -276,7 +276,7 @@ newtype Prediction = Prediction {
 }
 
 instance makeSearchLocationReq :: RestEndpoint SearchLocationReq  where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.autoComplete "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.autoComplete "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericSearchLocationReq :: Generic SearchLocationReq _
@@ -379,15 +379,15 @@ newtype GetPlaceNameResp = GetPlaceNameResp (Array PlaceName)
 
 
 instance placeDetailsReq :: RestEndpoint PlaceDetailsReq  where
- makeRequest reqBody@(PlaceDetailsReq id) headers = defaultMakeRequest GET (EP.placeDetails id) headers reqBody Nothing
+ makeRequest reqBody@(PlaceDetailsReq id) headers = defaultMakeRequestWithoutLogs GET (EP.placeDetails id) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 -- instance getCoordinatesReq :: RestEndpoint GetCoordinatesReq  where
---  makeRequest reqBody@(GetCoordinatesReq id language) headers = defaultMakeRequest GET (EP.getCoordinates id language) headers reqBod
+--  makeRequest reqBody@(GetCoordinatesReq id language) headers = defaultMakeRequestWithoutLogs GET (EP.getCoordinates id language) headers reqBod
 --  encodeRequest req = standardEncode req
 
 instance makeGetPlaceNameReq :: RestEndpoint GetPlaceNameReq  where
- makeRequest reqBody@(GetPlaceNameReq payload) headers = defaultMakeRequest POST (EP.getPlaceName "") headers reqBody Nothing
+ makeRequest reqBody@(GetPlaceNameReq payload) headers = defaultMakeRequestWithoutLogs POST (EP.getPlaceName "") headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericGetPlaceNameReq :: Generic GetPlaceNameReq _
@@ -575,7 +575,7 @@ instance eqLocationAddress :: Eq LocationAddress where eq = genericEq
 
 
 instance makeSearchReq :: RestEndpoint SearchReq  where
- makeRequest reqBody headers = defaultMakeRequest POST (EP.searchReq "") headers reqBody Nothing
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.searchReq "") headers reqBody Nothing
  encodeRequest req = encode req
 
 derive instance genericSearchReq :: Generic SearchReq _
@@ -815,7 +815,7 @@ newtype PublicTransportStation = PublicTransportStation {
 }
 
 instance makeGetQuotesReq :: RestEndpoint GetQuotesReq  where
- makeRequest reqBody@(GetQuotesReq searchId) headers = defaultMakeRequest GET (EP.getQuotes searchId) headers reqBody Nothing
+ makeRequest reqBody@(GetQuotesReq searchId) headers = defaultMakeRequestWithoutLogs GET (EP.getQuotes searchId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericGetQuotesRes :: Generic GetQuotesRes _
@@ -1017,7 +1017,7 @@ newtype ConfirmRes = ConfirmRes {
 }
 
 instance makeConfirmRequest :: RestEndpoint ConfirmRequest  where
- makeRequest reqBody@(ConfirmRequest quoteId) headers = defaultMakeRequest POST (EP.confirmRide quoteId) headers reqBody Nothing
+ makeRequest reqBody@(ConfirmRequest quoteId) headers = defaultMakeRequestWithoutLogs POST (EP.confirmRide quoteId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericConfirmRes :: Generic ConfirmRes _
@@ -1246,7 +1246,7 @@ newtype BookingLocationAPIEntity = BookingLocationAPIEntity {
 }
 
 instance makeRideBooking :: RestEndpoint RideBookingReq  where
- makeRequest reqBody@(RideBookingReq bookingId) headers = defaultMakeRequest POST (EP.ridebooking bookingId) headers reqBody Nothing
+ makeRequest reqBody@(RideBookingReq bookingId) headers = defaultMakeRequestWithoutLogs POST (EP.ridebooking bookingId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericRideBookingReq :: Generic RideBookingReq _
@@ -1264,7 +1264,7 @@ instance encodeRideBookingRes  :: Encode RideBookingRes where encode = defaultEn
 
 
 instance makeRideBookingStatus :: RestEndpoint RideBookingStatusReq where
- makeRequest reqBody@(RideBookingStatusReq bookingId) headers = defaultMakeRequest GET (EP.ridebookingStatus bookingId) headers reqBody Nothing
+ makeRequest reqBody@(RideBookingStatusReq bookingId) headers = defaultMakeRequestWithoutLogs GET (EP.ridebookingStatus bookingId) headers reqBody Nothing
  encodeRequest req = standardEncode req
   
 derive instance genericRideBookingStatusReq :: Generic RideBookingStatusReq _
@@ -1424,7 +1424,7 @@ instance standardEncodeInitiatedAs :: StandardEncode InitiatedAs
 
 
 instance makeSelectEstimateReq :: RestEndpoint SelectEstimateReq  where
- makeRequest reqBody@(SelectEstimateReq estimateId (DEstimateSelect rqBody)) headers = defaultMakeRequest POST (EP.selectEstimate estimateId) headers reqBody Nothing
+ makeRequest reqBody@(SelectEstimateReq estimateId (DEstimateSelect rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.selectEstimate estimateId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 
@@ -1461,7 +1461,7 @@ instance decodeSelectedQuotes :: Decode SelectedQuotes where decode = defaultDec
 instance encodeSelectedQuotes :: Encode SelectedQuotes where encode = defaultEncode
 
 instance makeSelectListReq :: RestEndpoint SelectListReq  where
- makeRequest reqBody@(SelectListReq estimateId) headers = defaultMakeRequest GET (EP.selectList estimateId) headers reqBody Nothing
+ makeRequest reqBody@(SelectListReq estimateId) headers = defaultMakeRequestWithoutLogs GET (EP.selectList estimateId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericSelectListReq :: Generic SelectListReq _
@@ -1490,7 +1490,7 @@ newtype CancelReq = CancelReq {
 
 
 instance makeCancelReq :: RestEndpoint CancelRequest  where
- makeRequest reqBody@(CancelRequest rqBody bookingId) headers = defaultMakeRequest POST (EP.cancelRide bookingId) headers reqBody Nothing
+ makeRequest reqBody@(CancelRequest rqBody bookingId) headers = defaultMakeRequestWithoutLogs POST (EP.cancelRide bookingId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 
@@ -1529,7 +1529,7 @@ instance encodeRideBookingListRes :: Encode RideBookingListRes where encode = de
 
 
 instance makeRideBookingListReq :: RestEndpoint RideBookingListReq  where
- makeRequest reqBody@(RideBookingListReq limit offset onlyActive status clientId ) headers = defaultMakeRequest GET (EP.rideBookingList limit offset onlyActive status clientId) headers reqBody Nothing
+ makeRequest reqBody@(RideBookingListReq limit offset onlyActive status clientId ) headers = defaultMakeRequestWithoutLogs GET (EP.rideBookingList limit offset onlyActive status clientId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 
@@ -1543,7 +1543,7 @@ newtype CallDriverRes = CallDriverRes {
 }
 
 instance makeCallDriverReq :: RestEndpoint CallDriverReq  where
-  makeRequest reqBody@(CallDriverReq rideId) headers = defaultMakeRequest POST (EP.callCustomerToDriver rideId) headers reqBody Nothing
+  makeRequest reqBody@(CallDriverReq rideId) headers = defaultMakeRequestWithoutLogs POST (EP.callCustomerToDriver rideId) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericCallDriverReq :: Generic CallDriverReq _
@@ -1572,7 +1572,7 @@ newtype FeedbackReq = FeedbackReq
 
 
 instance makeFeedBackReq :: RestEndpoint FeedbackReq  where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.feedback "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.feedback "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericFeedbackReq :: Generic FeedbackReq _
@@ -1651,11 +1651,11 @@ instance decodeDisability :: Decode Disability where decode = defaultDecode
 instance encodeDisability  :: Encode Disability where encode = defaultEncode
 
 instance makeGetProfileReq :: RestEndpoint GetProfileReq  where
-  makeRequest reqBody headers = defaultMakeRequest GET (EP.profile "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.profile "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 instance makeUpdateProfileReq :: RestEndpoint UpdateProfileReq  where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.profile "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.profile "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericGetProfileRes :: Generic GetProfileRes _
@@ -1704,7 +1704,7 @@ newtype BoundingLatLong = BoundingLatLong (Array Number)
 newtype Snapped = Snapped (Array LatLong)
 
 instance makeRouteReq :: RestEndpoint RouteReq  where
-  makeRequest reqBody@(RouteReq rType (GetRouteReq reqB)) headers = defaultMakeRequest POST (EP.getRoute rType) headers reqBody Nothing
+  makeRequest reqBody@(RouteReq rType (GetRouteReq reqB)) headers = defaultMakeRequestWithoutLogs POST (EP.getRoute rType) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericRouteReq :: Generic RouteReq _
@@ -1767,7 +1767,7 @@ newtype ContactDetails = ContactDetails {
 
 
 instance makeEmergContactsReq :: RestEndpoint EmergContactsReq  where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.emergencyContacts "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.emergencyContacts "") headers reqBody Nothing
   encodeRequest req = encode req
 
 derive instance genericEmergContactsReq :: Generic EmergContactsReq _
@@ -1793,7 +1793,7 @@ newtype GetEmergContactsResp = GetEmergContactsResp {
 }
 
 instance makeGetEmergContactsReq :: RestEndpoint GetEmergContactsReq  where
-  makeRequest reqBody headers = defaultMakeRequest GET (EP.emergencyContacts "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.emergencyContacts "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericGetEmergContactsReq :: Generic GetEmergContactsReq _
@@ -1814,7 +1814,7 @@ data GetDriverLocationReq = GetDriverLocationReq String
 newtype GetDriverLocationResp = GetDriverLocationResp LatLong
 
 instance makeGetDriverLocationReq :: RestEndpoint GetDriverLocationReq  where
-  makeRequest reqBody@(GetDriverLocationReq rideId) headers = defaultMakeRequest POST (EP.getCurrentLocation rideId) headers reqBody Nothing
+  makeRequest reqBody@(GetDriverLocationReq rideId) headers = defaultMakeRequestWithoutLogs POST (EP.getCurrentLocation rideId) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericGetDriverLocationResp :: Generic GetDriverLocationResp _
@@ -1849,7 +1849,7 @@ newtype SavedReqLocationAPIEntity = SavedReqLocationAPIEntity
 data AddLocationResp = AddLocationResp
 
 instance makeSavedReqLocationAPIEntity :: RestEndpoint SavedReqLocationAPIEntity  where
- makeRequest reqBody headers = defaultMakeRequest POST (EP.addLocation "") headers reqBody Nothing
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.addLocation "") headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericSavedReqLocationAPIEntity :: Generic SavedReqLocationAPIEntity _
@@ -1872,7 +1872,7 @@ newtype SavedLocationsListRes = SavedLocationsListRes
   }
 
 instance savedLocationReq :: RestEndpoint SavedLocationReq  where
- makeRequest reqBody headers = defaultMakeRequest GET (EP.savedLocation "") headers reqBody Nothing
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.savedLocation "") headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericSavedLocationReq :: Generic SavedLocationReq _
@@ -1892,7 +1892,7 @@ data DeleteSavedLocationReq = DeleteSavedLocationReq String
 data DeleteSavedLocationRes = DeleteSavedLocationRes
 
 instance deleteSavedLocationReq :: RestEndpoint DeleteSavedLocationReq  where
- makeRequest reqBody@(DeleteSavedLocationReq tag) headers = defaultMakeRequest DELETE (EP.deleteLocation tag) headers reqBody Nothing
+ makeRequest reqBody@(DeleteSavedLocationReq tag) headers = defaultMakeRequestWithoutLogs DELETE (EP.deleteLocation tag) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 
@@ -1923,7 +1923,7 @@ newtype Issue = Issue
 
 
 instance makeSendIssueReq :: RestEndpoint SendIssueReq  where
-    makeRequest reqBody headers = defaultMakeRequest POST (EP.sendIssue "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.sendIssue "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericSendIssueReq :: Generic SendIssueReq _
@@ -2005,7 +2005,7 @@ newtype HotSpotInfo = HotSpotInfo {
 data ServiceabilityRequest = ServiceabilityRequest String ServiceabilityReq 
 
 instance makeServiceabilityReq :: RestEndpoint ServiceabilityRequest  where 
-    makeRequest reqBody@(ServiceabilityRequest serviceabilityType rqBody) headers = defaultMakeRequest POST (EP.locServiceability serviceabilityType) headers reqBody Nothing
+    makeRequest reqBody@(ServiceabilityRequest serviceabilityType rqBody) headers = defaultMakeRequestWithoutLogs POST (EP.locServiceability serviceabilityType) headers reqBody Nothing
     encodeRequest (ServiceabilityRequest serviceabilityType req) = defaultEncode req
 
 
@@ -2076,7 +2076,7 @@ data FlowStatus = IDLE {}
                 | PENDING_RATING { rideId :: String }
 
 instance makeFlowStatusReq :: RestEndpoint FlowStatusReq  where
-    makeRequest reqBody headers = defaultMakeRequest GET (EP.flowStatus "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.flowStatus "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericFlowStatusReq :: Generic FlowStatusReq _
@@ -2135,7 +2135,7 @@ newtype NotifyFlowEventReq = NotifyFlowEventReq
 
 
 instance makeNotifyFlowEventReq :: RestEndpoint NotifyFlowEventReq  where
- makeRequest reqBody headers = defaultMakeRequest POST (EP.notifyFlowEvent "") headers reqBody Nothing
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.notifyFlowEvent "") headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericNotifyFlowEventReq :: Generic NotifyFlowEventReq _
@@ -2153,7 +2153,7 @@ data RequestCallbackReq = RequestCallbackReq
 
 
 instance makeRequestCallbackReq :: RestEndpoint RequestCallbackReq  where
-    makeRequest reqBody@(RequestCallbackReq) headers = defaultMakeRequest POST (EP.callbackRequest "") headers reqBody Nothing
+    makeRequest reqBody@(RequestCallbackReq) headers = defaultMakeRequestWithoutLogs POST (EP.callbackRequest "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericRequestCallbackReq :: Generic RequestCallbackReq _
@@ -2168,7 +2168,7 @@ data CancelEstimateReq = CancelEstimateReq String
 
 
 instance makeCancelEstimateReq :: RestEndpoint CancelEstimateReq  where
- makeRequest reqBody@(CancelEstimateReq estimateId) headers = defaultMakeRequest POST (EP.cancelEstimate estimateId) headers reqBody Nothing
+ makeRequest reqBody@(CancelEstimateReq estimateId) headers = defaultMakeRequestWithoutLogs POST (EP.cancelEstimate estimateId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 
@@ -2202,7 +2202,7 @@ newtype UserSosRes = UserSosRes
   }
 
 instance makeUserSosReq :: RestEndpoint UserSosReq  where
- makeRequest reqBody headers = defaultMakeRequest POST (EP.userSos "") headers reqBody Nothing
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.userSos "") headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericUserSosReq :: Generic UserSosReq _
@@ -2239,7 +2239,7 @@ newtype SosStatus = SosStatus
 
 
 instance makeUserSosStatusReq :: RestEndpoint UserSosStatusReq  where
- makeRequest reqBody@(UserSosStatusReq sosId (SosStatus rqBody)) headers = defaultMakeRequest POST (EP.userSosStatus sosId) headers reqBody Nothing
+ makeRequest reqBody@(UserSosStatusReq sosId (SosStatus rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.userSosStatus sosId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericUserSosStatusReq :: Generic UserSosStatusReq _
@@ -2267,7 +2267,7 @@ newtype OnCallReq = OnCallReq
 
 
 instance makeOnCallReq :: RestEndpoint OnCallReq  where
- makeRequest reqBody headers = defaultMakeRequest POST (EP.onCall "") headers reqBody Nothing
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.onCall "") headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericOnCallReq :: Generic OnCallReq _
@@ -2288,7 +2288,7 @@ newtype RideFeedbackReq = RideFeedbackReq
 data RideFeedbackRes = RideFeedbackRes
 
 instance makeRideFeedbackReq :: RestEndpoint RideFeedbackReq  where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.bookingFeedback "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.bookingFeedback "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericRideFeedbackReq :: Generic RideFeedbackReq _
@@ -2307,7 +2307,7 @@ data GetDisabilityListReq = GetDisabilityListReq
 newtype GetDisabilityListResp = GetDisabilityListResp (Array Disability)
 
 instance makeGetDisabilityListReq :: RestEndpoint GetDisabilityListReq  where
-  makeRequest reqBody headers = defaultMakeRequest GET (EP.disabilityList "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.disabilityList "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericGetDisabilityListReq :: Generic GetDisabilityListReq _
@@ -2354,7 +2354,7 @@ newtype PersonStatsRes = PersonStatsRes
   }
 
 instance personStatsReq :: RestEndpoint PersonStatsReq  where
- makeRequest reqBody headers = defaultMakeRequest GET (EP.personStats "") headers reqBody Nothing
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.personStats "") headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericPersonStatsReq :: Generic PersonStatsReq _
@@ -2395,7 +2395,7 @@ newtype TicketBookingAPIEntity = TicketBookingAPIEntity
   }
 
 instance getAllBookingsReq :: RestEndpoint GetAllBookingsReq  where
- makeRequest reqBody@(GetAllBookingsReq status) headers = defaultMakeRequest GET (EP.getAllBookings (show status)) headers reqBody Nothing
+ makeRequest reqBody@(GetAllBookingsReq status) headers = defaultMakeRequestWithoutLogs GET (EP.getAllBookings (show status)) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 
@@ -2478,7 +2478,7 @@ newtype TicketBookingDetails = TicketBookingDetails
   }
 
 instance getBookingInfoReq :: RestEndpoint GetBookingInfoReq  where
- makeRequest reqBody@(GetBookingInfoReq shortId) headers = defaultMakeRequest GET (EP.ticketBookingDetails shortId) headers reqBody Nothing
+ makeRequest reqBody@(GetBookingInfoReq shortId) headers = defaultMakeRequestWithoutLogs GET (EP.ticketBookingDetails shortId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericGetBookingInfoReq :: Generic GetBookingInfoReq _
@@ -2641,19 +2641,19 @@ data GetTicketStatusReq = GetTicketStatusReq String
 data GetTicketStatusResp = GetTicketStatusResp String
 
 instance makeGetTicketStatusReq :: RestEndpoint GetTicketStatusReq  where
-  makeRequest reqBody@(GetTicketStatusReq placeId) headers = defaultMakeRequest GET (EP.ticketStatus placeId) headers reqBody Nothing
+  makeRequest reqBody@(GetTicketStatusReq placeId) headers = defaultMakeRequestWithoutLogs GET (EP.ticketStatus placeId) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 instance makeTicketServiceReq :: RestEndpoint TicketServiceReq  where
- makeRequest reqBody@(TicketServiceReq placeId date) headers = defaultMakeRequest GET (EP.ticketPlaceServices placeId date) headers reqBody Nothing
+ makeRequest reqBody@(TicketServiceReq placeId date) headers = defaultMakeRequestWithoutLogs GET (EP.ticketPlaceServices placeId date) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 instance makeTicketPlaceReq :: RestEndpoint TicketPlaceReq  where
-  makeRequest reqBody headers = defaultMakeRequest GET (EP.ticketPlaces "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.ticketPlaces "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 instance makeTicketBookingRequest :: RestEndpoint TicketBookingRequest  where
-  makeRequest reqBody@(TicketBookingRequest placeId (TicketBookingReq rqBody)) headers = defaultMakeRequest POST (EP.ticketPlaceBook placeId) headers reqBody Nothing
+  makeRequest reqBody@(TicketBookingRequest placeId (TicketBookingReq rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.ticketPlaceBook placeId) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericGetTicketStatusReq :: Generic GetTicketStatusReq _
@@ -2803,7 +2803,7 @@ newtype IssueReportCustomerListItem = IssueReportCustomerListItem
   }
 
 instance makeFetchIssueListReq :: RestEndpoint FetchIssueListReq  where
-    makeRequest reqBody@(FetchIssueListReq language) headers = defaultMakeRequest GET (EP.fetchIssueList language) headers reqBody Nothing
+    makeRequest reqBody@(FetchIssueListReq language) headers = defaultMakeRequestWithoutLogs GET (EP.fetchIssueList language) headers reqBody Nothing
     encodeRequest = standardEncode
 
 derive instance genericFetchIssueListReq :: Generic FetchIssueListReq _
@@ -2841,7 +2841,7 @@ newtype Category = Category
   }
 
 instance makeGetCategoriesReq :: RestEndpoint GetCategoriesReq  where
-    makeRequest reqBody@(GetCategoriesReq language) headers = defaultMakeRequest GET (EP.getCategories language) headers reqBody Nothing
+    makeRequest reqBody@(GetCategoriesReq language) headers = defaultMakeRequestWithoutLogs GET (EP.getCategories language) headers reqBody Nothing
     encodeRequest = standardEncode
 
 derive instance genericGetCategoriesReq :: Generic GetCategoriesReq _
@@ -2887,7 +2887,7 @@ newtype Message = Message
   }
 
 instance makeGetOptionsReq :: RestEndpoint GetOptionsReq  where
-    makeRequest reqBody@(GetOptionsReq categoryId optionId rideId issueReportId language) headers = defaultMakeRequest GET (EP.getOptions categoryId optionId rideId issueReportId language) headers reqBody Nothing
+    makeRequest reqBody@(GetOptionsReq categoryId optionId rideId issueReportId language) headers = defaultMakeRequestWithoutLogs GET (EP.getOptions categoryId optionId rideId issueReportId language) headers reqBody Nothing
     encodeRequest = standardEncode
 
 derive instance genericGetOptionsReq :: Generic GetOptionsReq _
@@ -2940,7 +2940,7 @@ newtype PostIssueRes = PostIssueRes {
 }
 
 instance makePostIssueReq :: RestEndpoint PostIssueReq  where
-    makeRequest reqBody@(PostIssueReq language issueDetails) headers = defaultMakeRequest POST (EP.postIssue language) headers reqBody Nothing
+    makeRequest reqBody@(PostIssueReq language issueDetails) headers = defaultMakeRequestWithoutLogs POST (EP.postIssue language) headers reqBody Nothing
     encodeRequest = standardEncode
 
 derive instance genericChat :: Generic Chat _
@@ -2994,7 +2994,7 @@ newtype ChatDetail = ChatDetail
   }
 
 instance makeIssueInfoReq :: RestEndpoint IssueInfoReq  where
-    makeRequest reqBody@(IssueInfoReq issueId language) headers = defaultMakeRequest GET (EP.issueInfo issueId language) headers reqBody Nothing
+    makeRequest reqBody@(IssueInfoReq issueId language) headers = defaultMakeRequestWithoutLogs GET (EP.issueInfo issueId language) headers reqBody Nothing
     encodeRequest = standardEncode
 
 derive instance genericIssueInfoReq :: Generic IssueInfoReq _
@@ -3027,7 +3027,7 @@ newtype UpdateIssueRes = UpdateIssueRes {
 }
 
 instance makeUpdateIssueReq :: RestEndpoint UpdateIssueReq  where
-    makeRequest reqBody@(UpdateIssueReq issueId language req) headers = defaultMakeRequest PUT (EP.updateIssue language issueId) headers reqBody Nothing
+    makeRequest reqBody@(UpdateIssueReq issueId language req) headers = defaultMakeRequestWithoutLogs PUT (EP.updateIssue language issueId) headers reqBody Nothing
     encodeRequest = standardEncode
   
 derive instance genericUpdateIssueReqBody :: Generic UpdateIssueReqBody _
@@ -3108,11 +3108,11 @@ instance standardEncodeRideShareOptions :: StandardEncode RideShareOptions
     standardEncode _ = standardEncode {}
 
 instance makeGetEmergencySettingsReq :: RestEndpoint GetEmergencySettingsReq  where
-  makeRequest reqBody headers = defaultMakeRequest GET (EP.getEmergencySettings "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.getEmergencySettings "") headers reqBody Nothing
   encodeRequest req = encode req
 
 instance makeUpdateEmergencySettingsReq :: RestEndpoint UpdateEmergencySettingsReq  where
-  makeRequest reqBody headers = defaultMakeRequest PUT (EP.updateEmergencySettings "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs PUT (EP.updateEmergencySettings "") headers reqBody Nothing
   encodeRequest req = encode req
 
 derive instance genericGetEmergencySettingsRes :: Generic GetEmergencySettingsRes _
@@ -3168,7 +3168,7 @@ newtype Sos = Sos
   }
 
 instance makeGetSosDetailsReq :: RestEndpoint GetSosDetailsReq  where
- makeRequest reqBody@(GetSosDetailsReq rideId) headers = defaultMakeRequest GET (EP.getSosDetails rideId) headers reqBody Nothing
+ makeRequest reqBody@(GetSosDetailsReq rideId) headers = defaultMakeRequestWithoutLogs GET (EP.getSosDetails rideId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericGetSosDetailsReq :: Generic GetSosDetailsReq _
@@ -3200,7 +3200,7 @@ newtype UpdateAsSafeReqBody = UpdateAsSafeReqBody {
 
 
 instance makeUpdateAsSafeReq  :: RestEndpoint UpdateAsSafeReq  where
- makeRequest reqBody@(UpdateAsSafeReq sosId req) headers = defaultMakeRequest POST (EP.updateSafeRide sosId) headers reqBody Nothing
+ makeRequest reqBody@(UpdateAsSafeReq sosId req) headers = defaultMakeRequestWithoutLogs POST (EP.updateSafeRide sosId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericUpdateAsSafeReq :: Generic UpdateAsSafeReq _
@@ -3225,7 +3225,7 @@ newtype AskSupportReq = AskSupportReq {
   }
 
 instance makeAskSupportRequest :: RestEndpoint AskSupportReq  where
-    makeRequest reqBody headers = defaultMakeRequest POST (EP.safetySupport "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.safetySupport "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 
@@ -3243,7 +3243,7 @@ newtype CreateMockSosReq = CreateMockSosReq {
 
 
 instance makeCreateMockSosReq  :: RestEndpoint CreateMockSosReq  where
- makeRequest reqBody headers = defaultMakeRequest POST (EP.createMockSos "") headers reqBody Nothing
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.createMockSos "") headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericCreateMockSosReq :: Generic CreateMockSosReq _
@@ -3261,7 +3261,7 @@ newtype ShareRideReq = ShareRideReq {
 
 
 instance makeShareRideRequest :: RestEndpoint ShareRideReq  where
-    makeRequest reqBody headers = defaultMakeRequest POST (EP.shareRide "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.shareRide "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 
@@ -3286,7 +3286,7 @@ newtype Followers = Followers {
 }
 
 instance makeFollowRideReq :: RestEndpoint FollowRideReq  where
-  makeRequest reqBody headers = defaultMakeRequest GET (EP.followRide "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.followRide "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericFollowRideReq :: Generic FollowRideReq _
@@ -3331,7 +3331,7 @@ instance decodeGetMetroStationResponse :: Decode GetMetroStationResponse where d
 data StationType = START | END | TRANSIT | INTERMEDIATE
 
 instance makeGetMetroStationReq :: RestEndpoint GetMetroStationReq  where
-    makeRequest reqBody@(GetMetroStationReq city) headers = defaultMakeRequest GET (EP.getMetroStations city) headers reqBody Nothing
+    makeRequest reqBody@(GetMetroStationReq city) headers = defaultMakeRequestWithoutLogs GET (EP.getMetroStations city) headers reqBody Nothing
     encodeRequest = standardEncode
 
 derive instance genericGetMetroStationReq :: Generic GetMetroStationReq _
@@ -3371,7 +3371,7 @@ newtype SearchMetroResp = SearchMetroResp {
 }
 
 instance makeSearchMetroReq :: RestEndpoint SearchMetroReq  where
-  makeRequest reqBody headers = defaultMakeRequest POST (EP.searchMetro "") headers reqBody Nothing
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.searchMetro "") headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericSearchMetroReq :: Generic SearchMetroReq _
@@ -3450,7 +3450,7 @@ instance decodeFRFSStationAPI :: Decode FRFSStationAPI where decode = defaultDec
 instance encodeFRFSStationAPI :: Encode FRFSStationAPI where encode = defaultEncode
 
 instance getMetroQuotesReq :: RestEndpoint GetMetroQuotesReq  where
- makeRequest reqBody@(GetMetroQuotesReq id) headers = defaultMakeRequest GET (EP.getMetroQuotes id) headers reqBody Nothing
+ makeRequest reqBody@(GetMetroQuotesReq id) headers = defaultMakeRequestWithoutLogs GET (EP.getMetroQuotes id) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
  --------------------------------------------------- confirmMetroQuote ----------------------------------------------------
@@ -3495,7 +3495,7 @@ newtype FRFSTicketAPI = FRFSTicketAPI {
 data FRFSTicketStatus = ACTIVE | EXPIRED | USED
 
 instance makeConfirmMetroQuoteReq :: RestEndpoint ConfirmMetroQuoteReq  where
- makeRequest reqBody@(ConfirmMetroQuoteReq quoteId) headers = defaultMakeRequest POST (EP.confirmMetroQuote quoteId) headers reqBody Nothing
+ makeRequest reqBody@(ConfirmMetroQuoteReq quoteId) headers = defaultMakeRequestWithoutLogs POST (EP.confirmMetroQuote quoteId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericConfirmMetroQuoteResp :: Generic ConfirmMetroQuoteResp _
@@ -3539,7 +3539,7 @@ data GetMetroBookingStatusReq = GetMetroBookingStatusReq String
 newtype GetMetroBookingStatusResp = GetMetroBookingStatusResp MetroTicketBookingStatus
 
 instance makeGetMetroBookingStatusReq :: RestEndpoint GetMetroBookingStatusReq  where
- makeRequest reqBody@(GetMetroBookingStatusReq bookingId) headers = defaultMakeRequest GET (EP.getMetroBookingStatus bookingId) headers reqBody Nothing
+ makeRequest reqBody@(GetMetroBookingStatusReq bookingId) headers = defaultMakeRequestWithoutLogs GET (EP.getMetroBookingStatus bookingId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericGetMetroBookingStatusReq :: Generic GetMetroBookingStatusReq _
@@ -3562,7 +3562,7 @@ data GetMetroBookingListReq = GetMetroBookingListReq
 newtype GetMetroBookingListResp = GetMetroBookingListResp (Array MetroTicketBookingStatus)
 
 instance makeGetMetroBookingListReq :: RestEndpoint GetMetroBookingListReq  where
-    makeRequest reqBody headers = defaultMakeRequest GET (EP.getMetroBookingList "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.getMetroBookingList "") headers reqBody Nothing
     encodeRequest = standardEncode
 
 derive instance genericGetMetroBookingListReq :: Generic GetMetroBookingListReq _
@@ -3586,7 +3586,7 @@ newtype RetryMetrTicketPaymentResp = RetryMetrTicketPaymentResp MetroTicketBooki
 
 
 instance makeRetryMetrTicketPaymentReq :: RestEndpoint RetryMetrTicketPaymentReq  where
- makeRequest reqBody@(RetryMetrTicketPaymentReq quoteId) headers = defaultMakeRequest POST (EP.retryMetrTicketPayment quoteId) headers reqBody Nothing
+ makeRequest reqBody@(RetryMetrTicketPaymentReq quoteId) headers = defaultMakeRequestWithoutLogs POST (EP.retryMetrTicketPayment quoteId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericRetryMetrTicketPaymentReq :: Generic RetryMetrTicketPaymentReq _
@@ -3607,7 +3607,7 @@ instance encodeRetryMetrTicketPaymentResp  :: Encode RetryMetrTicketPaymentResp 
 data MetroBookingSoftCancelReq = MetroBookingSoftCancelReq String
 
 instance metroBookingSoftCancelReq :: RestEndpoint MetroBookingSoftCancelReq  where
- makeRequest reqBody@(MetroBookingSoftCancelReq bookingId) headers = defaultMakeRequest POST (EP.metroBookingSoftCancel bookingId) headers reqBody Nothing
+ makeRequest reqBody@(MetroBookingSoftCancelReq bookingId) headers = defaultMakeRequestWithoutLogs POST (EP.metroBookingSoftCancel bookingId) headers reqBody Nothing
  encodeRequest = standardEncode
 
 derive instance genericMetroBookingSoftCancelReq :: Generic MetroBookingSoftCancelReq _
@@ -3633,7 +3633,7 @@ instance decodeMetroBookingSoftCancelStatusResp :: Decode MetroBookingSoftCancel
 instance encodeMetroBookingSoftCancelStatusResp :: Encode MetroBookingSoftCancelStatusResp where encode = defaultEncode
 
 instance metroBookingSoftCancelStatusReq :: RestEndpoint MetroBookingSoftCancelStatusReq  where
- makeRequest reqBody@(MetroBookingSoftCancelStatusReq bookingId) headers = defaultMakeRequest GET (EP.getMetroBookingSoftCancelStatus bookingId) headers reqBody Nothing
+ makeRequest reqBody@(MetroBookingSoftCancelStatusReq bookingId) headers = defaultMakeRequestWithoutLogs GET (EP.getMetroBookingSoftCancelStatus bookingId) headers reqBody Nothing
  encodeRequest = standardEncode
 
 derive instance genericMetroBookingSoftCancelStatusReq :: Generic MetroBookingSoftCancelStatusReq _
@@ -3647,7 +3647,7 @@ instance encodeMetroBookingSoftCancelStatusReq   :: Encode MetroBookingSoftCance
 data MetroBookingHardCancelReq = MetroBookingHardCancelReq String
 
 instance metroBookingHardCancelReq :: RestEndpoint MetroBookingHardCancelReq  where
- makeRequest reqBody@(MetroBookingHardCancelReq bookingId) headers = defaultMakeRequest POST (EP.metroBookingHardCancel bookingId) headers reqBody Nothing
+ makeRequest reqBody@(MetroBookingHardCancelReq bookingId) headers = defaultMakeRequestWithoutLogs POST (EP.metroBookingHardCancel bookingId) headers reqBody Nothing
  encodeRequest = standardEncode
 
 derive instance genericMetroBookingHardCancelReq :: Generic MetroBookingHardCancelReq _
@@ -3672,7 +3672,7 @@ instance decodeMetroBookingHardCancelStatusResp :: Decode MetroBookingHardCancel
 instance encodeMetroBookingHardCancelStatusResp :: Encode MetroBookingHardCancelStatusResp where encode = defaultEncode
 
 instance metroBookingHardCancelStatusReq :: RestEndpoint MetroBookingHardCancelStatusReq  where
- makeRequest reqBody@(MetroBookingHardCancelStatusReq bookingId) headers = defaultMakeRequest GET (EP.getMetroBookingHardCancelStatus bookingId) headers reqBody Nothing
+ makeRequest reqBody@(MetroBookingHardCancelStatusReq bookingId) headers = defaultMakeRequestWithoutLogs GET (EP.getMetroBookingHardCancelStatus bookingId) headers reqBody Nothing
  encodeRequest = standardEncode
 
 derive instance genericMetroBookingHardCancelStatusReq :: Generic MetroBookingHardCancelStatusReq _
@@ -3707,7 +3707,7 @@ instance decodeEventsPayload :: Decode EventsPayload where decode = defaultDecod
 instance encodeEventsPayload  :: Encode EventsPayload where encode = defaultEncode
 
 instance makeSDKEventsReq :: RestEndpoint SDKEventsReq  where
- makeRequest reqBody headers = defaultMakeRequest POST (EP.pushSDKEvents "") headers reqBody Nothing
+ makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.pushSDKEvents "") headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericSDKEventsReq :: Generic SDKEventsReq _
@@ -3741,7 +3741,7 @@ newtype StopReq = StopReq
 data StopRequest = StopRequest String Boolean StopReq 
 
 instance makeStopReq :: RestEndpoint StopRequest  where 
-    makeRequest reqBody@(StopRequest rideBookingId isEdit rqBody) headers = defaultMakeRequest POST (EP.addOrEditStop isEdit rideBookingId) headers reqBody Nothing
+    makeRequest reqBody@(StopRequest rideBookingId isEdit rqBody) headers = defaultMakeRequestWithoutLogs POST (EP.addOrEditStop isEdit rideBookingId) headers reqBody Nothing
     encodeRequest (StopRequest rideBookingId isEdit rqBody) = defaultEncode rqBody
 
 derive instance genericStopReq :: Generic StopReq _
@@ -3785,11 +3785,11 @@ instance encodeEditStopRequest :: Encode EditStopRequest where encode = defaultE
 
 
 instance makeAddStopReq :: RestEndpoint AddStopRequest  where
-  makeRequest reqBody@(AddStopRequest bookingId (AddStopReq rqBody)) headers = defaultMakeRequest POST (EP.addStop bookingId ) headers reqBody Nothing
+  makeRequest reqBody@(AddStopRequest bookingId (AddStopReq rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.addStop bookingId ) headers reqBody Nothing
   encodeRequest = standardEncode
 
 instance makeEditStopReq :: RestEndpoint EditStopRequest  where 
-  makeRequest reqBody@(EditStopRequest bookingId (EditStopReq rqBody)) headers = defaultMakeRequest POST (EP.editStop bookingId ) headers reqBody Nothing
+  makeRequest reqBody@(EditStopRequest bookingId (EditStopReq rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.editStop bookingId ) headers reqBody Nothing
   encodeRequest = standardEncode  
 
 
@@ -3817,7 +3817,7 @@ instance makeEditStopReq :: RestEndpoint EditStopRequest  where
 --   }
 
 -- instance makeRentalSearchReq :: RestEndpoint RentalSearchReq  where
---   makeRequest reqBody headers = defaultMakeRequest POST (EP.rentalSearch "") headers reqBody Nothin
+--   makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.rentalSearch "") headers reqBody Nothin
 --   encodeRequest req = standardEncode req
 
 -- derive instance genericRentalSearchReq :: Generic RentalSearchReq _
@@ -3851,7 +3851,7 @@ newtype EditLocationRes = EditLocationRes {
   }
 
 instance makeEditLocationReq :: RestEndpoint EditLocationRequest  where
- makeRequest reqBody@(EditLocationRequest rideId (EditLocationReq rqBody)) headers = defaultMakeRequest POST (EP.editLocation rideId) headers reqBody Nothing
+ makeRequest reqBody@(EditLocationRequest rideId (EditLocationReq rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.editLocation rideId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericEditLocationRes :: Generic EditLocationRes _
@@ -3904,7 +3904,7 @@ newtype ErrorObj = ErrorObj {
 data BookingUpdateRequestStatus = SOFT | CONFIRM
 
 instance makeGetEditLocResultReq :: RestEndpoint GetEditLocResultReq  where
- makeRequest reqBody@(GetEditLocResultReq bookingUpdateRequestId) headers = defaultMakeRequest GET (EP.getEditLocResult bookingUpdateRequestId) headers reqBody Nothing
+ makeRequest reqBody@(GetEditLocResultReq bookingUpdateRequestId) headers = defaultMakeRequestWithoutLogs GET (EP.getEditLocResult bookingUpdateRequestId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericGetEditLocResultResp :: Generic GetEditLocResultResp _
@@ -3950,7 +3950,7 @@ data EditLocResultConfirmReq = EditLocResultConfirmReq String
 type EditLocResultConfirmResp = APISuccessResp
 
 instance makeEditLocResultConfirmReq :: RestEndpoint EditLocResultConfirmReq  where
- makeRequest reqBody@(EditLocResultConfirmReq bookingUpdateRequestId) headers = defaultMakeRequest POST (EP.confirmEditLocResult bookingUpdateRequestId) headers reqBody Nothing
+ makeRequest reqBody@(EditLocResultConfirmReq bookingUpdateRequestId) headers = defaultMakeRequestWithoutLogs POST (EP.confirmEditLocResult bookingUpdateRequestId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericEditLocResultConfirmReq :: Generic EditLocResultConfirmReq _
@@ -3988,7 +3988,7 @@ newtype MetroBookingConfigRes = MetroBookingConfigRes {
 }
 
 instance makeMetroBookingConfigReq :: RestEndpoint MetroBookingConfigReq where
- makeRequest reqBody@(MetroBookingConfigReq city) headers = defaultMakeRequest GET (EP.getMetroBookingConfig city) headers reqBody Nothing
+ makeRequest reqBody@(MetroBookingConfigReq city) headers = defaultMakeRequestWithoutLogs GET (EP.getMetroBookingConfig city) headers reqBody Nothing
  encodeRequest req = defaultEncode req
 
 derive instance genericMetroBookingConfigReq :: Generic MetroBookingConfigReq _
@@ -4017,7 +4017,7 @@ newtype CurrentTrackingDetails = CurrentTrackingDetails {
 }
 
 instance makeEmergencyContactsTrackingReq :: RestEndpoint EmergencyContactsTrackingReq where
- makeRequest reqBody@(EmergencyContactsTrackingReq rideId) headers = defaultMakeRequest GET (EP.getEmergencyContactsTrackingStatus rideId) headers reqBody Nothing
+ makeRequest reqBody@(EmergencyContactsTrackingReq rideId) headers = defaultMakeRequestWithoutLogs GET (EP.getEmergencyContactsTrackingStatus rideId) headers reqBody Nothing
  encodeRequest req = defaultEncode req
 
 derive instance genericEmergencyContactsTrackingReq :: Generic EmergencyContactsTrackingReq _
@@ -4049,7 +4049,7 @@ newtype GetManuallySharedDetailsRes = GetManuallySharedDetailsRes {
 }
 
 instance makeGetManuallySharedDetailsReq :: RestEndpoint GetManuallySharedDetailsReq where
- makeRequest reqBody@(GetManuallySharedDetailsReq rideId) headers = defaultMakeRequest GET (EP.getManuallySharedRideDetails rideId) headers reqBody Nothing
+ makeRequest reqBody@(GetManuallySharedDetailsReq rideId) headers = defaultMakeRequestWithoutLogs GET (EP.getManuallySharedRideDetails rideId) headers reqBody Nothing
  encodeRequest req = defaultEncode req
 
 derive instance genericGetManuallySharedDetailsReq :: Generic GetManuallySharedDetailsReq _
@@ -4079,7 +4079,7 @@ newtype MultiChatReq = MultiChatReq {
 }
 
 instance makeMultiChatReq :: RestEndpoint MultiChatReq  where
- makeRequest reqBody@(MultiChatReq payload) headers = defaultMakeRequest POST (EP.multiChat "") headers reqBody Nothing
+ makeRequest reqBody@(MultiChatReq payload) headers = defaultMakeRequestWithoutLogs POST (EP.multiChat "") headers reqBody Nothing
  encodeRequest req = defaultEncode req
 
 derive instance genericMultiChatReq :: Generic MultiChatReq _
@@ -4122,7 +4122,7 @@ instance decodeRemoveFavouriteDriverResp :: Decode RemoveFavouriteDriverResp whe
 instance encodeRemoveFavouriteDriverResp :: Encode RemoveFavouriteDriverResp where encode = defaultEncode
 
 instance makeRemoveFavouriteDriverReq :: RestEndpoint RemoveFavouriteDriverReq where
- makeRequest reqBody@(RemoveFavouriteDriverReq driverId) headers = defaultMakeRequest POST (EP.removeFavouriteDriver driverId) headers reqBody Nothing
+ makeRequest reqBody@(RemoveFavouriteDriverReq driverId) headers = defaultMakeRequestWithoutLogs POST (EP.removeFavouriteDriver driverId) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 ------------------------------------------------------------------------------GetFavouriteDriverList---------------------------------------------------
@@ -4153,7 +4153,7 @@ instance encodeGetFavouriteDriverListRes :: Encode GetFavouriteDriverListRes whe
 
 
 instance makeGetFavouriteDriverListReq :: RestEndpoint GetFavouriteDriverListReq where
- makeRequest reqBody@(GetFavouriteDriverListReq) headers = defaultMakeRequest GET (EP.getFavouriteDriverList) headers reqBody Nothing
+ makeRequest reqBody@(GetFavouriteDriverListReq) headers = defaultMakeRequestWithoutLogs GET (EP.getFavouriteDriverList) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
 derive instance genericFavouriteDriverList :: Generic FavouriteDriverList _
@@ -4196,7 +4196,7 @@ newtype FavouriteDriverTripsResp = FavouriteDriverTripsResp {
 }
 
 instance makeFavouriteDriverTripsReq :: RestEndpoint FavouriteDriverTripsReq where
-  makeRequest reqBody@(FavouriteDriverTripsReq limit offset isActive status clientId (FavouriteDriverTripsBody abcBody)) headers = defaultMakeRequest POST (EP.getFavouriteDriverTrips limit offset isActive status clientId ) headers reqBody Nothing
+  makeRequest reqBody@(FavouriteDriverTripsReq limit offset isActive status clientId (FavouriteDriverTripsBody abcBody)) headers = defaultMakeRequestWithoutLogs POST (EP.getFavouriteDriverTrips limit offset isActive status clientId ) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericFavouriteDriverTripsReq :: Generic FavouriteDriverTripsReq _
@@ -4239,7 +4239,7 @@ data GetDeliveryImageReq = GetDeliveryImageReq String
 newtype GetDeliveryImageResponse = GetDeliveryImageResponse String
 
 instance makeGetDeliveryImageReq :: RestEndpoint GetDeliveryImageReq where
- makeRequest reqBody@(GetDeliveryImageReq bookingId) headers = defaultMakeRequest GET (EP.getDeliveryImage bookingId) headers reqBody Nothing
+ makeRequest reqBody@(GetDeliveryImageReq bookingId) headers = defaultMakeRequestWithoutLogs GET (EP.getDeliveryImage bookingId) headers reqBody Nothing
  encodeRequest req = defaultEncode req
  
 derive instance genericGetDeliveryImageReq :: Generic GetDeliveryImageReq _

@@ -6,7 +6,7 @@ import Data.Maybe (Maybe(..))
 import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
 import Data.Show.Generic (genericShow)
-import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode, defaultMakeRequestString)
+import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequestWithoutLogs, standardEncode, defaultMakeRequestString)
 import Foreign.Generic (decode, encode, class Decode, class Encode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Services.Common.API
