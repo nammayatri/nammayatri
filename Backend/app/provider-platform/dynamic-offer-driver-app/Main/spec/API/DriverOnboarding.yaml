@@ -119,6 +119,15 @@ types:
   BankAccountResp:
     chargesEnabled: Bool
     detailsSubmitted: Bool
+  HVSdkCallLogReq:
+    txnId: Text
+    hvFlowId: Maybe Text
+    docType: Maybe DocumentType
+    status : Maybe Text
+    callbackResponse : Maybe Text
+    failureReason : Maybe Text
+
+
 
 apis:
   - GET:
@@ -202,5 +211,13 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       request:
         type: AadhaarCardReq
+      response:
+        type: APISuccess
+
+  - POST:
+      endpoint: /driver/register/logHvSdkCall
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: HVSdkCallLogReq
       response:
         type: APISuccess
