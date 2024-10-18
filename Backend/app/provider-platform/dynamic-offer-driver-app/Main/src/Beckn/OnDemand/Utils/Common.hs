@@ -1254,7 +1254,7 @@ convertEstimateToPricing specialLocationName (DEst.Estimate {..}, serviceTier, m
       fulfillmentType = Utils.tripCategoryToFulfillmentType tripCategory,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
-      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
+      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.defaultForVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
       vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
@@ -1273,7 +1273,7 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
       fulfillmentType = Utils.tripCategoryToFulfillmentType tripCategory,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
-      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
+      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.defaultForVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
       vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
@@ -1293,7 +1293,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       fulfillmentType = Utils.tripCategoryToFulfillmentType tripCategory,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
-      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
+      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.defaultForVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = Nothing,
       isCustomerPrefferedSearchRoute = Nothing,
       isBlockedRoute = Nothing,
