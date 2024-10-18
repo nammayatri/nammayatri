@@ -33,5 +33,25 @@
         '';
       });
     };
+
+    yaml-validation = {
+      enable = true;
+      name = "dsl-yaml";
+      description = "Validate and format DSL YAML files";
+      types = [ "file" ];
+      pass_filenames = true;
+      files = "Backend/.*/spec/.*\\.ya?ml$";
+      entry = lib.getExe (pkgs.writeShellApplication {
+        name = "yaml-validation";
+        text = ''
+          if [[ ''$# -gt 0 ]]; then
+            echo "Validate and format DSL YAML files"
+            for FILE in "''$@"; do
+              yamlfmt -formatter retain_line_breaks=true,trim_trailing_whitespace=true "$FILE" || exit 1
+            done
+          fi
+        '';
+      });
+    };
   };
 }
