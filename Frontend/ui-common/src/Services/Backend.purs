@@ -50,7 +50,7 @@ import Helpers.API (callApiBT)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 import Services.Config (getBaseUrl)
 import Data.Generic.Rep (class Generic)
-import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequest, standardEncode, defaultMakeRequestString)
+import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequestWithoutLogs, standardEncode, defaultMakeRequestString)
 import Foreign.Generic (decode, encode, class Decode, class Encode)
 import Data.Show.Generic (genericShow)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
@@ -168,7 +168,7 @@ instance encodeDriverProfile  :: Encode DriverProfile where encode = defaultEnco
 
 
 instance makeDriverProfileReq :: RestEndpoint DriverProfileReq where
-  makeRequest reqBody@(DriverProfileReq id withImages) headers = defaultMakeRequest GET (profile id withImages) headers reqBody Nothing
+  makeRequest reqBody@(DriverProfileReq id withImages) headers = defaultMakeRequestWithoutLogs GET (profile id withImages) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 derive instance genericDriverProfileReqById :: Generic DriverProfileReqById _
@@ -178,7 +178,7 @@ instance decodeDriverProfileReqById :: Decode DriverProfileReqById where decode 
 instance encodeDriverProfileReqById :: Encode DriverProfileReqById where encode = defaultEncode
 
 instance makeDriverProfileReqById :: RestEndpoint DriverProfileReqById where
-  makeRequest reqBody@(DriverProfileReqById id withImages) headers = defaultMakeRequest GET (profileById id withImages) headers reqBody Nothing
+  makeRequest reqBody@(DriverProfileReqById id withImages) headers = defaultMakeRequestWithoutLogs GET (profileById id withImages) headers reqBody Nothing
   encodeRequest req = standardEncode req
 
 profile :: String -> Boolean-> String
