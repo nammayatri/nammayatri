@@ -22,7 +22,7 @@ import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
-import Kernel.Utils.Common (MandatoryQueryParam, withFlowHandlerAPI)
+import Kernel.Utils.Common (MandatoryQueryParam, withDashboardFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
 import Storage.Beam.SystemConfigs ()
 
@@ -77,16 +77,16 @@ handler merchantId city =
     :<|> scheduleOverlay merchantId city
 
 createOverlay :: ShortId DM.Merchant -> Context.City -> DOverlay.CreateOverlayReq -> FlowHandler APISuccess
-createOverlay merchantShortId opCity req = withFlowHandlerAPI $ DOverlay.createOverlay merchantShortId opCity req
+createOverlay merchantShortId opCity req = withDashboardFlowHandlerAPI $ DOverlay.createOverlay merchantShortId opCity req
 
 deleteOverlay :: ShortId DM.Merchant -> Context.City -> DOverlay.DeleteOverlayReq -> FlowHandler APISuccess
-deleteOverlay merchantShortId opCity req = withFlowHandlerAPI $ DOverlay.deleteOverlay merchantShortId opCity req
+deleteOverlay merchantShortId opCity req = withDashboardFlowHandlerAPI $ DOverlay.deleteOverlay merchantShortId opCity req
 
 listOverlay :: ShortId DM.Merchant -> Context.City -> FlowHandler DOverlay.ListOverlayResp
-listOverlay merchantShortId = withFlowHandlerAPI . DOverlay.listOverlay merchantShortId
+listOverlay merchantShortId = withDashboardFlowHandlerAPI . DOverlay.listOverlay merchantShortId
 
 overlayInfo :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> FlowHandler DOverlay.OverlayInfoResp
-overlayInfo merchantShortId opCity overlayKey = withFlowHandlerAPI . DOverlay.overlayInfo merchantShortId opCity overlayKey
+overlayInfo merchantShortId opCity overlayKey = withDashboardFlowHandlerAPI . DOverlay.overlayInfo merchantShortId opCity overlayKey
 
 scheduleOverlay :: ShortId DM.Merchant -> Context.City -> DOverlay.ScheduleOverlay -> FlowHandler APISuccess
-scheduleOverlay merchantShortId opCity = withFlowHandlerAPI . DOverlay.scheduleOverlay merchantShortId opCity
+scheduleOverlay merchantShortId opCity = withDashboardFlowHandlerAPI . DOverlay.scheduleOverlay merchantShortId opCity

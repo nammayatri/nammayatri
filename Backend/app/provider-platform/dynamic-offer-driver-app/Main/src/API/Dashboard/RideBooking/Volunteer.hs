@@ -22,7 +22,7 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
-import Kernel.Utils.Common (withFlowHandlerAPI)
+import Kernel.Utils.Common (withDashboardFlowHandlerAPI)
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 
@@ -39,7 +39,7 @@ handler merchantId city =
 
 bookingInfo :: ShortId DM.Merchant -> Context.City -> Text -> FlowHandler Common.BookingInfoResponse
 bookingInfo merchantShortId opCity =
-  withFlowHandlerAPI . DVolunteer.bookingInfo merchantShortId opCity
+  withDashboardFlowHandlerAPI . DVolunteer.bookingInfo merchantShortId opCity
 
 assignCreateAndStartOtpRide :: ShortId DM.Merchant -> Context.City -> Common.AssignCreateAndStartOtpRideAPIReq -> FlowHandler APISuccess
-assignCreateAndStartOtpRide merchantShortId opCity = withFlowHandlerAPI . DVolunteer.assignCreateAndStartOtpRide merchantShortId opCity
+assignCreateAndStartOtpRide merchantShortId opCity = withDashboardFlowHandlerAPI . DVolunteer.assignCreateAndStartOtpRide merchantShortId opCity

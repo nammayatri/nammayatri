@@ -77,20 +77,20 @@ handler merchantId = callSelect merchantId :<|> callSelectList merchantId :<|> c
 
 callSelect :: ShortId DM.Merchant -> Id DP.Person -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler APISuccess
 callSelect merchantId personId estimateId req = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantId
   US.select2 (personId, m.id) estimateId req
 
 callSelectList :: ShortId DM.Merchant -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
 callSelectList merchantId personId estimate = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantId
   US.selectList (personId, m.id) estimate
 
 callSelectResult :: ShortId DM.Merchant -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.QuotesResultResponse
 callSelectResult merchantId personId estimate = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantId
   US.selectResult (personId, m.id) estimate
 
 callCancelSearch :: ShortId DM.Merchant -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
 callCancelSearch merchantId personId estimate = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantId
   US.cancelSearch (personId, m.id) estimate

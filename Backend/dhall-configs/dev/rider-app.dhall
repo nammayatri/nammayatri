@@ -270,6 +270,8 @@ let riderClickhouseCfg =
       , retryInterval = [ +0 ]
       }
 
+let dashboardClickhouseCfg = riderClickhouseCfg
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = hcfg
@@ -343,6 +345,7 @@ in  { esqDBCfg
     , collectRouteData = True
     , kafkaClickhouseCfg
     , riderClickhouseCfg
+    , dashboardClickhouseCfg
     , ondcTokenMap = sec.ondcTokenMap
     , iosValidateEnpoint = "http://localhost:3000/validateIosToken?idToken="
     , isMetroTestTransaction = False

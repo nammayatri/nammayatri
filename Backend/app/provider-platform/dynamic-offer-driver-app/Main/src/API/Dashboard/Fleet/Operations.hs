@@ -23,7 +23,7 @@ import Environment
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
-import Kernel.Utils.Common (withFlowHandlerAPI)
+import Kernel.Utils.Common (withDashboardFlowHandlerAPI)
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 
@@ -48,4 +48,4 @@ handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler = listDriverRidesForFleet
 
 listDriverRidesForFleet :: ShortId DM.Merchant -> Context.City -> Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe DRide.RideStatus -> Maybe Day -> Maybe Text -> Maybe Int -> FlowHandler DARide.DriverRideListRes
-listDriverRidesForFleet _ _ driverId mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId mbNumOfDays = withFlowHandlerAPI $ DARide.listDriverRides driverId mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId mbNumOfDays
+listDriverRidesForFleet _ _ driverId mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId mbNumOfDays = withDashboardFlowHandlerAPI $ DARide.listDriverRides driverId mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId mbNumOfDays

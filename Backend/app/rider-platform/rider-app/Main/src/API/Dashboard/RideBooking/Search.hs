@@ -48,5 +48,5 @@ handler = callSearch
 
 callSearch :: ShortId DM.Merchant -> Id DP.Person -> SH.SearchReq -> FlowHandler SH.SearchResp
 callSearch merchantId personId req = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantId
   SH.search (personId, m.id) req Nothing Nothing Nothing Nothing Nothing (Just True)

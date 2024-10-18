@@ -80,6 +80,7 @@ data AppCfg = AppCfg
     cutOffNonCriticalHedisCluster :: Bool,
     riderClickhouseCfg :: ClickhouseCfg,
     kafkaClickhouseCfg :: ClickhouseCfg,
+    dashboardClickhouseCfg :: ClickhouseCfg,
     hedisMigrationStage :: Bool,
     smsCfg :: SmsConfig,
     infoBIPCfg :: InfoBIPConfig,
@@ -156,8 +157,10 @@ data AppEnv = AppEnv
     coreVersion :: Text,
     serviceClickhouseEnv :: ClickhouseEnv,
     kafkaClickhouseEnv :: ClickhouseEnv,
+    dashboardClickhouseEnv :: ClickhouseEnv,
     serviceClickhouseCfg :: ClickhouseCfg,
     kafkaClickhouseCfg :: ClickhouseCfg,
+    dashboardClickhouseCfg :: ClickhouseCfg,
     loggerConfig :: LoggerConfig,
     internalAPIKey :: Text,
     googleTranslateUrl :: BaseUrl,
@@ -263,6 +266,7 @@ buildAppEnv cfg@AppCfg {..} = do
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   serviceClickhouseEnv <- createConn riderClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
+  dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
   let serviceClickhouseCfg = riderClickhouseCfg
   -- let tokenMap :: (M.Map Text (Text, BaseUrl)) = M.map (\TokenConfig {..} -> (token, ondcUrl)) ondcTokenMap
   let ondcTokenHashMap = HM.fromList $ M.toList ondcTokenMap
