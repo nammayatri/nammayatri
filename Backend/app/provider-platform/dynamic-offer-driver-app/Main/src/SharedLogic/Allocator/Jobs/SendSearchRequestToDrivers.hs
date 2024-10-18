@@ -124,7 +124,8 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
             tripQuoteDetails,
             customerExtraFee = searchTry.customerExtraFee,
             messageId = searchTry.messageId,
-            isRepeatSearch = False
+            isRepeatSearch = False,
+            isAllocatorBatch = True
           }
   (res, _, _) <- sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput goHomeCfg
   return res
@@ -172,7 +173,7 @@ sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput go
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
           getNextDriverPoolBatch = (if driverPoolConfig.poolSortingType == DriverPoolConfig.Tagged && driverPoolConfig.enableUnifiedPooling == Just True then UI.getNextDriverPoolBatch else I.getNextDriverPoolBatch) driverPoolConfig driverSearchBatchInput.searchReq searchTry driverSearchBatchInput.tripQuoteDetails,
-          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.searchReq searchTry driverPoolConfig,
+          sendSearchRequestToDrivers = I.sendSearchRequestToDrivers driverSearchBatchInput.isAllocatorBatch driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.searchReq searchTry driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
           metrics =
             MetricsHandle

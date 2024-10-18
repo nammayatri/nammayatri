@@ -138,7 +138,8 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 tripQuoteDetails = tripQuoteDetails,
                 customerExtraFee = Nothing,
                 messageId = booking.id.getId,
-                isRepeatSearch = True
+                isRepeatSearch = True,
+                isAllocatorBatch = False
               }
       handleDriverSearchBatch driverSearchBatchInput booking searchTry.estimateId False
 
@@ -160,7 +161,8 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 tripQuoteDetails = [tripQuoteDetail],
                 customerExtraFee = Nothing,
                 messageId = booking.id.getId,
-                isRepeatSearch
+                isRepeatSearch,
+                isAllocatorBatch = False
               }
       handleDriverSearchBatch driverSearchBatchInput newBooking searchTry.estimateId True
 
