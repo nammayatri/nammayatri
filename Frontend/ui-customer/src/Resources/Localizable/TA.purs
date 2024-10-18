@@ -1733,3 +1733,4 @@ getTA stringKey =
     ENTER_A_ADDRESS -> "முகவரியை உள்ளிடவும்"    
     EXPLORE -> "ஆராயுங்கள்"
     DELIVERED_IN_JUST time -> "உடன் விநியோகம் செய்யப்பட்டது " <> time
+    LIMIT_REACHED -> "வரம்பு எட்டியது!"

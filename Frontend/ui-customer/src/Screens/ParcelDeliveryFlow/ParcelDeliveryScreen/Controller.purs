@@ -64,6 +64,7 @@ data ScreenOutput
   | GoToSelectLocation ST.ParcelDeliveryScreenState
   | GoToChooseYourRide ST.ParcelDeliveryScreenState
   | GoToConfirmgDelivery ST.ParcelDeliveryScreenState
+  | GoToSelectContact ST.ParcelDeliveryScreenState
 
 eval :: Action -> ST.ParcelDeliveryScreenState -> Eval Action ScreenOutput ST.ParcelDeliveryScreenState
 
@@ -127,24 +128,10 @@ eval (DeliveryDetailAction (PopUpModalController.PersonName (PrimaryEditTextCont
   continue $ state { props { editDetails { name = newVal }}}
 
 eval (DeliveryDetailAction (PopUpModalController.PersonName PrimaryEditTextController.TextImageClicked)) state = do
-  continueWithCmd state $ [do
-    isPickContact <- runEffectFn1 JB.pickContact ""
-    if not isPickContact then
-      void $ pure $ JB.toast "Unable to pick contact, update app"
-    else
-      void $ pure unit
-    pure NoAction
-    ]
+  updateAndExit state $ GoToSelectContact state
 
 eval (DeliveryDetailAction (PopUpModalController.PersonMobile PrimaryEditTextController.TextImageClicked)) state = do
-  continueWithCmd state $ [do
-    isPickContact <- runEffectFn1 JB.pickContact ""
-    if not isPickContact then
-      void $ pure $ JB.toast "Unable to pick contact, update app"
-    else
-      void $ pure unit
-    pure NoAction
-  ]
+  updateAndExit state $ GoToSelectContact state
 
 eval (DeliveryDetailAction (PopUpModalController.PersonAddress (PrimaryEditTextController.TextChanged valId newVal))) state = do
   continue $ state { props { editDetails { extras = newVal } } }

@@ -1714,3 +1714,4 @@ getHI stringKey =
         ENTER_A_ADDRESS -> "पता दर्ज करें"       
         EXPLORE -> "अन्वेषण करें"
         DELIVERED_IN_JUST time -> "केवल " <> time <> " में डिलीवर किया गया"
+        LIMIT_REACHED -> "सीमा पार हो गई है!"
