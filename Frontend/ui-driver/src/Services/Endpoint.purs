@@ -377,3 +377,5 @@ registerAadhaar ::  String -> String
 registerAadhaar _ = (getBaseUrl "") <> "/driver/register/aadhaarCard"
 
 
+updateHVSdkCallLog :: String -> String
+updateHVSdkCallLog _ = (getBaseUrl "") <> "/driver/register/logHvSdkCall"
