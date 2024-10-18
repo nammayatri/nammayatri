@@ -1074,3 +1074,25 @@ vehicleVariantImage vehicle =
                   "TAXI"  ->  "ny_ic_taxi_left_view"
                   "SUV" ->     "ny_ic_suv_left_view"
                   _       ->  "ny_ic_auto_left_view"
+
+getHvErrorMsg :: Maybe String -> String
+getHvErrorMsg errorCode = 
+  case errorCode of
+    Just "112" -> getString AADHAAR_FRONT_NOT_DETECTED
+    Just "113" -> getString AADHAAR_BACK_NOT_DETECTED
+    Just "151" -> getString UNABLE_TO_EXTRACT_NAME
+    Just "152" -> getString UNABLE_TO_EXTRACT_DOB
+    Just "134" -> getString UNABLE_TO_EXTRACT_ID
+    Just "128" -> getString IMAGE_B_W
+    Just "136" -> getString PARTIAL_DOC_DETECTED
+    Just "127" -> getString DOC_IS_BLURRED
+    Just "165" -> getString FACE_MATCH_FAILED
+    Just "114" -> getString PAN_NOT_DETECTED
+    Just "120" -> getString UNABLE_TO_VERIFY_SELFIE
+    Just "123" -> getString BLURRED_SELFIE
+    Just "124" -> getString EYES_CLOSED_SELFIE
+    Just "125" -> getString MULTIPLE_FACES_IN_SELFIE
+    Just "126" -> getString FACE_BLOCKED
+    Just "140" -> getString REMOVE_EYEWERE
+    Just "170" -> getString DB_CHECK_AND_NAME_MATCH_FAILED
+    _ -> getString UNKNOWN_ERROR

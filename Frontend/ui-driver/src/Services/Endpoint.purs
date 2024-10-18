@@ -391,3 +391,5 @@ getScheduledBookingList limit offset from to  tripCategory lat lon  =  (getBaseU
 
 scheduleBookingAccept :: String -> String
 scheduleBookingAccept bookingId = (getBaseUrl "") <> "/driver/accept/scheduledBooking?bookingId="<>bookingId
+updateHVSdkCallLog :: String -> String
+updateHVSdkCallLog _ = (getBaseUrl "") <> "/driver/register/logHvSdkCall"
