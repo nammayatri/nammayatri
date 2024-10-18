@@ -26,6 +26,7 @@ SubscriptionConfig:
     serviceName: Domain.Types.Plan.ServiceNames
     sendDeepLink: Bool
     deepLinkExpiryTimeInMinutes: Maybe Int
+    isVendorSplitEnabled: Maybe Bool
     sgstPercentageOneTimeSecurityDeposit: Maybe  Kernel.Types.Common.HighPrecMoney
     cgstPercentageOneTimeSecurityDeposit: Maybe Kernel.Types.Common.HighPrecMoney
     payoutServiceName: Maybe Domain.Types.MerchantServiceConfig.ServiceName
