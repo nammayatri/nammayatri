@@ -1742,4 +1742,7 @@ getTe =
     , upload_parcel_image : "పార్సెల్ చిత్రాన్ని అప్‌లోడ్ చేయండి"
     , pickup_instruction : "పికప్ సూచన"
     , drop_instruction : "డ్రాప్ సూచన"
+    , parcel_is_inappropriate : "పార్సెల్ అననుకూలంగా ఉంది"
+    , sender_asking_different_location : "పంపిణీదారు వేరే ప్రదేశానికి రావాలని అడుగుతున్నారు"
+    , sender_unavailable_unreachable : "పంపిణీదారు అందుబాటులో లేరు / చేరడం సాధ్యం కాలేదు"
     }

@@ -1682,3 +1682,4 @@ data STR
   | ENTER_A_ADDRESS  
   | EXPLORE
   | DELIVERED_IN_JUST String
+  | MAX_PARCEL_SIZE String String String

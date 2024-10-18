@@ -1682,3 +1682,4 @@ getBN stringKey =
         ENTER_A_NAME -> "নাম লিখুন"
         ENTER_A_ADDRESS -> "ঠিকানা লিখুন"
         DELIVERED_IN_JUST time -> "মাত্র " <> time <> " সময়ে ডেলিভারি করা হয়েছে"
+        MAX_PARCEL_SIZE l b h -> "Max parcel size: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm"
