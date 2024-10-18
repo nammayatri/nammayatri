@@ -21,6 +21,8 @@ import Prelude
 import DecodeUtil (decodeForeignAny, decodeForeignObject, parseJSON)
 import Foreign (Foreign)
 import Foreign.Index (readProp)
+import Data.Array as DA
+import Data.Maybe (fromMaybe)
 import Data.Newtype (class Newtype)
 import Presto.Core.Utils.Encoding (defaultDecode)
 import RemoteConfig.Types
@@ -205,12 +207,28 @@ defaultCoinsConfig = {
   coinsValidTill : 150
 }
 
+defaultLocationUpdateServiceConfig :: LocationUpdateServiceConfig
+defaultLocationUpdateServiceConfig = {
+  minDisplacement : "25.0",
+  rideGFrequencyWithFrequentUpdates : "50000",
+  rideTFrequency : "20000",
+  stage : "default",
+  rideGFrequencyWithoutFrequentUpdates : "50000"
+}
+
 getCoinsConfigData :: String -> CoinsConfig
 getCoinsConfigData city = do
     let config = fetchRemoteConfigString "coins_config"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultCoinsConfig
     getCityBasedConfig value $ toLower city
 
+getLocationUpdateServiceConfig :: String -> LocationUpdateServiceConfig
+getLocationUpdateServiceConfig stage = do
+  let config = fetchRemoteConfigString "location_update_service_config"
+      value = decodeForeignAny (parseJSON config) $ []
+      configForStage = DA.find(\item -> item.stage == stage) value
+  fromMaybe defaultLocationUpdateServiceConfig configForStage
+  
 eventsConfig :: String -> Types.EventsConfig
 eventsConfig key =
     let stringifiedConf = fetchRemoteConfigString key
