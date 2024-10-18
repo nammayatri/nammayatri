@@ -1654,7 +1654,7 @@ getTE stringKey =
     CANNOT_ADD_OWN_NUMBER -> "మీ నంబర్‌ను ఎమర్జెన్సీ కాంటాక్ట్‌గా జోడించడం సాధ్యం కాదు"
     TRIVANDRUM -> "తిరువనంతపురం"
     PHONE_NUMBER_PERMISSION -> "ఫోన్ నంబర్ అనుమతి"
-    PHONE_NUMBER_PERMISSION_DESC -> "Redbus మీ నమ్మ యాత్రి ఫోన్ నంబర్ తెలుసుకోవాలనుకుంటోంది"
+    PHONE_NUMBER_PERMISSION_DESC -> "మీ నమ్మ యాత్రి ఫోన్ నంబర్‌ను RedBus‌లో ఉపయోగించి ప్రత్యేక ఆఫర్లను పొందండి."
     DENY -> "తిరస్కరించు"
     ALLOW -> "అనుమతించు"
     INTERCITY_BUS -> "ఇంటర్‌సిటీ బస్సు"

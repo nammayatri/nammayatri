@@ -4869,32 +4869,6 @@ instance standardEncodeDriverProfileDataRes :: StandardEncode DriverProfileDataR
 instance showDriverProfileDataRes:: Show DriverProfileDataRes where show = genericShow
 instance decodeDriverProfileDataRes :: Decode DriverProfileDataRes where decode = defaultDecode
 instance encodeDriverProfileDataRes :: Encode DriverProfileDataRes where encode = defaultEncode
------------------------------------------------------- Driver Reached Destination --------------------------------------------------------
-
-data DriverReachedDestinationRequest = DriverReachedDestinationRequest String DriverReachedReq
-
-newtype DriverReachedReq  = DriverReachedReq {
-    lat :: Number
-  , lon :: Number
-  }
-
-
-derive instance genericDriverReachedDestinationRequest :: Generic DriverReachedDestinationRequest _
-instance standardEncodeDriverReachedDestinationRequest :: StandardEncode DriverReachedDestinationRequest where standardEncode (DriverReachedDestinationRequest rideId req) = standardEncode req
-instance showDriverReachedDestinationRequest :: Show DriverReachedDestinationRequest where show = genericShow
-instance decodeDriverReachedDestinationRequest :: Decode DriverReachedDestinationRequest where decode = defaultDecode
-instance encodeDriverReachedDestinationRequest :: Encode DriverReachedDestinationRequest where encode = defaultEncode
-
-
-instance makeDriverReachedReq :: RestEndpoint DriverReachedDestinationRequest where
-    makeRequest reqBody@(DriverReachedDestinationRequest rideId (DriverReachedReq rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.driverReachedDestination rideId) headers reqBody Nothing
-    encodeRequest req = standardEncode req
-
-derive instance genericDriverReachedReq :: Generic DriverReachedReq _
-instance showDriverReachedReq :: Show DriverReachedReq where show = genericShow
-instance standardEncodeDriverReachedReq :: StandardEncode DriverReachedReq where standardEncode (DriverReachedReq req) = standardEncode req
-instance decodeDriverReachedReq :: Decode DriverReachedReq where decode = defaultDecode
-instance encodeDriverReachedReq :: Encode DriverReachedReq where encode = defaultEncode
 
 
 ------------------------------------------------------ Driver Reached Destination --------------------------------------------------------
