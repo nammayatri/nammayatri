@@ -1733,3 +1733,23 @@ getCoinInfoBT lazy = do
   withAPIResultBT (EP.getCoinInfo "") identity errorHandler (lift $ lift $ callAPI headers CoinInfoReq)
   where
     errorHandler (ErrorPayload errorPayload) =  BackT $ pure GoBack
+
+------------------------------- HyperVerge Sdk Calls logging ------------------------------------
+
+updateHVSdkCallLog :: HVSdkCallLogReq -> Flow GlobalState (Either ErrorResponse HVSdkCallLogResp)
+updateHVSdkCallLog req = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.updateHVSdkCallLog "") unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse x = x
+
+
+makeupdateHVSdkCallLogReq :: String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> HVSdkCallLogReq
+makeupdateHVSdkCallLogReq txnId status hvFlowId failureReason docType callbackResponse = HVSdkCallLogReq
+    { "callbackResponse" : callbackResponse,
+      "docType" : docType,
+      "failureReason" : failureReason,
+      "hvFlowId" : hvFlowId,
+      "status" : status,
+      "txnId" : txnId
+    }
