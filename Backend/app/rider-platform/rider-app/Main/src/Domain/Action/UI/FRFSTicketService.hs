@@ -257,11 +257,13 @@ getFrfsStations (_personId, mId) mbCity mbRouteCode mbStartStationCode vehicleTy
           stations
 
 postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-postFrfsSearch (mbPersonId, merchantId) vehicleType_ req =
+postFrfsSearch (mbPersonId, merchantId) vehicleType_ req = do
+  -- logDebug $ "hello world postFrfsSearch -----------------------> "
   postFrfsSearchHandler (mbPersonId, merchantId) vehicleType_ req Nothing Nothing
 
 postFrfsSearchHandler :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Maybe (Id DPO.PartnerOrgTransaction) -> Maybe (Id DPO.PartnerOrganization) -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
 postFrfsSearchHandler (mbPersonId, merchantId) vehicleType_ FRFSSearchAPIReq {..} mbPOrgTxnId mbPOrgId = do
+  logDebug $ "hello world postFrfsSearchHandler -----------------------> "
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) >>= fromMaybeM (InternalError "Beckn Config not found")

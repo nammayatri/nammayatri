@@ -1,0 +1,19 @@
+imports:
+  Route: Domain.Types.Route
+
+module: ScheduledTrips
+
+types:
+  CurrLocation:
+    lat: Double
+    lon: Double
+
+apis:
+  - POST:
+      endpoint: /scheduled/{routeId}/trips
+      params:
+        routeId: Id Route
+      request:
+        type: CurrLocation
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

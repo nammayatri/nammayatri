@@ -15,6 +15,11 @@
 module Domain.Action.UI.Search where
 
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
+-- import Kernel.External.MultiModal.OpenTripPlanner.Config as OTPConfig
+
+-- import Servant.Client
+
+import qualified API.Types.UI.ScheduledTrips as DScheduledTrips
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Tags as Beckn
 import Control.Applicative (liftA2)
@@ -31,6 +36,7 @@ import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import Domain.Action.UI.HotSpot
 import Domain.Action.UI.Maps (makeAutoCompleteKey)
 import qualified Domain.Action.UI.Maps as DMaps
+import Domain.Action.UI.ScheduledTrips as ScheduledTrips
 import qualified Domain.Types.Client as DC
 import Domain.Types.HotSpot hiding (address, updatedAt)
 import Domain.Types.HotSpotConfig
@@ -61,7 +67,6 @@ import qualified Kernel.External.Maps.Interface.NextBillion as NextBillion
 import qualified Kernel.External.Maps.NextBillion.Types as NBT
 import qualified Kernel.External.Maps.Utils as Search
 import Kernel.External.MultiModal.Interface as MultiModal hiding (decode, encode)
--- import Kernel.External.MultiModal.OpenTripPlanner.Config as OTPConfig
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
@@ -74,7 +79,6 @@ import Kernel.Utils.Version
 import qualified Lib.JourneyPlannerTypes as JPT
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
--- import Servant.Client
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.Serviceability as Serviceability
 import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
@@ -306,6 +310,8 @@ search ::
   Maybe JPT.JourneySearchData ->
   Flow SearchRes
 search personId req bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ journeySearchData = do
+  logDebug $ "hello world inside search ------------------->: " <> show journeySearchData
+
   now <- getCurrentTime
   let SearchDetails {..} = extractSearchDetails now req
   validateStartAndReturnTime now startTime returnTime
@@ -315,6 +321,9 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
   tag <- case person.hasDisability of
     Just True -> B.runInReplica $ fmap (.tag) <$> PD.findByPersonId personId
     _ -> return Nothing
+
+  query <- ScheduledTrips.postScheduledTrips (Just personId, person.merchantId) (Id "da4e23a5-3ce6-4c37-8b9b-41377c3c1a52") (DScheduledTrips.CurrLocation {lat = 0, lon = 0})
+  logDebug $ "hello world Query: -------------------------------->" <> show query
 
   merchant <- QMerc.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   let txnCity = show merchant.defaultCity
@@ -372,13 +381,16 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
   Metrics.startSearchMetrics merchant.name searchRequest.id.getId
   -- triggerSearchEvent SearchEventData {searchRequest = searchRequest}
   QSearchRequest.createDSReq searchRequest
+
+  logDebug $ "hello world searchRequest ---------------------------> " <> show searchRequest
+
   QPFS.clearCache person.id
 
   fork "updating search counters" $ fraudCheck person merchantOperatingCity searchRequest
   let updatedPerson = backfillCustomerNammaTags person
 
   riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id >>= fromMaybeM (RiderConfigNotFound merchantOperatingCity.id.getId)
-  when riderConfig.makeMultiModalSearch $ do
+  when (riderConfig.makeMultiModalSearch == False && journeySearchData == Nothing) $ do
     case req of
       OneWaySearch searchReq -> fork "multi-modal search" $ multiModalSearch personId person.merchantId searchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ searchRequest merchantOperatingCityId riderConfig.maximumWalkDistance
       _ -> pure ()
@@ -533,6 +545,9 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
 -- TODO(MultiModal): Move all multimodal related code to a separate module
 -- data MultiModalRoute = Metro [LatLong] | None
 
+-- makeRouteKey :: Text -> Text
+-- makeRouteKey routeId = "route:" <> routeId
+
 multiModalSearch ::
   Id Person.Person ->
   Id DM.Merchant ->
@@ -565,37 +580,40 @@ multiModalSearch personId merchantId searchReq bundleVersion clientVersion clien
 
   allRoutes <- MultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
 
+  logDebug $ "hello world allRoutes -----------------------> " <> show allRoutes
+
   void $
     mapWithIndex
       ( \idx route -> do
-          journeyId <- generateGUID
+          when (idx == 1) $ do
+            journeyId <- generateGUID
 
-          let journeyPlannerLegs = route.legs
-              journeyLegsCount = length journeyPlannerLegs
-              modes = map (\x -> convertMultiModalModeToTripMode x.mode (distanceToMeters x.distance) maximumWalkDistance) journeyPlannerLegs
+            let journeyPlannerLegs = route.legs
+                journeyLegsCount = length journeyPlannerLegs
+                modes = map (\x -> convertMultiModalModeToTripMode x.mode (distanceToMeters x.distance) maximumWalkDistance) journeyPlannerLegs
 
-          let journey =
-                DJourney.Journey
-                  { convenienceCost = 0,
-                    estimatedDistance = route.distance,
-                    estimatedDuration = Just route.duration,
-                    estimatedFare = Nothing,
-                    fare = Nothing,
-                    id = Id journeyId,
-                    legsDone = 0,
-                    totalLegs = journeyLegsCount,
-                    modes = modes,
-                    searchRequestId = searchRequest.id,
-                    merchantId = Just merchantId,
-                    merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
-                    createdAt = now,
-                    updatedAt = now
-                  }
-          QJourney.create journey
+            let journey =
+                  DJourney.Journey
+                    { convenienceCost = 0,
+                      estimatedDistance = route.distance,
+                      estimatedDuration = Just route.duration,
+                      estimatedFare = Nothing,
+                      fare = Nothing,
+                      id = Id journeyId,
+                      legsDone = 0,
+                      totalLegs = journeyLegsCount,
+                      modes = modes,
+                      searchRequestId = searchRequest.id,
+                      merchantId = Just merchantId,
+                      merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
+                      createdAt = now,
+                      updatedAt = now
+                    }
+            QJourney.create journey
 
-          logDebug $ "journey for multi-modal: " <> show journey
+            logDebug $ "hello world journey for multi-modal: " <> show journey
 
-          when (idx == 0) $ do
+            -- when (idx == 0) $ do
             fork "child searches for multi-modal journey" $ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest (Id journeyId) journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ now maximumWalkDistance
       )
       allRoutes.routes
@@ -617,7 +635,8 @@ makeChildSearchReqs ::
   UTCTime ->
   Meters ->
   Flow ()
-makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest journeyId journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ now maximumWalkDistance = do
+makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest journeyId journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ _now maximumWalkDistance = do
+  now <- getCurrentTime
   void $
     mapWithIndex
       ( \idx journeyPlannerLeg -> do
@@ -631,6 +650,7 @@ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchReque
                     convenienceCost = 0,
                     pricingId = Nothing
                   }
+          logDebug $ "hello world mode: -----------------------> " <> show mode
           case mode of
             DTrip.Taxi -> do
               let legSearchReq =
@@ -649,7 +669,7 @@ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchReque
                           isSourceManuallyMoved = if idx == 0 then searchReq.isSourceManuallyMoved else Nothing,
                           isDestinationManuallyMoved = if idx == (journeyLegsCount - 1) then searchReq.isDestinationManuallyMoved else Nothing,
                           isSpecialLocation = searchReq.isSpecialLocation,
-                          startTime = journeyPlannerLeg.fromArrivalTime,
+                          startTime = Just now, -- journeyPlannerLeg.fromArrivalTime,
                           isReallocationEnabled = searchReq.isReallocationEnabled,
                           quotesUnifiedFlow = searchReq.quotesUnifiedFlow,
                           sessionToken = searchReq.sessionToken,
@@ -657,14 +677,16 @@ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchReque
                           stops = Nothing,
                           driverIdentifier = Nothing
                         }
-              void $ search personId legSearchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ (Just journeySearchData)
+              fork "child searchReq for multi-modal" $ void $ search personId legSearchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ (Just journeySearchData)
             DTrip.Metro -> do
+              logDebug $ "hello world after DTrip.Metro -----------------------> " <> show journeySearchData
               frfsSearchReq <- convertToFRFSStations journeyPlannerLeg (Just journeySearchData)
-              void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) Spec.METRO frfsSearchReq
+              fork "child FRFS searchReq for multi-modal" $ void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) Spec.METRO frfsSearchReq
             -- poll getFrfsSearchQuote from frontend
             DTrip.Bus -> do
+              logDebug $ "hello world after DTrip.Bus -----------------------> " <> show journeySearchData
               frfsSearchReq <- convertToFRFSStations journeyPlannerLeg (Just journeySearchData)
-              void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) Spec.BUS frfsSearchReq
+              fork "child FRFS searchReq for multi-modal" $ void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) Spec.BUS frfsSearchReq
             -- poll getFrfsSearchQuote from frontend
             DTrip.Walk -> do
               fromLocation_ <- buildSearchReqLoc $ SearchReqLocation {gps = LatLong {lat = journeyPlannerLeg.startLocation.latLng.latitude, lon = journeyPlannerLeg.startLocation.latLng.longitude}, address = dummyAddress}
@@ -697,13 +719,18 @@ convertToFRFSStations journeyPlannerLeg journeySearchData_ = do
   _fromStopCode <- fromStopDetails.gtfsId & fromMaybeM (InternalError "fromStopCode doesnt exist")
   _toStopCode <- toStopDetails.gtfsId & fromMaybeM (InternalError "toStopCode doesnt exist")
   let _routeCode = routeDetails.gtfsId
+
+  logDebug $ "hello world fromStopCode -----------------------> " <> show _fromStopCode
+  logDebug $ "hello world toStopCode -----------------------> " <> show _toStopCode
+  logDebug $ "hello world routeCode -----------------------> " <> show _routeCode
+
   return $
     FRFSTicketService.FRFSSearchAPIReq
-      { fromStationCode = _fromStopCode,
-        toStationCode = _toStopCode,
+      { fromStationCode = "18024",
+        toStationCode = "18705",
         quantity = 1,
         journeySearchData = journeySearchData_,
-        routeCode = _routeCode
+        routeCode = Just "SHUTTLE-U"
       }
 
 buildSearchRequest ::

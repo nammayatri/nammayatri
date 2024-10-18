@@ -220,7 +220,7 @@ INSERT INTO
   )
 VALUES
   (
-    'Route:1:SHUTTLE-U',
+    'SHUTTLE-U',
     22.64223,
     88.43121,
     md5(random() :: text || clock_timestamp() :: text) :: uuid,
@@ -253,7 +253,7 @@ INSERT INTO
 VALUES
   (
     NULL,
-    'Stop:1:18465',
+    '18465',
     md5(random() :: text || clock_timestamp() :: text) :: uuid,
     22.5945,
     88.4728,
@@ -266,7 +266,7 @@ VALUES
   ),
   (
     NULL,
-    'Stop:1:18024',
+    '18024',
     md5(random() :: text || clock_timestamp() :: text) :: uuid,
     22.61831,
     88.465,
@@ -279,7 +279,7 @@ VALUES
   ),
   (
     NULL,
-    'Stop:1:18304',
+    '18304',
     md5(random() :: text || clock_timestamp() :: text) :: uuid,
     22.6218,
     88.4499,
@@ -292,7 +292,7 @@ VALUES
   ),
   (
     NULL,
-    'Stop:1:18705',
+    '18705',
     md5(random() :: text || clock_timestamp() :: text) :: uuid,
     22.6275,
     88.433,
@@ -305,7 +305,7 @@ VALUES
   ),
   (
     NULL,
-    'Stop:1:18058',
+    '18058',
     md5(random() :: text || clock_timestamp() :: text) :: uuid,
     22.6275,
     88.433,
@@ -336,8 +336,8 @@ INSERT INTO
 VALUES
   (
     '1',
-    'Route:1:SHUTTLE-U',
-    'Stop:1:18465',
+    'SHUTTLE-U',
+    '18465',
     'ECO T PARK',
     22.5945,
     88.4728,
@@ -351,8 +351,8 @@ VALUES
   ),
   (
     '2',
-    'Route:1:SHUTTLE-U',
-    'Stop:1:18024',
+    'SHUTTLE-U',
+    '18024',
     'AKANKHA MORE',
     22.61831,
     88.465,
@@ -366,8 +366,8 @@ VALUES
   ),
   (
     '3',
-    'Route:1:SHUTTLE-U',
-    'Stop:1:18304',
+    'SHUTTLE-U',
+    '18304',
     'CITY CENTER 2',
     22.6218,
     88.4499,
@@ -381,8 +381,8 @@ VALUES
   ),
   (
     '4',
-    'Route:1:SHUTTLE-U',
-    'Stop:1:18705',
+    'SHUTTLE-U',
+    '18705',
     'KAIKHALI/HALDIRAM',
     22.6275,
     88.433,
@@ -396,8 +396,8 @@ VALUES
   ),
   (
     '5',
-    'Route:1:SHUTTLE-U',
-    'Stop:1:18058',
+    'SHUTTLE-U',
+    '18058',
     'AIRPORT GATE NO1',
     22.64223,
     88.43121,
@@ -426,9 +426,9 @@ INSERT INTO
   )
 VALUES
   (
-    'Route:1:SHUTTLE-U',
-    'Stop:1:18465',
-    'Stop:1:18024',
+    'SHUTTLE-U',
+    '18465',
+    '18024',
     10,
     'INR',
     'BUS',
@@ -439,9 +439,9 @@ VALUES
     now()
   ),
   (
-    'Route:1:SHUTTLE-U',
-    'Stop:1:18465',
-    'Stop:1:18304',
+    'SHUTTLE-U',
+    '18465',
+    '18304',
     20,
     'INR',
     'BUS',
@@ -452,9 +452,9 @@ VALUES
     now()
   ),
   (
-    'Route:1:SHUTTLE-U',
-    'Stop:1:18465',
-    'Stop:1:18705',
+    'SHUTTLE-U',
+    '18465',
+    '18705',
     30,
     'INR',
     'BUS',
@@ -465,9 +465,9 @@ VALUES
     now()
   ),
   (
-    'Route:1:SHUTTLE-U',
-    'Stop:1:18465',
-    'Stop:1:18058',
+    'SHUTTLE-U',
+    '18465',
+    '18058',
     40,
     'INR',
     'BUS',
@@ -478,9 +478,9 @@ VALUES
     now()
   ),
   (
-    'Route:1:SHUTTLE-U',
-    'Stop:1:18024',
-    'Stop:1:18304',
+    'SHUTTLE-U',
+    '18024',
+    '18304',
     10,
     'INR',
     'BUS',
@@ -491,9 +491,9 @@ VALUES
     now()
   ),
   (
-    'Route:1:SHUTTLE-U',
-    'Stop:1:18024',
-    'Stop:1:18705',
+    'SHUTTLE-U',
+    '18024',
+    '18705',
     20,
     'INR',
     'BUS',
@@ -504,9 +504,9 @@ VALUES
     now()
   ),
   (
-    'Route:1:SHUTTLE-U',
-    'Stop:1:18024',
-    'Stop:1:18058',
+    'SHUTTLE-U',
+    '18024',
+    '18058',
     30,
     'INR',
     'BUS',
@@ -517,9 +517,9 @@ VALUES
     now()
   ),
   (
-    'Route:1:SHUTTLE-U',
-    'Stop:1:18304',
-    'Stop:1:18705',
+    'SHUTTLE-U',
+    '18304',
+    '18705',
     10,
     'INR',
     'BUS',
@@ -530,9 +530,9 @@ VALUES
     now()
   ),
   (
-    'Route:1:SHUTTLE-U',
-    'Stop:1:18304',
-    'Stop:1:18058',
+    'SHUTTLE-U',
+    '18304',
+    '18058',
     20,
     'INR',
     'BUS',
@@ -543,9 +543,9 @@ VALUES
     now()
   ),
   (
-    'Route:1:SHUTTLE-U',
-    'Stop:1:18705',
-    'Stop:1:18058',
+    'SHUTTLE-U',
+    '18705',
+    '18058',
     10,
     'INR',
     'BUS',
