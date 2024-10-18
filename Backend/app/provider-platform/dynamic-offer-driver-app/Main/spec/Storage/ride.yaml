@@ -268,7 +268,10 @@ Ride:
       kvFunction: updateOneWithKV
       params: [estimatedEndTimeRange]
       where: id
-
+    updateRideTags:
+      kvFunction: updateOneWithKV
+      params: [rideTags]
+      where: id
 
   excludedDefaultQueries:
     - create

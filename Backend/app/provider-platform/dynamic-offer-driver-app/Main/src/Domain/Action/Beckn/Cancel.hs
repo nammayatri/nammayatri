@@ -27,6 +27,7 @@ where
 
 import Data.Maybe (listToMaybe)
 import Domain.Action.UI.Ride.CancelRide (driverDistanceToPickup)
+import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.DriverLocation
@@ -47,6 +48,7 @@ import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import SharedLogic.Cancel
+import qualified SharedLogic.CancellationRate as SCR
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.FareCalculator as FareCalculator
@@ -69,6 +71,7 @@ import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.Vehicle as QVeh
+import Tools.Constants
 import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
@@ -98,6 +101,7 @@ cancel ::
 cancel req merchant booking mbActiveSearchTry = do
   CS.whenBookingCancellable booking.id $ do
     mbRide <- QRide.findActiveByRBId req.bookingId
+    transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
     whenJust mbRide $ \ride -> do
       void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
       updateOnRideStatusWithAdvancedRideCheck ride.driverId mbRide
@@ -123,13 +127,17 @@ cancel req merchant booking mbActiveSearchTry = do
     whenJust mbRide $ \ride -> do
       triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
       triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
+      upRide <- CInternal.updateNammaTagsForCancelledRide booking ride bookingCR
+      fork "incrementCancelledCount based on nammatag" $ do
+        when (validDriverCancellation `elem` (fromMaybe [] upRide.rideTags)) $ do
+          let windowSize = toInteger $ fromMaybe 7 transporterConfig.cancellationRateWindow
+          void $ SCR.incrementCancelledCount ride.driverId windowSize
 
     logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
 
     cancellationCharge <- do
       case mbRide of
         Just ride -> do
-          transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
           case (transporterConfig.canAddCancellationFee, ride.cancellationFeeIfCancelled) of
             (False, _) -> return Nothing
             (True, Just cancellationCharges) -> return $ Just PriceAPIEntity {amount = cancellationCharges, currency = booking.currency}
