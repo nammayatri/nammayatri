@@ -62,12 +62,12 @@ handler merchantId city =
 
 callAutoComplete :: ShortId DM.Merchant -> City.City -> Id DP.Person -> DMaps.AutoCompleteReq -> FlowHandler DMaps.AutoCompleteResp
 callAutoComplete merchantId city personId req = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  merchantOpCityId <- withFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just city)
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantId
+  merchantOpCityId <- withDashboardFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just city)
   UM.autoComplete (personId, m.id, merchantOpCityId) req
 
 callGetPlaceName :: ShortId DM.Merchant -> City.City -> Id DP.Person -> DMaps.GetPlaceNameReq -> FlowHandler DMaps.GetPlaceNameResp
 callGetPlaceName merchantId city personId req = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  merchantOpCityId <- withFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just city)
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantId
+  merchantOpCityId <- withDashboardFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just city)
   UM.getPlaceName (personId, m.id, merchantOpCityId) req

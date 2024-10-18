@@ -86,35 +86,35 @@ handler merchantId =
 
 verifyBookingDetails :: ShortId DM.Merchant -> Id DTB.TicketService -> ShortId DTB.TicketBookingService -> FlowHandler ATB.TicketServiceVerificationResp
 verifyBookingDetails merchantShortId personServiceId ticketBookingServiceShortId = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
-  withFlowHandlerAPI $ DTB.postTicketBookingsVerify (Nothing, m.id) personServiceId ticketBookingServiceShortId
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  withDashboardFlowHandlerAPI $ DTB.postTicketBookingsVerify (Nothing, m.id) personServiceId ticketBookingServiceShortId
 
 getServices :: ShortId DM.Merchant -> Id DTB.TicketPlace -> Maybe Day -> FlowHandler [ATB.TicketServiceResp]
 getServices merchantShortId ticketPlaceId date = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
-  withFlowHandlerAPI $ DTB.getTicketPlacesServices (Nothing, m.id) ticketPlaceId date
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  withDashboardFlowHandlerAPI $ DTB.getTicketPlacesServices (Nothing, m.id) ticketPlaceId date
 
 updateSeatManagement :: ShortId DM.Merchant -> ATB.TicketBookingUpdateSeatsReq -> FlowHandler APISuccess
 updateSeatManagement merchantShortId req = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
-  withFlowHandlerAPI $ DTB.postTicketBookingsUpdateSeats (Nothing, m.id) req
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  withDashboardFlowHandlerAPI $ DTB.postTicketBookingsUpdateSeats (Nothing, m.id) req
 
 getTicketPlaces :: ShortId DM.Merchant -> FlowHandler [DTB.TicketPlace]
 getTicketPlaces merchantShortId = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
-  withFlowHandlerAPI $ DTB.getTicketPlaces (Nothing, m.id)
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  withDashboardFlowHandlerAPI $ DTB.getTicketPlaces (Nothing, m.id)
 
 cancelTicketBookingService :: ShortId DM.Merchant -> ATB.TicketBookingCancelReq -> FlowHandler APISuccess
 cancelTicketBookingService merchantShortId req = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
-  withFlowHandlerAPI $ DTB.postTicketBookingCancel (Nothing, m.id) req
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  withDashboardFlowHandlerAPI $ DTB.postTicketBookingCancel (Nothing, m.id) req
 
 cancelTicketService :: ShortId DM.Merchant -> ATB.TicketServiceCancelReq -> FlowHandler APISuccess
 cancelTicketService merchantShortId req = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
-  withFlowHandlerAPI $ DTB.postTicketServiceCancel (Nothing, m.id) req
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  withDashboardFlowHandlerAPI $ DTB.postTicketServiceCancel (Nothing, m.id) req
 
 getTicketBookingDetails :: ShortId DM.Merchant -> ShortId DTB.TicketBooking -> FlowHandler ATB.TicketBookingDetails
 getTicketBookingDetails merchantShortId ticketBookingShortId = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
-  withFlowHandlerAPI $ DTB.getTicketBookingsDetails (Nothing, m.id) ticketBookingShortId
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  withDashboardFlowHandlerAPI $ DTB.getTicketBookingsDetails (Nothing, m.id) ticketBookingShortId

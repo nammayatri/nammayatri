@@ -58,7 +58,7 @@ handler :: ShortId DM.Merchant -> FlowServer API
 handler = callBookingCancel
 
 callBookingCancel :: ShortId DM.Merchant -> Id SRB.Booking -> Id DP.Person -> DCancel.CancelReq -> FlowHandler APISuccess
-callBookingCancel merchantId bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+callBookingCancel merchantId bookingId personId req = withDashboardFlowHandlerAPI . withPersonIdLogTag personId $ do
   m <- findMerchantByShortId merchantId
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   mRide <- B.runInReplica $ QR.findActiveByRBId booking.id

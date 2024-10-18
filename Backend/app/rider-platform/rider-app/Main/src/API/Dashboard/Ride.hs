@@ -65,13 +65,13 @@ shareRideInfo ::
   ShortId DM.Merchant ->
   Id Common.Ride ->
   FlowHandler Common.ShareRideInfoRes
-shareRideInfo merchantShortId reqRideId = withFlowHandlerAPI $ DRide.shareRideInfo merchantShortId reqRideId
+shareRideInfo merchantShortId reqRideId = withDashboardFlowHandlerAPI $ DRide.shareRideInfo merchantShortId reqRideId
 
 shareRideInfoByShortId ::
   ShortId DM.Merchant ->
   ShortId Common.Ride ->
   FlowHandler Common.ShareRideInfoRes
-shareRideInfoByShortId merchantShortId reqRideShortId = withFlowHandlerAPI $ DRide.shareRideInfoByShortId merchantShortId reqRideShortId
+shareRideInfoByShortId merchantShortId reqRideShortId = withDashboardFlowHandlerAPI $ DRide.shareRideInfoByShortId merchantShortId reqRideShortId
 
 rideList ::
   ShortId DM.Merchant ->
@@ -85,10 +85,10 @@ rideList ::
   Maybe UTCTime ->
   FlowHandler Common.RideListRes
 rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo =
-  withFlowHandlerAPI $ DRide.rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo
+  withDashboardFlowHandlerAPI $ DRide.rideList merchantShortId mbLimit mbOffset mbBookingStatus mbShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo
 
 callGetTripRoute :: ShortId DM.Merchant -> Id Common.Ride -> Double -> Double -> FlowHandler Maps.GetRoutesResp
-callGetTripRoute merchantShortId rideId pickupLocationLat pickupLocationLon = withFlowHandlerAPI $ mkGetLocation merchantShortId rideId pickupLocationLat pickupLocationLon False
+callGetTripRoute merchantShortId rideId pickupLocationLat pickupLocationLon = withDashboardFlowHandlerAPI $ mkGetLocation merchantShortId rideId pickupLocationLat pickupLocationLon False
 
 callGetPickupRoute ::
   ShortId DM.Merchant ->
@@ -96,26 +96,26 @@ callGetPickupRoute ::
   Double ->
   Double ->
   FlowHandler Maps.GetRoutesResp
-callGetPickupRoute merchantShortId rideId currLocationLat currLocationLon = withFlowHandlerAPI $ mkGetLocation merchantShortId rideId currLocationLat currLocationLon True
+callGetPickupRoute merchantShortId rideId currLocationLat currLocationLon = withDashboardFlowHandlerAPI $ mkGetLocation merchantShortId rideId currLocationLat currLocationLon True
 
 callRideInfo ::
   ShortId DM.Merchant ->
   Id Common.Ride ->
   FlowHandler Common.RideInfoRes
-callRideInfo merchantShortId rideId = withFlowHandlerAPI $ do
+callRideInfo merchantShortId rideId = withDashboardFlowHandlerAPI $ do
   merchant <- findMerchantByShortId merchantShortId
   DRide.rideInfo merchant.id rideId
 
 multipleRideCancel ::
   DRide.MultipleRideCancelReq ->
   FlowHandler APISuccess
-multipleRideCancel = withFlowHandlerAPI . DRide.multipleRideCancel
+multipleRideCancel = withDashboardFlowHandlerAPI . DRide.multipleRideCancel
 
 multipleRideSync ::
   ShortId DM.Merchant ->
   Common.MultipleRideSyncReq ->
   FlowHandler Common.MultipleRideSyncResp
-multipleRideSync merchantShortId req = withFlowHandlerAPI $ do
+multipleRideSync merchantShortId req = withDashboardFlowHandlerAPI $ do
   runRequestValidation Common.validateMultipleRideSyncReq req
   merchant <- findMerchantByShortId merchantShortId
   logTagInfo "dashboard -> multipleRideSync : " $ show (req.rides <&> (.rideId))
@@ -127,4 +127,4 @@ multipleRideSync merchantShortId req = withFlowHandlerAPI $ do
   pure $ Common.MultipleRideSyncResp {list = respItems}
 
 ticketRideList :: ShortId DM.Merchant -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler Common.TicketRideListRes
-ticketRideList merchantShortId mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withFlowHandlerAPI $ DRide.ticketRideList merchantShortId mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber
+ticketRideList merchantShortId mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber = withDashboardFlowHandlerAPI $ DRide.ticketRideList merchantShortId mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber
