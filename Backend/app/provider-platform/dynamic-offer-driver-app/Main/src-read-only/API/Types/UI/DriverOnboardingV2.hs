@@ -129,6 +129,17 @@ newtype GetLiveSelfieResp = GetLiveSelfieResp {image :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data HVSdkCallLogReq = HVSdkCallLogReq
+  { callbackResponse :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    docType :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentType,
+    failureReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    hvFlowId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    status :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    txnId :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data RateCardItem = RateCardItem {price :: Kernel.Types.Common.Money, priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity, title :: Kernel.Prelude.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
