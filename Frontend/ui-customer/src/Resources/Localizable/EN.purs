@@ -1646,7 +1646,7 @@ getEN stringKey =
         BIKE_TAXI -> "Bike Taxi"
         TRIVANDRUM -> "Trivandrum"
         PHONE_NUMBER_PERMISSION -> "Phone Number Permission"
-        PHONE_NUMBER_PERMISSION_DESC -> "Redbus wants to know your Namma Yatri phone number"
+        PHONE_NUMBER_PERMISSION_DESC -> "Use your Namma Yatri phone number on Red Bus to avail exclusive offers"
         DENY -> "Deny"
         ALLOW -> "Allow"
         INTERCITY_BUS -> "Intercity Bus" 

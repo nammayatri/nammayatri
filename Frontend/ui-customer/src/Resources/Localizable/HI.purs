@@ -1641,7 +1641,7 @@ getHI stringKey =
         BIKE_TAXI -> "बाइक टैक्सी"
         TRIVANDRUM -> "तिरुवनंतपुरम"
         PHONE_NUMBER_PERMISSION -> "फ़ोन नंबर अनुमति"
-        PHONE_NUMBER_PERMISSION_DESC -> "रेडबस आपका नम्मा यात्री फ़ोन नंबर जानना चाहता है"
+        PHONE_NUMBER_PERMISSION_DESC -> "अपने नम्मा यात्रा फ़ोन नंबर का उपयोग RedBus पर करें और विशेष ऑफ़र प्राप्त करें।"
         DENY -> "इनकार"
         ALLOW -> "अनुमति दें"
         INTERCITY_BUS -> "इंटरसिटी बस"

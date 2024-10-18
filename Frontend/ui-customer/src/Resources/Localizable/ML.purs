@@ -1639,7 +1639,7 @@ getML stringKey =
         BIKE_TAXI -> "ബൈക്ക് ടാക്സി"
         TRIVANDRUM -> "തിരുവനന്തപുരം"
         PHONE_NUMBER_PERMISSION -> "ഫോൺ നമ്പർ അനുമതി"
-        PHONE_NUMBER_PERMISSION_DESC -> "Redbus നിങ്ങളുടെ നമ്മ യാത്രി ഫോൺ നമ്പർ അറിയാൻ ആഗ്രഹിക്കുന്നു"
+        PHONE_NUMBER_PERMISSION_DESC -> "നിങ്ങളുടെ നമ്മുടെ യാത്രി ഫോൺ നമ്പർ RedBusൽ ഉപയോഗിച്ച് പ്രത്യേക ഓഫറുകൾ നേടൂ."
         DENY -> "നിരസിക്കുക"
         ALLOW -> "അനുവദിക്കുക"
         INTERCITY_BUS -> "ഇൻ്റർസിറ്റി ബസ്"

@@ -4127,26 +4127,3 @@ instance standardEncodeLocationAPIEntity :: StandardEncode LocationAPIEntity whe
 instance showLocationAPIEntity :: Show LocationAPIEntity where show = genericShow
 instance decodeLocationAPIEntity :: Decode LocationAPIEntity where decode = defaultDecode
 instance encodeLocationAPIEntity :: Encode LocationAPIEntity where encode = defaultEncode
-
------------------------------ DELIVERY -----------------------------------------------------
-
-data GetDeliveryImageReq = GetDeliveryImageReq String
-
-newtype GetDeliveryImageResponse = GetDeliveryImageResponse String
-
-instance makeGetDeliveryImageReq :: RestEndpoint GetDeliveryImageReq where
- makeRequest reqBody@(GetDeliveryImageReq bookingId) headers = defaultMakeRequestWithoutLogs GET (EP.getDeliveryImage bookingId) headers reqBody Nothing
- encodeRequest req = defaultEncode req
- 
-derive instance genericGetDeliveryImageReq :: Generic GetDeliveryImageReq _
-instance standardEncodeGetDeliveryImageReq :: StandardEncode GetDeliveryImageReq where standardEncode (GetDeliveryImageReq resp) = standardEncode resp
-instance showGetDeliveryImageReq :: Show GetDeliveryImageReq where show = genericShow
-instance decodeGetDeliveryImageReq :: Decode GetDeliveryImageReq where decode = defaultDecode
-instance encodeGetDeliveryImageReq :: Encode GetDeliveryImageReq where encode = defaultEncode
-
-derive instance genericGetDeliveryImageResponse :: Generic GetDeliveryImageResponse _
-derive instance newtypeGetDeliveryImageResponse :: Newtype GetDeliveryImageResponse _
-instance standardEncodeGetDeliveryImageResponse :: StandardEncode GetDeliveryImageResponse where standardEncode (GetDeliveryImageResponse resp) = standardEncode resp
-instance showGetDeliveryImageResponse :: Show GetDeliveryImageResponse where show = genericShow
-instance decodeGetDeliveryImageResponse :: Decode GetDeliveryImageResponse where decode = defaultDecode
-instance encodeGetDeliveryImageResponse :: Encode GetDeliveryImageResponse where encode = defaultEncode
