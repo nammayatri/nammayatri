@@ -25,3 +25,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_overlay ADD COLUMN title text ;
 ALTER TABLE atlas_driver_offer_bpp.merchant_overlay ADD COLUMN toast_message text ;
 ALTER TABLE atlas_driver_offer_bpp.merchant_overlay ADD COLUMN udf1 character varying(255) ;
 ALTER TABLE atlas_driver_offer_bpp.merchant_overlay ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_overlay ADD COLUMN vehicle_category text ;

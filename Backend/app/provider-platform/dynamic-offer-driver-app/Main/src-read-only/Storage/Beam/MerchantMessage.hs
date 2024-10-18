@@ -9,6 +9,7 @@ import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.MerchantMessage
+import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -24,7 +25,8 @@ data MerchantMessageT f = MerchantMessageT
     messageKey :: B.C f Domain.Types.MerchantMessage.MessageKey,
     senderHeader :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     templateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory)
   }
   deriving (Generic, B.Beamable)
 
