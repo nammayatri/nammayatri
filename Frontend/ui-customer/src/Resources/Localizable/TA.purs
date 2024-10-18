@@ -504,6 +504,7 @@ getTA stringKey =
     DIFFERENT_VEHICLE_NUMBER -> "வெவ்வேறு வாகன எண்"
     VEHICLE_NUMBER_IS_DIFFERENT_FROM_WHAT_IS_SHOWN_IN_THE_APP -> "வாகன எண் ஆப்ஸில் காட்டப்பட்டுள்ளதை விட வேறுபட்டது"
     DIFFERENT_AUTO -> "வேறு ஆட்டோ"
+    DIFFERENT_BIKE -> "வேறு பைக்"
     DIFFERENT_CAB -> "வேறு வண்டி"
     DRIVER_MIGHT_BE_TAKING_ALTERNATE_ROUTE -> "ஓட்டுனர் மாற்றுப் பாதையில் செல்லக்கூடும்."
     DRIVER_IS_NOT_MOVING_Q -> "டிரைவர் நகரவில்லையா?"

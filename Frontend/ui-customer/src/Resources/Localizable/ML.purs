@@ -482,6 +482,7 @@ getML stringKey =
         DIFFERENT_VEHICLE_NUMBER -> "വ്യത്യസ്ത വാഹന നമ്പർ"
         VEHICLE_NUMBER_IS_DIFFERENT_FROM_WHAT_IS_SHOWN_IN_THE_APP -> "ആപ്പിൽ കാണിച്ചിരിക്കുന്നതിൽ നിന്നും വ്യത്യസ്തമാണ് വാഹന നമ്പർ"
         DIFFERENT_AUTO -> "വ്യത്യസ്ത ഓട്ടോ"
+        DIFFERENT_BIKE -> "വ്യത്യസ്ത ബൈക്ക്"
         DIFFERENT_CAB -> "വ്യത്യസ്ത ക്യാബ്"
         DRIVER_MIGHT_BE_TAKING_ALTERNATE_ROUTE  -> "ഡ്രൈവർ ഒരു ഇതര റൂട്ട് എടുക്കുന്നുണ്ടാകാം."
         DRIVER_IS_NOT_MOVING_Q  -> "ഡ്രൈവർ നീങ്ങുന്നില്ല?"

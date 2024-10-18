@@ -487,6 +487,7 @@ getEN stringKey =
         DIFFERENT_VEHICLE_NUMBER -> "Different Vehicle No"
         VEHICLE_NUMBER_IS_DIFFERENT_FROM_WHAT_IS_SHOWN_IN_THE_APP -> "Vehicle number is different from  what is shown in the app"
         DIFFERENT_AUTO -> "Different Auto"
+        DIFFERENT_BIKE -> "Different Bike"
         DIFFERENT_CAB -> "Different Cab"
         DRIVER_MIGHT_BE_TAKING_ALTERNATE_ROUTE -> "Driver might be taking an alternate route."
         DRIVER_IS_NOT_MOVING_Q -> "Driver is not moving?"

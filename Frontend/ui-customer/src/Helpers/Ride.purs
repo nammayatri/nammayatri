@@ -68,10 +68,10 @@ import ConfigProvider (getCurrency)
 import Constants (appConfig)
 
 customerFeedbackPillData :: RideBookingRes -> String -> Array (Array (Array ST.FeedbackItem))
-customerFeedbackPillData (RideBookingRes state) vehicalVariant = if ((state.bookingDetails) ^. _fareProductType) == "DELIVERY" then parcelFeedbackPillData else normalRideFeedbackPillData (RideBookingRes state) vehicalVariant
+customerFeedbackPillData (RideBookingRes state) vehicleVariant = if ((state.bookingDetails) ^. _fareProductType) == "DELIVERY" then parcelFeedbackPillData else normalRideFeedbackPillData (RideBookingRes state) vehicleVariant
 
 normalRideFeedbackPillData :: RideBookingRes -> String -> Array (Array (Array ST.FeedbackItem))
-normalRideFeedbackPillData (RideBookingRes state) vehicalVariant = [ feedbackPillDataWithRating1 (RideBookingRes state), feedbackPillDataWithRating2 (RideBookingRes state), feedbackPillDataWithRating3 vehicalVariant, feedbackPillDataWithRating4 vehicalVariant, feedbackPillDataWithRating5 vehicalVariant ]
+normalRideFeedbackPillData (RideBookingRes state) vehicleVariant = [ feedbackPillDataWithRating1 (RideBookingRes state), feedbackPillDataWithRating2 (RideBookingRes state), feedbackPillDataWithRating3 vehicleVariant, feedbackPillDataWithRating4 vehicleVariant, feedbackPillDataWithRating5 vehicleVariant ]
 
 feedbackPillDataWithRating1 :: RideBookingRes -> Array (Array ST.FeedbackItem)
 feedbackPillDataWithRating1 (RideBookingRes state) =
@@ -100,39 +100,39 @@ feedbackPillDataWithRating2 :: RideBookingRes -> Array (Array ST.FeedbackItem)
 feedbackPillDataWithRating2 (RideBookingRes state) = feedbackPillDataWithRating1 (RideBookingRes state)
 
 feedbackPillDataWithRating3 :: String -> Array (Array ST.FeedbackItem)
-feedbackPillDataWithRating3 vehicalVariant =
+feedbackPillDataWithRating3 vehicleVariant =
   [ [ { id: "8", text: getString LT.UNPROFESSIONAL_DRIVER }
     , { id: "8", text: getString LT.DRIVER_CHARGED_MORE }
     ]
   , [ { id: "3", text: getString LT.FELT_UNSAFE }
     , { id: "8", text: getString LT.RASH_DRIVING }
-    , { id: "3", text: if vehicalVariant == "AUTO_RICKSHAW" then getString LT.DIFFERENT_AUTO else getString LT.DIFFERENT_CAB }
+    , { id: "3", text: if vehicleVariant == "AUTO_RICKSHAW" then getString LT.DIFFERENT_AUTO else if vehicleVariant == "BIKE" then getString LT.DIFFERENT_BIKE else getString LT.DIFFERENT_CAB }
     ]
   , [ { id: "3", text: getString LT.TRIP_GOT_DELAYED }
-    , { id: "11", text: if vehicalVariant == "AUTO_RICKSHAW" then getString LT.UNCOMFORTABLE_AUTO else getString LT.UNCOMFORTABLE_CAB }
+    , { id: "11", text: if vehicleVariant == "AUTO_RICKSHAW" then getString LT.UNCOMFORTABLE_AUTO else if vehicleVariant == "BIKE" then getString LT.UNCOMFORTABLE_BIKE else getString LT.UNCOMFORTABLE_CAB }
     ]
   ]
 
 feedbackPillDataWithRating4 :: String -> Array (Array ST.FeedbackItem)
-feedbackPillDataWithRating4 vehicalVariant =
+feedbackPillDataWithRating4 vehicleVariant =
   [ [ { id: "9", text: getString LT.POLITE_DRIVER }
     , { id: "9", text: getString LT.EXPERT_DRIVING }
     , { id: "4", text: getString LT.SAFE_RIDE }
     ]
   , [ { id: "9", text: getString LT.ASKED_FOR_EXTRA_FARE }
-    , { id: "11", text: if vehicalVariant == "AUTO_RICKSHAW" then getString LT.UNCOMFORTABLE_AUTO else getString LT.UNCOMFORTABLE_CAB }
+    , { id: "11", text: if vehicleVariant == "AUTO_RICKSHAW" then getString LT.UNCOMFORTABLE_AUTO else if vehicleVariant == "BIKE" then getString LT.UNCOMFORTABLE_BIKE else getString LT.UNCOMFORTABLE_CAB }
     ]
   , [ { id: "4", text: getString LT.TRIP_GOT_DELAYED }
-    , { id: "3", text: if vehicalVariant == "AUTO_RICKSHAW" then getString LT.DIFFERENT_AUTO else getString LT.DIFFERENT_CAB }
+    , { id: "3", text: if vehicleVariant == "AUTO_RICKSHAW" then getString LT.DIFFERENT_AUTO else if vehicleVariant == "BIKE" then getString LT.DIFFERENT_BIKE else getString LT.DIFFERENT_CAB }
     ]
   ]
 
 feedbackPillDataWithRating5 :: String -> Array (Array ST.FeedbackItem)
-feedbackPillDataWithRating5 vehicalVariant =
+feedbackPillDataWithRating5 vehicleVariant =
   [ [ { id: "10", text: getString LT.POLITE_DRIVER }
     , { id: "5", text: getString LT.EXPERT_DRIVING }
     ]
-  , [ { id: "12", text: if vehicalVariant == "AUTO_RICKSHAW" then getString LT.CLEAN_AUTO else getString LT.CLEAN_CAB }
+  , [ { id: "12", text : if vehicleVariant == "AUTO_RICKSHAW" then getString CLEAN_AUTO else if vehicleVariant == "BIKE" then getString CLEAN_BIKE else getString CLEAN_CAB }
     , { id: "10", text: getString LT.ON_TIME }
     ]
   , [ { id: "10", text: getString LT.SKILLED_NAVIGATOR }
