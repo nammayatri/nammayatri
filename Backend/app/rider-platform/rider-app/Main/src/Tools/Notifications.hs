@@ -43,7 +43,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
-import Kernel.External.Types (ServiceFlow)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import qualified Kernel.Prelude as Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto hiding (count, runInReplica)
@@ -51,7 +51,10 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import SharedLogic.JobScheduler
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.FollowRide as CQFollowRide
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
@@ -64,6 +67,7 @@ import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
 import qualified Storage.Queries.Person as Person
 import Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.PersonDisability as PD
+import Storage.Queries.SafetySettings as QSafety
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Error
 import qualified Tools.SMS as Sms
@@ -163,7 +167,7 @@ dynamicNotifyPerson ::
 dynamicNotifyPerson person notiData dynamicParams entity tripCategory dynamicTemplateParams = do
   let merchantOperatingCityId = person.merchantOperatingCityId
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId notiData.notificationKey tripCategory notiData.subCategory person.language
-  --when (EulerHS.Prelude.isNothing mbMerchantPN) $ logDebug $ "MISSED_FCM - " <> notiData.notificationKey
+  when (EulerHS.Prelude.isNothing mbMerchantPN) $ logError $ "MISSED_FCM - " <> notiData.notificationKey
   whenJust mbMerchantPN \merchantPN -> do
     let soundNotificationType = fromMaybe (merchantPN.fcmNotificationType) notiData.notificationTypeForSound
     notificationSoundFromConfig <- SQNSC.findByNotificationType soundNotificationType merchantOperatingCityId
@@ -318,7 +322,7 @@ data RideCompleteParam = RideCompleteParam
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 notifyOnRideCompleted ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, SchedulerFlow r) =>
   SRB.Booking ->
   SRide.Ride ->
   [Person.Person] ->
@@ -345,6 +349,15 @@ notifyOnRideCompleted booking ride otherParties = do
       [ ("driverName", driverName),
         ("totalFare", showPriceWithRounding totalFare)
       ]
+  fork "Create Post ride safety job" $ do
+    safetySettings <- QSafety.findSafetySettingsWithFallback person.id (Just person)
+    riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+    now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
+    when (checkSafetySettingConstraint (Just safetySettings.enablePostRideSafetyCheck) riderConfig now) $ do
+      maxShards <- asks (.maxShards)
+      let scheduleAfter = riderConfig.postRideSafetyNotificationDelay
+          postRideSafetyNotificationJobData = PostRideSafetyNotificationJobData {rideId = ride.id, personId = booking.riderId}
+      createJobIn @_ @'PostRideSafetyNotification scheduleAfter maxShards (postRideSafetyNotificationJobData :: PostRideSafetyNotificationJobData)
 
 -- title = "Trip finished!"
 -- body = "Hope you enjoyed your trip with {#driverName#}. Total Fare {#totalFare#}"
@@ -828,7 +841,7 @@ notifyRideStartToEmergencyContacts booking ride = do
   riderConfig <- QRC.findByMerchantOperatingCityId rider.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist rider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
   personENList <- QPDEN.findpersonENListWithFallBack booking.riderId (Just rider)
-  let followingContacts = filter (\contact -> checkSharedOptions contact riderConfig now) personENList
+  let followingContacts = filter (\contact -> checkSafetySettingConstraint contact.shareTripWithEmergencyContactOption riderConfig now) personENList
   let shouldShare = not $ null followingContacts
   if shouldShare
     then do
@@ -856,12 +869,6 @@ notifyRideStartToEmergencyContacts booking ride = do
           Nothing -> sendSMS contact rider.firstName trackLink
     else logInfo "Follow ride is not enabled"
   where
-    checkSharedOptions item riderConfig now =
-      case item.shareTripWithEmergencyContactOption of
-        Just ALWAYS_SHARE -> True
-        Just SHARE_WITH_TIME_CONSTRAINTS -> checkTimeConstraintForFollowRide riderConfig now
-        _ -> False
-
     updateFollowsRideCount emPersonId = do
       void $ CQFollowRide.updateFollowRideList emPersonId booking.riderId True
       Person.updateFollowsRide True emPersonId
@@ -877,6 +884,13 @@ notifyRideStartToEmergencyContacts booking ride = do
       void $
         Sms.sendSMS booking.merchantId booking.merchantOperatingCityId (buildSmsReq emergencyContact.mobileNumber)
           >>= Sms.checkSmsResult
+
+checkSafetySettingConstraint :: Maybe RideShareOptions -> RiderConfig -> UTCTime -> Bool
+checkSafetySettingConstraint setting riderConfig now =
+  case setting of
+    Just ALWAYS_SHARE -> True
+    Just SHARE_WITH_TIME_CONSTRAINTS -> checkTimeConstraintForFollowRide riderConfig now
+    _ -> False
 
 checkTimeConstraintForFollowRide :: DRC.RiderConfig -> UTCTime -> Bool
 checkTimeConstraintForFollowRide config now = do

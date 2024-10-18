@@ -57,6 +57,7 @@ import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge as JB
 import Components.RequestInfoCard as RequestInfoCard
+import Engineering.Helpers.Events as EHE
 
 instance showAction :: Show Action where
   show _ = ""
@@ -105,6 +106,7 @@ instance loggableAction :: Loggable Action where
       ReferralMobileNumberController.PrimaryEditTextActionController act -> case act of 
         PrimaryEditTextController.TextChanged valId newVal -> trackAppTextInput appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "referral_mobile_number_text_changed" "primary_edit_text"
         PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "referral_mobile_number_text_focus_changed" "primary_edit_text"
+        PrimaryEditTextController.TextImageClicked -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "referral_mobile_number" "text_image_onclick"
       ReferralMobileNumberController.OnSubTextClick -> pure unit
     ReferralMobileNumber -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "trigger_referral_mobile_number"
     GenericMessageModalAction act -> case act of
@@ -250,7 +252,7 @@ eval (BackPressed flag) state = do
             continueWithCmd (state {props{ validateProfilePicturePopUp = false,imageCaptureLayoutView = true}}) [ pure UploadFile]
         else do
             continueWithCmd state {props { validateProfilePicturePopUp = false, fileCameraPopupModal = false, fileCameraOption = false, imageCaptureLayoutView = false}} [do
-                _ <- liftEffect $ uploadFile uploadFileConfig
+                _ <- liftEffect $ uploadFile uploadFileConfig true
                 pure NoAction]
     else if(state.props.imageCaptureLayoutView) then continue state{props{imageCaptureLayoutView = false,openHowToUploadManual = true}} 
     else if(state.props.fileCameraPopupModal) then continue state{props{fileCameraPopupModal = false, validateProfilePicturePopUp = false, imageCaptureLayoutView = false}} 
@@ -279,9 +281,13 @@ eval RemoveUploadedFile state = do
   continue newState
 eval (VehicleRegistrationNumber val) state = do
   let newState = state {data = state.data { vehicle_registration_number = toUpper val }, props = state.props{isValidState = (checkRegNum (toUpper val) && state.props.rcAvailable) }}
+  if (length val == 10) then void $ pure $ EHE.addEvent (EHE.defaultEventObject "rc_number_entered") { module = "vehicle_registration_page", source = "RC"} 
+  else pure unit
   continue newState
 eval (ReEnterVehicleRegistrationNumber val) state = do
   let newState = state {data = state.data { reEnterVehicleRegistrationNumber = toUpper val }, props = state.props{isValidState = (checkRegNum (toUpper val) && state.props.rcAvailable) }}
+  if (length val == 10) then void $ pure $ EHE.addEvent (EHE.defaultEventObject "rc_number_confirmed") { module = "vehicle_registration_page", source = "RC"}
+  else pure unit
   continue newState
 eval (VehicleModelName val) state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "VehicleModelName")
@@ -376,19 +382,22 @@ eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = do
   let agreeTermsModalValue = state.data.vehicleCategory ==  Just (ST.AmbulanceCategory)
   if agreeTermsModalValue && not state.props.openHowToUploadManual then continue state { props { agreeTermsModal = agreeTermsModalValue }}
   else if isJust state.data.dateOfRegistration then exit $ ValidateDataAPICall state
-  else if (state.props.openHowToUploadManual == false) then 
+  else if (not state.props.openHowToUploadManual) then do
+    let _ = EHE.addEvent (EHE.defaultEventObject "upload_rc_clicked") { module = "vehicle_registration_page", source = "RC" }
+    let _ = EHE.addEvent (EHE.defaultEventObject "upload_rc_page_loaded") { module = "vehicle_registration_page", source = "RC" }
     continue state {props {openHowToUploadManual = true}}
   else  continueWithCmd state {props { fileCameraPopupModal = false, fileCameraOption = false}} [do
-     _ <- liftEffect $ uploadFile uploadFileConfig
-     pure NoAction]
+    let _ = EHE.addEvent (EHE.defaultEventObject "take_rc_photo_clicked") { module = "vehicle_registration_page", source = "RC"}
+    _ <- liftEffect $ uploadFile uploadFileConfig true
+    pure NoAction]
 eval (GenericMessageModalAction (GenericMessageModalController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = exit ApplicationSubmittedScreen
 
 eval ButtonClick state = do
   if isJust state.data.dateOfRegistration then exit $ ValidateDataAPICall state
-  else if (state.props.openHowToUploadManual == false) then 
+  else if (not state.props.openHowToUploadManual) then 
     continue state {props {openHowToUploadManual = true}}
   else  continueWithCmd state {props { fileCameraPopupModal = false, fileCameraOption = false}} [do
-     _ <- liftEffect $ uploadFile uploadFileConfig
+     _ <- liftEffect $ uploadFile uploadFileConfig true
      pure NoAction]
 
 eval SkipButton state = exit $ ValidateDataAPICall state
@@ -428,12 +437,13 @@ eval (ValidateDocumentModalAction (ValidateDocumentModal.PrimaryButtonActionCont
     updateAndExit state{props{validating = true}} $ ValidateDetails state{props{validating = true}}
    else  
      continueWithCmd state {props {validateProfilePicturePopUp = false, errorVisibility = false, fileCameraPopupModal = false, fileCameraOption = false}, data{errorMessage = ""}} [do
-     _ <- liftEffect $ uploadFile uploadFileConfig
+     let _ = EHE.addEvent (EHE.defaultEventObject "retake_photo_clicked") { module = "vehicle_registration_page", source = "RC"}
+     _ <- liftEffect $ uploadFile uploadFileConfig true
      pure NoAction]
 
 eval (PopUpModalActions (PopUpModal.OnButton2Click)) state = do
    continueWithCmd state {props { fileCameraPopupModal = false, fileCameraOption = false}} [do
-     _ <- liftEffect $ uploadFile uploadFileConfig
+     _ <- liftEffect $ uploadFile uploadFileConfig true
      pure NoAction]
 
 eval (PopUpModalActions (PopUpModal.OnButton1Click)) state = do

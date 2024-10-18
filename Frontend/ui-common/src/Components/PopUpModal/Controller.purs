@@ -25,6 +25,8 @@ import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>), Unit)
 import Data.Maybe as Mb
+import Font.Style as FontStyle
+import Engineering.Helpers.Commons as EHC
 import Components.TipsView as TipsView
 import JBridge
 import Effect (Effect)
@@ -41,9 +43,15 @@ data Action = OnButton1Click
             | YoutubeVideoStatus String
             | TipsViewActionController TipsView.Action
             | OnCoverImageClick
+            | PersonMobile PrimaryEditTextController.Action
+            | PersonName PrimaryEditTextController.Action
+            | PersonAddress PrimaryEditTextController.Action
+            | PersonInstruction PrimaryEditTextController.Action
+            | CheckBoxClick
 
 type Config = {
     primaryText :: TextConfig,
+    headerInfo :: TextConfig,
     customerTipArray :: Array String,
     customerTipArrayWithValues :: Array Int,
     secondaryText :: TextConfig,
@@ -91,7 +99,21 @@ type Config = {
     showRetry :: Boolean,
     coverLottie :: CoverLottie,
     layout :: forall w. Mb.Maybe (LayoutConfig -> PrestoDOM (Effect Unit) w),
-    upiDetailConfig :: UPIDetailConfig
+    upiDetailConfig :: UPIDetailConfig,
+    deliveryDetailsConfig :: DeliveryDetailsConfig
+}
+
+type DeliveryDetailsConfig = {
+  visibility :: Visibility,
+  margin  :: Margin,
+  personNameDetails :: PrimaryEditTextController.Config,
+  mobileNumberDetails :: PrimaryEditTextController.Config,
+  addressDetails :: PrimaryEditTextController.Config,
+  instructionDetails :: PrimaryEditTextController.Config,
+  isSource :: Boolean,
+  locationTitle :: String,
+  locationDetails :: String,
+  checkBoxDetails :: {text :: String, isSelected :: Boolean, visibility :: Boolean }
 }
 
 type UPIDetailConfig = {
@@ -312,6 +334,33 @@ config = {
       visibility : VISIBLE,
       isClickable : false ,
       textStyle : ParagraphText,
+      accessibilityHint : "", 
+      suffixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      },
+      prefixImage : {
+        visibility : GONE
+        , imageUrl : ""
+        , height : (V 0)
+        , width : (V 0)
+        , margin : (Margin 0 0 0 0)
+        , padding : (Padding 0 0 0 0)
+      }
+    }
+  , headerInfo : {
+      text : "Step",
+      color : Color.textSecondary,
+      gravity : RIGHT,
+      padding : (Padding 16 0 16 0),
+      margin : (Margin 0 20 0 20),
+      visibility : GONE,
+      textStyle : ParagraphText,
+      isClickable : true,
       accessibilityHint : "", 
       suffixImage : {
         visibility : GONE
@@ -680,6 +729,54 @@ config = {
         , padding : (Padding 0 0 0 0)
       }
     }
+  , deliveryDetailsConfig : dummyDeliveryDetailsConfig
 }
 
+dummyDeliveryDetailsConfig :: DeliveryDetailsConfig
+dummyDeliveryDetailsConfig = 
+  let config' = dummyDeliveryPrimaryText
+  in
+    {
+      visibility : GONE,
+      margin : Margin 0 0 0 0,
+      isSource : true,
+      locationTitle : "",
+      locationDetails : "",
+      personNameDetails : config',
+      mobileNumberDetails : config',
+      addressDetails : config',
+      instructionDetails : config',
+      checkBoxDetails : {
+        text : ""
+        , isSelected : false
+        , visibility : true
+      }
+    }
 
+dummyDeliveryPrimaryText :: PrimaryEditTextController.Config
+dummyDeliveryPrimaryText = 
+  let
+      config = PrimaryEditTextController.config
+      primaryEditTextConfig' = config
+        { editText
+          { color = Color.black800
+          , singleLine = true
+          , placeholder = ""
+          , textStyle = FontStyle.SubHeading3
+          }
+        , background = Color.white900
+        , topLabel
+          { text = ""
+          , color = Color.black800
+          , textStyle = FontStyle.Body3
+          }
+        , stroke = ("1,"<> Color.black500)
+        , margin = (Margin 0 8 0 0)
+        , errorLabel
+          { text = ""
+          , margin = (MarginTop 1)
+          }
+        , showErrorLabel = false
+        , width = MATCH_PARENT
+        }
+      in primaryEditTextConfig'

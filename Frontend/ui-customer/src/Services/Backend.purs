@@ -360,12 +360,13 @@ rideSearchBT payload = do
         handleError :: ErrorResponse -> FlowBT String SearchRes
         handleError errorPayload = do
             let errResp = errorPayload.response
+                userMessage = decodeError errResp.errorMessage "errorMessage"
                 codeMessage = decodeError errResp.errorMessage "errorCode"
-                message = if errorPayload.code == 400 && codeMessage == "RIDE_NOT_SERVICEABLE" 
-                            then getString RIDE_NOT_SERVICEABLE 
-                            else if errorPayload.code == 400 
-                            then codeMessage
-                            else getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+                message = case errorPayload.code, codeMessage, userMessage of
+                            400, "RIDE_NOT_SERVICEABLE", _ -> getString RIDE_NOT_SERVICEABLE
+                            400, _, "ACTIVE_BOOKING_PRESENT_FOR_OTHER_INVOLVED_PARTIES" -> getString BOOKING_CANNOT_PROCEED_ONE_PARTY_HAS_ACTIVE_BOOKING
+                            400, _, _ -> codeMessage
+                            _,_,_ -> getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
             pure $ toast message
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = HomeScreen}})
             void $ pure $ setValueToLocalStore LOCAL_STAGE "HomeScreen"
@@ -373,12 +374,10 @@ rideSearchBT payload = do
             BackT $ pure GoBack
 
 
-makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Boolean -> Boolean -> String -> Boolean -> SearchReq
-makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMoved destManuallyMoved sessionToken isSpecialLocation = -- check this for rentals
+makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Boolean -> Boolean -> String -> Boolean -> ST.FareProductType -> SearchReq
+makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMoved destManuallyMoved sessionToken isSpecialLocation searchActionType = -- check this for rentals
     let appConfig = CP.getAppConfig CP.appConfig
-    in  SearchReq 
-        { "contents" : OneWaySearchRequest 
-            ( OneWaySearchReq
+        searchRequest = ( OneWaySearchReq
                 { "startTime" : Just startTime
                 , "destination" : SearchReqLocation 
                     { "gps" : LatLong 
@@ -403,8 +402,16 @@ makeRideSearchReq slat slong dlat dlong srcAdd desAdd startTime sourceManuallyMo
                 , "rideRequestAndRideOtpUnifiedFlow" : Just true 
                 }
             )
-        , "fareProductType" : "ONE_WAY"
-        }
+    in case searchActionType of
+        ST.DELIVERY -> SearchReq 
+            { "contents" : DeliverySearchRequest searchRequest
+            , "fareProductType" : "DELIVERY"
+            }
+        _ -> SearchReq 
+            { "contents" : OneWaySearchRequest searchRequest
+            , "fareProductType" : "ONE_WAY"
+            }
+            
     where 
         validateLocationAddress :: Number -> Number -> LocationAddress -> LocationAddress
         validateLocationAddress lat long address = 
@@ -479,11 +486,12 @@ selectEstimateBT payload estimateId = do
       errorHandler errorPayload = do
             let errResp = errorPayload.response
                 codeMessage = decodeError errResp.errorMessage "errorCode"
-            if  errorPayload.code == 400 && codeMessage == "SEARCH_REQUEST_EXPIRED" then
-                pure $ toast (getString ESTIMATES_EXPIRY_ERROR)
-            else if errorPayload.code == 400 then
-                pure $ toast codeMessage
-            else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+                userMessage = decodeError errResp.errorMessage "errorMessage"
+            case errorPayload.code, codeMessage, userMessage of
+                400, "SEARCH_REQUEST_EXPIRED", _ -> pure $ toast (getString ESTIMATES_EXPIRY_ERROR)
+                400, _, "ACTIVE_BOOKING_PRESENT_FOR_OTHER_INVOLVED_PARTIES" -> pure $ toast (getString BOOKING_CANNOT_PROCEED_ONE_PARTY_HAS_ACTIVE_BOOKING)
+                400, _, _ -> pure $ toast codeMessage
+                _, _, _ -> pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = SearchLocationModel}})
             _ <- pure $ setValueToLocalStore LOCAL_STAGE "SearchLocationModel"
             BackT $ pure GoBack
@@ -495,13 +503,14 @@ selectEstimate payload estimateId = do
     where
         unwrapResponse (x) = x
 
-makeEstimateSelectReq :: Boolean -> Maybe Int -> Array String -> Boolean -> DEstimateSelect
-makeEstimateSelectReq isAutoAssigned tipForDriver otherSelectedEstimates isAdvancedBookingEnabled = DEstimateSelect {
+makeEstimateSelectReq :: Boolean -> Maybe Int -> Array String -> Boolean -> Maybe DeliveryDetails -> DEstimateSelect
+makeEstimateSelectReq isAutoAssigned tipForDriver otherSelectedEstimates isAdvancedBookingEnabled deliveryDetails = DEstimateSelect {
       "customerExtraFee": tipForDriver,
       "autoAssignEnabled": isAutoAssigned,
       "autoAssignEnabledV2": isAutoAssigned,
       "otherSelectedEstimates": otherSelectedEstimates,
-      "isAdvancedBookingEnabled": isAdvancedBookingEnabled
+      "isAdvancedBookingEnabled": isAdvancedBookingEnabled,
+      "deliveryDetails": deliveryDetails
     }
 
 ------------------------------------------------------------------------ SelectList Function ------------------------------------------------------------------------------------------
@@ -1443,7 +1452,7 @@ pushSDKEvents :: Flow GlobalState (Either ErrorResponse APISuccessResp)
 pushSDKEvents = do
     headers <- getHeaders "" false
     events <- liftFlow $ Events.getEvents
-    withAPIResult (EP.pushSDKEvents "") unwrapResponse $ callAPI headers (SDKEventsReq { event : events })
+    withAPIResult (EP.pushSDKEvents "") unwrapResponse $ callAPI headers (SDKEventsReq { event : events, events : [] })
     where
         unwrapResponse x = x
 
@@ -1554,4 +1563,22 @@ makeRoundTripReq slat slong dlat dlong srcAdd desAdd startTime returnTime roundT
                                             "isReallocationEnabled" : Just appConfig.feature.enableReAllocation
                                             }),
                     "fareProductType" : "INTER_CITY"
-                   }
+                   }----------------------------------------------------------------------------- MultiChat ----------------------------------------------------------------------------------------
+
+
+----------------------------------------- DELiVERY FLOW ----------------------------------------------
+
+getDeliveryImage :: String -> Flow GlobalState (Either ErrorResponse GetDeliveryImageResponse)
+getDeliveryImage rideId = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.getDeliveryImage rideId) unwrapResponse $ callAPI headers (GetDeliveryImageReq rideId)
+    where
+        unwrapResponse (x) = x
+
+getDeliveryImageBT :: String -> FlowBT String GetDeliveryImageResponse
+getDeliveryImageBT rideId = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getDeliveryImage rideId) identity errorHandler (lift $ lift $ callAPI headers (GetDeliveryImageReq rideId))
+    where
+    errorHandler errorPayload = do
+        BackT $ pure GoBack

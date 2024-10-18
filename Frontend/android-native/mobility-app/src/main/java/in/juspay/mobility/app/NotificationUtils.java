@@ -100,8 +100,9 @@ public class NotificationUtils {
     public static final String SOS_TRIGGERED = "SOS_TRIGGERED_NEW";
     public static final String SOS_RESOLVED = "SOS_RESOLVED_NEW";
     public static final String NOSOUND_NOTIFICATION = "NOSOUND_NOTIFICATION";
-    public static String RENTAL = "Rental";
-    public static String INTERCITY = "InterCity";
+    public static final String RENTAL = "Rental";
+    public static final String INTERCITY = "InterCity";
+    public static final String DELIVERY = "Delivery";
     public static Uri soundUri = null;
     public static OverlaySheetService.OverlayBinder binder;
     public static ArrayList<Bundle> listData = new ArrayList<>();

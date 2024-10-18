@@ -57,6 +57,9 @@ RiderConfig:
     maximumWalkDistance: Meters
     driverReferredSearchReqExpiry: Maybe Seconds
     dynamicLogicUpdatePassword: Text
+    feedbackAlertRatingThreshold: Int
+    postRideSafetyNotificationDelay: NominalDiffTime
+    useUserSettingsForSafetyIVR: Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -72,6 +75,9 @@ RiderConfig:
     makeMultiModalSearch: Maybe Bool
     maximumWalkDistance: Maybe Meters
     dynamicLogicUpdatePassword: Maybe Text
+    feedbackAlertRatingThreshold: Maybe Int
+    postRideSafetyNotificationDelay: Maybe Seconds
+    useUserSettingsForSafetyIVR: Maybe Bool
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -90,6 +96,9 @@ RiderConfig:
     makeMultiModalSearch: fromMaybe False makeMultiModalSearch|E
     maximumWalkDistance: fromMaybe (600) maximumWalkDistance|E
     dynamicLogicUpdatePassword: fromMaybe "dummy-password" dynamicLogicUpdatePassword|E
+    feedbackAlertRatingThreshold: fromMaybe 3 feedbackAlertRatingThreshold|E
+    postRideSafetyNotificationDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> postRideSafetyNotificationDelay)|E
+    useUserSettingsForSafetyIVR: fromMaybe False useUserSettingsForSafetyIVR|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -105,6 +114,9 @@ RiderConfig:
     makeMultiModalSearch: Just makeMultiModalSearch|E
     maximumWalkDistance: Just maximumWalkDistance|E
     dynamicLogicUpdatePassword: Just dynamicLogicUpdatePassword|E
+    feedbackAlertRatingThreshold: Just feedbackAlertRatingThreshold|E
+    postRideSafetyNotificationDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    useUserSettingsForSafetyIVR: Just useUserSettingsForSafetyIVR|E
 
   default:
     enableLocalPoliceSupport: "false"
@@ -126,6 +138,8 @@ RiderConfig:
     avgSpeedInKmPerHr: "20"
     makeMultiModalSearch: "false"
     maximumWalkDistance: "600"
+    postRideSafetyNotificationDelay : "60"
+    useUserSettingsForSafetyIVR: "false"
 
   queries:
     findByMerchantOperatingCityId:

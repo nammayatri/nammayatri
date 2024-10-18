@@ -94,7 +94,8 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             vehicleModel = vehicleModel,
             vehicleNumber = vehicleNumber,
             vehicleServiceTierType = vehicleServiceTierType,
-            vehicleVariant = vehicleVariant
+            vehicleVariant = vehicleVariant,
+            wasRideSafe = wasRideSafe
           }
 
 instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
@@ -171,5 +172,6 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.vehicleModel = vehicleModel,
         Beam.vehicleNumber = vehicleNumber,
         Beam.vehicleServiceTierType = vehicleServiceTierType,
-        Beam.vehicleVariant = vehicleVariant
+        Beam.vehicleVariant = vehicleVariant,
+        Beam.wasRideSafe = wasRideSafe
       }

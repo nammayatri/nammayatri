@@ -203,6 +203,9 @@ initData = let
     , upcomingRideDetails : Nothing
     , selectedService : Nothing
     , intercityBus : initialIntercityBusData
+    , deliveryImage : Nothing
+    , deliveryDetailsInfo : Nothing
+    , requestorPartyRoles : Nothing
     },
     props: {
       rideRequestFlow : false
@@ -412,6 +415,10 @@ initData = let
     , safetySettings : Nothing
     , isIntercityFlow : false
     , isTripSchedulable : false
+    , isConfirmSourceCurrentLocation : true
+    , showDeliveryImageAndOtpModal : false
+    , loadingDeliveryImage : false
+    , fromDeliveryScreen : false
   }
 }
 
@@ -526,6 +533,8 @@ dummyDriverInfo =
   , driverArrived : false
   , estimatedDistance : ""
   , driverArrivalTime : 0
+  , destinationReachedAt : 0
+  , destinationReached : false
   , bppRideId : ""
   , driverNumber : Nothing
   , merchantExoPhone : ""
@@ -554,6 +563,9 @@ dummyDriverInfo =
   , favCount : 0
   , rideDuration : Just 0
   , rideScheduledAtUTC : Nothing
+  , senderDetails : Nothing
+  , receiverDetails : Nothing
+  , estimatedTimeToReachDestination : Nothing
   }
 
 dummySettingBar :: SettingSideBarState
@@ -683,7 +695,10 @@ dummyRideBookingDetails = RideBookingDetails {
   toLocation : Nothing,
   estimatedDistance : Nothing,
   otpCode : Nothing,
-  stopLocation : Nothing
+  stopLocation : Nothing,
+  senderDetails : Nothing,
+  receiverDetails : Nothing,
+  requestorPartyRoles : Nothing
 }
 
 

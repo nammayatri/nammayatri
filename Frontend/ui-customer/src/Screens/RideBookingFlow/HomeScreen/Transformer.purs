@@ -25,7 +25,7 @@ import Helpers.TipConfig
 import Locale.Utils
 import Prelude
 
-import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt, _fareProductType, _fareProductType, _stopLocation, _amount, _nightShiftCharge, _types)
+import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _priceWithCurrency, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _createdAt, _fareProductType, _fareProductType, _stopLocation, _amount, _nightShiftCharge, _types, _senderDetails, _receiverDetails, _requestorPartyRoles)
 import Common.Types.App (LazyCheck(..), Paths, FareList, TicketType(..))
 import Common.Types.App as CT
 import Components.ChooseVehicle (Config, config, SearchResultType(..), FareProductType(..)) as ChooseVehicle
@@ -67,7 +67,7 @@ import PrestoDOM (Visibility(..))
 import RemoteConfig as RC
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData, VehicleViewType(..))
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..), HotSpotData, VehicleViewType(..), PersonDeliveryDetails(..))
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), RideBookingListRes(..), GetEmergContactsReq(..), GetEmergContactsResp(..), ContactDetails(..), GateInfoFull(..), HotSpotInfo(..), FareBreakupAPIEntity(..))
 import Services.Backend as Remote
 import Services.API as API
@@ -147,10 +147,16 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
   case (quoteEntity.quoteDetails)^._contents of
     (ONE_WAY contents) -> QLI.config
     (SPECIAL_ZONE contents) -> QLI.config
-    (DRIVER_OFFER contents) -> 
-      let (DriverOfferAPIEntity quoteDetails) = contents
-          expiryTime = (getExpiryTime quoteDetails.validTill isForLostAndFound) -4
-          timeLeft = fromMaybe 0 quoteDetails.durationToPickup
+    (DELIVERY contents) -> getQuoteFromContents contents city
+    (DRIVER_OFFER contents) -> getQuoteFromContents contents city
+    (RENTAL contents) -> QLI.config
+    (INTER_CITY contents) -> QLI.config
+  where
+    getQuoteFromContents contents city =
+      let 
+        (DriverOfferAPIEntity quoteDetails) = contents
+        expiryTime = (getExpiryTime quoteDetails.validTill isForLostAndFound) -4
+        timeLeft = fromMaybe 0 quoteDetails.durationToPickup
       in {  seconds : expiryTime
           , id : quoteEntity.id
           , timer : show expiryTime
@@ -165,9 +171,7 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
           , serviceTierName : quoteEntity.serviceTierName
           , appConfig : getAppConfig appConfig
           , city : city
-        }
-    (RENTAL contents) -> QLI.config
-    (INTER_CITY contents) -> QLI.config
+        } 
     
 getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard -> DriverInfoCard
 getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
@@ -176,9 +180,13 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
       stopLocation = if fareProductType == FPT.RENTAL then _stopLocation else _toLocation
       (BookingLocationAPIEntity toLocation) = fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation)
       (BookingLocationAPIEntity bookingLocationAPIEntity) = resp.fromLocation
+      senderDetails = case (resp.bookingDetails ^._contents ^._senderDetails) of
+        Just (API.PersonDetails details) -> Just ({name : details.name, phone : details.phoneNumber, extras : fromMaybe "" bookingLocationAPIEntity.extras, instructions : bookingLocationAPIEntity.instructions }::PersonDeliveryDetails)
+        Nothing -> Nothing
+      receiverDetails = (\(API.PersonDetails details) -> ({name : details.name, phone : details.phoneNumber, extras : fromMaybe "" toLocation.extras, instructions : toLocation.instructions }::PersonDeliveryDetails)) <$>  (resp.bookingDetails ^._contents ^. _receiverDetails)
       currentRecipient = prevState.currentChatRecipient.recipient
   in  {
-        otp : if isQuote && (not $ isLocalStageOn RideStarted) then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else if ((DA.any (_ == fareProductType ) [FPT.RENTAL, FPT.INTER_CITY] ) && isLocalStageOn RideStarted) then fromMaybe "" rideList.endOtp else rideList.rideOtp
+        otp : if isQuote && (not $ isLocalStageOn RideStarted) then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else if ((DA.any (_ == fareProductType ) [FPT.RENTAL, FPT.INTER_CITY, FPT.DELIVERY] ) && isLocalStageOn RideStarted) then fromMaybe "" rideList.endOtp else rideList.rideOtp
       , driverName : if length (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then
                         (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) <> " " <> (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 1)) else
                           (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0))
@@ -208,6 +216,8 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
       , waitingTime : prevState.waitingTime
       , driverArrived : prevState.driverArrived
       , driverArrivalTime : 0
+      , destinationReachedAt : 0
+      , destinationReached : prevState.destinationReached
       , bppRideId : rideList.bppRideId
       , driverNumber : rideList.driverNumber
       , merchantExoPhone : resp.merchantExoPhone
@@ -247,6 +257,9 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote prevState =
       , isAlreadyFav : fromMaybe false resp.isAlreadyFav
       , favCount : fromMaybe 0 resp.favCount
       , rideDuration : resp.duration
+      , senderDetails : senderDetails
+      , receiverDetails : receiverDetails
+      , estimatedTimeToReachDestination : prevState.estimatedTimeToReachDestination
       }
 
 encodeAddressDescription :: String -> String -> Maybe String -> Maybe Number -> Maybe Number -> Array AddressComponents -> SavedReqLocationAPIEntity
@@ -296,6 +309,7 @@ dummyRideAPIEntity = RideAPIEntity{
   rideEndTime : Nothing,
   rideRating : Nothing,
   driverArrivalTime : Nothing,
+  destinationReachedAt : Nothing,
   bppRideId : "",
   endOtp : Nothing,
   startOdometerReading : Nothing,
@@ -737,6 +751,8 @@ mapServiceTierName vehicleVariant isValueAddNP serviceTierName =
                 "SUV" -> Just "XL Cab"
                 "AUTO_RICKSHAW" -> Just "Auto"
                 "BIKE" -> Just "Bike Taxi"
+                "DELIVERY_BIKE" -> Just "2 Wheeler"
+                "Delivery Bike" -> Just "2 Wheeler"
                 "SUV_PLUS" -> Just "XL Plus"
                 _ -> serviceTierName
 
@@ -748,6 +764,7 @@ mapServiceTierShortDesc vehicleVariant isValueAddNP serviceTierShortDesc =
       "SEDAN" -> Just "AC, Premium Comfort"
       "SUV" -> Just "AC, Extra Spacious"
       "AUTO_RICKSHAW" -> Just "Easy Commute"
+      "DELIVERY_BIKE" -> Just "Upto 5kg"
       _ -> serviceTierShortDesc
     _ -> serviceTierShortDesc
 
@@ -771,7 +788,7 @@ getTripDetailsState (RideBookingRes ride) state = do
       waitingCharges = 
         if rideDetails.vehicleVariant == "AUTO_RICKSHAW" then
             autoWaitingCharges
-        else if rideDetails.vehicleVariant == "BIKE" then
+        else if rideDetails.vehicleVariant == "BIKE" || rideDetails.vehicleVariant == "DELIVERY_BIKE" then
             bikeWaitingCharges
         else 
             cabsWaitingCharges
@@ -1045,6 +1062,7 @@ getFareProductType fareProductType =
     "RENTAL" -> FPT.RENTAL 
     "ONE_WAY" -> FPT.ONE_WAY
     "DRIVER_OFFER" -> FPT.DRIVER_OFFER
+    "DELIVERY" -> FPT.DELIVERY
     _ -> FPT.ONE_WAY
 
 getServiceNames :: Array EstimateAPIEntity -> String -> Array String

@@ -23,7 +23,7 @@ import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
 import Data.Maybe (Maybe)
 import PrestoDOM
-import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), NavigationMode(..),  FareProductType(..), SpecialTags(..), LocationType)
+import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..), NavigationMode(..),  FareProductType(..), SpecialTags(..), LocationType, PersonDeliveryDetails(..))
 import Components.BannerCarousel as BannerCarousel
 import Common.Types.App as CTP
 import MerchantConfig.Types
@@ -56,6 +56,7 @@ data Action = NoAction
             | ShowDirections Number Number
             | EditingLocation LocationType
             | GoToDriverProfile
+            | ShowDeliveryImageAndOtp
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -131,4 +132,10 @@ type DriverInfoCardData =
   , spLocationName :: Maybe String
   , addressWard :: Maybe String
   , hasToll :: Boolean
+  , destinationReached :: Boolean
+  , destinationReachedAt :: Int
+  , senderDetails :: Maybe PersonDeliveryDetails
+  , receiverDetails :: Maybe PersonDeliveryDetails
+  , estimatedTimeToReachDestination :: Maybe String
+  , requestorPartyRoles :: Maybe (Array String)
   }

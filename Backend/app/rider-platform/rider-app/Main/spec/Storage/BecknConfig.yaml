@@ -56,6 +56,9 @@ BecknConfig:
       kvFunction: findAllWithKV
       where:
         and: [merchantId, domain, merchantOperatingCityId]
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
 
   extraOperations:
     - EXTRA_QUERY_FILE

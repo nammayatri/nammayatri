@@ -46,7 +46,7 @@ import Debug
 import Data.String as DS
 import Common.Types.App (FeedbackAnswer)
 import Data.Array (filter, elem)
-import Screens.Types (RiderRideCompletedScreenState, AdditionalCharges(..))
+import Screens.Types (RiderRideCompletedScreenState, AdditionalCharges(..), FareProductType(..))
 import Components.RideCompletedCard.Controller (CustomerIssue(..))
 import Components.RatingCard.Controller (FeedbackItem(..))
 import Debug (spy)
@@ -219,7 +219,7 @@ priceAndDistanceUpdateView state push =
         , textView $
           [ width MATCH_PARENT
           , height WRAP_CONTENT
-          , text $ getString $ REACHED_DESTINATION timeString
+          , text $ getString $ if state.driverInfoCardState.fareProductType == DELIVERY then DELIVERED_IN_JUST timeString else REACHED_DESTINATION timeString
           , gravity CENTER
           , weight 1.0
           , color Color.black800
@@ -333,7 +333,7 @@ rideDetailsButtonView state push =
            , rippleColor Color.rippleShade
           ][  textView $
               [ height WRAP_CONTENT
-              , text $ getString RIDE_DETAILS
+              , text $ getString $ if state.driverInfoCardState.fareProductType == DELIVERY then DELIVERY_DETAILS else RIDE_DETAILS
               , color Color.black800
               , weight 1.0
               ] <> (FontStyle.body2 TypoGraphy)
@@ -705,7 +705,7 @@ customerRatingDriverView state push =
   , padding $ Padding 10 0 10 20
   , gravity CENTER
   ][
-      commonTextView state push (getString HOW'S_TRIP) "#14171F" (FontStyle.h3 TypoGraphy) 10
+      commonTextView state push (if state.driverInfoCardState.fareProductType == DELIVERY then getString RATE_YOUR_DELIVERY_WITH <> " " <> state.driverInfoCardState.driverName else getString HOW'S_TRIP) "#14171F" (FontStyle.h3 TypoGraphy) 10
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT

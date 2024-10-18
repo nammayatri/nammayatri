@@ -436,3 +436,9 @@ eerieBlack = "#1A1C24"
 
 greyBackground :: Color 
 greyBackground = "#F2F2F2"
+
+seashell :: Color
+seashell = "#FFF5EF"
+
+seashellBorder :: Color
+seashellBorder = "#FFECE1"

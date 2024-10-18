@@ -172,8 +172,14 @@ dummyActiveRideData = {
   destinationCity : Nothing,
   roundTrip : false,
   returnTime : "",
-  parkingCharge : 0.0
-
+  parkingCharge : 0.0,
+  extraFromLocationInfo : Nothing,
+  extraToLocationInfo : Nothing,
+  senderInstructions : Nothing,
+  receiverInstructions : Nothing,
+  senderPersonDetails : Nothing,
+  receiverPersonDetails : Nothing,
+  notifiedReachedDestination : false
 }
 
 

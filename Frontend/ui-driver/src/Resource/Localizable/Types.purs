@@ -1431,7 +1431,7 @@ data STR = LETS_GET_STARTED
         | TERM_3A
         | TERM_1B String
         | TERM_2B String
-        | TERM_3B String
+        | TERM_3B String String
         | EXCLUDED_CHARGES
         | TOLLS 
         | STATE_PERMIT 
@@ -1645,7 +1645,7 @@ data STR = LETS_GET_STARTED
         | LAST_N_DAYS String
         | CANCELLATION_RATE_TRIVIA_2
         | LIFETIME_STATS
-        | TOTAL_RIDES_CANCELLED
+        | TOTAL_RIDES_CANCELLED        
         | RENTAL_RIDE
         | TOTAL_EARNINGS_MISSED
         | MORE_ABOUT_ME
@@ -1685,8 +1685,7 @@ data STR = LETS_GET_STARTED
         | CONTINUE_WITH String
         | CONTACT_SUPPORT_FOR_HELP
         | YOU_HAVE_SWITCHED_CITY_OR_VEHICLE
-        | XL_PLUS
-       
+        | XL_PLUS       
         | RIDE_REQUESTS
         | SCHEDULED_RIDE_ACCEPTED
         | YOU_CAN_ACCESS_SCHEDULED_RIDES
@@ -1741,7 +1740,26 @@ data STR = LETS_GET_STARTED
         | CAB
         | N_FREE_RIDES_COMPLETED String
         | N_MORE_FREE_RIDES String
-
+        | COLLECT_CASH_AT_DROP
+        | MORE_DETAILS
+        | TAKE_PHOTO_OF_PARCEL
+        | SENDER_WILL_VERIFY_PARCEL
+        | CALL_CUSTOMER_TEXT
+        | CALL_SENDER
+        | CALL_RECEIVER
+        | START'
+        | END'
+        | DELIVERY_BIKE_SERVICE_TIER_DESC
+        | RATE_YOUR_DELIVERY_WITH
+        | DELIVERY_DETAILS
+        | TAKE_CLEAR_PICTURE_PARCEL
+        | ENSURE_ADEQUATE_LIGHT_PARCEL_DESC
+        | FIT_PARCEL_CORRECTLY
+        | CORRECT_POSITIONING
+        | INCORRECT_POSITIONING
+        | UPLOAD_PARCEL_IMAGE
+        | PICKUP_INSTRUCTION
+        | DROP_INSTRUCTION
 
 
 -- instance showSTR :: Show STR
@@ -3458,4 +3476,4 @@ data STR = LETS_GET_STARTED
 --         | THE_RIDE_STARTS
 --         | GOOD_SERVICES 
 --         | SMOOTH_DRIVING
---         | NO_CANCELLATION 
+--         | NO_CANCELLATION

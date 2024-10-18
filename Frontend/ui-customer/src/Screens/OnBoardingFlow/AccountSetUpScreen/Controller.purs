@@ -52,6 +52,7 @@ instance loggableAction :: Loggable Action where
     NameEditTextActionController act -> case act of
       PrimaryEditTextController.TextChanged _ _ -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_edit_text_changed" "primary_edit_text"
       PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_edit_text_focus_changed" "primary_edit_text"
+      PrimaryEditTextController.TextImageClicked -> trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "name_edit_text_action" "text_image"
     GenericHeaderActionController act -> case act of
       GenericHeaderController.PrefixImgOnClick -> do
         trackAppActionClick appId (getScreen ACCOUNT_SET_UP_SCREEN) "generic_header_action" "back_icon"

@@ -89,7 +89,8 @@ data RideE e = Ride
     vehicleModel :: Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Text,
     vehicleServiceTierType :: Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType,
-    vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
+    vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant,
+    wasRideSafe :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic)
 
@@ -168,7 +169,8 @@ instance EncryptedItem Ride where
           vehicleModel = vehicleModel entity,
           vehicleNumber = vehicleNumber entity,
           vehicleServiceTierType = vehicleServiceTierType entity,
-          vehicleVariant = vehicleVariant entity
+          vehicleVariant = vehicleVariant entity,
+          wasRideSafe = wasRideSafe entity
         }
   decryptItem entity = do
     driverAlternateNumber_ <- fmap fst <$> decryptItem (driverAlternateNumber entity)
@@ -239,7 +241,8 @@ instance EncryptedItem Ride where
             vehicleModel = vehicleModel entity,
             vehicleNumber = vehicleNumber entity,
             vehicleServiceTierType = vehicleServiceTierType entity,
-            vehicleVariant = vehicleVariant entity
+            vehicleVariant = vehicleVariant entity,
+            wasRideSafe = wasRideSafe entity
           },
         ""
       )

@@ -633,6 +633,7 @@ getScreenFromStage stage = case stage of
   ChangeToRideStarted -> "change_to_ride_started"
   ConfirmingQuotes -> "confirming_quotes"
   GoToTripSelect -> "go_to_round_trip"
+  GoToConfirmgDelivery -> "confirm_delivery_screen"
 
 getGlobalPayload :: String -> Maybe GlobalPayload
 getGlobalPayload key = do
@@ -713,6 +714,7 @@ getVehicleVariantImage variant viewType =
                                       _ -> variantConfig.bookAny.leftViewImage
           "BIKE"          -> variantConfig.bike.leftViewImage
           "SUV_PLUS"      -> fetchImage FF_ASSET "ny_ic_suv_plus_left_side"
+          "DELIVERY_BIKE" -> variantConfig.deliveryBike.leftViewImage
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
       else do
         case variant of
@@ -740,6 +742,7 @@ getVehicleVariantImage variant viewType =
                                       _ -> variantConfig.bookAny.image
           "BIKE"          -> variantConfig.bike.image
           "SUV_PLUS"      -> fetchImage FF_ASSET "ny_ic_suv_plus_side"
+          "DELIVERY_BIKE" -> variantConfig.deliveryBike.image
           _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         
 getVariantRideType :: String -> String
@@ -749,6 +752,7 @@ getVariantRideType variant =
                     "TAXI" -> "Non-AC Mini"
                     "SUV"  -> "XL Cab"
                     "BIKE" -> "Bike Taxi"
+                    "DELIVERY_BIKE" -> "2 Wheeler"
                     "SEDAN" -> "Sedan"
                     "HATCHBACK" -> "AC Mini"
                     _      -> "AC Cab"
@@ -829,11 +833,13 @@ getCancellationImage vehicleVariant distance =
   then case vehicleVariant of
     "AUTO_RICKSHAW" -> getAutoRickshawNearImage
     "BIKE" -> "ny_ic_driver_near_bike"
+    "DELIVERY_BIKE" -> "ny_ic_driver_near_bike"
     "AMBULANCE" -> "ny_ic_driver_near_ambulance"
     _ -> "ny_ic_driver_started"
   else case vehicleVariant of
     "AUTO_RICKSHAW" -> getAutoRickshawStartedImage
     "BIKE" -> "ny_ic_driver_started_bike"
+    "DELIVERY_BIKE" -> "ny_ic_driver_started_bike"
     "AMBULANCE" -> "ny_ic_driver_started_ambulance"
     _ -> "ny_ic_driver_started"
 getAutoRickshawNearImage :: String
@@ -1138,14 +1144,17 @@ mkSrcMarker = getCitySpecificMarker
 
 getCitySpecificMarker :: City -> String -> Maybe Stage -> String
 getCitySpecificMarker city variant currentStage = 
-    case variant of
-        "AUTO_RICKSHAW" -> getAutoImage city
-        "SEDAN"         -> "ny_ic_vehicle_nav_on_map"
-        "SUV"           -> "ny_ic_suv_nav_on_map"
-        "HATCHBACK"     -> "ny_ic_hatchback_nav_on_map"
-        "BIKE"          -> if currentStage == Just RideStarted then "ny_ic_bike_pickup_nav_on_map" else "ny_ic_bike_nav_on_map"
-        "SUV_PLUS"      -> "ny_ic_suv_plus_nav_on_map"
-        _               -> "ny_ic_vehicle_nav_on_map"
+    let isDeliveryImagePresent = (JB.getResourceIdentifier "ny_ic_bike_delivery_nav_on_map" "drawable") /= 0
+        variantImage = case variant of
+            "AUTO_RICKSHAW" -> getAutoImage city
+            "SEDAN"         -> "ny_ic_vehicle_nav_on_map"
+            "SUV"           -> "ny_ic_suv_nav_on_map"
+            "HATCHBACK"     -> "ny_ic_hatchback_nav_on_map"
+            "BIKE"          -> if currentStage == Just RideStarted then "ny_ic_bike_pickup_nav_on_map" else "ny_ic_bike_nav_on_map"
+            "DELIVERY_BIKE" -> if isDeliveryImagePresent then "ny_ic_bike_delivery_nav_on_map" else "ny_ic_bike_nav_on_map"
+            "SUV_PLUS"      -> "ny_ic_suv_plus_nav_on_map"
+            _               -> "ny_ic_vehicle_nav_on_map"
+    in variantImage
 
 mkDestMarker :: TrackingType -> FareProductType -> String
 mkDestMarker trackingType fareProductType = 
@@ -1423,3 +1432,13 @@ fetchAddressDetails  (API.BookingLocationAPIEntity contents) =
       wardAddedString = if finalString == "" then finalString <> ward else finalString
     in 
       wardAddedString
+    
+disableChat :: FareProductType -> Boolean
+disableChat fareProductType = 
+  case fareProductType of
+    DELIVERY -> false
+    _ -> true
+
+isDeliveryInitiator :: Maybe (Array String) -> Boolean
+isDeliveryInitiator maybeTags = 
+  maybe true (\tags -> elem "Initiator" tags) maybeTags

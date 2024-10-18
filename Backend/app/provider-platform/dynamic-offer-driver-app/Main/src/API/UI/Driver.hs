@@ -360,7 +360,7 @@ getDriverPayments :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperat
 getDriverPayments authInfo mbFrom mbTo mbStatus mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getDriverPayments authInfo mbFrom mbTo mbStatus mbLimit mbOffset DPlan.YATRI_SUBSCRIPTION
 
 clearDriverDues :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DDriver.ClearDuesRes
-clearDriverDues authInfo = withFlowHandlerAPI $ DDriver.clearDriverDues authInfo DPlan.YATRI_SUBSCRIPTION Nothing
+clearDriverDues authInfo = withFlowHandlerAPI $ DDriver.clearDriverDues authInfo DPlan.YATRI_SUBSCRIPTION Nothing Nothing
 
 getDriverPaymentsHistoryV2 :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe InvoicePaymentMode -> Maybe Int -> Maybe Int -> FlowHandler DDriver.HistoryEntityV2
 getDriverPaymentsHistoryV2 authInfo pMode mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getDriverPaymentsHistoryV2 authInfo pMode mbLimit mbOffset DPlan.YATRI_SUBSCRIPTION

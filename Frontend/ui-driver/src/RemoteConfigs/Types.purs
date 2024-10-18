@@ -109,3 +109,8 @@ type CoinsConfig = {
   monsoonOfferDate :: String,
   coinsValidTill :: Int
 }
+type EventsConfig = {
+  enabled :: Boolean,
+  pushEventChunkSize :: Int,
+  loggingIntervalInMs :: Number
+}

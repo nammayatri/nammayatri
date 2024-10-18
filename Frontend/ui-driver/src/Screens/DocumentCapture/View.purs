@@ -48,6 +48,8 @@ import Debug (spy)
 import Screens.RegistrationScreen.ComponentConfig (changeVehicleConfig)
 import Data.Array as DA
 import Components.BottomDrawerList as BottomDrawerList
+import Engineering.Helpers.Events as EHE
+import Helpers.Utils as HU
 
 screen :: ST.DocumentCaptureScreenState -> Screen Action ST.DocumentCaptureScreenState ScreenOutput
 screen initialState = 
@@ -57,6 +59,7 @@ screen initialState =
   , globalEvents : [(\push -> do
     _ <- JB.storeCallBackImageUpload push CallBackImageUpload
     _ <- runEffectFn1 consumeBP unit
+    let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getRegisterationStepScreenLoadedEventName initialState.data.docType) { module = HU.getRegisterationStepModule initialState.data.docType, source = HU.getRegisterationStepScreenSource initialState.data.docType }
     pure $ pure unit
   )]
   , eval :

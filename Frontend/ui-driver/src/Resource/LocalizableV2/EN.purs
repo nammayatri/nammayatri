@@ -1415,13 +1415,13 @@ getEn =
     , term_1a: "1. Total fare will be calculated depending on the actual final distance of ride."
     , term_2a: "2. Toll will be applicable only if toll road is taken."
     , term_3a: "3. Parking charges if any will have to be settled separately with the driver."
-    , term_1b: (\time -> "1. Cancellation before " <> time <> " hr from the scheduled ride start will lead to penalties on the platform. ")
-    , term_2b: (\time -> "2. Be online before " <> time <> " minutes of Scheduled Ride Start. ")
-    , term_3b: (\time -> "3. Reach Customer pickup location before " <> time <> " minutes from scheduled ride start time.        ")
+    , term_1b: (\time -> "1. Repeated Cancellations will lead to penalties or being blocked. ")
+    , term_2b: (\time -> "2. Be online before " <> time <> " minutes from ride starts. ")
+    , term_3b: (\distance time  -> "3. Be within " <> distance <> " of pickup before " <> time <> " minutes of ride starts.")
     , excluded_charges: "Excluded charges"
     , tolls: "Tolls"
     , state_permit: "State Permits"
-    , excluded_footer: "These fare components are NOT included in the fare and must be settled separately with the customer"
+    , excluded_footer: "Please settle these charges directly with the customer."
     , included_charges: "Included charges"
     , inc_1: "*Extra Charges are only applicable if you exceed the included distance / time."
     , inc_2a: (\startTime endTime multiplier -> "Night time charges: Driving between " <> " " <> startTime <> " and " <> " " <> endTime <> " " <> " will have a " <> " " <> multiplier <> " " <> " multiplier to final fare.")
@@ -1722,4 +1722,24 @@ getEn =
     , free_trial_ending_in_n_days: (\days -> "Free trial ending in " <> days <> " days!")
     , n_free_rides_completed: (\n -> n <> " free Rides Completed")
     , n_more_free_rides_left: (\n -> n <> " more free rides left!")
+    , collect_cash_at_drop : "Collect Cash At Drop"
+    , more_details : "more details"
+    , take_photo_of_parcel : "Take Photo of Package"
+    , sender_will_verify_parcel : "Sender will verify this photo to give you the OTP"
+    , call_customer_text : "Call Customer"
+    , call_sender : "Call Sender"
+    , call_receiver : "Call Receiver"
+    , start : "Start"
+    , end : "End"
+    , delivery_bike_service_tier_desc : "Please ensure that you carry at least a 15L backpack or rear-mounted carrier box on your two-wheeler"
+    , rate_your_delivery_with : "Rate your delivery with"
+    , delivery_details : "Delivery Details"
+    , take_clear_picture_parcel : "Take a clear picture of your delivery parcel on a flat surface."
+    , ensure_adequate_light_parcel_desc : "Ensure that the lighting is adequate and all necessary information on parcel are clearly visible."
+    , fit_parcel_correctly : "Fit the entire parcel in the marked area correctly as shown below."
+    , correct_positioning : "Correct Positioning"
+    , incorrect_positioning : "Incorrect Positioning"
+    , upload_parcel_image : "Upload Parcel Image"
+    , pickup_instruction : "Pickup Instruction"
+    , drop_instruction : "Drop Instruction"
     }

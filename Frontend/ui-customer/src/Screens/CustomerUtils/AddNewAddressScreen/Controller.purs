@@ -84,6 +84,7 @@ instance loggableAction :: Loggable Action where
     PrimaryEditTextAC act -> case act of
       PrimaryEditText.TextChanged _ _ -> trackAppTextInput appId (getScreen ADD_NEW_ADDRESS_SCREEN)"save_as_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "primary_button" "focus_changed"
+      PrimaryEditText.TextImageClicked -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "primary_button" "text_image_clicked"
     PrimaryButtonAC act -> case act of
       PrimaryButton.OnClick -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "primary_button" "onclick"
       PrimaryButton.NoAction -> trackAppActionClick appId (getScreen ADD_NEW_ADDRESS_SCREEN) "primary_button" "no_action"

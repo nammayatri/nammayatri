@@ -33,6 +33,7 @@ data SubscriptionConfig = SubscriptionConfig
     isTriggeredAtEndRide :: Kernel.Prelude.Bool,
     maxRetryCount :: Kernel.Prelude.Int,
     numberOfFreeTrialRides :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    partialDueClearanceMessageKey :: Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageKey,
     paymentLinkChannel :: Domain.Types.MerchantMessage.MediaChannel,
     paymentLinkJobTime :: Data.Time.NominalDiffTime,
     paymentServiceName :: Domain.Types.MerchantServiceConfig.ServiceName,

@@ -634,6 +634,7 @@ getVehicleVariantImage variant =
       "BIKE_TIER" -> "ny_ic_bike_side," <> commonUrl <> "ny_ic_bike_side.png"
       "SUV_PLUS"  -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
       "SUV_PLUS_TIER" -> "ny_ic_suv_plus_side," <> commonUrl <> "ny_ic_suv_plus_side.png"
+      "DELIVERY_BIKE" -> "ny_ic_parcel_box," <> commonUrl <> "ny_ic_parcel_box.png"
       _ -> fetchImage FF_ASSET "ic_vehicle_front"
 
 getVariantRideType :: String -> String
@@ -955,6 +956,7 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.INTERCITY -> "INTERCITY"
   SA.BIKE_TIER -> "BIKE"
   SA.SUV_PLUS_TIER -> "SUV_PLUS"
+  SA.DELIVERY_BIKE -> "DELIVERY_BIKE"
 
 getVehicleServiceTierImage :: SA.ServiceTierType -> String
 getVehicleServiceTierImage vehicleServiceTier = case vehicleServiceTier of
@@ -1063,7 +1065,9 @@ dummyLocationInfo = SA.LocationInfo {
       lat : 0.0,
       city : Nothing,
       areaCode : Nothing,
-      lon : 0.0
+      lon : 0.0,
+      extras : Nothing,
+      instructions : Nothing
   }
 
 vehicleVariantImage :: String -> String
@@ -1083,3 +1087,86 @@ getVehicleVariantName variant =
                   BikeCategory -> getString BIKE_TAXI
                   AmbulanceCategory -> getString AMBULANCE
                   UnKnown -> ""
+
+getRegisterationStepClickEventName :: ST.RegisterationStep -> String
+getRegisterationStepClickEventName step = case step of
+  ST.DRIVING_LICENSE_OPTION -> "dl_option_clicked"
+  ST.VEHICLE_DETAILS_OPTION -> "rc_option_clicked"
+  ST.GRANT_PERMISSION -> "grant_permissions_option_clicked"
+  ST.SUBSCRIPTION_PLAN -> "subscription_plans_option_clicked"
+  ST.PROFILE_PHOTO -> "profile_pic_option_selected"
+  ST.AADHAAR_CARD -> "aadhaar_option_clicked"
+  ST.PAN_CARD -> "pan_option_clicked"
+  ST.VEHICLE_PERMIT -> "vehicle_permit_option_clicked"
+  ST.FITNESS_CERTIFICATE -> "fitness_cert_option_clicked"
+  ST.VEHICLE_INSURANCE -> "veh_insurance_option_clicked"
+  ST.VEHICLE_PUC -> "puc_option_clicked"
+  ST.NO_OPTION -> ""
+
+getRegisterationStepScreenLoadedEventName :: ST.RegisterationStep -> String
+getRegisterationStepScreenLoadedEventName step = case step of
+  ST.DRIVING_LICENSE_OPTION -> "dl_page_loaded"
+  ST.VEHICLE_DETAILS_OPTION -> "rc_details_page_loaded"
+  ST.GRANT_PERMISSION -> "grant_permissions_page_loaded"
+  ST.SUBSCRIPTION_PLAN -> "subscription_plans_screen_loaded"
+  ST.PROFILE_PHOTO -> "profile_pic_page_loaded"
+  ST.AADHAAR_CARD -> "aadhaar_page_loaded"
+  ST.PAN_CARD -> "pan_page_loaded"
+  ST.VEHICLE_PERMIT -> "vehicle_permit_page_loaded"
+  ST.FITNESS_CERTIFICATE -> "fitness_cert_page_loaded"
+  ST.VEHICLE_INSURANCE -> "veh_insurance_page_loaded"
+  ST.VEHICLE_PUC -> "puc_page_loaded"
+  ST.NO_OPTION -> ""
+
+getDocUploadEventName :: ST.RegisterationStep -> String
+getDocUploadEventName step = case step of
+  ST.DRIVING_LICENSE_OPTION -> "dl_upload_clicked"
+  ST.VEHICLE_DETAILS_OPTION -> "rc_details_upload_clicked"
+  ST.SUBSCRIPTION_PLAN -> "subscription_plans_upload_clicked"
+  ST.PROFILE_PHOTO -> "profile_pic_upload_clicked"
+--- above events are not required/mentiond -----------------
+  ST.AADHAAR_CARD -> "aadhaar_upload_clicked"
+  ST.PAN_CARD -> "pan_upload_clicked"
+  ST.VEHICLE_PERMIT -> "vehicle_permit_upload_clicked"
+  ST.FITNESS_CERTIFICATE -> "fitness_cert_upload_clicked"
+  ST.VEHICLE_INSURANCE -> "veh_insurance_upload_clicked"
+  ST.VEHICLE_PUC -> "puc_upload_clicked"
+  _ -> ""
+
+getRegisterationStepModule :: ST.RegisterationStep -> String
+getRegisterationStepModule step = case step of
+  ST.DRIVING_LICENSE_OPTION -> "dl_page"
+  ST.VEHICLE_DETAILS_OPTION -> "rc_details_page"
+  ST.GRANT_PERMISSION -> "grant_permissions_page"
+  ST.SUBSCRIPTION_PLAN -> "subscription_plans_screen"
+  ST.PROFILE_PHOTO -> "profile_pic_page"
+  ST.AADHAAR_CARD -> "aadhaar_page"
+  ST.PAN_CARD -> "pan_page"
+  ST.VEHICLE_PERMIT -> "vehicle_permit_page"
+  ST.FITNESS_CERTIFICATE -> "fitness_cert_page"
+  ST.VEHICLE_INSURANCE -> "veh_insurance_page"
+  ST.VEHICLE_PUC -> "puc_page"
+  ST.NO_OPTION -> ""
+
+getRegisterationStepScreenSource :: ST.RegisterationStep -> String
+getRegisterationStepScreenSource step = case step of
+  ST.DRIVING_LICENSE_OPTION -> "DL"
+  ST.VEHICLE_DETAILS_OPTION -> "RC"
+  ST.GRANT_PERMISSION -> "PERMISSION"
+  ST.SUBSCRIPTION_PLAN -> "PLAN"
+  ST.PROFILE_PHOTO -> "PROFILE"
+  ST.AADHAAR_CARD -> "AADHAAR"
+  ST.PAN_CARD -> "PAN"
+  ST.VEHICLE_PERMIT -> "VP"
+  ST.FITNESS_CERTIFICATE -> "FC"
+  ST.VEHICLE_INSURANCE -> "VI"
+  ST.VEHICLE_PUC -> "PUC"
+  ST.NO_OPTION -> ""
+
+getVehicleCategorySelectedEvent :: ST.VehicleCategory -> String
+getVehicleCategorySelectedEvent category = case category of
+  ST.AutoCategory -> "auto_selected"
+  ST.CarCategory -> "car_selected"
+  ST.BikeCategory -> "bike_selected"
+  ST.AmbulanceCategory -> "ambulance_selected"
+  _ -> ""

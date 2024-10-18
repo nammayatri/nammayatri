@@ -1296,7 +1296,14 @@ type ActiveRide = {
   destinationCity :: Maybe String,
   roundTrip :: Boolean,
   returnTime :: String,
-  parkingCharge :: Number
+  parkingCharge :: Number,
+  extraFromLocationInfo :: Maybe String,
+  extraToLocationInfo :: Maybe String,
+  senderInstructions :: Maybe String,
+  receiverInstructions :: Maybe String,
+  senderPersonDetails :: Maybe API.PersonDetails,
+  receiverPersonDetails :: Maybe API.PersonDetails,
+  notifiedReachedDestination :: Boolean
 }
 
 type HomeScreenProps =  {
@@ -1382,6 +1389,8 @@ type HomeScreenProps =  {
   showAddUPIPopUp :: Boolean,
   showVerifyUPIPopUp :: Boolean,
   chatServiceKilled :: Boolean,
+  isSourceDetailsExpanded  :: Boolean,
+  showDeliveryCallPopup :: Boolean,
   checkUpcomingRide :: Boolean,
   homeScreenBannerVisibility :: Boolean,
   rideRequestPill :: RideRequestPill,
@@ -1403,6 +1412,13 @@ type TollState = {
 , estimatedCharge :: Number
 }
 
+data DeliverCallType = SENDER | RECEIVER
+derive instance genericDeliverCallType :: Generic DeliverCallType _
+instance eqDeliverCallType :: Eq DeliverCallType where eq = genericEq
+instance showDeliverCallType :: Show DeliverCallType where show = genericShow
+instance encodeDeliverCallType :: Encode DeliverCallType where encode = defaultEnumEncode
+instance decodeDeliverCallType :: Decode DeliverCallType where decode = defaultEnumDecode
+
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
 
 derive instance genericSubscriptionBannerType :: Generic SubscriptionBannerType _
@@ -1419,7 +1435,7 @@ instance showSubscriptionPopupType :: Show SubscriptionPopupType where show = ge
 instance encodeSubscriptionPopupType :: Encode SubscriptionPopupType where encode = defaultEnumEncode
 instance decodeSubscriptionPopupType :: Decode SubscriptionPopupType where decode = defaultEnumDecode
 
-data TripType = OneWay | RoundTrip | Rental | Intercity | RideShare
+data TripType = OneWay | RoundTrip | Rental | Intercity | RideShare | Delivery
 
 derive instance genericTripType :: Generic TripType _
 instance eqTripType :: Eq TripType where eq = genericEq
@@ -1437,7 +1453,7 @@ instance decodePwdType :: Decode DisabilityType where decode = defaultEnumDecode
 
 data DriverStatus = Online | Offline | Silent
 
-data TimerStatus = Scheduled | Triggered | PostTriggered | NoStatus
+data TimerStatus = Scheduled | Triggered | PostTriggered | NoStatus | NotTriggered | DestinationReachedTriggered
 
 derive instance genericTimerStatus :: Generic TimerStatus _
 instance eqTimerStatus :: Eq TimerStatus where eq = genericEq
@@ -1923,6 +1939,7 @@ data NotificationType =  DRIVER_REACHED
                       | RIDE_REQUESTED
                       | TRIP_STARTED
                       | EDIT_LOCATION
+                      | DRIVER_REACHED_DESTINATION
 
 derive instance genericNotificationType :: Generic NotificationType _
 instance showNotificationType :: Show NotificationType where show = genericShow
@@ -3203,3 +3220,23 @@ type GullakSDKResp = {
   responseCode :: Int,
   isNewUser :: Boolean
 }
+
+-------------------------------------------------- Parcel Image Upload Screen ------------------------------------
+
+type UploadParcelImageScreenState = {
+  data :: UploadParcelImageScreenData ,
+  props :: UploadParcelImageScreenProps
+}
+
+type UploadParcelImageScreenData = {
+  rideId :: String,
+  imagePath :: String,
+  errorMessage :: Maybe String,
+  imageId :: String
+} 
+
+type UploadParcelImageScreenProps = {
+  showConfirmAndUploadButton :: Boolean,
+  isStartRideActive :: Boolean,
+  uploading :: Boolean
+} 

@@ -1096,6 +1096,20 @@ export const getSecondsFromUTCTime = function (str) {
   return Math.floor(date.getTime() / 1000);
 }
 
+export const getMedianUTCTime = function (utcTime1, utcTime2) {
+  console.log("getMedianUTCTime", utcTime1, " ", utcTime2);
+  const date1 = new Date(utcTime1);
+  const date2 = new Date(utcTime2);
+
+  const time1 = date1.getTime();
+  const time2 = date2.getTime();
+
+  const medianTime = (time1 + time2) / 2;
+  const medianDate = new Date(medianTime);
+
+  return medianDate.toISOString();
+}
+
 export const isCoordOnPath = function (data) {
   return function (lat) {
     return function (lon) {
@@ -1934,12 +1948,14 @@ export const factoryResetApp = function (str) {
 }
 
 export const uploadFile = function (aspectRatio) {
+  return function (canChooseFromFile) {
   return function () {
     try{
-      return JBridge.uploadFile(JSON.stringify(aspectRatio));
+      return JBridge.uploadFile(JSON.stringify(aspectRatio), canChooseFromFile);
     } catch (err2) {
       return JBridge.uploadFile();
     }
+  };
   };
 };
 
@@ -2066,13 +2082,7 @@ export const shareTextMessage = function (str) {
 export const shareImageMessage = function (message) {
   return function (data) {
     try {
-      if (JBridge.shareImageMessage && methodArgumentCount("shareImageMessage") == 3) {
         JBridge.shareImageMessage(message, "", JSON.stringify(data));
-      } else {
-        if (JBridge.shareTextMessage) {
-          JBridge.shareTextMessage("", message);
-        }
-      }
     } catch (e) {
       if (JBridge.shareTextMessage) {
         JBridge.shareTextMessage("", message);
@@ -2967,12 +2977,53 @@ export const emitJOSEventWithCb = function (eventName, innerPayload, cb, action)
   return window.JOS.emitEvent("java")("onEvent")(JSON.stringify({ event: eventName, action: callback, innerPayload: JSON.stringify(innerPayload)}))()();
 }
 
-
 export const triggerReloadApp = function (lazy){
   return function () {
     window["onEvent'"]("onReloadApp", {});
   }
 }
+
+export const storeCallBackPickContact = function (cb, action) {
+  try {
+    const callback = callbackMapper.map(function (name, phoneNumber) {
+      cb(action (name)(phoneNumber))();
+    });
+    window.JBridge.storeCallBackPickContact(callback);
+  }catch (error){
+    console.log("Error occurred in storeCallBackPickContact ------", error);
+  }
+}
+
+
+export const pickContact = function () {
+  if (window.JBridge.pickContact){
+    try {
+      JBridge.pickContact();
+      return true
+    } catch (err) {
+      console.log("Error in pickContact", err);
+      return false
+    }
+  }
+}
+
+export const getResourceIdentifier = function (resourceName) {
+  return function(type){
+    try{
+      if(JBridge.getResourceIdentifier){
+        return JBridge.getResourceIdentifier(resourceName,type);
+      }
+      else
+      {
+        return 0;
+      }
+    } catch (err) {
+      console.log("Error in getResourceIdentifier", err);
+      return 0;
+    }
+}
+}
+
 
 export const rsEncryption = (str) => window.JBridge.rsEncryption ? window.JBridge.rsEncryption(str) : "";
   

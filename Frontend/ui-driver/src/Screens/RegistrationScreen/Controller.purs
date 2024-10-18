@@ -69,6 +69,8 @@ import Engineering.Helpers.Commons (liftFlow)
 import Common.RemoteConfig (fetchRemoteConfigString)
 import RemoteConfig
 import DecodeUtil (decodeForeignObject)
+import Engineering.Helpers.Events as EHE
+import Helpers.Utils as HU
 
 instance showAction :: Show Action where
   show _ = ""
@@ -105,6 +107,7 @@ instance loggableAction :: Loggable Action where
     PrimaryEditTextActionController act -> case act of
       PrimaryEditText.TextChanged id value -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "registration_number_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "registration_number_text_focus_changed" "primary_edit_text"
+      PrimaryEditText.TextImageClicked -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "registration_number_text_image_clicked" "primary_edit_text"
     ReferralCodeTextChanged str -> pure unit
     EnterReferralCode val -> pure unit
     _ -> trackAppActionClick appId (getScreen REGISTRATION_SCREEN) "popup_modal_action" "no_action"
@@ -142,7 +145,7 @@ data Action = BackPressed
             | SupportClick Boolean
             | WhatsAppClick
             | CallButtonClick
-            | ChooseVehicleCategory Int
+            | ChooseVehicleCategory Int ST.VehicleCategory
             | ContinueButtonAction PrimaryButtonController.Action
             | ExpandOptionalDocs
             | OptionsMenuAction OptionsMenu.Action
@@ -174,7 +177,8 @@ eval BackPressed state = do
 
 eval (RegistrationAction step ) state = do
        let item = step.stage
-       let hvFlowIds = decodeForeignObject (getHVRemoteConfig $ fetchRemoteConfigString "app_configs") (hvConfigs JB.getAppName)
+           hvFlowIds = decodeForeignObject (getHVRemoteConfig $ fetchRemoteConfigString "app_configs") (hvConfigs JB.getAppName)
+           _ = EHE.addEvent (EHE.defaultEventObject $ HU.getRegisterationStepClickEventName item)
        case item of 
           DRIVING_LICENSE_OPTION -> exit $ GoToUploadDriverLicense state
           VEHICLE_DETAILS_OPTION -> exit $ GoToUploadVehicleRegistration state step.rcNumberPrefixList
@@ -327,7 +331,8 @@ eval ContactSupport state = continueWithCmd state [do
   pure NoAction
   ]
 
-eval (ChooseVehicleCategory index) state = 
+eval (ChooseVehicleCategory index item) state = do
+  let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getVehicleCategorySelectedEvent item)
   continue state { props { selectedVehicleIndex = Mb.Just index } }
 
 eval (ContinueButtonAction PrimaryButtonController.OnClick) state = do
