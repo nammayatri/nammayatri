@@ -1808,3 +1808,23 @@ driverReachedDestination rideId payload = do
     withAPIResult (EP.driverReachedDestination rideId) unwrapResponse $ callAPI headers $ DriverReachedDestinationRequest rideId payload
     where
         unwrapResponse (x) = x
+
+------------------------------- HyperVerge Sdk Calls logging ------------------------------------
+
+updateHVSdkCallLog :: HVSdkCallLogReq -> Flow GlobalState (Either ErrorResponse HVSdkCallLogResp)
+updateHVSdkCallLog req = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.updateHVSdkCallLog "") unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse x = x
+
+
+makeupdateHVSdkCallLogReq :: String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> Maybe String -> HVSdkCallLogReq
+makeupdateHVSdkCallLogReq txnId status hvFlowId failureReason docType callbackResponse = HVSdkCallLogReq
+    { "callbackResponse" : callbackResponse,
+      "docType" : docType,
+      "failureReason" : failureReason,
+      "hvFlowId" : hvFlowId,
+      "status" : status,
+      "txnId" : txnId
+    }
