@@ -244,5 +244,6 @@ data DriverSearchBatchInput m = DriverSearchBatchInput
     tripQuoteDetails :: [TripQuoteDetail],
     customerExtraFee :: Maybe HighPrecMoney,
     messageId :: Text,
-    isRepeatSearch :: Bool
+    isRepeatSearch :: Bool,
+    isAllocatorBatch :: Bool
   }

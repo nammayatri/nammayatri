@@ -2,6 +2,7 @@ module ExternalBPP.Metro.Flow where
 
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.Text as T
+import qualified Data.UUID as UU
 import Domain.Action.Beckn.FRFS.Common
 import Domain.Action.Beckn.FRFS.OnInit
 import Domain.Action.Beckn.FRFS.OnSearch
@@ -115,7 +116,8 @@ init _merchant _merchantOperatingCity _providerConfig bapConfig (_mRiderName, _m
 
 confirm :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> FRFSConfig -> ProviderConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
 confirm _merchant _merchantOperatingCity _frfsConfig config bapConfig (_mRiderName, mRiderNumber) booking = do
-  bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError $ "Bpp Order Id Missing")
+  bookingUUID <- UU.fromText booking.id.getId & fromMaybeM (InternalError "Booking Id not being able to parse into UUID")
+  let bppOrderId :: Text = T.pack $ "CUM" ++ show ((\(a, b, c, d) -> a + b + c + d) (UU.toWords bookingUUID)) -- This should be max 20 characters UUID (Using Transaction UUID)
   tickets <- mkTickets bppOrderId
   return $
     DOrder

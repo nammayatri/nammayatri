@@ -25,6 +25,7 @@ import Domain.Types.DriverInformation
 import qualified Domain.Types.DriverPanCard as Domain
 import Domain.Types.DriverSSN
 import Domain.Types.FarePolicy
+import qualified Domain.Types.HyperVergeSdkLogs as DomainHVSdkLogs
 import qualified Domain.Types.Image as Image
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -71,6 +72,7 @@ import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.DriverSSN as QDriverSSN
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.HyperVergeSdkLogs as HVSdkLogsQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as PersonQuery
 import qualified Storage.Queries.Translations as MTQuery
@@ -779,4 +781,26 @@ getDriverRegisterBankAccountStatus (mbPersonId, _, _) = do
         API.Types.UI.DriverOnboardingV2.BankAccountResp
           { chargesEnabled = resp.chargesEnabled,
             detailsSubmitted = resp.detailsSubmitted
+          }
+
+postDriverRegisterLogHvSdkCall ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.HVSdkCallLogReq ->
+    Environment.Flow APISuccess
+  )
+postDriverRegisterLogHvSdkCall (mbDriverId, merchantId, merchantOperatingCityId) APITypes.HVSdkCallLogReq {..} = do
+  driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
+  HVSdkLogsQuery.create =<< makeHyperVergeSdkLogs driverId
+  return Success
+  where
+    makeHyperVergeSdkLogs driverId = do
+      now <- getCurrentTime
+      return $
+        DomainHVSdkLogs.HyperVergeSdkLogs
+          { createdAt = now,
+            updatedAt = now,
+            ..
           }

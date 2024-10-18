@@ -708,6 +708,7 @@ library
       Domain.Types.FleetRCAssociation
       Domain.Types.FullFarePolicyProgressiveDetailsPerMinRateSection
       Domain.Types.GoHomeConfig
+      Domain.Types.HyperVergeSdkLogs
       Domain.Types.IdfyVerification
       Domain.Types.Image
       Domain.Types.Invoice
@@ -824,6 +825,7 @@ library
       Storage.Beam.FleetRCAssociation
       Storage.Beam.FullFarePolicyProgressiveDetailsPerMinRateSection
       Storage.Beam.GoHomeConfig
+      Storage.Beam.HyperVergeSdkLogs
       Storage.Beam.IdfyVerification
       Storage.Beam.Image
       Storage.Beam.Invoice
@@ -943,6 +945,7 @@ library
       Storage.Queries.FleetRCAssociation
       Storage.Queries.FullFarePolicyProgressiveDetailsPerMinRateSection
       Storage.Queries.GoHomeConfig
+      Storage.Queries.HyperVergeSdkLogs
       Storage.Queries.IdfyVerification
       Storage.Queries.Image
       Storage.Queries.Invoice
