@@ -58,6 +58,8 @@ let driverClickhouseCfg =
       , retryInterval = [ +0 ]
       }
 
+let dashboardClickhouseCfg = driverClickhouseCfg
+
 let rcfg =
       { connectHost = "localhost"
       , connectPort = 6379
@@ -300,6 +302,7 @@ in  { esqDBCfg
     , esqDBReplicaCfg
     , kafkaClickhouseCfg
     , driverClickhouseCfg
+    , dashboardClickhouseCfg
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
     , hedisNonCriticalCfg = rcfg

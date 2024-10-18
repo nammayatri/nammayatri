@@ -52,7 +52,7 @@ issueCategoryList ::
   ShortId DM.Merchant ->
   Context.City ->
   FlowHandler Common.IssueCategoryListRes
-issueCategoryList (ShortId merchantShortId) opCity = withFlowHandlerAPI $ DIssue.issueCategoryList (ShortId merchantShortId) opCity dashboardIssueHandle Common.DRIVER
+issueCategoryList (ShortId merchantShortId) opCity = withDashboardFlowHandlerAPI $ DIssue.issueCategoryList (ShortId merchantShortId) opCity dashboardIssueHandle Common.DRIVER
 
 issueList ::
   ShortId DM.Merchant ->
@@ -63,14 +63,14 @@ issueList ::
   Maybe (Id IssueCategory) ->
   Maybe Text ->
   FlowHandler Common.IssueReportListResponse
-issueList (ShortId merchantShortId) opCity mbLimit mbOffset mbStatus mbCategoryId mbAssignee = withFlowHandlerAPI $ DIssue.issueList (ShortId merchantShortId) opCity mbLimit mbOffset mbStatus (cast <$> mbCategoryId) mbAssignee dashboardIssueHandle Common.DRIVER
+issueList (ShortId merchantShortId) opCity mbLimit mbOffset mbStatus mbCategoryId mbAssignee = withDashboardFlowHandlerAPI $ DIssue.issueList (ShortId merchantShortId) opCity mbLimit mbOffset mbStatus (cast <$> mbCategoryId) mbAssignee dashboardIssueHandle Common.DRIVER
 
 issueInfo ::
   ShortId DM.Merchant ->
   Context.City ->
   Id IssueReport ->
   FlowHandler Common.IssueInfoRes
-issueInfo (ShortId merchantShortId) opCity issueReportId = withFlowHandlerAPI $ DIssue.issueInfo (ShortId merchantShortId) opCity (Just issueReportId) Nothing dashboardIssueHandle Common.DRIVER
+issueInfo (ShortId merchantShortId) opCity issueReportId = withDashboardFlowHandlerAPI $ DIssue.issueInfo (ShortId merchantShortId) opCity (Just issueReportId) Nothing dashboardIssueHandle Common.DRIVER
 
 issueInfoV2 ::
   ShortId DM.Merchant ->
@@ -78,7 +78,7 @@ issueInfoV2 ::
   Maybe (Id IssueReport) ->
   Maybe (ShortId IssueReport) ->
   FlowHandler Common.IssueInfoRes
-issueInfoV2 (ShortId merchantShortId) opCity mbIssueReportId mbIssueReportShortId = withFlowHandlerAPI $ DIssue.issueInfo (ShortId merchantShortId) opCity mbIssueReportId mbIssueReportShortId dashboardIssueHandle Common.DRIVER
+issueInfoV2 (ShortId merchantShortId) opCity mbIssueReportId mbIssueReportShortId = withDashboardFlowHandlerAPI $ DIssue.issueInfo (ShortId merchantShortId) opCity mbIssueReportId mbIssueReportShortId dashboardIssueHandle Common.DRIVER
 
 issueUpdate ::
   ShortId DM.Merchant ->
@@ -86,7 +86,7 @@ issueUpdate ::
   Id IssueReport ->
   Common.IssueUpdateByUserReq ->
   FlowHandler APISuccess
-issueUpdate (ShortId merchantShortId) opCity issueReportId req = withFlowHandlerAPI $ DIssue.issueUpdate (ShortId merchantShortId) opCity (cast issueReportId) dashboardIssueHandle req
+issueUpdate (ShortId merchantShortId) opCity issueReportId req = withDashboardFlowHandlerAPI $ DIssue.issueUpdate (ShortId merchantShortId) opCity (cast issueReportId) dashboardIssueHandle req
 
 issueAddComment ::
   ShortId DM.Merchant ->
@@ -94,25 +94,25 @@ issueAddComment ::
   Id IssueReport ->
   Common.IssueAddCommentByUserReq ->
   FlowHandler APISuccess
-issueAddComment (ShortId merchantShortId) opCity issueReportId req = withFlowHandlerAPI $ DIssue.issueAddComment (ShortId merchantShortId) opCity (cast issueReportId) dashboardIssueHandle req
+issueAddComment (ShortId merchantShortId) opCity issueReportId req = withDashboardFlowHandlerAPI $ DIssue.issueAddComment (ShortId merchantShortId) opCity (cast issueReportId) dashboardIssueHandle req
 
 issueFetchMedia :: ShortId DM.Merchant -> Context.City -> Text -> FlowHandler Text
-issueFetchMedia (ShortId merchantShortId) _opCity = withFlowHandlerAPI . DIssue.issueFetchMedia (ShortId merchantShortId)
+issueFetchMedia (ShortId merchantShortId) _opCity = withDashboardFlowHandlerAPI . DIssue.issueFetchMedia (ShortId merchantShortId)
 
 ticketStatusCallBack :: ShortId DM.Merchant -> Context.City -> A.Value -> FlowHandler APISuccess
-ticketStatusCallBack (ShortId _merchantShortId) _opCity req = withFlowHandlerAPI $ DIssue.ticketStatusCallBack req dashboardIssueHandle Common.DRIVER
+ticketStatusCallBack (ShortId _merchantShortId) _opCity req = withDashboardFlowHandlerAPI $ DIssue.ticketStatusCallBack req dashboardIssueHandle Common.DRIVER
 
 createIssueCategory :: ShortId DM.Merchant -> Context.City -> Common.CreateIssueCategoryReq -> FlowHandler Common.CreateIssueCategoryRes
-createIssueCategory (ShortId merchantShortId) city req = withFlowHandlerAPI $ DIssue.createIssueCategory (ShortId merchantShortId) city req dashboardIssueHandle Common.DRIVER
+createIssueCategory (ShortId merchantShortId) city req = withDashboardFlowHandlerAPI $ DIssue.createIssueCategory (ShortId merchantShortId) city req dashboardIssueHandle Common.DRIVER
 
 updateIssueCategory :: ShortId DM.Merchant -> Context.City -> Id IssueCategory -> Common.UpdateIssueCategoryReq -> FlowHandler APISuccess
-updateIssueCategory (ShortId merchantShortId) city issueCategoryId req = withFlowHandlerAPI $ DIssue.updateIssueCategory (ShortId merchantShortId) city issueCategoryId req dashboardIssueHandle Common.DRIVER
+updateIssueCategory (ShortId merchantShortId) city issueCategoryId req = withDashboardFlowHandlerAPI $ DIssue.updateIssueCategory (ShortId merchantShortId) city issueCategoryId req dashboardIssueHandle Common.DRIVER
 
 createIssueOption :: ShortId DM.Merchant -> Context.City -> Id IssueCategory -> Id IssueMessage -> Common.CreateIssueOptionReq -> FlowHandler Common.CreateIssueOptionRes
-createIssueOption (ShortId merchantShortId) city issueCategoryId issueMessageId req = withFlowHandlerAPI $ DIssue.createIssueOption (ShortId merchantShortId) city Nothing issueCategoryId issueMessageId dashboardIssueHandle req Common.DRIVER
+createIssueOption (ShortId merchantShortId) city issueCategoryId issueMessageId req = withDashboardFlowHandlerAPI $ DIssue.createIssueOption (ShortId merchantShortId) city Nothing issueCategoryId issueMessageId dashboardIssueHandle req Common.DRIVER
 
 updateIssueOption :: ShortId DM.Merchant -> Context.City -> Id IssueOption -> Common.UpdateIssueOptionReq -> FlowHandler APISuccess
-updateIssueOption (ShortId merchantShortId) city issueOptionId req = withFlowHandlerAPI $ DIssue.updateIssueOption (ShortId merchantShortId) city issueOptionId req dashboardIssueHandle Common.DRIVER
+updateIssueOption (ShortId merchantShortId) city issueOptionId req = withDashboardFlowHandlerAPI $ DIssue.updateIssueOption (ShortId merchantShortId) city issueOptionId req dashboardIssueHandle Common.DRIVER
 
 upsertIssueMessage :: ShortId DM.Merchant -> Context.City -> Common.UpsertIssueMessageReq -> FlowHandler Common.UpsertIssueMessageRes
-upsertIssueMessage (ShortId merchantShortId) city req = withFlowHandlerAPI $ DIssue.upsertIssueMessage (ShortId merchantShortId) city req dashboardIssueHandle Common.DRIVER
+upsertIssueMessage (ShortId merchantShortId) city req = withDashboardFlowHandlerAPI $ DIssue.upsertIssueMessage (ShortId merchantShortId) city req dashboardIssueHandle Common.DRIVER

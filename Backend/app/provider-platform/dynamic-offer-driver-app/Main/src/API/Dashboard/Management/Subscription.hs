@@ -235,36 +235,36 @@ handler merchantId city =
 
 planListV2 :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> DPlan.ServiceNames -> FlowHandler DTPlan.PlanListAPIRes
 planListV2 merchantShortId opCity driverId serviceName = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
-  mOCityId <- withFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
-  withFlowHandlerAPI $ DTPlan.planList (cast driverId, m.id, mOCityId) serviceName (Just 0) (Just 50) Nothing
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  mOCityId <- withDashboardFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
+  withDashboardFlowHandlerAPI $ DTPlan.planList (cast driverId, m.id, mOCityId) serviceName (Just 0) (Just 50) Nothing
 
 planList :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> FlowHandler DTPlan.PlanListAPIRes
 planList merchantShortId opCity driverId = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
-  mOCityId <- withFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
-  withFlowHandlerAPI $ DTPlan.planList (cast driverId, m.id, mOCityId) DPlan.YATRI_SUBSCRIPTION (Just 0) (Just 50) Nothing
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  mOCityId <- withDashboardFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
+  withDashboardFlowHandlerAPI $ DTPlan.planList (cast driverId, m.id, mOCityId) DPlan.YATRI_SUBSCRIPTION (Just 0) (Just 50) Nothing
 
 planSelectV2 :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> Id DPlan.Plan -> DPlan.ServiceNames -> FlowHandler APISuccess
 planSelectV2 merchantShortId opCity driverId planId serviceName = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
-  mOCityId <- withFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
-  withFlowHandlerAPI $ DTPlan.planSwitch serviceName planId (cast driverId, m.id, mOCityId)
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  mOCityId <- withDashboardFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
+  withDashboardFlowHandlerAPI $ DTPlan.planSwitch serviceName planId (cast driverId, m.id, mOCityId)
 
 planSelect :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> Id DPlan.Plan -> FlowHandler APISuccess
 planSelect merchantShortId opCity driverId planId = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
-  mOCityId <- withFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
-  withFlowHandlerAPI $ DTPlan.planSwitch DPlan.YATRI_SUBSCRIPTION planId (cast driverId, m.id, mOCityId)
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  mOCityId <- withDashboardFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
+  withDashboardFlowHandlerAPI $ DTPlan.planSwitch DPlan.YATRI_SUBSCRIPTION planId (cast driverId, m.id, mOCityId)
 
 planSuspendV2 :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> DPlan.ServiceNames -> FlowHandler APISuccess
-planSuspendV2 merchantShortId opCity driverId serviceName = withFlowHandlerAPI $ do
+planSuspendV2 merchantShortId opCity driverId serviceName = withDashboardFlowHandlerAPI $ do
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   DTPlan.planSuspend serviceName True (cast driverId, m.id, mOCityId)
 
 planSuspend :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> FlowHandler APISuccess
-planSuspend merchantShortId opCity driverId = withFlowHandlerAPI $ do
+planSuspend merchantShortId opCity driverId = withDashboardFlowHandlerAPI $ do
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   DTPlan.planSuspend DPlan.YATRI_SUBSCRIPTION True (cast driverId, m.id, mOCityId)
@@ -277,7 +277,7 @@ planSubscribeV2 ::
   DPlan.ServiceNames ->
   PlanSubscribeReq ->
   FlowHandler DTPlan.PlanSubscribeRes
-planSubscribeV2 merchantShortId opCity driverId planId serviceName req = withFlowHandlerAPI $ do
+planSubscribeV2 merchantShortId opCity driverId planId serviceName req = withDashboardFlowHandlerAPI $ do
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -300,7 +300,7 @@ planSubscribe ::
   Id DP.Driver ->
   Id DPlan.Plan ->
   FlowHandler DTPlan.PlanSubscribeRes
-planSubscribe merchantShortId opCity driverId planId = withFlowHandlerAPI $ do
+planSubscribe merchantShortId opCity driverId planId = withDashboardFlowHandlerAPI $ do
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
   driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -308,21 +308,21 @@ planSubscribe merchantShortId opCity driverId planId = withFlowHandlerAPI $ do
 
 currentPlanV2 :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> DPlan.ServiceNames -> FlowHandler DTPlan.CurrentPlanRes
 currentPlanV2 merchantShortId opCity driverId serviceName = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
-  mOCityId <- withFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
-  withFlowHandlerAPI $ DTPlan.currentPlan serviceName (cast driverId, m.id, mOCityId)
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  mOCityId <- withDashboardFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
+  withDashboardFlowHandlerAPI $ DTPlan.currentPlan serviceName (cast driverId, m.id, mOCityId)
 
 currentPlan :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> FlowHandler DTPlan.CurrentPlanRes
 currentPlan merchantShortId opCity driverId = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
-  mOCityId <- withFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
-  withFlowHandlerAPI $ DTPlan.currentPlan DPlan.YATRI_SUBSCRIPTION (cast driverId, m.id, mOCityId)
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  mOCityId <- withDashboardFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
+  withDashboardFlowHandlerAPI $ DTPlan.currentPlan DPlan.YATRI_SUBSCRIPTION (cast driverId, m.id, mOCityId)
 
 paymentStatus :: ShortId DM.Merchant -> Context.City -> Id DP.Driver -> Id INV.Invoice -> FlowHandler APayment.PaymentStatusResp
 paymentStatus merchantShortId opCity driverId invoiceId = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantShortId
-  moCityId <- withFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
-  withFlowHandlerAPI $ APayment.getStatus (cast driverId, m.id, moCityId) (cast invoiceId)
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantShortId
+  moCityId <- withDashboardFlowHandlerAPI $ CQMOC.getMerchantOpCityId Nothing m (Just opCity)
+  withDashboardFlowHandlerAPI $ APayment.getStatus (cast driverId, m.id, moCityId) (cast invoiceId)
 
 getPaymentHistory ::
   ShortId DM.Merchant ->
@@ -332,7 +332,7 @@ getPaymentHistory ::
   Maybe Int ->
   Maybe Int ->
   FlowHandler Driver.HistoryEntityV2
-getPaymentHistory merchantShortId opCity driverId invoicePaymentMode limit offset = withFlowHandlerAPI $ DDriver.getPaymentHistory merchantShortId opCity driverId invoicePaymentMode limit offset DPlan.YATRI_SUBSCRIPTION
+getPaymentHistory merchantShortId opCity driverId invoicePaymentMode limit offset = withDashboardFlowHandlerAPI $ DDriver.getPaymentHistory merchantShortId opCity driverId invoicePaymentMode limit offset DPlan.YATRI_SUBSCRIPTION
 
 getPaymentHistoryV2 ::
   ShortId DM.Merchant ->
@@ -343,7 +343,7 @@ getPaymentHistoryV2 ::
   Maybe Int ->
   Maybe Int ->
   FlowHandler Driver.HistoryEntityV2
-getPaymentHistoryV2 merchantShortId opCity driverId serviceName invoicePaymentMode limit offset = withFlowHandlerAPI $ DDriver.getPaymentHistory merchantShortId opCity driverId invoicePaymentMode limit offset serviceName
+getPaymentHistoryV2 merchantShortId opCity driverId serviceName invoicePaymentMode limit offset = withDashboardFlowHandlerAPI $ DDriver.getPaymentHistory merchantShortId opCity driverId invoicePaymentMode limit offset serviceName
 
 getPaymentHistoryEntityDetailsV2 ::
   ShortId DM.Merchant ->
@@ -353,7 +353,7 @@ getPaymentHistoryEntityDetailsV2 ::
   Id INV.Invoice ->
   FlowHandler Driver.HistoryEntryDetailsEntityV2
 getPaymentHistoryEntityDetailsV2 merchantShortId opCity driverId serviceName invoiceId = do
-  withFlowHandlerAPI $ DDriver.getPaymentHistoryEntityDetails merchantShortId opCity driverId serviceName invoiceId
+  withDashboardFlowHandlerAPI $ DDriver.getPaymentHistoryEntityDetails merchantShortId opCity driverId serviceName invoiceId
 
 getPaymentHistoryEntityDetails ::
   ShortId DM.Merchant ->
@@ -362,7 +362,7 @@ getPaymentHistoryEntityDetails ::
   Id INV.Invoice ->
   FlowHandler Driver.HistoryEntryDetailsEntityV2
 getPaymentHistoryEntityDetails merchantShortId opCity driverId invoiceId = do
-  withFlowHandlerAPI $ DDriver.getPaymentHistoryEntityDetails merchantShortId opCity driverId DPlan.YATRI_SUBSCRIPTION invoiceId
+  withDashboardFlowHandlerAPI $ DDriver.getPaymentHistoryEntityDetails merchantShortId opCity driverId DPlan.YATRI_SUBSCRIPTION invoiceId
 
 updateDriverSubscriptionDriverFeeAndInvoiceUpdate ::
   ShortId DM.Merchant ->
@@ -371,7 +371,7 @@ updateDriverSubscriptionDriverFeeAndInvoiceUpdate ::
   Common.ServiceNames ->
   Common.SubscriptionDriverFeesAndInvoicesToUpdate ->
   FlowHandler Common.SubscriptionDriverFeesAndInvoicesToUpdate
-updateDriverSubscriptionDriverFeeAndInvoiceUpdate merchantShortId opCity driverId serviceName req = withFlowHandlerAPI $ DDriver.updateSubscriptionDriverFeeAndInvoice merchantShortId opCity driverId serviceName req
+updateDriverSubscriptionDriverFeeAndInvoiceUpdate merchantShortId opCity driverId serviceName req = withDashboardFlowHandlerAPI $ DDriver.updateSubscriptionDriverFeeAndInvoice merchantShortId opCity driverId serviceName req
 
 sendSmsToDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> DDriver.SendSmsReq -> FlowHandler APISuccess
-sendSmsToDriver merchantShortId opCity driverId volunteerId = withFlowHandlerAPI . DDriver.sendSmsToDriver merchantShortId opCity driverId volunteerId
+sendSmsToDriver merchantShortId opCity driverId volunteerId = withDashboardFlowHandlerAPI . DDriver.sendSmsToDriver merchantShortId opCity driverId volunteerId
