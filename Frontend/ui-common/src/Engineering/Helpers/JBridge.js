@@ -2995,15 +2995,3 @@ export const launchCustomTab = (url, cb) => {
     window.JBridge.launchCustomTab(url, callback);
   }
 }
-
-export const initSignedCall = () => {
-  // java , ios func call 
-  // return what?
-  // params ??
-}
-
-export const makeSignedCall = () => {
-  // java , ios func call 
-  // return what?
-  // params ??
-}
