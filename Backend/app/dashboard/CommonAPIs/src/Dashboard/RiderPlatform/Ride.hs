@@ -11,28 +11,29 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TemplateHaskell #-}
+-- {-# LANGUAGE DerivingVia #-}
+-- {-# LANGUAGE TemplateHaskell #-}
 
-module Dashboard.RiderPlatform.Ride
-  ( module Dashboard.RiderPlatform.Ride,
-    module Reexport,
-  )
-where
+module Dashboard.RiderPlatform.Ride where
 
-import Dashboard.Common as Reexport
-import Dashboard.Common.Ride as Reexport
-import Data.Aeson
-import Domain.Types
-import Kernel.External.Maps
-import qualified Kernel.External.Ticket.Interface.Types as Ticket
-import Kernel.Prelude
-import Kernel.Storage.Esqueleto (derivePersistField)
-import Kernel.Types.Id
-import Kernel.Types.Price
-import Kernel.Utils.JSON (constructorsWithLowerCase)
-import Kernel.Utils.TH (mkHttpInstancesForEnum)
-import Servant hiding (Summary)
+-- ( module Dashboard.RiderPlatform.Ride,
+--   module Reexport,
+-- )
+
+-- import Dashboard.Common as Reexport
+-- import Dashboard.Common.Ride as Reexport
+
+-- import Data.Aeson
+-- import Domain.Types
+-- import Kernel.External.Maps
+-- import qualified Kernel.External.Ticket.Interface.Types as Ticket
+-- import Kernel.Prelude
+-- import Kernel.Storage.Esqueleto (derivePersistField)
+-- import Kernel.Types.Id
+-- import Kernel.Types.Price
+-- import Kernel.Utils.JSON (constructorsWithLowerCase)
+-- import Kernel.Utils.TH (mkHttpInstancesForEnum)
+-- import Servant hiding (Summary)
 
 ---------------------------------------------------------
 -- share ride info--------------------------------------
@@ -235,13 +236,13 @@ import Servant hiding (Summary)
 --   deriving stock (Show, Generic)
 --   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data BookingStatus = UPCOMING | UPCOMING_6HRS | ONGOING | ONGOING_6HRS | RCOMPLETED | RCANCELLED
-  deriving stock (Show, Read, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+-- data BookingStatus = UPCOMING | UPCOMING_6HRS | ONGOING | ONGOING_6HRS | RCOMPLETED | RCANCELLED
+--   deriving stock (Show, Read, Generic)
+--   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-derivePersistField "BookingStatus"
+-- derivePersistField "BookingStatus"
 
-$(mkHttpInstancesForEnum ''BookingStatus)
+-- $(mkHttpInstancesForEnum ''BookingStatus)
 
 ---------------------------------------------------------
 -- Trip Route--------------------------------------

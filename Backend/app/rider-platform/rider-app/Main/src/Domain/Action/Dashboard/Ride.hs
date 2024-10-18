@@ -34,7 +34,7 @@ import qualified Beckn.ACL.Common as Common
 import Beckn.ACL.Status
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified "dashboard-helper-api" Dashboard.Common as Common
-import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
+import qualified Dashboard.Common.Ride as Common
 import Data.Coerce (coerce)
 import qualified Data.List as DL
 import qualified Data.Text as T
@@ -272,8 +272,15 @@ buildRideListItem QRide.RideItem {..} = do
         ..
       }
 
-getRideKaptureList :: ShortId DM.Merchant -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.TicketRideListRes
-getRideKaptureList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
+getRideKaptureList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe (ShortId Common.Ride) ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Flow Common.TicketRideListRes
+getRideKaptureList merchantShortId _ mbRideShortId countryCode mbPhoneNumber _ = do
   merchant <- findMerchantByShortId merchantShortId
   let totalRides = 5
   let mbShortId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbRideShortId
