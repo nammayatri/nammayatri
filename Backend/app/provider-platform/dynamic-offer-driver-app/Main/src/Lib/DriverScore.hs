@@ -48,6 +48,7 @@ import qualified Storage.Queries.DriverStats as DSQ
 import qualified Storage.Queries.FareParameters as FPQ
 import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as FPPDQ
 import qualified Storage.Queries.Ride as RQ
+import Tools.Constants
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 import Utils.Common.Cac.KeyNameConstants
@@ -81,8 +82,10 @@ eventPayloadHandler merchantOpCityId DST.OnNewSearchRequestForDrivers {..} =
 eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
   let driverId = driver.id
   merchantConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  let windowSize = toInteger $ fromMaybe 7 merchantConfig.cancellationRateWindow
-  void $ SCR.incrementCancelledCount driverId windowSize
+  let ridetags = fromMaybe [] ride.rideTags
+  when (validDriverCancellation `elem` ridetags) $ do
+    let windowSize = toInteger $ fromMaybe 7 merchantConfig.cancellationRateWindow
+    void $ SCR.incrementCancelledCount driverId windowSize
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
   when (doCancellationRateBasedBlocking == Just True && not (driverInfo.onRide)) $
     SCR.nudgeOrBlockDriver merchantConfig driver driverInfo
