@@ -334,7 +334,8 @@ window.getMerchantConfig = function () {
       "enableShareRide" : true,
       "enableSupport": false,
       "enableEditDestination" : true,
-      "enableEditPickupLocation" : true
+      "enableEditPickupLocation" : true,
+      "disableBike" : true
     }
     , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
     , "termsLink" :"https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0"
