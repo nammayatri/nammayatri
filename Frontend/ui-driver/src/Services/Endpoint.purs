@@ -398,3 +398,6 @@ uploadParcelImage rideId = (getBaseUrl "") <> "/driver/ride/" <> rideId <> "/upl
 
 driverReachedDestination :: String -> String
 driverReachedDestination rideId = (getBaseUrl "") <> "/driver/ride/" <> rideId <> "/arrived/destination"
+
+updateHVSdkCallLog :: String -> String
+updateHVSdkCallLog _ = (getBaseUrl "") <> "/driver/register/logHvSdkCall"
