@@ -25,8 +25,8 @@ module SharedLogic.SyncRide
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
 import qualified BecknV2.OnDemand.Utils.Common as Utils
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Ride as Common
 import Domain.Types.Beckn.Status
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.BookingCancellationReason as DBCR

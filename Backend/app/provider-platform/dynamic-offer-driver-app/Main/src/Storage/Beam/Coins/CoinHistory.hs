@@ -17,7 +17,7 @@
 
 module Storage.Beam.Coins.CoinHistory where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverCoin as DCoins
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as DCoins
 import qualified Database.Beam as B
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
