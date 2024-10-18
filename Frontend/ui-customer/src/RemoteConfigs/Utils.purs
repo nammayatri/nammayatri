@@ -4,7 +4,7 @@ import Prelude
 import DecodeUtil (decodeForeignObject, parseJSON)
 import Foreign (Foreign)
 import Foreign.Index (readProp)
-import Common.RemoteConfig (fetchRemoteConfigString, getCityBasedConfig, defaultCityRemoteConfig, BundleLottieConfig)
+import Common.RemoteConfig (fetchRemoteConfigString, getCityBasedConfig, defaultCityRemoteConfig, BundleLottieConfig, RemoteAC(..))
 import Data.Maybe (Maybe(..), maybe)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Data.Generic.Rep (class Generic)
@@ -132,3 +132,17 @@ getInterCityBusConfig lazy = decodeForeignObject (parseJSON $ fetchRemoteConfigS
 
 getBundleSplashConfig :: String -> BundleLottieConfig
 getBundleSplashConfig lazy = decodeForeignObject (parseJSON $ fetchRemoteConfigString "customer_bundle_splash_config") $ { lottieUrl : "https://assets.moving.tech/beckn/nammayatri/user/lottie/ny_bundle_splash_lottie_new.json", enable : true}
+
+getSafetyConfig :: LazyCheck -> SafetyConfig
+getSafetyConfig _ = 
+    let config = fetchRemoteConfigString "safety_configs"
+        value = decodeForeignObject (parseJSON config) defaultSafetyConfig
+    in value
+
+defaultSafetyConfig :: SafetyConfig
+defaultSafetyConfig = {
+    bannerAction : "",
+    bannerUrl : "", 
+    bannerPosition : 0, 
+    showOnRide : ""
+}

@@ -311,6 +311,8 @@ foreign import getMedianUTCTime :: Fn2 String String String
 foreign import storeCallBackPickContact :: forall action. EffectFn2 (action -> Effect Unit)  (String -> String -> action) Unit
 foreign import pickContact :: EffectFn1 String Boolean
 foreign import getResourceIdentifier :: String -> String -> Int
+foreign import executeJS :: Fn2 (Array String) String String
+
 type SliderConfig = { 
   id :: String,
   sliderConversionRate :: Number,

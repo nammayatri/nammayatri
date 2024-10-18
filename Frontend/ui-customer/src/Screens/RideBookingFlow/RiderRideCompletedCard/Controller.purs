@@ -132,7 +132,7 @@ eval (PrimaryButtonCarousel PrimaryButton.OnClick) state = do
     }
 
   if priorityIssue == CTP.NoIssue then
-    continue state {customerIssue {showIssueBanners = false}}
+    continue state {customerIssue {showIssueBanners = false}, ratingViewState{ nightSafety = Just true }}
   else 
     exit $ GoToIssueReportChatScreenWithIssue ratingUpdatedState priorityIssue
 
