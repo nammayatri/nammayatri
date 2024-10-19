@@ -3853,6 +3853,7 @@ homescreenHeader push state =
     [height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
+    , background Color.white900
     , padding $ PaddingTop safeMarginTop
     , id $ getNewIDWithTag "homescreenHeader"
     , afterRender push $ const UpdatePeekHeight
