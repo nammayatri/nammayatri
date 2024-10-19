@@ -384,6 +384,11 @@ shouldRectifyDistantPointsSnapToRoadFailure tripCategory = case tripCategory of
   InterCity _ _ -> True
   _ -> False
 
+isOneWayTrip :: TripCategory -> Bool
+isOneWayTrip tripCategory = case tripCategory of
+  OneWay _ -> True
+  _ -> False
+
 isRentalTrip :: TripCategory -> Bool
 isRentalTrip tripCategory = case tripCategory of
   Rental _ -> True
