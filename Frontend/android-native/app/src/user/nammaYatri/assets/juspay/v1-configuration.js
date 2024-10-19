@@ -319,7 +319,13 @@ window.getMerchantConfig = function () {
         },
         "bike" : {
           "name" : "Bike",
-          "image" : "ny_ic_bike_side,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_bike_side.png"
+          "image": "ny_ic_bike_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_bike_side.png",
+          "leftViewImage" : "ny_ic_bike_left_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_bike_left_side.png"
+        },
+        "suvPlus" : {
+          "name" : "XL Plus",
+          "image" : "ny_ic_suv_plus_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv_plus_side.png",
+          "leftViewImage" : "ny_ic_suv_plus_left_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_suv_plus_left_side.png"
         }
       }
       , "enableOnlyAuto" : true
