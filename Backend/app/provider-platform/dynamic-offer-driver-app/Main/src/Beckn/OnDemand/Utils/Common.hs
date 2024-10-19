@@ -1126,6 +1126,7 @@ mkQuotationBreakup fareParams =
   let fareParameters = mkFareParamsBreakups mkPrice mkQuotationBreakupInner fareParams
    in Just $ filter (filterRequiredBreakups $ DFParams.getFareParametersType fareParams) fareParameters -- TODO: Remove after roll out
   where
+    mkPrice :: HighPrecMoney -> Maybe Spec.Price
     mkPrice money =
       Just
         Spec.Price
