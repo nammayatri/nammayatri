@@ -42,7 +42,7 @@ buildOnConfirmReqV2 req isValueAddNP = do
   handleErrorV2 req $ \message -> do
     let order = message.confirmReqMessageOrder
     fareParamsQuotationBreakup <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "Missing Quote Breakups.")
-    fareBreakups <- traverse ACL.mkDFareBreakup fareParamsQuotationBreakup
+    let fareBreakups = mapMaybe ACL.mkDFareBreakup fareParamsQuotationBreakup
     case parseData message fareBreakups of
       Right dReq -> do
         case dReq of

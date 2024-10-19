@@ -41,7 +41,7 @@ buildOnInitReqV2 req = do
   handleErrorV2 req $ \message -> do
     let order = message.confirmReqMessageOrder
     fareParamsQuotationBreakup <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "Missing Quote Breakups.")
-    fareBreakups <- traverse ACL.mkDFareBreakup fareParamsQuotationBreakup
+    let fareBreakups = mapMaybe ACL.mkDFareBreakup fareParamsQuotationBreakup
     case parsedData of
       Left err -> throwError . InvalidBecknSchema $ "on_init req," <> "on_init error: " <> show err
       Right (bookingId, bppBookingId, estimatedFare, paymentId, currency) -> do

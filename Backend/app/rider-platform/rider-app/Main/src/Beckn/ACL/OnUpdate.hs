@@ -200,7 +200,7 @@ parseEditDestinationSoftUpdate order messageId = do
   fareBreakups' <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "Quote breakup is not present in Soft Update Event.")
   fare :: DecimalValue.DecimalValue <- order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= DecimalValue.valueFromString & fromMaybeM (InvalidRequest "quote.price.value is not present in Soft Update Event.")
   currency :: Currency <- order.orderQuote >>= (.quotationPrice) >>= (.priceCurrency) >>= (readMaybe . T.unpack) & fromMaybeM (InvalidRequest "quote.price.currency is not present in Soft Update Event.")
-  fareBreakups <- traverse Common.mkDFareBreakup fareBreakups'
+  let fareBreakups = mapMaybe Common.mkDFareBreakup fareBreakups'
   return $
     DOnUpdate.OUEditDestSoftUpdateReq $
       DOnUpdate.EditDestSoftUpdateReq
