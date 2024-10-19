@@ -218,7 +218,7 @@ parseRideCompletedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text ->
 parseRideCompletedEvent order msgId = do
   bookingDetails <- parseBookingDetails order msgId
   currency :: Currency <- order.orderQuote >>= (.quotationPrice) >>= (.priceCurrency) >>= (readMaybe . T.unpack) & fromMaybeM (InvalidRequest "quote.price.currency is not present in RideCompleted Event.")
-  fare :: DecimalValue.DecimalValue <- order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= DecimalValue.valueFromString & fromMaybeM (InvalidRequest "quote.price.value is not present in RideCompleted Event.")
+  fare :: DecimalValue.DecimalValue <- order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= decodeFromText & fromMaybeM (InvalidRequest "quote.price.value is not present in RideCompleted Event.")
   let totalFare = fare
       tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
       chargeableDistance :: Maybe HighPrecMeters = readMaybe . T.unpack =<< getTagV2' Tag.RIDE_DISTANCE_DETAILS Tag.CHARGEABLE_DISTANCE tagGroups
@@ -245,7 +245,7 @@ parseRideCompletedEvent order msgId = do
 
 mkDFareBreakup :: Spec.QuotationBreakupInner -> Maybe Common.DFareBreakup
 mkDFareBreakup breakup = do
-  val :: DecimalValue.DecimalValue <- breakup.quotationBreakupInnerPrice >>= (.priceValue) >>= DecimalValue.valueFromString
+  val :: DecimalValue.DecimalValue <- breakup.quotationBreakupInnerPrice >>= (.priceValue) >>= decodeFromText
   currency :: Currency <- breakup.quotationBreakupInnerPrice >>= (.priceCurrency) >>= readMaybe . T.unpack
   title <- breakup.quotationBreakupInnerTitle
   pure $
