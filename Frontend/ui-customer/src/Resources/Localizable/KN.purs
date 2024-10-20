@@ -1359,6 +1359,8 @@ getKN stringKey =
         SHIVAMOGGA -> "ಶಿವಮೊಗ್ಗ"
         HUBLI -> "ಹುಬ್ಬಳ್ಳಿ"
         MANGALORE -> "ಮಂಗಳೂರು"
+        ODISHA -> "Odisha"
+        BHUBANESWAR -> "Bhubaneswar"
         GULBARGA -> "ಗುಲ್ಬರ್ಗಾ"
         UDUPI -> "ಉಡುಪಿ"
         CANCEL_BOOKING_ -> "ಬುಕ್ ರದ್ದುಮಾಡಿ"

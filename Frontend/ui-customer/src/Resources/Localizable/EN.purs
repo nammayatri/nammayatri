@@ -1362,6 +1362,8 @@ getEN stringKey =
         SHIVAMOGGA -> "Shivamogga"
         HUBLI -> "Hubli"
         MANGALORE -> "Mangalore"
+        ODISHA -> "Odisha"
+        BHUBANESWAR -> "Bhubaneswar"
         GULBARGA -> "Gulbarga"
         UDUPI -> "Udupi"
         CANCEL_BOOKING_ -> "Cancel Booking"
