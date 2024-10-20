@@ -1359,6 +1359,8 @@ getBN stringKey =
         HUBLI -> "হুবলি"
         MANGALORE -> "ম্যাংগালোর"
         GULBARGA -> "গুলবর্গা"
+        ODISHA -> "Odisha"
+        BHUBANESWAR -> "Bhubaneswar"
         UDUPI -> "উডুপি"
         CANCEL_BOOKING_ -> "বুকিং বাতিল করুন"
         CANCEL_INTERCITY_BOOKING -> "আন্তঃনগর বুকিং বাতিল করুন"

@@ -1373,6 +1373,8 @@ getTE stringKey =
     HUBLI -> "హుబ్లీ"
     MANGALORE -> "మంగుళూరు"
     GULBARGA -> "గుల్బర్గా"
+    ODISHA -> "Odisha"
+    BHUBANESWAR -> "Bhubaneswar"
     UDUPI -> "ఉడిపి"
     CANCEL_BOOKING_ -> "బుకింగ్ రద్దు చేయండి"
     CANCEL_INTERCITY_BOOKING -> "ఇంటర్‌సిటీ బుకింగ్ రద్దు చేయండి"

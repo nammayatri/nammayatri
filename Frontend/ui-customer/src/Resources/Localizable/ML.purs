@@ -1359,6 +1359,8 @@ getML stringKey =
         HUBLI -> "ഹൂബ്ലി"
         MANGALORE -> "മംഗലാപുരം"
         GULBARGA -> "ഗുൽബർഗ"
+        ODISHA -> "Odisha"
+        BHUBANESWAR -> "Bhubaneswar"
         UDUPI -> "ഉഡുപ്പി"
         CANCEL_BOOKING_ -> "ബുക്കിംഗ് റദ്ദാക്കുക"
         CANCEL_INTERCITY_BOOKING -> "ഇന്റർസിറ്റി ബുക്കിംഗ് റദ്ദാക്കുക"
