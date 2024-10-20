@@ -495,6 +495,7 @@ newtype LatLong = LatLong {
   lon :: Number
 }
 
+instance eqLatLong :: Eq LatLong where eq = genericEq
 newtype SearchRes = SearchRes {
   searchId :: String,
   searchExpiry :: String,
@@ -2589,6 +2590,17 @@ instance standardEncodeTicketPlaceStatus :: StandardEncode TicketPlaceStatus
   where
     standardEncode _ = standardEncode {}
 
+data TicketServiceType = METRO | BUS
+
+derive instance genericTicketServiceType :: Generic TicketServiceType _
+instance showTicketServiceType :: Show TicketServiceType where show = genericShow
+instance decodeTicketServiceType :: Decode TicketServiceType where decode = defaultEnumDecode
+instance encodeTicketServiceType :: Encode TicketServiceType where encode = defaultEnumEncode
+instance eqTicketServiceType :: Eq TicketServiceType where eq = genericEq
+instance standardEncodeTicketServiceType :: StandardEncode TicketServiceType
+  where
+    standardEncode _ = standardEncode {}
+
 newtype BusinessHoursResp = BusinessHoursResp {
   id :: String,
   slot :: Maybe String, -- array of slots
@@ -3309,40 +3321,44 @@ instance showFollowers :: Show Followers where show = genericShow
 instance decodeFollowers :: Decode Followers where decode = defaultDecode
 instance encodeFollowers :: Encode Followers where encode = defaultEncode
 --------------------------------------------------- GetMetroStation ----------------------------------------------------
-data GetMetroStationReq = GetMetroStationReq String
+data GetMetroStationReq = GetMetroStationReq String String String String
 
 newtype GetMetroStationResponse = GetMetroStationResponse (Array GetMetroStationResp)
 
 newtype GetMetroStationResp = GetMetroStationResp { 
-     name :: String
-  ,  code :: String
-  ,  lat :: Maybe Number
-  ,  lon :: Maybe Number
-  ,  address :: Maybe String
-  ,  stationType :: Maybe StationType --StationType
-  ,  color :: Maybe String
+    address :: Maybe String,
+    code :: String,
+    color :: Maybe String,
+    distance :: Maybe Int,
+    lat :: Maybe Number,
+    lon :: Maybe Number,
+    name :: String,
+    sequenceNum :: Maybe Int,
+    stationType :: Maybe String
 }
 
 derive instance genericGetMetroStationResponse :: Generic GetMetroStationResponse _
 derive instance newtypeGetMetroStationResponse :: Newtype GetMetroStationResponse _
+instance eqGetMetroStationResponse :: Eq GetMetroStationResponse where eq = genericEq
 instance showGetMetroStationResponse :: Show GetMetroStationResponse where show = genericShow
 instance decodeGetMetroStationResponse :: Decode GetMetroStationResponse where decode = defaultDecode
 
 data StationType = START | END | TRANSIT | INTERMEDIATE
 
 instance makeGetMetroStationReq :: RestEndpoint GetMetroStationReq  where
-    makeRequest reqBody@(GetMetroStationReq city) headers = defaultMakeRequestWithoutLogs GET (EP.getMetroStations city) headers reqBody Nothing
+    makeRequest reqBody@(GetMetroStationReq vehicleType city routeCode startStationCode) headers = defaultMakeRequest GET (EP.getMetroStations vehicleType city routeCode startStationCode) headers reqBody Nothing
     encodeRequest = standardEncode
 
 derive instance genericGetMetroStationReq :: Generic GetMetroStationReq _
 instance showGetMetroStationReq     :: Show GetMetroStationReq where show     = genericShow
-instance standardGetMetroStationReq :: StandardEncode GetMetroStationReq where standardEncode (GetMetroStationReq _) = standardEncode {}
+instance standardGetMetroStationReq :: StandardEncode GetMetroStationReq where standardEncode (GetMetroStationReq _ _ _ _) = standardEncode {}
 instance decodeGetMetroStationReq   :: Decode GetMetroStationReq where decode = defaultDecode
 instance encodeGetMetroStationReq   :: Encode GetMetroStationReq where encode = defaultEncode
 
 derive instance genericGetMetroStationResp :: Generic GetMetroStationResp _
 instance showGetMetroStationResp        :: Show GetMetroStationResp where show     = genericShow
 instance standardEncodeGetMetroStationResp :: StandardEncode GetMetroStationResp where standardEncode (GetMetroStationResp res) = standardEncode res
+instance eqGetMetroStationResp        :: Eq GetMetroStationResp where eq     = genericEq
 instance decodeGetMetroStationResp         :: Decode GetMetroStationResp where decode = defaultDecode
 instance encodeGetMetroStationResp         :: Encode GetMetroStationResp where encode = defaultEncode
 
@@ -3358,21 +3374,62 @@ instance standardEncodeStationType :: StandardEncode StationType
   standardEncode TRANSIT = standardEncode $ show TRANSIT
   standardEncode INTERMEDIATE = standardEncode $ show INTERMEDIATE
 
+----------------------------------------------------GetBusRoute----------------------------------------------------
+
+data GetBusRoutesReq = GetBusRoutesReq String String String
+
+newtype GetBusRoutesResponse = GetBusRoutesResponse (Array GetBusRouteResp)
+
+newtype GetBusRouteResp = GetBusRouteResp {
+  code :: Maybe String,
+  endPoint :: LatLong ,
+  longName :: String,
+  shortName :: String,
+  startPoint :: LatLong,
+  totalStops :: Maybe Int
+}
+
+derive instance genericGetBusRoutesResponse :: Generic GetBusRoutesResponse _
+derive instance newtypeGetBusRoutesResponse :: Newtype GetBusRoutesResponse _
+instance showGetBusRoutesResponse :: Show GetBusRoutesResponse where show = genericShow
+instance eqGetBusRouteResp :: Eq GetBusRouteResp where eq = genericEq
+instance decodeGetBusRoutesResponse :: Decode GetBusRoutesResponse where decode = defaultDecode
+
+instance makeGetBusRoutesReq :: RestEndpoint GetBusRoutesReq  where
+    makeRequest reqBody@(GetBusRoutesReq city startStationCode endStationCode) headers = defaultMakeRequest GET (EP.getBusRoutes city startStationCode endStationCode) headers reqBody Nothing
+    encodeRequest = standardEncode
+
+derive instance genericGetBusRoutesReq :: Generic GetBusRoutesReq _
+instance showGetBusRoutesReq     :: Show GetBusRoutesReq where show     = genericShow
+instance standardGetBusRoutesReq :: StandardEncode GetBusRoutesReq where standardEncode (GetBusRoutesReq _ _ _) = standardEncode {}
+instance decodeGetBusRoutesReq   :: Decode GetBusRoutesReq where decode = defaultDecode
+instance encodeGetBusRoutesReq   :: Encode GetBusRoutesReq where encode = defaultEncode
+
+derive instance genericGetBusRouteResp :: Generic GetBusRouteResp _
+instance showGetBusRouteResp        :: Show GetBusRouteResp where show     = genericShow
+instance standardEncodeGetBusRouteResp :: StandardEncode GetBusRouteResp where standardEncode (GetBusRouteResp res) = standardEncode res
+instance decodeGetBusRouteResp         :: Decode GetBusRouteResp where decode = defaultDecode
+instance encodeGetBusRouteResp         :: Encode GetBusRouteResp where encode = defaultEncode
+
 --------------------------------------------------- searchMetro ----------------------------------------------------
+data SearchMetroRequest = SearchMetroRequest SearchMetroReq String
 
 newtype SearchMetroReq = SearchMetroReq {
-  fromStationCode :: String
-  ,  toStationCode :: String
-  ,  quantity :: Int
+  fromStationCode :: String,
+  toStationCode :: String,
+  quantity :: Int,
+  routeCode :: Maybe String
 }
 
 newtype SearchMetroResp = SearchMetroResp {
   searchId :: String
 }
 
-instance makeSearchMetroReq :: RestEndpoint SearchMetroReq  where
-  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.searchMetro "") headers reqBody Nothing
-  encodeRequest req = standardEncode req
+instance makeSearchMetroRequest :: RestEndpoint SearchMetroRequest where
+  makeRequest reqBody@(SearchMetroRequest rqBody vehicleType) headers = defaultMakeRequest POST (EP.searchMetro vehicleType) headers reqBody Nothing  
+  encodeRequest (SearchMetroRequest rqBody vehicleType) = standardEncode rqBody
+
+
 
 derive instance genericSearchMetroReq :: Generic SearchMetroReq _
 derive instance newtypeSearchMetroReq :: Newtype SearchMetroReq _
@@ -3389,6 +3446,11 @@ instance showSearchMetroResp :: Show SearchMetroResp where show = genericShow
 instance decodeSearchMetroResp :: Decode SearchMetroResp where decode = defaultDecode
 instance encodeSearchMetroResp :: Encode SearchMetroResp where encode = defaultEncode
 
+derive instance genericSearchMetroRequest :: Generic SearchMetroRequest _ 
+instance standardEncodeSearchMetroRequest :: StandardEncode SearchMetroRequest where standardEncode (SearchMetroRequest req id) = standardEncode req
+instance decodeSearchMetroRequest :: Decode  SearchMetroRequest where decode = defaultDecode
+instance encodeSearchMetroRequest :: Encode SearchMetroRequest where encode = defaultEncode
+
 --------------------------------------------------- getMetroQuote ----------------------------------------------------
 
 data GetMetroQuotesReq = GetMetroQuotesReq String
@@ -3403,6 +3465,7 @@ newtype FRFSStationAPI = FRFSStationAPI {
   , address :: Maybe String
   , stationType :: Maybe String
   , sequenceNum :: Maybe Int
+  , distance :: Maybe Number
   , color :: Maybe String
 }
 
@@ -3416,6 +3479,7 @@ newtype MetroQuote = MetroQuote {
   , validTill :: String
   , discountedTickets :: Maybe Int
   , eventDiscountAmount :: Maybe Number
+  , routeStations :: Maybe (Array GetBusRouteResp)
 }
 
 -- For understanding and debugging types 
@@ -3474,6 +3538,7 @@ newtype MetroTicketBookingStatus = MetroTicketBookingStatus {
   , tickets :: Array FRFSTicketAPI
   , stations :: Array FRFSStationAPI
   , createdAt :: String
+  , routeStations :: Maybe (Array GetBusRouteResp)
 }
 
 newtype FRFSBookingPaymentAPI = FRFSBookingPaymentAPI {
@@ -3983,6 +4048,7 @@ newtype MetroBookingConfigRes = MetroBookingConfigRes {
   customDates :: Array String,
   isEventOngoing :: Maybe Boolean,
   freeTicketInterval :: Maybe Int,
+  isCancellationAllowed :: Maybe Boolean,
   maxFreeTicketCashback :: Maybe Int,
   ticketsBookedInEvent :: Maybe Int
 }
@@ -4254,3 +4320,39 @@ instance standardEncodeGetDeliveryImageResponse :: StandardEncode GetDeliveryIma
 instance showGetDeliveryImageResponse :: Show GetDeliveryImageResponse where show = genericShow
 instance decodeGetDeliveryImageResponse :: Decode GetDeliveryImageResponse where decode = defaultDecode
 instance encodeGetDeliveryImageResponse :: Encode GetDeliveryImageResponse where encode = defaultEncode
+
+data SearchRideType = BUS_ROUTE | BUS_SOURCE | BUS_DESTINATION
+
+derive instance genericSearchRideType :: Generic SearchRideType _
+
+instance eqSearchRideType :: Eq SearchRideType where eq = genericEq
+
+instance showSearchRideType :: Show SearchRideType where show = genericShow
+
+
+
+------------------------------------------------- AutoComplete API Types --------------------------------------------
+
+data BusAutoCompleteReq = BusAutoCompleteReq String String String (Maybe String)
+
+newtype AutoCompleteResp = AutoCompleteResp {
+    routes :: Array GetBusRouteResp,
+    stops :: Array GetMetroStationResp
+}
+
+derive instance genericBusAutoCompleteReq :: Generic BusAutoCompleteReq _
+instance showBusAutoCompleteReq    :: Show BusAutoCompleteReq where show     = genericShow
+instance standardBusAutoCompleteReq :: StandardEncode BusAutoCompleteReq where standardEncode (BusAutoCompleteReq _ _ _ _) = standardEncode {}
+instance decodeBusAutoCompleteReq   :: Decode BusAutoCompleteReq where decode = defaultDecode
+instance encodeBusAutoCompleteReq  :: Encode BusAutoCompleteReq where encode = defaultEncode
+
+derive instance genericAutoCompleteResp :: Generic AutoCompleteResp _
+instance standardAutoCompleteResp :: StandardEncode AutoCompleteResp where
+    standardEncode (AutoCompleteResp body) = standardEncode body
+instance showAutoCompleteResp :: Show AutoCompleteResp where show = genericShow
+instance decodeAutoCompleteResp :: Decode AutoCompleteResp where decode = defaultDecode
+instance encodeAutoCompleteResp :: Encode AutoCompleteResp where encode = defaultEncode
+
+instance makeAutoCompleteReq :: RestEndpoint BusAutoCompleteReq where
+    makeRequest reqBody@(BusAutoCompleteReq vehicleType city location input) headers = defaultMakeRequest GET (EP.busAutoComplete vehicleType city location input) headers reqBody Nothing
+    encodeRequest = standardEncode

@@ -43,7 +43,7 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..), Accessiblity(..))
 import RemoteConfig as RC
-import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes, RideShareOptions, DeliveryDetails(..), PersonLocationAndInstruction(..), InitiatedAs(..), InstructionAndAddress(..), LocationAPIEntity(..), DeadKmFare(..),PriceAPIEntityDecimals(..),DistanceWithUnit(..),RideAPIEntity(..),RideBookingListRes)
+import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes, RideShareOptions, DeliveryDetails(..), PersonLocationAndInstruction(..), InitiatedAs(..), InstructionAndAddress(..), LocationAPIEntity(..), DeadKmFare(..),PriceAPIEntityDecimals(..),DistanceWithUnit(..),RideAPIEntity(..),RideBookingListRes, GetBusRouteResp)
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent, ChatContacts)
 import Screens(ScreenName)
@@ -1137,14 +1137,15 @@ type HomeScreenStateProps =
   , showDeliveryImageAndOtpModal :: Boolean
   , loadingDeliveryImage :: Boolean
   , fromDeliveryScreen :: Boolean
+  , busClicked :: Boolean
+  , ticketServiceType :: API.TicketServiceType
   }
 
 type EditedLocation = {
   gps :: LatLong ,
   address :: Address
 }
-
-data BottomNavBarIcon = TICKETING | MOBILITY
+data BottomNavBarIcon = TICKETING | MOBILITY | BUS_
 
 type BookingTime = {
   rideStartTime :: String,
@@ -2245,6 +2246,8 @@ type MetroTicketDetailsScreenData = {
 , ticketType :: String
 , ticketPrice :: Int
 , noOfTickets :: Int
+, vehicleType :: String
+, route :: Maybe (Array GetBusRouteResp)
 }
 
 type MetroTicketInfo = {
@@ -2282,6 +2285,8 @@ type MetroTicketDetailsScreenProps = {
 , cancellationCharges :: Maybe Number
 , refundAmount :: Maybe Number
 , showLoader :: Boolean
+, fromScreen :: Maybe String
+, paymentDetailsExpanded :: Boolean
 }
 
 data PreviousMetroTicketDetailsStage = MetroMyTicketsStage 
@@ -2321,6 +2326,8 @@ type MetroMyTicketsScreenProps = {
   dummyProps :: String
 , showShimmer :: Boolean
 , entryPoint :: MetroMyTicketsEntry
+, fromScreen :: Maybe String
+, ticketServiceType :: API.TicketServiceType
 }
 
 type MetroTicketCardData = {
@@ -2378,6 +2385,7 @@ type TicketStatusScreenProps = {
 
 data TicketStatusEntry = MetroTicketToPaymentStatusEntry
                        | ZooTicketToPaymentStatusEntry
+                       | BusTicketToPaymentStatusEntry
 derive instance genericTicketStatusEntry :: Generic TicketStatusEntry _ 
 instance showTicketStatusEntry :: Show TicketStatusEntry where show = genericShow
 instance eqTicketStatusEntry :: Eq TicketStatusEntry where eq = genericEq
@@ -2405,12 +2413,20 @@ type SearchLocationScreenData =
     defaultGate :: String,
     nearByGates :: Array Location,
     specialZoneCoordinates :: String,
+    activeRideIndex :: Int,
     confirmLocCategory :: ZoneType,
     metroStations :: Array Station,
     updatedMetroStations :: Array Station,
     predictionSelectedFromHome :: LocationListItemState,
     quotesList :: Array QuotesList,
-    rideDetails :: RideDetails
+    rideDetails :: RideDetails,
+    routeSearchedList :: Array GetBusRouteResp,
+    stopsSearchedList :: Array GetMetroStationResp,
+    updatedStopsSearchedList :: Array GetMetroStationResp,
+    updatedRouteSearchedList :: Array GetBusRouteResp,
+    ticketServiceType :: API.TicketServiceType,
+    rideType :: RideType,
+    searchRideType :: SearchRideType
   }
 
 type RideDetails = {
@@ -2426,6 +2442,7 @@ type Station = {
   stationName :: String,
   stationCode :: String
 }
+
 
 type SearchLocationScreenProps = 
   { searchLocStage :: SearchLocationStage
@@ -2445,11 +2462,24 @@ type SearchLocationScreenProps =
   , customerTip :: CustomerTipProps
   , fareProductType :: FareProductType
   , currentEstimateHeight :: Int
+  , routeSearch :: Boolean
+  , routeSelected :: String
+  , stopCodeSelected :: String
+  , stopNameSelected :: String
+  , autoCompleteBusStop :: Boolean
+  , srcLat :: Number 
+  , srcLong :: Number
   , selectedEstimateHeight :: Int }
 
 data SearchLocationActionType = AddingStopAction 
                               | SearchLocationAction
                               | MetroStationSelectionAction
+                              | BusStationSelectionAction
+                              | BusSearchSelectionAction
+                              | BusRouteSelectionAction
+                              | BusStopSelectionAction
+                              | NoBusRouteSelectionAction
+                              
 
 derive instance genericSearchLocationActionType :: Generic SearchLocationActionType _
 instance eqSearchLocationActionType :: Eq SearchLocationActionType where eq = genericEq
@@ -2484,10 +2514,18 @@ type LocationInfo =
     address :: String ,
     addressComponents :: Address ,
     metroInfo :: Maybe Station,
+    busStopInfo :: Maybe Station,
     stationCode :: String,
     city :: City
   }
   
+data RideType = ROUTES | STOP
+
+derive instance genericRideType :: Generic RideType _
+instance eqRideType :: Eq RideType where eq = genericEq
+instance showRideType :: Show RideType where
+  show ROUTES = "Routes"
+  show STOP = "Stops"
 -- ############################################## NammaSafetyScreenState #############################
 
 
@@ -2766,6 +2804,7 @@ type MetroStation = {
   , address :: Maybe String
   , stationType :: Maybe String
   , color :: Maybe String
+  , distance :: Maybe Int
   , sequenceNum :: Maybe Int
 }
 
@@ -2795,24 +2834,35 @@ type MetroTicketBookingScreenData = {
   , bookingId :: String
   , quoteId :: String
   , quoteResp :: Array MetroQuote
+  , routeSearchedList :: Array GetBusRouteResp
+  , routeList :: Array GetBusRouteResp
+  , stopsSearchedList :: Array GetMetroStationResp
   , metroBookingConfigResp :: MetroBookingConfigRes
   , eventDiscountAmount :: Maybe Int
+  , searchRideType :: SearchRideType
 }
 
 type MetroTicketBookingScreenProps = {
   isLimitExceeded :: Boolean
 , termsAndConditionsSelected :: Boolean
-, currentStage :: MetroTicketBookingStage
+, currentStage :: TicketBookingStage
 , isButtonActive :: Boolean
 , showMetroBookingTimeError :: Boolean
 , showShimmer :: Boolean
+, busClicked :: Boolean
+, routeList :: Boolean
+, showRouteOptions :: Boolean
+, isEmptyRoute :: String
+, ticketServiceType :: API.TicketServiceType
+, srcLat :: Number 
+, srcLong :: Number
 }
 
-data MetroTicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote | PaymentSDKPooling
+data TicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote | PaymentSDKPooling | BusTicketSelection
 
-derive instance genericMetroTicketBookingStage :: Generic MetroTicketBookingStage _
-instance eqMetroTicketBookingStage :: Eq MetroTicketBookingStage where eq = genericEq
-instance showMetroTicketBookingStage :: Show MetroTicketBookingStage where show = genericShow
+derive instance genericTicketBookingStage :: Generic TicketBookingStage _
+instance eqMetroTicketBookingStage :: Eq TicketBookingStage where eq = genericEq
+instance showTicketBookingStage :: Show TicketBookingStage where show = genericShow
 
 data TicketType = ONE_WAY_TICKET | ROUND_TRIP_TICKET
 
@@ -2848,7 +2898,7 @@ type MetroTicketStatusScreenProps = {
 , entryPoint :: MetroTicketStatusScreenEntry
 }
 
-data MetroTicketStatusScreenEntry = HomescreenToMetroTicketStatus | MyMetroTicketsToMetroTicketStatus
+data MetroTicketStatusScreenEntry = HomescreenToMetroTicketStatus | MyMetroTicketsToMetroTicketStatus | BusTicketToMetroTicketStatus
 
 type RideSearchProps = {
     sessionId :: String
@@ -3190,4 +3240,26 @@ data Currency  = INR | USD | EUR
 type NotificationBody = {
   rideTime :: Maybe String,
   bookingId :: Maybe String
+}
+
+
+-- ######################################### BusTicketBookingFlow ####################################################
+
+type BusTicketBookingState = {
+  data :: BusTicketBookingData,
+  props :: BusTicketBookingProps
+}
+
+type BusTicketBookingData = {
+    routeList :: Boolean
+  , showRouteOptions :: Boolean
+  , isEmptyRoute :: String
+  , ticketServiceType :: API.TicketServiceType
+  , ticketDetailsState :: Maybe MetroMyTicketsScreenState
+}
+
+type BusTicketBookingProps = {
+   srcLat :: Number
+ , srcLong :: Number
+ , showAllTickets :: Boolean
 }

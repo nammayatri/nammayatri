@@ -133,6 +133,8 @@ data ScreenOutput = LogoutUser
   | GoToParcelInstructions HomeScreenState
   | GetDeliveryImage HomeScreenState
   | GoToDeliveryDetails HomeScreenState
+  | GoToSearchLocationScreenForRoutes HomeScreenState LocationActionId
+  | GoToBusTicketBookingFlow HomeScreenState
 
 data Action = NoAction
   | BackPressed

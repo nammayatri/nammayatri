@@ -120,6 +120,10 @@ public class MediaPlayer {
         }
     }
 
+    public void takePhoto(){
+        uploadFile(false);
+    }
+
     public boolean isMicrophonePermissionEnabled() {
         return ActivityCompat.checkSelfPermission(bridgeComponents.getContext(), RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
     }

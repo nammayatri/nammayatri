@@ -33,6 +33,8 @@ initData = {
   , ticketType : ""
   , noOfTickets : 0
   , ticketPrice : 0
+  , vehicleType : ""
+  , route : Nothing
   }
 , props :  {
     dummyProps : ""
@@ -43,5 +45,7 @@ initData = {
   , isBookingCancellable : Nothing
   , cancellationCharges : Nothing
   , refundAmount : Nothing
+  , fromScreen : Nothing
+  , paymentDetailsExpanded : false
   }
 }

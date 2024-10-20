@@ -302,7 +302,7 @@ deliveryGuidelinesView push state =
       ]
       ( map (\item -> instructionItem item) instructionData)
     , textView $ 
-      [ text $ getString VIEW_ALL_GUIDELINES
+      [ text "View all Guidelines"
       , color Color.blue800
       , layoutGravity "center_horizontal"
       , margin $ Margin 16 16 16 0

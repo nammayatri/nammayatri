@@ -380,3 +380,9 @@ _end = lens (unwrap >>> _.end) (\oldRec newVal -> wrap ((unwrap oldRec) { end = 
 
 _requestorPartyRoles :: forall a b c. Newtype a { requestorPartyRoles :: b | c } => Lens' a b
 _requestorPartyRoles = lens (unwrap >>> _.requestorPartyRoles) (\oldRec newVal -> wrap ((unwrap oldRec) { requestorPartyRoles = newVal }))
+
+_types :: forall a b c. Newtype a { types :: b | c } => Lens' a b
+_types = lens (unwrap >>> _.types) (\oldRec newVal -> wrap ((unwrap oldRec) { types = newVal }))
+
+_vehicleType :: forall a b c. Newtype a { vehicleType :: b | c } => Lens' a b
+_vehicleType = lens (unwrap >>> _.vehicleType) (\oldRec newVal -> wrap ((unwrap oldRec) { vehicleType = newVal }))
