@@ -5,6 +5,7 @@ module IssueManagement.Domain.Types.Issue.IssueMessage where
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
 import IssueManagement.Common
+import IssueManagement.Domain.Types.Issue.Common
 import IssueManagement.Domain.Types.Issue.IssueCategory
 import IssueManagement.Domain.Types.Issue.IssueOption
 import IssueManagement.Domain.Types.MediaFile
@@ -29,7 +30,8 @@ data IssueMessage = IssueMessage
     messageType :: IssueMessageType,
     isActive :: Bool,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    filterOptionFn :: [FilterFn]
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema, Read, Ord)
 

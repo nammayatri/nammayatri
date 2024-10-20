@@ -20,6 +20,7 @@ module IssueManagement.Storage.Beam.Issue.IssueMessage where
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import GHC.Generics (Generic)
+import qualified IssueManagement.Domain.Types.Issue.Common as DIC
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage as DIM
 import IssueManagement.Tools.UtilsTH hiding (Generic, label)
 
@@ -40,7 +41,8 @@ data IssueMessageT f = IssueMessageT
     messageType :: B.C f DIM.IssueMessageType,
     isActive :: B.C f Bool,
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    filterOptionFn :: B.C f (Maybe [DIC.FilterFn])
   }
   deriving (Generic, B.Beamable)
 
