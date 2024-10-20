@@ -172,7 +172,7 @@ public class LocationUpdateService extends Service {
         context = getApplicationContext();
         try{
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                this.startForeground(notificationServiceId, createNotification());
+                this.startForeground(notificationServiceId, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
             } else{
                 this.startForeground(notificationServiceId, createNotification());
             }
@@ -231,7 +231,7 @@ public class LocationUpdateService extends Service {
         /* Start the service if the driver is active*/
         try{
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(notificationServiceId, createNotification());
+                startForeground(notificationServiceId, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION);
             }else {
                 startForeground(notificationServiceId, createNotification());
             }
