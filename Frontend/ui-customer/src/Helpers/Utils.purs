@@ -1212,6 +1212,9 @@ getLanguageBasedCityName cityName =
     Mangalore -> getString MANGALORE
     Gulbarga -> getString GULBARGA
     Udupi -> getString UDUPI
+    Odisha -> getString ODISHA
+    Paris -> getString ODISHA
+    Bhubaneswar -> getString BHUBANESWAR
     AnyCity -> ""
 
 breakPrefixAndId :: String -> Maybe (Tuple String (Maybe String))

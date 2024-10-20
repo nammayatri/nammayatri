@@ -1359,6 +1359,8 @@ getHI stringKey =
         HUBLI -> "हुबली"
         MANGALORE -> "मंगलौर"
         GULBARGA -> "गुलबर्गा"
+        ODISHA -> "Odisha"
+        BHUBANESWAR -> "Bhubaneswar"
         UDUPI -> "उडुपी"
         CANCEL_BOOKING_ -> "बुकिंग रद्द करें"
         CANCEL_INTERCITY_BOOKING -> "इंटरसिटी बुकिंग रद्द करें"

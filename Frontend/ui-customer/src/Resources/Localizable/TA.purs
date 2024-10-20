@@ -1378,6 +1378,8 @@ getTA stringKey =
     GULBARGA -> "குல்பர்கா"
     UDUPI -> "உடுபி"
     CANCEL_BOOKING_ -> "பதிவு ரத்து"
+    ODISHA -> "Odisha"
+    BHUBANESWAR -> "Bhubaneswar"
     CANCEL_INTERCITY_BOOKING -> "இன்டர்சிட்டி பதிவை ரத்து செய்" 
     RENTAL_BOOKING -> "வாடகை பதிவு"
     INTERCITY_BOOKING -> "இன்டர்சிட்டி பதிவு"

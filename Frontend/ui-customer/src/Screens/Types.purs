@@ -1197,6 +1197,9 @@ data City
   | Mangalore
   | Gulbarga
   | Udupi
+  | Odisha
+  | Paris
+  | Bhubaneswar
 
 derive instance genericCity :: Generic City _
 instance showCity :: Show City where show = genericShow
