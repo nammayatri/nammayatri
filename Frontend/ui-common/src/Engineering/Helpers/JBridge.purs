@@ -976,7 +976,7 @@ routeConfig :: RouteConfig
 routeConfig = {
   locations : {points: []},
   style : "LineString",
-  routeColor : "#323643",
+  routeColor : "#812486",
   isActual : true,
   routeWidth : 8,
   routeType : "",

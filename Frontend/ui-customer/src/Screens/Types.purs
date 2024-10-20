@@ -3163,3 +3163,14 @@ type NotificationBody = {
   rideTime :: Maybe String,
   bookingId :: Maybe String
 }
+
+type JourneyTrackingScreenState = {
+  data :: JourneyTrackingScreenData,
+  props :: JourneyTrackingScreenProps
+}
+
+type JourneyTrackingScreenData = {
+  appConfig :: AppConfig
+}
+
+type JourneyTrackingScreenProps = {}

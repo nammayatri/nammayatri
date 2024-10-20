@@ -93,6 +93,8 @@ import Services.API (BookingStatus(..))
 import Screens.DriverProfileScreenCommon.ScreenData (DriverProfileScreenCommonState(..))
 import Screens.CustomerUtils.FavouriteDriverTrips.ScreenData as FavouriteDriverTripsData
 import Screens.RideSummaryScreen.ScreenData as RideSummaryScreenData
+import Screens.MultiModalFlow.JourneyTrackingScreen.ScreenData as JourneyTrackingScreenData
+import Screens.Types as ST
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -144,6 +146,7 @@ newtype GlobalState = GlobalState {
   , favouriteDriverListScreen :: FavouriteDriverTripsState
   , parcelDeliveryScreen :: ParcelDeliveryScreenState
   , rideSummaryScreen :: RideSummaryScreenData.RideSummaryScreenState
+  , journeyTrackingScreen :: ST.JourneyTrackingScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -195,6 +198,7 @@ defaultGlobalState = GlobalState {
   , favouriteDriverListScreen : FavouriteDriverTripsData.initData
   , parcelDeliveryScreen : ParcelDeliveryScreenData.initData
   , rideSummaryScreen : RideSummaryScreenData.initData
+  , journeyTrackingScreen : JourneyTrackingScreenData.initData
   }
 
 defaultGlobalProps :: GlobalProps 
@@ -454,3 +458,4 @@ data ScreenType =
   | FavouriteDriverTripsStateType (FavouriteDriverTripsState -> FavouriteDriverTripsState)
   | ParcelDeliveryScreenStateType (ParcelDeliveryScreenState -> ParcelDeliveryScreenState)
   | RideSummaryScreenStateType (RideSummaryScreenData.RideSummaryScreenState -> RideSummaryScreenData.RideSummaryScreenState)
+  | JourneyTrackingScreenStateType (ST.JourneyTrackingScreenState -> ST.JourneyTrackingScreenState)
