@@ -357,6 +357,14 @@ updateSafetySettings state = do
         , hasCompletedMockSafetyDrill : Just state.data.hasCompletedMockSafetyDrill
         }
   void $ lift $ lift $ Remote.updateEmergencySettings req
+  when setUpCompletedConditions $ 
+      modifyScreenState $ HomeScreenStateType $ \homeScreen → homeScreen
+        { data
+          { settingSideBar
+            { hasCompletedSafetySetup = true
+            }
+          }
+        }
   pure unit
 
 
