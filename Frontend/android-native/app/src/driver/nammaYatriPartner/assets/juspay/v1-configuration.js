@@ -182,8 +182,8 @@ window.getMerchantConfig = function () {
       , "name" : "Namma Yatri"
     }
     , "enableMockLocation" : true
-    , "cityConfig" : [
-      {
+    , "cityConfig" : {
+      "Bangalore" : {
         "cityName" : "Bangalore",
         "mapImage" : "ny_ic_bangalore_map",
         "cityCode" : "std:080",
@@ -200,7 +200,6 @@ window.getMerchantConfig = function () {
         "showDriverReferral" : false,
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
-        "enableYatriCoins" : true,
         "vehicleNSImg" : "ny_ic_auto_image",
         "registration" : {
             "supportWAN" : "918618963188",
@@ -265,7 +264,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "Hyderabad" : {
         "cityName" : "Hyderabad",
         "mapImage" : "ny_ic_hyderabad_map",
         "cityCode" : "std:040",
@@ -358,7 +357,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "Mysore" : {
         "cityName" : "Mysore",
         "mapImage" : "ny_ic_mysuru_map",
         "cityCode" : "std:0821",
@@ -446,7 +445,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "Delhi" : {
         "cityName" : "Delhi",
         "mapImage" : "ny_ic_delhi_map",
         "cityCode" : "std:011",
@@ -534,7 +533,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "Chennai" : {
         "cityName" : "Chennai",
         "mapImage" : "ny_ic_chennai_map",
         "cityCode" : "std:044",
@@ -622,7 +621,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "Coimbatore" : {
         "cityName" : "Coimbatore",
         "mapImage" : "ny_ic_coimbatore_map",
         "cityCode" : "std:0422",
@@ -697,7 +696,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "Pondicherry" : {
         "cityName" : "Pondicherry",
         "mapImage" : "ny_ic_puducherry_map",
         "cityCode" : "std:0413",
@@ -772,7 +771,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "Tumakuru" : {
         "cityName" : "Tumakuru",
         "mapImage" : "ny_ic_tumakuru_map",
         "cityCode" : "std:0816",
@@ -847,7 +846,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "Gurugram" : {
         "cityName" : "Gurugram",
         "mapImage" : "ny_ic_gurugram_map",
         "cityCode" : "std:0124",
@@ -922,7 +921,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "Noida" : {
         "cityName" : "Noida",
         "mapImage" : "ny_ic_noida_map",
         "cityCode" : "std:01189",
@@ -997,7 +996,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "TamilNaduCities" : {
         "cityName" : "TamilNaduCities",
         "mapImage" : "ny_ic_tamilnadu_map",
         "cityCode" :  "std:0422",
@@ -1072,7 +1071,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "Minneapolis" : {
         "cityName" : "Minneapolis",
         "mapImage" : "ny_ic_minneapolis_map",
         "cityCode" : "std:01189",
@@ -1147,7 +1146,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "Kochi" :{
         "cityName" : "Kochi",
         "mapImage" : "ny_ic_kochi_map",
         "cityCode" : "std:0484",
@@ -1222,7 +1221,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "Trichy" : {
         "cityName" : "Trichy",
         "mapImage" : "ny_ic_tamilnadu_map",
         "cityCode" : "std:0431",
@@ -1310,7 +1309,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "Thanjavur" : {
         "cityName" : "Thanjavur",
         "mapImage" : "ny_ic_tamilnadu_map",
         "cityCode" : "std:04362",
@@ -1398,7 +1397,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "Salem" : {
         "cityName" : "Salem",
         "mapImage" : "ny_ic_tamilnadu_map",
         "cityCode" : "std:0427",
@@ -1486,7 +1485,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "Tirunelveli" : {
         "cityName" : "Tirunelveli",
         "mapImage" : "ny_ic_tamilnadu_map",
         "cityCode" : "std:0462",
@@ -1574,7 +1573,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "Hosur" : {
         "cityName" : "Hosur",
         "mapImage" : "ny_ic_tamilnadu_map",
         "cityCode" : "std:04344",
@@ -1662,7 +1661,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "Madurai" : {
         "cityName" : "Madurai",
         "mapImage" : "ny_ic_tamilnadu_map",
         "cityCode" : "std:0452",
@@ -1750,7 +1749,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "Vellore" : {
         "cityName" : "Vellore",
         "mapImage" : "ny_ic_tamilnadu_map",
         "cityCode" : "std:0416",
@@ -1838,7 +1837,7 @@ window.getMerchantConfig = function () {
           "bike" : {}
         }
       },
-      {
+      "Davanagere" : {
         "cityName" : "Davanagere",
         "mapImage" : "ny_ic_davanagere_map",
         "cityCode" : "std:08192",
@@ -1913,7 +1912,7 @@ window.getMerchantConfig = function () {
           "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
         }
       },
-      {
+      "Shivamogga" : {
         "cityName" : "Shivamogga",
         "mapImage" : "ny_ic_shivamogga_map",
         "cityCode" : "std:08182",
@@ -1988,7 +1987,7 @@ window.getMerchantConfig = function () {
           "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
         }
       },
-      {
+      "Hubli" : {
         "cityName" : "Hubli",
         "mapImage" : "ny_ic_hubli_map",
         "cityCode" : "std:0836",
@@ -2063,7 +2062,7 @@ window.getMerchantConfig = function () {
           "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
         }
       },
-      {
+      "Paris" : {
         "cityName" : "Paris",
         "mapImage" : "ny_ic_location_map",
         "cityCode" : "std:0824",
@@ -2138,7 +2137,7 @@ window.getMerchantConfig = function () {
           "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
         }
       },
-      {
+      "Odisha" : {
         "cityName" : "Odisha",
         "mapImage" : "ny_ic_location_map",
         "cityCode" : "std:0824",
@@ -2213,7 +2212,7 @@ window.getMerchantConfig = function () {
           "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
         }
       },
-      {
+      "Bhubaneswar" : {
         "cityName" : "Bhubaneswar",
         "mapImage" : "ny_ic_location_map",
         "cityCode" : "std:0824",
@@ -2289,7 +2288,7 @@ window.getMerchantConfig = function () {
         }
       },
       
-      {
+      "Mangalore" : {
         "cityName" : "Mangalore",
         "mapImage" : "ny_ic_mangalore_map",
         "cityCode" : "std:0824",
@@ -2364,7 +2363,7 @@ window.getMerchantConfig = function () {
           "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
         }
       },
-      {
+      "Gulbarga" : {
         "cityName" : "Gulbarga",
         "mapImage" : "ny_ic_gulbarga_map",
         "cityCode" : "std:08472",
@@ -2439,7 +2438,7 @@ window.getMerchantConfig = function () {
           "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
         }
       },
-      {
+      "Udupi" : {
         "cityName" : "Udupi",
         "mapImage" : "ny_ic_udupi_map",
         "cityCode" : "std:08200",
@@ -2514,7 +2513,7 @@ window.getMerchantConfig = function () {
           "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
         }
       }
-  ]
+    }
   , "appUpdatePopupUrl" : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner&pcampaignid=web_share"
   , "dashboard" : {
         "enable" : true,

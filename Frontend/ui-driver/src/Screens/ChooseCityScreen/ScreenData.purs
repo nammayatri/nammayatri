@@ -31,7 +31,7 @@ initData = {
   data: {
     config : getAppConfig appConfig,
     locationSelected : Mb.Nothing,
-    merchantOperatingCityConfig : [],
+    merchantOperatingCityConfig : empty,
     logField : empty
   },
   props : {
