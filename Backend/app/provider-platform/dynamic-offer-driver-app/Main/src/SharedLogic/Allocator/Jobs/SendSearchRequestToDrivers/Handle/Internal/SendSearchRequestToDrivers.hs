@@ -268,6 +268,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 renderedAt = Nothing,
                 respondedAt = Nothing,
                 upgradeCabRequest = Just tripQuoteDetail.eligibleForUpgrade,
+                driverTagScore = dpRes.score,
                 ..
               }
       pure searchRequestForDriver

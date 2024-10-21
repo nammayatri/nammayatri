@@ -45,6 +45,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     driverMinExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     driverSpeed :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     driverStepFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    driverTagScore :: Kernel.Prelude.Maybe Data.Aeson.Value,
     driverTags :: Kernel.Prelude.Maybe Data.Aeson.Value,
     durationToPickup :: Kernel.Types.Common.Seconds,
     estimateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

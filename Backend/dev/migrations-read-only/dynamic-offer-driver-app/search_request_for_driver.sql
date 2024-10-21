@@ -124,3 +124,7 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN pooling_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN upgrade_cab_request boolean ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ALTER COLUMN driver_tag_score TYPE text;
