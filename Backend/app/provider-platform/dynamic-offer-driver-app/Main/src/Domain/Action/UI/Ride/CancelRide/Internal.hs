@@ -29,7 +29,8 @@ import qualified Domain.Types.CancellationFarePolicy as DTC
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Yudhishthira as TY
-import Kernel.Prelude
+import EulerHS.Prelude
+import Kernel.Prelude hiding (any, elem)
 import qualified Kernel.Storage.Esqueleto as Esq hiding (whenJust_)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -64,6 +65,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as QVeh
+import Tools.Constants
 import Tools.Error
 import Tools.Event
 import qualified Tools.Metrics as Metrics
@@ -113,15 +115,16 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   transporterConfig <- CTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   noShowCharges <- if transporterConfig.canAddCancellationFee then calculateNoShowCharges booking ride else return Nothing
-  upRide <- cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy noShowCharges
+  cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy noShowCharges
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
   fork "cancelRide - Notify driver" $ do
+    rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason
     triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
     triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
     when (bookingCReason.source == SBCR.ByDriver) $
-      DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {ride = upRide, merchantId = merchantId, driver = driver, rideFare = Just booking.estimatedFare, currency = booking.currency, distanceUnit = booking.distanceUnit, doCancellationRateBasedBlocking}
+      DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {rideTags, merchantId = merchantId, driver = driver, rideFare = Just booking.estimatedFare, currency = booking.currency, distanceUnit = booking.distanceUnit, doCancellationRateBasedBlocking}
     Notify.notifyOnCancel ride.merchantOperatingCityId booking driver bookingCReason.source
   fork "cancelRide/ReAllocate - Notify BAP" $ do
     isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation
@@ -151,7 +154,7 @@ cancelRideTransaction ::
   Id DMerc.Merchant ->
   DRide.RideEndedBy ->
   Maybe PriceAPIEntity ->
-  m DRide.Ride
+  m ()
 cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy cancellationFee = do
   let driverId = cast ride.driverId
   void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
@@ -160,8 +163,6 @@ cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy cancell
   void $ LF.rideDetails ride.id DRide.CANCELLED merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
   void $ QRide.updateStatus ride.id DRide.CANCELLED
   void $ QRide.updateRideEndedBy ride.id rideEndedBy
-  rideWithUpdatedTags <- updateNammaTagsForCancelledRide booking ride bookingCReason
-  let upRide = rideWithUpdatedTags{status = DRide.CANCELLED, rideEndedBy = Just rideEndedBy}
   QBCR.upsert bookingCReason
   void $ QRB.updateStatus booking.id SRB.CANCELLED
   when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
@@ -172,7 +173,6 @@ cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy cancell
       QRiderDetails.updateCancellationDues (fee.amount + riderDetails.cancellationDues) rid
     _ -> do
       logError "cancelRideTransaction: riderId in booking or cancellationFee is not present"
-  return upRide
 
 updateNammaTagsForCancelledRide ::
   ( EsqDBFlow m r,
@@ -182,7 +182,7 @@ updateNammaTagsForCancelledRide ::
   SRB.Booking ->
   DRide.Ride ->
   SBCR.BookingCancellationReason ->
-  m DRide.Ride
+  m [Text]
 updateNammaTagsForCancelledRide booking ride bookingCReason = do
   now <- getCurrentTime
   mbCallStatus <- QCallStatus.findOneByEntityId (Just ride.id.getId)
@@ -200,5 +200,10 @@ updateNammaTagsForCancelledRide booking ride bookingCReason = do
   nammaTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.RideCancel tagData)
   let allTags = ride.rideTags <> eitherToMaybe nammaTags
   QRide.updateRideTags allTags ride.id
-  let upRide = ride{rideTags = allTags}
-  return upRide
+  driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  let tags = fromMaybe [] allTags
+  when (validDriverCancellation `elem` tags) $ do
+    QDriverStats.updateValidDriverCancellationTagCount (driverStats.validDriverCancellationTagCount + 1) ride.driverId
+  when (validCustomerCancellation `elem` tags) $ do
+    QDriverStats.updateValidCustomerCancellationTagCount (driverStats.validCustomerCancellationTagCount + 1) ride.driverId
+  return $ fromMaybe [] allTags
