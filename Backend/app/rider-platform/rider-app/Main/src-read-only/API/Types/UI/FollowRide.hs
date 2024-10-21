@@ -17,7 +17,7 @@ data ContactsDetail = ContactsDetail {personId :: Kernel.Types.Id.Id Domain.Type
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data EmergencyContactsStatusRes = EmergencyContactsStatusRes {details :: [API.Types.UI.FollowRide.ContactsDetail]}
+data EmergencyContactsStatusRes = EmergencyContactsStatusRes {details :: [ContactsDetail]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

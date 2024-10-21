@@ -122,7 +122,7 @@ let defaultImports =
         }
       , { _simpleImports =
           [ "EulerHS.Prelude hiding (id)"
-          , "Servant"
+          , "Servant hiding (Summary)"
           , "Tools.Auth"
           , "Data.OpenApi (ToSchema)"
           ]

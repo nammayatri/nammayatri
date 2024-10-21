@@ -26,7 +26,7 @@ data AllFees = AllFees
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CollectionList = CollectionList {onlineCollection :: [API.Types.ProviderPlatform.Management.Revenue.CollectionListElem], offlineCollection :: [API.Types.ProviderPlatform.Management.Revenue.CollectionListElem]}
+data CollectionList = CollectionList {onlineCollection :: [CollectionListElem], offlineCollection :: [CollectionListElem]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -50,21 +50,14 @@ type GetRevenueCollectionHistory =
            "to"
            Kernel.Prelude.UTCTime
       :> QueryParam "volunteerId" Kernel.Prelude.Text
-      :> Get
-           '[JSON]
-           API.Types.ProviderPlatform.Management.Revenue.CollectionList
+      :> Get '[JSON] CollectionList
   )
 
-type GetRevenueAllFeeHistory =
-  ( "allFeeHistory" :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "to" Kernel.Prelude.UTCTime
-      :> Get
-           '[JSON]
-           [API.Types.ProviderPlatform.Management.Revenue.AllFees]
-  )
+type GetRevenueAllFeeHistory = ("allFeeHistory" :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "to" Kernel.Prelude.UTCTime :> Get '[JSON] [AllFees])
 
 data RevenueAPIs = RevenueAPIs
-  { getRevenueCollectionHistory :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Revenue.CollectionList,
-    getRevenueAllFeeHistory :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient [API.Types.ProviderPlatform.Management.Revenue.AllFees]
+  { getRevenueCollectionHistory :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient CollectionList,
+    getRevenueAllFeeHistory :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient [AllFees]
   }
 
 mkRevenueAPIs :: (Client EulerHS.Types.EulerClient API -> RevenueAPIs)

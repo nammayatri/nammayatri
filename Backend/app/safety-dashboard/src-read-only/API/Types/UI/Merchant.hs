@@ -9,7 +9,7 @@ import qualified Domain.Types.MerchantConfigs
 import qualified "lib-dashboard" Domain.Types.Person
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
-import Servant
+import Servant hiding (Summary)
 import "lib-dashboard" Tools.Auth
 
 data MerchantUserList = MerchantUserList {merchantUserList :: [Domain.Types.Person.PersonAPIEntity]}
