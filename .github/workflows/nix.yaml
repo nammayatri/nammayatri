@@ -1,18 +1,32 @@
-name: CI
+name: CI (Dependent on Labeler)
 
 on:
   push:
     branches: ["main", "prodHotPush-Common"]
   pull_request:
     branches: ["main", "prodHotPush-Common"]
+  workflow_run:
+    workflows: ["Labeler"]
+    types:
+      - completed
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: x86_64-linux
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     outputs:
       docker-image-name: ${{ steps.docker.outputs.image_name }}
     steps:
+      - name: Show error if labeler failed
+        if: github.event.workflow_run.conclusion != 'success' && github.event_name != 'workflow_dispatch'
+        run: |
+          echo "::error::Labeler workflow failed with conclusion: ${{ github.event.workflow_run.conclusion }}"
+          echo "You can:"
+          echo "1. Fix the issues in the Labeler workflow and retry"
+          echo "2. Manually trigger this workflow using the 'Run workflow' button"
+          exit 1
+
       - uses: actions/checkout@v4
       - uses: cachix/cachix-action@v15
         with:
@@ -30,13 +44,13 @@ jobs:
 
       - name: Docker tasks
         id: docker
-        if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/prodHotPush-Common')
+        # if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/prodHotPush-Common')
         run: |
           nix build .#dockerImage -o docker-image.tgz
           echo "image_name=$(nix eval --raw .#dockerImage.imageName):$(nix eval --raw .#dockerImage.imageTag)" >> $GITHUB_OUTPUT
 
       - name: Upload Docker image tarball
-        if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/prodHotPush-Common')
+        # if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/prodHotPush-Common')
         uses: actions/upload-artifact@v4
         with:
           name: docker-image
@@ -45,7 +59,7 @@ jobs:
   push-docker:
     needs: build
     runs-on: ubuntu-latest
-    if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/prodHotPush-Common')
+    # if: (github.ref == 'refs/heads/main') || (github.ref == 'refs/heads/prodHotPush-Common')
     steps:
       - name: Download Docker image tarball
         uses: actions/download-artifact@v4
