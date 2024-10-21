@@ -40,7 +40,7 @@ import Data.String
 import JBridge 
 import Data.Int (fromString)
 import PrestoDOM.Types.DomAttributes as PTD
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import ConfigProvider
 
 primaryButtonConfig :: RentalScreenState -> PrimaryButton.Config

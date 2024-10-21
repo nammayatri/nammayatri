@@ -61,7 +61,7 @@ import Services.API (GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBooki
 import Services.Backend (getQuotes, rideBooking)
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 
 rentalScreen :: RentalScreenState -> Screen Action RentalScreenState ScreenOutput
 rentalScreen initialState =

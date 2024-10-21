@@ -62,7 +62,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..), getCityFromString, interse
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Common.Types.App (LazyCheck(..), Paths, FareList)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import MerchantConfig.Types (EstimateAndQuoteConfig)
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Engineering.Helpers.LogEvent
