@@ -329,6 +329,7 @@ data CreateIssueMessageReq = CreateIssueMessageReq
     referenceOptionId :: Maybe (Id IssueOption),
     referenceCategoryId :: Maybe (Id IssueCategory),
     isActive :: Maybe Bool,
+    filterTags :: Maybe [FilterOptionTags],
     filterOptionFn :: Maybe [FilterFn]
   }
   deriving stock (Eq, Show, Generic)

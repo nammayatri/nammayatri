@@ -284,8 +284,8 @@ getIssueCategory (driverId, merchantId, merchantOperatingCityId) language = with
 getIssueOption :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id Domain.IssueCategory -> Maybe (Id Domain.IssueOption) -> Maybe (Id Domain.IssueReport) -> Maybe (Id Common.Ride) -> Maybe Language -> FlowHandler Common.IssueOptionListRes
 getIssueOption (driverId, merchantId, merchantOpCityId) issueCategoryId issueOptionId issueReportId mbRideId language = withFlowHandlerAPI $ Common.getIssueOption (cast driverId, cast merchantId, cast merchantOpCityId) issueCategoryId issueOptionId issueReportId mbRideId language driverIssueHandle Common.DRIVER
 
-getIssueOption :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Common.GetIssueOptionReq -> FlowHandler Common.IssueOptionListRes
-getIssueOption (driverId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ Common.getIssueOption (cast driverId, cast merchantId, cast merchantOpCityId) req driverIssueHandle Common.DRIVER
+getIssueOptionV2 :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Common.GetIssueOptionReq -> FlowHandler Common.IssueOptionListRes
+getIssueOptionV2 (driverId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ Common.getIssueOptionV2 (cast driverId, cast merchantId, cast merchantOpCityId) req driverIssueHandle Common.DRIVER
 
 igmIssueStatus :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
 igmIssueStatus _ = withFlowHandlerAPI $ throwError $ InvalidRequest "IGM Issue Status should not be called by BPP"

@@ -42,6 +42,7 @@ data IssueMessageT f = IssueMessageT
     isActive :: B.C f Bool,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
+    filterTags :: B.C f (Maybe [DIC.FilterOptionTags]),
     filterOptionFn :: B.C f (Maybe [DIC.FilterFn])
   }
   deriving (Generic, B.Beamable)

@@ -480,6 +480,7 @@ createIssueMessages merchantShortId city merchantOperatingCity issueCategoryId m
             createdAt = now,
             updatedAt = now,
             mediaFiles = [],
+            filterTags = fromMaybe [] filterTags,
             filterOptionFn = fromMaybe [] filterOptionFn,
             ..
           }
@@ -689,6 +690,7 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
             messageTitle = req.messageTitle <|> ((.messageTitle) =<< mbIssueMessage),
             messageAction = req.messageAction <|> ((.messageAction) =<< mbIssueMessage),
             isActive = fromMaybe True (req.isActive <|> (mbIssueMessage <&> (.isActive))),
+            filterTags = maybe [] (.filterTags) mbIssueMessage,
             filterOptionFn = maybe [] (.filterOptionFn) mbIssueMessage,
             ..
           }

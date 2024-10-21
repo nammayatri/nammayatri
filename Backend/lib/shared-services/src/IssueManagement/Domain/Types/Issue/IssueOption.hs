@@ -42,7 +42,7 @@ data UIAction = GetVpa | GetAmount | GetPlainText | GetFeedback
   deriving (Generic, FromJSON, ToJSON, Show, Eq, Read, Ord, ToSchema)
 
 -- What logic to perform on the input from UI
-data OnInputAction = ProcessRefund | ProcessDriverDemandedMore
+data OnInputAction = ProcessVpa | ProcessDriverDemandedMore | ProcessFeedback
   deriving (Generic, FromJSON, ToJSON, Show, Eq, Read, Ord, ToSchema)
 
 type Description = Text

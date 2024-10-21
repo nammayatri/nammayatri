@@ -31,6 +31,7 @@ data IssueMessage = IssueMessage
     isActive :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
+    filterTags :: [FilterOptionTags],
     filterOptionFn :: [FilterFn]
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema, Read, Ord)
