@@ -546,7 +546,8 @@ dummyFareQuoteDetails = {
   plannedPerKmRate : 0,
   nightShiftCharge : 0,
   tollCharges : MB.Nothing,
-  deadKmFare : MB.Nothing
+  deadKmFare : MB.Nothing,
+  nightShiftInfo : MB.Nothing
 }
 
 fetchSelectedQuote quotesList = DA.head $ DA.filter (\item -> item.activeIndex == item.index) quotesList
@@ -634,6 +635,7 @@ quotesFlow res state = do
         , baseFare : quoteDetails.baseFare
         , tollCharges : quoteDetails.tollCharges
         , deadKmFare: quoteDetails.deadKmFare
+        , nightShiftInfo : quoteDetails.nightShiftInfo
         }
 
     compareByFare :: OfferRes -> OfferRes -> Ordering
