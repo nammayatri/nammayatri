@@ -52,6 +52,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     driverSpeed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     driverStepFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
     driverStepFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    driverTagScore :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     driverTags :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     durationToPickup :: B.C f Kernel.Types.Common.Seconds,
     estimateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

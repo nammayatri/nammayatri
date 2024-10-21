@@ -88,6 +88,7 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.driverSpeed driverSpeed,
       Se.Set Beam.driverStepFee (Kernel.Prelude.roundToIntegral <$> driverStepFee),
       Se.Set Beam.driverStepFeeAmount driverStepFee,
+      Se.Set Beam.driverTagScore driverTagScore,
       Se.Set Beam.driverTags driverTags,
       Se.Set Beam.durationToPickup durationToPickup,
       Se.Set Beam.estimateId estimateId,
