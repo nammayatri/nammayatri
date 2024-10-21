@@ -411,14 +411,40 @@ VALUES
   );
 
 INSERT INTO
-  atlas_app.route_stop_fare (
-    route_code,
-    start_stop_code,
-    end_stop_code,
-    amount,
+  atlas_app.frfs_ticket_discount (
+    id,
+    type,
+    code,
     currency,
+    description,
+    merchant_id,
+    merchant_operating_city_id,
+    value,
     vehicle_type,
-    vehicle_service_tier_id,
+    created_at,
+    updated_at
+  )
+VALUES
+  (
+    '333e23a5-3ce6-4c37-8b9b-41377c3c1333',
+    'Women',
+    'WOMEN',
+    'INR',
+    'Women Discount',
+    'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    'namma-yatri-0-0000-0000-00000000city',
+    'Percentage 50.0',
+    'BUS',
+    now(),
+    now()
+  );
+
+INSERT INTO
+  atlas_app.frfs_fare_policy (
+    id,
+    type,
+    applicable_discount_ids,
+    description,
     merchant_id,
     merchant_operating_city_id,
     created_at,
@@ -426,132 +452,174 @@ INSERT INTO
   )
 VALUES
   (
+    '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
+    'MatrixBased',
+    '{"333e23a5-3ce6-4c37-8b9b-41377c3c1333"}',
+    'SHUTTLE - U | ECO T PARK - AIRPORT GATE NO1',
+    'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    'namma-yatri-0-0000-0000-00000000city',
+    now(),
+    now()
+  );
+
+INSERT INTO
+  atlas_app.route_stop_fare (
+    fare_policy_id,
+    route_code,
+    start_stop_code,
+    end_stop_code,
+    amount,
+    currency,
+    merchant_id,
+    merchant_operating_city_id,
+    created_at,
+    updated_at
+  )
+VALUES
+  (
+    '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
     'Route:1:SHUTTLE-U',
     'Stop:1:18465',
     'Stop:1:18024',
     10,
     'INR',
-    'BUS',
-    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
     now()
   ),
   (
+    '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
     'Route:1:SHUTTLE-U',
     'Stop:1:18465',
     'Stop:1:18304',
     20,
     'INR',
-    'BUS',
-    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
     now()
   ),
   (
+    '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
     'Route:1:SHUTTLE-U',
     'Stop:1:18465',
     'Stop:1:18705',
     30,
     'INR',
-    'BUS',
-    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
     now()
   ),
   (
+    '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
     'Route:1:SHUTTLE-U',
     'Stop:1:18465',
     'Stop:1:18058',
     40,
     'INR',
-    'BUS',
-    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
     now()
   ),
   (
+    '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
     'Route:1:SHUTTLE-U',
     'Stop:1:18024',
     'Stop:1:18304',
     10,
     'INR',
-    'BUS',
-    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
     now()
   ),
   (
+    '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
     'Route:1:SHUTTLE-U',
     'Stop:1:18024',
     'Stop:1:18705',
     20,
     'INR',
-    'BUS',
-    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
     now()
   ),
   (
+    '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
     'Route:1:SHUTTLE-U',
     'Stop:1:18024',
     'Stop:1:18058',
     30,
     'INR',
-    'BUS',
-    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
     now()
   ),
   (
+    '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
     'Route:1:SHUTTLE-U',
     'Stop:1:18304',
     'Stop:1:18705',
     10,
     'INR',
-    'BUS',
-    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
     now()
   ),
   (
+    '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
     'Route:1:SHUTTLE-U',
     'Stop:1:18304',
     'Stop:1:18058',
     20,
     'INR',
-    'BUS',
-    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
     now()
   ),
   (
+    '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
     'Route:1:SHUTTLE-U',
     'Stop:1:18705',
     'Stop:1:18058',
     10,
     'INR',
-    'BUS',
-    '59e722df-feb0-4a86-bd5b-015cf118f402',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
+    now(),
+    now()
+  );
+
+INSERT INTO
+  atlas_app.frfs_route_fare_product (
+    id,
+    route_code,
+    fare_policy_id,
+    merchant_id,
+    merchant_operating_city_id,
+    time_bounds,
+    vehicle_service_tier_id,
+    vehicle_type,
+    created_at,
+    updated_at
+  )
+VALUES
+  (
+    md5(random() :: text || clock_timestamp() :: text) :: uuid,
+    'Route:1:SHUTTLE-U',
+    '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
+    'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    'namma-yatri-0-0000-0000-00000000city',
+    'Unbounded',
+    '59e722df-feb0-4a86-bd5b-015cf118f400',
+    'BUS',
     now(),
     now()
   );

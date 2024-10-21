@@ -3,7 +3,9 @@
 
 module Storage.Queries.FRFSTicketBookingExtra where
 
+import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.FRFSTicketBooking
+import Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -37,6 +39,18 @@ findAllByCashbackStatus limit offset cashbackStatus = do
         [ Se.Is Beam.cashbackStatus $ Se.Eq cashbackStatus,
           Se.Is Beam.payerVpa $ Se.Not $ Se.Eq Nothing
         ]
+    ]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset
+
+findAllByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Int -> Maybe Int -> Id Person -> Maybe Spec.VehicleCategory -> m [FRFSTicketBooking]
+findAllByRiderId limit offset riderId mbVehicleCategory = do
+  findAllWithOptionsKV
+    [ Se.And
+        ( [Se.Is Beam.riderId $ Se.Eq (Kernel.Types.Id.getId riderId)]
+            <> [Se.Is Beam.vehicleType $ Se.Eq (fromJust mbVehicleCategory) | isJust mbVehicleCategory]
+        )
     ]
     (Se.Desc Beam.createdAt)
     limit

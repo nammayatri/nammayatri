@@ -255,6 +255,8 @@ library
       Domain.Types.UtilsTH
       Environment
       ExternalBPP.Bus.ExternalAPI.CallAPI
+      ExternalBPP.Bus.ExternalAPI.CUMTA.Order
+      ExternalBPP.Bus.ExternalAPI.CUMTA.Verification
       ExternalBPP.Bus.ExternalAPI.EBIX.Auth
       ExternalBPP.Bus.ExternalAPI.EBIX.Order
       ExternalBPP.Bus.ExternalAPI.EBIX.Payment
@@ -516,12 +518,17 @@ library
       Domain.Types.FareBreakup
       Domain.Types.FeedbackForm
       Domain.Types.FRFSConfig
+      Domain.Types.FRFSFarePolicy
       Domain.Types.FRFSQuote
       Domain.Types.FRFSRecon
+      Domain.Types.FRFSRouteFareProduct
+      Domain.Types.FRFSRouteStopStageFare
       Domain.Types.FRFSSearch
+      Domain.Types.FRFSStageFare
       Domain.Types.FRFSTicket
       Domain.Types.FRFSTicketBooking
       Domain.Types.FRFSTicketBookingPayment
+      Domain.Types.FRFSTicketDiscount
       Domain.Types.FRFSVehicleServiceTier
       Domain.Types.HotSpotConfig
       Domain.Types.IntegratedBPPConfig
@@ -616,12 +623,17 @@ library
       Storage.Beam.FareBreakup
       Storage.Beam.FeedbackForm
       Storage.Beam.FRFSConfig
+      Storage.Beam.FRFSFarePolicy
       Storage.Beam.FRFSQuote
       Storage.Beam.FRFSRecon
+      Storage.Beam.FRFSRouteFareProduct
+      Storage.Beam.FRFSRouteStopStageFare
       Storage.Beam.FRFSSearch
+      Storage.Beam.FRFSStageFare
       Storage.Beam.FRFSTicket
       Storage.Beam.FRFSTicketBooking
       Storage.Beam.FRFSTicketBookingPayment
+      Storage.Beam.FRFSTicketDiscount
       Storage.Beam.FRFSVehicleServiceTier
       Storage.Beam.HotSpotConfig
       Storage.Beam.IntegratedBPPConfig
@@ -717,12 +729,17 @@ library
       Storage.Queries.FareBreakup
       Storage.Queries.FeedbackForm
       Storage.Queries.FRFSConfig
+      Storage.Queries.FRFSFarePolicy
       Storage.Queries.FRFSQuote
       Storage.Queries.FRFSRecon
+      Storage.Queries.FRFSRouteFareProduct
+      Storage.Queries.FRFSRouteStopStageFare
       Storage.Queries.FRFSSearch
+      Storage.Queries.FRFSStageFare
       Storage.Queries.FRFSTicket
       Storage.Queries.FRFSTicketBooking
       Storage.Queries.FRFSTicketBookingPayment
+      Storage.Queries.FRFSTicketDiscount
       Storage.Queries.FRFSVehicleServiceTier
       Storage.Queries.HotSpotConfig
       Storage.Queries.IntegratedBPPConfig
