@@ -112,7 +112,7 @@ VALUES
   );
 
 -- ONLY FOR LOCAL TESTING --
-delete from atlas_app.station WHERE vehicle_category = 'METRO';
+delete from atlas_app.station WHERE vehicle_type = 'METRO';
 insert into atlas_app.station (address,code,id,lat,lon,name,vehicle_type,merchant_id,merchant_operating_city_id,created_at,updated_at,time_bounds,possible_types)
 values (null,'SGM|0115','719fca8c-dab8-4a2c-91ed-9cb034a2e2ab',13.044682,80.248052,'AG-DMS','METRO','da4e23a5-3ce6-4c37-8b9b-41377c3c1a52','namma-yatri-0-0000-0000-00000000city',now(),now(),'Unbounded',null),
 (null,'SAP|0133','f723fd25-aeed-4bc8-af80-69ef9c39871e',12.980826,80.1642,'Chennai International Airport','METRO','da4e23a5-3ce6-4c37-8b9b-41377c3c1a52','namma-yatri-0-0000-0000-00000000city',now(),now(),'Unbounded',null),
