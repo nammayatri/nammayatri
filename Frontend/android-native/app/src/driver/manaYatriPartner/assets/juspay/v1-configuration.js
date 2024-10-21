@@ -205,8 +205,8 @@ window.getMerchantConfig = function () {
       , "name" : "Mana Yatri"
     }
     , "enableMockLocation" : false
-    , "cityConfig" : [
-      {
+    , "cityConfig" : {
+      "Bangalore" : {
         "cityName" : "Bangalore",
         "mapImage" : "ny_ic_bangalore_map",
         "cityCode" : "std:080",
@@ -271,7 +271,7 @@ window.getMerchantConfig = function () {
           }
         }
       },
-      {
+      "Hyderabad" : {
         "cityName" : "Hyderabad",
         "mapImage" : "ny_ic_hyderabad_map",
         "cityCode" : "std:040",
@@ -336,7 +336,7 @@ window.getMerchantConfig = function () {
           }
         }
       },
-      {
+      "Mysore" : {
         "cityName" : "Mysore",
         "mapImage" : "ny_ic_mysuru_map",
         "cityCode" : "std:0821",
@@ -401,7 +401,7 @@ window.getMerchantConfig = function () {
         }
       }
       },
-      {
+      "Delhi" : {
         "cityName" : "Delhi",
         "mapImage" : "ny_ic_delhi_map",
         "cityCode" : "std:011",
@@ -466,7 +466,7 @@ window.getMerchantConfig = function () {
         }
       }
       },
-      {
+      "Chennai" : {
         "cityName" : "Chennai",
         "mapImage" : "ny_ic_chennai_map",
         "cityCode" : "std:044",
@@ -531,7 +531,7 @@ window.getMerchantConfig = function () {
         }
       }
       },
-      {
+      "Coimbatore" : {
         "cityName" : "Coimbatore",
         "mapImage" : "ny_ic_coimbatore_map",
         "cityCode" : "std:0422",
@@ -596,7 +596,7 @@ window.getMerchantConfig = function () {
         }
       }
       },
-      {
+      "Puducherry" : {
         "cityName" : "Puducherry",
         "mapImage" : "ny_ic_puducherry_map",
         "cityCode" : "std:0413",
@@ -661,7 +661,7 @@ window.getMerchantConfig = function () {
         }
       }
       },
-      {
+      "Tumakuru" : {
         "cityName" : "Tumakuru",
         "mapImage" : "ny_ic_tumakuru_map",
         "cityCode" : "std:0816",
@@ -725,7 +725,7 @@ window.getMerchantConfig = function () {
         }
       }
       },
-      {
+      "Gurugram" : {
         "cityName" : "Gurugram",
         "mapImage" : "ny_ic_gurugram_map",
         "cityCode" : "std:0124",
@@ -790,7 +790,7 @@ window.getMerchantConfig = function () {
         }
       }
       },
-      {
+      "Noida" : {
         "cityName" : "Noida",
         "mapImage" : "ny_ic_noida_map",
         "cityCode" : "std:01189",
@@ -854,7 +854,7 @@ window.getMerchantConfig = function () {
         }
       }
       },
-      {
+      "TamilNaduCities" : {
         "cityName" : "TamilNaduCities",
         "mapImage" : "ny_ic_tamilnadu_map",
         "cityCode" :  "std:0422",
@@ -919,7 +919,7 @@ window.getMerchantConfig = function () {
         }
       }
       },
-      {
+      "Minneapolis" : {
         "cityName" : "Minneapolis",
         "mapImage" : "ny_ic_minneapolis_map",
         "cityCode" : "std:01189",
@@ -983,7 +983,7 @@ window.getMerchantConfig = function () {
         }
       }
       },
-      {
+      "Kochi" : {
         "cityName" : "Kochi",
         "mapImage" : "ny_ic_kochi_map",
         "cityCode" : "std:0484",

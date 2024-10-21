@@ -112,6 +112,8 @@ import Data.Foldable (foldl)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Data.Function (flip)
 import Data.Ord (compare)
+import Foreign.Object as FO
+import LocalStorage.Cache 
 
 
 type AffSuccess s = (s -> Effect Unit)
@@ -689,13 +691,12 @@ setForwardBatchingData cityConf =
   let (ForwardBatchConfigData forwardBatchRemoteConfig) = forwardBatchConfigData cityConf.cityName
   in cityConf {enableAdvancedBooking = forwardBatchRemoteConfig.is_Forward_Dispatch_Feature_Enabled, advancedRidePopUpYoutubeLink = forwardBatchRemoteConfig.advancedRidePopUpYoutubeLink, callDriverInfoPost = forwardBatchRemoteConfig.callDriverInfoPost}
 
-getCityConfig :: Array MCT.CityConfig -> String -> MCT.CityConfig
-getCityConfig cityConfig cityName = do
-  maybe defaultCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig
+getCityConfig :: FO.Object MCT.CityConfig -> String -> MCT.CityConfig
+getCityConfig cityConfig cityName = getValueFromCache cityName (\city -> maybe defaultCityConfig setForwardBatchingData $ FO.lookup city cityConfig)
     
-getCityConfigFromCityCode :: Array MCT.CityConfig -> String -> MCT.CityConfig
+getCityConfigFromCityCode :: FO.Object MCT.CityConfig -> String -> MCT.CityConfig
 getCityConfigFromCityCode cityConfigArr cityCode =
-  let cityConfig = fromMaybe defaultCityConfig $ DA.find (\item -> item.cityCode == cityCode) cityConfigArr
+  let cityConfig = fromMaybe defaultCityConfig $ DA.find (\item -> item.cityCode == cityCode) $ FO.values cityConfigArr
   in setForwardBatchingData cityConfig
 
 formatSecIntoMinSecs :: Int -> String
