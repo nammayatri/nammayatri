@@ -41,8 +41,8 @@ import qualified Storage.Queries.Feedback as QFeedback
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.LmsModule as QLmsModule
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.QueriesExtra.RideLite as QRLite
 import qualified Storage.Queries.RatingExtra as QRating
-import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 
@@ -84,8 +84,9 @@ data DriverProfileRes = DriverProfileRes
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 knowYourDriver :: Id Ride -> Maybe Bool -> Maybe Text -> Flow DriverProfileRes
-knowYourDriver rideId withImages apiKey =
-  QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+knowYourDriver rideId withImages apiKey = do
+  let rideLiteId = cast rideId :: Id QRLite.RideLite
+  QRLite.findByIdLite rideLiteId >>= fromMaybeM (RideNotFound rideId.getId)
     >>= \ride ->
       getDriver ride.driverId apiKey
         >>= getDriverProfile withImages
@@ -195,7 +196,8 @@ getDriverProfile withImages person = do
 
     getBookingsAndRides :: [DRating.Rating] -> Flow [(DRating.Rating, Maybe Text)]
     getBookingsAndRides ratings = do
-      rides <- QRide.findRidesFromDB ((.rideId) <$> ratings)
+      let rideLiteIds = cast . (.rideId) <$> ratings
+      rides <- QRLite.findRidesFromDBLite rideLiteIds
       bookings <- QBooking.findBookingsFromDB (rides <&> (.bookingId))
       let ratingBookingIds = constructRatingWithBookingId ratings rides
       pure (constructRatingWithRiderName bookings ratingBookingIds)
