@@ -21,4 +21,12 @@ findFeedbackFromRatings :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kern
 findFeedbackFromRatings rideIds = findAllWithKV [Se.And [Se.Is Beam.rideId $ Se.In (Kernel.Types.Id.getId <$> rideIds)]]
 
 findOtherFeedbacks :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.Ride.Ride] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Maybe Int -> m ([Domain.Types.Feedback.Feedback]))
-findOtherFeedbacks rideIds driverId limit = findAllWithOptionsKV' [Se.And [Se.Is Beam.rideId $ Se.Not $ Se.In (Kernel.Types.Id.getId <$> rideIds), Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]] limit Nothing
+findOtherFeedbacks rideIds driverId limit =
+  findAllWithOptionsKV'
+    [ Se.And
+        [ Se.Is Beam.rideId $ Se.Not $ Se.In (Kernel.Types.Id.getId <$> rideIds),
+          Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)
+        ]
+    ]
+    limit
+    Nothing
