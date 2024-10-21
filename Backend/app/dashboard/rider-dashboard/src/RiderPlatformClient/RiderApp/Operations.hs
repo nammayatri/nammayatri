@@ -56,8 +56,7 @@ import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 
 data AppBackendAPIs = AppBackendAPIs
-  { --rides :: RidesAPIs,
-    issues :: ListIssueAPIs,
+  { issues :: ListIssueAPIs,
     issuesV2 :: IssueAPIs,
     tickets :: TicketAPIs,
     hotSpot :: HotSpotAPIs,
@@ -67,10 +66,6 @@ data AppBackendAPIs = AppBackendAPIs
     merchantDSL :: MerchantDSL.MerchantAPIs,
     invoiceDSL :: InvoiceDSL.InvoiceAPIs
   }
-
--- data RidesAPIs = RidesAPIs
---   { ticketRideList :: Maybe (ShortId Ride.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Euler.EulerClient Ride.TicketRideListRes
---   }
 
 data ListIssueAPIs = ListIssueAPIs
   { listIssue :: Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Euler.EulerClient DI.IssueListRes,
@@ -109,7 +104,6 @@ newtype HotSpotAPIs = HotSpotAPIs
 
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> AppBackendAPIs
 mkAppBackendAPIs merchantId city token = do
-  -- let rides = RidesAPIs {..}
   let issues = ListIssueAPIs {..}
   let issuesV2 = IssueAPIs {..}
   let tickets = TicketAPIs {..}

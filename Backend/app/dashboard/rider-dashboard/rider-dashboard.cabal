@@ -31,7 +31,6 @@ library
       API.RiderPlatform.HotSpot
       API.RiderPlatform.Issue
       API.RiderPlatform.IssueList
-      API.RiderPlatform.Ride
       API.RiderPlatform.RideBooking
       API.RiderPlatform.RideBooking.Booking
       API.RiderPlatform.RideBooking.Cancel

@@ -43,12 +43,10 @@ library
       API.Beckn.OnTrack
       API.Beckn.OnUpdate
       API.Dashboard
-      API.Dashboard.Customer
       API.Dashboard.Exotel
       API.Dashboard.HotSpot
       API.Dashboard.Issue
       API.Dashboard.IssueList
-      API.Dashboard.Ride
       API.Dashboard.RideBooking
       API.Dashboard.RideBooking.Booking
       API.Dashboard.RideBooking.Cancel

@@ -47,7 +47,6 @@ library
       Dashboard.RiderPlatform.Customer
       Dashboard.RiderPlatform.Management.Ride
       Dashboard.RiderPlatform.Merchant
-      Dashboard.RiderPlatform.Ride
       Dashboard.SafetyPlatform
       API.Types.ProviderPlatform.Fleet
       API.Types.ProviderPlatform.Fleet.Driver

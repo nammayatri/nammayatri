@@ -19,7 +19,6 @@ import qualified API.Types.RiderPlatform.Management.Ride hiding (BookingStatus)
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Ride
 import qualified Dashboard.RiderPlatform.Management.Ride
-import qualified Dashboard.RiderPlatform.Ride
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
