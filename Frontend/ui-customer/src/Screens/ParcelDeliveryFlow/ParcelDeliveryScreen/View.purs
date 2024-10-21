@@ -43,7 +43,7 @@ import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.Controller (Action(..), ScreenOutput, eval, validateInput)
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ComponentConfig (chooseVehicleConfig, deliveryPickupDetialsModalConfig, genericHeaderConfig, primaryButtonConfig, rateCardConfig, decodeAddress')
 import Screens.HomeScreen.ScreenData (dummyRideBooking)

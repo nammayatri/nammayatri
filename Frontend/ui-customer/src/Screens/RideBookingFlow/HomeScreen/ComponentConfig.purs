@@ -98,7 +98,7 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import RemoteConfig as RemoteConfig
 import Resources.Constants (dummyPrice)
 import Resources.Constants (getKmMeter, emergencyContactInitialChatSuggestionId)
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import Screens.HomeScreen.ScreenData (dummyInvalidBookingPopUpConfig, dummyRideBooking)
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
