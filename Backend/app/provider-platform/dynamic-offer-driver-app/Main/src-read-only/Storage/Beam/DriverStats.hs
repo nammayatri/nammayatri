@@ -39,7 +39,10 @@ data DriverStatsT f = DriverStatsT
     totalRides :: B.C f Kernel.Prelude.Int,
     totalRidesAssigned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalValidActivatedRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    validCancellationTagsStatsStartDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    validCustomerCancellationTagCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    validDriverCancellationTagCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)
   }
   deriving (Generic, B.Beamable)
 
