@@ -1925,6 +1925,8 @@ optionsStop =
     table =
       [ ("stopAuthorization", "authorization"),
         ("stopLocation", "location"),
+        ("stopId", "id"),
+        ("stopParentStopId", "parent_stop_id"),
         ("stopTime", "time"),
         ("stopType", "type")
       ]
