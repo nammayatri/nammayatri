@@ -10,7 +10,7 @@ import qualified Kernel.Types.Price
 import Servant
 import Tools.Auth
 
-data EstimateBreakup = EstimateBreakup {price :: API.Types.UI.EstimateBP.EstimateBreakupPrice, title :: Data.Text.Text}
+data EstimateBreakup = EstimateBreakup {price :: EstimateBreakupPrice, title :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -18,6 +18,6 @@ data EstimateBreakupPrice = EstimateBreakupPrice {value :: Kernel.Types.Price.Pr
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data EstimateDetailsRes = EstimateDetailsRes {estimateBreakup :: [API.Types.UI.EstimateBP.EstimateBreakup]}
+data EstimateDetailsRes = EstimateDetailsRes {estimateBreakup :: [EstimateBreakup]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

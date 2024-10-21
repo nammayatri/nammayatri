@@ -23,7 +23,7 @@ data SocialLoginReq = SocialLoginReq
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantShortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant,
     name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    oauthProvider :: API.Types.UI.SocialLogin.OAuthProvider,
+    oauthProvider :: OAuthProvider,
     registrationLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     registrationLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     tokenId :: Kernel.Prelude.Text

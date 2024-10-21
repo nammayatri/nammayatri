@@ -44,41 +44,30 @@ data DriverHomeLocationAPIEntity = DriverHomeLocationAPIEntity
 instance Kernel.Types.HideSecrets.HideSecrets DriverHomeLocationAPIEntity where
   hideSecrets = Kernel.Prelude.identity
 
-type GetHomeLocationsRes = [API.Types.ProviderPlatform.Management.DriverGoHome.DriverHomeLocationAPIEntity]
+type GetHomeLocationsRes = [DriverHomeLocationAPIEntity]
 
-type UpdateDriverHomeLocationReq = API.Types.ProviderPlatform.Management.DriverGoHome.DriverHomeLocationAPIEntity
+type UpdateDriverHomeLocationReq = DriverHomeLocationAPIEntity
 
 type API = ("driver" :> (GetDriverGoHomeGetHomeLocation :<|> PostDriverGoHomeUpdateHomeLocation :<|> PostDriverGoHomeIncrementGoToCount :<|> GetDriverGoHomeGetGoHomeInfo))
 
-type GetDriverGoHomeGetHomeLocation =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "getHomeLocation"
-      :> Get
-           '[JSON]
-           API.Types.ProviderPlatform.Management.DriverGoHome.GetHomeLocationsRes
-  )
+type GetDriverGoHomeGetHomeLocation = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "getHomeLocation" :> Get '[JSON] GetHomeLocationsRes)
 
 type PostDriverGoHomeUpdateHomeLocation =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "updateHomeLocation"
-      :> ReqBody
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "updateHomeLocation" :> ReqBody '[JSON] UpdateDriverHomeLocationReq
+      :> Post
            '[JSON]
-           API.Types.ProviderPlatform.Management.DriverGoHome.UpdateDriverHomeLocationReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+           Kernel.Types.APISuccess.APISuccess
   )
 
 type PostDriverGoHomeIncrementGoToCount = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "incrementGoToCount" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type GetDriverGoHomeGetGoHomeInfo =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "getGoHomeInfo"
-      :> Get
-           '[JSON]
-           API.Types.ProviderPlatform.Management.DriverGoHome.CachedGoHomeRequestInfoRes
-  )
+type GetDriverGoHomeGetGoHomeInfo = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "getGoHomeInfo" :> Get '[JSON] CachedGoHomeRequestInfoRes)
 
 data DriverGoHomeAPIs = DriverGoHomeAPIs
-  { getDriverGoHomeGetHomeLocation :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.DriverGoHome.GetHomeLocationsRes,
-    postDriverGoHomeUpdateHomeLocation :: Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverGoHome.UpdateDriverHomeLocationReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+  { getDriverGoHomeGetHomeLocation :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient GetHomeLocationsRes,
+    postDriverGoHomeUpdateHomeLocation :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateDriverHomeLocationReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverGoHomeIncrementGoToCount :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverGoHomeGetGoHomeInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.DriverGoHome.CachedGoHomeRequestInfoRes
+    getDriverGoHomeGetGoHomeInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient CachedGoHomeRequestInfoRes
   }
 
 mkDriverGoHomeAPIs :: (Client EulerHS.Types.EulerClient API -> DriverGoHomeAPIs)

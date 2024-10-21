@@ -55,8 +55,8 @@ data DriverInfoRes = DriverInfoRes
     canSwitchToInterCity :: Kernel.Prelude.Bool,
     vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     selectedServiceTiers :: [Kernel.Prelude.Text],
-    driverLicenseDetails :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.RideBooking.Driver.DriverLicenseAPIEntity,
-    vehicleRegistrationDetails :: [API.Types.ProviderPlatform.RideBooking.Driver.DriverRCAssociationAPIEntity],
+    driverLicenseDetails :: Kernel.Prelude.Maybe DriverLicenseAPIEntity,
+    vehicleRegistrationDetails :: [DriverRCAssociationAPIEntity],
     onboardingDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     bundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
@@ -77,7 +77,7 @@ data DriverInfoRes = DriverInfoRes
     blockStateModifier :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverTag :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    blockedInfo :: [API.Types.ProviderPlatform.RideBooking.Driver.DriverBlockTransactions]
+    blockedInfo :: [DriverBlockTransactions]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -100,11 +100,11 @@ data DriverLicenseAPIEntity = DriverLicenseAPIEntity
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverOutstandingBalanceResp = DriverOutstandingBalanceResp
-  { driverFeeId :: Kernel.Types.Id.Id API.Types.ProviderPlatform.RideBooking.Driver.DriverOutstandingBalanceResp,
+  { driverFeeId :: Kernel.Types.Id.Id DriverOutstandingBalanceResp,
     driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver,
     govtCharges :: Kernel.Types.Common.Money,
     govtChargesWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
-    platformFee :: API.Types.ProviderPlatform.RideBooking.Driver.PlatformFee,
+    platformFee :: PlatformFee,
     numRides :: Kernel.Prelude.Int,
     payBy :: Kernel.Prelude.UTCTime,
     totalFee :: Kernel.Types.Common.Money,
@@ -122,7 +122,7 @@ data DriverRCAssociationAPIEntity = DriverRCAssociationAPIEntity
   { associatedOn :: Kernel.Prelude.UTCTime,
     associatedTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     isRcActive :: Kernel.Prelude.Bool,
-    details :: API.Types.ProviderPlatform.RideBooking.Driver.VehicleRegistrationCertificateAPIEntity
+    details :: VehicleRegistrationCertificateAPIEntity
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -172,12 +172,7 @@ data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPI
 
 type API = ("driver" :> (GetDriverPaymentDue :<|> PostDriverEnable :<|> PostDriverCollectCashHelper :<|> PostDriverCollectCashV2Helper :<|> PostDriverExemptCashHelper :<|> PostDriverExemptCashV2Helper :<|> GetDriverInfoHelper :<|> PostDriverUnlinkVehicle :<|> PostDriverEndRCAssociation :<|> PostDriverAddVehicle :<|> PostDriverSetRCStatus :<|> PostDriverExemptDriverFeeV2Helper))
 
-type GetDriverPaymentDue =
-  ( "paymentDue" :> QueryParam "countryCode" Kernel.Prelude.Text :> MandatoryQueryParam "phone" Kernel.Prelude.Text
-      :> Get
-           '[JSON]
-           [API.Types.ProviderPlatform.RideBooking.Driver.DriverOutstandingBalanceResp]
-  )
+type GetDriverPaymentDue = ("paymentDue" :> QueryParam "countryCode" Kernel.Prelude.Text :> MandatoryQueryParam "phone" Kernel.Prelude.Text :> Get '[JSON] [DriverOutstandingBalanceResp])
 
 type PostDriverEnable = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "enable" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
@@ -244,7 +239,7 @@ type GetDriverInfo =
            (Kernel.Types.Id.Id Dashboard.Common.Driver)
       :> Get
            '[JSON]
-           API.Types.ProviderPlatform.RideBooking.Driver.DriverInfoRes
+           DriverInfoRes
   )
 
 type GetDriverInfoHelper =
@@ -268,7 +263,7 @@ type GetDriverInfoHelper =
            (Kernel.Types.Id.Id Dashboard.Common.Driver)
       :> Get
            '[JSON]
-           API.Types.ProviderPlatform.RideBooking.Driver.DriverInfoRes
+           DriverInfoRes
   )
 
 type PostDriverUnlinkVehicle = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "unlinkVehicle" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
@@ -296,10 +291,8 @@ type PostDriverExemptDriverFee =
       :> Capture
            "serviceName"
            Dashboard.Common.Driver.ServiceNames
-      :> ReqBody '[JSON] API.Types.ProviderPlatform.RideBooking.Driver.ExemptionAndCashCollectionDriverFeeReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
+      :> ReqBody '[JSON] ExemptionAndCashCollectionDriverFeeReq
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 type PostDriverExemptDriverFeeV2Helper =
@@ -307,27 +300,25 @@ type PostDriverExemptDriverFeeV2Helper =
       :> Capture
            "serviceName"
            Dashboard.Common.Driver.ServiceNames
-      :> ReqBody
-           '[JSON]
-           API.Types.ProviderPlatform.RideBooking.Driver.ExemptionAndCashCollectionDriverFeeReq
+      :> ReqBody '[JSON] ExemptionAndCashCollectionDriverFeeReq
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 data DriverAPIs = DriverAPIs
-  { getDriverPaymentDue :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient [API.Types.ProviderPlatform.RideBooking.Driver.DriverOutstandingBalanceResp],
+  { getDriverPaymentDue :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient [DriverOutstandingBalanceResp],
     postDriverEnable :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverCollectCash :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverV2CollectCash :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Dashboard.Common.Driver.ServiceNames -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverExemptCash :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverV2ExemptCash :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Dashboard.Common.Driver.ServiceNames -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverInfo :: Kernel.Prelude.Text -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.RideBooking.Driver.DriverInfoRes,
+    getDriverInfo :: Kernel.Prelude.Text -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> EulerHS.Types.EulerClient DriverInfoRes,
     postDriverUnlinkVehicle :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverEndRCAssociation :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverAddVehicle :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Dashboard.ProviderPlatform.Fleet.Driver.AddVehicleReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverSetRCStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Dashboard.ProviderPlatform.Fleet.Driver.RCStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverExemptDriverFee :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Dashboard.Common.Driver.ServiceNames -> API.Types.ProviderPlatform.RideBooking.Driver.ExemptionAndCashCollectionDriverFeeReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postDriverExemptDriverFee :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Dashboard.Common.Driver.ServiceNames -> ExemptionAndCashCollectionDriverFeeReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)

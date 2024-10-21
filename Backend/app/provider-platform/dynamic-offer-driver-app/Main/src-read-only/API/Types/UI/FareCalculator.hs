@@ -28,6 +28,6 @@ data EstimateApi = EstimateApi
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FareResponse = FareResponse {estimatedFares :: [API.Types.UI.FareCalculator.EstimateApi]}
+data FareResponse = FareResponse {estimatedFares :: [EstimateApi]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
