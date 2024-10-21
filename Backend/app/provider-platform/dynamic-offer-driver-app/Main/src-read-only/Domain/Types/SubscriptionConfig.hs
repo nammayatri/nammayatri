@@ -31,6 +31,7 @@ data SubscriptionConfig = SubscriptionConfig
     genericJobRescheduleTime :: Data.Time.NominalDiffTime,
     isSubscriptionEnabledAtCategoryLevel :: Kernel.Prelude.Bool,
     isTriggeredAtEndRide :: Kernel.Prelude.Bool,
+    isVendorSplitEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     maxRetryCount :: Kernel.Prelude.Int,
     numberOfFreeTrialRides :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     partialDueClearanceMessageKey :: Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageKey,
