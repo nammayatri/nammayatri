@@ -1719,3 +1719,4 @@ getKN stringKey =
         ENTER_A_ADDRESS -> "ವಿಳಾಸವನ್ನು ನಮೂದಿಸಿ"        
         EXPLORE -> "ಅನ್ವೇಷಿಸಿ"
         DELIVERED_IN_JUST time -> "ಕೇವಲ " <> time <> " ನಲ್ಲಿ ಡೆಲಿವರಿ ಮಾಡಲಾಗಿದೆ"
+        MAX_PARCEL_SIZE l b h -> "ಗರಿಷ್ಠ ಪಾರ್ಸೆಲ್ ಗಾತ್ರ: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm"

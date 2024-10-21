@@ -1761,7 +1761,6 @@ data STR = LETS_GET_STARTED
         | PICKUP_INSTRUCTION
         | DROP_INSTRUCTION
 
-
 -- instance showSTR :: Show STR
 --   show = case _ of
 --     LETS_GET_STARTED

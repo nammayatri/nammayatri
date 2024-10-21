@@ -133,6 +133,8 @@ import Screens.HomeScreen.ScreenData as HSD
 import Debug
 import Data.Tuple(Tuple(..))
 import Data.String (Pattern(..), contains)
+import Resource.Localizable.TypesV2 as LT2
+import Resource.Localizable.StringsV2 as StringsV2
 
 instance showAction :: Show Action where
   show _ = ""
@@ -1225,7 +1227,7 @@ eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ TF.clearTimerWithId state.data.cancelRideConfirmationPopUp.timerID
   continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
 
-eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton1Click)) state = continue state {props {cancelRideModalShow = true, cancelConfirmationPopup = false},data {cancelRideConfirmationPopUp{enableTimer = false}, cancelRideModal {activeIndex=Nothing, selectedReasonCode="", selectionOptions = cancellationReasons "" }}}
+eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton1Click)) state = continue state {props {cancelRideModalShow = true, cancelConfirmationPopup = false},data {cancelRideConfirmationPopUp{enableTimer = false}, cancelRideModal {activeIndex=Nothing, selectedReasonCode="", selectionOptions = cancellationReasons state }}}
 
 eval (PopUpModalCancelConfirmationAction (PopUpModal.CountDown seconds status timerID)) state = do
   if status == "EXPIRED" then do
@@ -1847,8 +1849,8 @@ activeRideDetail state (RidesInfo ride) =
     getAddressFromStopLocation :: Maybe API.StopLocation -> Maybe String
     getAddressFromStopLocation  stopLocation = (\(API.StopLocation {address,lat,lon}) -> decodeAddress (getLocationInfoFromStopLocation address lat lon) true) <$>  stopLocation
 
-cancellationReasons :: String -> Array Common.OptionButtonList
-cancellationReasons dummy = [
+cancellationReasons :: ST.HomeScreenState -> Array Common.OptionButtonList
+cancellationReasons state = [
         {
           reasonCode: "VEHICLE_ISSUE"
         , description: (getString LT.VEHICLE_ISSUE)
@@ -1858,12 +1860,6 @@ cancellationReasons dummy = [
         {
           reasonCode: "PICKUP_TOO_FAR"
         , description: (getString LT.PICKUP_TOO_FAR)
-        , textBoxRequired : false
-        , subtext: Nothing
-        },
-        {
-          reasonCode: "CUSTOMER_NOT_PICKING_CALL"
-        , description: (getString LT.CUSTOMER_NOT_PICKING_CALL)
         , textBoxRequired : false
         , subtext: Nothing
         },
@@ -1878,14 +1874,43 @@ cancellationReasons dummy = [
         , description: (getString LT.CUSTOMER_WAS_RUDE)
         , textBoxRequired : false
         , subtext: Nothing
-        },
-        {
+        }] <> 
+        (if state.data.activeRide.tripType == ST.Delivery then deliveryCancellationReasons else customerNotPickingCall) 
+        <> otherReasons
+    where
+      customerNotPickingCall = [{
+          reasonCode: "CUSTOMER_NOT_PICKING_CALL"
+        , description: (StringsV2.getStringV2 LT2.customer_not_picking_call)
+        , textBoxRequired : false
+        , subtext: Nothing
+        }]
+      otherReasons = [{
           reasonCode: "OTHER"
         , description: (getString LT.OTHER)
         , textBoxRequired : true
         , subtext: Nothing
-        }
-]
+        }]
+
+deliveryCancellationReasons :: Array Common.OptionButtonList
+deliveryCancellationReasons = 
+  [{
+    reasonCode: "CUSTOMER_NOT_PICKING_CALL"
+  , description: (StringsV2.getStringV2 LT2.parcel_is_inappropriate)
+  , textBoxRequired : false
+  , subtext: Nothing
+  },
+  {
+    reasonCode: "SENDER_UNAVAILABLE_UNREACHABLE"
+  , description: (StringsV2.getStringV2 LT2.sender_unavailable_unreachable)
+  , textBoxRequired : false
+  , subtext: Nothing
+  },
+  {
+    reasonCode: "SENDER_ASKING_DIFFERENT_LOCATION"
+  , description: (StringsV2.getStringV2 LT2.sender_asking_different_location)
+  , textBoxRequired : false
+  , subtext: Nothing
+  }]
 
 dummyCancelReason :: Common.OptionButtonList
 dummyCancelReason =  {

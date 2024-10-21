@@ -1721,3 +1721,4 @@ getEN stringKey =
         ENTER_A_NAME -> "Enter a name"
         ENTER_A_ADDRESS -> "Enter an address"
         DELIVERED_IN_JUST time -> "Yay! Delivered in just " <> time
+        MAX_PARCEL_SIZE l b h -> "Max parcel size: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm"
