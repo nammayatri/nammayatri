@@ -167,6 +167,7 @@ FRFSQuote:
     eventDiscountAmount: Maybe HighPrecMoney
     discountedTickets: Maybe Int
     bppDelayedInterest : Maybe Int
+    applicableDiscountIds: Maybe [Id FRFSTicketDiscount]
 
   beamFields:
     price:
@@ -185,10 +186,15 @@ FRFSQuote:
 
   fromTType:
     price: Kernel.Types.Common.mkPrice currency price|E
+    applicableDiscountIds: (Kernel.Types.Id.Id <$> ) <$>|I
 
   toTType:
     price: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
+    applicableDiscountIds: (Kernel.Types.Id.getId <$> ) <$>|I
+
+  sqlType:
+    applicableDiscountIds: "text[]"
 
   constraints:
     id: PrimaryKey
@@ -286,7 +292,7 @@ FRFSTicketBooking:
     id: PrimaryKey
     searchId: SecondaryKey
     bppOrderId: SecondaryKey
-    riderId: SecondaryKey
+    riderId: "!SecondaryKey"
     quoteId: SecondaryKey
 
   queries:
@@ -305,10 +311,6 @@ FRFSTicketBooking:
     findAllByStatus:
       kvFunction: findAllWithKV
       where: status
-    findAllByRiderId:
-      kvFunction: findAllWithOptionsKV
-      where: riderId
-      orderBy: createdAt
     updateStatusById:
       kvFunction: updateWithKV
       params: [status, updatedAt]
@@ -688,39 +690,146 @@ RouteStopMapping:
         and:
           - in: [routeCode]
 
-RouteStopFare:
-  tableName: route_stop_fare
+FRFSRouteFareProduct:
+  tableName: frfs_route_fare_product
   fields:
+    id: Id FRFSRouteFareProduct
     routeCode: Text
-    startStopCode: Text
-    endStopCode: Text
     vehicleType: VehicleCategory
+    farePolicyId: Id FRFSFarePolicy
     vehicleServiceTierId: Id FRFSVehicleServiceTier
-    amount: HighPrecMoney
-    currency: Currency
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     timeBounds: TimeBound
   default:
     timeBounds: "'Unbounded'"
+  queries:
+    findByRouteCode:
+      kvFunction: findAllWithKV
+      where:
+        and: [routeCode, merchantId, merchantOperatingCityId]
+
+FRFSFarePolicy:
+  tableName: frfs_fare_policy
+  fields:
+    id: Id FRFSFarePolicy
+    applicableDiscountIds: "[Id FRFSTicketDiscount]"
+    _type: FRFSFarePolicyType
+    description: Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  types:
+    FRFSFarePolicyType:
+      enum: "MatrixBased, StageBased"
+  default:
+    applicableDiscountIds: "'{}'"
+  constraints:
+    id: PrimaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+RouteStopFare:
+  tableName: route_stop_fare
+  fields:
+    farePolicyId: Id FRFSFarePolicy
+    routeCode: Text
+    startStopCode: Text
+    endStopCode: Text
+    amount: HighPrecMoney
+    currency: Currency
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  default:
+    timeBounds: "'Unbounded'"
     currency: "'INR'"
   constraints:
+    farePolicyId: PrimaryKey
     routeCode: PrimaryKey
     startStopCode: PrimaryKey
     endStopCode: PrimaryKey
   queries:
     findByRouteCode:
       kvFunction: findAllWithKV
-      where: routeCode
-    findByRouteStartAndStopCode:
-      kvFunction: findAllWithKV
       where:
-        and: [routeCode, startStopCode, endStopCode]
+        and: [farePolicyId, routeCode]
+    findByRouteStartAndStopCode:
+      kvFunction: findOneWithKV
+      where:
+        and: [farePolicyId, routeCode, startStopCode, endStopCode]
     updateFareByRouteCodeAndStopCodes:
-      kvFunction: updateWithKV
+      kvFunction: updateOneWithKV
       params: [amount]
       where:
-        and: [routeCode, startStopCode, endStopCode]
+        and: [farePolicyId, routeCode, startStopCode, endStopCode]
+
+FRFSStageFare:
+  tableName: frfs_stage_fare
+  fields:
+    farePolicyId: Id FRFSFarePolicy
+    stage: Int
+    amount: HighPrecMoney
+    currency: Currency
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  default:
+    currency: "'INR'"
+  constraints:
+    farePolicyId: PrimaryKey
+    stage: PrimaryKey
+  queries:
+    findAllByFarePolicyId:
+      kvFunction: findAllWithKV
+      where: farePolicyId
+
+FRFSRouteStopStageFare:
+  tableName: frfs_route_stop_stage_fare
+  fields:
+    farePolicyId: Id FRFSFarePolicy
+    routeCode: Text
+    stopCode: Text
+    stage: Int
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  constraints:
+    farePolicyId: PrimaryKey
+    routeCode: PrimaryKey
+    stopCode: PrimaryKey
+  queries:
+    findByRouteAndStopCode:
+      kvFunction: findOneWithKV
+      where:
+        and: [farePolicyId, routeCode, stopCode]
+
+FRFSTicketDiscount:
+  tableName: frfs_ticket_discount
+  fields:
+    id: Id FRFSTicketDiscount
+    code: Text
+    description: Text
+    _type: DiscountType
+    value: DiscountValue
+    currency: Currency
+    vehicleType: VehicleCategory
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  types:
+    DiscountType:
+      enum: "Women, Children, SeniorCitizen"
+    DiscountValue:
+      enum: "FixedAmount HighPrecMoney, Percentage Double"
+  constraints:
+    id: PrimaryKey
+  queries:
+    findByCodeAndVehicleAndCity:
+      kvFunction: findOneWithKV
+      where:
+        and: [code, vehicleType, merchantId, merchantOperatingCityId]
+    findByIdAndVehicleAndCity:
+      kvFunction: findOneWithKV
+      where:
+        and: [id, vehicleType, merchantId, merchantOperatingCityId]
 
 FRFSVehicleServiceTier:
   tableName: frfs_vehicle_service_tier

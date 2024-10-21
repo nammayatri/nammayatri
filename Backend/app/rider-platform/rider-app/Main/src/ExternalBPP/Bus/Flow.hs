@@ -8,10 +8,12 @@ import Domain.Action.Beckn.FRFS.OnSearch
 import Domain.Types
 import Domain.Types.BecknConfig
 import Domain.Types.FRFSConfig
+import qualified Domain.Types.FRFSFarePolicy as DFRFSFarePolicy
 import Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketDiscount as DFRFSTicketDiscount
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -26,7 +28,12 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common
+import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
+import Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
+import Storage.Queries.FRFSRouteStopStageFare as QFRFSRouteStopStageFare
+import Storage.Queries.FRFSStageFare as QFRFSStageFare
 import Storage.Queries.FRFSTicket as QFRFSTicket
+import Storage.Queries.FRFSTicketDiscount as QFRFSTicketDiscount
 import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import Storage.Queries.Route as QRoute
 import Storage.Queries.RouteStopFare as QRouteStopFare
@@ -35,7 +42,7 @@ import Storage.Queries.Station as QStation
 import Tools.Error
 
 search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> DFRFSSearch.FRFSSearch -> m DOnSearch
-search _merchant _merchantOperatingCity bapConfig searchReq = do
+search merchant merchantOperatingCity bapConfig searchReq = do
   fromStation <- QStation.findById searchReq.fromStationId >>= fromMaybeM (StationNotFound searchReq.fromStationId.getId)
   toStation <- QStation.findById searchReq.toStationId >>= fromMaybeM (StationNotFound searchReq.toStationId.getId)
   routeId <- searchReq.routeId & fromMaybeM (InternalError "Route Id is not present in Search Request")
@@ -63,7 +70,7 @@ search _merchant _merchantOperatingCity bapConfig searchReq = do
         bppSubscriberUrl = showBaseUrl bapConfig.subscriberUrl,
         providerDescription = Nothing,
         providerId = bapConfig.uniqueKeyId,
-        providerName = "Kolkata Buses",
+        providerName = "Buses",
         quotes = quotes,
         validTill = validTill,
         transactionId = searchReq.id.getId,
@@ -85,20 +92,64 @@ search _merchant _merchantOperatingCity bapConfig searchReq = do
 
     mkQuote routeStations stations vehicleType routeCode startStopCode endStopCode = do
       currentTime <- getCurrentTime
-      farePolicies <- QRouteStopFare.findByRouteStartAndStopCode routeCode startStopCode endStopCode
-      let serviceableFarePolicies = DTB.findBoundedDomain farePolicies currentTime ++ filter (\farePolicy -> farePolicy.timeBounds == DTB.Unbounded) farePolicies
+      fareProducts <- QFRFSRouteFareProduct.findByRouteCode routeCode merchant.id merchantOperatingCity.id
+      let serviceableFareProducts = DTB.findBoundedDomain fareProducts currentTime ++ filter (\fareProduct -> fareProduct.timeBounds == DTB.Unbounded) fareProducts
       mapM
-        ( \farePolicy -> do
-            vehicleServiceTier <- QFRFSVehicleServiceTier.findById farePolicy.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> farePolicy.vehicleServiceTierId.getId)
-            let price =
-                  Price
-                    { amountInt = round farePolicy.amount,
-                      amount = farePolicy.amount,
-                      currency = farePolicy.currency
-                    }
+        ( \fareProduct -> do
+            vehicleServiceTier <- QFRFSVehicleServiceTier.findById fareProduct.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fareProduct.vehicleServiceTierId.getId)
+            farePolicy <- QFRFSFarePolicy.findById fareProduct.farePolicyId >>= fromMaybeM (InternalError $ "FRFS Fare Policy Not Found : " <> fareProduct.farePolicyId.getId)
+            price <-
+              case farePolicy._type of
+                DFRFSFarePolicy.MatrixBased -> do
+                  routeStopFare <- QRouteStopFare.findByRouteStartAndStopCode farePolicy.id routeCode startStopCode endStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Fare Not Found")
+                  return $
+                    Price
+                      { amountInt = round routeStopFare.amount,
+                        amount = routeStopFare.amount,
+                        currency = routeStopFare.currency
+                      }
+                DFRFSFarePolicy.StageBased -> do
+                  stageFares <- QFRFSStageFare.findAllByFarePolicyId farePolicy.id
+                  startStageFare <- QFRFSRouteStopStageFare.findByRouteAndStopCode farePolicy.id routeCode startStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Stage Fare Not Found")
+                  endStageFare <- QFRFSRouteStopStageFare.findByRouteAndStopCode farePolicy.id routeCode endStopCode >>= fromMaybeM (InternalError "FRFS Route Stop Stage Fare Not Found")
+                  let stage = endStageFare.stage - startStageFare.stage
+                  stageFare <- find (\stageFare -> stageFare.stage == stage) stageFares & fromMaybeM (InternalError "FRFS Stage Fare Not Found")
+                  return $
+                    Price
+                      { amountInt = round stageFare.amount,
+                        amount = stageFare.amount,
+                        currency = stageFare.currency
+                      }
+            discounts <-
+              mapM
+                ( \applicableDiscountId -> do
+                    discount <- QFRFSTicketDiscount.findByIdAndVehicleAndCity applicableDiscountId vehicleType merchant.id merchantOperatingCity.id >>= fromMaybeM (InternalError "FRFS Discount Not Found")
+                    let discountPrice =
+                          case discount.value of
+                            DFRFSTicketDiscount.FixedAmount amount ->
+                              Price
+                                { amountInt = round amount,
+                                  amount = amount,
+                                  currency = discount.currency
+                                }
+                            DFRFSTicketDiscount.Percentage percent ->
+                              Price
+                                { amountInt = round ((HighPrecMoney (toRational percent) * price.amount) / 100),
+                                  amount = (HighPrecMoney (toRational percent) * price.amount) / 100,
+                                  currency = discount.currency
+                                }
+                    return $
+                      DDiscount
+                        { description = discount.description,
+                          price = discountPrice,
+                          code = discount.code,
+                          _type = discount._type
+                        }
+                )
+                farePolicy.applicableDiscountIds
             return $
               DQuote
-                { bppItemId = "Kolkata Buses Item - " <> show vehicleServiceTier._type <> " - " <> vehicleServiceTier.providerCode,
+                { bppItemId = "Buses Item - " <> show vehicleServiceTier._type <> " - " <> vehicleServiceTier.providerCode,
                   _type = DFRFSQuote.SingleJourney,
                   routeStations = routeStations,
                   serviceTierType = Just vehicleServiceTier._type,
@@ -106,10 +157,11 @@ search _merchant _merchantOperatingCity bapConfig searchReq = do
                   serviceTierShortName = Just vehicleServiceTier.shortName,
                   serviceTierDescription = Just vehicleServiceTier.description,
                   serviceTierLongName = Just vehicleServiceTier.longName,
+                  applicableDiscounts = discounts,
                   ..
                 }
         )
-        serviceableFarePolicies
+        serviceableFareProducts
 
 init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit
 init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking = do
@@ -122,7 +174,7 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       { providerId = bapConfig.uniqueKeyId,
         totalPrice = booking.price,
         fareBreakUp = [],
-        bppItemId = "Kolkata Buses Item",
+        bppItemId = "Buses Item",
         validTill = validTill,
         transactionId = booking.searchId.getId,
         messageId = booking.id.getId,
@@ -146,7 +198,7 @@ confirm _merchant _merchantOperatingCity frfsConfig config bapConfig (_mRiderNam
         totalPrice = booking.price.amount,
         fareBreakUp = [],
         bppOrderId = bppOrderId,
-        bppItemId = "Kolkata Buses Item",
+        bppItemId = "Buses Item",
         transactionId = booking.searchId.getId,
         orderStatus = Nothing,
         messageId = booking.id.getId,
@@ -158,7 +210,7 @@ confirm _merchant _merchantOperatingCity frfsConfig config bapConfig (_mRiderNam
       return $
         DTicket
           { qrData = qrData,
-            bppFulfillmentId = "Kolkata Buses Fulfillment",
+            bppFulfillmentId = "Buses Fulfillment",
             ticketNumber = ticketNumber,
             validTill = qrValidity,
             status = qrStatus
@@ -176,7 +228,7 @@ status _merchantId _merchantOperatingCity config bapConfig booking = do
         map
           ( \DFRFSTicket.FRFSTicket {status = _status, ..} ->
               DTicket
-                { bppFulfillmentId = "Kolkata Buses Fulfillment",
+                { bppFulfillmentId = "Buses Fulfillment",
                   status = ticketStatus,
                   ..
                 }
@@ -188,7 +240,7 @@ status _merchantId _merchantOperatingCity config bapConfig booking = do
         totalPrice = booking.price.amount,
         fareBreakUp = [],
         bppOrderId = bppOrderId,
-        bppItemId = "Kolkata Buses Item",
+        bppItemId = "Buses Item",
         transactionId = booking.searchId.getId,
         orderStatus = Nothing,
         messageId = booking.id.getId,
