@@ -17,7 +17,6 @@ module SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider where
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
-import Data.Time (defaultTimeLocale, formatTime)
 import qualified Domain.Action.UI.Call as DCall
 import qualified Domain.Types.Booking as DB
 import Domain.Types.CallStatus
@@ -88,27 +87,27 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
         QCallStatus.create callStatus
       PN -> do
         merchantPN <- CPN.findMatchingMerchantPN merchantOpCityId notificationKey Nothing Nothing person.language >>= fromMaybeM (MerchantPNNotFound merchantOpCityId.getId notificationKey)
-        let entityData = generateReq merchantPN.title merchantPN.body booking ride riderConfig
+        let entityData = generateReq merchantPN.title merchantPN.body booking ride
         notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
       SMS -> do
         smsCfg <- asks (.smsCfg)
         messageKey <- A.decode (A.encode notificationKey) & fromMaybeM (InvalidRequest "Invalid message key for SMS")
         merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCityId messageKey >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId notificationKey)
         let sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
-        let (_, smsReqBody) = formatMessageTransformer "" merchantMessage.message booking ride riderConfig
+        let (_, smsReqBody) = formatMessageTransformer "" merchantMessage.message booking ride
         Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq smsReqBody phoneNumber sender) -- TODO: append SMS heading
           >>= Sms.checkSmsResult
       _ -> pure ()
   return Complete
   where
-    generateReq notifTitle notifBody booking ride riderConfig = do
-      let (title, message) = formatMessageTransformer notifTitle notifBody booking ride riderConfig
+    generateReq notifTitle notifBody booking ride = do
+      let (title, message) = formatMessageTransformer notifTitle notifBody booking ride
       NotifReq
         { title = title,
           message = message
         }
 
-    formatMessageTransformer title body booking ride riderConfig = do
+    formatMessageTransformer title body booking ride = do
       let isRentalOrIntercity = case booking.bookingDetails of
             DB.RentalDetails _ -> "Rental"
             DB.InterCityDetails _ -> "InterCity"
@@ -116,8 +115,7 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
       let formattedTitle = T.replace "{#isRentalOrIntercity#}" isRentalOrIntercity title
           rideStartOtp = ride.otp
           rideEndOtp = fromMaybe "" ride.endOtp
-          rideStartLocalTime = formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" $ addUTCTime (secondsToNominalDiffTime riderConfig.timeDiffFromUtc) booking.startTime
-          rideStartTime = show rideStartLocalTime
+          rideStartTime = showTimeIst booking.startTime
           formattedBody = T.replace "{#rideStartOtp#}" rideStartOtp $ T.replace "{#rideEndOtp#}" rideEndOtp $ T.replace "{#isRentalOrIntercity#}" isRentalOrIntercity $ T.replace "{#rideStartTime#}" rideStartTime body
       (formattedTitle, formattedBody)
 
