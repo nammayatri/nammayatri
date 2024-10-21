@@ -43,9 +43,9 @@ data DOnCancel = DOnCancel
     transactionId :: Text,
     messageId :: Text,
     orderStatus :: Spec.OrderStatus,
-    refundAmount :: HighPrecMoney,
+    refundAmount :: Maybe HighPrecMoney,
     baseFare :: HighPrecMoney,
-    cancellationCharges :: HighPrecMoney
+    cancellationCharges :: Maybe HighPrecMoney
   }
 
 validateRequest :: DOnCancel -> Flow (Merchant, FTBooking.FRFSTicketBooking)
@@ -53,7 +53,7 @@ validateRequest DOnCancel {..} = do
   booking <- runInReplica $ QTBooking.findBySearchId (Id transactionId) >>= fromMaybeM (BookingDoesNotExist messageId)
   let merchantId = booking.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  when (totalPrice /= baseFare + refundAmount + cancellationCharges) $ throwError (InternalError "Fare Mismatch in onCancel Req")
+  when (totalPrice /= baseFare + fromMaybe 0 refundAmount + fromMaybe 0 cancellationCharges) $ throwError (InternalError "Fare Mismatch in onCancel Req")
   return (merchant, booking)
 
 onCancel :: Merchant -> Booking.FRFSTicketBooking -> DOnCancel -> Flow ()
@@ -61,7 +61,7 @@ onCancel _ booking' dOnCancel = do
   let booking = booking' {Booking.bppOrderId = Just dOnCancel.bppOrderId}
   case dOnCancel.orderStatus of
     Spec.ON_CANCEL_SOFT_CANCEL -> do
-      void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just dOnCancel.refundAmount) (Just dOnCancel.cancellationCharges) (Just True) booking.id
+      void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId dOnCancel.refundAmount dOnCancel.cancellationCharges (Just True) booking.id
     Spec.ON_CANCEL_CANCELLED -> do
       val :: Maybe Bool <- Redis.get (makecancelledTtlKey booking.id)
       case val of
@@ -80,6 +80,11 @@ onCancel _ booking' dOnCancel = do
           void $ Redis.del (makecancelledTtlKey booking.id)
       void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (booking.quantity))
       void $ CQP.clearPSCache booking.riderId
+    Spec.ON_CANCEL_CANCEL_INITIATED -> do
+      void $ QTBooking.updateStatusById FTBooking.CANCEL_INITIATED booking.id
+      void $ QTicket.updateAllStatusByBookingId DFRFSTicket.CANCEL_INITIATED booking.id
+      void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCEL_INITIATED) booking.id
+      void $ QTBP.updateStatusByTicketBookingId DTBP.REFUND_PENDING booking.id
     _ -> throwError $ InvalidRequest "Unexpected orderStatus received"
   return ()
   where
@@ -87,9 +92,9 @@ onCancel _ booking' dOnCancel = do
       booking <- runInReplica $ QTBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
       case booking of
         Booking.FRFSTicketBooking {refundAmount = Just rfAmount, cancellationCharges = Just charges} -> do
-          when (rfAmount /= dOnCancel.refundAmount) $
+          when (Just rfAmount /= dOnCancel.refundAmount) $
             throwError $ InternalError "Refund Amount mismatch in onCancel Req"
-          when (charges /= dOnCancel.cancellationCharges) $
+          when (Just charges /= dOnCancel.cancellationCharges) $
             throwError $ InternalError "Cancellation Charges mismatch in onCancel Req"
         _ -> throwError $ InternalError "Refund Amount or Cancellation Charges not found in booking"
 
