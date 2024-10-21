@@ -95,9 +95,6 @@ data DriverEncDataReq = DriverEncDataReq {driverIdReq :: Kernel.Types.Id.Id Dash
 instance Kernel.Types.HideSecrets.HideSecrets DriverEncDataReq where
   hideSecrets = Kernel.Prelude.identity
 
-instance Kernel.Types.HideSecrets.HideSecrets [DriverEncDataReq] where
-  hideSecrets = Kernel.Prelude.identity
-
 data DriverFeeType
   = PAYOUT_REGISTRATION
   | ONE_TIME_SECURITY_DEPOSIT

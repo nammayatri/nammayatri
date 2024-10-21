@@ -23,12 +23,12 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.HyperVergeSdkLogs.HyperVergeSdkLogs] -> m ())
 createMany = traverse_ create
 
-findAllByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.HyperVergeSdkLogs.HyperVergeSdkLogs]))
+findAllByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.HyperVergeSdkLogs.HyperVergeSdkLogs])
 findAllByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findAllByDriverIdAndDocType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentType -> m ([Domain.Types.HyperVergeSdkLogs.HyperVergeSdkLogs]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.HyperVergeSdkLogs.HyperVergeSdkLogs])
 findAllByDriverIdAndDocType limit offset driverId docType = do
   findAllWithOptionsKV
     [ Se.And
