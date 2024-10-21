@@ -367,7 +367,7 @@ bottomCardView state push =
   , alignParentBottom "true,-1"
   , background Color.white900
   ] [
-      if state.showRentalRideDetails then rentalTripDetailsView state push else customerIssueView push customerIssue state,
+      if state.showRentalRideDetails then rentalTripDetailsViewWrapper state push else customerIssueView push customerIssue state,
       rideCustomerExperienceView state push
     ]
 
@@ -530,6 +530,24 @@ customerIssuePopupView  push config =
   ]
 
 ---------------------------------------------- (Driver Card 7) rentalRideDetailsView  ------------------------------------------------------------------------------------------------------------------------------------------
+rentalTripDetailsViewWrapper :: forall w . RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+rentalTripDetailsViewWrapper config push =
+  linearLayout
+    [ weight 1.0
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ]
+    [ rentalTripDetailsView config push
+    , linearLayout[weight 1.0][] 
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , cornerRadii $ Corners 16.0 true true false false
+      , background Color.white900
+      , padding $ Padding 16 16 16 16
+      , adjustViewWithKeyboard "true"
+      ][PrimaryButton.view (push <<< PrimaryBtnRentalTripDetailsAC) (primaryBtnConfigForRentalTripDetails config)]
+    ]
 
 rentalTripDetailsView :: forall w . RiderRideCompletedScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 rentalTripDetailsView config push =
@@ -675,7 +693,7 @@ rideCustomerExperienceView state push =
   , width MATCH_PARENT
   , orientation VERTICAL
   , weight 1.0
-  , visibility $ boolToVisibility $ not state.customerIssue.showIssueBanners
+  , visibility $ boolToVisibility $ not $ state.customerIssue.showIssueBanners || state.showRentalRideDetails
   ]
   [
     linearLayout[
@@ -859,6 +877,8 @@ rideRatingView state push =
               , orientation VERTICAL
               , visibility $ boolToVisibility state.isRatingCard
               , onBackPressed push $ const Back
+              , adjustViewWithKeyboard "true"
+              , padding $ PaddingBottom 40
               ][ 
                 topPartView state push 
               , bottomPartView state push
