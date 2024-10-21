@@ -516,7 +516,7 @@ checkRideStatus rideAssigned prioritizeRating = do
                               , extraTimeFare = show $ getFareFromArray fareBreakup "TIME_BASED_FARE"
                               , extraDistanceFare = show $ getFareFromArray fareBreakup "DIST_BASED_FARE"
                               }
-                            , showRentalRideDetails = state.data.fareProductType == FPT.RENTAL
+                            , showRentalRideDetails = fareProductType == FPT.RENTAL
                             , ratingCard
                               {
                                 feedbackPillData = customerFeedbackPillData (RideBookingRes resp) ride.vehicleVariant

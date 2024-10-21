@@ -603,7 +603,7 @@ senderReceiverNameAndNumberView details' textWidth =
 senderReceiverAddrInstructionView :: forall w. Maybe PersonDeliveryDetails -> String -> Boolean -> PrestoDOM (Effect Unit) w
 senderReceiverAddrInstructionView details' address isSource =
   case details' of
-    Nothing -> linearLayout[][]
+    Nothing -> linearLayout[visibility GONE][]
     Just details ->
       linearLayout
         [ height WRAP_CONTENT

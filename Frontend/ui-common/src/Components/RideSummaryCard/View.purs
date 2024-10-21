@@ -3,6 +3,7 @@ module Components.RideSummaryCard.View where
 import Prelude
 import PrestoDOM
 import Components.RideSummaryCard.Controller
+import Data.Array as DA
 import Effect (Effect)
 import Styles.Colors as Color
 import Font.Size as FontSize
@@ -12,6 +13,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC, getNewIDWithTag)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Mobility.Prelude (boolToVisibility)
 
 
 view :: Config -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -119,6 +121,7 @@ vehicleInfo config push  =
     , padding $ Padding 5 4 5 3
     , gravity CENTER
     , layoutGravity "center"
+    , visibility $ boolToVisibility $ not $ DA.any (_ == config.vehicleInfo.vehicleServiceTierName ) ["Auto", "Bike Taxi" ]
     ]
     [ imageView
         [ height $ V 14

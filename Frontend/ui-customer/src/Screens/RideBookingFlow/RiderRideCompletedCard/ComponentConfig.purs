@@ -49,6 +49,22 @@ primaryButtonConfigForCarousel state = PrimaryButton.config
     , isClickable = state.customerIssue.buttonActive
     }
 
+primaryBtnConfigForRentalTripDetails :: RiderRideCompletedScreenState -> PrimaryButton.Config
+primaryBtnConfigForRentalTripDetails state = PrimaryButton.config
+    { textConfig
+        { text = getString LT.DONE
+        , color = Color.yellow900
+        , accessibilityHint = "Done : button" 
+        }
+    , alpha = 1.0
+    , background = Color.black900
+    , margin = (Margin 0 0 0 0)
+    , id = "DoneWithRentalRideDetails"
+    , enableRipple = true
+    , rippleColor = Color.rippleShade
+    , isClickable = true
+    }
+
 driverInfoCardConfig :: RiderRideCompletedScreenState -> FavouriteDriverInfoCard.FavouriteDriverInfoCardState
 driverInfoCardConfig state = FavouriteDriverInfoCard.config 
 
