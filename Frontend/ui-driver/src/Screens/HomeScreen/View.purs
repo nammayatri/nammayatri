@@ -113,7 +113,7 @@ import Control.Alt ((<|>))
 import Effect.Aff (launchAff, makeAff, nonCanceler)
 import Common.Resources.Constants(chatService)
 import DecodeUtil as DU
-import RemoteConfig.Utils (cancellationThresholds, getEnableOtpRideConfigData,getenableScheduledRideConfigData,getenableScheduledRideConfigData)
+import RemoteConfig.Utils (cancellationThresholds, getEnableOtpRideConfigData,getenableScheduledRideConfigData,getenableScheduledRideConfigData, getLocationUpdateServiceConfig)
 import Components.SelectPlansModal as SelectPlansModal
 import Services.API as APITypes
 import Helpers.SplashUtils as HS
@@ -202,6 +202,7 @@ screen initialState (GlobalState globalState) =
                                     id = fromMaybe "" (waitTime DA.!! 0)
                                     isTimerValid = id == initialState.data.activeRide.id
                                     startingTime = (runFn2 JB.differenceBetweenTwoUTC (HU.getCurrentUTC "") (fromMaybe "" (waitTime DA.!! 1)))
+                                    locationUpdateServiceConfig = getLocationUpdateServiceConfig "ride_accepted"
                                 if (getValueToLocalStore WAITING_TIME_STATUS == show ST.Triggered) then do
                                   void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.PostTriggered)
                                   void $ waitingCountdownTimerV2 startingTime "1" "countUpTimerId" push WaitTimerCallback
@@ -216,8 +217,7 @@ screen initialState (GlobalState globalState) =
                                   void $ startTimer (runFn2 JB.differenceBetweenTwoUTC (fromMaybe (getCurrentUTC "") initialState.data.activeRide.tripScheduledAt) (getCurrentUTC "")) ("rideStartRemainingTimeId_" <> initialState.data.activeRide.id) "1" push RideStartRemainingTime     
                                   else pure unit
                                 if (DA.elem initialState.data.peekHeight [518,470,0]) then void $ push $ RideActionModalAction (RideActionModal.NoAction) else pure unit
-                                _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "2000"
-                                _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "5.0"
+                                void $ fetchAndUpdateLocationUpdateServiceVars "ride_accepted" true
                                 if (not initialState.props.chatcallbackInitiated && not initialState.data.activeRide.bookingFromOtherPlatform) then do
                                   _ <- JB.clearChatMessages
                                   _ <- JB.storeCallBackMessageUpdated push initialState.data.activeRide.id "Driver" UpdateMessages AllChatsLoaded
@@ -240,6 +240,7 @@ screen initialState (GlobalState globalState) =
                                   else pure unit
                                 push GetMessages
             "RideStarted"    -> do
+                                void $ fetchAndUpdateLocationUpdateServiceVars "ride_started" initialState.data.activeRide.enableFrequentLocationUpdates
                                 when (initialState.data.activeRide.tripType == ST.Rental) $ void $ HU.storeCallBackForAddRideStop push CallBackNewStop
                                 _ <- pure $ setValueToLocalNativeStore RIDE_START_LAT (HU.toStringJSON initialState.data.activeRide.src_lat)
                                 _ <- pure $ setValueToLocalNativeStore RIDE_START_LON (HU.toStringJSON initialState.data.activeRide.src_lon)
@@ -247,11 +248,6 @@ screen initialState (GlobalState globalState) =
                                 _ <- pure $ setValueToLocalNativeStore RIDE_END_LON (HU.toStringJSON initialState.data.activeRide.dest_lon)
                                 _ <- pure $ setValueToLocalNativeStore WAYPOINT_DEVIATION_COUNT "0"
                                 _ <- pure $ setValueToLocalNativeStore TOLERANCE_EARTH "100.0"
-                                _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY 
-                                        $ if initialState.data.activeRide.enableFrequentLocationUpdates
-                                          then "2000"
-                                          else "10000"
-                                _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "20.0"
 
                                 let advancedRideId = case initialState.data.advancedRideData of
                                                         Just advancedRideData -> Just advancedRideData.id
@@ -292,12 +288,11 @@ screen initialState (GlobalState globalState) =
                                   pure unit
                                   else pure unit
             _                -> do
+                                void $ fetchAndUpdateLocationUpdateServiceVars (if initialState.props.statusOnline then "online" else "offline") true
                                 void $ push RemoveChat
                                 _ <- pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
-                                _ <- pure $ setValueToLocalStore RIDE_G_FREQUENCY "50000"
                                 _ <- pure $ JB.removeAllPolylines ""
                                 _ <- JB.reallocateMapFragment (EHC.getNewIDWithTag "DriverTrackingHomeScreenMap")
-                                _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
                                 _ <- pure $ setValueToLocalStore SESSION_ID (JB.generateSessionId unit)
                                 _ <- checkPermissionAndUpdateDriverMarker initialState true
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification initialState
@@ -314,6 +309,16 @@ screen initialState (GlobalState globalState) =
       let _ = spy "HomeScreen--------action" action
       eval action state)
   }
+
+fetchAndUpdateLocationUpdateServiceVars :: String -> Boolean -> Effect Unit
+fetchAndUpdateLocationUpdateServiceVars stage frequentLocationUpdates = do 
+  let locationUpdateServiceConfig = getLocationUpdateServiceConfig stage
+  void $ pure $ setValueToLocalStore RIDE_G_FREQUENCY 
+                      $ if frequentLocationUpdates 
+                        then locationUpdateServiceConfig.rideGFrequencyWithFrequentUpdates 
+                        else locationUpdateServiceConfig.rideGFrequencyWithoutFrequentUpdates
+  void $ pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT locationUpdateServiceConfig.minDisplacement
+  void $ pure $ setValueToLocalStore RIDE_T_FREQUENCY locationUpdateServiceConfig.rideTFrequency
 
 checkAndStartChatService :: forall w . (Action -> Effect Unit) -> Int -> String -> HomeScreenState -> Flow GlobalState Unit
 checkAndStartChatService push retry rideId state = 
