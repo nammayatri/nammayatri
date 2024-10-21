@@ -42,6 +42,13 @@ FareProduct:
           - eq: [merchantOperatingCityId, area, tripCategory, vehicleServiceTier, timeBounds, enabled]
           - in: [searchSource]
 
+    findAllUnboundedByMerchantOpCityIdVariantArea:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - eq: [merchantOperatingCityId, area, tripCategory, vehicleServiceTier, timeBounds, enabled]
+          - in: [searchSource]
+
     findAllUnboundedFareProductForArea:
       kvFunction: findAllWithKV
       where:
