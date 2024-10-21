@@ -1814,3 +1814,4 @@ getProxy str = case str of
   UPLOAD_PARCEL_IMAGE -> \a -> a @~ upload_parcel_image
   PICKUP_INSTRUCTION -> \a -> a @~ pickup_instruction
   DROP_INSTRUCTION -> \a -> a @~ drop_instruction
+  

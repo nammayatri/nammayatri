@@ -1680,4 +1680,5 @@ getTa = Keymap {
 , limit_reached : "வரம்பு எட்டியது!"
 , confirm_contacts : "தொடர்புகளை உறுதிப்படுத்தவும்"
 , tickets_for_delhi_metro : "டெல்ஹி மெட்ரோ டிக்கெட்கள்"
+, max_parcel_size : (\l b h -> "அதிகபட்ச பார்சல் அளவு: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
 }

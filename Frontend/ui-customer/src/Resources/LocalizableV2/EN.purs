@@ -1680,4 +1680,5 @@ getEn = Keymap {
 , limit_reached : "Limit reached!"
 , confirm_contacts :  "Confirm Contacts"
 , tickets_for_delhi_metro : "Tickets for Delhi Metro"
+, max_parcel_size : (\l b h -> "Max parcel size: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
 }
