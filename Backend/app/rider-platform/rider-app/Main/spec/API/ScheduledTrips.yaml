@@ -1,0 +1,22 @@
+imports:
+  Route: Domain.Types.Route
+  RouteStopMapping: Domain.Types.RouteStopMapping
+
+module: ScheduledTrips
+
+types:
+  CurrLocation:
+    lat: Double
+    lon: Double
+  TrackingResp:
+    nextStop: RouteStopMapping
+
+apis:
+  - POST:
+      endpoint: /scheduled/{routeId}/trips
+      params:
+        routeId: Id Route
+      request:
+        type: CurrLocation
+      response:
+        type: TrackingResp

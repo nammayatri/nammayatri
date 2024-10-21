@@ -29,6 +29,7 @@ import qualified API.Action.UI.Invoice as Invoice
 import qualified API.Action.UI.MultimodalConfirm as MultimodalConfirm
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.RidePayment as RidePayment
+import qualified API.Action.UI.ScheduledTrips as ScheduledTrips
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.Sos as SosApi
 import qualified API.Action.UI.TicketService as TicketService
@@ -117,6 +118,7 @@ type API =
            :<|> PartnerOrgFRFS.API
            :<|> TriggerFCM.API
            :<|> MultimodalConfirm.API
+           :<|> ScheduledTrips.API
        )
 
 handler :: FlowServer API
@@ -168,3 +170,4 @@ handler =
     :<|> PartnerOrgFRFS.handler
     :<|> TriggerFCM.handler
     :<|> MultimodalConfirm.handler
+    :<|> ScheduledTrips.handler
