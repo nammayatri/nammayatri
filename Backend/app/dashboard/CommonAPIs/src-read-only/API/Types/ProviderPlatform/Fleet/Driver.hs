@@ -47,14 +47,14 @@ data DriveVehicleAssociationListItem = DriveVehicleAssociationListItem
   { driverId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    status :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Driver.DriverMode,
+    status :: Kernel.Prelude.Maybe DriverMode,
     driverPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     completedRides :: Kernel.Prelude.Int,
     vehicleType :: Kernel.Prelude.Maybe Dashboard.Common.VehicleVariant,
     earning :: Kernel.Prelude.Int,
     isDriverActive :: Kernel.Prelude.Bool,
     isRcAssociated :: Kernel.Prelude.Bool,
-    verificationDocsStatus :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Driver.VerificationDocsStatus
+    verificationDocsStatus :: Kernel.Prelude.Maybe VerificationDocsStatus
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -66,7 +66,7 @@ data DriverMode
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-data DrivertoVehicleAssociationRes = DrivertoVehicleAssociationRes {fleetOwnerId :: Kernel.Prelude.Text, listItem :: [API.Types.ProviderPlatform.Fleet.Driver.DriveVehicleAssociationListItem], summary :: Dashboard.Common.Summary}
+data DrivertoVehicleAssociationRes = DrivertoVehicleAssociationRes {fleetOwnerId :: Kernel.Prelude.Text, listItem :: [DriveVehicleAssociationListItem], summary :: Dashboard.Common.Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -81,7 +81,7 @@ data FleetDriversAPIEntity = FleetDriversAPIEntity
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FleetEarningListRes = FleetEarningListRes {fleetEarningRes :: [API.Types.ProviderPlatform.Fleet.Driver.FleetEarningRes], summary :: Dashboard.Common.Summary}
+data FleetEarningListRes = FleetEarningListRes {fleetEarningRes :: [FleetEarningRes], summary :: Dashboard.Common.Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -91,9 +91,9 @@ data FleetEarningRes = FleetEarningRes
     vehicleNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver),
     driverName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    status :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Driver.DriverMode,
+    status :: Kernel.Prelude.Maybe DriverMode,
     vehicleType :: Kernel.Prelude.Maybe Dashboard.Common.VehicleVariant,
-    totalDuration :: API.Types.ProviderPlatform.Fleet.Driver.TotalDuration,
+    totalDuration :: TotalDuration,
     distanceTravelled :: Kernel.Prelude.Double,
     driverPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cancelledRides :: Kernel.Prelude.Int
@@ -101,7 +101,7 @@ data FleetEarningRes = FleetEarningRes
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-newtype FleetListDriverRes = FleetListDriverRes {fleetDriversInfos :: [API.Types.ProviderPlatform.Fleet.Driver.FleetDriversAPIEntity]}
+newtype FleetListDriverRes = FleetListDriverRes {fleetDriversInfos :: [FleetDriversAPIEntity]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -147,7 +147,7 @@ data LinkRCWithDriverForFleetReq = LinkRCWithDriverForFleetReq {driverMobileCoun
 instance Kernel.Types.HideSecrets.HideSecrets LinkRCWithDriverForFleetReq where
   hideSecrets = Kernel.Prelude.identity
 
-newtype ListVehicleRes = ListVehicleRes {vehicles :: [API.Types.ProviderPlatform.Fleet.Driver.VehicleAPIEntity]}
+newtype ListVehicleRes = ListVehicleRes {vehicles :: [VehicleAPIEntity]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -220,11 +220,10 @@ instance Kernel.Types.HideSecrets.HideSecrets VerifyFleetJoiningOtpReq where
 type API = ("driver" :> (PostDriverFleetAddVehicleHelper :<|> PostDriverFleetAddRCWithoutDriverHelper :<|> GetDriverFleetGetAllVehicleHelper :<|> GetDriverFleetGetAllDriverHelper :<|> PostDriverFleetUnlinkHelper :<|> PostDriverFleetRemoveVehicleHelper :<|> PostDriverFleetRemoveDriverHelper :<|> GetDriverFleetTotalEarningHelper :<|> GetDriverFleetVehicleEarningHelper :<|> GetDriverFleetDriverEarningHelper :<|> GetDriverFleetGetFleetDriverVehicleAssociationHelper :<|> GetDriverFleetGetFleetDriverAssociationHelper :<|> GetDriverFleetGetFleetVehicleAssociationHelper :<|> PostDriverFleetVehicleDriverRCstatusHelper :<|> PostDriverUpdateFleetOwnerInfo :<|> GetDriverFleetOwnerInfo :<|> PostDriverFleetDriverSendJoiningOtpHelper :<|> PostDriverFleetDriverVerifyJoiningOtpHelper :<|> PostDriverFleetLinkRCWithDriverHelper))
 
 type PostDriverFleetAddVehicle =
-  ( Capture "mobileNo" Kernel.Prelude.Text :> "fleet" :> "addVehicle" :> QueryParam "countryCode" Kernel.Prelude.Text
-      :> ReqBody
+  ( Capture "mobileNo" Kernel.Prelude.Text :> "fleet" :> "addVehicle" :> QueryParam "countryCode" Kernel.Prelude.Text :> ReqBody '[JSON] AddVehicleReq
+      :> Post
            '[JSON]
-           API.Types.ProviderPlatform.Fleet.Driver.AddVehicleReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+           Kernel.Types.APISuccess.APISuccess
   )
 
 type PostDriverFleetAddVehicleHelper =
@@ -232,10 +231,8 @@ type PostDriverFleetAddVehicleHelper =
       :> QueryParam
            "mobileCountryCode"
            Kernel.Prelude.Text
-      :> ReqBody '[JSON] API.Types.ProviderPlatform.Fleet.Driver.AddVehicleReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
+      :> ReqBody '[JSON] AddVehicleReq
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 type PostDriverFleetAddRCWithoutDriver =
@@ -253,34 +250,24 @@ type PostDriverFleetAddRCWithoutDriverHelper =
       :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
-type GetDriverFleetGetAllVehicle =
-  ( "fleet" :> "getAllVehicle" :> QueryParam "mblimit" Kernel.Prelude.Int :> QueryParam "mboffset" Kernel.Prelude.Int
-      :> Get
-           '[JSON]
-           API.Types.ProviderPlatform.Fleet.Driver.ListVehicleRes
-  )
+type GetDriverFleetGetAllVehicle = ("fleet" :> "getAllVehicle" :> QueryParam "mblimit" Kernel.Prelude.Int :> QueryParam "mboffset" Kernel.Prelude.Int :> Get '[JSON] ListVehicleRes)
 
 type GetDriverFleetGetAllVehicleHelper =
   ( Capture "fleetOwnerId" Kernel.Prelude.Text :> "fleet" :> "getAllVehicle" :> QueryParam "limit" Kernel.Prelude.Int
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
-      :> Get '[JSON] API.Types.ProviderPlatform.Fleet.Driver.ListVehicleRes
+      :> Get '[JSON] ListVehicleRes
   )
 
-type GetDriverFleetGetAllDriver =
-  ( "fleet" :> "getAllDriver" :> QueryParam "mblimit" Kernel.Prelude.Int :> QueryParam "mboffset" Kernel.Prelude.Int
-      :> Get
-           '[JSON]
-           API.Types.ProviderPlatform.Fleet.Driver.FleetListDriverRes
-  )
+type GetDriverFleetGetAllDriver = ("fleet" :> "getAllDriver" :> QueryParam "mblimit" Kernel.Prelude.Int :> QueryParam "mboffset" Kernel.Prelude.Int :> Get '[JSON] FleetListDriverRes)
 
 type GetDriverFleetGetAllDriverHelper =
   ( Capture "fleetOwnerId" Kernel.Prelude.Text :> "fleet" :> "getAllDriver" :> QueryParam "limit" Kernel.Prelude.Int
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
-      :> Get '[JSON] API.Types.ProviderPlatform.Fleet.Driver.FleetListDriverRes
+      :> Get '[JSON] FleetListDriverRes
   )
 
 type PostDriverFleetUnlink =
@@ -322,19 +309,14 @@ type PostDriverFleetRemoveDriverHelper =
       :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
-type GetDriverFleetTotalEarning =
-  ( "fleet" :> "totalEarning" :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "to" Kernel.Prelude.UTCTime
-      :> Get
-           '[JSON]
-           API.Types.ProviderPlatform.Fleet.Driver.FleetTotalEarningResponse
-  )
+type GetDriverFleetTotalEarning = ("fleet" :> "totalEarning" :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "to" Kernel.Prelude.UTCTime :> Get '[JSON] FleetTotalEarningResponse)
 
 type GetDriverFleetTotalEarningHelper =
   ( Capture "fleetOwnerId" Kernel.Prelude.Text :> "fleet" :> "totalEarning" :> QueryParam "from" Kernel.Prelude.UTCTime
       :> QueryParam
            "to"
            Kernel.Prelude.UTCTime
-      :> Get '[JSON] API.Types.ProviderPlatform.Fleet.Driver.FleetTotalEarningResponse
+      :> Get '[JSON] FleetTotalEarningResponse
   )
 
 type GetDriverFleetVehicleEarning =
@@ -346,7 +328,7 @@ type GetDriverFleetVehicleEarning =
       :> QueryParam "to" Kernel.Prelude.UTCTime
       :> Get
            '[JSON]
-           API.Types.ProviderPlatform.Fleet.Driver.FleetEarningListRes
+           FleetEarningListRes
   )
 
 type GetDriverFleetVehicleEarningHelper =
@@ -361,7 +343,7 @@ type GetDriverFleetVehicleEarningHelper =
            Kernel.Prelude.UTCTime
       :> Get
            '[JSON]
-           API.Types.ProviderPlatform.Fleet.Driver.FleetEarningListRes
+           FleetEarningListRes
   )
 
 type GetDriverFleetDriverEarning =
@@ -379,10 +361,10 @@ type GetDriverFleetDriverEarning =
            Kernel.Prelude.Bool
       :> QueryParam
            "sortOn"
-           API.Types.ProviderPlatform.Fleet.Driver.SortOn
+           SortOn
       :> Get
            '[JSON]
-           API.Types.ProviderPlatform.Fleet.Driver.FleetEarningListRes
+           FleetEarningListRes
   )
 
 type GetDriverFleetDriverEarningHelper =
@@ -405,10 +387,10 @@ type GetDriverFleetDriverEarningHelper =
            Kernel.Prelude.Bool
       :> QueryParam
            "SortOn"
-           API.Types.ProviderPlatform.Fleet.Driver.SortOn
+           SortOn
       :> Get
            '[JSON]
-           API.Types.ProviderPlatform.Fleet.Driver.FleetEarningListRes
+           FleetEarningListRes
   )
 
 type GetDriverFleetDriverVehicleAssociation =
@@ -431,7 +413,7 @@ type GetDriverFleetDriverVehicleAssociation =
            Kernel.Prelude.UTCTime
       :> Get
            '[JSON]
-           API.Types.ProviderPlatform.Fleet.Driver.DrivertoVehicleAssociationRes
+           DrivertoVehicleAssociationRes
   )
 
 type GetDriverFleetGetFleetDriverVehicleAssociationHelper =
@@ -458,7 +440,7 @@ type GetDriverFleetGetFleetDriverVehicleAssociationHelper =
            Kernel.Prelude.UTCTime
       :> Get
            '[JSON]
-           API.Types.ProviderPlatform.Fleet.Driver.DrivertoVehicleAssociationRes
+           DrivertoVehicleAssociationRes
   )
 
 type GetDriverFleetDriverAssociation =
@@ -481,10 +463,10 @@ type GetDriverFleetDriverAssociation =
            Kernel.Prelude.UTCTime
       :> QueryParam
            "status"
-           API.Types.ProviderPlatform.Fleet.Driver.DriverMode
+           DriverMode
       :> Get
            '[JSON]
-           API.Types.ProviderPlatform.Fleet.Driver.DrivertoVehicleAssociationRes
+           DrivertoVehicleAssociationRes
   )
 
 type GetDriverFleetGetFleetDriverAssociationHelper =
@@ -511,10 +493,10 @@ type GetDriverFleetGetFleetDriverAssociationHelper =
            Kernel.Prelude.UTCTime
       :> QueryParam
            "status"
-           API.Types.ProviderPlatform.Fleet.Driver.DriverMode
+           DriverMode
       :> Get
            '[JSON]
-           API.Types.ProviderPlatform.Fleet.Driver.DrivertoVehicleAssociationRes
+           DrivertoVehicleAssociationRes
   )
 
 type GetDriverFleetVehicleAssociation =
@@ -531,10 +513,10 @@ type GetDriverFleetVehicleAssociation =
            Kernel.Prelude.UTCTime
       :> QueryParam
            "status"
-           API.Types.ProviderPlatform.Fleet.Driver.FleetVehicleStatus
+           FleetVehicleStatus
       :> Get
            '[JSON]
-           API.Types.ProviderPlatform.Fleet.Driver.DrivertoVehicleAssociationRes
+           DrivertoVehicleAssociationRes
   )
 
 type GetDriverFleetGetFleetVehicleAssociationHelper =
@@ -555,18 +537,17 @@ type GetDriverFleetGetFleetVehicleAssociationHelper =
            Kernel.Prelude.UTCTime
       :> QueryParam
            "status"
-           API.Types.ProviderPlatform.Fleet.Driver.FleetVehicleStatus
+           FleetVehicleStatus
       :> Get
            '[JSON]
-           API.Types.ProviderPlatform.Fleet.Driver.DrivertoVehicleAssociationRes
+           DrivertoVehicleAssociationRes
   )
 
 type PostDriverFleetVehicleDriverRcStatus =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "fleet" :> "vehicleDriverRCstatus"
-      :> ReqBody
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "fleet" :> "vehicleDriverRCstatus" :> ReqBody '[JSON] RCStatusReq
+      :> Post
            '[JSON]
-           API.Types.ProviderPlatform.Fleet.Driver.RCStatusReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+           Kernel.Types.APISuccess.APISuccess
   )
 
 type PostDriverFleetVehicleDriverRCstatusHelper =
@@ -576,21 +557,18 @@ type PostDriverFleetVehicleDriverRCstatusHelper =
            Kernel.Prelude.Text
       :> "fleet"
       :> "vehicleDriverRCstatus"
-      :> ReqBody '[JSON] API.Types.ProviderPlatform.Fleet.Driver.RCStatusReq
+      :> ReqBody '[JSON] RCStatusReq
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
+
+type PostDriverUpdateFleetOwnerInfo =
+  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "updateFleetOwnerInfo" :> ReqBody '[JSON] UpdateFleetOwnerInfoReq
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
-type PostDriverUpdateFleetOwnerInfo =
-  ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "updateFleetOwnerInfo"
-      :> ReqBody
-           '[JSON]
-           API.Types.ProviderPlatform.Fleet.Driver.UpdateFleetOwnerInfoReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
-  )
-
-type GetDriverFleetOwnerInfo = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "fleetOwnerInfo" :> Get '[JSON] API.Types.ProviderPlatform.Fleet.Driver.FleetOwnerInfoRes)
+type GetDriverFleetOwnerInfo = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "fleetOwnerInfo" :> Get '[JSON] FleetOwnerInfoRes)
 
 type PostDriverFleetSendJoiningOtp =
   ( "fleet" :> "sendJoiningOtp" :> ReqBody '[JSON] Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq
@@ -608,11 +586,10 @@ type PostDriverFleetDriverSendJoiningOtpHelper =
   )
 
 type PostDriverFleetVerifyJoiningOtp =
-  ( "fleet" :> "verifyJoiningOtp" :> QueryParam "authId" Kernel.Prelude.Text
-      :> ReqBody
+  ( "fleet" :> "verifyJoiningOtp" :> QueryParam "authId" Kernel.Prelude.Text :> ReqBody '[JSON] VerifyFleetJoiningOtpReq
+      :> Post
            '[JSON]
-           API.Types.ProviderPlatform.Fleet.Driver.VerifyFleetJoiningOtpReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+           Kernel.Types.APISuccess.APISuccess
   )
 
 type PostDriverFleetDriverVerifyJoiningOtpHelper =
@@ -620,47 +597,39 @@ type PostDriverFleetDriverVerifyJoiningOtpHelper =
       :> QueryParam
            "authId"
            Kernel.Prelude.Text
-      :> ReqBody '[JSON] API.Types.ProviderPlatform.Fleet.Driver.VerifyFleetJoiningOtpReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
-
-type PostDriverFleetLinkRCWithDriver =
-  ( "fleet" :> "linkRCWithDriver" :> ReqBody '[JSON] API.Types.ProviderPlatform.Fleet.Driver.LinkRCWithDriverForFleetReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
-
-type PostDriverFleetLinkRCWithDriverHelper =
-  ( "fleet" :> "linkRCWithDriver" :> Capture "fleetOwnerId" Kernel.Prelude.Text
-      :> ReqBody
-           '[JSON]
-           API.Types.ProviderPlatform.Fleet.Driver.LinkRCWithDriverForFleetReq
+      :> ReqBody '[JSON] VerifyFleetJoiningOtpReq
       :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
+type PostDriverFleetLinkRCWithDriver = ("fleet" :> "linkRCWithDriver" :> ReqBody '[JSON] LinkRCWithDriverForFleetReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostDriverFleetLinkRCWithDriverHelper =
+  ( "fleet" :> "linkRCWithDriver" :> Capture "fleetOwnerId" Kernel.Prelude.Text :> ReqBody '[JSON] LinkRCWithDriverForFleetReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
 data DriverAPIs = DriverAPIs
-  { postDriverFleetAddVehicle :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.ProviderPlatform.Fleet.Driver.AddVehicleReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+  { postDriverFleetAddVehicle :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> AddVehicleReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverFleetAddRCWithoutDriver :: Kernel.Prelude.Text -> Dashboard.ProviderPlatform.Management.DriverRegistration.RegisterRCReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverFleetGetAllVehicle :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Fleet.Driver.ListVehicleRes,
-    getDriverFleetGetAllDriver :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Fleet.Driver.FleetListDriverRes,
+    getDriverFleetGetAllVehicle :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient ListVehicleRes,
+    getDriverFleetGetAllDriver :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient FleetListDriverRes,
     postDriverFleetUnlink :: Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverFleetRemoveVehicle :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverFleetRemoveDriver :: Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverFleetTotalEarning :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Fleet.Driver.FleetTotalEarningResponse,
-    getDriverFleetVehicleEarning :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Fleet.Driver.FleetEarningListRes,
-    getDriverFleetDriverEarning :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Driver.SortOn -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Fleet.Driver.FleetEarningListRes,
-    getDriverFleetDriverVehicleAssociation :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Fleet.Driver.DrivertoVehicleAssociationRes,
-    getDriverFleetDriverAssociation :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Driver.DriverMode -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Fleet.Driver.DrivertoVehicleAssociationRes,
-    getDriverFleetVehicleAssociation :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Driver.FleetVehicleStatus -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Fleet.Driver.DrivertoVehicleAssociationRes,
-    postDriverFleetVehicleDriverRcStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Fleet.Driver.RCStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverUpdateFleetOwnerInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Fleet.Driver.UpdateFleetOwnerInfoReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverFleetOwnerInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Fleet.Driver.FleetOwnerInfoRes,
+    getDriverFleetTotalEarning :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient FleetTotalEarningResponse,
+    getDriverFleetVehicleEarning :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient FleetEarningListRes,
+    getDriverFleetDriverEarning :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe SortOn -> EulerHS.Types.EulerClient FleetEarningListRes,
+    getDriverFleetDriverVehicleAssociation :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient DrivertoVehicleAssociationRes,
+    getDriverFleetDriverAssociation :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe DriverMode -> EulerHS.Types.EulerClient DrivertoVehicleAssociationRes,
+    getDriverFleetVehicleAssociation :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe FleetVehicleStatus -> EulerHS.Types.EulerClient DrivertoVehicleAssociationRes,
+    postDriverFleetVehicleDriverRcStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> RCStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverUpdateFleetOwnerInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateFleetOwnerInfoReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getDriverFleetOwnerInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient FleetOwnerInfoRes,
     postDriverFleetSendJoiningOtp :: Kernel.Prelude.Text -> Dashboard.ProviderPlatform.Management.DriverRegistration.AuthReq -> EulerHS.Types.EulerClient Dashboard.ProviderPlatform.Management.DriverRegistration.AuthRes,
-    postDriverFleetVerifyJoiningOtp :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.ProviderPlatform.Fleet.Driver.VerifyFleetJoiningOtpReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverFleetLinkRCWithDriver :: Kernel.Prelude.Text -> API.Types.ProviderPlatform.Fleet.Driver.LinkRCWithDriverForFleetReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postDriverFleetVerifyJoiningOtp :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> VerifyFleetJoiningOtpReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverFleetLinkRCWithDriver :: Kernel.Prelude.Text -> LinkRCWithDriverForFleetReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)

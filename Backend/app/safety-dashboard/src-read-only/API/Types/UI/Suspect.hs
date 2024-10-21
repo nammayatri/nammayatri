@@ -11,7 +11,7 @@ import qualified Kernel.Prelude
 import Servant
 import "lib-dashboard" Tools.Auth
 
-data SuspectBulkUploadReq = SuspectBulkUploadReq {suspects :: [API.Types.UI.Suspect.SuspectUploadReq]}
+data SuspectBulkUploadReq = SuspectBulkUploadReq {suspects :: [SuspectUploadReq]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

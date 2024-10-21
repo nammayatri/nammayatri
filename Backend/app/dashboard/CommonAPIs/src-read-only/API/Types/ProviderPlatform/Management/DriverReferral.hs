@@ -19,7 +19,7 @@ data FailureReasons = FailureReasons {driverId :: Kernel.Prelude.Text, failureRe
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LinkReport = LinkReport {successFullyLinked :: Kernel.Prelude.Int, failures :: [API.Types.ProviderPlatform.Management.DriverReferral.FailureReasons]}
+data LinkReport = LinkReport {successFullyLinked :: Kernel.Prelude.Int, failures :: [FailureReasons]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -39,28 +39,13 @@ instance Kernel.Types.HideSecrets.HideSecrets ReferralLinkReq where
 
 type API = ("driverReferral" :> (PostDriverReferralReferralOpsPassword :<|> PostDriverReferralLinkReferral))
 
-type PostDriverReferralReferralOpsPassword =
-  ( "referralOpsPassword" :> ReqBody '[JSON] API.Types.ProviderPlatform.Management.DriverReferral.ReferralLinkPasswordUpdateAPIReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+type PostDriverReferralReferralOpsPassword = ("referralOpsPassword" :> ReqBody '[JSON] ReferralLinkPasswordUpdateAPIReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostDriverReferralLinkReferral =
-  ( "linkReferral"
-      :> Kernel.ServantMultipart.MultipartForm
-           Kernel.ServantMultipart.Tmp
-           API.Types.ProviderPlatform.Management.DriverReferral.ReferralLinkReq
-      :> Post '[JSON] API.Types.ProviderPlatform.Management.DriverReferral.LinkReport
-  )
+type PostDriverReferralLinkReferral = ("linkReferral" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp ReferralLinkReq :> Post '[JSON] LinkReport)
 
 data DriverReferralAPIs = DriverReferralAPIs
-  { postDriverReferralReferralOpsPassword :: API.Types.ProviderPlatform.Management.DriverReferral.ReferralLinkPasswordUpdateAPIReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverReferralLinkReferral ::
-      ( Data.ByteString.Lazy.ByteString,
-        API.Types.ProviderPlatform.Management.DriverReferral.ReferralLinkReq
-      ) ->
-      EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.DriverReferral.LinkReport
+  { postDriverReferralReferralOpsPassword :: ReferralLinkPasswordUpdateAPIReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverReferralLinkReferral :: (Data.ByteString.Lazy.ByteString, ReferralLinkReq) -> EulerHS.Types.EulerClient LinkReport
   }
 
 mkDriverReferralAPIs :: (Client EulerHS.Types.EulerClient API -> DriverReferralAPIs)

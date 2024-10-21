@@ -24,7 +24,7 @@ data InvoiceRes = InvoiceRes
     date :: Kernel.Prelude.UTCTime,
     destination :: Data.Text.Text,
     driverName :: Data.Text.Text,
-    faresList :: [API.Types.RiderPlatform.Management.Invoice.FareBreakup],
+    faresList :: [FareBreakup],
     rideEndTime :: Kernel.Prelude.UTCTime,
     rideStartTime :: Kernel.Prelude.UTCTime,
     shortRideId :: Data.Text.Text,
@@ -42,10 +42,10 @@ type GetInvoiceInvoice =
       :> MandatoryQueryParam
            "to"
            Kernel.Prelude.UTCTime
-      :> Get '[JSON] [API.Types.RiderPlatform.Management.Invoice.InvoiceRes]
+      :> Get '[JSON] [InvoiceRes]
   )
 
-newtype InvoiceAPIs = InvoiceAPIs {getInvoiceInvoice :: Kernel.Prelude.UTCTime -> Data.Text.Text -> Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient [API.Types.RiderPlatform.Management.Invoice.InvoiceRes]}
+newtype InvoiceAPIs = InvoiceAPIs {getInvoiceInvoice :: Kernel.Prelude.UTCTime -> Data.Text.Text -> Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient [InvoiceRes]}
 
 mkInvoiceAPIs :: (Client EulerHS.Types.EulerClient API -> InvoiceAPIs)
 mkInvoiceAPIs invoiceClient = (InvoiceAPIs {..})

@@ -14,7 +14,7 @@ import qualified Kernel.Types.HideSecrets
 import Servant
 import Servant.Client
 
-data QueryData = QueryData {queryType :: API.Types.RiderPlatform.Management.System.QueryType, tableName :: Kernel.Prelude.Text, setClause :: Data.Aeson.Value, whereClause :: Data.Aeson.Value}
+data QueryData = QueryData {queryType :: QueryType, tableName :: Kernel.Prelude.Text, setClause :: Data.Aeson.Value, whereClause :: Data.Aeson.Value}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -29,9 +29,9 @@ data QueryType
 
 type API = ("system" :> PostSystemRunQuery)
 
-type PostSystemRunQuery = ("runQuery" :> ReqBody '[JSON] API.Types.RiderPlatform.Management.System.QueryData :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostSystemRunQuery = ("runQuery" :> ReqBody '[JSON] QueryData :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-newtype SystemAPIs = SystemAPIs {postSystemRunQuery :: API.Types.RiderPlatform.Management.System.QueryData -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess}
+newtype SystemAPIs = SystemAPIs {postSystemRunQuery :: QueryData -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess}
 
 mkSystemAPIs :: (Client EulerHS.Types.EulerClient API -> SystemAPIs)
 mkSystemAPIs systemClient = (SystemAPIs {..})

@@ -8,7 +8,7 @@ import EulerHS.Prelude hiding (id)
 import Servant
 import Tools.Auth
 
-data EditBookingRespondAPIReq = EditBookingRespondAPIReq {action :: API.Types.UI.EditBooking.EditBookingRespondAction}
+data EditBookingRespondAPIReq = EditBookingRespondAPIReq {action :: EditBookingRespondAction}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

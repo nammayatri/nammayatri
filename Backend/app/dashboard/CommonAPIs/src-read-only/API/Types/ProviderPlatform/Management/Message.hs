@@ -24,13 +24,13 @@ data AddLinkAsMedia = AddLinkAsMedia {url :: Kernel.Prelude.Text, fileType :: AW
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data AddMessageRequest = AddMessageRequest
-  { _type :: API.Types.ProviderPlatform.Management.Message.MessageType,
+  { _type :: MessageType,
     title :: Kernel.Prelude.Text,
     description :: Kernel.Prelude.Text,
     shortDescription :: Kernel.Prelude.Text,
     label :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     alwaysTriggerOnOnboarding :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    translations :: [API.Types.ProviderPlatform.Management.Message.MessageTranslation],
+    translations :: [MessageTranslation],
     mediaFiles :: [Kernel.Types.Id.Id Dashboard.Common.File]
   }
   deriving stock (Generic)
@@ -80,17 +80,17 @@ data MessageInfoResponse = MessageInfoResponse
     title :: Kernel.Prelude.Text,
     description :: Kernel.Prelude.Text,
     shortDescription :: Kernel.Prelude.Text,
-    _type :: API.Types.ProviderPlatform.Management.Message.MessageType,
-    mediaFiles :: [API.Types.ProviderPlatform.Management.Message.MediaFile]
+    _type :: MessageType,
+    mediaFiles :: [MediaFile]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data MessageListItem = MessageListItem {messageId :: Kernel.Types.Id.Id Dashboard.Common.Message, title :: Kernel.Prelude.Text, _type :: API.Types.ProviderPlatform.Management.Message.MessageType}
+data MessageListItem = MessageListItem {messageId :: Kernel.Types.Id.Id Dashboard.Common.Message, title :: Kernel.Prelude.Text, _type :: MessageType}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data MessageListResponse = MessageListResponse {messages :: [API.Types.ProviderPlatform.Management.Message.MessageListItem], summary :: Dashboard.Common.Summary}
+data MessageListResponse = MessageListResponse {messages :: [MessageListItem], summary :: Dashboard.Common.Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -101,12 +101,12 @@ data MessageReceiverListItem = MessageReceiverListItem
     reply :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     seen :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     liked :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    status :: API.Types.ProviderPlatform.Management.Message.MessageDeliveryStatus
+    status :: MessageDeliveryStatus
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data MessageReceiverListResponse = MessageReceiverListResponse {receivers :: [API.Types.ProviderPlatform.Management.Message.MessageReceiverListItem], summary :: Dashboard.Common.Summary}
+data MessageReceiverListResponse = MessageReceiverListResponse {receivers :: [MessageReceiverListItem], summary :: Dashboard.Common.Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -126,7 +126,7 @@ data MessageType
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SendMessageRequest = SendMessageRequest {csvFile :: Kernel.Prelude.Maybe Kernel.Prelude.FilePath, _type :: API.Types.ProviderPlatform.Management.Message.InputType, messageId :: Kernel.Prelude.Text}
+data SendMessageRequest = SendMessageRequest {csvFile :: Kernel.Prelude.Maybe Kernel.Prelude.FilePath, _type :: InputType, messageId :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -146,69 +146,41 @@ newtype UploadFileResponse = UploadFileResponse {fileId :: Kernel.Types.Id.Id Da
 
 type API = ("message" :> (PostMessageUploadFile :<|> PostMessageAddLink :<|> PostMessageAdd :<|> PostMessageSend :<|> GetMessageList :<|> GetMessageInfo :<|> GetMessageDeliveryInfo :<|> GetMessageReceiverList))
 
-type PostMessageUploadFile =
-  ( "uploadFile" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp API.Types.ProviderPlatform.Management.Message.UploadFileRequest
-      :> Post
-           '[JSON]
-           API.Types.ProviderPlatform.Management.Message.UploadFileResponse
-  )
+type PostMessageUploadFile = ("uploadFile" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp UploadFileRequest :> Post '[JSON] UploadFileResponse)
 
-type PostMessageAddLink =
-  ( "addLink" :> ReqBody '[JSON] API.Types.ProviderPlatform.Management.Message.AddLinkAsMedia
-      :> Post
-           '[JSON]
-           API.Types.ProviderPlatform.Management.Message.UploadFileResponse
-  )
+type PostMessageAddLink = ("addLink" :> ReqBody '[JSON] AddLinkAsMedia :> Post '[JSON] UploadFileResponse)
 
-type PostMessageAdd = ("add" :> ReqBody '[JSON] API.Types.ProviderPlatform.Management.Message.AddMessageRequest :> Post '[JSON] API.Types.ProviderPlatform.Management.Message.AddMessageResponse)
+type PostMessageAdd = ("add" :> ReqBody '[JSON] AddMessageRequest :> Post '[JSON] AddMessageResponse)
 
-type PostMessageSend =
-  ( "send" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp API.Types.ProviderPlatform.Management.Message.SendMessageRequest
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+type PostMessageSend = ("send" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp SendMessageRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type GetMessageList = ("list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get '[JSON] API.Types.ProviderPlatform.Management.Message.MessageListResponse)
+type GetMessageList = ("list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get '[JSON] MessageListResponse)
 
-type GetMessageInfo = (Capture "messageId" (Kernel.Types.Id.Id Dashboard.Common.Message) :> "info" :> Get '[JSON] API.Types.ProviderPlatform.Management.Message.MessageInfoResponse)
+type GetMessageInfo = (Capture "messageId" (Kernel.Types.Id.Id Dashboard.Common.Message) :> "info" :> Get '[JSON] MessageInfoResponse)
 
-type GetMessageDeliveryInfo =
-  ( Capture "messageId" (Kernel.Types.Id.Id Dashboard.Common.Message) :> "deliveryInfo"
-      :> Get
-           '[JSON]
-           API.Types.ProviderPlatform.Management.Message.MessageDeliveryInfoResponse
-  )
+type GetMessageDeliveryInfo = (Capture "messageId" (Kernel.Types.Id.Id Dashboard.Common.Message) :> "deliveryInfo" :> Get '[JSON] MessageDeliveryInfoResponse)
 
 type GetMessageReceiverList =
   ( Capture "messageId" (Kernel.Types.Id.Id Dashboard.Common.Message) :> "receiverList" :> QueryParam "number" Kernel.Prelude.Text
       :> QueryParam
            "status"
-           API.Types.ProviderPlatform.Management.Message.MessageDeliveryStatus
-      :> QueryParam
-           "limit"
-           Kernel.Prelude.Int
-      :> QueryParam
-           "offset"
-           Kernel.Prelude.Int
+           MessageDeliveryStatus
+      :> QueryParam "limit" Kernel.Prelude.Int
+      :> QueryParam "offset" Kernel.Prelude.Int
       :> Get
            '[JSON]
-           API.Types.ProviderPlatform.Management.Message.MessageReceiverListResponse
+           MessageReceiverListResponse
   )
 
 data MessageAPIs = MessageAPIs
-  { postMessageUploadFile ::
-      ( Data.ByteString.Lazy.ByteString,
-        API.Types.ProviderPlatform.Management.Message.UploadFileRequest
-      ) ->
-      EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Message.UploadFileResponse,
-    postMessageAddLink :: API.Types.ProviderPlatform.Management.Message.AddLinkAsMedia -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Message.UploadFileResponse,
-    postMessageAdd :: API.Types.ProviderPlatform.Management.Message.AddMessageRequest -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Message.AddMessageResponse,
-    postMessageSend :: (Data.ByteString.Lazy.ByteString, API.Types.ProviderPlatform.Management.Message.SendMessageRequest) -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getMessageList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Message.MessageListResponse,
-    getMessageInfo :: Kernel.Types.Id.Id Dashboard.Common.Message -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Message.MessageInfoResponse,
-    getMessageDeliveryInfo :: Kernel.Types.Id.Id Dashboard.Common.Message -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Message.MessageDeliveryInfoResponse,
-    getMessageReceiverList :: Kernel.Types.Id.Id Dashboard.Common.Message -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Message.MessageDeliveryStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Message.MessageReceiverListResponse
+  { postMessageUploadFile :: (Data.ByteString.Lazy.ByteString, UploadFileRequest) -> EulerHS.Types.EulerClient UploadFileResponse,
+    postMessageAddLink :: AddLinkAsMedia -> EulerHS.Types.EulerClient UploadFileResponse,
+    postMessageAdd :: AddMessageRequest -> EulerHS.Types.EulerClient AddMessageResponse,
+    postMessageSend :: (Data.ByteString.Lazy.ByteString, SendMessageRequest) -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getMessageList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient MessageListResponse,
+    getMessageInfo :: Kernel.Types.Id.Id Dashboard.Common.Message -> EulerHS.Types.EulerClient MessageInfoResponse,
+    getMessageDeliveryInfo :: Kernel.Types.Id.Id Dashboard.Common.Message -> EulerHS.Types.EulerClient MessageDeliveryInfoResponse,
+    getMessageReceiverList :: Kernel.Types.Id.Id Dashboard.Common.Message -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe MessageDeliveryStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient MessageReceiverListResponse
   }
 
 mkMessageAPIs :: (Client EulerHS.Types.EulerClient API -> MessageAPIs)

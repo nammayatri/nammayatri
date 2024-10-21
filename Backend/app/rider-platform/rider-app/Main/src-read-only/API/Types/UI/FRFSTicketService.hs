@@ -23,13 +23,13 @@ import qualified Lib.JourneyPlannerTypes
 import Servant
 import Tools.Auth
 
-data AutocompleteRes = AutocompleteRes {routes :: [API.Types.UI.FRFSTicketService.FRFSRouteAPI], stops :: [API.Types.UI.FRFSTicketService.FRFSStationAPI]}
+data AutocompleteRes = AutocompleteRes {routes :: [FRFSRouteAPI], stops :: [FRFSStationAPI]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSBookingPaymentAPI = FRFSBookingPaymentAPI
   { paymentOrder :: Data.Maybe.Maybe Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp,
-    status :: API.Types.UI.FRFSTicketService.FRFSBookingPaymentStatusAPI,
+    status :: FRFSBookingPaymentStatusAPI,
     transactionId :: Data.Maybe.Maybe Data.Text.Text
   }
   deriving stock (Generic)
@@ -83,12 +83,12 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     quantity :: Kernel.Prelude.Int,
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
-    routeStations :: Data.Maybe.Maybe [API.Types.UI.FRFSTicketService.FRFSRouteStationsAPI],
+    routeStations :: Data.Maybe.Maybe [FRFSRouteStationsAPI],
     serviceTierDescription :: Data.Maybe.Maybe Data.Text.Text,
     serviceTierLongName :: Data.Maybe.Maybe Data.Text.Text,
     serviceTierShortName :: Data.Maybe.Maybe Data.Text.Text,
     serviceTierType :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
-    stations :: [API.Types.UI.FRFSTicketService.FRFSStationAPI],
+    stations :: [FRFSStationAPI],
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
@@ -114,7 +114,7 @@ data FRFSRouteStationsAPI = FRFSRouteStationsAPI
     sequenceNum :: Data.Maybe.Maybe Kernel.Prelude.Int,
     shortName :: Data.Text.Text,
     startPoint :: Kernel.External.Maps.Types.LatLong,
-    stations :: [API.Types.UI.FRFSTicketService.FRFSStationAPI]
+    stations :: [FRFSStationAPI]
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -159,18 +159,18 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     createdAt :: Kernel.Prelude.UTCTime,
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
-    payment :: Data.Maybe.Maybe API.Types.UI.FRFSTicketService.FRFSBookingPaymentAPI,
+    payment :: Data.Maybe.Maybe FRFSBookingPaymentAPI,
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     quantity :: Kernel.Prelude.Int,
-    routeStations :: Data.Maybe.Maybe [API.Types.UI.FRFSTicketService.FRFSRouteStationsAPI],
+    routeStations :: Data.Maybe.Maybe [FRFSRouteStationsAPI],
     serviceTierDescription :: Data.Maybe.Maybe Data.Text.Text,
     serviceTierLongName :: Data.Maybe.Maybe Data.Text.Text,
     serviceTierShortName :: Data.Maybe.Maybe Data.Text.Text,
     serviceTierType :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
-    stations :: [API.Types.UI.FRFSTicketService.FRFSStationAPI],
+    stations :: [FRFSStationAPI],
     status :: Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
-    tickets :: [API.Types.UI.FRFSTicketService.FRFSTicketAPI],
+    tickets :: [FRFSTicketAPI],
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory

@@ -21,7 +21,7 @@ data InvoiceRes = InvoiceRes
     date :: Kernel.Prelude.UTCTime,
     destination :: Data.Text.Text,
     driverName :: Data.Text.Text,
-    faresList :: [API.Types.UI.Invoice.FareBreakup],
+    faresList :: [FareBreakup],
     rideEndTime :: Kernel.Prelude.UTCTime,
     rideStartTime :: Kernel.Prelude.UTCTime,
     shortRideId :: Data.Text.Text,

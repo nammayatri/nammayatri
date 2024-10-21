@@ -16,17 +16,13 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
-data BulkUploadCoinsReq = BulkUploadCoinsReq
-  { driverIdListWithCoins :: [API.Types.ProviderPlatform.Management.DriverCoins.DriverIdListWithCoins],
-    bulkUploadTitle :: API.Types.ProviderPlatform.Management.DriverCoins.Translations,
-    expirationTime :: Kernel.Prelude.Maybe Kernel.Prelude.Int
-  }
+data BulkUploadCoinsReq = BulkUploadCoinsReq {driverIdListWithCoins :: [DriverIdListWithCoins], bulkUploadTitle :: Translations, expirationTime :: Kernel.Prelude.Maybe Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data BulkUploadCoinsReqV2 = BulkUploadCoinsReqV2
-  { driverIdListWithCoins :: [API.Types.ProviderPlatform.Management.DriverCoins.DriverIdListWithAmount],
-    bulkUploadTitle :: API.Types.ProviderPlatform.Management.DriverCoins.Translations,
+  { driverIdListWithCoins :: [DriverIdListWithAmount],
+    bulkUploadTitle :: Translations,
     expirationTime :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     eventFunction :: Dashboard.Common.DriverCoinsExtra.DriverCoinsFunctionType
   }
@@ -50,8 +46,8 @@ data CoinEarnHistoryItem = CoinEarnHistoryItem
     createdAt :: Kernel.Prelude.UTCTime,
     expirationAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     coinsUsed :: Kernel.Prelude.Int,
-    status :: API.Types.ProviderPlatform.Management.DriverCoins.CoinStatus,
-    bulkUploadTitle :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.DriverCoins.Translations
+    status :: CoinStatus,
+    bulkUploadTitle :: Kernel.Prelude.Maybe Translations
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -61,8 +57,8 @@ data CoinHistoryRes = CoinHistoryRes
     coinEarned :: Kernel.Prelude.Int,
     coinUsed :: Kernel.Prelude.Int,
     coinExpired :: Kernel.Prelude.Int,
-    coinEarnHistory :: [API.Types.ProviderPlatform.Management.DriverCoins.CoinEarnHistoryItem],
-    coinBurnHistory :: [API.Types.ProviderPlatform.Management.DriverCoins.CoinBurnHistoryItem]
+    coinEarnHistory :: [CoinEarnHistoryItem],
+    coinBurnHistory :: [CoinBurnHistoryItem]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -96,27 +92,22 @@ data Translations = Translations
 
 type API = ("coins" :> (PostDriverCoinsBulkUploadCoins :<|> PostDriverCoinsBulkUploadCoinsV2 :<|> GetDriverCoinsCoinHistory))
 
-type PostDriverCoinsBulkUploadCoins = ("bulkUploadCoins" :> ReqBody '[JSON] API.Types.ProviderPlatform.Management.DriverCoins.BulkUploadCoinsReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostDriverCoinsBulkUploadCoins = ("bulkUploadCoins" :> ReqBody '[JSON] BulkUploadCoinsReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostDriverCoinsBulkUploadCoinsV2 =
-  ( "bulkUploadCoinsV2" :> ReqBody '[JSON] API.Types.ProviderPlatform.Management.DriverCoins.BulkUploadCoinsReqV2
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+type PostDriverCoinsBulkUploadCoinsV2 = ("bulkUploadCoinsV2" :> ReqBody '[JSON] BulkUploadCoinsReqV2 :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type GetDriverCoinsCoinHistory =
   ( "coinHistory" :> Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> QueryParam "limit" Kernel.Prelude.Integer
       :> QueryParam
            "offset"
            Kernel.Prelude.Integer
-      :> Get '[JSON] API.Types.ProviderPlatform.Management.DriverCoins.CoinHistoryRes
+      :> Get '[JSON] CoinHistoryRes
   )
 
 data DriverCoinsAPIs = DriverCoinsAPIs
-  { postDriverCoinsBulkUploadCoins :: API.Types.ProviderPlatform.Management.DriverCoins.BulkUploadCoinsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverCoinsBulkUploadCoinsV2 :: API.Types.ProviderPlatform.Management.DriverCoins.BulkUploadCoinsReqV2 -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverCoinsCoinHistory :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.DriverCoins.CoinHistoryRes
+  { postDriverCoinsBulkUploadCoins :: BulkUploadCoinsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverCoinsBulkUploadCoinsV2 :: BulkUploadCoinsReqV2 -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getDriverCoinsCoinHistory :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> EulerHS.Types.EulerClient CoinHistoryRes
   }
 
 mkDriverCoinsAPIs :: (Client EulerHS.Types.EulerClient API -> DriverCoinsAPIs)

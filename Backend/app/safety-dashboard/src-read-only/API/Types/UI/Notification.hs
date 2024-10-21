@@ -11,7 +11,7 @@ import qualified Kernel.Prelude
 import Servant
 import "lib-dashboard" Tools.Auth
 
-data NotificationList = NotificationList {list :: [Domain.Types.Notification.Notification], summary :: API.Types.UI.Notification.Summary}
+data NotificationList = NotificationList {list :: [Domain.Types.Notification.Notification], summary :: Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

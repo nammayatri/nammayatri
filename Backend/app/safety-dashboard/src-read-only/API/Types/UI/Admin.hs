@@ -23,7 +23,7 @@ data SuspectFlagChangeRequestList = SuspectFlagChangeRequestList {flaggedStatus 
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data WebhookCheck = WebhookCheck {suspectList :: [API.Types.UI.Admin.WebhookRequest]}
+data WebhookCheck = WebhookCheck {suspectList :: [WebhookRequest]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

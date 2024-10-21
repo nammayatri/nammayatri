@@ -17,7 +17,7 @@ data SuspectApprovalReqList = SuspectApprovalReqList {adminApproval :: Domain.Ty
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SuspectFlagRequestList = SuspectFlagRequestList {flagRequestList :: [API.Types.UI.SuspectFlagRequest.SuspectFlagRequestResp], summary :: API.Types.UI.Notification.Summary}
+data SuspectFlagRequestList = SuspectFlagRequestList {flagRequestList :: [SuspectFlagRequestResp], summary :: API.Types.UI.Notification.Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -60,7 +60,7 @@ data PayoutHistoryItem = PayoutHistoryItem
     payoutAmount :: Kernel.Types.Common.HighPrecMoney,
     payoutStatus :: Kernel.Prelude.Text,
     payoutTime :: Data.Time.LocalTime,
-    payoutEntity :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Payout.EntityName,
+    payoutEntity :: Kernel.Prelude.Maybe EntityName,
     payoutOrderId :: Kernel.Prelude.Text,
     responseMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     responseCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -69,11 +69,11 @@ data PayoutHistoryItem = PayoutHistoryItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PayoutHistoryRes = PayoutHistoryRes {history :: [API.Types.ProviderPlatform.Management.Payout.PayoutHistoryItem], summary :: Dashboard.Common.Summary}
+data PayoutHistoryRes = PayoutHistoryRes {history :: [PayoutHistoryItem], summary :: Dashboard.Common.Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PayoutReferralHistoryRes = PayoutReferralHistoryRes {history :: [API.Types.ProviderPlatform.Management.Payout.ReferralHistoryItem], summary :: Dashboard.Common.Summary}
+data PayoutReferralHistoryRes = PayoutReferralHistoryRes {history :: [ReferralHistoryItem], summary :: Dashboard.Common.Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -90,7 +90,7 @@ data ReferralHistoryItem = ReferralHistoryItem
     riderDetailsId :: Kernel.Prelude.Text,
     hasTakenValidActivatedRide :: Kernel.Prelude.Bool,
     dateOfActivation :: Kernel.Prelude.Maybe Data.Time.LocalTime,
-    fraudFlaggedReason :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Payout.PayoutFlagReason,
+    fraudFlaggedReason :: Kernel.Prelude.Maybe PayoutFlagReason,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Ride),
     driverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver),
     isReviewed :: Kernel.Prelude.Bool
@@ -98,12 +98,7 @@ data ReferralHistoryItem = ReferralHistoryItem
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RetryPayoutsReq = RetryPayoutsReq
-  { limit :: Kernel.Prelude.Int,
-    offset :: Kernel.Prelude.Int,
-    status :: Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus,
-    entityNames :: [API.Types.ProviderPlatform.Management.Payout.EntityName]
-  }
+data RetryPayoutsReq = RetryPayoutsReq {limit :: Kernel.Prelude.Int, offset :: Kernel.Prelude.Int, status :: Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus, entityNames :: [EntityName]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -147,7 +142,7 @@ type GetPayoutPayoutReferralHistory =
            Kernel.Prelude.UTCTime
       :> Get
            '[JSON]
-           API.Types.ProviderPlatform.Management.Payout.PayoutReferralHistoryRes
+           PayoutReferralHistoryRes
   )
 
 type GetPayoutPayoutHistory =
@@ -167,47 +162,27 @@ type GetPayoutPayoutHistory =
            Kernel.Prelude.UTCTime
       :> Get
            '[JSON]
-           API.Types.ProviderPlatform.Management.Payout.PayoutHistoryRes
+           PayoutHistoryRes
   )
 
-type PostPayoutPayoutVerifyFraudStatus =
-  ( "payout" :> "verifyFraudStatus" :> ReqBody '[JSON] API.Types.ProviderPlatform.Management.Payout.UpdateFraudStatusReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+type PostPayoutPayoutVerifyFraudStatus = ("payout" :> "verifyFraudStatus" :> ReqBody '[JSON] UpdateFraudStatusReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostPayoutPayoutRetryFailed =
-  ( "payout" :> "retryFailed" :> ReqBody '[JSON] API.Types.ProviderPlatform.Management.Payout.FailedRetryPayoutReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+type PostPayoutPayoutRetryFailed = ("payout" :> "retryFailed" :> ReqBody '[JSON] FailedRetryPayoutReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostPayoutPayoutRetryAllWithStatus =
-  ( "payout" :> "retryAllWithStatus" :> ReqBody '[JSON] API.Types.ProviderPlatform.Management.Payout.RetryPayoutsReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+type PostPayoutPayoutRetryAllWithStatus = ("payout" :> "retryAllWithStatus" :> ReqBody '[JSON] RetryPayoutsReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostPayoutPayoutPendingPayout =
-  ( "payout" :> "pendingPayout" :> ReqBody '[JSON] API.Types.ProviderPlatform.Management.Payout.PendingPayoutReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+type PostPayoutPayoutPendingPayout = ("payout" :> "pendingPayout" :> ReqBody '[JSON] PendingPayoutReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostPayoutPayoutDeleteVPA = ("payout" :> "deleteVPA" :> ReqBody '[JSON] API.Types.ProviderPlatform.Management.Payout.DeleteVpaReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostPayoutPayoutDeleteVPA = ("payout" :> "deleteVPA" :> ReqBody '[JSON] DeleteVpaReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data PayoutAPIs = PayoutAPIs
-  { getPayoutPayoutReferralHistory :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Payout.PayoutReferralHistoryRes,
-    getPayoutPayoutHistory :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Payout.PayoutHistoryRes,
-    postPayoutPayoutVerifyFraudStatus :: API.Types.ProviderPlatform.Management.Payout.UpdateFraudStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postPayoutPayoutRetryFailed :: API.Types.ProviderPlatform.Management.Payout.FailedRetryPayoutReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postPayoutPayoutRetryAllWithStatus :: API.Types.ProviderPlatform.Management.Payout.RetryPayoutsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postPayoutPayoutPendingPayout :: API.Types.ProviderPlatform.Management.Payout.PendingPayoutReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postPayoutPayoutDeleteVPA :: API.Types.ProviderPlatform.Management.Payout.DeleteVpaReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+  { getPayoutPayoutReferralHistory :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient PayoutReferralHistoryRes,
+    getPayoutPayoutHistory :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient PayoutHistoryRes,
+    postPayoutPayoutVerifyFraudStatus :: UpdateFraudStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postPayoutPayoutRetryFailed :: FailedRetryPayoutReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postPayoutPayoutRetryAllWithStatus :: RetryPayoutsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postPayoutPayoutPendingPayout :: PendingPayoutReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postPayoutPayoutDeleteVPA :: DeleteVpaReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkPayoutAPIs :: (Client EulerHS.Types.EulerClient API -> PayoutAPIs)
