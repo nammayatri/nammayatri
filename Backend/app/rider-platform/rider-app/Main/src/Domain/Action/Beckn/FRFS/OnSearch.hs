@@ -20,6 +20,7 @@ import Data.List (sortOn)
 import qualified Data.Text as T
 import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSSearch as Search
+import qualified Domain.Types.FRFSTicketDiscount as Discount
 import Domain.Types.Merchant
 import qualified Domain.Types.StationType as Station
 import Environment
@@ -33,6 +34,7 @@ import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
+import qualified Storage.Queries.FRFSTicketDiscount as QFRFSTicketDiscount
 import qualified Storage.Queries.PersonStats as QPStats
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.Station as QStation
@@ -62,7 +64,15 @@ data DQuote = DQuote
     serviceTierLongName :: Maybe Text,
     routeStations :: [DRouteStation],
     stations :: [DStation],
+    applicableDiscounts :: [DDiscount],
     _type :: Quote.FRFSQuoteType
+  }
+
+data DDiscount = DDiscount
+  { description :: Text,
+    price :: Price,
+    code :: Text,
+    _type :: Discount.DiscountType
   }
 
 data DRouteStation = DRouteStation
@@ -140,6 +150,13 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             )
             $ sortOn (.routeSequenceNum) routeStations
         return $ Just (Quote.Metro (map (.id) routes))
+  applicableDiscountIds <-
+    mapM
+      ( \discount -> do
+          ticketDiscount <- QFRFSTicketDiscount.findByCodeAndVehicleAndCity discount.code vehicleType search.merchantId search.merchantOperatingCityId >>= fromMaybeM (InternalError "FRFS Ticket Discount Not Found")
+          return ticketDiscount.id
+      )
+      applicableDiscounts
   let freeTicketInterval = fromMaybe (maxBound :: Int) mbFreeTicketInterval
   let stationsJSON = stations & map castStationToAPI & encodeToText
   let routeStationsJSON = routeStations & map castRouteStationToAPI & encodeToText
@@ -174,6 +191,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
         Quote.routeStationsJson = Just routeStationsJSON,
         Quote.toStationId = endStation.id,
         Quote.routeId = routeId,
+        Quote.applicableDiscountIds = Just applicableDiscountIds,
         Quote.validTill,
         Quote.vehicleType,
         Quote.merchantId = search.merchantId,

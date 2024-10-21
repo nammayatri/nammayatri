@@ -43,11 +43,14 @@ import Kernel.Types.GuidLike (generateGUID)
 import qualified Kernel.Types.Id
 import Kernel.Types.Time (getCurrentTime)
 import Kernel.Types.TimeBound
+import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common (fromMaybeM, throwError)
 import Kernel.Utils.Logging (logInfo)
 import Servant hiding (Header, throwError)
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
+import Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
 import Storage.Queries.Route as QRoute
 import Storage.Queries.RouteExtra as RE
 import Storage.Queries.RouteStopFare as QRSF
@@ -119,10 +122,20 @@ postFRFSTicketFrfsRouteDelete _merchantShortId _opCity code _vehicleType = do
   pure Success
 
 getFRFSTicketFrfsRouteFareList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow API.Types.RiderPlatform.Management.FRFSTicket.FRFSRouteFareAPI)
-getFRFSTicketFrfsRouteFareList _merchantShortId _opCity routeCode _vehicleType = do
+getFRFSTicketFrfsRouteFareList merchantShortId opCity routeCode vehicleType = do
   fetchedRoute <- QRoute.findByRouteCode routeCode >>= fromMaybeM (InvalidRequest "Invalid route code")
 
-  routeFares <- QRSF.findByRouteCode routeCode
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+
+  merchantOperatingCity <-
+    CQMOC.findByMerchantIdAndCity merchant.id opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+
+  -- TODO :: To be fixed properly to handle multi-dimensional Fare Product
+  fareProducts <- QFRFSRouteFareProduct.findByRouteCode routeCode merchant.id merchantOperatingCity.id
+  fareProduct <- find (\fareProduct -> fareProduct.timeBounds == DTB.Unbounded && fareProduct.vehicleType == vehicleType) fareProducts & fromMaybeM (InternalError "FRFS Fare Product Not Found")
+  farePolicy <- QFRFSFarePolicy.findById fareProduct.farePolicyId >>= fromMaybeM (InternalError $ "FRFS Fare Policy Not Found : " <> fareProduct.farePolicyId.getId)
+  routeFares <- QRSF.findByRouteCode farePolicy.id routeCode
 
   let groupedFares = groupBy (\a b -> a.startStopCode == b.startStopCode) routeFares
   let sortedGroupedFares = sortBy (comparing (negate . length)) groupedFares
@@ -187,7 +200,7 @@ data UpsertRouteFareResp = UpsertRouteFareResp {unprocessedRouteFares :: [Kernel
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 putFRFSTicketFrfsRouteFareUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteFareReq -> Environment.Flow API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteFareResp)
-putFRFSTicketFrfsRouteFareUpsert _merchantShortId _opCity _routeCode _vehicleType req = do
+putFRFSTicketFrfsRouteFareUpsert merchantShortId opCity _routeCode vehicleType req = do
   fareUpdates <- readCsv req.file
 
   unprocessedFares <- forM fareUpdates $ \row -> do
@@ -197,13 +210,24 @@ putFRFSTicketFrfsRouteFareUpsert _merchantShortId _opCity _routeCode _vehicleTyp
         let message = "Invalid amount format for route " <> row.routeCode <> " (" <> row.startStopCode <> " -> " <> row.endStopCode <> ")"
         throwError (InvalidRequest message)
       Just value -> do
-        existingFares <- QRSF.findByRouteStartAndStopCode row.routeCode row.startStopCode row.endStopCode
+        merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+
+        merchantOperatingCity <-
+          CQMOC.findByMerchantIdAndCity merchant.id opCity
+            >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+
+        -- TODO :: To be fixed properly to handle multi-dimensional Fare Product
+        fareProducts <- QFRFSRouteFareProduct.findByRouteCode row.routeCode merchant.id merchantOperatingCity.id
+        fareProduct <- find (\fareProduct -> fareProduct.timeBounds == DTB.Unbounded && fareProduct.vehicleType == vehicleType) fareProducts & fromMaybeM (InternalError "FRFS Fare Product Not Found")
+        farePolicy <- QFRFSFarePolicy.findById fareProduct.farePolicyId >>= fromMaybeM (InternalError $ "FRFS Fare Policy Not Found : " <> fareProduct.farePolicyId.getId)
+        existingFares <- QRSF.findByRouteStartAndStopCode farePolicy.id row.routeCode row.startStopCode row.endStopCode
+
         case existingFares of
-          [] -> do
+          Nothing -> do
             logInfo $ "No matching fare found for route " <> row.routeCode <> " with startStopCode " <> row.startStopCode <> " and endStopCode " <> row.endStopCode
             pure [(row.routeCode, row.startStopCode, row.endStopCode)]
           _ -> do
-            QRSF.updateFareByRouteCodeAndStopCodes value row.routeCode row.startStopCode row.endStopCode
+            QRSF.updateFareByRouteCodeAndStopCodes value farePolicy.id row.routeCode row.startStopCode row.endStopCode
             logInfo $ "Updated fare for route " <> row.routeCode <> " from " <> row.startStopCode <> " to " <> row.endStopCode <> " with amount " <> show value
             pure []
 
