@@ -199,12 +199,8 @@ eval (CallHV workFLowId inputJson) state =
         push <- getPushFn Mb.Nothing "RegistrationScreen"
         if EHC.os == "ANDROID" 
           then do
-            versionCodeAndroid <- JB.getVersionCode
-            if versionCodeAndroid < (getLatestAndroidVersion (getMerchant FunctionCall)) 
-              then pure UpdateApkAction
-            else do
-              void $ runEffectFn8 JB.initHVSdk state.data.accessToken workFLowId transactionId true (getDefaultAlpha2LanguageCode "") inputJson OnActivityResult push
-              pure NoAction
+            void $ runEffectFn8 JB.initHVSdk state.data.accessToken workFLowId transactionId true (getDefaultAlpha2LanguageCode "") inputJson OnActivityResult push
+            pure NoAction
         else pure NoAction
     ]
 
