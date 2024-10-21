@@ -19,6 +19,7 @@ import com.finternet.sdk.MyEventPackage;
 import com.google.firebase.FirebaseApp;
 import com.google.gson.Gson;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
+import com.google.android.play.core.splitcompat.SplitCompat;
 
 import java.util.List;
 
@@ -28,14 +29,18 @@ public class DynamicActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        SplitCompat.installActivity(this);
         setContentView(R.layout.activity_resource);
         try{
+            System.loadLibrary("jscexecutor");
             System.loadLibrary("turbomodulejsijni");
             System.loadLibrary("imagepipeline");
             System.loadLibrary("reactnativeblob");
             System.loadLibrary("native-imagetranscoder");
             System.loadLibrary("logger");
             System.loadLibrary("yoga");
+            System.loadLibrary("reactnativejni");
+            System.loadLibrary("fbjni");
             Intent intent = getIntent();
             String repeatUserLoginToken = intent.getStringExtra("token");
             FirebaseApp.getApps(this);
