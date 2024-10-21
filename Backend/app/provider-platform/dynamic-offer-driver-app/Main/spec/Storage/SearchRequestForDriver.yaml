@@ -98,6 +98,7 @@ SearchRequestForDriver:
     isFavourite : Maybe Bool
     parcelType: Maybe ParcelType
     parcelQuantity: Maybe Int
+    driverTagScore: Maybe Value
 
   beamType:
     clientBundleVersion: Maybe Text
