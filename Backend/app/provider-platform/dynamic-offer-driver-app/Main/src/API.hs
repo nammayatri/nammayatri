@@ -14,7 +14,7 @@
 
 module API where
 
-import qualified API.Dashboard as Dashboard
+import qualified API.Dashboard as Dashboar
 import qualified API.IGM as IGM
 import qualified API.Internal as Internal
 import qualified API.UI as UI
