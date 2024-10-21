@@ -211,7 +211,7 @@ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction m
           }
   CHistory.updateCoinEvent driverCoinEvent
   when (numCoins > 0) $ do
-    sendCoinsNotification merchantOpCityId driverId numCoins
+    sendCoinsNotification merchantOpCityId driverId numCoins eventFunction
   pure numCoins
 
 sendCoinsNotificationV2 :: EventFlow m r => Id DMOC.MerchantOperatingCity -> Id DP.Person -> HighPrecMoney -> Int -> DCT.DriverCoinsFunctionType -> m ()
@@ -233,19 +233,20 @@ sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue (DCT.BulkUpl
     replaceAmountValue amount' = T.replace "{#amountValue#}" (T.pack $ show amount')
 sendCoinsNotificationV2 _merchantOpCityId _driverId _amount _coinsValue _eventFunction = pure ()
 
-sendCoinsNotification :: EventFlow m r => Id DMOC.MerchantOperatingCity -> Id DP.Person -> Int -> m ()
-sendCoinsNotification merchantOpCityId driverId coinsValue =
+sendCoinsNotification :: EventFlow m r => Id DMOC.MerchantOperatingCity -> Id DP.Person -> Int -> DCT.DriverCoinsFunctionType -> m ()
+sendCoinsNotification merchantOpCityId driverId coinsValue eventFunction =
   B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
     let language = fromMaybe L.ENGLISH driver.language
         queryType = if coinsValue > 0 then CoinAdded else CoinSubtracted
-     in MTQuery.findByErrorAndLanguage (T.pack (show queryType)) language >>= processMessage driver
+        entityData = Notify.CoinsNotificationData {coins = coinsValue, event = eventFunction}
+     in MTQuery.findByErrorAndLanguage (T.pack (show queryType)) language >>= processMessage driver entityData
   where
-    processMessage driver mbCoinsMessage =
+    processMessage driver entityData mbCoinsMessage =
       case mbCoinsMessage of
         Just coinsMessage ->
           case T.splitOn " | " coinsMessage.message of
             [title, description] ->
-              Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS title (replaceCoinsValue description) driver (driver.deviceToken)
+              Notify.sendCoinsNotification merchantOpCityId title (replaceCoinsValue description) driver (driver.deviceToken) entityData
             _ -> logDebug "Invalid message format."
         Nothing -> logDebug "Could not find Translations."
     replaceCoinsValue = T.replace "{#coinsValue#}" (T.pack $ show coinsValue)
