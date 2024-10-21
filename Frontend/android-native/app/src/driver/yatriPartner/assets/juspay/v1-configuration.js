@@ -231,8 +231,8 @@ window.getMerchantConfig = function () {
       "hearingImpairmentVideo" : "https://www.youtube.com/watch?v=udkWOt0serg",
       "genericAccessibilityVideo" : "https://youtu.be/5s21p2rI58c"
     },
-    "cityConfig" : [
-      {
+    "cityConfig" : {
+      "Bangalore" :{
         "cityName" : "Bangalore",
         "mapImage" : "ny_ic_bangalore_map",
         "cityCode" : "std:080",
@@ -302,7 +302,7 @@ window.getMerchantConfig = function () {
         }
       , "rideStartAudio" : defaultStartAudioConfig
       },
-      {
+      "Hyderabad" : {
         "cityName" : "Hyderabad",
         "mapImage" : "ny_ic_hyderabad_map",
         "cityCode" : "std:040",
@@ -385,7 +385,7 @@ window.getMerchantConfig = function () {
         }
         , "rideStartAudio" : defaultStartAudioConfig
       },
-      {
+      "Mysore" : {
         "cityName" : "Mysore",
         "mapImage" : "ny_ic_mysuru_map",
         "cityCode" : "std:0821",
@@ -455,7 +455,7 @@ window.getMerchantConfig = function () {
       }
       , "rideStartAudio" : defaultStartAudioConfig
       },
-      {
+      "Delhi" : {
         "cityName" : "Delhi", 
         "mapImage" : "ny_ic_delhi_map",
         "cityCode" : "std:011",
@@ -538,7 +538,7 @@ window.getMerchantConfig = function () {
       }
       , "rideStartAudio" : defaultStartAudioConfig
       },
-      {
+      "Chennai" :{
         "cityName" : "Chennai",
         "mapImage" : "ny_ic_chennai_map",
         "cityCode" : "std:044",
@@ -621,7 +621,7 @@ window.getMerchantConfig = function () {
       }
       , "rideStartAudio" : defaultStartAudioConfig
       },
-      {
+      "Coimbatore" : {
         "cityName" : "Coimbatore",
         "mapImage" : "ny_ic_coimbatore_map",
         "cityCode" : "std:0422",
@@ -691,7 +691,7 @@ window.getMerchantConfig = function () {
       }
       , "rideStartAudio" : defaultStartAudioConfig
       },
-      {
+      "Puducherry" : {
         "cityName" : "Puducherry",
         "mapImage" : "ny_ic_puducherry_map",
         "cityCode" : "std:0413",
@@ -761,7 +761,7 @@ window.getMerchantConfig = function () {
       }
       , "rideStartAudio" : defaultStartAudioConfig
       },
-      {
+      "Tumakuru" : {
         "cityName" : "Tumakuru",
         "mapImage" : "ny_ic_tumakuru_map",
         "cityCode" : "std:0816",
@@ -831,7 +831,7 @@ window.getMerchantConfig = function () {
       }
       , "rideStartAudio" : defaultStartAudioConfig
       },
-      {
+      "Gurugram" : {
         "cityName" : "Gurugram",
         "mapImage" : "ny_ic_gurugram_map",
         "cityCode" : "std:0124",
@@ -901,7 +901,7 @@ window.getMerchantConfig = function () {
       }
       , "rideStartAudio" : defaultStartAudioConfig
       },
-      {
+      "Noida" : {
         "cityName" : "Noida",
         "mapImage" : "ny_ic_noida_map",
         "cityCode" : "std:01189",
@@ -971,7 +971,7 @@ window.getMerchantConfig = function () {
       }
       , "rideStartAudio" : defaultStartAudioConfig
       },
-      {
+      "TamilNaduCities" : {
         "cityName" : "TamilNaduCities",
         "mapImage" : "ny_ic_tamilnadu_map",
         "cityCode" :  "std:0422",
@@ -1041,7 +1041,7 @@ window.getMerchantConfig = function () {
       }
       , "rideStartAudio" : defaultStartAudioConfig
       },
-      {
+      "Minneapolis" : {
         "cityName" : "Minneapolis",
         "mapImage" : "ny_ic_minneapolis_map",
         "cityCode" : "std:01189",
@@ -1111,7 +1111,7 @@ window.getMerchantConfig = function () {
         }
         , "rideStartAudio" : defaultStartAudioConfig
       },
-      {
+      "Kochi" : {
         "cityName" : "Kochi",
         "mapImage" : "ny_ic_kochi_map",
         "cityCode" : "std:0484",
@@ -1182,7 +1182,7 @@ window.getMerchantConfig = function () {
       }
       , "rideStartAudio" : defaultStartAudioConfig
     },
-      {
+      "Jaipur" : {
         "cityName": "Jaipur",
         "mapImage": "ny_ic_jaipur_map",
         "cityCode": "std:0141",
@@ -1265,7 +1265,7 @@ window.getMerchantConfig = function () {
         }
         , "rideStartAudio" : defaultStartAudioConfig
       },
-      {
+      "Chandigarh" : {
         "cityName": "Chandigarh",
         "mapImage": "ny_ic_chandigarh_map",
         "cityCode": "std:0172",
@@ -1348,7 +1348,7 @@ window.getMerchantConfig = function () {
         }
         , "rideStartAudio" : defaultStartAudioConfig
       },
-      {
+      "Thrissur" : {
         "cityName": "Thrissur",
         "mapImage": "ny_ic_thrissur_map",
         "cityCode": "std:0487",
@@ -1418,7 +1418,7 @@ window.getMerchantConfig = function () {
         }
         , "rideStartAudio" : defaultStartAudioConfig
       },
-      {
+      "Trivandrum" : {
         "cityName": "Trivandrum",
         "mapImage": "ny_ic_trivandrum_map",
         "cityCode": "std:0471",
@@ -1488,7 +1488,7 @@ window.getMerchantConfig = function () {
         }
         , "rideStartAudio" : defaultStartAudioConfig
       },
-      {
+      "Kozhikode" : {
         "cityName": "Kozhikode",
         "mapImage": "ny_ic_kochi_map",
         "cityCode": "std:0495",
@@ -1558,7 +1558,7 @@ window.getMerchantConfig = function () {
         }
         , "rideStartAudio" : defaultStartAudioConfig
       }
-  ]
+    }
   , "dashboard" : {
         "enable" : true,
         "url" : "https://www.getyatri.com/open?source=in-app"

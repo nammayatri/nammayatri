@@ -983,7 +983,7 @@ tableItemView (API.CoinInfo item) index state =
               [ textView
                   ( [ height WRAP_CONTENT
                     , width WRAP_CONTENT
-                    , text $ if index /= 0 then  (if item.coins > 0 then "+" else "-") <> (show item.coins) else getString YATRI_POINTS_STR
+                    , text $ if index /= 0 then  (if item.coins > 0 then "+" else "") <> (show item.coins) else getString YATRI_POINTS_STR
                     , color Color.black900
                     ]
                       <> if index == 0 then FontStyle.h2 TypoGraphy else FontStyle.subHeading2 TypoGraphy
