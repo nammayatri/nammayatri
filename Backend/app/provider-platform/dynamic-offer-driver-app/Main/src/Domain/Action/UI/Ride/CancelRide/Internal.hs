@@ -29,7 +29,8 @@ import qualified Domain.Types.CancellationFarePolicy as DTC
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Yudhishthira as TY
-import Kernel.Prelude
+import EulerHS.Prelude
+import Kernel.Prelude hiding (any, elem)
 import qualified Kernel.Storage.Esqueleto as Esq hiding (whenJust_)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -64,6 +65,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as QVeh
+import Tools.Constants
 import Tools.Error
 import Tools.Event
 import qualified Tools.Metrics as Metrics
@@ -200,5 +202,11 @@ updateNammaTagsForCancelledRide booking ride bookingCReason = do
   nammaTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.RideCancel tagData)
   let allTags = ride.rideTags <> eitherToMaybe nammaTags
   QRide.updateRideTags allTags ride.id
+  driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  let tags = fromMaybe [] allTags
+  when (validDriverCancellation `elem` tags) $ do
+    QDriverStats.updateValidDriverCancellationTagCount (driverStats.validDriverCancellationTagCount + 1) ride.driverId
+  when (validCustomerCancellation `elem` tags) $ do
+    QDriverStats.updateValidCustomerCancellationTagCount (driverStats.validCustomerCancellationTagCount + 1) ride.driverId
   let upRide = ride{rideTags = allTags}
   return upRide

@@ -48,3 +48,10 @@ ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_payout_earnings
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_payout_amount_paid double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN valid_driver_cancellation_tag_count integer  default 0;
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN valid_customer_cancellation_tag_count integer  default 0;
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN valid_cancellation_tags_stats_start_date timestamp with time zone ;
