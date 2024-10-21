@@ -1727,3 +1727,4 @@ getTE stringKey =
     ENTER_A_ADDRESS -> "చిరునామా నమోదు చేయండి"    
     EXPLORE -> "పరిశీలించండి"
     DELIVERED_IN_JUST time -> "మాత్రమే " <> time <> " లో డెలివర్"
+    MAX_PARCEL_SIZE l b h -> "గరిష్ట పార్సల్ పరిమాణం: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm"

@@ -1714,3 +1714,4 @@ getHI stringKey =
         ENTER_A_ADDRESS -> "पता दर्ज करें"       
         EXPLORE -> "अन्वेषण करें"
         DELIVERED_IN_JUST time -> "केवल " <> time <> " में डिलीवर किया गया"
+        MAX_PARCEL_SIZE l b h -> "अधिकतम पार्सल आकार: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm"

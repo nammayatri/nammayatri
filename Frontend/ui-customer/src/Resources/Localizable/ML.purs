@@ -1712,3 +1712,4 @@ getML stringKey =
         ENTER_A_ADDRESS -> "വിലാസം നൽകുക"        
         EXPLORE -> "പര്യവേക്ഷണം ചെയ്യുക"
         DELIVERED_IN_JUST time -> "മാത്രം " <> time <> " സമയത്തിൽ ഡെലിവർ ചെയ്യപ്പെടും"
+        MAX_PARCEL_SIZE l b h -> "പരമാവധി പാർസൽ വലിപ്പം: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm"

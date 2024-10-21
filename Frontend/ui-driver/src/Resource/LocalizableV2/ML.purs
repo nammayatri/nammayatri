@@ -1742,4 +1742,7 @@ getMl =
     , upload_parcel_image : "പാക്കേജിന്റെ ചിത്രം അപ്‌ലോഡ് ചെയ്യുക"
     , pickup_instruction : "പിക്കപ്പ് നിർദേശം"
     , drop_instruction : "ഡ്രോപ്പ് നിർദേശം"
+    , parcel_is_inappropriate : "പാഴ്സൽ അനുയോജ്യമല്ല"
+    , sender_asking_different_location : "അയച്ചയാള്‍ വ്യത്യസ്ത സ്ഥലം ആവശ്യപ്പെടുന്നു"
+    , sender_unavailable_unreachable : "അയച്ചയാള്‍ ലഭ്യമല്ല / എത്തിക്കാനായില്ല"
     }
