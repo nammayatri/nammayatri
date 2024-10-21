@@ -1681,4 +1681,5 @@ getMl = Keymap {
 , limit_reached : "പരിധി എത്തി!"
 , confirm_contacts : "ബന്ധങ്ങളെ സ്ഥിരീകരിക്കുക"
 , tickets_for_delhi_metro : "ദില്ലി മെട്രോ ടിക്കറ്റുകൾ"
+, max_parcel_size : (\l b h -> "പരമാവധി പാർസൽ വലിപ്പം: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
 }

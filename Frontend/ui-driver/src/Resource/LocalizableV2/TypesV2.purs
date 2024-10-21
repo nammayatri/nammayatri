@@ -1756,6 +1756,9 @@ newtype Keymap
   , upload_parcel_image :: String
   , pickup_instruction :: String
   , drop_instruction :: String
+  , parcel_is_inappropriate :: String
+  , sender_asking_different_location :: String
+  , sender_unavailable_unreachable :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -6972,3 +6975,12 @@ pickup_instruction = a
 
 drop_instruction :: Proxy "drop_instruction"
 drop_instruction = a
+
+parcel_is_inappropriate :: Proxy "parcel_is_inappropriate"
+parcel_is_inappropriate = a
+
+sender_asking_different_location :: Proxy "sender_asking_different_location"
+sender_asking_different_location = a
+
+sender_unavailable_unreachable :: Proxy "sender_unavailable_unreachable"
+sender_unavailable_unreachable = a

@@ -1742,4 +1742,7 @@ getTa =
     , upload_parcel_image : "பார்சலின் புகைப்படத்தை பதிவேற்றவும்"
     , pickup_instruction : "பிக்அப் வழிமுறை"
     , drop_instruction : "டிராப் வழிமுறை"
+    , parcel_is_inappropriate : "பார்சல் பொருத்தமற்றது"
+    , sender_asking_different_location : "அனுப்புநர் வேறொரு இடத்திற்கு வருமாறு கேட்டுக்கொள்கிறார்"
+    , sender_unavailable_unreachable : "அனுப்புநர் கிடைக்கவில்லை / தொடர்பு கொள்ள முடியவில்லை"
     }

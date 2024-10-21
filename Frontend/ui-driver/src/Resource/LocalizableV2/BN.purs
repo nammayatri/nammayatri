@@ -1742,4 +1742,7 @@ getBn =
     , upload_parcel_image : "পার্সেল ছবি আপলোড করুন"
     , pickup_instruction : "পিকআপ নির্দেশাবলী"
     , drop_instruction : "ড্রপ নির্দেশাবলী"
+    , parcel_is_inappropriate : "পার্সেল অনুপযুক্ত"
+    , sender_asking_different_location : "প্রেরক ভিন্ন স্থানে আসতে বলছে"
+    , sender_unavailable_unreachable : "প্রেরক অনুপলব্ধ / পৌঁছানো যাচ্ছে না"
     }
