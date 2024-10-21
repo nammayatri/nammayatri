@@ -30,12 +30,12 @@ jobs:
           git config --global user.name 'namma-bot'
           git clone https://namma-bot:$PAT_TOKEN@github.com/nammayatri/asset-store.git asset-store
         env:
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+          PAT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run script
         env:
           ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }} 
+          PAT_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
         run: |
           chmod +x ../asset-store-script.sh 
-          ./../asset-store-script.sh ${{ github.event.pull_request.head.ref }} ${{ secrets.PAT_TOKEN }}
+          ./../asset-store-script.sh ${{ github.event.pull_request.head.ref }} ${{ secrets.GITHUB_TOKEN }}
