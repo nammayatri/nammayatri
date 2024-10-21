@@ -308,16 +308,23 @@ view push state =
             , height WRAP_CONTENT
             , orientation HORIZONTAL
             ]
-            [ textView $
+            [ imageView [
+               width state.primaryText.prefixImage.width
+               , height state.primaryText.prefixImage.height
+               , imageWithFallback state.primaryText.prefixImage.imageUrl
+               , visibility state.primaryText.prefixImage.visibility
+               , margin state.primaryText.prefixImage.margin
+                ]
+            , textView $
                 [ text $ state.primaryText.text
                 , accessibilityHint state.primaryText.text
                 , accessibility ENABLE
                 , color $ state.primaryText.color
-                , margin $ state.primaryText.margin
-                , gravity $ state.primaryText.gravity
                 , width if state.dismissPopupConfig.visibility == VISIBLE || state.headerInfo.visibility == VISIBLE then WRAP_CONTENT else MATCH_PARENT
                 , height WRAP_CONTENT
                 , visibility $ state.primaryText.visibility
+                , margin $ state.primaryText.margin
+                , gravity $ state.primaryText.gravity
                 ] <> (FontStyle.getFontStyle state.primaryText.textStyle LanguageStyle)
             , linearLayout
                 [ height WRAP_CONTENT
