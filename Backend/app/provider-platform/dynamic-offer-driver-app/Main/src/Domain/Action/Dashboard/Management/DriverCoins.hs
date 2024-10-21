@@ -106,7 +106,7 @@ bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsVal
                 vehicleCategory = Just vehCategory
               }
       CHistory.updateCoinEvent driverCoinEvent
-      Coins.sendCoinsNotification merchantOpCityId driverId coinsValue
+      Coins.sendCoinsNotification merchantOpCityId driverId coinsValue eventFunction
       pure ()
 
 postDriverCoinsBulkUploadCoinsV2 :: ShortId DM.Merchant -> Context.City -> Common.BulkUploadCoinsReqV2 -> Flow APISuccess
