@@ -233,6 +233,7 @@ import Styles.Colors as Color
 import Data.Int (ceil)
 import RemoteConfig as RemoteConfig
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ScreenData as ParcelDeliveryScreenData
+import Screens.MultiModalFlow.MultiModalScreen.Controller as MultiModalScreenController
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -2599,6 +2600,8 @@ homeScreenFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState)
       modifyScreenState $ ParcelDeliveryScreenStateType (\parcelDeliveryScreen -> parcelDeliveryScreen { props { isEditModal = false}, data { tipForDriver = if updatedState.data.config.tipsEnabled && updatedState.props.customerTip.tipForDriver /= 0 then Just updatedState.props.customerTip.tipForDriver else Nothing, parcelQuoteList = updatedState.data.selectedEstimatesObject, sourceAddress = updatedState.data.sourceAddress, destinationAddress = updatedState.data.destinationAddress, route = updatedState.data.route, sourceLat = updatedState.props.sourceLat, sourceLong = updatedState.props.sourceLong, destinationLat = updatedState.props.destinationLat, destinationLong = updatedState.props.destinationLong, rateCard = updatedState.data.rateCard}})
       parcelDeliveryFlow
+    GO_TO_MULTI_MODAL_FLOW _ -> do
+      multiModalFlow
     _ -> homeScreenFlow
 
 findEstimates :: HomeScreenState -> FlowBT String Unit 
@@ -6996,3 +6999,13 @@ updateScheduledRides needApiCall updateRentals= do
       pure unit
     )
     pure unit
+
+
+multiModalFlow :: FlowBT String Unit
+multiModalFlow = do
+  (GlobalState currentState) <- getState
+  action <- lift $ lift $ runScreen $ UI.multiModalScreen currentState.multiModalScreen
+  case action of
+    MultiModalScreenController.GoToHomeScreen state -> do
+      homeScreenFlow
+    _ -> pure unit

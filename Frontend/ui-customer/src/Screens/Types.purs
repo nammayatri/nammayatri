@@ -3191,3 +3191,26 @@ type NotificationBody = {
   rideTime :: Maybe String,
   bookingId :: Maybe String
 }
+
+-- ######################################### MultiModalFlow ####################################################
+
+data MultiModalStage = 
+    MULTI_MODAL_INSTRUCTIONS 
+  | MULTI_MODAL_RIDE_DETAILS
+
+type MultiModalScreenState = {
+  data :: MultiModalScreenData,
+  props :: MultiModalScreenProps
+}
+
+type MultiModalScreenData = {
+    currentStage :: MultiModalStage
+  , routeLatLongs :: Array LatLong
+  , currentLat :: Number
+  , currentLong :: Number
+}
+
+type MultiModalScreenProps = {
+    sheetState :: Maybe BottomSheetState
+  , currentSheetState :: BottomSheetState
+}

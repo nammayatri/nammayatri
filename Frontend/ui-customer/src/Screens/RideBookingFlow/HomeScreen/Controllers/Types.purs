@@ -133,6 +133,7 @@ data ScreenOutput = LogoutUser
   | GoToParcelInstructions HomeScreenState
   | GetDeliveryImage HomeScreenState
   | GoToDeliveryDetails HomeScreenState
+  | GoToMultiModalFlow HomeScreenState
 
 data Action = NoAction
   | BackPressed

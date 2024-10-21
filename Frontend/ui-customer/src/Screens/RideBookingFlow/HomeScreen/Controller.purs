@@ -3284,7 +3284,7 @@ eval (ServicesOnClick service) state = do
         else do
           void $ pure $ toast $ getString INTERCITY_RIDES_COMING_SOON
           continue updatedState
-    RC.INSTANT -> continueWithCmd updatedState [ pure $ WhereToClick]
+    RC.INSTANT -> exit $ GoToMultiModalFlow updatedState -- continueWithCmd updatedState [ pure $ WhereToClick]
     RC.TRANSIT -> exit $ GoToMetroTicketBookingFlow updatedState
     RC.BIKE_TAXI -> continueWithCmd updatedState [ pure $ WhereToClick]
     RC.INTERCITY_BUS -> do

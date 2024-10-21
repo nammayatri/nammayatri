@@ -285,3 +285,5 @@ homeScreen = do
     GoToDeliveryDetails updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ PARCEL (GO_TO_DELIVERY_DETAILS updatedState))
+    GoToMultiModalFlow updatedState -> do
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_MULTI_MODAL_FLOW updatedState)
