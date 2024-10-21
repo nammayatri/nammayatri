@@ -28,7 +28,7 @@ import Components.SelectListModal as SelectListModal
 import Control.Monad.Except (lift, runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (mapWithIndex, length, (!!))
+import Data.Array (mapWithIndex, length, (!!), any)
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import Effect (Effect)
 import Effect.Aff (launchAff)
@@ -36,12 +36,12 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (FetchImageFrom(..), fetchImage)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, strLenWithSpecificCharacters)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, map, const, discard, not, pure, unit, (-), ($), (<<<), (==), (||), (/=), (<>), (>=) , (+), (&&))
+import Prelude
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, width, afterRender, onClick, visibility, alignParentBottom, weight, imageWithFallback, editText, onChange, hint, hintColor, pattern, id, singleLine, stroke, clickable, inputTypeI, hintColor, relativeLayout, scrollView, frameLayout, scrollBarY, onAnimationEnd, adjustViewWithKeyboard, accessibilityHint, accessibility)
+import PrestoDOM
 import Resources.Constants as RSRC
 import PrestoDOM.Animation as PrestoAnim
 import Screens.MyProfileScreen.Controller (Action(..), ScreenOutput, eval)
@@ -82,8 +82,11 @@ screen initialState =
 
 view :: forall w . (Action -> Effect Unit) -> ST.MyProfileScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-    Anim.screenAnimation $
-      frameLayout
+  Anim.screenAnimation $
+    relativeLayout[
+      height MATCH_PARENT
+    , width MATCH_PARENT]$
+    [ frameLayout
       ([ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
@@ -117,9 +120,19 @@ view push state =
               , gravity BOTTOM
               ][  PopUpModal.view (push <<< AccessibilityPopUpAC) (CommonComponentConfig.accessibilityPopUpConfig state.data.disabilityOptions.selectedDisability state.data.config.purpleRideConfig)] ]
               else [])
+      , deleteAccountView state push
+    ]
+      <> ( if state.props.accountStatus == ST.CONFIRM_REQ
+            then [PopUpModal.view (push <<<  PopUpModalAction) (requestDeletePopUp state)]
+            else []
+        )
+      <> ( if state.props.accountStatus == ST.DEL_REQUESTED
+            then [PopUpModal.view (push <<< AccountDeletedModalAction) (accountDeletedPopUp state)]
+          else []
+        )
 
 updateButtonView :: forall w. ST.MyProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-updateButtonView state push = 
+updateButtonView state push =
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -141,7 +154,8 @@ detailsView state push =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  ][ if state.props.updateProfile then updatePersonalDetails state push else personalDetails state push]
+  ][ if state.props.updateProfile then updatePersonalDetails state push else personalDetails state push
+  ]
 
 personalDetails :: forall w. ST.MyProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 personalDetails state push =
@@ -151,12 +165,16 @@ personalDetails state push =
   , padding $ PaddingBottom 15
   , background Color.white900
   , orientation VERTICAL
-  ][  scrollView
+  ][ relativeLayout [
+      height MATCH_PARENT
+    , width MATCH_PARENT
+    ]$[
+     scrollView
       [ height if EHC.os == "IOS" then V (EHC.screenHeight unit) else MATCH_PARENT
         , width MATCH_PARENT
         , background Color.white900
         , scrollBarY false
-      ][  linearLayout
+      ]$[  linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , orientation VERTICAL
@@ -228,7 +246,16 @@ personalDetails state push =
                   ] ) (personalDetailsArray state))
               ]
           ]
+        , linearLayout [
+            height WRAP_CONTENT
+          , width MATCH_PARENT
+          , alignParentBottom "true,-1"
+          , gravity CENTER
+          ][
+            PrimaryButton.view (push <<< DeleteAccountAction) (deleteAccountButtonConfig state)
+          ]
       ]
+    ]
 
 personalDetailsArray :: ST.MyProfileScreenState ->  Array {title :: String, text :: String, fieldType :: ST.FieldType, supportText :: (Maybe String)}
 personalDetailsArray state =
@@ -547,3 +574,108 @@ claimerView state push =
       , width WRAP_CONTENT
       ] <> FontStyle.body3 TypoGraphy)
   ]
+
+deleteAccountView :: ST.MyProfileScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+deleteAccountView state push =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , visibility $ if state.props.showDeleteAccountView then VISIBLE else GONE
+    , padding $ PaddingTop EHC.safeMarginTop
+    , background Color.white900
+    , accessibility $ if any (_ == state.props.accountStatus) [ST.CONFIRM_REQ, ST.DEL_REQUESTED] then DISABLE_DESCENDANT else DISABLE
+    , clickable true
+    ]
+    [ GenericHeader.view (push <<< DeleteGenericHeaderAC) (deleteGenericHeaderConfig state)
+    , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , padding (Padding 16 12 16 12)
+        , background Color.blue600
+        ]
+        [ textView
+            [ text $ if state.props.btnActive || state.props.accountStatus == ST.DEL_REQUESTED
+                     then getString WE_WOULD_APPRECIATE_YOUR_REASONING
+                     else getString WE_WOULD_APPRECIATE_YOUR_FEEDBACK
+            , textSize FontSize.a_12
+            , fontStyle $ FontStyle.regular LanguageStyle
+            , color Color.black650
+            ]
+        ]
+    , relativeLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , adjustViewWithKeyboard "true"
+        ]
+        [ editTextView state push
+        , linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , background Color.white900
+            , alignParentBottom "true,-1"
+            , weight 1.0
+            ]
+            [ PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfigSubmitRequest state) ]
+        ]
+    ]
+
+
+editTextView :: ST.MyProfileScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+editTextView state push =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ]
+    [ scrollView
+        [ width MATCH_PARENT
+        , orientation VERTICAL
+        ]
+        [ linearLayout
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , padding (Padding 6 0 6 60)
+            , orientation VERTICAL
+            ]
+            [ PrimaryEditText.view (push <<< EmailEditTextAC) (primaryEditTextConfigEmail state)
+            , linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , orientation VERTICAL
+                ]
+                [ PrimaryEditText.view (push <<< DescriptionEditTextAC) (primaryEditTextConfigDescription state)
+                , linearLayout
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , orientation HORIZONTAL
+                    , gravity CENTER_VERTICAL
+                    , padding $ PaddingLeft 10
+                    , margin $ MarginTop 5
+                    , visibility $ boolToVisibility
+                        $ (strLenWithSpecificCharacters state.data.description "[a-zA-Z]") < 10
+                    ]
+                    [ imageView
+                        [ width $ V 24
+                        , height $ V 24
+                        , padding $ PaddingVertical 5 3
+                        , margin $ MarginRight 3
+                        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
+                        ]
+                    , textView
+                        ( [ height WRAP_CONTENT
+                          , width WRAP_CONTENT
+                          , text $ getString DESCRIPTION_SHOULD_BE_MORE_THAN_10_ALPHABETIC_CHARACTERS
+                          , color Color.black600
+                          , gravity LEFT
+                          , margin $ Margin 0 0 0 0
+                          , lineHeight "28"
+                          , singleLine true
+                          , alpha 1.0
+                          ] <> FontStyle.body3 TypoGraphy
+                        )
+                    ]
+                ]
+            ]
+        ]
+    ]

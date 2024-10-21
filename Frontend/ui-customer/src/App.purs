@@ -212,6 +212,7 @@ defaultGlobalFlowCache :: GlobalFlowCache
 defaultGlobalFlowCache = {
     savedLocations : Nothing
   , savedScheduledRides : Nothing
+  , issueCategories : Nothing
 }
 
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
@@ -343,7 +344,7 @@ data ADD_NEW_ADDRESS_SCREEN_OUTPUT =  SEARCH_ADDRESS String AddNewAddressScreenS
                                     | GO_TO_HOME_SCREEN_FLOW
                                     | GO_TO_SEARCH_LOC_SCREEN
 
-data MY_PROFILE_SCREEN_OUTPUT = UPDATE_USER_PROFILE MyProfileScreenState | GO_TO_HOME_
+data MY_PROFILE_SCREEN_OUTPUT = UPDATE_USER_PROFILE MyProfileScreenState | GO_TO_HOME_ | CONFIRM_DELETE_ACCOUNT MyProfileScreenState
 
 data REFERRAL_SCREEN_OUPUT = UPDATE_REFERRAL String | BACK_TO_HOME
 

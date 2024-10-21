@@ -99,4 +99,15 @@ type SafetyConfig = {
   bannerUrl :: String,
   bannerPosition :: Int,
   showOnRide :: String
+  }
+  
+type SelfServeCategoryConfig = {
+  safetyIssueCategoryConfig :: CategoryConfig,
+  tollRelatedIssueCategoryConfig :: CategoryConfig,
+  acRelatedIssueCategoryConfig :: CategoryConfig
+}
+
+type CategoryConfig = {
+  categoryLabel :: String,
+  optionLabels :: Maybe (Array String)
 }

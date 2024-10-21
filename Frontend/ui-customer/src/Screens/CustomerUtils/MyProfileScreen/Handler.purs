@@ -37,3 +37,6 @@ myProfileScreen = do
     GoToHome updatedState -> do
       void $ modifyScreenState $ MyProfileScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> pure GO_TO_HOME_
+    ConfirmDeleteAccount updatedState -> do
+      void $ modifyScreenState $ MyProfileScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CONFIRM_DELETE_ACCOUNT updatedState)
