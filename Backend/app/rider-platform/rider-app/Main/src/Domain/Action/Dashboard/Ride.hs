@@ -29,12 +29,12 @@ module Domain.Action.Dashboard.Ride
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride as Common
 import qualified Beckn.ACL.Common as Common
 import Beckn.ACL.Status
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified Dashboard.Common.Ride as Common
+import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Management.Ride as Common
 import Data.Coerce (coerce)
 import qualified Data.List as DL
 import qualified Data.Text as T

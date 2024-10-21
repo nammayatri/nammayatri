@@ -15,9 +15,9 @@ module Domain.Action.RiderPlatform.Management.Ride
 where
 
 import qualified API.Types.RiderPlatform.Management
-import qualified API.Types.RiderPlatform.Management.Ride
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Ride
+import qualified Dashboard.RiderPlatform.Management.Ride
 import qualified Dashboard.RiderPlatform.Ride
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Transaction

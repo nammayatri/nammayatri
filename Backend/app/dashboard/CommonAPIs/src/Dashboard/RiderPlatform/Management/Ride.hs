@@ -3,7 +3,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Dashboard.RiderPlatform.Management.Ride where
+module Dashboard.RiderPlatform.Management.Ride (module Reexport) where
 
 import API.Types.RiderPlatform.Management.Ride as Reexport
 import Data.Aeson
