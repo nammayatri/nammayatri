@@ -30,6 +30,7 @@ data Estimate = Estimate
     maxFare :: Kernel.Types.Common.HighPrecMoney,
     minFare :: Kernel.Types.Common.HighPrecMoney,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
+    smartTipSuggestion :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     supplyDemandRatioFromLoc :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     supplyDemandRatioToLoc :: Kernel.Prelude.Maybe Kernel.Prelude.Double,

@@ -227,6 +227,12 @@ getestimatedPickupDuration item = do
   parsedTagValue <- readMaybe tagValueStr :: Maybe Seconds
   return parsedTagValue
 
+getSmartTipSuggestion :: Spec.Item -> Maybe HighPrecMoney
+getSmartTipSuggestion item = do
+  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.SMART_TIP_SUGGESTION item.itemTags
+  parsedTagValue <- readMaybe tagValueStr :: Maybe HighPrecMoney
+  return parsedTagValue
+
 getVehicleIconUrl :: Spec.Item -> Maybe BaseUrl
 getVehicleIconUrl item = do
   tagValueStr <- Utils.getTagV2 Tag.VEHICLE_INFO Tag.VEHICLE_ICON_URL item.itemTags

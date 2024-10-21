@@ -68,6 +68,7 @@ data EstimateAPIEntity = EstimateAPIEntity
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     validTill :: UTCTime,
     vehicleIconUrl :: Maybe Text,
+    smartTipSuggestion :: Maybe HighPrecMoney,
     isReferredRide :: Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
