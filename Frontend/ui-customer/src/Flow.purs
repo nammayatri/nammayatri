@@ -557,6 +557,7 @@ riderRideCompletedScreenFlow = do
       void $ pure $ currentPosition ""
       void $ updateLocalStage HomeScreen
       updateUserInfoToState state.homeScreen
+      modifyScreenState $ HelpAndSupportScreenStateType (\_ -> HelpAndSupportScreenData.initData)
       modifyScreenState $ RiderRideCompletedScreenStateType (\_ -> RiderRideCompletedScreenData.initData)
       currentFlowStatus false
     GOTO_NAMMASAFETY _ triggerSos showtestDrill -> do
