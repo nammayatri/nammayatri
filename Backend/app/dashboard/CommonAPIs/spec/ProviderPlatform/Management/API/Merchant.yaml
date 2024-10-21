@@ -766,3 +766,4 @@ types:
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE

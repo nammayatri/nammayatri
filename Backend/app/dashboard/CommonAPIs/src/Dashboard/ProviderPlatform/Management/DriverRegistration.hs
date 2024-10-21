@@ -20,7 +20,7 @@ module Dashboard.ProviderPlatform.Management.DriverRegistration
   )
 where
 
-import API.Types.ProviderPlatform.Management.DriverRegistration as Reexport
+import API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration as Reexport
 import Dashboard.Common as Reexport
 import qualified Data.Aeson as A
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)

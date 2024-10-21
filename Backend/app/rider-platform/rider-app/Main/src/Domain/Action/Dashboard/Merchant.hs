@@ -28,8 +28,8 @@ module Domain.Action.Dashboard.Merchant
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Merchant as Common
 import Control.Applicative
-import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Merchant as Common
 import qualified Data.Text as T
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Geometry as DGEO

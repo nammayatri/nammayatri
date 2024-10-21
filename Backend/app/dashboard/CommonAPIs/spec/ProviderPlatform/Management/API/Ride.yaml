@@ -308,3 +308,7 @@ types:
     - personId: Id Driver
     - classification: Classification
     - derive': "Show, Generic, ToSchema"
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE

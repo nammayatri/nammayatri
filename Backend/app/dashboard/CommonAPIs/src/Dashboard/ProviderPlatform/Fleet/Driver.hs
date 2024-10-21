@@ -20,7 +20,7 @@ module Dashboard.ProviderPlatform.Fleet.Driver
   )
 where
 
-import API.Types.ProviderPlatform.Fleet.Driver as Reexport
+import API.Types.ProviderPlatform.Fleet.Endpoints.Driver
 import Dashboard.Common as Reexport
 import Dashboard.Common.Driver as Reexport
 import Data.Aeson

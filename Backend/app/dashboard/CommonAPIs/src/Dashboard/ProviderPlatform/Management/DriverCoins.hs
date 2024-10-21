@@ -11,16 +11,19 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Dashboard.ProviderPlatform.RideBooking.Driver
-  ( module Reexport,
+module Dashboard.ProviderPlatform.Management.DriverCoins
+  ( module ReExport,
   )
 where
 
-import API.Types.ProviderPlatform.RideBooking.Driver as Reexport
-import Dashboard.Common as Reexport
-import Dashboard.Common.Driver as Reexport
-import qualified Kernel.Storage.ClickhouseV2 as CH
+import API.Types.ProviderPlatform.Management.Endpoints.DriverCoins
+import Dashboard.Common as ReExport
+import Dashboard.Common.DriverCoins as ReExport
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForJSON)
 
-instance CH.ClickhouseValue DriverFeeStatus
+$(mkBeamInstancesForEnum ''CoinStatus)
+
+$(mkBeamInstancesForJSON ''Translations)

@@ -15,7 +15,7 @@
 
 module Storage.Queries.Coins.CoinHistory where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverCoin as DCoins
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as DCoins
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
 import Domain.Types.Coins.CoinHistory
 import qualified Domain.Types.Person as SP

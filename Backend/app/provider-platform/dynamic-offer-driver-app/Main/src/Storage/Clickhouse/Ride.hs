@@ -15,7 +15,7 @@
 
 module Storage.Clickhouse.Ride where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails

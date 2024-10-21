@@ -1,6 +1,6 @@
 imports:
   Driver: Dashboard.Common
-  DriverCoinsFunctionType: Dashboard.Common.DriverCoinsExtra
+  DriverCoinsFunctionType: Dashboard.Common.DriverCoins
 
 module: DriverCoins # module: Driver.Coins TODO Driver.Coins.yaml should generate Driver.Coins.hs
 apiPrefix: coins
@@ -84,3 +84,6 @@ types:
     - enum: "Used, Remaining"
     - derive: "Read, Ord"
 
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE
