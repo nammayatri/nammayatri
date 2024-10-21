@@ -2662,7 +2662,7 @@ type ChooseCityScreenState = {
 type ChooseCityScreenData = {
   config :: AppConfig,
   locationSelected :: Maybe String,
-  merchantOperatingCityConfig :: Array CityConfig,
+  merchantOperatingCityConfig :: Object CityConfig,
   logField :: Object Foreign
 }
 

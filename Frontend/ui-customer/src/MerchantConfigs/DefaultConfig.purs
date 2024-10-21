@@ -6,6 +6,7 @@ import Engineering.Helpers.Commons as EHC
 import Prelude ((/=))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
+import Foreign.Object (fromHomogeneous)
 
 config :: AppConfig 
 config =
@@ -410,8 +411,9 @@ config =
       , countryShortCode : "IN"
       }
     ]
-  , cityConfig :
-      [ defaultCityConfig 
+  , cityConfig : 
+     fromHomogeneous {
+        "Bangalore" : defaultCityConfig 
           { cityName = "Bangalore",
             cityCode = "std:080",
             featureConfig {
@@ -432,7 +434,7 @@ config =
                 }
               }
           },
-        defaultCityConfig 
+        "Mysore" : defaultCityConfig 
           { cityName = "Mysore",
             cityCode = "std:0821",
             featureConfig {
@@ -459,7 +461,7 @@ config =
               }
             }
           },
-        defaultCityConfig 
+        "Tumakuru" : defaultCityConfig 
           { cityName = "Tumakuru",
             cityCode = "std:0816",
             featureConfig {
@@ -476,7 +478,7 @@ config =
               }
             }
           },
-        defaultCityConfig 
+        "Chennai" : defaultCityConfig 
           {   cityName = "Chennai"
             , cityCode = "std:044"
             , enableCabs = true
@@ -491,7 +493,7 @@ config =
               }
           },
 
-           defaultCityConfig 
+          "Vellore" : defaultCityConfig 
           {   cityName = "Vellore"
             , cityCode = "std:0452"
             , enableCabs = true
@@ -506,7 +508,7 @@ config =
               }
           },
 
-           defaultCityConfig 
+          "Tirunelveli" : defaultCityConfig 
           {   cityName = "Tirunelveli"
             , cityCode = "std:0462"
             , enableCabs = true
@@ -521,7 +523,7 @@ config =
               }
           },
 
-           defaultCityConfig 
+          "Thanjavur" : defaultCityConfig 
           {   cityName = "Thanjavur"
             , cityCode = "std:04362"
             , enableCabs = true
@@ -536,7 +538,7 @@ config =
               }
           },
 
-           defaultCityConfig 
+            "Madurai" : defaultCityConfig 
           {   cityName = "Madurai"
             , cityCode = "std:0452"
             , enableCabs = true
@@ -551,7 +553,7 @@ config =
               }
           },
 
-           defaultCityConfig 
+          "Salem" : defaultCityConfig 
           {   cityName = "Salem"
             , cityCode = "std:0427"
             , enableCabs = true
@@ -566,7 +568,7 @@ config =
               }
           },
 
-           defaultCityConfig 
+          "Hosur" : defaultCityConfig 
           {   cityName = "Hosur"
             , cityCode = "std:04344"
             , enableCabs = true
@@ -581,7 +583,7 @@ config =
               }
           },
 
-           defaultCityConfig 
+           "Trichy" : defaultCityConfig 
           {   cityName = "Trichy"
             , cityCode = "std:0431"
             , enableCabs = true
@@ -597,7 +599,7 @@ config =
           },
 
 
-           defaultCityConfig 
+           "TamilNaduCities" : defaultCityConfig 
           {   cityName = "TamilNaduCities"
             , cityCode = "std:0422"
             , enableCabs = true
@@ -613,7 +615,7 @@ config =
           },
 
 
-        defaultCityConfig
+        "Hyderabad" : defaultCityConfig
           { cityName = "Hyderabad",
             cityCode = "std:040",
             enableIntercity = true,
@@ -650,7 +652,7 @@ config =
       }
     }
           },
-        defaultCityConfig
+        "Kolkata" : defaultCityConfig
           { cityName = "Kolkata",
             cityCode = "std:033",
             referral
@@ -686,7 +688,7 @@ config =
               }
             }
           },
-        defaultCityConfig
+        "Siliguri" : defaultCityConfig
           { cityName = "Siliguri",
             cityCode = "std:0353",
             referral
@@ -722,7 +724,7 @@ config =
               }
             }
           },
-        defaultCityConfig
+        "Delhi" : defaultCityConfig
           { cityName = "Delhi",
             cityCode = "std:011",
             waitingChargeConfig {
@@ -736,30 +738,28 @@ config =
               }
             }
           },
-        defaultCityConfig
+        "Kochi" : defaultCityConfig
           { cityName = "Kochi",
             cityCode = "std:0484",
             waitingChargeConfig = keralaWTC
           },
-        defaultCityConfig
+        "Trivandrum" : defaultCityConfig
           { cityName = "Trivandrum",
             cityCode = "std:0471",
             waitingChargeConfig = keralaWTC
           },
-        defaultCityConfig
+        "Thrissur" : defaultCityConfig
           { cityName = "Thrissur",
             cityCode = "std:0487",
             waitingChargeConfig = keralaWTC
           },
 
-        defaultCityConfig
+        "Kozhikode" : defaultCityConfig
           { cityName = "Kozhikode",
             cityCode = "std:0495",
             waitingChargeConfig = keralaWTC
           }
-
-      
-      ]
+      }
   , bannerCarousel : defaultBannerCarousel
   , driverLocationPolling : {
     retryExpFactor : 3

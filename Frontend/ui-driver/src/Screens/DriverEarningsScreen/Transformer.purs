@@ -80,7 +80,7 @@ getEventName state event bulkUploadTitle = do
 
 checkPopupShowToday :: ST.CoinEarnedPopupType -> AppConfig -> ST.HomeScreenState -> ST.CoinEarnedPopupType
 checkPopupShowToday popupType appConfig hsState = do
-  let cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  let cityConfig = getCityConfig appConfig.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
       coinsConfig = getCoinsConfigData $ STR.toLower $ getValueToLocalStore DRIVER_LOCATION
       checkCoinIsEnabled = appConfig.feature.enableYatriCoins && cityConfig.enableYatriCoins
       coinPopupInfo = getValueFromCache "COIN_EARNED_POPUP_TYPE" getCoinPopupStatus

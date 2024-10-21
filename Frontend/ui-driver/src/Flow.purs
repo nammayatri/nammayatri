@@ -172,6 +172,7 @@ import DecodeUtil as DU
 import Helpers.SplashUtils (hideSplashAndCallFlow, toggleSetupSplash)
 import RemoteConfig as RemoteConfig
 import Control.Apply as CA
+import Foreign.Object as FO
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -465,13 +466,13 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
       logField_ <- lift $ lift $ getLogFields
       case driverInfoRes of
         Right (GetDriverInfoResp getDriverInfoResp) -> do
-          let cityConfigFromCityCode = HU.getCityConfigFromCityCode config.cityConfig (fromMaybe "" getDriverInfoResp.operatingCity)
+          let cityConfigFromCityCode = HU.getCityConfigFromCityCode config.cityConfigObj (fromMaybe "" getDriverInfoResp.operatingCity)
           void $ pure $ setValueToLocalStore DRIVER_LOCATION  (capitalize $ cityConfigFromCityCode.cityName)
           updateFirebaseToken getDriverInfoResp.maskedDeviceToken getUpdateToken
           when updateCTBasicData $ liftFlowBT $ updateInitialCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
           liftFlowBT $ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
           maybe (pure unit) (setValueToLocalStore MOBILE_NUMBER_KEY) getDriverInfoResp.mobileNumber
-          let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+          let cityConfig = getCityConfig config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
           when (updateFeatureFlags && cityConfig.callDriverInfoPost) $ do
             void $ lift $ lift $ fork $ Remote.getDriverInfoApi ""
           if getDriverInfoResp.enabled 
@@ -535,7 +536,7 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
 
 updateSubscriptionForVehicleVariant :: GetDriverInfoResp -> AppConfig -> FlowBT String Unit
 updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) appConfig = do
-  let cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  let cityConfig = getCityConfig appConfig.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
       vehicleVariant = getDriverInfoResp.linkedVehicle
   if cityConfig.variantSubscriptionConfig.enableVariantBasedSubscription then do
     case vehicleVariant of
@@ -707,7 +708,7 @@ onBoardingFlow = do
   setValueToLocalStore LOGS_TRACKING "true"
   GlobalState allState <- getState
   DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
-  let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  let cityConfig = getCityConfig config.cityConfigObj(getValueToLocalStore DRIVER_LOCATION)
       registrationState = allState.registrationScreen
       driverEnabled = fromMaybe false driverRegistrationResp.enabled
       merchantName = getMerchantName $ getMerchant FunctionCall
@@ -1108,7 +1109,7 @@ uploadDrivingLicenseFlow = do
           void $ lift $ lift $ toggleLoader false
           modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {dateOfIssue = Just ""}}
           if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
-            let cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+            let cityConfig = getCityConfig state.data.config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
                 hideError = not cityConfig.uploadRCandDL && ((decodeErrorCode errorPayload.response.errorMessage) == "IMAGE_NOT_FOUND")
                 correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
             modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props {errorVisibility = not hideError, validating = false, validateProfilePicturePopUp = false, openHowToUploadManual = false}, data {errorMessage = if hideError then "" else correspondingErrorMessage }}
@@ -1919,7 +1920,7 @@ bookingOptionsFlow = do
 rateCardScreenFlow :: FlowBT String Unit
 rateCardScreenFlow = do
   config <- getAppConfigFlowBT Constants.appConfig
-  let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  let cityConfig = getCityConfig config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
   modifyScreenState $ RateCardScreenStateType (\rateCardScreen -> rateCardScreen{data {cityConfig = cityConfig}})
   action <- UI.rateCardScreen
   case action of
@@ -1938,7 +1939,7 @@ rateCardScreenFlow = do
 helpAndSupportFlow :: FlowBT String Unit
 helpAndSupportFlow = do
   config <- getAppConfigFlowBT Constants.appConfig
-  let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  let cityConfig = getCityConfig config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
   modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen{data {cityConfig = cityConfig}})
   action <- UI.helpAndSupportScreen
   case action of
@@ -3226,7 +3227,7 @@ paymentHistoryFlow = do
       else nyPaymentFlow state.data.planData "MYPLAN"
     EntityDetailsAPI state id -> do
       paymentEntityDetails <- lift $ lift $ Remote.paymentEntityDetails id
-      let cityConfig = HU.getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+      let cityConfig = HU.getCityConfig appConfig.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
       case paymentEntityDetails of
         Right (HistoryEntryDetailsEntityV2Resp resp) ->
             modifyScreenState $ PaymentHistoryScreenStateType (\paymentHistoryScreen -> paymentHistoryScreen{props{subView = ST.TransactionDetails},
@@ -3805,7 +3806,7 @@ updateBannerAndPopupFlags = do
   rideAndEarnPopup <- callGetPastDaysData appConfig allState.homeScreen
   let
     coinsConfig = getCoinsConfigData $ DS.toLower driverCity
-    cityConfig = getCityConfig appConfig.cityConfig driverCity
+    cityConfig = getCityConfig appConfig.cityConfigObj driverCity
     driverCity = getValueToLocalStore DRIVER_LOCATION
     driverVehicle = getValueToLocalStore VEHICLE_VARIANT
     vehicleAndCityConfig = CommonRC.subscriptionsConfigVariantLevel driverCity driverVehicle
@@ -3947,7 +3948,7 @@ updateBannerAndPopupFlags = do
 
 callGetPastDaysData :: AppConfig -> HomeScreenState -> FlowBT String ST.CoinEarnedPopupType
 callGetPastDaysData appConfig hsState = do
-  let cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  let cityConfig = getCityConfig appConfig.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
       coinsConfig = getCoinsConfigData $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
       coinPopupInfo = getValueFromCache "COIN_EARNED_POPUP_TYPE" getCoinPopupStatus
       checkCoinIsEnabled = appConfig.feature.enableYatriCoins && cityConfig.enableYatriCoins
@@ -4016,7 +4017,7 @@ chooseCityFlow = do
     straightLineDist lat lon state = do
       let distanceFromBangalore = getDistanceBwCordinates lat lon 12.9716 77.5946
           initialAccumulator = Tuple "Bangalore" distanceFromBangalore
-          result = DA.foldl (\acc city -> closestCity acc city lat lon) initialAccumulator state.data.config.cityConfig
+          result = FO.fold (\acc city cityObj -> closestCity acc cityObj lat lon) initialAccumulator state.data.config.cityConfigObj
           insideThreshold = (snd result) <= state.data.config.unserviceableThreshold
       if insideThreshold && (not state.props.isMockLocation) then
         modifyScreenState $ ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { data { locationSelected = Just $ fst result }, props { locationUnserviceable = false, locationDetectionFailed = false }}
@@ -4032,7 +4033,7 @@ chooseCityFlow = do
               compareStrings = on (==) (toLower <<< trim)
           case resp'.city of
             Just city -> do
-              let cityInList = any (\cityOb -> compareStrings cityOb.cityName city) state.data.config.cityConfig
+              let cityInList = isJust $ FO.lookup (toLower $ trim city) state.data.config.cityConfigObj
                   displayCityName = case city of 
                                       "TamilNaduCities" -> Just "Tamil Nadu"
                                       "Paris" -> Just "Odisha"
@@ -4061,7 +4062,7 @@ benefitsScreenFlow = do
   (GlobalState globalstate) <- getState
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalstate) false
   let referralCode = getValueToLocalStore REFERRAL_CODE
-      cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+      cityConfig = getCityConfig appConfig.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
   modifyScreenState $ BenefitsScreenStateType (\benefitsScreen -> benefitsScreen { data {referralCode = referralCode, cityConfig = cityConfig, payoutRewardAmount = getDriverInfoResp.payoutRewardAmount}})
   benefitsScreen <- UI.benefitsScreen
   case benefitsScreen of
@@ -4074,7 +4075,7 @@ benefitsScreenFlow = do
     DRIVER_CONTEST_SCREEN -> referralScreenFlow
     GO_TO_LMS_VIDEO_SCREEN state -> do
       let cachedSelectedLanguage = (getValueToLocalStore LMS_SELECTED_LANGUAGE_CACHE)
-          cityConfig = (getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION))
+          cityConfig = (getCityConfig state.data.config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION))
           selectedLanguage = if (cachedSelectedLanguage == "__failed" || cachedSelectedLanguage == "null" || cachedSelectedLanguage == "") 
                               then if (DS.null cityConfig.languageKey) then (getLanguageLocale languageKey) else cityConfig.languageKey
                               else cachedSelectedLanguage
@@ -4156,7 +4157,7 @@ setUPIPaymentStatus status = do
 referralFlow :: FlowBT String Unit
 referralFlow = do
   appConfig <- getAppConfigFlowBT Constants.appConfig
-  let cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  let cityConfig = getCityConfig appConfig.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
   modifyScreenState $ BenefitsScreenStateType (\benefitsScreen -> benefitsScreen { props {driverReferralType = ST.CUSTOMER}})
   benefitsScreenFlow
 

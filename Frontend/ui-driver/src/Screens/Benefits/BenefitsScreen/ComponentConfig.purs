@@ -40,7 +40,7 @@ import JBridge as JB
 --------------------------------------------------- genericHeaderConfig -----------------------------------------------------
 genericHeaderConfig :: ST.BenefitsScreenState -> GenericHeader.Config
 genericHeaderConfig state = let
-  cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  cityConfig = getCityConfig state.data.config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
   bothReferralNotEnabled = not (cityConfig.showDriverReferral || state.data.config.enableDriverReferral || cityConfig.showCustomerReferral || state.data.config.enableCustomerReferral)
   config = GenericHeader.config
   genericHeaderConfig' = config

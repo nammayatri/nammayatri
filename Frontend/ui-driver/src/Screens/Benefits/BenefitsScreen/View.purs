@@ -325,7 +325,7 @@ tabView push state =
     ,  tabItem push (state.props.driverReferralType == DRIVER) (getString LT.REFER_DRIVER) "ny_ic_new_avatar_profile" DRIVER bothTabsEnabled $ cityConfig.showDriverReferral || state.data.config.enableDriverReferral
     ]
   where
-  cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  cityConfig = HU.getCityConfig state.data.config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
 
   bothTabsEnabled = (cityConfig.showDriverReferral || state.data.config.enableDriverReferral) && (cityConfig.showCustomerReferral || state.data.config.enableCustomerReferral)
 
@@ -369,7 +369,7 @@ tabItem push isActive text' img referralType bothTabsEnabled visibility' =
 shouldShowReferral :: BenefitsScreenState -> Boolean
 shouldShowReferral state =
   let
-    cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+    cityConfig = HU.getCityConfig state.data.config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
 
     driverReferral = cityConfig.showDriverReferral || state.data.config.enableDriverReferral
 

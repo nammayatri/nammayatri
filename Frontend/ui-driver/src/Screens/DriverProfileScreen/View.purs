@@ -107,7 +107,7 @@ screen initialState =
                     void $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
                     EHU.toggleLoader true
                     summaryResponse <- Remote.driverProfileSummary ""
-                    let cityConfig = getCityConfig initialState.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+                    let cityConfig = getCityConfig initialState.data.config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
                     profileResponse <- Remote.getDriverInfoApi ""
                     case summaryResponse, profileResponse of
                       Right summaryResp, Right profileResp -> do
@@ -430,7 +430,7 @@ manageVehicleItem state vehicle push =
     ]
   where
   getVehicleImage :: ST.VehicleCategory -> String
-  getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
 
   mkAsset :: ST.VehicleCategory -> CityConfig -> String
   mkAsset category cityConfig =
@@ -891,7 +891,7 @@ tabImageView state push =
   where
 
   getVehicleImage :: ST.VehicleCategory -> String
-  getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
 
   mkAsset :: ST.VehicleCategory -> CityConfig -> String
   mkAsset category cityConfig =
@@ -1837,7 +1837,7 @@ vehicleListItem state push vehicle =
     ]
   where
   getVehicleImage :: ST.VehicleCategory -> String
-  getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  getVehicleImage category = mkAsset category $ getCityConfig state.data.config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
 
   mkAsset :: ST.VehicleCategory -> CityConfig -> String
   mkAsset category cityConfig =

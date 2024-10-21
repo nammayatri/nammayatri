@@ -22,6 +22,7 @@ import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Components.ErrorModal.Controller as ErrorModalController
 import Locale.Utils
+import Foreign.Object as FO
 
 instance showAction :: Show Action where
   show _ = ""
@@ -90,7 +91,7 @@ eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
       case state.data.locationSelected of 
         Just location -> do
           _ <- pure $ setValueToLocalStore DRIVER_LOCATION location
-          let mbCity = DA.find (\city' -> city'.cityName == location) state.data.config.cityConfig
+          let mbCity = FO.lookup location state.data.config.cityConfigObj
           case mbCity of 
             Just city -> do
               _ <- pure $ setValueToLocalStore SHOW_SUBSCRIPTIONS if city.showSubscriptions then "true" else "false"

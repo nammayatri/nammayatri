@@ -182,2339 +182,8 @@ window.getMerchantConfig = function () {
       , "name" : "Namma Yatri"
     }
     , "enableMockLocation" : true
-    , "cityConfig" : [
-      {
-        "cityName" : "Bangalore",
-        "mapImage" : "ny_ic_bangalore_map",
-        "cityCode" : "std:080",
-        "showSubscriptions" : true,
-        "enableAdvancedBooking" : true,
-        "enableGullak": true,
-        "advancedRidePopUpYoutubeLink" : "" ,
-        "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 12.971599,
-        "cityLong" : 77.594566,
-        "supportNumber" : "08069724919",
-        "languageKey" : "KN_IN",
-        "showScheduledRides" : true,
-        "showDriverReferral" : false,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : true,
-        "vehicleNSImg" : "ny_ic_auto_image",
-        "registration" : {
-            "supportWAN" : "918618963188",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList": ["AutoCategory", "CarCategory"],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-            "domain" : "https://nammayatri.in"
-          , "customerAppId" : "in.juspay.nammayatri"
-          , "driverAppId" : "in.juspay.nammayatripartner"
-        },
-        "waitingCharges" : 1.50,
-        "waitingChargesConfig" : defWaitingChargesConfig,
-        "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-        "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
-        "gstPercentage" : "18",
-        "assets" :{
-          "auto_image" : "ic_auto_rickshaw",
-          "onboarding_auto_image" : "ny_ic_auto_side",
-          "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
-          "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-        },
-        "enableHvSdk" : true,
-        "purpleRideConfig" : {
-          "purpleRideConfigForAuto" : {
-            "vehicleVariant" : "Auto",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForCabs" : {
-            "vehicleVariant" : "Cab",
-            "showVideo" : true,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=ZnA9uM8pLPc"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=SZ3NtePrLpM"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=ZJ-aRfkxYtI"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForBikes" : {
-            "vehicleVariant" : "Bike",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          }
-        },
-        "rideStartAudio" : {
-          "acCab" : {
-            "tollAudio" : "https://assets.moving.tech/beckn/audios/toll_charges_background/kn.mp3",
-            "acAudio" : "https://assets.moving.tech/beckn/audios/ac_background/kn.mp3",
-          },
-          "nonAcCab" : {
-            "tollAudio" : "https://assets.moving.tech/beckn/audios/toll_charges_background/kn.mp3",
-            "acAudio" : "https://assets.moving.tech/beckn/audios/non_ac_background/kn.mp3"
-          },
-
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "Hyderabad",
-        "mapImage" : "ny_ic_hyderabad_map",
-        "cityCode" : "std:040",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : false,
-        "enableGullak": false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-      "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 17.402113,
-        "cityLong" : 78.499827,
-        "supportNumber" : "+918069724900",
-        "languageKey" : "TE_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : true,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : false,
-        "vehicleNSImg" : "ny_ic_auto_image_old",
-        "registration" : {
-            "supportWAN" : "919392636637",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-            "domain" : "https://www.manayatri.in"
-          , "customerAppId" : "in.mobility.manayatri"
-          , "driverAppId" : "in.mobility.manayatripartner"
-        },
-        "waitingCharges" : 2.00,
-        "waitingChargesConfig" : {
-          "cab" : {
-            "freeSeconds" : 180,
-            "perMinCharges" : 2.0
-          },
-          "auto" : {
-            "freeSeconds" : 300,
-            "perMinCharges" : 2.0
-          },
-          "bike" : {
-            "freeSeconds" : 180,
-            "perMinCharges" : 2.0
-          }
-        },
-        "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-        "rateCardConfig" : defRateCardConfig,
-        "gstPercentage" :  "18",       
-        "assets" :{
-          "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-          "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
-          "empty_referral_auto" : "ny_ic_refer_now_auto_my,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_my.png",
-          "empty_referral_cab" : "ny_ic_refer_now_cab_my,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_my.png"
-        },
-        "enableHvSdk" : true,
-        "purpleRideConfig" : {
-          "purpleRideConfigForAuto" : {
-            "vehicleVariant" : "Auto",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForCabs" : {
-            "vehicleVariant" : "Cab",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForBikes" : {
-            "vehicleVariant" : "Bike",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          }
-        },
-        "rideStartAudio" : {
-          "acCab" : {
-            "tollAudio" : "",
-            "acAudio" : "",
-            "parkingAudio" : "https://assets.moving.tech/beckn/audios/parking_charges_background/te.mp3",
-            "defaultAudio" : ""
-          },
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "Mysore",
-        "mapImage" : "ny_ic_mysuru_map",
-        "cityCode" : "std:0821",
-        "showSubscriptions" : true,
-        "enableAdvancedBooking" : false,
-        "enableGullak": false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-      "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 12.295810,
-        "cityLong" : 76.639381,
-        "supportNumber" : "08069724919",
-        "languageKey" : "KN_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : false,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : true,
-        "vehicleNSImg" : "ny_ic_auto_image",
-        "registration" : {
-            "supportWAN" : "918618963188",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : ["AutoCategory", "CarCategory"],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
-      },
-      "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig,
-      "rentalWaitingChargesConfig" :{
-        "cab" : {
-          "freeSeconds" : 180
-        , "perMinCharges" : 2.0
-        },
-        "auto" : {
-          "freeSeconds" : 180
-        , "perMinCharges" : 1.5
-        },
-        "bike" : {
-          "freeSeconds" : 180
-        , "perMinCharges" : 2.0
-        }
-      },
-      "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
-      "gstPercentage" : "18",
-      "assets" :{
-        "auto_image" : "ic_auto_rickshaw",
-        "onboarding_auto_image" : "ny_ic_auto_side",
-        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
-        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      },
-      "enableHvSdk" : true,
-      "purpleRideConfig" : {
-        "purpleRideConfigForAuto" : {
-          "vehicleVariant" : "Auto",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForCabs" : {
-          "vehicleVariant" : "Cab",
-          "showVideo" : true,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=ZnA9uM8pLPc"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=SZ3NtePrLpM"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=ZJ-aRfkxYtI"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForBikes" : {
-          "vehicleVariant" : "Bike",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        }
-      },
-      "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "Delhi",
-        "mapImage" : "ny_ic_delhi_map",
-        "cityCode" : "std:011",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : false,
-        "enableGullak": false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-      "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 28.618978,
-        "cityLong" : 77.207795,
-        "supportNumber" : "+918069724848",
-        "languageKey" : "HI_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : true,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : false,
-        "vehicleNSImg" : "ny_ic_auto_image",
-        "registration" : {
-            "supportWAN" : "919625724848",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
-      },
-      "waitingCharges" : 0.75,
-      "waitingChargesConfig" : {
-        "cab" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 1.0
-        },
-        "auto" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 0.75
-        },
-        "bike" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 1.0
-        }
-      },
-      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-      "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
-      "assets" :{
-        "auto_image" : "ic_auto_rickshaw",
-        "onboarding_auto_image" : "ny_ic_auto_side",
-        "empty_referral_auto" : "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
-        "empty_referral_cab" : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
-      },
-      "enableHvSdk" : true,
-      "purpleRideConfig" : {
-        "purpleRideConfigForAuto" : {
-          "vehicleVariant" : "Auto",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForCabs" : {
-          "vehicleVariant" : "Cab",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForBikes" : {
-          "vehicleVariant" : "Bike",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        }
-      },
-      "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "Chennai",
-        "mapImage" : "ny_ic_chennai_map",
-        "cityCode" : "std:044",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : false,
-        "enableGullak": false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-      "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 13.067439,
-        "cityLong" : 80.237617,
-        "supportNumber" : "08069724899",
-        "languageKey" : "TA_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : true,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : false,
-        "enableYatriCoins" : false,
-        "vehicleNSImg" : "ny_ic_auto_image_old",
-        "registration" : {
-            "supportWAN" : "917483117936",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
-      },
-      "waitingCharges" : 1.00,
-      "waitingChargesConfig" : {
-        "cab" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 1.0
-        },
-        "auto" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 1.0
-        },
-        "bike" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 1.0
-        }
-      },
-      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-      "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",     
-      "assets" :{
-        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
-        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
-        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      },
-      "enableHvSdk" : true,
-      "purpleRideConfig" : {
-        "purpleRideConfigForAuto" : {
-          "vehicleVariant" : "Auto",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForCabs" : {
-          "vehicleVariant" : "Cab",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForBikes" : {
-          "vehicleVariant" : "Bike",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        }
-      },
-      "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "Coimbatore",
-        "mapImage" : "ny_ic_coimbatore_map",
-        "cityCode" : "std:0422",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : false,
-        "enableGullak": false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-      "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 11.023481,
-        "cityLong" : 76.966429,
-        "supportNumber" : "",
-        "languageKey" : "TA_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : true,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : false,
-        "vehicleNSImg" : "ny_ic_auto_image",
-        "registration" : {
-            "supportWAN" : "",
-            "callSupport" : true,
-            "whatsappSupport" : false
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
-      },
-      "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig,
-      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-      "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
-      "assets" :{
-        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
-        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
-        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      },
-      "enableHvSdk" : true,
-      "purpleRideConfig" : {
-        "purpleRideConfigForAuto" : {
-          "vehicleVariant" : "Auto",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForCabs" : {
-          "vehicleVariant" : "Cab",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForBikes" : {
-          "vehicleVariant" : "Bike",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        }
-      },
-      "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "Pondicherry",
-        "mapImage" : "ny_ic_puducherry_map",
-        "cityCode" : "std:0413",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : false,
-        "enableGullak": false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-        "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 11.943852,
-        "cityLong" : 79.808292,
-        "supportNumber" : "08069724899",
-        "languageKey" : "TA_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : true,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : false,
-        "vehicleNSImg" : "ny_ic_auto_image",
-        "registration" : {
-          "supportWAN" : "917483117936",
-          "callSupport" : true,
-          "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
-      },
-      "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig,
-      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-      "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
-      "assets" :{
-        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
-        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
-        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      },
-      "enableHvSdk" : true,
-      "purpleRideConfig" : {
-        "purpleRideConfigForAuto" : {
-          "vehicleVariant" : "Auto",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForCabs" : {
-          "vehicleVariant" : "Cab",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForBikes" : {
-          "vehicleVariant" : "Bike",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        }
-      },
-      "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "Tumakuru",
-        "mapImage" : "ny_ic_tumakuru_map",
-        "cityCode" : "std:0816",
-        "showSubscriptions" : true,
-        "enableAdvancedBooking" : false,
-        "enableGullak": true,
-        "advancedRidePopUpYoutubeLink" : "" ,
-      "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 15.32383804957557,
-        "cityLong" : 75.88071672412116,
-        "supportNumber" : "08069724919",
-        "languageKey" : "KN_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : false,
-        "showCustomerReferral" : true,
-        "vehicleNSImg" : "ny_ic_auto_image_old",
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : true,
-        "registration" : {
-          "supportWAN" : "918618963188",
-          "callSupport" : true,
-          "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : ["AutoCategory", "CarCategory"],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
-      },
-      "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig,
-      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-      "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
-      "gstPercentage" : "18",
-      "assets" :{
-        "auto_image" : "ic_auto_rickshaw",
-        "onboarding_auto_image" : "ny_ic_auto_side",
-        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
-        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      },
-      "enableHvSdk" : true,
-      "purpleRideConfig" : {
-        "purpleRideConfigForAuto" : {
-          "vehicleVariant" : "Auto",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForCabs" : {
-          "vehicleVariant" : "Cab",
-          "showVideo" : true,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=ZnA9uM8pLPc"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=SZ3NtePrLpM"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=ZJ-aRfkxYtI"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForBikes" : {
-          "vehicleVariant" : "Bike",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        }
-      },
-      "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "Gurugram",
-        "mapImage" : "ny_ic_gurugram_map",
-        "cityCode" : "std:0124",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : false,
-        "enableGullak": false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-      "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 28.457523,
-        "cityLong" : 77.026344,
-        "supportNumber" : "+918069724848",
-        "languageKey" : "HI_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : true,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : false,
-        "vehicleNSImg" : "ny_ic_auto_image",
-        "registration" : {
-          "supportWAN" : "919625724848",
-          "callSupport" : true,
-          "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
-      },
-      "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig,
-      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-      "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",     
-      "assets" :{
-        "auto_image" : "ic_auto_rickshaw",
-        "onboarding_auto_image" : "ny_ic_auto_side",
-        "empty_referral_auto" : "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
-        "empty_referral_cab" : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
-      },
-      "enableHvSdk" : true,
-      "purpleRideConfig" : {
-        "purpleRideConfigForAuto" : {
-          "vehicleVariant" : "Auto",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForCabs" : {
-          "vehicleVariant" : "Cab",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForBikes" : {
-          "vehicleVariant" : "Bike",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        }
-      },
-      "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "Noida",
-        "mapImage" : "ny_ic_noida_map",
-        "cityCode" : "std:01189",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : false,
-        "enableGullak": false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-      "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 28.535517,
-        "cityLong" : 77.391029,
-        "supportNumber" : "+918069724848",
-        "languageKey" : "HI_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : true,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : false,
-        "registration" : {
-          "supportWAN" : "919625724848",
-          "callSupport" : true,
-          "whatsappSupport" : true
-        },
-        "vehicleNSImg" : "ny_ic_auto_image_old",
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
-      },
-      "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig,
-      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-      "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
-      "assets" :{
-        "auto_image" : "ic_auto_rickshaw",
-        "onboarding_auto_image" : "ny_ic_auto_side",
-        "empty_referral_auto" : "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
-        "empty_referral_cab" : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
-      },
-      "enableHvSdk" : true,
-      "purpleRideConfig" : {
-        "purpleRideConfigForAuto" : {
-          "vehicleVariant" : "Auto",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForCabs" : {
-          "vehicleVariant" : "Cab",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForBikes" : {
-          "vehicleVariant" : "Bike",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        }
-      },
-      "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "TamilNaduCities",
-        "mapImage" : "ny_ic_tamilnadu_map",
-        "cityCode" :  "std:0422",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : false,
-        "enableGullak": false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-      "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 11.1271,
-        "cityLong" : 78.6569,
-        "supportNumber" : "08069724899",
-        "languageKey" : "TA_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : true,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : false,
-        "enableYatriCoins" : false,
-        "vehicleNSImg" : "ny_ic_auto_image_old",
-        "registration" : {
-          "supportWAN" : "917483117936",
-          "callSupport" : true,
-          "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
-      },
-      "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig,
-      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-      "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
-      "assets" :{
-        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
-        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
-        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      },
-      "enableHvSdk" : true,
-      "purpleRideConfig" : {
-        "purpleRideConfigForAuto" : {
-          "vehicleVariant" : "Auto",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForCabs" : {
-          "vehicleVariant" : "Cab",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForBikes" : {
-          "vehicleVariant" : "Bike",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        }
-      },
-      "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "Minneapolis",
-        "mapImage" : "ny_ic_minneapolis_map",
-        "cityCode" : "std:01189",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : false,
-        "enableGullak": false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-      "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 44.977753,
-        "cityLong" : -93.2650108,
-        "supportNumber" : "+918069724848",
-        "vehicleNSImg" : "ny_ic_auto_image_old",
-        "languageKey" : "EN_US",
-        "showScheduledRides" : false,
-        "showDriverReferral" : true,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : false,
-        "registration" : {
-          "supportWAN" : "919625724848",
-          "callSupport" : true,
-          "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : false,
-        "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
-      },
-      "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig,
-      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-      "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",     
-      "assets" :{
-        "auto_image" : "ic_auto_rickshaw",
-        "onboarding_auto_image" : "ny_ic_auto_side",
-        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
-        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      },
-      "enableHvSdk" : false,
-      "purpleRideConfig" : {
-        "purpleRideConfigForAuto" : {
-          "vehicleVariant" : "Auto",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForCabs" : {
-          "vehicleVariant" : "Cab",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForBikes" : {
-          "vehicleVariant" : "Bike",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        }
-      },
-      "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "Kochi",
-        "mapImage" : "ny_ic_kochi_map",
-        "cityCode" : "std:0484",
-        "showSubscriptions" : true,
-        "enableAdvancedBooking": false,
-        "enableGullak": false,
-        "advancedRidePopUpYoutubeLink": "",
-        "callDriverInfoPost": false, 
-        "cityLat" : 9.931233,
-        "cityLong" : 76.267303,
-        "supportNumber" : "",
-        "languageKey" : "ML_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : true,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : true,
-        "vehicleNSImg" : "ny_ic_auto_image",
-        "registration" : {
-            "supportWAN" : "918618963188",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : ["AutoCategory"],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-          "domain" : "https://nammayatri.in"
-          , "customerAppId" : "in.juspay.nammayatri"
-          , "driverAppId" : "in.juspay.nammayatripartner"
-      },
-      "waitingCharges" : 1.50,
-      "waitingChargesConfig" : defWaitingChargesConfig,
-      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-      "rateCardConfig": defRateCardConfig,
-      "gstPercentage" : "18",
-      "assets" :{
-        "auto_image" : "ny_ic_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_right_side_black",
-        "empty_referral_auto" : "ny_ic_refer_now_auto_yatri_black,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_black.png",
-        "empty_referral_cab" : "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
-      },
-      "enableHvSdk" : true,
-      "purpleRideConfig" : {
-        "purpleRideConfigForAuto" : {
-          "vehicleVariant" : "Auto",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForCabs" : {
-          "vehicleVariant" : "Cab",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForBikes" : {
-          "vehicleVariant" : "Bike",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        }
-      },
-      "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "Trichy",
-        "mapImage" : "ny_ic_tamilnadu_map",
-        "cityCode" : "std:0431",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : false,
-        "enableGullak": false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-      "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 10.80942,
-        "cityLong" : 78.693486,
-        "supportNumber" : "08069724899",
-        "languageKey" : "TA_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : true,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : false,
-        "enableYatriCoins" : false,
-        "vehicleNSImg" : "ny_ic_auto_image_old",
-        "registration" : {
-            "supportWAN" : "917483117936",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
-      },
-      "waitingCharges" : 1.00,
-      "waitingChargesConfig" : {
-        "cab" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 1.0
-        },
-        "auto" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 1.0
-        },
-        "bike" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 1.0
-        }
-      },
-      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-      "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",     
-      "assets" :{
-        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
-        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
-        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      },
-      "enableHvSdk" : true,
-      "purpleRideConfig" : {
-        "purpleRideConfigForAuto" : {
-          "vehicleVariant" : "Auto",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForCabs" : {
-          "vehicleVariant" : "Cab",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForBikes" : {
-          "vehicleVariant" : "Bike",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        }
-      },
-      "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "Thanjavur",
-        "mapImage" : "ny_ic_tamilnadu_map",
-        "cityCode" : "std:04362",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : false,
-        "enableGullak": false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-      "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 10.778442,
-        "cityLong" : 79.133848,
-        "supportNumber" : "08069724899",
-        "languageKey" : "TA_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : true,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : false,
-        "enableYatriCoins" : false,
-        "vehicleNSImg" : "ny_ic_auto_image_old",
-        "registration" : {
-            "supportWAN" : "917483117936",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
-      },
-      "waitingCharges" : 1.00,
-      "waitingChargesConfig" : {
-        "cab" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 1.0
-        },
-        "auto" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 1.0
-        },
-        "bike" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 1.0
-        }
-      },
-      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-      "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
-      "assets" :{
-        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
-        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
-        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      },
-      "enableHvSdk" : true,
-      "purpleRideConfig" : {
-        "purpleRideConfigForAuto" : {
-          "vehicleVariant" : "Auto",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForCabs" : {
-          "vehicleVariant" : "Cab",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForBikes" : {
-          "vehicleVariant" : "Bike",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        }
-      },
-      "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "Salem",
-        "mapImage" : "ny_ic_tamilnadu_map",
-        "cityCode" : "std:0427",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : false,
-        "enableGullak": false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-      "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 11.656077,
-        "cityLong" : 78.14412,
-        "supportNumber" : "08069724899",
-        "languageKey" : "TA_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : true,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : false,
-        "enableYatriCoins" : false,
-        "vehicleNSImg" : "ny_ic_auto_image_old",
-        "registration" : {
-            "supportWAN" : "917483117936",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
-      },
-      "waitingCharges" : 1.00,
-      "waitingChargesConfig" : {
-        "cab" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 1.0
-        },
-        "auto" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 1.0
-        },
-        "bike" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 1.0
-        }
-      },
-      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-      "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
-      "assets" :{
-        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
-        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
-        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      },
-      "enableHvSdk" : true,
-      "purpleRideConfig" : {
-        "purpleRideConfigForAuto" : {
-          "vehicleVariant" : "Auto",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForCabs" : {
-          "vehicleVariant" : "Cab",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForBikes" : {
-          "vehicleVariant" : "Bike",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        }
-      },
-      "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "Tirunelveli",
-        "mapImage" : "ny_ic_tamilnadu_map",
-        "cityCode" : "std:0462",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : false,
-        "enableGullak": false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-      "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 8.723441,
-        "cityLong" : 77.740959,
-        "supportNumber" : "08069724899",
-        "languageKey" : "TA_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : true,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : false,
-        "enableYatriCoins" : false,
-        "vehicleNSImg" : "ny_ic_auto_image_old",
-        "registration" : {
-            "supportWAN" : "917483117936",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
-      },
-      "waitingCharges" : 1.00,
-      "waitingChargesConfig" : {
-        "cab" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 1.0
-        },
-        "auto" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 1.0
-        },
-        "bike" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 1.0
-        }
-      },
-      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-      "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",     
-      "assets" :{
-        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
-        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
-        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      },
-      "enableHvSdk" : true,
-      "purpleRideConfig" : {
-        "purpleRideConfigForAuto" : {
-          "vehicleVariant" : "Auto",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForCabs" : {
-          "vehicleVariant" : "Cab",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForBikes" : {
-          "vehicleVariant" : "Bike",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        }
-      },
-      "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "Hosur",
-        "mapImage" : "ny_ic_tamilnadu_map",
-        "cityCode" : "std:04344",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : false,
-        "enableGullak": false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-      "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 12.738274,
-        "cityLong" : 77.82293,
-        "supportNumber" : "08069724899",
-        "languageKey" : "TA_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : true,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : false,
-        "enableYatriCoins" : false,
-        "vehicleNSImg" : "ny_ic_auto_image_old",
-        "registration" : {
-            "supportWAN" : "917483117936",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
-      },
-      "waitingCharges" : 1.00,
-      "waitingChargesConfig" : {
-        "cab" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 1.0
-        },
-        "auto" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 1.0
-        },
-        "bike" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 1.0
-        }
-      },
-      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-      "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
-      "assets" :{
-        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
-        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
-        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      },
-      "enableHvSdk" : true,
-      "purpleRideConfig" : {
-        "purpleRideConfigForAuto" : {
-          "vehicleVariant" : "Auto",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForCabs" : {
-          "vehicleVariant" : "Cab",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForBikes" : {
-          "vehicleVariant" : "Bike",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        }
-      },
-      "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "Madurai",
-        "mapImage" : "ny_ic_tamilnadu_map",
-        "cityCode" : "std:0452",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : false,
-        "enableGullak": false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-      "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 9.920995,
-        "cityLong" : 78.121278,
-        "supportNumber" : "08069724899",
-        "languageKey" : "TA_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : true,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : false,
-        "enableYatriCoins" : false,
-        "vehicleNSImg" : "ny_ic_auto_image_old",
-        "registration" : {
-            "supportWAN" : "917483117936",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
-      },
-      "waitingCharges" : 1.00,
-      "waitingChargesConfig" : {
-        "cab" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 1.0
-        },
-        "auto" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 1.0
-        },
-        "bike" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 1.0
-        }
-      },
-      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-      "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",     
-      "assets" :{
-        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
-        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
-        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      },
-      "enableHvSdk" : true,
-      "purpleRideConfig" : {
-        "purpleRideConfigForAuto" : {
-          "vehicleVariant" : "Auto",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForCabs" : {
-          "vehicleVariant" : "Cab",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForBikes" : {
-          "vehicleVariant" : "Bike",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        }
-      },
-      "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "Vellore",
-        "mapImage" : "ny_ic_tamilnadu_map",
-        "cityCode" : "std:0416",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : false,
-        "enableGullak": false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-      "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 12.929078,
-        "cityLong" : 79.126577,
-        "supportNumber" : "08069724899",
-        "languageKey" : "TA_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : true,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : false,
-        "enableYatriCoins" : false,
-        "vehicleNSImg" : "ny_ic_auto_image_old",
-        "registration" : {
-            "supportWAN" : "917483117936",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : true,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : true,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-          "domain" : "https://nammayatri.in"
-        , "customerAppId" : "in.juspay.nammayatri"
-        , "driverAppId" : "in.juspay.nammayatripartner"
-      },
-      "waitingCharges" : 1.00,
-      "waitingChargesConfig" : {
-        "cab" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 1.0
-        },
-        "auto" : {
-          "freeSeconds" : 180,
-          "perMinCharges" : 1.0
-        },
-        "bike" : {
-          "freeSeconds" : 300,
-          "perMinCharges" : 1.0
-        }
-      },
-      "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-      "rateCardConfig" : defRateCardConfig,
-      "gstPercentage" :  "18",      
-      "assets" :{
-        "auto_image" :  "ny_ic_black_yellow_auto_side_view",
-        "onboarding_auto_image" : "ny_ic_auto_right_side_yellow",
-        "empty_referral_auto" : "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
-        "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-      },
-      "enableHvSdk" : true,
-      "purpleRideConfig" : {
-        "purpleRideConfigForAuto" : {
-          "vehicleVariant" : "Auto",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForCabs" : {
-          "vehicleVariant" : "Cab",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        },
-        "purpleRideConfigForBikes" : {
-          "vehicleVariant" : "Bike",
-          "showVideo" : false,
-          "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-          "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-        }
-      },
-      "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        }
-      },
-      {
-        "cityName" : "Davanagere",
-        "mapImage" : "ny_ic_davanagere_map",
-        "cityCode" : "std:08192",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : true,
-        "advancedRidePopUpYoutubeLink" : "" ,
-        "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 14.4519495,
-        "cityLong" : 75.9236604,
-        "supportNumber" : "08069724919",
-        "languageKey" : "KN_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : false,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : false,
-        "enableGullak": false,
-        "vehicleNSImg" : "ny_ic_auto_image",
-        "registration" : {
-            "supportWAN" : "918618963188",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : false,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-            "domain" : "https://nammayatri.in"
-          , "customerAppId" : "in.juspay.nammayatri"
-          , "driverAppId" : "in.juspay.nammayatripartner"
-        },
-        "waitingCharges" : 1.50,
-        "waitingChargesConfig" : defWaitingChargesConfig,
-        "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-        "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
-        "gstPercentage": "18",
-        "enableHvSdk" : true,
-        "purpleRideConfig" : {
-          "purpleRideConfigForAuto" : {
-            "vehicleVariant" : "Auto",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForCabs" : {
-            "vehicleVariant" : "Cab",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForBikes" : {
-            "vehicleVariant" : "Bike",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          }
-        },
-        "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        },
-        "assets" :{
-          "auto_image" : "ic_auto_rickshaw",
-          "onboarding_auto_image" : "ny_ic_auto_side",
-          "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
-          "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-        }
-      },
-      {
-        "cityName" : "Shivamogga",
-        "mapImage" : "ny_ic_shivamogga_map",
-        "cityCode" : "std:08182",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : true,
-        "advancedRidePopUpYoutubeLink" : "" ,
-        "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 13.9342598,
-        "cityLong" : 75.5664889,
-        "supportNumber" : "08069724919",
-        "languageKey" : "KN_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : false,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : false,
-        "enableGullak": false,
-        "vehicleNSImg" : "ny_ic_auto_image",
-        "registration" : {
-            "supportWAN" : "918618963188",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : false,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-            "domain" : "https://nammayatri.in"
-          , "customerAppId" : "in.juspay.nammayatri"
-          , "driverAppId" : "in.juspay.nammayatripartner"
-        },
-        "waitingCharges" : 1.50,
-        "waitingChargesConfig" : defWaitingChargesConfig,
-        "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-        "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
-        "gstPercentage": "18",
-        "enableHvSdk" : true,
-        "purpleRideConfig" : {
-          "purpleRideConfigForAuto" : {
-            "vehicleVariant" : "Auto",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForCabs" : {
-            "vehicleVariant" : "Cab",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForBikes" : {
-            "vehicleVariant" : "Bike",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          }
-        },
-        "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        },
-        "assets" :{
-          "auto_image" : "ic_auto_rickshaw",
-          "onboarding_auto_image" : "ny_ic_auto_side",
-          "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
-          "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-        }
-      },
-      {
-        "cityName" : "Hubli",
-        "mapImage" : "ny_ic_hubli_map",
-        "cityCode" : "std:0836",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : true,
-        "advancedRidePopUpYoutubeLink" : "" ,
-        "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 23.68946891656628,
-        "cityLong" : 86.96920957618282,
-        "supportNumber" : "08069724919",
-        "languageKey" : "KN_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : false,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : false,
-        "enableGullak": false,
-        "vehicleNSImg" : "ny_ic_auto_image",
-        "registration" : {
-            "supportWAN" : "918618963188",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : false,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-            "domain" : "https://nammayatri.in"
-          , "customerAppId" : "in.juspay.nammayatri"
-          , "driverAppId" : "in.juspay.nammayatripartner"
-        },
-        "waitingCharges" : 1.50,
-        "waitingChargesConfig" : defWaitingChargesConfig,
-        "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-        "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
-        "gstPercentage": "18",
-        "enableHvSdk" : true,
-        "purpleRideConfig" : {
-          "purpleRideConfigForAuto" : {
-            "vehicleVariant" : "Auto",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForCabs" : {
-            "vehicleVariant" : "Cab",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForBikes" : {
-            "vehicleVariant" : "Bike",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          }
-        },
-        "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        },
-        "assets" :{
-          "auto_image" : "ic_auto_rickshaw",
-          "onboarding_auto_image" : "ny_ic_auto_side",
-          "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
-          "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-        }
-      },
-      {
-        "cityName" : "Paris",
-        "mapImage" : "ny_ic_location_map",
-        "cityCode" : "std:0824",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-        "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 20.2376, 
-        "cityLong" : 84.2700,
-        "supportNumber" : "08069724919",
-        "languageKey" : "KN_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : false,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : false,
-        "enableGullak": false,
-        "vehicleNSImg" : "ny_ic_auto_image",
-        "registration" : {
-            "supportWAN" : "918618963188",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : false,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-            "domain" : "https://nammayatri.in"
-          , "customerAppId" : "in.juspay.nammayatri"
-          , "driverAppId" : "in.juspay.nammayatripartner"
-        },
-        "waitingCharges" : 1.50,
-        "waitingChargesConfig" : defWaitingChargesConfig,
-        "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-        "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
-        "gstPercentage": "18",
-        "enableHvSdk" : true,
-        "purpleRideConfig" : {
-          "purpleRideConfigForAuto" : {
-            "vehicleVariant" : "Auto",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForCabs" : {
-            "vehicleVariant" : "Cab",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForBikes" : {
-            "vehicleVariant" : "Bike",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          }
-        },
-        "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        },
-        "assets" :{
-          "auto_image" : "ic_auto_rickshaw",
-          "onboarding_auto_image" : "ny_ic_auto_side",
-          "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
-          "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-        }
-      },
-      {
-        "cityName" : "Odisha",
-        "mapImage" : "ny_ic_location_map",
-        "cityCode" : "std:0824",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-        "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 20.2376, 
-        "cityLong" : 84.2700,
-        "supportNumber" : "08069724919",
-        "languageKey" : "KN_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : false,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : false,
-        "enableGullak": false,
-        "vehicleNSImg" : "ny_ic_auto_image",
-        "registration" : {
-            "supportWAN" : "918618963188",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : false,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-            "domain" : "https://nammayatri.in"
-          , "customerAppId" : "in.juspay.nammayatri"
-          , "driverAppId" : "in.juspay.nammayatripartner"
-        },
-        "waitingCharges" : 1.50,
-        "waitingChargesConfig" : defWaitingChargesConfig,
-        "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-        "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
-        "gstPercentage": "18",
-        "enableHvSdk" : true,
-        "purpleRideConfig" : {
-          "purpleRideConfigForAuto" : {
-            "vehicleVariant" : "Auto",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForCabs" : {
-            "vehicleVariant" : "Cab",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForBikes" : {
-            "vehicleVariant" : "Bike",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          }
-        },
-        "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        },
-        "assets" :{
-          "auto_image" : "ic_auto_rickshaw",
-          "onboarding_auto_image" : "ny_ic_auto_side",
-          "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
-          "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-        }
-      },
-      {
-        "cityName" : "Bhubaneswar",
-        "mapImage" : "ny_ic_location_map",
-        "cityCode" : "std:0824",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : false,
-        "advancedRidePopUpYoutubeLink" : "" ,
-        "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 20.2376, 
-        "cityLong" : 84.2700,
-        "supportNumber" : "08069724919",
-        "languageKey" : "KN_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : false,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : false,
-        "enableGullak": false,
-        "vehicleNSImg" : "ny_ic_auto_image",
-        "registration" : {
-            "supportWAN" : "918618963188",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : false,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-            "domain" : "https://nammayatri.in"
-          , "customerAppId" : "in.juspay.nammayatri"
-          , "driverAppId" : "in.juspay.nammayatripartner"
-        },
-        "waitingCharges" : 1.50,
-        "waitingChargesConfig" : defWaitingChargesConfig,
-        "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-        "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
-        "gstPercentage": "18",
-        "enableHvSdk" : true,
-        "purpleRideConfig" : {
-          "purpleRideConfigForAuto" : {
-            "vehicleVariant" : "Auto",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForCabs" : {
-            "vehicleVariant" : "Cab",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForBikes" : {
-            "vehicleVariant" : "Bike",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          }
-        },
-        "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        },
-        "assets" :{
-          "auto_image" : "ic_auto_rickshaw",
-          "onboarding_auto_image" : "ny_ic_auto_side",
-          "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
-          "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-        }
-      },
-      
-      {
-        "cityName" : "Mangalore",
-        "mapImage" : "ny_ic_mangalore_map",
-        "cityCode" : "std:0824",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : true,
-        "advancedRidePopUpYoutubeLink" : "" ,
-        "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 12.9139747,
-        "cityLong" : 74.8561126,
-        "supportNumber" : "08069724919",
-        "languageKey" : "KN_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : false,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : false,
-        "enableGullak": false,
-        "vehicleNSImg" : "ny_ic_auto_image",
-        "registration" : {
-            "supportWAN" : "918618963188",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : false,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-            "domain" : "https://nammayatri.in"
-          , "customerAppId" : "in.juspay.nammayatri"
-          , "driverAppId" : "in.juspay.nammayatripartner"
-        },
-        "waitingCharges" : 1.50,
-        "waitingChargesConfig" : defWaitingChargesConfig,
-        "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-        "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
-        "gstPercentage": "18",
-        "enableHvSdk" : true,
-        "purpleRideConfig" : {
-          "purpleRideConfigForAuto" : {
-            "vehicleVariant" : "Auto",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForCabs" : {
-            "vehicleVariant" : "Cab",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForBikes" : {
-            "vehicleVariant" : "Bike",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          }
-        },
-        "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        },
-        "assets" :{
-          "auto_image" : "ic_auto_rickshaw",
-          "onboarding_auto_image" : "ny_ic_auto_side",
-          "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
-          "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-        }
-      },
-      {
-        "cityName" : "Gulbarga",
-        "mapImage" : "ny_ic_gulbarga_map",
-        "cityCode" : "std:08472",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : true,
-        "advancedRidePopUpYoutubeLink" : "" ,
-        "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 17.3237322,
-        "cityLong" : 76.8354076,
-        "supportNumber" : "08069724919",
-        "languageKey" : "KN_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : false,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : false,
-        "enableGullak": false,
-        "vehicleNSImg" : "ny_ic_auto_image",
-        "registration" : {
-            "supportWAN" : "918618963188",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : false,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-            "domain" : "https://nammayatri.in"
-          , "customerAppId" : "in.juspay.nammayatri"
-          , "driverAppId" : "in.juspay.nammayatripartner"
-        },
-        "waitingCharges" : 1.50,
-        "waitingChargesConfig" : defWaitingChargesConfig,
-        "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-        "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
-        "gstPercentage": "18",
-        "enableHvSdk" : true,
-        "purpleRideConfig" : {
-          "purpleRideConfigForAuto" : {
-            "vehicleVariant" : "Auto",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForCabs" : {
-            "vehicleVariant" : "Cab",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForBikes" : {
-            "vehicleVariant" : "Bike",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          }
-        },
-        "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        },
-        "assets" :{
-          "auto_image" : "ic_auto_rickshaw",
-          "onboarding_auto_image" : "ny_ic_auto_side",
-          "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
-          "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-        }
-      },
-      {
-        "cityName" : "Udupi",
-        "mapImage" : "ny_ic_udupi_map",
-        "cityCode" : "std:08200",
-        "showSubscriptions" : false,
-        "enableAdvancedBooking" : true,
-        "advancedRidePopUpYoutubeLink" : "" ,
-        "callDriverInfoPost": false, // Dummy link need to change
-        "cityLat" : 13.3407096,
-        "cityLong" : 74.7421016,
-        "supportNumber" : "08069724919",
-        "languageKey" : "KN_IN",
-        "showScheduledRides" : false,
-        "showDriverReferral" : false,
-        "showCustomerReferral" : true,
-        "uploadRCandDL" : true,
-        "enableYatriCoins" : false,
-        "enableGullak": false,
-        "vehicleNSImg" : "ny_ic_auto_image",
-        "registration" : {
-            "supportWAN" : "918618963188",
-            "callSupport" : true,
-            "whatsappSupport" : true
-        },
-        "variantSubscriptionConfig" : {
-          "enableVariantBasedSubscription" : false,
-          "variantList" : [],
-          "enableCabsSubscriptionView" : false,
-          "staticViewPlans" : staticSubscriptionConfig
-        },
-        "showEarningSection" : true,
-        "referral" : {
-            "domain" : "https://nammayatri.in"
-          , "customerAppId" : "in.juspay.nammayatri"
-          , "driverAppId" : "in.juspay.nammayatripartner"
-        },
-        "waitingCharges" : 1.50,
-        "waitingChargesConfig" : defWaitingChargesConfig,
-        "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-        "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
-        "gstPercentage": "18",
-        "enableHvSdk" : true,
-        "purpleRideConfig" : {
-          "purpleRideConfigForAuto" : {
-            "vehicleVariant" : "Auto",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForCabs" : {
-            "vehicleVariant" : "Cab",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          },
-          "purpleRideConfigForBikes" : {
-            "vehicleVariant" : "Bike",
-            "showVideo" : false,
-            "disabilityToVideo" : [{"disabilityType" : "BLIND_AND_LOW_VISION", "videoUrl" : "https://www.youtube.com/watch?v=2qYXl03N6Jg"}, {"disabilityType" : "HEAR_IMPAIRMENT", "videoUrl" : "https://www.youtube.com/watch?v=udkWOt0serg"}, {"disabilityType" : "LOCOMOTOR_DISABILITY", "videoUrl" : "https://www.youtube.com/watch?v=B0C6SZTQO6k"}, {"disabilityType" : "SAFETY", "videoUrl" : ""}, {"disabilityType" : "SPECIAL_ZONE_PICKUP", "videoUrl" : ""}, {"disabilityType" : "OTHER_DISABILITY", "videoUrl" : ""}],
-            "genericVideoForVariant" : "https://youtu.be/5s21p2rI58c"
-          }
-        },
-        "rideStartAudio" : {
-          "acCab" : {},
-          "nonAcCab" : {},
-          "auto" : {},
-          "bike" : {}
-        },
-        "assets" :{
-          "auto_image" : "ic_auto_rickshaw",
-          "onboarding_auto_image" : "ny_ic_auto_side",
-          "empty_referral_auto" : "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
-          "empty_referral_cab" : "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
-        }
-      }
-  ]
+    , "cityConfig" : fallBackCityConfig
+    , "cityConfigObj" : cityConfigObj
   , "appUpdatePopupUrl" : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner&pcampaignid=web_share"
   , "dashboard" : {
         "enable" : true,
@@ -2580,3 +249,4674 @@ let defRateCardConfig = {
     "showLearnMore" : false,
     "learnMoreVideoLink" : ""
   }
+
+
+const fallBackCityConfig = [
+  {
+    "cityName": "Bangalore",
+    "mapImage": "ny_ic_bangalore_map",
+    "cityCode": "std:080",
+    "showSubscriptions": true,
+    "enableAdvancedBooking": true,
+    "enableGullak": true,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 12.971599,
+    "cityLong": 77.594566,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": true,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": true,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": ["AutoCategory", "CarCategory"],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": true,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=ZnA9uM8pLPc" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=SZ3NtePrLpM" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=ZJ-aRfkxYtI" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {
+        "tollAudio": "https://assets.moving.tech/beckn/audios/toll_charges_background/kn.mp3",
+        "acAudio": "https://assets.moving.tech/beckn/audios/ac_background/kn.mp3",
+      },
+      "nonAcCab": {
+        "tollAudio": "https://assets.moving.tech/beckn/audios/toll_charges_background/kn.mp3",
+        "acAudio": "https://assets.moving.tech/beckn/audios/non_ac_background/kn.mp3"
+      },
+
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "Hyderabad",
+    "mapImage": "ny_ic_hyderabad_map",
+    "cityCode": "std:040",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 17.402113,
+    "cityLong": 78.499827,
+    "supportNumber": "+918069724900",
+    "languageKey": "TE_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "919392636637",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://www.manayatri.in"
+      , "customerAppId": "in.mobility.manayatri"
+      , "driverAppId": "in.mobility.manayatripartner"
+    },
+    "waitingCharges": 2.00,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 180,
+        "perMinCharges": 2.0
+      },
+      "auto": {
+        "freeSeconds": 300,
+        "perMinCharges": 2.0
+      },
+      "bike": {
+        "freeSeconds": 180,
+        "perMinCharges": 2.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_my,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_my.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_my,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_my.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {
+        "tollAudio": "",
+        "acAudio": "",
+        "parkingAudio": "https://assets.moving.tech/beckn/audios/parking_charges_background/te.mp3",
+        "defaultAudio": ""
+      },
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "Mysore",
+    "mapImage": "ny_ic_mysuru_map",
+    "cityCode": "std:0821",
+    "showSubscriptions": true,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 12.295810,
+    "cityLong": 76.639381,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": true,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": ["AutoCategory", "CarCategory"],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 180
+        , "perMinCharges": 2.0
+      },
+      "auto": {
+        "freeSeconds": 180
+        , "perMinCharges": 1.5
+      },
+      "bike": {
+        "freeSeconds": 180
+        , "perMinCharges": 2.0
+      }
+    },
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": true,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=ZnA9uM8pLPc" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=SZ3NtePrLpM" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=ZJ-aRfkxYtI" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "Delhi",
+    "mapImage": "ny_ic_delhi_map",
+    "cityCode": "std:011",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 28.618978,
+    "cityLong": 77.207795,
+    "supportNumber": "+918069724848",
+    "languageKey": "HI_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "919625724848",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 0.75,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      },
+      "auto": {
+        "freeSeconds": 180,
+        "perMinCharges": 0.75
+      },
+      "bike": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "Chennai",
+    "mapImage": "ny_ic_chennai_map",
+    "cityCode": "std:044",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 13.067439,
+    "cityLong": 80.237617,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": false,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.00,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      },
+      "auto": {
+        "freeSeconds": 180,
+        "perMinCharges": 1.0
+      },
+      "bike": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "Coimbatore",
+    "mapImage": "ny_ic_coimbatore_map",
+    "cityCode": "std:0422",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 11.023481,
+    "cityLong": 76.966429,
+    "supportNumber": "",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "",
+      "callSupport": true,
+      "whatsappSupport": false
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "Pondicherry",
+    "mapImage": "ny_ic_puducherry_map",
+    "cityCode": "std:0413",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 11.943852,
+    "cityLong": 79.808292,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "Tumakuru",
+    "mapImage": "ny_ic_tumakuru_map",
+    "cityCode": "std:0816",
+    "showSubscriptions": true,
+    "enableAdvancedBooking": false,
+    "enableGullak": true,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 15.32383804957557,
+    "cityLong": 75.88071672412116,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "uploadRCandDL": true,
+    "enableYatriCoins": true,
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": ["AutoCategory", "CarCategory"],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": true,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=ZnA9uM8pLPc" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=SZ3NtePrLpM" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=ZJ-aRfkxYtI" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "Gurugram",
+    "mapImage": "ny_ic_gurugram_map",
+    "cityCode": "std:0124",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 28.457523,
+    "cityLong": 77.026344,
+    "supportNumber": "+918069724848",
+    "languageKey": "HI_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "919625724848",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "Noida",
+    "mapImage": "ny_ic_noida_map",
+    "cityCode": "std:01189",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 28.535517,
+    "cityLong": 77.391029,
+    "supportNumber": "+918069724848",
+    "languageKey": "HI_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "registration": {
+      "supportWAN": "919625724848",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "TamilNaduCities",
+    "mapImage": "ny_ic_tamilnadu_map",
+    "cityCode": "std:0422",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 11.1271,
+    "cityLong": 78.6569,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": false,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "Minneapolis",
+    "mapImage": "ny_ic_minneapolis_map",
+    "cityCode": "std:01189",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 44.977753,
+    "cityLong": -93.2650108,
+    "supportNumber": "+918069724848",
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "languageKey": "EN_US",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "registration": {
+      "supportWAN": "919625724848",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": false,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": false,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "Kochi",
+    "mapImage": "ny_ic_kochi_map",
+    "cityCode": "std:0484",
+    "showSubscriptions": true,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false,
+    "cityLat": 9.931233,
+    "cityLong": 76.267303,
+    "supportNumber": "",
+    "languageKey": "ML_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": true,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": ["AutoCategory"],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_black",
+      "empty_referral_auto": "ny_ic_refer_now_auto_yatri_black,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_black.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "Trichy",
+    "mapImage": "ny_ic_tamilnadu_map",
+    "cityCode": "std:0431",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 10.80942,
+    "cityLong": 78.693486,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": false,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.00,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      },
+      "auto": {
+        "freeSeconds": 180,
+        "perMinCharges": 1.0
+      },
+      "bike": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "Thanjavur",
+    "mapImage": "ny_ic_tamilnadu_map",
+    "cityCode": "std:04362",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 10.778442,
+    "cityLong": 79.133848,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": false,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.00,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      },
+      "auto": {
+        "freeSeconds": 180,
+        "perMinCharges": 1.0
+      },
+      "bike": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "Salem",
+    "mapImage": "ny_ic_tamilnadu_map",
+    "cityCode": "std:0427",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 11.656077,
+    "cityLong": 78.14412,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": false,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.00,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      },
+      "auto": {
+        "freeSeconds": 180,
+        "perMinCharges": 1.0
+      },
+      "bike": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "Tirunelveli",
+    "mapImage": "ny_ic_tamilnadu_map",
+    "cityCode": "std:0462",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 8.723441,
+    "cityLong": 77.740959,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": false,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.00,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      },
+      "auto": {
+        "freeSeconds": 180,
+        "perMinCharges": 1.0
+      },
+      "bike": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "Hosur",
+    "mapImage": "ny_ic_tamilnadu_map",
+    "cityCode": "std:04344",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 12.738274,
+    "cityLong": 77.82293,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": false,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.00,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      },
+      "auto": {
+        "freeSeconds": 180,
+        "perMinCharges": 1.0
+      },
+      "bike": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "Madurai",
+    "mapImage": "ny_ic_tamilnadu_map",
+    "cityCode": "std:0452",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 9.920995,
+    "cityLong": 78.121278,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": false,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.00,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      },
+      "auto": {
+        "freeSeconds": 180,
+        "perMinCharges": 1.0
+      },
+      "bike": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "Vellore",
+    "mapImage": "ny_ic_tamilnadu_map",
+    "cityCode": "std:0416",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 12.929078,
+    "cityLong": 79.126577,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": false,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.00,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      },
+      "auto": {
+        "freeSeconds": 180,
+        "perMinCharges": 1.0
+      },
+      "bike": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  {
+    "cityName": "Davanagere",
+    "mapImage": "ny_ic_davanagere_map",
+    "cityCode": "std:08192",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": true,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 14.4519495,
+    "cityLong": 75.9236604,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "enableGullak": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": false,
+      "variantList": [],
+      "enableCabsSubscriptionView": false,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    },
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    }
+  },
+  {
+    "cityName": "Shivamogga",
+    "mapImage": "ny_ic_shivamogga_map",
+    "cityCode": "std:08182",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": true,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 13.9342598,
+    "cityLong": 75.5664889,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "enableGullak": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": false,
+      "variantList": [],
+      "enableCabsSubscriptionView": false,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    },
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    }
+  },
+  {
+    "cityName": "Hubli",
+    "mapImage": "ny_ic_hubli_map",
+    "cityCode": "std:0836",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": true,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 23.68946891656628,
+    "cityLong": 86.96920957618282,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "enableGullak": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": false,
+      "variantList": [],
+      "enableCabsSubscriptionView": false,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    },
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    }
+  },
+  {
+    "cityName": "Paris",
+    "mapImage": "ny_ic_location_map",
+    "cityCode": "std:0824",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 20.2376,
+    "cityLong": 84.2700,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "enableGullak": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": false,
+      "variantList": [],
+      "enableCabsSubscriptionView": false,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    },
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    }
+  },
+  {
+    "cityName": "Odisha",
+    "mapImage": "ny_ic_location_map",
+    "cityCode": "std:0824",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 20.2376,
+    "cityLong": 84.2700,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "enableGullak": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": false,
+      "variantList": [],
+      "enableCabsSubscriptionView": false,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    },
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    }
+  },
+  {
+    "cityName": "Bhubaneswar",
+    "mapImage": "ny_ic_location_map",
+    "cityCode": "std:0824",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 20.2376,
+    "cityLong": 84.2700,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "enableGullak": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": false,
+      "variantList": [],
+      "enableCabsSubscriptionView": false,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    },
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    }
+  },
+
+  {
+    "cityName": "Mangalore",
+    "mapImage": "ny_ic_mangalore_map",
+    "cityCode": "std:0824",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": true,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 12.9139747,
+    "cityLong": 74.8561126,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "enableGullak": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": false,
+      "variantList": [],
+      "enableCabsSubscriptionView": false,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    },
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    }
+  },
+  {
+    "cityName": "Gulbarga",
+    "mapImage": "ny_ic_gulbarga_map",
+    "cityCode": "std:08472",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": true,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 17.3237322,
+    "cityLong": 76.8354076,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "enableGullak": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": false,
+      "variantList": [],
+      "enableCabsSubscriptionView": false,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    },
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    }
+  },
+  {
+    "cityName": "Udupi",
+    "mapImage": "ny_ic_udupi_map",
+    "cityCode": "std:08200",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": true,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 13.3407096,
+    "cityLong": 74.7421016,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "enableGullak": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": false,
+      "variantList": [],
+      "enableCabsSubscriptionView": false,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    },
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    }
+  }
+]
+
+
+
+const cityConfigObj = {
+  "Bangalore": {
+    "cityName": "Bangalore",
+    "mapImage": "ny_ic_bangalore_map",
+    "cityCode": "std:080",
+    "showSubscriptions": true,
+    "enableAdvancedBooking": true,
+    "enableGullak": true,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 12.971599,
+    "cityLong": 77.594566,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": true,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": true,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": ["AutoCategory", "CarCategory"],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": true,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=ZnA9uM8pLPc" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=SZ3NtePrLpM" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=ZJ-aRfkxYtI" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {
+        "tollAudio": "https://assets.moving.tech/beckn/audios/toll_charges_background/kn.mp3",
+        "acAudio": "https://assets.moving.tech/beckn/audios/ac_background/kn.mp3",
+      },
+      "nonAcCab": {
+        "tollAudio": "https://assets.moving.tech/beckn/audios/toll_charges_background/kn.mp3",
+        "acAudio": "https://assets.moving.tech/beckn/audios/non_ac_background/kn.mp3"
+      },
+
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "Hyderabad": {
+    "cityName": "Hyderabad",
+    "mapImage": "ny_ic_hyderabad_map",
+    "cityCode": "std:040",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 17.402113,
+    "cityLong": 78.499827,
+    "supportNumber": "+918069724900",
+    "languageKey": "TE_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "919392636637",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://www.manayatri.in"
+      , "customerAppId": "in.mobility.manayatri"
+      , "driverAppId": "in.mobility.manayatripartner"
+    },
+    "waitingCharges": 2.00,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 180,
+        "perMinCharges": 2.0
+      },
+      "auto": {
+        "freeSeconds": 300,
+        "perMinCharges": 2.0
+      },
+      "bike": {
+        "freeSeconds": 180,
+        "perMinCharges": 2.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_my,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_my.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_my,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_my.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {
+        "tollAudio": "",
+        "acAudio": "",
+        "parkingAudio": "https://assets.moving.tech/beckn/audios/parking_charges_background/te.mp3",
+        "defaultAudio": ""
+      },
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "Mysore": {
+    "cityName": "Mysore",
+    "mapImage": "ny_ic_mysuru_map",
+    "cityCode": "std:0821",
+    "showSubscriptions": true,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 12.295810,
+    "cityLong": 76.639381,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": true,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": ["AutoCategory", "CarCategory"],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 180
+        , "perMinCharges": 2.0
+      },
+      "auto": {
+        "freeSeconds": 180
+        , "perMinCharges": 1.5
+      },
+      "bike": {
+        "freeSeconds": 180
+        , "perMinCharges": 2.0
+      }
+    },
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": true,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=ZnA9uM8pLPc" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=SZ3NtePrLpM" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=ZJ-aRfkxYtI" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "Delhi": {
+    "cityName": "Delhi",
+    "mapImage": "ny_ic_delhi_map",
+    "cityCode": "std:011",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 28.618978,
+    "cityLong": 77.207795,
+    "supportNumber": "+918069724848",
+    "languageKey": "HI_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "919625724848",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 0.75,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      },
+      "auto": {
+        "freeSeconds": 180,
+        "perMinCharges": 0.75
+      },
+      "bike": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "Chennai": {
+    "cityName": "Chennai",
+    "mapImage": "ny_ic_chennai_map",
+    "cityCode": "std:044",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 13.067439,
+    "cityLong": 80.237617,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": false,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.00,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      },
+      "auto": {
+        "freeSeconds": 180,
+        "perMinCharges": 1.0
+      },
+      "bike": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "Coimbatore": {
+    "cityName": "Coimbatore",
+    "mapImage": "ny_ic_coimbatore_map",
+    "cityCode": "std:0422",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 11.023481,
+    "cityLong": 76.966429,
+    "supportNumber": "",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "",
+      "callSupport": true,
+      "whatsappSupport": false
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "Pondicherry": {
+    "cityName": "Pondicherry",
+    "mapImage": "ny_ic_puducherry_map",
+    "cityCode": "std:0413",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 11.943852,
+    "cityLong": 79.808292,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "Tumakuru": {
+    "cityName": "Tumakuru",
+    "mapImage": "ny_ic_tumakuru_map",
+    "cityCode": "std:0816",
+    "showSubscriptions": true,
+    "enableAdvancedBooking": false,
+    "enableGullak": true,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 15.32383804957557,
+    "cityLong": 75.88071672412116,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "uploadRCandDL": true,
+    "enableYatriCoins": true,
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": ["AutoCategory", "CarCategory"],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": true,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=ZnA9uM8pLPc" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=SZ3NtePrLpM" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=ZJ-aRfkxYtI" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "Gurugram": {
+    "cityName": "Gurugram",
+    "mapImage": "ny_ic_gurugram_map",
+    "cityCode": "std:0124",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 28.457523,
+    "cityLong": 77.026344,
+    "supportNumber": "+918069724848",
+    "languageKey": "HI_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "919625724848",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "Noida": {
+    "cityName": "Noida",
+    "mapImage": "ny_ic_noida_map",
+    "cityCode": "std:01189",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 28.535517,
+    "cityLong": 77.391029,
+    "supportNumber": "+918069724848",
+    "languageKey": "HI_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "registration": {
+      "supportWAN": "919625724848",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_yatri_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "TamilNaduCities": {
+    "cityName": "TamilNaduCities",
+    "mapImage": "ny_ic_tamilnadu_map",
+    "cityCode": "std:0422",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 11.1271,
+    "cityLong": 78.6569,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": false,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "Minneapolis": {
+    "cityName": "Minneapolis",
+    "mapImage": "ny_ic_minneapolis_map",
+    "cityCode": "std:01189",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 44.977753,
+    "cityLong": -93.2650108,
+    "supportNumber": "+918069724848",
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "languageKey": "EN_US",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "registration": {
+      "supportWAN": "919625724848",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": false,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": false,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "Kochi": {
+    "cityName": "Kochi",
+    "mapImage": "ny_ic_kochi_map",
+    "cityCode": "std:0484",
+    "showSubscriptions": true,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false,
+    "cityLat": 9.931233,
+    "cityLong": 76.267303,
+    "supportNumber": "",
+    "languageKey": "ML_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": true,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": ["AutoCategory"],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_black",
+      "empty_referral_auto": "ny_ic_refer_now_auto_yatri_black,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_yatri_black.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_yatri,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_yatri.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "Trichy": {
+    "cityName": "Trichy",
+    "mapImage": "ny_ic_tamilnadu_map",
+    "cityCode": "std:0431",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 10.80942,
+    "cityLong": 78.693486,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": false,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.00,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      },
+      "auto": {
+        "freeSeconds": 180,
+        "perMinCharges": 1.0
+      },
+      "bike": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "Thanjavur": {
+    "cityName": "Thanjavur",
+    "mapImage": "ny_ic_tamilnadu_map",
+    "cityCode": "std:04362",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 10.778442,
+    "cityLong": 79.133848,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": false,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.00,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      },
+      "auto": {
+        "freeSeconds": 180,
+        "perMinCharges": 1.0
+      },
+      "bike": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "Salem": {
+    "cityName": "Salem",
+    "mapImage": "ny_ic_tamilnadu_map",
+    "cityCode": "std:0427",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 11.656077,
+    "cityLong": 78.14412,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": false,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.00,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      },
+      "auto": {
+        "freeSeconds": 180,
+        "perMinCharges": 1.0
+      },
+      "bike": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "Tirunelveli": {
+    "cityName": "Tirunelveli",
+    "mapImage": "ny_ic_tamilnadu_map",
+    "cityCode": "std:0462",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 8.723441,
+    "cityLong": 77.740959,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": false,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.00,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      },
+      "auto": {
+        "freeSeconds": 180,
+        "perMinCharges": 1.0
+      },
+      "bike": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "Hosur": {
+    "cityName": "Hosur",
+    "mapImage": "ny_ic_tamilnadu_map",
+    "cityCode": "std:04344",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 12.738274,
+    "cityLong": 77.82293,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": false,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.00,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      },
+      "auto": {
+        "freeSeconds": 180,
+        "perMinCharges": 1.0
+      },
+      "bike": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "Madurai": {
+    "cityName": "Madurai",
+    "mapImage": "ny_ic_tamilnadu_map",
+    "cityCode": "std:0452",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 9.920995,
+    "cityLong": 78.121278,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": false,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.00,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      },
+      "auto": {
+        "freeSeconds": 180,
+        "perMinCharges": 1.0
+      },
+      "bike": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "Vellore": {
+    "cityName": "Vellore",
+    "mapImage": "ny_ic_tamilnadu_map",
+    "cityCode": "std:0416",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "enableGullak": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 12.929078,
+    "cityLong": 79.126577,
+    "supportNumber": "08069724899",
+    "languageKey": "TA_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": true,
+    "showCustomerReferral": true,
+    "uploadRCandDL": false,
+    "enableYatriCoins": false,
+    "vehicleNSImg": "ny_ic_auto_image_old",
+    "registration": {
+      "supportWAN": "917483117936",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": true,
+      "variantList": [],
+      "enableCabsSubscriptionView": true,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.00,
+    "waitingChargesConfig": {
+      "cab": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      },
+      "auto": {
+        "freeSeconds": 180,
+        "perMinCharges": 1.0
+      },
+      "bike": {
+        "freeSeconds": 300,
+        "perMinCharges": 1.0
+      }
+    },
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": defRateCardConfig,
+    "gstPercentage": "18",
+    "assets": {
+      "auto_image": "ny_ic_black_yellow_auto_side_view",
+      "onboarding_auto_image": "ny_ic_auto_right_side_yellow",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_yellow,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_yellow.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    },
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    }
+  },
+  "Davanagere": {
+    "cityName": "Davanagere",
+    "mapImage": "ny_ic_davanagere_map",
+    "cityCode": "std:08192",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": true,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 14.4519495,
+    "cityLong": 75.9236604,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "enableGullak": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": false,
+      "variantList": [],
+      "enableCabsSubscriptionView": false,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    },
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    }
+  },
+  "Shivamogga": {
+    "cityName": "Shivamogga",
+    "mapImage": "ny_ic_shivamogga_map",
+    "cityCode": "std:08182",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": true,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 13.9342598,
+    "cityLong": 75.5664889,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "enableGullak": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": false,
+      "variantList": [],
+      "enableCabsSubscriptionView": false,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    },
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    }
+  },
+  "Hubli": {
+    "cityName": "Hubli",
+    "mapImage": "ny_ic_hubli_map",
+    "cityCode": "std:0836",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": true,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 23.68946891656628,
+    "cityLong": 86.96920957618282,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "enableGullak": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": false,
+      "variantList": [],
+      "enableCabsSubscriptionView": false,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    },
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    }
+  },
+  "Paris": {
+    "cityName": "Paris",
+    "mapImage": "ny_ic_location_map",
+    "cityCode": "std:0824",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 20.2376,
+    "cityLong": 84.2700,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "enableGullak": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": false,
+      "variantList": [],
+      "enableCabsSubscriptionView": false,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    },
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    }
+  },
+  "Odisha": {
+    "cityName": "Odisha",
+    "mapImage": "ny_ic_location_map",
+    "cityCode": "std:0824",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 20.2376,
+    "cityLong": 84.2700,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "enableGullak": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": false,
+      "variantList": [],
+      "enableCabsSubscriptionView": false,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    },
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    }
+  },
+  "Bhubaneswar": {
+    "cityName": "Bhubaneswar",
+    "mapImage": "ny_ic_location_map",
+    "cityCode": "std:0824",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": false,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 20.2376,
+    "cityLong": 84.2700,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "enableGullak": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": false,
+      "variantList": [],
+      "enableCabsSubscriptionView": false,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    },
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    }
+  },
+
+  "Mangalore": {
+    "cityName": "Mangalore",
+    "mapImage": "ny_ic_mangalore_map",
+    "cityCode": "std:0824",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": true,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 12.9139747,
+    "cityLong": 74.8561126,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "enableGullak": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": false,
+      "variantList": [],
+      "enableCabsSubscriptionView": false,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    },
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    }
+  },
+  "Gulbarga": {
+    "cityName": "Gulbarga",
+    "mapImage": "ny_ic_gulbarga_map",
+    "cityCode": "std:08472",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": true,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 17.3237322,
+    "cityLong": 76.8354076,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "enableGullak": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": false,
+      "variantList": [],
+      "enableCabsSubscriptionView": false,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    },
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    }
+  },
+  "Udupi": {
+    "cityName": "Udupi",
+    "mapImage": "ny_ic_udupi_map",
+    "cityCode": "std:08200",
+    "showSubscriptions": false,
+    "enableAdvancedBooking": true,
+    "advancedRidePopUpYoutubeLink": "",
+    "callDriverInfoPost": false, // Dummy link need to change
+    "cityLat": 13.3407096,
+    "cityLong": 74.7421016,
+    "supportNumber": "08069724919",
+    "languageKey": "KN_IN",
+    "showScheduledRides": false,
+    "showDriverReferral": false,
+    "showCustomerReferral": true,
+    "uploadRCandDL": true,
+    "enableYatriCoins": false,
+    "enableGullak": false,
+    "vehicleNSImg": "ny_ic_auto_image",
+    "registration": {
+      "supportWAN": "918618963188",
+      "callSupport": true,
+      "whatsappSupport": true
+    },
+    "variantSubscriptionConfig": {
+      "enableVariantBasedSubscription": false,
+      "variantList": [],
+      "enableCabsSubscriptionView": false,
+      "staticViewPlans": staticSubscriptionConfig
+    },
+    "showEarningSection": true,
+    "referral": {
+      "domain": "https://nammayatri.in"
+      , "customerAppId": "in.juspay.nammayatri"
+      , "driverAppId": "in.juspay.nammayatripartner"
+    },
+    "waitingCharges": 1.50,
+    "waitingChargesConfig": defWaitingChargesConfig,
+    "rentalWaitingChargesConfig": defRentalWaitingChargesConfig,
+    "rateCardConfig": { "showLearnMore": true, "learnMoreVideoLink": "https://www.youtube.com/shorts/NUTNKPzslpw" },
+    "gstPercentage": "18",
+    "enableHvSdk": true,
+    "purpleRideConfig": {
+      "purpleRideConfigForAuto": {
+        "vehicleVariant": "Auto",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForCabs": {
+        "vehicleVariant": "Cab",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      },
+      "purpleRideConfigForBikes": {
+        "vehicleVariant": "Bike",
+        "showVideo": false,
+        "disabilityToVideo": [{ "disabilityType": "BLIND_AND_LOW_VISION", "videoUrl": "https://www.youtube.com/watch?v=2qYXl03N6Jg" }, { "disabilityType": "HEAR_IMPAIRMENT", "videoUrl": "https://www.youtube.com/watch?v=udkWOt0serg" }, { "disabilityType": "LOCOMOTOR_DISABILITY", "videoUrl": "https://www.youtube.com/watch?v=B0C6SZTQO6k" }, { "disabilityType": "SAFETY", "videoUrl": "" }, { "disabilityType": "SPECIAL_ZONE_PICKUP", "videoUrl": "" }, { "disabilityType": "OTHER_DISABILITY", "videoUrl": "" }],
+        "genericVideoForVariant": "https://youtu.be/5s21p2rI58c"
+      }
+    },
+    "rideStartAudio": {
+      "acCab": {},
+      "nonAcCab": {},
+      "auto": {},
+      "bike": {}
+    },
+    "assets": {
+      "auto_image": "ic_auto_rickshaw",
+      "onboarding_auto_image": "ny_ic_auto_side",
+      "empty_referral_auto": "ny_ic_refer_now_auto_ny_green,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_auto_ny_green.png",
+      "empty_referral_cab": "ny_ic_refer_now_cab_ny,https://assets.moving.tech/beckn/common/driver/images/ny_ic_refer_now_cab_ny.png"
+    }
+  }
+}

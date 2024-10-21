@@ -61,7 +61,7 @@ primaryButtonConfig isActive =
 genericHeaderConfig :: ST.DriverEarningsScreenState -> GenericHeaderConfig.Config
 genericHeaderConfig state =
   let
-    cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+    cityConfig = HU.getCityConfig state.data.config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
 
     enableYatriCoins = state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins
 

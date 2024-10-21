@@ -1476,7 +1476,7 @@ accessibilityConfig dummy = { title : "", coverMediaText : "", primaryText : get
 
 getDisabilityTypeVideo :: ST.HomeScreenState -> String -> String
 getDisabilityTypeVideo state pwdtype =
-  let cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalNativeStore DRIVER_LOCATION) 
+  let cityConfig = HU.getCityConfig state.data.config.cityConfigObj (getValueToLocalNativeStore DRIVER_LOCATION) 
       purpleRideConfigForVehicle = getPurpleRideConfigForVehicle state.data.linkedVehicleVariant cityConfig.purpleRideConfig
       disabilityToVideo = DA.find (\item -> item.disabilityType == pwdtype) purpleRideConfigForVehicle.disabilityToVideo
   in maybe "" (\obj -> obj.videoUrl) disabilityToVideo

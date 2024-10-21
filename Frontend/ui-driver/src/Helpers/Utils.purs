@@ -112,6 +112,8 @@ import Data.Foldable (foldl)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Data.Function (flip)
 import Data.Ord (compare)
+import Foreign.Object as FO
+import LocalStorage.Cache 
 
 
 type AffSuccess s = (s -> Effect Unit)
@@ -679,7 +681,7 @@ contactSupportNumber :: String -> Effect Unit
 contactSupportNumber supportType = do
   void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT do 
     config <- getAppConfigFlowBT appConfig
-    let city = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+    let city = getCityConfig config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
         supportNumber = if DSC.null city.supportNumber then getSupportNumber "" else city.supportNumber
     if supportType == "WHATSAPP" && DSC.null city.supportNumber then 
       liftFlowBT $ openWhatsAppSupport $ getWhatsAppSupportNo $ show (getMerchant FunctionCall) 
@@ -691,13 +693,12 @@ setForwardBatchingData cityConf =
   let (ForwardBatchConfigData forwardBatchRemoteConfig) = forwardBatchConfigData cityConf.cityName
   in cityConf {enableAdvancedBooking = forwardBatchRemoteConfig.is_Forward_Dispatch_Feature_Enabled, advancedRidePopUpYoutubeLink = forwardBatchRemoteConfig.advancedRidePopUpYoutubeLink, callDriverInfoPost = forwardBatchRemoteConfig.callDriverInfoPost}
 
-getCityConfig :: Array MCT.CityConfig -> String -> MCT.CityConfig
-getCityConfig cityConfig cityName = do
-  maybe defaultCityConfig setForwardBatchingData $ DA.find (\item -> item.cityName == cityName) cityConfig
+getCityConfig :: FO.Object MCT.CityConfig -> String -> MCT.CityConfig
+getCityConfig cityConfig cityName = getValueFromCache cityName (\city -> maybe defaultCityConfig setForwardBatchingData $ FO.lookup city cityConfig)
     
-getCityConfigFromCityCode :: Array MCT.CityConfig -> String -> MCT.CityConfig
+getCityConfigFromCityCode :: FO.Object MCT.CityConfig -> String -> MCT.CityConfig
 getCityConfigFromCityCode cityConfigArr cityCode =
-  let cityConfig = fromMaybe defaultCityConfig $ DA.find (\item -> item.cityCode == cityCode) cityConfigArr
+  let cityConfig = fromMaybe defaultCityConfig $ DA.find (\item -> item.cityCode == cityCode) $ FO.values cityConfigArr
   in setForwardBatchingData cityConfig
 
 formatSecIntoMinSecs :: Int -> String
@@ -734,7 +735,7 @@ splitBasedOnLanguage str =
 generateReferralLink :: String -> String -> String -> String -> String -> DriverReferralType -> String
 generateReferralLink source medium term content campaign driverReferralType =
   let config = getAppConfig appConfig 
-      cityConfig = getCityConfig config.cityConfig source
+      cityConfig = getCityConfig config.cityConfigObj source
       path = if driverReferralType == DRIVER then "/driverRefer" else "/refer"
       packageId = if driverReferralType == DRIVER then cityConfig.referral.driverAppId else cityConfig.referral.customerAppId
       domain = cityConfig.referral.domain
@@ -985,13 +986,13 @@ getLatestAndroidVersion merchant =
 
 shouldShowPurpleVideos :: ST.HomeScreenState -> Boolean
 shouldShowPurpleVideos state = do
-  let cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalNativeStore DRIVER_LOCATION) 
+  let cityConfig = getCityConfig state.data.config.cityConfigObj (getValueToLocalNativeStore DRIVER_LOCATION) 
       purpleRideConfigForVehicle = getPurpleRideConfigForVehicle state.data.linkedVehicleVariant cityConfig.purpleRideConfig
   purpleRideConfigForVehicle.showVideo
   
 getGenericAccessibilityVideo :: ST.HomeScreenState -> String
 getGenericAccessibilityVideo state = do
-  let cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalNativeStore DRIVER_LOCATION) 
+  let cityConfig = getCityConfig state.data.config.cityConfigObj (getValueToLocalNativeStore DRIVER_LOCATION) 
       purpleRideConfigForVehicle = getPurpleRideConfigForVehicle state.data.linkedVehicleVariant cityConfig.purpleRideConfig
   purpleRideConfigForVehicle.genericVideoForVariant
 

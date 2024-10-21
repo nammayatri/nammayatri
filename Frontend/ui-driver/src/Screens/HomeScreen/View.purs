@@ -2589,7 +2589,7 @@ extractAudioConfig state requestedVehicleVariant acRide locationTag tollCharges 
     isAcRide = fromMaybe false state.data.activeRide.acRide
     vehicleType = fromMaybe "" state.data.activeRide.requestedVehicleVariant
     isAirportPriority = DS.contains(DS.Pattern("SureAirport")) (fromMaybe "" locationTag)
-    cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+    cityConfig = HU.getCityConfig state.data.config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
     vehicleAudioConfig = geVehicleBasedAudioConfig cityConfig.rideStartAudio vehicleType acRide
   in
     if isAirportPriority && isJust vehicleAudioConfig.parkingAudio then

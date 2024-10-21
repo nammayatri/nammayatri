@@ -52,6 +52,8 @@ import PrestoDOM.Types.DomAttributes as PTD
 import Components.ErrorModal as ErrorModal
 import Mobility.Prelude
 import Locale.Utils
+import Foreign.Object as FO
+
 
 screen :: ChooseCityScreenState -> Screen Action ChooseCityScreenState ScreenOutput
 screen initialState =
@@ -316,5 +318,5 @@ mockLocationEnabledView push state =
 dummyView :: forall w. PrestoDOM (Effect Unit) w
 dummyView = linearLayout [visibility GONE][]
 
-transformCityConfig :: Array CityConfig -> Array MenuButton.Text
-transformCityConfig cityConfig = map (\city -> {name: city.cityName, value: city.cityName, subtitle: ""}) cityConfig
+transformCityConfig :: FO.Object CityConfig -> Array MenuButton.Text
+transformCityConfig cityConfig = map (\city -> {name: city.cityName, value: city.cityName, subtitle: ""}) $ FO.values cityConfig
