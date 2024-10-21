@@ -98,7 +98,8 @@ data Pricing = Pricing
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     specialLocationName :: Maybe Text,
-    vehicleIconUrl :: Maybe BaseUrl
+    vehicleIconUrl :: Maybe BaseUrl,
+    smartTipSuggestion :: Maybe HighPrecMoney
   }
 
 data RateCardBreakupItem = RateCardBreakupItem
@@ -1278,6 +1279,7 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
       vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
       vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
       isAirConditioned = serviceTier.isAirConditioned,
+      smartTipSuggestion = Nothing,
       ..
     }
 
@@ -1299,6 +1301,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       isBlockedRoute = Nothing,
       specialLocationName = Nothing,
       vehicleIconUrl = Nothing,
+      smartTipSuggestion = Nothing,
       ..
     }
 
@@ -1324,8 +1327,24 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP
               <> isBlockedRouteSingleton pricing.isBlockedRoute
               <> tollNamesSingleton pricing.tollNames
               <> durationToNearestDriverTagSingleton
+              <> smartTipSuggestionTagSingleton
         }
   where
+    smartTipSuggestionTagSingleton
+      | isNothing pricing.smartTipSuggestion || not isValueAddNP = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.SMART_TIP_SUGGESTION,
+                      descriptorName = Just "Smart Tip Suggestion",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = show <$> pricing.smartTipSuggestion
+            }
     specialLocationTagSingleton specialLocationTag
       | isNothing specialLocationTag = Nothing
       | otherwise =
@@ -1417,7 +1436,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP
               tagValue = show <$> tollNames
             }
     durationToNearestDriverTagSingleton
-      | isNothing (pricing.distanceToNearestDriver) || not isValueAddNP = Nothing
+      | isNothing pricing.distanceToNearestDriver || not isValueAddNP = Nothing
       | otherwise =
         Just . List.singleton $
           Spec.Tag

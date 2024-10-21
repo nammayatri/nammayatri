@@ -193,16 +193,16 @@ getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mb
         maybe (return Nothing) (checkGeoHashAndCalculate localTimeZoneSeconds whiteListedGeohashes blackListedGeohashes) mbFromLocGeohash
       _ -> return Nothing -- For now, we are not supporting congestion charge through model for other trips
   farePolicy' <- QFP.findById txnId fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
-  let (updatedCongestionChargePerMin, updatedCongestionChargeMultiplier, version, supplyDemandRatioFromLoc, supplyDemandRatioToLoc) =
+  let (updatedCongestionChargePerMin, updatedCongestionChargeMultiplier, version, supplyDemandRatioFromLoc, supplyDemandRatioToLoc, smartTipSuggestion) =
         case congestionChargeMultiplierFromModel of
           Just details ->
-            maybe
-              (Nothing, farePolicy'.congestionChargeMultiplier, Just "Static", details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc)
-              (\congestionChargePerMinute -> (Just congestionChargePerMinute, Nothing, details.dpVersion, details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc)) -----------Need to send Nothing here for congestionChargeMultiplier
-              details.congestionChargePerMin
-          Nothing -> (Nothing, farePolicy'.congestionChargeMultiplier, Just "Static", Nothing, Nothing)
+            case (details.congestionChargePerMin, details.smartTipSuggestion) of
+              (Just congestionChargePerMinute, _) -> (Just congestionChargePerMinute, Nothing, details.dpVersion, details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc, Nothing) -----------Need to send Nothing here for congestionChargeMultiplier
+              (_, Just smartTip) -> (Nothing, farePolicy'.congestionChargeMultiplier, details.dpVersion, details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc, Just smartTip) -----------Need to send Nothing here for congestionChargeMultiplier
+              _ -> (Nothing, farePolicy'.congestionChargeMultiplier, Just "Static", details.mbSupplyDemandRatioFromLoc, details.mbSupplyDemandRatioToLoc, Nothing)
+          Nothing -> (Nothing, farePolicy'.congestionChargeMultiplier, Just "Static", Nothing, Nothing, Nothing)
   let farePolicy = updateCongestionChargeMultiplier farePolicy' updatedCongestionChargeMultiplier
-  let congestionChargeDetails = FarePolicyD.CongestionChargeDetails version supplyDemandRatioToLoc supplyDemandRatioFromLoc updatedCongestionChargePerMin
+  let congestionChargeDetails = FarePolicyD.CongestionChargeDetails version supplyDemandRatioToLoc supplyDemandRatioFromLoc updatedCongestionChargePerMin smartTipSuggestion
   cancellationFarePolicy <- maybe (return Nothing) QCCFP.findById farePolicy.cancellationFarePolicyId
   let fullFarePolicy = FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy congestionChargeDetails farePolicy
   case mbVehicleServiceTierItem of
@@ -756,11 +756,44 @@ getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocGeohash) to
         Right resp ->
           case (A.fromJSON resp.result :: Result DynamicPricingResult) of
             A.Success result -> do
-              maybe
-                (return $ Just $ FarePolicyD.CongestionChargeDetails Nothing (Just dynamicPricingData.supplyDemandRatioToLoc) (Just dynamicPricingData.supplyDemandRatioFromLoc) Nothing)
-                (\congestionFee -> return $ (fmap (T.pack . show) mbVersion <|> result.version) <&> \version -> FarePolicyD.CongestionChargeDetails (Just version) (Just dynamicPricingData.supplyDemandRatioToLoc) (Just dynamicPricingData.supplyDemandRatioFromLoc) (Just congestionFee))
-                result.congestionFeePerMin
+              case (result.congestionFeePerMin, result.smartTipSuggestion) of
+                (Just congestionFee, _) -> do
+                  let mbVersionText = fmap (T.pack . show) mbVersion <|> result.version
+                  return $
+                    mbVersionText <&> \version -> do
+                      FarePolicyD.CongestionChargeDetails
+                        { dpVersion = Just version,
+                          congestionChargePerMin = Just congestionFee,
+                          smartTipSuggestion = Nothing,
+                          ..
+                        }
+                (_, Just smartTipSuggestion) -> do
+                  let mbVersionText = fmap (T.pack . show) mbVersion <|> result.version
+                  return $
+                    mbVersionText <&> \version -> do
+                      FarePolicyD.CongestionChargeDetails
+                        { dpVersion = Just version,
+                          congestionChargePerMin = Nothing,
+                          smartTipSuggestion = Just smartTipSuggestion,
+                          ..
+                        }
+                _ -> do
+                  return $
+                    Just $
+                      FarePolicyD.CongestionChargeDetails
+                        { dpVersion = Nothing,
+                          congestionChargePerMin = Nothing,
+                          smartTipSuggestion = Nothing,
+                          ..
+                        }
             A.Error err -> do
               logError $ "Error in parsing DynamicPricingResult - " <> show err <> " - " <> show resp <> " - " <> show dynamicPricingData <> " - " <> show allLogics
-              return $ Just $ FarePolicyD.CongestionChargeDetails Nothing (Just dynamicPricingData.supplyDemandRatioToLoc) (Just dynamicPricingData.supplyDemandRatioFromLoc) Nothing
+              return $
+                Just $
+                  FarePolicyD.CongestionChargeDetails
+                    { dpVersion = Nothing,
+                      congestionChargePerMin = Nothing,
+                      smartTipSuggestion = Nothing,
+                      ..
+                    }
 getCongestionChargeMultiplierFromModel' _ _ _ _ _ _ _ _ = return Nothing

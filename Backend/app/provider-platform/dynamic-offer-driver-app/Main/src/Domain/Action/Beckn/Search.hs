@@ -684,6 +684,7 @@ buildEstimate _ currency distanceUnit mbSearchReq startTime isScheduled returnTi
         eligibleForUpgrade = False,
         supplyDemandRatioToLoc = fullFarePolicy.mbSupplyDemandRatioToLoc,
         supplyDemandRatioFromLoc = fullFarePolicy.mbSupplyDemandRatioFromLoc,
+        smartTipSuggestion = fullFarePolicy.smartTipSuggestion,
         ..
       }
 

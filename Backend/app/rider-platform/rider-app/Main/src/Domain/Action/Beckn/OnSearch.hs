@@ -131,7 +131,8 @@ data EstimateInfo = EstimateInfo
     specialLocationName :: Maybe Text,
     tripCategory :: DT.TripCategory,
     vehicleCategory :: Enums.VehicleCategory,
-    vehicleIconUrl :: Maybe BaseUrl
+    vehicleIconUrl :: Maybe BaseUrl,
+    smartTipSuggestion :: Maybe HighPrecMoney
   }
 
 data NightShiftInfo = NightShiftInfo

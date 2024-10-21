@@ -453,3 +453,8 @@ ALTER TABLE atlas_app.estimate ADD COLUMN vehicle_icon_url text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.estimate ALTER COLUMN vehicle_icon_url TYPE character varying(255);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN smart_tip_suggestion double precision ;
