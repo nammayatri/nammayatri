@@ -27,7 +27,6 @@ import qualified API.Types.RiderPlatform.Management.Merchant as MerchantDSL
 import qualified API.Types.RiderPlatform.Management.Ride as RideDSL
 import qualified "rider-app" API.Types.UI.TicketService as DTB
 import qualified Beckn.Types.Core.Taxi.Search ()
-import qualified Dashboard.RiderPlatform.Ride as Ride
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import Data.Time

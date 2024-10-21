@@ -15,6 +15,7 @@ module Domain.Action.RiderPlatform.Management.Ride
 where
 
 import qualified API.Types.RiderPlatform.Management
+import qualified API.Types.RiderPlatform.Management.Ride hiding (BookingStatus)
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Ride
 import qualified Dashboard.RiderPlatform.Management.Ride
@@ -41,7 +42,7 @@ getRideList ::
   ApiTokenInfo ->
   Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
   Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-  Kernel.Prelude.Maybe (Dashboard.RiderPlatform.Ride.BookingStatus) ->
+  Kernel.Prelude.Maybe (Dashboard.RiderPlatform.Management.Ride.BookingStatus) ->
   Kernel.Prelude.Maybe ((Kernel.Types.Id.ShortId Dashboard.Common.Ride)) ->
   Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
   Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
