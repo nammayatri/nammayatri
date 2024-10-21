@@ -87,6 +87,7 @@ search _merchant _merchantOperatingCity providerConfig bapConfig searchReq = do
             serviceTierShortName = Nothing,
             serviceTierDescription = Nothing,
             serviceTierLongName = Nothing,
+            applicableDiscounts = [],
             ..
           }
 

@@ -7,6 +7,7 @@ module Domain.Types.Extra.IntegratedBPPConfig where
 import Data.Aeson
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Types.Base64
 
 data EBIXConfig = EBIXConfig
   { agentId :: Text,
@@ -18,7 +19,7 @@ data EBIXConfig = EBIXConfig
   deriving anyclass (FromJSON, ToJSON)
 
 data CUMTAConfig = CUMTAConfig
-  { cumtaNetworkHostUrl :: BaseUrl
+  { cipherKey :: Base64
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)

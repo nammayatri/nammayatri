@@ -26,6 +26,7 @@ import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
+import qualified Domain.Types.FRFSTicketDiscount as DFRFSTicketDiscount
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.MerchantOperatingCity as DMOC
@@ -81,6 +82,7 @@ import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.Queries.FRFSTicketDiscount as QFRFSTicketDiscount
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Route as QRoute
@@ -315,6 +317,31 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
     ( \quote -> do
         (stations :: [FRFSStationAPI]) <- decodeFromText quote.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
         let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
+        applicableDiscounts <-
+          mapM
+            ( \applicableDiscountId -> do
+                ticketDiscount <- B.runInReplica $ QFRFSTicketDiscount.findByIdAndVehicleAndCity applicableDiscountId quote.vehicleType quote.merchantId quote.merchantOperatingCityId >>= fromMaybeM (InternalError $ "FRFS Ticket Discount Not Found : " <> applicableDiscountId.getId)
+                let discountPrice =
+                      case ticketDiscount.value of
+                        DFRFSTicketDiscount.FixedAmount amount ->
+                          PriceAPIEntity
+                            { amount = amount,
+                              currency = ticketDiscount.currency
+                            }
+                        DFRFSTicketDiscount.Percentage percent ->
+                          PriceAPIEntity
+                            { amount = (HighPrecMoney (toRational percent) * quote.price.amount) / 100,
+                              currency = ticketDiscount.currency
+                            }
+                return $
+                  FRFSTicketService.FRFSDiscountRes
+                    { code = ticketDiscount.code,
+                      _type = ticketDiscount._type,
+                      price = discountPrice,
+                      description = ticketDiscount.description
+                    }
+            )
+            $ fromMaybe [] quote.applicableDiscountIds
         return $
           FRFSTicketService.FRFSQuoteAPIRes
             { quoteId = quote.id,
@@ -330,6 +357,7 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
               serviceTierDescription = quote.serviceTierDescription,
               discountedTickets = quote.discountedTickets,
               eventDiscountAmount = quote.eventDiscountAmount,
+              applicableDiscounts = Just applicableDiscounts,
               ..
             }
     )
@@ -350,9 +378,8 @@ filterQuotes quotes = listToMaybe quotes
 -- 	Create journeyBooking
 -- 	Skip this: If they will collect the money? How will
 -- => create payment link of basis how may booking confirmed
-
-postFrfsQuoteConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
+postFrfsQuoteV2Confirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   (rider, dConfirmRes) <- confirm
   -- handle (errHandler dConfirmRes.booking) $
@@ -389,6 +416,20 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
     buildAndCreateBooking rider quote@DFRFSQuote.FRFSQuote {..} = do
       uuid <- generateGUID
       now <- getCurrentTime
+      let ticketPrice = modifyPrice quote.price $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational quote.quantity)
+      totalDiscount <-
+        foldrM
+          ( \discountReq discountAmount -> do
+              discount <- QFRFSTicketDiscount.findByCodeAndVehicleAndCity discountReq.code quote.vehicleType quote.merchantId quote.merchantOperatingCityId >>= fromMaybeM (InternalError "FRFS Discount Not Found")
+              let discountPrice =
+                    case discount.value of
+                      DFRFSTicketDiscount.FixedAmount amount -> amount * (HighPrecMoney $ fromIntegral discountReq.quantity)
+                      DFRFSTicketDiscount.Percentage percent -> ((HighPrecMoney (toRational percent) * ticketPrice.amount) / 100) * (HighPrecMoney $ fromIntegral discountReq.quantity)
+              return $ discountAmount + discountPrice
+          )
+          (HighPrecMoney 0.0)
+          req.discounts
+      let discountedPrice = modifyPrice quote.price $ \p -> HighPrecMoney ((p.getHighPrecMoney) * (toRational quote.quantity)) - totalDiscount
       let booking =
             DFRFSTicketBooking.FRFSTicketBooking
               { id = uuid,
@@ -398,8 +439,8 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
                 createdAt = now,
                 updatedAt = now,
                 merchantId = quote.merchantId,
-                price = modifyPrice quote.price $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational quote.quantity),
-                estimatedPrice = modifyPrice quote.price $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational quote.quantity),
+                price = discountedPrice,
+                estimatedPrice = discountedPrice,
                 finalPrice = Nothing,
                 paymentTxnId = Nothing,
                 bppBankAccountNumber = Nothing,
@@ -440,6 +481,9 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
           eventDiscountAmount = booking.eventDiscountAmount,
           ..
         }
+
+postFrfsQuoteConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {discounts = []})
 
 postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuotePaymentRetry = error "Logic yet to be decided"
@@ -657,10 +701,10 @@ updateTotalOrderValueAndSettlementAmount booking bapConfig = do
   settlementAmount <- tOrderValue `subtractPrice` finderFeeForEachTicket
   void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById settlementAmount tOrderValue booking.id
 
-getFrfsBookingList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]
-getFrfsBookingList (mbPersonId, _) = do
+getFrfsBookingList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Maybe Spec.VehicleCategory -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]
+getFrfsBookingList (mbPersonId, _) mbVehicleCategory = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
-  bookings <- B.runInReplica $ QFRFSTicketBooking.findAllByRiderId Nothing Nothing personId
+  bookings <- B.runInReplica $ QFRFSTicketBooking.findAllByRiderId Nothing Nothing personId mbVehicleCategory
   mapM (`buildFRFSTicketBookingStatusAPIRes` Nothing) bookings
 
 buildFRFSTicketBookingStatusAPIRes :: DFRFSTicketBooking.FRFSTicketBooking -> Maybe FRFSTicketService.FRFSBookingPaymentAPI -> Environment.Flow FRFSTicketService.FRFSTicketBookingStatusAPIRes

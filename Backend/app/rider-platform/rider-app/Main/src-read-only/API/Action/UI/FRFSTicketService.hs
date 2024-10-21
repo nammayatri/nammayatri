@@ -36,7 +36,7 @@ type API =
            Kernel.Types.Beckn.Context.City
       :> MandatoryQueryParam "vehicleType" BecknV2.FRFS.Enums.VehicleCategory
       :> Get
-           '[JSON]
+           ('[JSON])
            [API.Types.UI.FRFSTicketService.FRFSRouteAPI]
       :<|> TokenAuth
       :> "frfs"
@@ -54,7 +54,7 @@ type API =
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
       :> Get
-           '[JSON]
+           ('[JSON])
            [API.Types.UI.FRFSTicketService.FRFSStationAPI]
       :<|> TokenAuth
       :> "frfs"
@@ -63,10 +63,10 @@ type API =
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.FRFSTicketService.FRFSSearchAPIReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
       :<|> TokenAuth
       :> "frfs"
@@ -76,7 +76,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch)
       :> "quote"
       :> Get
-           '[JSON]
+           ('[JSON])
            [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
       :<|> TokenAuth
       :> "frfs"
@@ -86,7 +86,21 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote)
       :> "confirm"
       :> Post
-           '[JSON]
+           ('[JSON])
+           API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+      :<|> TokenAuth
+      :> "frfs"
+      :> "quote"
+      :> "v2"
+      :> Capture
+           "quoteId"
+           (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote)
+      :> "confirm"
+      :> ReqBody
+           ('[JSON])
+           API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq
+      :> Post
+           ('[JSON])
            API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
       :<|> TokenAuth
       :> "frfs"
@@ -97,7 +111,7 @@ type API =
       :> "payment"
       :> "retry"
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
       :<|> TokenAuth
       :> "frfs"
@@ -107,14 +121,17 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
       :> "status"
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
       :<|> TokenAuth
       :> "frfs"
       :> "booking"
       :> "list"
+      :> QueryParam
+           "vehicleType"
+           BecknV2.FRFS.Enums.VehicleCategory
       :> Get
-           '[JSON]
+           ('[JSON])
            [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]
       :<|> TokenAuth
       :> "frfs"
@@ -124,7 +141,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
       :> "canCancel"
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "frfs"
@@ -135,7 +152,7 @@ type API =
       :> "canCancel"
       :> "status"
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.FRFSTicketService.FRFSCanCancelStatus
       :<|> TokenAuth
       :> "frfs"
@@ -145,7 +162,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
       :> "cancel"
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "frfs"
@@ -156,7 +173,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
       :> "status"
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.FRFSTicketService.FRFSCancelStatus
       :<|> TokenAuth
       :> "frfs"
@@ -165,7 +182,7 @@ type API =
            "city"
            Kernel.Types.Beckn.Context.City
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.FRFSTicketService.FRFSConfigAPIRes
       :<|> TokenAuth
       :> "frfs"
@@ -183,19 +200,19 @@ type API =
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.FRFSTicketService.AutocompleteRes
   )
 
 handler :: Environment.FlowServer API
-handler = getFrfsRoutes :<|> getFrfsStations :<|> postFrfsSearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> getFrfsConfig :<|> getFrfsAutocomplete
+handler = getFrfsRoutes :<|> getFrfsStations :<|> postFrfsSearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> getFrfsConfig :<|> getFrfsAutocomplete
 
 getFrfsRoutes ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe (Data.Text.Text) ->
+    Kernel.Prelude.Maybe (Data.Text.Text) ->
     Kernel.Types.Beckn.Context.City ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSRouteAPI]
@@ -206,9 +223,9 @@ getFrfsStations ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe (Kernel.Types.Beckn.Context.City) ->
+    Kernel.Prelude.Maybe (Data.Text.Text) ->
+    Kernel.Prelude.Maybe (Data.Text.Text) ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSStationAPI]
   )
@@ -242,6 +259,16 @@ postFrfsQuoteConfirm ::
   )
 postFrfsQuoteConfirm a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsQuoteConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
+postFrfsQuoteV2Confirm ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote ->
+    API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq ->
+    Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+  )
+postFrfsQuoteV2Confirm a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsQuoteV2Confirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
 postFrfsQuotePaymentRetry ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -264,9 +291,10 @@ getFrfsBookingList ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
+    Kernel.Prelude.Maybe (BecknV2.FRFS.Enums.VehicleCategory) ->
     Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]
   )
-getFrfsBookingList a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsBookingList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getFrfsBookingList a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsBookingList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postFrfsBookingCanCancel ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -317,7 +345,7 @@ getFrfsAutocomplete ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe (Data.Text.Text) ->
     Kernel.Types.Beckn.Context.City ->
     Kernel.External.Maps.Types.LatLong ->
     BecknV2.FRFS.Enums.VehicleCategory ->
