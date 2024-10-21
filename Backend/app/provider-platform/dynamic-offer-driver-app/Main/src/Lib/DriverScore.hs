@@ -82,8 +82,7 @@ eventPayloadHandler merchantOpCityId DST.OnNewSearchRequestForDrivers {..} =
 eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
   let driverId = driver.id
   merchantConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  let ridetags = fromMaybe [] ride.rideTags
-  when (validDriverCancellation `elem` ridetags) $ do
+  when (validDriverCancellation `elem` rideTags) $ do
     let windowSize = toInteger $ fromMaybe 7 merchantConfig.cancellationRateWindow
     void $ SCR.incrementCancelledCount driverId windowSize
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
@@ -237,6 +236,9 @@ createDriverStat currency distanceUnit driverId = do
             totalPayoutAmountPaid = Nothing,
             totalValidActivatedRides = 0,
             totalReferralCounts = 0,
+            validDriverCancellationTagCount = 0,
+            validCustomerCancellationTagCount = 0,
+            validCancellationTagsStatsStartDate = Just now,
             updatedAt = now
           }
   _ <- DSQ.create driverStat

@@ -61,7 +61,7 @@ data DriverRideRequest
         currency :: Currency,
         distanceUnit :: DistanceUnit,
         doCancellationRateBasedBlocking :: Maybe Bool,
-        ride :: DR.Ride
+        rideTags :: [Text]
       }
   | OnRideCompletion
       { merchantId :: Id DM.Merchant,

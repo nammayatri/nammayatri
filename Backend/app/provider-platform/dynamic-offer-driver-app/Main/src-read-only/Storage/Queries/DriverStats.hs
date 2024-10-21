@@ -55,6 +55,24 @@ updateTotalValidRidesAndPayoutEarnings totalValidActivatedRides totalPayoutEarni
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateValidCustomerCancellationTagCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateValidCustomerCancellationTagCount validCustomerCancellationTagCount driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.validCustomerCancellationTagCount (Kernel.Prelude.Just validCustomerCancellationTagCount),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+updateValidDriverCancellationTagCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
+updateValidDriverCancellationTagCount validDriverCancellationTagCount driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.validDriverCancellationTagCount (Kernel.Prelude.Just validDriverCancellationTagCount),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Driver -> m (Maybe Domain.Types.DriverStats.DriverStats))
 findByPrimaryKey driverId = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
 
@@ -86,6 +104,9 @@ updateByPrimaryKey (Domain.Types.DriverStats.DriverStats {..}) = do
       Se.Set Beam.totalRides totalRides,
       Se.Set Beam.totalRidesAssigned totalRidesAssigned,
       Se.Set Beam.totalValidActivatedRides (Kernel.Prelude.Just totalValidActivatedRides),
-      Se.Set Beam.updatedAt _now
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.validCancellationTagsStatsStartDate validCancellationTagsStatsStartDate,
+      Se.Set Beam.validCustomerCancellationTagCount (Kernel.Prelude.Just validCustomerCancellationTagCount),
+      Se.Set Beam.validDriverCancellationTagCount (Kernel.Prelude.Just validDriverCancellationTagCount)
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
