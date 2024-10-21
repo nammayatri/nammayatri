@@ -10,4 +10,4 @@ data JourneySearchData = JourneySearchData
     convenienceCost :: Int,
     pricingId :: Maybe Text
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
