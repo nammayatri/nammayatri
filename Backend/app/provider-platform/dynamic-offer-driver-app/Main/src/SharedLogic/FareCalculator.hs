@@ -30,8 +30,8 @@ module SharedLogic.FareCalculator
   )
 where
 
+import "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant hiding (NightShiftChargeAPIEntity (..), VehicleVariant (..), WaitingChargeAPIEntity (..))
 import qualified BecknV2.OnDemand.Enums as Enums
-import "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Merchant hiding (NightShiftChargeAPIEntity (..), VehicleVariant (..), WaitingChargeAPIEntity (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import Domain.Types.CancellationFarePolicy as DTCFP

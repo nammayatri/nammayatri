@@ -173,3 +173,6 @@ apis:
         type: APISuccess
       migrate:
         userActionType: ApiAuth APP_BACKEND FRFS DELETE_FRFS_STATION
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

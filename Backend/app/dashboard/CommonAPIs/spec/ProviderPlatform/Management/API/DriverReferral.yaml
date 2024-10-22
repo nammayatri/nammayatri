@@ -42,3 +42,6 @@ types:
     - recordType: NewType
     - referralLinkPassword: Text
     - derive: "'HideSecrets" # Should we hide password?
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

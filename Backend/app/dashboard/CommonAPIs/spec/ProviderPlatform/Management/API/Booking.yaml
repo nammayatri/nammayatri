@@ -34,3 +34,6 @@ apis:
 
 # types are common for rider and provider dashboard
 types: {}
+
+extraOperations:
+  - EXTRA_API_COMMON_TYPES_FILE

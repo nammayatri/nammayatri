@@ -17,17 +17,15 @@ module Domain.Action.ProviderPlatform.RideBooking.Driver
   )
 where
 
-import qualified API.Client.ProviderPlatform.RideBooking
 import qualified API.Client.ProviderPlatform.RideBooking as Client
+import qualified API.Types.ProviderPlatform.Fleet.Driver
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as CommonFleet
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.RideBooking
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.RideBooking as Common
 import qualified API.Types.ProviderPlatform.RideBooking.Driver
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.RideBooking.Driver as Common
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
-import qualified Dashboard.ProviderPlatform.Fleet.Driver
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as CommonFleet
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.RideBooking.Driver as Common
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Role as DRole

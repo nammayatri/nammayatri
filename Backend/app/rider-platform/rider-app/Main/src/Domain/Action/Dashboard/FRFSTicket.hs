@@ -15,7 +15,6 @@ where
 
 import qualified API.Types.RiderPlatform.Management.FRFSTicket
 import qualified BecknV2.FRFS.Enums
-import Dashboard.RiderPlatform.FRFSTicket
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv

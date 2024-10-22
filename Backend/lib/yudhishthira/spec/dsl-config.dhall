@@ -13,6 +13,7 @@ let riderMigrationPath =
 let outputPath =
       { _apiRelatedTypes = outputPrefixReadOnly ++ "Lib/Yudhishthira/API/Types"
       , _extraApiRelatedTypes = ""
+      , _extraApiRelatedCommonTypes = ""
       , _beamQueries =
           outputPrefixReadOnly ++ "Lib/Yudhishthira/Storage/Queries"
       , _extraBeamQueries = outputPrefix ++ "Lib/Yudhishthira/Storage/Queries/"
