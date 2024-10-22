@@ -19,7 +19,7 @@ module Domain.Action.Dashboard.Management.DriverCoins
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverCoin as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as Common
 import Data.Time (UTCTime (UTCTime, utctDay))
 import qualified Domain.Types.Coins.CoinHistory as DTCC
 import qualified Domain.Types.Merchant as DM

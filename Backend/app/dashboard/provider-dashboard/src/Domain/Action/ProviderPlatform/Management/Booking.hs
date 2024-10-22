@@ -20,7 +20,6 @@ where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Booking as Common
-import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment

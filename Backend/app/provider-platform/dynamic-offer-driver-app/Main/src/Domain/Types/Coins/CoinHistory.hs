@@ -15,7 +15,7 @@
 
 module Domain.Types.Coins.CoinHistory where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverCoin as DCoins
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as DCoins
 import Data.Time
 import Domain.Types.VehicleCategory as DTV
 import EulerHS.Prelude hiding (id, state)

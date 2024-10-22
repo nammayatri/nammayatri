@@ -7,10 +7,10 @@ module API.Action.Dashboard.RideBooking.Driver
   )
 where
 
+import qualified API.Types.ProviderPlatform.Fleet.Driver
 import qualified API.Types.ProviderPlatform.RideBooking.Driver
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
-import qualified Dashboard.ProviderPlatform.Fleet.Driver
 import qualified Domain.Action.Dashboard.RideBooking.Driver as Domain.Action.Dashboard.RideBooking.Driver
 import qualified Domain.Types.Merchant
 import qualified Environment
@@ -53,10 +53,10 @@ postDriverUnlinkVehicle a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.
 postDriverEndRCAssociation :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverEndRCAssociation a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.Driver.postDriverEndRCAssociation a3 a2 a1
 
-postDriverAddVehicle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Dashboard.ProviderPlatform.Fleet.Driver.AddVehicleReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postDriverAddVehicle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Fleet.Driver.AddVehicleReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverAddVehicle a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.Driver.postDriverAddVehicle a4 a3 a2 a1
 
-postDriverSetRCStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Dashboard.ProviderPlatform.Fleet.Driver.RCStatusReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postDriverSetRCStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Fleet.Driver.RCStatusReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverSetRCStatus a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.Driver.postDriverSetRCStatus a4 a3 a2 a1
 
 postDriverExemptDriverFee :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Dashboard.Common.Driver.ServiceNames -> API.Types.ProviderPlatform.RideBooking.Driver.ExemptionAndCashCollectionDriverFeeReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

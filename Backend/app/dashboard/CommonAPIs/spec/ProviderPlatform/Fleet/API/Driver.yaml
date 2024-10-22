@@ -26,7 +26,7 @@ apis:
         type: AddVehicleReq
       response:
         type: APISuccess
-      validation: Dashboard.ProviderPlatform.Fleet.Driver.validateAddVehicleReq
+      validation: API.Types.ProviderPlatform.Fleet.Driver.validateAddVehicleReq
       helperApi:
         - POST:
             endpoint: /{mobileNo}/{fleetOwnerId}/fleet/addVehicle
@@ -40,7 +40,7 @@ apis:
               type: AddVehicleReq
             response:
               type: APISuccess
-            validation: Dashboard.ProviderPlatform.Fleet.Driver.validateAddVehicleReq
+            validation: API.Types.ProviderPlatform.validateAddVehicleReq
   - POST: # RegisterRCForFleetWithoutDriverAPI
       endpoint: /fleet/addRC/withoutDriver
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_RC_FLEET_WITHOUT_DRIVER
@@ -539,3 +539,7 @@ types:
     - driverMobileNumber: Text
     - vehicleRegistrationNumber: Text
     - derive: "'HideSecrets"
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE

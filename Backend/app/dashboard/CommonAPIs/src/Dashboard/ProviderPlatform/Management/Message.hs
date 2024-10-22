@@ -20,7 +20,7 @@ module Dashboard.ProviderPlatform.Management.Message
   )
 where
 
-import API.Types.ProviderPlatform.Management.Message as Reexport
+import API.Types.ProviderPlatform.Management.Endpoints.Message
 import Dashboard.Common as Reexport
 import Data.Aeson
 import Data.Text as T

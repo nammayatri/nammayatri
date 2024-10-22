@@ -10,6 +10,7 @@ let migrationPath = rootDir ++ "/Backend/dev/migrations-read-only/rider-app/"
 let outputPath =
       { _apiRelatedTypes = outputPrefixReadOnly ++ "API/Types/UI"
       , _extraApiRelatedTypes = ""
+      , _extraApiRelatedCommonTypes = ""
       , _beamQueries = outputPrefixReadOnly ++ "Storage/Queries"
       , _extraBeamQueries = outputPrefix ++ "Storage/Queries/"
       , _cachedQueries = outputPrefixReadOnly ++ "Storage/CachedQueries"

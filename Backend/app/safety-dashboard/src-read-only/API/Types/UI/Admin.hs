@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.UI.Admin where
@@ -8,7 +7,7 @@ import qualified Data.Text
 import qualified Domain.Types.Suspect
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
-import Servant
+import Servant hiding (Summary)
 import "lib-dashboard" Tools.Auth
 
 data AssignRoleMerchantUserReq = AssignRoleMerchantUserReq {email :: Data.Text.Text, roleName :: Data.Text.Text}

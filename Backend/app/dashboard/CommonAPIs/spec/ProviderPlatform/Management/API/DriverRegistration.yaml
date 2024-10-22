@@ -296,3 +296,6 @@ types:
     - dateOfExpiry: Maybe UTCTime
   ApproveDetails:
     - enum: "RC RCApproveDetails, DL DLApproveDetails, UploadProfile (Id Image), SSNApprove Text, ProfilePhoto (Id Image), VehiclePermit VPermitApproveDetails, VehiclePUC VPUCApproveDetails, VehicleInsurance VInsuranceApproveDetails, VehicleFitnessCertificate FitnessApproveDetails, VehicleInspectionForm VInspectionApproveDetails"
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

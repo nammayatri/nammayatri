@@ -14,8 +14,8 @@
 
 module API.Dashboard.Management.Subscription where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.Common as DP
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as Common
 import qualified Domain.Action.Dashboard.Driver as DDriver
 import qualified Domain.Action.UI.Driver as Driver
 import qualified Domain.Action.UI.Payment as APayment

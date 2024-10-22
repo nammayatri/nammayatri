@@ -152,3 +152,6 @@ apis:
         ApiAuth APP_BACKEND FRFS DELETE_FRFS_STATION
       response:
         type: APISuccess
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

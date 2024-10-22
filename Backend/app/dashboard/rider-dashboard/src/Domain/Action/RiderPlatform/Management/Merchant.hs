@@ -28,7 +28,7 @@ module Domain.Action.RiderPlatform.Management.Merchant
 where
 
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management as Common
-import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Merchant as Common
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Merchant as Common
 import qualified Data.Text as T
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT

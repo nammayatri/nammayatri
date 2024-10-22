@@ -26,7 +26,7 @@ module Domain.Action.Dashboard.Ride
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Ride as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
 import qualified Data.Text as T

@@ -20,7 +20,6 @@ module Domain.Action.ProviderPlatform.Management.DriverCoins
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverCoin as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
 import Kernel.Prelude
