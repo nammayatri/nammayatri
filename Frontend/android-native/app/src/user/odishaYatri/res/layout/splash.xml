@@ -10,13 +10,13 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="120dp"
+        android:layout_marginTop="180dp"
         android:orientation="vertical"
         >
 
         <ImageView
-            android:layout_width="250dp"
-            android:layout_height="270dp"
+            android:layout_width="260dp"
+            android:layout_height="100dp"
             android:layout_gravity="center"
             android:src="@drawable/ic_launcher_with_name"/>
 
@@ -46,8 +46,8 @@
             android:orientation="horizontal">
 
             <ImageView
-                android:layout_width="350dp"
-                android:layout_height="65dp"
+                android:layout_width="270dp"
+                android:layout_height="100dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_powered_by_" />
         </LinearLayout>
