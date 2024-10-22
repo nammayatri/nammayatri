@@ -94,6 +94,7 @@ SearchRequestForDriver:
     upgradeCabRequest: Maybe Bool
     renderedAt : Maybe UTCTime
     respondedAt: Maybe UTCTime
+    isFavourite : Maybe Bool
 
   beamType:
     clientBundleVersion: Maybe Text

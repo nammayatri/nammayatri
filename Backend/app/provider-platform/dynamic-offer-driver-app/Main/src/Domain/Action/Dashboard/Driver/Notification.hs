@@ -138,6 +138,7 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData dummyShowD
           driverDefaultStepFeeWithCurrencyV2 = driverDefaultStepFeeWithCurrency,
           useSilentFCMForForwardBatch = False,
           isOnRide = False,
+          isFavourite = Just False,
           isReferredRideReq = Nothing,
           ..
         }
