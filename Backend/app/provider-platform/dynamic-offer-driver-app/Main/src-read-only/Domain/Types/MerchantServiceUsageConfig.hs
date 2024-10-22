@@ -4,6 +4,7 @@
 
 module Domain.Types.MerchantServiceUsageConfig where
 
+import qualified ChatCompletion.Types
 import Data.Aeson
 import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.Merchant
@@ -43,6 +44,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     getTripRoutes :: Kernel.External.Maps.Types.MapsService,
     initiateCall :: Kernel.External.Call.CallService,
     issueTicketService :: Kernel.External.Ticket.Types.IssueTicketService,
+    llmChatCompletion :: ChatCompletion.Types.LLMChatCompletionService,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     rectifyDistantPointsFailure :: Kernel.External.Maps.Types.MapsService,

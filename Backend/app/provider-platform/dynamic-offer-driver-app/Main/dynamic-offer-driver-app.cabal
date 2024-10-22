@@ -442,6 +442,7 @@ library
       Storage.CachedQueries.InterCityTravelCities
       Storage.CachedQueries.KioskLocation
       Storage.CachedQueries.KioskLocationTranslation
+      Storage.CachedQueries.LLMPrompt.LLMPrompt
       Storage.CachedQueries.Lms
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.Merchant
@@ -602,6 +603,7 @@ library
       Tools.BackgroundVerification
       Tools.Beam.UtilsTH
       Tools.Call
+      Tools.ChatCompletion
       Tools.Constants
       Tools.DriverBackgroundVerification
       Tools.Error
@@ -723,6 +725,7 @@ library
       Domain.Types.KioskLocation
       Domain.Types.KioskLocationTranslation
       Domain.Types.LeaderBoardConfigs
+      Domain.Types.LlmPrompt
       Domain.Types.LmsModule
       Domain.Types.LmsModuleTranslation
       Domain.Types.LmsModuleVideoInformation
@@ -840,6 +843,7 @@ library
       Storage.Beam.KioskLocation
       Storage.Beam.KioskLocationTranslation
       Storage.Beam.LeaderBoardConfigs
+      Storage.Beam.LlmPrompt
       Storage.Beam.LmsModule
       Storage.Beam.LmsModuleTranslation
       Storage.Beam.LmsModuleVideoInformation
@@ -960,6 +964,7 @@ library
       Storage.Queries.KioskLocation
       Storage.Queries.KioskLocationTranslation
       Storage.Queries.LeaderBoardConfigs
+      Storage.Queries.LlmPrompt
       Storage.Queries.LmsModule
       Storage.Queries.LmsModuleTranslation
       Storage.Queries.LmsModuleVideoInformation
