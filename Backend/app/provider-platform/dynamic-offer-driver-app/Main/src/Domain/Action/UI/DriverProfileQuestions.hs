@@ -5,6 +5,10 @@ module Domain.Action.UI.DriverProfileQuestions where
 
 import qualified API.Types.UI.DriverProfileQuestions
 import qualified AWS.S3 as S3
+import qualified ChatCompletion.AzureOpenAI.Config as CAC
+import ChatCompletion.AzureOpenAI.Types as CAT
+import ChatCompletion.Interface as CI
+import ChatCompletion.Interface.Types as CIT
 import Data.Maybe (fromJust)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
@@ -19,11 +23,14 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import Kernel.Beam.Functions as B
+import Kernel.External.Encryption
+import Kernel.Prelude (head)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common as KUC
 import Servant
+import Servant.Client
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Queries.DriverProfileQuestions as DPQ
 import qualified Storage.Queries.DriverStats as QDS
@@ -47,6 +54,7 @@ postDriverProfileQues (mbPersonId, _, merchantOpCityId) req@API.Types.UI.DriverP
     person <- QP.findById driverId >>= fromMaybeM (PersonNotFound ("No person found with id" <> show driverId))
     driverStats <- QDS.findByPrimaryKey driverId >>= fromMaybeM (PersonNotFound ("No person found with id" <> show driverId))
     now <- getCurrentTime
+    aboutMe <- generateAboutMe person driverStats now req
     DPQ.upsert
       ( DTDPQ.DriverProfileQuestions
           { updatedAt = now,
@@ -59,7 +67,7 @@ postDriverProfileQues (mbPersonId, _, merchantOpCityId) req@API.Types.UI.DriverP
             drivingSince = drivingSince,
             imageIds = toMaybe imageIds,
             vehicleTags = toMaybe vehicleTags,
-            aboutMe = generateAboutMe person driverStats now req
+            aboutMe = Just aboutMe
           }
       )
       >> pure Success
@@ -67,7 +75,17 @@ postDriverProfileQues (mbPersonId, _, merchantOpCityId) req@API.Types.UI.DriverP
     toMaybe xs = guard (not (null xs)) >> Just xs
 
     -- Generate with LLM or create a template text here
-    generateAboutMe person driverStats now req' = Just (hometownDetails req'.hometown <> "I have been with Nammayatri for " <> (withNY now person.createdAt) <> " months. " <> writeDriverStats driverStats <> genAspirations req'.aspirations)
+    generateAboutMe person driverStats now req' = do
+      encApiKey <- encrypt "4b31bb529d1044d98057ccfa7239bf57"
+      let prompt = "Write about me: \n\n-**Hometown**: I am from " <> hometownDetails req'.hometown <> " , and growing up in this area has shaped my understanding of roads, safety, and community." <> "\n- **Driving Experience**: I have been with Nammayatri for " <> (withNY now person.createdAt) <> "months, learning valuable lessons along the way such as patience, focus, and safety." <> "\n- **Driver Statistics**:" <> writeDriverStats driverStats <> "\n- **Aspirations**:" <> genAspirations req'.aspirations <> "\n- **Pledge or Commitment**: My personal commitment as a driver is to always prioritize safety, respect other drivers, and maintain a calm and professional attitude on the road."
+          acfg = CAC.AzureOpenAICfg {azureOpenAIChatCompletionUrl = BaseUrl {baseUrlScheme = Https, baseUrlHost = "gateway-integration-south-india.openai.azure.com", baseUrlPort = 443, baseUrlPath = ""}, apiKey = encApiKey, apiVersion = "2023-07-01-preview"}
+          cccfg = AzureOpenAI acfg
+          ccreq = ChatCompletionReq {messages = [CAT.Message {role = "user", content = prompt}]}
+      ccresp <- CI.chatCompletion cccfg ccreq
+      let choice = head $ ccresp.choices
+          respContent = choice.message.content
+      pure respContent
+    -- generateAboutMe person driverStats now req' = Just (hometownDetails req'.hometown <> "I have been with Nammayatri for " <> (withNY now person.createdAt) <> " months. " <> writeDriverStats driverStats <> genAspirations req'.aspirations)
 
     hometownDetails mHometown = case mHometown of
       Just hometown' -> "Hailing from " <> hometown' <> ", "
