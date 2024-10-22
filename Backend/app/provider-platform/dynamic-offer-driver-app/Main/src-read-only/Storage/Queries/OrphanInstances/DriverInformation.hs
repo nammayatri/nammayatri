@@ -12,10 +12,12 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.DriverInformation as Beam
+import qualified Storage.Queries.Transformers.DriverInformation
 import qualified Storage.Queries.Transformers.Ride
 
 instance FromTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverInformation where
   fromTType' (Beam.DriverInformationT {..}) = do
+    preferredPrimarySpecialLoc' <- Storage.Queries.Transformers.DriverInformation.getPreferredPrimarySpecialLoc preferredPrimarySpecialLocId
     pure $
       Just
         Domain.Types.DriverInformation.DriverInformation
@@ -47,6 +49,7 @@ instance FromTType' Beam.DriverInformation Domain.Types.DriverInformation.Driver
             forwardBatchingEnabled = Kernel.Prelude.fromMaybe Kernel.Prelude.False forwardBatchingEnabled,
             hasAdvanceBooking = Kernel.Prelude.fromMaybe Kernel.Prelude.False hasAdvanceBooking,
             isInteroperable = Kernel.Prelude.fromMaybe Kernel.Prelude.False isInteroperable,
+            isSpecialLocWarrior = Kernel.Prelude.fromMaybe Kernel.Prelude.False isSpecialLocWarrior,
             lastACStatusCheckedAt = lastACStatusCheckedAt,
             lastEnabledOn = lastEnabledOn,
             latestScheduledBooking = latestScheduledBooking,
@@ -62,6 +65,8 @@ instance FromTType' Beam.DriverInformation Domain.Types.DriverInformation.Driver
             payoutVpa = payoutVpa,
             payoutVpaBankAccount = payoutVpaBankAccount,
             payoutVpaStatus = payoutVpaStatus,
+            preferredPrimarySpecialLoc = preferredPrimarySpecialLoc',
+            preferredSecondarySpecialLocIds = Kernel.Prelude.maybe [] (map Kernel.Types.Id.Id) preferredSecondarySpecialLocIds,
             referralCode = referralCode,
             referredByDriverId = Kernel.Types.Id.Id <$> referredByDriverId,
             subscribed = subscribed,
@@ -107,6 +112,7 @@ instance ToTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverIn
         Beam.forwardBatchingEnabled = Kernel.Prelude.Just forwardBatchingEnabled,
         Beam.hasAdvanceBooking = Kernel.Prelude.Just hasAdvanceBooking,
         Beam.isInteroperable = Kernel.Prelude.Just isInteroperable,
+        Beam.isSpecialLocWarrior = Kernel.Prelude.Just isSpecialLocWarrior,
         Beam.lastACStatusCheckedAt = lastACStatusCheckedAt,
         Beam.lastEnabledOn = lastEnabledOn,
         Beam.latestScheduledBooking = latestScheduledBooking,
@@ -123,6 +129,8 @@ instance ToTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverIn
         Beam.payoutVpa = payoutVpa,
         Beam.payoutVpaBankAccount = payoutVpaBankAccount,
         Beam.payoutVpaStatus = payoutVpaStatus,
+        Beam.preferredPrimarySpecialLocId = Kernel.Types.Id.getId . (.id) <$> preferredPrimarySpecialLoc,
+        Beam.preferredSecondarySpecialLocIds = Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds),
         Beam.referralCode = referralCode,
         Beam.referredByDriverId = Kernel.Types.Id.getId <$> referredByDriverId,
         Beam.subscribed = subscribed,

@@ -243,6 +243,7 @@ library
       Domain.Action.UI.SearchRequestLocation
       Domain.Action.UI.SocialLogin
       Domain.Action.UI.SpecialLocation
+      Domain.Action.UI.SpecialLocationWarrior
       Domain.Action.UI.Tokenization
       Domain.Action.UI.Transporter
       Domain.Action.UI.VehicleDetails
@@ -567,6 +568,7 @@ library
       Storage.Queries.Transformers.DailyStats
       Storage.Queries.Transformers.DocumentVerificationConfig
       Storage.Queries.Transformers.DriverFee
+      Storage.Queries.Transformers.DriverInformation
       Storage.Queries.Transformers.DriverPlan
       Storage.Queries.Transformers.DriverQuote
       Storage.Queries.Transformers.DriverStats
@@ -647,6 +649,7 @@ library
       API.Action.UI.ReferralPayout
       API.Action.UI.SocialLogin
       API.Action.UI.SpecialLocation
+      API.Action.UI.SpecialLocationWarrior
       API.Action.UI.Tokenization
       API.Action.UI.VehicleDetails
       API.Types.UI.DemandHotspots
@@ -658,6 +661,7 @@ library
       API.Types.UI.Reels
       API.Types.UI.ReferralPayout
       API.Types.UI.SocialLogin
+      API.Types.UI.SpecialLocationWarrior
       API.Types.UI.Tokenization
       API.Types.UI.VehicleDetails
       Domain.Types.AadhaarCard

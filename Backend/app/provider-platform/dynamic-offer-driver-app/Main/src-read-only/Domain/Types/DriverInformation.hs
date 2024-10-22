@@ -14,6 +14,8 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
+import qualified Lib.Queries.SpecialLocation
+import qualified Lib.Types.SpecialLocation
 import qualified Tools.Beam.UtilsTH
 import qualified Tools.Error
 
@@ -46,6 +48,7 @@ data DriverInformation = DriverInformation
     forwardBatchingEnabled :: Kernel.Prelude.Bool,
     hasAdvanceBooking :: Kernel.Prelude.Bool,
     isInteroperable :: Kernel.Prelude.Bool,
+    isSpecialLocWarrior :: Kernel.Prelude.Bool,
     lastACStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     lastEnabledOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     latestScheduledBooking :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -61,6 +64,8 @@ data DriverInformation = DriverInformation
     payoutVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutVpaBankAccount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutVpaStatus :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus,
+    preferredPrimarySpecialLoc :: Kernel.Prelude.Maybe Lib.Queries.SpecialLocation.SpecialLocationWarrior,
+    preferredSecondarySpecialLocIds :: [Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation],
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredByDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     subscribed :: Kernel.Prelude.Bool,
