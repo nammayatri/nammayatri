@@ -27,6 +27,8 @@ let outputPath =
           outputPrefixCommonApisReadOnly ++ "API/Types/ProviderPlatform"
       , _extraApiRelatedTypes =
           outputPrefixCommonApis ++ "Dashboard/ProviderPlatform"
+      , _extraApiRelatedCommonTypes =
+          outputPrefixCommonApis ++ "Dashboard/Common"
       , _beamQueries = outputPrefixDashboardReadOnly ++ "Storage/Queries"
       , _extraBeamQueries = outputPrefixDashboardReadOnly ++ "Storage/Queries"
       , _cachedQueries =

@@ -11,6 +11,7 @@ let migrationPath =
 let outputPath =
       { _apiRelatedTypes = outputPrefixReadOnly ++ "API/Types/UI"
       , _extraApiRelatedTypes = ""
+      , _extraApiRelatedCommonTypes = ""
       , _beamQueries = outputPrefixReadOnly ++ "Storage/Queries"
       , _extraBeamQueries = outputPrefix ++ "Storage/Queries/"
       , _cachedQueries = outputPrefixReadOnly ++ "Storage/CachedQueries"
@@ -118,7 +119,7 @@ let defaultImports =
         }
       , { _simpleImports =
           [ "EulerHS.Prelude hiding (id)"
-          , "Servant"
+          , "Servant hiding (Summary)"
           , "Tools.Auth"
           , "Data.OpenApi (ToSchema)"
           ]

@@ -14,13 +14,13 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Dashboard.RiderPlatform.Merchant
-  ( module Dashboard.RiderPlatform.Merchant,
+module Dashboard.RiderPlatform.Management.Merchant
+  ( module Dashboard.RiderPlatform.Management.Merchant,
     module Reexport,
   )
 where
 
-import API.Types.RiderPlatform.Management.Merchant as Reexport
+import API.Types.RiderPlatform.Management.Endpoints.Merchant
 import Dashboard.Common.Merchant as Reexport
 import Kernel.Prelude
 import Kernel.Types.Predicate

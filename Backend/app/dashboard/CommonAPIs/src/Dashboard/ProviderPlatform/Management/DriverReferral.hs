@@ -13,12 +13,9 @@
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Dashboard.ProviderPlatform.Management.DriverReferral
-  ( module Reexport,
-  )
-where
+module Dashboard.ProviderPlatform.Management.DriverReferral where
 
-import API.Types.ProviderPlatform.Management.DriverReferral as Reexport
+import API.Types.ProviderPlatform.Management.Endpoints.DriverReferral
 import qualified Data.Text as T
 import Kernel.Prelude
 import Kernel.ServantMultipart

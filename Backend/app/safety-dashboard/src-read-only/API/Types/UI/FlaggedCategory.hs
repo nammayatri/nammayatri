@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.UI.FlaggedCategory where
@@ -8,7 +7,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.FlaggedCategory
 import EulerHS.Prelude hiding (id)
-import Servant
+import Servant hiding (Summary)
 import "lib-dashboard" Tools.Auth
 
 data AddFlagCategoryReq = AddFlagCategoryReq {name :: Data.Text.Text}

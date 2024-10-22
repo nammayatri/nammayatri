@@ -20,13 +20,11 @@ module Dashboard.ProviderPlatform.Management.Message
   )
 where
 
-import API.Types.ProviderPlatform.Management.Message as Reexport
+import API.Types.ProviderPlatform.Management.Endpoints.Message
 import Dashboard.Common as Reexport
-import Data.Aeson
 import Data.Text as T
 import Kernel.Prelude
 import Kernel.ServantMultipart
-import Kernel.Utils.TH (mkHttpInstancesForEnum)
 
 ---
 -- Upload File
@@ -67,5 +65,3 @@ instance ToMultipart Tmp SendMessageRequest where
         Input "messageId" form.messageId
       ]
       (maybe [] (\file -> [FileData "csvFile" (T.pack file) "text/csv" file]) form.csvFile)
-
-$(mkHttpInstancesForEnum ''MessageDeliveryStatus)

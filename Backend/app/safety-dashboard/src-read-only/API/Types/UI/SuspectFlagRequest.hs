@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.UI.SuspectFlagRequest where
@@ -10,14 +9,14 @@ import qualified Domain.Types.Suspect
 import qualified Domain.Types.SuspectFlagRequest
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
-import Servant
+import Servant hiding (Summary)
 import "lib-dashboard" Tools.Auth
 
 data SuspectApprovalReqList = SuspectApprovalReqList {adminApproval :: Domain.Types.SuspectFlagRequest.AdminApproval, suspectFlagRequestIdList :: [Data.Text.Text]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SuspectFlagRequestList = SuspectFlagRequestList {flagRequestList :: [API.Types.UI.SuspectFlagRequest.SuspectFlagRequestResp], summary :: API.Types.UI.Notification.Summary}
+data SuspectFlagRequestList = SuspectFlagRequestList {flagRequestList :: [SuspectFlagRequestResp], summary :: API.Types.UI.Notification.Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -15,7 +15,6 @@ where
 
 import qualified API.Types.RiderPlatform.Management.FRFSTicket
 import qualified BecknV2.FRFS.Enums
-import Dashboard.RiderPlatform.FRFSTicket
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.Merchant

@@ -25,7 +25,7 @@ type API = ("system" :> PostSystemRunQuery)
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
 handler merchantId city = postSystemRunQuery merchantId city
 
-type PostSystemRunQuery = (ApiAuth ('APP_BACKEND_MANAGEMENT) ('MIGRATION) ('RUN_QUERY) :> API.Types.RiderPlatform.Management.System.PostSystemRunQuery)
+type PostSystemRunQuery = (ApiAuth 'APP_BACKEND_MANAGEMENT 'MIGRATION 'RUN_QUERY :> API.Types.RiderPlatform.Management.System.PostSystemRunQuery)
 
 postSystemRunQuery :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.RiderPlatform.Management.System.QueryData -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postSystemRunQuery merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.System.postSystemRunQuery merchantShortId opCity apiTokenInfo req

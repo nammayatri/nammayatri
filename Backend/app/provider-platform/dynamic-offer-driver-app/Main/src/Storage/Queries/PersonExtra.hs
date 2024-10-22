@@ -9,8 +9,8 @@ where
 
 -- Extra code goes here --
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as Common
 import Control.Applicative ((<|>))
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
 import qualified Data.HashMap.Strict as HashMap
 import Data.List (or)
 import Data.Maybe (catMaybes)

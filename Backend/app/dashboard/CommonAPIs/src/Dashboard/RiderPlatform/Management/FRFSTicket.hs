@@ -2,9 +2,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Dashboard.RiderPlatform.FRFSTicket where
+module Dashboard.RiderPlatform.Management.FRFSTicket where
 
-import API.Types.RiderPlatform.Management.FRFSTicket as Reexport
+import API.Types.RiderPlatform.Management.Endpoints.FRFSTicket
 import Data.Text as T
 import Kernel.Prelude
 import Kernel.ServantMultipart

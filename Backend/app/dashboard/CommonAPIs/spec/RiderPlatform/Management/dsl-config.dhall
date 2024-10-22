@@ -8,6 +8,8 @@ let outputPath =
           defaultOutput
       //  { _apiRelatedTypes =
               defaultOutput._apiRelatedTypes ++ "/" ++ folderName
+          , _extraApiRelatedTypes =
+              defaultOutput._extraApiRelatedTypes ++ "/" ++ folderName
           , _domainHandlerDashboard =
               defaultOutput._domainHandlerDashboard ++ "/" ++ folderName
           , _servantApi = defaultOutput._servantApi ++ "/" ++ folderName

@@ -53,7 +53,7 @@ module Domain.Action.Dashboard.Management.Driver
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as Common
 import qualified Domain.Action.Dashboard.Driver as DDriver
 import qualified Domain.Action.Dashboard.Driver.Notification as DDN
 import qualified Domain.Types.Merchant as DM

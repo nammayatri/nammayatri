@@ -26,7 +26,7 @@ apis:
         type: AddVehicleReq
       response:
         type: APISuccess
-      validation: Dashboard.ProviderPlatform.Fleet.Driver.validateAddVehicleReq
+      validation: API.Types.ProviderPlatform.Fleet.Driver.validateAddVehicleReq
       helperApi:
         - POST:
             endpoint: /{mobileNo}/{fleetOwnerId}/fleet/addVehicle
@@ -40,7 +40,7 @@ apis:
               type: AddVehicleReq
             response:
               type: APISuccess
-            validation: Dashboard.ProviderPlatform.Fleet.Driver.validateAddVehicleReq
+            validation: API.Types.ProviderPlatform.validateAddVehicleReq
   - POST: # RegisterRCForFleetWithoutDriverAPI
       endpoint: /fleet/addRC/withoutDriver
       auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_RC_FLEET_WITHOUT_DRIVER
@@ -462,7 +462,7 @@ types:
     - summary: Summary
   SortOn:
     - enum: "COMPLETED_RIDES, CANCELLED_RIDES"
-    - derive: "Kernel.Prelude.ToParamSchema"
+    - derive: "HttpInstance"
   FleetEarningRes:
     - totalRides: Int
     - totalEarning: Int
@@ -480,7 +480,7 @@ types:
     - minutes: Int
   FleetVehicleStatus:
     - enum: "Active, InActive, Pending, Invalid"
-    - derive: "Kernel.Prelude.ToParamSchema"
+    - derive: "HttpInstance"
   DrivertoVehicleAssociationRes:
     - fleetOwnerId: Text
     - listItem: [DriveVehicleAssociationListItem]
@@ -511,7 +511,7 @@ types:
     - driverLicense: Maybe VerificationStatus
   DriverMode:
     - enum: "ONLINE, OFFLINE, SILENT"
-    - derive: "Kernel.Prelude.ToParamSchema"
+    - derive: "HttpInstance"
   UpdateFleetOwnerInfoReq:
     - firstName: Maybe Text
     - lastName: Maybe Text
@@ -539,3 +539,7 @@ types:
     - driverMobileNumber: Text
     - vehicleRegistrationNumber: Text
     - derive: "'HideSecrets"
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE

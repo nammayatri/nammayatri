@@ -20,8 +20,8 @@ module Domain.Action.Dashboard.Management.DriverGoHome
   )
 where
 
+import qualified API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified API.Types.ProviderPlatform.Management.DriverGoHome as Common
-import qualified Dashboard.ProviderPlatform.Fleet.Driver as Common
 import qualified Domain.Action.Dashboard.Driver as DDriver
 import qualified Domain.Types.Merchant as DM
 import Environment

@@ -25,7 +25,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.StopInformation.StopInformation] -> m ())
 createMany = traverse_ create
 
-findAllByRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ([Domain.Types.StopInformation.StopInformation]))
+findAllByRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m [Domain.Types.StopInformation.StopInformation])
 findAllByRideId rideId = do findAllWithKVAndConditionalDB [Se.Is Beam.rideId $ Se.Eq (Kernel.Types.Id.getId rideId)] Nothing
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.StopInformation.StopInformation -> m (Maybe Domain.Types.StopInformation.StopInformation))
