@@ -14,7 +14,7 @@
 -}
 module Common.RemoteConfig.Utils where
 
-import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel, GullakConfig, StuckRideFilterConfig)
+import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel, GullakConfig, StuckRideFilterConfig, FeaturesConfigData(..), defaultFeaturesConfigData)
 import DecodeUtil (decodeForeignObject, parseJSON, setAnyInWindow)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
@@ -129,6 +129,14 @@ forwardBatchConfigData city =
     decodedConfg = decodeForeignObject (parseJSON remoteConfig) $ defaultCityRemoteConfig defaultForwardBatchConfigData
   in 
     getCityBasedConfig decodedConfg $ toLower city
+
+featuresConfigData :: String -> FeaturesConfigData
+featuresConfigData city =
+  let
+    remoteConfig = fetchRemoteConfigString "feature_configs"
+    decodedConfig = decodeForeignObject (parseJSON remoteConfig) $ defaultCityRemoteConfig defaultFeaturesConfigData
+  in
+    getCityBasedConfig decodedConfig $ toLower city
 
 getCityBasedConfig :: forall a. RemoteConfig a -> String -> a
 getCityBasedConfig config city = case city of
