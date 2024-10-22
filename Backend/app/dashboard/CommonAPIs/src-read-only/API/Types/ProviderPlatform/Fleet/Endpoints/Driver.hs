@@ -1,4 +1,5 @@
 {-# LANGUAGE StandaloneKindSignatures #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.ProviderPlatform.Fleet.Endpoints.Driver where
@@ -6,6 +7,7 @@ module API.Types.ProviderPlatform.Fleet.Endpoints.Driver where
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
 import qualified Dashboard.ProviderPlatform.Management.DriverRegistration
+import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Data.Time
@@ -17,6 +19,7 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
+import Kernel.Utils.TH
 import Servant
 import Servant.Client
 
@@ -660,5 +663,11 @@ data DriverUserActionType
   | POST_DRIVER_FLEET_LINK_RC_WITH_DRIVER
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(mkHttpInstancesForEnum ''DriverMode)
+
+$(mkHttpInstancesForEnum ''FleetVehicleStatus)
+
+$(mkHttpInstancesForEnum ''SortOn)
 
 $(Data.Singletons.TH.genSingletons [''DriverUserActionType])

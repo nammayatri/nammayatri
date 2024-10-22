@@ -498,7 +498,7 @@ types:
     - summary: Summary
   SortOn:
     - enum: "COMPLETED_RIDES, CANCELLED_RIDES"
-    - derive: "Kernel.Prelude.ToParamSchema"
+    - derive: "HttpInstance"
   FleetEarningRes:
     - totalRides: Int
     - totalEarning: Int
@@ -516,7 +516,7 @@ types:
     - minutes: Int
   FleetVehicleStatus:
     - enum: "Active, InActive, Pending, Invalid"
-    - derive: "Kernel.Prelude.ToParamSchema"
+    - derive: "HttpInstance"
   DrivertoVehicleAssociationRes:
     - fleetOwnerId: Text
     - listItem: [DriveVehicleAssociationListItem]
@@ -547,7 +547,7 @@ types:
     - driverLicense: Maybe VerificationStatus
   DriverMode:
     - enum: "ONLINE, OFFLINE, SILENT"
-    - derive: "Kernel.Prelude.ToParamSchema"
+    - derive: "HttpInstance"
   UpdateFleetOwnerInfoReq:
     - firstName: Maybe Text
     - lastName: Maybe Text
