@@ -78,7 +78,7 @@ modifyScreenStateFlow st =
     FavouriteDriverTripsStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {favouriteDriverListScreen = a state.favouriteDriverListScreen})
     ParcelDeliveryScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {parcelDeliveryScreen = a state.parcelDeliveryScreen})
     RideSummaryScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideSummaryScreen = a state.rideSummaryScreen})
-
+    JourneyTrackingScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {journeyTrackingScreen = a state.journeyTrackingScreen})
     
 updateRepeatRideDetails :: Trip -> FlowBT String Unit
 updateRepeatRideDetails state = do 

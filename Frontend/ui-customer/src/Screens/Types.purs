@@ -3163,3 +3163,20 @@ type NotificationBody = {
   rideTime :: Maybe String,
   bookingId :: Maybe String
 }
+
+-- ######################################### MultiModalFlow ####################################################
+
+type JourneyTrackingScreenState = {
+  data :: JourneyTrackingScreenData,
+  props :: JourneyTrackingScreenProps
+}
+
+type JourneyTrackingScreenData = {
+  appConfig :: AppConfig
+}
+
+type JourneyTrackingScreenProps = {
+  showRouteDetailsTab :: Boolean
+}
+
+type AlertWidgetConfig = {}

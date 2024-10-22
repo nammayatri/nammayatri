@@ -790,6 +790,7 @@
       "tip_banner_rectangle" : true,
       "widget_close_gradient" : true,
       "ys_ic_driver_message" : true,
-      "zone_curve" : true
+      "zone_curve" : true,
+      "ny_ic_blue_alarm_clock" : true
    }
 }

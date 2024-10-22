@@ -355,6 +355,14 @@ updateSafetySettings state = do
         , hasCompletedMockSafetyDrill : Just state.data.hasCompletedMockSafetyDrill
         }
   void $ lift $ lift $ Remote.updateEmergencySettings req
+  when setUpCompletedConditions $ 
+      modifyScreenState $ HomeScreenStateType $ \homeScreen → homeScreen
+        { data
+          { settingSideBar
+            { hasCompletedSafetySetup = true
+            }
+          }
+        }
   pure unit
 
 
@@ -681,7 +689,9 @@ currentFlowStatus prioritizeRating = do
   hideLoaderFlow
   void $ pure $ hideKeyboardOnNavigation true -- TODO:: Why is this added here @ashkriti?  
   (GlobalState globalState) <- getState
-  if globalState.homeScreen.props.currentStage == RideCompleted then riderRideCompletedScreenFlow else homeScreenFlow
+  -- if globalState.homeScreen.props.currentStage == RideCompleted then riderRideCompletedScreenFlow else homeScreenFlow
+  
+  if globalState.homeScreen.props.currentStage == RideCompleted then riderRideCompletedScreenFlow else journeyTrackingScreenFlow
 
   where
   goToConfirmingQuotesStage :: { bookingId :: String, validTill :: String, fareProductType :: Maybe String } -> FlowBT String Unit
@@ -6913,3 +6923,9 @@ updateScheduledRides needApiCall updateRentals= do
       pure unit
     )
     pure unit
+
+journeyTrackingScreenFlow :: FlowBT String Unit
+journeyTrackingScreenFlow = do
+  action <- UI.journeyTrackingScreen 
+  case action of
+    _ -> journeyTrackingScreenFlow
