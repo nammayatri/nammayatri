@@ -25,6 +25,7 @@ import Data.Array as DA
 import Data.Function.Uncurried (runFn3, runFn2)
 import DecodeUtil (getAnyFromWindow)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
+import Debug
 import Common.Types.App (LazyCheck(..))
 import Common.RemoteConfig.Types as Types
 
@@ -41,6 +42,8 @@ defaultCityRemoteConfig defaultValue =
   , chennai : Just defaultValue
   , tumakuru : Just defaultValue
   , mysore : Just defaultValue
+  , paris : Just defaultValue
+  , odisha : Just defaultValue
   , kochi : Just defaultValue
   , delhi : Just defaultValue
   , hyderabad : Just defaultValue
@@ -73,11 +76,11 @@ defaultCityRemoteConfig defaultValue =
 carouselConfigData :: String -> String -> String -> String -> String -> String -> Array RCCarousel
 carouselConfigData city configKey default userId categoryFilter variantFilter =
   let
-    remoteConfig = fetchRemoteConfigString configKey
+    remoteConfig = spy "carouselConfigData" $ fetchRemoteConfigString configKey
 
     parseVal = if not null remoteConfig then remoteConfig else fetchRemoteConfigString default
 
-    decodedConfg = decodeForeignObject (parseJSON parseVal) $ defaultCityRemoteConfig []
+    decodedConfg = decodeForeignObject (parseJSON (spy "carouselConfigData" parseVal)) $ defaultCityRemoteConfig []
   in
     filterWhiteListedConfigs userId $ filterCategoryBasedCarousel categoryFilter variantFilter $ getCityBasedConfig decodedConfg city
 
@@ -141,6 +144,8 @@ featuresConfigData city =
 getCityBasedConfig :: forall a. RemoteConfig a -> String -> a
 getCityBasedConfig config city = case city of
   "bangalore" -> fromMaybe config.default config.bangalore
+  "paris" -> fromMaybe config.default config.paris
+  "odisha" -> fromMaybe config.default config.odisha
   "kolkata" -> fromMaybe config.default config.kolkata
   "chennai" -> fromMaybe config.default config.chennai
   "mysore" -> fromMaybe config.default config.mysore
