@@ -12,16 +12,18 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
-module Dashboard.Common.DriverCoinsExtra
-  ( module Dashboard.Common.DriverCoinsExtra,
-    module Reexport,
+module Dashboard.Common.DriverCoins
+  ( module Dashboard.Common.DriverCoins,
+    module ReExport,
   )
 where
 
-import Dashboard.Common as Reexport
+import Dashboard.Common as ReExport
 import Data.Aeson
 import qualified Data.List as List
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 
 data CoinMessage
@@ -148,3 +150,5 @@ instance FromJSON DriverCoinsFunctionType where
       "RidesCompleted" -> RidesCompleted <$> obj .: "contents"
       "BulkUploadFunctionV2" -> BulkUploadFunctionV2 <$> obj .: "contents"
       _ -> fail $ "Unknown DriverCoinsFunctionType tag encountered from DB : " ++ tag
+
+$(mkBeamInstancesForEnum ''DriverCoinsFunctionType)

@@ -23,6 +23,7 @@ where
 import Dashboard.Common as Reexport
 import Data.Aeson
 import Kernel.Prelude
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.Common (HighPrecMoney, PriceAPIEntity)
 import Kernel.Types.Id
@@ -215,3 +216,5 @@ data DriverFeeStatus
   | ONE_TIME_SECURITY_ADJUSTED
   deriving stock (Eq, Show, Generic, Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance CH.ClickhouseValue DriverFeeStatus

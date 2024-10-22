@@ -19,7 +19,7 @@ module Domain.Action.RiderPlatform.Management.Booking
 where
 
 import qualified API.Client.RiderPlatform.Management as Client
-import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Booking as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment

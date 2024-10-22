@@ -176,3 +176,6 @@ types:
   MessageDeliveryStatus:
     - enum: "Failed, Success, Queued, Sending"
     - derive: "Kernel.Prelude.ToParamSchema"
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

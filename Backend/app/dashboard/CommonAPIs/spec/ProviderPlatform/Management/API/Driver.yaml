@@ -665,5 +665,6 @@ types:
     - imageId1 : Maybe Text
     - imageId2 : Maybe Text
 
-
-
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE
