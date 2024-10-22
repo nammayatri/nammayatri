@@ -11,8 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Dashboard.ProviderPlatform.Fleet.Driver
   ( module Dashboard.ProviderPlatform.Fleet.Driver,
@@ -23,11 +21,9 @@ where
 import API.Types.ProviderPlatform.Fleet.Endpoints.Driver
 import Dashboard.Common as Reexport
 import Dashboard.Common.Driver as Reexport
-import Data.Aeson
 import Kernel.Prelude
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
-import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Validation
 
 validateAddVehicleReq :: Validate AddVehicleReq
@@ -37,9 +33,3 @@ validateAddVehicleReq AddVehicleReq {..} =
       validateField "registrationNo" registrationNo $
         LengthInRange 1 11 `And` star (P.latinUC \/ P.digit)
     ]
-
-$(mkHttpInstancesForEnum ''FleetVehicleStatus)
-
-$(mkHttpInstancesForEnum ''DriverMode)
-
-$(mkHttpInstancesForEnum ''SortOn)
