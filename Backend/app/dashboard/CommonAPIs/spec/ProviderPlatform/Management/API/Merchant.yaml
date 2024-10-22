@@ -653,7 +653,7 @@ types:
     - enum: "Infix, Prefix, Suffix"
   DocumentType:
     - enum: "RC, DL"
-    - derive: "Kernel.Prelude.ToParamSchema"
+    - derive: "HttpInstance"
   DocumentVerificationConfigUpdateReq:
     - checkExtraction: Maybe (MandatoryValue Bool)
     - checkExpiry: Maybe (MandatoryValue Bool)

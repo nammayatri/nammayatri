@@ -1,9 +1,11 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.ProviderPlatform.Management.Endpoints.Merchant where
 
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Merchant
+import Data.Aeson
 import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
 import qualified Data.Vector
@@ -18,6 +20,7 @@ import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters
 import qualified Kernel.Types.Value
+import Kernel.Utils.TH
 import qualified Lib.Types.SpecialLocation
 import Servant
 import Servant.Client
@@ -865,3 +868,5 @@ data MerchantEndpointDSL
   | PostMerchantConfigClearCacheSubscriptionEndpoint
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(mkHttpInstancesForEnum ''DocumentType)

@@ -32,7 +32,6 @@ import Kernel.Types.Common
 import Kernel.Types.Predicate
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import qualified Kernel.Utils.Predicates as P
-import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Validation
 
 ---------------------------------------------------------
@@ -198,8 +197,6 @@ validateSlidingWindowOptions SWC.SlidingWindowOptions {..} =
 
 ---------------------------------------------------------
 -- merchant onboarding document config update -----------
-
-$(mkHttpInstancesForEnum ''DocumentType)
 
 --- Upsert fare policy using csv file ----
 

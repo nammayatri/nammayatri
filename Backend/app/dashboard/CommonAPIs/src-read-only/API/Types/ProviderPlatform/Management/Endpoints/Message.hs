@@ -1,9 +1,11 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.ProviderPlatform.Management.Endpoints.Message where
 
 import qualified AWS.S3
 import qualified Dashboard.Common
+import Data.Aeson
 import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id, state)
@@ -15,6 +17,7 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
+import Kernel.Utils.TH
 import Servant
 import Servant.Client
 
@@ -198,3 +201,5 @@ data MessageEndpointDSL
   | GetMessageReceiverListEndpoint
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(mkHttpInstancesForEnum ''MessageDeliveryStatus)
