@@ -42,13 +42,11 @@ if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){
         if (shouldLog) {
           window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
         }
-        try{
+        try {
         const result = window.JBridgeProxy[fnName](...arguments);
         return result;
-        }
-        catch(e){
-          console.error("Error in index.js" + e);
-          return;
+        } catch (e) {
+          console.error("error", e , fnName);
         }
       };
     });

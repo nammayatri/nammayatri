@@ -263,6 +263,8 @@ android {
         ysDriver.res.srcDir('src/driver/common/res')
         yatriDriver.res.srcDir('src/driver/common/res')
         passCulturePartner.res.srcDir('src/driver/common/res')
+        oyUser.res.srcDir('src/user/common/res')
+        oyDriver.res.srcDir('src/driver/common/res')
     }
     sourceSets {
         dev.res.srcDir 'src/dev/res'
