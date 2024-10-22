@@ -1041,6 +1041,7 @@ newtype Keymap = Keymap {
 , get_fare :: String
 , metro_booking_timings :: String
 , chennai_metro_time :: String -> String -> String
+, delhi_metro_time :: String -> String -> String
 , please_come_back_later_metro :: String
 , no_qoutes_available :: String
 , i_agree_to_the :: String
@@ -1111,7 +1112,7 @@ newtype Keymap = Keymap {
 , experience_hassle_free_metro_booking :: String -> String
 , kochi_metro_term_1 :: String
 , kochi_metro_term_2 :: String
-, kochi_metro_time :: String
+, kochi_metro_time :: String -> String -> String
 , book_ticket :: String
 , prepare_emergency_contacts :: String
 , emergency_contacts_will_be_notified :: String
@@ -1692,6 +1693,7 @@ newtype Keymap = Keymap {
 , different_bike :: String
 , limit_reached :: String
 , confirm_contacts :: String
+, tickets_for_delhi_metro :: String
 }
 
 
@@ -4766,6 +4768,9 @@ metro_booking_timings = a
 chennai_metro_time :: Proxy "chennai_metro_time"
 chennai_metro_time = a
 
+delhi_metro_time :: Proxy "delhi_metro_time"
+delhi_metro_time = a
+
 please_come_back_later_metro :: Proxy "please_come_back_later_metro"
 please_come_back_later_metro = a
 
@@ -6739,3 +6744,6 @@ limit_reached = a
 
 confirm_contacts :: Proxy "confirm_contacts"
 confirm_contacts = a
+
+tickets_for_delhi_metro :: Proxy "tickets_for_delhi_metro"
+tickets_for_delhi_metro = a
