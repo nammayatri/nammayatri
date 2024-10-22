@@ -3885,6 +3885,7 @@ homescreenHeader push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , padding $ PaddingTop safeMarginTop
+    , background Color.white900
     , id $ getNewIDWithTag "homescreenHeader"
     , afterRender push $ const UpdatePeekHeight
     ][ pickupLocationView push state]
