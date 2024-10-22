@@ -1,5 +1,7 @@
 module Storage.Queries.Transformers.MerchantServiceConfig where
 
+import ChatCompletion.Interface.Types as CIT
+import ChatCompletion.Types
 import qualified Data.Aeson
 import qualified Data.Aeson as A
 import qualified Data.Text as T
@@ -74,6 +76,9 @@ getConfigJSON = \case
     BackgroundVerification.CheckrConfig cfg -> toJSON cfg
   Domain.IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
     IncidentReport.ERSSConfig cfg -> toJSON cfg
+  Domain.LLMChatCompletionServiceConfig chatCompletionCfg -> case chatCompletionCfg of
+    CIT.AzureOpenAI cfg -> toJSON cfg
+    CIT.Gemini cfg -> toJSON cfg
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -125,6 +130,9 @@ getServiceName = \case
     BackgroundVerification.CheckrConfig _ -> Domain.BackgroundVerificationService BackgroundVerification.Checkr
   Domain.IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
     IncidentReport.ERSSConfig _ -> Domain.IncidentReportService IncidentReport.ERSS
+  Domain.LLMChatCompletionServiceConfig chatCompletionCfg -> case chatCompletionCfg of
+    CIT.AzureOpenAI _ -> Domain.LLMChatCompletionService ChatCompletion.Types.AzureOpenAI
+    CIT.Gemini _ -> Domain.LLMChatCompletionService ChatCompletion.Types.Gemini
 
 mkServiceConfig :: (MonadThrow m, Log m) => Data.Aeson.Value -> Domain.ServiceName -> m Domain.ServiceConfig
 mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON: " <> show configJSON <> " Error:" <> err)) return $ case serviceName of
@@ -162,6 +170,8 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.TokenizationService Tokenize.Gullak -> Domain.TokenizationServiceConfig . Tokenize.GullakTokenizationServiceConfig <$> eitherValue configJSON
   Domain.BackgroundVerificationService BackgroundVerification.Checkr -> Domain.BackgroundVerificationServiceConfig . BackgroundVerification.CheckrConfig <$> eitherValue configJSON
   Domain.IncidentReportService IncidentReport.ERSS -> Domain.IncidentReportServiceConfig . IncidentReport.ERSSConfig <$> eitherValue configJSON
+  Domain.LLMChatCompletionService ChatCompletion.Types.AzureOpenAI -> Domain.LLMChatCompletionServiceConfig . CIT.AzureOpenAI <$> eitherValue configJSON
+  Domain.LLMChatCompletionService ChatCompletion.Types.Gemini -> Domain.LLMChatCompletionServiceConfig . CIT.Gemini <$> eitherValue configJSON
   where
     eitherValue :: FromJSON a => A.Value -> Either Text a
     eitherValue value = case A.fromJSON value of

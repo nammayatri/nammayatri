@@ -4,11 +4,13 @@
 
 module Storage.Queries.MerchantServiceUsageConfig where
 
+import qualified ChatCompletion.Types
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantServiceUsageConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -68,6 +70,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             getTripRoutes = getTripRoutes,
             initiateCall = initiateCall,
             issueTicketService = issueTicketService,
+            llmChatCompletion = Kernel.Prelude.fromMaybe ChatCompletion.Types.AzureOpenAI llmChatCompletion,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             rectifyDistantPointsFailure = rectifyDistantPointsFailure,
@@ -106,6 +109,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.getTripRoutes = getTripRoutes,
         Beam.initiateCall = initiateCall,
         Beam.issueTicketService = issueTicketService,
+        Beam.llmChatCompletion = Kernel.Prelude.Just llmChatCompletion,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.rectifyDistantPointsFailure = rectifyDistantPointsFailure,
