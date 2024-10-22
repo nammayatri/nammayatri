@@ -5,30 +5,38 @@ module Domain.Action.UI.DriverProfileQuestions where
 
 import qualified API.Types.UI.DriverProfileQuestions
 import qualified AWS.S3 as S3
+import ChatCompletion.Interface.Types as CIT
 import Data.Maybe (fromJust)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time.Calendar (diffDays)
 import Data.Time.Clock (utctDay)
 import qualified Domain.Types.DriverProfileQuestions as DTDPQ
+import Domain.Types.LlmPrompt as DTL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantServiceConfig as DOSC
 import qualified Domain.Types.Person as SP
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import Kernel.Beam.Functions as B
+import Kernel.External.Encryption
+import Kernel.Prelude (head)
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common as KUC
 import Servant
 import Storage.Beam.IssueManagement ()
+import qualified Storage.Cac.MerchantServiceUsageConfig as QOMC
+import Storage.CachedQueries.LLMPrompt.LLMPrompt as SCL
 import qualified Storage.Queries.DriverProfileQuestions as DPQ
 import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.Person as QP
 import Tools.Auth
+import Tools.ChatCompletion as TC
 import Tools.Error
 
 data ImageType = JPG | PNG | UNKNOWN deriving (Generic, Show, Eq)
@@ -41,12 +49,13 @@ postDriverProfileQues ::
     API.Types.UI.DriverProfileQuestions.DriverProfileQuesReq ->
     Flow APISuccess
   )
-postDriverProfileQues (mbPersonId, _, merchantOpCityId) req@API.Types.UI.DriverProfileQuestions.DriverProfileQuesReq {..} =
+postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.UI.DriverProfileQuestions.DriverProfileQuesReq {..} =
   do
     driverId <- mbPersonId & fromMaybeM (PersonNotFound "No person id passed")
     person <- QP.findById driverId >>= fromMaybeM (PersonNotFound ("No person found with id" <> show driverId))
     driverStats <- QDS.findByPrimaryKey driverId >>= fromMaybeM (PersonNotFound ("No person found with id" <> show driverId))
     now <- getCurrentTime
+    aboutMe <- generateAboutMe person driverStats now req
     DPQ.upsert
       ( DTDPQ.DriverProfileQuestions
           { updatedAt = now,
@@ -59,7 +68,7 @@ postDriverProfileQues (mbPersonId, _, merchantOpCityId) req@API.Types.UI.DriverP
             drivingSince = drivingSince,
             imageIds = toMaybe imageIds,
             vehicleTags = toMaybe vehicleTags,
-            aboutMe = generateAboutMe person driverStats now req
+            aboutMe = Just aboutMe
           }
       )
       >> pure Success
@@ -67,7 +76,26 @@ postDriverProfileQues (mbPersonId, _, merchantOpCityId) req@API.Types.UI.DriverP
     toMaybe xs = guard (not (null xs)) >> Just xs
 
     -- Generate with LLM or create a template text here
-    generateAboutMe person driverStats now req' = Just (hometownDetails req'.hometown <> "I have been with Nammayatri for " <> (withNY now person.createdAt) <> " months. " <> writeDriverStats driverStats <> genAspirations req'.aspirations)
+    generateAboutMe person driverStats now req' = do
+      orgLLMChatCompletionConfig <- QOMC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+      let promptServiceName = DOSC.LLMChatCompletionService $ (.llmChatCompletion) orgLLMChatCompletionConfig
+          promptKey = DTL.AzureOpenAI_DriverProfileGen_1
+          useCase = DTL.DriverProfileGen
+      llmPrompt <- SCL.findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey merchantOpCityId promptServiceName useCase promptKey >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+      let promptTemplate = llmPrompt.promptTemplate
+          prompt =
+            T.replace "{#hometown#}" (hometownDetails req'.hometown)
+              . T.replace "{#withNY#}" (withNY now person.createdAt)
+              . T.replace "{#driverStats#}" (writeDriverStats driverStats)
+              . T.replace "{#aspirations#}" (genAspirations req'.aspirations)
+              $ promptTemplate
+          gccreq = CIT.GeneralChatCompletionReq {genMessages = [CIT.GeneralChatCompletionMessage {genRole = "user", genContent = prompt}]}
+      gccresp <- TC.getChatCompletion merchantId merchantOpCityId gccreq
+      let genContent = gccresp.genMessage.genContent
+          genRole = gccresp.genMessage.genRole
+      logDebug $ "azure open AI api response - by " <> show genRole <> " content " <> show genContent
+      pure genContent
+    -- generateAboutMe person driverStats now req' = Just (hometownDetails req'.hometown <> "I have been with Nammayatri for " <> (withNY now person.createdAt) <> " months. " <> writeDriverStats driverStats <> genAspirations req'.aspirations)
 
     hometownDetails mHometown = case mHometown of
       Just hometown' -> "Hailing from " <> hometown' <> ", "

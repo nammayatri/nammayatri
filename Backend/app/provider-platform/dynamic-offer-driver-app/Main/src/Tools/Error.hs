@@ -1435,3 +1435,21 @@ instance IsHTTPError SpecialZoneErrors where
     DriverLocationOutOfRestictionBounds -> E400
 
 instance IsAPIError SpecialZoneErrors
+
+data LlmPromptError
+  = LlmPromptNotFound Text Text Text Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''LlmPromptError
+
+instance IsBaseError LlmPromptError where
+  toMessage (LlmPromptNotFound merchantOperatingCityId service useCase promptKey) = Just $ "LLMPrompt with merchantOperatingCityId \"" <> merchantOperatingCityId <> "\" service \"" <> service <> "\" useCase \"" <> useCase <> "\" promptKey \"" <> promptKey <> "\" not found."
+
+instance IsHTTPError LlmPromptError where
+  toErrorCode = \case
+    LlmPromptNotFound {} -> "LLM_PROMPT_NOT_FOUND"
+
+  toHttpCode = \case
+    LlmPromptNotFound {} -> E500
+
+instance IsAPIError LlmPromptError
