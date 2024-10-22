@@ -46,7 +46,7 @@ metroTicketListApiToMyTicketsTransformer ticketList state =
     pastTicketEvaluator :: String -> Array FRFSTicketAPI -> Boolean
     pastTicketEvaluator status tickets = 
       let validTill =  maybe "" (\(FRFSTicketAPI ticket) -> ticket.validTill) (head tickets)
-      in (any (_ == status) ["CANCELLED", "FAILED"]) || (isTicketExpired validTill)
+      in (any (_ == status) ["CANCELLED", "FAILED", "CANCEL_INITIATED", "TECHNICAL_CANCEL_REJECTED"]) || (isTicketExpired validTill)
 
 
 metroTicketCardTransformer :: Array MetroTicketBookingStatus -> Array MetroTicketCardData

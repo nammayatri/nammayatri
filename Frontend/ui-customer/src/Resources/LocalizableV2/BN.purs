@@ -1018,6 +1018,7 @@ getBn = Keymap {
 , get_fare: "ভাড়া প্রাপ্ত করুন"
 , metro_booking_timings: "মেট্রো বুকিং সময়"
 , chennai_metro_time: (\startTime endTime -> "চেন্নাই মেট্রো 4:30 টা থেকে 10:30 টা পর্যন্ত কিউআর টিকেট ক্রয় করার অনুমতি দেয়।")
+, delhi_metro_time: (\startTime endTime -> "দিল্লি মেট্রো"<>startTime<>" টা থেকে"<>endTime<>" টা পর্যন্ত কিউআর টিকেট ক্রয় করার অনুমতি দেয়।")
 , please_come_back_later_metro: "দয়া করে এলাক্টেবল সময়ে টিকেট ক্রয় করতে প্রস্তুত হন।"
 , no_qoutes_available: "কোন উদ্ধৃতি উপলব্ধ নেই"
 , i_agree_to_the: "আমি সম্মত"
@@ -1051,7 +1052,7 @@ getBn = Keymap {
 , experience_hassle_free_metro_booking: (\appName -> "এখন কোচি মেট্রো টিকিট বুক করুন " <> appName <> " এর সাথে")
 , kochi_metro_term_1: "সারাদিন সকাল 5:00 AM থেকে 11:45 PM পর্যন্ত টিকিট কেনা যাবে।"
 , kochi_metro_term_2: "একবার প্রবেশ করা হয়ে গেলে, যাত্রীদের গন্তব্য থেকে 120 মিনিটের মধ্যে প্রস্থান করতে হবে।"
-, kochi_metro_time: "কোচি মেট্রো সমস্ত দিন সকাল 5:00 AM থেকে 11:45 PM পর্যন্ত QR টিকেট কেনার অনুমতি দেয়।"
+, kochi_metro_time: (\startTime endTime -> "কোচি মেট্রো সমস্ত দিন সকাল " <> startTime <> " থেকে " <> endTime <> " পর্যন্ত QR টিকেট কেনার অনুমতি দেয়।")
 , book_ticket: "টিকিট বুক করুন"
 , origin: "উৎপত্তি"
 , history: "ইতিহাস"
@@ -1678,4 +1679,5 @@ getBn = Keymap {
 , different_bike : "বিভিন্ন বাইক"
 , limit_reached : "সীমা পৌঁছেছে!"
 , confirm_contacts : "কনফার্ম কন্ট্যাক্টস"
+, tickets_for_delhi_metro : "দিল্লি মেট্রো টিকিট"
 }

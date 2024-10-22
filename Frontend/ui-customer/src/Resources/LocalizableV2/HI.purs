@@ -1018,6 +1018,7 @@ getHi = Keymap {
 , get_fare: "किराया प्राप्त करें"
 , metro_booking_timings: "मेट्रो बुकिंग समय"
 , chennai_metro_time: (\startTime endTime -> "चेन्नई मेट्रो "<> startTime<>" से "<> endTime <> " तक क्यूआर टिकट खरीद करने की अनुमति देता है।")
+, delhi_metro_time: (\startTime endTime -> "दिल्ली मेट्रो " <> startTime <> " से " <> endTime <> " तक क्यूआर टिकट खरीदने की अनुमति देता है।")
 , please_come_back_later_metro: "कृपया समय पर वापस आएं टिकट खरीदने के लिए।"
 , no_qoutes_available: "कोट्स उपलब्ध नहीं हैं"
 , i_agree_to_the: "मैं सहमत हूँ"
@@ -1051,7 +1052,7 @@ getHi = Keymap {
 , experience_hassle_free_metro_booking: (\appName -> appName <> " पर हैसल-फ्री मेट्रो बुकिंग का अनुभव")
 , kochi_metro_term_1: "टिकट सभी दिन सुबह 5:00 बजे से रात 11:45 बजे के बीच खरीदे जा सकते हैं।"
 , kochi_metro_term_2: "एक बार प्रवेश हो जाने के बाद, यात्रियों को गंतव्य से 120 मिनट के भीतर बाहर निकल जाना चाहिए।"
-, kochi_metro_time: "कोच्चि मेट्रो सभी दिन सुबह 5:00 बजे से रात 11:45 बजे तक क्यूआर टिकट खरीदने की अनुमति देता है।"
+, kochi_metro_time: (\startTime endTime -> "कोच्चि मेट्रो सभी दिन सुबह " <> startTime <> " से रात " <> endTime <> " तक क्यूआर टिकट खरीदने की अनुमति देता है।")
 , book_ticket: "टिकट नियुक्त करें"
 , origin: "मूल"
 , history: "इतिहास"
@@ -1678,4 +1679,5 @@ getHi = Keymap {
 , different_bike : "अलग बाइक"
 , limit_reached : "सीमा पार हो गई है!"
 , confirm_contacts : "संपर्कों की पुष्टि करें"
+, tickets_for_delhi_metro : "दिल्ली मेट्रो के लिए टिकट"
 }

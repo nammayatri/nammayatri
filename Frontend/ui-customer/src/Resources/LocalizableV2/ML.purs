@@ -1019,6 +1019,7 @@ getMl = Keymap {
 , get_fare: "കടപ്പാട് ലഭ്യമാക്കുക"
 , metro_booking_timings: "മെട്രോ ബുക്കിംഗ് സമയം"
 , chennai_metro_time: (\startTime endTime -> "ചെന്നൈ മെട്രോ 4:30 ബജി മുതൽ 10:30 ബജി വരെ ക്യൂആർ ടിക്കറ്റ് വാങ്ങാൻ അനുമതിക്കുന്നു.")
+, delhi_metro_time: (\startTime endTime -> "ദില്ലി മെട്രോ " <> startTime <> " ബജി മുതൽ " <> endTime <> " ബജി വരെ ക്യൂആർ ടിക്കറ്റ് വാങ്ങാൻ അനുമതിക്കുന്നു.")
 , please_come_back_later_metro: "ദയവായി പുനരാരംഭിക്കുക, ടിക്കറ്റ് വാങ്ങാൻ അനുമതിക്കുന്ന സമയത്തിൽ തിരികെ വാ."
 , no_qoutes_available: "ഉദ്ധാരണികൾ ലഭ്യമില്ല"
 , i_agree_to_the: "ഞാൻ അംഗീകരിക്കുന്നു"
@@ -1052,7 +1053,7 @@ getMl = Keymap {
 , experience_hassle_free_metro_booking: (\appName -> "ഹാസിൽ-ഫ്രീ മെട്രോ ബുക്കിംഗ് അനുഭവിക്കുക " <> appName)
 , kochi_metro_term_1: "എല്ലാ ദിവസവും രാവിലെ 5:00 മുതൽ 11:45 PM വരെ ടിക്കറ്റുകൾ വാങ്ങാം."
 , kochi_metro_term_2: "പ്രവേശനം ചെയ്തുകഴിഞ്ഞാൽ, യാത്രക്കാർ ലക്ഷ്യസ്ഥാനത്ത് നിന്ന് 120 മിനിറ്റിനുള്ളിൽ പുറത്തുകടക്കണം."
-, kochi_metro_time: "എല്ലാ ദിവസവും രാവിലെ 5:00 മുതൽ രാത്രി 11:45 വരെ QR ടിക്കറ്റ് വാങ്ങാൻ കൊച്ചി മെട്രോ അനുവദിക്കുന്നു."
+, kochi_metro_time: (\startTime endTime -> "എല്ലാ ദിവസവും രാവിലെ " <> startTime <> " മുതൽ രാത്രി " <> endTime <> " വരെ QR ടിക്കറ്റ് വാങ്ങാൻ കൊച്ചി മെട്രോ അനുവദിക്കുന്നു.")
 , book_ticket: "ടിക്കറ്റ് ബുക്ക് ചെയ്യുക"
 , origin: "ഉത്ഭവം"
 , history: "ചരിത്രം"
@@ -1679,4 +1680,5 @@ getMl = Keymap {
 , different_bike : "വിവിധ ബൈക്കുകൾ"
 , limit_reached : "പരിധി എത്തി!"
 , confirm_contacts : "ബന്ധങ്ങളെ സ്ഥിരീകരിക്കുക"
+, tickets_for_delhi_metro : "ദില്ലി മെട്രോ ടിക്കറ്റുകൾ"
 }
