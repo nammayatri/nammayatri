@@ -549,6 +549,7 @@ library
       Storage.Queries.PersonExtra
       Storage.Queries.PlanExtra
       Storage.Queries.PurchaseHistoryExtra
+      Storage.Queries.QueriesExtra.BookingLite
       Storage.Queries.QueriesExtra.RideLite
       Storage.Queries.Quote
       Storage.Queries.RatingExtra
