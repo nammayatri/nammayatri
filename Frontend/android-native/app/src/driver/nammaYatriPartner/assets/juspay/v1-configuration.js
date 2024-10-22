@@ -304,16 +304,16 @@ window.getMerchantConfig = function () {
         "waitingCharges" : 2.00,
         "waitingChargesConfig" : {
           "cab" : {
-            "freeSeconds" : 300,
-            "perMinCharges" : 1.0
+            "freeSeconds" : 180,
+            "perMinCharges" : 2.0
           },
           "auto" : {
             "freeSeconds" : 180,
-            "perMinCharges" : 2.00
+            "perMinCharges" : 2.0
           },
           "bike" : {
-            "freeSeconds" : 300,
-            "perMinCharges" : 1.0
+            "freeSeconds" : 180,
+            "perMinCharges" : 2.0
           }
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
