@@ -139,3 +139,10 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN block_reason_fl
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN payout_reg_amount_refunded double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN preferred_secondary_special_loc_ids text[] ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN preferred_primary_special_loc_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_special_loc_warrior boolean ;

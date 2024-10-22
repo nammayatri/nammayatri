@@ -37,6 +37,7 @@ mkPersist
       category Text
       gates (PostgresList Domain.GatesInfo)
       merchantOperatingCityId Text Maybe
+      linkedLocationsIds (PostgresList Text),
       geom Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
@@ -45,9 +46,10 @@ mkPersist
     |]
 
 instance ToTType SpecialLocationGeomT Domain.SpecialLocation where
-  toTType Domain.SpecialLocation {..} =
+  toTType Domain.SpecialLocation {..} = do
     SpecialLocationGeomT
       { id = getId id,
         gates = PostgresList gates,
+        linkedLocationsIds = PostgresList $ map (.getId) linkedLocationsIds,
         ..
       }

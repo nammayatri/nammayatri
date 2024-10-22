@@ -7,6 +7,8 @@ imports:
   LatLong: Kernel.External.Maps
   DriverMode: Domain.Types.Common
   BlockReasonFlag: Tools.Error
+  SpecialLocationWarrior: Lib.Queries.SpecialLocation
+  SpecialLocation: Lib.Types.SpecialLocation
 
 DriverInformation:
   tableName: driver_information
@@ -50,6 +52,9 @@ DriverInformation:
     verified: Bool
     subscribed: Bool
     paymentPending: Bool
+    isSpecialLocWarrior: Bool
+    preferredPrimarySpecialLoc: Maybe SpecialLocationWarrior
+    preferredSecondarySpecialLocIds : "[(Id SpecialLocation)]"
     referralCode: Maybe Text
     referredByDriverId: Maybe (Id Person)
     totalReferred: Maybe Int
@@ -115,6 +120,8 @@ DriverInformation:
     latestScheduledPickup:
       latestScheduledPickupLat: Maybe Double
       latestScheduledPickupLon: Maybe Double
+    preferredPrimarySpecialLoc:
+      preferredPrimarySpecialLocId: Maybe (Id SpecialLocation)
 
 
   beamType:
@@ -124,25 +131,36 @@ DriverInformation:
     hasAdvanceBooking: Maybe Bool
     forwardBatchingEnabled: Maybe Bool
     isInteroperable: Maybe Bool
+    isSpecialLocWarrior: Maybe Bool
+    preferredSecondarySpecialLocIds : "Maybe [Text]"
+
+  sqlType:
+    preferredSecondarySpecialLocIds: "text[]"
 
   fromTType:
     canSwitchToRental: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     canSwitchToInterCity: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    isSpecialLocWarrior: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     acUsageRestrictionType: Kernel.Prelude.fromMaybe Domain.Types.DriverInformation.NoRestriction|I
     hasAdvanceBooking: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     forwardBatchingEnabled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     isInteroperable: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     latestScheduledPickup: Storage.Queries.Transformers.Ride.mkLatLong|I
+    preferredPrimarySpecialLoc : Storage.Queries.Transformers.DriverInformation.getPreferredPrimarySpecialLoc preferredPrimarySpecialLocId|EM
+    preferredSecondarySpecialLocIds: Kernel.Prelude.maybe [] (map Kernel.Types.Id.Id) preferredSecondarySpecialLocIds|E
 
   toTType:
     canSwitchToRental: Kernel.Prelude.Just|I
     canSwitchToInterCity: Kernel.Prelude.Just|I
+    isSpecialLocWarrior: Kernel.Prelude.Just|I
     acUsageRestrictionType: Kernel.Prelude.Just|I
     hasAdvanceBooking: Kernel.Prelude.Just|I
     forwardBatchingEnabled: Kernel.Prelude.Just|I
     isInteroperable: Kernel.Prelude.Just|I
     latestScheduledPickupLat: Kernel.Prelude.fmap (.lat)|I
     latestScheduledPickupLon: Kernel.Prelude.fmap (.lon)|I
+    preferredPrimarySpecialLocId: (Kernel.Types.Id.getId . (.id)) <$> preferredPrimarySpecialLoc|E
+    preferredSecondarySpecialLocIds:  Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds)|E
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -255,8 +273,13 @@ DriverInformation:
     updateDailyAndWeeklyCancellationRateBlockingCooldown:
       kvFunction: updateOneWithKV
       params: [dailyCancellationRateBlockingCooldown, weeklyCancellationRateBlockingCooldown]
-      where: driverId    updatePayoutRegAmountRefunded:
+      where: driverId
+    updatePayoutRegAmountRefunded:
       kvFunction: updateOneWithKV
       params: [payoutRegAmountRefunded]
+      where: driverId
+    updateSpecialLocWarriorInfo:
+      kvFunction: updateOneWithKV
+      params: [isSpecialLocWarrior, preferredPrimarySpecialLoc, preferredSecondarySpecialLocIds]
       where: driverId
 
