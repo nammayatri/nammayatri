@@ -31,9 +31,20 @@ data SpecialLocationFull = SpecialLocationFull
     locationName :: Text,
     category :: Text,
     merchantOperatingCityId :: Maybe Text,
+    linkedLocationsIds :: [Id D.SpecialLocation],
     gatesInfo :: [GD.GateInfoFull],
     gates :: [D.GatesInfo], --TODO: deprecate this later
     geoJson :: Maybe Text,
+    createdAt :: UTCTime
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
+data SpecialLocationWarrior = SpecialLocationWarrior
+  { id :: Id D.SpecialLocation,
+    locationName :: Text,
+    category :: Text,
+    merchantOperatingCityId :: Maybe Text,
+    linkedLocations :: [D.SpecialLocation],
     createdAt :: UTCTime
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
@@ -84,6 +95,9 @@ makeFullSpecialLocation (D.SpecialLocation {..}, specialShape) = do
 fullSpecialLocationRedisKey :: Text
 fullSpecialLocationRedisKey = "SpecialLocation:Full"
 
+specialLocationWarriorRedisKey :: Text -> Text
+specialLocationWarriorRedisKey category = "SpecialLocation:Warrior" <> category
+
 findFullSpecialLocationsByMerchantOperatingCityId :: (Transactionable m, CacheFlow m r) => Text -> m [SpecialLocationFull]
 findFullSpecialLocationsByMerchantOperatingCityId mocId = do
   Hedis.safeGet fullSpecialLocationRedisKey >>= \case
@@ -103,6 +117,25 @@ findFullSpecialLocationsByMerchantOperatingCityId' mocId = do
           ||. isNothing (specialLocation ^. SpecialLocationMerchantOperatingCityId)
       return (specialLocation, F.getGeomGeoJSON)
   mapM makeFullSpecialLocation mbRes
+
+findSpecialLocationsWarriorByMerchantOperatingCityId :: (Transactionable m, CacheFlow m r) => Text -> Text -> m [D.SpecialLocation]
+findSpecialLocationsWarriorByMerchantOperatingCityId mocId category = do
+  Hedis.safeGet (specialLocationWarriorRedisKey category) >>= \case
+    Just a -> pure a
+    Nothing -> do
+      specialLocations <- findSpecialLocationsWarriorByMerchantOperatingCityId' mocId category
+      Hedis.set (specialLocationWarriorRedisKey category) specialLocations
+      pure specialLocations
+
+findSpecialLocationsWarriorByMerchantOperatingCityId' :: (Transactionable m, CacheFlow m r) => Text -> Text -> m [D.SpecialLocation]
+findSpecialLocationsWarriorByMerchantOperatingCityId' mocId category = do
+  Esq.findAll $ do
+    specialLocation <- from $ table @SpecialLocationT
+    where_ $
+      specialLocation ^. SpecialLocationMerchantOperatingCityId ==. just (val mocId)
+        ||. isNothing (specialLocation ^. SpecialLocationMerchantOperatingCityId)
+        &&. specialLocation ^. SpecialLocationCategory ==. val category
+    return specialLocation
 
 findSpecialLocationByLatLongFull :: Transactionable m => LatLong -> m (Maybe SpecialLocationFull)
 findSpecialLocationByLatLongFull point = do
@@ -149,3 +182,13 @@ findSpecialLocationByLatLong point = do
 
 deleteById :: Id D.SpecialLocation -> SqlDB ()
 deleteById = Esq.deleteByKey @SpecialLocationT
+
+specialLocToSpecialLocWarrior :: Transactionable m => D.SpecialLocation -> m SpecialLocationWarrior
+specialLocToSpecialLocWarrior D.SpecialLocation {..} = do
+  linkedLocations <- mapM Lib.Queries.SpecialLocation.findById linkedLocationsIds >>= pure . catMaybes
+  pure SpecialLocationWarrior {..}
+
+specialLocFullToSpecialLocWarrior :: Transactionable m => SpecialLocationFull -> m SpecialLocationWarrior
+specialLocFullToSpecialLocWarrior SpecialLocationFull {..} = do
+  linkedLocations <- mapM Lib.Queries.SpecialLocation.findById linkedLocationsIds >>= pure . catMaybes
+  pure SpecialLocationWarrior {..}

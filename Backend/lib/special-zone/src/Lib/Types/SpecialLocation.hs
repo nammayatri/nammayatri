@@ -37,6 +37,7 @@ data SpecialLocation = SpecialLocation
     merchantOperatingCityId :: Maybe Text,
     gates :: [GatesInfo], --TODO: deprecate this later
     geom :: Maybe Text,
+    linkedLocationsIds :: [Id SpecialLocation],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

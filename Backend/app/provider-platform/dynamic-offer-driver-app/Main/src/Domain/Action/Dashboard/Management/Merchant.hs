@@ -1558,6 +1558,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             createdAt = maybe now (.createdAt) mbExistingSpLoc,
             updatedAt = now,
             merchantOperatingCityId = (.id.getId) <$> merchantOperatingCity,
+            linkedLocationsIds = maybe [] (.linkedLocationsIds) mbExistingSpLoc,
             ..
           }
 
