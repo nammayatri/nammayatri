@@ -1,4 +1,8 @@
-module Screens.MultiModalFlow.Components.MetroCard where
+module Screens.MultiModalFlow.Components.MetroCard
+  ( view
+  , Action(..)
+  , dummyRouteInfo
+  ) where
 
 import Common.Types.App (LazyCheck(..))
 import Data.Array (take, (!!))

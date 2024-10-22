@@ -14,34 +14,35 @@
 -}
 module Screens.MultiModalFlow.JourneyTrackingScreen.ComponentConfig where
 
+import Debug
+
+import Components.BoxContainer as BoxContainer
+import Components.DropDownWithHeader as DropDownWithHeader
+import Components.GenericHeader as GenericHeader
+import Components.InfoBox as InfoBox
 import Components.PopUpModal as PopUpModal
 import Components.PopupWithCheckbox.Controller as PopupWithCheckboxController
 import Components.PrimaryButton as PrimaryButton
-import Components.GenericHeader as GenericHeader
+import Components.PrimaryButton as PrimaryButton
+import Components.SourceToDestination as SourceToDestination
+import Data.Array (find)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Engineering.Helpers.Commons as EHC
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Language.Strings (getString)
+import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
 import Prelude (map, not, ($), (<>), (==), (&&), (/=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..))
+import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), Gravity(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Screens.DataExplainWithFetch.Controller as DC
+import Screens.EmergencyContactsScreen.ScreenData (getRideOptionFromKey)
 import Screens.Types as ST
 import Services.API (RideShareOptions(..))
 import Styles.Colors as Color
-import Components.SourceToDestination as SourceToDestination
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Array (find)
-import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Font.Size as FontSize
-import Font.Style as FontStyle
-import Language.Strings (getString)
-import Language.Types (STR(..))
-import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), Gravity(..))
-import Components.BoxContainer as BoxContainer
-import Components.DropDownWithHeader as DropDownWithHeader
-import Components.PrimaryButton as PrimaryButton
-import Components.InfoBox as InfoBox
-import Screens.DataExplainWithFetch.Controller as DC
-import Debug
-import Screens.EmergencyContactsScreen.ScreenData (getRideOptionFromKey)
 
 genericHeaderConfig :: ST.DataFetchScreenState -> GenericHeader.Config
 genericHeaderConfig state =
@@ -156,3 +157,6 @@ infoBoxConfig state config action =
         }
   in
     infoBoxConfig'
+
+getAlertWidgetConfig :: ST.JourneyTrackingScreenState -> ST.AlertWidgetConfig
+getAlertWidgetConfig _ = {}

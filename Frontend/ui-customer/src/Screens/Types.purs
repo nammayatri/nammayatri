@@ -3164,6 +3164,8 @@ type NotificationBody = {
   bookingId :: Maybe String
 }
 
+-- ######################################### MultiModalFlow ####################################################
+
 type JourneyTrackingScreenState = {
   data :: JourneyTrackingScreenData,
   props :: JourneyTrackingScreenProps
@@ -3174,3 +3176,5 @@ type JourneyTrackingScreenData = {
 }
 
 type JourneyTrackingScreenProps = {}
+
+type AlertWidgetConfig = {}

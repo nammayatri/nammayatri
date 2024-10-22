@@ -41,6 +41,7 @@ import Components.DropDownWithHeader.Controller as DropDownWithHeader
 import Components.PrimaryButton as PrimaryButton
 import Services.API as API
 import Screens.MultiModalFlow.Components.MetroCard as MetroCard
+import Screens.MultiModalFlow.Components.AlertWidget as AlertWidget
 import Screens.MultiModalFlow.Components.VehicleCard as VehicleCard
 import Effect.Aff (launchAff)
 import Presto.Core.Types.Language.Flow (Flow)
@@ -73,12 +74,17 @@ data Action
   | VehicleCardAction VehicleCard.Action
   | MapReady String String String
   | NoAction
+  | AlertWidgetAction AlertWidget.Action
+  | ShareRide
+  | ToggleViewButtonClicked
 
 eval :: Action -> ST.JourneyTrackingScreenState -> Eval Action ScreenOutput ST.JourneyTrackingScreenState
 
 eval (MetroCardAction MetroCard.ExpandStops) state = continue state
 
 eval (VehicleCardAction VehicleCard.ExpandStops) state = continue state
+
+eval (AlertWidgetAction AlertWidget.NoAction) state = continue state
 
 eval (MapReady _ _ _ )state = continueWithCmd state [do 
   void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
@@ -87,6 +93,9 @@ eval (MapReady _ _ _ )state = continueWithCmd state [do
     pure unit
   pure NoAction
 ]
+
+-- eval Backpressed state =
+
 
 eval _ state = update state
 
