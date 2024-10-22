@@ -127,6 +127,7 @@ data ScreenOutput = LogoutUser
   | EditDestBackPressed HomeScreenState
   | ExitAndEnterHomeScreen HomeScreenState
   | SelectEstimateAndQuotes HomeScreenState
+  | RetrySearchWithoutUpgrade Boolean HomeScreenState
   | UpdateChatScreen HomeScreenState
   | GoToTripSelectionScreen HomeScreenState
   | RideSummary HomeScreenState

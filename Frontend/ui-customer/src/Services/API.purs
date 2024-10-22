@@ -768,6 +768,7 @@ newtype DriverOfferAPIEntity = DriverOfferAPIEntity
   , validTill :: String
   , driverName :: String
   , distanceToPickup :: Maybe Number
+  , isUpgradedToCab :: Boolean
   , durationToPickup :: Maybe Int
   }
 
@@ -2177,6 +2178,20 @@ instance standardEncodeCancelEstimateReq :: StandardEncode CancelEstimateReq whe
 instance showCancelEstimateReq :: Show CancelEstimateReq where show = genericShow
 instance decodeCancelEstimateReq :: Decode CancelEstimateReq where decode = defaultDecode
 instance encodeCancelEstimateReq  :: Encode CancelEstimateReq where encode = defaultEncode
+
+----------------------------------------------------------------------- rejectUpgradeReq api -------------------------------------------------------------------
+
+data RejectUpgradeReq = RejectUpgradeReq String
+
+instance makeRejectUpgradeReq :: RestEndpoint RejectUpgradeReq  where
+ makeRequest reqBody@(RejectUpgradeReq estimateId) headers = defaultMakeRequestWithoutLogs POST (EP.rejectUpgrade estimateId) headers reqBody Nothing
+ encodeRequest req = standardEncode req
+
+derive instance genericRejectUpgradeReq :: Generic RejectUpgradeReq _
+instance standardEncodeRejectUpgradeReq :: StandardEncode RejectUpgradeReq where standardEncode (RejectUpgradeReq body) = standardEncode body
+instance showRejectUpgradeReq :: Show RejectUpgradeReq where show = genericShow
+instance decodeRejectUpgradeReq :: Decode RejectUpgradeReq where decode = defaultDecode
+instance encodeRejectUpgradeReq  :: Encode RejectUpgradeReq where encode = defaultEncode
 
 ----------------------------------------------------------------------- userCreateSos api -------------------------------------------------------------------
 

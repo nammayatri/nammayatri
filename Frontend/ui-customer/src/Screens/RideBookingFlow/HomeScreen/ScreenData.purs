@@ -602,6 +602,7 @@ dummyDriverOfferAPIEntity =
         , validTill: ""
         , driverName: ""
         , distanceToPickup: Nothing
+        , isUpgradedToCab: false
         , durationToPickup: Nothing
         }
 

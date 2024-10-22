@@ -1009,6 +1009,13 @@ cancelEstimateBT estimateId = do
       errorHandler errorPayload = do
             BackT $ pure GoBack
 
+rejectUpgrade :: String -> Flow GlobalState (Either ErrorResponse APISuccessResp)
+rejectUpgrade estimateId = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.rejectUpgrade estimateId) unwrapResponse $ callAPI headers (RejectUpgradeReq estimateId)
+    where
+        unwrapResponse (x) = x
+
 userSosBT :: UserSosReq -> FlowBT String UserSosRes
 userSosBT requestBody = do
      headers <- lift $ lift $ getHeaders "" false
