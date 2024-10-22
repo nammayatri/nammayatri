@@ -96,6 +96,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     isOnRide :: Bool,
     tollNames :: Maybe [Text],
     parkingCharge :: Maybe HighPrecMoney,
+    isFavourite :: Maybe Bool,
     isReferredRideReq :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
@@ -161,6 +162,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           useSilentFCMForForwardBatch = useSilentFCMForForwardBatch,
           isOnRide = nearbyReq.isForwardRequest,
           isReferredRideReq = searchRequest.driverIdForSearch $> True,
+          isFavourite = nearbyReq.isFavourite,
           ..
         }
   where
