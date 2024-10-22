@@ -453,8 +453,8 @@ let getAllCityConfig = () => {
   , "rideStartAudio" : defaultStartAudioConfig
   };
   
-  let cityConfigs = [
-    Object.assign({}, baseCityConfig, {
+  let cityConfigs = {
+    "Kolkata" : Object.assign({}, baseCityConfig, {
       cityName: "Kolkata",
       mapImage: "ys_ic_kolkata_map",
       cityCode: "std:033",
@@ -496,7 +496,7 @@ let getAllCityConfig = () => {
         }
       }
     }),
-    Object.assign({}, baseCityConfig, {
+    "Siliguri" : Object.assign({}, baseCityConfig, {
       cityName: "Siliguri",
       mapImage: "ys_ic_siliguri_map",
       cityCode: "std:0353",
@@ -534,7 +534,7 @@ let getAllCityConfig = () => {
         }
       }
     }),
-    Object.assign({}, baseCityConfig, {
+    "Asansol" : Object.assign({}, baseCityConfig, {
       cityName: "Asansol",
       mapImage: "ys_ic_asansol_map",
       cityCode: "std:0353",
@@ -544,7 +544,7 @@ let getAllCityConfig = () => {
       supportNumber: "08069724949",
       languageKey: "BN_IN"
     }),
-    Object.assign({}, baseCityConfig, {
+    "Durgapur" : Object.assign({}, baseCityConfig, {
       cityName: "Durgapur",
       mapImage: "ys_ic_durgapur_map",
       cityCode: "std:0342",
@@ -552,7 +552,7 @@ let getAllCityConfig = () => {
       cityLong: 87.3119,
       showSubscriptions: false
     }),
-    Object.assign({}, baseCityConfig, {
+    "Petrapole" : Object.assign({}, baseCityConfig, {
       cityName: "Petrapole",
       mapImage: "ys_ic_petrapole_map",
       cityCode: "std:03215",
@@ -560,6 +560,6 @@ let getAllCityConfig = () => {
       cityLong: 88.58293,
       showSubscriptions: false
     })
-  ];
+  };
   return cityConfigs;
 }

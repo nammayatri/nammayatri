@@ -172,6 +172,7 @@ import DecodeUtil as DU
 import Helpers.SplashUtils (hideSplashAndCallFlow, toggleSetupSplash)
 import RemoteConfig as RemoteConfig
 import Control.Apply as CA
+import Foreign.Object as FO
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
 baseAppFlow baseFlow event driverInfoResponse = do
@@ -3990,7 +3991,7 @@ chooseCityFlow = do
     straightLineDist lat lon state = do
       let distanceFromBangalore = getDistanceBwCordinates lat lon 12.9716 77.5946
           initialAccumulator = Tuple "Bangalore" distanceFromBangalore
-          result = DA.foldl (\acc city -> closestCity acc city lat lon) initialAccumulator state.data.config.cityConfig
+          result = FO.fold (\acc city cityObj -> closestCity acc cityObj lat lon) initialAccumulator state.data.config.cityConfig
           insideThreshold = (snd result) <= state.data.config.unserviceableThreshold
       if insideThreshold && (not state.props.isMockLocation) then
         modifyScreenState $ ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { data { locationSelected = Just $ fst result }, props { locationUnserviceable = false, locationDetectionFailed = false }}
@@ -4006,7 +4007,7 @@ chooseCityFlow = do
               compareStrings = on (==) (toLower <<< trim)
           case resp'.city of
             Just city -> do
-              let cityInList = any (\cityOb -> compareStrings cityOb.cityName city) state.data.config.cityConfig
+              let cityInList = isJust $ FO.lookup (toLower $ trim city) state.data.config.cityConfig
                   displayCityName = case city of 
                                       "TamilNaduCities" -> Just "Tamil Nadu"
                                       "Paris" -> Just "Odisha"
