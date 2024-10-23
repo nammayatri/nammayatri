@@ -60,6 +60,7 @@ data RideT f = RideT
     isAdvanceBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isFreeRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isPickupOrDestinationEdited :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     numberOfDeviation :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

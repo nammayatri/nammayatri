@@ -62,6 +62,7 @@ data Ride = Ride
     isAdvanceBooking :: Kernel.Prelude.Bool,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isFreeRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isPickupOrDestinationEdited :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     numberOfDeviation :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

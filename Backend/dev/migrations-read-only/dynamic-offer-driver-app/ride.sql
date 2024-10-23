@@ -177,3 +177,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN ride_tags text[] ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN has_stops boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN is_pickup_or_destination_edited boolean ;
