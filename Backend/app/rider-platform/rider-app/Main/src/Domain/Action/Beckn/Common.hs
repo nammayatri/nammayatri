@@ -397,7 +397,7 @@ rideAssignedReqHandler req = do
                   receiptEmail = email,
                   driverAccountId
                 }
-        handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent booking.merchantId merchantOperatingCityId booking.riderId ride createPaymentIntentReq)
+        handle (SPayment.paymentErrorHandler booking) $ withShortRetry (void $ SPayment.makePaymentIntent driverAccountId booking.merchantId merchantOperatingCityId booking.riderId ride createPaymentIntentReq)
       triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
       let category = case booking.specialLocationTag of
             Just _ -> "specialLocation"
