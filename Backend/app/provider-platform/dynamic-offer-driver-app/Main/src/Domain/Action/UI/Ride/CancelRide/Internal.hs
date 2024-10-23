@@ -22,9 +22,9 @@ import Data.Either.Extra (eitherToMaybe)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.CancellationFarePolicy as DTC
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Ride as DRide
@@ -57,7 +57,6 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
-import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -186,15 +185,15 @@ updateNammaTagsForCancelledRide ::
 updateNammaTagsForCancelledRide booking ride bookingCReason = do
   now <- getCurrentTime
   mbCallStatus <- QCallStatus.findOneByEntityId (Just ride.id.getId)
-  bookingUpdateRequests <- QBUR.findAllByBookingId Nothing Nothing booking.id
   let callAtemptByDriver = isJust mbCallStatus
-      isDestinationEdited = any (\x -> x.status == DBUR.DRIVER_ACCEPTED) bookingUpdateRequests
+      currentTime = floor $ utcTimeToPOSIXSeconds now
+      rideCreatedTime = floor $ utcTimeToPOSIXSeconds ride.createdAt
+      driverArrivalTime = floor . utcTimeToPOSIXSeconds <$> (ride.driverArrivalTime)
       tagData =
         TY.CancelRideTagData
           { ride = ride{status = DRide.CANCELLED},
             booking = booking{status = SRB.CANCELLED},
             cancellationReason = bookingCReason,
-            currentTime = now,
             ..
           }
   nammaTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.RideCancel tagData)

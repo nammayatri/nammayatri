@@ -18,8 +18,9 @@ data CancelRideTagData = CancelRideTagData
     booking :: SRB.Booking,
     cancellationReason :: DBCR.BookingCancellationReason,
     callAtemptByDriver :: Bool,
-    isDestinationEdited :: Bool,
-    currentTime :: UTCTime
+    currentTime :: Int,
+    rideCreatedTime :: Int,
+    driverArrivalTime :: Maybe Int
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
