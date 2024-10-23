@@ -195,6 +195,8 @@ apis:
         city: City
         routeCode: Text
         startStationCode: Text
+        endStationCode: Text
+        location: LatLong
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
 
@@ -321,5 +323,7 @@ apis:
         vehicleType: VehicleCategory
       query:
         input: Text
+        limit: Int
+        offset: Int
       response:
         type: "API.Types.UI.FRFSTicketService.AutocompleteRes"
