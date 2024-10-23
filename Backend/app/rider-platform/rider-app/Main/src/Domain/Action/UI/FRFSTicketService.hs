@@ -180,7 +180,8 @@ getFrfsStations (_personId, mId) mbCity mbRouteCode mbStartStationCode vehicleTy
                   address = Nothing,
                   distance = Nothing,
                   color = Nothing,
-                  towards = Nothing
+                  towards = Nothing,
+                  routeName = Nothing -- shrey00 fix this
                 }
           )
           filteredRouteStops
@@ -203,7 +204,8 @@ getFrfsStations (_personId, mId) mbCity mbRouteCode mbStartStationCode vehicleTy
                   address = Nothing,
                   distance = Nothing,
                   color = Nothing,
-                  towards = Nothing
+                  towards = Nothing,
+                  routeName = Nothing -- shrey00: fix this
                 }
           )
           stopsSortedBySequenceNumber
@@ -236,7 +238,8 @@ getFrfsStations (_personId, mId) mbCity mbRouteCode mbStartStationCode vehicleTy
                   address = Nothing,
                   distance = Nothing,
                   color = Nothing,
-                  towards = Nothing
+                  towards = Nothing,
+                  routeName = Nothing -- shrey00: fix this
                 }
           )
           possibleEndStops
@@ -252,6 +255,7 @@ getFrfsStations (_personId, mId) mbCity mbRouteCode mbStartStationCode vehicleTy
                   sequenceNum = Nothing,
                   distance = Nothing,
                   towards = Nothing,
+                  routeName = Nothing, -- shrey00: fix this
                   ..
                 }
           )
@@ -905,7 +909,8 @@ getFrfsAutocomplete (_, mId) mbInput opCity origin vehicle = do
                       sequenceNum = Nothing,
                       address = Nothing,
                       color = Nothing,
-                      towards = Nothing
+                      towards = Nothing,
+                      routeName = Nothing -- shrey00: fix this
                     }
               )
               (NonEmpty.toList stopsDistanceResp)

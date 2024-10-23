@@ -111,6 +111,7 @@ types:
     distance: Maybe Meters
     sequenceNum: Maybe Int
     towards: Maybe Text
+    routeName: Maybe Text
     derive: "Show"
 
   FRFSCanCancelStatus:

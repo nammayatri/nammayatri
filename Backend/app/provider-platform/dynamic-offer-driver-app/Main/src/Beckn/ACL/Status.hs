@@ -41,7 +41,7 @@ buildStatusReqV2 subscriber req = do
 
   let statusReqMessageRefId = req.statusReqMessage.statusReqMessageRefId
   transactionId <- (fmap UUID.toText req.statusReqContext.contextTransactionId) & fromMaybeM (InvalidRequest "TransactionId not found")
-  let bookingId = Id statusReqMessageRefId
+  let bookingId = Id <$> statusReqMessageRefId
   return $
     DStatus.StatusReq
       { ..

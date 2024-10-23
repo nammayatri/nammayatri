@@ -141,7 +141,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             $ sortOn (.routeSequenceNum) routeStations
         return $ Just (Quote.Metro (map (.id) routes))
   let freeTicketInterval = fromMaybe (maxBound :: Int) mbFreeTicketInterval
-  let stationsJSON = stations & map castStationToAPI & encodeToText
+  let stationsJSON = stations & map (castStationToAPI Nothing) & encodeToText
   let routeStationsJSON = routeStations & map castRouteStationToAPI & encodeToText
   let maxFreeTicketCashback = fromMaybe 0 mbMaxFreeTicketCashback
   uid <- generateGUID
@@ -192,8 +192,8 @@ getStartStation = find (\station -> station.stationType == Station.START)
 getEndStation :: [DStation] -> Maybe DStation
 getEndStation = find (\station -> station.stationType == Station.END)
 
-castStationToAPI :: DStation -> API.FRFSStationAPI
-castStationToAPI DStation {..} =
+castStationToAPI :: Maybe Text -> DStation -> API.FRFSStationAPI
+castStationToAPI routeLongName DStation {..} = do
   API.FRFSStationAPI
     { API.address = Nothing,
       API.code = stationCode,
@@ -204,7 +204,8 @@ castStationToAPI DStation {..} =
       API.stationType = Just stationType,
       API.sequenceNum = stopSequence,
       API.distance = Nothing,
-      API.towards = Nothing
+      API.towards = towards,
+      API.routeName = routeLongName
     }
 
 castRouteStationToAPI :: DRouteStation -> API.FRFSRouteStationsAPI
@@ -217,5 +218,11 @@ castRouteStationToAPI DRouteStation {..} =
       API.longName = routeLongName,
       API.shortName = routeShortName,
       API.sequenceNum = routeSequenceNum,
-      API.stations = map castStationToAPI routeStations
+      API.stations = map (castStationToAPI (Just routeLongName)) routeStations
     }
+
+evaluateTowardsStation :: DStation -> Int -> Maybe Text
+evaluateTowardsStation DStation {..} nextStationSequence
+  | (stationType == Station.TRANSIT) && ((fromMaybe 0 stopSequence) > nextStationSequence) = Just stationName
+  | (stationType == Station.TRANSIT) && ((fromMaybe 9999 stopSequence) < nextStationSequence) = Just stationName
+  | otherwise = Nothing
