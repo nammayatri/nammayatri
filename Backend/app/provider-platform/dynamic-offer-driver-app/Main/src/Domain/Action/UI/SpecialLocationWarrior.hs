@@ -41,7 +41,7 @@ getSpecialLocationListCategory ::
   )
 getSpecialLocationListCategory (_, _, merchanOperatingCityId) category = do
   specialLocations <- SpecialLocation.findSpecialLocationsWarriorByMerchantOperatingCityId merchanOperatingCityId.getId category
-  mapM SpecialLocation.specialLocToSpecialLocWarrior specialLocations
+  mapM SpecialLocation.specialLocToSpecialLocWarrior (filter (notNull . (.gates)) specialLocations)
 
 getGetInfoSpecialLocWarrior ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
