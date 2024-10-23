@@ -114,6 +114,7 @@ Ride:
     deliveryFileIds: Maybe [Id MediaFile]
     estimatedEndTimeRange: Maybe EstimatedEndTimeRange
     rideTags: Maybe [Text]
+    isPickupOrDestinationEdited: Maybe Bool
 
   sqlType:
     id: character(36)
@@ -271,6 +272,10 @@ Ride:
     updateRideTags:
       kvFunction: updateOneWithKV
       params: [rideTags]
+      where: id
+    updateIsPickupOrDestinationEdited:
+      kvFunction: updateOneWithKV
+      params: [isPickupOrDestinationEdited]
       where: id
 
   excludedDefaultQueries:
