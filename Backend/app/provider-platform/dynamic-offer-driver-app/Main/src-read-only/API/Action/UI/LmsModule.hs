@@ -29,11 +29,14 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "lms" :> "listAllModules" :> QueryParam "language" Kernel.External.Types.Language :> QueryParam "limit" Kernel.Prelude.Int
       :> QueryParam
-           "offset"
-           Kernel.Prelude.Int
-      :> QueryParam "variant" Domain.Types.VehicleVariant.VehicleVariant
+           "moduleSection"
+           Domain.Types.LmsModule.ModuleSection
+      :> QueryParam "offset" Kernel.Prelude.Int
+      :> QueryParam
+           "variant"
+           Domain.Types.VehicleVariant.VehicleVariant
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.LmsModule.LmsGetModuleRes
       :<|> TokenAuth
       :> "lms"
@@ -45,7 +48,7 @@ type API =
            "language"
            Kernel.External.Types.Language
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.LmsModule.LmsGetVideosRes
       :<|> TokenAuth
       :> "lms"
@@ -57,35 +60,35 @@ type API =
            "language"
            Kernel.External.Types.Language
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.LmsModule.LmsGetQuizRes
       :<|> TokenAuth
       :> "lms"
       :> "markVideoAsStarted"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.LmsModule.VideoUpdateAPIReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "lms"
       :> "markVideoAsCompleted"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.LmsModule.VideoUpdateAPIReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "lms"
       :> "question"
       :> "confirm"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.LmsModule.QuestionConfirmReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.LmsModule.QuestionConfirmRes
   )
 
@@ -97,13 +100,14 @@ getLmsListAllModules ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe Kernel.External.Types.Language ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant ->
+    Kernel.Prelude.Maybe (Kernel.External.Types.Language) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Domain.Types.LmsModule.ModuleSection) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Domain.Types.VehicleVariant.VehicleVariant) ->
     Environment.FlowHandler API.Types.UI.LmsModule.LmsGetModuleRes
   )
-getLmsListAllModules a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsModule.getLmsListAllModules (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+getLmsListAllModules a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsModule.getLmsListAllModules (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
 
 getLmsListAllVideos ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -111,7 +115,7 @@ getLmsListAllVideos ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule ->
-    Kernel.Prelude.Maybe Kernel.External.Types.Language ->
+    Kernel.Prelude.Maybe (Kernel.External.Types.Language) ->
     Environment.FlowHandler API.Types.UI.LmsModule.LmsGetVideosRes
   )
 getLmsListAllVideos a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsModule.getLmsListAllVideos (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
@@ -122,7 +126,7 @@ getLmsListAllQuiz ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule ->
-    Kernel.Prelude.Maybe Kernel.External.Types.Language ->
+    Kernel.Prelude.Maybe (Kernel.External.Types.Language) ->
     Environment.FlowHandler API.Types.UI.LmsModule.LmsGetQuizRes
   )
 getLmsListAllQuiz a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.LmsModule.getLmsListAllQuiz (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

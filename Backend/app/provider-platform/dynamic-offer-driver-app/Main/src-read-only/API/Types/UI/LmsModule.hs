@@ -55,6 +55,7 @@ data LmsModuleRes = LmsModuleRes
     moduleCompletionCriteria :: Domain.Types.LmsModule.ModuleCompletionCriteria,
     moduleCompletionStatus :: Domain.Types.DriverModuleCompletion.ModuleCompletionStatus,
     moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
+    moduleSection :: Data.Maybe.Maybe Domain.Types.LmsModule.ModuleSection,
     name :: Data.Text.Text,
     noOfVideos :: Kernel.Prelude.Int,
     noOfVideosCompleted :: Kernel.Prelude.Int,

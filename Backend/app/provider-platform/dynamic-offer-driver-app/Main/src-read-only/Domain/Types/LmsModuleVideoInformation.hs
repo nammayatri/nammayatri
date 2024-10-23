@@ -22,4 +22,4 @@ data LmsModuleVideoInformation = LmsModuleVideoInformation
 
 data VideoStatus = ACTIVE | INACTIVE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''VideoStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''VideoStatus))
