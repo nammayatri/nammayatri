@@ -559,7 +559,7 @@ filterWithFareAndVariant state estimates estimateAndQuoteConfig preferredVariant
         map (\sortedEstimate -> sortedEstimate.item) sortedEstimates
 
   filterEstimateByVariants :: Array String -> Array EstimateAPIEntity -> Array EstimateAPIEntity
-  filterEstimateByVariants variant estimates = DA.take 1 (sortEstimateWithVariantOrder (DA.filter (\(EstimateAPIEntity item) -> DA.any (_ == fromMaybe "" item.serviceTierName) variant) estimates) variant)
+  filterEstimateByVariants variant estimates = DA.take 1 (sortEstimateWithVariantOrder (DA.filter (\(EstimateAPIEntity item) -> DA.any (_ == item.vehicleVariant) variant) estimates) variant)
 
 
 getFareFromEstimate :: EstimateAPIEntity -> Int
