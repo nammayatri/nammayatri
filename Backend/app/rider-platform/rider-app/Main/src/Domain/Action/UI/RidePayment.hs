@@ -196,8 +196,8 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                   receiptEmail = email,
                   driverAccountId
                 }
-        paymentIntentResp <- Payment.makePaymentIntent person.merchantId person.merchantOperatingCityId person.id ride createPaymentIntentReq
-        void $ Payment.chargePaymentIntent person.merchantId person.merchantOperatingCityId paymentIntentResp.paymentIntentId
+        paymentIntentResp <- Payment.makePaymentIntent driverAccountId person.merchantId person.merchantOperatingCityId person.id ride createPaymentIntentReq
+        void $ Payment.chargePaymentIntent driverAccountId person.merchantId person.merchantOperatingCityId paymentIntentResp.paymentIntentId
     createFareBreakup
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     void $ CallBPPInternal.populateTipAmount merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId tipRequest.amount.amount

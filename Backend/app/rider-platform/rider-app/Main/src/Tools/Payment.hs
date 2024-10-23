@@ -90,8 +90,8 @@ getCardList = runWithServiceConfig1 Payment.getCardList (.getCardList)
 createPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreatePaymentIntentReq -> m CreatePaymentIntentResp
 createPaymentIntent = runWithServiceConfig1 Payment.createPaymentIntent (.createPaymentIntent)
 
-cancelPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> PaymentIntentId -> m CreatePaymentIntentResp
-cancelPaymentIntent = runWithServiceConfig1 Payment.cancelPaymentIntent (.cancelPaymentIntent)
+cancelPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> PaymentIntentId -> m CreatePaymentIntentResp
+cancelPaymentIntent = runWithServiceConfig2 Payment.cancelPaymentIntent (.cancelPaymentIntent)
 
 getPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> PaymentIntentId -> m CreatePaymentIntentResp
 getPaymentIntent = runWithServiceConfig1 Payment.getPaymentIntent (.createPaymentIntent)
@@ -99,11 +99,11 @@ getPaymentIntent = runWithServiceConfig1 Payment.getPaymentIntent (.createPaymen
 updatePaymentMethodInIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> PaymentIntentId -> PaymentMethodId -> m ()
 updatePaymentMethodInIntent = runWithServiceConfig2 Payment.updatePaymentMethodInIntent (.updatePaymentMethodInIntent)
 
-capturePaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()
-capturePaymentIntent = runWithServiceConfig3 Payment.capturePaymentIntent (.capturePaymentIntent)
+capturePaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()
+capturePaymentIntent = runWithServiceConfig4 Payment.capturePaymentIntent (.capturePaymentIntent)
 
-updateAmountInPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()
-updateAmountInPaymentIntent = runWithServiceConfig3 Payment.updateAmountInPaymentIntent (.updateAmountInPaymentIntent)
+updateAmountInPaymentIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()
+updateAmountInPaymentIntent = runWithServiceConfig4 Payment.updateAmountInPaymentIntent (.updateAmountInPaymentIntent)
 
 createSetupIntent :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CustomerId -> m CreateSetupIntentResp
 createSetupIntent = runWithServiceConfig1 Payment.createSetupIntent (.createSetupIntent)
@@ -173,23 +173,24 @@ runWithServiceConfig2 func getCfg merchantId merchantOperatingCityId req1 req2 =
     DMSC.PaymentServiceConfig msc -> func msc req1 req2
     _ -> throwError $ InternalError "Unknown Service Config"
 
-runWithServiceConfig3 ::
+runWithServiceConfig4 ::
   ServiceFlow m r =>
-  (Payment.PaymentServiceConfig -> req1 -> req2 -> req3 -> m resp) ->
+  (Payment.PaymentServiceConfig -> req1 -> req2 -> req3 -> req4 -> m resp) ->
   (DMSUC.MerchantServiceUsageConfig -> PaymentService) ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   req1 ->
   req2 ->
   req3 ->
+  req4 ->
   m resp
-runWithServiceConfig3 func getCfg merchantId merchantOperatingCityId req1 req2 req3 = do
+runWithServiceConfig4 func getCfg merchantId merchantOperatingCityId req1 req2 req3 req4 = do
   merchantConfig <- CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   merchantPaymentServiceConfig <-
     CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.PaymentService $ getCfg merchantConfig)
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payment" (show $ getCfg merchantConfig))
   case merchantPaymentServiceConfig.serviceConfig of
-    DMSC.PaymentServiceConfig msc -> func msc req1 req2 req3
+    DMSC.PaymentServiceConfig msc -> func msc req1 req2 req3 req4
     _ -> throwError $ InternalError "Unknown Service Config"
 
 data PaymentServiceType = Normal | FRFSBooking | FRFSBusBooking

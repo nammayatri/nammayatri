@@ -31,19 +31,20 @@ makePaymentIntent ::
     CacheFlow m r,
     HasShortDurationRetryCfg r c
   ) =>
+  Payment.AccountId ->
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id Person.Person ->
   Ride.Ride ->
   Payment.CreatePaymentIntentReq ->
   m Payment.CreatePaymentIntentResp
-makePaymentIntent merchantId merchantOpCityId personId ride createPaymentIntentReq = do
+makePaymentIntent accountId merchantId merchantOpCityId personId ride createPaymentIntentReq = do
   let commonMerchantId = cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @Person.Person @DPayment.Person personId
       commonRideId = cast @Ride.Ride @DPayment.Ride ride.id
       createPaymentIntentCall = TPayment.createPaymentIntent merchantId merchantOpCityId
-      updatePaymentIntentAmountCall = TPayment.updateAmountInPaymentIntent merchantId merchantOpCityId
-      capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId
+      updatePaymentIntentAmountCall = TPayment.updateAmountInPaymentIntent merchantId merchantOpCityId accountId
+      capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId accountId
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
   DPayment.createPaymentIntentService commonMerchantId commonPersonId commonRideId ride.shortId.getShortId createPaymentIntentReq createPaymentIntentCall updatePaymentIntentAmountCall capturePaymentIntentCall getPaymentIntentCall
 
@@ -54,12 +55,13 @@ cancelPaymentIntent ::
     CacheFlow m r,
     HasShortDurationRetryCfg r c
   ) =>
+  Payment.AccountId ->
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id Ride.Ride ->
   m ()
-cancelPaymentIntent merchantId merchantOpCityId rideId = do
-  let cancelPaymentIntentCall = TPayment.cancelPaymentIntent merchantId merchantOpCityId
+cancelPaymentIntent accountId merchantId merchantOpCityId rideId = do
+  let cancelPaymentIntentCall = TPayment.cancelPaymentIntent merchantId merchantOpCityId accountId
   DPayment.cancelPaymentIntentService (cast @Ride.Ride @DPayment.Ride rideId) cancelPaymentIntentCall
 
 chargePaymentIntent ::
@@ -69,12 +71,13 @@ chargePaymentIntent ::
     CacheFlow m r,
     HasShortDurationRetryCfg r c
   ) =>
+  Payment.AccountId ->
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Payment.PaymentIntentId ->
   m Bool
-chargePaymentIntent merchantId merchantOpCityId paymentIntentId = do
-  let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId
+chargePaymentIntent accountId merchantId merchantOpCityId paymentIntentId = do
+  let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId accountId
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
   DPayment.chargePaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall
 
@@ -114,12 +117,13 @@ makeCxCancellationPayment ::
     CacheFlow m r,
     HasShortDurationRetryCfg r c
   ) =>
+  Payment.AccountId ->
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Payment.PaymentIntentId ->
   HighPrecMoney ->
   m Bool
-makeCxCancellationPayment merchantId merchantOpCityId paymentIntentId cancellationAmount = do
-  let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId
+makeCxCancellationPayment accountId merchantId merchantOpCityId paymentIntentId cancellationAmount = do
+  let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId accountId
       getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId
   DPayment.updateForCXCancelPaymentIntentService paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount

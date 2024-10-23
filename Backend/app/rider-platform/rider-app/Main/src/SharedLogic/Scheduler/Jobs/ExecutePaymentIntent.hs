@@ -77,8 +77,8 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             }
 
     booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-    paymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId person.id ride createPaymentIntentReq
-    paymentCharged <- SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId paymentIntentResp.paymentIntentId
+    paymentIntentResp <- SPayment.makePaymentIntent driverAccountId person.merchantId person.merchantOperatingCityId person.id ride createPaymentIntentReq -- todo: we should update paymentintent which is already created.
+    paymentCharged <- SPayment.chargePaymentIntent driverAccountId booking.merchantId booking.merchantOperatingCityId paymentIntentResp.paymentIntentId
     when paymentCharged $ QRide.markPaymentStatus DRide.Completed ride.id
   return Complete
 
@@ -108,9 +108,10 @@ cancelExecutePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
   order <- QOrder.findById (cast rideId) >>= fromMaybeM (PaymentOrderNotFound rideId.getId)
   mobileCountryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
   when (isNothing ride.cancellationFeeIfCancelled) $ do
     QRide.updateCancellationFeeIfCancelledField (Just cancellationAmount.amount) rideId
-  paymentCharged <- SPayment.makeCxCancellationPayment booking.merchantId booking.merchantOperatingCityId order.paymentServiceOrderId cancellationAmount.amount
+  paymentCharged <- SPayment.makeCxCancellationPayment driverAccountId booking.merchantId booking.merchantOperatingCityId order.paymentServiceOrderId cancellationAmount.amount
   when paymentCharged $ QRide.markPaymentStatus DRide.Completed rideId
   void $
     CallBPPInternal.customerCancellationDuesSync

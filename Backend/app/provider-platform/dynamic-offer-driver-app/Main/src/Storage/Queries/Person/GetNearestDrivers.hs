@@ -3,7 +3,7 @@ module Storage.Queries.Person.GetNearestDrivers where
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
-import qualified Data.Text as T
+-- import qualified Data.Text as T
 import Domain.Types
 import qualified Domain.Types.Common as DriverInfo
 import Domain.Types.Merchant
@@ -82,7 +82,7 @@ getNearestDrivers NearestDriversReq {..} = do
   drivers <- Int.getDrivers vehicle
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
   driverBankAccounts <-
-    if onlinePayment
+    if onlinePayment && False
       then QDBA.getDrivers (driverLocs <&> (.driverId))
       else return []
 
@@ -99,13 +99,13 @@ getNearestDrivers NearestDriversReq {..} = do
           driverBankAccountHashMap = HashMap.fromList $ catMaybes $ (\dba -> if dba.chargesEnabled then Just (dba.driverId, dba.accountId) else Nothing) <$> driverBankAccounts
        in concat $ mapMaybe (buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap driverBankAccountHashMap) driverLocations
 
-    buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap driverBankAccountHashMap location = do
+    buildFullDriverList personHashMap vehicleHashMap driverInfoHashMap _driverBankAccountHashMap location = do
       let driverId' = location.driverId
       person <- HashMap.lookup driverId' personHashMap
       -- driverStats <- HashMap.lookup driverId' driverStatsHashMap
       vehicle <- HashMap.lookup driverId' vehicleHashMap
       info <- HashMap.lookup driverId' driverInfoHashMap
-      _ <- if onlinePayment then HashMap.lookup driverId' driverBankAccountHashMap else Just T.empty -- is there any better way to do this?
+      -- _ <- if onlinePayment then HashMap.lookup driverId' driverBankAccountHashMap else Just T.empty -- is there any better way to do this?
       let dist = (realToFrac $ distanceBetweenInMeters fromLocLatLong $ LatLong {lat = location.lat, lon = location.lon}) :: Double
       -- ideally should be there inside the vehicle.selectedServiceTiers but still to make sure we have a default service tier for the driver
       let cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
