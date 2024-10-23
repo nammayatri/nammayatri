@@ -44,6 +44,7 @@ data SpecialLocationWarrior = SpecialLocationWarrior
     locationName :: Text,
     category :: Text,
     merchantOperatingCityId :: Maybe Text,
+    gates :: [D.GatesInfo],
     linkedLocations :: [D.SpecialLocation],
     createdAt :: UTCTime
   }
@@ -92,6 +93,11 @@ makeFullSpecialLocation (D.SpecialLocation {..}, specialShape) = do
         ..
       }
 
+buildSpecialLocationWithGates :: Transactionable m => D.SpecialLocation -> m D.SpecialLocation
+buildSpecialLocationWithGates specialLocation = do
+  gates <- QGI.findAllGatesBySpecialLocationIdWithoutGeoJson specialLocation.id
+  pure specialLocation {D.gates = map (\(GD.GateInfo {..}) -> D.GatesInfo {..}) gates}
+
 fullSpecialLocationRedisKey :: Text
 fullSpecialLocationRedisKey = "SpecialLocation:Full"
 
@@ -129,13 +135,14 @@ findSpecialLocationsWarriorByMerchantOperatingCityId mocId category = do
 
 findSpecialLocationsWarriorByMerchantOperatingCityId' :: (Transactionable m, CacheFlow m r) => Text -> Text -> m [D.SpecialLocation]
 findSpecialLocationsWarriorByMerchantOperatingCityId' mocId category = do
-  Esq.findAll $ do
+  specialLocationWithoutGates <- Esq.findAll $ do
     specialLocation <- from $ table @SpecialLocationT
     where_ $
       specialLocation ^. SpecialLocationMerchantOperatingCityId ==. just (val mocId)
         ||. isNothing (specialLocation ^. SpecialLocationMerchantOperatingCityId)
         &&. specialLocation ^. SpecialLocationCategory ==. val category
     return specialLocation
+  mapM buildSpecialLocationWithGates specialLocationWithoutGates
 
 findSpecialLocationByLatLongFull :: Transactionable m => LatLong -> m (Maybe SpecialLocationFull)
 findSpecialLocationByLatLongFull point = do
