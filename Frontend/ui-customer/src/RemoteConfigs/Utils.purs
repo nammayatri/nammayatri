@@ -159,3 +159,14 @@ defaultSafetyConfig = {
     bannerPosition : 0, 
     showOnRide : ""
 }
+
+getMetroConfig :: String -> MetroConfig
+getMetroConfig city = do
+    let config = fetchRemoteConfigString "metro_configs"
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultMetroConfig
+    getCityBasedConfig value city
+
+defaultMetroConfig :: MetroConfig
+defaultMetroConfig = {
+  tnc : ""
+}

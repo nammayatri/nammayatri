@@ -78,6 +78,8 @@ let serviceClickhouseCfg =
       , retryInterval = [ +0 ]
       }
 
+let dashboardClickhouseCfg = serviceClickhouseCfg
+
 let kafkaConsumerCfg =
       { topicNames = [ "rider-app-events-updates" ], consumerProperties }
 
@@ -125,6 +127,7 @@ in  { hedisCfg
     , cacConfig
     , kafkaClickhouseCfg
     , serviceClickhouseCfg
+    , dashboardClickhouseCfg
     , encTools
     , healthCheckAppCfg = None genericCommon.healthCheckAppCfgT
     , kafkaProducerCfg

@@ -1057,12 +1057,12 @@ public class MobilityAppBridge extends HyperBridge {
 
     @JavascriptInterface
     public void detectPhoneNumbers(final String callback) {
+        try {
         storeDetectPhoneNumbersCallBack = callback;
         HintRequest hintRequest = new HintRequest.Builder()
                 .setPhoneNumberIdentifierSupported(true)
                 .build();
         PendingIntent intent = Credentials.getClient(bridgeComponents.getContext()).getHintPickerIntent(hintRequest);
-        try {
             if (bridgeComponents.getActivity() != null) {
                 startIntentSenderForResult(bridgeComponents.getActivity(), intent.getIntentSender(), CREDENTIAL_PICKER_REQUEST, null, 0, 0, 0, new Bundle());
             }

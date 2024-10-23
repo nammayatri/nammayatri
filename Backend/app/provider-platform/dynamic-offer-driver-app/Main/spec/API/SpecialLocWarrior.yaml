@@ -1,0 +1,43 @@
+imports:
+  Text: Data.Text
+  SpecialLocationWarrior: Lib.Queries.SpecialLocation
+  SpecialLocation: Lib.Types.SpecialLocation
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+
+module: SpecialLocationWarrior
+types:
+  SpecialLocWarriorInfoRes:
+    isSpecialLocWarrior: Bool
+    preferredPrimarySpecialLoc: Maybe SpecialLocationWarrior
+    preferredSecondarySpecialLocIds: "[(Id SpecialLocation)]"
+  SpecialLocWarriorInfoReq:
+    isSpecialLocWarrior: Bool
+    preferredPrimarySpecialLocId : Maybe (Id SpecialLocation)
+    preferredSecondarySpecialLocIds : "[(Id SpecialLocation)]"
+apis:
+  - GET:
+      endpoint: /specialLocation/list/category
+      mandatoryQuery:
+        category: Text
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: "[SpecialLocationWarrior]"
+
+  - GET:
+      endpoint: getInfo/specialLocWarrior
+      mandatoryQuery:
+        driverId: Id Person
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: SpecialLocWarriorInfoRes
+
+  - POST:
+      endpoint: updateInfo/specialLocWarrior
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery:
+        driverId: Id Person
+      request:
+        type: SpecialLocWarriorInfoReq
+      response:
+        type: SpecialLocWarriorInfoRes

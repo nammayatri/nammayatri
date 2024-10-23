@@ -39,5 +39,5 @@ handler = removeExpires
 
 removeExpires :: ShortId Merchant.Merchant -> FlowHandler APISuccess
 removeExpires merchantId = do
-  m <- withFlowHandlerAPI' $ findMerchantByShortId merchantId
-  withFlowHandlerAPI' $ DAH.removeExpiredHotSpots m.id
+  m <- withDashboardFlowHandlerAPI' $ findMerchantByShortId merchantId
+  withDashboardFlowHandlerAPI' $ DAH.removeExpiredHotSpots m.id

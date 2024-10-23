@@ -19,6 +19,7 @@ import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import qualified Kernel.Utils.GenericPretty
 import qualified Kernel.Utils.TH
+import qualified Servant.Client.Core
 import qualified Tools.Beam.UtilsTH
 
 data Estimate = Estimate
@@ -53,10 +54,11 @@ data Estimate = Estimate
     providerId :: Kernel.Prelude.Text,
     providerMobileNumber :: Kernel.Prelude.Text,
     providerName :: Kernel.Prelude.Text,
-    providerUrl :: Kernel.Types.Common.BaseUrl,
+    providerUrl :: Servant.Client.Core.BaseUrl,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierShortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    smartTipSuggestion :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Domain.Types.Estimate.EstimateStatus,
@@ -66,7 +68,7 @@ data Estimate = Estimate
     tripTerms :: Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms,
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,
-    vehicleIconUrl :: Kernel.Prelude.Maybe Kernel.Types.Common.BaseUrl,
+    vehicleIconUrl :: Kernel.Prelude.Maybe Servant.Client.Core.BaseUrl,
     vehicleServiceTierAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleServiceTierType :: Domain.Types.ServiceTierType.ServiceTierType,

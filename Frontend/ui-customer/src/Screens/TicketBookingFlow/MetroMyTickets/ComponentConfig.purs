@@ -16,7 +16,7 @@ import JBridge as JB
 import Screens.Types as ST
 import Components.RequestInfoCard as InfoCard
 import Language.Strings 
-import Resources.Localizable.EN
+import Resources.LocalizableV2.Strings (getEN)
 import Language.Types
 import Services.API as API
 import Helpers.Utils
@@ -33,6 +33,8 @@ getTicketStatusConfig ticketCard =
     "PAYMENT_PENDING" -> mkTicketStatusConfig (getString PENDING_STR) Color.yellow900 (fetchImage FF_COMMON_ASSET "ny_ic_yellow_clock")
     "CONFIRMING" -> mkTicketStatusConfig (getString CONFIRMING_STR) Color.red900 (fetchImage FF_COMMON_ASSET "ny_ic_yellow_clock")
     "FAILED" -> mkTicketStatusConfig (getString FAILED_STR) Color.red900 (fetchImage FF_COMMON_ASSET "ny_ic_red_triangle_warning")
+    "CANCEL_INITIATED" -> mkTicketStatusConfig (getString FAILED_STR) Color.red900 (fetchImage FF_COMMON_ASSET "ny_ic_red_triangle_warning")
+    "TECHNICAL_CANCEL_REJECTED" -> mkTicketStatusConfig (getString FAILED_STR) Color.red900 (fetchImage FF_COMMON_ASSET "ny_ic_red_triangle_warning")
     "CANCELLED" -> mkTicketStatusConfig (getString CANCELLED) Color.red900 (fetchImage FF_COMMON_ASSET "ny_ic_cross_red_outline")
     "CONFIRMED" -> mkTicketStatusConfig (getString CONFIRMED_STR) Color.black800 (fetchImage FF_COMMON_ASSET "ny_ic_green_tick")
     "EXPIRED" -> mkTicketStatusConfig (getString EXPIRED_STR) Color.black800 (fetchImage FF_ASSET "ny_ic_info")

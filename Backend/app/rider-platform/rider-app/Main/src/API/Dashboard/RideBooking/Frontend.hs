@@ -59,9 +59,9 @@ handler =
     :<|> callNotifyEvent
 
 callGetPersonFlowStatus :: Id DP.Person -> Maybe Bool -> FlowHandler DFrontend.GetPersonFlowStatusRes
-callGetPersonFlowStatus personId isPolling = withFlowHandlerAPI $ do
+callGetPersonFlowStatus personId isPolling = withDashboardFlowHandlerAPI $ do
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId) --
   DFrontend.getPersonFlowStatus personId person.merchantId isPolling
 
 callNotifyEvent :: Id DP.Person -> DFrontend.NotifyEventReq -> FlowHandler DFrontend.NotifyEventResp
-callNotifyEvent personId = withFlowHandlerAPI . DFrontend.notifyEvent personId
+callNotifyEvent personId = withDashboardFlowHandlerAPI . DFrontend.notifyEvent personId

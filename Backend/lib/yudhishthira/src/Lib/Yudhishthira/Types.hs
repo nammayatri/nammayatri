@@ -45,7 +45,6 @@ module Lib.Yudhishthira.Types
     AppDynamicLogicDomainResp,
     ChakraQueryResp,
     UpdateTagReq (..),
-    -- DynamicPricingResult (..),
   )
 where
 

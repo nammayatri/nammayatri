@@ -19,7 +19,7 @@ import MerchantConfig.Types
 import JBridge as JB
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Style as FontStyle
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 
 type ContentConfig = 
    { primaryText :: String,

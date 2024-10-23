@@ -1,0 +1,25 @@
+imports:
+  Route: Domain.Types.Route
+  RouteStopMapping: Domain.Types.RouteStopMapping
+  LatLong: Kernel.External.Maps.Types
+  UTCTime: Kernel.Prelude
+
+
+module: TrackRoute
+
+types:
+  TrackingResp:
+    vehicleTrackingInfo : "[VehicleInfo]"
+  VehicleInfo:
+    location: LatLong
+    nextStop: RouteStopMapping
+    vehicleId: Text
+    locationUpdateTime: Maybe UTCTime
+
+apis:
+  - GET:
+      endpoint: /track/{routeCode}/vehicles
+      params:
+        routeCode: Text
+      response:
+        type: "TrackingResp"

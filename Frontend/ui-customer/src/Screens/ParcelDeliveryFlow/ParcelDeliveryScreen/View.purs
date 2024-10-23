@@ -43,7 +43,7 @@ import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.Controller (Action(..), ScreenOutput, eval, validateInput)
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ComponentConfig (chooseVehicleConfig, deliveryPickupDetialsModalConfig, genericHeaderConfig, primaryButtonConfig, rateCardConfig, decodeAddress')
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
@@ -409,9 +409,10 @@ separatorView push state =
 
 instructionData :: Array { title :: String, image :: String }
 instructionData = 
-  [ { title: getString $ ITEMS_SHOULD_FIT_IN_BACKPACK "5", image: "ny_ic_backpack" }
+  [ { title: getString $ ITEMS_SHOULD_FIT_IN_BACKPACK "15", image: "ny_ic_backpack" }
   , { title: getString AVOID_SENDING_HIGH_VALUE_ITEMS, image: "ny_ic_streamline_fragile_solid" }
   , { title: getString ILLEGAL_ITEMS_PROHIBITED, image: "ny_ic_prohibited" }
+  , { title: getString $ MAX_PARCEL_SIZE "40" "40" "40", image: "ny_ic_backpack" }
   ]
 
 

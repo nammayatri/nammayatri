@@ -98,7 +98,8 @@ data Pricing = Pricing
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     specialLocationName :: Maybe Text,
-    vehicleIconUrl :: Maybe BaseUrl
+    vehicleIconUrl :: Maybe BaseUrl,
+    smartTipSuggestion :: Maybe HighPrecMoney
   }
 
 data RateCardBreakupItem = RateCardBreakupItem
@@ -1255,7 +1256,7 @@ convertEstimateToPricing specialLocationName (DEst.Estimate {..}, serviceTier, m
       fulfillmentType = Utils.tripCategoryToFulfillmentType tripCategory,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
-      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
+      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.defaultForVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
       vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
@@ -1274,11 +1275,12 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
       fulfillmentType = Utils.tripCategoryToFulfillmentType tripCategory,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
-      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
+      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.defaultForVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
       vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
       isAirConditioned = serviceTier.isAirConditioned,
+      smartTipSuggestion = Nothing,
       ..
     }
 
@@ -1294,12 +1296,13 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       fulfillmentType = Utils.tripCategoryToFulfillmentType tripCategory,
       serviceTierName = serviceTier.name,
       serviceTierDescription = serviceTier.shortDescription,
-      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.allowedVehicleVariant), -- ideally this should not be empty
+      vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.defaultForVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = Nothing,
       isCustomerPrefferedSearchRoute = Nothing,
       isBlockedRoute = Nothing,
       specialLocationName = Nothing,
       vehicleIconUrl = Nothing,
+      smartTipSuggestion = Nothing,
       ..
     }
 
@@ -1325,8 +1328,24 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP
               <> isBlockedRouteSingleton pricing.isBlockedRoute
               <> tollNamesSingleton pricing.tollNames
               <> durationToNearestDriverTagSingleton
+              <> smartTipSuggestionTagSingleton
         }
   where
+    smartTipSuggestionTagSingleton
+      | isNothing pricing.smartTipSuggestion || not isValueAddNP = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.SMART_TIP_SUGGESTION,
+                      descriptorName = Just "Smart Tip Suggestion",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = show <$> pricing.smartTipSuggestion
+            }
     specialLocationTagSingleton specialLocationTag
       | isNothing specialLocationTag = Nothing
       | otherwise =
@@ -1418,7 +1437,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP
               tagValue = show <$> tollNames
             }
     durationToNearestDriverTagSingleton
-      | isNothing (pricing.distanceToNearestDriver) || not isValueAddNP = Nothing
+      | isNothing pricing.distanceToNearestDriver || not isValueAddNP = Nothing
       | otherwise =
         Just . List.singleton $
           Spec.Tag

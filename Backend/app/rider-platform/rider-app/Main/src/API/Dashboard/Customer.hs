@@ -64,41 +64,41 @@ listCustomers ::
   Maybe (Id Common.Customer) ->
   FlowHandler Common.CustomerListRes
 listCustomers merchantShortId opCity mbLimit mbOffset enabled blocked personId =
-  withFlowHandlerAPI . DCustomer.listCustomers merchantShortId opCity mbLimit mbOffset enabled blocked personId
+  withDashboardFlowHandlerAPI . DCustomer.listCustomers merchantShortId opCity mbLimit mbOffset enabled blocked personId
 
 deleteCustomer ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Customer ->
   FlowHandler APISuccess
-deleteCustomer merchantShortId opCity personId = withFlowHandlerAPI $ DCustomer.deleteCustomer merchantShortId opCity personId
+deleteCustomer merchantShortId opCity personId = withDashboardFlowHandlerAPI $ DCustomer.deleteCustomer merchantShortId opCity personId
 
 blockCustomer ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Customer ->
   FlowHandler APISuccess
-blockCustomer merchantShortId opCity personId = withFlowHandlerAPI $ DCustomer.blockCustomer merchantShortId opCity personId
+blockCustomer merchantShortId opCity personId = withDashboardFlowHandlerAPI $ DCustomer.blockCustomer merchantShortId opCity personId
 
 unblockCustomer ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Customer ->
   FlowHandler APISuccess
-unblockCustomer merchantShortId opCity personId = withFlowHandlerAPI $ DCustomer.unblockCustomer merchantShortId opCity personId
+unblockCustomer merchantShortId opCity personId = withDashboardFlowHandlerAPI $ DCustomer.unblockCustomer merchantShortId opCity personId
 
 customerInfo ::
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Customer ->
   FlowHandler Common.CustomerInfoRes
-customerInfo merchantShortId opCity personId = withFlowHandlerAPI $ DCustomer.customerInfo merchantShortId opCity personId
+customerInfo merchantShortId opCity personId = withDashboardFlowHandlerAPI $ DCustomer.customerInfo merchantShortId opCity personId
 
 customerCancellationDuesSync :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Common.CustomerCancellationDuesSyncReq -> FlowHandler APISuccess
-customerCancellationDuesSync (ShortId merchantShortId) _ personId = withFlowHandlerAPI . DCustomer.customerCancellationDuesSync (ShortId merchantShortId) personId
+customerCancellationDuesSync (ShortId merchantShortId) _ personId = withDashboardFlowHandlerAPI . DCustomer.customerCancellationDuesSync (ShortId merchantShortId) personId
 
 getCancellationDuesDetails :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> FlowHandler Common.CancellationDuesDetailsRes
-getCancellationDuesDetails (ShortId merchantShortId) _ personId = withFlowHandlerAPI $ DCustomer.getCancellationDuesDetails (ShortId merchantShortId) personId
+getCancellationDuesDetails (ShortId merchantShortId) _ personId = withDashboardFlowHandlerAPI $ DCustomer.getCancellationDuesDetails (ShortId merchantShortId) personId
 
 updateSafetyCenterBlocking ::
   ShortId DM.Merchant ->
@@ -106,10 +106,10 @@ updateSafetyCenterBlocking ::
   Id Common.Customer ->
   Common.UpdateSafetyCenterBlockingReq ->
   FlowHandler APISuccess
-updateSafetyCenterBlocking _ _ personId = withFlowHandlerAPI . DCustomer.updateSafetyCenterBlocking personId
+updateSafetyCenterBlocking _ _ personId = withDashboardFlowHandlerAPI . DCustomer.updateSafetyCenterBlocking personId
 
 postCustomersPersonNumbers :: ShortId DM.Merchant -> Context.City -> Common.PersonIdsReq -> FlowHandler [Common.PersonRes]
-postCustomersPersonNumbers a b c = withFlowHandlerAPI $ DCustomer.getCustomerPersonNumbers a b c
+postCustomersPersonNumbers a b c = withDashboardFlowHandlerAPI $ DCustomer.getCustomerPersonNumbers a b c
 
 postCustomerPersonId :: ShortId DM.Merchant -> Context.City -> Common.PersonMobileNoReq -> FlowHandler [Common.PersonRes]
-postCustomerPersonId a b c = withFlowHandlerAPI $ DCustomer.getCustomerPersonId a b c
+postCustomerPersonId a b c = withDashboardFlowHandlerAPI $ DCustomer.getCustomerPersonId a b c

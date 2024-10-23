@@ -273,6 +273,7 @@ data IssueReportType = AC_RELATED_ISSUE | DRIVER_TOLL_RELATED_ISSUE | SYNC_BOOKI
 data KaptureConfig = KaptureConfig
   { queue :: Text,
     sosQueue :: Maybe Text,
+    l0FeedbackQueue :: Maybe Text,
     disposition :: Text
   }
   deriving stock (Eq, Show, Generic, Ord)

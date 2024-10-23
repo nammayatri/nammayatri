@@ -65,10 +65,10 @@ handler merchantId =
 
 callBookingStatus :: ShortId DM.Merchant -> Id SRB.Booking -> Id DP.Person -> FlowHandler DB.BookingAPIEntity
 callBookingStatus merchantId bookingId personId = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantId
   UB.bookingStatus bookingId (personId, m.id)
 
 callBookingList :: ShortId DM.Merchant -> Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> FlowHandler DBooking.BookingListRes
 callBookingList merchantId personId mbLimit mbOffset mbOnlyActive bkngStatus = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantId
   UB.bookingList (personId, m.id) mbLimit mbOffset mbOnlyActive bkngStatus Nothing

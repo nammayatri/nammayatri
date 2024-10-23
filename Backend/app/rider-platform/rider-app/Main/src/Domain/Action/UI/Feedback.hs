@@ -135,7 +135,8 @@ feedback request personId = do
     fork "Creating ticket and notifying on slack" $ do
       phoneNumber <- mapM decrypt person.mobileNumber
       let rideInfo = SIVR.buildRideInfo ride person phoneNumber
-          ticketReq = mkTicket person phoneNumber rideInfo filePath riderConfig.kaptureConfig.disposition riderConfig.kaptureConfig.queue
+          queue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.l0FeedbackQueue
+          ticketReq = mkTicket person phoneNumber rideInfo filePath riderConfig.kaptureConfig.disposition queue
       createTicketResp <- try @_ @SomeException $ Ticket.createTicket merchant.id merchantOperatingCityId ticketReq
       case createTicketResp of
         Left err -> logTagError "Create Ticket API failed - " $ show err

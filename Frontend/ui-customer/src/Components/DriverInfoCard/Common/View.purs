@@ -22,7 +22,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig, getCityNameFromCode)
 import Language.Strings (getString)
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (<), (-), (*), bind, pure, discard, not, (&&), (||), (/=),(+), (+))
@@ -603,7 +603,7 @@ senderReceiverNameAndNumberView details' textWidth =
 senderReceiverAddrInstructionView :: forall w. Maybe PersonDeliveryDetails -> String -> Boolean -> PrestoDOM (Effect Unit) w
 senderReceiverAddrInstructionView details' address isSource =
   case details' of
-    Nothing -> linearLayout[][]
+    Nothing -> linearLayout[visibility GONE][]
     Just details ->
       linearLayout
         [ height WRAP_CONTENT

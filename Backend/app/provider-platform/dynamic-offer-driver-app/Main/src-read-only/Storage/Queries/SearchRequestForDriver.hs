@@ -92,6 +92,7 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.estimateId estimateId,
       Se.Set Beam.fromLocGeohash fromLocGeohash,
       Se.Set Beam.goHomeRequestId (Kernel.Types.Id.getId <$> goHomeRequestId),
+      Se.Set Beam.isFavourite isFavourite,
       Se.Set Beam.isForwardRequest (Kernel.Prelude.Just isForwardRequest),
       Se.Set Beam.isPartOfIntelligentPool isPartOfIntelligentPool,
       Se.Set Beam.keepHiddenForSeconds keepHiddenForSeconds,

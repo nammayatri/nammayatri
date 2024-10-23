@@ -92,9 +92,9 @@ sendScheduledRideNotificationsToRider Job {id, jobInfo} = withLogTag ("JobId-" <
         notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
       SMS -> do
         smsCfg <- asks (.smsCfg)
-        let sender = smsCfg.sender
         messageKey <- A.decode (A.encode notificationKey) & fromMaybeM (InvalidRequest "Invalid message key for SMS")
         merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCityId messageKey >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId notificationKey)
+        let sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
         let (_, smsReqBody) = formatMessageTransformer "" merchantMessage.message booking ride riderConfig
         Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq smsReqBody phoneNumber sender) -- TODO: append SMS heading
           >>= Sms.checkSmsResult

@@ -1,13 +1,7 @@
 module ExternalBPP.Bus.ExternalAPI.EBIX.Verification where
 
-import Crypto.Cipher.TripleDES
-import Crypto.Cipher.Types
-import Crypto.Error (CryptoFailable (..))
 import Data.Aeson
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Base64 as Base64
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
 import qualified Data.Time as Time
 import Data.Time.Format
 import Domain.Types.FRFSQuote
@@ -19,7 +13,6 @@ import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
-import Kernel.Types.Base64
 import Kernel.Utils.Common
 import Servant hiding (route, throwError)
 import qualified Storage.Queries.Route as QRoute
@@ -68,28 +61,6 @@ getVerificationDetails config txnUUID ticketNum qrTtl booking = do
   where
     formatUtcTime :: UTCTime -> Text
     formatUtcTime utcTime = T.pack $ formatTime Time.defaultTimeLocale "%d-%m-%Y %H:%M:%S" utcTime
-
-generateQR :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => EBIXConfig -> Text -> Integer -> Seconds -> FRFSTicketBooking -> m (Text, Text, UTCTime, Text)
-generateQR config txnUUID ticketNum qrTtl booking = do
-  (qrData, qrValidity) <- getVerificationDetails config txnUUID ticketNum qrTtl booking
-  let cipherKey = Base64 "VGhpc0lzVGVzdEVuY3J5cHRpb25LZXkh"
-  encryptedQR <- encryptDES cipherKey qrData & fromEitherM (\err -> InternalError $ "Failed to encrypt: " <> show err)
-  return (encryptedQR, "UNCLAIMED", qrValidity, show ticketNum)
-  where
-    pad :: Int -> BS.ByteString -> BS.ByteString
-    pad blockSize' bs =
-      let padLen = blockSize' - BS.length bs `mod` blockSize'
-          padding = BS.replicate padLen (fromIntegral padLen)
-       in BS.append bs padding
-
-    encryptDES :: Base64 -> Text -> Either String Text
-    encryptDES (Base64 cipherKey) plainText = do
-      let cipherEither = cipherInit (Base64.decodeLenient cipherKey) :: CryptoFailable DES_EDE3
-      case cipherEither of
-        CryptoPassed cipher ->
-          let paddedPlainText = pad (blockSize cipher) (TE.encodeUtf8 plainText)
-           in Right $ TE.decodeUtf8 $ Base64.encode $ ecbEncrypt cipher paddedPlainText
-        CryptoFailed err -> Left $ show err
 
 newtype Ticket = Ticket
   { t :: Text

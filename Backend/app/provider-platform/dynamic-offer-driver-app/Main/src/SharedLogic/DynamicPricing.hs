@@ -19,12 +19,14 @@ import Data.Aeson
 import Data.Default.Class
 import qualified Domain.Types.ServiceTierType as DServiceTierType
 import EulerHS.Prelude hiding (id)
+import Kernel.Utils.Common
 
 mkSupplyDemandRatioKeyWithGeohash :: Text -> DServiceTierType.ServiceTierType -> Text
 mkSupplyDemandRatioKeyWithGeohash geohash vehicleServiceTier = "S_D_ratio_geohash" <> geohash <> "_serviceTier_" <> show vehicleServiceTier
 
 data DynamicPricingResult = DynamicPricingResult
   { congestionFeePerMin :: Maybe Double,
+    smartTipSuggestion :: Maybe HighPrecMoney,
     version :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)

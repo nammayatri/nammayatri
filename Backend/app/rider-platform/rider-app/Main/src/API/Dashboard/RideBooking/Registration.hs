@@ -81,16 +81,16 @@ handler merchantId =
 callAuth :: ShortId DM.Merchant -> CustomerAuthReq -> FlowHandler DRegistration.AuthRes
 callAuth merchantShortId req = do
   let authReq = buildAuthReq merchantShortId req
-  withFlowHandlerAPI $ DRegistration.auth authReq Nothing Nothing Nothing Nothing
+  withDashboardFlowHandlerAPI $ DRegistration.auth authReq Nothing Nothing Nothing Nothing
 
 callVerify :: Id SR.RegistrationToken -> DRegistration.AuthVerifyReq -> FlowHandler DRegistration.AuthVerifyRes
-callVerify tokenId req = withFlowHandlerAPI $ DRegistration.verify tokenId req
+callVerify tokenId req = withDashboardFlowHandlerAPI $ DRegistration.verify tokenId req
 
 callResend :: Id SR.RegistrationToken -> FlowHandler DRegistration.ResendAuthRes
-callResend = withFlowHandlerAPI . DRegistration.resend
+callResend = withDashboardFlowHandlerAPI . DRegistration.resend
 
 callLogout :: Id SP.Person -> FlowHandler APISuccess
-callLogout personId = withFlowHandlerAPI . withPersonIdLogTag personId $ DRegistration.logout personId
+callLogout personId = withDashboardFlowHandlerAPI . withPersonIdLogTag personId $ DRegistration.logout personId
 
 buildAuthReq :: ShortId DM.Merchant -> CustomerAuthReq -> DRegistration.AuthReq
 buildAuthReq merchantShortId req =

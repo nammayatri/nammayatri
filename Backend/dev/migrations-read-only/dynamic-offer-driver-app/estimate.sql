@@ -64,3 +64,8 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN supply_demand_ratio_from_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN eligible_for_upgrade boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN smart_tip_suggestion double precision ;

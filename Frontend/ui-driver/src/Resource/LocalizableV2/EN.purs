@@ -1742,4 +1742,7 @@ getEn =
     , upload_parcel_image : "Upload Parcel Image"
     , pickup_instruction : "Pickup Instruction"
     , drop_instruction : "Drop Instruction"
+    , parcel_is_inappropriate : "Parcel is inappropriate"
+    , sender_asking_different_location : "Sender asking to come to different location"
+    , sender_unavailable_unreachable : "Sender unavailable / unreachable"
     }

@@ -18,8 +18,6 @@ imports:
   Version: Kernel.Types.Version
   Minutes: Kernel.Types.Common
   TripCategory: Domain.Types.Common
-  BaseUrl: Kernel.Types.Common
-
 
 Estimate:
   tableName: estimate
@@ -116,6 +114,7 @@ Estimate:
     createdAt : UTCTime
     validTill : UTCTime
     vehicleIconUrl : Maybe BaseUrl
+    smartTipSuggestion: Maybe HighPrecMoney
 
   constraints:
     id: PrimaryKey

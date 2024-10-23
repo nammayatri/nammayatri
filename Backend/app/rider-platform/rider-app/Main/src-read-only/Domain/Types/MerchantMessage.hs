@@ -47,6 +47,7 @@ data MessageKey
   | POST_DELIVERY_SENDER
   | PRE_PICKUP_DELIVERY_RECEIVER
   | SEND_SCHEDULED_RIDE_DETAILS
+  | SCHEDULED_RIDE_OTP
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe

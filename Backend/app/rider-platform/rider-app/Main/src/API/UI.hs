@@ -32,6 +32,7 @@ import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.Sos as SosApi
 import qualified API.Action.UI.TicketService as TicketService
+import qualified API.Action.UI.TrackRoute as TrackRoute
 import qualified API.Action.UI.TriggerFCM as TriggerFCM
 import qualified API.UI.AadhaarVerification as AadhaarVerification
 import qualified API.UI.AppInstalls as AppInstalls
@@ -117,6 +118,7 @@ type API =
            :<|> PartnerOrgFRFS.API
            :<|> TriggerFCM.API
            :<|> MultimodalConfirm.API
+           :<|> TrackRoute.API
        )
 
 handler :: FlowServer API
@@ -168,3 +170,4 @@ handler =
     :<|> PartnerOrgFRFS.handler
     :<|> TriggerFCM.handler
     :<|> MultimodalConfirm.handler
+    :<|> TrackRoute.handler

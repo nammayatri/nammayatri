@@ -69,6 +69,7 @@ data Action =
             | SetIssueReportBannerItems ListItem
             | RideCompletedAC RideCompletedCard.Action
             | PrimaryButtonCarousel PrimaryButton.Action
+            | PrimaryBtnRentalTripDetailsAC PrimaryButton.Action
 
 instance showAction :: Show Action where
     show _ = ""
@@ -136,6 +137,7 @@ eval (PrimaryButtonCarousel PrimaryButton.OnClick) state = do
   else 
     exit $ GoToIssueReportChatScreenWithIssue ratingUpdatedState priorityIssue
 
+eval (PrimaryBtnRentalTripDetailsAC PrimaryButton.OnClick) state = continue state {showRentalRideDetails = false}
 
 eval (RideDetails) state = exit $ RideDetailsScreen state 
 

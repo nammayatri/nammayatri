@@ -122,7 +122,10 @@ postNammaTagTagVerify _merchantShortId _opCity Lib.Yudhishthira.Types.VerifyNamm
         Lib.Yudhishthira.Types.RideEnd -> do
           _ :: Domain.Types.Yudhishthira.EndRideTagData <- parseOrThrowError value
           pure ()
-        _ -> throwError $ InvalidRequest $ "Only supported for Search and EndRide event for now"
+        Lib.Yudhishthira.Types.RideCancel -> do
+          _ :: Domain.Types.Yudhishthira.CancelRideTagData <- parseOrThrowError value
+          pure ()
+        _ -> throwError $ InvalidRequest $ "Only supported for Search, Cancel and EndRide event for now"
 
     parseOrThrowError value =
       case A.fromJSON value of

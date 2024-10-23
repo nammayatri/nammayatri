@@ -12,17 +12,25 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl) where
+module Domain.Action.UI.Ride.CancelRide.Internal
+  ( cancelRideImpl,
+    updateNammaTagsForCancelledRide,
+  )
+where
 
+import Data.Either.Extra (eitherToMaybe)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.CancellationFarePolicy as DTC
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Ride as DRide
-import Kernel.Prelude
+import qualified Domain.Types.Yudhishthira as TY
+import EulerHS.Prelude
+import Kernel.Prelude hiding (any, elem)
 import qualified Kernel.Storage.Esqueleto as Esq hiding (whenJust_)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -33,6 +41,8 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
+import qualified Lib.Yudhishthira.Event as Yudhishthira
+import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.Cancel
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -47,12 +57,15 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.BookingUpdateRequest as QBUR
+import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as QVeh
+import Tools.Constants
 import Tools.Error
 import Tools.Event
 import qualified Tools.Metrics as Metrics
@@ -107,10 +120,11 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
   fork "cancelRide - Notify driver" $ do
+    rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason
     triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
     triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
     when (bookingCReason.source == SBCR.ByDriver) $
-      DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {merchantId = merchantId, driver = driver, rideFare = Just booking.estimatedFare, currency = booking.currency, distanceUnit = booking.distanceUnit, doCancellationRateBasedBlocking}
+      DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {rideTags, merchantId = merchantId, driver = driver, rideFare = Just booking.estimatedFare, currency = booking.currency, distanceUnit = booking.distanceUnit, doCancellationRateBasedBlocking}
     Notify.notifyOnCancel ride.merchantOperatingCityId booking driver bookingCReason.source
   fork "cancelRide/ReAllocate - Notify BAP" $ do
     isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation
@@ -159,3 +173,37 @@ cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy cancell
       QRiderDetails.updateCancellationDues (fee.amount + riderDetails.cancellationDues) rid
     _ -> do
       logError "cancelRideTransaction: riderId in booking or cancellationFee is not present"
+
+updateNammaTagsForCancelledRide ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    Esq.EsqDBReplicaFlow m r
+  ) =>
+  SRB.Booking ->
+  DRide.Ride ->
+  SBCR.BookingCancellationReason ->
+  m [Text]
+updateNammaTagsForCancelledRide booking ride bookingCReason = do
+  now <- getCurrentTime
+  mbCallStatus <- QCallStatus.findOneByEntityId (Just ride.id.getId)
+  bookingUpdateRequests <- QBUR.findAllByBookingId Nothing Nothing booking.id
+  let callAtemptByDriver = isJust mbCallStatus
+      isDestinationEdited = any (\x -> x.status == DBUR.DRIVER_ACCEPTED) bookingUpdateRequests
+      tagData =
+        TY.CancelRideTagData
+          { ride = ride{status = DRide.CANCELLED},
+            booking = booking{status = SRB.CANCELLED},
+            cancellationReason = bookingCReason,
+            currentTime = now,
+            ..
+          }
+  nammaTags <- try @_ @SomeException (Yudhishthira.computeNammaTags Yudhishthira.RideCancel tagData)
+  let allTags = ride.rideTags <> eitherToMaybe nammaTags
+  QRide.updateRideTags allTags ride.id
+  driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  let tags = fromMaybe [] allTags
+  when (validDriverCancellation `elem` tags) $ do
+    QDriverStats.updateValidDriverCancellationTagCount (driverStats.validDriverCancellationTagCount + 1) ride.driverId
+  when (validCustomerCancellation `elem` tags) $ do
+    QDriverStats.updateValidCustomerCancellationTagCount (driverStats.validCustomerCancellationTagCount + 1) ride.driverId
+  return $ fromMaybe [] allTags

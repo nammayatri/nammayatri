@@ -37,6 +37,7 @@ mkPersist
       category Text
       gates (PostgresList Domain.GatesInfo)
       merchantOperatingCityId Text Maybe
+      linkedLocationsIds (PostgresList Text),
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -49,11 +50,12 @@ instance TEntityKey SpecialLocationT where
   toKey (Id id) = SpecialLocationTKey id
 
 instance FromTType SpecialLocationT Domain.SpecialLocation where
-  fromTType SpecialLocationT {..} =
+  fromTType SpecialLocationT {..} = do
     return $
       Domain.SpecialLocation
         { id = Id id,
           gates = unPostgresList gates,
           geom = Nothing,
+          linkedLocationsIds = map Id (unPostgresList linkedLocationsIds),
           ..
         }

@@ -119,6 +119,19 @@ defaultForwardBatchConfigData = ForwardBatchConfigData
     callDriverInfoPost: false
   }
 
+newtype FeaturesConfigData = FeaturesConfigData
+  { enableDeliveryBike :: Boolean
+  }
+derive instance genericFeaturesConfigData :: Generic FeaturesConfigData _
+
+instance decodeFeaturesConfigData :: Decode FeaturesConfigData where
+  decode = defaultDecode
+
+defaultFeaturesConfigData :: FeaturesConfigData
+defaultFeaturesConfigData = FeaturesConfigData
+  { enableDeliveryBike: false
+  }
+
 type TipsConfig
   = { autoRickshaw :: Maybe (Array Int),
       suv :: Maybe (Array Int),

@@ -11,7 +11,8 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
-import qualified Domain.Types.Station
+import qualified Domain.Types.FRFSTicketDiscount
+import qualified Domain.Types.StationType
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Payment.Juspay.Types.CreateOrder
@@ -75,8 +76,17 @@ data FRFSConfigAPIRes = FRFSConfigAPIRes
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSDiscountReq = FRFSDiscountReq {code :: Data.Text.Text, quantity :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSDiscountRes = FRFSDiscountRes {_type :: Domain.Types.FRFSTicketDiscount.DiscountType, code :: Data.Text.Text, description :: Data.Text.Text, price :: Kernel.Types.Common.PriceAPIEntity}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
+    applicableDiscounts :: Data.Maybe.Maybe [API.Types.UI.FRFSTicketService.FRFSDiscountRes],
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     price :: Kernel.Types.Common.HighPrecMoney,
@@ -92,6 +102,10 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSQuoteConfirmReq = FRFSQuoteConfirmReq {discounts :: [API.Types.UI.FRFSTicketService.FRFSDiscountReq]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -142,7 +156,7 @@ data FRFSStationAPI = FRFSStationAPI
     lon :: Data.Maybe.Maybe Kernel.Prelude.Double,
     name :: Data.Text.Text,
     sequenceNum :: Data.Maybe.Maybe Kernel.Prelude.Int,
-    stationType :: Data.Maybe.Maybe Domain.Types.Station.StationType,
+    stationType :: Data.Maybe.Maybe Domain.Types.StationType.StationType,
     towards :: Data.Maybe.Maybe Data.Text.Text
   }
   deriving stock (Generic, Show)

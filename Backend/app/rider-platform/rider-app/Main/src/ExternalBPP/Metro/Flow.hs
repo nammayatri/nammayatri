@@ -17,6 +17,7 @@ import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Station
+import Domain.Types.StationType
 import qualified ExternalBPP.Metro.ExternalAPI.CMRL.FareByOriginDest as CallAPIFareByOriginDest
 import qualified ExternalBPP.Metro.ExternalAPI.CMRL.QR as CallAPIQR
 import qualified ExternalBPP.Metro.ExternalAPI.CMRL.TicketStatus as CallAPITicketStatus
@@ -86,6 +87,7 @@ search _merchant _merchantOperatingCity providerConfig bapConfig searchReq = do
             serviceTierShortName = Nothing,
             serviceTierDescription = Nothing,
             serviceTierLongName = Nothing,
+            applicableDiscounts = [],
             ..
           }
 
