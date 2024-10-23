@@ -167,6 +167,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     let fcmOverlayReq = Notify.mkOverlayReq overlay
     let entityData = Notify.EditPickupLocationReq {hasAdvanceBooking = driverInfo.hasAdvanceBooking, ..}
     Notify.sendPickupLocationChangedOverlay person fcmOverlayReq entityData
+    QRide.updateIsPickupOrDestinationEdited (Just True) ride.id
 
   whenJust destination $ \dropLocation -> do
     --------------------TO DO ----------------------- Dependency on other people changes
