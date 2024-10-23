@@ -69,3 +69,8 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN eligible_for_upgrade bool
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN smart_tip_suggestion double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN smart_tip_reason text ;

@@ -233,6 +233,9 @@ getSmartTipSuggestion item = do
   parsedTagValue <- readMaybe tagValueStr :: Maybe HighPrecMoney
   return parsedTagValue
 
+getSmartTipReason :: Spec.Item -> Maybe Text
+getSmartTipReason item = Utils.getTagV2 Tag.INFO Tag.SMART_TIP_REASON item.itemTags
+
 getVehicleIconUrl :: Spec.Item -> Maybe BaseUrl
 getVehicleIconUrl item = do
   tagValueStr <- Utils.getTagV2 Tag.VEHICLE_INFO Tag.VEHICLE_ICON_URL item.itemTags

@@ -99,7 +99,8 @@ data Pricing = Pricing
     isAirConditioned :: Maybe Bool,
     specialLocationName :: Maybe Text,
     vehicleIconUrl :: Maybe BaseUrl,
-    smartTipSuggestion :: Maybe HighPrecMoney
+    smartTipSuggestion :: Maybe HighPrecMoney,
+    smartTipReason :: Maybe Text
   }
 
 data RateCardBreakupItem = RateCardBreakupItem
@@ -1280,6 +1281,7 @@ convertQuoteToPricing specialLocationName (DQuote.Quote {..}, serviceTier, mbDri
       vehicleServiceTierAirConditioned = serviceTier.airConditionedThreshold,
       isAirConditioned = serviceTier.isAirConditioned,
       smartTipSuggestion = Nothing,
+      smartTipReason = Nothing,
       ..
     }
 
@@ -1302,6 +1304,7 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
       specialLocationName = Nothing,
       vehicleIconUrl = Nothing,
       smartTipSuggestion = Nothing,
+      smartTipReason = Nothing,
       ..
     }
 
@@ -1328,6 +1331,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP
               <> tollNamesSingleton pricing.tollNames
               <> durationToNearestDriverTagSingleton
               <> smartTipSuggestionTagSingleton
+              <> smartTipReasonTagSingleton
         }
   where
     smartTipSuggestionTagSingleton
@@ -1344,6 +1348,21 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP
                       descriptorShortDesc = Nothing
                     },
               tagValue = show <$> pricing.smartTipSuggestion
+            }
+    smartTipReasonTagSingleton
+      | isNothing pricing.smartTipReason || not isValueAddNP = Nothing
+      | otherwise =
+        Just . List.singleton $
+          Spec.Tag
+            { tagDisplay = Just True,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.SMART_TIP_REASON,
+                      descriptorName = Just "Smart Tip Reason",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = show <$> pricing.smartTipReason
             }
     specialLocationTagSingleton specialLocationTag
       | isNothing specialLocationTag = Nothing

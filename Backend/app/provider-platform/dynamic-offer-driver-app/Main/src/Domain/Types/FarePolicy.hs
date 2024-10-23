@@ -152,6 +152,7 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     additionalCongestionCharge :: HighPrecMoney,
     mbSupplyDemandRatioFromLoc :: Maybe Double,
     smartTipSuggestion :: Maybe HighPrecMoney,
+    smartTipReason :: Maybe Text,
     perDistanceUnitInsuranceCharge :: Maybe HighPrecMoney,
     cardCharge :: Maybe CardCharge,
     farePolicyDetails :: FarePolicyDetailsD s,
@@ -173,7 +174,8 @@ data CongestionChargeDetails = CongestionChargeDetails
     mbSupplyDemandRatioToLoc :: Maybe Double,
     mbSupplyDemandRatioFromLoc :: Maybe Double,
     congestionChargePerMin :: Maybe Double,
-    smartTipSuggestion :: Maybe HighPrecMoney
+    smartTipSuggestion :: Maybe HighPrecMoney,
+    smartTipReason :: Maybe Text
   }
   deriving (Generic, Show)
 

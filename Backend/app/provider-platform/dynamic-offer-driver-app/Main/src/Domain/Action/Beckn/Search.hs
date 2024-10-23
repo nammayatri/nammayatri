@@ -280,8 +280,8 @@ handler ValidatedDSearchReq {..} sReq = do
   let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration spcllocationTag mbTollCharges mbTollNames mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute
   (estimates', quotes) <- foldrM (processPolicy buildEstimateHelper buildQuoteHelper) ([], []) selectedFarePolicies
 
-  let mbAutoMaxFare = (find (\est -> est.vehicleServiceTier == AUTO_RICKSHAW) estimates') <&> (.maxFare)
-  let estimates = maybe estimates' (\autFare -> map (\DEst.Estimate {..} -> DEst.Estimate {eligibleForUpgrade = (maxFare <= autFare) && (VehicleVariant.castServiceTierToVehicleCategory vehicleServiceTier) == DVC.CAR, ..}) estimates') mbAutoMaxFare
+  let mbAutoMaxFare = find (\est -> est.vehicleServiceTier == AUTO_RICKSHAW) estimates' <&> (.maxFare)
+  let estimates = maybe estimates' (\autFare -> map (\DEst.Estimate {..} -> DEst.Estimate {eligibleForUpgrade = (maxFare <= autFare) && VehicleVariant.castServiceTierToVehicleCategory vehicleServiceTier == DVC.CAR, ..}) estimates') mbAutoMaxFare
 
   QEst.createMany estimates
   for_ quotes QQuote.create
@@ -685,6 +685,7 @@ buildEstimate _ currency distanceUnit mbSearchReq startTime isScheduled returnTi
         supplyDemandRatioToLoc = fullFarePolicy.mbSupplyDemandRatioToLoc,
         supplyDemandRatioFromLoc = fullFarePolicy.mbSupplyDemandRatioFromLoc,
         smartTipSuggestion = fullFarePolicy.smartTipSuggestion,
+        smartTipReason = fullFarePolicy.smartTipReason,
         ..
       }
 
