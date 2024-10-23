@@ -27,7 +27,7 @@ createMany = traverse_ create
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m (Maybe Domain.Types.FRFSSearch.FRFSSearch))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-getTicketPlaces :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSSearch.FRFSSearch])
+getTicketPlaces :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FRFSSearch.FRFSSearch]))
 getTicketPlaces merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m (Maybe Domain.Types.FRFSSearch.FRFSSearch))
@@ -38,11 +38,11 @@ updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
-      Se.Set Beam.agency (journeyLegInfo >>= (.agency)),
+      Se.Set Beam.agency ((journeyLegInfo >>= (.agency))),
       Se.Set Beam.convenienceCost (Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo),
       Se.Set Beam.journeyId (Kernel.Prelude.fmap (.journeyId) journeyLegInfo),
       Se.Set Beam.journeyLegOrder (Kernel.Prelude.fmap (.journeyLegOrder) journeyLegInfo),
-      Se.Set Beam.pricingId (journeyLegInfo >>= (.pricingId)),
+      Se.Set Beam.pricingId ((journeyLegInfo >>= (.pricingId))),
       Se.Set Beam.skipBooking (Kernel.Prelude.fmap (.skipBooking) journeyLegInfo),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),

@@ -1018,6 +1018,7 @@ getTe = Keymap {
 , get_fare: "ఫేర్ పొందండి"
 , metro_booking_timings: "మెట్రో బుకింగ్ టైమింగ్స్"
 , chennai_metro_time: (\startTime endTime -> "చెన్నై మెట్రో అనుమతించిన క్యూఆర్ టికెట్ కొనుగోలు "<>startTime<>" నుండి "<> endTime <>" వరకు అన్ని రోజులు.")
+, delhi_metro_time: (\startTime endTime -> "దిల్లీ మెట్రో అనుమతించిన క్యూఆర్ టికెట్ కొనుగోలు "<>startTime<>" నుండి "<> endTime <>" వరకు అన్ని రోజులు.")
 , please_come_back_later_metro: "దయచేసి ప్రారంభ సమయంలో టికెట్లు కొనుగోలు చేయడానికి తరువాత తిరిగి రాయండి."
 , no_qoutes_available: "ములాకాతులు లేవు"
 , i_agree_to_the: "నేను సమ్మతిస్తాను"
@@ -1051,7 +1052,7 @@ getTe = Keymap {
 , experience_hassle_free_metro_booking: (\appName -> "అనుభవించండి హాసల్ ఫ్రీ మెట్రో బుకింగ్లను " <> appName)
 , kochi_metro_term_1: "టికెట్లను అన్ని రోజులలో 5:00 AM నుండి 11:45 PM మధ్య కొనుగోలు చేయవచ్చు."
 , kochi_metro_term_2: "ప్రవేశం పూర్తయిన తర్వాత, ప్రయాణీకులు గమ్యస్థానం నుండి 120 నిమిషాలలోపు నిష్క్రమించాలి."
-, kochi_metro_time: "కొచ్చి మెట్రో అన్ని రోజులలో 5:00 AM నుండి 11:45 PM వరకు QR టిక్కెట్ కొనుగోలును అనుమతిస్తుంది."
+, kochi_metro_time: (\startTime endTime -> "కొచ్చి మెట్రో అన్ని రోజులలో " <> startTime <> " AM నుండి " <> endTime <> " PM వరకు QR టిక్కెట్ కొనుగోలును అనుమతిస్తుంది.")
 , book_ticket: "టికెట్ బుక్"
 , origin: "మూలం"
 , history: "చరిత్ర"
@@ -1678,4 +1679,6 @@ getTe = Keymap {
 , different_bike : "వివిధ బైక్"
 , limit_reached : "పరిమితి చేరుకుంది!"
 , confirm_contacts : "పరిచయాలను నిర్ధారించండి"
+, tickets_for_delhi_metro : "దిల్లీ మెట్రో టికెట్లు"
+, max_parcel_size : (\l b h -> "గరిష్ట పార్సల్ పరిమాణం: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
 }

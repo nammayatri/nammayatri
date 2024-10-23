@@ -1027,6 +1027,7 @@ getEn = Keymap {
 , get_fare: "Get Fare"
 , metro_booking_timings: "Metro Booking Timings"
 , chennai_metro_time: (\startTime endTime -> "Chennai Metro allows QR ticket purchase from "<> startTime <>" to "<> endTime <> " on all days. ")
+, delhi_metro_time: (\startTime endTime -> "Delhi Metro allows QR ticket purchase from "<>startTime<>" to "<>endTime<>" on all days. ")
 , please_come_back_later_metro: "Please come back later during the eligible time to purchase tickets."
 , no_qoutes_available: "No quotes available"
 , i_agree_to_the: "I agree to the"
@@ -1060,7 +1061,7 @@ getEn = Keymap {
 , experience_hassle_free_metro_booking: (\appName -> "Experience hassle-free metro bookings on " <> appName)
 , kochi_metro_term_1: "The tickets can be purchased between 5:00 AM to 11:45 PM on all days."
 , kochi_metro_term_2: "Once Entry is done, passengers should exit within 120 mins from the destination."
-, kochi_metro_time: "Kochi Metro allows QR ticket purchase from 5:00 AM to 11:45 PM on all days. "
+, kochi_metro_time: (\startTime endTime -> "Kochi Metro allows QR ticket purchase from"<>startTime<>" to"<>startTime<>" on all days. ")
 , book_ticket: "Book Ticket"
 , origin: "Origin"
 , history: "History"
@@ -1678,4 +1679,6 @@ getEn = Keymap {
 , different_bike : "Different Bike"
 , limit_reached : "Limit reached!"
 , confirm_contacts :  "Confirm Contacts"
+, tickets_for_delhi_metro : "Tickets for Delhi Metro"
+, max_parcel_size : (\l b h -> "Max parcel size: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
 }

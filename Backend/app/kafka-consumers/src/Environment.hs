@@ -108,6 +108,7 @@ data AppCfg = AppCfg
     kafkaProducerCfg :: KafkaProducerCfg,
     serviceClickhouseCfg :: ClickhouseCfg,
     kafkaClickhouseCfg :: ClickhouseCfg,
+    dashboardClickhouseCfg :: ClickhouseCfg,
     kafkaReadBatchSize :: Int,
     kafkaReadBatchDelay :: Seconds,
     consumerStartTime :: Maybe Integer,
@@ -151,6 +152,8 @@ data AppEnv = AppEnv
     serviceClickhouseEnv :: ClickhouseEnv,
     kafkaClickhouseEnv :: ClickhouseEnv,
     serviceClickhouseCfg :: ClickhouseCfg,
+    dashboardClickhouseCfg :: ClickhouseCfg,
+    dashboardClickhouseEnv :: ClickhouseEnv,
     kafkaClickhouseCfg :: ClickhouseCfg,
     kafkaReadBatchSize :: Int,
     kafkaReadBatchDelay :: Seconds,
@@ -201,6 +204,7 @@ buildAppEnv AppCfg {..} consumerType = do
   isShuttingDown <- mkShutdown
   serviceClickhouseEnv <- createConn serviceClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
+  dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
   pure $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

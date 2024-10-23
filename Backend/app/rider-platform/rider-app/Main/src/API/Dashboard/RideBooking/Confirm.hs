@@ -54,5 +54,5 @@ handler =
 
 callConfirm :: ShortId DM.Merchant -> Id DP.Person -> Id Quote.Quote -> Maybe Payment.PaymentMethodId -> FlowHandler UC.ConfirmRes
 callConfirm merchantId personId quote mbPaymentMethodId = do
-  m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
+  m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantId
   UC.confirm (personId, m.id) quote mbPaymentMethodId

@@ -1051,7 +1051,8 @@ getKn = Keymap {
 , experience_hassle_free_metro_booking: (\appName -> "ಅನುಭವಿಸಿ ತುರ್ತು ಹಾಗೂ ಸುಲಭ ಮೆಟ್ರೋ ಬುಕಿಂಗ್ಗಳನ್ನು " <> appName <> " ನಲ್ಲಿ")
 , kochi_metro_term_1: "ಟಿಕೆಟ್‌ಗಳನ್ನು ಎಲ್ಲಾ ದಿನಗಳಲ್ಲಿ 5:00 AM ನಿಂದ 11:45 PM ನಡುವೆ ಖರೀದಿಸಬಹುದು."
 , kochi_metro_term_2: "ಒಮ್ಮೆ ಪ್ರವೇಶ ಮುಗಿದ ನಂತರ, ಪ್ರಯಾಣಿಕರು ಗಮ್ಯಸ್ಥಾನದಿಂದ 120 ನಿಮಿಷಗಳಲ್ಲಿ ನಿರ್ಗಮಿಸಬೇಕು."
-, kochi_metro_time: "ಕೊಚ್ಚಿ ಮೆಟ್ರೋ ಎಲ್ಲಾ ದಿನಗಳಲ್ಲಿ 5:00 AM ನಿಂದ 11:45 PM ವರೆಗೆ QR ಟಿಕೆಟ್ ಖರೀದಿಸಲು ಅನುಮತಿಸುತ್ತದೆ."
+, kochi_metro_time: (\startTime endTime -> "ಕೊಚ್ಚಿ ಮೆಟ್ರೋ ಎಲ್ಲಾ ದಿನಗಳಲ್ಲಿ " <> startTime <> " AM ನಿಂದ " <> endTime <> " PM ವರೆಗೆ QR ಟಿಕೆಟ್ ಖರೀದಿಸಲು ಅನುಮತಿಸುತ್ತದೆ.")
+, delhi_metro_time: (\startTime endTime-> "ಬೆಂಗಳೂರು ಮೆಟ್ರೊ " <> startTime <> " ಇಂದ " <> endTime <> " ಗೆರವರೆಗೆ ಕ್ಯೂಆರ್ ಟಿಕೆಟ್ ಖರೀದಿಸಲು ಅನುಮತಿಸಿದೆ.")
 , book_ticket: "ಟಿಕೆಟ್ ಬುಕ್ ಮಾಡಿ"
 , origin: "ಮೂಲ"
 , history: "ಇತಿಹಾಸ"
@@ -1678,4 +1679,6 @@ getKn = Keymap {
 , different_bike : "ವಿಭಿನ್ನ ಬೈಕ್"
 , limit_reached : "ಮಿತಿ ತಲುಪಿದೆ!"
 , confirm_contacts : "ಸಂಪರ್ಕಗಳನ್ನು ದೃಢೀಕರಿಸಿ"
+, tickets_for_delhi_metro : "ದೆಹಲಿ ಮೆಟ್ರೋ ಟಿಕೆಟ್ಗಳು"
+, max_parcel_size : (\l b h -> "ಗರಿಷ್ಠ ಪಾರ್ಸೆಲ್ ಗಾತ್ರ: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
 }

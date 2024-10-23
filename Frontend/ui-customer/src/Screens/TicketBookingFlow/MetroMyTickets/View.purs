@@ -274,10 +274,11 @@ activeTicketView push ticketCard =
       linearLayout [
         width MATCH_PARENT
       , height WRAP_CONTENT
+      , gravity CENTER_VERTICAL
       ][
         linearLayout [
           width WRAP_CONTENT
-        , height MATCH_PARENT
+        , height $ V 41
         , gravity CENTER_VERTICAL
         ][
           imageView [

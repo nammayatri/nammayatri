@@ -1742,4 +1742,7 @@ getKn =
     , upload_parcel_image : "ಪಾರ್ಸೆಲ್ ಚಿತ್ರವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ"
     , pickup_instruction : "ಪಿಕಪ್ ಸೂಚನೆ"
     , drop_instruction : "ಡ್ರಾಪ್ ಸೂಚನೆ"
+    , parcel_is_inappropriate : "ಪಾರ್ಸೆಲ್ ಅನನುಕೂಲಕರವಾಗಿದೆ"
+    , sender_asking_different_location : "ಕಳುಹಿಸುವವರು ಬೇರೆ ಸ್ಥಳಕ್ಕೆ ಬರಲು ಕೇಳುತ್ತಿದ್ದಾರೆ"
+    , sender_unavailable_unreachable : "ಕಳುಹಿಸುವವರು ಲಭ್ಯವಿಲ್ಲ / ಸಂಪರ್ಕಿಸಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ"
     }

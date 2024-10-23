@@ -51,7 +51,7 @@ handler merchantShortId =
     :<|> ticketStatusCallBack merchantShortId
 
 listIssue :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler DI.IssueListRes
-listIssue merchantShortId mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo = withFlowHandlerAPI $ DDI.getIssueList merchantShortId mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo
+listIssue merchantShortId mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo = withDashboardFlowHandlerAPI $ DDI.getIssueList merchantShortId mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo
 
 ticketStatusCallBack :: ShortId DM.Merchant -> A.Value -> FlowHandler APISuccess
-ticketStatusCallBack merchantShortId = withFlowHandlerAPI . DDI.ticketStatusCallBack merchantShortId
+ticketStatusCallBack merchantShortId = withDashboardFlowHandlerAPI . DDI.ticketStatusCallBack merchantShortId

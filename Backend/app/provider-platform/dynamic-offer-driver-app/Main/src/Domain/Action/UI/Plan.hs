@@ -196,7 +196,8 @@ data DriverDuesEntity = DriverDuesEntity
     specialZoneRideCount :: Int,
     totalSpecialZoneCharges :: HighPrecMoney,
     totalSpecialZoneChargesWithCurrency :: PriceAPIEntity,
-    driverFeeId :: Text
+    driverFeeId :: Text,
+    status :: DF.DriverFeeStatus
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
@@ -910,7 +911,8 @@ mkDueDriverFeeInfoEntity serviceName driverFees transporterConfig = do
               totalSpecialZoneCharges = driverFee.specialZoneAmount,
               totalSpecialZoneChargesWithCurrency = PriceAPIEntity driverFee.specialZoneAmount driverFee.currency,
               totalEarningsWithCurrency = PriceAPIEntity driverFee.totalEarnings driverFee.currency,
-              driverFeeId = driverFee.id.getId
+              driverFeeId = driverFee.id.getId,
+              status = driverFee.status
             }
     )
     driverFees

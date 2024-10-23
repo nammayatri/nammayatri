@@ -78,7 +78,7 @@ import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations,Stage)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo, BookingTime, VehicleViewType(..), FareProductType(..))
-import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..), MetroBookingConfigRes,RideBookingRes(..),RideBookingAPIDetails(..),RideBookingDetails(..),RideBookingListRes(..),BookingLocationAPIEntity(..))
+import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..), MetroBookingConfigRes,RideBookingRes(..),RideBookingAPIDetails(..),RideBookingDetails(..),RideBookingListRes(..),BookingLocationAPIEntity(..), MetroBookingConfigRes (..))
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
@@ -105,6 +105,14 @@ import Data.Array as DA
 import Components.MessagingView.Controller (ChatContacts(..))
 import Services.API as API
 import JBridge as JB
+import Engineering.Helpers.Commons as EHC
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Effect.Aff (launchAff)
+import Types.App (defaultGlobalState)
+import Control.Monad.Except (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
+import Debug 
+import RemoteConfig as RC
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -984,10 +992,10 @@ newtype CityMetroConfig = CityMetroConfig {
   , bannerImage :: String
   , bannerBackgroundColor :: String
   , bannerTextColor :: String
-  , termsAndConditionsUrl :: String
   , termsAndConditions :: Array String
   , errorPopupTitle :: String
   , showCancelButton :: Boolean
+  , termsAndConditionsUrl :: String
 }
 
 getMetroConfigFromAppConfig :: AppConfig -> String -> MetroConfig
@@ -1011,14 +1019,74 @@ getMetroConfigFromAppConfig config city = do
      }
     Just cfg -> cfg
 
-getMetroConfigFromCity :: City -> Maybe Boolean -> CityMetroConfig
-getMetroConfigFromCity city isEventOngoing =
-  case city of
-    Kochi -> mkCityBasedConfig "ny_ic_kochi_metro" (getString TICKETS_FOR_KOCHI_METRO) "ny_ic_kochi_metro_map" "ny_ic_kochi_metro_banner" "#F5FFFF" "#02B0AF" "https://metro-terms.triffy.in/kochi/index.html" [getString KOCHI_METRO_TERM_1 ,getString KOCHI_METRO_TERM_2, if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else "" , if isEventOngoing == Just true then getString FREE_TICKET_CASHBACK else "" ] (getString KOCHI_METRO_TIME)  true
-    Chennai -> mkCityBasedConfig "ny_ic_chennai_metro" (getString TICKETS_FOR_CHENNAI_METRO) "ny_ic_chennai_metro_map" "ny_ic_chennai_metro_banner" "#D8E2FF" Color.metroBlue "https://metro-terms.triffy.in/chennai/index.html" [getString CHENNAI_METRO_TERM_2 , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else getString CHENNAI_METRO_TERM_1, if isEventOngoing == Just true then getString FREE_TICKET_CASHBACK else ""  ] (getString $ CHENNAI_METRO_TIME "04:30:00" "22:30:00") false
-    _ -> mkCityBasedConfig "" "" "" "" "" "" "" [] "" false
+getMetroConfigFromCity :: City -> Maybe MetroBookingConfigRes -> CityMetroConfig
+getMetroConfigFromCity city fcResponse = 
+    let
+        bookingStartTime = maybe "04:30:00" (\(MetroBookingConfigRes r) -> r.bookingStartTime) fcResponse
+        bookingEndTime = maybe "22:30:00" (\(MetroBookingConfigRes r) -> r.bookingEndTime) fcResponse
+        customEndTime = maybe Nothing (\(MetroBookingConfigRes r) -> Just r.customEndTime) fcResponse
+        customDates = maybe [] (\(MetroBookingConfigRes r) -> r.customDates) fcResponse
+        isEventOngoing = maybe Nothing (\(MetroBookingConfigRes r) -> r.isEventOngoing) fcResponse
+
+        convertedBookingStartTime = EHC.convertUTCtoISC bookingStartTime "HH:mm:ss"
+        convertedBookingEndTime = 
+            if elem (EHC.convertUTCtoISC (EHC.getCurrentUTC "") "DD/MM/YYYY") customDates
+            then fromMaybe (EHC.convertUTCtoISC bookingEndTime "HH:mm:ss") customEndTime
+            else EHC.convertUTCtoISC bookingEndTime "HH:mm:ss"
+        config = RC.getMetroConfig $ toLower $ show city
+    in
+    case city of
+        Kochi ->
+            mkCityBasedConfig
+                "ny_ic_kochi_metro"
+                (getString TICKETS_FOR_KOCHI_METRO)
+                "ny_ic_kochi_metro_map"
+                "ny_ic_kochi_metro_banner"
+                "#F5FFFF"
+                "#02B0AF"
+                ([ getString KOCHI_METRO_TERM_1
+                , getString KOCHI_METRO_TERM_2
+                , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else ""
+                , if isEventOngoing == Just true then getString FREE_TICKET_CASHBACK else ""
+                ])
+                (getString $ KOCHI_METRO_TIME convertedBookingStartTime convertedBookingEndTime)
+                true
+                config
+        Chennai ->
+            mkCityBasedConfig
+                "ny_ic_chennai_metro"
+                (getString TICKETS_FOR_CHENNAI_METRO)
+                "ny_ic_chennai_metro_map"
+                "ny_ic_chennai_metro_banner"
+                "#D8E2FF"
+                Color.metroBlue
+                ([ getString CHENNAI_METRO_TERM_2
+                , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else getString CHENNAI_METRO_TERM_1
+                , if isEventOngoing == Just true then getString FREE_TICKET_CASHBACK else ""
+                ])
+                (getString $ CHENNAI_METRO_TIME convertedBookingStartTime convertedBookingEndTime)
+                false
+                config
+        Delhi ->
+            mkCityBasedConfig
+                "ny_ic_delhi_metro"
+                (getString TICKETS_FOR_DELHI_METRO)
+                ""
+                "ny_ic_chennai_metro_banner"
+                "#D8E2FF"
+                Color.metroBlue
+                ([ getString CHENNAI_METRO_TERM_2
+                , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else getString CHENNAI_METRO_TERM_1
+                , if isEventOngoing == Just true then getString FREE_TICKET_CASHBACK else ""
+                ])
+                (getString $ DELHI_METRO_TIME convertedBookingStartTime convertedBookingEndTime)
+                false
+                config
+
+        _ ->
+            mkCityBasedConfig "" "" "" "" "" "" [] "" false config 
   where
-    mkCityBasedConfig logoImage title mapImage bannerImage bannerBackgroundColor bannerTextColor termsAndConditionsUrl termsAndConditions errorPopupTitle showCancelButton = 
+    mkCityBasedConfig logoImage title mapImage bannerImage bannerBackgroundColor bannerTextColor termsAndConditions errorPopupTitle showCancelButton config =
       CityMetroConfig
         { logoImage
         , title
@@ -1026,11 +1094,14 @@ getMetroConfigFromCity city isEventOngoing =
         , bannerImage
         , bannerBackgroundColor
         , bannerTextColor
-        , termsAndConditionsUrl
         , termsAndConditions
         , errorPopupTitle
         , showCancelButton
+        , termsAndConditionsUrl : config.tnc
         }
+
+
+
         
 getImageBasedOnCity :: String -> String
 getImageBasedOnCity image =

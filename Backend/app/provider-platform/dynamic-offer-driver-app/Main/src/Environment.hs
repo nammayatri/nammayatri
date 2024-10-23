@@ -71,6 +71,7 @@ data AppCfg = AppCfg
     hedisNonCriticalClusterCfg :: HedisCfg,
     kafkaClickhouseCfg :: ClickhouseCfg,
     driverClickhouseCfg :: ClickhouseCfg,
+    dashboardClickhouseCfg :: ClickhouseCfg,
     port :: Int,
     metricsPort :: Int,
     hostName :: Text,
@@ -157,6 +158,7 @@ data AppEnv = AppEnv
     esqDBReplicaEnv :: EsqDBEnv,
     kafkaClickhouseEnv :: ClickhouseEnv,
     serviceClickhouseEnv :: ClickhouseEnv,
+    dashboardClickhouseEnv :: ClickhouseEnv,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     hedisEnv :: HedisEnv,
@@ -228,6 +230,7 @@ data AppEnv = AppEnv
     sosAlertsTopicARN :: Text,
     psqlConn :: PG.Connection,
     serviceClickhouseCfg :: ClickhouseCfg,
+    dashboardClickhouseCfg :: ClickhouseCfg,
     kafkaClickhouseCfg :: ClickhouseCfg
   }
   deriving (Generic)
@@ -277,6 +280,7 @@ buildAppEnv cfg@AppCfg {..} = do
   coreMetrics <- Metrics.registerCoreMetricsContainer
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   serviceClickhouseEnv <- createConn driverClickhouseCfg
+  dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let searchRequestExpirationSeconds = fromIntegral cfg.searchRequestExpirationSeconds
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds

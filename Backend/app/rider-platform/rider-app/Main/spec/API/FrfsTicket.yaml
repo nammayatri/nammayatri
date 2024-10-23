@@ -4,6 +4,9 @@ imports:
   Station: Domain.Types.Station
   StationType: Domain.Types.StationType
   FRFSQuoteType: Domain.Types.FRFSQuote
+  DiscountType: Domain.Types.FRFSTicketDiscount
+  DiscountValue: Domain.Types.FRFSTicketDiscount
+  FRFSTicketDiscount: Domain.Types.FRFSTicketDiscount
   FRFSQuote: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBooking
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
@@ -42,6 +45,7 @@ types:
     serviceTierLongName: Maybe Text
     serviceTierDescription: Maybe Text
     quantity: Int
+    applicableDiscounts: Maybe [FRFSDiscountRes]
     price: HighPrecMoney
     priceWithCurrency: PriceAPIEntity
     stations: [FRFSStationAPI]
@@ -49,6 +53,19 @@ types:
     validTill: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
+
+  FRFSDiscountRes:
+    code: Text
+    _type: DiscountType
+    price: PriceAPIEntity
+    description: Text
+
+  FRFSDiscountReq:
+    code: Text
+    quantity: Int
+
+  FRFSQuoteConfirmReq:
+    discounts: "[FRFSDiscountReq]"
 
   FRFSTicketBookingStatusAPIRes:
     bookingId: Id FRFSTicketBooking
@@ -210,6 +227,17 @@ apis:
       response:
         type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 
+  # Confirm quote V2 for metro/bus tickets (return PP sdk params)
+  - POST:
+      endpoint: /frfs/quote/v2/{quoteId}/confirm
+      params:
+        quoteId: Id FRFSQuote
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq
+      response:
+        type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+
   # Retry payment
   - POST:
       endpoint: /frfs/quote/{quoteId}/payment/retry
@@ -232,6 +260,8 @@ apis:
   - GET:
       endpoint: /frfs/booking/list
       auth: TokenAuth
+      query:
+        vehicleType: VehicleCategory
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]"
 

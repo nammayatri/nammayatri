@@ -74,6 +74,6 @@ data CashbackStatus = PENDING | PROCESSING | SUCCESSFUL | CASHBACK_FAILED | MANU
 
 data FRFSTicketBookingStatus = NEW | APPROVED | PAYMENT_PENDING | CONFIRMING | FAILED | CONFIRMED | CANCELLED | COUNTER_CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CashbackStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CashbackStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketBookingStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSTicketBookingStatus))

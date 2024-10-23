@@ -27,17 +27,33 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FareProduct.FareProduct] -> m ())
 createMany = traverse_ create
 
-findAllFareProductByFarePolicyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FarePolicy.FarePolicy -> m [Domain.Types.FareProduct.FareProduct])
+findAllFareProductByFarePolicyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FarePolicy.FarePolicy -> m ([Domain.Types.FareProduct.FareProduct]))
 findAllFareProductByFarePolicyId farePolicyId = do findAllWithKV [Se.And [Se.Is Beam.farePolicyId $ Se.Eq (Kernel.Types.Id.getId farePolicyId)]]
 
 findAllFareProductByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m [Domain.Types.FareProduct.FareProduct])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m ([Domain.Types.FareProduct.FareProduct]))
 findAllFareProductByMerchantOpCityId merchantOperatingCityId enabled = do
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
           Se.Is Beam.enabled $ Se.Eq enabled
+        ]
+    ]
+
+findAllUnboundedByMerchantOpCityIdVariantArea ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Lib.Types.SpecialLocation.Area -> Domain.Types.Common.TripCategory -> Domain.Types.Common.ServiceTierType -> Kernel.Types.TimeBound.TimeBound -> Kernel.Prelude.Bool -> [Domain.Types.FareProduct.SearchSource] -> m ([Domain.Types.FareProduct.FareProduct]))
+findAllUnboundedByMerchantOpCityIdVariantArea merchantOperatingCityId area tripCategory vehicleServiceTier timeBounds enabled searchSource = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.area $ Se.Eq area,
+          Se.Is Beam.tripCategory $ Se.Eq tripCategory,
+          Se.Is Beam.vehicleVariant $ Se.Eq vehicleServiceTier,
+          Se.Is Beam.timeBounds $ Se.Eq timeBounds,
+          Se.Is Beam.enabled $ Se.Eq enabled,
+          Se.Is Beam.searchSource $ Se.In searchSource
         ]
     ]
 

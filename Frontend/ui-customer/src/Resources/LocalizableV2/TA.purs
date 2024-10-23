@@ -1017,6 +1017,7 @@ getTa = Keymap {
 , get_fare: "கட்டணத்தைப் பெறு"
 , metro_booking_timings: "மெட்ரோ முன்பதிவு நேரம்"
 , chennai_metro_time: (\startTime endTime -> "சென்னை மெட்ரோ அனைத்து நாட்களிலும் "<>startTime<>" முதல் "<>endTime<>" வரை QR டிக்கெட் வாங்க அனுமதிக்கிறது.")
+, delhi_metro_time: (\startTime endTime -> "தில்லி மெட்ரோ அனைத்து நாட்களிலும் "<>startTime<>" முதல் "<>endTime<>" வரை QR டிக்கெட் வாங்க அனுமதிக்கிறது.")
 , please_come_back_later_metro: "டிக்கெட்டுகளை வாங்க தகுதியான நேரத்தில் பின்னர் வரவும்."
 , no_qoutes_available: "விலைக்குறி இல்லை"
 , i_agree_to_the: "நான் ஒப்புக்கொள்கிறேன்"
@@ -1050,7 +1051,7 @@ getTa = Keymap {
 , experience_hassle_free_metro_booking: (\appName -> "எப்போதும் துரிதமான மெட்ரோ முன்பதிவுகளை " <> appName <> " மூலம் அனுபவிக்கவும்")
 , kochi_metro_term_1: "எல்லா நாட்களிலும் காலை 5:00 மணி முதல் இரவு 11:45 மணி வரை டிக்கெட்டுகளை வாங்கலாம்."
 , kochi_metro_term_2: "நுழைவு முடிந்ததும், பயணிகள் சேருமிடத்திலிருந்து 120 நிமிடங்களுக்குள் வெளியேற வேண்டும்."
-, kochi_metro_time: "கொச்சி மெட்ரோ அனைத்து நாட்களிலும் காலை 5:00 மணி முதல் இரவு 11:45 மணி வரை QR டிக்கெட் வாங்க அனுமதிக்கிறது."
+, kochi_metro_time: (\startTime endTime -> "கொச்சி மெட்ரோ அனைத்து நாட்களிலும் காலை " <> startTime <> " மணி முதல் இரவு " <> endTime <> " மணி வரை QR டிக்கெட் வாங்க அனுமதிக்கிறது.")
 , book_ticket: "டிக்கெட் புக்"
 , origin: "தொடக்கம்"
 , history: "வரலாறு"
@@ -1678,4 +1679,6 @@ getTa = Keymap {
 , different_bike : "வேறு பைக்"
 , limit_reached : "வரம்பு எட்டியது!"
 , confirm_contacts : "தொடர்புகளை உறுதிப்படுத்தவும்"
+, tickets_for_delhi_metro : "டெல்ஹி மெட்ரோ டிக்கெட்கள்"
+, max_parcel_size : (\l b h -> "அதிகபட்ச பார்சல் அளவு: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
 }

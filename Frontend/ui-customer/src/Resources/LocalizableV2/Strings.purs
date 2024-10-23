@@ -1122,6 +1122,7 @@ getProxy str =
     GET_FARE -> \a -> a @~ get_fare
     METRO_BOOKING_TIMINGS -> \a -> a @~ metro_booking_timings
     CHENNAI_METRO_TIME arg1 arg2 -> \a -> (a @~ chennai_metro_time) arg1 arg2
+    DELHI_METRO_TIME arg1 arg2 -> \a -> (a @~ delhi_metro_time) arg1 arg2
     PLEASE_COME_BACK_LATER_METRO -> \a -> a @~ please_come_back_later_metro
     NO_QOUTES_AVAILABLE -> \a -> a @~ no_qoutes_available
     I_AGREE_TO_THE -> \a -> a @~ i_agree_to_the
@@ -1192,7 +1193,7 @@ getProxy str =
     EXPERIENCE_HASSLE_FREE_METRO_BOOKING arg1 -> \a -> (a @~ experience_hassle_free_metro_booking) arg1
     KOCHI_METRO_TERM_1 -> \a -> a @~ kochi_metro_term_1
     KOCHI_METRO_TERM_2 -> \a -> a @~ kochi_metro_term_2
-    KOCHI_METRO_TIME -> \a -> a @~ kochi_metro_time
+    KOCHI_METRO_TIME arg1 arg2 -> \a -> (a @~ kochi_metro_time) arg1 arg2
     BOOK_TICKET -> \a -> a @~ book_ticket
     PREPARE_EMERGENCY_CONTACTS -> \a -> a @~ prepare_emergency_contacts
     EMERGENCY_CONTACTS_WILL_BE_NOTIFIED -> \a -> a @~ emergency_contacts_will_be_notified
@@ -1773,3 +1774,5 @@ getProxy str =
     BHUBANESWAR -> \a -> a @~ bhubaneswar
     LIMIT_REACHED -> \a -> a @~ limit_reached
     CONFIRM_CONTACTS -> \a -> a @~ confirm_contacts
+    TICKETS_FOR_DELHI_METRO -> \a -> a @~ tickets_for_delhi_metro
+    MAX_PARCEL_SIZE arg1 arg2 arg3 -> \a -> (a @~ max_parcel_size) arg1 arg2 arg3

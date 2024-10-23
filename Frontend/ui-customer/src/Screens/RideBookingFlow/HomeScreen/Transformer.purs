@@ -765,7 +765,7 @@ mapServiceTierShortDesc vehicleVariant isValueAddNP serviceTierShortDesc =
       "SEDAN" -> Just "AC, Premium Comfort"
       "SUV" -> Just "AC, Extra Spacious"
       "AUTO_RICKSHAW" -> Just "Easy Commute"
-      "DELIVERY_BIKE" -> Just "Upto 5kg"
+      "DELIVERY_BIKE" -> Just "Upto 15kg"
       _ -> serviceTierShortDesc
     _ -> serviceTierShortDesc
 
