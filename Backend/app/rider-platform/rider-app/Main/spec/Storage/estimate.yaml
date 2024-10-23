@@ -115,6 +115,7 @@ Estimate:
     validTill : UTCTime
     vehicleIconUrl : Maybe BaseUrl
     smartTipSuggestion: Maybe HighPrecMoney
+    smartTipReason: Maybe Text
 
   constraints:
     id: PrimaryKey
