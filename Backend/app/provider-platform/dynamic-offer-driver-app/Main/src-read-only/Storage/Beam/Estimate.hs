@@ -32,6 +32,7 @@ data EstimateT f = EstimateT
     minFare :: B.C f Kernel.Types.Common.Money,
     minFareAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     requestId :: B.C f Kernel.Prelude.Text,
+    smartTipReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     smartTipSuggestion :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     supplyDemandRatioFromLoc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),

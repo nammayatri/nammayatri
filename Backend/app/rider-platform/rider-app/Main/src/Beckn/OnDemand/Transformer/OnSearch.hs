@@ -113,6 +113,7 @@ tfQuotesInfo provider fulfillments validTill item = do
       waitingCharges_ <- Beckn.OnDemand.Utils.OnSearch.buildWaitingChargeInfo item currency
       estimateBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildEstimateBreakupList item currency
       let smartTipSuggestion = Beckn.OnDemand.Utils.OnSearch.getSmartTipSuggestion item
+      let smartTipReason = Beckn.OnDemand.Utils.OnSearch.getSmartTipReason item
       pure $
         Left $
           Domain.Action.Beckn.OnSearch.EstimateInfo
@@ -144,7 +145,8 @@ tfQuotesInfo provider fulfillments validTill item = do
               tripCategory = tripCategory,
               vehicleCategory,
               vehicleIconUrl = vehicleIconUrl,
-              smartTipSuggestion
+              smartTipSuggestion,
+              smartTipReason
             }
     QuoteBased _ -> do
       quoteBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildQuoteBreakupList item currency
