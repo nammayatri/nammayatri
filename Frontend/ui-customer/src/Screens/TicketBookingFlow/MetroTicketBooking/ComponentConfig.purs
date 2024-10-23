@@ -30,7 +30,7 @@ import JBridge as JB
 import Screens.Types as ST
 import Components.RequestInfoCard as InfoCard
 import Language.Strings 
-import Resources.Localizable.EN
+import Resources.LocalizableV2.Strings (getEN)
 import Language.Types
 import Helpers.Utils (CityMetroConfig(..))
 import Components.Banner as Banner

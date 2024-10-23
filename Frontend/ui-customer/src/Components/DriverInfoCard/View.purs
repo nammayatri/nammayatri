@@ -60,7 +60,7 @@ import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import Screens.Types (Stage(..), ZoneType(..), SheetState(..), City(..), NavigationMode(..))
 import Storage (KeyStore(..))
 import Storage ( getValueToLocalStore, KeyStore(..)) as STO

@@ -37,7 +37,7 @@ import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&
 import PrestoDOM (Eval, update, ScrollState(..), continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getKmMeter, fetchVehicleVariant)
-import Resources.Localizable.EN (getEN)
+import Resources.LocalizableV2.Strings (getEN)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (AnimationState(..), Fares, IndividualRideCardState, ItemState, Stage(..), ZoneType(..))
 import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..))
