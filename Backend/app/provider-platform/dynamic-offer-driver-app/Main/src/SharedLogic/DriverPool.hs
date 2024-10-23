@@ -82,7 +82,7 @@ import qualified Domain.Types.VehicleVariant as DVeh
 import EulerHS.Prelude hiding (find, id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Types
-import Kernel.Prelude (NominalDiffTime, head)
+import Kernel.Prelude (NominalDiffTime, head, listToMaybe)
 import qualified Kernel.Prelude as KP
 import qualified Kernel.Randomizer as Rnd
 import Kernel.Storage.Esqueleto
@@ -104,6 +104,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverGoHomeRequest as QDGR
+import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.GetNearestDrivers as QPG
 import Tools.Maps as Maps
@@ -540,8 +541,8 @@ calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId
   where
     getParallelSearchRequestCount now dObj = getValidSearchRequestCount merchantId (dObj.driverId) now
 
-convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult :: Bool -> DriverPoolWithActualDistResult -> QP.NearestGoHomeDriversResult -- # TODO: Lets merge these two types
-convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult onRide DriverPoolWithActualDistResult {driverPoolResult = DriverPoolResult {..}} = do
+convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult :: Bool -> Bool -> DriverPoolWithActualDistResult -> QP.NearestGoHomeDriversResult -- # TODO: Lets merge these two types
+convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult onRide isSpecialLocWarrior DriverPoolWithActualDistResult {driverPoolResult = DriverPoolResult {..}} = do
   QP.NearestGoHomeDriversResult {QP.distanceToDriver = distanceToPickup, ..}
 
 -- this is not required in the flow where we convert them
@@ -561,6 +562,7 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
   Id DMOC.MerchantOperatingCity ->
   m ([DriverPoolWithActualDistResult], [Id DP.Driver])
 filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = do
+  now <- getCurrentTime
   goHomeRequests <-
     mapMaybeM
       ( \driver -> runMaybeT $ do
@@ -569,7 +571,29 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           return (goHomeReq, driver)
       )
       randomDriverPool
-  let convertedDriverPoolRes = map (\(ghr, driver) -> (ghr,driver,) $ makeDriverPoolRes driver) goHomeRequests
+  let specialLocWarriorDrivers = filter (\driver -> driver.isSpecialLocWarrior) randomDriverPool -- specialLocWarriorDriversInfo <- Int.getSpecialLocWarriorDriverInfo specialLocWarriorDrivers
+  specialLocgoHomeRequests <-
+    mapMaybeM
+      ( \specialLocWarriorDriver -> runMaybeT $ do
+          driverInfo <- MaybeT $ Int.getSpecialLocWarriorDriverInfo specialLocWarriorDriver.driverId.getId
+          preferredLoc <- MaybeT $ return driverInfo.preferredPrimarySpecialLoc
+          preferredLocGate <- MaybeT $ return $ listToMaybe preferredLoc.gates
+          let gHR =
+                DDGR.DriverGoHomeRequest
+                  { createdAt = now,
+                    driverId = driverInfo.driverId,
+                    id = Id "specialLocWarriorGoHomeId",
+                    lat = preferredLocGate.point.lat,
+                    lon = preferredLocGate.point.lon,
+                    mbReachedHome = Nothing,
+                    numCancellation = 0,
+                    status = DDGR.ACTIVE,
+                    updatedAt = now
+                  }
+          return (gHR, specialLocWarriorDriver)
+      )
+      specialLocWarriorDrivers
+  let convertedDriverPoolRes = map (\(ghr, driver) -> (ghr,driver,) $ makeDriverPoolRes driver) (goHomeRequests <> specialLocgoHomeRequests)
   driverGoHomePoolWithActualDistance <-
     case convertedDriverPoolRes of
       [] -> return []
@@ -640,7 +664,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           searchTags = Nothing,
           tripDistance = Nothing,
           keepHiddenForSeconds = Seconds 0,
-          goHomeReqId = Just ghrId,
+          goHomeReqId = if ghrId.getId == "specialLocWarriorGoHomeId" then Nothing else Just ghrId,
           isForwardRequest = False,
           previousDropGeoHash = Nothing
         }

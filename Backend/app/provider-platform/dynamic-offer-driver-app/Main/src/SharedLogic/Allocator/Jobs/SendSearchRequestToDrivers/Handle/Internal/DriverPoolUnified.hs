@@ -62,14 +62,14 @@ assignTagsToDrivers :: [Id Driver] -> DriverPoolTags -> Bool -> [DriverPoolWithA
 assignTagsToDrivers driverIds driverTag checkNeeded =
   map
     ( \dp ->
-        if (not checkNeeded) || dp.driverPoolResult.driverId `elem` driverIds
+        if not checkNeeded || dp.driverPoolResult.driverId `elem` driverIds
           then
             dp
               { driverPoolResult =
                   (driverPoolResult dp :: DriverPoolResult)
                     { driverTags =
                         insertInObject
-                          (((driverTags :: DriverPoolResult -> Value) . (driverPoolResult)) dp)
+                          (((driverTags :: DriverPoolResult -> Value) . driverPoolResult) dp)
                           [driverTag]
                     }
               }
@@ -431,23 +431,23 @@ assignDriverGoHomeTags pool searchReq searchTry tripQuoteDetails driverPoolCfg m
                   onlinePayment = merchant.onlinePayment,
                   ..
                 }
-        filterOutGoHomeDriversAccordingToHomeLocation (map (convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult False) pool) goHomeReq merchantOpCityId
+        filterOutGoHomeDriversAccordingToHomeLocation (map (convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult False True) pool) goHomeReq merchantOpCityId
       _ -> pure ([], [])
   let goHomeDriversToDestionation = map (\dp -> dp.driverPoolResult.driverId) goHomeDriversInQueue
-      goHomePool' = (filter (\dp -> dp.driverPoolResult.driverId `notElem` goHomeDriversToDestionation) pool) <> (assignGoHomeTags goHomeDriversToDestionation GoHomeDriverToDestination False goHomeDriversInQueue)
+      goHomePool' = filter (\dp -> dp.driverPoolResult.driverId `notElem` goHomeDriversToDestionation) pool <> assignGoHomeTags goHomeDriversToDestionation GoHomeDriverToDestination False goHomeDriversInQueue
   return $ assignGoHomeTags goHomeDriversNotToDestination GoHomeDriverNotToDestination True goHomePool'
   where
     assignGoHomeTags goHomeDrivers driverTag checkNeeded =
       map
         ( \dp ->
-            if (not checkNeeded) || dp.driverPoolResult.driverId `elem` goHomeDrivers
+            if not checkNeeded || dp.driverPoolResult.driverId `elem` goHomeDrivers
               then
                 dp
                   { driverPoolResult =
                       (driverPoolResult dp :: DriverPoolResult)
                         { driverTags =
                             insertInObject
-                              (((driverTags :: DriverPoolResult -> Value) . (driverPoolResult)) dp)
+                              (((driverTags :: DriverPoolResult -> Value) . driverPoolResult) dp)
                               [driverTag]
                         }
                   }

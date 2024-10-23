@@ -62,6 +62,7 @@ data NearestGoHomeDriversResult = NearestGoHomeDriversResult
     serviceTier :: ServiceTierType,
     serviceTierDowngradeLevel :: Int,
     isAirConditioned :: Maybe Bool,
+    isSpecialLocWarrior :: Bool,
     lat :: Double,
     lon :: Double,
     mode :: Maybe DriverInfo.DriverMode,
@@ -86,8 +87,10 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
   let allowedCityServiceTiers = filter (\cvst -> cvst.serviceTierType `elem` serviceTiers) cityServiceTiers
       allowedVehicleVariant = DL.nub $ concatMap (.allowedVehicleVariant) allowedCityServiceTiers
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocation nearestRadius (Just allowedVehicleVariant)
+  specialLocWarriorDriverInfos <- Int.getSpecialLocWarriorDriverInfoWithCond (driverLocs <&> (.driverId)) True False isRental isInterCity
   driverHomeLocs <- Int.getDriverGoHomeReqNearby (driverLocs <&> (.driverId))
-  driverInfos <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False isRental isInterCity
+  driverInfoWithoutSpecialLocWarrior <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False isRental isInterCity
+  let driverInfos = specialLocWarriorDriverInfos <> driverInfoWithoutSpecialLocWarrior
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
@@ -147,6 +150,7 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
                 driverDeviceToken = person.deviceToken,
                 language = person.language,
                 onRide = info.onRide,
+                isSpecialLocWarrior = info.isSpecialLocWarrior,
                 distanceToDriver = roundToIntegral dist,
                 variant = vehicle.variant,
                 serviceTier = serviceTier,
