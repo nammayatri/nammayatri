@@ -30,6 +30,7 @@ import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.ReferralPayout as ReferralPayout
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.SpecialLocation as SpecialLocation
+import qualified API.Action.UI.SpecialLocationWarrior as SpecialLocationWarrior
 import qualified API.Action.UI.Tokenization as Tokenization
 import qualified API.Action.UI.VehicleDetails as VehicleDetails
 import qualified API.UI.Call as Call
@@ -111,6 +112,7 @@ type API =
            :<|> Tokenization.API
            :<|> FareCalculator.API
            :<|> ReferralPayout.API
+           :<|> SpecialLocationWarrior.API
        )
 
 handler :: FlowServer API
@@ -158,3 +160,4 @@ handler =
     :<|> Tokenization.handler
     :<|> FareCalculator.handler
     :<|> ReferralPayout.handler
+    :<|> SpecialLocationWarrior.handler
