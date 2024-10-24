@@ -1745,4 +1745,7 @@ getTe =
     , parcel_is_inappropriate : "పార్సెల్ అననుకూలంగా ఉంది"
     , sender_asking_different_location : "పంపిణీదారు వేరే ప్రదేశానికి రావాలని అడుగుతున్నారు"
     , sender_unavailable_unreachable : "పంపిణీదారు అందుబాటులో లేరు / చేరడం సాధ్యం కాలేదు"
+    , intercity_round_trip_ride_accepted : "అంతర్రాష్ట్రీయ రౌండ్ట్రిప్ సవారి ఆమోదించబడింది"
+    , you_are_on_intercity_roundtrip_ride : "మీరు అంతర్రాష్ట్రీయ రౌండ్ట్రిప్ సవారిలో ఉన్నారు"
+    , please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip : (\destination -> "దయచేసి మీ వాహనం " <> "<span><b>" <> destination <> "</b></span>" <>" వెళ్లడానికి మరియు అక్కడి నుండి తిరిగి రావడానికి సిద్ధంగా ఉందో నిర్ధారించుకోండి" )
     }

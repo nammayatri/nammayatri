@@ -1745,4 +1745,7 @@ getMl =
     , parcel_is_inappropriate : "പാഴ്സൽ അനുയോജ്യമല്ല"
     , sender_asking_different_location : "അയച്ചയാള്‍ വ്യത്യസ്ത സ്ഥലം ആവശ്യപ്പെടുന്നു"
     , sender_unavailable_unreachable : "അയച്ചയാള്‍ ലഭ്യമല്ല / എത്തിക്കാനായില്ല"
+    , intercity_round_trip_ride_accepted :"അന്തർനഗര റൗണ്ട്‌ട്രിപ്പ് യാത്ര സ്വീകരിച്ചു"
+    , you_are_on_intercity_roundtrip_ride : " നിങ്ങള്‍ അന്തർനഗര റൗണ്ട്‌ട്രിപ്പ് യാത്രയിൽ ആണു"
+    , please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip : (\destination -> "ദയവായി നിങ്ങളുടെ വാഹനം " <> "<span><b>" <> destination <> "</b></span>" <> " ലേക്ക് പോകാനും തിരിച്ചുവരാനും തയ്യാറാണെന്ന് ഉറപ്പാക്കുക" )
     }

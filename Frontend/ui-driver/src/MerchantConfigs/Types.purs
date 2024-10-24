@@ -49,12 +49,17 @@ type AppConfigDriver a =
     acExplanation :: Boolean,
     showMonthlyLeaderBoard :: Boolean,
     rentalRideVideoConfig :: RentalRideVideoConfig,
-    scheduledRideConfig :: ScheduledRideConfig
+    scheduledRideConfig :: ScheduledRideConfig,
+    intercityRideVideoConfig :: IntercityRideVideoConfig 
     | a
   } 
 
 type RentalRideVideoConfig = {
   auto :: String,
+  cab :: String
+}
+
+type IntercityRideVideoConfig = {
   cab :: String
 }
 

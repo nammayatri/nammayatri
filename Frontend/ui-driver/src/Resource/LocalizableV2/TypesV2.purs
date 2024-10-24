@@ -1759,6 +1759,9 @@ newtype Keymap
   , parcel_is_inappropriate :: String
   , sender_asking_different_location :: String
   , sender_unavailable_unreachable :: String
+  , intercity_round_trip_ride_accepted :: String
+  , you_are_on_intercity_roundtrip_ride :: String
+  , please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip :: String -> String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -6984,3 +6987,12 @@ sender_asking_different_location = a
 
 sender_unavailable_unreachable :: Proxy "sender_unavailable_unreachable"
 sender_unavailable_unreachable = a
+
+intercity_round_trip_ride_accepted :: Proxy "intercity_round_trip_ride_accepted"
+intercity_round_trip_ride_accepted = a
+
+you_are_on_intercity_roundtrip_ride :: Proxy "you_are_on_intercity_roundtrip_ride"
+you_are_on_intercity_roundtrip_ride = a
+
+please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip :: Proxy "please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip"
+please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip = a

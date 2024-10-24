@@ -1691,7 +1691,7 @@ getEn =
     , your_ride_starts_in: "your ride starts in"
     , away: " away"
     , intercity: "Intercity"
-    , intercity_return: "Intercity Return"
+    , intercity_return: "Intercity Roundtrip"
     , rental: "Rental"
     , regular: "Regular"
     , upcoming_ride: "Upcoming"
@@ -1745,4 +1745,7 @@ getEn =
     , parcel_is_inappropriate : "Parcel is inappropriate"
     , sender_asking_different_location : "Sender asking to come to different location"
     , sender_unavailable_unreachable : "Sender unavailable / unreachable"
+    , intercity_round_trip_ride_accepted : "Intercity Roundtrip ride accepted"
+    , you_are_on_intercity_roundtrip_ride : "you are on  an Intercity Roundtrip ride"
+    , please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip : (\destination -> "Please ensure that your vehicle is ready for intercity trip to and back from "<> "<span><b>" <> destination <> "</b></span>") 
     }

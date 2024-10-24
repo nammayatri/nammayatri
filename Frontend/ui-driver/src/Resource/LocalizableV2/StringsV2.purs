@@ -1815,3 +1815,7 @@ getProxy str = case str of
   PICKUP_INSTRUCTION -> \a -> a @~ pickup_instruction
   DROP_INSTRUCTION -> \a -> a @~ drop_instruction
   
+  INTERCITY_ROUND_TRIP_RIDE_ACCEPTED -> \a -> a @~ intercity_round_trip_ride_accepted
+  YOU_ARE_ON_INTERCITY_ROUND_TRIP_RIDE -> \a -> a @~ you_are_on_intercity_roundtrip_ride
+  PLEASE_ENSURE_THAT_YOUR_VEHICLE_IS_READY_FOR_INTERCITY_ROUND_TRIP  arg1 -> \a -> (a @~ please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip) arg1
+

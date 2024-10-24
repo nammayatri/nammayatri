@@ -1745,4 +1745,7 @@ getTa =
     , parcel_is_inappropriate : "பார்சல் பொருத்தமற்றது"
     , sender_asking_different_location : "அனுப்புநர் வேறொரு இடத்திற்கு வருமாறு கேட்டுக்கொள்கிறார்"
     , sender_unavailable_unreachable : "அனுப்புநர் கிடைக்கவில்லை / தொடர்பு கொள்ள முடியவில்லை"
+    , intercity_round_trip_ride_accepted : "இடைநகர் ரவுண்ட்ரிப் சவாரி ஏற்கப்பட்டது "
+    , you_are_on_intercity_roundtrip_ride : "இடைநகர் ரவுண்ட்ரிப் சவாரியில் இருக்கிறீர்கள்"
+    , please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip : (\destination -> "தயவுசெய்து உங்கள் வாகனம் "  <> "<span><b>" <> destination <> "</b></span>" <>  " சென்று திரும்ப வர தயாராக உள்ளது என்பதை உறுதிப்படுத்தவும்" )
     }

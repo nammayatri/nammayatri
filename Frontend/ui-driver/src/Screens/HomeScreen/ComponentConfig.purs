@@ -159,6 +159,7 @@ rideActionModalConfig state =
   , delivery = if isDelivery then getDeliveryDetails state else Nothing
   , isSourceDetailsExpanded = state.props.isSourceDetailsExpanded
   , isDestinationDetailsExpanded = if state.props.currentStage == ST.RideStarted then true else not state.props.isSourceDetailsExpanded
+  , roundTrip = state.data.activeRide.roundTrip
   }
   in rideActionModalConfig'
   where 
@@ -1254,8 +1255,12 @@ rentalInfoPopUpConfig state =
     tripDistance = fromMaybe 0 $ Int.fromNumber $ state.data.activeRide.distance / 1000.0
     rideInfo = (show tripDuration) <> "h / " <> (show tripDistance) <> "km"
     tripType = state.data.activeRide.tripType
+    roundTrip = state.data.activeRide.roundTrip
     destinationCity = fromMaybe "" $state.data.activeRide.destinationCity
-    text  = if tripType == ST.Rental then ((getString $ THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE rideInfo) <>"<br></br><span style='color:#2194FF'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>") else (getString PLEASE_ENSURE_THAT_YOUR_VEHICLE_IS_READY_FOR_INTERCITY_TRIP <> destinationCity)
+    text  = if tripType == ST.Rental then ((getString $ THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE rideInfo) <>"<br></br><span style='color:#2194FF'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>") 
+            else if tripType  ==ST.Intercity && roundTrip == false then  ((getString PLEASE_ENSURE_THAT_YOUR_VEHICLE_IS_READY_FOR_INTERCITY_TRIP <> destinationCity) <>"<br></br><span style='color:#2194FF'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>")
+            else ((getString $ PLEASE_ENSURE_THAT_YOUR_VEHICLE_IS_READY_FOR_INTERCITY_ROUND_TRIP destinationCity ) <>"<br></br><span style='color:#2194FF'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>")
+    primaryText = if tripType == ST.Rental then getString RENTAL_RIDE_ACCEPTED else if tripType == ST.Intercity && roundTrip == false then getString INTERCITY_RIDE_ACCEPTED else getString INTERCITY_ROUND_TRIP_RIDE_ACCEPTED
     config' = config
       {
         gravity = CENTER,
@@ -1268,7 +1273,7 @@ rentalInfoPopUpConfig state =
         , visibility = VISIBLE
         },
         primaryText {
-          text = if tripType == ST.Rental then (getString RENTAL_RIDE_ACCEPTED)  else (getString INTERCITY_RIDE_ACCEPTED)<> "!"
+          text = primaryText <> "!"
         , visibility = VISIBLE
         , margin = Margin 16 24 16 4 },
         secondaryText {
@@ -1276,7 +1281,7 @@ rentalInfoPopUpConfig state =
         , visibility = VISIBLE
         , textStyle = SubHeading2
         , margin = MarginBottom 24
-        , isClickable  = tripType ==ST.Rental
+        , isClickable  = tripType == ST.Rental ||  tripType == ST.Intercity
 
         },
         option1 {
@@ -1290,7 +1295,7 @@ rentalInfoPopUpConfig state =
         backgroundClickable = false,
         cornerRadius = (PTD.Corners 15.0 true true true true),
         coverImageConfig {
-          imageUrl =  if tripType == ST.Rental then fetchImage FF_ASSET "ny_ic_rental_info" else fetchImage FF_ASSET "ny_ic_intercity_info"
+          imageUrl =  if tripType == ST.Rental then fetchImage FF_ASSET "ny_ic_rental_info" else if tripType == ST.Intercity && roundTrip == false then  fetchImage FF_ASSET "ny_ic_intercity_info" else "ny_ic_intercity_round_trip_info"
         , visibility = VISIBLE
         , height = V 160
         , width = MATCH_PARENT
