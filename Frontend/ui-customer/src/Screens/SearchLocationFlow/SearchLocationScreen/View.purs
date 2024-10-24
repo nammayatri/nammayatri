@@ -732,12 +732,12 @@ predictionsView push state globalProps = let
                 else if state.props.actionType == BusSearchSelectionAction then if (not DA.null state.data.updatedRouteSearchedList && DA.null state.data.updatedStopsSearchedList) 
                                                                                 then "Route Search" 
                                                                                 else if (DA.null state.data.updatedRouteSearchedList && not DA.null state.data.updatedStopsSearchedList) 
-                                                                                then "Bus Search"
+                                                                                then "Stops Result"
                                                                                 else if not DA.null validDecodedStops 
                                                                                 then "Recent Bus Stops"
                                                                                 else "Recent Route Stops"
-                else if state.props.actionType == BusRouteSelectionAction || state.props.actionType == BusStopSelectionAction then "Bus Search"
-                else if state.props.actionType == NoBusRouteSelectionAction then "NearBy Places"
+                else if state.props.actionType == BusRouteSelectionAction || state.props.actionType == BusStopSelectionAction then "Stops Result"
+                else if state.props.actionType == NoBusRouteSelectionAction then "Nearby Places"
                 else
                   MB.maybe "" (\ currField -> if currField == SearchLocPickup then (getString PAST_SEARCHES) else (getString SUGGESTED_DESTINATION)) state.props.focussedTextField
   in

@@ -137,7 +137,7 @@ view push state =
   let
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
     MetroBookingConfigRes metroBookingConfigResp = state.data.metroBookingConfigResp
-    cityMetroConfig = getMetroConfigFromCity city metroBookingConfigResp.isEventOngoing
+    cityMetroConfig = getMetroConfigFromCity city metroBookingConfigResp.isEventOngoing (show state.props.ticketServiceType)
     config = getAppConfig appConfig
     metroConfig = getMetroConfigFromAppConfig config (show city)
   in
@@ -280,7 +280,7 @@ infoSelectioView state push city cityMetroConfig metroConfig =
                           ][  textView
                               ([ width WRAP_CONTENT
                               , height WRAP_CONTENT
-                              , text "Route/Bus Number"
+                              , text "Pickup and Destination Stop"
                               , color Color.greyTextColor
                               , margin (MarginVertical 10 10)
                               ] <> (FontStyle.getFontStyle FontStyle.SubHeading1 LanguageStyle))

@@ -25,6 +25,7 @@ import PrestoDOM
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Services.API
+import Services.API as API
 import Data.Array
 import Data.Maybe
 import Debug (spy)
@@ -82,9 +83,9 @@ eval (MetroBookingConfigAction resp) state = do
   let updatedState = state { data {metroBookingConfigResp = resp}, props { showShimmer = false }}
   continue updatedState
 
-eval BackPressed state =  if state.props.ticketServiceType == BUS then exit $ GotoSearchScreen state else exit $ GoToHome
+eval BackPressed state =  if state.props.ticketServiceType ==API.BUS then exit $ GotoSearchScreen state else exit $ GoToHome
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
-    if state.props.ticketServiceType == BUS && state.props.isEmptyRoute == "" then do
+    if state.props.ticketServiceType == API.BUS && state.props.isEmptyRoute == "" then do
      void $ pure $ toast $ "Please Select Route"
      void $ pure $ toggleBtnLoader "" false
      continue state 
@@ -166,7 +167,7 @@ updateQuotes quotes state = do
   case quoteData of
     Nothing -> do
       void $ pure $ toast $ getString NO_QOUTES_AVAILABLE
-      continue state { props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
+      continue state { props {currentStage  = if state.props.ticketServiceType == API.BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
     Just (MetroQuote quoteData) -> do
       let updatedState = state { data {ticketPrice = quoteData.price, quoteId = quoteData.quoteId, quoteResp = quotes, eventDiscountAmount = DI.round <$> quoteData.eventDiscountAmount}, props { currentStage = ST.ConfirmMetroQuote}}
       updateAndExit updatedState $ Refresh updatedState

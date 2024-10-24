@@ -264,7 +264,7 @@ mapInputViewConfig state isEditable =
           , width : V 15
           , padding : Padding 0 0 0 0 
           }
-      , stroke : if item.isFocussed && state.props.actionType == ST.BusStopSelectionAction then "1," <> Color.yellow900 else "0," <> Color.yellow900
+      , stroke : if item.isFocussed && DS.null state.props.routeSelected then "1," <> Color.yellow900 else "0," <> Color.yellow900
       , alpha : item.alpha
       , imageSeparator : separatorConfig 
       , fontStyle : FontStyle.subHeading2 TypoGraphy
@@ -305,7 +305,7 @@ mapInputViewConfig state isEditable =
           , placeHolder : getInputView.srcPlaceHolder
           , canClearText : DS.length (if addressOnMap /= "" && pickUpFocussed then addressOnMap else srcLoc) > 2
           , id : ST.SearchLocPickup
-          , isEditable :  state.props.actionType /= ST.BusStopSelectionAction && (not $ (state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN) || (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN)))
+          , isEditable : (not $ (state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN) || (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN)))
           , alpha : if state.props.actionType /= ST.BusStopSelectionAction then 1.0 else 0.3
           }] <> (if state.props.routeSearch then [] else 
           [{ textValue : destLoc
@@ -316,8 +316,8 @@ mapInputViewConfig state isEditable =
           , canClearText : DS.length (if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc) > 2
           , id : ST.SearchLocDrop
           , alpha : 1.0
-          , isEditable : true
-          }])
+          , isEditable : if DS.null state.props.routeSelected then false else true
+          }] )
       
     getInputViewConfigBasedOnActionType :: ST.SearchLocationActionType -> { srcPrefixImageName :: String, destPrefixImageName :: String, srcPlaceHolder :: String, destPlaceHolder :: String, inputViewMargin :: Margin, headerVisibility :: Boolean, imageLayoutMargin :: Margin }
     getInputViewConfigBasedOnActionType actionType =
@@ -326,9 +326,9 @@ mapInputViewConfig state isEditable =
             ST.SearchLocationAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_blue_circle", srcPlaceHolder : (getString START_), destPlaceHolder : (getString WHERE_TO), inputViewMargin : MarginTop 8, headerVisibility : true, imageLayoutMargin : MarginLeft 24 }
             ST.MetroStationSelectionAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_red_circle", srcPlaceHolder : "Starting From?", destPlaceHolder : (getString WHERE_TO), inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
             ST.BusStationSelectionAction -> { srcPrefixImageName :"ny_ic_green_circle", destPrefixImageName : "ny_ic_red_circle", srcPlaceHolder : "Route/Bus No" , destPlaceHolder : (getString WHERE_TO), inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
-            ST.BusSearchSelectionAction -> { srcPrefixImageName :"", destPrefixImageName : "", srcPlaceHolder : "Enter Route/Bus No or Pickup Stop" , destPlaceHolder : "", inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
+            ST.BusSearchSelectionAction -> { srcPrefixImageName :"", destPrefixImageName : "", srcPlaceHolder : "Enter Bus No or Destination" , destPlaceHolder : "", inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
             ST.BusRouteSelectionAction ->  { srcPrefixImageName :"", destPrefixImageName : "", srcPlaceHolder : "PickUp Stop" , destPlaceHolder : "", inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
-            ST.BusStopSelectionAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_red_circle", srcPlaceHolder : "Starting From?", destPlaceHolder : (getString WHERE_TO), inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
+            ST.BusStopSelectionAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_red_circle", srcPlaceHolder : "Pickup Stop", destPlaceHolder : "Destination Stop", inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
             ST.NoBusRouteSelectionAction -> { srcPrefixImageName :"", destPrefixImageName : "", srcPlaceHolder : "Route/Bus No" , destPlaceHolder : "", inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
 
 menuButtonConfig :: ST.SearchLocationScreenState -> JB.Location -> MenuButton.Config

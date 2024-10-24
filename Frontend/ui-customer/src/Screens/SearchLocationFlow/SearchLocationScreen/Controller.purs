@@ -75,6 +75,7 @@ import LocalStorage.Cache (clearCache, setInCache,setValueToCache,getValueFromCa
 import Data.Function.Uncurried (runFn3, runFn2, runFn1, mkFn1)
 import DecodeUtil (stringifyJSON, decodeForeignAny, parseJSON, decodeForeignAnyImpl)
 import Foreign.Class (encode)
+import Data.String as DS
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -233,16 +234,20 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
       updateAndExit newState $ PredictionClicked item newState
   else if state.props.actionType == BusStopSelectionAction then do
           let busStopInfo = {stationName : item.title , stationCode : item.tag}
-          let updatedLoc = {placeId : MB.Nothing , address : item.title , lat : MB.Nothing , lon : MB.Nothing, city : AnyCity, addressComponents : dummyAddress, metroInfo : MB.Nothing, busStopInfo : MB.Just busStopInfo , stationCode : item.tag}
-              newState = if state.props.focussedTextField == MB.Just SearchLocPickup then 
-                          state { data { srcLoc = MB.Just updatedLoc }, props { isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop }} 
-                          else state { data { destLoc = MB.Just updatedLoc}, props {isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop} }
+              updatedLoc = {placeId : MB.Nothing , address : item.title , lat : MB.Nothing , lon : MB.Nothing, city : AnyCity, addressComponents : dummyAddress, metroInfo : MB.Nothing, busStopInfo : MB.Just busStopInfo , stationCode : item.tag}
+              updatedStopsList = if state.props.focussedTextField == MB.Just SearchLocPickup then filterStopsBySequenceInc item.title state.data.stopsSearchedList else  filterStopsBySequenceDec item.title state.data.stopsSearchedList
+              _ = spy "Printing for check updatedStopsList" updatedStopsList
+              newState = if (spy "focussedTextField is : " $ state.props.focussedTextField) == MB.Just SearchLocPickup then do
+                          let _ = spy "Printing for check srcLoc" state.data.srcLoc 
+                              _ = spy "Printing for check destLoc" state.data.destLoc
+                          state { data { srcLoc = MB.Just updatedLoc , updatedStopsSearchedList = if not (DS.null state.props.routeSelected) then updatedStopsList else state.data.updatedStopsSearchedList}, props { isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop }} 
+                          else state { data { destLoc = MB.Just updatedLoc , updatedStopsSearchedList = if not (DS.null state.props.routeSelected) then updatedStopsList else state.data.updatedStopsSearchedList}, props {isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop} }
           void $ pure $ hideKeyboardOnNavigation true
           updateAndExit newState $ PredictionClicked item newState
   else if state.props.actionType == BusRouteSelectionAction then do
           let busCodeSelected = item.tag
               busNameSelected = item.title
-              updatedStopsSearchedList = filterStopsBySequence item.title state.data.updatedStopsSearchedList
+              updatedStopsSearchedList = filterStopsBySequenceInc item.title state.data.updatedStopsSearchedList
               newState = state {props {stopCodeSelected = busCodeSelected , stopNameSelected = busNameSelected}, data {searchRideType = BUS_SOURCE , updatedStopsSearchedList = updatedStopsSearchedList}}
           void $ pure $ hideKeyboardOnNavigation true
           updateAndExit newState $ PredictionClicked item newState
@@ -306,10 +311,10 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
 eval (InputViewAC globalProps (InputViewController.ClearTextField textField)) state = do 
   pure $ setText (getNewIDWithTag textField) $ ""
   if state.props.focussedTextField == MB.Just SearchLocPickup then
-    continue state { data {locationList = fetchSortedCachedSearches state globalProps textField, updatedMetroStations = state.data.metroStations, srcLoc = MB.Nothing }
+    continue state { data {locationList = fetchSortedCachedSearches state globalProps textField, updatedMetroStations = state.data.metroStations, srcLoc = MB.Nothing,updatedStopsSearchedList = state.data.stopsSearchedList}
                    , props {canClearText = false, isAutoComplete = false, locUnserviceable = false}}
   else
-    continue state { data {locationList = fetchSortedCachedSearches state globalProps textField, updatedMetroStations = state.data.metroStations, destLoc = MB.Nothing }
+    continue state { data {locationList = fetchSortedCachedSearches state globalProps textField, updatedMetroStations = state.data.metroStations, destLoc = MB.Nothing , updatedStopsSearchedList = state.data.stopsSearchedList}
                    , props {canClearText = false, isAutoComplete = false, locUnserviceable = false}}
   
 eval (InputViewAC _ (InputViewController.BackPressed)) state = do
@@ -749,12 +754,20 @@ quotesFlow res state = do
             in compare quoteEntity1.estimatedFare quoteEntity2.estimatedFare
           _ , _ -> EQ
 
-filterStopsBySequence :: String -> Array GetMetroStationResp -> Array GetMetroStationResp
-filterStopsBySequence title updatedStopsSearchedList = 
+filterStopsBySequenceInc :: String -> Array GetMetroStationResp -> Array GetMetroStationResp
+filterStopsBySequenceInc title updatedStopsSearchedList = 
   case DA.find (\(GetMetroStationResp stop) -> stop.name == title) updatedStopsSearchedList of
     MB.Just (GetMetroStationResp foundStop) -> 
       let foundSequence = foundStop.sequenceNum
       in DA.filter (\(GetMetroStationResp stop) -> stop.sequenceNum > foundSequence) updatedStopsSearchedList
+    MB.Nothing -> 
+      updatedStopsSearchedList
+filterStopsBySequenceDec :: String -> Array GetMetroStationResp -> Array GetMetroStationResp
+filterStopsBySequenceDec title updatedStopsSearchedList = 
+  case DA.find (\(GetMetroStationResp stop) -> stop.name == title) updatedStopsSearchedList of
+    MB.Just (GetMetroStationResp foundStop) -> 
+      let foundSequence = foundStop.sequenceNum
+      in DA.filter (\(GetMetroStationResp stop) -> stop.sequenceNum < foundSequence) updatedStopsSearchedList
     MB.Nothing -> 
       updatedStopsSearchedList
 
