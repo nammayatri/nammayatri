@@ -81,6 +81,8 @@ DriverInformation:
     lastACStatusCheckedAt: Maybe UTCTime
     hasAdvanceBooking: Bool
     tollRelatedIssueCount: Maybe Int
+    extraFareMitigationFlag: Maybe Bool
+    extraFareMitigationCounter: Maybe Int
     forwardBatchingEnabled: Bool
     payoutVpa: Maybe Text
     isInteroperable: Bool
@@ -233,6 +235,10 @@ DriverInformation:
     updateTollRelatedIssueCount:
       kvFunction: updateOneWithKV
       params : [tollRelatedIssueCount]
+      where: driverId
+    updateExtraFareMitigation:
+      kvFunction: updateOneWithKV
+      params : [extraFareMitigationFlag, extraFareMitigationCounter]
       where: driverId
     updateForwardBatchingEnabled:
       kvFunction: updateOneWithKV

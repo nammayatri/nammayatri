@@ -43,6 +43,7 @@ reportIssue rideId issueType apiKey = do
       incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers ride.driverId
     ICommon.DRIVER_TOLL_RELATED_ISSUE -> handleTollRelatedIssue ride
     ICommon.SYNC_BOOKING -> pure ()
+    ICommon.EXTRA_FARE_MITIGATION -> handleExtraFareMitigation ride
   return Success
 
 handleTollRelatedIssue :: Ride -> Flow ()
@@ -50,3 +51,10 @@ handleTollRelatedIssue ride = do
   driverInfo <- QDI.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
   let tollRelatedIssueCount = fromMaybe 0 driverInfo.tollRelatedIssueCount + 1
   void $ QDI.updateTollRelatedIssueCount (Just tollRelatedIssueCount) ride.driverId
+
+handleExtraFareMitigation :: Ride -> Flow ()
+handleExtraFareMitigation ride = do
+  driverInfo <- QDI.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+  let extraFareMitigationFlag = fromMaybe False driverInfo.extraFareMitigationFlag
+      extraFareMitigationCounter = fromMaybe 0 driverInfo.extraFareMitigationCounter
+  void $ QDI.updateExtraFareMitigation (Just extraFareMitigationFlag) (Just extraFareMitigationCounter) ride.driverId
