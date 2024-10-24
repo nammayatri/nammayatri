@@ -2650,9 +2650,13 @@ eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do
   
 eval (RentalBannerClick) state = maybe (exit GoToScheduledRides) (\rentalsInfo -> if rentalsInfo.multipleScheduled then exit (PastRides state true) else exit GoToScheduledRides) state.data.rentalsInfo
 eval (BottomNavBarAction id) state = do 
-  let newState = state {props {focussedBottomIcon = id}}
+  let newState = state {props {focussedBottomIcon = id , busClicked = true}}
   case id of 
     TICKETING -> updateAndExit newState $ GoToTicketBookingFlow newState
+    BUS_ -> do
+      let updatedState = newState { props { ticketServiceType = API.BUS } }
+      updateAndExit updatedState $ GoToBusTicketBookingFlow state
+      -- updateAndExit updatedState $ GoToSearchLocationScreenForRoutes updatedState ST.Src
     MOBILITY -> continue newState 
     _ -> continue state 
     
@@ -3065,6 +3069,10 @@ eval (ServicesOnClick service) state = do
     RC.TRANSIT -> exit $ GoToMetroTicketBookingFlow updatedState
     RC.BIKE_TAXI -> continueWithCmd updatedState [ pure $ WhereToClick]
     RC.DELIVERY -> exit $ GoToParcelInstructions state
+    RC.BUS -> do
+      let newState = updatedState { props { ticketServiceType = API.BUS } }
+      updateAndExit newState $ GoToBusTicketBookingFlow state
+    RC.METRO_RIDE -> exit $ GoToMetroTicketBookingFlow updatedState
     _ -> continue state
 
 eval (EnableShareRideForContact personId) state = do
@@ -3207,6 +3215,7 @@ dummyListItem = {
   , recencyDate : Nothing
   , locationScore : Nothing
   , dynamicAction : Nothing
+  , types : Nothing
 }
 
 tagClickEvent :: CardType -> (Maybe LocationListItemState) -> HomeScreenState -> Boolean -> Eval Action ScreenOutput HomeScreenState

@@ -48,6 +48,8 @@ data ScreenName = SPLASH_SCREEN
                 | METRO_TICKET_BOOKING_SCREEN
                 | RENTAL_SCREEN
                 | PARCEL_SCREEN
+                | BUS_TICKET_BOOKING_SCREEN
+                | BUS_ROUTE_STOPS_SEARCH_SCREEN
 
 getScreen :: ScreenName -> String
 getScreen str = case str of 
@@ -84,3 +86,5 @@ getScreen str = case str of
         METRO_TICKET_BOOKING_SCREEN   -> "metro_ticket_booking_screen"
         RENTAL_SCREEN                 -> "rental_screen"
         PARCEL_SCREEN                 -> "parcel_screen"
+        BUS_TICKET_BOOKING_SCREEN     -> "bus_ticket_booking_screen"
+        BUS_ROUTE_STOPS_SEARCH_SCREEN -> "bus_route_stops_search_screen"

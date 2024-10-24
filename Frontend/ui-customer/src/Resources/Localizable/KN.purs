@@ -1571,3 +1571,4 @@ getKN stringKey =
         QUICK_DELIVERY_WITH str -> str <> " ಜೊತೆ ವೇಗದ ಡೆಲಿವರಿಗಳು"
         STEP -> "ಹಂತ"
         BOOKING_CANNOT_PROCEED_ONE_PARTY_HAS_ACTIVE_BOOKING -> "ಬುಕ್ಕಿಂಗ್ ಮುಂದುವರಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ: ಒಂದು ಪಾರ್ಟಿಯು ಸಕ್ರಿಯ ಸವಾರಿಯನ್ನು ಹೊಂದಿದೆ. ದಯವಿಟ್ಟು ನಂತರ ಪ್ರಯತ್ನಿಸಿ!"
+        BUS__ -> "Bus"

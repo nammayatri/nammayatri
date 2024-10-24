@@ -2107,6 +2107,8 @@ locationTagBarConfig state =
           ]
             <> (if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else [])
             <> ([{image: "ny_ic_delivery", text: (getString DELIVERY_STR), id: "DELIVERY", background: Color.seashell, showBanner: GONE }])
+            <> ([{image: "ny_ic_bus_icon", text: "Bus", id: "BUS", background: Color.amber, showBanner: GONE }])
+            <> ([{image: "ny_ic_metro_icon", text: "Metro", id: "METRO_RIDE", background: Color.mutedRed, showBanner: GONE }])
         )
   in
     { tagList: locTagList }
@@ -2538,13 +2540,15 @@ getAllServices :: LazyCheck -> Array RemoteConfig.Service
 getAllServices dummy = 
   let config = getAppConfig appConfig
   in
-    [ {type: RemoteConfig.INSTANT, image: fetchImage COMMON_ASSET "ny_ic_instant_new", name: INSTANT, backgroundColor: "#f2f9f3" }
-    , {type: RemoteConfig.TRANSIT, image: fetchImage COMMON_ASSET "ny_ic_transit", name: TRANSIT, backgroundColor: "#faeeee"}
-    , {type: RemoteConfig.INTERCITY, image: fetchImage COMMON_ASSET "ny_ic_intercity_service", name: INTERCITY_STR, backgroundColor: "#f1f8fe"}
-    , {type: RemoteConfig.RENTAL, image: fetchImage COMMON_ASSET "ny_ic_rental_service", name: RENTAL_STR, backgroundColor: "#fef9eb"}
-    , {type: RemoteConfig.INTERCITY_BUS, image: fetchImage COMMON_ASSET "ny_ic_intercity_bus_service", name: INTERCITY_BUS, backgroundColor: "#fdf3ec"}
+    [ {type: RemoteConfig.INSTANT, image: fetchImage COMMON_ASSET "ny_ic_instant_new", name: INSTANT, backgroundColor: "#f2f9f3", preferredEstimateOrder : [""]}
+    , {type: RemoteConfig.TRANSIT, image: fetchImage COMMON_ASSET "ny_ic_transit", name: TRANSIT, backgroundColor: "#faeeee", preferredEstimateOrder : [""]}
+    , {type: RemoteConfig.INTERCITY, image: fetchImage COMMON_ASSET "ny_ic_intercity_service", name: INTERCITY_STR, backgroundColor: "#f1f8fe", preferredEstimateOrder : [""]}
+    , {type: RemoteConfig.RENTAL, image: fetchImage COMMON_ASSET "ny_ic_rental_service", name: RENTAL_STR, backgroundColor: "#fef9eb", preferredEstimateOrder : [""]}
+    , {type: RemoteConfig.INTERCITY_BUS, image: fetchImage COMMON_ASSET "ny_ic_intercity_bus_service", name: INTERCITY_BUS, backgroundColor: "#fdf3ec", preferredEstimateOrder : [""]}
     , {type: RemoteConfig.BIKE_TAXI, image: fetchImage COMMON_ASSET "ny_ic_bike_taxi_service", name: BIKE_TAXI, backgroundColor: "#F0FAF0" , preferredEstimateOrder : ["BIKE"]}
-    ] <> if config.enableDeliveryService then [{type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY, backgroundColor: "#fef9eb"}] else []
+    , {type: RemoteConfig.BUS, image: fetchImage COMMON_ASSET "ny_ic_bus_icon", name: BUS__, backgroundColor: "#FFF3EB" , preferredEstimateOrder : ["BUS"]}
+    , {type: RemoteConfig.METRO_RIDE, image: fetchImage COMMON_ASSET "ny_ic_metro_icon", name: METRO_RIDE, backgroundColor: "#faeeee" , preferredEstimateOrder : ["METRO_RIDE"]}
+    ] <> if config.enableDeliveryService then [{type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY_STR, backgroundColor: "#fef9eb", preferredEstimateOrder : [""]}] else []
 
 getChatDetails :: ST.HomeScreenState -> Array NewContacts -> Array ChatContacts
 getChatDetails state contacts = 
