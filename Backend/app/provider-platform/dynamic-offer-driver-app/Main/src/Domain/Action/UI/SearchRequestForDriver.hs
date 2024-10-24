@@ -98,6 +98,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     parkingCharge :: Maybe HighPrecMoney,
     isFavourite :: Maybe Bool,
     isReferredRideReq :: Maybe Bool,
+    roundTrip :: Maybe Bool,
     middleStopCount :: Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
@@ -164,6 +165,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           isOnRide = nearbyReq.isForwardRequest,
           isReferredRideReq = searchRequest.driverIdForSearch $> True,
           isFavourite = nearbyReq.isFavourite,
+          roundTrip = searchRequest.roundTrip,
           middleStopCount = fromMaybe 0 nearbyReq.middleStopCount,
           ..
         }

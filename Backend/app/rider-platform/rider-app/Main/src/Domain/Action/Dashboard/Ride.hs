@@ -417,7 +417,8 @@ rideInfo merchantId reqRideId = do
         fareBreakup = transformFareBreakup <$> fareBreakup,
         estimatedDistance = distanceToHighPrecMeters <$> booking.estimatedDistance,
         computedPrice = ride.totalFare <&> (.amount),
-        rideCreatedAt = ride.createdAt
+        rideCreatedAt = ride.createdAt,
+        roundTrip = booking.roundTrip
       }
 
 transformFareBreakup :: DFareBreakup.FareBreakup -> Common.FareBreakup
