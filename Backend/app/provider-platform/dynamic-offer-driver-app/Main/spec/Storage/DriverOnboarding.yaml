@@ -802,7 +802,7 @@ HyperVergeSdkLogs:
       kvFunction: findAllWithKV
       where: driverId
     findAllByDriverIdAndDocType:
-      kvFunction: findAllWithOptionsKV
+      kvFunction: findAllWithKV
       where:
         and: [driverId, docType]
       orderBy:
