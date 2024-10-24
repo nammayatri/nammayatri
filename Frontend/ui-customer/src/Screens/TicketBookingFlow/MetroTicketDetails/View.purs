@@ -401,7 +401,7 @@ ticketDetailsView push state =
           height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , background Color.grey700
+        , background if isBusTicketBooking state then Color.white900 else Color.grey700
         , margin $ Margin 16 24 16 0
         ]
         [ 
@@ -485,7 +485,7 @@ statusPillView state (Config.StatusPillConfig statusPillConfig) =
 metroHeaderView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> (forall properties. (Array (Prop properties))) -> Boolean -> PrestoDOM (Effect Unit) w
 metroHeaderView push state headerFontStyle detailVisibility = 
   let 
-    (CityMetroConfig cityConfig) = getMetroConfigFromCity state.data.city Nothing
+    (CityMetroConfig cityConfig) = getMetroConfigFromCity state.data.city Nothing ""
     currentTicket = state.data.ticketsInfo !! state.props.currentTicketIndex
     currentTicketNumber = maybe "" (\ticket -> ticket.ticketNumber) currentTicket
   in
@@ -574,14 +574,15 @@ metroHeaderView push state headerFontStyle detailVisibility =
       , visibility $ boolToVisibility $ detailVisibility && (isBusTicketBooking state) && (maybe "" (\ticketInfo -> ticketInfo.status) (state.data.ticketsInfo !! state.props.currentTicketIndex)) /= "EXPIRED"
       ]
       [ textView $
-        [ text "2:10" --dummy-codex
+        [ text $  convertUTCtoISC state.data.bookingUpdatedAt "HH" <> ":" <> convertUTCtoISC state.data.bookingUpdatedAt "mm"
         , color Color.white900
         , gravity CENTER
         ] <> FontStyle.body6 TypoGraphy
       , textView $
-        [ text "pm" --dummy-codex
+        [ text $ convertUTCtoISC state.data.bookingUpdatedAt "A"
         , color Color.black500
         , margin $ MarginLeft 3
+        , gravity CENTER
         ] <> FontStyle.body24 TypoGraphy
       ]
     ]
@@ -613,7 +614,7 @@ qrCodeView push state =
         width WRAP_CONTENT
       , height WRAP_CONTENT
       , text $ headerText
-      , color Color.black800
+      , color Color.black500
       , gravity CENTER
       , visibility $ boolToVisibility $ not $ isBusTicketBooking state
       ] <> FontStyle.subHeading1 TypoGraphy
@@ -712,7 +713,7 @@ ticketNumberAndValidView push state =
           width WRAP_CONTENT
         , height WRAP_CONTENT
         , text $ (getString VALID_UNTIL) <> " " <> validUntil
-        , color $ if isBusTicketBooking state then Color.black500 else Color.black800
+        , color $ Color.black500
         , padding $ PaddingLeft $ if isBusTicketBooking state then 4 else 0
         ] <> FontStyle.tags TypoGraphy 
       ]
@@ -894,7 +895,7 @@ linePillView line =
 mapView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
 mapView push state = 
   let
-    (CityMetroConfig cityConfig) = getMetroConfigFromCity state.data.city Nothing
+    (CityMetroConfig cityConfig) = getMetroConfigFromCity state.data.city Nothing ""
   in
     PrestoAnim.animationSet [Anim.fadeIn true] $  linearLayout [
       width MATCH_PARENT

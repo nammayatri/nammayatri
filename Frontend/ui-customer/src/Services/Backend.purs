@@ -1259,10 +1259,10 @@ getMetroBookingStatus shortOrderID = do
   where
     unwrapResponse x = x
 
-getMetroBookingStatusListBT :: FlowBT String GetMetroBookingListResp
-getMetroBookingStatusListBT = do
+getMetroBookingStatusListBT :: String -> FlowBT String GetMetroBookingListResp
+getMetroBookingStatusListBT vehicleType= do
       headers <- getHeaders' "" false
-      withAPIResultBT (EP.getMetroBookingList "") (\x → x) errorHandler (lift $ lift $ callAPI headers (GetMetroBookingListReq))
+      withAPIResultBT (EP.getMetroBookingList vehicleType) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetMetroBookingListReq vehicleType))
       where
         errorHandler _ = do
             BackT $ pure GoBack

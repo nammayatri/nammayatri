@@ -454,3 +454,9 @@ abbey = "#47484D"
 
 cloudBurst :: Color
 cloudBurst = "#1D3449"
+
+mutedRed :: Color
+mutedRed = "#E554541A"
+
+amber :: Color
+amber = "#FF85331A"

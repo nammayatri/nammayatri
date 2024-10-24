@@ -1585,3 +1585,4 @@ getTA stringKey =
     QUICK_DELIVERY_WITH str -> str <> "உடன் வேகமான டெலிவரிகள்"
     STEP -> "படி"
     BOOKING_CANNOT_PROCEED_ONE_PARTY_HAS_ACTIVE_BOOKING -> "பதிவு செயல்பட முடியாது: ஒரு தரப்பில் ஒரு செயல்பாட்டு பயணம் உள்ளது. பின்னர் முயற்சிக்கவும்!"
+    BUS__ -> "Bus"

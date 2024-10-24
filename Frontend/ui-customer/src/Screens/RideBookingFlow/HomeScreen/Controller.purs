@@ -3069,6 +3069,10 @@ eval (ServicesOnClick service) state = do
     RC.TRANSIT -> exit $ GoToMetroTicketBookingFlow updatedState
     RC.BIKE_TAXI -> continueWithCmd updatedState [ pure $ WhereToClick]
     RC.DELIVERY -> exit $ GoToParcelInstructions state
+    RC.BUS -> do
+      let newState = updatedState { props { ticketServiceType = API.BUS } }
+      updateAndExit newState $ GoToBusTicketBookingFlow state
+    RC.METRO_RIDE -> exit $ GoToMetroTicketBookingFlow updatedState
     _ -> continue state
 
 eval (EnableShareRideForContact personId) state = do

@@ -74,7 +74,7 @@ busTicketBookingScreen initialState =
       if (isNothing initialState.data.ticketDetailsState) then do
         void $ launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do 
           void $ lift $ lift $ EHU.toggleLoader true
-          (GetMetroBookingListResp resp)<- Remote.getMetroBookingStatusListBT
+          (GetMetroBookingListResp resp)<- Remote.getMetroBookingStatusListBT (show initialState.data.ticketServiceType)
           lift $ lift $ doAff do liftEffect $ push $ BusTicketBookingListRespAC resp
           void $ lift $ lift $ EHU.toggleLoader false
         pure $ pure unit
@@ -164,8 +164,15 @@ headerView push state =
         , gravity RIGHT
         , padding $ Padding 4 4 4 4
         , onClick push $ const TicketIconClicked
-        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_ticket_icon_yellow"
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_ticket_icon_yellow"
         , rippleColor Color.rippleShade
+        ]
+      , textView $
+        [ text "Tickets"
+        , color Color.yellow900
+        , gravity RIGHT
+        , singleLine true
+        , maxLines 1
         ]
       ]
     , linearLayout
@@ -244,7 +251,7 @@ searchRouteButton push state =
     , cornerRadius 12.0
     , rippleColor Color.rippleShade
     , gravity CENTER_VERTICAL
-    , accessibilityHint "Search Your Bus : Button"
+    , accessibilityHint "Enter Bus No/Destination : Button"
     ]
     [ imageView
       [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_search_grey"
@@ -254,7 +261,7 @@ searchRouteButton push state =
       , margin $ MarginRight 12
       ]
     , textView $ 
-      [ text "Search Your Bus"
+      [ text "Enter Bus No/Destination"
       , color Color.black900
       , singleLine false
       , gravity CENTER_VERTICAL

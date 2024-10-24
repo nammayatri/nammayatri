@@ -490,7 +490,7 @@ getEN stringKey =
         DRIVER_IS_NEAR_YOUR_LOCATION -> "Driver is near your location."
         SOME_OTHER_REASON -> "Some other reason."
         LOCATION_PERMISSION_SUBTITLE_NEW_USER -> "Welcome to {}! \nTo start booking rides, please allow us to find you!"
-        METRO_RIDE -> "Metro Ride"
+        METRO_RIDE -> "Metro"
         GO_BACK_TEXT -> "Go Back"
         DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST_AND_IS_JUST -> "The driver preferred your special request and is just "
         DRIVER_PREFERRED_YOUR_SPECIAL_REQUEST -> "The driver preferred your special request and has travelled "
@@ -1568,4 +1568,5 @@ getEN stringKey =
         QUICK_DELIVERY_WITH str -> "Quick Deliveries with " <> str
         STEP -> "Step"
         BOOKING_CANNOT_PROCEED_ONE_PARTY_HAS_ACTIVE_BOOKING -> "Booking can't proceed: One party has an active ride. Please try later!"
+        BUS__ -> "Bus"
         
