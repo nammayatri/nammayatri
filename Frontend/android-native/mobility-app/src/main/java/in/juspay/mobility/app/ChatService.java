@@ -10,6 +10,8 @@ package in.juspay.mobility.app;
 
 import static in.juspay.mobility.app.NotificationUtils.startMediaPlayer;
 import static android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC;
+import static android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING;
+
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
