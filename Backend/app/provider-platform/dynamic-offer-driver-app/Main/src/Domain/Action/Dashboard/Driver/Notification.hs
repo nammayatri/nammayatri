@@ -140,6 +140,7 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData dummyShowD
           isOnRide = False,
           isFavourite = Just False,
           isReferredRideReq = Nothing,
+          roundTrip = Just False,
           middleStopCount = 0,
           ..
         }
