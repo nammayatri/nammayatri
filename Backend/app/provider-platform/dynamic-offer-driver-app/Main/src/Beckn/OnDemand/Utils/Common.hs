@@ -1309,30 +1309,28 @@ convertBookingToPricing serviceTier DBooking.Booking {..} =
     }
 
 mkGeneralInfoTagGroup :: DTC.TransporterConfig -> Pricing -> Bool -> Maybe Spec.TagGroup
-mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP
-  | isNothing pricing.specialLocationTag && isNothing pricing.distanceToNearestDriver = Nothing
-  | otherwise =
-    Just $
-      Spec.TagGroup
-        { tagGroupDisplay = Just False,
-          tagGroupDescriptor =
-            Just
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tags.INFO,
-                  descriptorName = Just "Information",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupList =
-            specialLocationTagSingleton pricing.specialLocationTag
-              <> specialLocationNameTag pricing.specialLocationName
-              <> distanceToNearestDriverTagSingleton pricing.distanceToNearestDriver
-              <> isCustomerPrefferedSearchRouteSingleton pricing.isCustomerPrefferedSearchRoute
-              <> isBlockedRouteSingleton pricing.isBlockedRoute
-              <> tollNamesSingleton pricing.tollNames
-              <> durationToNearestDriverTagSingleton
-              <> smartTipSuggestionTagSingleton
-              <> smartTipReasonTagSingleton
-        }
+mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
+  Just $
+    Spec.TagGroup
+      { tagGroupDisplay = Just False,
+        tagGroupDescriptor =
+          Just
+            Spec.Descriptor
+              { descriptorCode = Just $ show Tags.INFO,
+                descriptorName = Just "Information",
+                descriptorShortDesc = Nothing
+              },
+        tagGroupList =
+          specialLocationTagSingleton pricing.specialLocationTag
+            <> specialLocationNameTag pricing.specialLocationName
+            <> distanceToNearestDriverTagSingleton pricing.distanceToNearestDriver
+            <> isCustomerPrefferedSearchRouteSingleton pricing.isCustomerPrefferedSearchRoute
+            <> isBlockedRouteSingleton pricing.isBlockedRoute
+            <> tollNamesSingleton pricing.tollNames
+            <> durationToNearestDriverTagSingleton
+            <> smartTipSuggestionTagSingleton
+            <> smartTipReasonTagSingleton
+      }
   where
     smartTipSuggestionTagSingleton
       | isNothing pricing.smartTipSuggestion || not isValueAddNP = Nothing
