@@ -45,7 +45,7 @@ getTrackVehicles ::
   )
 getTrackVehicles (mbPersonId, merchantId) routeCode = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
-  routeInfoFromRedis :: [(Text, TrackRoute.VehicleInfoForRoute)] <- Redis.hGetAll (makeRouteKey routeCode)
+  routeInfoFromRedis :: [(Text, TrackRoute.VehicleInfoForRoute)] <- Redis.withCrossAppRedis $ Redis.hGetAll (makeRouteKey routeCode)
   let routeInfoWithLatLong :: [(Text, TrackRoute.VehicleInfoForRoute, Double, Double)] = mapMaybe (\(vId, vInfo) -> (vId,vInfo,,) <$> vInfo.latitude <*> vInfo.longitude) routeInfoFromRedis
   logDebug $ "got route from redis " <> show routeInfoFromRedis
   logDebug $ "got route from redis 2 " <> show routeInfoWithLatLong
