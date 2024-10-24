@@ -26,6 +26,13 @@ flag Local
 
 library
   exposed-modules:
+      ChatCompletion.AzureOpenAI.API
+      ChatCompletion.AzureOpenAI.Config
+      ChatCompletion.AzureOpenAI.Types
+      ChatCompletion.Interface
+      ChatCompletion.Interface.AzureOpenAI
+      ChatCompletion.Interface.Types
+      ChatCompletion.Types
       Email.AWS.Flow
       Email.Types
       KafkaLogs.TransactionLogs
