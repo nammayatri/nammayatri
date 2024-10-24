@@ -86,6 +86,6 @@ data FRFSTicketBookingStatus
   | TECHNICAL_CANCEL_REJECTED
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CashbackStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CashbackStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSTicketBookingStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketBookingStatus)
