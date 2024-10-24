@@ -3014,7 +3014,9 @@ type BusTrackingScreenData = {
 type BusTrackingScreenProps = {
   showRouteDetailsTab :: Boolean, 
   expandStopsView :: Boolean, 
-  verticalLineHeight :: Int
+  verticalLineHeight :: Int,
+  srcLat :: Number,
+  srcLon :: Number
 }
 
 type AlertWidgetConfig = {}

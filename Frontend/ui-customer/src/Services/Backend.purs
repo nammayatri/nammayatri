@@ -1284,10 +1284,10 @@ retryMetroTicketPayment quoteId = do
   where
     unwrapResponse x = x
 
-getMetroStationBT :: String -> String -> String -> String-> FlowBT String GetMetroStationResponse
-getMetroStationBT vehicleType city routeCode startStationCode = do
+getMetroStationBT :: String -> String -> String -> String-> String -> FlowBT String GetMetroStationResponse
+getMetroStationBT vehicleType city routeCode endStationCode location = do
     headers <- getHeaders' "" false
-    withAPIResultBT (EP.getMetroStations vehicleType city routeCode startStationCode) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ GetMetroStationReq vehicleType city routeCode startStationCode)
+    withAPIResultBT (EP.getMetroStations vehicleType city routeCode endStationCode location) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ GetMetroStationReq vehicleType city routeCode endStationCode location)
     where
     errorHandler errorPayload = do
       BackT $ pure GoBack 

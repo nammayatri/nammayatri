@@ -240,8 +240,8 @@ shareRide dummy = (getBaseUrl "54") <> "/share/ride"
 followRide :: String -> String
 followRide _ = (getBaseUrl "47") <> "/follow/ride"
 
-getMetroStations :: String -> String -> String -> String -> String
-getMetroStations vehicleType city routeCode startStationCode= (getBaseUrl "47") <> "/frfs/stations?vehicleType=\"" <> vehicleType <> "\"&city=" <> city <> (if (vehicleType == "BUS" && routeCode /= "") then "&routeCode=" <> routeCode else "") <> (if (vehicleType == "BUS" && startStationCode /= "") then "&startStationCode=" <> startStationCode else "")
+getMetroStations :: String -> String -> String -> String -> String -> String
+getMetroStations vehicleType city routeCode endStationCode location = (getBaseUrl "47") <> "/frfs/stations?vehicleType=\"" <> vehicleType <> "\"&city=" <> city <> (if (vehicleType == "BUS" && routeCode /= "") then "&routeCode=" <> routeCode else "") <> (if (vehicleType == "BUS" && endStationCode/= "") then "&endStationCode=" <> endStationCode else "")<> "&location=" <> location
 
 searchMetro :: String -> String
 searchMetro vehicleType = (getBaseUrl "48") <> "/frfs/search?vehicleType=\"" <> vehicleType <> "\""

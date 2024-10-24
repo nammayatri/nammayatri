@@ -285,10 +285,10 @@ infoSelectioView state push city cityMetroConfig metroConfig =
                           ][  textView
                               ([ width WRAP_CONTENT
                               , height WRAP_CONTENT
-                              , text "Pickup and Destination Stop"
+                              , text "Route/Bus Number"
                               , color Color.greyTextColor
                               , margin (MarginVertical 10 10)
-                              ] <> (FontStyle.getFontStyle FontStyle.SubHeading1 LanguageStyle))
+                              ] <> FontStyle.body2 TypoGraphy)
                             ] 
                         , linearLayout
                               [ width MATCH_PARENT
@@ -325,6 +325,14 @@ infoSelectioView state push city cityMetroConfig metroConfig =
                                   ]
                             , routeListView state push
                       ]
+                     , textView
+                            ([ width WRAP_CONTENT
+                            , height WRAP_CONTENT
+                            , text "Pickup and Destination Stop"
+                            , color Color.greyTextColor
+                            -- , margin (MarginVertical 10 10)
+                            , margin $ if state.props.ticketServiceType == BUS then  MarginTop 35 else MarginTop 5
+                            ] <> FontStyle.body2 TypoGraphy)
                     , locationSelectionView push state
                     , incrementDecrementView push state metroConfig isBusTicketService
                     , limitReachedView push state
@@ -633,25 +641,40 @@ updateButtonView state push =
   ]
 
 locationSelectionView :: (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState ->  forall w. PrestoDOM (Effect Unit) w
-locationSelectionView push state = 
-  linearLayout[
+locationSelectionView push state =
+  relativeLayout 
+  [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+   ]
+  [
+    linearLayout[
     width MATCH_PARENT
   , height WRAP_CONTENT
   , cornerRadius 8.0
   , stroke ("1," <> Color.borderColorLight)
   , orientation VERTICAL
-  , margin $ if state.props.ticketServiceType == BUS then  MarginTop 35 else MarginTop 5
+  , margin $  MarginTop 5
   , gravity CENTER
-  ][
-    srcTextView push state
+  ]
+  [srcTextView push state
   , linearLayout[
       height $ V 1
     , width $ V 280
+    , padding $ Padding 0 0 10 0
     , background Color.borderColorLight
-    ][]
+    ][ ]
   , destTextView push state
-  ]
-
+]
+  , imageView $ 
+      [ height $ V 32
+      , width $ V 32
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_src_dest_edit"
+      , cornerRadius 10.0 
+      , margin $ Margin 0 46 16 0
+      , onClick push $ const (SelectLocation Src)
+      , alignParentRight "true,-1"
+      ]
+]
 srcTextView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
 srcTextView push state = textViewForLocation (getString FROM) Src push state
 

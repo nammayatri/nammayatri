@@ -536,7 +536,7 @@ noStopRouteConfig state = let
     },
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_noroute_nobus"
+      imageUrl = HU.fetchImage HU.COMMON_ASSET "ny_ic_noroute_nobus"
       , visibility = VISIBLE
       , margin = Margin 16 16 16 24
       , width = MATCH_PARENT

@@ -86,7 +86,7 @@ screen initialState =
       [ ( \push -> do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
                 let city = getValueToLocalStore CUSTOMER_LOCATION
-                getMetroStationResp <- Remote.getMetroStationBT "BUS" city initialState.data.busRouteCode "" --chnge
+                getMetroStationResp <- Remote.getMetroStationBT "BUS" city initialState.data.busRouteCode "" (show initialState.props.srcLat <> "," <> show initialState.props.srcLon)
                 liftFlowBT $ push $ UpdateStops getMetroStationResp
                 lift $ lift $ busLocationTracking 3000.0 0 initialState.data.busRouteCode
                 -- lift $ lift $ defaultMockInviteFlow 0 initialState

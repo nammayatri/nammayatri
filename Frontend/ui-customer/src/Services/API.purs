@@ -3202,7 +3202,7 @@ instance showFollowers :: Show Followers where show = genericShow
 instance decodeFollowers :: Decode Followers where decode = defaultDecode
 instance encodeFollowers :: Encode Followers where encode = defaultEncode
 --------------------------------------------------- GetMetroStation ----------------------------------------------------
-data GetMetroStationReq = GetMetroStationReq String String String String
+data GetMetroStationReq = GetMetroStationReq String String String String String
 
 newtype GetMetroStationResponse = GetMetroStationResponse (Array GetMetroStationResp)
 
@@ -3227,12 +3227,12 @@ instance decodeGetMetroStationResponse :: Decode GetMetroStationResponse where d
 data StationType = START | END | TRANSIT | INTERMEDIATE
 
 instance makeGetMetroStationReq :: RestEndpoint GetMetroStationReq  where
-    makeRequest reqBody@(GetMetroStationReq vehicleType city routeCode startStationCode) headers = defaultMakeRequest GET (EP.getMetroStations vehicleType city routeCode startStationCode) headers reqBody Nothing
+    makeRequest reqBody@(GetMetroStationReq vehicleType city routeCode endStationCode location) headers = defaultMakeRequest GET (EP.getMetroStations vehicleType city routeCode endStationCode location) headers reqBody Nothing
     encodeRequest = standardEncode
 
 derive instance genericGetMetroStationReq :: Generic GetMetroStationReq _
 instance showGetMetroStationReq     :: Show GetMetroStationReq where show     = genericShow
-instance standardGetMetroStationReq :: StandardEncode GetMetroStationReq where standardEncode (GetMetroStationReq _ _ _ _) = standardEncode {}
+instance standardGetMetroStationReq :: StandardEncode GetMetroStationReq where standardEncode (GetMetroStationReq _ _ _ _ _) = standardEncode {}
 instance decodeGetMetroStationReq   :: Decode GetMetroStationReq where decode = defaultDecode
 instance encodeGetMetroStationReq   :: Encode GetMetroStationReq where encode = defaultEncode
 

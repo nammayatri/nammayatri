@@ -48,6 +48,8 @@ initData =
         { showRouteDetailsTab: true
         , expandStopsView: false
         , verticalLineHeight : 0
+        , srcLat : 0.0
+        , srcLon : 0.0
         }
     }
 
