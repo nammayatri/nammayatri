@@ -102,6 +102,8 @@ instance FromTType' BeamIO.IssueOption IssueOption where
             merchantId = Id merchantId,
             igmSubCategory = igmSubCategory,
             merchantOperatingCityId = Id merchantOperatingCityId,
+            allowedAttachements = fromMaybe [] allowedAttachements,
+            filterTags = fromMaybe [] filterTags,
             ..
           }
 
@@ -122,5 +124,9 @@ instance ToTType' BeamIO.IssueOption IssueOption where
         BeamIO.isActive = isActive,
         BeamIO.createdAt = createdAt,
         BeamIO.updatedAt = updatedAt,
-        BeamIO.igmSubCategory = igmSubCategory
+        BeamIO.igmSubCategory = igmSubCategory,
+        BeamIO.allowedAttachements = if null allowedAttachements then Nothing else Just allowedAttachements,
+        BeamIO.uiAction = uiAction,
+        BeamIO.onInputAction = onInputAction,
+        BeamIO.filterTags = if null filterTags then Nothing else Just filterTags
       }

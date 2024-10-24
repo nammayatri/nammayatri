@@ -15,6 +15,7 @@ import qualified Data.Text.Encoding as DTE
 import Data.Time
 import qualified IGM.Enums as Spec
 import IssueManagement.Common
+import IssueManagement.Domain.Types.Issue.Common
 import IssueManagement.Domain.Types.Issue.IssueCategory
 import IssueManagement.Domain.Types.Issue.IssueMessage
 import IssueManagement.Domain.Types.Issue.IssueOption
@@ -308,7 +309,9 @@ data CreateIssueCategoryReq = CreateIssueCategoryReq
     translations :: [Translation],
     messages :: [CreateIssueMessageReq],
     label :: Maybe Text,
-    igmCategory :: Maybe Text
+    igmCategory :: Maybe Text,
+    filterOptionFn :: Maybe [FilterFn],
+    description :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -325,7 +328,9 @@ data CreateIssueMessageReq = CreateIssueMessageReq
     options :: [CreateIssueOptionReq],
     referenceOptionId :: Maybe (Id IssueOption),
     referenceCategoryId :: Maybe (Id IssueCategory),
-    isActive :: Maybe Bool
+    isActive :: Maybe Bool,
+    filterTags :: Maybe [FilterOptionTags],
+    filterOptionFn :: Maybe [FilterFn]
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -340,7 +345,11 @@ data CreateIssueOptionReq = CreateIssueOptionReq
     restrictedVariants :: Maybe [VehicleVariant],
     restrictedRideStatuses :: Maybe [RideStatus],
     showOnlyWhenUserBlocked :: Maybe Bool,
-    igmSubCategory :: Maybe Spec.IssueSubCategory
+    igmSubCategory :: Maybe Spec.IssueSubCategory,
+    allowedAttachements :: Maybe [AllowedAttachment],
+    uiAction :: Maybe UIAction,
+    onInputAction :: Maybe OnInputAction,
+    filterTags :: Maybe [FilterOptionTags]
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

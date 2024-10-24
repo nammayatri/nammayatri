@@ -17,6 +17,8 @@ type IssueAPI =
       :> Common.IssueCategoryAPI
     :<|> "option"
       :> Common.IssueOptionAPI
+    :<|> "getOptionV2"
+      :> Common.IssueOptionAPIV2
     :<|> Capture "issueId" (Id Domain.IssueReport)
       :> "info"
       :> Common.IssueInfoAPI
