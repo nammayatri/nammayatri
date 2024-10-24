@@ -44,6 +44,8 @@ data FRFSRouteFareAPI = FRFSRouteFareAPI {code :: Data.Text.Text, fares :: [API.
 data FRFSRouteReq = FRFSRouteReq
   { color :: Kernel.Prelude.Maybe Data.Text.Text,
     endPoint :: Kernel.External.Maps.Types.LatLong,
+    firstStopName :: Kernel.Prelude.Maybe Data.Text.Text,
+    lastStopName :: Kernel.Prelude.Maybe Data.Text.Text,
     longName :: Data.Text.Text,
     polyline :: Kernel.Prelude.Maybe Data.Text.Text,
     shortName :: Data.Text.Text,

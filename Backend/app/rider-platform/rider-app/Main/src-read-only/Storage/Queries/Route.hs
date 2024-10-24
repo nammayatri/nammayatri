@@ -41,6 +41,17 @@ findAllByMerchantOperatingCityAndVehicleType limit offset merchantOperatingCityI
     limit
     offset
 
+findAllByMerchantOperatingCityAndVehicleTypeWithoutOptions ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.FRFS.Enums.VehicleCategory -> m [Domain.Types.Route.Route])
+findAllByMerchantOperatingCityAndVehicleTypeWithoutOptions merchantOperatingCityId vehicleType = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.vehicleType $ Se.Eq vehicleType
+        ]
+    ]
+
 findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.Route.Route))
 findByRouteCode code = do findOneWithKV [Se.Is Beam.code $ Se.Eq code]
 
@@ -61,6 +72,8 @@ updateByPrimaryKey (Domain.Types.Route.Route {..}) = do
       Se.Set Beam.color color,
       Se.Set Beam.endLat ((.lat) endPoint),
       Se.Set Beam.endLon ((.lon) endPoint),
+      Se.Set Beam.firstStopName firstStopName,
+      Se.Set Beam.lastStopName lastStopName,
       Se.Set Beam.longName longName,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),

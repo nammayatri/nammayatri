@@ -25,3 +25,9 @@ ALTER TABLE atlas_app.route ADD COLUMN color text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.route ADD COLUMN polyline text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.route ADD COLUMN last_stop_name text ;
+ALTER TABLE atlas_app.route ADD COLUMN first_stop_name text ;
