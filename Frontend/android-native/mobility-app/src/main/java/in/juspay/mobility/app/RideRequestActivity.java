@@ -164,6 +164,7 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideStartDate,
                     notificationSource,
                     rideRequestBundle.getBoolean("isThirdPartyBooking"),
+                    rideRequestBundle.getBoolean("isFavourite"),
                     rideRequestBundle.getDouble("parkingCharge"),
                     getCurrTime
                     );
@@ -182,7 +183,7 @@ public class RideRequestActivity extends AppCompatActivity {
             boolean showSpecialLocationTag = model.getSpecialZonePickup();
             String searchRequestId = model.getSearchRequestId();
             boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag || showVariant) {
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || showSpecialLocationTag || showVariant || model.isFavourite()) {
                 holder.tagsBlock.setVisibility(View.VISIBLE);
                 holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE: View.GONE);
                 if (showSpecialLocationTag && (model.getDriverDefaultStepFee() == model.getOfferedPrice())) {
@@ -192,6 +193,7 @@ public class RideRequestActivity extends AppCompatActivity {
                     holder.specialLocExtraTip.setVisibility(View.GONE);
                 }
                 holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
+                holder.isFavouriteTag.setVisibility(model.isFavourite() ? View.VISIBLE : View.GONE);
                 holder.specialLocTag.setVisibility(showSpecialLocationTag ? View.VISIBLE : View.GONE);
                 holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip());
                 holder.testRequestTag.setVisibility(searchRequestId.equals(DUMMY_FROM_LOCATION) ? View.VISIBLE : View.GONE);

@@ -30,7 +30,7 @@ public class SheetModel {
     private final int negotiationUnit;
     private final int tollCharges;
 
-    private final Boolean disabilityTag;
+    private final Boolean disabilityTag, isFavourite;
     private float buttonIncreasePriceAlpha , buttonDecreasePriceAlpha, distanceToBeCovered;
     private boolean buttonIncreasePriceClickable , buttonDecreasePriceClickable, gotoTag, isTranslated, specialZonePickup, downgradeEnabled, isThirdPartyBooking;
     private double srcLat, srcLng, destLat, destLng;
@@ -78,6 +78,7 @@ public class SheetModel {
                       String rideStartDate,
                       String notificationSource,
                       Boolean isThirdPartyBooking,
+                      Boolean isFavourite,
                       double parkingCharge,
                       String renderedAt
                       ){
@@ -131,6 +132,7 @@ public class SheetModel {
         this.rideStartDate = rideStartDate;
         this.notificationSource = notificationSource;
         this.isThirdPartyBooking = isThirdPartyBooking;
+        this.isFavourite = isFavourite;
         this.parkingCharge = parkingCharge;
         this.renderedAt = renderedAt;
     }
@@ -199,6 +201,8 @@ public class SheetModel {
     }
 
     public int getCustomerTip() {return customerExtraFee;}
+
+    public Boolean isFavourite() {return isFavourite;}
 
     public Boolean getDisabilityTag() {return disabilityTag; }
 
