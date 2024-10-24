@@ -74,7 +74,6 @@ import Kernel.Utils.Version
 import qualified Lib.JourneyPlannerTypes as JPT
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
--- import Servant.Client
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.Serviceability as Serviceability
 import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
@@ -378,7 +377,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
   let updatedPerson = backfillCustomerNammaTags person
 
   riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id >>= fromMaybeM (RiderConfigNotFound merchantOperatingCity.id.getId)
-  when riderConfig.makeMultiModalSearch $ do
+  when (riderConfig.makeMultiModalSearch && isNothing journeySearchData) $ do
     case req of
       OneWaySearch searchReq -> fork "multi-modal search" $ multiModalSearch personId person.merchantId searchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ searchRequest merchantOperatingCityId riderConfig.maximumWalkDistance
       _ -> pure ()
@@ -617,7 +616,8 @@ makeChildSearchReqs ::
   UTCTime ->
   Meters ->
   Flow ()
-makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest journeyId journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ now maximumWalkDistance = do
+makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest journeyId journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ _now maximumWalkDistance = do
+  now <- getCurrentTime
   void $
     mapWithIndex
       ( \idx journeyPlannerLeg -> do
@@ -649,7 +649,7 @@ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchReque
                           isSourceManuallyMoved = if idx == 0 then searchReq.isSourceManuallyMoved else Nothing,
                           isDestinationManuallyMoved = if idx == (journeyLegsCount - 1) then searchReq.isDestinationManuallyMoved else Nothing,
                           isSpecialLocation = searchReq.isSpecialLocation,
-                          startTime = journeyPlannerLeg.fromArrivalTime,
+                          startTime = Just now, -- journeyPlannerLeg.fromArrivalTime,
                           isReallocationEnabled = searchReq.isReallocationEnabled,
                           quotesUnifiedFlow = searchReq.quotesUnifiedFlow,
                           sessionToken = searchReq.sessionToken,
@@ -657,14 +657,14 @@ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchReque
                           stops = Nothing,
                           driverIdentifier = Nothing
                         }
-              void $ search personId legSearchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ (Just journeySearchData)
+              fork "child searchReq for multi-modal" $ void $ search personId legSearchReq bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ (Just journeySearchData)
             DTrip.Metro -> do
               frfsSearchReq <- convertToFRFSStations journeyPlannerLeg (Just journeySearchData)
-              void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) Spec.METRO frfsSearchReq
+              fork "child FRFS searchReq for multi-modal" $ void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) Spec.METRO frfsSearchReq
             -- poll getFrfsSearchQuote from frontend
             DTrip.Bus -> do
               frfsSearchReq <- convertToFRFSStations journeyPlannerLeg (Just journeySearchData)
-              void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) Spec.BUS frfsSearchReq
+              fork "child FRFS searchReq for multi-modal" $ void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) Spec.BUS frfsSearchReq
             -- poll getFrfsSearchQuote from frontend
             DTrip.Walk -> do
               fromLocation_ <- buildSearchReqLoc $ SearchReqLocation {gps = LatLong {lat = journeyPlannerLeg.startLocation.latLng.latitude, lon = journeyPlannerLeg.startLocation.latLng.longitude}, address = dummyAddress}
