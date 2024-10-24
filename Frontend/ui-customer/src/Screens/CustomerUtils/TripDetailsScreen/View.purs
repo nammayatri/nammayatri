@@ -64,11 +64,14 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.TripDetailsScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  let 
-    filteredTopics = DA.filter (\topic -> 
+  let
+    filteredCategories = if state.data.config.feature.enableHelpAndSupport
+      then DA.filter (_.isRideRequired) state.data.categories 
+      else []
+    filteredTopics = DA.filter (\topic ->
         topic.categoryType == "Category" &&
         RSST.findIfRideIsValid (Just topic) state.data.selectedItem.rideStatus state.data.selectedItem.rideCreatedAt state.data.selectedItem.status
-      ) (topicsList state)
+      ) filteredCategories
   in
   Anim.screenAnimation $
  relativeLayout
@@ -92,7 +95,7 @@ view push state =
         , orientation VERTICAL
         , padding $ PaddingVertical 16 16
         , gravity CENTER_VERTICAL
-        ][tripDetailsLayout state push (DA.length filteredTopics > 0)
+        ][tripDetailsLayout state push
         , reportIssueView state push filteredTopics
         ]
       ]
@@ -125,8 +128,8 @@ providerDetails state push =
         ] <> FontStyle.tags LanguageStyle
   ]
 
-tripDetailsLayout :: forall w. ST.TripDetailsScreenState -> (Action -> Effect Unit) -> Boolean -> PrestoDOM (Effect Unit) w
-tripDetailsLayout state push showDivider =
+tripDetailsLayout :: forall w. ST.TripDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+tripDetailsLayout state push =
   linearLayout
   [height WRAP_CONTENT
   , width MATCH_PARENT
@@ -161,7 +164,6 @@ tripDetailsLayout state push showDivider =
              , width MATCH_PARENT
              , background Color.lightGreyShade
              , margin $ MarginVertical 16 16
-             , visibility $ boolToVisibility showDivider
              ][]
            ]
         ]]
@@ -460,19 +462,28 @@ invoiceView state push =
 ----------------- report Isssue ----------------
 reportIssueView ::  forall w . ST.TripDetailsScreenState -> (Action -> Effect Unit) -> Array CategoryListType -> PrestoDOM (Effect Unit) w
 reportIssueView state push filteredTopics =
+  let helpAndSupportVisibility = boolToVisibility $ (state.props.fromMyRides /= ReportIssueChat &&
+        DA.length filteredTopics > 0) || not state.data.config.feature.enableHelpAndSupport
+      dropDownImage = if state.data.config.feature.enableHelpAndSupport 
+        then if
+          state.props.reportIssue
+            then "ny_ic_chevron_up_dark"
+            else "ny_ic_chevron_down_light"
+        else "ny_ic_chevron_right"
+  in
   linearLayout
     [ orientation VERTICAL
     , width MATCH_PARENT
     , height WRAP_CONTENT
     , disableClickFeedback true
     , onClick push $ const ReportIssue
+    , visibility helpAndSupportVisibility
     ][  linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , gravity CENTER_VERTICAL
         , orientation HORIZONTAL
         , margin $ Margin 16 0 16 16
-        , visibility $ boolToVisibility (state.props.fromMyRides /= ReportIssueChat && DA.length filteredTopics > 0) 
         ][  
           imageView
             [ width $ V 20
@@ -491,7 +502,7 @@ reportIssueView state push filteredTopics =
             , width MATCH_PARENT
             , gravity RIGHT
             ][imageView[ 
-                imageWithFallback $ fetchImage FF_COMMON_ASSET $ if state.props.reportIssue then "ny_ic_chevron_up_dark" else "ny_ic_chevron_down_light"
+                imageWithFallback $ fetchImage FF_COMMON_ASSET dropDownImage
               , height $ V 20
               , width $ V 20
               ]

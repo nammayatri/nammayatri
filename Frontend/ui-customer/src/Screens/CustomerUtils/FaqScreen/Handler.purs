@@ -45,16 +45,15 @@ import Screens.FaqScreen.ScreenData
 import Components.IssueView (IssueInfo)
 import Debug
 import Screens.RideSelectionScreen.ScreenData as RideSelectionScreenData
+import Services.FlowCache as SF
 
 faqScreen :: FlowBT String FlowState
 faqScreen = do
   (GlobalState globalState) <- getState
   let faqScreenState = globalState.faqScreen
-  if DA.null faqScreenState.data.categories then do 
-    let language = fetchLanguage $ getLanguageLocale languageKey 
-    (GetCategoriesRes response) <- Remote.getCategoriesBT language
-    let categories' = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : Just catObj.label, categoryImageUrl : Just catObj.logoUrl, isRideRequired : catObj.isRideRequired , maxAllowedRideAge : catObj.maxAllowedRideAge, categoryType: catObj.categoryType, allowedRideStatuses: catObj.allowedRideStatuses}) response.categories
-    modifyScreenState $ FaqScreenStateType (\faqScreen -> faqScreen { data {categories = categories' } } )
+  if DA.null faqScreenState.data.categories then do
+    categories <- SF.fetchIssueCategories
+    modifyScreenState $ FaqScreenStateType (\faqScreen -> faqScreen { data { categories = categories } } )
   else pure unit
   (GlobalState updatedGlobalState) <- getState
   act <- lift $ lift $ runScreen $ FaqScreen.screen updatedGlobalState.faqScreen

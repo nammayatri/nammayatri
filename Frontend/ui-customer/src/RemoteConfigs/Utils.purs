@@ -170,3 +170,16 @@ defaultMetroConfig :: MetroConfig
 defaultMetroConfig = {
   tnc : ""
 }
+
+defaultSelfServeCategoryConfig :: SelfServeCategoryConfig
+defaultSelfServeCategoryConfig = {
+    safetyIssueCategoryConfig : {categoryLabel : "SAFETY", optionLabels : Nothing},
+    tollRelatedIssueCategoryConfig : {categoryLabel : "PAYMENT_RELATED", optionLabels : Just ["TOLL_RELATED_ISSUE", "DRIVER_TOLL_RELATED_ISSUE"]},
+    acRelatedIssueCategoryConfig : {categoryLabel : "RIDE_RELATED", optionLabels : Just ["RIDE_RELATED"]}
+}
+
+getSelfServeCategoryConfig :: String -> SelfServeCategoryConfig
+getSelfServeCategoryConfig city = do
+    let config = fetchRemoteConfigString "self_serve_category"
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultSelfServeCategoryConfig
+    getCityBasedConfig value city
