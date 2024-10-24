@@ -214,6 +214,7 @@ types:
     - merchantOperatingCityId: Maybe Text
     - rideCreatedAt: UTCTime
     - rideStatus: RideStatus
+    - roundTrip: Maybe Bool
   LocationAPIEntity:
     - lat: Double
     - lon: Double
