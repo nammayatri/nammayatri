@@ -62,6 +62,8 @@ RiderConfig:
     useUserSettingsForSafetyIVR: Bool
     payoutReferralProgram: Bool
     payoutReferralStartDate: UTCTime
+    thresholdCancellationPercentageToBlock: Maybe Int
+    minRidesToBlock: Maybe Int
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
