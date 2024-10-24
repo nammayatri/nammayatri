@@ -152,3 +152,10 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN dynamic_logic_update_password text
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN feedback_alert_rating_threshold integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN use_user_settings_for_safety_ivr boolean  default false;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN threshold_cancellation_percentage_to_block integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN min_rides_to_block integer ;
