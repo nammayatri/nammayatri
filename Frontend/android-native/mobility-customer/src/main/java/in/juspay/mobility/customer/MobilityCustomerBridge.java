@@ -13,9 +13,13 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.graphics.Color;
 import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
@@ -23,7 +27,11 @@ import android.os.Build;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.animation.LinearInterpolator;
+import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebChromeClient;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -49,9 +57,11 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
@@ -59,6 +69,7 @@ import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.mobility.common.MapRemoteConfig;
 import in.juspay.mobility.common.MobilityCommonBridge;
 import android.view.accessibility.AccessibilityManager;
+import android.widget.Toast;
 
 public class MobilityCustomerBridge extends MobilityCommonBridge {
 
@@ -72,10 +83,12 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         NORMAL, SPECIAL_ZONE, HOTSPOT
     }
     private Integer debounceAnimateCameraCounter;
+    private InterCityBus interCityBus;
 
     public MobilityCustomerBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
         app = AppType.CONSUMER;
+        interCityBus = new InterCityBus();
     }
 
     // endregion
@@ -620,5 +633,101 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     public boolean isAccessibilityEnabled() {
         AccessibilityManager accessibilityManager = (AccessibilityManager) bridgeComponents.getContext().getSystemService(Context.ACCESSIBILITY_SERVICE);
         return accessibilityManager.isEnabled();
+    }
+
+
+
+    public class InterCityBus {
+        String redBusPermissionCallback;
+        String pSPermissionRequestCallback;
+
+
+        @JavascriptInterface
+        public void requestMobileNumberPermission(String cbFunction){
+            redBusPermissionCallback = cbFunction;
+            String triggerEvent = String.format("window.callUICallback(%s)", pSPermissionRequestCallback);
+            Objects.requireNonNull(bridgeComponents.getJsCallback()).addJsToWebView(triggerEvent);
+        }
+
+        public void sentNumberToIntercityBus(String phoneNumber){
+
+        }
+
+        public void setPSPermissionRequestCallback(String cb){
+            pSPermissionRequestCallback = cb;
+        }
+    }
+
+    public void storeIntercityBusView(String cb){
+        interCityBus.setPSPermissionRequestCallback(cb);
+    }
+
+
+
+    @JavascriptInterface
+    public void initialIntercityWebView(String callback, String id) {
+        storeDashboardCallBack = callback;
+        Context context = bridgeComponents.getContext();
+        Activity activity = bridgeComponents.getActivity();
+
+        if (activity != null) {
+            ExecutorManager.runOnMainThread(new Runnable() {
+                @Override
+                public void run() {
+                    WebView webView = activity.findViewById(Integer.parseInt(id));
+                    webView.addJavascriptInterface(new );
+                    webView.
+
+                    if (webView == null) return;
+                    webView.setWebChromeClient(new WebChromeClient() {
+                        @Override
+                        public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
+                            String message = consoleMessage.message();
+                            if (message.contains("Write permission denied")) {
+                                // Handle the error here
+                                ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                                ClipData clip = ClipData.newPlainText("MyLbl", "https://nammayatri.in/link/rider/SJ8D");
+                                clipboard.setPrimaryClip(clip);
+                            }
+                            return super.onConsoleMessage(consoleMessage);
+                        }
+                    });
+                    webView.setWebViewClient(new WebViewClient() {
+                        @Override
+                        public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                            if (url.startsWith("intent://")) {
+                                try {
+                                    Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
+                                    if (intent != null) {
+                                        PackageManager packageManager = context.getPackageManager();
+                                        ResolveInfo info = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY);
+                                        if (info != null) {
+                                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                            context.startActivity(intent);
+                                            return true;
+                                        }
+                                    }
+                                } catch (URISyntaxException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                            if (url.startsWith("tg:") || url.startsWith("https://www.facebook.com") || url.startsWith("https://www.twitter.com/") || url.startsWith("https://www.linkedin.com") || url.startsWith("https://api.whatsapp.com") || url.contains("YATRI.pdf") || url.startsWith("https://telegram.me/")) {
+                                try {
+                                    CustomTabsIntent.Builder builder = new CustomTabsIntent.Builder();
+                                    CustomTabsIntent customTabsIntent = builder.build();
+                                    customTabsIntent.intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    customTabsIntent.launchUrl(context, Uri.parse(url));
+                                    return true;
+                                } catch (Exception e) {
+                                    Toast.makeText(context, "Looks like there is no app or web browser installed on your device", Toast.LENGTH_SHORT).show();
+                                    return true;
+                                }
+                            }
+                            return false;
+                        }
+                    });
+                }
+            });
+        }
     }
 }
