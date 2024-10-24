@@ -49,12 +49,12 @@ screen initialState =
   , view
   , name : "AadhaarVerificationScreen"
   , globalEvents : [ (\push -> do
-                      if (initialState.props.currentStage == VerifyAadhaar) && (not initialState.props.resendEnabled)then do
-                        _ <- pure $ HU.clearTimer ""
-                        _ <- HU.startTimer 60 true push ResendTimer
-                        pure unit
-                      else
-                        pure unit
+                      -- if (initialState.props.currentStage == VerifyAadhaar) && (not initialState.props.resendEnabled)then do
+                      --   _ <- pure $ HU.clearTimer ""
+                      --   _ <- HU.startTimer 60 true push ResendTimer
+                      --   pure unit
+                      -- else
+                      --   pure unit
                       pure (pure unit)) ]
   , eval : (\action state -> do
       let _ = spy "AadhaarVerificationScreenState action" action

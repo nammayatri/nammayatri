@@ -398,7 +398,7 @@ data METRO_TICKET_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_METRO_TICKET MetroTicke
                                  | GO_TO_PRIVIOUS_SEARCH_SCREEN MetroTicketBookingScreenState
                                  | GO_TO_SEARCH_SCREEN MetroTicketBookingScreenState
                                  | GO_TO_BUS_SEARCH_SCREEN MetroTicketBookingScreenState
-                                 | GO_TO_AADHAAR_VERIFICATION_SCREEN MetroTicketBookingScreenState
+                                 | GO_TO_AADHAAR_VERIFICATION_SCREEN MetroTicketBookingScreenState String
 
 data PICKUP_INSTRUCTIONS_SCREEN_OP = GO_TO_HOME_SCREEN_FROM_PICKUP_INSTRUCTIONS
 

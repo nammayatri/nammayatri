@@ -64,6 +64,6 @@ metroTicketBookingScreen = do
         GoToBusSearchScreen state -> 
             App.BackT $ App.BackPoint <$> (pure $ GO_TO_BUS_SEARCH_SCREEN state)
         -- GET_ROUTES state -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_ROUTE_SEARCH_METRO_SCREEN state)
-        AadhaarVerificationSO state ->
-            App.BackT $ App.BackPoint <$> (pure $ GO_TO_AADHAAR_VERIFICATION_SCREEN state)
+        AadhaarVerificationSO state offerType ->
+            App.BackT $ App.BackPoint <$> (pure $ GO_TO_AADHAAR_VERIFICATION_SCREEN state offerType)
         

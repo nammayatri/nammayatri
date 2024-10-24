@@ -227,6 +227,8 @@ import Screens.TicketBookingFlow.BusTicketBooking.Controller as BusTicketBooking
 import Screens.TicketBookingFlow.BusTicketBooking.ScreenData as BusTicketBookingScreenData
 import Screens.TicketBookingFlow.BusTrackingScreen.Controller as BusTrackingScreen
 import Screens.TicketBookingFlow.BusTrackingScreen.Transformer (getStationsFromBusRoute)
+import Screens.AadhaarVerificationScreen.ScreenData as AadhaarVerificationScreenData
+
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
   when callInitUI $ lift $ lift $ initUI 
@@ -4561,7 +4563,9 @@ metroTicketBookingFlow = do
     --  modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
     --  modifyScreenState $ SearchLocationScreenStateType (\slsstate -> slsstate { props {srcLat =  state.props.srcLat , srcLong = state.props.srcLong, actionType = BusStopSelectionAction}})
     --  searchLocationFlow
-    GO_TO_AADHAAR_VERIFICATION_SCREEN _ -> aadhaarVerificationFlow
+    GO_TO_AADHAAR_VERIFICATION_SCREEN _ offerType -> do
+      modifyScreenState $ AadhaarVerificationScreenType (\_ -> AadhaarVerificationScreenData.initData)
+      aadhaarVerificationFlow offerType
   where
   fetchMetroStations currentCity metroStationsList routeCode ticketServiceType srcLat srcLong srcCode destCode= do
     (GetMetroStationResponse getMetroStationResp) <- Remote.getMetroStationBT ticketServiceType currentCity routeCode "" (show srcLat <> "," <> show srcLong)
@@ -6982,8 +6986,8 @@ busTrackingScreenFlow = do
 
     _ -> busTrackingScreenFlow
 
-aadhaarVerificationFlow :: FlowBT String Unit
-aadhaarVerificationFlow = do
+aadhaarVerificationFlow :: String -> FlowBT String Unit
+aadhaarVerificationFlow offerType = do
   action <- UI.aadhaarVerificationScreen
   case action of
     ENTER_AADHAAR_OTP state -> do
@@ -6997,8 +7001,8 @@ aadhaarVerificationFlow = do
           case resp.statusCode of
             "1001" -> do
               modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = VerifyAadhaar, btnActive = false}})
-              aadhaarVerificationFlow
-            _ -> aadhaarVerificationFlow
+              aadhaarVerificationFlow offerType
+            _ -> aadhaarVerificationFlow offerType
         Left errorPayload -> do
           let errorCode = HU.decodeErrorCode errorPayload.response.errorMessage
           case errorCode of
@@ -7010,7 +7014,7 @@ aadhaarVerificationFlow = do
             _ -> do
               pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
               modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = AadhaarDetails, btnActive = false}})
-          aadhaarVerificationFlow
+          aadhaarVerificationFlow offerType
     VERIFY_AADHAAR_OTP state -> do
       void $ lift $ lift $ toggleLoader true
       res <- lift $ lift $ Remote.verifyAadhaarOtp state.data.otp
@@ -7019,14 +7023,15 @@ aadhaarVerificationFlow = do
         Right (VerifyAadhaarOTPResp resp) -> do
           -- if resp.code == 200 then if state.props.fromHomeScreen then getDriverInfoFlow Nothing Nothing Nothing false Nothing false else onBoardingFlow
             -- else do
-          void $ pure $ toast "Error Occured please try again later"
-          modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = EnterAadhaar, btnActive = false}})
-          aadhaarVerificationFlow
+          predictionClickedFlow dummyListItem SearchLocationScreenData.initData
+          -- void $ pure $ toast "Error Occured please try again later"
+          -- modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = EnterAadhaar, btnActive = false}})
+          -- aadhaarVerificationFlow offerType
         Left errorPayload -> do
           let stage = if (HU.decodeErrorCode errorPayload.response.errorMessage) == "INVALID_OTP" then VerifyAadhaar else AadhaarDetails
           void $ pure if (HU.decodeErrorCode errorPayload.response.errorMessage) == "INVALID_OTP" then toast "Invalid OTP" else unit
           modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = stage, btnActive = false}})
-          aadhaarVerificationFlow
+          aadhaarVerificationFlow offerType
     RESEND_AADHAAR_OTP state -> do
       res <- lift $ lift $ Remote.triggerAadhaarOtp state.data.aadhaarNumber
       case res of
@@ -7034,11 +7039,11 @@ aadhaarVerificationFlow = do
           case resp.statusCode of
             "1001" -> do
               modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = VerifyAadhaar}})
-              aadhaarVerificationFlow
+              aadhaarVerificationFlow offerType
             _ -> do
               void $ pure $ toast "Verification Failed"
               modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = EnterAadhaar}})
-              aadhaarVerificationFlow
+              aadhaarVerificationFlow offerType
         Left errorPayload -> do
           let errorCode = HU.decodeErrorCode errorPayload.response.errorMessage
           case errorCode of
@@ -7048,7 +7053,7 @@ aadhaarVerificationFlow = do
             "GENERATE_AADHAAR_OTP_EXCEED_LIMIT" -> pure $ toast "OTP Resend Limit Exceeded"
             _ -> pure $ toast $ HU.decodeErrorMessage errorPayload.response.errorMessage
           modifyScreenState $ AadhaarVerificationScreenType (\aadhaarVerification -> aadhaarVerification{props{currentStage = EnterAadhaar, btnActive = false}})
-          aadhaarVerificationFlow
+          aadhaarVerificationFlow offerType
     -- GO_TO_HOME_FROM_AADHAAR -> do
     --   (GlobalState state) <- getState
     --   modifyScreenState $ AadhaarVerificationScreenType (\_ -> state.aadhaarVerificationScreen)
@@ -7065,4 +7070,38 @@ aadhaarVerificationFlow = do
     --       void $ lift $ lift $ toggleLoader false
     --       void $ pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
     --       aadhaarVerificationFlow
-    _ -> aadhaarVerificationFlow
+    _ -> aadhaarVerificationFlow offerType
+
+
+dummyListItem :: LocationListItemState
+dummyListItem = {
+    prefixImageUrl : ""
+  , postfixImageUrl : ""
+  , postfixImageVisibility : false
+  , lat : Nothing
+  , lon : Nothing
+  , placeId : Nothing
+  , subTitle : ""
+  , title : ""
+  , description : ""
+  , tag : ""
+  , tagType : Nothing
+  , cardType : Nothing
+  , address : ""
+  , tagName : ""
+  , isEditEnabled : true
+  , savedLocation : ""
+  , placeName : ""
+  , isClickable : true
+  , alpha : 1.0
+  , fullAddress : HomeScreenData.dummyAddress
+  , locationItemType : Nothing
+  , distance : Nothing
+  , showDistance : Just false
+  , actualDistance : Nothing
+  , frequencyCount : Nothing
+  , recencyDate : Nothing
+  , locationScore : Nothing
+  , dynamicAction : Nothing
+  , types : Nothing
+}

@@ -78,15 +78,15 @@ data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | GoToBusSearchScreen ST.MetroTicketBookingScreenState
                   | GotoSearchScreen ST.MetroTicketBookingScreenState
                   -- | GET_ROUTES ST.MetroTicketBookingScreenState
-                  | AadhaarVerificationSO ST.MetroTicketBookingScreenState
+                  | AadhaarVerificationSO ST.MetroTicketBookingScreenState String
 
 eval :: Action -> ST.MetroTicketBookingScreenState -> Eval Action ScreenOutput ST.MetroTicketBookingScreenState
 
 eval OfferInfoClicked state =
   continue state { props { currentStage = ST.OfferSelection }}
 
-eval (ApplyOffer _) state =
-  exit $ AadhaarVerificationSO state
+eval (ApplyOffer offerType) state =
+  updateAndExit state $ AadhaarVerificationSO state offerType
 
 eval (MetroBookingConfigAction resp) state = do
   let updatedState = state { data {metroBookingConfigResp = resp}, props { showShimmer = false }}

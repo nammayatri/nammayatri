@@ -4211,7 +4211,7 @@ newtype VerifyAadhaarOTPResp = VerifyAadhaarOTPResp {
   , request_id :: String
   , transactionId :: String
   , image :: String
-  , code :: Int
+  , code :: String
 }
 
 instance makeVerifyAadhaarOTPReq :: RestEndpoint VerifyAadhaarOTPReq where
