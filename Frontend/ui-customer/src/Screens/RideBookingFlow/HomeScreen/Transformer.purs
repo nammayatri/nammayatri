@@ -171,6 +171,7 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
           , serviceTierName : quoteEntity.serviceTierName
           , appConfig : getAppConfig appConfig
           , city : city
+          , isUpgradedToCab : quoteDetails.isUpgradedToCab
         } 
     
 getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard -> DriverInfoCard

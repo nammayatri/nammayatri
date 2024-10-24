@@ -43,4 +43,5 @@ config = {
   , selectedQuote : Nothing
   , appConfig : getAppConfig appConfig
   , city : AnyCity
+  , isUpgradedToCab : false
   }

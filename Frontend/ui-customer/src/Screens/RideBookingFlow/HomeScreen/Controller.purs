@@ -1410,7 +1410,8 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) newState 
         updateAndExit updatedState $ (ConfirmEditedPickup updatedState)
       SettingPrice -> do
                         void $ pure $ performHapticFeedback unit
-                        void $ pure $ setValueToLocalStore SELECTED_VARIANT state.data.selectedEstimatesObject.vehicleVariant
+                        void $ pure $ setValueToLocalStore SELECTED_VARIANT state.data.selectedEstimatesObject.vehicleVariant 
+                        void $ pure $ setValueToLocalStore SELECTED_SERVICE_TIER (fromMaybe "" state.data.selectedEstimatesObject.serviceTierName)
                         void $ pure $ cacheRateCard state
                         let updatedState = state{data{rideHistoryTrip = Nothing}, props{ searchExpire = (getSearchExpiryTime true)}}
                         exit $ SelectEstimateAndQuotes updatedState
@@ -2176,16 +2177,19 @@ eval (EstimatesTryAgain (GetQuotesRes quotesRes) count ) state = do
 
 
 eval (GetQuotesList (SelectListRes resp)) state = do
-  if flowWithoutOffers WithoutOffers then
+  let allQuotes = getQuoteList ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes) state.props.city
+      existingQuotes = state.data.quoteListModelState
+      newQuotes = filter (\quote -> quote.seconds > 0) (filter (\a -> length (filter (\b -> a.id == b.id ) existingQuotes) == 0 ) allQuotes) --filter (\quote -> quote.seconds > 0) (union allQuotes existingQuotes)
+      updatedQuotes = existingQuotes <> newQuotes
+      mbUpgradedQuote = (find(\item -> item.isUpgradedToCab) updatedQuotes)
+      hasUpgradedQuote = isJust mbUpgradedQuote
+  if (flowWithoutOffers WithoutOffers) && (not hasUpgradedQuote) then
     continueWithCmd state [pure $ ContinueWithoutOffers (SelectListRes resp)]
   else do
-    let allQuotes = getQuoteList ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes) state.props.city
-        existingQuotes = state.data.quoteListModelState
-        newQuotes = filter (\quote -> quote.seconds > 0) (filter (\a -> length (filter (\b -> a.id == b.id ) existingQuotes) == 0 ) allQuotes) --filter (\quote -> quote.seconds > 0) (union allQuotes existingQuotes)
-        updatedQuotes = existingQuotes <> newQuotes
-        newState = state{data{quoteListModelState = updatedQuotes },props{isSearchLocation = NoView, isSource = Nothing, currentStage = FindingQuotes}}
-        
-    if getValueToLocalStore GOT_ONE_QUOTE == "FALSE" && length updatedQuotes > 0 then do
+    let upgradedQuotes = if hasUpgradedQuote then (foldl(\acc item -> if item.isUpgradedToCab then [item] <> acc else acc <> [item]) [] updatedQuotes) else updatedQuotes
+        newState = state{data{quoteListModelState = upgradedQuotes },props{isSearchLocation = NoView, isSource = Nothing, currentStage = FindingQuotes}}
+
+    if getValueToLocalStore GOT_ONE_QUOTE == "FALSE" && length upgradedQuotes > 0 then do
       void $ pure $ firebaseLogEvent "ny_user_received_quotes"
       void $ pure $ setValueToLocalStore GOT_ONE_QUOTE "TRUE"
     else pure unit
@@ -2194,15 +2198,15 @@ eval (GetQuotesList (SelectListRes resp)) state = do
       logInfo "retry_finding_quotes" ( "QuoteList : Current Stage: " <> (show newState.props.currentStage) <> " LOCAL_STAGE : " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id:" <> state.props.estimateId)
       let updatedState = if isTipEnabled state then tipEnabledState newState{props{isPopUp = TipsPopUp  ,findingQuotesProgress = 0.0}} else newState{props{isPopUp = ConfirmBack}}
       exit $ GetSelectList updatedState
-    else if state.props.selectedQuote == Nothing && (getValueToLocalStore AUTO_SELECTING) /= "CANCELLED_AUTO_ASSIGN" then do
+    else if (state.props.selectedQuote == Nothing && (getValueToLocalStore AUTO_SELECTING) /= "CANCELLED_AUTO_ASSIGN") || hasUpgradedQuote then do
       logInfo "retry_finding_quotes" ( "SelectedQuote: Current Stage: " <> (show newState.props.currentStage) <> " LOCAL_STAGE : " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id:" <> state.props.estimateId)
-      case head updatedQuotes of
+      case head upgradedQuotes of
         Just quote -> do
           let selectedQuote = Just quote.id
           void $ pure $ setValueToLocalStore AUTO_SELECTING quote.id
-          continue newState{ data{ quoteListModelState = map (\quote' -> quote'{ selectedQuote = selectedQuote }) updatedQuotes }, props{ selectedQuote = selectedQuote }}
+          continue newState{ data{ quoteListModelState = map (\quote' -> quote'{ selectedQuote = selectedQuote }) upgradedQuotes }, props{ selectedQuote = selectedQuote }}
         Nothing -> continue newState
-    else if null updatedQuotes then do
+    else if null upgradedQuotes then do
       logInfo "retry_finding_quotes" ( "Default :Current Stage: " <> (show newState.props.currentStage) <> " LOCAL_STAGE : " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id:" <> state.props.estimateId)
       void $ pure $ setValueToLocalStore AUTO_SELECTING "false"
       continue newState{props{ selectedQuote = Nothing }}
@@ -2542,6 +2546,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
       estimateId = if config.vehicleVariant == "BOOK_ANY" then fromMaybe "" (head selectedEstimates) else config.id
       otherSelectedEstimates = fromMaybe [] $ tail $ selectedEstimates
   void $ pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
+  void $ pure $ setValueToLocalNativeStore SELECTED_SERVICE_TIER (fromMaybe "" config.serviceTierName)
   let updatedSpecialZOneQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
       props = if config.activeIndex == config.index then state.props else state.props{customerTip = HomeScreenData.initData.props.customerTip, tipViewProps = HomeScreenData.initData.props.tipViewProps}
       updatedQuoteList = map (\item -> item{activeIndex = config.index}) state.data.quoteList
@@ -2589,6 +2594,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionControll
       (Tuple estimateId otherSelectedEstimates) = getEstimateId state.data.specialZoneQuoteList state.data.selectedEstimatesObject 
   void $ pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price
   void $ pure $ setValueToLocalStore SELECTED_VARIANT (state.data.selectedEstimatesObject.vehicleVariant)
+  void $ pure $ setValueToLocalStore SELECTED_SERVICE_TIER (fromMaybe "" state.data.selectedEstimatesObject.serviceTierName)
   void $ pure $ cacheRateCard state
   if state.data.fareProductType  == FPT.ONE_WAY_SPECIAL_ZONE then do
     _ <- pure $ updateLocalStage ConfirmingRide
@@ -2619,6 +2625,12 @@ eval (ChooseYourRideAction ChooseYourRideController.NoAction) state = do
 eval (QuoteListModelActionController (QuoteListModelController.CancelTimer)) state = do
   void $ pure $ clearTimerWithId state.data.iopState.timerId
   continue state { data { iopState { timerVal = "0"}}}
+
+eval (QuoteListModelActionController (QuoteListModelController.UpgradeRidePrimaryButtonAction PrimaryButtonController.OnClick)) state =
+  exit $ ConfirmRide state { props { selectedQuote = if state.data.quoteListModelState == [] then Nothing else state.props.selectedQuote } }
+
+eval (QuoteListModelActionController (QuoteListModelController.RejectUpgradePrimaryButtonAction PrimaryButtonController.OnClick)) state = do
+  exit $ RetrySearchWithoutUpgrade true state{props{selectedQuote = Nothing}, data{quoteListModelState = []}}
 
 eval (QuoteListModelActionController (QuoteListModelController.ProviderModelAC (PM.ButtonClick (PrimaryButtonController.OnClick)))) state = do
   void $ pure $ clearTimerWithId state.data.iopState.timerId

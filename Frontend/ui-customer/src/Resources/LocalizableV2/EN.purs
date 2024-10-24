@@ -1681,4 +1681,8 @@ getEn = Keymap {
 , confirm_contacts :  "Confirm Contacts"
 , tickets_for_delhi_metro : "Tickets for Delhi Metro"
 , max_parcel_size : (\l b h -> "Max parcel size: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, here_is_a_surprise_upgrade : "Here's a surprise upgrade! 🎉"
+, new_fare : "New Fare: "
+, confirming_ride_in : (\time -> "Confirming Ride in " <> time <> "s")
+, no_continue_search_for : (\serviceTierName -> "No, continue search for " <> serviceTierName)
 }

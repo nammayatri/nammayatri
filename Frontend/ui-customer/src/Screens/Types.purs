@@ -918,6 +918,7 @@ type QuoteListItemState =
   , city :: City
   , vehicleImage :: String
   , serviceTierName :: Maybe String
+  , isUpgradedToCab :: Boolean
   }
 
 

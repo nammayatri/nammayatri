@@ -885,6 +885,7 @@ currentFlowStatus prioritizeRating = do
                           , destinationAddress = flowStatusData.destinationAddress
                           , selectedEstimatesObject
                             { vehicleVariant = getValueToLocalStore SELECTED_VARIANT
+                            , serviceTierName = Just $ getValueToLocalStore SELECTED_SERVICE_TIER
                             , providerType = providerType
                             }
                           }
@@ -1249,6 +1250,52 @@ homeScreenFlow = do
           void $ lift $ lift $ toggleLoader true
           checkRideStatus true false
       homeScreenFlow
+        
+    RETRY_SEARCH_WITHOUT_UPGRADE showLoader -> do 
+      void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
+      void $ lift $ lift $ toggleLoader showLoader
+      (GlobalState newState) <- getState
+      let state = newState.homeScreen
+      cancelRideUpgrade state.props.estimateId
+      setValueToLocalStore AUTO_SELECTING "false"
+      setValueToLocalStore FINDING_QUOTES_POLLING "false"
+      setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
+      let
+        currentTime = (convertUTCtoISC (getCurrentUTC "") "HH:mm:ss")
+
+        findingQuotesTime = convertUTCtoISC (getValueToLocalNativeStore FINDING_QUOTES_START_TIME) "HH:mm:ss"
+      if withinTimeRange findingQuotesTime currentTime "22:00:00" || withinTimeRange findingQuotesTime currentTime "05:00:00" then do
+        void $ pure $ toast (getString STR.PLEASE_FIND_REVISED_FARE_ESTIMATE)
+        void $ pure $ firebaseLogEvent "ny_user_new_estimate_after_night_charges_applicable"
+        updateLocalStage FindEstimateAndSearch
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = FindEstimateAndSearch, searchAfterEstimate = false } })
+      else do
+        void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
+        response <- lift $ lift $ Remote.selectEstimate (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected && state.props.customerTip.tipForDriver > 0 then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled) state.data.deliveryDetailsInfo) (state.props.estimateId)
+        case response of
+          Right res -> do
+            void $ pure $ setValueToLocalStore LOCAL_STAGE (show FindingQuotes)
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = FindingQuotes, searchExpire = (getSearchExpiryTime true) } })
+            let
+              tipViewData = if state.props.customerTip.isTipSelected then state.props.tipViewProps { stage = TIP_ADDED_TO_SEARCH } else HomeScreenData.initData.props.tipViewProps
+            void $ pure $ setTipViewData (TipViewData { stage: tipViewData.stage, activeIndex: tipViewData.activeIndex, isVisible: tipViewData.isVisible })
+            void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/progress_loader_line.json", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = 0.0, scaleType="CENTER_CROP"}
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { customerTip = if homeScreen.props.customerTip.isTipSelected then homeScreen.props.customerTip else HomeScreenData.initData.props.customerTip { enableTips = homeScreen.props.customerTip.enableTips }, tipViewProps = tipViewData, findingQuotesProgress = 0.0 } })
+            homeScreenFlow
+          Left err -> do
+            void $ pure $ firebaseLogEvent "ny_user_estimate_expired"
+            updateLocalStage FindEstimateAndSearch
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = FindEstimateAndSearch, searchAfterEstimate = true } })
+            let
+              errResp = err.response
+
+              codeMessage = decodeError errResp.errorMessage "errorCode"
+            if (err.code == 400 && codeMessage == "SEARCH_REQUEST_EXPIRED") then do
+              void $ pure $ toast (getString STR.ESTIMATES_EXPIRY_ERROR)
+            else do
+              void $ pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = SearchLocationModel } })
+            currentFlowStatus false
     
     EDIT_DEST_BACKPRESSED ->  do
       (GlobalState globalState) <- getState
@@ -1598,6 +1645,7 @@ homeScreenFlow = do
           setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
           setValueToLocalStore FARE_ESTIMATE_DATA selectedEstimateOrQuote.price
           setValueToLocalStore SELECTED_VARIANT selectedEstimateOrQuote.vehicleVariant
+          setValueToLocalStore SELECTED_SERVICE_TIER (fromMaybe "" selectedEstimateOrQuote.serviceTierName)
           case selectedEstimateOrQuote.searchResultType of
             ChooseVehicle.ESTIMATES -> do
               let valid = timeValidity (getCurrentUTC "") selectedEstimateOrQuote.validTill
@@ -3968,6 +4016,31 @@ addNewAddressScreenFlow input = do
       searchLocationFlow
   pure unit
 
+cancelRideUpgrade :: String -> FlowBT String Unit
+cancelRideUpgrade bookingId = do
+  res <- lift $ lift $ Remote.rejectUpgrade bookingId
+  if bookingId == "" then do
+    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = HomeScreen, autoScroll = false } })
+  else do
+    case res of
+      Right res -> do
+        let
+          (APISuccessResp resp) = res
+        case resp.result of
+          "Success" -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { isSearchCancelled = true } })
+          _ -> currentFlowStatus false
+      Left err -> do
+        let
+          errResp = err.response
+
+          codeMessage = decodeError errResp.errorMessage "errorCode"
+        if (err.code == 400 && codeMessage == "ACTIVE_BOOKING_EXISTS") then do
+          currentFlowStatus false
+        else do
+          void $ pure $ toast $ getString STR.CANCELLATION_UNSUCCESSFULL_PLEASE_TRY_AGAIN
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { autoScroll = false, currentStage = HomeScreen } })
+          homeScreenFlow
+
 referralScreenFlow :: FlowBT String Unit
 referralScreenFlow = do
   modifyScreenState $ ReferralScreenStateType (\referralScreen -> referralScreen { referralCode = getValueToLocalStore CUSTOMER_REFERRAL_CODE })
@@ -6170,6 +6243,7 @@ rentalScreenFlow = do
             )
             .quoteDetails
       setValueToLocalStore SELECTED_VARIANT selectedQuote.vehicleVariant
+      setValueToLocalStore SELECTED_SERVICE_TIER (fromMaybe "" selectedQuote.serviceTierName)
       response <- lift $ lift $ Remote.rideConfirm (selectedQuote.id)
       case response of
         Right (ConfirmRes resp) -> do
@@ -6557,6 +6631,7 @@ fcmHandler notification state notificationBody= do
       void $ updateLocalStage HomeScreen
       setValueToLocalStore IS_SOS_ACTIVE "false"
       deleteValueFromLocalStore SELECTED_VARIANT
+      deleteValueFromLocalStore SELECTED_SERVICE_TIER
       removeChatService ""
       modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { sosId = "" } })
       if (state.props.bookingId /= "" && isPersonDeliveryInitiator) then do

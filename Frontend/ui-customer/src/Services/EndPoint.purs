@@ -333,3 +333,6 @@ removeFavouriteDriver id = ((getBaseUrl "59") <> "/favorites/" <> id <> "/remove
 
 getDeliveryImage :: String -> String
 getDeliveryImage rideId = (getBaseUrl "61") <> "/ride/" <> rideId <> "/deliveryImage"
+
+rejectUpgrade :: String -> String 
+rejectUpgrade estimateId = (getBaseUrl "60") <> "/estimate/" <> estimateId <> "/rejectUpgrade"

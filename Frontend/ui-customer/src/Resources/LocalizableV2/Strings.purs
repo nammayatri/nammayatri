@@ -1776,3 +1776,5 @@ getProxy str =
     CONFIRM_CONTACTS -> \a -> a @~ confirm_contacts
     TICKETS_FOR_DELHI_METRO -> \a -> a @~ tickets_for_delhi_metro
     MAX_PARCEL_SIZE arg1 arg2 arg3 -> \a -> (a @~ max_parcel_size) arg1 arg2 arg3
+    CONFIRMING_RIDE_IN arg1 -> \a -> (a @~ confirming_ride_in) arg1
+    NO_CONTINUE_SEARCH_FOR_ arg1 -> \a -> (a @~ no_continue_search_for) arg1
