@@ -29,9 +29,9 @@ data QueryType
 
 type API = ("system" :> PostSystemRunQuery)
 
-type PostSystemRunQuery = ("runQuery" :> ReqBody ('[JSON]) API.Types.RiderPlatform.Management.System.QueryData :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostSystemRunQuery = ("runQuery" :> ReqBody '[JSON] API.Types.RiderPlatform.Management.System.QueryData :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-newtype SystemAPIs = SystemAPIs {postSystemRunQuery :: (API.Types.RiderPlatform.Management.System.QueryData -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)}
+newtype SystemAPIs = SystemAPIs {postSystemRunQuery :: API.Types.RiderPlatform.Management.System.QueryData -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess}
 
 mkSystemAPIs :: (Client EulerHS.Types.EulerClient API -> SystemAPIs)
 mkSystemAPIs systemClient = (SystemAPIs {..})
@@ -44,7 +44,7 @@ data SystemEndpointDSL
   deriving anyclass (ToSchema)
 
 instance ToJSON SystemEndpointDSL where
-  toJSON (PostSystemRunQueryEndpoint) = Data.Aeson.String "PostSystemRunQueryEndpoint"
+  toJSON PostSystemRunQueryEndpoint = Data.Aeson.String "PostSystemRunQueryEndpoint"
 
 instance FromJSON SystemEndpointDSL where
   parseJSON (Data.Aeson.String "PostSystemRunQueryEndpoint") = pure PostSystemRunQueryEndpoint

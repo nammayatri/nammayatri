@@ -22,7 +22,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "driver" :> "demandHotspots" :> Get ('[JSON]) API.Types.UI.DemandHotspots.GetDemandHotspotsResp)
+type API = (TokenAuth :> "driver" :> "demandHotspots" :> Get '[JSON] API.Types.UI.DemandHotspots.GetDemandHotspotsResp)
 
 handler :: Environment.FlowServer API
 handler = getDriverDemandHotspots
