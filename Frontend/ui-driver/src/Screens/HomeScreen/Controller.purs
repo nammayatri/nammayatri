@@ -1625,7 +1625,7 @@ eval (IsAcWorkingPopUpAction PopUpModal.OnButton2Click) state = exit $ UpdateAir
 eval (IsAcWorkingPopUpAction PopUpModal.DismissPopup) state = continue state{props{showAcWorkingPopup = Just false}}
 
 eval (ACExpController action) state = do
-  let acVideoLink = "https://www.youtube.com/watch?v=MbgxZkqxPLQ"
+  let acVideoLink = HU.topAcDriverPopupVideo $ getLanguageLocale languageKey
       newState = state { props { acExplanationPopup = false } }
   case action of
     PopUpModal.DismissPopup -> continue newState

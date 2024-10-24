@@ -112,6 +112,7 @@ import Data.Foldable (foldl)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Data.Function (flip)
 import Data.Ord (compare)
+import RemoteConfig.Utils as RCD
 
 
 type AffSuccess s = (s -> Effect Unit)
@@ -1193,3 +1194,15 @@ getHvErrorMsg errorCode =
     Just "140" -> getString REMOVE_EYEWERE
     Just "170" -> getString DB_CHECK_AND_NAME_MATCH_FAILED
     _ -> getString UNKNOWN_ERROR
+
+topAcDriverPopupVideo :: String -> String
+topAcDriverPopupVideo lang = 
+  let acConfigs = RCD.getAcConfigs
+  in case lang of
+    "KN_IN" -> acConfigs.videos.kn_in
+    "HI_IN" -> acConfigs.videos.hi_in
+    "TA_IN" -> acConfigs.videos.ta_in
+    "BN_IN" -> acConfigs.videos.bn_in
+    "TE_IN" -> acConfigs.videos.te_in
+    "ML_IN" -> acConfigs.videos.ml_in
+    _       -> acConfigs.videos.en_in

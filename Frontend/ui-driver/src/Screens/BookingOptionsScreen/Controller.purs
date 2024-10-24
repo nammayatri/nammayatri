@@ -25,6 +25,7 @@ import Data.Foldable as DF
 import Storage (getValueToLocalStore, KeyStore(..))
 import Helpers.Utils as HU
 import Screens.Types as ST
+import Locale.Utils as LU
 
 instance showAction :: Show Action where
   show _ = ""
@@ -79,7 +80,7 @@ eval (UpdateACAvailability acServiceToggle) state = exit $ ToggleACAvailability 
 eval ShowACVideoPopup state = continue state { props { acExplanationPopup = not state.props.acExplanationPopup && state.data.config.rateCardScreen.showYoutubeVideo} }
 
 eval (TopAcDriverAction action) state = do
-  let acVideoLink = "https://www.youtube.com/watch?v=MbgxZkqxPLQ"
+  let acVideoLink = HU.topAcDriverPopupVideo $ LU.getLanguageLocale LU.languageKey
       newState = state { props { acExplanationPopup = false } }
   case action of
     PopUpModal.DismissPopup -> continue newState

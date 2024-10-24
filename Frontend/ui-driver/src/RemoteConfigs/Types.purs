@@ -123,3 +123,17 @@ type EventsConfig = {
   pushEventChunkSize :: Int,
   loggingIntervalInMs :: Number
 }
+
+type AcConfigs = {
+  videos :: AcVideos
+}
+
+type AcVideos = {
+  kn_in :: String,
+  hi_in :: String,
+  ta_in :: String,
+  bn_in :: String,
+  te_in :: String,
+  ml_in :: String,
+  en_in :: String
+}

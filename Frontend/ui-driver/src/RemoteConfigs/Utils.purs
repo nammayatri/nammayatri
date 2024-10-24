@@ -241,3 +241,21 @@ defEventsConfig = {
   pushEventChunkSize : 10,
   loggingIntervalInMs : 10000.0
 }
+
+getAcConfigs :: Types.AcConfigs
+getAcConfigs =
+  let stringifiedConf = fetchRemoteConfigString "ac_configs"
+  in decodeForeignObject (parseJSON stringifiedConf) defAcConfig
+
+defAcConfig ::  Types.AcConfigs
+defAcConfig = {
+  videos : {
+    kn_in : "https://www.youtube.com/watch?v=MbgxZkqxPLQ",
+    hi_in : "",
+    ta_in : "",
+    bn_in : "",
+    te_in : "",
+    ml_in : "",
+    en_in : ""
+  }
+}
