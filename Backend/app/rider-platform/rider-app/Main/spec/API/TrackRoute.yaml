@@ -3,6 +3,7 @@ imports:
   RouteStopMapping: Domain.Types.RouteStopMapping
   LatLong: Kernel.External.Maps.Types
   UTCTime: Kernel.Prelude
+  Double: Kernel.Prelude
 
 
 module: TrackRoute
@@ -10,11 +11,21 @@ module: TrackRoute
 types:
   TrackingResp:
     vehicleTrackingInfo : "[VehicleInfo]"
+  VehicleInfoForRoute:
+    startTime : Maybe UTCTime
+    startDate : Maybe Text
+    scheduleRelationship : Maybe Text
+    tripId : Maybe Text
+    latitude : Maybe Double
+    longitude : Maybe Double
+    speed : Maybe Text
+    timestamp : Maybe Text
+    derive: "Show"
+
   VehicleInfo:
-    location: LatLong
     nextStop: RouteStopMapping
     vehicleId: Text
-    locationUpdateTime: Maybe UTCTime
+    vehicleInfo: VehicleInfoForRoute
 
 apis:
   - GET:

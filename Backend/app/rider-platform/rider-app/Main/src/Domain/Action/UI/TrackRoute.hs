@@ -44,48 +44,50 @@ getTrackVehicles ::
     Environment.Flow TrackRoute.TrackingResp
   )
 getTrackVehicles (mbPersonId, merchantId) routeCode = do
-  now <- getCurrentTime
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
-  routeInfoFromRedis :: [(Text, VehicleInfoForRoute)] <- Redis.hGetAll (makeRouteKey routeCode)
+  routeInfoFromRedis :: [(Text, TrackRoute.VehicleInfoForRoute)] <- Redis.hGetAll (makeRouteKey routeCode)
+  let routeInfoWithLatLong :: [(Text, TrackRoute.VehicleInfoForRoute, Double, Double)] = mapMaybe (\(vId, vInfo) -> (vId,vInfo,,) <$> vInfo.latitude <*> vInfo.longitude) routeInfoFromRedis
+  logDebug $ "got route from redis " <> show routeInfoFromRedis
+  logDebug $ "got route from redis 2 " <> show routeInfoWithLatLong
   reqStops <- QRSM.findByRouteCode routeCode
   let sortedStops = sortBy (compare `on` RouteStopMapping.sequenceNum) reqStops
       stopPairs = map (\(x, y) -> (x, y)) (pairWithNext sortedStops)
 
   stopPairsWithWaypoints <- do
-    forM stopPairs $ \stopPair -> do
-      let firstStop = fst stopPair
-          secondStop = snd stopPair
-          request =
-            Maps.GetRoutesReq
-              { waypoints = NE.fromList [firstStop.stopPoint, secondStop.stopPoint],
-                calcPoints = True,
-                mode = Just Maps.CAR
-              }
+    res <- Redis.get (stopPairRoutePointsKey routeCode)
+    case res of
+      Just res' -> pure res'
+      Nothing -> do
+        res' <-
+          forM stopPairs $ \stopPair -> do
+            let firstStop = fst stopPair
+                secondStop = snd stopPair
+                request =
+                  Maps.GetRoutesReq
+                    { waypoints = NE.fromList [firstStop.stopPoint, secondStop.stopPoint],
+                      calcPoints = True,
+                      mode = Just Maps.CAR
+                    }
 
-      routeInfo <- Maps.getRoutes Nothing personId merchantId Nothing request
-      reqRouteInfo <- (listToMaybe routeInfo) & fromMaybeM (InvalidRequest "Route not found")
-      let wayPoints = reqRouteInfo.points
-      pure (stopPair, wayPoints)
-
+            routeInfo <- Maps.getRoutes Nothing personId merchantId Nothing request
+            reqRouteInfo <- (listToMaybe routeInfo) & fromMaybeM (InvalidRequest "Route not found")
+            let wayPoints = reqRouteInfo.points
+            pure (stopPair, wayPoints)
+        Redis.set (stopPairRoutePointsKey routeCode) res'
+        pure res'
+  logDebug $ "stopPairsWithWaypoints" <> show stopPairsWithWaypoints
   trackingResp <-
-    forM routeInfoFromRedis $ \singleRouteInfo -> do
-      let vehicleId_ = fst singleRouteInfo
-          vehicleInfo = snd singleRouteInfo
-      vehicleLat <- vehicleInfo.latitude & fromMaybeM (InternalError "vehicle latitude not found")
-      vehicleLong <- vehicleInfo.longitude & fromMaybeM (InternalError "vehicle longitude not found")
-
+    forM routeInfoWithLatLong $ \(vehicleId_, vi, vehicleLat, vehicleLong) -> do
       minDistancesWithPoint <-
         forM stopPairsWithWaypoints $ \stopPairWithWaypoints -> do
           distancesFromCurrLocation <-
             forM (snd stopPairWithWaypoints) $ \point -> do
               pure (highPrecMetersToMeters $ distanceBetweenInMeters (mkLatLong vehicleLat vehicleLong) point)
           let minDistance = minimum (pure distancesFromCurrLocation)
+          logDebug $ "distancesFromCurrLocation " <> show distancesFromCurrLocation
           pure (minDistance, (snd (fst stopPairWithWaypoints)))
-
       let nextStop = List.minimumBy (comparing fst) minDistancesWithPoint
-
-      pure $ TrackRoute.VehicleInfo {nextStop = snd nextStop, location = (mkLatLong vehicleLat vehicleLong), vehicleId = vehicleId_, locationUpdateTime = Just now}
-
+      pure $ TrackRoute.VehicleInfo {nextStop = snd nextStop, vehicleId = vehicleId_, vehicleInfo = vi}
   pure $ TrackRoute.TrackingResp {vehicleTrackingInfo = trackingResp}
 
 mkLatLong :: Double -> Double -> Maps.LatLong
@@ -98,17 +100,8 @@ mkLatLong lat_ lon_ =
 pairWithNext :: [a] -> [(a, a)]
 pairWithNext xs = zip xs (List.tail xs)
 
-data VehicleInfoForRoute = VehicleInfoForRoute
-  { startTime :: Maybe UTCTime,
-    startDate :: Maybe Text,
-    scheduleRelationship :: Maybe Text,
-    tripId :: Maybe Text,
-    latitude :: Maybe Double,
-    longitude :: Maybe Double,
-    speed :: Maybe Text,
-    timestamp :: Maybe Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
 makeRouteKey :: Text -> Text
 makeRouteKey routeId = "route:" <> routeId
+
+stopPairRoutePointsKey :: Text -> Text
+stopPairRoutePointsKey routeId = "Tk:SPRPK:" <> routeId
