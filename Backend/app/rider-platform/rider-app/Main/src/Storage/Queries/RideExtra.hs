@@ -2,7 +2,7 @@
 
 module Storage.Queries.RideExtra where
 
-import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride as Common
 import qualified Data.Text.Encoding as TE
 import Data.Time hiding (getCurrentTime)
 import qualified Database.Beam as B

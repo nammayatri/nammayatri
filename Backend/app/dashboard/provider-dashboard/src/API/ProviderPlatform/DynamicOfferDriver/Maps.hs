@@ -15,7 +15,7 @@
 module API.ProviderPlatform.DynamicOfferDriver.Maps where
 
 import qualified "dynamic-offer-driver-app" API.Dashboard.RideBooking.Maps as BPP
-import qualified Dashboard.RiderPlatform.Customer as Common
+import qualified Dashboard.Common as Common
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Maps as DMaps
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "dynamic-offer-driver-app" Domain.Types.Person as DP

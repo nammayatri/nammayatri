@@ -15,7 +15,7 @@
 module API.RiderPlatform.RideBooking.Cancel where
 
 import qualified "rider-app" API.Dashboard.RideBooking.Cancel as BAP
-import qualified Dashboard.RiderPlatform.Customer as Common
+import qualified Dashboard.Common as Common
 import qualified "rider-app" Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.Booking as SRB
 import qualified "lib-dashboard" Domain.Types.Merchant as DM

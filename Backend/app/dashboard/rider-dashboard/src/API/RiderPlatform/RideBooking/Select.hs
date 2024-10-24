@@ -15,7 +15,7 @@
 module API.RiderPlatform.RideBooking.Select where
 
 import qualified "rider-app" API.Dashboard.RideBooking.Select as BAP
-import qualified Dashboard.RiderPlatform.Customer as Common
+import qualified Dashboard.Common as Common
 import qualified "rider-app" Domain.Action.UI.Select as DSelect
 import qualified "rider-app" Domain.Types.Estimate as DEstimate
 import qualified "lib-dashboard" Domain.Types.Merchant as DM

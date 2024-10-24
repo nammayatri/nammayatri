@@ -44,9 +44,8 @@ library
       Dashboard.ProviderPlatform.Management.Ride
       Dashboard.ProviderPlatform.RideBooking.Driver
       Dashboard.ProviderPlatform.Volunteer
-      Dashboard.RiderPlatform.Customer
+      Dashboard.RiderPlatform.Management.Ride
       Dashboard.RiderPlatform.Merchant
-      Dashboard.RiderPlatform.Ride
       Dashboard.SafetyPlatform
       API.Types.ProviderPlatform.Fleet
       API.Types.ProviderPlatform.Fleet.Driver
@@ -68,8 +67,10 @@ library
       API.Types.ProviderPlatform.RideBooking.Driver
       API.Types.RiderPlatform.Management
       API.Types.RiderPlatform.Management.Booking
+      API.Types.RiderPlatform.Management.Customer
       API.Types.RiderPlatform.Management.Invoice
       API.Types.RiderPlatform.Management.Merchant
+      API.Types.RiderPlatform.Management.Ride
   other-modules:
       Paths_dashboard_helper_api
   hs-source-dirs:

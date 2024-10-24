@@ -1,0 +1,141 @@
+imports:
+  Customer: Dashboard.Common
+  Summary: Dashboard.Common
+  HighPrecMoney: Kernel.Types.Common
+  PriceAPIEntity: Kernel.Types.Common
+  PersonRes: Dashboard.Common
+  PersonIdsReq: Dashboard.Common
+  PersonMobileNoReq: Dashboard.Common
+
+module: Customer
+
+apis:
+  - GET:
+      endpoint: /list
+      auth: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_LIST
+      query:
+        - limit: Int
+        - offset: Int
+        - enabled: Bool
+        - blocked: Bool
+        - phone: Text
+        - personId: Id Customer
+      response:
+        type: CustomerListRes
+  - DELETE:
+      endpoint:  /{customerId}/delete
+      auth: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_DELETE
+      params:
+        customerId: Id Customer
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: CustomerAPI DeleteCustomerEndpoint
+  - POST:
+      endpoint:  /{customerId}/block
+      auth: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_BLOCK
+      params:
+        customerId: Id Customer
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: CustomerAPI BlockCustomerEndpoint
+  - POST:
+      endpoint:  /{customerId}/unblock
+      auth: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_UNBLOCK
+      params:
+        customerId: Id Customer
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: CustomerAPI UnblockCustomerEndpoint
+  - GET:
+      endpoint:  /{customerId}/info
+      auth: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_INFO
+      params:
+        customerId: Id Customer
+      response:
+        type: CustomerInfoRes
+  - POST:
+      endpoint: /{customerId}/cancellationDuesSync
+      auth: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_CANCELLATION_DUES_SYNC
+      params:
+        customerId: Id Customer
+      request:
+        type: CustomerCancellationDuesSyncReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: CustomerAPI CancellationDuesSyncCustomerEndpoint
+  - GET:
+      name: GetCustomerCancellationDuesDetails
+      endpoint:  /{customerId}/getCancellationDuesDetails
+      auth: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_CANCELLATION_DUES_DETAILS
+      params:
+        customerId: Id Customer
+      response:
+        type: CancellationDuesDetailsRes
+  - POST:
+      endpoint: /{customerId}/updateSafetyCenterBlocking
+      auth: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS UPDATE_SAFETY_CENTER
+      params:
+        customerId: Id Customer
+      request:
+        type: UpdateSafetyCenterBlockingReq
+      response:
+        type: APISuccess
+      migrate:
+        endpoint: CustomerAPI UpdateSafetyCenterBlockingCustomerEndpoint
+  - POST:
+      endpoint: /personNumbers
+      auth: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS PERSON_NUMBERS
+      multipart:
+        type: PersonIdsReq
+      response:
+        type: "[PersonRes]"
+      migrate:
+        endpoint: CustomerAPI PersonNumbersCustomerEndpoint
+  - POST:
+      endpoint: /personId
+      auth: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS FETCH_PERSON_ID
+      multipart:
+        type: PersonMobileNoReq
+      response:
+        type: "[PersonRes]"
+      migrate:
+        endpoint: CustomerAPI PersonIdCustomerEndpoint
+
+types:
+  CustomerListRes:
+    - totalItems: Int # for backward compatibility
+    - summary: Summary
+    - customers: [CustomerListItem]
+  CustomerListItem:
+    - customerId: Id Customer
+    - firstName: Maybe Text
+    - middleName: Maybe Text
+    - lastName: Maybe Text
+    - phoneNo: Maybe Text
+    - enabled: Bool
+    - blocked: Bool
+  CustomerInfoRes:
+    - numberOfRides: Int
+    - falseSafetyAlarmCount: Int
+    - safetyCenterDisabledOnDate: Maybe UTCTime
+    - totalSosCount: Int
+  CustomerCancellationDuesSyncReq:
+    - cancellationCharges: Maybe HighPrecMoney
+    - cancellationChargesWithCurrency: Maybe PriceAPIEntity
+    - disputeChancesUsed: Maybe Int
+    - paymentMadeToDriver: Bool
+    - derive: "'HideSecrets"
+  CancellationDuesDetailsRes:
+    - cancellationDues: Maybe PriceAPIEntity
+    - disputeChancesUsed: Maybe Int
+    - canBlockCustomer: Maybe Bool
+  UpdateSafetyCenterBlockingReq:
+    - incrementCount: Maybe Bool
+    - resetCount: Maybe Bool
+    - derive: "'HideSecrets"
+
+

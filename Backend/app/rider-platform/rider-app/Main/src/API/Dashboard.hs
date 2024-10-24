@@ -15,14 +15,14 @@
 module API.Dashboard where
 
 import qualified API.Action.Dashboard.Management.Booking as BookingDSL
+import qualified API.Action.Dashboard.Management.Customer as CustomerDSL
 import qualified API.Action.Dashboard.Management.Invoice as InvoiceDSL
 import qualified API.Action.Dashboard.Management.Merchant as MerchantDSL
-import qualified API.Dashboard.Customer as Customer
+import qualified API.Action.Dashboard.Management.Ride as RideDSL
 import qualified API.Dashboard.Exotel as Exotel
 import qualified API.Dashboard.HotSpot as HotSpot
 import qualified API.Dashboard.Issue as Issue
 import qualified API.Dashboard.IssueList as IssueList
-import qualified API.Dashboard.Ride as Ride
 import qualified API.Dashboard.RideBooking as RideBookings
 import qualified API.Dashboard.Tickets as Tickets
 import qualified Domain.Types.Merchant as DM
@@ -54,13 +54,13 @@ type APIV2 =
 
 type OperationsAPI =
   DashboardTokenAuth
-    :> ( Customer.API
-           :<|> Ride.API
-           :<|> IssueList.API
+    :> ( IssueList.API
            :<|> Issue.API
            :<|> Tickets.API
            :<|> HotSpot.API
            :<|> BookingDSL.API
+           :<|> CustomerDSL.API
+           :<|> RideDSL.API
            :<|> MerchantDSL.API
            :<|> InvoiceDSL.API
        )
@@ -95,13 +95,13 @@ handlerV2 =
 
 operationHandler :: ShortId DM.Merchant -> Context.City -> FlowServer OperationsAPI
 operationHandler merchantId city _ = do
-  Customer.handler merchantId city
-    :<|> Ride.handler merchantId
-    :<|> IssueList.handler merchantId
+  IssueList.handler merchantId
     :<|> Issue.handler merchantId city
     :<|> Tickets.handler merchantId
     :<|> HotSpot.handler merchantId
     :<|> BookingDSL.handler merchantId city
+    :<|> CustomerDSL.handler merchantId city
+    :<|> RideDSL.handler merchantId city
     :<|> MerchantDSL.handler merchantId city
     :<|> InvoiceDSL.handler merchantId city
 
