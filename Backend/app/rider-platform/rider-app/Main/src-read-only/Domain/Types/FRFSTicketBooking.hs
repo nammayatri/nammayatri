@@ -32,6 +32,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     cashbackStatus :: Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.CashbackStatus,
     customerCancelled :: Kernel.Prelude.Bool,
     discountedTickets :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    discountsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     estimatedPrice :: Kernel.Types.Common.Price,
     eventDiscountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     finalPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,

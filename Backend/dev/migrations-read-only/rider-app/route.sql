@@ -20,3 +20,8 @@ ALTER TABLE atlas_app.route ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.route ADD COLUMN color text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.route ADD COLUMN polyline text ;

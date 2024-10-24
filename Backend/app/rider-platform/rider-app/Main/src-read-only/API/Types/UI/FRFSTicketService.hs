@@ -11,7 +11,6 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
-import qualified Domain.Types.FRFSTicketDiscount
 import qualified Domain.Types.StationType
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
@@ -80,14 +79,21 @@ data FRFSDiscountReq = FRFSDiscountReq {code :: Data.Text.Text, quantity :: Kern
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSDiscountRes = FRFSDiscountRes {_type :: Domain.Types.FRFSTicketDiscount.DiscountType, code :: Data.Text.Text, description :: Data.Text.Text, price :: Kernel.Types.Common.PriceAPIEntity}
+data FRFSDiscountRes = FRFSDiscountRes
+  { code :: Data.Text.Text,
+    description :: Data.Text.Text,
+    eligibility :: Kernel.Prelude.Bool,
+    price :: Kernel.Types.Common.PriceAPIEntity,
+    title :: Data.Text.Text,
+    tnc :: Data.Text.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
-    applicableDiscounts :: Data.Maybe.Maybe [API.Types.UI.FRFSTicketService.FRFSDiscountRes],
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    discounts :: Data.Maybe.Maybe [API.Types.UI.FRFSTicketService.FRFSDiscountRes],
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
@@ -115,7 +121,8 @@ data FRFSRouteAPI = FRFSRouteAPI
     longName :: Data.Text.Text,
     shortName :: Data.Text.Text,
     startPoint :: Kernel.External.Maps.Types.LatLong,
-    totalStops :: Data.Maybe.Maybe Kernel.Prelude.Int
+    totalStops :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    waypoints :: Data.Maybe.Maybe [Kernel.External.Maps.Types.LatLong]
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -172,6 +179,7 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     city :: Kernel.Types.Beckn.Context.City,
     createdAt :: Kernel.Prelude.UTCTime,
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    discounts :: Data.Maybe.Maybe [API.Types.UI.FRFSTicketService.FRFSDiscountRes],
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     payment :: Data.Maybe.Maybe API.Types.UI.FRFSTicketService.FRFSBookingPaymentAPI,
     price :: Kernel.Types.Common.HighPrecMoney,

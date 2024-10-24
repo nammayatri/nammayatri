@@ -23,7 +23,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSQuote.FRFSQuote] -> m ())
 createMany = traverse_ create
 
-findAllBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m ([Domain.Types.FRFSQuote.FRFSQuote]))
+findAllBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m [Domain.Types.FRFSQuote.FRFSQuote])
 findAllBySearchId searchId = do findAllWithKV [Se.Is Beam.searchId $ Se.Eq (Kernel.Types.Id.getId searchId)]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m (Maybe Domain.Types.FRFSQuote.FRFSQuote))
@@ -37,19 +37,19 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam._type _type,
-      Se.Set Beam.applicableDiscountIds ((Kernel.Types.Id.getId <$>) <$> applicableDiscountIds),
       Se.Set Beam.bppDelayedInterest bppDelayedInterest,
       Se.Set Beam.bppItemId bppItemId,
       Se.Set Beam.bppSubscriberId bppSubscriberId,
       Se.Set Beam.bppSubscriberUrl bppSubscriberUrl,
       Se.Set Beam.discountedTickets discountedTickets,
+      Se.Set Beam.discountsJson discountsJson,
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
       Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
-      Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) price),
+      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
       Se.Set Beam.price ((.amount) price),
       Se.Set Beam.providerDescription providerDescription,
       Se.Set Beam.providerId providerId,
@@ -79,12 +79,12 @@ instance FromTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
       Just
         Domain.Types.FRFSQuote.FRFSQuote
           { _type = _type,
-            applicableDiscountIds = (Kernel.Types.Id.Id <$>) <$> applicableDiscountIds,
             bppDelayedInterest = bppDelayedInterest,
             bppItemId = bppItemId,
             bppSubscriberId = bppSubscriberId,
             bppSubscriberUrl = bppSubscriberUrl,
             discountedTickets = discountedTickets,
+            discountsJson = discountsJson,
             eventDiscountAmount = eventDiscountAmount,
             fromStationId = Kernel.Types.Id.Id fromStationId,
             id = Kernel.Types.Id.Id id,
@@ -118,12 +118,12 @@ instance ToTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
   toTType' (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
     Beam.FRFSQuoteT
       { Beam._type = _type,
-        Beam.applicableDiscountIds = (Kernel.Types.Id.getId <$>) <$> applicableDiscountIds,
         Beam.bppDelayedInterest = bppDelayedInterest,
         Beam.bppItemId = bppItemId,
         Beam.bppSubscriberId = bppSubscriberId,
         Beam.bppSubscriberUrl = bppSubscriberUrl,
         Beam.discountedTickets = discountedTickets,
+        Beam.discountsJson = discountsJson,
         Beam.eventDiscountAmount = eventDiscountAmount,
         Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
         Beam.id = Kernel.Types.Id.getId id,
@@ -131,7 +131,7 @@ instance ToTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.partnerOrgId = Kernel.Types.Id.getId <$> partnerOrgId,
         Beam.partnerOrgTransactionId = Kernel.Types.Id.getId <$> partnerOrgTransactionId,
-        Beam.currency = ((Kernel.Prelude.Just . (.currency))) price,
+        Beam.currency = (Kernel.Prelude.Just . (.currency)) price,
         Beam.price = (.amount) price,
         Beam.providerDescription = providerDescription,
         Beam.providerId = providerId,

@@ -21,6 +21,7 @@ source-repository head
 
 library
   exposed-modules:
+      Tools.DynamicLogic
       Utils.Common.Cac.ContextConstants
       Utils.Common.Cac.KeyNameConstants
       Utils.Common.Cac.PrefixConstants
@@ -134,4 +135,5 @@ library
     , vector
     , wai
     , warp
+    , yudhishthira
   default-language: Haskell2010

@@ -23,6 +23,7 @@ data RouteT f = RouteT
     longName :: (B.C f Kernel.Prelude.Text),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    polyline :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     shortName :: (B.C f Kernel.Prelude.Text),
     startLat :: (B.C f Kernel.Prelude.Double),
     startLon :: (B.C f Kernel.Prelude.Double),

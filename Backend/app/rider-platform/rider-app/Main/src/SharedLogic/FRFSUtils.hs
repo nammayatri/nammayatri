@@ -15,18 +15,32 @@
 module SharedLogic.FRFSUtils where
 
 import qualified API.Types.UI.FRFSTicketService as APITypes
+import qualified BecknV2.FRFS.Enums as Spec
+import Data.Aeson as A
+import Domain.Types.AadhaarVerification as DAadhaarVerification
 import qualified Domain.Types.FRFSConfig as Config
 import qualified Domain.Types.FRFSTicket as DT
 import qualified Domain.Types.FRFSTicketBookingPayment as DTBP
+import Domain.Types.FRFSTicketDiscount as DFRFSTicketDiscount
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrganization as DPO
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Station as Station
 import EulerHS.Prelude ((+||), (||+))
 import Kernel.Beam.Functions as B
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import qualified Lib.Yudhishthira.Types as LYT
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import qualified Storage.CachedQueries.Station as CQS
+import Storage.Queries.AadhaarVerification as QAV
+import Storage.Queries.FRFSTicketDiscount as QFRFSTicketDiscount
+import Tools.DynamicLogic
 import Tools.Error
 
 mkTicketAPI :: DT.FRFSTicket -> APITypes.FRFSTicketAPI
@@ -54,3 +68,49 @@ mkPOrgStationAPI :: (CacheFlow m r, EsqDBFlow m r) => Maybe (Id DPO.PartnerOrgan
 mkPOrgStationAPI mbPOrgId stationAPI = do
   station <- B.runInReplica $ CQS.findByStationCode stationAPI.code >>= fromMaybeM (StationNotFound $ "station code:" +|| stationAPI.code ||+ "")
   mkPOrgStationAPIRes station mbPOrgId
+
+data FRFSTicketDiscountDynamic = FRFSTicketDiscountDynamic
+  { aadhaarData :: Maybe DAadhaarVerification.AadhaarVerification,
+    discounts :: [DFRFSTicketDiscount.FRFSTicketDiscount]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+getFRFSTicketDiscountWithEligibility ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r
+  ) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Spec.VehicleCategory ->
+  Id DP.Person ->
+  [Id FRFSTicketDiscount] ->
+  m [(FRFSTicketDiscount, Bool)]
+getFRFSTicketDiscountWithEligibility merchantId merchantOperatingCityId vehicleType personId applicableDiscountIds = do
+  availableDiscounts <-
+    pure . catMaybes
+      =<< mapM
+        ( \applicableDiscountId -> QFRFSTicketDiscount.findByIdAndVehicleAndCity applicableDiscountId vehicleType merchantId merchantOperatingCityId
+        )
+        applicableDiscountIds
+  aadhaarVerification <- QAV.findByPersonId personId
+  applicableDiscounts <- do
+    let ticketDiscountData = FRFSTicketDiscountDynamic {aadhaarData = aadhaarVerification, discounts = availableDiscounts}
+    localTime <- getLocalCurrentTime 19800 -- Fix Me
+    (allLogics, _) <- getAppDynamicLogic (cast merchantOperatingCityId) LYT.FRFS_DISCOUNTS localTime Nothing
+    response <- try @_ @SomeException $ LYTU.runLogics allLogics ticketDiscountData
+    case response of
+      Left e -> do
+        logError $ "Error in running FRFS Discount Logic - " <> show e <> " - " <> show ticketDiscountData <> " - " <> show allLogics
+        return []
+      Right resp ->
+        case (A.fromJSON resp.result :: Result FRFSTicketDiscountDynamic) of
+          A.Success result -> return result.discounts
+          A.Error err -> do
+            logError $ "Error in parsing FRFSTicketDiscountDynamic - " <> show err <> " - " <> show resp <> " - " <> show ticketDiscountData <> " - " <> show allLogics
+            return []
+  return $ mergeDiscounts availableDiscounts applicableDiscounts
+  where
+    mergeDiscounts availableDiscounts applicableDiscounts =
+      map (\discount -> (discount, discount `elem` applicableDiscounts)) availableDiscounts

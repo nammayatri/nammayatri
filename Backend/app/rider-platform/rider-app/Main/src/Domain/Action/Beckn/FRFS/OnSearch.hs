@@ -20,7 +20,6 @@ import Data.List (sortOn)
 import qualified Data.Text as T
 import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSSearch as Search
-import qualified Domain.Types.FRFSTicketDiscount as Discount
 import Domain.Types.Merchant
 import qualified Domain.Types.StationType as Station
 import Environment
@@ -34,7 +33,6 @@ import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
-import qualified Storage.Queries.FRFSTicketDiscount as QFRFSTicketDiscount
 import qualified Storage.Queries.PersonStats as QPStats
 import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.Station as QStation
@@ -64,15 +62,17 @@ data DQuote = DQuote
     serviceTierLongName :: Maybe Text,
     routeStations :: [DRouteStation],
     stations :: [DStation],
-    applicableDiscounts :: [DDiscount],
+    discounts :: [DDiscount],
     _type :: Quote.FRFSQuoteType
   }
 
 data DDiscount = DDiscount
-  { description :: Text,
+  { code :: Text,
+    title :: Text,
+    description :: Text,
+    tnc :: Text,
     price :: Price,
-    code :: Text,
-    _type :: Discount.DiscountType
+    eligibility :: Bool
   }
 
 data DRouteStation = DRouteStation
@@ -150,16 +150,10 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             )
             $ sortOn (.routeSequenceNum) routeStations
         return $ Just (Quote.Metro (map (.id) routes))
-  applicableDiscountIds <-
-    mapM
-      ( \discount -> do
-          ticketDiscount <- QFRFSTicketDiscount.findByCodeAndVehicleAndCity discount.code vehicleType search.merchantId search.merchantOperatingCityId >>= fromMaybeM (InternalError "FRFS Ticket Discount Not Found")
-          return ticketDiscount.id
-      )
-      applicableDiscounts
   let freeTicketInterval = fromMaybe (maxBound :: Int) mbFreeTicketInterval
   let stationsJSON = stations & map castStationToAPI & encodeToText
   let routeStationsJSON = routeStations & map castRouteStationToAPI & encodeToText
+  let discountsJSON = discounts & map castDiscountToAPI & encodeToText
   let maxFreeTicketCashback = fromMaybe 0 mbMaxFreeTicketCashback
   uid <- generateGUID
   now <- getCurrentTime
@@ -189,9 +183,9 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
         Quote.searchId = search.id,
         Quote.stationsJson = stationsJSON,
         Quote.routeStationsJson = Just routeStationsJSON,
+        Quote.discountsJson = Just discountsJSON,
         Quote.toStationId = endStation.id,
         Quote.routeId = routeId,
-        Quote.applicableDiscountIds = Just applicableDiscountIds,
         Quote.validTill,
         Quote.vehicleType,
         Quote.merchantId = search.merchantId,
@@ -236,4 +230,15 @@ castRouteStationToAPI DRouteStation {..} =
       API.shortName = routeShortName,
       API.sequenceNum = routeSequenceNum,
       API.stations = map castStationToAPI routeStations
+    }
+
+castDiscountToAPI :: DDiscount -> API.FRFSDiscountRes
+castDiscountToAPI DDiscount {..} =
+  API.FRFSDiscountRes
+    { API.code = code,
+      API.price = mkPriceAPIEntity price,
+      API.title = title,
+      API.description = description,
+      API.tnc = tnc,
+      API.eligibility = eligibility
     }

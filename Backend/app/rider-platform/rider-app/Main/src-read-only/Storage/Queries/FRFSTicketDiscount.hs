@@ -59,12 +59,13 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.FRFSTicketDiscount.FRFSTicketDiscount {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam._type _type,
-      Se.Set Beam.code code,
+    [ Se.Set Beam.code code,
       Se.Set Beam.currency currency,
       Se.Set Beam.description description,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.title title,
+      Se.Set Beam.tnc tnc,
       Se.Set Beam.value value,
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.createdAt createdAt,
@@ -77,13 +78,14 @@ instance FromTType' Beam.FRFSTicketDiscount Domain.Types.FRFSTicketDiscount.FRFS
     pure $
       Just
         Domain.Types.FRFSTicketDiscount.FRFSTicketDiscount
-          { _type = _type,
-            code = code,
+          { code = code,
             currency = currency,
             description = description,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            title = title,
+            tnc = tnc,
             value = value,
             vehicleType = vehicleType,
             createdAt = createdAt,
@@ -93,13 +95,14 @@ instance FromTType' Beam.FRFSTicketDiscount Domain.Types.FRFSTicketDiscount.FRFS
 instance ToTType' Beam.FRFSTicketDiscount Domain.Types.FRFSTicketDiscount.FRFSTicketDiscount where
   toTType' (Domain.Types.FRFSTicketDiscount.FRFSTicketDiscount {..}) = do
     Beam.FRFSTicketDiscountT
-      { Beam._type = _type,
-        Beam.code = code,
+      { Beam.code = code,
         Beam.currency = currency,
         Beam.description = description,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.title = title,
+        Beam.tnc = tnc,
         Beam.value = value,
         Beam.vehicleType = vehicleType,
         Beam.createdAt = createdAt,

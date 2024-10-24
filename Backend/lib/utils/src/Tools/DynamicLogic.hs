@@ -1,7 +1,6 @@
 module Tools.DynamicLogic where
 
 import Data.Aeson as A
-import qualified Domain.Types.MerchantOperatingCity as MOC
 import Kernel.Prelude
 import Kernel.Randomizer
 import Kernel.Types.Id
@@ -11,12 +10,13 @@ import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as DALE
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as DALR
 import qualified Lib.Yudhishthira.Storage.CachedQueries.TimeBoundConfig as CTBC
+import Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.AppDynamicLogicRollout
 
 getAppDynamicLogic ::
   BeamFlow m r =>
-  Id MOC.MerchantOperatingCity ->
+  Id MerchantOperatingCity ->
   LYT.LogicDomain ->
   UTCTime ->
   Maybe Int ->
@@ -34,7 +34,7 @@ getAppDynamicLogic merchantOpCityId domain localTime mbVersion = do
 
 selectAppDynamicLogicVersion ::
   BeamFlow m r =>
-  Id MOC.MerchantOperatingCity ->
+  Id MerchantOperatingCity ->
   LYT.LogicDomain ->
   UTCTime ->
   m (Maybe Int)

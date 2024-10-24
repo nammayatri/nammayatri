@@ -40,11 +40,11 @@ instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
     Beam.FRFSSearchT
       { Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.agency = (journeyLegInfo >>= (.agency)),
+        Beam.agency = journeyLegInfo >>= (.agency),
         Beam.convenienceCost = Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo,
         Beam.journeyId = Kernel.Prelude.fmap (.journeyId) journeyLegInfo,
         Beam.journeyLegOrder = Kernel.Prelude.fmap (.journeyLegOrder) journeyLegInfo,
-        Beam.pricingId = (journeyLegInfo >>= (.pricingId)),
+        Beam.pricingId = journeyLegInfo >>= (.pricingId),
         Beam.skipBooking = Kernel.Prelude.fmap (.skipBooking) journeyLegInfo,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,

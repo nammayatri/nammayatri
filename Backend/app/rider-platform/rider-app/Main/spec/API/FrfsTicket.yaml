@@ -4,7 +4,6 @@ imports:
   Station: Domain.Types.Station
   StationType: Domain.Types.StationType
   FRFSQuoteType: Domain.Types.FRFSQuote
-  DiscountType: Domain.Types.FRFSTicketDiscount
   DiscountValue: Domain.Types.FRFSTicketDiscount
   FRFSTicketDiscount: Domain.Types.FRFSTicketDiscount
   FRFSQuote: Domain.Types.FRFSQuote
@@ -45,7 +44,7 @@ types:
     serviceTierLongName: Maybe Text
     serviceTierDescription: Maybe Text
     quantity: Int
-    applicableDiscounts: Maybe [FRFSDiscountRes]
+    discounts: Maybe [FRFSDiscountRes]
     price: HighPrecMoney
     priceWithCurrency: PriceAPIEntity
     stations: [FRFSStationAPI]
@@ -56,9 +55,11 @@ types:
 
   FRFSDiscountRes:
     code: Text
-    _type: DiscountType
     price: PriceAPIEntity
+    title: Text
     description: Text
+    tnc: Text
+    eligibility: Bool
 
   FRFSDiscountReq:
     code: Text
@@ -86,6 +87,7 @@ types:
     tickets: [FRFSTicketAPI]
     stations: [FRFSStationAPI]
     routeStations: "Maybe [FRFSRouteStationsAPI]"
+    discounts: Maybe [FRFSDiscountRes]
     createdAt: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
@@ -162,6 +164,7 @@ types:
     startPoint: LatLong
     endPoint: LatLong
     totalStops: Maybe Int
+    waypoints: Maybe [LatLong]
     derive: "Show"
 
   AutocompleteRes:
@@ -199,6 +202,18 @@ apis:
         location: LatLong
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
+
+  # GET metro/bus route details for the merchant city
+  - GET:
+      endpoint: /frfs/route/{routeCode}
+      auth: TokenAuth
+      mandatoryQuery:
+        city: City
+        vehicleType: VehicleCategory
+      params:
+        routeCode: Text
+      response:
+        type: "API.Types.UI.FRFSTicketService.FRFSRouteAPI"
 
   # Initiate search for metro/bus tickets
   - POST:

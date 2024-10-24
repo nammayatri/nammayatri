@@ -146,6 +146,7 @@ FRFSQuote:
     quantity: Int
     stationsJson: Text
     routeStationsJson: Maybe Text
+    discountsJson: Maybe Text
     vehicleType: VehicleCategory
     serviceTierProviderCode: Maybe Text
     serviceTierType: Maybe ServiceTierType
@@ -167,7 +168,6 @@ FRFSQuote:
     eventDiscountAmount: Maybe HighPrecMoney
     discountedTickets: Maybe Int
     bppDelayedInterest : Maybe Int
-    applicableDiscountIds: Maybe [Id FRFSTicketDiscount]
 
   beamFields:
     price:
@@ -220,6 +220,7 @@ FRFSTicketBooking:
     riderId: Id Person
     stationsJson: Text
     routeStationsJson: Maybe Text
+    discountsJson: Maybe Text
     bppItemId: Text
     _type: FRFSQuoteType
     fromStationId: Id Station
@@ -596,6 +597,7 @@ Route:
     endPoint: LatLong
     vehicleType: VehicleCategory
     color: Maybe Text
+    polyline: Maybe Text
     timeBounds: TimeBound
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -804,19 +806,19 @@ FRFSRouteStopStageFare:
 
 FRFSTicketDiscount:
   tableName: frfs_ticket_discount
+  derives: "Generic,Show,Eq,FromJSON,ToJSON,ToSchema"
   fields:
     id: Id FRFSTicketDiscount
     code: Text
+    title: Text
     description: Text
-    _type: DiscountType
+    tnc: Text
     value: DiscountValue
     currency: Currency
     vehicleType: VehicleCategory
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
   types:
-    DiscountType:
-      enum: "Women, Children, SeniorCitizen"
     DiscountValue:
       enum: "FixedAmount HighPrecMoney, Percentage Double"
   constraints:

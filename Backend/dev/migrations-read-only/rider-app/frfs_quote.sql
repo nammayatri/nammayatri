@@ -78,4 +78,4 @@ ALTER TABLE atlas_app.frfs_quote ADD COLUMN route_stations_json text ;
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.frfs_quote ADD COLUMN applicable_discount_ids text[] ;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN discounts_json text ;

@@ -45,6 +45,7 @@ data FRFSRouteReq = FRFSRouteReq
   { color :: Kernel.Prelude.Maybe Data.Text.Text,
     endPoint :: Kernel.External.Maps.Types.LatLong,
     longName :: Data.Text.Text,
+    polyline :: Kernel.Prelude.Maybe Data.Text.Text,
     shortName :: Data.Text.Text,
     startPoint :: Kernel.External.Maps.Types.LatLong,
     timeBounds :: Kernel.Types.TimeBound.TimeBound

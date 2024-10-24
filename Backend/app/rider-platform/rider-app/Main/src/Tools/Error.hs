@@ -699,3 +699,22 @@ instance IsHTTPError CancellationError where
     CancellationNotSupported -> E500
 
 instance IsAPIError CancellationError
+
+data DiscountError
+  = DiscountsIneligible
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DiscountError
+
+instance IsBaseError DiscountError where
+  toMessage = \case
+    DiscountsIneligible -> Just $ "Discount not eligible"
+
+instance IsHTTPError DiscountError where
+  toErrorCode = \case
+    DiscountsIneligible -> "DISCOUNTS_INELIGIBLE"
+
+  toHttpCode = \case
+    DiscountsIneligible -> E400
+
+instance IsAPIError DiscountError

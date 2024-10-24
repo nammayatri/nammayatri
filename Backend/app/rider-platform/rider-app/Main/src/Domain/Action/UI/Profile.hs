@@ -118,7 +118,8 @@ data ProfileRes = ProfileRes
     isSafetyCenterDisabled :: Bool,
     customerReferralCode :: Maybe Text,
     deviceId :: Maybe Text,
-    androidId :: Maybe Text
+    androidId :: Maybe Text,
+    aadhaarVerified :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

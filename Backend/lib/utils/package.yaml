@@ -110,6 +110,7 @@ dependencies:
   - JuicyPixels-extra
   - base64-bytestring
   - http-conduit
+  - yudhishthira
 
 ghc-options:
   - -fwrite-ide-info

@@ -143,6 +143,7 @@ data LogicDomain
   = POOLING
   | FARE_POLICY
   | DYNAMIC_PRICING_UNIFIED
+  | FRFS_DISCOUNTS
   | CONFIG ConfigType
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -150,7 +151,8 @@ instance Enumerable LogicDomain where
   allValues =
     [ POOLING,
       FARE_POLICY,
-      DYNAMIC_PRICING_UNIFIED
+      DYNAMIC_PRICING_UNIFIED,
+      FRFS_DISCOUNTS
     ]
       ++ map CONFIG [minBound .. maxBound]
 
@@ -159,6 +161,7 @@ generateLogicDomainShowInstances =
   [show POOLING]
     ++ [show FARE_POLICY]
     ++ [show DYNAMIC_PRICING_UNIFIED]
+    ++ [show FRFS_DISCOUNTS]
     ++ [show (CONFIG configType) | configType <- configTypes]
   where
     configTypes = [minBound .. maxBound]
@@ -175,6 +178,7 @@ instance Show LogicDomain where
   show POOLING = "POOLING"
   show FARE_POLICY = "FARE-POLICY"
   show DYNAMIC_PRICING_UNIFIED = "DYNAMIC-PRICING-UNIFIED"
+  show FRFS_DISCOUNTS = "FRFS-DISCOUNTS"
   show (CONFIG configType) = "CONFIG_" ++ show configType
 
 instance Read LogicDomain where
@@ -187,6 +191,8 @@ instance Read LogicDomain where
             [(FARE_POLICY, drop 1 rest)]
           "DYNAMIC-PRICING-UNIFIED" ->
             [(DYNAMIC_PRICING_UNIFIED, drop 1 rest)]
+          "FRFS-DISCOUNTS" ->
+            [(FRFS_DISCOUNTS, drop 1 rest)]
           "CONFIG" ->
             let (configType', rest1) = break (== '_') (drop 1 rest)
              in case readMaybe configType' of

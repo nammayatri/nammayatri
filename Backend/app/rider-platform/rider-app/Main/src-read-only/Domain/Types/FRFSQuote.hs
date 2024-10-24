@@ -7,7 +7,6 @@ module Domain.Types.FRFSQuote where
 import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Domain.Types.FRFSSearch
-import qualified Domain.Types.FRFSTicketDiscount
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
@@ -21,12 +20,12 @@ import qualified Tools.Beam.UtilsTH
 
 data FRFSQuote = FRFSQuote
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
-    applicableDiscountIds :: Kernel.Prelude.Maybe [Kernel.Types.Id.Id Domain.Types.FRFSTicketDiscount.FRFSTicketDiscount],
     bppDelayedInterest :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     bppItemId :: Kernel.Prelude.Text,
     bppSubscriberId :: Kernel.Prelude.Text,
     bppSubscriberUrl :: Kernel.Prelude.Text,
     discountedTickets :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    discountsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     eventDiscountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
