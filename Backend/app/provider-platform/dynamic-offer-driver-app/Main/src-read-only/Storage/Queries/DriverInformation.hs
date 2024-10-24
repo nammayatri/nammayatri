@@ -138,6 +138,18 @@ updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngrade
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateExtraFareMitigation ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateExtraFareMitigation extraFareMitigationFlag extraFareMitigationCounter driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.extraFareMitigationFlag extraFareMitigationFlag,
+      Se.Set Beam.extraFareMitigationCounter extraFareMitigationCounter,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateForwardBatchingEnabled :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateForwardBatchingEnabled forwardBatchingEnabled driverId = do
   _now <- getCurrentTime
@@ -278,6 +290,8 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.driverDob driverDob,
       Se.Set Beam.enabled enabled,
       Se.Set Beam.enabledAt enabledAt,
+      Se.Set Beam.extraFareMitigationCounter extraFareMitigationCounter,
+      Se.Set Beam.extraFareMitigationFlag extraFareMitigationFlag,
       Se.Set Beam.forwardBatchingEnabled (Kernel.Prelude.Just forwardBatchingEnabled),
       Se.Set Beam.hasAdvanceBooking (Kernel.Prelude.Just hasAdvanceBooking),
       Se.Set Beam.isInteroperable (Kernel.Prelude.Just isInteroperable),

@@ -44,6 +44,8 @@ data DriverInformation = DriverInformation
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     enabled :: Kernel.Prelude.Bool,
     enabledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    extraFareMitigationCounter :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    extraFareMitigationFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     forwardBatchingEnabled :: Kernel.Prelude.Bool,
     hasAdvanceBooking :: Kernel.Prelude.Bool,
     isInteroperable :: Kernel.Prelude.Bool,

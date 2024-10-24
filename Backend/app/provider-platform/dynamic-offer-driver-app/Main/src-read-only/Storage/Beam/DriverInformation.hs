@@ -41,6 +41,8 @@ data DriverInformationT f = DriverInformationT
     driverId :: B.C f Kernel.Prelude.Text,
     enabled :: B.C f Kernel.Prelude.Bool,
     enabledAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    extraFareMitigationCounter :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    extraFareMitigationFlag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     forwardBatchingEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasAdvanceBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isInteroperable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
