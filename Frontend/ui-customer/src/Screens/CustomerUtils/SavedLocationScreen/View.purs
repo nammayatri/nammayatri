@@ -171,7 +171,7 @@ locationView push state =
 
 driverView :: forall w. (Action -> Effect Unit) -> ST.SavedLocationScreenState -> PrestoDOM (Effect Unit) w
 driverView push state =
-  linearLayout
+  Anim.screenAnimation $ linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
