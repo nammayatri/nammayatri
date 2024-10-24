@@ -1170,3 +1170,14 @@ getVehicleCategorySelectedEvent category = case category of
   ST.BikeCategory -> "bike_selected"
   ST.AmbulanceCategory -> "ambulance_selected"
   _ -> ""
+
+topAcDriverPopupVideo :: String -> String
+topAcDriverPopupVideo lang = 
+  case lang of
+    "KN_IN" -> "https://www.youtube.com/watch?v=MbgxZkqxPLQ"
+    "HI_IN" -> "" -- Need to replace it once get video link
+    "TA_IN" -> ""
+    "BN_IN" -> ""
+    "TE_IN" -> ""
+    "ML_IN" -> ""
+    _       -> ""
