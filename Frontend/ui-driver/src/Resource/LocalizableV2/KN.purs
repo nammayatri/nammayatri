@@ -1745,4 +1745,7 @@ getKn =
     , parcel_is_inappropriate : "ಪಾರ್ಸೆಲ್ ಅನನುಕೂಲಕರವಾಗಿದೆ"
     , sender_asking_different_location : "ಕಳುಹಿಸುವವರು ಬೇರೆ ಸ್ಥಳಕ್ಕೆ ಬರಲು ಕೇಳುತ್ತಿದ್ದಾರೆ"
     , sender_unavailable_unreachable : "ಕಳುಹಿಸುವವರು ಲಭ್ಯವಿಲ್ಲ / ಸಂಪರ್ಕಿಸಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ"
+    , intercity_round_trip_ride_accepted : "ಅಂತರನಗರ ರೌಂಡ್ಟ್ರಿಪ್ ಸವಾರಿ ಸ್ವೀಕಾರಿಸಲಾಗಿದೆ "
+    , you_are_on_intercity_roundtrip_ride : "ನೀವು ಅಂತರನಗರ ರೌಂಡ್ಟ್ರಿಪ್ ಸವಾರಿಯಲ್ಲಿದ್ದೀರಿ"
+    , please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip : (\destination -> "ದಯವಿಟ್ಟು ನಿಮ್ಮ ವಾಹನವು "<> "<span><b>" <> destination <> "</b></span>" <>" ಗೆ ಹೋಗಲು ಮತ್ತು ಅಲ್ಲಿಂದ ಹಿಂದಿರುಗಲು ಸಿದ್ಧವಾಗಿರುವುದನ್ನು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ ") 
     }

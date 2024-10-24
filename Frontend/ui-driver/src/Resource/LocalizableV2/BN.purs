@@ -1745,4 +1745,8 @@ getBn =
     , parcel_is_inappropriate : "পার্সেল অনুপযুক্ত"
     , sender_asking_different_location : "প্রেরক ভিন্ন স্থানে আসতে বলছে"
     , sender_unavailable_unreachable : "প্রেরক অনুপলব্ধ / পৌঁছানো যাচ্ছে না"
+    , intercity_round_trip_ride_accepted : "আন্তঃনগর রাউন্ডট্রিপ যাত্রা গৃহীত হয়েছে "
+    , you_are_on_intercity_roundtrip_ride : "আপনি একটি আন্তঃনগর রাউন্ডট্রিপ যাত্রায় আছেন "
+    , please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip : (\destination -> "অনুগ্রহ করে নিশ্চিত করুন যে আপনার গাড়ি আন্তঃনগর যাত্রার জন্য " <> "<span><b>" <> destination <> "</b></span>"<> " এ যাওয়া এবং সেখান থেকে ফেরার জন্য প্রস্তুত" )
+
     }

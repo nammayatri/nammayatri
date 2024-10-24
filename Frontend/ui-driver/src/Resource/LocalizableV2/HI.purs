@@ -1745,4 +1745,7 @@ getHi =
     , parcel_is_inappropriate : "पार्सल अनुचित है"
     , sender_asking_different_location : "प्रेषक ने किसी अन्य स्थान पर आने के लिए कहा है"
     , sender_unavailable_unreachable : "प्रेषक अनुपलब्ध है / संपर्क नहीं हो पा रहा"
+    , intercity_round_trip_ride_accepted : "अंतर-शहर राउंडट्रिप सवारी स्वीकार की गई"
+    , you_are_on_intercity_roundtrip_ride : "आप एक अंतर-शहर राउंडट्रिप सवारी पर हैं"
+    , please_ensure_that_your_vehicle_is_ready_for_intercity_round_trip : (\destination -> "कृपया सुनिश्चित करें कि आपका वाहन अंतर-शहर यात्रा के लिए " <> "<span><b>" <> destination <> "</b></span>" <> " और वहां से वापस आने के लिए तैयार है ")  
     }
