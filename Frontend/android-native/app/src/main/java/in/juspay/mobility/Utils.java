@@ -13,6 +13,7 @@ import android.util.Log;
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
 
+import com.google.android.play.core.splitinstall.SplitInstallHelper;
 import com.google.android.play.core.splitinstall.SplitInstallManager;
 import com.google.android.play.core.splitinstall.SplitInstallManagerFactory;
 import com.google.android.play.core.splitinstall.SplitInstallRequest;
@@ -141,6 +142,16 @@ public class Utils {
                             break;
 
                         case SplitInstallSessionStatus.INSTALLED:
+                            SplitInstallHelper.loadLibrary(context, "jsinspector");
+                            SplitInstallHelper.loadLibrary(context, "jscexecutor");
+                            SplitInstallHelper.loadLibrary(context, "turbomodulejsijni");
+                            SplitInstallHelper.loadLibrary(context, "imagepipeline");
+                            SplitInstallHelper.loadLibrary(context, "reactnativeblob");
+                            SplitInstallHelper.loadLibrary(context, "native-imagetranscoder");
+                            SplitInstallHelper.loadLibrary(context, "logger");
+                            SplitInstallHelper.loadLibrary(context, "yoga");
+                            SplitInstallHelper.loadLibrary(context, "fbjni");
+                            SplitInstallHelper.loadLibrary(context, "reactnativejni");
                             if (sharedPref!= null) sharedPref.edit().putBoolean("GLSDK_INSTALLED", true).apply();
                             if (!installOnly){
                                 Intent intent = new Intent();
