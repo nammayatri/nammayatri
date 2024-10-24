@@ -42,7 +42,8 @@ initData =
           busRouteCode : "",
           stopsList : [],
           sourceStation : Mb.Nothing,
-          destinationStation : Mb.Nothing
+          destinationStation : Mb.Nothing,
+          bookingId : ""
         }
     , props:
         { showRouteDetailsTab: true

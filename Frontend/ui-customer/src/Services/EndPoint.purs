@@ -331,3 +331,5 @@ verifyAadhaarOTP _ = (getBaseUrl "") <> "/verifyAadhaar/verifyOtp"
 
 -- unVerifiedAadhaarData :: String -> String
 -- unVerifiedAadhaarData _ = (getBaseUrl "") <> "/driver/register/unVerifiedAadhaarData"
+frfsRoute :: String -> String -> String -> String
+frfsRoute routeCode city vehicleType = (getBaseUrl "61") <> "/frfs/route/" <> routeCode <> "?vehicleType=" <> show vehicleType <> "&city=" <> city

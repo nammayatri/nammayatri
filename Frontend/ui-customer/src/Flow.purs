@@ -226,7 +226,7 @@ import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ScreenData as ParcelDeliv
 import Screens.TicketBookingFlow.BusTicketBooking.Controller as BusTicketBookingController
 import Screens.TicketBookingFlow.BusTicketBooking.ScreenData as BusTicketBookingScreenData
 import Screens.TicketBookingFlow.BusTrackingScreen.Controller as BusTrackingScreen
-
+import Screens.TicketBookingFlow.BusTrackingScreen.Transformer (getStationsFromBusRoute)
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
   when callInitUI $ lift $ lift $ initUI 
@@ -4947,15 +4947,24 @@ metroMyTicketsFlow = do
       let
         (MetroTicketBookingStatus metroTicketBookingStatus) = resp
       if (metroTicketBookingStatus.status == "CONFIRMED") then do
-        modifyScreenState
-          $ MetroTicketDetailsScreenStateType
-              ( \metroTicketDetailsState ->
-                  let
-                    transformedState = metroTicketDetailsTransformer resp metroTicketDetailsState
-                  in
-                    transformedState { props { previousScreenStage = ST.MetroMyTicketsStage } }
-              )
-        metroTicketDetailsFlow
+        if metroTicketBookingStatus.vehicleType == "BUS" then do
+          let route = (fromMaybe [] metroTicketBookingStatus.routeStations) !! 0
+          let stationList = fromMaybe [] (getStationsFromBusRoute <$> route)
+          let code = case route of 
+                      Just (GetBusRouteResp r) -> fromMaybe "" r.code
+                      Nothing -> ""
+          modifyScreenState $ BusTrackingScreenStateType (\busScreen -> busScreen { data { sourceStation = Nothing, destinationStation = Nothing, stopsList = stationList, busRouteCode = code, bookingId = bookingId}, props{ showRouteDetailsTab = false } })
+          busTrackingScreenFlow
+        else do
+          modifyScreenState
+            $ MetroTicketDetailsScreenStateType
+                ( \metroTicketDetailsState ->
+                    let
+                      transformedState = metroTicketDetailsTransformer resp metroTicketDetailsState
+                    in
+                      transformedState { props { previousScreenStage = ST.MetroMyTicketsStage } }
+                )
+          metroTicketDetailsFlow
       else if (metroTicketBookingStatus.status == "CANCELLED") then do
         modifyScreenState
           $ MetroTicketDetailsScreenStateType
@@ -5630,7 +5639,7 @@ predictionClickedFlow prediction state = do
               --     modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusRouteSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , routeSelected = busRouteSelected}, data {ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing , stopsSearchedList = state.data.updatedStopsSearchedList , updatedStopsSearchedList = state.data.updatedStopsSearchedList } })
               -- searchLocationFlow
               -- PS change
-              modifyScreenState $ BusTrackingScreenStateType (\busScreen -> busScreen { data { sourceStation = Nothing, destinationStation = Nothing, busRouteCode = state.props.routeSelected} , props {srcLat = currentState.homeScreen.props.sourceLat , srcLon = currentState.homeScreen.props.sourceLong } })
+              modifyScreenState $ BusTrackingScreenStateType (\busScreen -> busScreen { data { sourceStation = Nothing, destinationStation = Nothing, busRouteCode = state.props.routeSelected, stopsList = []} , props {srcLat = currentState.homeScreen.props.sourceLat , srcLon = currentState.homeScreen.props.sourceLong,showRouteDetailsTab = true } })
               busTrackingScreenFlow
         
           else do
@@ -6956,6 +6965,21 @@ busTrackingScreenFlow = do
       modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusStopSelectionAction ,canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSelected = busRouteSelected,isAutoComplete = false }, data { fromScreen =(Screen.getScreen Screen.BUS_ROUTE_STOPS_SEARCH_SCREEN) , srcLoc = Nothing, destLoc = Nothing, stopsSearchedList = state.data.stopsList , updatedStopsSearchedList = state.data.stopsList } })
       searchLocationFlow
     BusTrackingScreen.GoToBusTicketBooking state -> busTicketBookingFlow
+    BusTrackingScreen.GoToViewTicket state -> do 
+      (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT state.data.bookingId
+      let
+        (MetroTicketBookingStatus metroTicketBookingStatus) = resp
+      -- if (metroTicketBookingStatus.status == "CONFIRMED") then do --check
+      modifyScreenState
+          $ MetroTicketDetailsScreenStateType
+              ( \metroTicketDetailsState ->
+                  let
+                    transformedState = metroTicketDetailsTransformer resp metroTicketDetailsState
+                  in
+                    transformedState { props { previousScreenStage = ST.MetroMyTicketsStage } }
+              )
+      metroTicketDetailsFlow
+
     _ -> busTrackingScreenFlow
 
 aadhaarVerificationFlow :: FlowBT String Unit

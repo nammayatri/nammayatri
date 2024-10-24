@@ -25,6 +25,8 @@ import Screens.TicketBookingFlow.BusTrackingScreen.View as BusTrackingScreen
 import Screens.TicketBookingFlow.BusTrackingScreen.Controller (ScreenOutput(..))
 import Types.App (GlobalState(..), FlowBT, ScreenType(..))
 import ModifyScreenState (modifyScreenState)
+import Data.Function.Uncurried
+import LocalStorage.Cache
 
 busTrackingScreen :: FlowBT String ScreenOutput
 busTrackingScreen = do
@@ -33,5 +35,7 @@ busTrackingScreen = do
   case act of
   
     _ -> do
+      let _ = runFn2 setInCache "BUS_LOCATION_TRACKING" ""
+
       -- modifyScreenState $ JourneyTrackingScreenStateType (\_ -> state)
       App.BackT $ App.BackPoint <$> (pure $ act)

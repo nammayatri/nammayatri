@@ -3008,7 +3008,8 @@ type BusTrackingScreenData = {
   busRouteCode :: String,
   stopsList :: Array GetMetroStationResp,
   sourceStation :: Maybe Station,
-  destinationStation :: Maybe Station
+  destinationStation :: Maybe Station,
+  bookingId :: String
 }
 
 type BusTrackingScreenProps = {

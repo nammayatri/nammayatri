@@ -78,3 +78,6 @@ transformStationsForMap stations (API.Route route) srcCode destCode = do
   --     lat : fromMaybe 0.0 (stop <#> _.lat)
   --     lng : fromMaybe 0.0 (stop <#> _.lon)
   --   }
+
+getStationsFromBusRoute ::  API.GetBusRouteResp -> Array API.GetMetroStationResp 
+getStationsFromBusRoute (API.GetBusRouteResp stop) = fromMaybe [] stop.stations

@@ -3267,7 +3267,8 @@ newtype GetBusRouteResp = GetBusRouteResp {
   longName :: String,
   shortName :: String,
   startPoint :: LatLong,
-  totalStops :: Maybe Int
+  totalStops :: Maybe Int,
+  stations :: Maybe (Array GetMetroStationResp)
 }
 
 derive instance genericGetBusRoutesResponse :: Generic GetBusRoutesResponse _
@@ -4095,9 +4096,20 @@ newtype BusTrackingRouteResp = BusTrackingRouteResp {
 
 newtype VehicleInfo = VehicleInfo {
   location:: LatLong,
-  nextStop:: RouteStopMapping,
+  -- nextStop:: RouteStopMapping,
   vehicleId:: String,
-  locationUpdateTime:: Maybe String
+  vehicleInfo:: VehicleInfoForRoute
+}
+
+newtype VehicleInfoForRoute = VehicleInfoForRoute {
+    startTime :: Maybe String,
+    startDate :: Maybe String,
+    scheduleRelationship :: Maybe String,
+    tripId :: Maybe String,
+    latitude :: Maybe Number,
+    longitude :: Maybe Number,
+    speed :: Maybe String,
+    timestamp :: Maybe String
 }
 
 newtype RouteStopMapping = RouteStopMapping { 
@@ -4223,4 +4235,40 @@ type DiscountObj =
   , title :: String
   , tnc :: String
   }
+
+derive instance genericVehicleInfoForRoute :: Generic VehicleInfoForRoute _
+instance showVehicleInfoForRoute    :: Show VehicleInfoForRoute where show     = genericShow
+instance standardVehicleInfoForRoute :: StandardEncode VehicleInfoForRoute where standardEncode (VehicleInfoForRoute _) = standardEncode {}
+instance decodeVehicleInfoForRoute   :: Decode VehicleInfoForRoute where decode = defaultDecode
+instance encodeVehicleInfoForRoute  :: Encode VehicleInfoForRoute where encode = defaultEncode
+
+
+data FrfsGetRouteReq = FrfsGetRouteReq String String String
+
+newtype FrfsGetRouteResp = FrfsGetRouteResp {
+  code :: String,
+  endPoint :: LatLong,
+  longName :: String,
+  shortName :: String,
+  startPoint :: LatLong,
+  totalStops :: Maybe Int,
+  waypoints :: Maybe (Array LatLong)
+}
+
+derive instance genericFrfsGetRouteReq :: Generic FrfsGetRouteReq _
+instance showFrfsGetRouteReq    :: Show FrfsGetRouteReq where show     = genericShow
+instance standardFrfsGetRouteReq :: StandardEncode FrfsGetRouteReq where standardEncode (FrfsGetRouteReq _ _ _) = standardEncode {}
+instance decodeFrfsGetRouteReq   :: Decode FrfsGetRouteReq where decode = defaultDecode
+instance encodeFrfsGetRouteReq  :: Encode FrfsGetRouteReq where encode = defaultEncode
+
+derive instance genericFrfsGetRouteResp :: Generic FrfsGetRouteResp _
+instance standardFrfsGetRouteResp :: StandardEncode FrfsGetRouteResp where
+    standardEncode (FrfsGetRouteResp body) = standardEncode body
+instance showFrfsGetRouteResp :: Show FrfsGetRouteResp where show = genericShow
+instance decodeFrfsGetRouteResp :: Decode FrfsGetRouteResp where decode = defaultDecode
+instance encodeFrfsGetRouteResp :: Encode FrfsGetRouteResp where encode = defaultEncode
+
+instance makeFrfsGetRouteReq :: RestEndpoint FrfsGetRouteReq where
+    makeRequest reqBody@(FrfsGetRouteReq routeCode city vehicleType) headers = defaultMakeRequest GET (EP.frfsRoute routeCode city vehicleType) headers reqBody Nothing
+    encodeRequest = standardEncode
 
