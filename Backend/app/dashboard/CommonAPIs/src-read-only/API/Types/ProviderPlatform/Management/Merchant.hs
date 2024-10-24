@@ -859,16 +859,16 @@ data MerchantAPIs = MerchantAPIs
     postMerchantConfigFarePolicyUpdate :: Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> API.Types.ProviderPlatform.Management.Merchant.UpdateFarePolicyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantConfigFarePolicyUpsert ::
       ( Data.ByteString.Lazy.ByteString,
-        API.Types.ProviderPlatform.Management.Merchant.UpsertFarePolicyReq
-      ) ->
-      EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Merchant.UpsertFarePolicyResp,
+          API.Types.ProviderPlatform.Management.Merchant.UpsertFarePolicyReq
+        ) ->
+        EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Merchant.UpsertFarePolicyResp,
     postMerchantConfigOperatingCityCreate :: Dashboard.Common.Merchant.CreateMerchantOperatingCityReqT -> EulerHS.Types.EulerClient Dashboard.Common.Merchant.CreateMerchantOperatingCityRes,
     postMerchantSchedulerTrigger :: API.Types.ProviderPlatform.Management.Merchant.SchedulerTriggerReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantUpdateOnboardingVehicleVariantMapping ::
       ( Data.ByteString.Lazy.ByteString,
-        API.Types.ProviderPlatform.Management.Merchant.UpdateOnboardingVehicleVariantMappingReq
-      ) ->
-      EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+          API.Types.ProviderPlatform.Management.Merchant.UpdateOnboardingVehicleVariantMappingReq
+        ) ->
+        EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantSpecialLocationUpsert :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation) -> Dashboard.Common.Merchant.UpsertSpecialLocationReqT -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     deleteMerchantSpecialLocationDelete :: Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantSpecialLocationGatesUpsert :: Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Dashboard.Common.Merchant.UpsertSpecialLocationGateReqT -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

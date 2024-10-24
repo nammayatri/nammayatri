@@ -180,11 +180,11 @@ data FRFSTicketAPIs = FRFSTicketAPIs
     getFRFSTicketFrfsRouteFareList :: Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.FRFSTicket.FRFSRouteFareAPI,
     putFRFSTicketFrfsRouteFareUpsert ::
       Data.Text.Text ->
-      BecknV2.FRFS.Enums.VehicleCategory ->
-      ( Data.ByteString.Lazy.ByteString,
-        API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteFareReq
-      ) ->
-      EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteFareResp,
+        BecknV2.FRFS.Enums.VehicleCategory ->
+        ( Data.ByteString.Lazy.ByteString,
+          API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteFareReq
+        ) ->
+        EulerHS.Types.EulerClient API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteFareResp,
     getFRFSTicketFrfsRouteStations :: Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient [API.Types.RiderPlatform.Management.FRFSTicket.FRFSStationAPI],
     postFRFSTicketFrfsStationAdd :: Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.FRFSStationReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postFRFSTicketFrfsStationDelete :: Data.Text.Text -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess

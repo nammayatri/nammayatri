@@ -58,9 +58,9 @@ data DriverReferralAPIs = DriverReferralAPIs
   { postDriverReferralReferralOpsPassword :: API.Types.ProviderPlatform.Management.DriverReferral.ReferralLinkPasswordUpdateAPIReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverReferralLinkReferral ::
       ( Data.ByteString.Lazy.ByteString,
-        API.Types.ProviderPlatform.Management.DriverReferral.ReferralLinkReq
-      ) ->
-      EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.DriverReferral.LinkReport
+          API.Types.ProviderPlatform.Management.DriverReferral.ReferralLinkReq
+        ) ->
+        EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.DriverReferral.LinkReport
   }
 
 mkDriverReferralAPIs :: (Client EulerHS.Types.EulerClient API -> DriverReferralAPIs)

@@ -199,9 +199,9 @@ type GetMessageReceiverList =
 data MessageAPIs = MessageAPIs
   { postMessageUploadFile ::
       ( Data.ByteString.Lazy.ByteString,
-        API.Types.ProviderPlatform.Management.Message.UploadFileRequest
-      ) ->
-      EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Message.UploadFileResponse,
+          API.Types.ProviderPlatform.Management.Message.UploadFileRequest
+        ) ->
+        EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Message.UploadFileResponse,
     postMessageAddLink :: API.Types.ProviderPlatform.Management.Message.AddLinkAsMedia -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Message.UploadFileResponse,
     postMessageAdd :: API.Types.ProviderPlatform.Management.Message.AddMessageRequest -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Message.AddMessageResponse,
     postMessageSend :: (Data.ByteString.Lazy.ByteString, API.Types.ProviderPlatform.Management.Message.SendMessageRequest) -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
