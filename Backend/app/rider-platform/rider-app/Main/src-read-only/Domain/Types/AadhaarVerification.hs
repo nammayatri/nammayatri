@@ -22,4 +22,4 @@ data AadhaarVerification = AadhaarVerification
     personName :: Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, ToJSON, FromJSON, Show)
+  deriving (Generic, (ToJSON), (FromJSON), (Show), (Eq))

@@ -107,6 +107,7 @@ postFRFSTicketFrfsRouteAdd merchantShortId opCity code vehicleType req = do
                 timeBounds = req.timeBounds,
                 merchantId = merchant.id,
                 merchantOperatingCityId = merchantOpCity.id,
+                polyline = req.polyline,
                 createdAt = now,
                 updatedAt = now
               }

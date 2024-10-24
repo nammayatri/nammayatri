@@ -1,4 +1,6 @@
--- QUERIES FOR LOCAL ONLY
+---------------------------------------------------------------------------------------------------
+--------------------------------- ALL QUERIES ARE ONLY FOR LOCAL ----------------------------------
+---------------------------------------------------------------------------------------------------
 INSERT INTO
   atlas_app.merchant_service_config (
     merchant_id,
@@ -14,6 +16,7 @@ VALUES
     'namma-yatri-0-0000-0000-00000000city'
   );
 
+-- ONLY FOR LOCAL
 INSERT INTO
   atlas_app.beckn_config(
     bap_ifsc,
@@ -77,6 +80,7 @@ VALUES
     'localhost/beckn/frfs/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52'
   );
 
+-- ONLY FOR LOCAL
 INSERT INTO
   atlas_app.integrated_bpp_config(
     domain,
@@ -98,6 +102,7 @@ VALUES
     now()
   );
 
+-- ONLY FOR LOCAL
 INSERT INTO
   atlas_app.frfs_vehicle_service_tier (
     id,
@@ -201,6 +206,7 @@ VALUES
     'সাধারণ'
   );
 
+-- ONLY FOR LOCAL
 INSERT INTO
   atlas_app.route (
     code,
@@ -211,6 +217,7 @@ INSERT INTO
     short_name,
     start_lat,
     start_lon,
+    polyline,
     time_bounds,
     vehicle_type,
     merchant_id,
@@ -228,6 +235,7 @@ VALUES
     'SHUTTLEU',
     22.5945,
     88.4728,
+    'wegnA__whNy@{@SKQGUC_A@@MCUAO?wB@_F?{Q@{A?aTAcCCaDMWGKMEICgDn@g@Na@\\ALQ^OHYAq@W_@?YDa@JWDQAc@@yARmAN}@NeFx@uATAWsEr@yDr@wDj@sF~@gBXcDf@BPz@Mx@KuBXkG`AoEr@oDh@kGdA_Dd@_DZoF\\aABUIk@P_BNo@Ze@`@Yf@Wx@AFIj@BxB@dD@zHBbD?hBIjBU|CCR[C{CWwAIqHI}A@_BDqHByBDoCAkA@eCIcCMwCSoBS_Ei@}@McAUaCm@iIeBqLqCeB]?@wIsBkGwAeEkAYSQWOa@WsAQcAO]UQUKuCQgDEO??KBm@XwDZ}DLyAN}@d@_DR}@JW}@g@w@m@qB{AwDeCwBoA{DmCuEeDgAq@yDoCk@]ObAEt@Ax@oEQaBE?_@IkJqH{EqE}C?Ae@YwB}@uCwAeD{AiB{@oAg@mASs@I{AI{E[{BUMAUU{CaBy@g@iBeAaAw@}BkAiA_@eBg@mCk@wAO_@E}@[WMGCq@]aCoBoB}AGKIA{AI}AIk@Gu@Iy@Wo@MmEm@yE[{@Mm@Mk@WA@KEwBy@w@a@c@KUMwCUcAKo@C{@DQBeCdAKD]AQCOIsCyDqBkCc@e@_@S{AQoFg@_Ee@O?MF_@Zu@eAk@aAIEWKk@[WGy@e@yA{@]OsB_AA]LuABwABiBDoA{@wAUSa@O{Am@e@[YUcAuAwDaF{@WiC_A}@o@eAkA_GuGu@FkFP_A@aNRWFOLKXS~@Sl@_@\\OFYFa@?}@KsAOs@EY?aGNcADO?[QGCEKIg@AOEo@?M^QLCGi@IaAq@sJIkBc@}JCcA@wAa@UsAw@}C_BqCcBeA}@W_@kAqBWm@Ok@}J}A}Dm@?tAB|B@v@',
     'Unbounded',
     'BUS',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
@@ -236,6 +244,7 @@ VALUES
     now()
   );
 
+-- ONLY FOR LOCAL
 INSERT INTO
   atlas_app.station (
     address,
@@ -317,6 +326,7 @@ VALUES
     now()
   );
 
+-- ONLY FOR LOCAL
 INSERT INTO
   atlas_app.route_stop_mapping (
     provider_code,
@@ -410,13 +420,15 @@ VALUES
     now()
   );
 
+-- ONLY FOR LOCAL
 INSERT INTO
   atlas_app.frfs_ticket_discount (
     id,
-    type,
     code,
+    title,
     currency,
     description,
+    tnc,
     merchant_id,
     merchant_operating_city_id,
     value,
@@ -427,18 +439,34 @@ INSERT INTO
 VALUES
   (
     '333e23a5-3ce6-4c37-8b9b-41377c3c1333',
-    'Women',
     'WOMEN',
+    'Women 50% Off',
     'INR',
     'Women Discount',
+    '<b>Only eligible for women above 18 years old</b>',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     'Percentage 50.0',
     'BUS',
     now(),
     now()
+  ),
+  (
+    '333e23a5-3ce6-4c37-8b9b-41377c3c1444',
+    'SENIORCITIZEN',
+    'Senior Citizen 40% Off',
+    'INR',
+    'Women Discount',
+    '<b>Only eligible for adults with age above 70 years</b>',
+    'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    'namma-yatri-0-0000-0000-00000000city',
+    'Percentage 40.0',
+    'BUS',
+    now(),
+    now()
   );
 
+-- ONLY FOR LOCAL
 INSERT INTO
   atlas_app.frfs_fare_policy (
     id,
@@ -454,7 +482,7 @@ VALUES
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
     'MatrixBased',
-    '{"333e23a5-3ce6-4c37-8b9b-41377c3c1333"}',
+    '{"333e23a5-3ce6-4c37-8b9b-41377c3c1333", "333e23a5-3ce6-4c37-8b9b-41377c3c1444"}',
     'SHUTTLE - U | ECO T PARK - AIRPORT GATE NO1',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
@@ -462,6 +490,7 @@ VALUES
     now()
   );
 
+-- ONLY FOR LOCAL
 INSERT INTO
   atlas_app.route_stop_fare (
     fare_policy_id,
@@ -597,6 +626,7 @@ VALUES
     now()
   );
 
+-- ONLY FOR LOCAL
 INSERT INTO
   atlas_app.frfs_route_fare_product (
     id,
@@ -620,6 +650,51 @@ VALUES
     'Unbounded',
     '59e722df-feb0-4a86-bd5b-015cf118f400',
     'BUS',
+    now(),
+    now()
+  );
+
+-- ONLY FOR LOCAL
+INSERT INTO
+  atlas_app.app_dynamic_logic_element (
+    description,
+    domain,
+    logic,
+    "order",
+    version,
+    created_at,
+    updated_at
+  )
+VALUES
+  (
+    'FRFS Discounts Eligibility',
+    'FRFS-DISCOUNTS',
+    '{ "filter" :[{"var":"discounts"},{"or":[{"and":[{"==":[{"var":"code"},"WOMEN"] },{ "==" :[{"var":"aadhaarData.personGender"},"women"] } ] },{ "!=" :[{"var":"code"},"WOMEN"] } ] } ] }',
+    0,
+    1,
+    now(),
+    now()
+  );
+
+INSERT INTO
+  atlas_app.app_dynamic_logic_rollout (
+    domain,
+    percentage_rollout,
+    version,
+    version_description,
+    time_bounds,
+    merchant_operating_city_id,
+    created_at,
+    updated_at
+  )
+VALUES
+  (
+    'FRFS-DISCOUNTS',
+    100,
+    1,
+    'FRFS Discounts Eligibility For Women',
+    'Unbounded',
+    'namma-yatri-0-0000-0000-00000000city',
     now(),
     now()
   );

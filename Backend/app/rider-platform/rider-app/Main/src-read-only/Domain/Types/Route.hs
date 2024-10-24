@@ -22,6 +22,7 @@ data Route = Route
     longName :: Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    polyline :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     shortName :: Kernel.Prelude.Text,
     startPoint :: Kernel.External.Maps.Types.LatLong,
     timeBounds :: Kernel.Types.TimeBound.TimeBound,

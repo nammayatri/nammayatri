@@ -25,7 +25,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking] -> m ())
 createMany = traverse_ create
 
-findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus -> m ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking]))
+findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
 findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 
 findByBppOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.FRFSTicketBooking.FRFSTicketBooking))
@@ -91,7 +91,7 @@ updatePayoutStatusById cashbackStatus id = do
 updatePriceById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Common.Price -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updatePriceById price id = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) price), Se.Set Beam.price ((.amount) price), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateWithKV [Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price), Se.Set Beam.price ((.amount) price), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateRefundCancellationChargesAndIsCancellableByBookingId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -141,6 +141,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.cashbackStatus cashbackStatus,
       Se.Set Beam.customerCancelled customerCancelled,
       Se.Set Beam.discountedTickets discountedTickets,
+      Se.Set Beam.discountsJson discountsJson,
       Se.Set Beam.estimatedPrice ((.amount) estimatedPrice),
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
       Se.Set Beam.finalPrice (Kernel.Prelude.fmap (.amount) finalPrice),
@@ -152,7 +153,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),
       Se.Set Beam.payerVpa payerVpa,
       Se.Set Beam.paymentTxnId paymentTxnId,
-      Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) price),
+      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
       Se.Set Beam.price ((.amount) price),
       Se.Set Beam.providerDescription providerDescription,
       Se.Set Beam.providerId providerId,

@@ -28,12 +28,12 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common
+import SharedLogic.FRFSUtils
 import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
 import Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
 import Storage.Queries.FRFSRouteStopStageFare as QFRFSRouteStopStageFare
 import Storage.Queries.FRFSStageFare as QFRFSStageFare
 import Storage.Queries.FRFSTicket as QFRFSTicket
-import Storage.Queries.FRFSTicketDiscount as QFRFSTicketDiscount
 import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import Storage.Queries.Route as QRoute
 import Storage.Queries.RouteStopFare as QRouteStopFare
@@ -120,33 +120,7 @@ search merchant merchantOperatingCity bapConfig searchReq = do
                         amount = stageFare.amount,
                         currency = stageFare.currency
                       }
-            discounts <-
-              mapM
-                ( \applicableDiscountId -> do
-                    discount <- QFRFSTicketDiscount.findByIdAndVehicleAndCity applicableDiscountId vehicleType merchant.id merchantOperatingCity.id >>= fromMaybeM (InternalError "FRFS Discount Not Found")
-                    let discountPrice =
-                          case discount.value of
-                            DFRFSTicketDiscount.FixedAmount amount ->
-                              Price
-                                { amountInt = round amount,
-                                  amount = amount,
-                                  currency = discount.currency
-                                }
-                            DFRFSTicketDiscount.Percentage percent ->
-                              Price
-                                { amountInt = round ((HighPrecMoney (toRational percent) * price.amount) / 100),
-                                  amount = (HighPrecMoney (toRational percent) * price.amount) / 100,
-                                  currency = discount.currency
-                                }
-                    return $
-                      DDiscount
-                        { description = discount.description,
-                          price = discountPrice,
-                          code = discount.code,
-                          _type = discount._type
-                        }
-                )
-                farePolicy.applicableDiscountIds
+            discountsWithEligibility <- getFRFSTicketDiscountWithEligibility merchant.id merchantOperatingCity.id vehicleType searchReq.riderId farePolicy.applicableDiscountIds
             return $
               DQuote
                 { bppItemId = "Buses Item - " <> show vehicleServiceTier._type <> " - " <> vehicleServiceTier.providerCode,
@@ -157,11 +131,35 @@ search merchant merchantOperatingCity bapConfig searchReq = do
                   serviceTierShortName = Just vehicleServiceTier.shortName,
                   serviceTierDescription = Just vehicleServiceTier.description,
                   serviceTierLongName = Just vehicleServiceTier.longName,
-                  applicableDiscounts = discounts,
+                  discounts = map (mkDiscount price) discountsWithEligibility,
                   ..
                 }
         )
         serviceableFareProducts
+
+    mkDiscount price (discount, eligibility) =
+      let discountPrice =
+            case discount.value of
+              DFRFSTicketDiscount.FixedAmount amount ->
+                Price
+                  { amountInt = round amount,
+                    amount = amount,
+                    currency = discount.currency
+                  }
+              DFRFSTicketDiscount.Percentage percent ->
+                Price
+                  { amountInt = round ((HighPrecMoney (toRational percent) * price.amount) / 100),
+                    amount = (HighPrecMoney (toRational percent) * price.amount) / 100,
+                    currency = discount.currency
+                  }
+       in DDiscount
+            { code = discount.code,
+              title = discount.title,
+              description = discount.description,
+              tnc = discount.tnc,
+              price = discountPrice,
+              ..
+            }
 
 init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit
 init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking = do

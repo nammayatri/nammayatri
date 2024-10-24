@@ -168,7 +168,7 @@ getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist 
   let unboundedConfig = filter (\cfg -> cfg.timeBounds == Unbounded) configs
   let dpc' = getDriverPoolConfigFromDB' serviceTier tripCategory area mbDist boundedConfigs <|> getDriverPoolConfigFromDB' serviceTier tripCategory area mbDist unboundedConfig
   oldVersion <- getConfigVersion (getKeyValue <$> stickeyKey)
-  (allLogics, version) <- TDL.getAppDynamicLogic merchantOpCityId (LYT.CONFIG LYT.DriverPoolConfig) localTime oldVersion
+  (allLogics, version) <- TDL.getAppDynamicLogic (cast merchantOpCityId) (LYT.CONFIG LYT.DriverPoolConfig) localTime oldVersion
   let otherDimensions = A.Object $ KM.fromList [("serviceTier", toJSON serviceTier), ("tripCategory", toJSON tripCategory), ("area", toJSON area), ("tripDistance", toJSON mbDist)]
   case dpc' of
     Just dpc -> do

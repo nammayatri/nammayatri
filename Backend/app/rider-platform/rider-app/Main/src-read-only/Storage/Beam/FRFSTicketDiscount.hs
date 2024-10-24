@@ -16,13 +16,14 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data FRFSTicketDiscountT f = FRFSTicketDiscountT
-  { _type :: (B.C f Domain.Types.FRFSTicketDiscount.DiscountType),
-    code :: (B.C f Kernel.Prelude.Text),
+  { code :: (B.C f Kernel.Prelude.Text),
     currency :: (B.C f Kernel.Types.Common.Currency),
     description :: (B.C f Kernel.Prelude.Text),
     id :: (B.C f Kernel.Prelude.Text),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    title :: (B.C f Kernel.Prelude.Text),
+    tnc :: (B.C f Kernel.Prelude.Text),
     value :: (B.C f Domain.Types.FRFSTicketDiscount.DiscountValue),
     vehicleType :: (B.C f BecknV2.FRFS.Enums.VehicleCategory),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),

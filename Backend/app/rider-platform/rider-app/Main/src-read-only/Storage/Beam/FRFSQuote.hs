@@ -17,12 +17,12 @@ import Tools.Beam.UtilsTH
 
 data FRFSQuoteT f = FRFSQuoteT
   { _type :: (B.C f Domain.Types.FRFSQuote.FRFSQuoteType),
-    applicableDiscountIds :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
     bppDelayedInterest :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     bppItemId :: (B.C f Kernel.Prelude.Text),
     bppSubscriberId :: (B.C f Kernel.Prelude.Text),
     bppSubscriberUrl :: (B.C f Kernel.Prelude.Text),
     discountedTickets :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    discountsJson :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     eventDiscountAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     fromStationId :: (B.C f Kernel.Prelude.Text),
     id :: (B.C f Kernel.Prelude.Text),
