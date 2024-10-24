@@ -89,6 +89,8 @@ import Screens.TripDetailsScreen.ScreenData as TripDetailsScreenData
 import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, MetroTicketStatusScreenState, MetroTicketDetailsScreenState, MetroTicketBookingScreenState, MetroMyTicketsScreenState, LocationActionId, GlobalFlowCache, ReferralType, RentalScreenState, CancelSearchType, BusTicketBookingState)
 import Services.API (BookingStatus(..))
 import Screens.TicketBookingFlow.BusTicketBooking.ScreenData as BusTicketBookingScreenData
+import Screens.TicketBookingFlow.BusTrackingScreen.ScreenData as BusTrackingScreenData
+import Screens.Types as ST
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -137,6 +139,7 @@ newtype GlobalState = GlobalState {
   , dataExplainWithFetch :: DataFetchScreenState
   , parcelDeliveryScreen :: ParcelDeliveryScreenState
   , busTicketBookingScreen :: BusTicketBookingState
+  , busTrackingScreen :: ST.BusTrackingScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -185,6 +188,7 @@ defaultGlobalState = GlobalState {
   , pickupInstructionsScreen : PickupInstructionsScreenData.initData
   , parcelDeliveryScreen : ParcelDeliveryScreenData.initData
   , busTicketBookingScreen : BusTicketBookingScreenData.initData
+  , busTrackingScreen : BusTrackingScreenData.initData
   }
 
 defaultGlobalProps :: GlobalProps 
@@ -439,3 +443,4 @@ data ScreenType =
   | DataFetchScreenStateType (DataFetchScreenState -> DataFetchScreenState)
   | ParcelDeliveryScreenStateType (ParcelDeliveryScreenState -> ParcelDeliveryScreenState)
   | BusTicketBookingScreenStateType (BusTicketBookingState -> BusTicketBookingState)
+  | BusTrackingScreenStateType (ST.BusTrackingScreenState -> ST.BusTrackingScreenState)

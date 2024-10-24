@@ -67,3 +67,4 @@ import Screens.NammaSafetyFlow.Handler (nammaSafetyScreen) as UI
 import Screens.DataExplainWithFetch.Handler (dataFetchScreen) as UI
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.View (parcelDeliveryScreen) as UI
 import Screens.TicketBookingFlow.BusTicketBooking.View (busTicketBookingScreen) as UI
+import Screens.TicketBookingFlow.BusTrackingScreen.Handler (busTrackingScreen) as UI

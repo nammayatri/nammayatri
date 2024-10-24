@@ -319,3 +319,6 @@ busAutoComplete :: String -> String -> String -> Maybe String -> String
 busAutoComplete vehicleType city location input = 
   (getBaseUrl "48") <> "/frfs/autocomplete?vehicleType=\"" <> vehicleType <> "\"&city=" <> city <> "&location=" <> location <>
   maybe "" (\i -> "&input=" <> i) input
+
+trackRouteBus :: String -> String 
+trackRouteBus route = (getBaseUrl "61") <> "/track/"<>route <> "/vehicles"

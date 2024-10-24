@@ -146,3 +146,6 @@ convertMonthsToSeconds months = months * daysPerMonth * secondsPerDay
   where
     daysPerMonth = 30 
     secondsPerDay = 24 * 60 * 60
+
+layoutWithWeight :: forall w. PD.PrestoDOM (Effect Unit) w
+layoutWithWeight = PD.linearLayout [ PD.weight 1.0 ] []
