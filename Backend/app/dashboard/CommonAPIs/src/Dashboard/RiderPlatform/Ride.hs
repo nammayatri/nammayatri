@@ -132,7 +132,8 @@ data RideInfoRes = RideInfoRes
     estimatedDistance :: Maybe HighPrecMeters,
     computedPrice :: Maybe HighPrecMoney,
     fareBreakup :: [FareBreakup],
-    rideCreatedAt :: UTCTime
+    rideCreatedAt :: UTCTime,
+    roundTrip :: Maybe Bool
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
