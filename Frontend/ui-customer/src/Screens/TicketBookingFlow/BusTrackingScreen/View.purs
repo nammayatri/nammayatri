@@ -129,7 +129,7 @@ view push state =
                 , id $ EHC.getNewIDWithTag "BusTrackingScreenMap"
                 , onAnimationEnd
                     ( \action -> do
-                        void $ JB.showMap (EHC.getNewIDWithTag "BusTrackingScreenMap") true "satellite" 13.0 0.0 0.0 push MapReady
+                        void $ JB.showMap (EHC.getNewIDWithTag "BusTrackingScreenMap") true "satellite" 11.0 0.0 0.0 push MapReady
                         push action
                     )
                     (const NoAction)
@@ -547,33 +547,36 @@ busLocationTracking  duration id routeCode = do
     else do
       void $ delay $ Milliseconds $ 2000.0
  
-      let (API.BusTrackingRouteResp dummy) = dummyData
-      for_ dummy.vehicleTrackingInfo $ \(API.VehicleInfo item) -> do
-          -- void $ map (\(API.VehicleInfo item) -> do
-            let (API.LatLong location) = item.location
-            let markerConfig = JB.defaultMarkerConfig {markerId = item.vehicleId, pointerIcon = "ny_ic_bus_marker"}
-            EHC.liftFlow $ JB.showMarker markerConfig location.lat location.lon 160 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
-      -- resp <- HelpersAPI.callApi $ API.BusTrackingRouteReq routeCode
-      -- case resp of 
-      --   Right (API.BusTrackingRouteResp resp) -> do
-      --     for_ resp.vehicleTrackingInfo $ \(API.VehicleInfo item) -> do
+      -- let (API.BusTrackingRouteResp dummy) = dummyData
+      -- for_ dummy.vehicleTrackingInfo $ \(API.VehicleInfo item) -> do
       --     -- void $ map (\(API.VehicleInfo item) -> do
       --       let (API.LatLong location) = item.location
       --       let markerConfig = JB.defaultMarkerConfig {markerId = item.vehicleId, pointerIcon = "ny_ic_bus_marker"}
-      --       EHC.liftFlow $ JB.showMarker markerConfig location.lat location.lon 60 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
-      --     -- ) resp.vehicleTrackingInfo
-      --     void $ delay $ Milliseconds $ duration 
-      --     busLocationTracking duration id routeCode
-      --   Left err -> do
-      --     void $ delay $ Milliseconds $ duration
-      --     busLocationTracking duration id routeCode
+      --       EHC.liftFlow $ JB.showMarker markerConfig location.lat location.lon 160 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+      resp <- HelpersAPI.callApi $ API.BusTrackingRouteReq routeCode
+      case resp of 
+        Right (API.BusTrackingRouteResp resp) -> do
+          for_ resp.vehicleTrackingInfo $ \(API.VehicleInfo item) -> do
+          -- void $ map (\(API.VehicleInfo item) -> do
+            -- let (API.VehicleInfo l) = item.vehicleInfo
+            let (API.VehicleInfoForRoute m) = item.vehicleInfo
+            let lat = Mb.fromMaybe 0.0 m.latitude
+            let lon = Mb.fromMaybe 0.0  m.longitude
+            let markerConfig = JB.defaultMarkerConfig {markerId = item.vehicleId, pointerIcon = "ny_ic_bus_marker"}
+            EHC.liftFlow $ JB.showMarker markerConfig lat lon 160 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+          -- ) resp.vehicleTrackingInfo
+          void $ delay $ Milliseconds $ duration 
+          busLocationTracking duration id routeCode
+        Left err -> do
+          void $ delay $ Milliseconds $ duration
+          busLocationTracking duration id routeCode
 
 -- Example data for BusTrackingRouteResp
 dummyData :: API.BusTrackingRouteResp
 dummyData = API.BusTrackingRouteResp {
   vehicleTrackingInfo : [
     API.VehicleInfo {
-      location : API.LatLong {lat :  12.97619, lon : 80.14511000000002}, -- Location of the vehicl}e
+      -- location : API.LatLong {lat :  12.97619, lon : 80.14511000000002}, -- Location of the vehicl}e
       vehicleId : "Bus1234",              -- Vehicle ID
       vehicleInfo : API.VehicleInfoForRoute {
         startTime : Mb.Just "08:00:00",
@@ -587,7 +590,7 @@ dummyData = API.BusTrackingRouteResp {
       }
     },
     API.VehicleInfo {
-      location : API.LatLong {lat :  12.977810000000002, lon : 80.13876000000002},
+      -- location : API.LatLong {lat :  12.977810000000002, lon : 80.13876000000002},
       vehicleId : "Bus5678",
       vehicleInfo : API.VehicleInfoForRoute {
         startTime : Mb.Just "08:10:00",
@@ -601,7 +604,7 @@ dummyData = API.BusTrackingRouteResp {
       }
     },
     API.VehicleInfo {
-      location : API.LatLong {lat :  12.987440000000003, lon : 80.14203},
+      -- location : API.LatLong {lat :  12.987440000000003, lon : 80.14203},
       vehicleId : "Bus9101",
       vehicleInfo : API.VehicleInfoForRoute {
         startTime : Mb.Just "08:15:00",

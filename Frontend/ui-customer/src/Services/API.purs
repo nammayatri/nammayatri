@@ -4095,7 +4095,7 @@ newtype BusTrackingRouteResp = BusTrackingRouteResp {
 }
 
 newtype VehicleInfo = VehicleInfo {
-  location:: LatLong,
+  -- location:: LatLong,
   -- nextStop:: RouteStopMapping,
   vehicleId:: String,
   vehicleInfo:: VehicleInfoForRoute
@@ -4111,6 +4111,16 @@ newtype VehicleInfoForRoute = VehicleInfoForRoute {
     speed :: Maybe String,
     timestamp :: Maybe String
 }
+-- VehicleInfoForRoute:
+--     startTime : Maybe UTCTime
+--     startDate : Maybe Text
+--     scheduleRelationship : Maybe Text
+--     tripId : Maybe Text
+--     latitude : Maybe Double
+--     longitude : Maybe Double
+--     speed : Maybe Text
+--     timestamp : Maybe Text
+--     derive: "Show"
 
 newtype RouteStopMapping = RouteStopMapping { 
     routeId :: String,

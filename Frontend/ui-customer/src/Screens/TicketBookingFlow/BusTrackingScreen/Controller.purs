@@ -161,9 +161,9 @@ drawDriverRoute route resp state = do
   --   EHC.liftFlow $ addAndUpdateSOSRipples srcPoint
   for_ (routeConfig.stopMarkerConfigs) $ \(item) -> do
       -- void $ map (\(API.VehicleInfo item) -> do
-        EHC.liftFlow $ JB.showMarker item item.position.lat item.position.lng 40 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
-  void $ EHC.liftFlow $ JB.showMarker routeConfig.startMarkerConfig routeConfig.startMarkerConfig.position.lat routeConfig.startMarkerConfig.position.lng 130 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
-  void $ EHC.liftFlow $ JB.showMarker routeConfig.endMarkerConfig routeConfig.endMarkerConfig.position.lat routeConfig.endMarkerConfig.position.lng 130 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+        EHC.liftFlow $ JB.showMarker item item.position.lat item.position.lng 20 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+  void $ EHC.liftFlow $ JB.showMarker routeConfig.startMarkerConfig routeConfig.startMarkerConfig.position.lat routeConfig.startMarkerConfig.position.lng 110 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+  void $ EHC.liftFlow $ JB.showMarker routeConfig.endMarkerConfig routeConfig.endMarkerConfig.position.lat routeConfig.endMarkerConfig.position.lng 110 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
   EHC.liftFlow $ JB.animateCamera routeConfig.startMarkerConfig.position.lat routeConfig.startMarkerConfig.position.lng 10.0 "NO_ZOOM"
 
 
