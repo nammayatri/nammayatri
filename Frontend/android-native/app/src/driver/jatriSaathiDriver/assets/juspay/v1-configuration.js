@@ -360,7 +360,7 @@ let getAllCityConfig = () => {
     "cityName" : "",
     "mapImage" : "",
     "cityCode" : "",
-    "showSubscriptions" : false,
+    "showSubscriptions" : true,
     "enableAdvancedBooking" : true,
     "advancedRidePopUpYoutubeLink" : "" ,
     "callDriverInfoPost": false, // Dummy link need to change
@@ -381,9 +381,9 @@ let getAllCityConfig = () => {
         "whatsappSupport" : true
     },
     "variantSubscriptionConfig" : {
-      "enableVariantBasedSubscription" : false,
-      "variantList" : [],
-      "enableCabsSubscriptionView" : false,
+      "enableVariantBasedSubscription" : true,
+      "variantList" : ["CarCategory","BikeCategory","AutoCategory"],
+      "enableCabsSubscriptionView" : true,
       "staticViewPlans" : []
     },
     "showEarningSection" : true,
@@ -463,7 +463,7 @@ let getAllCityConfig = () => {
       cityLong: 88.2649516,
       variantSubscriptionConfig: {
         enableVariantBasedSubscription: true,
-        variantList: ["CarCategory"],
+        variantList: ["CarCategory","BikeCategory","AutoCategory"],
         enableCabsSubscriptionView: true,
         staticViewPlans: []
       },
@@ -500,7 +500,7 @@ let getAllCityConfig = () => {
       cityName: "Siliguri",
       mapImage: "ys_ic_siliguri_map",
       cityCode: "std:0353",
-      showSubscriptions: false,
+      showSubscriptions: true,
       cityLat: 26.708845,
       cityLong: 88.434362,
       supportNumber: "08069724949",
@@ -538,7 +538,7 @@ let getAllCityConfig = () => {
       cityName: "Asansol",
       mapImage: "ys_ic_asansol_map",
       cityCode: "std:0353",
-      showSubscriptions: false,
+      showSubscriptions: true,
       cityLat: 23.6889,
       cityLong: 86.9661,
       supportNumber: "08069724949",
@@ -550,7 +550,7 @@ let getAllCityConfig = () => {
       cityCode: "std:0342",
       cityLat: 23.5204,
       cityLong: 87.3119,
-      showSubscriptions: false
+      showSubscriptions: true
     }),
     Object.assign({}, baseCityConfig, {
       cityName: "Petrapole",
@@ -558,7 +558,7 @@ let getAllCityConfig = () => {
       cityCode: "std:03215",
       cityLat: 22.40117,
       cityLong: 88.58293,
-      showSubscriptions: false
+      showSubscriptions: true
     })
   ];
   return cityConfigs;
