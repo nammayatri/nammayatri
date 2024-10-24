@@ -10,20 +10,17 @@ import qualified Domain.Types.Ride as DR
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
-import qualified Kernel.Types.Common as Common
 import Kernel.Types.Id
 
 data BookingCancellationReasonT f = BookingCancellationReasonT
   { additionalInfo :: C f (Maybe Text),
     bookingId :: C f (Id DB.Booking),
-    createdAt :: C f (Maybe UTCTime),
-    distanceUnit :: C f (Maybe Common.DistanceUnit),
+    date :: C f (Maybe UTCTime),
     merchantId :: C f (Maybe (Id DM.Merchant)),
     reasonCode :: C f (Maybe CR.CancellationReasonCode),
     reasonStage :: C f (Maybe CR.CancellationStage),
     rideId :: C f (Maybe (Id DR.Ride)),
-    source :: C f DBCR.CancellationSource,
-    updatedAt :: C f (Maybe UTCTime)
+    source :: C f DBCR.CancellationSource
   }
   deriving (Generic)
 
@@ -34,20 +31,15 @@ bookingCancellationReasonTTable =
   BookingCancellationReasonT
     { additionalInfo = "additional_info",
       bookingId = "booking_id",
-      createdAt = "created_at",
-      distanceUnit = "distance_unit",
+      date = "date",
       merchantId = "merchant_id",
       reasonCode = "reason_code",
       reasonStage = "reason_stage",
       rideId = "ride_id",
-      source = "source",
-      updatedAt = "updated_at"
+      source = "source"
     }
 
 type BookingCancellationReason = BookingCancellationReasonT Identity
-
-instance CH.ClickhouseValue Common.DistanceUnit where
-  fromClickhouseValue = parseAsEnum @Common.DistanceUnit
 
 instance CH.ClickhouseValue CR.CancellationReasonCode where
   fromClickhouseValue = parseAsEnum @CR.CancellationReasonCode
@@ -58,7 +50,7 @@ instance CH.ClickhouseValue CR.CancellationStage where
 instance CH.ClickhouseValue DBCR.CancellationSource where
   fromClickhouseValue = parseAsEnum @DBCR.CancellationSource
 
-$(TH.mkClickhouseInstances ''BookingCancellationReasonT 'SELECT_FINAL_MODIFIER)
+$(TH.mkClickhouseInstances ''BookingCancellationReasonT 'NO_SELECT_MODIFIER)
 
 countCancelledBookingsByBookingIdsByUserAndDriver ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
@@ -77,7 +69,7 @@ countCancelledBookingsByBookingIdsByUserAndDriver bookingIds createdAt = do
         )
         $ CH.filter_
           ( \bookingCancellationReason _ ->
-              bookingCancellationReason.createdAt >=. (Just createdAt)
+              bookingCancellationReason.date >=. (Just createdAt)
                 CH.&&. bookingCancellationReason.bookingId `in_` bookingIds
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingCancellationReasonTTable)
