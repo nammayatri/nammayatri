@@ -2452,6 +2452,7 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
           createPayoutOrderCall = Payout.createPayoutOrder person.merchantId opCityId payoutServiceName
       merchantOperatingCity <- CQMOC.findById (cast opCityId) >>= fromMaybeM (MerchantOperatingCityNotFound opCityId.getId)
       logDebug $ "calling create payoutOrder with driverId: " <> personId.getId <> " | amount: " <> show createPayoutOrderReq.amount <> " | orderId: " <> show uid
+      when (createPayoutOrderReq.amount <= 0.0) $ throwError (InternalError "refund amount is less than or equal to 0")
       void $ adjustDues dueDriverFees
       (_, mbPayoutOrder) <- DPayment.createPayoutService (cast person.merchantId) (cast personId) (Just $ map ((.getId) . (.id)) driverFeeToPayout) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
       whenJust mbPayoutOrder $ \payoutOrder -> do
@@ -2497,7 +2498,7 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
           customerPhone = fromMaybe "6666666666" phoneNo, -- dummy no.
           customerEmail = fromMaybe "dummymail@gmail.com" person.email, -- dummy mail
           customerId = personId.getId,
-          orderType = "YATRI_RENTAL_SECURITY_DEPOSIT",
+          orderType = "FULFILL_ONLY",
           remark = "Refund for security deposit",
           customerName = person.firstName,
           customerVpa = vpa
