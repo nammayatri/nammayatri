@@ -56,7 +56,7 @@ getIsUpgradedToCab :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Mayb
 getIsUpgradedToCab = \case
   DRB.OneWayDetails details -> details.isUpgradedToCab
   DRB.RentalDetails _ -> Nothing
-  DRB.DriverOfferDetails _ -> Nothing
+  DRB.DriverOfferDetails details -> details.isUpgradedToCab
   DRB.OneWaySpecialZoneDetails _ -> Nothing
   DRB.InterCityDetails _ -> Nothing
   DRB.AmbulanceDetails _ -> Nothing
