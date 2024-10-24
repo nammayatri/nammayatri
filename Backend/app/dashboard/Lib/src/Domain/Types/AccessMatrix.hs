@@ -286,6 +286,7 @@ data UserActionType
   | DELETE_FRFS_STATION
   | COLLECT_MANUAL_PAYMENTS
   | EXEMPT_DRIVER_FEE
+  | PAN_AADHAAR_SELFIE_DETAILS_LIST
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)
