@@ -146,8 +146,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             boolean showSpecialLocationTag = model.getSpecialZonePickup();
             String searchRequestId = model.getSearchRequestId();
             boolean showVariant =  !model.getRequestedVehicleVariant().equals(NO_VARIANT) && model.isDowngradeEnabled() && RideRequestUtils.handleVariant(holder, model, this);
-
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showVariant || showSpecialLocationTag) {
+            
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || searchRequestId.equals(DUMMY_FROM_LOCATION) || model.isGotoTag() || showVariant || showSpecialLocationTag || model.isFavourite()) {
                 if (showSpecialLocationTag && (model.getDriverDefaultStepFee() == model.getOfferedPrice())) {
                     holder.specialLocExtraTip.setText(model.getCurrency() + model.getDriverDefaultStepFee());
                     holder.specialLocExtraTip.setVisibility(View.VISIBLE);
@@ -159,6 +159,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.specialLocTag.setVisibility(showSpecialLocationTag ? View.VISIBLE : View.GONE);
                 holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip));
                 holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
+                holder.isFavouriteTag.setVisibility(model.isFavourite() ? View.VISIBLE : View.GONE);
                 holder.testRequestTag.setVisibility(searchRequestId.equals(DUMMY_FROM_LOCATION) ? View.VISIBLE : View.GONE);
                 holder.gotoTag.setVisibility(model.isGotoTag() ? View.VISIBLE : View.GONE);
                 holder.reqButton.setTextColor(model.isGotoTag() ? getColor(R.color.yellow900) : getColor(R.color.white));
@@ -651,6 +652,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     String rideStartDate= rideRequestBundle.getString("rideStartDate");
                     String notificationSource= rideRequestBundle.getString("notificationSource");
                     boolean isThirdPartyBooking = rideRequestBundle.getBoolean("isThirdPartyBooking");
+                    Boolean isFavourite = rideRequestBundle.getBoolean("isFavourite");
                     double parkingCharge = rideRequestBundle.getDouble("parkingCharge", 0);
                    
                     if (calculatedTime > rideRequestedBuffer) {
@@ -699,6 +701,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             rideStartDate,
                             notificationSource,
                             isThirdPartyBooking,
+                            isFavourite,
                             parkingCharge,
                             getCurrTime
                     );
@@ -1274,11 +1277,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 indicatorTipBannerImageList.get(i).setImageResource(R.drawable.ny_ic_delivery);
                 break;
             default:
-                if (sheetArrayList.get(i).getCustomerTip() > 0 || isSpecialZone) {
+                if (sheetArrayList.get(i).getCustomerTip() > 0 || isSpecialZone || sheetArrayList.get(i).isFavourite()) {
                     indicatorTipBannerList.get(i).setVisibility(View.VISIBLE);
-                    indicatorTipBannerList.get(i).setText(isSpecialZone? "Zone" : "TIP");
-                    indicatorTipBannerList.get(i).setTextColor(isSpecialZone ? getColor(R.color.white) : getColor(R.color.black650));
-                    indicatorTipList.get(i).setBackground(getDrawable(isSpecialZone ? R.drawable.zone_curve : R.drawable.rectangle_9506));
+                    indicatorTipBannerList.get(i).setText(isSpecialZone? "Zone" : (sheetArrayList.get(i).getCustomerTip() > 0 ? "TIP" : "Favourite"));
+                    indicatorTipBannerList.get(i).setTextColor(isSpecialZone ? getColor(R.color.white) : (sheetArrayList.get(i).getCustomerTip() > 0 ? getColor(R.color.black650) : getColor(R.color.white)));
+                    indicatorTipList.get(i).setBackground(getDrawable(isSpecialZone ? R.drawable.zone_curve : (sheetArrayList.get(i).getCustomerTip() > 0 ? R.drawable.rectangle_9506 : R.drawable.blue_curve)));
                     indicatorTipBannerImageList.get(i).setVisibility(View.GONE);
                 } else {
                     indicatorTipBannerList.get(i).setVisibility(View.INVISIBLE);

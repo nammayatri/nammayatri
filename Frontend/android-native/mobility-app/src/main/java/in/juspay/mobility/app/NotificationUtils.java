@@ -287,6 +287,7 @@ public class NotificationUtils {
                     sheetData.putInt("driverDefaultStepFee", driverDefaultStepFeeWithCurrency.optInt("amount", 0));
                     sheetData.putInt("driverStepFeeWithCurrency", driverStepFeeWithCurrency.optInt("amount", negotiationUnit));
                     sheetData.putDouble("parkingCharge", entity_payload.optDouble("parkingCharge", 0.0));
+                    sheetData.putBoolean("isFavourite", entity_payload.has("isFavourite") && entity_payload.optBoolean("isFavourite", false));
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
                     System.out.println(entity_payload);
