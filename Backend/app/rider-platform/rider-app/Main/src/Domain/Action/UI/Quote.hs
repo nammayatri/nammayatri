@@ -169,13 +169,13 @@ mkQuoteAPIDetails tollCharges = \case
   DQuote.DeliveryDetails DDriverOffer.DriverOffer {..} ->
     -- TODO::is delivery entity required
     let distanceToPickup' = distanceToHighPrecMeters <$> distanceToPickup
-     in DQuote.DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickup, durationToPickup = durationToPickup, rating = rating, isUpgradedToCab = False, ..}
+     in DQuote.DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickup, durationToPickup = durationToPickup, rating = rating, isUpgradedToCab = fromMaybe False isUpgradedToCab, ..}
   DQuote.DriverOfferDetails DDriverOffer.DriverOffer {..} ->
     let distanceToPickup' = (distanceToHighPrecMeters <$> distanceToPickup) <|> (Just . HighPrecMeters $ toCentesimal 0) -- TODO::remove this default value
         distanceToPickupWithUnit' = distanceToPickup <|> Just (Distance 0 Meter) -- TODO::remove this default value
         durationToPickup' = durationToPickup <|> Just 0 -- TODO::remove this default value
         rating' = rating <|> Just (toCentesimal 500) -- TODO::remove this default value
-     in DQuote.DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickupWithUnit', durationToPickup = durationToPickup', rating = rating', isUpgradedToCab = False, ..}
+     in DQuote.DriverOfferAPIDetails UDriverOffer.DriverOfferAPIEntity {distanceToPickup = distanceToPickup', distanceToPickupWithUnit = distanceToPickupWithUnit', durationToPickup = durationToPickup', rating = rating', isUpgradedToCab = fromMaybe False isUpgradedToCab, ..}
   DQuote.OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> DQuote.OneWaySpecialZoneAPIDetails USpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
   DQuote.InterCityDetails details -> DQuote.InterCityAPIDetails $ DInterCityDetails.mkInterCityDetailsAPIEntity details tollCharges
 
