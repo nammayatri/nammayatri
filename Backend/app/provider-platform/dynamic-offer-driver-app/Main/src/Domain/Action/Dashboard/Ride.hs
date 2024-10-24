@@ -347,6 +347,7 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         merchantOperatingCityId = Just ride.merchantOperatingCityId.getId,
         rideCreatedAt = ride.createdAt,
         rideStatus = mkCommonRideStatus ride.status,
+        roundTrip = booking.roundTrip,
         deliveryParcelImageId = ride.deliveryFileIds >>= lastMay & fmap getId
       }
 

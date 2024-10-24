@@ -330,6 +330,7 @@ data RideInfoRes = RideInfoRes
     merchantOperatingCityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rideCreatedAt :: Kernel.Prelude.UTCTime,
     rideStatus :: RideStatus,
+    roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     deliveryParcelImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)

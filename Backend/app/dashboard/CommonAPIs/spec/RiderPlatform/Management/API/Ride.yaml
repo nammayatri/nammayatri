@@ -188,6 +188,7 @@ types:
     - computedPrice: Maybe HighPrecMoney
     - fareBreakup: [FareBreakup]
     - rideCreatedAt: UTCTime
+    - roundTrip: Maybe Bool
   ShareRideInfoRes:
     - id: Id Ride
     - bookingId: Id Booking
