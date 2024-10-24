@@ -2995,3 +2995,25 @@ type BusTicketBookingProps = {
  , srcLong :: Number
  , showAllTickets :: Boolean
 }
+-- ######################################### MultiModalFlow ####################################################
+
+type BusTrackingScreenState = {
+  data :: BusTrackingScreenData,
+  props :: BusTrackingScreenProps
+}
+
+type BusTrackingScreenData = {
+  appConfig :: AppConfig,
+  busRouteCode :: String,
+  stopsList :: Array GetMetroStationResp,
+  sourceStation :: Maybe Station,
+  destinationStation :: Maybe Station
+}
+
+type BusTrackingScreenProps = {
+  showRouteDetailsTab :: Boolean, 
+  expandStopsView :: Boolean, 
+  verticalLineHeight :: Int
+}
+
+type AlertWidgetConfig = {}

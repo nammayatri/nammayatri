@@ -56,6 +56,7 @@ import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Helpers.CommonView
+import DecodeUtil as DU
 
 busTicketBookingScreen :: ST.BusTicketBookingState -> Screen Action ST.BusTicketBookingState ScreenOutput
 busTicketBookingScreen initialState =
@@ -229,13 +230,15 @@ dummyIllustrationView push state =
     , imageWithFallback $ fetchImage FF_ASSET "ny_ic_bus_ticket_illustration"
     ]
   , textView $
-    [ text "Experience hassle-free bus bookings with Yatri Sathi"
+    [ text $ "Experience hassle-free bus bookings with " <> appName
     , color Color.black800
     , margin $ MarginHorizontal 24 24
     , gravity CENTER_HORIZONTAL
     , padding $ PaddingHorizontal 24 24
     ] <> FontStyle.body25 TypoGraphy
   ]
+  where
+    appName = fromMaybe "Namma Yatri" $ DFU.runFn3 DU.getAnyFromWindow "appName" Nothing Just
 
 searchRouteButton :: forall w. (Action -> Effect Unit) -> ST.BusTicketBookingState -> PrestoDOM (Effect Unit) w
 searchRouteButton push state =

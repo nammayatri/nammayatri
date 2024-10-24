@@ -3262,7 +3262,7 @@ data GetBusRoutesReq = GetBusRoutesReq String String String
 newtype GetBusRoutesResponse = GetBusRoutesResponse (Array GetBusRouteResp)
 
 newtype GetBusRouteResp = GetBusRouteResp {
-  code :: Maybe String,
+  code :: Maybe String, --routecode
   endPoint :: LatLong ,
   longName :: String,
   shortName :: String,
@@ -4083,4 +4083,61 @@ instance encodeAutoCompleteResp :: Encode AutoCompleteResp where encode = defaul
 
 instance makeAutoCompleteReq :: RestEndpoint BusAutoCompleteReq where
     makeRequest reqBody@(BusAutoCompleteReq vehicleType city location input) headers = defaultMakeRequest GET (EP.busAutoComplete vehicleType city location input) headers reqBody Nothing
+    encodeRequest = standardEncode
+
+
+data BusTrackingRouteReq = BusTrackingRouteReq String 
+
+newtype BusTrackingRouteResp = BusTrackingRouteResp {
+    vehicleTrackingInfo :: Array VehicleInfo
+}
+
+newtype VehicleInfo = VehicleInfo {
+  location:: LatLong,
+  nextStop:: RouteStopMapping,
+  vehicleId:: String,
+  locationUpdateTime:: Maybe String
+}
+
+newtype RouteStopMapping = RouteStopMapping { 
+    routeId :: String,
+    sequence :: Int,
+    stopId :: String,
+    -- timeBounds :: Kernel.Types.TimeBound.TimeBound,
+    vehicleType :: String--,
+    -- merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
+    -- merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    -- createdAt :: Kernel.Prelude.UTCTime,
+    -- updatedAt :: Kernel.Prelude.UTCTime
+  }
+
+derive instance genericBusTrackingRouteReq :: Generic BusTrackingRouteReq _
+instance showBusTrackingRouteReq    :: Show BusTrackingRouteReq where show     = genericShow
+instance standardBusTrackingRouteReq :: StandardEncode BusTrackingRouteReq where standardEncode (BusTrackingRouteReq _) = standardEncode {}
+instance decodeBusTrackingRouteReq   :: Decode BusTrackingRouteReq where decode = defaultDecode
+instance encodeBusTrackingRouteReq  :: Encode BusTrackingRouteReq where encode = defaultEncode
+
+derive instance genericBusTrackingRouteResp :: Generic BusTrackingRouteResp _
+instance standardBusTrackingRouteResp :: StandardEncode BusTrackingRouteResp where
+    standardEncode (BusTrackingRouteResp body) = standardEncode body
+instance showBusTrackingRouteResp :: Show BusTrackingRouteResp where show = genericShow
+instance decodeBusTrackingRouteResp :: Decode BusTrackingRouteResp where decode = defaultDecode
+instance encodeBusTrackingRouteResp :: Encode BusTrackingRouteResp where encode = defaultEncode
+
+derive instance genericVehicleInfo :: Generic VehicleInfo _
+instance standardVehicleInfo :: StandardEncode VehicleInfo where
+    standardEncode (VehicleInfo body) = standardEncode body
+instance showVehicleInfo :: Show VehicleInfo where show = genericShow
+instance decodeVehicleInfo :: Decode VehicleInfo where decode = defaultDecode
+instance encodeVehicleInfo :: Encode VehicleInfo where encode = defaultEncode
+
+derive instance genericRouteStopMapping :: Generic RouteStopMapping _
+instance standardRouteStopMapping :: StandardEncode RouteStopMapping where
+    standardEncode (RouteStopMapping body) = standardEncode body
+instance showRouteStopMapping :: Show RouteStopMapping where show = genericShow
+instance decodeRouteStopMapping :: Decode RouteStopMapping where decode = defaultDecode
+instance encodeRouteStopMapping :: Encode RouteStopMapping where encode = defaultEncode
+
+instance makeBusTrackingRouteReq :: RestEndpoint BusTrackingRouteReq where
+    makeRequest reqBody@(BusTrackingRouteReq code) headers = defaultMakeRequest GET (EP.trackRouteBus code) headers reqBody Nothing
     encodeRequest = standardEncode
