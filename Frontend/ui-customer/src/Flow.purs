@@ -4561,6 +4561,7 @@ metroTicketBookingFlow = do
     --  modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
     --  modifyScreenState $ SearchLocationScreenStateType (\slsstate -> slsstate { props {srcLat =  state.props.srcLat , srcLong = state.props.srcLong, actionType = BusStopSelectionAction}})
     --  searchLocationFlow
+    GO_TO_AADHAAR_VERIFICATION_SCREEN _ -> aadhaarVerificationFlow
   where
   fetchMetroStations currentCity metroStationsList routeCode ticketServiceType srcLat srcLong srcCode destCode= do
     (GetMetroStationResponse getMetroStationResp) <- Remote.getMetroStationBT ticketServiceType currentCity routeCode ""
@@ -6942,3 +6943,88 @@ busTrackingScreenFlow = do
       searchLocationFlow
     BusTrackingScreen.GoToBusTicketBooking state -> busTicketBookingFlow
     _ -> busTrackingScreenFlow
+
+aadhaarVerificationFlow :: FlowBT String Unit
+aadhaarVerificationFlow = do
+  action <- UI.aadhaarVerificationScreen
+  case action of
+    ENTER_AADHAAR_OTP state -> do
+      void $ lift $ lift $ loaderText "Validating" "Please wait while in progress"
+      void $ lift $ lift $ toggleLoader true
+      res <- lift $ lift $ Remote.triggerAadhaarOtp state.data.aadhaarNumber
+      void $ lift $ lift $ toggleLoader false
+      case res of
+        Right (GenerateAadhaarOTPResp resp) -> do
+          -- let _ = toast resp.message
+          case resp.statusCode of
+            "1001" -> do
+              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = VerifyAadhaar, btnActive = false}})
+              aadhaarVerificationFlow
+            _ -> aadhaarVerificationFlow
+        Left errorPayload -> do
+          let errorCode = HU.decodeErrorCode errorPayload.response.errorMessage
+          case errorCode of
+            "AADHAAR_NUMBER_NOT_EXIST" -> pure $ toast "Aadhaar Does not exist"
+            "AADHAAR_ALREADY_LINKED" -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+            "INVALID_AADHAAR" -> do
+              void $ pure $ toast $ HU.decodeErrorMessage errorPayload.response.errorMessage
+              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{showErrorAadhaar = true, btnActive = false}})
+            _ -> do
+              pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = AadhaarDetails, btnActive = false}})
+          aadhaarVerificationFlow
+    VERIFY_AADHAAR_OTP state -> do
+      void $ lift $ lift $ toggleLoader true
+      res <- lift $ lift $ Remote.verifyAadhaarOtp state.data.otp
+      void $ lift $ lift $ toggleLoader false
+      case res of
+        Right (VerifyAadhaarOTPResp resp) -> do
+          -- if resp.code == 200 then if state.props.fromHomeScreen then getDriverInfoFlow Nothing Nothing Nothing false Nothing false else onBoardingFlow
+            -- else do
+          void $ pure $ toast "Error Occured please try again later"
+          modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = EnterAadhaar, btnActive = false}})
+          aadhaarVerificationFlow
+        Left errorPayload -> do
+          let stage = if (HU.decodeErrorCode errorPayload.response.errorMessage) == "INVALID_OTP" then VerifyAadhaar else AadhaarDetails
+          void $ pure if (HU.decodeErrorCode errorPayload.response.errorMessage) == "INVALID_OTP" then toast "Invalid OTP" else unit
+          modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = stage, btnActive = false}})
+          aadhaarVerificationFlow
+    RESEND_AADHAAR_OTP state -> do
+      res <- lift $ lift $ Remote.triggerAadhaarOtp state.data.aadhaarNumber
+      case res of
+        Right (GenerateAadhaarOTPResp resp) -> do
+          case resp.statusCode of
+            "1001" -> do
+              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = VerifyAadhaar}})
+              aadhaarVerificationFlow
+            _ -> do
+              void $ pure $ toast "Verification Failed"
+              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = EnterAadhaar}})
+              aadhaarVerificationFlow
+        Left errorPayload -> do
+          let errorCode = HU.decodeErrorCode errorPayload.response.errorMessage
+          case errorCode of
+            "INVALID_AADHAAR" -> do
+              void $ pure $ toast "Verification Failed"
+              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = EnterAadhaar,showErrorAadhaar = true, btnActive = false}})
+            "GENERATE_AADHAAR_OTP_EXCEED_LIMIT" -> pure $ toast "OTP Resend Limit Exceeded"
+            _ -> pure $ toast $ HU.decodeErrorMessage errorPayload.response.errorMessage
+          modifyScreenState $ AadhaarVerificationScreenType (\aadhaarVerification -> aadhaarVerification{props{currentStage = EnterAadhaar, btnActive = false}})
+          aadhaarVerificationFlow
+    -- GO_TO_HOME_FROM_AADHAAR -> do
+    --   (GlobalState state) <- getState
+    --   modifyScreenState $ AadhaarVerificationScreenType (\_ -> state.aadhaarVerificationScreen)
+    --   getDriverInfoFlow Nothing Nothing Nothing false Nothing false
+    -- LOGOUT_FROM_AADHAAR -> logoutFlow
+    -- SEND_UNVERIFIED_AADHAAR_DATA state -> do
+    --   void $ lift $ lift $ toggleLoader true
+    --   unVerifiedAadhaarDataResp <- lift $ lift $ Remote.unVerifiedAadhaarData state.data.driverName state.data.driverGender state.data.driverDob
+    --   case unVerifiedAadhaarDataResp of
+    --     Right resp -> do
+    --       void $ lift $ lift $ toggleLoader false
+    --       if state.props.fromHomeScreen then getDriverInfoFlow Nothing Nothing Nothing false Nothing false else onBoardingFlow
+    --     Left errorPayload -> do
+    --       void $ lift $ lift $ toggleLoader false
+    --       void $ pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
+    --       aadhaarVerificationFlow
+    _ -> aadhaarVerificationFlow

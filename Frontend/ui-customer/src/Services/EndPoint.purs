@@ -322,3 +322,12 @@ busAutoComplete vehicleType city location input =
 
 trackRouteBus :: String -> String 
 trackRouteBus route = (getBaseUrl "61") <> "/track/"<>route <> "/vehicles"
+
+triggerAadhaarOTP :: String -> String
+triggerAadhaarOTP _ = (getBaseUrl "") <> "/verifyAadhaar/generateOtp"
+
+verifyAadhaarOTP :: String -> String
+verifyAadhaarOTP _ = (getBaseUrl "") <> "/verifyAadhaar/verifyOtp"
+
+-- unVerifiedAadhaarData :: String -> String
+-- unVerifiedAadhaarData _ = (getBaseUrl "") <> "/driver/register/unVerifiedAadhaarData"

@@ -67,6 +67,9 @@ import Helpers.API (callApi)
 import Data.Array as DA
 import LocalStorage.Cache (getFromCache)
 import Common.Animation.Config
+import Data.Eq.Generic (genericEq)
+import Data.Show.Generic (genericShow)
+import Data.Generic.Rep (class Generic)
 
 screen :: ST.MetroTicketBookingScreenState -> Screen Action ST.MetroTicketBookingScreenState ScreenOutput
 screen initialState =
@@ -162,12 +165,14 @@ view push state =
           , visibility $ boolToVisibility (not state.props.showShimmer)
           ][]
         , infoSelectioView state push city cityMetroConfig metroConfig
+        , offerSelectionView push state
         ]
         , updateButtonView state push
     ] <> if state.props.showMetroBookingTimeError && not state.props.showShimmer then [InfoCard.view (push <<< InfoCardAC) (metroTimeErrorPopupConfig state cityMetroConfig)] else [linearLayout [visibility GONE] []]
       <> if state.props.showShimmer
             then [shimmerView state]
             else [linearLayout [visibility GONE] []]
+      -- <> if state.props.currentStage == OfferSelection then [offerSelectionView push state] else [linearLayout [visibility GONE] []]
 
 routeListView :: forall w. ST.MetroTicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 routeListView state push = 
@@ -242,7 +247,7 @@ infoSelectioView state push city cityMetroConfig metroConfig =
       , width MATCH_PARENT    
       , padding $ PaddingBottom 75
       , scrollBarY false
-      , visibility $ boolToVisibility (not state.props.showShimmer)
+      , visibility $ boolToVisibility $ (not state.props.showShimmer) && (state.props.currentStage /= ST.OfferSelection)
       ] [ linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -354,7 +359,7 @@ bannerView push cityMetroConfig state =
   , height WRAP_CONTENT
   , cornerRadius 8.0  
   , margin $ (Margin 16 0 16 0)
-  , visibility $ boolToVisibility (state.props.ticketServiceType /= BUS)
+  , visibility $ boolToVisibility $ (state.props.ticketServiceType /= BUS) && state.props.currentStage /= ST.OfferSelection
   ][ Banner.view (push <<< const NoAction) (metroBannerConfig cityMetroConfig state)
   ]
 
@@ -607,15 +612,25 @@ updateButtonView state push =
   , gravity BOTTOM
   , alignParentBottom "true,-1"
   , background Color.transparent
-  , visibility $ boolToVisibility (not state.props.showShimmer)
-  ][ linearLayout
+  , visibility $ boolToVisibility $ state.props.currentStage /= ST.OfferSelection && (not state.props.showShimmer)
+  , orientation VERTICAL
+  ]
+  [ linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ]
+    [ offersInfoView push state
+    , linearLayout
       [ orientation VERTICAL
       , height WRAP_CONTENT
       , width MATCH_PARENT
       , background Color.white900
       , padding $ PaddingVertical 5 24
+      , stroke ("1," <> Color.borderColorLight)
       ][PrimaryButton.view (push <<< UpdateButtonAction) (updateButtonConfig state)]
     ]
+  ]
 
 locationSelectionView :: (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState ->  forall w. PrestoDOM (Effect Unit) w
 locationSelectionView push state = 
@@ -754,3 +769,124 @@ offerInfoView push state =
       if freeTicketCount > 0 then {color : Color.green900, text : (getString $ FREE_TICKET_AVAILABLE (show $ freeTicketCount * (fromMaybe 0 metroBookingConfigResp.maxFreeTicketCashback)) (show freeTicketCount)), visibility : true}
         else if ticketsAfterLastFreeTicket == (freeTicketInterval - 1) then {color : Color.metroBlue, text : (getString NEXT_FREE_TICKET), visibility : true} 
         else {color : Color.transparent, text : "", visibility : false}
+
+offersInfoView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
+offersInfoView push state =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , background Color.cosmicLatte
+  , padding $ Padding 16 12 16 12
+  , gravity CENTER_VERTICAL
+  , visibility $ boolToVisibility $ DA.length state.data.discounts > 0
+  -- , alignParentBottom "true,-1"
+  ]
+  [ imageView
+    [ height $ V 12
+    , width $ V 12
+    , gravity CENTER_VERTICAL
+    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_discount_percentage"
+    ]
+  , textView $
+    [ text $ (show $ DA.length state.data.discounts) <> " Offers Available ✨"
+    , color Color.black900
+    , margin $ MarginLeft 8
+    ] <> FontStyle.tags TypoGraphy
+  , linearLayout
+    [weight 1.0][]
+  , textView $
+    [ text "Check"
+    , padding $ Padding 4 2 4 2
+    , color Color.blue900
+    , gravity RIGHT
+    , onClick push $ const OfferInfoClicked
+    , rippleColor Color.rippleShade
+    ] <> FontStyle.tags TypoGraphy
+  ]
+
+offerSelectionView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
+offerSelectionView push state =
+  scrollView
+  [ height MATCH_PARENT
+  , width MATCH_PARENT    
+  , padding $ PaddingBottom 75
+  , scrollBarY false
+  , visibility $ boolToVisibility $ (not state.props.showShimmer) && state.props.currentStage == ST.OfferSelection
+  , background Color.white900
+  ] 
+  [ linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ] $
+    [ textView $ 
+      [ text "For Verification you have to enter Aadhaar details"
+      , background Color.blue600
+      , padding $ Padding 16 12 16 12
+      , color Color.black700 
+      , width MATCH_PARENT
+      ] <> FontStyle.body3 TypoGraphy
+    ] <> map (\discount -> offerCardView push state discount) state.data.discounts
+  ]
+
+offerCardView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> DiscountObj -> PrestoDOM (Effect Unit) w
+offerCardView push state discount =
+  -- let 
+  --   allTexts = 
+  --     case offerCardType of
+  --       ST.Ladki -> {title1 : "40% OFF", title2 : "for Women Passenger", title3 : ""}
+  --       ST.Buddha -> {title1 : "50% OFF", title2 : "for Senior Citizen", title3 : "Passenger age should be above 60 years"}
+  -- in
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , cornerRadius 8.0
+    , stroke ("1," <> Color.borderColorLight)
+    , orientation VERTICAL
+    , margin $ Margin 16 16 16 0
+    , padding $ Padding 16 16 16 16
+    , alpha if discount.eligibility == true then 1.0 else 0.5
+    ]
+    [ linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation HORIZONTAL
+      ]
+      [ linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , orientation VERTICAL
+        ]
+        [ textView $
+          [ text discount.title
+          , color Color.black800
+          , gravity CENTER
+          -- , padding $ Padding 8 8 8 8
+          ] <> FontStyle.h2 TypoGraphy
+        , textView $
+          [ text discount.description
+          , color Color.black800
+          , gravity CENTER
+          -- , padding $ Padding 8 8 8 8
+          ] <> FontStyle.subHeading1 TypoGraphy
+        ]
+      , linearLayout [weight 1.0] []
+      , textView $
+        [ text "Apply"
+        , cornerRadius 20.0
+        , padding $ Padding 12 6 12 6
+        , color Color.blue800
+        , stroke $ "1," <> Color.blue800
+        , onClick push $ const $ if discount.eligibility == true then ApplyOffer discount.code else NoAction
+        , rippleColor Color.rippleShade
+        ] <> FontStyle.body27 TypoGraphy
+      ]
+    , textView $
+      [ textFromHtml discount.tnc
+      , color Color.black800
+      , gravity CENTER
+      , visibility $ boolToVisibility $ discount.tnc /= ""
+      , margin $ MarginTop 8
+      -- , padding $ Padding 8 8 8 8
+      ] <> FontStyle.body3 TypoGraphy
+    ]

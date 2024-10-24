@@ -1223,3 +1223,7 @@ disableChat fareProductType =
 isDeliveryInitiator :: Maybe (Array String) -> Boolean
 isDeliveryInitiator maybeTags = 
   maybe true (\tags -> elem "Initiator" tags) maybeTags
+
+foreign import clearTimer :: String -> Unit
+foreign import startTimer :: forall action. Int -> Boolean -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import decodeErrorMessage :: String -> String

@@ -42,6 +42,7 @@ initData = {
   , searchRideType : API.BUS_DESTINATION
   , metroBookingConfigResp : MetroBookingConfigRes {bookingEndTime: "", bookingStartTime: "", oneWayTicketLimit: 0, roundTripTicketLimit: 0, metroStationTtl: 10080, discount: 0, customEndTime : "", customDates : [], isEventOngoing : Mb.Nothing, freeTicketInterval : Mb.Nothing, maxFreeTicketCashback : Mb.Nothing, ticketsBookedInEvent : Mb.Nothing , isCancellationAllowed : Mb.Just true}
   , eventDiscountAmount : Mb.Nothing
+  , discounts : [] -- [womenDiscount] <> [seniorCitizenDiscount]
   },
   props: {
     isLimitExceeded : false
@@ -61,3 +62,31 @@ initData = {
   },
   config :  getAppConfig appConfig
 }
+
+
+
+womenDiscount :: API.DiscountObj
+womenDiscount = 
+  { code: "WOMEN"
+  , description: "Women Discount"
+  , eligibility: false
+  , price: 
+      { amount: 20.0
+      , currency: "INR"
+      }
+  , title: "Women 50% Off"
+  , tnc: "<b>Only eligible for women above 18 years old</b>"
+  }
+
+seniorCitizenDiscount :: API.DiscountObj
+seniorCitizenDiscount = 
+  { code: "SENIORCITIZEN"
+  , description: "Senior Citizen Discount"
+  , eligibility: true
+  , price: 
+      { amount: 16.0
+      , currency: "INR"
+      }
+  , title: "Senior Citizen 40% Off"
+  , tnc: "<b>Only eligible for adults with age above 70 years</b>"
+  }

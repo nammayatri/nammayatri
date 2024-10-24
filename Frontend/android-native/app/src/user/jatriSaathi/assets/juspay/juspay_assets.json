@@ -780,6 +780,7 @@
       "ys_ic_driver_message" : true,
       "zone_curve" : true,
       "ny_ic_repeat_icon_blue" : true,
-      "ny_ic_bus_icon_light_blue" : true
+      "ny_ic_bus_icon_light_blue" : true,
+      "ny_ic_discount_percentage" : true
    }
 }

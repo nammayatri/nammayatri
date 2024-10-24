@@ -2620,6 +2620,7 @@ type MetroTicketBookingScreenData = {
   , metroBookingConfigResp :: MetroBookingConfigRes
   , eventDiscountAmount :: Maybe Int
   , searchRideType :: SearchRideType
+  , discounts :: Array API.DiscountObj
 }
 
 type MetroTicketBookingScreenProps = {
@@ -2638,7 +2639,7 @@ type MetroTicketBookingScreenProps = {
 , srcLong :: Number
 }
 
-data TicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote | PaymentSDKPooling | BusTicketSelection
+data TicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote | PaymentSDKPooling | BusTicketSelection | OfferSelection
 
 derive instance genericTicketBookingStage :: Generic TicketBookingStage _
 instance eqMetroTicketBookingStage :: Eq TicketBookingStage where eq = genericEq
@@ -3017,3 +3018,42 @@ type BusTrackingScreenProps = {
 }
 
 type AlertWidgetConfig = {}
+
+
+data OfferCardType = Ladki | Buddha
+
+derive instance genericOfferCardType :: Generic OfferCardType _
+instance showOfferCardType :: Show OfferCardType where show = genericShow
+instance eqOfferCardType :: Eq OfferCardType where eq = genericEq
+
+--------------------------------------------------------------- AadhaarVerificationScreenState -----------------------------------------------------------------------------
+
+type AadhaarVerificationScreenState = {
+  data :: EnterAadhaarNumberScreenStateData,
+  props :: EnterAadhaarNumberScreenStateProps
+}
+
+type EnterAadhaarNumberScreenStateData = {
+    aadhaarNumber :: String
+  , timer :: String
+  , otp :: String
+  , driverName :: String
+  , driverGender :: String
+  , driverDob :: String
+}
+
+type EnterAadhaarNumberScreenStateProps = {
+  btnActive :: Boolean
+, isValid :: Boolean
+, resendEnabled :: Boolean
+, currentStage :: AadhaarStage
+, showErrorAadhaar :: Boolean
+, fromHomeScreen :: Boolean
+, showLogoutPopup :: Boolean
+, isDateClickable :: Boolean
+}
+
+data AadhaarStage = EnterAadhaar | VerifyAadhaar | AadhaarDetails
+
+derive instance genericAadhaarStage :: Generic AadhaarStage _
+instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq

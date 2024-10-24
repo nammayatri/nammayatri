@@ -59,7 +59,7 @@ metroTicketBookingHeaderConfig state = let
           } 
         , padding = PaddingVertical 5 5
         , textConfig {
-            text = if state.props.ticketServiceType == BUS then "Buy Bus Tickets" else getString BUY_METRO_TICKETS
+            text = if state.props.currentStage == ST.OfferSelection then "Offers" else if state.props.ticketServiceType == BUS then "Buy Bus Tickets" else getString BUY_METRO_TICKETS
           , color = Color.darkCharcoal
           }
         , suffixImageConfig {
