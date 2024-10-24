@@ -796,9 +796,9 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
       QBPL.makeAllInactiveByBookingId booking.id
   whenJust mbRide $ \ride -> void $ do
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
+  riderConfig <- QRiderConfig.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (InternalError "RiderConfig not found")
   fork "Cancellation Settlement" $ do
     whenJust cancellationFee $ \fee -> do
-      riderConfig <- QRiderConfig.findByMerchantOperatingCityId booking.merchantOperatingCityId >>= fromMaybeM (InternalError "RiderConfig not found")
       person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
       case (riderConfig.settleCancellationFeeBeforeNextRide, mbRide, person.mobileCountryCode) of
         (Just True, Just ride, Just _countryCode) -> do
@@ -810,6 +810,15 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
         _ -> pure ()
   unless (cancellationSource == DBCR.ByUser) $
     QBCR.upsert bookingCancellationReason
+  fork "Checking lifetime blocking condition for customer based on cancellation rate" $ do
+    personStats <- QPersonStats.findByPersonId booking.riderId
+    case (personStats, riderConfig.minRidesToBlock, riderConfig.thresholdCancellationPercentageToBlock) of
+      (Just stats, Just minRides, Just threshold) -> do
+        let totalRides = stats.completedRides + stats.driverCancelledRides + stats.userCancelledRides
+        let rate = (stats.userCancelledRides * 100) `div` max 1 totalRides
+        when (totalRides > minRides && rate > threshold) $ do
+          SMC.blockCustomer booking.riderId Nothing
+      _ -> logDebug "Configs or person stats doesnt not exist for checking blocking condition"
   -- notify customer
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
   Notify.notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParties
