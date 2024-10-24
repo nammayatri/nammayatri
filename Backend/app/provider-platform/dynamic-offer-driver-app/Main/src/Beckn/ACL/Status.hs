@@ -39,9 +39,9 @@ buildStatusReqV2 subscriber req = do
   unless (Just subscriber.subscriber_id == req.statusReqContext.contextBapId) $
     throwError (InvalidRequest "Invalid bap_id")
 
-  statusReqMessageRefId <- req.statusReqMessage.statusReqMessageRefId & fromMaybeM (InvalidRequest "Invalid statusReqMessageRefId")
+  let statusReqMessageRefId = req.statusReqMessage.statusReqMessageRefId
   transactionId <- (fmap UUID.toText req.statusReqContext.contextTransactionId) & fromMaybeM (InvalidRequest "TransactionId not found")
-  let bookingId = Just $ Id statusReqMessageRefId
+  let bookingId = Id <$> statusReqMessageRefId
   return $
     DStatus.StatusReq
       { ..
