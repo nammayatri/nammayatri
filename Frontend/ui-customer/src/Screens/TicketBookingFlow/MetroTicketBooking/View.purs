@@ -230,36 +230,40 @@ bannerView push cityMetroConfig state =
   ][ Banner.view (push <<< const NoAction) (metroBannerConfig cityMetroConfig state)
   ]
 
-roundTripCheckBox :: (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> MetroConfig -> forall w . PrestoDOM (Effect Unit) w
-roundTripCheckBox push state metroConfig = 
+roundTripCheckBox :: (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> MetroConfig -> forall w. PrestoDOM (Effect Unit) w
+roundTripCheckBox push state metroConfig =
   let
     isRoundTripSelected = ST.ROUND_TRIP_TICKET == state.data.ticketType
     ticketType = if isRoundTripSelected then ST.ONE_WAY_TICKET else ST.ROUND_TRIP_TICKET
+    city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   in
-    linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation HORIZONTAL
-    , padding $ Padding 4 4 4 4
-    , margin $ MarginTop 20
-    ][linearLayout
+    if city == Delhi
+    then linearLayout [] []
+    else 
+      linearLayout
       [ height WRAP_CONTENT
-      , width WRAP_CONTENT 
-      , onClick (\action -> push action
-            ) (const $ ChangeTicketTab ticketType metroConfig)
-    ][imageView
-      [ height $ V 16
-      , width $ V 16
-      , layoutGravity "center_vertical"
-      , margin $ MarginRight 4
-      , imageWithFallback $ fetchImage FF_COMMON_ASSET (if isRoundTripSelected then "ny_ic_checked" else "ny_ic_unchecked")
+      , width MATCH_PARENT
+      , orientation HORIZONTAL
+      , padding $ Padding 4 4 4 4
+      , margin $ MarginTop 20
+      ][linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT 
+        , onClick (\action -> push action) (const $ ChangeTicketTab ticketType metroConfig)
+      ][imageView
+        [ height $ V 16
+        , width $ V 16
+        , layoutGravity "center_vertical"
+        , margin $ MarginRight 4
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET (if isRoundTripSelected then "ny_ic_checked" else "ny_ic_unchecked")
+        ]
+        , textView $ 
+         [ text $ " " <> (getString BOOK_ROUND_TRIP)
+         , color Color.black800
+         ] <> FontStyle.body2 TypoGraphy
+       ]
       ]
-      , textView $ 
-       [ text $ " " <> (getString BOOK_ROUND_TRIP)
-       , color Color.black800
-       ] <> FontStyle.body2 TypoGraphy
-     ]
-    ]
+
 selectionTab :: forall w . String  -> ST.TicketType -> (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> MetroConfig -> PrestoDOM (Effect Unit) w
 selectionTab _text ticketType push state metoConfig = 
   let ticketEnabled = ticketType == state.data.ticketType
