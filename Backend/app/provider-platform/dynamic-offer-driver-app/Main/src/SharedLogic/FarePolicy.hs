@@ -27,6 +27,7 @@ import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FareProduct as FareProduct
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Trip as DTT
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleServiceTier as DVST
 import GHC.Float (int2Double)
@@ -177,7 +178,7 @@ getFareProduct _ Nothing = Nothing
 getFareProduct fareProducts (Just vehicleServiceTier) = List.find (\fareProduct -> fareProduct.vehicleServiceTier == vehicleServiceTier.serviceTierType) fareProducts.fareProducts
 
 getFullFarePolicy :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe CacKey -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> FareProduct.FareProduct -> m FarePolicyD.FullFarePolicy
-getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mbBookingStartTime mbBaseVaraintCarPrice mbAppDynamicLogicVersion fareProduct = do
+getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mbBookingStartTime mbBaseVariantCarPrice mbAppDynamicLogicVersion fareProduct = do
   transporterConfig <- CTC.findByMerchantOpCityId fareProduct.merchantOperatingCityId txnId >>= fromMaybeM (TransporterConfigNotFound fareProduct.merchantOperatingCityId.getId)
   mbVehicleServiceTierItem <-
     CQVST.findByServiceTierTypeAndCityId fareProduct.vehicleServiceTier fareProduct.merchantOperatingCityId
@@ -206,7 +207,7 @@ getFullFarePolicy mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mb
   let fullFarePolicy = FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy congestionChargeDetails farePolicy
   case mbVehicleServiceTierItem of
     Just vehicleServiceTierItem -> do
-      if vehicleServiceTierItem.vehicleCategory == Just DVC.CAR && isJust mbBaseVaraintCarPrice && not (fromMaybe True vehicleServiceTierItem.baseVehicleServiceTier)
+      if vehicleServiceTierItem.vehicleCategory == Just DVC.CAR && isJust mbBaseVariantCarPrice && not (fromMaybe True vehicleServiceTierItem.baseVehicleServiceTier) && DTT.isOneWayTrip fareProduct.tripCategory
         then do
           let addtionalFarePerKm = toRational $ fromMaybe 0 vehicleServiceTierItem.fareAdditionPerKmOverBaseServiceTier
           let mbAdditionalFare = mbDistance <&> \distance -> toHighPrecMoney ((fromIntegral distance.getMeters / 1000 :: Rational) * addtionalFarePerKm)
