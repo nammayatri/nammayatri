@@ -159,6 +159,18 @@ data LicDetails = LicDetails {licExpiry :: Kernel.Prelude.UTCTime, vehicleClass 
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PanAadharSelfieDetailsListResp = PanAadharSelfieDetailsListResp
+  { transactionId :: Kernel.Prelude.Text,
+    verificationStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    failureReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime,
+    imageId1 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    imageId2 :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PanAadharSelfieDetailsResp = PanAadharSelfieDetailsResp
   { personName :: Kernel.Prelude.Text,
     personId :: Kernel.Prelude.Text,
@@ -289,7 +301,7 @@ data UpdateVehicleVariantReq = UpdateVehicleVariantReq {rcId :: Kernel.Prelude.T
 instance Kernel.Types.HideSecrets.HideSecrets UpdateVehicleVariantReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("driver" :> (GetDriverDocumentsInfo :<|> PostDriverPersonNumbers :<|> PostDriverDriverDataDecryption :<|> PostDriverPersonId :<|> GetDriverAadhaarInfo :<|> GetDriverAadhaarInfobyMobileNumber :<|> GetDriverList :<|> GetDriverActivity :<|> PostDriverDisable :<|> PostDriverAcRestrictionUpdate :<|> PostDriverBlockWithReasonHelper :<|> PostDriverBlock :<|> GetDriverBlockReasonList :<|> PostDriverUnblockHelper :<|> GetDriverLocation :<|> DeleteDriverPermanentlyDelete :<|> PostDriverUnlinkDL :<|> PostDriverUnlinkAadhaar :<|> PostDriverUpdatePhoneNumber :<|> PostDriverUpdateByPhoneNumber :<|> PostDriverUpdateName :<|> PostDriverDeleteRC :<|> GetDriverClearStuckOnRide :<|> PostDriverSendDummyNotification :<|> PostDriverChangeOperatingCity :<|> GetDriverGetOperatingCity :<|> PostDriverPauseOrResumeServiceCharges :<|> PostDriverUpdateRCInvalidStatus :<|> PostDriverUpdateVehicleVariant :<|> PostDriverBulkReviewRCVariant :<|> PostDriverUpdateDriverTag :<|> PostDriverClearFee :<|> GetDriverPanAadharSelfieDetails :<|> PostDriverSyncDocAadharPan :<|> PostDriverUpdateVehicleManufacturing :<|> PostDriverRefundByPayout :<|> GetDriverSecurityDepositStatus))
+type API = ("driver" :> (GetDriverDocumentsInfo :<|> PostDriverPersonNumbers :<|> PostDriverDriverDataDecryption :<|> PostDriverPersonId :<|> GetDriverAadhaarInfo :<|> GetDriverAadhaarInfobyMobileNumber :<|> GetDriverList :<|> GetDriverActivity :<|> PostDriverDisable :<|> PostDriverAcRestrictionUpdate :<|> PostDriverBlockWithReasonHelper :<|> PostDriverBlock :<|> GetDriverBlockReasonList :<|> PostDriverUnblockHelper :<|> GetDriverLocation :<|> DeleteDriverPermanentlyDelete :<|> PostDriverUnlinkDL :<|> PostDriverUnlinkAadhaar :<|> PostDriverUpdatePhoneNumber :<|> PostDriverUpdateByPhoneNumber :<|> PostDriverUpdateName :<|> PostDriverDeleteRC :<|> GetDriverClearStuckOnRide :<|> PostDriverSendDummyNotification :<|> PostDriverChangeOperatingCity :<|> GetDriverGetOperatingCity :<|> PostDriverPauseOrResumeServiceCharges :<|> PostDriverUpdateRCInvalidStatus :<|> PostDriverUpdateVehicleVariant :<|> PostDriverBulkReviewRCVariant :<|> PostDriverUpdateDriverTag :<|> PostDriverClearFee :<|> GetDriverPanAadharSelfieDetails :<|> PostDriverSyncDocAadharPan :<|> PostDriverUpdateVehicleManufacturing :<|> PostDriverRefundByPayout :<|> GetDriverSecurityDepositStatus :<|> GetDriverPanAadharSelfieDetailsList))
 
 type GetDriverDocumentsInfo = ("documents" :> "info" :> Get '[JSON] Dashboard.Common.Driver.DriverDocumentsInfoRes)
 
@@ -534,6 +546,14 @@ type GetDriverSecurityDepositStatus =
       :> Get '[JSON] [API.Types.ProviderPlatform.Management.Driver.SecurityDepositDfStatusRes]
   )
 
+type GetDriverPanAadharSelfieDetailsList =
+  ( "panAadharSelfieDetailsList" :> MandatoryQueryParam "docType" Kernel.Prelude.Text
+      :> MandatoryQueryParam
+           "driverId"
+           (Kernel.Types.Id.Id Dashboard.Common.Driver)
+      :> Get '[JSON] [API.Types.ProviderPlatform.Management.Driver.PanAadharSelfieDetailsListResp]
+  )
+
 data DriverAPIs = DriverAPIs
   { getDriverDocumentsInfo :: EulerHS.Types.EulerClient Dashboard.Common.Driver.DriverDocumentsInfoRes,
     postDriverPersonNumbers :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.PersonIdsReq) -> EulerHS.Types.EulerClient [Dashboard.Common.PersonRes],
@@ -571,13 +591,14 @@ data DriverAPIs = DriverAPIs
     postDriverSyncDocAadharPan :: API.Types.ProviderPlatform.Management.Driver.AadharPanSyncReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverUpdateVehicleManufacturing :: Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.Driver.UpdateVehicleManufacturingReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverRefundByPayout :: Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.Driver.RefundByPayoutReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverSecurityDepositStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Dashboard.Common.Driver.ServiceNames -> EulerHS.Types.EulerClient [API.Types.ProviderPlatform.Management.Driver.SecurityDepositDfStatusRes]
+    getDriverSecurityDepositStatus :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Dashboard.Common.Driver.ServiceNames -> EulerHS.Types.EulerClient [API.Types.ProviderPlatform.Management.Driver.SecurityDepositDfStatusRes],
+    getDriverPanAadharSelfieDetailsList :: Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient [API.Types.ProviderPlatform.Management.Driver.PanAadharSelfieDetailsListResp]
   }
 
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)
 mkDriverAPIs driverClient = (DriverAPIs {..})
   where
-    getDriverDocumentsInfo :<|> postDriverPersonNumbers :<|> postDriverDriverDataDecryption :<|> postDriverPersonId :<|> getDriverAadhaarInfo :<|> getDriverAadhaarInfobyMobileNumber :<|> getDriverList :<|> getDriverActivity :<|> postDriverDisable :<|> postDriverAcRestrictionUpdate :<|> postDriverBlockWithReason :<|> postDriverBlock :<|> getDriverBlockReasonList :<|> postDriverUnblock :<|> getDriverLocation :<|> deleteDriverPermanentlyDelete :<|> postDriverUnlinkDL :<|> postDriverUnlinkAadhaar :<|> postDriverUpdatePhoneNumber :<|> postDriverUpdateByPhoneNumber :<|> postDriverUpdateName :<|> postDriverDeleteRC :<|> getDriverClearStuckOnRide :<|> postDriverSendDummyNotification :<|> postDriverChangeOperatingCity :<|> getDriverGetOperatingCity :<|> postDriverPauseOrResumeServiceCharges :<|> postDriverUpdateRCInvalidStatus :<|> postDriverUpdateVehicleVariant :<|> postDriverBulkReviewRCVariant :<|> postDriverUpdateDriverTag :<|> postDriverClearFee :<|> getDriverPanAadharSelfieDetails :<|> postDriverSyncDocAadharPan :<|> postDriverUpdateVehicleManufacturing :<|> postDriverRefundByPayout :<|> getDriverSecurityDepositStatus = driverClient
+    getDriverDocumentsInfo :<|> postDriverPersonNumbers :<|> postDriverDriverDataDecryption :<|> postDriverPersonId :<|> getDriverAadhaarInfo :<|> getDriverAadhaarInfobyMobileNumber :<|> getDriverList :<|> getDriverActivity :<|> postDriverDisable :<|> postDriverAcRestrictionUpdate :<|> postDriverBlockWithReason :<|> postDriverBlock :<|> getDriverBlockReasonList :<|> postDriverUnblock :<|> getDriverLocation :<|> deleteDriverPermanentlyDelete :<|> postDriverUnlinkDL :<|> postDriverUnlinkAadhaar :<|> postDriverUpdatePhoneNumber :<|> postDriverUpdateByPhoneNumber :<|> postDriverUpdateName :<|> postDriverDeleteRC :<|> getDriverClearStuckOnRide :<|> postDriverSendDummyNotification :<|> postDriverChangeOperatingCity :<|> getDriverGetOperatingCity :<|> postDriverPauseOrResumeServiceCharges :<|> postDriverUpdateRCInvalidStatus :<|> postDriverUpdateVehicleVariant :<|> postDriverBulkReviewRCVariant :<|> postDriverUpdateDriverTag :<|> postDriverClearFee :<|> getDriverPanAadharSelfieDetails :<|> postDriverSyncDocAadharPan :<|> postDriverUpdateVehicleManufacturing :<|> postDriverRefundByPayout :<|> getDriverSecurityDepositStatus :<|> getDriverPanAadharSelfieDetailsList = driverClient
 
 data DriverEndpointDSL
   = GetDriverDocumentsInfoEndpoint
@@ -617,5 +638,6 @@ data DriverEndpointDSL
   | PostDriverUpdateVehicleManufacturingEndpoint
   | PostDriverRefundByPayoutEndpoint
   | GetDriverSecurityDepositStatusEndpoint
+  | GetDriverPanAadharSelfieDetailsListEndpoint
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

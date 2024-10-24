@@ -87,6 +87,7 @@ module Domain.Action.Dashboard.Driver
     postDriverRefundByPayout,
     getDriverSecurityDepositStatus,
     postDriverDriverDataDecryption,
+    getDriverPanAadharSelfieDetailsList,
   )
 where
 
@@ -96,13 +97,14 @@ import "dashboard-helper-api" Dashboard.Common (HideSecrets (hideSecrets))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as DC
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common hiding (ApproveDetails (..), DocumentType (..))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.RideBooking.Driver as Common
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce
 import Data.Csv
-import Data.List (sortOn)
+import qualified Data.HashSet as HS
+import Data.List (partition, sortOn)
 import Data.List.NonEmpty (nonEmpty)
 import Data.List.Split (chunksOf)
 import qualified Data.Map as M
@@ -132,6 +134,7 @@ import Domain.Types.DriverRCAssociation
 import Domain.Types.FleetDriverAssociation
 import qualified Domain.Types.FleetDriverAssociation as DTFDA
 import qualified Domain.Types.FleetOwnerInformation as DFOI
+import qualified Domain.Types.HyperVergeSdkLogs as DomainHVSdkLogs
 import qualified Domain.Types.IdfyVerification as IV
 import Domain.Types.Image (Image)
 import qualified Domain.Types.Image as DImage
@@ -210,6 +213,7 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import Storage.Queries.FleetRCAssociationExtra as FRAE
+import qualified Storage.Queries.HyperVergeSdkLogs as QSdkLogs
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Message as MQuery
@@ -2596,3 +2600,65 @@ getDriverSecurityDepositStatus merchantShortId _opCity driverId serviceName' = d
         ( \(DDriver.SecurityDepositDfStatusRes {..}) -> do
             Common.SecurityDepositDfStatusRes {securityDepositStatus = castStatus securityDepositStatus, ..}
         )
+
+getDriverPanAadharSelfieDetailsList :: (ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Flow [Common.PanAadharSelfieDetailsListResp])
+getDriverPanAadharSelfieDetailsList merchantShortId _opCity docType' driverID = do
+  let personId = cast @Common.Driver @DP.Person driverID
+  merchant <- findMerchantByShortId merchantShortId
+  documentType <- convertToDomainType docType'
+  hvSdkLogs <- QSdkLogs.findAllByDriverIdAndDocType personId $ Just documentType
+  imageDetails <- filter (isJust . (.workflowTransactionId)) <$> QImage.findImagesByPersonAndType merchant.id personId documentType
+  let txnIdsInLogs = HS.fromList $ map (Just . (.txnId)) hvSdkLogs
+      (imagesAvaialbleInLogs, imagesNotAvailableInLogs) = partition ((`HS.member` txnIdsInLogs) . (.workflowTransactionId)) imageDetails
+  partialResp <- mapM (buildRespFromHVSdkLogs imagesAvaialbleInLogs) hvSdkLogs
+  let uniqueTxnIdsNotInLogs = HS.toList . HS.fromList $ map (.workflowTransactionId) imagesNotAvailableInLogs
+  remResp <- mapM (\txnId -> buildRemResp (filter ((== txnId) . (.workflowTransactionId)) imagesNotAvailableInLogs)) uniqueTxnIdsNotInLogs
+  return $ partialResp <> remResp
+  where
+    buildRespFromHVSdkLogs :: (MonadThrow m, Log m) => [DImage.Image] -> DomainHVSdkLogs.HyperVergeSdkLogs -> m Common.PanAadharSelfieDetailsListResp
+    buildRespFromHVSdkLogs imagesAvaialbleInLogs DomainHVSdkLogs.HyperVergeSdkLogs {..} = do
+      (image1, image2) <- extractImages $ filter ((== Just txnId) . (.workflowTransactionId)) imagesAvaialbleInLogs
+      return $
+        Common.PanAadharSelfieDetailsListResp
+          { transactionId = txnId,
+            verificationStatus = convertToVerificationStatus <$> status,
+            imageId1 = image1 <&> getId . (.id),
+            imageId2 = image2 <&> getId . (.id),
+            ..
+          }
+    buildRemResp :: (MonadThrow m, Log m) => [DImage.Image] -> m Common.PanAadharSelfieDetailsListResp
+    buildRemResp imageList = do
+      (image1, image2) <- extractImages imageList -- Here logically atleast one image should always come.
+      createdAt <- fromMaybeM (InternalError "could not find created_at as Image does not exist !!!!!!") $ image1 <&> (.createdAt) -- these errors will never happen.
+      updatedAt <- fromMaybeM (InternalError "could not find updated_at as Image does not exist !!!!!!") $ image1 <&> (.updatedAt) -- these errors will never happen.
+      transactionId <- fromMaybeM (InternalError "could not find transactionId as Image does not exist !!!!!!") . join $ image1 <&> (.workflowTransactionId) -- these errors will never happen as all hyperverge workflow captured images have transactionId.
+      return $
+        Common.PanAadharSelfieDetailsListResp
+          { verificationStatus = image1 <&> show . (.verificationStatus),
+            imageId1 = image1 <&> getId . (.id),
+            imageId2 = image2 <&> getId . (.id),
+            failureReason = Nothing,
+            ..
+          }
+
+    extractImages :: (MonadThrow m, Log m) => [DImage.Image] -> m (Maybe DImage.Image, Maybe DImage.Image)
+    extractImages [img1, img2] = return (Just img1, Just img2)
+    extractImages [img1] = return (Just img1, Nothing)
+    extractImages [] = return (Nothing, Nothing)
+    extractImages _ = throwError $ InternalError "Document like Pan, aadhaar and selfie cannot have more than 2 images for single transactionId !!!!!!"
+
+    convertToVerificationStatus :: Text -> Text
+    convertToVerificationStatus = \case
+      "auto_approved" -> "VALID"
+      "auto_declined" -> "INVALID"
+      "needs_review" -> "MANUAL_VERIFICATION_REQUIRED"
+      "user_cancelled" -> "USER_CANCELLED"
+      "error" -> "ERROR"
+      _ -> "UNKNOWN"
+
+    convertToDomainType :: (MonadThrow m, Log m) => Text -> m DomainDVC.DocumentType
+    convertToDomainType docType = case docType of
+      "PanCard" -> return DomainDVC.PanCard
+      "AadhaarCard" -> return DomainDVC.AadhaarCard
+      "ProfilePhoto" -> return DomainDVC.ProfilePhoto
+      _ -> throwError $ InvalidDocumentType docType

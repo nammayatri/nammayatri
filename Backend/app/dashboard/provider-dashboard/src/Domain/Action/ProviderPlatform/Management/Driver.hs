@@ -50,6 +50,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     postDriverRefundByPayout,
     getDriverSecurityDepositStatus,
     postDriverDriverDataDecryption,
+    getDriverPanAadharSelfieDetailsList,
   )
 where
 
@@ -322,3 +323,8 @@ postDriverDriverDataDecryption merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- T.buildTransaction (DT.ProviderManagementAPI (Common.DriverAPI Common.PostDriverDriverDataDecryptionEndpoint)) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   T.withTransactionStoring transaction (do Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.postDriverDriverDataDecryption) req)
+
+getDriverPanAadharSelfieDetailsList :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Id Common.Driver -> Environment.Flow [Common.PanAadharSelfieDetailsListResp])
+getDriverPanAadharSelfieDetailsList merchantShortId opCity apiTokenInfo docType driverId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.driverDSL.getDriverPanAadharSelfieDetailsList) docType driverId

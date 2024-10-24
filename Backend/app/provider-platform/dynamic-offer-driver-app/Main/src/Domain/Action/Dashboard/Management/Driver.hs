@@ -50,6 +50,7 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverRefundByPayout,
     getDriverSecurityDepositStatus,
     postDriverDriverDataDecryption,
+    getDriverPanAadharSelfieDetailsList,
   )
 where
 
@@ -175,3 +176,6 @@ getDriverSecurityDepositStatus = DDriver.getDriverSecurityDepositStatus
 
 postDriverDriverDataDecryption :: (ShortId DM.Merchant -> Context.City -> [Common.DriverEncDataReq] -> Flow [Common.DriverDecDataResp])
 postDriverDriverDataDecryption = DDriver.postDriverDriverDataDecryption
+
+getDriverPanAadharSelfieDetailsList :: (ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Flow [Common.PanAadharSelfieDetailsListResp])
+getDriverPanAadharSelfieDetailsList = DDriver.getDriverPanAadharSelfieDetailsList
