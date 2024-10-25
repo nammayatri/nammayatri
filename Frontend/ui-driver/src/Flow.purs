@@ -3981,7 +3981,6 @@ chooseCityFlow = do
               let cityInList = any (\cityOb -> compareStrings cityOb.cityName city) state.data.config.cityConfig
                   displayCityName = case city of 
                                       "TamilNaduCities" -> Just "Tamil Nadu"
-                                      "Paris" -> Just "Odisha"
                                       _ -> Just city
                   locationServiceableState = ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { data { locationSelected = displayCityName }, props { locationUnserviceable = false, locationDetectionFailed = false }}
               modifyScreenState if cityInList then locationServiceableState else unserviceableState
