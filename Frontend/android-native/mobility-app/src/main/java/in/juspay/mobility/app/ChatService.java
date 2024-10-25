@@ -154,7 +154,7 @@ public class ChatService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         try{
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING);
+                this.startForeground(serviceNotificationID, createNotification(), FOREGROUND_SERVICE_TYPE_DATA_SYNC);
             }else {
                 this.startForeground(serviceNotificationID, createNotification());
             }
