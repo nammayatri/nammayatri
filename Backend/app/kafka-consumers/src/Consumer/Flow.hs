@@ -173,12 +173,16 @@ readMesssageWithWaitAndTimeRange kafkaConsumer appEnv = do
         pollRecords = do
           currentHour <- liftIO getCurrentHour
           let shouldPoll = maybe True (\(start, end) -> start <= currentHour && end > currentHour) timeRange
-          print (shouldPoll, currentHour)
-          when shouldPoll $ threadDelay $ batchDelayInMicroseconds appEnv.kafkaReadBatchDelay
-          let eitherRecords = S.replicateM appEnv.kafkaReadBatchSize (Consumer.pollMessage kc (Consumer.Timeout 500))
-          let records = S.mapMaybe hush eitherRecords
-          S.mapMaybe (removeMaybeFromTuple . decodeRecord) records
-
+          if shouldPoll
+            then do
+              threadDelay $ batchDelayInMicroseconds appEnv.kafkaReadBatchDelay
+              let eitherRecords = S.replicateM appEnv.kafkaReadBatchSize (Consumer.pollMessage kc (Consumer.Timeout 500))
+              let records = S.mapMaybe hush eitherRecords
+              S.mapMaybe (removeMaybeFromTuple . decodeRecord) records
+            else do
+              -- Wait without reading messages
+              threadDelay $ batchDelayInMicroseconds appEnv.kafkaReadBatchDelay
+              S.nil -- Produce no records
         timeRange = (,) <$> appEnv.consumerStartTime <*> appEnv.consumerEndTime
         getCurrentHour = do
           (T.UTCTime _date secTillNow) <- T.getCurrentTime
