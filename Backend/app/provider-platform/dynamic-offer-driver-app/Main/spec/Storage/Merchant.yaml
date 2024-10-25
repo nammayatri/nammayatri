@@ -881,6 +881,7 @@ TransporterConfig:
     dailyConditionCooldownTimeHours: Maybe Int
     weeklyConditionCooldownTimeHours: Maybe Int
     driverDrivenSearchReqExpiry: Maybe NominalDiffTime
+    otpRideStartRestrictionRadius: Maybe Meters
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit

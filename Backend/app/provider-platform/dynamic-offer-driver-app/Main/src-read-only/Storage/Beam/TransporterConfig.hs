@@ -155,6 +155,7 @@ data TransporterConfigT f = TransporterConfigT
     orderAndNotificationStatusCheckFallBackTime :: B.C f Kernel.Types.Common.Seconds,
     orderAndNotificationStatusCheckTime :: B.C f Kernel.Types.Common.Seconds,
     orderAndNotificationStatusCheckTimeLimit :: B.C f Kernel.Types.Common.Seconds,
+    otpRideStartRestrictionRadius :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     overlayBatchSize :: B.C f Kernel.Prelude.Int,
     pastDaysRideCounter :: B.C f Kernel.Prelude.Int,
     payoutBatchLimit :: B.C f Kernel.Prelude.Int,

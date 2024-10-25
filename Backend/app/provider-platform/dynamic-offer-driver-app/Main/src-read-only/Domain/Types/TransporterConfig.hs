@@ -156,6 +156,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     orderAndNotificationStatusCheckFallBackTime :: Kernel.Prelude.NominalDiffTime,
     orderAndNotificationStatusCheckTime :: Kernel.Prelude.NominalDiffTime,
     orderAndNotificationStatusCheckTimeLimit :: Kernel.Prelude.NominalDiffTime,
+    otpRideStartRestrictionRadius :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     overlayBatchSize :: Kernel.Prelude.Int,
     pastDaysRideCounter :: Kernel.Prelude.Int,
     payoutBatchLimit :: Kernel.Prelude.Int,
