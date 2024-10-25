@@ -1414,3 +1414,20 @@ instance IsHTTPError DeliveryErrors where
     DeliveryImageNotFound -> E400
 
 instance IsAPIError DeliveryErrors
+
+data SpecialZoneErrors = DriverLocationOutOfRestictionBounds
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''SpecialZoneErrors
+
+instance IsBaseError SpecialZoneErrors where
+  toMessage = \case
+    DriverLocationOutOfRestictionBounds -> Just "Driver location out of restriction bounds."
+
+instance IsHTTPError SpecialZoneErrors where
+  toErrorCode = \case
+    DriverLocationOutOfRestictionBounds -> "DRIVER_LOCATION_OUT_OF_RESTRICTION_BOUNDS"
+  toHttpCode = \case
+    DriverLocationOutOfRestictionBounds -> E400
+
+instance IsAPIError SpecialZoneErrors

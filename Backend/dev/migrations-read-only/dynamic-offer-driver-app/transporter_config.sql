@@ -308,3 +308,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN daily_condition
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_driven_search_req_expiry integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN otp_ride_start_restriction_radius integer ;

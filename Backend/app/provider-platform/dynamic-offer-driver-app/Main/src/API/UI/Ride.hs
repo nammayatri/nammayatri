@@ -47,9 +47,11 @@ import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Servant hiding (throwError)
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import SharedLogic.Person (findPerson)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as SCT
@@ -197,11 +199,28 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide
       QBooking.findBookingBySpecialZoneOTPAndCity merchantOpCityId.getId rideOtp now transporterConfig.specialZoneBookingOtpExpiry
         |<|>| QBooking.findBookingBySpecialZoneOTP rideOtp now transporterConfig.specialZoneBookingOtpExpiry -- TODO :: Fix properly, when driver goes from one city to another, he should see the booking.
         >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
+  void $ validateOtpRideStartRestriction driverInfo transporterConfig.otpRideStartRestrictionRadius booking.fromLocation
   ride <- DRide.otpRideCreate requestor rideOtp booking clientId
   let driverReq = RideStart.DriverStartRideReq {rideOtp, requestor, ..}
   shandle <- RideStart.buildStartRideHandle merchantId merchantOpCityId
   void $ RideStart.driverStartRide shandle ride.id driverReq
   return ride
+  where
+    validateOtpRideStartRestriction driverInfo mbOtpRideStartRestrictionRadius pickupLocation = do
+      case mbOtpRideStartRestrictionRadius of
+        Just otpRideStartRestrictionRadius -> do
+          driverLocation <- try @_ @SomeException $ LTF.driversLocation [driverInfo.driverId]
+          case driverLocation of
+            Left _ -> throwError DriverLocationOutOfRestictionBounds
+            Right locations -> do
+              case listToMaybe locations of
+                Just location -> do
+                  let driverToPickupDistance = distanceBetweenInMeters (LatLong location.lat location.lon) (LatLong pickupLocation.lat pickupLocation.lon)
+                  if Meters (round driverToPickupDistance) > otpRideStartRestrictionRadius
+                    then throwError DriverLocationOutOfRestictionBounds
+                    else return ()
+                Nothing -> throwError DriverLocationOutOfRestictionBounds
+        Nothing -> return ()
 
 endRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> EndRideReq -> FlowHandler RideEnd.EndRideResp
 endRide (requestorId, merchantId, merchantOpCityId) rideId EndRideReq {..} = withFlowHandlerAPI $ do
