@@ -4743,7 +4743,7 @@ rentalBannerView state push =
             , imageWithFallback $ fetchImage FF_COMMON_ASSET bannerImg
             ]
           , imageView
-            [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleVariantImage (maybe "" (\item -> item.vehicleVariant) state.data.rentalsInfo) LEFT_VIEW
+            [ imageWithFallback $ getVehicleVariantImage (maybe "" (\item -> item.vehicleVariant) state.data.rentalsInfo) LEFT_VIEW
             , height $ V 56
             , width $ V 77 
             , layoutGravity "center"
