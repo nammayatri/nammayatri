@@ -3357,7 +3357,7 @@ newtype MetroQuote = MetroQuote {
   , _type :: String--FRFSQuoteType
   , vehicleType :: String--FRFSVehicleType
   , quantity :: Int
-  , price :: Int
+  , price :: Number
   , stations :: Array FRFSStationAPI 
   , validTill :: String
   , discountedTickets :: Maybe Int
@@ -4096,8 +4096,8 @@ newtype BusTrackingRouteResp = BusTrackingRouteResp {
 }
 
 newtype VehicleInfo = VehicleInfo {
-  location:: LatLong,
-  -- nextStop:: RouteStopMapping,
+  -- location:: LatLong,
+  nextStop:: RouteStopMapping,
   vehicleId:: String,
   vehicleInfo:: VehicleInfoForRoute
 }
@@ -4114,9 +4114,11 @@ newtype VehicleInfoForRoute = VehicleInfoForRoute {
 }
 
 newtype RouteStopMapping = RouteStopMapping { 
-    routeId :: String,
-    sequence :: Int,
-    stopId :: String,
+    routeCode :: String,
+    sequenceNum :: Int,
+    stopCode :: String,
+    stopPoint :: LatLong,
+    stopName :: String,
     -- timeBounds :: Kernel.Types.TimeBound.TimeBound,
     vehicleType :: String--,
     -- merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),

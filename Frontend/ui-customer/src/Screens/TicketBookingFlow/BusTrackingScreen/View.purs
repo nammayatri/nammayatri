@@ -73,11 +73,14 @@ import Components.SeparatorView.View as SeparatorView
 import Types.EndPoint (shareRide)
 import Screens.TicketBookingFlow.BusTrackingScreen.ComponentConfig
 import Control.Monad.Trans.Class (lift)
-import Data.Either 
+import Data.Either
 import Storage (getValueToLocalStore, KeyStore(..))
-import Data.Traversable (traverse, for_)
+import Data.Traversable (traverse, for)
+import Data.Int as DI
 import Data.Function.Uncurried (runFn2, runFn3)
 import LocalStorage.Cache
+import Data.Tuple as DT
+import Data.Map as DM
 
 screen :: ST.BusTrackingScreenState -> Screen Action ST.BusTrackingScreenState ScreenOutput
 screen initialState =
@@ -86,18 +89,22 @@ screen initialState =
   , name: "BusTrackingScreen"
   , globalEvents:
       [ ( \push -> do
-            void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-                let city = getValueToLocalStore CUSTOMER_LOCATION
-                if (DA.null initialState.data.stopsList) then do
-                  getMetroStationResp <- Remote.getMetroStationBT "BUS" city initialState.data.busRouteCode "" (show initialState.props.srcLat <> "," <> show initialState.props.srcLon)
-                  liftFlowBT $ push $ UpdateStops getMetroStationResp
-                else liftFlowBT $ push $ UpdateStops (API.GetMetroStationResponse initialState.data.stopsList)
-                let _ = runFn2 setInCache "BUS_LOCATION_TRACKING" initialState.data.busRouteCode
-                lift $ lift $ busLocationTracking 3000.0 0 initialState.data.busRouteCode
-                -- lift $ lift $ defaultMockInviteFlow 0 initialState
-                let
-                  _ = spy "defaultMockInviteFlow" "defaultMockInviteFlow"
-                pure unit
+            void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
+              $ do
+                  let
+                    city = getValueToLocalStore CUSTOMER_LOCATION
+                  if (DA.null initialState.data.stopsList) then do
+                    getMetroStationResp <- Remote.getMetroStationBT "BUS" city initialState.data.busRouteCode "" (show initialState.props.srcLat <> "," <> show initialState.props.srcLon)
+                    liftFlowBT $ push $ UpdateStops getMetroStationResp
+                  else
+                    liftFlowBT $ push $ UpdateStops (API.GetMetroStationResponse initialState.data.stopsList)
+                  let
+                    _ = runFn2 setInCache "BUS_LOCATION_TRACKING" initialState.data.busRouteCode
+                  lift $ lift $ busLocationTracking 3000.0 0 initialState.data.busRouteCode push
+                  -- lift $ lift $ defaultMockInviteFlow 0 initialState
+                  let
+                    _ = spy "defaultMockInviteFlow" "defaultMockInviteFlow"
+                  pure unit
             -- void $ launchAff $ flowRunner globalState $ updateMockData push initialState tracking.id
             pure $ pure unit
         )
@@ -119,6 +126,7 @@ view push state =
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , onBackPressed push $ const BackPressed
+        , background Color.white900
         ]
         [ PrestoAnim.animationSet
             [ Anim.fadeIn true
@@ -129,7 +137,7 @@ view push state =
                 , id $ EHC.getNewIDWithTag "BusTrackingScreenMap"
                 , onAnimationEnd
                     ( \action -> do
-                        void $ JB.showMap (EHC.getNewIDWithTag "BusTrackingScreenMap") true "satellite" 11.0 0.0 0.0 push MapReady
+                        void $ JB.showMap (EHC.getNewIDWithTag "BusTrackingScreenMap") true "satellite" 17.0 state.props.srcLat state.props.srcLon push MapReady
                         push action
                     )
                     (const NoAction)
@@ -143,29 +151,30 @@ view push state =
             ] --   linearLayout --     [ width WRAP_CONTENT --     , height WRAP_CONTENT --     , orientation HORIZONTAL --     -- , background Color.ba --     , visibility GONE --     ] --     [ -- topLeftIconView push state-- dynamicProgressBarView push state-- , safetyButtonView push state] -- ,  
         -- journeyLegView push state
         , linearLayout
-          [ height $ V 48
-          , width $ V 48
-          , cornerRadius 25.0
-          , gravity CENTER
-          , background Color.white900
-          , margin $ Margin 16 16 0 0
-          ][ imageView
-            [ width $ V 24
-            , height $ V 24
-            , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevron_left"
-            , onClick push $ const BackPressed
-            -- , padding $ Padding 7 7 7 7
-            , rippleColor Color.rippleShade
+            [ height $ V 48
+            , width $ V 48
+            , cornerRadius 25.0
+            , gravity CENTER
+            , background Color.white900
+            , margin $ Margin 16 16 0 0
             ]
-          ]
+            [ imageView
+                [ width $ V 24
+                , height $ V 24
+                , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_chevron_left"
+                , onClick push $ const BackPressed
+                -- , padding $ Padding 7 7 7 7
+                , rippleColor Color.rippleShade
+                ]
+            ]
         ]
 
-journeyLegTitleView :: forall w. Boolean -> String -> PrestoDOM (Effect Unit) w
-journeyLegTitleView isSource name =
+journeyLegTitleView :: forall w. Boolean -> String -> ST.BusTrackingScreenState -> PrestoDOM (Effect Unit) w
+journeyLegTitleView isSource name state =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , margin $ MarginTop 8
+    , margin $ MarginVertical 8 (if state.props.showRouteDetailsTab then 0 else 8)
     , background Color.white900
     ]
     [ linearLayout
@@ -183,7 +192,7 @@ journeyLegTitleView isSource name =
         ]
     , textView
         $ [ text name
-          , margin $ MarginLeft 8
+          , margin $ MarginLeft 16
           ]
         <> FontStyle.body1 CTA.TypoGraphy
     ]
@@ -205,23 +214,60 @@ journeyLegDescriptionView push state =
     -- , VehicleCard.view (push <<< VehicleCardAction) VehicleCard.dummyRouteInfo
     ]
 
-verticalLineView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Boolean -> PrestoDOM (Effect Unit) w
-verticalLineView push state isDotted =
-  let
-    ht = JB.getLayoutBounds $ EHC.getNewIDWithTag $ "stopListView" -- <> "false"
-  in
-    -- linearLayout
-    --   [ height $ V ht.height 
-    --   , width WRAP_CONTENT
-    --   ]
-    --   [ ]
-    linearLayout
-      [ height $ V ht.height
-      , width $ V 2
-      , margin $ Margin 9 8 9 0
-      , background if isDotted then Color.white900 else Color.black900
+verticalLineView :: forall w. (Action -> Effect Unit) -> String -> Boolean -> Mb.Maybe (Array Number) -> PrestoDOM (Effect Unit) w --ST.BusTrackingScreenState -> Boolean -> PrestoDOM (Effect Unit) w
+verticalLineView push idTag showOnlyBullet vehicles =  -- state isDotted =
+  -- let
+  --   -- ht = JB.getLayoutBounds $ EHC.getNewIDWithTag $ "stopListView" -- <> "false"
+  -- in
+  -- linearLayout
+  --   [ height $ V ht.height 
+  --   , width WRAP_CONTENT
+  --   ]
+  --   [ ]
+  relativeLayout
+    [ height MATCH_PARENT
+    , width $ V 20
+    , clipChildren false
+    , visibility $ boolToVisibility showOnlyBullet
+    , background Color.white900 --if Mb.isJust vehicles then Color.red else Color.white900
+    ]
+    $ [ linearLayout
+          [ height MATCH_PARENT
+          , width $ V 2
+          , margin $ MarginLeft 9
+          , background Color.black900
+          , id $ EHC.getNewIDWithTag idTag
+          ]
+          []
       ]
-      []
+    <> case vehicles of
+        Mb.Just v -> (map (\p -> busMarkerView p) v)
+        _ -> []
+  where
+  lineViewBounds = JB.getLayoutBounds $ EHC.getNewIDWithTag idTag
+
+  busMarkerView :: Number -> PrestoDOM (Effect Unit) w
+  busMarkerView percent = do
+    let
+      lineViewHeight = spy "lineViewHeight" lineViewBounds.height
+
+      totalDistance = 50.0
+
+      currentDistance = 5.0
+
+      _ = spy "busmarginTop1" percent
+
+      _ = spy "busmarginTop2" (DI.toNumber lineViewHeight)
+
+      _ = spy "busmarginTop3" $ DI.round (percent * (DI.toNumber lineViewHeight))
+
+      marginTop = spy "busmarginTop" $ DI.round (percent * (DI.toNumber lineViewHeight) - 8.0)
+    imageView
+      [ height $ V 20
+      , width $ V 20
+      , margin $ MarginTop $ marginTop
+      , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_bus_marker_with_arrow"
+      ]
 
 -- , stopListView push state true
 -- ]
@@ -264,8 +310,7 @@ bottomSheetView push state =  --let
                 , width MATCH_PARENT
                 , orientation VERTICAL
                 ]
-                [ -- linearLayout --   [ height WRAP_CONTENT --   , width WRAP_CONTENT --   , layoutGravity "right" --   , orientation HORIZONTAL --   ] --   [ toggleViewButtons push state --   , shareRideButton push state --   ] -- , smartAlertsView push state
-                  linearLayout
+                [ linearLayout
                     [ height WRAP_CONTENT
                     , width MATCH_PARENT
                     , orientation VERTICAL
@@ -391,64 +436,75 @@ busDetailsView push state =
 
 busStopsView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> PrestoDOM (Effect Unit) w
 busStopsView push state = do
-  let lb = JB.getLayoutBounds $ EHC.getNewIDWithTag "stopListView"
-      showScrollView = lb.height > 400
-  linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , orientation VERTICAL
-    , margin $ MarginHorizontal 16 16
+  let
+    lb = JB.getLayoutBounds $ EHC.getNewIDWithTag "stopListView"
+
+    showScrollView = lb.height > 400
+  (if showScrollView then scrollView else linearLayout)
+    [ height $ if showScrollView then V 400 else WRAP_CONTENT
+    , width MATCH_PARENT
     ]
-    [ journeyLegTitleView true $ (Mb.maybe "" (\(API.GetMetroStationResp item) -> item.name) (DA.head state.data.stopsList))
-    , (if showScrollView then scrollView else linearLayout)
-      [ height $ if showScrollView then V 400 else WRAP_CONTENT
-      , width MATCH_PARENT
-        ][relativeLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
+    [ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        , margin $ MarginHorizontal 16 16
         ]
-        [ verticalLineView push state false
-        , stopListView push state false
-        ]]
-    , journeyLegTitleView false $ (Mb.maybe "" (\(API.GetMetroStationResp item) -> item.name) (DA.last state.data.stopsList)) --fromMaybe ""  (state.data.destinationStation <#> ._stationName) --"KSR Bengaluru Railway Station, M.G. Railway Colony, Sevashrama, Bengaluru, Karnataka 560023"
+        [ journeyLegTitleView true (Mb.maybe "" (\(API.GetMetroStationResp item) -> item.name) (DA.head state.data.stopsList)) state
+        , linearLayout [ width MATCH_PARENT, height WRAP_CONTENT ] [ stopListView push state true, stopListView push state false ]
+        , journeyLegTitleView false (Mb.maybe "" (\(API.GetMetroStationResp item) -> item.name) (DA.last state.data.stopsList)) state --fromMaybe ""  (state.data.destinationStation <#> ._stationName) --"KSR Bengaluru Railway Station, M.G. Railway Colony, Sevashrama, Bengaluru, Karnataka 560023"
+        ]
     ]
 
 stopListView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 stopListView push state showOnlyBullet =
   linearLayout
-    ( [ width MATCH_PARENT
-      , height WRAP_CONTENT
+    ( [ height WRAP_CONTENT
       , orientation VERTICAL
-        , id $ EHC.getNewIDWithTag $ "stopListView" -- <> show showOnlyBullet
-      , margin $ MarginHorizontal 6 16
+      , id $ EHC.getNewIDWithTag $ "stopListView" -- <> show showOnlyBullet
+      , margin $ MarginHorizontal 0 16
       ]
-        <> if state.props.showRouteDetailsTab then
-            []
+        <> if showOnlyBullet then
+            [ width $ V 20 ]
           else
-            [ cornerRadius 12.0
-            -- , stroke $ "1," <> Color.grey900
-            , padding $ PaddingBottom $ if state.props.expandStopsView then 12 else 0
-            ]
+            [ weight 1.0 ]
+              <> if state.props.showRouteDetailsTab then
+                  []
+                else
+                  [ cornerRadius 12.0
+                  , stroke $ "1," <> Color.grey900
+                  , padding $ PaddingBottom $ if state.props.expandStopsView then 12 else 0
+                  ]
     )
-    [ stopsViewHeader push state
+    [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        -- , visibility $ boolToVisibility $ state.props.showRouteDetailsTab || state.props.expandStopsView
+        ]
+        [ verticalLineView push ("verticalLineView2" <> show showOnlyBullet <> "0000") showOnlyBullet Mb.Nothing
+        , stopsViewHeader push state showOnlyBullet
+        ]
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        -- , visibility $ boolToVisibility $ state.props.showRouteDetailsTab || state.props.expandStopsView
+        , visibility $ boolToVisibility $ state.props.showRouteDetailsTab || state.props.expandStopsView
         ]
-        (DA.mapWithIndex (\index (API.GetMetroStationResp item) -> stopView item.name showOnlyBullet stopMarginTop ) stops)
+        (DA.mapWithIndex (\index item -> stopView item showOnlyBullet stopMarginTop state push index) stops)
     ]
-    where 
-      stopMarginTop = if state.props.showRouteDetailsTab then 32 else 12
-      stops = if DA.length state.data.stopsList <= 2 then [] else DA.slice 1 (DA.length state.data.stopsList - 1) state.data.stopsList
+  where
+  stopMarginTop = if state.props.showRouteDetailsTab then 32 else 12
 
-stopsViewHeader :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> PrestoDOM (Effect Unit) w
-stopsViewHeader push state =
+  stops = if DA.length state.data.stopsList <= 2 then [] else DA.slice 1 (DA.length state.data.stopsList - 1) state.data.stopsList
+
+stopsViewHeader :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Boolean -> PrestoDOM (Effect Unit) w
+stopsViewHeader push state showOnlyBullet =
   linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
+    [ weight 1.0
+    , height $ V 50
     , orientation VERTICAL
+    -- , visibility $ boolToInvisibility $ not showOnlyBullet
+    , visibility $ boolToVisibility $ not state.props.showRouteDetailsTab
     ]
     [ linearLayout
         [ width MATCH_PARENT
@@ -457,7 +513,7 @@ stopsViewHeader push state =
         , padding $ Padding 16 16 16 16
         ]
         [ textView
-            $ [ text "6 stops left"
+            $ [ text $ show (DA.length state.data.stopsList - 1) <> " stops left"
               -- , margin $ MarginLeft 8
               -- , visibility $ boolToInvisibility isVisible
               ]
@@ -475,24 +531,23 @@ stopsViewHeader push state =
               ]
             <> FontStyle.tags CTA.TypoGraphy
         , layoutWithWeight
-        -- , imageView
-        --     [ imageWithFallback
-        --         $ HU.fetchImage HU.FF_ASSET
-        --             if state.props.expandStopsView then
-        --               "ny_ic_chevron_up"
-        --             else
-        --               "ny_ic_chevron_down"
-        --     , height $ V 12
-        --     , width $ V 12
-        --     , margin $ MarginLeft 6
-        --     , onClick push $ const ToggleStops
-        --     ]
+        , imageView
+            [ imageWithFallback
+                $ HU.fetchImage HU.FF_ASSET
+                    if state.props.expandStopsView then
+                      "ny_ic_chevron_up"
+                    else
+                      "ny_ic_chevron_down"
+            , height $ V 12
+            , width $ V 12
+            , margin $ MarginLeft 6
+            , onClick push $ const ToggleStops
+            ]
         ]
-    -- , 
-    -- if state.props.expandStopsView 
-    --     then 
-        -- separatorView Color.grey900 (MarginTop 0)
-        -- else MP.noView
+    , if state.props.expandStopsView then
+        separatorView Color.grey900 (MarginTop 0)
+      else
+        MP.noView
     ]
 
 -- collapsedStopsView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Boolean -> PrestoDOM (Effect Unit) w
@@ -507,26 +562,75 @@ stopsViewHeader push state =
 --     ]
 --     [ 
 --     ]
-stopView :: forall w. String -> Boolean -> Int -> PrestoDOM (Effect Unit) w
-stopView stop isVisible marginTop =
+stopView :: forall w. API.GetMetroStationResp -> Boolean -> Int -> ST.BusTrackingScreenState -> (Action -> Effect Unit) -> Int -> PrestoDOM (Effect Unit) w
+stopView (API.GetMetroStationResp stop) showOnlyBullet marginTop state push index =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , gravity CENTER_VERTICAL
-    , margin $ Margin 0 marginTop 0 0
+    , orientation VERTICAL
+    -- , padding $ Padding 0 marginTop 0 0
     ]
-    [ imageView
-        [ height $ V 8
-        , width $ V 8
-        , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_stop_black"
+    [ linearLayout
+        [ height $ V 32
+        , width MATCH_PARENT
         ]
-    , textView
-        $ [ text stop
-          , margin $ MarginLeft 8
-          -- , visibility $ boolToInvisibility isVisible
-          ]
-        <> FontStyle.body1 CTA.TypoGraphy
+        [ verticalLineView push ("verticalLineView1" <> show showOnlyBullet <> show index) showOnlyBullet $ DM.lookup stop.code state.data.vehicleTrackingData
+        -- , linearLayout
+        --     [ width MATCH_PARENT
+        --     , height $ if index == 0 then WRAP_CONTENT else V 32
+        --     , padding $ Padding 8 8 8 8
+        --     , cornerRadius 12.0
+        --     , stroke $ "1," <> Color.grey900
+        --     ]
+        --     [ textView
+        --         $ [ text "Next bus in 10 min"
+        --           , margin $ MarginLeft if showOnlyBullet || not state.props.showRouteDetailsTab then 8 else 0
+        --           , visibility $ boolToVisibility $ index == 1 && state.props.showRouteDetailsTab
+        --           ]
+        --         <> FontStyle.body1 CTA.TypoGraphy
+        --     , layoutWithWeight
+        --     , textView
+        --         $ [ text "2:45pm"
+        --           , margin $ MarginLeft if showOnlyBullet || not state.props.showRouteDetailsTab then 8 else 0
+        --           , visibility $ boolToVisibility $ index == 1 && state.props.showRouteDetailsTab
+        --           ]
+        --         <> FontStyle.body1 CTA.TypoGraphy
+        --     ]
+        ]
+    , linearLayout
+        [ height $ V 30
+        , width MATCH_PARENT
+        , gravity CENTER_VERTICAL
+        -- , margin $ Margin 0 marginTop 0 0
+        -- , visibility $ boolToInvisibility $ not isVisible
+        ]
+        [ relativeLayout
+            [ height MATCH_PARENT
+            , gravity CENTER
+            ]
+            [ verticalLineView push ("verticalLineView2" <> show showOnlyBullet <> show index) showOnlyBullet Mb.Nothing
+            , imageView
+                [ height $ V 8
+                , width $ V 8
+                , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_stop_black"
+                , margin $ Margin 6 6 0 6
+                , visibility $ boolToVisibility showOnlyBullet
+                ]
+            ]
+        , textView
+            $ [ text stop.name
+              , margin $ MarginLeft if showOnlyBullet || not state.props.showRouteDetailsTab then 8 else 0
+              , visibility $ boolToVisibility $ not showOnlyBullet
+              , width $ if showOnlyBullet then V 0 else WRAP_CONTENT
+              , id $ EHC.getNewIDWithTag $ "textviewstop" <> show index
+              , singleLine true
+              , ellipsize true
+              ]
+            <> FontStyle.body1 CTA.TypoGraphy
+        ]
     ]
+  where
+  b = JB.getLayoutBounds $ EHC.getNewIDWithTag $ "textviewstop" <> show index
 
 separatorView :: forall w. String -> Margin -> PrestoDOM (Effect Unit) w
 separatorView color' margin' =
@@ -538,84 +642,97 @@ separatorView color' margin' =
     ]
     []
 
+busLocationTracking :: Number -> Int -> String -> (Action -> Effect Unit) -> Flow GlobalState Unit
+busLocationTracking duration id routeCode push = do
+  let
+    trackingId = runFn3 getFromCache "BUS_LOCATION_TRACKING" Mb.Nothing Mb.Just
+  if Mb.isJust trackingId && trackingId /= Mb.Just routeCode then
+    pure unit
+  else do
+    void $ delay $ Milliseconds $ 2000.0
+    -- let (API.BusTrackingRouteResp dummy) = dummyData
+    -- for_ dummy.vehicleTrackingInfo $ \(API.VehicleInfo item) -> do
+    --     -- void $ map (\(API.VehicleInfo item) -> do
+    --       let (API.LatLong location) = item.location
+    --       let markerConfig = JB.defaultMarkerConfig {markerId = item.vehicleId, pointerIcon = "ny_ic_bus_marker"}
+    --       EHC.liftFlow $ JB.showMarker markerConfig location.lat location.lon 160 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+    resp <- HelpersAPI.callApi $ API.BusTrackingRouteReq routeCode
+    case resp of
+      Right (API.BusTrackingRouteResp resp) -> do
+        trackingInfo <-
+          for resp.vehicleTrackingInfo
+            $ \(API.VehicleInfo item) -> do
+                -- void $ map (\(API.VehicleInfo item) -> do
+                -- let (API.VehicleInfo l) = item.vehicleInfo
+                let
+                  (API.VehicleInfoForRoute m) = item.vehicleInfo
 
-busLocationTracking ::  Number -> Int -> String -> Flow GlobalState Unit
-busLocationTracking  duration id routeCode = do
-  let trackingId = runFn3 getFromCache "BUS_LOCATION_TRACKING" Mb.Nothing Mb.Just
-  if Mb.isJust trackingId && trackingId /= Mb.Just routeCode 
-    then pure unit 
-    else do
-      void $ delay $ Milliseconds $ 2000.0
- 
-      -- let (API.BusTrackingRouteResp dummy) = dummyData
-      -- for_ dummy.vehicleTrackingInfo $ \(API.VehicleInfo item) -> do
-      --     -- void $ map (\(API.VehicleInfo item) -> do
-      --       let (API.LatLong location) = item.location
-      --       let markerConfig = JB.defaultMarkerConfig {markerId = item.vehicleId, pointerIcon = "ny_ic_bus_marker"}
-      --       EHC.liftFlow $ JB.showMarker markerConfig location.lat location.lon 160 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
-      resp <- HelpersAPI.callApi $ API.BusTrackingRouteReq routeCode
-      case resp of 
-        Right (API.BusTrackingRouteResp resp) -> do
-          for_ resp.vehicleTrackingInfo $ \(API.VehicleInfo item) -> do
-          -- void $ map (\(API.VehicleInfo item) -> do
-            -- let (API.VehicleInfo l) = item.vehicleInfo
-            let (API.VehicleInfoForRoute m) = item.vehicleInfo
-            let lat = Mb.fromMaybe 0.0 m.latitude
-            let lon = Mb.fromMaybe 0.0  m.longitude
-            let markerConfig = JB.defaultMarkerConfig {markerId = item.vehicleId, pointerIcon = "ny_ic_bus_marker"}
-            EHC.liftFlow $ JB.showMarker markerConfig lat lon 160 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
-          -- ) resp.vehicleTrackingInfo
-          void $ delay $ Milliseconds $ duration 
-          busLocationTracking duration id routeCode
-        Left err -> do
-          void $ delay $ Milliseconds $ duration
-          busLocationTracking duration id routeCode
+                  (API.RouteStopMapping nextStop) = item.nextStop
+
+                  lat = Mb.fromMaybe 0.0 m.latitude
+
+                  lon = Mb.fromMaybe 0.0 m.longitude
+
+                  markerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId, pointerIcon = "ny_ic_bus_marker" }
+
+                  (API.LatLong nextStopPosition) = nextStop.stopPoint
+                void $ EHC.liftFlow $ JB.showMarker markerConfig lat lon 160 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+                pure { vehicleId: item.vehicleId, nextStop: nextStop.stopCode, nextStopDistance: HU.getDistanceBwCordinates lat lon nextStopPosition.lat nextStopPosition.lon, vehicleLat: lat, vehicleLon: lon, nextStopLat: nextStopPosition.lat, nextStopLon: nextStopPosition.lon }
+        let
+          _ = spy "trackingInfo" trackingInfo
+        EHC.liftFlow $ push $ UpdateTracking trackingInfo
+        void $ delay $ Milliseconds $ duration
+        busLocationTracking duration id routeCode push
+      Left err -> do
+        void $ delay $ Milliseconds $ duration
+        busLocationTracking duration id routeCode push
 
 -- Example data for BusTrackingRouteResp
-dummyData :: API.BusTrackingRouteResp
-dummyData = API.BusTrackingRouteResp {
-  vehicleTrackingInfo : [
-    API.VehicleInfo {
-      location : API.LatLong {lat :  12.97619, lon : 80.14511000000002}, -- Location of the vehicl}e
-      vehicleId : "Bus1234",              -- Vehicle ID
-      vehicleInfo : API.VehicleInfoForRoute {
-        startTime : Mb.Just "08:00:00",
-        startDate : Mb.Just "2024-10-23",
-        scheduleRelationship : Mb.Just "OnSchedule",
-        tripId : Mb.Just "Trip123",
-        latitude : Mb.Just 12.97619,          -- Vehicle's current latitude
-        longitude : Mb.Just 80.14511000000002,         -- Vehicle's current longitude
-        speed : Mb.Just "45 km/h",           -- Vehicle speed
-        timestamp : Mb.Just "2024-10-23T10:30:00Z" -- Time of location update
-      }
-    },
-    API.VehicleInfo {
-      location : API.LatLong {lat :  12.977810000000002, lon : 80.13876000000002},
-      vehicleId : "Bus5678",
-      vehicleInfo : API.VehicleInfoForRoute {
-        startTime : Mb.Just "08:10:00",
-        startDate : Mb.Just "2024-10-23",
-        scheduleRelationship : Mb.Just "Delayed",
-        tripId : Mb.Just "Trip567",
-        latitude : Mb.Just 12.977810000000002,
-        longitude : Mb.Just 80.13876000000002,
-        speed : Mb.Just "30 km/h",
-        timestamp : Mb.Just "2024-10-23T10:35:00Z"
-      }
-    },
-    API.VehicleInfo {
-      location : API.LatLong {lat :  12.987440000000003, lon : 80.14203},
-      vehicleId : "Bus9101",
-      vehicleInfo : API.VehicleInfoForRoute {
-        startTime : Mb.Just "08:15:00",
-        startDate : Mb.Just "2024-10-23",
-        scheduleRelationship : Mb.Just "AheadOfSchedule",
-        tripId : Mb.Just "Trip910",
-        latitude : Mb.Just 12.987440000000003,
-        longitude : Mb.Just 80.14203,
-        speed : Mb.Just "50 km/h",
-        timestamp : Mb.Just "2024-10-23T10:40:00Z"
-      }
-    }
-  ]
-}
+-- dummyData :: API.BusTrackingRouteResp
+-- dummyData =
+--   API.BusTrackingRouteResp
+--     { vehicleTrackingInfo:
+--         [ API.VehicleInfo
+--             { vehicleId: "Bus1234"
+--             , vehicleInfo:
+--                 API.VehicleInfoForRoute
+--                   { startTime: Mb.Just "08:00:00"
+--                   , startDate: Mb.Just "2024-10-23"
+--                   , scheduleRelationship: Mb.Just "OnSchedule"
+--                   , tripId: Mb.Just "Trip123"
+--                   , latitude: Mb.Just 12.97619
+--                   , longitude: Mb.Just 80.14511000000002
+--                   , speed: Mb.Just "45 km/h"
+--                   , timestamp: Mb.Just "2024-10-23T10:30:00Z" -- Time of location update
+--                   }
+--             }
+--         , API.VehicleInfo
+--             { vehicleId: "Bus5678"
+--             , vehicleInfo:
+--                 API.VehicleInfoForRoute
+--                   { startTime: Mb.Just "08:10:00"
+--                   , startDate: Mb.Just "2024-10-23"
+--                   , scheduleRelationship: Mb.Just "Delayed"
+--                   , tripId: Mb.Just "Trip567"
+--                   , latitude: Mb.Just 12.977810000000002
+--                   , longitude: Mb.Just 80.13876000000002
+--                   , speed: Mb.Just "30 km/h"
+--                   , timestamp: Mb.Just "2024-10-23T10:35:00Z"
+--                   }
+--             }
+--         , API.VehicleInfo
+--             { vehicleId: "Bus9101"
+--             , vehicleInfo:
+--                 API.VehicleInfoForRoute
+--                   { startTime: Mb.Just "08:15:00"
+--                   , startDate: Mb.Just "2024-10-23"
+--                   , scheduleRelationship: Mb.Just "AheadOfSchedule"
+--                   , tripId: Mb.Just "Trip910"
+--                   , latitude: Mb.Just 12.987440000000003
+--                   , longitude: Mb.Just 80.14203
+--                   , speed: Mb.Just "50 km/h"
+--                   , timestamp: Mb.Just "2024-10-23T10:40:00Z"
+--                   }
+--             }
+--         ]
+--     }

@@ -4938,14 +4938,18 @@ metroMyTicketsFlow = do
       (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT bookingId
       let
         (MetroTicketBookingStatus metroTicketBookingStatus) = resp
+        tickets = metroTicketBookingStatus.tickets
       if (metroTicketBookingStatus.status == "CONFIRMED") then do
-        if metroTicketBookingStatus.vehicleType == "BUS" then do
+        let goToTracking = maybe false (\(API.FRFSTicketAPI i) -> i.status /= "EXPIRED") (tickets !! 0)
+        if metroTicketBookingStatus.vehicleType == "BUS" && goToTracking then  do
           let route = (fromMaybe [] metroTicketBookingStatus.routeStations) !! 0
           let stationList = fromMaybe [] (getStationsFromBusRoute <$> route)
           let code = case route of 
                       Just (GetBusRouteResp r) -> fromMaybe "" r.code
                       Nothing -> ""
-          modifyScreenState $ BusTrackingScreenStateType (\busScreen -> busScreen { data { sourceStation = Nothing, destinationStation = Nothing, stopsList = stationList, busRouteCode = code, bookingId = bookingId}, props{ showRouteDetailsTab = false } })
+          let source = maybe Nothing (\(GetMetroStationResp s) -> Just {stationName : s.name,stationCode :s.code}) (stationList !! 0)
+          let dest = maybe Nothing (\(GetMetroStationResp s) -> Just {stationName : s.name,stationCode :s.code}) (stationList !! (length stationList -1))
+          modifyScreenState $ BusTrackingScreenStateType (\busScreen -> busScreen { data { sourceStation = source, destinationStation = dest, stopsList = [], busRouteCode = code, bookingId = bookingId}, props{ showRouteDetailsTab = false } })
           busTrackingScreenFlow
         else do
           modifyScreenState

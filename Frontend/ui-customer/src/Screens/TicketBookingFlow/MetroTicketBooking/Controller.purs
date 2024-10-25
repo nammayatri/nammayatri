@@ -188,7 +188,7 @@ updateQuotes quotes state = do
       void $ pure $ toast $ getString NO_QOUTES_AVAILABLE
       continue state { props {currentStage  = if state.props.ticketServiceType == API.BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
     Just (MetroQuote quoteData) -> do
-      let updatedState = state { data {discounts = quoteData.discounts, ticketPrice = INT.toNumber quoteData.price, quoteId = quoteData.quoteId, quoteResp = quotes, eventDiscountAmount = DI.round <$> quoteData.eventDiscountAmount}, props { currentStage = ST.ConfirmMetroQuote}}
+      let updatedState = state { data {discounts = quoteData.discounts, ticketPrice = quoteData.price, quoteId = quoteData.quoteId, quoteResp = quotes, eventDiscountAmount = DI.round <$> quoteData.eventDiscountAmount}, props { currentStage = ST.ConfirmMetroQuote}}
       updateAndExit updatedState $ Refresh updatedState
   where
     getTicketType :: String -> ST.TicketType

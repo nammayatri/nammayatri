@@ -31,6 +31,7 @@ import Screens.HomeScreen.ScreenData
 import Common.Types.App as CT
 import Screens.Types (FareProductType(..)) as FPT
 import Components.MessagingView.Controller (dummyChatRecipient)
+import Data.Map as DM
 
 initData :: ST.BusTrackingScreenState
 initData =
@@ -38,19 +39,22 @@ initData =
     appConfig' = getAppConfig appConfig
   in
     { data:
-        { appConfig: appConfig',
-          busRouteCode : "",
-          stopsList : [],
-          sourceStation : Mb.Nothing,
-          destinationStation : Mb.Nothing,
-          bookingId : ""
+        { appConfig: appConfig'
+        , busRouteCode: ""
+        , stopsList: []
+        , sourceStation: Mb.Nothing
+        , destinationStation: Mb.Nothing
+        , bookingId: ""
+        , vehicleTrackingData: DM.empty
+        , previousStopsMap: DM.empty
         }
     , props:
         { showRouteDetailsTab: true
         , expandStopsView: false
-        , verticalLineHeight : 0
-        , srcLat : 0.0
-        , srcLon : 0.0
+        , verticalLineHeight: 0
+        , srcLat: 0.0
+        , srcLon: 0.0
+        , busNearSource: false
         }
     }
 
@@ -128,7 +132,7 @@ mockRoute =
     , duration: 150
     , pointsForRentals: Mb.Nothing
     , points:
-        API.Snapped 
+        API.Snapped
           [ API.LatLong
               { lat: 12.942134
               , lon: 77.622155
@@ -205,4 +209,14 @@ mockRoute =
               , lon: 77.611986
               }
           ]
+    }
+
+type VehicleData
+  = { vehicleId :: String
+    , nextStop :: String
+    , nextStopDistance :: Number
+    , vehicleLat :: Number
+    , vehicleLon :: Number
+    , nextStopLat ::Number
+    , nextStopLon ::Number
     }

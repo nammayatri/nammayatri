@@ -60,6 +60,7 @@ import JBridge (startLottieProcess, lottieAnimationConfig)
 import Screens.TicketBookingFlow.MetroTicketDetails.ComponentConfig as Config
 import Components.SourceToDestination.View as SourceToDestinationView
 import Styles.Types as Style
+import Data.Int as DI
 
 screen :: ST.MetroTicketDetailsScreenState -> Screen Action ST.MetroTicketDetailsScreenState ScreenOutput
 screen initialState =
@@ -553,7 +554,7 @@ metroHeaderView push state headerFontStyle detailVisibility =
         , textView $ [
             width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ "₹" <> show state.data.ticketPrice
+          , text $ "₹" <> (show $ DI.round state.data.ticketPrice)
           , color Color.black500
           , visibility $ boolToVisibility $ not $ isBusTicketBooking state
           ] <> FontStyle.tags TypoGraphy
@@ -1190,7 +1191,7 @@ paymentDetailsView push state =
     , visibility $ boolToVisibility state.props.paymentDetailsExpanded
     ]
     [ singleTitleSubTitleView "Transaction ID" "ABC12345678D" 0 -- dummy-codex
-    , singleTitleSubTitleView "Total Amount" ("₹" <> show state.data.ticketPrice) 24
+    , singleTitleSubTitleView "Total Amount" ("₹" <> (show $ DI.round state.data.ticketPrice)) 24
     ]
   ]
 
