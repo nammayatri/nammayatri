@@ -134,8 +134,8 @@ windowFromIntelligentPoolConfig merchantOpCityId windowKey = maybe defaultWindow
 
 getBatchSize :: V.Vector Int -> Int -> Int -> Int
 getBatchSize dynamicBatchSize index driverBatchSize =
-  let size = min (V.length dynamicBatchSize - 1) index
-   in bool (dynamicBatchSize V.! size) driverBatchSize (size == -1)
+  let size = min (V.length dynamicBatchSize - 1) (index + 1)
+   in bool (dynamicBatchSize V.! size) driverBatchSize (size <= -1)
 
 withAcceptanceRatioWindowOption ::
   ( Redis.HedisFlow m r,
@@ -618,7 +618,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
   let goHomeDriverIdsToDest = map (\(driver, _, _, _) -> driver.driverId) driversOnWayToHome
   let goHomeDriverIdsNotToDest = map (\(_, driver, _) -> driver.driverId) $ filter (\(_, driver, _) -> driver.driverId `notElem` goHomeDriverIdsToDest) driverGoHomePoolWithActualDistance
   let goHomeDriverPoolWithActualDist = makeDriverPoolWithActualDistResult <$> driversOnWayToHome
-  return (take (getBatchSize driverPoolCfg.dynamicBatchSize 0 driverPoolCfg.driverBatchSize) goHomeDriverPoolWithActualDist, goHomeDriverIdsNotToDest)
+  return (take (getBatchSize driverPoolCfg.dynamicBatchSize (-1) driverPoolCfg.driverBatchSize) goHomeDriverPoolWithActualDist, goHomeDriverIdsNotToDest)
   where
     filterFunc threshold estDist distanceToPickup =
       case driverPoolCfg.thresholdToIgnoreActualDistanceThreshold of
