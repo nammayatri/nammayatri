@@ -34,6 +34,8 @@ type RemoteConfig a
     , kolkata :: Maybe a
     , chennai :: Maybe a
     , tumakuru :: Maybe a
+    , paris :: Maybe a
+    , odisha :: Maybe a
     , mysore :: Maybe a
     , kochi :: Maybe a
     , delhi :: Maybe a
