@@ -2066,7 +2066,7 @@ window.getMerchantConfig = function () {
       {
         "cityName" : "Paris",
         "mapImage" : "ny_ic_location_map",
-        "cityCode" : "std:0824",
+        "cityCode": "std:001",
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
         "advancedRidePopUpYoutubeLink" : "" ,
@@ -2141,7 +2141,7 @@ window.getMerchantConfig = function () {
       {
         "cityName" : "Odisha",
         "mapImage" : "ny_ic_location_map",
-        "cityCode" : "std:0824",
+        "cityCode" : "std:001", // check this once from backend
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
         "advancedRidePopUpYoutubeLink" : "" ,
@@ -2216,7 +2216,7 @@ window.getMerchantConfig = function () {
       {
         "cityName" : "Bhubaneswar",
         "mapImage" : "ny_ic_location_map",
-        "cityCode" : "std:0824",
+        "cityCode" : "std:001",  // check this from backend
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
         "advancedRidePopUpYoutubeLink" : "" ,
