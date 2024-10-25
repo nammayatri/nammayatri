@@ -110,7 +110,8 @@ initData = {
    stopCodeSelected : "",
    stopNameSelected : "",
    srcLat : 0.000,
-   srcLong : 0.000
+   srcLong : 0.000,
+   routeName : ""
   },
   appConfig : getAppConfig appConfig
 }

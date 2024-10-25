@@ -58,6 +58,7 @@ initData = {
     , ticketServiceType : API.METRO
     , srcLat : 0.00
     , srcLong : 0.00
+    , routeName : ""
     
   },
   config :  getAppConfig appConfig

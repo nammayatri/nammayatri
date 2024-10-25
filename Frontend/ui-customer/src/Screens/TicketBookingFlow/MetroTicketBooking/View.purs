@@ -196,13 +196,14 @@ routeListView state push =
     ](DA.mapWithIndex (\index (GetBusRouteResp route) ->
         let
           routeCode = fromMaybe "No Code" route.code
+          routeName = route.shortName
           routeTotalStops = fromMaybe 0 route.totalStops
         in
         linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , padding $ Padding 16 15 16 10
-        , onClick push $ const $ SelectRoutes routeCode 
+        , onClick push $ const $ SelectRoutes routeCode routeName 
         , orientation VERTICAL
         ][  
           linearLayout
@@ -211,8 +212,8 @@ routeListView state push =
             , orientation HORIZONTAL
             ][  
               textView $
-                [ accessibilityHint $ routeCode <> " : Button"
-                , textFromHtml routeCode 
+                [ accessibilityHint $ routeName <> " : Button"
+                , textFromHtml routeName 
                 , color Color.darkCharcoal
                 , weight 1.0
                 ] <> FontStyle.paragraphText LanguageStyle
@@ -304,7 +305,7 @@ infoSelectioView state push city cityMetroConfig metroConfig =
                                   , height WRAP_CONTENT
                                   , padding (Padding 19 17 0 17)
                                   , color Color.greyTextColor
-                                  , textFromHtml $ if state.props.isEmptyRoute == "" then "Select Route Number" else  state.props.isEmptyRoute                                            
+                                  , textFromHtml $ if state.props.routeName == "" then "Select Route Number" else  state.props.routeName                                            
                                   , weight 4.0
                                   , cornerRadius 6.0
                                   , stroke ("3," <> Color.white900)

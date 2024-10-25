@@ -2250,6 +2250,7 @@ type SearchLocationScreenProps =
   , autoCompleteBusStop :: Boolean
   , srcLat :: Number 
   , srcLong :: Number
+  , routeName :: String
   , selectedEstimateHeight :: Int }
 
 data SearchLocationActionType = AddingStopAction 
@@ -2637,6 +2638,7 @@ type MetroTicketBookingScreenProps = {
 , ticketServiceType :: API.TicketServiceType
 , srcLat :: Number 
 , srcLong :: Number
+, routeName :: String
 }
 
 data TicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote | PaymentSDKPooling | BusTicketSelection | OfferSelection

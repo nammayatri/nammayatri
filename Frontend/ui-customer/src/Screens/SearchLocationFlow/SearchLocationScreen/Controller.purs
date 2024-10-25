@@ -254,8 +254,10 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
   else if state.props.actionType == BusSearchSelectionAction then do
           if( DA.length state.data.routeSearchedList /= 0 && DA.length state.data.stopsSearchedList /= 0) || (DA.length validDecodedRoutes /= 0 && DA.length validDecodedStops /= 0) then do
               if state.data.rideType == ROUTES then do 
-                  let busRouteSelected = item.title
-                      newState = state {props {routeSelected = busRouteSelected , isAutoComplete = false}, data {searchRideType = BUS_ROUTE}}
+                  let busRouteSelected = item.tagName
+                      busRouteName = item.title
+                      _ = spy "Printing for check " busRouteSelected
+                      newState = state {props {routeName = busRouteName , routeSelected = busRouteSelected , isAutoComplete = false}, data {searchRideType = BUS_ROUTE}}
                   void $ pure $ hideKeyboardOnNavigation true
                   updateAndExit newState $ PredictionClicked item newState
               else do
@@ -265,9 +267,10 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
                 void $ pure $ hideKeyboardOnNavigation true
                 updateAndExit newState $ PredictionClicked item newState
           else if DA.length state.data.routeSearchedList /= 0 && DA.length state.data.stopsSearchedList == 0 then do
-                let busRouteSelected = item.title
+                let busRouteSelected = item.tagName
+                    busRouteName = item.title
                     _ = spy "Printing for check " busRouteSelected
-                    newState = state {props {routeSelected = busRouteSelected , isAutoComplete = false} , data {searchRideType = BUS_ROUTE}}
+                    newState = state {props {routeName = busRouteName ,routeSelected = busRouteSelected , isAutoComplete = false} , data {searchRideType = BUS_ROUTE}}
                 void $ pure $ hideKeyboardOnNavigation true
                 updateAndExit newState $ PredictionClicked item newState
           else do

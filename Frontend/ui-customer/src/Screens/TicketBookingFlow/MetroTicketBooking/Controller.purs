@@ -61,7 +61,7 @@ data Action = BackPressed
             | GetSDKPollingAC CreateOrderRes
             | MetroBookingConfigAction MetroBookingConfigRes
             | ListExpandAinmationEnd
-            | SelectRoutes String
+            | SelectRoutes String String
             | SelectRouteslistView
             | OfferInfoClicked
             | ApplyOffer String
@@ -165,7 +165,7 @@ eval SelectRouteslistView state = do
     
     continue state{props{routeList = not old , showRouteOptions = true}}
   -- updateAndExit state{props{routeList = not old , showRouteOptions = true}} $ SearchRoute state
-eval (SelectRoutes route) state = continue state{props{isEmptyRoute = route ,routeList = not state.props.routeList , showRouteOptions = false,currentStage = ST.BusTicketSelection}}
+eval (SelectRoutes route routeName) state = continue state{props{isEmptyRoute = route ,routeName = routeName , routeList = not state.props.routeList , showRouteOptions = false,currentStage = ST.BusTicketSelection}}
 eval (GetSDKPollingAC createOrderRes) state = exit $ GotoPaymentPage createOrderRes state.data.bookingId
 
 eval _ state = update state
