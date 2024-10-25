@@ -38,10 +38,13 @@ import DecodeUtil (getAnyFromWindow)
 import Data.Function.Uncurried (runFn3)
 import MerchantConfig.Types (MetroConfig)
 import Storage
-import Services.API (MetroBookingConfigRes(..),TicketServiceType(..))
+import Services.API (MetroBookingConfigRes(..),TicketServiceType(..), DiscountItem(..))
 import Mobility.Prelude (getNumberWithSuffix)
 import Debug
 import Data.Array as DA
+import Accessor (_amount)
+import Data.Lens((^.))
+import Data.Int as INT
 
 metroTicketBookingHeaderConfig :: ST.MetroTicketBookingScreenState -> GenericHeader.Config
 metroTicketBookingHeaderConfig state = let
@@ -72,14 +75,14 @@ updateButtonConfig :: ST.MetroTicketBookingScreenState -> PrimaryButton.Config
 updateButtonConfig state = let
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
     config = PrimaryButton.config
-    price = state.data.ticketPrice * state.data.ticketCount
+    price = state.data.ticketPrice * (INT.toNumber state.data.ticketCount)
     eventDiscountAmount = fromMaybe 0 state.data.eventDiscountAmount
     (MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
-    priceWithoutDiscount = spy "priceWithoutDiscount" (((metroBookingConfigResp.discount * price) / 100) + price)
-    discountText = if price /= priceWithoutDiscount then ("&nbsp;&nbsp; " <> " ₹" <> "<strike> " <> "<span style='color:#7F6A34;'>"<> (show priceWithoutDiscount)  <> " </span>" <> " </strike>" <> " ") else ""
+    priceWithoutDiscount = spy "priceWithoutDiscount" (((metroBookingConfigResp.discount * price) / 100.0) + price)
+    discountText = if price /= priceAfterExtraDiscount then ("&nbsp;&nbsp; " <> " ₹" <> "<strike> " <> "<span style='color:#7F6A34;'>"<> (show price)  <> " </span>" <> " </strike>" <> " ") else ""
     cashbackText = if eventDiscountAmount > 0 then (" (" <> "₹" <> show eventDiscountAmount <> " cashback)") else ""
     updateButtonConfig' = config 
-        { textConfig { textFromHtml = Just $ if (state.props.currentStage /= ST.MetroTicketSelection && state.props.currentStage /= ST.BusTicketSelection ) then ("Book & Pay" <> discountText <> " ₹" <> (show price) <> cashbackText) else (getString GET_FARE)}
+        { textConfig { textFromHtml = Just $ if (state.props.currentStage /= ST.MetroTicketSelection && state.props.currentStage /= ST.BusTicketSelection ) then ("Book & Pay" <> discountText <> " ₹" <> (show priceAfterExtraDiscount) <> cashbackText) else (getString GET_FARE)}
         , height = (V 48)
         , cornerRadius = 8.0
         , margin = (Margin 16 0 16 0)
@@ -89,6 +92,18 @@ updateButtonConfig state = let
         , alpha = if (state.props.termsAndConditionsSelected && state.props.isButtonActive) then 1.0 else 0.5
         }
     in updateButtonConfig'
+    where
+      appliedDiscountCodes :: Array String
+      appliedDiscountCodes = maybe [] extractDiscountCodes state.data.applyDiscounts
+
+      extractDiscountCodes :: Array DiscountItem -> Array String
+      extractDiscountCodes discounts = map (\(DiscountItem discountItem) -> discountItem.code) discounts
+
+      priceAfterExtraDiscount = 
+        state.data.ticketPrice * (INT.toNumber state.data.ticketCount) - ( 
+            case DA.find (\discount -> discount.code == (fromMaybe "" $ DA.head appliedDiscountCodes)) state.data.discounts of
+              Just discount -> discount.price.amount
+              _ -> 0.0)
 
 metroBannerConfig :: CityMetroConfig -> ST.MetroTicketBookingScreenState -> Banner.Config
 metroBannerConfig (CityMetroConfig cityMetroConfig) state =

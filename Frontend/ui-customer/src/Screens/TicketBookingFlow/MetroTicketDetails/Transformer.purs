@@ -21,6 +21,7 @@ import Screens.Types
 import Common.Types.App
 import Data.Array
 import Data.Maybe
+import Data.Int as INT
 import Engineering.Helpers.Commons
 import Helpers.Utils (getCityNameFromCode)
 

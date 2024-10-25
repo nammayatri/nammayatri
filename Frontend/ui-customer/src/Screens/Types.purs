@@ -2025,7 +2025,7 @@ type MetroTicketDetailsScreenData = {
 , metroRoute :: Array MetroRoute
 , ticketsInfo :: Array MetroTicketInfo
 , ticketType :: String
-, ticketPrice :: Int
+, ticketPrice :: Number
 , noOfTickets :: Int
 , vehicleType :: String
 , route :: Maybe (Array GetBusRouteResp)
@@ -2611,7 +2611,7 @@ type MetroTicketBookingScreenData = {
   , srcCode :: String
   , destCode :: String
   , searchId :: String
-  , ticketPrice :: Int
+  , ticketPrice :: Number
   , bookingId :: String
   , quoteId :: String
   , quoteResp :: Array MetroQuote
@@ -2622,6 +2622,7 @@ type MetroTicketBookingScreenData = {
   , eventDiscountAmount :: Maybe Int
   , searchRideType :: SearchRideType
   , discounts :: Array API.DiscountObj
+  , applyDiscounts :: Maybe (Array API.DiscountItem)
 }
 
 type MetroTicketBookingScreenProps = {

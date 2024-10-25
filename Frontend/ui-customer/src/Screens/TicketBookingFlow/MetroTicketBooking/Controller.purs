@@ -36,6 +36,7 @@ import Language.Types
 import MerchantConfig.Types (MetroConfig)
 import Data.Int as DI
 import Log(trackAppScreenEvent)
+import Data.Int as INT
 
 instance showAction :: Show Action where
   show _ = ""
@@ -86,7 +87,16 @@ eval OfferInfoClicked state =
   continue state { props { currentStage = ST.OfferSelection }}
 
 eval (ApplyOffer offerType) state =
-  updateAndExit state $ AadhaarVerificationSO state offerType
+  let updatedState = state 
+        { data 
+          { applyDiscounts = 
+            Just $ [ API.DiscountItem
+              { code: offerType
+              , quantity: 1
+              } ] 
+          }
+        }
+  in updateAndExit updatedState $ AadhaarVerificationSO updatedState offerType
 
 eval (MetroBookingConfigAction resp) state = do
   let updatedState = state { data {metroBookingConfigResp = resp}, props { showShimmer = false }}
@@ -178,7 +188,7 @@ updateQuotes quotes state = do
       void $ pure $ toast $ getString NO_QOUTES_AVAILABLE
       continue state { props {currentStage  = if state.props.ticketServiceType == API.BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
     Just (MetroQuote quoteData) -> do
-      let updatedState = state { data {discounts = quoteData.discounts, ticketPrice = quoteData.price, quoteId = quoteData.quoteId, quoteResp = quotes, eventDiscountAmount = DI.round <$> quoteData.eventDiscountAmount}, props { currentStage = ST.ConfirmMetroQuote}}
+      let updatedState = state { data {discounts = quoteData.discounts, ticketPrice = INT.toNumber quoteData.price, quoteId = quoteData.quoteId, quoteResp = quotes, eventDiscountAmount = DI.round <$> quoteData.eventDiscountAmount}, props { currentStage = ST.ConfirmMetroQuote}}
       updateAndExit updatedState $ Refresh updatedState
   where
     getTicketType :: String -> ST.TicketType

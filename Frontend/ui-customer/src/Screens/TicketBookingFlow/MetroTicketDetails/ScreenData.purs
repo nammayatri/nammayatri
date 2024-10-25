@@ -32,7 +32,7 @@ initData = {
   , ticketsInfo : []
   , ticketType : ""
   , noOfTickets : 0
-  , ticketPrice : 0
+  , ticketPrice : 0.0
   , vehicleType : ""
   , route : Nothing
   }

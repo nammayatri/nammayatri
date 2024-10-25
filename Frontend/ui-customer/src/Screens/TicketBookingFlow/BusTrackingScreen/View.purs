@@ -576,7 +576,7 @@ dummyData :: API.BusTrackingRouteResp
 dummyData = API.BusTrackingRouteResp {
   vehicleTrackingInfo : [
     API.VehicleInfo {
-      -- location : API.LatLong {lat :  12.97619, lon : 80.14511000000002}, -- Location of the vehicl}e
+      location : API.LatLong {lat :  12.97619, lon : 80.14511000000002}, -- Location of the vehicl}e
       vehicleId : "Bus1234",              -- Vehicle ID
       vehicleInfo : API.VehicleInfoForRoute {
         startTime : Mb.Just "08:00:00",
@@ -590,7 +590,7 @@ dummyData = API.BusTrackingRouteResp {
       }
     },
     API.VehicleInfo {
-      -- location : API.LatLong {lat :  12.977810000000002, lon : 80.13876000000002},
+      location : API.LatLong {lat :  12.977810000000002, lon : 80.13876000000002},
       vehicleId : "Bus5678",
       vehicleInfo : API.VehicleInfoForRoute {
         startTime : Mb.Just "08:10:00",
@@ -604,7 +604,7 @@ dummyData = API.BusTrackingRouteResp {
       }
     },
     API.VehicleInfo {
-      -- location : API.LatLong {lat :  12.987440000000003, lon : 80.14203},
+      location : API.LatLong {lat :  12.987440000000003, lon : 80.14203},
       vehicleId : "Bus9101",
       vehicleInfo : API.VehicleInfoForRoute {
         startTime : Mb.Just "08:15:00",

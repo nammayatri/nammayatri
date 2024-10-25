@@ -21,6 +21,7 @@ import Services.API (MetroBookingConfigRes(..), GetBusRouteResp(..))
 import Data.Maybe as Mb
 import Data.Array 
 import Services.API as API
+import Data.Maybe (Maybe(..))
 
 initData :: ST.MetroTicketBookingScreenState
 initData = {
@@ -32,7 +33,7 @@ initData = {
   , srcCode : ""
   , destCode : ""
   , searchId : ""
-  , ticketPrice : 0
+  , ticketPrice : 0.0
   , bookingId : ""
   , quoteId : ""
   , quoteResp : []
@@ -40,9 +41,10 @@ initData = {
   , routeList : []
   , stopsSearchedList : []
   , searchRideType : API.BUS_DESTINATION
-  , metroBookingConfigResp : MetroBookingConfigRes {bookingEndTime: "", bookingStartTime: "", oneWayTicketLimit: 0, roundTripTicketLimit: 0, metroStationTtl: 10080, discount: 0, customEndTime : "", customDates : [], isEventOngoing : Mb.Nothing, freeTicketInterval : Mb.Nothing, maxFreeTicketCashback : Mb.Nothing, ticketsBookedInEvent : Mb.Nothing , isCancellationAllowed : Mb.Just true}
+  , metroBookingConfigResp : MetroBookingConfigRes {bookingEndTime: "", bookingStartTime: "", oneWayTicketLimit: 0, roundTripTicketLimit: 0, metroStationTtl: 10080, discount: 0.0, customEndTime : "", customDates : [], isEventOngoing : Mb.Nothing, freeTicketInterval : Mb.Nothing, maxFreeTicketCashback : Mb.Nothing, ticketsBookedInEvent : Mb.Nothing , isCancellationAllowed : Mb.Just true}
   , eventDiscountAmount : Mb.Nothing
   , discounts : [] -- [womenDiscount] <> [seniorCitizenDiscount]
+  , applyDiscounts : Nothing -- Just exampleDiscounts 
   },
   props: {
     isLimitExceeded : false
@@ -91,3 +93,11 @@ seniorCitizenDiscount =
   , title: "Senior Citizen 40% Off"
   , tnc: "<b>Only eligible for adults with age above 70 years</b>"
   }
+
+exampleDiscounts :: Array API.DiscountItem
+exampleDiscounts =
+  [ API.DiscountItem
+    { code: "SENIORCITIZEN"
+    , quantity: 1
+    }
+  ]

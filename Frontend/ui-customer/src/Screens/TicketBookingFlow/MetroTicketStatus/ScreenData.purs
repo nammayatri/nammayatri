@@ -50,7 +50,7 @@ dummyMetroBookingStatus =
     city : "",
     updatedAt : "",
     payment : Nothing,
-    price: 1,
+    price: 1.0,
     quantity: 2,
     stations: [],
     status: "CONFIRMED",

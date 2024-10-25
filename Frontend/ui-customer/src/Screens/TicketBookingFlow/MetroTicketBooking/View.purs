@@ -36,7 +36,7 @@ import Animation.Config
 import JBridge as JB
 import Data.Array
 import Font.Size as FontSize
-import Data.Maybe (maybe, fromMaybe)
+import Data.Maybe (maybe, fromMaybe, isJust)
 import Effect.Aff (launchAff)
 import Services.API
 import Presto.Core.Types.Language.Flow (doAff, Flow, delay)
@@ -802,7 +802,7 @@ offersInfoView push state =
   , background Color.cosmicLatte
   , padding $ Padding 16 12 16 12
   , gravity CENTER_VERTICAL
-  , visibility $ boolToVisibility $ DA.length state.data.discounts > 0
+  , visibility $ boolToVisibility $ (DA.length (state.data.discounts) > 0) || (DA.length appliedDiscountCodes > 0)
   -- , alignParentBottom "true,-1"
   ]
   [ imageView
@@ -812,7 +812,7 @@ offersInfoView push state =
     , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_discount_percentage"
     ]
   , textView $
-    [ text $ (show $ DA.length state.data.discounts) <> " Offers Available ✨"
+    [ text $ offerText
     , color Color.black900
     , margin $ MarginLeft 8
     ] <> FontStyle.tags TypoGraphy
@@ -827,6 +827,17 @@ offersInfoView push state =
     , rippleColor Color.rippleShade
     ] <> FontStyle.tags TypoGraphy
   ]
+  where
+    appliedDiscountCodes :: Array String
+    appliedDiscountCodes = maybe [] extractDiscountCodes state.data.applyDiscounts
+
+    extractDiscountCodes :: Array DiscountItem -> Array String
+    extractDiscountCodes discounts = map (\(DiscountItem discountItem) -> discountItem.code) discounts
+    
+    offerText :: String
+    offerText = case DA.find (\discount -> discount.code == (fromMaybe "" $ DA.head appliedDiscountCodes)) state.data.discounts of
+      Just discount -> discount.title <> " Applied ✨"
+      _ -> (show $ DA.length state.data.discounts) <> " Offers Available ✨"
 
 offerSelectionView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
 offerSelectionView push state =

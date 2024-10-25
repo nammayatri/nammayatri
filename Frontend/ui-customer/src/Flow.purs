@@ -4486,27 +4486,8 @@ metroTicketBookingFlow = do
           (SearchMetroResp searchMetroResp) <- Remote.searchMetroBT (show state.props.ticketServiceType) (Remote.makeSearchMetroReq state.data.srcCode state.data.destCode state.data.ticketCount (if state.props.ticketServiceType == BUS then Just state.props.isEmptyRoute else Nothing))
           modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data { searchId = searchMetroResp.searchId }, props { currentStage = GetMetroQuote } })
       else if state.props.currentStage == ConfirmMetroQuote then do
-        metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuote state.data.quoteId
-        case metroBookingStatus of
-          Right (MetroTicketBookingStatus metroBookingStatus) -> do
-            modifyScreenState
-                $ MetroTicketBookingScreenStateType
-                    ( \state ->
-                        state
-                          { data { bookingId = metroBookingStatus.bookingId }
-                          , props { currentStage = ST.PaymentSDKPooling }
-                          }
-                    )              
-            let _ = runFn2 setInCache (show METRO_PAYMENT_SDK_POLLING) true
-            pure unit
-          Left err -> do
-            let errResp = err.response
-                errMsg = if err.code == 400 
-                          then decodeError errResp.errorMessage "errorMessage"
-                          else getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
-            void $ pure $ toast errMsg
-            modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { props { currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection } })
-            pure unit
+        metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 state.data.quoteId $ API.ConfirmMetroQuoteReqV2Body {discounts: fromMaybe [] state.data.applyDiscounts}
+        updateMetroBookingQuoteInfo metroBookingStatus
       else
         pure unit
       metroTicketBookingFlow
@@ -4553,7 +4534,7 @@ metroTicketBookingFlow = do
                   destLocation = Just $ SearchLocationScreenData.dummyLocationInfo { busStopInfo = Just { stationName : state.data.destLoc, stationCode : state.data.destCode }, address = state.data.destLoc, stationCode = state.data.destCode }
                   autoCompleteBusStop = searchLocationState.props.autoCompleteBusStop || searchLocationState.props.actionType == BusSearchSelectionAction
                 -- (GetMetroStationResponse getBusStopResp) <- Remote.getMetroStationBT (show state.props.ticketServiceType) currentCity "" state.data.srcCode
-                modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data { ticketPrice = 1} , props {routeList = false , isEmptyRoute = "", currentStage = ST.BusTicketSelection} })
+                modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data { ticketPrice = 1.0} , props {routeList = false , isEmptyRoute = "", currentStage = ST.BusTicketSelection} })
                 modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
                 modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { routeSelected = "" , actionType = BusStopSelectionAction ,  canSelectFromFav = false, focussedTextField = Just SearchLocDrop, autoCompleteBusStop = autoCompleteBusStop,srcLat =  state.props.srcLat , srcLong = state.props.srcLong }, data { fromScreen =(Screen.getScreen Screen.BUS_ROUTE_STOPS_SEARCH_SCREEN) , srcLoc = srcLocation, destLoc = destLocation, stopsSearchedList = searchLocationState.data.stopsSearchedList , updatedStopsSearchedList = searchLocationState.data.stopsSearchedList } })
                 searchLocationFlow
@@ -4563,9 +4544,16 @@ metroTicketBookingFlow = do
     --  modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
     --  modifyScreenState $ SearchLocationScreenStateType (\slsstate -> slsstate { props {srcLat =  state.props.srcLat , srcLong = state.props.srcLong, actionType = BusStopSelectionAction}})
     --  searchLocationFlow
-    GO_TO_AADHAAR_VERIFICATION_SCREEN _ offerType -> do
-      modifyScreenState $ AadhaarVerificationScreenType (\_ -> AadhaarVerificationScreenData.initData)
-      aadhaarVerificationFlow offerType
+    GO_TO_AADHAAR_VERIFICATION_SCREEN state offerType -> do
+      (GetProfileRes profileResponse) <- Remote.getProfileBT ""
+      if (profileResponse.aadhaarVerified == Just true) then do
+        metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 state.data.quoteId $ API.ConfirmMetroQuoteReqV2Body {discounts: fromMaybe [] state.data.applyDiscounts}
+        updateMetroBookingQuoteInfo metroBookingStatus
+        modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { props { currentStage = GetMetroQuote} })
+        metroTicketBookingFlow
+      else do
+        modifyScreenState $ AadhaarVerificationScreenType (\_ -> AadhaarVerificationScreenData.initData)
+        aadhaarVerificationFlow offerType
   where
   fetchMetroStations currentCity metroStationsList routeCode ticketServiceType srcLat srcLong srcCode destCode= do
     (GetMetroStationResponse getMetroStationResp) <- Remote.getMetroStationBT ticketServiceType currentCity routeCode "" (show srcLat <> "," <> show srcLong)
@@ -6993,6 +6981,7 @@ busTrackingScreenFlow = do
 
 aadhaarVerificationFlow :: String -> FlowBT String Unit
 aadhaarVerificationFlow offerType = do
+  (GlobalState currentGlobalState) <- getState
   action <- UI.aadhaarVerificationScreen
   case action of
     ENTER_AADHAAR_OTP state -> do
@@ -7013,12 +7002,8 @@ aadhaarVerificationFlow offerType = do
           case errorCode of
             "AADHAAR_NUMBER_NOT_EXIST" -> pure $ toast "Aadhaar Does not exist"
             "AADHAAR_ALREADY_LINKED" -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
-            "INVALID_AADHAAR" -> do
-              void $ pure $ toast $ HU.decodeErrorMessage errorPayload.response.errorMessage
-              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{showErrorAadhaar = true, btnActive = false}})
-            _ -> do
-              pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
-              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = AadhaarDetails, btnActive = false}})
+            "INVALID_AADHAAR" -> pure $ toast $ HU.decodeErrorMessage errorPayload.response.errorMessage
+            _ -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
           aadhaarVerificationFlow offerType
     VERIFY_AADHAAR_OTP state -> do
       let _ = spy "coming aa rha hai?" ""
@@ -7027,16 +7012,28 @@ aadhaarVerificationFlow offerType = do
       void $ lift $ lift $ toggleLoader false
       case res of
         Right (VerifyAadhaarOTPResp resp) -> do
-          -- if resp.code == 200 then if state.props.fromHomeScreen then getDriverInfoFlow Nothing Nothing Nothing false Nothing false else onBoardingFlow
-            -- else do
-          predictionClickedFlow dummyListItem SearchLocationScreenData.initData
-          -- void $ pure $ toast "Error Occured please try again later"
-          -- modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = EnterAadhaar, btnActive = false}})
-          -- aadhaarVerificationFlow offerType
+          let _ = spy "ahaksdfdf" resp
+          if resp.code == "1002"
+            then do
+              metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 currentGlobalState.metroTicketBookingScreen.data.quoteId $ API.ConfirmMetroQuoteReqV2Body
+                { discounts: 
+                  [ API.DiscountItem
+                    { code: offerType
+                    , quantity: 1
+                    }
+                  ]
+                }
+              updateMetroBookingQuoteInfo metroBookingStatus
+              modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { props { currentStage = GetMetroQuote} })
+              metroTicketBookingFlow
+            else do
+              void $ pure $ toast "Error Occured please try again later"
+              modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = EnterAadhaar, btnActive = false}})
+              aadhaarVerificationFlow offerType
         Left errorPayload -> do
           let stage = if (HU.decodeErrorCode errorPayload.response.errorMessage) == "INVALID_OTP" then VerifyAadhaar else AadhaarDetails
-          void $ pure if (HU.decodeErrorCode errorPayload.response.errorMessage) == "INVALID_OTP" then toast "Invalid OTP" else unit
-          modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = stage, btnActive = false}})
+          void $ pure if (HU.decodeErrorCode errorPayload.response.errorMessage) == "INVALID_OTP" then toast "Invalid OTP" else toast "Something went wrong please try again later"
+          modifyScreenState $ AadhaarVerificationScreenType (\_ -> state{props{currentStage = VerifyAadhaar, btnActive = false}})
           aadhaarVerificationFlow offerType
     RESEND_AADHAAR_OTP state -> do
       res <- lift $ lift $ Remote.triggerAadhaarOtp state.data.aadhaarNumber
@@ -7110,4 +7107,27 @@ dummyListItem = {
   , locationScore : Nothing
   , dynamicAction : Nothing
   , types : Nothing
-}
+}   
+
+updateMetroBookingQuoteInfo :: (Either ErrorResponse MetroTicketBookingStatus) -> FlowBT String Unit
+updateMetroBookingQuoteInfo metroBookingStatus = do
+  case metroBookingStatus of
+    Right (MetroTicketBookingStatus metroBookingStatus) -> do
+      modifyScreenState
+          $ MetroTicketBookingScreenStateType
+              ( \state ->
+                  state
+                    { data { bookingId = metroBookingStatus.bookingId }
+                    , props { currentStage = ST.PaymentSDKPooling }
+                    }
+              )              
+      let _ = runFn2 setInCache (show METRO_PAYMENT_SDK_POLLING) true
+      pure unit
+    Left err -> do
+      let errResp = err.response
+          errMsg = if err.code == 400 
+                    then decodeError errResp.errorMessage "errorMessage"
+                    else getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+      void $ pure $ toast errMsg
+      modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data {applyDiscounts = Nothing}, props { currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection } })
+      pure unit

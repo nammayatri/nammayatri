@@ -1549,3 +1549,11 @@ verifyAadhaarOtp aadhaarNumber = do
     , shareCode : DS.take 4 otp
     }
     unwrapResponse x = x
+
+---------------------------------------- confirmMetroQuoteV2 ---------------------------------------------
+confirmMetroQuoteV2 :: String -> ConfirmMetroQuoteReqV2Body -> Flow GlobalState (Either ErrorResponse MetroTicketBookingStatus)
+confirmMetroQuoteV2 quoteId confirmQuoteReqV2Body = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.confirmMetroQuoteV2 quoteId) unwrapResponse $ callAPI headers (ConfirmMetroQuoteReqV2 quoteId confirmQuoteReqV2Body)
+  where
+    unwrapResponse x = x

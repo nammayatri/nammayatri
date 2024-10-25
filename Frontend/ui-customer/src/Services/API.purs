@@ -1496,6 +1496,7 @@ newtype GetProfileRes = GetProfileRes
   , customerReferralCode :: Maybe String
   , deviceId :: Maybe String
   , androidId :: Maybe String
+  , aadhaarVerified :: Maybe Boolean
   }
 
 
@@ -3402,7 +3403,7 @@ instance getMetroQuotesReq :: RestEndpoint GetMetroQuotesReq  where
 
  --------------------------------------------------- confirmMetroQuote ----------------------------------------------------
 
-data ConfirmMetroQuoteReq = ConfirmMetroQuoteReq String
+newtype ConfirmMetroQuoteReq = ConfirmMetroQuoteReq String
 
 
 newtype ConfirmMetroQuoteResp = ConfirmMetroQuoteResp MetroTicketBookingStatus
@@ -3415,7 +3416,7 @@ newtype MetroTicketBookingStatus = MetroTicketBookingStatus {
   , _type :: String--FRFSQuoteType
   , quantity :: Int
   , vehicleType :: String--FRFSVehicleType
-  , price :: Int
+  , price :: Number
   , validTill :: String
   , payment :: Maybe FRFSBookingPaymentAPI
   , tickets :: Array FRFSTicketAPI
@@ -3907,7 +3908,7 @@ newtype MetroBookingConfigRes = MetroBookingConfigRes {
   roundTripTicketLimit :: Int,
   oneWayTicketLimit :: Int,
   metroStationTtl :: Int,
-  discount :: Int,
+  discount :: Number,
   customEndTime :: String,
   customDates :: Array String,
   isEventOngoing :: Maybe Boolean,
@@ -4095,7 +4096,7 @@ newtype BusTrackingRouteResp = BusTrackingRouteResp {
 }
 
 newtype VehicleInfo = VehicleInfo {
-  -- location:: LatLong,
+  location:: LatLong,
   -- nextStop:: RouteStopMapping,
   vehicleId:: String,
   vehicleInfo:: VehicleInfoForRoute
@@ -4111,16 +4112,6 @@ newtype VehicleInfoForRoute = VehicleInfoForRoute {
     speed :: Maybe String,
     timestamp :: Maybe String
 }
--- VehicleInfoForRoute:
---     startTime : Maybe UTCTime
---     startDate : Maybe Text
---     scheduleRelationship : Maybe Text
---     tripId : Maybe Text
---     latitude : Maybe Double
---     longitude : Maybe Double
---     speed : Maybe Text
---     timestamp : Maybe Text
---     derive: "Show"
 
 newtype RouteStopMapping = RouteStopMapping { 
     routeId :: String,
@@ -4281,4 +4272,75 @@ instance encodeFrfsGetRouteResp :: Encode FrfsGetRouteResp where encode = defaul
 instance makeFrfsGetRouteReq :: RestEndpoint FrfsGetRouteReq where
     makeRequest reqBody@(FrfsGetRouteReq routeCode city vehicleType) headers = defaultMakeRequest GET (EP.frfsRoute routeCode city vehicleType) headers reqBody Nothing
     encodeRequest = standardEncode
+
+ --------------------------------------------------- confirmMetroQuote ----------------------------------------------------
+
+data ConfirmMetroQuoteReqV2 = ConfirmMetroQuoteReqV2 String ConfirmMetroQuoteReqV2Body
+
+newtype ConfirmMetroQuoteReqV2Body = ConfirmMetroQuoteReqV2Body {
+  discounts :: Array DiscountItem
+}
+
+newtype DiscountItem = DiscountItem { 
+    code :: String
+  , quantity :: Int
+  }
+
+newtype ConfirmMetroQuoteRespV2 = ConfirmMetroQuoteRespV2 MetroTicketBookingStatus
+
+newtype MetroTicketBookingStatusV2 = MetroTicketBookingStatusV2 {
+  bookingId :: String
+  , city :: String
+  , updatedAt :: String
+  , status :: String --FRFSTicketBookingStatus
+  , _type :: String--FRFSQuoteType
+  , quantity :: Int
+  , vehicleType :: Maybe String--FRFSVehicleType
+  , price :: Number
+  , validTill :: Maybe String
+  , payment :: Maybe FRFSBookingPaymentAPI
+  , tickets :: Array FRFSTicketAPI
+  , stations :: Array FRFSStationAPI
+  , createdAt :: String
+  , routeStations :: Maybe (Array GetBusRouteResp)
+  , discounts :: Maybe (Array DiscountObj)
+}
+
+instance makeConfirmMetroQuoteReqV2 :: RestEndpoint ConfirmMetroQuoteReqV2  where
+ makeRequest reqBody@(ConfirmMetroQuoteReqV2 quoteId (ConfirmMetroQuoteReqV2Body rqBody)) headers = defaultMakeRequest POST (EP.confirmMetroQuoteV2 quoteId) headers reqBody Nothing
+ encodeRequest req = standardEncode req
+
+derive instance genericConfirmMetroQuoteRespV2 :: Generic ConfirmMetroQuoteRespV2 _
+derive instance newtypeConfirmMetroQuoteRespV2 :: Newtype ConfirmMetroQuoteRespV2 _
+instance standardEncodeConfirmMetroQuoteRespV2 :: StandardEncode ConfirmMetroQuoteRespV2 where standardEncode (ConfirmMetroQuoteRespV2 body) = standardEncode body
+instance showConfirmMetroQuoteRespV2 :: Show ConfirmMetroQuoteRespV2 where show = genericShow
+instance decodeConfirmMetroQuoteRespV2 :: Decode ConfirmMetroQuoteRespV2 where decode = defaultDecode
+instance encodeConfirmMetroQuoteRespV2  :: Encode ConfirmMetroQuoteRespV2 where encode = defaultEncode
+
+derive instance genericMetroTicketBookingStatusV2 :: Generic MetroTicketBookingStatusV2 _
+derive instance newtypeMetroTicketBookingStatusV2 :: Newtype MetroTicketBookingStatusV2 _
+instance standardEncodeMetroTicketBookingStatusV2 :: StandardEncode MetroTicketBookingStatusV2 where standardEncode (MetroTicketBookingStatusV2 body) = standardEncode body
+instance showMetroTicketBookingStatusV2 :: Show MetroTicketBookingStatusV2 where show = genericShow
+instance decodeMetroTicketBookingStatusV2 :: Decode MetroTicketBookingStatusV2 where decode = defaultDecode
+instance encodeMetroTicketBookingStatusV2 :: Encode MetroTicketBookingStatusV2 where encode = defaultEncode
+
+derive instance genericConfirmMetroQuoteReqV2 :: Generic ConfirmMetroQuoteReqV2 _
+-- derive instance genericConfirmMetroQuoteReqV2 :: Newtype ConfirmMetroQuoteReqV2 _
+instance standardEncodeConfirmMetroQuoteReqV2 :: StandardEncode ConfirmMetroQuoteReqV2 where standardEncode (ConfirmMetroQuoteReqV2 token reqBody) = standardEncode reqBody
+instance decodeConfirmMetroQuoteReqV2 :: Decode ConfirmMetroQuoteReqV2 where decode = defaultDecode
+instance encodeConfirmMetroQuoteReqV2 :: Encode ConfirmMetroQuoteReqV2 where encode = defaultEncode
+
+derive instance genericConfirmMetroQuoteReqV2Body :: Generic ConfirmMetroQuoteReqV2Body _
+instance standardConfirmMetroQuoteReqV2Body :: StandardEncode ConfirmMetroQuoteReqV2Body where
+    standardEncode (ConfirmMetroQuoteReqV2Body body) = standardEncode body
+instance showConfirmMetroQuoteReqV2Body :: Show ConfirmMetroQuoteReqV2Body where show = genericShow
+instance decodeConfirmMetroQuoteReqV2Body :: Decode ConfirmMetroQuoteReqV2Body where decode = defaultDecode
+instance encodeConfirmMetroQuoteReqV2Body :: Encode ConfirmMetroQuoteReqV2Body where encode = defaultEncode
+
+derive instance genericDiscountItem :: Generic DiscountItem _
+instance standardDiscountItem :: StandardEncode DiscountItem where
+    standardEncode (DiscountItem body) = standardEncode body
+instance showDiscountItem :: Show DiscountItem where show = genericShow
+instance decodeDiscountItem :: Decode DiscountItem where decode = defaultDecode
+instance encodeDiscountItem :: Encode DiscountItem where encode = defaultEncode
 
