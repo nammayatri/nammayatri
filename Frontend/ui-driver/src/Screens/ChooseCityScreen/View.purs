@@ -137,54 +137,61 @@ headerView state push =
 
 currentLocationView :: forall w. ChooseCityScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 currentLocationView state push = 
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , gravity CENTER
-  , padding $ Padding 24 24 24 24
-  , margin $ Margin 16 16 16 16
-  , cornerRadius 12.0
-  , background Color.white900
-  , stroke $ "1," <> Color.grey900
-  ][  imageView
-      [ height $ V 220
-      , width $ V 220
-      , imageWithFallback $ fetchImage FF_ASSET $ getLocationMapImage state
-      ]
-    , textView $
-      [ text $ getString LOCATION_UNSERVICEABLE
-      , gravity CENTER
-      , color Color.black800
-      , margin $ MarginTop 4
-      , visibility $ boolToVisibility state.props.locationUnserviceable
-      ] <> FontStyle.h2 TypoGraphy
-    , textView $
-      [ text $ getString case state.props.locationDetectionFailed, Mb.isNothing state.data.locationSelected, state.props.locationUnserviceable of
-                            _ , _ , true -> WE_ARE_NOT_LIVE_IN_YOUR_AREA
-                            false, true, _ -> DETECTING_LOCATION
-                            true, true, _ -> UNABLE_TO_DETECT_YOUR_LOCATION
-                            _, false, _ -> YOUR_DETECTED_LOCATION_IS
-      , gravity CENTER
-      , color Color.black700
-      , margin $ MarginTop if state.props.locationUnserviceable then 4 else 24
-      ] <> FontStyle.paragraphText TypoGraphy
-    , textView $
-      [ text if Mb.isJust state.data.locationSelected then (Mb.fromMaybe "--" state.data.locationSelected) else "--"
-      , gravity CENTER
-      , color Color.black800
-      , margin $ MarginTop 4
-      , visibility $ boolToVisibility (not state.props.locationUnserviceable)
-      ] <> FontStyle.priceFont TypoGraphy
-    , textView $
-      [ text $ getString if Mb.isJust state.data.locationSelected then CHANGE_CITY else SELECT_CITY_STR
-      , gravity CENTER
-      , color Color.blue800
-      , margin $ MarginTop 16
-      , onClick push $ const $ ChangeStage SELECT_CITY
-      , visibility GONE -- Disable change city for now
-      ] <> FontStyle.tags TypoGraphy
-  ]
+  let locSelectedVal = if Mb.isJust state.data.locationSelected then Mb.fromMaybe "" state.data.locationSelected else ""
+      locSelected = 
+        case locSelectedVal of
+          "" -> ""
+          "Paris" -> "Odisha"
+          _ -> locSelectedVal
+
+  in linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity CENTER
+    , padding $ Padding 24 24 24 24
+    , margin $ Margin 16 16 16 16
+    , cornerRadius 12.0
+    , background Color.white900
+    , stroke $ "1," <> Color.grey900
+    ][  imageView
+        [ height $ V 220
+        , width $ V 220
+        , imageWithFallback $ fetchImage FF_ASSET $ getLocationMapImage state
+        ]
+      , textView $
+        [ text $ getString LOCATION_UNSERVICEABLE
+        , gravity CENTER
+        , color Color.black800
+        , margin $ MarginTop 4
+        , visibility $ boolToVisibility state.props.locationUnserviceable
+        ] <> FontStyle.h2 TypoGraphy
+      , textView $
+        [ text $ getString case state.props.locationDetectionFailed, Mb.isNothing state.data.locationSelected, state.props.locationUnserviceable of
+                              _ , _ , true -> WE_ARE_NOT_LIVE_IN_YOUR_AREA
+                              false, true, _ -> DETECTING_LOCATION
+                              true, true, _ -> UNABLE_TO_DETECT_YOUR_LOCATION
+                              _, false, _ -> YOUR_DETECTED_LOCATION_IS
+        , gravity CENTER
+        , color Color.black700
+        , margin $ MarginTop if state.props.locationUnserviceable then 4 else 24
+        ] <> FontStyle.paragraphText TypoGraphy
+      , textView $
+        [ text if Mb.isJust state.data.locationSelected then locSelected else "--"
+        , gravity CENTER
+        , color Color.black800
+        , margin $ MarginTop 4
+        , visibility $ boolToVisibility (not state.props.locationUnserviceable)
+        ] <> FontStyle.priceFont TypoGraphy
+      , textView $
+        [ text $ getString if Mb.isJust state.data.locationSelected then CHANGE_CITY else SELECT_CITY_STR
+        , gravity CENTER
+        , color Color.blue800
+        , margin $ MarginTop 16
+        , onClick push $ const $ ChangeStage SELECT_CITY
+        , visibility GONE -- Disable change city for now
+        ] <> FontStyle.tags TypoGraphy
+    ]
 
 currentLanguageView :: forall w. ChooseCityScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 currentLanguageView state push = 
