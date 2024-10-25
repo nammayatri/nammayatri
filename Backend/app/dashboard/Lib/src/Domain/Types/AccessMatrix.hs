@@ -284,6 +284,7 @@ data UserActionType
   | LIST_FRFS_STATION
   | ADD_FRFS_STATION
   | DELETE_FRFS_STATION
+  | PAN_AADHAAR_SELFIE_DETAILS_LIST
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionType)

@@ -422,6 +422,15 @@ apis:
         ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SECURITY_DEPOSIT_STATUS
       response:
         type: ([SecurityDepositDfStatusRes])
+  - GET:
+      endpoint: /panAadharSelfieDetailsList
+      mandatoryQuery:
+        docType: Text
+        driverId: Id Driver
+      auth:
+        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAN_AADHAAR_SELFIE_DETAILS_LIST
+      response:
+        type: ([PanAadharSelfieDetailsListResp])
 types:
   DriverListRes:
     - totalItems: Int # for backward compatibility
@@ -599,3 +608,14 @@ types:
     - driverFeeType : DriverFeeType
     - refundAmountSegregation : Maybe Text
     - derive: "'HideSecrets"
+  PanAadharSelfieDetailsListResp:
+    - transactionId : Text
+    - verificationStatus : Maybe Text
+    - failureReason : Maybe Text
+    - createdAt : UTCTime
+    - updatedAt : UTCTime
+    - imageId1 : Maybe Text
+    - imageId2 : Maybe Text
+
+
+
