@@ -463,7 +463,7 @@ let getAllCityConfig = () => {
       cityLong: 88.2649516,
       variantSubscriptionConfig: {
         enableVariantBasedSubscription: true,
-        variantList: ["CarCategory","BikeCategory","AutoCategory"],
+        variantList: ["CarCategory"],
         enableCabsSubscriptionView: true,
         staticViewPlans: []
       },
@@ -537,7 +537,7 @@ let getAllCityConfig = () => {
     Object.assign({}, baseCityConfig, {
       cityName: "Asansol",
       mapImage: "ys_ic_asansol_map",
-      cityCode: "std:0353",
+      cityCode: "std:0341",
       showSubscriptions: true,
       cityLat: 23.6889,
       cityLong: 86.9661,
