@@ -25,7 +25,6 @@ import Data.Array as DA
 import Data.Function.Uncurried (runFn3, runFn2)
 import DecodeUtil (getAnyFromWindow)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import Debug
 import Common.Types.App (LazyCheck(..))
 import Common.RemoteConfig.Types as Types
 
@@ -76,11 +75,11 @@ defaultCityRemoteConfig defaultValue =
 carouselConfigData :: String -> String -> String -> String -> String -> String -> Array RCCarousel
 carouselConfigData city configKey default userId categoryFilter variantFilter =
   let
-    remoteConfig = spy "carouselConfigData" $ fetchRemoteConfigString configKey
+    remoteConfig = fetchRemoteConfigString configKey
 
     parseVal = if not null remoteConfig then remoteConfig else fetchRemoteConfigString default
 
-    decodedConfg = decodeForeignObject (parseJSON (spy "carouselConfigData" parseVal)) $ defaultCityRemoteConfig []
+    decodedConfg = decodeForeignObject (parseJSON parseVal) $ defaultCityRemoteConfig []
   in
     filterWhiteListedConfigs userId $ filterCategoryBasedCarousel categoryFilter variantFilter $ getCityBasedConfig decodedConfg city
 

@@ -2141,7 +2141,7 @@ window.getMerchantConfig = function () {
       {
         "cityName" : "Odisha",
         "mapImage" : "ny_ic_location_map",
-        "cityCode": "std:001", //// check this from backend
+        "cityCode": "std:0011", //// check this from backend
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
         "advancedRidePopUpYoutubeLink" : "" ,
@@ -2216,7 +2216,7 @@ window.getMerchantConfig = function () {
       {
         "cityName" : "Bhubaneswar",
         "mapImage" : "ny_ic_location_map",
-        "cityCode": "std:001", //// check this from backend
+        "cityCode": "std:00112", //// check this from backend
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
         "advancedRidePopUpYoutubeLink" : "" ,
