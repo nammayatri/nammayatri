@@ -1215,6 +1215,7 @@ data DriverOnboardingError
   | UnsyncedImageNotFound
   | DocumentAlreadyInSync
   | NotValidatedUisngFrontendSDK
+  | InvalidDocumentType Text
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instance IsBaseError DriverOnboardingError where
@@ -1263,6 +1264,7 @@ instance IsBaseError DriverOnboardingError where
     UnsyncedImageNotFound -> Just "Unsynced image not found"
     DocumentAlreadyInSync -> Just "Document already in sync"
     NotValidatedUisngFrontendSDK -> Just "Document not validated using frontend SDK"
+    InvalidDocumentType docType -> Just $ "Document type send in the query is invalid or not supported!!!! query = " <> docType
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -1310,6 +1312,7 @@ instance IsHTTPError DriverOnboardingError where
     UnsyncedImageNotFound -> "UNSYNCED_IMAGE_NOT_FOUND"
     DocumentAlreadyInSync -> "DOCUMENT_ALREADY_IN_SYNC"
     NotValidatedUisngFrontendSDK -> "DOCUMENT_NOT_VALIDATED_USING_FRONTEND_SDK"
+    InvalidDocumentType _ -> "INAVLID_DOCUMENT_TYPE"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -1355,6 +1358,7 @@ instance IsHTTPError DriverOnboardingError where
     UnsyncedImageNotFound -> E400
     DocumentAlreadyInSync -> E400
     NotValidatedUisngFrontendSDK -> E400
+    InvalidDocumentType _ -> E400
 
 instance IsAPIError DriverOnboardingError
 

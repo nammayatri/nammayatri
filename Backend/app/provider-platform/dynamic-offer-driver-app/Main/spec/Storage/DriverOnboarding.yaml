@@ -779,3 +779,32 @@ BackgroundVerification:
       where: driverId
   extraOperations:
     - EXTRA_QUERY_FILE
+
+HyperVergeSdkLogs:
+  tableName: hyperverge_sdk_logs
+  fields:
+    txnId: Text
+    hvFlowId: Maybe Text
+    driverId: Id Person
+    docType: Maybe DocumentType
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    status: Maybe Text
+    callbackResponse: Maybe Text
+    failureReason: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+  constraints:
+    txnId: PrimaryKey
+    driverId: SecondaryKey
+  queries:
+    findAllByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+    findAllByDriverIdAndDocType:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId, docType]
+      orderBy:
+        field: createdAt
+        order: asc
