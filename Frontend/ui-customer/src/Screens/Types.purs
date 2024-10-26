@@ -43,7 +43,7 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import RemoteConfig as RC
-import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), MetroQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes, RideShareOptions, DeliveryDetails(..), PersonLocationAndInstruction(..), InitiatedAs(..), InstructionAndAddress(..), RideAPIEntity(..),RideBookingListRes, SearchRideType(..), GetBusRouteResp)
+import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), FrfsQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes, RideShareOptions, DeliveryDetails(..), PersonLocationAndInstruction(..), InitiatedAs(..), InstructionAndAddress(..), RideAPIEntity(..),RideBookingListRes, SearchRideType(..), FrfsGetRouteResp)
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent, ChatContacts)
 import Screens(ScreenName)
@@ -2028,7 +2028,7 @@ type MetroTicketDetailsScreenData = {
 , ticketPrice :: Number
 , noOfTickets :: Int
 , vehicleType :: String
-, route :: Maybe (Array GetBusRouteResp)
+, route :: Maybe (Array FrfsGetRouteResp)
 }
 
 type MetroTicketInfo = {
@@ -2201,10 +2201,10 @@ type SearchLocationScreenData =
     predictionSelectedFromHome :: LocationListItemState,
     quotesList :: Array QuotesList,
     rideDetails :: RideDetails,
-    routeSearchedList :: Array GetBusRouteResp,
+    routeSearchedList :: Array FrfsGetRouteResp,
     stopsSearchedList :: Array GetMetroStationResp,
     updatedStopsSearchedList :: Array GetMetroStationResp,
-    updatedRouteSearchedList :: Array GetBusRouteResp,
+    updatedRouteSearchedList :: Array FrfsGetRouteResp,
     ticketServiceType :: API.TicketServiceType,
     rideType :: RideType,
     searchRideType :: SearchRideType
@@ -2614,9 +2614,9 @@ type MetroTicketBookingScreenData = {
   , ticketPrice :: Number
   , bookingId :: String
   , quoteId :: String
-  , quoteResp :: Array MetroQuote
-  , routeSearchedList :: Array GetBusRouteResp
-  , routeList :: Array GetBusRouteResp
+  , quoteResp :: Array FrfsQuote
+  , routeSearchedList :: Array FrfsGetRouteResp
+  , routeList :: Array FrfsGetRouteResp
   , stopsSearchedList :: Array GetMetroStationResp
   , metroBookingConfigResp :: MetroBookingConfigRes
   , eventDiscountAmount :: Maybe Int
@@ -3014,7 +3014,8 @@ type BusTrackingScreenData = {
   destinationStation :: Maybe Station,
   bookingId :: String,
   previousStopsMap :: DM.Map String GetMetroStationResp,
-  vehicleTrackingData :: DM.Map String (Array Number)
+  vehicleTrackingData :: DM.Map String (Array Number),
+  rideType :: Maybe RideType
 }
 
 type BusTrackingScreenProps = {

@@ -32,6 +32,7 @@ import Common.Types.App as CT
 import Screens.Types (FareProductType(..)) as FPT
 import Components.MessagingView.Controller (dummyChatRecipient)
 import Data.Map as DM
+import Data.Maybe (Maybe(..))
 
 initData :: ST.BusTrackingScreenState
 initData =
@@ -47,6 +48,7 @@ initData =
         , bookingId: ""
         , vehicleTrackingData: DM.empty
         , previousStopsMap: DM.empty
+        , rideType : Nothing
         }
     , props:
         { showRouteDetailsTab: true

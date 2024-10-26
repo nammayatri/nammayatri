@@ -69,3 +69,4 @@ import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.View (parcelDeliveryScree
 import Screens.TicketBookingFlow.BusTicketBooking.View (busTicketBookingScreen) as UI
 import Screens.TicketBookingFlow.BusTrackingScreen.Handler (busTrackingScreen) as UI
 import Screens.AadhaarVerificationScreen.Handler (aadhaarVerificationScreen) as UI
+import Screens.SelectBusRoute.Handler (selectBusRouteScreen) as UI

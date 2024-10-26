@@ -55,7 +55,7 @@ data Action = BackPressed
             | IncrementTicket
             | DecrementTicket
             | MetroRouteMapAction
-            | GetMetroQuotesAction (Array MetroQuote)
+            | GetMetroQuotesAction (Array FrfsQuote)
             | SelectLocation ST.LocationActionId
             | ShowMetroBookingTimeError Boolean
             | InfoCardAC InfoCard.Action 
@@ -187,14 +187,14 @@ eval (GetSDKPollingAC createOrderRes) state = exit $ GotoPaymentPage createOrder
 
 eval _ state = update state
 
-updateQuotes :: (Array MetroQuote) -> ST.MetroTicketBookingScreenState -> Eval Action ScreenOutput ST.MetroTicketBookingScreenState
+updateQuotes :: (Array FrfsQuote) -> ST.MetroTicketBookingScreenState -> Eval Action ScreenOutput ST.MetroTicketBookingScreenState
 updateQuotes quotes state = do
-  let quoteData = find (\(MetroQuote item) -> (getTicketType item._type) == (state.data.ticketType)) quotes
+  let quoteData = find (\(FrfsQuote item) -> (getTicketType item._type) == (state.data.ticketType)) quotes
   case quoteData of
     Nothing -> do
       void $ pure $ toast $ getString NO_QOUTES_AVAILABLE
       continue state { props {currentStage  = if state.props.ticketServiceType == API.BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
-    Just (MetroQuote quoteData) -> do
+    Just (FrfsQuote quoteData) -> do
       let updatedState = state { data {discounts = quoteData.discounts, ticketPrice = quoteData.price, quoteId = quoteData.quoteId, quoteResp = quotes, eventDiscountAmount = DI.round <$> quoteData.eventDiscountAmount}, props { currentStage = ST.ConfirmMetroQuote}}
       updateAndExit updatedState $ Refresh updatedState
   where

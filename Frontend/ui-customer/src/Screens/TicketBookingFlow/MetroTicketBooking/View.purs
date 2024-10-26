@@ -115,13 +115,13 @@ getSDKPolling bookingId delayDuration state push action = do
           getSDKPolling bookingId delayDuration state push action
   else pure unit
 
-getQuotesPolling :: forall action. String-> Int -> Number -> ST.MetroTicketBookingScreenState -> (action -> Effect Unit) -> (Array MetroQuote -> action) -> Flow GlobalState Unit
+getQuotesPolling :: forall action. String-> Int -> Number -> ST.MetroTicketBookingScreenState -> (action -> Effect Unit) -> (Array FrfsQuote -> action) -> Flow GlobalState Unit
 getQuotesPolling searchId count delayDuration state push action = do
   if state.props.currentStage == GetMetroQuote && searchId /= "" then do
     if count > 0 then do
-      (getMetroQuotesResp) <- Remote.getMetroQuotes searchId
+      (getMetroQuotesResp) <- Remote.frfsQuotes searchId
       case getMetroQuotesResp of
-          Right (GetMetroQuotesRes resp) -> do
+          Right (FrfsQuotesRes resp) -> do
             if (not (null resp)) then do
                 doAff do liftEffect $ push $ action resp
             else do
@@ -193,9 +193,9 @@ routeListView state push =
     , stroke ("1," <> Color.borderColorLight)
     , cornerRadius 5.0
     , onAnimationEnd push $ const ListExpandAinmationEnd
-    ](DA.mapWithIndex (\index (GetBusRouteResp route) ->
+    ](DA.mapWithIndex (\index (FrfsGetRouteResp route) ->
         let
-          routeCode = fromMaybe "No Code" route.code
+          routeCode = route.code
           routeName = route.shortName
           routeTotalStops = fromMaybe 0 route.totalStops
         in
@@ -248,6 +248,7 @@ infoSelectioView state push city cityMetroConfig metroConfig =
       , width MATCH_PARENT    
       , padding $ PaddingBottom 75
       , scrollBarY false
+      , background Color.white900
       , visibility $ boolToVisibility $ (not state.props.showShimmer) && (state.props.currentStage /= ST.OfferSelection)
       ] [ linearLayout
           [ height WRAP_CONTENT
@@ -258,10 +259,7 @@ infoSelectioView state push city cityMetroConfig metroConfig =
           , linearLayout
                     [ height WRAP_CONTENT
                     , width MATCH_PARENT
-                    , margin (Margin 16 0 16 20)
                     , padding (Padding 20 20 20 20)
-                    , background Color.white900
-                    , cornerRadius 8.0
                     , orientation VERTICAL
                     ][ 
                       textView $ [
@@ -326,7 +324,7 @@ infoSelectioView state push city cityMetroConfig metroConfig =
                                   ]
                             , routeListView state push
                       ]
-                     , textView
+                    , textView
                             ([ width WRAP_CONTENT
                             , height WRAP_CONTENT
                             , text "Pickup and Destination Stop"
@@ -335,7 +333,7 @@ infoSelectioView state push city cityMetroConfig metroConfig =
                             , margin $ if state.props.ticketServiceType == BUS then  MarginTop 35 else MarginTop 5
                             ] <> FontStyle.body2 TypoGraphy)
                     , locationSelectionView push state
-                    , incrementDecrementView push state metroConfig isBusTicketService
+                    -- , incrementDecrementView push state metroConfig isBusTicketService
                     , limitReachedView push state
                     , offerInfoView push state
                     , roundTripCheckBox push state metroConfig
@@ -356,10 +354,11 @@ infoSelectioView state push city cityMetroConfig metroConfig =
                                 , onClick push $ const MetroRouteMapAction
                                 ] <> FontStyle.subHeading1 TypoGraphy
                             ]
+                    , termsAndConditionsView push cityMetroConfig true
+                    -- , paymentSummaryView push state -- TODO : make payment summary view - @ashishsingh101
                     ]
-                  , termsAndConditionsView push cityMetroConfig true
-          ]
-      ]
+    ]
+  ]
 
 bannerView :: forall w . (Action -> Effect Unit) ->  CityMetroConfig -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
 bannerView push cityMetroConfig state = 
@@ -426,13 +425,29 @@ selectionTab _text ticketType push state metoConfig =
             ) (const $ ChangeTicketTab ticketType metoConfig)
   ]
 
+paymentSummaryView :: (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> forall w . PrestoDOM (Effect Unit) w
+paymentSummaryView push state = 
+  linearLayout[
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , background Color.grey700
+  , cornerRadius 12.0
+  , padding $ Padding 16 20 16 20
+  , margin $ MarginTop 12
+  ][
+   ]
+
 termsAndConditionsView :: forall w . (Action -> Effect Unit) -> CityMetroConfig -> Boolean -> PrestoDOM (Effect Unit) w
 termsAndConditionsView push (CityMetroConfig cityMetroConfig) isMarginTop = 
   linearLayout[
     width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , margin $ Margin 16 12 16 15
+  , background Color.grey700
+  , cornerRadius 12.0
+  , padding $ Padding 12 12 12 12
+  , margin $ MarginTop 24
   ][ linearLayout
      [ height WRAP_CONTENT
      , width MATCH_PARENT

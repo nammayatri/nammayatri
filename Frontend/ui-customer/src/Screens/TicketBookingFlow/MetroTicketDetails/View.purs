@@ -46,7 +46,7 @@ import Presto.Core.Types.Language.Flow (doAff, Flow, delay)
 import Language.Strings
 import Language.Types
 import Data.String as DS
-import Services.API (MetroBookingSoftCancelStatusResp(..), MetroBookingHardCancelStatusResp(..), GetBusRouteResp(..))
+import Services.API (MetroBookingSoftCancelStatusResp(..), MetroBookingHardCancelStatusResp(..), FrfsGetRouteResp(..))
 import Screens.Types
 import Services.Backend as Remote
 import Data.Either (Either(..))
@@ -1084,7 +1084,7 @@ busRouteAndStopsView push state =
   [ textView $
     [ text $ "Route No: " <> maybe "" (\routes -> 
                                         case head routes of
-                                          Just (GetBusRouteResp route) -> fromMaybe "" route.code
+                                          Just (FrfsGetRouteResp route) -> route.code
                                           Nothing -> ""
                                       ) state.data.route
     , color Color.grey900

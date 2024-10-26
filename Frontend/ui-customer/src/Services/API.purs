@@ -3260,22 +3260,13 @@ instance standardEncodeStationType :: StandardEncode StationType
 
 data GetBusRoutesReq = GetBusRoutesReq String String String
 
-newtype GetBusRoutesResponse = GetBusRoutesResponse (Array GetBusRouteResp)
+newtype GetBusRoutesResponse = GetBusRoutesResponse (Array FrfsGetRouteResp)
 
-newtype GetBusRouteResp = GetBusRouteResp {
-  code :: Maybe String, --routecode
-  endPoint :: LatLong ,
-  longName :: String,
-  shortName :: String,
-  startPoint :: LatLong,
-  totalStops :: Maybe Int,
-  stations :: Maybe (Array GetMetroStationResp)
-}
 
 derive instance genericGetBusRoutesResponse :: Generic GetBusRoutesResponse _
 derive instance newtypeGetBusRoutesResponse :: Newtype GetBusRoutesResponse _
 instance showGetBusRoutesResponse :: Show GetBusRoutesResponse where show = genericShow
-instance eqGetBusRouteResp :: Eq GetBusRouteResp where eq = genericEq
+instance eqGetBusRouteResp :: Eq FrfsGetRouteResp where eq = genericEq
 instance decodeGetBusRoutesResponse :: Decode GetBusRoutesResponse where decode = defaultDecode
 
 instance makeGetBusRoutesReq :: RestEndpoint GetBusRoutesReq  where
@@ -3288,57 +3279,51 @@ instance standardGetBusRoutesReq :: StandardEncode GetBusRoutesReq where standar
 instance decodeGetBusRoutesReq   :: Decode GetBusRoutesReq where decode = defaultDecode
 instance encodeGetBusRoutesReq   :: Encode GetBusRoutesReq where encode = defaultEncode
 
-derive instance genericGetBusRouteResp :: Generic GetBusRouteResp _
-instance showGetBusRouteResp        :: Show GetBusRouteResp where show     = genericShow
-instance standardEncodeGetBusRouteResp :: StandardEncode GetBusRouteResp where standardEncode (GetBusRouteResp res) = standardEncode res
-instance decodeGetBusRouteResp         :: Decode GetBusRouteResp where decode = defaultDecode
-instance encodeGetBusRouteResp         :: Encode GetBusRouteResp where encode = defaultEncode
+--------------------------------------------------- frfsSearch ----------------------------------------------------
+data FrfsSearchRequest = FrfsSearchRequest FrfsSearchReq String
 
---------------------------------------------------- searchMetro ----------------------------------------------------
-data SearchMetroRequest = SearchMetroRequest SearchMetroReq String
-
-newtype SearchMetroReq = SearchMetroReq {
+newtype FrfsSearchReq = FrfsSearchReq {
   fromStationCode :: String,
   toStationCode :: String,
   quantity :: Int,
   routeCode :: Maybe String
 }
 
-newtype SearchMetroResp = SearchMetroResp {
+newtype FrfsSearchResp = FrfsSearchResp {
   searchId :: String
 }
 
-instance makeSearchMetroRequest :: RestEndpoint SearchMetroRequest where
-  makeRequest reqBody@(SearchMetroRequest rqBody vehicleType) headers = defaultMakeRequest POST (EP.searchMetro vehicleType) headers reqBody Nothing  
-  encodeRequest (SearchMetroRequest rqBody vehicleType) = standardEncode rqBody
+instance makeSearchMetroRequest :: RestEndpoint FrfsSearchRequest where
+  makeRequest reqBody@(FrfsSearchRequest rqBody vehicleType) headers = defaultMakeRequest POST (EP.frfsSearch vehicleType) headers reqBody Nothing  
+  encodeRequest (FrfsSearchRequest rqBody vehicleType) = standardEncode rqBody
 
 
 
-derive instance genericSearchMetroReq :: Generic SearchMetroReq _
-derive instance newtypeSearchMetroReq :: Newtype SearchMetroReq _
-instance standardEncodeSearchMetroReq :: StandardEncode SearchMetroReq where standardEncode (SearchMetroReq payload) = standardEncode payload
-instance showSearchMetroReq :: Show SearchMetroReq where show = genericShow
-instance decodeSearchMetroReq :: Decode SearchMetroReq where decode = defaultDecode
-instance encodeSearchMetroReq :: Encode SearchMetroReq where encode = defaultEncode
+derive instance genericSearchMetroReq :: Generic FrfsSearchReq _
+derive instance newtypeSearchMetroReq :: Newtype FrfsSearchReq _
+instance standardEncodeSearchMetroReq :: StandardEncode FrfsSearchReq where standardEncode (FrfsSearchReq payload) = standardEncode payload
+instance showSearchMetroReq :: Show FrfsSearchReq where show = genericShow
+instance decodeSearchMetroReq :: Decode FrfsSearchReq where decode = defaultDecode
+instance encodeSearchMetroReq :: Encode FrfsSearchReq where encode = defaultEncode
 
 
-derive instance genericSearchMetroResp :: Generic SearchMetroResp _
-derive instance newtypeSearchMetroResp :: Newtype SearchMetroResp _
-instance standardEncodeSearchMetroResp :: StandardEncode SearchMetroResp where standardEncode (SearchMetroResp id) = standardEncode id
-instance showSearchMetroResp :: Show SearchMetroResp where show = genericShow
-instance decodeSearchMetroResp :: Decode SearchMetroResp where decode = defaultDecode
-instance encodeSearchMetroResp :: Encode SearchMetroResp where encode = defaultEncode
+derive instance genericSearchMetroResp :: Generic FrfsSearchResp _
+derive instance newtypeSearchMetroResp :: Newtype FrfsSearchResp _
+instance standardEncodeSearchMetroResp :: StandardEncode FrfsSearchResp where standardEncode (FrfsSearchResp id) = standardEncode id
+instance showSearchMetroResp :: Show FrfsSearchResp where show = genericShow
+instance decodeSearchMetroResp :: Decode FrfsSearchResp where decode = defaultDecode
+instance encodeSearchMetroResp :: Encode FrfsSearchResp where encode = defaultEncode
 
-derive instance genericSearchMetroRequest :: Generic SearchMetroRequest _ 
-instance standardEncodeSearchMetroRequest :: StandardEncode SearchMetroRequest where standardEncode (SearchMetroRequest req id) = standardEncode req
-instance decodeSearchMetroRequest :: Decode  SearchMetroRequest where decode = defaultDecode
-instance encodeSearchMetroRequest :: Encode SearchMetroRequest where encode = defaultEncode
+derive instance genericSearchMetroRequest :: Generic FrfsSearchRequest _ 
+instance standardEncodeSearchMetroRequest :: StandardEncode FrfsSearchRequest where standardEncode (FrfsSearchRequest req id) = standardEncode req
+instance decodeSearchMetroRequest :: Decode  FrfsSearchRequest where decode = defaultDecode
+instance encodeSearchMetroRequest :: Encode FrfsSearchRequest where encode = defaultEncode
 
 --------------------------------------------------- getMetroQuote ----------------------------------------------------
 
-data GetMetroQuotesReq = GetMetroQuotesReq String
+data FrfsQuotesReq = FrfsQuotesReq String
 
-newtype GetMetroQuotesRes = GetMetroQuotesRes (Array MetroQuote)
+newtype FrfsQuotesRes = FrfsQuotesRes (Array FrfsQuote)
 
 newtype FRFSStationAPI = FRFSStationAPI {
   code :: String
@@ -3352,7 +3337,7 @@ newtype FRFSStationAPI = FRFSStationAPI {
   , color :: Maybe String
 }
 
-newtype MetroQuote = MetroQuote {
+newtype FrfsQuote = FrfsQuote {
   quoteId :: String
   , _type :: String--FRFSQuoteType
   , vehicleType :: String--FRFSVehicleType
@@ -3362,7 +3347,7 @@ newtype MetroQuote = MetroQuote {
   , validTill :: String
   , discountedTickets :: Maybe Int
   , eventDiscountAmount :: Maybe Number
-  , routeStations :: Maybe (Array GetBusRouteResp)
+  , routeStations :: Maybe (Array FrfsGetRouteResp)
   , discounts :: Array DiscountObj
 }
 
@@ -3370,25 +3355,25 @@ newtype MetroQuote = MetroQuote {
 -- FRFSQuoteType = SingleJourney | ReturnJourney | Pass
 -- FRFSVehicleType = Metro_ | Bus
 
-derive instance genericGetMetroQuotesReq :: Generic GetMetroQuotesReq _
-instance standardEncodeGetMetroQuotesReq :: StandardEncode GetMetroQuotesReq where standardEncode (GetMetroQuotesReq body) = standardEncode body
-instance showGetMetroQuotesReq :: Show GetMetroQuotesReq where show = genericShow
-instance decodeGetMetroQuotesReq :: Decode GetMetroQuotesReq where decode = defaultDecode
-instance encodeGetMetroQuotesReq  :: Encode GetMetroQuotesReq where encode = defaultEncode
+derive instance genericGetMetroQuotesReq :: Generic FrfsQuotesReq _
+instance standardEncodeGetMetroQuotesReq :: StandardEncode FrfsQuotesReq where standardEncode (FrfsQuotesReq body) = standardEncode body
+instance showGetMetroQuotesReq :: Show FrfsQuotesReq where show = genericShow
+instance decodeGetMetroQuotesReq :: Decode FrfsQuotesReq where decode = defaultDecode
+instance encodeGetMetroQuotesReq  :: Encode FrfsQuotesReq where encode = defaultEncode
 
-derive instance genericGetMetroQuotesRes :: Generic GetMetroQuotesRes _
-derive instance newtypeGetMetroQuotesRes :: Newtype GetMetroQuotesRes _
-instance standardEncodeGetMetroQuotesRes :: StandardEncode GetMetroQuotesRes where standardEncode (GetMetroQuotesRes body) = standardEncode body
-instance showGetMetroQuotesRes :: Show GetMetroQuotesRes where show = genericShow
-instance decodeGetMetroQuotesRes :: Decode GetMetroQuotesRes where decode = defaultDecode
-instance encodeGetMetroQuotesRes :: Encode GetMetroQuotesRes where encode = defaultEncode
+derive instance genericGetMetroQuotesRes :: Generic FrfsQuotesRes _
+derive instance newtypeGetMetroQuotesRes :: Newtype FrfsQuotesRes _
+instance standardEncodeGetMetroQuotesRes :: StandardEncode FrfsQuotesRes where standardEncode (FrfsQuotesRes body) = standardEncode body
+instance showGetMetroQuotesRes :: Show FrfsQuotesRes where show = genericShow
+instance decodeGetMetroQuotesRes :: Decode FrfsQuotesRes where decode = defaultDecode
+instance encodeGetMetroQuotesRes :: Encode FrfsQuotesRes where encode = defaultEncode
 
-derive instance genericMetroQuote :: Generic MetroQuote _
-derive instance newtypeMetroQuote :: Newtype MetroQuote _
-instance standardEncodeMetroQuote :: StandardEncode MetroQuote where standardEncode (MetroQuote body) = standardEncode body
-instance showMetroQuote :: Show MetroQuote where show = genericShow
-instance decodeMetroQuote :: Decode MetroQuote where decode = defaultDecode
-instance encodeMetroQuote :: Encode MetroQuote where encode = defaultEncode
+derive instance genericMetroQuote :: Generic FrfsQuote _
+derive instance newtypeMetroQuote :: Newtype FrfsQuote _
+instance standardEncodeMetroQuote :: StandardEncode FrfsQuote where standardEncode (FrfsQuote body) = standardEncode body
+instance showMetroQuote :: Show FrfsQuote where show = genericShow
+instance decodeMetroQuote :: Decode FrfsQuote where decode = defaultDecode
+instance encodeMetroQuote :: Encode FrfsQuote where encode = defaultEncode
 
 derive instance genericFRFSStationAPI :: Generic FRFSStationAPI _
 derive instance newtypeFRFSStationAPI :: Newtype FRFSStationAPI _
@@ -3397,8 +3382,8 @@ instance showFRFSStationAPI :: Show FRFSStationAPI where show = genericShow
 instance decodeFRFSStationAPI :: Decode FRFSStationAPI where decode = defaultDecode
 instance encodeFRFSStationAPI :: Encode FRFSStationAPI where encode = defaultEncode
 
-instance getMetroQuotesReq :: RestEndpoint GetMetroQuotesReq  where
- makeRequest reqBody@(GetMetroQuotesReq id) headers = defaultMakeRequest GET (EP.getMetroQuotes id) headers reqBody Nothing
+instance getMetroQuotesReq :: RestEndpoint FrfsQuotesReq  where
+ makeRequest reqBody@(FrfsQuotesReq id) headers = defaultMakeRequest GET (EP.frfsQuotes id) headers reqBody Nothing
  encodeRequest req = standardEncode req
 
  --------------------------------------------------- confirmMetroQuote ----------------------------------------------------
@@ -3422,7 +3407,7 @@ newtype MetroTicketBookingStatus = MetroTicketBookingStatus {
   , tickets :: Array FRFSTicketAPI
   , stations :: Array FRFSStationAPI
   , createdAt :: String
-  , routeStations :: Maybe (Array GetBusRouteResp)
+  , routeStations :: Maybe (Array FrfsGetRouteResp)
 }
 
 newtype FRFSBookingPaymentAPI = FRFSBookingPaymentAPI {
@@ -4067,7 +4052,7 @@ instance showSearchRideType :: Show SearchRideType where show = genericShow
 data BusAutoCompleteReq = BusAutoCompleteReq String String String (Maybe String)
 
 newtype AutoCompleteResp = AutoCompleteResp {
-    routes :: Array GetBusRouteResp,
+    routes :: Array FrfsGetRouteResp,
     stops :: Array GetMetroStationResp
 }
 
@@ -4255,7 +4240,8 @@ newtype FrfsGetRouteResp = FrfsGetRouteResp {
   shortName :: String,
   startPoint :: LatLong,
   totalStops :: Maybe Int,
-  waypoints :: Maybe (Array LatLong)
+  waypoints :: Maybe (Array LatLong),
+  stations :: Maybe (Array GetMetroStationResp)
 }
 
 derive instance genericFrfsGetRouteReq :: Generic FrfsGetRouteReq _
@@ -4304,7 +4290,7 @@ newtype MetroTicketBookingStatusV2 = MetroTicketBookingStatusV2 {
   , tickets :: Array FRFSTicketAPI
   , stations :: Array FRFSStationAPI
   , createdAt :: String
-  , routeStations :: Maybe (Array GetBusRouteResp)
+  , routeStations :: Maybe (Array FrfsGetRouteResp)
   , discounts :: Maybe (Array DiscountObj)
 }
 
