@@ -783,7 +783,7 @@ allCitiesDefCityConfig =
       domain : "https://nammayatri.in",
       customerAppId : "in.juspay.nammayatri"
     },
-    appLogo : "",
+    appLogo : "ic_namma_yatri_logo",
     dashboardUrl : "",
     appLogoLight : "",
     enableAcViews : false,
