@@ -20,7 +20,7 @@ jobs:
       # Compress Lottie JSON files directly in YAML using shell commands
       - name: Compress Lottie JSON Files
         run: |
-          find . -path './raw/*.json' | while read -r json_file; do
+          while read -r json_file; do
             jq -c . "$json_file" > tmp.json && mv tmp.json "$json_file"
             echo "Compressed: $json_file"
           done
