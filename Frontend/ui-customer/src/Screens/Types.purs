@@ -3027,13 +3027,6 @@ type BusTrackingScreenProps = {
 
 type AlertWidgetConfig = {}
 
-
-data OfferCardType = Ladki | Buddha
-
-derive instance genericOfferCardType :: Generic OfferCardType _
-instance showOfferCardType :: Show OfferCardType where show = genericShow
-instance eqOfferCardType :: Eq OfferCardType where eq = genericEq
-
 --------------------------------------------------------------- AadhaarVerificationScreenState -----------------------------------------------------------------------------
 
 type AadhaarVerificationScreenState = {

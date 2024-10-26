@@ -4547,9 +4547,13 @@ metroTicketBookingFlow = do
     GO_TO_AADHAAR_VERIFICATION_SCREEN state offerType -> do
       (GetProfileRes profileResponse) <- Remote.getProfileBT ""
       if (profileResponse.aadhaarVerified == Just true) then do
-        metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 state.data.quoteId $ API.ConfirmMetroQuoteReqV2Body {discounts: fromMaybe [] state.data.applyDiscounts}
+        let appliedDiscountItem = Just $ [ API.DiscountItem
+                { code: offerType
+                , quantity: 1
+                } ]
+        metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 state.data.quoteId $ API.ConfirmMetroQuoteReqV2Body {discounts: fromMaybe [] appliedDiscountItem}
         updateMetroBookingQuoteInfo metroBookingStatus
-        modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { props { currentStage = GetMetroQuote} })
+        modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data {applyDiscounts = appliedDiscountItem}, props { currentStage = GetMetroQuote} })
         metroTicketBookingFlow
       else do
         modifyScreenState $ AadhaarVerificationScreenType (\_ -> AadhaarVerificationScreenData.initData)
@@ -7020,16 +7024,13 @@ aadhaarVerificationFlow offerType = do
           let _ = spy "ahaksdfdf" resp
           if resp.code == "1002"
             then do
-              metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 currentGlobalState.metroTicketBookingScreen.data.quoteId $ API.ConfirmMetroQuoteReqV2Body
-                { discounts: 
-                  [ API.DiscountItem
-                    { code: offerType
-                    , quantity: 1
-                    }
-                  ]
-                }
+              let appliedDiscountItem = Just $ [ API.DiscountItem
+                { code: offerType
+                , quantity: 1
+                } ]
+              metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 currentGlobalState.metroTicketBookingScreen.data.quoteId $ API.ConfirmMetroQuoteReqV2Body $ {discounts: fromMaybe [] appliedDiscountItem}
               updateMetroBookingQuoteInfo metroBookingStatus
-              modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { props { currentStage = GetMetroQuote} })
+              modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data {applyDiscounts = appliedDiscountItem}, props { currentStage = GetMetroQuote} })
               metroTicketBookingFlow
             else do
               void $ pure $ toast "Error Occured please try again later"

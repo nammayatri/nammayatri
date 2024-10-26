@@ -96,7 +96,7 @@ eval (ApplyOffer offerType) state =
               } ] 
           }
         }
-  in updateAndExit updatedState $ AadhaarVerificationSO updatedState offerType
+  in exit $ AadhaarVerificationSO state offerType
 
 eval (MetroBookingConfigAction resp) state = do
   let updatedState = state { data {metroBookingConfigResp = resp}, props { showShimmer = false }}
@@ -121,12 +121,12 @@ eval MyMetroTicketAction state = exit $ MyMetroTicketScreen
 
 eval IncrementTicket state = do
   if state.data.ticketCount < 6
-    then continue state { data {ticketCount = state.data.ticketCount + 1 }, props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
+    then continue state { data {ticketCount = state.data.ticketCount + 1, applyDiscounts = Nothing, discounts = []}, props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
     else continue state
 
 eval DecrementTicket state = do
   if state.data.ticketCount > 1
-    then continue state { data {ticketCount = state.data.ticketCount - 1 }, props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
+    then continue state { data {ticketCount = state.data.ticketCount - 1, applyDiscounts = Nothing, discounts = []}, props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
     else continue state
 
 eval MetroRouteMapAction state = exit $ GoToMetroRouteMap
