@@ -33,6 +33,6 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add raw/**/*.json
+          git add .
           git commit -m "[github-bot] Compressed Lottie JSON files" || echo "No changes to commit"
           git push
