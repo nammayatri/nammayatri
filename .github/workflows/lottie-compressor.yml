@@ -17,6 +17,9 @@ jobs:
       - name: Install jq
         run: sudo apt-get install jq
 
+      - name: Run pwd
+        run: pwd
+
       # Compress Lottie JSON files directly in YAML using shell commands
       - name: Compress Lottie JSON Files
         run: |
