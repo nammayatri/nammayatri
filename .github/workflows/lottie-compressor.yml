@@ -1,8 +1,8 @@
 name: Compress Lottie Files
 on:
   push:
-    paths:
-      - 'raw/**/*.json'  # Trigger on changes to raw/*.json files
+  #   paths:
+  #     - 'raw/**/*.json'  # Trigger on changes to raw/*.json files
 
 jobs:
   compress-lottie:
