@@ -28,6 +28,8 @@ import ModifyScreenState (modifyScreenState)
 import LocalStorage.Cache (setInCache)
 import Data.Function.Uncurried (runFn2)
 import Storage (KeyStore(..))
+import Screens.Types as ST
+import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
 
 metroTicketBookingScreen :: FlowBT String METRO_TICKET_SCREEN_OUTPUT
 metroTicketBookingScreen = do
@@ -59,7 +61,8 @@ metroTicketBookingScreen = do
             App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_PAYMENT_PAGE orderResp bookingId)
         GotoPreviosStopScreen  updatedState-> 
             App.BackT $ App.BackPoint <$> (pure $ GO_TO_PRIVIOUS_SEARCH_SCREEN updatedState)
-        GotoSearchScreen updatedState->
+        GotoSearchScreen updatedState -> do
+            void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> MetroTicketBookingScreenData.initData)
             App.BackT $ App.BackPoint <$> (pure $ GO_TO_SEARCH_SCREEN updatedState)
         GoToBusSearchScreen state -> 
             App.BackT $ App.BackPoint <$> (pure $ GO_TO_BUS_SEARCH_SCREEN state)

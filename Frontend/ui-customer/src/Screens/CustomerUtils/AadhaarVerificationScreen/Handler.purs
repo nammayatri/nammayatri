@@ -49,4 +49,4 @@ aadhaarVerificationScreen = do
     UnVerifiedAadhaarData updatedState -> do
       modifyScreenState $ AadhaarVerificationScreenType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ SEND_UNVERIFIED_AADHAAR_DATA updatedState)
-    GoBack -> App.BackT $ pure App.GoBack
+    GoBack -> App.BackT $ App.NoBack <$> (pure $ GO_TO_TICKET_BOOKING_FROM_AADHAAR)

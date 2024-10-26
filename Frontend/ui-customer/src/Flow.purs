@@ -6871,6 +6871,7 @@ busTicketBookingFlow = do
      let 
        currentCity = getValueToLocalStore CUSTOMER_LOCATION
        searchLocationState = currentState.searchLocationScreen
+     modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> MetroTicketBookingScreenData.initData)
      (AutoCompleteResp routeStopresponse) <- Remote.busAutoCompleteBT "BUS" currentCity "0.0,0.0" Nothing --(show currentState.homeScreen.props.sourceLat <> "," <> show currentState.homeScreen.props.sourceLong) (Nothing)
      let rideType = if null routeStopresponse.stops then ROUTES else STOP
          sortedStops = sortStops routeStopresponse.stops
@@ -6951,7 +6952,7 @@ busTicketBookingFlow = do
                                             Just (FRFSStationAPI route) -> route.code
                                             Nothing -> ""
                             _ -> ""
-      modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { props { ticketServiceType = API.BUS, currentStage  = ST.BusTicketSelection , isEmptyRoute = routeCode , srcLat = currentState.homeScreen.props.sourceLat , srcLong = currentState.homeScreen.props.sourceLong , isButtonActive = true}, data {ticketCount = 1 , srcLoc = sourceName , destLoc = destinationName,srcCode = srcCode, destCode = destCode} })
+      modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> MetroTicketBookingScreenData.initData { props { ticketServiceType = API.BUS, currentStage  = ST.BusTicketSelection , isEmptyRoute = routeCode , srcLat = currentState.homeScreen.props.sourceLat , srcLong = currentState.homeScreen.props.sourceLong , isButtonActive = true}, data {ticketCount = 1 , srcLoc = sourceName , destLoc = destinationName,srcCode = srcCode, destCode = destCode} })
       metroTicketBookingFlow
     _ -> pure unit
     
@@ -7077,6 +7078,7 @@ aadhaarVerificationFlow offerType = do
     --       void $ lift $ lift $ toggleLoader false
     --       void $ pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
     --       aadhaarVerificationFlow
+    GO_TO_TICKET_BOOKING_FROM_AADHAAR -> metroTicketBookingFlow
     _ -> aadhaarVerificationFlow offerType
 
 

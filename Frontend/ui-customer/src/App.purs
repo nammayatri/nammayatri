@@ -411,6 +411,7 @@ data AADHAAR_VERIFICATION_SCREEN_OUTPUT = ENTER_AADHAAR_OTP AadhaarVerificationS
   | SEND_UNVERIFIED_AADHAAR_DATA AadhaarVerificationScreenState
   | GO_TO_HOME_FROM_AADHAAR
   | LOGOUT_FROM_AADHAAR
+  | GO_TO_TICKET_BOOKING_FROM_AADHAAR
 
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)

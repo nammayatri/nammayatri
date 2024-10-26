@@ -102,7 +102,14 @@ eval (MetroBookingConfigAction resp) state = do
   let updatedState = state { data {metroBookingConfigResp = resp}, props { showShimmer = false }}
   continue updatedState
 
-eval BackPressed state =  if state.props.ticketServiceType ==API.BUS then exit $ GotoSearchScreen state else exit $ GoToHome
+eval BackPressed state =  
+  if state.props.ticketServiceType ==API.BUS 
+    then 
+      case state.props.currentStage of
+        ST.OfferSelection -> continue state { props { currentStage = ST.ConfirmMetroQuote }}
+        _ -> exit $ GotoSearchScreen state 
+    else exit $ GoToHome
+
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
     if state.props.ticketServiceType == API.BUS && state.props.isEmptyRoute == "" then do
      void $ pure $ toast $ "Please Select Route"
