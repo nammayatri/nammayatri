@@ -210,7 +210,7 @@ drawDriverRoute route resp state = do
     --                         else if index == ln - 1  then markers.destMarker
     --                         else "ny_ic_stop_black"
     -- markers = HU.normalRoute ""
-  void $ delay $ Milliseconds 1000.0
+  void $ delay $ Milliseconds 500.0
   void $ pure $ JB.removeAllPolylines ""
   void $ pure $ JB.removeAllMarkers ""
   EHC.liftFlow $ JB.drawRoute [ routeConfig ] (EHC.getNewIDWithTag "BusTrackingScreenMap")

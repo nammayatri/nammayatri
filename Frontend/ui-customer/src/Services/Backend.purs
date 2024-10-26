@@ -1313,10 +1313,10 @@ frfsSearch vehicleType requestBody = do
     headers <- getHeaders "" false
     withAPIResult (EP.frfsSearch vehicleType) identity $ callAPI headers (FrfsSearchRequest requestBody vehicleType)
 
-busAutoCompleteBT :: String -> String -> String -> Maybe String -> FlowBT String AutoCompleteResp
-busAutoCompleteBT vehicleType city location input = do 
+busAutoCompleteBT :: String -> String -> String -> Maybe String -> String -> Maybe String -> FlowBT String AutoCompleteResp
+busAutoCompleteBT vehicleType city location input limit offset = do 
     headers <- getHeaders' "" false
-    withAPIResultBT (EP.busAutoComplete vehicleType city location input) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ BusAutoCompleteReq vehicleType city location input)
+    withAPIResultBT (EP.busAutoComplete vehicleType city location input limit offset) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ BusAutoCompleteReq vehicleType city location input limit offset)
     where
     errorHandler errorPayload = do
       BackT $ pure GoBack 

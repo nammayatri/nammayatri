@@ -2322,7 +2322,7 @@ homeScreenFlow = do
      let 
        currentCity = getValueToLocalStore CUSTOMER_LOCATION
        searchLocationState = currentState.searchLocationScreen
-     (AutoCompleteResp routeStopresponse) <- Remote.busAutoCompleteBT (show state.props.ticketServiceType) currentCity (show state.props.sourceLat <> "," <> show state.props.sourceLong) Nothing
+     (AutoCompleteResp routeStopresponse) <- Remote.busAutoCompleteBT (show state.props.ticketServiceType) currentCity (show state.props.sourceLat <> "," <> show state.props.sourceLong) Nothing "10" Nothing
      if null searchLocationState.data.routeSearchedList then do
         modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
         modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false}, data { ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = routeStopresponse.stops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = routeStopresponse.stops } })
@@ -5156,7 +5156,7 @@ searchLocationFlow = do
     SearchLocationController.GoToRouteBusSearch state input -> do
      let 
        currentCity = getValueToLocalStore CUSTOMER_LOCATION
-     (AutoCompleteResp routeStopresponse) <- Remote.busAutoCompleteBT (show state.data.ticketServiceType) currentCity (show globalState.homeScreen.props.sourceLat <> "," <> show globalState.homeScreen.props.sourceLong) (Just input)
+     (AutoCompleteResp routeStopresponse) <- Remote.busAutoCompleteBT (show state.data.ticketServiceType) currentCity (show globalState.homeScreen.props.sourceLat <> "," <> show globalState.homeScreen.props.sourceLong) (Just input) "10" Nothing
      if null routeStopresponse.routes && null routeStopresponse.stops then do
       -- modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
       modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
@@ -5667,7 +5667,7 @@ predictionClickedFlow prediction state = do
         _ = spy "debug bus predictionClickedFlow placeName" placeName
         currentCity = getValueToLocalStore CUSTOMER_LOCATION
         
-    (AutoCompleteResp busStopResponse) <- Remote.busAutoCompleteBT (show state.data.ticketServiceType) currentCity (show placeLat <> "," <> show placeLon) (Nothing)
+    (AutoCompleteResp busStopResponse) <- Remote.busAutoCompleteBT (show state.data.ticketServiceType) currentCity (show placeLat <> "," <> show placeLon) (Nothing) "10" Nothing
     pure $ setText (getNewIDWithTag (show SearchLocPickup)) ""
     if (null busStopResponse.stops) then do
       void $ pure $ hideKeyboardOnNavigation true
@@ -6890,7 +6890,7 @@ busTicketBookingFlow = do
        currentCity = getValueToLocalStore CUSTOMER_LOCATION
        searchLocationState = currentState.searchLocationScreen
      modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> MetroTicketBookingScreenData.initData)
-     (AutoCompleteResp routeStopresponse) <- Remote.busAutoCompleteBT "BUS" currentCity "0.0,0.0" Nothing --(show currentState.homeScreen.props.sourceLat <> "," <> show currentState.homeScreen.props.sourceLong) (Nothing)
+     (AutoCompleteResp routeStopresponse) <- Remote.busAutoCompleteBT "BUS" currentCity "0.0,0.0" Nothing "10" Nothing --(show currentState.homeScreen.props.sourceLat <> "," <> show currentState.homeScreen.props.sourceLong) (Nothing)
      let rideType = if null routeStopresponse.stops then ROUTES else STOP
          sortedStops = sortStops routeStopresponse.stops
      modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)

@@ -458,11 +458,10 @@ ticketDetailsView push state =
       , padding $ if isBusTicketBooking state then Padding 24 20 24 20 else Padding 16 30 16 16
       , margin $ MarginHorizontal 16 16 
       , cornerRadii $ Corners 15.0 true true true true
-      ][
+      ] $ [] <>
         if isBusTicketBooking state 
-          then busRouteAndStopsView push state
-          else originAndDestinationView push state VERTICAL (FontStyle.body3 TypoGraphy) (FontStyle.body1 TypoGraphy) LEFT
-      ]
+          then mapWithIndex (\_ _ -> busRouteAndStopsView push state) $ fromMaybe [] state.data.route
+          else [originAndDestinationView push state VERTICAL (FontStyle.body3 TypoGraphy) (FontStyle.body1 TypoGraphy) LEFT]
     ]
 
 statusPillView :: ST.MetroTicketDetailsScreenState -> Config.StatusPillConfig -> forall w . PrestoDOM (Effect Unit) w
@@ -498,7 +497,7 @@ metroHeaderView push state headerFontStyle detailVisibility =
         width $ V 41
       , height $ V 41
       , margin $ MarginTop $ if isBusTicketBooking state then 4 else 0
-      , imageWithFallback $ fetchImage FF_COMMON_ASSET cityConfig.logoImage
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if isBusTicketBooking state then "ny_ic_bus_icon_light_blue" else cityConfig.logoImage
       ]
     , linearLayout [
         width WRAP_CONTENT

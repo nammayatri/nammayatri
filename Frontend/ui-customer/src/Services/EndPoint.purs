@@ -316,9 +316,10 @@ multiChat _ = (getBaseUrl "61") <> "/triggerFCM/message"
 getDeliveryImage :: String -> String
 getDeliveryImage rideId = (getBaseUrl "61") <> "/ride/" <> rideId <> "/deliveryImage"
 
-busAutoComplete :: String -> String -> String -> Maybe String -> String
-busAutoComplete vehicleType city location input = 
-  (getBaseUrl "48") <> "/frfs/autocomplete?vehicleType=\"" <> vehicleType <> "\"&city=" <> city <> "&location=" <> location <>
+busAutoComplete :: String -> String -> String -> Maybe String -> String -> Maybe String -> String
+busAutoComplete vehicleType city location input limit offset = 
+  (getBaseUrl "48") <> "/frfs/autocomplete?vehicleType=\"" <> vehicleType <> "\"&city=" <> city <> "&location=" <> location <> 
+  "&limit=" <> limit <> "&offset=" <> (fromMaybe "0" offset) <>
   maybe "" (\i -> "&input=" <> i) input
 
 trackRouteBus :: String -> String 

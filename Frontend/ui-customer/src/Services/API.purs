@@ -3413,6 +3413,7 @@ newtype MetroTicketBookingStatus = MetroTicketBookingStatus {
 newtype FRFSBookingPaymentAPI = FRFSBookingPaymentAPI {
     status :: String
   , paymentOrder :: Maybe CreateOrderRes
+  , transactionId :: Maybe String
 }
 
 newtype FRFSTicketAPI = FRFSTicketAPI {
@@ -3596,7 +3597,8 @@ data MetroBookingHardCancelStatusReq = MetroBookingHardCancelStatusReq String
 
 newtype MetroBookingHardCancelStatusResp = MetroBookingHardCancelStatusResp 
   { cancellationCharges :: Maybe Number,
-    refundAmount :: Maybe Number
+    refundAmount :: Maybe Number,
+    payment :: Maybe FRFSBookingPaymentAPI
   }
 
 derive instance genericMetroBookingHardCancelStatusResp :: Generic MetroBookingHardCancelStatusResp _
@@ -4049,7 +4051,7 @@ instance showSearchRideType :: Show SearchRideType where show = genericShow
 
 ------------------------------------------------- AutoComplete API Types --------------------------------------------
 
-data BusAutoCompleteReq = BusAutoCompleteReq String String String (Maybe String)
+data BusAutoCompleteReq = BusAutoCompleteReq String String String (Maybe String) String (Maybe String)
 
 newtype AutoCompleteResp = AutoCompleteResp {
     routes :: Array FrfsGetRouteResp,
@@ -4058,7 +4060,7 @@ newtype AutoCompleteResp = AutoCompleteResp {
 
 derive instance genericBusAutoCompleteReq :: Generic BusAutoCompleteReq _
 instance showBusAutoCompleteReq    :: Show BusAutoCompleteReq where show     = genericShow
-instance standardBusAutoCompleteReq :: StandardEncode BusAutoCompleteReq where standardEncode (BusAutoCompleteReq _ _ _ _) = standardEncode {}
+instance standardBusAutoCompleteReq :: StandardEncode BusAutoCompleteReq where standardEncode (BusAutoCompleteReq _ _ _ _ _ _) = standardEncode {}
 instance decodeBusAutoCompleteReq   :: Decode BusAutoCompleteReq where decode = defaultDecode
 instance encodeBusAutoCompleteReq  :: Encode BusAutoCompleteReq where encode = defaultEncode
 
@@ -4070,7 +4072,7 @@ instance decodeAutoCompleteResp :: Decode AutoCompleteResp where decode = defaul
 instance encodeAutoCompleteResp :: Encode AutoCompleteResp where encode = defaultEncode
 
 instance makeAutoCompleteReq :: RestEndpoint BusAutoCompleteReq where
-    makeRequest reqBody@(BusAutoCompleteReq vehicleType city location input) headers = defaultMakeRequest GET (EP.busAutoComplete vehicleType city location input) headers reqBody Nothing
+    makeRequest reqBody@(BusAutoCompleteReq vehicleType city location input limit offset) headers = defaultMakeRequest GET (EP.busAutoComplete vehicleType city location input limit offset) headers reqBody Nothing
     encodeRequest = standardEncode
 
 
