@@ -87,5 +87,5 @@ transformStationsForMap stations (API.Route route) srcCode destCode = do
   --     lng : fromMaybe 0.0 (stop <#> _.lon)
   --   }
 
-getStationsFromBusRoute ::  API.GetBusRouteResp -> Array API.GetMetroStationResp 
-getStationsFromBusRoute (API.GetBusRouteResp stop) = fromMaybe [] stop.stations
+getStationsFromBusRoute ::  API.FrfsGetRouteResp -> Array API.GetMetroStationResp 
+getStationsFromBusRoute (API.FrfsGetRouteResp stop) = fromMaybe [] stop.stations

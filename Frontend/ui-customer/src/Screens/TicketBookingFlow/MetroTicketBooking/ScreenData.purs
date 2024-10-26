@@ -17,7 +17,7 @@ module Screens.TicketBookingFlow.MetroTicketBooking.ScreenData where
 import Prelude
 import Screens.Types as ST
 import ConfigProvider
-import Services.API (MetroBookingConfigRes(..), GetBusRouteResp(..))
+import Services.API (MetroBookingConfigRes(..), FrfsGetRouteResp(..))
 import Data.Maybe as Mb
 import Data.Array 
 import Services.API as API

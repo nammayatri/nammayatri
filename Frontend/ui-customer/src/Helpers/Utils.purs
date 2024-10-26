@@ -78,7 +78,7 @@ import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations,Stage)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo, BookingTime, VehicleViewType(..), FareProductType(..))
-import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..), MetroBookingConfigRes)
+import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..), MetroBookingConfigRes, FrfsQuote(..), FrfsGetRouteResp(..))
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
@@ -1227,3 +1227,12 @@ isDeliveryInitiator maybeTags =
 foreign import clearTimer :: String -> Unit
 foreign import startTimer :: forall action. Int -> Boolean -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import decodeErrorMessage :: String -> String
+
+getFirstRoute :: FrfsQuote -> Maybe FrfsGetRouteResp
+getFirstRoute (FrfsQuote quote) =
+  case quote.routeStations of
+    Just routes ->
+      case routes !! 0 of
+        Just route -> Just route
+        Nothing -> Nothing
+    Nothing -> Nothing

@@ -243,13 +243,14 @@ followRide _ = (getBaseUrl "47") <> "/follow/ride"
 getMetroStations :: String -> String -> String -> String -> String -> String
 getMetroStations vehicleType city routeCode endStationCode location = (getBaseUrl "47") <> "/frfs/stations?vehicleType=\"" <> vehicleType <> "\"&city=" <> city <> (if (vehicleType == "BUS" && routeCode /= "") then "&routeCode=" <> routeCode else "") <> (if (vehicleType == "BUS" && endStationCode/= "") then "&endStationCode=" <> endStationCode else "")<> "&location=" <> location
 
-searchMetro :: String -> String
-searchMetro vehicleType = (getBaseUrl "48") <> "/frfs/search?vehicleType=\"" <> vehicleType <> "\""
+frfsSearch :: String -> String
+frfsSearch vehicleType = (getBaseUrl "48") <> "/frfs/search?vehicleType=\"" <> vehicleType <> "\""
+
 getBusRoutes :: String -> String -> String -> String
 getBusRoutes city startStationCode endStationCode = (getBaseUrl "47") <> "/frfs/routes?vehicleType=\"BUS\"" <> "&city=" <> city <> "&startStationCode=" <> startStationCode <> "&endStationCode=" <> endStationCode
 
-getMetroQuotes :: String -> String
-getMetroQuotes searchId = (getBaseUrl "49") <> "/frfs/search/" <> searchId <> "/quote"
+frfsQuotes :: String -> String
+frfsQuotes searchId = (getBaseUrl "49") <> "/frfs/search/" <> searchId <> "/quote"
 
 confirmMetroQuote :: String -> String
 confirmMetroQuote quoteId = (getBaseUrl "50") <> "/frfs/quote/" <> quoteId <> "/confirm"

@@ -1299,13 +1299,19 @@ getBusRoutesBT city startStationCode endStationCode= do
     where
     errorHandler errorPayload = do
       BackT $ pure GoBack
-searchMetroBT :: String -> SearchMetroReq -> FlowBT String SearchMetroResp
-searchMetroBT vehicleType requestBody = do
+
+frfsSearchBT :: String -> FrfsSearchReq -> FlowBT String FrfsSearchResp
+frfsSearchBT vehicleType requestBody = do
     headers <- getHeaders' "" false
-    withAPIResultBT (EP.searchMetro vehicleType) (\x -> x) errorHandler (lift $ lift $ callAPI headers (SearchMetroRequest requestBody vehicleType))
+    withAPIResultBT (EP.frfsSearch vehicleType) (\x -> x) errorHandler (lift $ lift $ callAPI headers (FrfsSearchRequest requestBody vehicleType))
     where
     errorHandler errorPayload = do
-      BackT $ pure GoBack 
+      BackT $ pure GoBack
+
+frfsSearch :: String -> FrfsSearchReq -> Flow GlobalState (Either ErrorResponse FrfsSearchResp)
+frfsSearch vehicleType requestBody = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.frfsSearch vehicleType) identity $ callAPI headers (FrfsSearchRequest requestBody vehicleType)
 
 busAutoCompleteBT :: String -> String -> String -> Maybe String -> FlowBT String AutoCompleteResp
 busAutoCompleteBT vehicleType city location input = do 
@@ -1316,26 +1322,26 @@ busAutoCompleteBT vehicleType city location input = do
       BackT $ pure GoBack 
 
 
-makeSearchMetroReq :: String -> String -> Int -> Maybe String-> SearchMetroReq
-makeSearchMetroReq srcCode destCode count routeCode = SearchMetroReq {
+makeSearchMetroReq :: String -> String -> Int -> Maybe String-> FrfsSearchReq
+makeSearchMetroReq srcCode destCode count routeCode = FrfsSearchReq {
     "fromStationCode" : srcCode,
     "toStationCode" : destCode,
     "quantity" : count,
     "routeCode" : routeCode
     }
 
-getMetroQuotesBT :: String -> FlowBT String GetMetroQuotesRes
-getMetroQuotesBT searchId = do
+frfsQuotesBT :: String -> FlowBT String FrfsQuotesRes
+frfsQuotesBT searchId = do
         headers <- getHeaders' "" false
-        withAPIResultBT (EP.getMetroQuotes searchId) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetMetroQuotesReq searchId))
+        withAPIResultBT (EP.frfsQuotes searchId) (\x → x) errorHandler (lift $ lift $ callAPI headers (FrfsQuotesReq searchId))
         where
           errorHandler _ = do
                 BackT $ pure GoBack
 
-getMetroQuotes :: String -> Flow GlobalState (Either ErrorResponse GetMetroQuotesRes)
-getMetroQuotes searchId = do
+frfsQuotes :: String -> Flow GlobalState (Either ErrorResponse FrfsQuotesRes)
+frfsQuotes searchId = do
   headers <- getHeaders "" false
-  withAPIResult (EP.getMetroQuotes searchId) unwrapResponse $ callAPI headers (GetMetroQuotesReq searchId)
+  withAPIResult (EP.frfsQuotes searchId) unwrapResponse $ callAPI headers (FrfsQuotesReq searchId)
   where
   unwrapResponse x = x
  
