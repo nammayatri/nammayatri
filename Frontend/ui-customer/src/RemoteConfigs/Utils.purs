@@ -4,7 +4,7 @@ import Prelude
 import DecodeUtil (decodeForeignObject, parseJSON)
 import Foreign (Foreign)
 import Foreign.Index (readProp)
-import Common.RemoteConfig (fetchRemoteConfigString, getCityBasedConfig, defaultCityRemoteConfig, BundleLottieConfig, RemoteAC(..))
+import Common.RemoteConfig (fetchRemoteConfigString, getCityBasedConfig, getAppBasedConfig, defaultCityRemoteConfig, defaultAppRemoteConfig, BundleLottieConfig, RemoteAC(..))
 import Data.Maybe (Maybe(..), maybe)
 import Foreign.Class (class Decode, class Encode, decode, encode)
 import Data.Generic.Rep (class Generic)
@@ -16,6 +16,7 @@ import Data.String as DS
 import Common.Types.App
 import RemoteConfig.Types
 import Data.Array as DA
+import MerchantConfig.Types (Language)
 import Locale.Utils(getLanguageLocale)
 import Constants (languageKey)
 
@@ -100,6 +101,12 @@ getBookAnySelectedServices city = do
     let config = fetchRemoteConfigString "book_any_selected_services"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig ["Auto", "Non-AC Mini", "AC Mini"]
     getCityBasedConfig value city
+
+customerAppLanguageConfig :: String -> Array Language
+customerAppLanguageConfig appName = do
+  let config = fetchRemoteConfigString "enabled_app_languages"
+      value = decodeForeignObject (parseJSON config) $ defaultAppRemoteConfig []
+  getAppBasedConfig value appName
 
 getLocationSuggestionsToExclude :: String -> Array String
 getLocationSuggestionsToExclude city = do

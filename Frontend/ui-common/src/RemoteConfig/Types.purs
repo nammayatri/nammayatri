@@ -63,8 +63,26 @@ type RemoteConfig a
     , gulbarga :: Maybe a
     , udupi :: Maybe a
     , ysCities :: Maybe a
+    , bhubaneshwar :: Maybe a
+    , bhubaneswar :: Maybe a
+    , cuttack :: Maybe a
+    , puri :: Maybe a
     , config :: Maybe Config
     }
+    
+type AppConfigRC a =
+  { nammaYatri :: Maybe a
+  , nammaYatriPartner :: Maybe a
+  , odishaYatri :: Maybe a
+  , odishaYatriPartner :: Maybe a
+  , yatri :: Maybe a
+  , yatriPartner :: Maybe a
+  , manaYatri :: Maybe a
+  , manaYatriPartner :: Maybe a
+  , yatriSathi :: Maybe a
+  , yatriSathiPartner :: Maybe a
+  , default :: a
+  }
 
 newtype RCCarousel
   = RCCarousel
@@ -144,6 +162,12 @@ type SubscriptionConfigVariantLevel
       default :: Maybe SubscriptionConfigVariantLevelEntity
     }
 
+type AppLanguage
+  = {
+    name :: String,
+    value :: String,
+    subtitle :: String
+  }
 
 type SubscriptionConfigVariantLevelEntity = {
    noChargesTillDate :: String,

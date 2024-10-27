@@ -26,7 +26,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, const, ($), (<<<), (==))
+import Prelude (Unit, const, ($), (<<<), (==), unit, not)
 import PrestoDOM (visibility, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alpha, background, color, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width, rippleColor, cornerRadius)
 import Screens.SelectLanguageScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -37,7 +37,9 @@ import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import PrestoDOM.Animation as PrestoAnim
 import Debug
+import JBridge as JB
 import Mobility.Prelude(boolToVisibility)
+import Common.RemoteConfig as RC
 
 screen :: ST.SelectLanguageScreenState -> Screen Action ST.SelectLanguageScreenState ScreenOutput
 screen initialState =
@@ -116,31 +118,34 @@ headerLayout push state =
 ------------------------------ menuButtonsView ------------------------------
 menuButtonsView :: ST.SelectLanguageScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 menuButtonsView state push = 
- scrollView
-  [ width MATCH_PARENT
-  , weight 1.0
-  , padding $ if state.props.onlyGetTheSelectedLanguage then PaddingHorizontal 16 16 else Padding 0 0 0 0
-  ][  linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , margin $ Margin 1 0 1 0
-      , background Color.white900
-      ][  textView $ 
-          [ visibility $ boolToVisibility state.props.onlyGetTheSelectedLanguage
-          , text $ getString SELECT_THE_LANGUAGE_YOU_CAN_READ
-          , color $ Color.black800
-          , margin $ MarginTop 16
-          ] <> FontStyle.subHeading1 TypoGraphy
-       ,  linearLayout
-          [   height WRAP_CONTENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            , margin $ Margin 1 16 1 0
-            , background Color.white900
-          ](DA.mapWithIndex
-              (\ index language ->
-              MenuButton.view (push <<< MenuButtonAction) (menuButtonConfig state language index)) $ if state.props.onlyGetTheSelectedLanguage then state.data.languageList else (state.data.config.languageList)
-          )
+  let appName = JB.getAppName unit
+      getConfigList = RC.appLanguageConfig appName
+      languageList = if not DA.null getConfigList then getConfigList else state.data.config.languageList 
+  in scrollView
+      [ width MATCH_PARENT
+      , weight 1.0
+      , padding $ if state.props.onlyGetTheSelectedLanguage then PaddingHorizontal 16 16 else Padding 0 0 0 0
+      ][  linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          , margin $ Margin 1 0 1 0
+          , background Color.white900
+          ][  textView $ 
+              [ visibility $ boolToVisibility state.props.onlyGetTheSelectedLanguage
+              , text $ getString SELECT_THE_LANGUAGE_YOU_CAN_READ
+              , color $ Color.black800
+              , margin $ MarginTop 16
+              ] <> FontStyle.subHeading1 TypoGraphy
+          ,  linearLayout
+              [   height WRAP_CONTENT
+                , width MATCH_PARENT
+                , orientation VERTICAL
+                , margin $ Margin 1 16 1 0
+                , background Color.white900
+              ](DA.mapWithIndex
+                  (\ index language ->
+                  MenuButton.view (push <<< MenuButtonAction) (menuButtonConfig state language index)) $ if state.props.onlyGetTheSelectedLanguage then state.data.languageList else languageList
+              )
+          ]
       ]
-  ]
