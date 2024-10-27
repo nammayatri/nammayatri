@@ -5,63 +5,63 @@ imports:
   FlaggedStatus: Domain.Types.Suspect
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  SearchSuspectReq : API.Types.UI.SearchSuspectReq
-  StatusHistory : API.Types.UI.StatusHistory
-  SearchSuspectResp : API.Types.UI.SearchSuspectResp
-  Summary : API.Types.UI.Notification
-  AdminApproval : Domain.Types.SuspectFlagRequest
-  FlaggedBy : Domain.Types.Suspect
+  SearchSuspectReq: API.Types.UI.SearchSuspectReq
+  StatusHistory: API.Types.UI.StatusHistory
+  SearchSuspectResp: API.Types.UI.SearchSuspectResp
+  Summary: API.Types.UI.Notification
+  AdminApproval: Domain.Types.SuspectFlagRequest
+  FlaggedBy: Domain.Types.Suspect
 importPackageOverrides:
-    Domain.Types.Merchant: lib-dashboard
-    Tools.Auth: lib-dashboard
-    Environment: lib-dashboard
-    Domain.Types.Person : lib-dashboard
+  Domain.Types.Merchant: lib-dashboard
+  Tools.Auth: lib-dashboard
+  Environment: lib-dashboard
+  Domain.Types.Person: lib-dashboard
 
 
-module : SearchSuspect
+module: SearchSuspect
 types:
   SuspectsList:
-    suspects : [SearchSuspectResp]
-    summary : Summary
+    suspects: [SearchSuspectResp]
+    summary: Summary
 
   SearchSuspectResp:
-    id : Text
-    dl : Maybe Text
-    voterId : Maybe Text
-    flaggedStatus : FlaggedStatus
-    statusChangedReason : Maybe Text
-    flaggedBy : Maybe [FlaggedBy]
-    firstName : Text
-    lastName : Text
-    flaggedCounter : Int
-    flagUpdatedAt : UTCTime
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Text
+    dl: Maybe Text
+    voterId: Maybe Text
+    flaggedStatus: FlaggedStatus
+    statusChangedReason: Maybe Text
+    flaggedBy: Maybe [FlaggedBy]
+    firstName: Text
+    lastName: Text
+    flaggedCounter: Int
+    flagUpdatedAt: UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   SearchSuspectReqList:
-    suspectReqList : [SearchSuspectReq]
+    suspectReqList: [SearchSuspectReq]
 
   SearchSuspectReq:
-    dl : Maybe Text
-    voterId : Maybe Text
+    dl: Maybe Text
+    voterId: Maybe Text
 
   CheckSuspectStatusHistoryResp:
-    suspectStatusHistory : [StatusHistory]
+    suspectStatusHistory: [StatusHistory]
 
   StatusHistory:
-    id : Text
-    dl : Maybe Text
-    firstName : Maybe Text
-    lastName : Maybe Text
-    voterId : Maybe Text
-    flaggedStatus : FlaggedStatus
-    flaggedBy : Maybe [FlaggedBy]
-    statusChangedReason : Maybe Text
-    adminApproval : Maybe AdminApproval
-    merchantShortId : Maybe Text
-    approvedBy : Maybe Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Text
+    dl: Maybe Text
+    firstName: Maybe Text
+    lastName: Maybe Text
+    voterId: Maybe Text
+    flaggedStatus: FlaggedStatus
+    flaggedBy: Maybe [FlaggedBy]
+    statusChangedReason: Maybe Text
+    adminApproval: Maybe AdminApproval
+    merchantShortId: Maybe Text
+    approvedBy: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
 
 apis:
@@ -77,8 +77,8 @@ apis:
       endpoint: /check/suspectStatusHistory
       auth: DashboardAuth DASHBOARD_ADMIN
       query:
-        limit : Int
-        offset : Int
+        limit: Int
+        offset: Int
       request:
         type: API.Types.UI.SearchSuspect.SearchSuspectReq
       response:
@@ -106,13 +106,13 @@ apis:
       query:
         to: UTCTime
         from: UTCTime
-        limit : Int
-        offset : Int
-        partnerName : Text
-        flaggedCategory : Text
-        flaggedStatus : FlaggedStatus
-        dl : Text
-        voterId : Text
+        limit: Int
+        offset: Int
+        partnerName: Text
+        flaggedCategory: Text
+        flaggedStatus: FlaggedStatus
+        dl: Text
+        voterId: Text
 
 
       response:
@@ -124,7 +124,7 @@ apis:
       query:
         to: UTCTime
         from: UTCTime
-        limit : Int
-        offset : Int
+        limit: Int
+        offset: Int
       response:
         type: API.Types.UI.SearchSuspect.SuspectsList

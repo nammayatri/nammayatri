@@ -15,7 +15,7 @@ imports:
   Client: Domain.Types.Client
   Double: Kernel.Prelude
   Int: Kernel.Prelude
-  Device : Kernel.Types.Version
+  Device: Kernel.Types.Version
   DeviceType: Kernel.Types.Version
   Version: Kernel.Types.Version
   TripCategory: Domain.Types.Common
@@ -43,7 +43,7 @@ Ride:
     id: Id Ride
     bookingId: Id Booking
     shortId: ShortId Ride
-    hasStops : Maybe Bool
+    hasStops: Maybe Bool
     clientId: Maybe (Id Client)
     merchantId: Maybe (Id Merchant)
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -65,9 +65,9 @@ Ride:
     tripEndPos: Maybe LatLong
     previousRideTripEndPos: Maybe LatLong
     previousRideTripEndTime: Maybe UTCTime
-    isAdvanceBooking : Bool
+    isAdvanceBooking: Bool
     fromLocation: Location
-    stops : "[Location]"
+    stops: "[Location]"
     toLocation: Maybe Location
     fareParametersId: Maybe (Id FareParameters)
     distanceCalculationFailed: Maybe Bool
@@ -103,8 +103,8 @@ Ride:
     backendConfigVersion: Maybe Version
     backendAppVersion: Maybe Text
     clientDevice: Maybe Device
-    vehicleVariant : Maybe VehicleVariant
-    vehicleServiceTierName : Maybe Text
+    vehicleVariant: Maybe VehicleVariant
+    vehicleServiceTierName: Maybe Text
     tripCategory: TripCategory
     onlinePayment: Bool
     enableOtpLessRide: Maybe Bool
@@ -161,17 +161,17 @@ Ride:
       previousRideTripEndLon: Maybe Double
     startOdometerReading:
       startOdometerReadingValue: Maybe Centesimal
-      startOdometerReadingFileId:  Maybe Text
+      startOdometerReadingFileId: Maybe Text
     endOdometerReading:
       endOdometerReadingValue: Maybe Centesimal
-      endOdometerReadingFileId:  Maybe Text
+      endOdometerReadingFileId: Maybe Text
     fare:
       fare: Maybe Money
       fareAmount: Maybe HighPrecMoney
     currency:
       currency: Maybe Currency
     distanceUnit:
-      distanceUnit : Maybe DistanceUnit
+      distanceUnit: Maybe DistanceUnit
     estimatedEndTimeRange:
       estimatedEndTimeRangeStart: Maybe UTCTime
       estimatedEndTimeRangeEnd: Maybe UTCTime
@@ -191,7 +191,7 @@ Ride:
     clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
-    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
+    clientDevice: (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
     fare: fmap (Kernel.Types.Common.mkAmountWithDefault fareAmount) fare|E
     currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
     isAdvanceBooking: Kernel.Prelude.fromMaybe False|I
@@ -218,8 +218,8 @@ Ride:
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
-    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
-    clientOsType:  (clientDevice <&> (.deviceType))|E
+    clientOsVersion: (clientDevice <&> (.deviceVersion))|E
+    clientOsType: (clientDevice <&> (.deviceType))|E
     fare: Kernel.Prelude.fmap roundToIntegral|I
     currency: Kernel.Prelude.Just|I
     isAdvanceBooking: Kernel.Prelude.Just|I

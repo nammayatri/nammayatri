@@ -100,7 +100,7 @@ types:
     - hasTakenValidActivatedRide: Bool
     - dateOfActivation: Maybe LocalTime
     - fraudFlaggedReason: Maybe PayoutFlagReason
-    - rideId : Maybe (Id Ride)
+    - rideId: Maybe (Id Ride)
     - driverId: Maybe (Id Driver)
     - isReviewed: Bool
 
@@ -139,8 +139,8 @@ types:
     - entityNames: [EntityName]
     - derive: "'HideSecrets"
   PendingPayoutReq:
-   - personId : Id Driver
-   - derive: "'HideSecrets"
+    - personId: Id Driver
+    - derive: "'HideSecrets"
   DeleteVpaReq:
-   - driverIds: [Id Driver]
-   - derive: "'HideSecrets"
+    - driverIds: [Id Driver]
+    - derive: "'HideSecrets"

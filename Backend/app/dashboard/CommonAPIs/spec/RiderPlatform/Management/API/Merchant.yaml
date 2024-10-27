@@ -20,8 +20,7 @@ module: Merchant
 apis:
   - POST: # MerchantUpdateAPI
       endpoint: /update
-      auth:
-        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MERCHANT_UPDATE
+      auth: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MERCHANT_UPDATE
       request:
         type: MerchantUpdateReq
       response:
@@ -32,14 +31,12 @@ apis:
         endpointV2:
   - GET: # ServiceUsageConfigAPI
       endpoint: /serviceUsageConfig
-      auth:
-        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT SERVICE_USAGE_CONFIG
+      auth: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT SERVICE_USAGE_CONFIG
       response:
         type: ServiceUsageConfigRes
   - POST: # MapsServiceConfigUpdateAPI
       endpoint: /serviceConfig/maps/update
-      auth:
-        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MAPS_SERVICE_CONFIG_UPDATE
+      auth: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MAPS_SERVICE_CONFIG_UPDATE
       request:
         type: MapsServiceConfigUpdateReq
       response:
@@ -49,8 +46,7 @@ apis:
         endpointV2:
   - POST: # MapsServiceUsageConfigUpdateAPI
       endpoint: /serviceUsageConfig/maps/update
-      auth:
-        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MAPS_SERVICE_USAGE_CONFIG_UPDATE
+      auth: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MAPS_SERVICE_USAGE_CONFIG_UPDATE
       request:
         type: MapsServiceUsageConfigUpdateReq
       response:
@@ -61,8 +57,7 @@ apis:
         endpointV2:
   - POST: # SmsServiceConfigUpdateAPI
       endpoint: /serviceConfig/sms/update
-      auth:
-        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT SMS_SERVICE_CONFIG_UPDATE
+      auth: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT SMS_SERVICE_CONFIG_UPDATE
       request:
         type: SmsServiceConfigUpdateReq
       response:
@@ -72,8 +67,7 @@ apis:
         endpointV2:
   - POST: # SmsServiceUsageConfigUpdateAPI
       endpoint: /serviceUsageConfig/sms/update
-      auth:
-        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT SMS_SERVICE_USAGE_CONFIG_UPDATE
+      auth: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT SMS_SERVICE_USAGE_CONFIG_UPDATE
       request:
         type: SmsServiceUsageConfigUpdateReq
       response:
@@ -84,8 +78,7 @@ apis:
         endpointV2:
   - POST: # CreateMerchantOperatingCityAPI
       endpoint: /config/operatingCity/create
-      auth:
-        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
+      auth: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
       multipart:
         type: CreateMerchantOperatingCityReq
       response:
@@ -93,8 +86,7 @@ apis:
       helperApi:
         - POST:
             endpoint: /config/operatingCity/create
-            auth: # TODO remove
-              ApiAuth APP_BACKEND_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
+            auth: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY # TODO remove
             request:
               type: CreateMerchantOperatingCityReqT
             response:
@@ -106,8 +98,7 @@ apis:
       endpoint: /specialLocation/upsert
       query:
         specialLocationId: Id SpecialLocation
-      auth:
-        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION
+      auth: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION
       multipart:
         type: UpsertSpecialLocationReq
       response:
@@ -117,8 +108,7 @@ apis:
             endpoint: /specialLocation/upsert
             query:
               specialLocationId: Id SpecialLocation
-            auth:
-              ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION # TODO serverName move to dhall
+            auth: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION # TODO serverName move to dhall
             request:
               type: UpsertSpecialLocationReqT
             response:
@@ -129,9 +119,8 @@ apis:
   - DELETE: # DeleteSpecialLocationAPI
       endpoint: /specialLocation/{specialLocationId}/delete
       params:
-        specialLocationId : Id SpecialLocation
-      auth:
-        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION
+        specialLocationId: Id SpecialLocation
+      auth: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION
       response:
         type: APISuccess
       migrate:
@@ -140,9 +129,8 @@ apis:
   - POST: # UpsertSpecialLocationGateAPI
       endpoint: /specialLocation/{specialLocationId}/gates/upsert
       params:
-        specialLocationId : Id SpecialLocation
-      auth:
-        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_GATE
+        specialLocationId: Id SpecialLocation
+      auth: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_GATE
       multipart:
         type: UpsertSpecialLocationGateReq
       response:
@@ -151,9 +139,8 @@ apis:
         - POST:
             endpoint: /specialLocation/{specialLocationId}/gates/upsert
             params:
-              specialLocationId : Id SpecialLocation
-            auth:
-              ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_GATE
+              specialLocationId: Id SpecialLocation
+            auth: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_GATE
             request:
               type: UpsertSpecialLocationGateReqT
             response:
@@ -164,10 +151,9 @@ apis:
   - DELETE: # DeleteSpecialLocationGateAPI
       endpoint: /specialLocation/{specialLocationId}/gates/delete/{gateName}
       params:
-        specialLocationId : Id SpecialLocation
+        specialLocationId: Id SpecialLocation
         gateName: Text
-      auth:
-        ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION_GATE
+      auth: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION_GATE
       response:
         type: APISuccess
       migrate:

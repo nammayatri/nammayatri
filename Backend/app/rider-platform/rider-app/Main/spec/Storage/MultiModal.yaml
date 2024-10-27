@@ -135,7 +135,7 @@ WalkLegMultimodal:
     journeyLegInfo: Maybe JourneySearchData
 
   sqlType:
-    toLocationId : character varying(36)
+    toLocationId: character varying(36)
     fromLocationId: character varying(36)
 
   queries:

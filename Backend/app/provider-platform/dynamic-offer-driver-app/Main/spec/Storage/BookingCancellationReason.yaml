@@ -3,7 +3,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   CancellationReasonCode: Domain.Types.CancellationReason
   CancellationStage: Domain.Types.CancellationReason
-  Booking:  Domain.Types.Booking
+  Booking: Domain.Types.Booking
   Ride: Domain.Types.Ride
   LatLong: Kernel.External.Maps
   Person: Domain.Types.Person
@@ -16,16 +16,16 @@ BookingCancellationReason:
       enum: "ByUser, ByDriver, ByMerchant, ByAllocator, ByApplication"
 
   fields:
-    driverId : Maybe (Id Person)
-    bookingId : Id Booking
-    rideId : Maybe (Id Ride)
-    merchantId : Maybe (Id Merchant)
-    source : CancellationSource
-    reasonCode : Maybe CancellationReasonCode
-    additionalInfo : Maybe Text
-    driverCancellationLocation : Maybe LatLong
-    driverDistToPickup : Maybe Meters
-    distanceUnit : DistanceUnit
+    driverId: Maybe (Id Person)
+    bookingId: Id Booking
+    rideId: Maybe (Id Ride)
+    merchantId: Maybe (Id Merchant)
+    source: CancellationSource
+    reasonCode: Maybe CancellationReasonCode
+    additionalInfo: Maybe Text
+    driverCancellationLocation: Maybe LatLong
+    driverDistToPickup: Maybe Meters
+    distanceUnit: DistanceUnit
 
   beamType:
     reasonCode: Maybe Text

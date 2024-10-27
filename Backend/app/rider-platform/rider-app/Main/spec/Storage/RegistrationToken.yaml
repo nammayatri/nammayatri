@@ -18,22 +18,22 @@ RegistrationToken:
       enum: "OTP,PASSWORD,DIRECT,OAUTH"
 
   fields:
-    id : Id RegistrationToken
-    token : Text
-    attempts : Int
-    authMedium : Medium
-    authType : LoginType
-    authValueHash : Text
-    verified : Bool
-    authExpiry : Int
-    tokenExpiry : Int
-    entityId : Text
-    merchantId : Text
-    entityType : RTEntityType
-    createdAt : UTCTime
-    updatedAt : UTCTime
-    info : Maybe Text
-    createdViaPartnerOrgId : Maybe (Id PartnerOrganization)
+    id: Id RegistrationToken
+    token: Text
+    attempts: Int
+    authMedium: Medium
+    authType: LoginType
+    authValueHash: Text
+    verified: Bool
+    authExpiry: Int
+    tokenExpiry: Int
+    entityId: Text
+    merchantId: Text
+    entityType: RTEntityType
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    info: Maybe Text
+    createdViaPartnerOrgId: Maybe (Id PartnerOrganization)
 
   excludedFields: [merchantOperatingCityId]
   constraints:

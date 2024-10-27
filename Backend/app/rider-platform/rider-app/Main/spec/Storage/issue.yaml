@@ -8,18 +8,18 @@ Issue:
   tableName: issue
 
   fields:
-    id : Id Issue
-    customerId : Id Person
-    bookingId : Maybe (Id Quote)
-    contactEmail : Maybe Text
-    reason : Text
-    description : Text
-    ticketId : Maybe Text
-    status : IssueStatus
-    nightSafety : Bool
-    createdAt : UTCTime
-    updatedAt : UTCTime
-    merchantId : Maybe (Id Merchant)
+    id: Id Issue
+    customerId: Id Person
+    bookingId: Maybe (Id Quote)
+    contactEmail: Maybe Text
+    reason: Text
+    description: Text
+    ticketId: Maybe Text
+    status: IssueStatus
+    nightSafety: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    merchantId: Maybe (Id Merchant)
 
   beamInstance:
     - MakeTableInstances

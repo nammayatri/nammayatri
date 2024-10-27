@@ -10,10 +10,10 @@ Volunteer:
   tableName: volunteer
 
   fields:
-    id : Id Volunteer
-    place : Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Id Volunteer
+    place: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   constraints:
     id: PrimaryKey

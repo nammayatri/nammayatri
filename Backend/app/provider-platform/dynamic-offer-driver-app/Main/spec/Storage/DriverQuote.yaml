@@ -31,40 +31,40 @@ DriverQuote:
 
 
   fields:
-    id : Id DriverQuote
-    requestId : Id SearchRequest
-    searchTryId : Id SearchTry
-    clientId : Maybe (Id Client)
-    searchRequestForDriverId : Maybe (Id SearchRequestForDriver)
-    tripCategory : TripCategory
-    estimateId : Id Estimate
-    driverId : Id Person
-    driverName : Text
-    driverRating : Maybe Centesimal
-    status : DriverQuoteStatus
-    vehicleVariant : VehicleVariant|NoRelation
-    vehicleServiceTier : ServiceTierType|NoRelation
-    distance : Maybe Meters
-    distanceToPickup : Meters
+    id: Id DriverQuote
+    requestId: Id SearchRequest
+    searchTryId: Id SearchTry
+    clientId: Maybe (Id Client)
+    searchRequestForDriverId: Maybe (Id SearchRequestForDriver)
+    tripCategory: TripCategory
+    estimateId: Id Estimate
+    driverId: Id Person
+    driverName: Text
+    driverRating: Maybe Centesimal
+    status: DriverQuoteStatus
+    vehicleVariant: VehicleVariant|NoRelation
+    vehicleServiceTier: ServiceTierType|NoRelation
+    distance: Maybe Meters
+    distanceToPickup: Meters
     distanceUnit: DistanceUnit
-    durationToPickup : Seconds
-    validTill : UTCTime
-    estimatedFare : HighPrecMoney
-    currency : Currency
-    fareParams : FareParameters|NoRelation
-    providerId : Id Merchant
-    specialLocationTag : Maybe Text
-    goHomeRequestId : Maybe (Id DriverGoHomeRequest)
-    clientSdkVersion : Maybe Version
-    clientBundleVersion : Maybe Version
-    clientConfigVersion : Maybe Version
-    clientDevice : Maybe Device
-    backendConfigVersion : Maybe Version
-    backendAppVersion : Maybe Text
-    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
-    vehicleServiceTierName : Maybe Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    durationToPickup: Seconds
+    validTill: UTCTime
+    estimatedFare: HighPrecMoney
+    currency: Currency
+    fareParams: FareParameters|NoRelation
+    providerId: Id Merchant
+    specialLocationTag: Maybe Text
+    goHomeRequestId: Maybe (Id DriverGoHomeRequest)
+    clientSdkVersion: Maybe Version
+    clientBundleVersion: Maybe Version
+    clientConfigVersion: Maybe Version
+    clientDevice: Maybe Device
+    backendConfigVersion: Maybe Version
+    backendAppVersion: Maybe Text
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    vehicleServiceTierName: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   beamType:
     tripCategory: Maybe TripCategory
@@ -105,7 +105,7 @@ DriverQuote:
     clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
-    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
+    clientDevice: (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
     createdAt: Data.Time.localTimeToUTC Data.Time.utc createdAt|E
     updatedAt: Data.Time.localTimeToUTC Data.Time.utc updatedAt|E
     validTill: Data.Time.localTimeToUTC Data.Time.utc validTill|E
@@ -120,8 +120,8 @@ DriverQuote:
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
-    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
-    clientOsType:  (clientDevice <&> (.deviceType))|E
+    clientOsVersion: (clientDevice <&> (.deviceVersion))|E
+    clientOsType: (clientDevice <&> (.deviceType))|E
     vehicleServiceTier: Kernel.Prelude.Just|I
     createdAt: Data.Time.utcToLocalTime Data.Time.utc createdAt|E
     updatedAt: Data.Time.utcToLocalTime Data.Time.utc updatedAt|E
@@ -158,7 +158,7 @@ DriverQuote:
     durationToPickup: bigint
     vehicleVariant: character varying(255)
     driverRating: double precision
-    estimateId : text
+    estimateId: text
 
 
   default:

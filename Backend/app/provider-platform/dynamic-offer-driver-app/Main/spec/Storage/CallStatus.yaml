@@ -13,18 +13,18 @@ CallStatus:
       enum: "Attempted, Resolved, Failed, Pending"
 
   fields:
-    id : Id CallStatus
-    callId : Text
-    entityId : Maybe Text
-    dtmfNumberUsed : Maybe Text
-    status : Kernel.External.Call.Interface.Types.CallStatus
-    recordingUrl : Maybe Text
-    conversationDuration : Int
-    merchantId : Maybe Text
-    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
-    callService : Maybe CallService
-    callError : Maybe Text
-    callAttempt : Maybe CallAttemptStatus
+    id: Id CallStatus
+    callId: Text
+    entityId: Maybe Text
+    dtmfNumberUsed: Maybe Text
+    status: Kernel.External.Call.Interface.Types.CallStatus
+    recordingUrl: Maybe Text
+    conversationDuration: Int
+    merchantId: Maybe Text
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    callService: Maybe CallService
+    callError: Maybe Text
+    callAttempt: Maybe CallAttemptStatus
     createdAt: UTCTime
 
   constraints:

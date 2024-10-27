@@ -7,14 +7,14 @@ FleetDriverAssociation:
   tableName: fleet_driver_association
 
   fields:
-    id : Id FleetDriverAssociation
-    driverId : Id Person
-    isActive : Bool
-    fleetOwnerId : Text
-    associatedOn : Maybe UTCTime
-    associatedTill : Maybe UTCTime
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Id FleetDriverAssociation
+    driverId: Id Person
+    isActive: Bool
+    fleetOwnerId: Text
+    associatedOn: Maybe UTCTime
+    associatedTill: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
 
   constraints:

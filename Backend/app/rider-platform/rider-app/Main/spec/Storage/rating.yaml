@@ -9,15 +9,15 @@ Rating:
   tableName: rating
 
   fields:
-    id : Id Rating
-    rideId : Id Ride
-    riderId : Id Person
-    ratingValue : Int
-    feedbackDetails : Maybe Text
-    wasOfferedAssistance : Maybe Bool
+    id: Id Rating
+    rideId: Id Ride
+    riderId: Id Person
+    ratingValue: Int
+    feedbackDetails: Maybe Text
+    wasOfferedAssistance: Maybe Bool
     mediaId: Maybe (Id MediaFile)
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   constraints:
     id: PrimaryKey

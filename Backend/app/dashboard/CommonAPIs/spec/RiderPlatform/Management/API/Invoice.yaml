@@ -30,8 +30,7 @@ apis:
   # GET /invoice
   - GET:
       endpoint: /invoice
-      auth:
-        ApiAuth APP_BACKEND CUSTOMERS INVOICE
+      auth: ApiAuth APP_BACKEND CUSTOMERS INVOICE
       mandatoryQuery:
         from: UTCTime
         to: UTCTime

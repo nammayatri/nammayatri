@@ -6,25 +6,25 @@ imports:
   FlaggedStatus: Domain.Types.Suspect
   AdminApproval: Domain.Types.SuspectFlagRequest
   WebHookHeaders: Domain.Types.MerchantConfigs
-  FlaggedBy : Domain.Types.Suspect
+  FlaggedBy: Domain.Types.Suspect
   Value: Data.Aeson
-  ReportDetails : Domain.Types.Suspect
+  ReportDetails: Domain.Types.Suspect
 
 Suspect:
   tableName: suspect
   fields:
-    id : Id Suspect
-    dl : Maybe Text
-    voterId : Maybe Text
-    firstName : Text
-    lastName : Text
-    flaggedStatus : FlaggedStatus
-    flaggedCounter : Int
-    statusChangedReason : Maybe Text
-    flaggedBy : "[FlaggedBy]"
-    flagUpdatedAt : UTCTime
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Id Suspect
+    dl: Maybe Text
+    voterId: Maybe Text
+    firstName: Text
+    lastName: Text
+    flaggedStatus: FlaggedStatus
+    flaggedCounter: Int
+    statusChangedReason: Maybe Text
+    flaggedBy: "[FlaggedBy]"
+    flagUpdatedAt: UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   sqlType:
     flaggedBy: "json"
@@ -38,23 +38,23 @@ Suspect:
   toTType:
     flaggedBy: convertFlaggedByToTable
 
-  excludedFields: [merchantOperatingCityId,merchantId]
+  excludedFields: [merchantOperatingCityId, merchantId]
 
   constraints:
     id: PrimaryKey
   types:
     FlaggedBy:
-      partnerName : Maybe Text
-      flaggedCategory : Text
-      flaggedReason : Maybe Text
-      agentContactNumber : Maybe Text
-      totalComplaintsCount : Maybe Int
-      reportDetails : Maybe ReportDetails
+      partnerName: Maybe Text
+      flaggedCategory: Text
+      flaggedReason: Maybe Text
+      agentContactNumber: Maybe Text
+      totalComplaintsCount: Maybe Int
+      reportDetails: Maybe ReportDetails
       derive: "Ord,Eq,Read,'ListInstance"
     ReportDetails:
-      reportNumber : Maybe Text
-      reportPoliceStation : Maybe Text
-      reportType : ReportType
+      reportNumber: Maybe Text
+      reportPoliceStation: Maybe Text
+      reportType: ReportType
       derive: "Ord,Eq,Read,'ListInstance"
     FlaggedStatus:
       enum: "Flagged,Confirmed,NotConfirmed"
@@ -72,11 +72,11 @@ Suspect:
       where: voterId
     updateFlaggedCounterByDl:
       kvFunction: updateWithKV
-      params: [flaggedCounter,flaggedStatus, updatedAt,flaggedBy]
+      params: [flaggedCounter, flaggedStatus, updatedAt, flaggedBy]
       where: dl
     updateFlaggedCounterByVoterId:
       kvFunction: updateWithKV
-      params: [flaggedCounter,flaggedStatus, updatedAt,flaggedBy]
+      params: [flaggedCounter, flaggedStatus, updatedAt, flaggedBy]
       where: voterId
     updateFlaggedStatusById:
       kvFunction: updateWithKV
@@ -87,23 +87,23 @@ Suspect:
 
 
 
-SuspectStatusHistory :
+SuspectStatusHistory:
   tableName: suspect_status_history
 
   fields:
-    id : Id SuspectStatusHistory
-    dl : Maybe Text
-    voterId : Maybe Text
-    firstName : Maybe Text
-    lastName : Maybe Text
-    flaggedStatus : FlaggedStatus
-    statusChangedReason : Maybe Text
-    flaggedBy : Maybe [FlaggedBy]
-    adminApproval : Maybe AdminApproval
-    approvedBy : Maybe Text
-    merchantShortId : Maybe Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Id SuspectStatusHistory
+    dl: Maybe Text
+    voterId: Maybe Text
+    firstName: Maybe Text
+    lastName: Maybe Text
+    flaggedStatus: FlaggedStatus
+    statusChangedReason: Maybe Text
+    flaggedBy: Maybe [FlaggedBy]
+    adminApproval: Maybe AdminApproval
+    approvedBy: Maybe Text
+    merchantShortId: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   sqlType:
     flaggedBy: "text[]"
@@ -123,23 +123,23 @@ SuspectFlagRequest:
   tableName: suspect_flag_request
 
   fields:
-    id : Id SuspectFlagRequest
-    dl : Maybe Text
-    voterId : Maybe Text
-    flaggedStatus : FlaggedStatus
-    flaggedCategory : Text
-    flaggedReason : Text
-    flaggedBy : Text
-    firstName : Text
-    lastName : Text
-    mobileNumber : Maybe Text
-    reportDetails : Maybe ReportDetails
-    totalComplaintsCount : Maybe Int
-    adminApproval : AdminApproval
-    approvedBy : Maybe Text
-    merchantShortId : Maybe Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Id SuspectFlagRequest
+    dl: Maybe Text
+    voterId: Maybe Text
+    flaggedStatus: FlaggedStatus
+    flaggedCategory: Text
+    flaggedReason: Text
+    flaggedBy: Text
+    firstName: Text
+    lastName: Text
+    mobileNumber: Maybe Text
+    reportDetails: Maybe ReportDetails
+    totalComplaintsCount: Maybe Int
+    adminApproval: AdminApproval
+    approvedBy: Maybe Text
+    merchantShortId: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   excludedFields: [merchantOperatingCityId]
   importPackageOverrides:
@@ -200,12 +200,12 @@ FlaggedCategory:
   tableName: flagged_category
 
   fields:
-    id : Id FlaggedCategory
-    name : Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Id FlaggedCategory
+    name: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
-  excludedFields: [merchantOperatingCityId,merchantId]
+  excludedFields: [merchantOperatingCityId, merchantId]
   importPackageOverrides:
     Domain.Types.Merchant: lib-dashboard
     Tools.Auth: lib-dashboard
@@ -227,10 +227,10 @@ FlaggedCategory:
 MerchantConfigs:
   tableName: merchant_configs
   fields:
-    id : Id MerchantConfigs
-    webHookHeaders : "[WebHookHeaders]"
-    merchantShortId : Text
-    webHookUrl : Text
+    id: Id MerchantConfigs
+    webHookHeaders: "[WebHookHeaders]"
+    merchantShortId: Text
+    webHookUrl: Text
     requestWebHook: Bool
   sqlType:
     webHookHeaders: "text[]"
@@ -257,20 +257,20 @@ MerchantConfigs:
       params: [requestWebHook, updatedAt]
       where: id
 
-Notification :
+Notification:
   tableName: notification
 
   fields:
-    id : Id Notification
-    notificationCategory : NotificationCategory
-    notificationCount : Int
-    receiverId : Text
-    senderId : Text
-    metadata : Text
-    readStatus : Bool
-    merchantShortId : Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Id Notification
+    notificationCategory: NotificationCategory
+    notificationCount: Int
+    receiverId: Text
+    senderId: Text
+    metadata: Text
+    readStatus: Bool
+    merchantShortId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   excludedFields: [merchantOperatingCityId]
   importPackageOverrides:
@@ -310,13 +310,13 @@ SuspectStatusChangeRequest:
   tableName: suspect_status_change_request
 
   fields:
-    id : Id SuspectStatusChangeRequest
-    suspectId : Text
-    reasonToChange : Text
-    merchantShortId : Text
-    reqStatus : AdminApproval
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Id SuspectStatusChangeRequest
+    suspectId: Text
+    reasonToChange: Text
+    merchantShortId: Text
+    reqStatus: AdminApproval
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   excludedFields: [merchantOperatingCityId]
   importPackageOverrides:
@@ -344,17 +344,17 @@ SuspectStatusChangeRequest:
       where: suspectId
 
 
-PortalConfigs :
+PortalConfigs:
   tableName: portal_configs
 
   fields:
-    id : Id PortalConfigs
-    value : Text
-    configName : Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Id PortalConfigs
+    value: Text
+    configName: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
-  excludedFields: [merchantOperatingCityId,merchantId]
+  excludedFields: [merchantOperatingCityId, merchantId]
   importPackageOverrides:
     Domain.Types.Merchant: lib-dashboard
     Tools.Auth: lib-dashboard

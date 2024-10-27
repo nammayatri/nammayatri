@@ -14,16 +14,16 @@ types:
     androidId: Maybe Text
     gps: Maybe LatLong
   ReferrerInfo:
-    firstName : Maybe Text
-    middleName : Maybe Text
-    lastName : Maybe Text
-    rating : Maybe Centesimal
-    registeredAt : UTCTime
-    totalRides : Int
-    vehicleNumber : Maybe Text
+    firstName: Maybe Text
+    middleName: Maybe Text
+    lastName: Maybe Text
+    rating: Maybe Centesimal
+    registeredAt: UTCTime
+    totalRides: Int
+    vehicleNumber: Maybe Text
     vehicleVariant: Maybe Text
     applicableServiceTiers: "Maybe [Text]"
-    referrerImageUri : Maybe Text
+    referrerImageUri: Maybe Text
 
 apis:
   # GET /customerReferralCount

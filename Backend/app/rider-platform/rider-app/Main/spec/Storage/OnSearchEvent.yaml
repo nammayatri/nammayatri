@@ -6,13 +6,13 @@ OnSearchEvent:
   tableName: on_search_event
 
   fields:
-    id : Id OnSearchEvent
-    bppId : Text
-    messageId : Text
-    errorCode : Maybe Text
-    errorType : Maybe Text
-    errorMessage : Maybe Text
-    createdAt : UTCTime
+    id: Id OnSearchEvent
+    bppId: Text
+    messageId: Text
+    errorCode: Maybe Text
+    errorType: Maybe Text
+    errorMessage: Maybe Text
+    createdAt: UTCTime
 
   constraints:
     id: PrimaryKey

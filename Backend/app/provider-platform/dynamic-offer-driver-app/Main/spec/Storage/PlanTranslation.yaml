@@ -12,10 +12,10 @@ PlanTranslation:
   tableName: plan_translation
 
   fields:
-    planId : Id Plan
-    language : Language
-    name : Text
-    description : Text
+    planId: Id Plan
+    language: Language
+    name: Text
+    description: Text
 
   constraints:
     planId: PrimaryKey

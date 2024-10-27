@@ -179,7 +179,7 @@ Booking:
     startTime: UTCTime
     returnTime: Maybe UTCTime
     roundTrip: Maybe Bool
-    hasStops : Maybe Bool
+    hasStops: Maybe Bool
     riderId: Id Person
     fromLocation: Location
     initialPickupLocation: Location|NoRelation
@@ -259,7 +259,7 @@ Booking:
     currency: Maybe Currency
     tripTermsId: Maybe Text
     isScheduled: Maybe Bool
-    isBookingUpdated : Maybe Bool
+    isBookingUpdated: Maybe Bool
     merchantOperatingCityId: Maybe Text
     clientBundleVersion: Maybe Text
     clientSdkVersion: Maybe Text
@@ -427,8 +427,8 @@ BookingPartiesLink:
       kvFunction: findAllWithKVAndConditionalDB
       where:
         and:
-         - bookingId
-         - isActive: True|CB
+          - bookingId
+          - isActive: True|CB
     makeAllInactiveByBookingId:
       kvFunction: updateWithKV
       params:

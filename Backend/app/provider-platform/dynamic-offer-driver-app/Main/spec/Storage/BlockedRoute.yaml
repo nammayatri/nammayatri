@@ -8,13 +8,13 @@ BlockedRoute:
   tableName: blocked_route
   derives: "Generic,Show,Read,FromJSON,ToJSON"
   fields:
-    id : Id BlockedRoute
+    id: Id BlockedRoute
     name: Text
-    startSegment : LineSegment
-    endSegment : LineSegment
+    startSegment: LineSegment
+    endSegment: LineSegment
     enabled: Bool
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   constraints:
     id: PrimaryKey

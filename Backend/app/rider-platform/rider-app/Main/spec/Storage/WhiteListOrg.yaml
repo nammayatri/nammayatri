@@ -10,11 +10,11 @@ WhiteListOrg:
   beamInstance: MakeTableInstancesWithTModifier [("subscriberId", "subscriber_id")]
 
   fields:
-    id : Id WhiteListOrg
-    subscriberId : ShortId Subscriber
-    merchantId : Id Merchant
-    domain : Domain
-    merchantOperatingCityId : Id MerchantOperatingCity
+    id: Id WhiteListOrg
+    subscriberId: ShortId Subscriber
+    merchantId: Id Merchant
+    domain: Domain
+    merchantOperatingCityId: Id MerchantOperatingCity
     createdAt: UTCTime
     updatedAt: UTCTime
   derives: "Generic,Show,'UsageSafety"
@@ -33,7 +33,7 @@ WhiteListOrg:
 
   constraints:
     id: PrimaryKey
-    subscriberId: !SecondaryKey
+    subscriberId: "!SecondaryKey"
 
   queries:
     findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId:

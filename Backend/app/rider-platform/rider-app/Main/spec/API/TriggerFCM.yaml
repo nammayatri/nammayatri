@@ -3,9 +3,9 @@ imports:
   Person: Domain.Types.Person
 module: TriggerFCM
 types:
-  TriggerFcmReq :
-    chatPersonId : Id Person
-    body : Text
+  TriggerFcmReq:
+    chatPersonId: Id Person
+    body: Text
     title: Text
     channelId: Maybe Text
     source: Maybe MessageSource
@@ -15,14 +15,14 @@ types:
     enum: "USER, TRUSTED_CONTACT"
 
   FCMEntityData:
-    personId : Id Person
+    personId: Id Person
     channelId: Maybe Text
     source: Maybe MessageSource
 
-apis :
-  - POST :
-      endpoint : /triggerFCM/message
-      auth : TokenAuth
+apis:
+  - POST:
+      endpoint: /triggerFCM/message
+      auth: TokenAuth
       request:
         type: API.Types.UI.TriggerFCM.TriggerFcmReq
       response:

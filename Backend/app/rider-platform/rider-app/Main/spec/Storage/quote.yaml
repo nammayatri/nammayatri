@@ -24,7 +24,7 @@ imports:
   Distance: Kernel.Types.Common
   Minutes: Kernel.Types.Common
   Version: Kernel.Types.Version
-  Device : Kernel.Types.Version
+  Device: Kernel.Types.Version
   DeviceType: Kernel.Types.Version
 
 Quote:
@@ -60,74 +60,74 @@ Quote:
 
 
   fields:
-    id : Id Quote
-    requestId : Id SearchRequest
-    estimatedFare : Price
-    discount : Maybe Price
-    estimatedTotalFare : Price
-    estimatedPickupDuration : Maybe Seconds
-    distanceUnit : DistanceUnit
-    providerId : Text
-    providerUrl : BaseUrl
-    itemId : Text
-    tripTerms : Maybe TripTerms
+    id: Id Quote
+    requestId: Id SearchRequest
+    estimatedFare: Price
+    discount: Maybe Price
+    estimatedTotalFare: Price
+    estimatedPickupDuration: Maybe Seconds
+    distanceUnit: DistanceUnit
+    providerId: Text
+    providerUrl: BaseUrl
+    itemId: Text
+    tripTerms: Maybe TripTerms
     tripCategory: Maybe TripCategory
-    quoteDetails : QuoteDetails
-    merchantId : Id Merchant
-    vehicleServiceTierType : ServiceTierType
-    vehicleServiceTierSeatingCapacity : Maybe Int
-    vehicleServiceTierAirConditioned : Maybe Double
+    quoteDetails: QuoteDetails
+    merchantId: Id Merchant
+    vehicleServiceTierType: ServiceTierType
+    vehicleServiceTierSeatingCapacity: Maybe Int
+    vehicleServiceTierAirConditioned: Maybe Double
     isAirConditioned: Maybe Bool
     serviceTierName: Maybe Text
     serviceTierShortDesc: Maybe Text
-    merchantOperatingCityId : Id MerchantOperatingCity
-    specialLocationTag : Maybe Text
-    specialLocationName : Maybe Text
-    clientBundleVersion : Maybe Version
-    clientSdkVersion : Maybe Version
-    clientConfigVersion : Maybe Version
-    clientDevice : Maybe Device
-    backendConfigVersion : Maybe Version
-    backendAppVersion : Maybe Text
+    merchantOperatingCityId: Id MerchantOperatingCity
+    specialLocationTag: Maybe Text
+    specialLocationName: Maybe Text
+    clientBundleVersion: Maybe Version
+    clientSdkVersion: Maybe Version
+    clientConfigVersion: Maybe Version
+    clientDevice: Maybe Device
+    backendConfigVersion: Maybe Version
+    backendAppVersion: Maybe Text
     isCustomerPrefferedSearchRoute: Maybe Bool
     isBlockedRoute: Maybe Bool
     tollChargesInfo: Maybe TollChargesInfo
-    quoteBreakupList : "[QuoteBreakup]"
-    createdAt : UTCTime
-    updatedAt : UTCTime
-    validTill : UTCTime
+    quoteBreakupList: "[QuoteBreakup]"
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    validTill: UTCTime
     vehicleIconUrl: Maybe BaseUrl
   derives: "Generic, Show"
 
   beamFields:
-      quoteDetails: {}
-      tripTerms:
-        tripTermsId: Maybe Text
-      discount:
-        discount: Maybe HighPrecMoney
-        currency: Maybe Currency
-        fareProductType: FareProductType # TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
-        distanceToNearestDriver: Maybe HighPrecMeters
-        distanceToNearestDriverValue: Maybe HighPrecDistance
-        rentalDetailsId: Maybe Text
-        driverOfferId: Maybe Text
-        specialZoneQuoteId: Maybe Text
-      distanceUnit:
-        distanceUnit: Maybe Kernel.Types.Common.DistanceUnit
-      vehicleServiceTierType:
-        vehicleVariant: ServiceTierType
-      clientDevice:
-        clientOsType: Maybe DeviceType
-        clientOsVersion: Maybe Text
-        clientModelName: Maybe Text
-        clientManufacturer: Maybe Text
-      tollChargesInfo:
-        tollCharges : Maybe HighPrecMoney
-        tollNames : Maybe [Text]
-      quoteBreakupList: {}
+    quoteDetails: {}
+    tripTerms:
+      tripTermsId: Maybe Text
+    discount:
+      discount: Maybe HighPrecMoney
+      currency: Maybe Currency
+      fareProductType: FareProductType # TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+      distanceToNearestDriver: Maybe HighPrecMeters
+      distanceToNearestDriverValue: Maybe HighPrecDistance
+      rentalDetailsId: Maybe Text
+      driverOfferId: Maybe Text
+      specialZoneQuoteId: Maybe Text
+    distanceUnit:
+      distanceUnit: Maybe Kernel.Types.Common.DistanceUnit
+    vehicleServiceTierType:
+      vehicleVariant: ServiceTierType
+    clientDevice:
+      clientOsType: Maybe DeviceType
+      clientOsVersion: Maybe Text
+      clientModelName: Maybe Text
+      clientManufacturer: Maybe Text
+    tollChargesInfo:
+      tollCharges: Maybe HighPrecMoney
+      tollNames: Maybe [Text]
+    quoteBreakupList: {}
 
   beamType:
-    estimatedFare : HighPrecMoney
+    estimatedFare: HighPrecMoney
     estimatedTotalFare: HighPrecMoney
     providerUrl: Text
     merchantOperatingCityId: Maybe Text
@@ -157,7 +157,7 @@ Quote:
     clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
-    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
+    clientDevice: (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
     vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
 
@@ -183,8 +183,8 @@ Quote:
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
-    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
-    clientOsType:  (clientDevice <&> (.deviceType))|E
+    clientOsVersion: (clientDevice <&> (.deviceVersion))|E
+    clientOsType: (clientDevice <&> (.deviceType))|E
     clientModelName: (clientDevice <&> (.deviceModel))|E
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
     distanceUnit: Kernel.Prelude.Just|I

@@ -15,16 +15,16 @@ FareProduct:
     SearchSource:
       enum: "ALL,DASHBOARD,MOBILE_APP"
   fields:
-    id : Id FareProduct
-    merchantId : Id Merchant
-    merchantOperatingCityId : Id MerchantOperatingCity
-    farePolicyId : Id FarePolicy
-    vehicleServiceTier : ServiceTierType
-    area : Area
-    tripCategory : TripCategory
-    timeBounds : TimeBound|NoRelation
+    id: Id FareProduct
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    farePolicyId: Id FarePolicy
+    vehicleServiceTier: ServiceTierType
+    area: Area
+    tripCategory: TripCategory
+    timeBounds: TimeBound|NoRelation
     searchSource: SearchSource
-    enabled : Bool
+    enabled: Bool
 
   beamFields:
     vehicleServiceTier:

@@ -9,10 +9,10 @@ CancellationCharges:
   derives: Generic
 
   fields:
-    id : Id CancellationCharges
-    driverId : Id Person
-    rideId : Maybe (Id Ride)
-    cancellationCharges : HighPrecMoney
+    id: Id CancellationCharges
+    driverId: Id Person
+    rideId: Maybe (Id Ride)
+    cancellationCharges: HighPrecMoney
     currency: Currency
 
   beamFields:

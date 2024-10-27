@@ -11,26 +11,26 @@ DriverStats:
 
 
   fields:
-    driverId : Id Driver
-    idleSince : UTCTime
-    totalRides : Int
-    totalEarnings : HighPrecMoney
-    bonusEarned : HighPrecMoney
-    lateNightTrips : Int
-    earningsMissed : HighPrecMoney
-    totalDistance : Meters
-    ridesCancelled : Maybe Int
-    totalRidesAssigned : Maybe Int
-    coinCovertedToCashLeft : HighPrecMoney
-    totalCoinsConvertedCash : HighPrecMoney
-    currency : Currency
+    driverId: Id Driver
+    idleSince: UTCTime
+    totalRides: Int
+    totalEarnings: HighPrecMoney
+    bonusEarned: HighPrecMoney
+    lateNightTrips: Int
+    earningsMissed: HighPrecMoney
+    totalDistance: Meters
+    ridesCancelled: Maybe Int
+    totalRidesAssigned: Maybe Int
+    coinCovertedToCashLeft: HighPrecMoney
+    totalCoinsConvertedCash: HighPrecMoney
+    currency: Currency
     distanceUnit: DistanceUnit
-    rating : Maybe Centesimal
-    totalRatings : Maybe Int
-    totalRatingScore : Maybe Int
-    isValidRating : Maybe Bool
-    updatedAt : UTCTime
-    favRiderCount : Int
+    rating: Maybe Centesimal
+    totalRatings: Maybe Int
+    totalRatingScore: Maybe Int
+    isValidRating: Maybe Bool
+    updatedAt: UTCTime
+    favRiderCount: Int
     totalPayoutEarnings: HighPrecMoney
     totalValidActivatedRides: Int
     totalReferralCounts: Int
@@ -97,7 +97,7 @@ DriverStats:
     totalCoinsConvertedCash: Kernel.Prelude.Just|I
     distanceUnit: Kernel.Prelude.Just|I
     totalPayoutEarnings: Kernel.Prelude.Just|I
-    totalPayoutEarningsAmount:  Kernel.Prelude.Just|I
+    totalPayoutEarningsAmount: Kernel.Prelude.Just|I
     totalValidActivatedRides: Kernel.Prelude.Just|I
     totalReferralCounts: Kernel.Prelude.Just|I
     validDriverCancellationTagCount: Kernel.Prelude.Just|I

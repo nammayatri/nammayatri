@@ -8,7 +8,7 @@ types:
   EditBookingRespondAction:
     enum: "ACCEPT, REJECT"
   EditBookingRespondAPIReq:
-    action : EditBookingRespondAction
+    action: EditBookingRespondAction
 
 apis:
   - POST:

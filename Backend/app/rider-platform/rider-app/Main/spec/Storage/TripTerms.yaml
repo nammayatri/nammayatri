@@ -7,8 +7,8 @@ TripTerms:
   tableName: trip_terms
 
   fields:
-    id : Id TripTerms
-    descriptions : "[Text]"
+    id: Id TripTerms
+    descriptions: "[Text]"
     createdAt: UTCTime
     updatedAt: UTCTime
   derives: "Generic, Show, Kernel.Utils.GenericPretty.PrettyShow"

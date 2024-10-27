@@ -24,7 +24,7 @@ SearchRequestForDriver:
 
   types:
     DriverSearchRequestStatus:
-     enum: "Active, Inactive"
+      enum: "Active, Inactive"
     SearchRequestForDriverResponse:
       enum: "Accept, Reject, Pulled"
     NotificationSource:
@@ -32,57 +32,57 @@ SearchRequestForDriver:
 
 
   fields:
-    id : Id SearchRequestForDriver
-    requestId : Id SearchRequest
-    searchTryId : Id SearchTry
-    estimateId : Maybe Text
-    merchantId : Maybe (Id Merchant)
-    merchantOperatingCityId : Id MerchantOperatingCity
-    baseFare : Maybe HighPrecMoney
-    startTime : UTCTime
-    searchRequestValidTill : UTCTime
-    vehicleAge : Maybe Months
-    driverId : Id Person
-    fromLocGeohash : Maybe Text
-    actualDistanceToPickup : Meters
-    straightLineDistanceToPickup : Meters
-    durationToPickup : Seconds
-    vehicleVariant : VehicleVariant|NoRelation
-    vehicleServiceTier : ServiceTierType|NoRelation
-    vehicleServiceTierName : Maybe Text
-    airConditioned : Maybe Bool
-    status : DriverSearchRequestStatus
-    batchNumber : Int
-    lat : Maybe Double
-    lon : Maybe Double
-    createdAt : UTCTime
+    id: Id SearchRequestForDriver
+    requestId: Id SearchRequest
+    searchTryId: Id SearchTry
+    estimateId: Maybe Text
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Id MerchantOperatingCity
+    baseFare: Maybe HighPrecMoney
+    startTime: UTCTime
+    searchRequestValidTill: UTCTime
+    vehicleAge: Maybe Months
+    driverId: Id Person
+    fromLocGeohash: Maybe Text
+    actualDistanceToPickup: Meters
+    straightLineDistanceToPickup: Meters
+    durationToPickup: Seconds
+    vehicleVariant: VehicleVariant|NoRelation
+    vehicleServiceTier: ServiceTierType|NoRelation
+    vehicleServiceTierName: Maybe Text
+    airConditioned: Maybe Bool
+    status: DriverSearchRequestStatus
+    batchNumber: Int
+    lat: Maybe Double
+    lon: Maybe Double
+    createdAt: UTCTime
     updatedAt: Maybe UTCTime
-    response : Maybe SearchRequestForDriverResponse
+    response: Maybe SearchRequestForDriverResponse
     notificationSource: Maybe NotificationSource
-    driverMinExtraFee : Maybe HighPrecMoney
-    driverMaxExtraFee : Maybe HighPrecMoney
+    driverMinExtraFee: Maybe HighPrecMoney
+    driverMaxExtraFee: Maybe HighPrecMoney
     driverStepFee: Maybe HighPrecMoney
     driverDefaultStepFee: Maybe HighPrecMoney
-    rideRequestPopupDelayDuration : Seconds
-    isPartOfIntelligentPool : Bool
-    pickupZone : Bool
-    cancellationRatio : Maybe Double
-    acceptanceRatio : Maybe Double
-    driverAvailableTime : Maybe Double
-    parallelSearchRequestCount : Maybe Int
-    driverSpeed : Maybe Double
-    keepHiddenForSeconds : Seconds
-    mode : Maybe DriverMode
-    goHomeRequestId : Maybe (Id DriverGoHomeRequest)
-    rideFrequencyScore : Maybe Double
-    customerCancellationDues : HighPrecMoney
-    clientSdkVersion : Maybe Version
-    clientBundleVersion : Maybe Version
-    clientConfigVersion : Maybe Version
-    clientDevice : Maybe Device
-    backendConfigVersion : Maybe Version
-    backendAppVersion : Maybe Text
-    isForwardRequest : Bool
+    rideRequestPopupDelayDuration: Seconds
+    isPartOfIntelligentPool: Bool
+    pickupZone: Bool
+    cancellationRatio: Maybe Double
+    acceptanceRatio: Maybe Double
+    driverAvailableTime: Maybe Double
+    parallelSearchRequestCount: Maybe Int
+    driverSpeed: Maybe Double
+    keepHiddenForSeconds: Seconds
+    mode: Maybe DriverMode
+    goHomeRequestId: Maybe (Id DriverGoHomeRequest)
+    rideFrequencyScore: Maybe Double
+    customerCancellationDues: HighPrecMoney
+    clientSdkVersion: Maybe Version
+    clientBundleVersion: Maybe Version
+    clientConfigVersion: Maybe Version
+    clientDevice: Maybe Device
+    backendConfigVersion: Maybe Version
+    backendAppVersion: Maybe Text
+    isForwardRequest: Bool
     currency: Currency
     distanceUnit: DistanceUnit
     totalRides: Int
@@ -90,11 +90,11 @@ SearchRequestForDriver:
     customerTags: Maybe Value
     poolingLogicVersion: Maybe Int
     poolingConfigVersion: Maybe Int
-    previousDropGeoHash : Maybe Text
+    previousDropGeoHash: Maybe Text
     upgradeCabRequest: Maybe Bool
-    renderedAt : Maybe UTCTime
+    renderedAt: Maybe UTCTime
     respondedAt: Maybe UTCTime
-    isFavourite : Maybe Bool
+    isFavourite: Maybe Bool
 
   beamType:
     clientBundleVersion: Maybe Text
@@ -147,7 +147,7 @@ SearchRequestForDriver:
     clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
-    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
+    clientDevice: (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
     vehicleServiceTier: Kernel.Prelude.fromMaybe (Domain.Types.VehicleVariant.castVariantToServiceTier vehicleVariant) vehicleServiceTier|E
     createdAt: Data.Time.localTimeToUTC Data.Time.utc createdAt|E
     searchRequestValidTill: Data.Time.localTimeToUTC Data.Time.utc searchRequestValidTill|E
@@ -168,8 +168,8 @@ SearchRequestForDriver:
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
-    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
-    clientOsType:  (clientDevice <&> (.deviceType))|E
+    clientOsVersion: (clientDevice <&> (.deviceVersion))|E
+    clientOsType: (clientDevice <&> (.deviceType))|E
     clientModelName: (clientDevice <&> (.deviceModel))|E
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
     vehicleServiceTier: Kernel.Prelude.Just|I
@@ -202,12 +202,12 @@ SearchRequestForDriver:
     findAllActiveBySTId:
       kvFunction: findAllWithKV
       where:
-        and: [searchTryId,status]
+        and: [searchTryId, status]
 
     findAllActiveBySRId:
       kvFunction: findAllWithKV
       where:
-       and: [requestId, status]
+        and: [requestId, status]
 
     updateDriverResponse:
       kvFunction: updateOneWithKV

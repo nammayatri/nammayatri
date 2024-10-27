@@ -39,7 +39,7 @@ SearchRequest:
     returnTime: Maybe UTCTime
     roundTrip: Maybe Bool
     validTill: UTCTime
-    hasStops : Maybe Bool
+    hasStops: Maybe Bool
     riderId: Id Person
     clientId: Maybe (Id Client)
     fromLocation: Location
@@ -71,7 +71,7 @@ SearchRequest:
     isAdvanceBookingEnabled: Maybe Bool
     isDashboardRequest: Maybe Bool
     availablePaymentMethods: "[Id MerchantPaymentMethod]"
-    placeNameSource:  Maybe Text
+    placeNameSource: Maybe Text
     initiatedBy: Maybe TripParty
     journeyLegInfo: Maybe JourneySearchData
     driverIdentifier: Maybe DriverIdentifier
@@ -95,7 +95,7 @@ SearchRequest:
     clientManufacturer: Maybe Text
 
   sqlType:
-    toLocationId : character varying(36)
+    toLocationId: character varying(36)
     distance: numeric(30,2)
     language: character varying(255)
     maxDistance: double precision

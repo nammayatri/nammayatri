@@ -31,7 +31,7 @@ apis:
   - GET:
       endpoint: /calculateFare
       auth: TokenAuth PROVIDER_TYPE
-      mandatoryQuery :
+      mandatoryQuery:
         pickupLatLon: LatLong
         dropLatLon: LatLong
         distanceWeightage: Int

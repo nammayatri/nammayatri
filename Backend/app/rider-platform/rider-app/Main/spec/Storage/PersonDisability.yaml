@@ -8,12 +8,12 @@ PersonDisability:
   tableName: person_disability
 
   fields:
-    personId : Id Person
-    disabilityId : Text
-    tag : Text
-    description : Maybe Text
+    personId: Id Person
+    disabilityId: Text
+    tag: Text
+    description: Maybe Text
     createdAt: UTCTime
-    updatedAt : UTCTime
+    updatedAt: UTCTime
 
   types: {}
 
@@ -69,7 +69,7 @@ Disability:
     - create
     - createMany
   extraOperations:
-   - EXTRA_QUERY_FILE
+    - EXTRA_QUERY_FILE
 
 DisabilityTranslation:
   tableName: disability_translation

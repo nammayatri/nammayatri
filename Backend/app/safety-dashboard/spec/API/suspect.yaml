@@ -11,37 +11,37 @@ imports:
   ReportDetails: Domain.Types.Suspect
 
 importPackageOverrides:
-    Domain.Types.Merchant: lib-dashboard
-    Tools.Auth: lib-dashboard
-    Environment: lib-dashboard
-    Domain.Types.Person : lib-dashboard
+  Domain.Types.Merchant: lib-dashboard
+  Tools.Auth: lib-dashboard
+  Environment: lib-dashboard
+  Domain.Types.Person: lib-dashboard
 
 
 module: Suspect
 types:
   SuspectUploadReq:
-    dl : Maybe Text
-    voterId : Maybe Text
-    firstName : Text
-    lastName : Text
-    flaggedReason : Text
-    flaggedCategory : Text
-    mobileNumber : Maybe Text
-    reportDetails : Maybe ReportDetails
-    totalComplaintsCount : Maybe Int
+    dl: Maybe Text
+    voterId: Maybe Text
+    firstName: Text
+    lastName: Text
+    flaggedReason: Text
+    flaggedCategory: Text
+    mobileNumber: Maybe Text
+    reportDetails: Maybe ReportDetails
+    totalComplaintsCount: Maybe Int
 
   SuspectBulkUploadReq:
-    suspects : [SuspectUploadReq]
+    suspects: [SuspectUploadReq]
 
   SuspectBulkUploadResp:
-    dlList : [Maybe Text]
-    voterIdList : [Maybe Text]
-    message : Text
+    dlList: [Maybe Text]
+    voterIdList: [Maybe Text]
+    message: Text
 
   SuspectFlagStatusChangeReq:
-    voterId : Maybe Text
-    dl : Maybe Text
-    reasonToChange : Text
+    voterId: Maybe Text
+    dl: Maybe Text
+    reasonToChange: Text
 
 
 apis:

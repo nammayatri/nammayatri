@@ -15,14 +15,14 @@ DailyStats:
     PayoutStatus:
       enum: "Verifying,Processing,Success,Failed,ManualReview,PendingForVpa"
   fields:
-    id : Text
-    driverId : Id Person
-    totalEarnings : HighPrecMoney
+    id: Text
+    driverId: Id Person
+    totalEarnings: HighPrecMoney
     currency: Currency
-    numRides : Int
-    totalDistance : Meters
-    distanceUnit : DistanceUnit
-    merchantLocalDate : Day
+    numRides: Int
+    totalDistance: Meters
+    distanceUnit: DistanceUnit
+    merchantLocalDate: Day
     activatedValidRides: Int
     referralEarnings: HighPrecMoney
     referralCounts: Int
@@ -59,7 +59,7 @@ DailyStats:
     currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
     referralEarnings: getHighPrecMoney
-    activatedValidRides:  Kernel.Prelude.fromMaybe 0|I
+    activatedValidRides: Kernel.Prelude.fromMaybe 0|I
     referralCounts: Kernel.Prelude.fromMaybe 0|I
     payoutStatus: Kernel.Prelude.fromMaybe Domain.Types.DailyStats.Verifying|I
     tollCharges: Kernel.Prelude.fromMaybe 0|I
@@ -70,12 +70,12 @@ DailyStats:
 
   toTType:
     totalEarnings: Kernel.Prelude.roundToIntegral|I
-    totalEarningsAmount:  Kernel.Prelude.Just|I
+    totalEarningsAmount: Kernel.Prelude.Just|I
     currency: Kernel.Prelude.Just|I
     distanceUnit: Kernel.Prelude.Just|I
     referralEarnings: Kernel.Prelude.Just|I
     referralEarningsAmount: Kernel.Prelude.Just|I
-    activatedValidRides:  Kernel.Prelude.Just|I
+    activatedValidRides: Kernel.Prelude.Just|I
     referralCounts: Kernel.Prelude.Just|I
     payoutStatus: Kernel.Prelude.Just|I
     tollCharges: Kernel.Prelude.Just|I

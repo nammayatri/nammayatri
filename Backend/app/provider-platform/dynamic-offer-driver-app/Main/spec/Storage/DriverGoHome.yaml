@@ -16,15 +16,15 @@ DriverGoHomeRequest:
 
 
   fields:
-    id : Id DriverGoHomeRequest
-    driverId : Id Person
-    lat : Double
-    lon : Double
-    status : DriverGoHomeRequestStatus
-    numCancellation : Int
-    mbReachedHome : Maybe Bool
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Id DriverGoHomeRequest
+    driverId: Id Person
+    lat: Double
+    lon: Double
+    status: DriverGoHomeRequestStatus
+    numCancellation: Int
+    mbReachedHome: Maybe Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   beamFields:
     mbReachedHome:
@@ -83,14 +83,14 @@ DriverHomeLocation:
 
 
   fields:
-    id : Id DriverHomeLocation
-    driverId : Id Person
-    lat : Double
-    lon : Double
-    address : Text
-    tag : Text
-    updatedAt : UTCTime
-    createdAt : UTCTime
+    id: Id DriverHomeLocation
+    driverId: Id Person
+    lat: Double
+    lon: Double
+    address: Text
+    tag: Text
+    updatedAt: UTCTime
+    createdAt: UTCTime
 
   constraints:
     id: PrimaryKey
@@ -129,25 +129,25 @@ GoHomeConfig:
 
 
   fields:
-    merchantId : Id Merchant
-    merchantOperatingCityId : Id MerchantOperatingCity
-    enableGoHome : Bool
-    startCnt : Int
-    destRadiusMeters : Int
-    activeTime : Int
-    updateHomeLocationAfterSec : Int
-    cancellationCnt : Int
-    numHomeLocations : Int
-    goHomeFromLocationRadius : Meters
-    goHomeWayPointRadius : Meters
-    numDriversForDirCheck : Int
-    goHomeBatchDelay : Seconds
-    ignoreWaypointsTill : Meters
-    addStartWaypointAt : Meters
-    newLocAllowedRadius : Meters
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    enableGoHome: Bool
+    startCnt: Int
+    destRadiusMeters: Int
+    activeTime: Int
+    updateHomeLocationAfterSec: Int
+    cancellationCnt: Int
+    numHomeLocations: Int
+    goHomeFromLocationRadius: Meters
+    goHomeWayPointRadius: Meters
+    numDriversForDirCheck: Int
+    goHomeBatchDelay: Seconds
+    ignoreWaypointsTill: Meters
+    addStartWaypointAt: Meters
+    newLocAllowedRadius: Meters
     distanceUnit: DistanceUnit
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   beamType:
     goHomeBatchDelay: Int

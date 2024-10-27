@@ -6,8 +6,8 @@ imports:
   OptionalValue: Kernel.Types.Value
   NominalDiffTime: Kernel.Prelude
   VehicleVariant: Dashboard.Common
-  VehicleCategory:  Dashboard.Common
-  FarePolicy:  Dashboard.Common
+  VehicleCategory: Dashboard.Common
+  FarePolicy: Dashboard.Common
   SlidingWindowOptions: Kernel.Types.SlidingWindowCounters
   Area: Lib.Types.SpecialLocation
   SupportedVehicleClasses: Dashboard.Common.Merchant
@@ -43,14 +43,12 @@ apis:
         endpointV2:
   - GET: # MerchantCommonConfigAPI
       endpoint: /config/common
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MERCHANT_COMMON_CONFIG
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MERCHANT_COMMON_CONFIG
       response:
         type: MerchantCommonConfigRes
   - POST: # MerchantCommonConfigUpdateAPI
       endpoint: /config/common/update
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MERCHANT_COMMON_CONFIG_UPDATE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MERCHANT_COMMON_CONFIG_UPDATE
       request:
         type: MerchantCommonConfigUpdateReq
       response:
@@ -61,8 +59,7 @@ apis:
         endpointV2:
   - GET: # DriverPoolConfigAPI
       endpoint: /config/driverPool
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_POOL_CONFIG
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_POOL_CONFIG
       query:
         - tripDistance: Meters
         - tripDistanceValue: HighPrecDistance
@@ -71,8 +68,7 @@ apis:
         type: DriverPoolConfigRes
   - POST: # DriverPoolConfigUpdateAPI
       endpoint: /config/driverPool/update
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_POOL_CONFIG_UPDATE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_POOL_CONFIG_UPDATE
       mandatoryQuery:
         - tripDistance: Meters
         - area: Area
@@ -91,8 +87,7 @@ apis:
         endpointV2:
   - POST: # DriverPoolConfigCreateAPI
       endpoint: /config/driverPool/create
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_POOL_CONFIG_CREATE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_POOL_CONFIG_CREATE
       mandatoryQuery:
         - tripDistance: Meters
         - area: Area
@@ -111,14 +106,12 @@ apis:
         endpointV2:
   - GET: # DriverIntelligentPoolConfigAPI
       endpoint: /config/driverIntelligentPool
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_INTELLIGENT_POOL_CONFIG
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_INTELLIGENT_POOL_CONFIG
       response:
         type: DriverIntelligentPoolConfigRes
   - POST: # DriverIntelligentPoolConfigUpdateAPI
       endpoint: /config/driverIntelligentPool/update
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_INTELLIGENT_POOL_CONFIG_UPDATE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DRIVER_INTELLIGENT_POOL_CONFIG_UPDATE
       request:
         type: DriverIntelligentPoolConfigUpdateReq
       response:
@@ -132,14 +125,12 @@ apis:
       query:
         - documentType: DocumentType
         - vehicleCategory: VehicleCategory
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT ONBOARDING_DOCUMENT_CONFIG
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT ONBOARDING_DOCUMENT_CONFIG
       response:
         type: DocumentVerificationConfigRes
   - POST: # DocumentVerificationConfigUpdateAPI
       endpoint: /config/onboardingDocument/update
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT ONBOARDING_DOCUMENT_CONFIG_UPDATE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT ONBOARDING_DOCUMENT_CONFIG_UPDATE
       mandatoryQuery:
         - documentType: DocumentType
         - category: VehicleCategory
@@ -152,8 +143,7 @@ apis:
         endpointV2:
   - POST: # DocumentVerificationConfigCreateAPI
       endpoint: /config/onboardingDocument/create
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT ONBOARDING_DOCUMENT_CONFIG_CREATE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT ONBOARDING_DOCUMENT_CONFIG_CREATE
       mandatoryQuery:
         - documentType: DocumentType
         - category: VehicleCategory
@@ -166,14 +156,12 @@ apis:
         endpointV2:
   - GET: # ServiceUsageConfigAPI
       endpoint: /serviceUsageConfig
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SERVICE_USAGE_CONFIG
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SERVICE_USAGE_CONFIG
       response:
         type: ServiceUsageConfigRes
   - POST: # MapsServiceConfigUpdateAPI
       endpoint: /serviceConfig/maps/update
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MAPS_SERVICE_CONFIG_UPDATE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MAPS_SERVICE_CONFIG_UPDATE
       request:
         type: MapsServiceConfigUpdateReq
       response:
@@ -183,8 +171,7 @@ apis:
         endpointV2:
   - POST: # MapsServiceUsageConfigUpdateAPI
       endpoint: /serviceUsageConfig/maps/update
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MAPS_SERVICE_USAGE_CONFIG_UPDATE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MAPS_SERVICE_USAGE_CONFIG_UPDATE
       request:
         type: MapsServiceUsageConfigUpdateReq
       response:
@@ -195,8 +182,7 @@ apis:
         endpointV2:
   - POST: # SmsServiceConfigUpdateAPI
       endpoint: /serviceConfig/sms/update
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SMS_SERVICE_CONFIG_UPDATE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SMS_SERVICE_CONFIG_UPDATE
       request:
         type: SmsServiceConfigUpdateReq
       response:
@@ -206,8 +192,7 @@ apis:
         endpointV2:
   - POST: # SmsServiceUsageConfigUpdateAPI
       endpoint: /serviceUsageConfig/sms/update
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SMS_SERVICE_USAGE_CONFIG_UPDATE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SMS_SERVICE_USAGE_CONFIG_UPDATE
       request:
         type: SmsServiceUsageConfigUpdateReq
       response:
@@ -218,8 +203,7 @@ apis:
         endpointV2:
   - POST: # VerificationServiceConfigUpdateAPI
       endpoint: /serviceConfig/verification/update
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT VERIFICATION_SERVICE_CONFIG_UPDATE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT VERIFICATION_SERVICE_CONFIG_UPDATE
       request:
         type: VerificationServiceConfigUpdateReq
       response:
@@ -229,8 +213,7 @@ apis:
         endpointV2:
   - POST: # CreateFPDriverExtraFee
       endpoint: /config/farePolicy/{farePolicyId}/driverExtraFeeBounds/create
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT CREATE_FP_DRIVER_EXTRA_FEE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT CREATE_FP_DRIVER_EXTRA_FEE
       params:
         farePolicyId: Id FarePolicy
       mandatoryQuery:
@@ -247,8 +230,7 @@ apis:
         endpointV2:
   - POST: # UpdateFPDriverExtraFee
       endpoint: /config/farePolicy/{farePolicyId}/driverExtraFeeBounds/update
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPDATE_FP_DRIVER_EXTRA_FEE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPDATE_FP_DRIVER_EXTRA_FEE
       params:
         farePolicyId: Id FarePolicy
       query:
@@ -265,8 +247,7 @@ apis:
         endpointV2:
   - POST: # UpdateFPPerExtraKmRate
       endpoint: /config/farePolicy/{farePolicyId}/{startDistance}/perExtraKmRate/update
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPDATE_FP_PER_EXTRA_KM_RATE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPDATE_FP_PER_EXTRA_KM_RATE
       params:
         farePolicyId: Id FarePolicy
         startDistance: Meters
@@ -279,8 +260,7 @@ apis:
         endpointV2:
   - POST: # UpdateFarePolicy
       endpoint: /config/farePolicy/{farePolicyId}/update
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPDATE_FARE_POLICY
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPDATE_FARE_POLICY
       params:
         farePolicyId: Id FarePolicy
       request:
@@ -292,8 +272,7 @@ apis:
         endpointV2:
   - POST: # UpsertFarePolicyAPI
       endpoint: /config/farePolicy/upsert/
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_FARE_POLICY
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_FARE_POLICY
       multipart:
         type: UpsertFarePolicyReq
       response:
@@ -303,8 +282,7 @@ apis:
         endpointV2:
   - POST: # CreateMerchantOperatingCityAPI
       endpoint: /config/operatingCity/create
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
       multipart:
         type: CreateMerchantOperatingCityReq
       response:
@@ -312,8 +290,7 @@ apis:
       helperApi:
         - POST:
             endpoint: /config/operatingCity/create
-            auth: # TODO remove
-              ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
+            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY # TODO remove
             request:
               type: CreateMerchantOperatingCityReqT
             response:
@@ -323,16 +300,14 @@ apis:
         endpointV2:
   - POST: # SchedulerTriggerAPI
       endpoint: /scheduler/trigger
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SCHEDULER_TRIGGER
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT SCHEDULER_TRIGGER
       request:
         type: SchedulerTriggerReq
       response:
         type: APISuccess
   - POST: # UpdateOnboardingVehicleVariantMappingAPI
       endpoint: /updateOnboardingVehicleVariantMapping
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPDATE_ONBOARDING_VEHICLE_VARIANT_MAPPING
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPDATE_ONBOARDING_VEHICLE_VARIANT_MAPPING
       multipart:
         type: UpdateOnboardingVehicleVariantMappingReq
       response:
@@ -344,8 +319,7 @@ apis:
       endpoint: /specialLocation/upsert
       query:
         - specialLocationId: Id SpecialLocation
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION
       multipart:
         type: UpsertSpecialLocationReq
       response:
@@ -355,8 +329,7 @@ apis:
             endpoint: /specialLocation/upsert
             query:
               - specialLocationId: Id SpecialLocation
-            auth: # TODO remove
-              ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION
+            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION # TODO remove
             request:
               type: UpsertSpecialLocationReqT
             response:
@@ -367,9 +340,8 @@ apis:
   - DELETE: # DeleteSpecialLocationAPI
       endpoint: /specialLocation/{specialLocationId}/delete
       params:
-        specialLocationId : Id SpecialLocation
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION
+        specialLocationId: Id SpecialLocation
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION
       response:
         type: APISuccess
       migrate:
@@ -378,9 +350,8 @@ apis:
   - POST: # UpsertSpecialLocationGateAPI
       endpoint: /specialLocation/{specialLocationId}/gates/upsert
       params:
-        specialLocationId : Id SpecialLocation
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_GATE
+        specialLocationId: Id SpecialLocation
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_GATE
       multipart:
         type: UpsertSpecialLocationGateReq
       response:
@@ -389,9 +360,8 @@ apis:
         - POST:
             endpoint: /specialLocation/{specialLocationId}/gates/upsert
             params:
-              specialLocationId : Id SpecialLocation
-            auth: # TODO remove
-              ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_GATE
+              specialLocationId: Id SpecialLocation
+            auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_GATE # TODO remove
             request:
               type: UpsertSpecialLocationGateReqT
             response:
@@ -402,10 +372,9 @@ apis:
   - DELETE: # DeleteSpecialLocationGateAPI
       endpoint: /specialLocation/{specialLocationId}/gates/delete/{gateName}
       params:
-        specialLocationId : Id SpecialLocation
+        specialLocationId: Id SpecialLocation
         gateName: Text
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION_GATE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION_GATE
       response:
         type: APISuccess
       migrate:
@@ -413,8 +382,7 @@ apis:
         endpointV2:
   - POST:
       endpoint: /config/clearCache/subscription
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT CLEAR_CACHE_SUBSCRIPTION
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT CLEAR_CACHE_SUBSCRIPTION
       request:
         type: ClearCacheSubscriptionReq
       response:
@@ -572,7 +540,7 @@ types:
     - currentRideTripCategoryValidForForwardBatching: [Text]
     - batchSizeOnRide: Int
     - batchSizeOnRideWithStraightLineDistance: Maybe Int
-    - useOneToOneOsrmMapping : Maybe Bool
+    - useOneToOneOsrmMapping: Maybe Bool
     - actualDistanceThresholdWithUnit: Maybe Distance
     - actualDistanceThresholdOnRideWithUnit: Maybe Distance
     - maxDriverQuotesRequired: Int
@@ -760,8 +728,8 @@ types:
     - file: FilePath
     - derive: "'HideSecrets"
   ClearCacheSubscriptionReq:
-    - serviceName : Maybe ServiceNames
-    - planId : Maybe Text
+    - serviceName: Maybe ServiceNames
+    - planId: Maybe Text
     - derive: "'HideSecrets"
 
 extraOperations:

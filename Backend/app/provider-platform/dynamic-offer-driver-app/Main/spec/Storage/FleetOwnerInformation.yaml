@@ -1,26 +1,26 @@
 imports:
   Merchant: Domain.Types.Merchant
   Person: Domain.Types.Person
-  FleetType : Domain.Types.FleetType
+  FleetType: Domain.Types.FleetType
 
 FleetOwnerInformation:
   tableName: fleet_owner_information
   fields:
     merchantId: Id Merchant
-    fleetOwnerPersonId : Id Person
+    fleetOwnerPersonId: Id Person
     enabled: Bool
     blocked: Bool
     verified: Bool
     gstNumber: Maybe Text
     fleetType: FleetType
-    gstImageId : Maybe Text
+    gstImageId: Maybe Text
   excludedFields: [merchantOperatingCityId]
   types:
     FleetType:
       enum: "RENTAL_FLEET,NORMAL_FLEET"
 
   constraints:
-    fleetOwnerPersonId : PrimaryKey
+    fleetOwnerPersonId: PrimaryKey
 
   queries:
     updateFleetOwnerVerifiedStatus:

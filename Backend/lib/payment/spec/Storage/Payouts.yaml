@@ -4,9 +4,9 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   Currency: Kernel.Types.Common
   Price: Kernel.Types.Common
-  PayoutOrderStatus : Kernel.External.Payout.Juspay.Types.Payout
-  AccountDetailsType : Kernel.External.Payout.Juspay.Types.Payout
-  EntityName : Lib.Payment.Domain.Types.Common
+  PayoutOrderStatus: Kernel.External.Payout.Juspay.Types.Payout
+  AccountDetailsType: Kernel.External.Payout.Juspay.Types.Payout
+  EntityName: Lib.Payment.Domain.Types.Common
   EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
 
@@ -14,26 +14,26 @@ PayoutOrder:
   tableName: payout_order
   derives: "Generic"
   fields:
-    id : Id PayoutOrder
-    shortId : Maybe (ShortId PayoutOrder)
-    customerId : Text
-    orderId : Text
-    merchantId : Text
-    city : Text
-    amount : Price
-    status : PayoutOrderStatus
-    accountDetailsType : Maybe AccountDetailsType
-    entityName : Maybe EntityName
-    vpa : Maybe Text
-    mobileNo : (EncryptedHashedField e Text)
-    customerEmail : (EncryptedHashedField e Text)
-    lastStatusCheckedAt : Maybe UTCTime
-    createdAt : UTCTime
-    updatedAt : UTCTime
-    entityIds : Maybe [Text]
-    responseCode : Maybe Text
-    responseMessage : Maybe Text
-    retriedOrderId : Maybe Text
+    id: Id PayoutOrder
+    shortId: Maybe (ShortId PayoutOrder)
+    customerId: Text
+    orderId: Text
+    merchantId: Text
+    city: Text
+    amount: Price
+    status: PayoutOrderStatus
+    accountDetailsType: Maybe AccountDetailsType
+    entityName: Maybe EntityName
+    vpa: Maybe Text
+    mobileNo: (EncryptedHashedField e Text)
+    customerEmail: (EncryptedHashedField e Text)
+    lastStatusCheckedAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    entityIds: Maybe [Text]
+    responseCode: Maybe Text
+    responseMessage: Maybe Text
+    retriedOrderId: Maybe Text
   beamFields:
     amount:
       currency: Maybe Currency
@@ -81,7 +81,7 @@ PayoutOrder:
       where: orderId
 
   extraOperations:
-  - EXTRA_QUERY_FILE
+    - EXTRA_QUERY_FILE
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
 
@@ -89,16 +89,16 @@ PayoutTransaction:
   tableName: payout_transaction
   derives: "Generic"
   fields:
-    id : Id PayoutTransaction
-    payoutOrderId : Id PayoutOrder
-    transactionRef : Text
-    gateWayRefId : Maybe Text
-    fulfillmentMethod : Maybe Text
-    amount : Price
-    status : Text
+    id: Id PayoutTransaction
+    payoutOrderId: Id PayoutOrder
+    transactionRef: Text
+    gateWayRefId: Maybe Text
+    fulfillmentMethod: Maybe Text
+    amount: Price
+    status: Text
     merchantId: Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
   sqlType:
     id: character varying(36)
     createdAt: timestamp with time zone

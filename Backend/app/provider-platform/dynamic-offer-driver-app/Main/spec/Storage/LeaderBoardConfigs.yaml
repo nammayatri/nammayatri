@@ -10,16 +10,16 @@ LeaderBoardConfigs:
   tableName: leader_board_configs
 
   fields:
-    id : Id LeaderBoardConfigs
-    leaderBoardType : LeaderBoardType
-    numberOfSets : Int
-    leaderBoardExpiry : Seconds
-    zScoreBase : Int
-    leaderBoardLengthLimit : Int
-    isEnabled : Bool
-    merchantId : Id Merchant
-    merchantOperatingCityId : Id MerchantOperatingCity
-    useOperatingCityBasedLeaderBoard : Maybe Bool
+    id: Id LeaderBoardConfigs
+    leaderBoardType: LeaderBoardType
+    numberOfSets: Int
+    leaderBoardExpiry: Seconds
+    zScoreBase: Int
+    leaderBoardLengthLimit: Int
+    isEnabled: Bool
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    useOperatingCityBasedLeaderBoard: Maybe Bool
 
   types:
     LeaderBoardType:

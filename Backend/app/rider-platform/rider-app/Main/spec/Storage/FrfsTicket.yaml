@@ -163,11 +163,11 @@ FRFSQuote:
     riderId: Id Person
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
+    partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     eventDiscountAmount: Maybe HighPrecMoney
     discountedTickets: Maybe Int
-    bppDelayedInterest : Maybe Int
+    bppDelayedInterest: Maybe Int
 
   beamFields:
     price:
@@ -251,14 +251,14 @@ FRFSTicketBooking:
     customerCancelled: Bool
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
+    partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
     payerVpa: Maybe Text
     cashbackStatus: Maybe CashbackStatus
     cashbackPayoutOrderId: Maybe Text
-    bppDelayedInterest : Maybe Int
+    bppDelayedInterest: Maybe Int
 
   default:
     customerCancelled: "false"
@@ -342,8 +342,7 @@ FRFSTicketBooking:
       where: id
     updateRefundCancellationChargesAndIsCancellableByBookingId:
       kvFunction: updateOneWithKV
-      params:
-        [refundAmount, cancellationCharges, isBookingCancellable, updatedAt]
+      params: [refundAmount, cancellationCharges, isBookingCancellable, updatedAt]
       where: id
     updateIsBookingCancellableByBookingId:
       kvFunction: updateOneWithKV
@@ -385,7 +384,7 @@ FRFSTicket:
     ticketNumber: Text
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    partnerOrgTransactionId : Maybe (Id PartnerOrgTransaction)
+    partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     isTicketFree: Maybe Bool
 

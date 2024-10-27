@@ -398,7 +398,7 @@ DocumentVerificationConfig:
     supportedVehicleClassesJSON: json
   beamFields:
     supportedVehicleClasses:
-     supportedVehicleClassesJSON: Value
+      supportedVehicleClassesJSON: Value
   toTType:
     supportedVehicleClassesJSON: getConfigJSON
   fromTType:

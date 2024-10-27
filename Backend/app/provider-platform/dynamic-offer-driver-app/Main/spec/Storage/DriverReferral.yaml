@@ -11,9 +11,9 @@ DriverReferral:
   tableName: driver_referral
 
   fields:
-    referralCode : Id DriverReferral
-    driverId : Id Person
-    linkedAt : UTCTime
+    referralCode: Id DriverReferral
+    driverId: Id Person
+    linkedAt: UTCTime
 
   constraints:
     referralCode: PrimaryKey

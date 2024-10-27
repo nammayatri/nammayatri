@@ -19,26 +19,26 @@ BookingUpdateRequest:
 
   fields:
     id: Id BookingUpdateRequest
-    bookingId : Id Booking
-    bapBookingUpdateRequestId : Text
-    status : BookingUpdateRequestStatus
-    travelledDistance : Maybe HighPrecMeters
-    estimatedDistance : Maybe HighPrecMeters
-    maxEstimatedDistance : Maybe HighPrecMeters
-    estimatedFare : HighPrecMoney
-    totalDistance : Maybe HighPrecMeters
-    currentPointLat : Maybe Double
-    currentPointLon : Maybe Double
-    oldEstimatedFare : HighPrecMoney
-    oldEstimatedDistance : Maybe HighPrecMeters
-    oldMaxEstimatedDistance : Maybe HighPrecMeters
+    bookingId: Id Booking
+    bapBookingUpdateRequestId: Text
+    status: BookingUpdateRequestStatus
+    travelledDistance: Maybe HighPrecMeters
+    estimatedDistance: Maybe HighPrecMeters
+    maxEstimatedDistance: Maybe HighPrecMeters
+    estimatedFare: HighPrecMoney
+    totalDistance: Maybe HighPrecMeters
+    currentPointLat: Maybe Double
+    currentPointLon: Maybe Double
+    oldEstimatedFare: HighPrecMoney
+    oldEstimatedDistance: Maybe HighPrecMeters
+    oldMaxEstimatedDistance: Maybe HighPrecMeters
     distanceUnit: DistanceUnit
-    oldFareParamsId : Id FareParameters
+    oldFareParamsId: Id FareParameters
     createdAt: UTCTime
     updatedAt: UTCTime
-    validTill : UTCTime
-    fareParamsId : Id FareParameters
-    farePolicyId : Id FarePolicy
+    validTill: UTCTime
+    fareParamsId: Id FareParameters
+    farePolicyId: Id FarePolicy
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     getRouteReq: Maybe Text
@@ -89,4 +89,4 @@ BookingUpdateRequest:
   constraints:
     id: PrimaryKey
     bookingId: SecondaryKey
-    bapBookingUpdateRequestId : SecondaryKey
+    bapBookingUpdateRequestId: SecondaryKey

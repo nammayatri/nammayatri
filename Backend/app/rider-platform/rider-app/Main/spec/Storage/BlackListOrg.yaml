@@ -10,9 +10,9 @@ BlackListOrg:
   beamInstance: MakeTableInstancesWithTModifier [("subscriberId", "subscriber_id")]
 
   fields:
-    id : Id BlackListOrg
-    subscriberId : ShortId Subscriber
-    domain : Domain
+    id: Id BlackListOrg
+    subscriberId: ShortId Subscriber
+    domain: Domain
     createdAt: UTCTime
     updatedAt: UTCTime
   derives: "Generic,'UsageSafety"

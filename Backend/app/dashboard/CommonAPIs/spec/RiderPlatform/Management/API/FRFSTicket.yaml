@@ -77,8 +77,7 @@ types:
 apis:
   - GET: # Get list of all the FRFS routes
       endpoint: /frfs/routes
-      auth:
-        ApiAuth APP_BACKEND FRFS LIST_FRFS_ROUTES
+      auth: ApiAuth APP_BACKEND FRFS LIST_FRFS_ROUTES
       mandatoryQuery:
         vehicleType: VehicleCategory
         limit: Int
@@ -95,8 +94,7 @@ apis:
         code: Text
       request:
         type: FRFSRouteReq
-      auth:
-        ApiAuth APP_BACKEND FRFS ADD_FRFS_ROUTE
+      auth: ApiAuth APP_BACKEND FRFS ADD_FRFS_ROUTE
       response:
         type: APISuccess
   - POST: # Delete a route
@@ -105,8 +103,7 @@ apis:
         vehicleType: VehicleCategory
       params:
         code: Text
-      auth:
-        ApiAuth APP_BACKEND FRFS DELETE_FRFS_ROUTE
+      auth: ApiAuth APP_BACKEND FRFS DELETE_FRFS_ROUTE
       response:
         type: APISuccess
   - GET: # Get list of stop fares for a Route
@@ -115,8 +112,7 @@ apis:
         vehicleType: VehicleCategory
       params:
         routeCode: Text
-      auth:
-        ApiAuth APP_BACKEND FRFS LIST_FRFS_ROUTE_FARE
+      auth: ApiAuth APP_BACKEND FRFS LIST_FRFS_ROUTE_FARE
       response:
         type: "FRFSRouteFareAPI"
   - PUT: # Upsert fares for Route through CSV
@@ -127,8 +123,7 @@ apis:
         routeCode: Text
       multipart:
         type: UpsertRouteFareReq
-      auth:
-        ApiAuth APP_BACKEND FRFS UPSERT_FRFS_ROUTE_FARE
+      auth: ApiAuth APP_BACKEND FRFS UPSERT_FRFS_ROUTE_FARE
       response:
         type: UpsertRouteFareResp
   - GET: # List all stations
@@ -139,8 +134,7 @@ apis:
         offset: Int
       query:
         searchStr: Text
-      auth:
-        ApiAuth APP_BACKEND FRFS LIST_FRFS_STATION
+      auth: ApiAuth APP_BACKEND FRFS LIST_FRFS_STATION
       response:
         type: "[FRFSStationAPI]"
   - POST: # Add new station
@@ -151,8 +145,7 @@ apis:
         code: Text
       request:
         type: FRFSStationReq
-      auth:
-        ApiAuth APP_BACKEND FRFS ADD_FRFS_STATION
+      auth: ApiAuth APP_BACKEND FRFS ADD_FRFS_STATION
       response:
         type: APISuccess
   - POST: # Delete a station
@@ -161,7 +154,6 @@ apis:
         vehicleType: VehicleCategory
       params:
         code: Text
-      auth:
-        ApiAuth APP_BACKEND FRFS DELETE_FRFS_STATION
+      auth: ApiAuth APP_BACKEND FRFS DELETE_FRFS_STATION
       response:
         type: APISuccess

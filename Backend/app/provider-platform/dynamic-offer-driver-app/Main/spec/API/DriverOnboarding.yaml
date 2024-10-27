@@ -51,9 +51,9 @@ types:
     canSwitchToInterCity: Maybe Bool
     airConditioned: Maybe AirConditionedTier
   AirConditionedTier:
-      isWorking: Bool
-      usageRestrictionType: AirConditionedRestrictionType
-      restrictionMessage: Maybe Text
+    isWorking: Bool
+    usageRestrictionType: AirConditionedRestrictionType
+    restrictionMessage: Maybe Text
   DriverVehicleServiceTier:
     serviceTierType: ServiceTierType
     name: Text
@@ -87,8 +87,8 @@ types:
     rateCardItems: [RateCardItem]
   DriverPanReq:
     panNumber: Text
-    imageId1 : Id Image
-    imageId2 : Maybe (Id Image)
+    imageId1: Id Image
+    imageId2: Maybe (Id Image)
     consent: Bool
     nameOnCard: Maybe Text
     dateOfBirth: Maybe UTCTime
@@ -123,9 +123,9 @@ types:
     txnId: Text
     hvFlowId: Maybe Text
     docType: Maybe DocumentType
-    status : Maybe Text
-    callbackResponse : Maybe Text
-    failureReason : Maybe Text
+    status: Maybe Text
+    callbackResponse: Maybe Text
+    failureReason: Maybe Text
 
 
 

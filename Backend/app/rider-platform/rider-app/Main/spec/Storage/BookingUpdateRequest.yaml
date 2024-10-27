@@ -22,15 +22,15 @@ BookingUpdateRequest:
     bookingId: Id Booking
     status: BookingUpdateRequestStatus
     travelledDistance: Maybe HighPrecMeters
-    estimatedDistance : Maybe HighPrecMeters
-    estimatedFare : Maybe HighPrecMoney
-    totalDistance : Maybe HighPrecMeters
-    currentPointLat : Maybe Double
-    currentPointLon : Maybe Double
-    oldEstimatedFare : HighPrecMoney
-    oldEstimatedDistance : Maybe HighPrecMeters
-    errorObj : Maybe ErrorObj
-    distanceUnit : DistanceUnit
+    estimatedDistance: Maybe HighPrecMeters
+    estimatedFare: Maybe HighPrecMoney
+    totalDistance: Maybe HighPrecMeters
+    currentPointLat: Maybe Double
+    currentPointLon: Maybe Double
+    oldEstimatedFare: HighPrecMoney
+    oldEstimatedDistance: Maybe HighPrecMeters
+    errorObj: Maybe ErrorObj
+    distanceUnit: DistanceUnit
     createdAt: UTCTime
     updatedAt: UTCTime
     merchantId: Id Merchant

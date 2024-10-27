@@ -8,11 +8,11 @@ Feedback:
   tableName: feedback
 
   fields:
-    id : Id Feedback
-    rideId : Id Ride
-    driverId : Id Person
-    badge : Text
-    createdAt : UTCTime
+    id: Id Feedback
+    rideId: Id Ride
+    driverId: Id Person
+    badge: Text
+    createdAt: UTCTime
 
 
   constraints:

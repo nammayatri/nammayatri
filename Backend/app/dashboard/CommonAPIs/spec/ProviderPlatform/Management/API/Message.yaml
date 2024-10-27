@@ -13,8 +13,7 @@ apis:
       endpoint: /uploadFile
       multipart:
         type: UploadFileRequest
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE UPLOAD_FILE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE UPLOAD_FILE
       response:
         type: UploadFileResponse
       migrate:
@@ -24,8 +23,7 @@ apis:
       endpoint: /addLink
       request:
         type: AddLinkAsMedia
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE ADD_LINK
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE ADD_LINK
       response:
         type: UploadFileResponse
       migrate:
@@ -35,8 +33,7 @@ apis:
       endpoint: /add
       request:
         type: AddMessageRequest
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE ADD_MESSAGE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE ADD_MESSAGE
       response:
         type: AddMessageResponse
       migrate:
@@ -46,8 +43,7 @@ apis:
       endpoint: /send
       multipart:
         type: SendMessageRequest
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE SEND_MESSAGE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE SEND_MESSAGE
       response:
         type: APISuccess
       migrate:
@@ -58,24 +54,21 @@ apis:
       query:
         - limit: Int
         - offset: Int
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_LIST
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_LIST
       response:
         type: MessageListResponse
   - GET:
       endpoint: /{messageId}/info
       params:
         messageId: Id Message
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_INFO
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_INFO
       response:
         type: MessageInfoResponse
   - GET:
       endpoint: /{messageId}/deliveryInfo
       params:
         messageId: Id Message
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_DELIVERY_INFO
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_DELIVERY_INFO
       response:
         type: MessageDeliveryInfoResponse
   - GET:
@@ -87,8 +80,7 @@ apis:
         - status: MessageDeliveryStatus
         - limit: Int
         - offset: Int
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_RECEIVER_LIST
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MESSAGE MESSAGE_RECEIVER_LIST
       response:
         type: MessageReceiverListResponse
 types:

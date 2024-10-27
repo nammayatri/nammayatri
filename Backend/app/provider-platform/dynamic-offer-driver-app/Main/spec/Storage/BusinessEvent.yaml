@@ -19,17 +19,17 @@ BusinessEvent:
       enum: "ON_SEARCH, ON_CONFIRM, ON_REALLOCATION"
 
   fields:
-    id : Id BusinessEvent
-    driverId : Maybe (Id Driver)
-    eventType : EventType
-    timeStamp : UTCTime
-    bookingId : Maybe (Id Booking)
-    whenPoolWasComputed : Maybe WhenPoolWasComputed
-    vehicleVariant : Maybe VehicleVariant
-    distance : Maybe Meters
+    id: Id BusinessEvent
+    driverId: Maybe (Id Driver)
+    eventType: EventType
+    timeStamp: UTCTime
+    bookingId: Maybe (Id Booking)
+    whenPoolWasComputed: Maybe WhenPoolWasComputed
+    vehicleVariant: Maybe VehicleVariant
+    distance: Maybe Meters
     distanceUnit: DistanceUnit
-    duration : Maybe Seconds
-    rideId : Maybe (Id Ride)
+    duration: Maybe Seconds
+    rideId: Maybe (Id Ride)
 
   beamType:
     distance: Maybe Int

@@ -51,7 +51,7 @@ Ride:
     bppRideId: Id BPPRide
     bookingId: Id Booking
     shortId: ShortId Ride
-    hasStops : Maybe Bool
+    hasStops: Maybe Bool
     merchantId: Maybe (Id Merchant)
     clientId: Maybe (Id Client)
     fromLocation: Location
@@ -86,7 +86,7 @@ Ride:
     rideRating: Maybe Int
     allowedEditLocationAttempts: Maybe Int
     allowedEditPickupLocationAttempts: Maybe Int
-    driversPreviousRideDropLoc : Maybe LatLong
+    driversPreviousRideDropLoc: Maybe LatLong
     startOdometerReading: Maybe Centesimal
     endOdometerReading: Maybe Centesimal
     vehicleAge: Maybe Months
@@ -145,7 +145,7 @@ Ride:
     driverAlternateNumberHash: bytea
     tipAmount: numeric(30,2)
 
-# FIXME separate distanceUnit/currency for each column
+  # FIXME separate distanceUnit/currency for each column
   beamFields:
     toLocation: {}
     fromLocation: {}
@@ -246,7 +246,7 @@ Ride:
     clientSdkVersion: Maybe Text
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
-    showDriversPreviousRideDropLoc : Maybe Bool
+    showDriversPreviousRideDropLoc: Maybe Bool
     paymentStatus: Maybe PaymentStatus
     onlinePayment: Maybe Bool
     clientModelName: Maybe Text

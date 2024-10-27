@@ -84,6 +84,6 @@ SavedReqLocation:
         - riderId
         - latLong: Kernel.External.Maps.LatLong
   extraOperations:
-   - EXTRA_QUERY_FILE
-   - EXTRA_CACHED_QUERY_FILE
+    - EXTRA_QUERY_FILE
+    - EXTRA_CACHED_QUERY_FILE
 

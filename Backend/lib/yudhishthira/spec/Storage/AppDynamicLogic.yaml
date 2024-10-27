@@ -1,6 +1,6 @@
 imports:
   Text: Data.Text
-  TimeBound : Kernel.Types.TimeBound
+  TimeBound: Kernel.Types.TimeBound
   MerchantOperatingCity: Lib.Yudhishthira.Types
   LogicDomain: Lib.Yudhishthira.Types
 

@@ -10,9 +10,9 @@ RegistryMapFallback:
 
 
   fields:
-    subscriberId : Text
-    uniqueId : Text
-    registryUrl : BaseUrl
+    subscriberId: Text
+    uniqueId: Text
+    registryUrl: BaseUrl
 
   beamType:
     registryUrl: Text

@@ -13,12 +13,12 @@ Translations:
 
 
   fields:
-    id : Id Translations
-    messageKey : Text
-    language : Language
-    message : Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Id Translations
+    messageKey: Text
+    language: Language
+    message: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   constraints:
     id: PrimaryKey

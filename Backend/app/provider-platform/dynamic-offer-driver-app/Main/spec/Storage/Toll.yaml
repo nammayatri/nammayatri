@@ -11,14 +11,14 @@ Toll:
   tableName: toll
   derives: "Generic,Show,Read,FromJSON,ToJSON"
   fields:
-    id : Id Toll
+    id: Id Toll
     name: Text
-    tollStartGates : "[LineSegment]"
-    tollEndGates : "[LineSegment]"
-    isAutoRickshawAllowed : Bool
+    tollStartGates: "[LineSegment]"
+    tollEndGates: "[LineSegment]"
+    isAutoRickshawAllowed: Bool
     price: Price
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   sqlType:
     tollStartGates: text[]

@@ -66,7 +66,7 @@ Merchant:
     editPickupDistanceThreshold: Distance
     driverDistanceThresholdFromPickup: Distance
     numOfAllowedEditPickupLocationAttemptsThreshold: Int
-    numOfAllowedEditLocationAttemptsThreshold : Int
+    numOfAllowedEditLocationAttemptsThreshold: Int
     publicMediaFileUrlPattern: Text
     scheduleRideBufferTime: NominalDiffTime
     fakeOtpMobileNumbers: "[Text]"
@@ -191,7 +191,7 @@ Merchant:
     driverOnTheWayNotifyExpiry: "3600"
     scheduleRideBufferTime: "1800"
     numOfAllowedEditPickupLocationAttemptsThreshold: "2"
-    numOfAllowedEditLocationAttemptsThreshold : "3"
+    numOfAllowedEditLocationAttemptsThreshold: "3"
     driverDistanceThresholdFromPickup: "100"
     editPickupDistanceThreshold: "100"
     publicMediaFileUrlPattern: "'http://localhost:8013/v2/<DOMAIN>/media?filePath=<FILE_PATH>'"
@@ -407,12 +407,12 @@ MerchantPaymentMethod:
 
 
   excludedDefaultQueries:
-   - findByPrimaryKey
-   - updateByPrimaryKey
+    - findByPrimaryKey
+    - updateByPrimaryKey
 
   extraOperations:
-   - EXTRA_DOMAIN_TYPE_FILE
-   - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_QUERY_FILE
 
 
 
@@ -467,14 +467,14 @@ MerchantMessage:
       where:
         and: [merchantOperatingCityId, messageKey]
   excludedDefaultQueries:
-   - findByPrimaryKey
-   - updateByPrimaryKey
+    - findByPrimaryKey
+    - updateByPrimaryKey
 
   extraOperations:
-   - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
 
 RideRelatedNotificationConfig:
-  tableName : ride_related_notification_config
+  tableName: ride_related_notification_config
   derives: "Generic,Show,ToJSON,FromJSON"
   types:
     NotificationType:
@@ -485,7 +485,7 @@ RideRelatedNotificationConfig:
       enum: "PreEvent,PostEvent,OnEvent"
   fields:
     id: Id RideRelatedNotificationConfig
-    timeDiff : NominalDiffTime
+    timeDiff: NominalDiffTime
     timeDiffEvent: TimeDiffEvent
     onBookingStatus: BookingStatus
     notificationType: NotificationType
@@ -553,7 +553,7 @@ MerchantPushNotification:
         and: [merchantOperatingCityId, key, tripCategory]
 
 PayoutConfig:
-  tableName : payout_config
+  tableName: payout_config
   derives: "Generic,Show,ToJSON,FromJSON"
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity

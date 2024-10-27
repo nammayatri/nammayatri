@@ -8,17 +8,17 @@ PurchaseHistory:
   beamInstance: Custom Kernel.Beam.Lib.UtilsTH.mkTableInstances "coin_purchase_history" "atlas_driver_offer_bpp"
 
   fields:
-    id : Id PurchaseHistory
-    driverId : Text
-    merchantId : Text
-    merchantOptCityId : Text
-    numCoins : Int
-    cash : HighPrecMoney
-    currency : Currency
-    title : Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
-    vehicleCategory : Maybe VehicleCategory
+    id: Id PurchaseHistory
+    driverId: Text
+    merchantId: Text
+    merchantOptCityId: Text
+    numCoins: Int
+    cash: HighPrecMoney
+    currency: Currency
+    title: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    vehicleCategory: Maybe VehicleCategory
 
   beamFields:
     currency:

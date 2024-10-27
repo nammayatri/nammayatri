@@ -8,10 +8,10 @@ KioskLocationTranslation:
   tableName: kiosk_location_translation
 
   fields:
-    kioskLocationId : Id KioskLocation
-    language : Language
-    landmark : Text
-    address : Text
+    kioskLocationId: Id KioskLocation
+    language: Language
+    landmark: Text
+    address: Text
 
 
   constraints:
