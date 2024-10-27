@@ -14,7 +14,7 @@
 -}
 module Common.RemoteConfig.Utils where
 
-import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel, GullakConfig, StuckRideFilterConfig)
+import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel, GullakConfig, StuckRideFilterConfig, AppLanguage, AppConfigRC)
 import DecodeUtil (decodeForeignObject, parseJSON, setAnyInWindow)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
@@ -69,6 +69,10 @@ defaultCityRemoteConfig defaultValue =
   , gulbarga : Just defaultValue
   , udupi : Just defaultValue
   , ysCities : Just defaultValue
+  , bhubaneshwar : Just defaultValue
+  , bhubaneswar : Just defaultValue
+  , cuttack : Just defaultValue
+  , puri : Just defaultValue
   , config: Nothing
   }
 
@@ -131,6 +135,12 @@ forwardBatchConfigData city =
     decodedConfg = decodeForeignObject (parseJSON remoteConfig) $ defaultCityRemoteConfig defaultForwardBatchConfigData
   in 
     getCityBasedConfig decodedConfg $ toLower city
+
+getAppBasedConfig :: forall a. AppConfigRC a -> String -> a
+getAppBasedConfig config app = case app of
+  "Namma Yatri Partner" -> fromMaybe config.default config.nammaYatriPartner
+  "Odisha Yatri Partner" -> fromMaybe config.default config.odishaYatriPartner
+  _ -> config.default
 
 getCityBasedConfig :: forall a. RemoteConfig a -> String -> a
 getCityBasedConfig config city = case city of
@@ -284,6 +294,51 @@ defaultStuckRideFilterConfig =
     enable : false
   }
 
+defaultAppRemoteConfig :: forall a. a -> AppConfigRC a
+defaultAppRemoteConfig defaultValue =
+  { nammaYatri: Just defaultValue
+  , nammaYatriPartner: Just defaultValue
+  , odishaYatri: Just defaultValue
+  , odishaYatriPartner: Just defaultValue
+  , yatri: Just defaultValue
+  , yatriPartner: Just defaultValue
+  , manaYatri: Just defaultValue
+  , manaYatriPartner: Just defaultValue
+  , yatriSathi: Just defaultValue
+  , yatriSathiPartner: Just defaultValue
+  , default: defaultValue 
+  }
+
+defaultLanguageConfig :: Array AppLanguage
+defaultLanguageConfig = 
+  [
+    { name:"English",
+      value:"EN_US",
+      subtitle: "ಆಂಗ್ಲ"
+    },
+    { name:"ಕನ್ನಡ",
+      value:"KN_IN",
+      subtitle: "Kannada"
+    },
+    {
+      name: "ଓଡିଆ",
+      value: "OD_IN",
+      subtitle: "Odiya"
+    },
+    { name:"हिंदी",
+      value:"HI_IN",
+      subtitle: "Hindi"
+    },
+    { name:"தமிழ்",
+      value:"TA_IN",
+      subtitle: "Tamil"
+    },
+    { name:"తెలుగు",
+      value:"TE_IN",
+      subtitle: "Telugu"
+    }
+  ]
+
 stuckRideFilterConfig :: String -> StuckRideFilterConfig
 stuckRideFilterConfig _ =
   let config = fetchRemoteConfigString "stuck_ride_filter"
@@ -294,6 +349,12 @@ gullakConfig city = do
     let config = fetchRemoteConfigString "gullak_config"
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultGullakConfig
     getCityBasedConfig value $ toLower city
+
+appLanguageConfig :: String -> Array AppLanguage
+appLanguageConfig appName = do
+  let config = fetchRemoteConfigString "enabled_app_languages"
+      value = decodeForeignObject (parseJSON config) $ defaultAppRemoteConfig defaultLanguageConfig
+  getAppBasedConfig value appName
 
 defaultOfferBannerConfig :: Types.OfferBanner
 defaultOfferBannerConfig = {

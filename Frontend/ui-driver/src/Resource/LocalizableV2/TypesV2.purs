@@ -16,6 +16,7 @@ newtype Languages
   , tamil :: Keymap
   , kannada :: Keymap
   , telugu :: Keymap
+  , odiya :: Keymap
   }
 
 newtype Keymap
@@ -1745,6 +1746,9 @@ derive instance ntK :: Newtype Keymap _
 
 a :: forall a. Proxy a
 a = Proxy
+
+odiya :: Proxy "odiya"
+odiya = a
 
 hindi :: Proxy "hindi"
 hindi = a
