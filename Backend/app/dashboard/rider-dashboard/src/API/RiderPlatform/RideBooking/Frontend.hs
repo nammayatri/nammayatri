@@ -56,10 +56,10 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.FlowStatusAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
-callGetPersonFlowStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Maybe Bool -> FlowHandler DFrontend.GetPersonFlowStatusRes
-callGetPersonFlowStatus merchantShortId opCity apiTokenInfo personId isPolling = withFlowHandlerAPI' $ do
+callGetPersonFlowStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Maybe Bool -> Maybe Bool -> FlowHandler DFrontend.GetPersonFlowStatusRes
+callGetPersonFlowStatus merchantShortId opCity apiTokenInfo personId isPolling checkForActiveBooking = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callRiderApp checkedMerchantId opCity (.rideBooking.flowStatus.personFlowStatus) personId isPolling
+  Client.callRiderApp checkedMerchantId opCity (.rideBooking.flowStatus.personFlowStatus) personId isPolling checkForActiveBooking
 
 callNotifyEvent :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> DFrontend.NotifyEventReq -> FlowHandler DFrontend.NotifyEventResp
 callNotifyEvent merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI' $ do
