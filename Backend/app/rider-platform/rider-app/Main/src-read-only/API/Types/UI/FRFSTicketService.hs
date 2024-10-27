@@ -19,6 +19,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.TimeBound
 import qualified Lib.JourneyPlannerTypes
 import Servant
 import Tools.Auth
@@ -100,10 +101,6 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     quantity :: Kernel.Prelude.Int,
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     routeStations :: Data.Maybe.Maybe [API.Types.UI.FRFSTicketService.FRFSRouteStationsAPI],
-    serviceTierDescription :: Data.Maybe.Maybe Data.Text.Text,
-    serviceTierLongName :: Data.Maybe.Maybe Data.Text.Text,
-    serviceTierShortName :: Data.Maybe.Maybe Data.Text.Text,
-    serviceTierType :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     stations :: [API.Types.UI.FRFSTicketService.FRFSStationAPI],
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
@@ -121,6 +118,7 @@ data FRFSRouteAPI = FRFSRouteAPI
     longName :: Data.Text.Text,
     shortName :: Data.Text.Text,
     startPoint :: Kernel.External.Maps.Types.LatLong,
+    timeBounds :: Data.Maybe.Maybe Kernel.Types.TimeBound.TimeBound,
     totalStops :: Data.Maybe.Maybe Kernel.Prelude.Int,
     waypoints :: Data.Maybe.Maybe [Kernel.External.Maps.Types.LatLong]
   }
@@ -132,10 +130,13 @@ data FRFSRouteStationsAPI = FRFSRouteStationsAPI
     color :: Data.Maybe.Maybe Data.Text.Text,
     endPoint :: Kernel.External.Maps.Types.LatLong,
     longName :: Data.Text.Text,
+    priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     sequenceNum :: Data.Maybe.Maybe Kernel.Prelude.Int,
     shortName :: Data.Text.Text,
     startPoint :: Kernel.External.Maps.Types.LatLong,
-    stations :: [API.Types.UI.FRFSTicketService.FRFSStationAPI]
+    stations :: [API.Types.UI.FRFSTicketService.FRFSStationAPI],
+    travelTime :: Data.Maybe.Maybe Kernel.Types.Common.Seconds,
+    vehicleServiceTier :: Data.Maybe.Maybe API.Types.UI.FRFSTicketService.FRFSVehicleServiceTierAPI
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -186,10 +187,6 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     quantity :: Kernel.Prelude.Int,
     routeStations :: Data.Maybe.Maybe [API.Types.UI.FRFSTicketService.FRFSRouteStationsAPI],
-    serviceTierDescription :: Data.Maybe.Maybe Data.Text.Text,
-    serviceTierLongName :: Data.Maybe.Maybe Data.Text.Text,
-    serviceTierShortName :: Data.Maybe.Maybe Data.Text.Text,
-    serviceTierType :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     stations :: [API.Types.UI.FRFSTicketService.FRFSStationAPI],
     status :: Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
     tickets :: [API.Types.UI.FRFSTicketService.FRFSTicketAPI],
@@ -198,4 +195,8 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSVehicleServiceTierAPI = FRFSVehicleServiceTierAPI {_type :: BecknV2.FRFS.Enums.ServiceTierType, description :: Data.Text.Text, longName :: Data.Text.Text, providerCode :: Data.Text.Text, shortName :: Data.Text.Text}
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

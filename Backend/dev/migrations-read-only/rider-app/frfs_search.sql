@@ -42,3 +42,18 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN pricing_id text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

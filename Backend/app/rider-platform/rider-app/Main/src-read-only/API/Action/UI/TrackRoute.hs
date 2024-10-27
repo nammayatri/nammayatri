@@ -21,7 +21,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "track" :> Capture "routeCode" Kernel.Prelude.Text :> "vehicles" :> Get ('[JSON]) API.Types.UI.TrackRoute.TrackingResp)
+type API = (TokenAuth :> "track" :> Capture "routeCode" Kernel.Prelude.Text :> "vehicles" :> Get '[JSON] API.Types.UI.TrackRoute.TrackingResp)
 
 handler :: Environment.FlowServer API
 handler = getTrackVehicles

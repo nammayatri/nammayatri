@@ -53,14 +53,8 @@ data FRFSTicketBooking = FRFSTicketBooking
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     refundAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    routeId :: Kernel.Prelude.Maybe Domain.Types.FRFSQuote.FRFSRoutes,
     routeStationsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
-    serviceTierDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    serviceTierLongName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    serviceTierProviderCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    serviceTierShortName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     stationsJson :: Kernel.Prelude.Text,
     status :: Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
     toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
@@ -86,6 +80,6 @@ data FRFSTicketBookingStatus
   | TECHNICAL_CANCEL_REJECTED
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CashbackStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CashbackStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSTicketBookingStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketBookingStatus)

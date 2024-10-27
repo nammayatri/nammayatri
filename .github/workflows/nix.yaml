@@ -1,10 +1,10 @@
 name: CI
 on:
   push:
-    branches: ["main", "prodHotPush-Common"]
+    branches: ["main", "prodHotPush-Common", "frfs-master"]
   pull_request:
     types: [opened, synchronize, reopened, closed]
-    branches: ["main", "prodHotPush-Common"]
+    branches: ["main", "prodHotPush-Common", "frfs-master"]
   workflow_dispatch:
 
 permissions:
@@ -46,7 +46,7 @@ jobs:
 
   build:
     needs: [process-labels]
-    runs-on: ubuntu-latest
+    runs-on: x86_64-linux
     if: |
       needs.process-labels.outputs.has-backend == 'true' && 
       (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed')
@@ -72,6 +72,7 @@ jobs:
         if: |
           github.ref == 'refs/heads/main' || 
           github.ref == 'refs/heads/prodHotPush-Common' || 
+          github.ref == 'refs/heads/frfs-master' || 
           github.event.pull_request.merged == true
         run: |
           nix build .#dockerImage -o docker-image.tgz
@@ -81,6 +82,7 @@ jobs:
         if: |
           github.ref == 'refs/heads/main' || 
           github.ref == 'refs/heads/prodHotPush-Common' || 
+          github.ref == 'refs/heads/frfs-master' || 
           github.event.pull_request.merged == true
         uses: actions/upload-artifact@v4
         with:
@@ -91,7 +93,7 @@ jobs:
     needs: [build, process-labels]
     runs-on: ubuntu-latest
     if: |
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/prodHotPush-Common' || github.event.pull_request.merged == true) && 
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/prodHotPush-Common' || github.ref == 'refs/heads/frfs-master' || github.event.pull_request.merged == true) && 
       needs.process-labels.outputs.has-backend == 'true'
     steps:
       - name: Download Docker image tarball

@@ -85,9 +85,9 @@ getTrackVehicles (mbPersonId, merchantId) routeCode = do
               pure (highPrecMetersToMeters $ distanceBetweenInMeters (mkLatLong vehicleLat vehicleLong) point)
           let minDistance = minimum (pure distancesFromCurrLocation)
           logDebug $ "distancesFromCurrLocation " <> show distancesFromCurrLocation
-          pure (minDistance, (snd (fst stopPairWithWaypoints)))
+          pure (minDistance, snd (fst stopPairWithWaypoints))
       let nextStop = List.minimumBy (comparing fst) minDistancesWithPoint
-      pure $ TrackRoute.VehicleInfo {nextStop = snd nextStop, vehicleId = vehicleId_, vehicleInfo = vi}
+      pure $ TrackRoute.VehicleInfo {nextStop = snd nextStop, nextStopTravelTime = Just $ Seconds 300, vehicleId = vehicleId_, vehicleInfo = vi}
   pure $ TrackRoute.TrackingResp {vehicleTrackingInfo = trackingResp}
 
 mkLatLong :: Double -> Double -> Maps.LatLong

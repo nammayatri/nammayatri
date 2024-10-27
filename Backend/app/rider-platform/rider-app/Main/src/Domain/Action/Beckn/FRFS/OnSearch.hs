@@ -16,7 +16,6 @@ module Domain.Action.Beckn.FRFS.OnSearch where
 
 import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
-import Data.List (sortOn)
 import qualified Data.Text as T
 import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSSearch as Search
@@ -34,9 +33,7 @@ import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.PersonStats as QPStats
-import qualified Storage.Queries.Route as QRoute
 import qualified Storage.Queries.Station as QStation
-import Tools.Error
 
 data DOnSearch = DOnSearch
   { bppSubscriberId :: Text,
@@ -51,15 +48,18 @@ data DOnSearch = DOnSearch
     bppDelayedInterest :: Maybe Text
   }
 
+data DVehicleServiceTier = DVehicleServiceTier
+  { serviceTierType :: Spec.ServiceTierType,
+    serviceTierProviderCode :: Text,
+    serviceTierShortName :: Text,
+    serviceTierDescription :: Text,
+    serviceTierLongName :: Text
+  }
+
 data DQuote = DQuote
   { bppItemId :: Text,
     price :: Price,
     vehicleType :: Spec.VehicleCategory,
-    serviceTierType :: Maybe Spec.ServiceTierType,
-    serviceTierProviderCode :: Maybe Text,
-    serviceTierShortName :: Maybe Text,
-    serviceTierDescription :: Maybe Text,
-    serviceTierLongName :: Maybe Text,
     routeStations :: [DRouteStation],
     stations :: [DStation],
     discounts :: [DDiscount],
@@ -82,7 +82,10 @@ data DRouteStation = DRouteStation
     routeStartPoint :: LatLong,
     routeEndPoint :: LatLong,
     routeStations :: [DStation],
+    routeTravelTime :: Maybe Seconds,
     routeSequenceNum :: Maybe Int,
+    routeServiceTier :: Maybe DVehicleServiceTier,
+    routePrice :: Price,
     routeColor :: Maybe Text
   }
 
@@ -133,23 +136,6 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
 
   startStation <- QStation.findByStationCode dStartStation.stationCode >>= fromMaybeM (InternalError $ "Station not found: " <> dStartStation.stationCode)
   endStation <- QStation.findByStationCode dEndStation.stationCode >>= fromMaybeM (InternalError $ "Station not found: " <> dEndStation.stationCode)
-  routeId <-
-    case vehicleType of
-      Spec.BUS -> do
-        maybe
-          (pure Nothing)
-          ( \rStation -> do
-              route <- QRoute.findByRouteCode rStation.routeCode >>= fromMaybeM (RouteNotFound rStation.routeCode)
-              return $ Just (Quote.Bus route.id)
-          )
-          $ listToMaybe routeStations
-      Spec.METRO -> do
-        routes <-
-          mapM
-            ( \rStation -> QRoute.findByRouteCode rStation.routeCode >>= fromMaybeM (RouteNotFound rStation.routeCode)
-            )
-            $ sortOn (.routeSequenceNum) routeStations
-        return $ Just (Quote.Metro (map (.id) routes))
   let freeTicketInterval = fromMaybe (maxBound :: Int) mbFreeTicketInterval
   let stationsJSON = stations & map castStationToAPI & encodeToText
   let routeStationsJSON = routeStations & map castRouteStationToAPI & encodeToText
@@ -185,7 +171,6 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
         Quote.routeStationsJson = Just routeStationsJSON,
         Quote.discountsJson = Just discountsJSON,
         Quote.toStationId = endStation.id,
-        Quote.routeId = routeId,
         Quote.validTill,
         Quote.vehicleType,
         Quote.merchantId = search.merchantId,
@@ -229,7 +214,20 @@ castRouteStationToAPI DRouteStation {..} =
       API.longName = routeLongName,
       API.shortName = routeShortName,
       API.sequenceNum = routeSequenceNum,
+      API.travelTime = routeTravelTime,
+      API.vehicleServiceTier = castVehicleServiceTierAPI <$> routeServiceTier,
+      API.priceWithCurrency = mkPriceAPIEntity routePrice,
       API.stations = map castStationToAPI routeStations
+    }
+
+castVehicleServiceTierAPI :: DVehicleServiceTier -> API.FRFSVehicleServiceTierAPI
+castVehicleServiceTierAPI DVehicleServiceTier {..} =
+  API.FRFSVehicleServiceTierAPI
+    { _type = serviceTierType,
+      providerCode = serviceTierProviderCode,
+      description = serviceTierDescription,
+      longName = serviceTierLongName,
+      shortName = serviceTierShortName
     }
 
 castDiscountToAPI :: DDiscount -> API.FRFSDiscountRes
