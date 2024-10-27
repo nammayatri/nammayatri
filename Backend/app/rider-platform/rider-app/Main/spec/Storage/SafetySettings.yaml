@@ -1,28 +1,28 @@
 imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  RideShareOptions : Domain.Types.Person
-  Person : Domain.Types.Person
+  RideShareOptions: Domain.Types.Person
+  Person: Domain.Types.Person
 SafetySettings:
   tableName: safety_settings
 
 
   fields:
-    personId : Id Person
-    nightSafetyChecks : Bool
-    hasCompletedMockSafetyDrill : Maybe Bool
-    hasCompletedSafetySetup : Bool
-    falseSafetyAlarmCount : Int
-    safetyCenterDisabledOnDate : Maybe UTCTime
-    informPoliceSos : Bool
-    autoCallDefaultContact : Bool
-    notifySosWithEmergencyContacts : Bool
-    enableUnexpectedEventsCheck : RideShareOptions
-    enablePostRideSafetyCheck : RideShareOptions
-    notifySafetyTeamForSafetyCheckFailure : Bool
-    shakeToActivate : Bool
-    enableOtpLessRide : Maybe Bool
-    aggregatedRideShareSetting : Maybe RideShareOptions
+    personId: Id Person
+    nightSafetyChecks: Bool
+    hasCompletedMockSafetyDrill: Maybe Bool
+    hasCompletedSafetySetup: Bool
+    falseSafetyAlarmCount: Int
+    safetyCenterDisabledOnDate: Maybe UTCTime
+    informPoliceSos: Bool
+    autoCallDefaultContact: Bool
+    notifySosWithEmergencyContacts: Bool
+    enableUnexpectedEventsCheck: RideShareOptions
+    enablePostRideSafetyCheck: RideShareOptions
+    notifySafetyTeamForSafetyCheckFailure: Bool
+    shakeToActivate: Bool
+    enableOtpLessRide: Maybe Bool
+    aggregatedRideShareSetting: Maybe RideShareOptions
 
   beamType:
     falseSafetyAlarmCount: Maybe Int
@@ -37,23 +37,23 @@ SafetySettings:
     personId: PrimaryKey
 
   default:
-    nightSafetyChecks : "false"
-    hasCompletedMockSafetyDrill : "false"
-    hasCompletedSafetySetup : "false"
-    informPoliceSos : "false"
-    autoCallDefaultContact : "false"
-    notifySosWithEmergencyContacts : "false"
-    enableUnexpectedEventsCheck : "'NEVER_SHARE'"
-    enablePostRideSafetyCheck : "false"
-    notifySafetyTeamForSafetyCheckFailure : "false"
-    shakeToActivate : "false"
+    nightSafetyChecks: "false"
+    hasCompletedMockSafetyDrill: "false"
+    hasCompletedSafetySetup: "false"
+    informPoliceSos: "false"
+    autoCallDefaultContact: "false"
+    notifySosWithEmergencyContacts: "false"
+    enableUnexpectedEventsCheck: "'NEVER_SHARE'"
+    enablePostRideSafetyCheck: "false"
+    notifySafetyTeamForSafetyCheckFailure: "false"
+    shakeToActivate: "false"
 
 
 
   queries:
     updateEmergencyContactStatus:
       kvFunction: updateWithKV
-      params: [autoCallDefaultContact,notifySosWithEmergencyContacts]
+      params: [autoCallDefaultContact, notifySosWithEmergencyContacts]
       where: personId
 
     updateMockSafetyDrillStatus:
@@ -64,6 +64,6 @@ SafetySettings:
 
 
   extraOperations:
-  - EXTRA_QUERY_FILE
+    - EXTRA_QUERY_FILE
 
-  excludedFields: [merchantOperatingCityId,merchantId, createdAt]
+  excludedFields: [merchantOperatingCityId, merchantId, createdAt]

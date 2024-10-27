@@ -10,7 +10,7 @@ imports:
   City: Kernel.Types.Beckn.Context
   AddVehicleReq: Dashboard.ProviderPlatform.Fleet.Driver
   RCStatusReq: Dashboard.ProviderPlatform.Fleet.Driver
-  DriverFeeStatus:  Dashboard.Common.Driver
+  DriverFeeStatus: Dashboard.Common.Driver
 module: Driver
 
 apis:
@@ -205,7 +205,7 @@ apis:
             endpoint: /{driverId}/exemptDriverFee/v2/{token}/{serviceName}
             auth: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_DRIVER_FEE
             request:
-               type: ExemptionAndCashCollectionDriverFeeReq
+              type: ExemptionAndCashCollectionDriverFeeReq
             params:
               driverId: Id Driver
               token: Text
@@ -263,15 +263,15 @@ types:
     - lastACStatusCheckedAt: Maybe UTCTime
     - currentACStatus: Bool
     - downgradeReason: Maybe Text
-    - assignedCount : Maybe Int
-    - cancelledCount : Maybe Int
-    - cancellationRate : Maybe Int
-    - windowSize : Maybe Int
+    - assignedCount: Maybe Int
+    - cancelledCount: Maybe Int
+    - cancellationRate: Maybe Int
+    - windowSize: Maybe Int
     - blockedDueToRiderComplains: Bool
     - blockStateModifier: Maybe Text
     - driverTag: Maybe [Text]
     - email: Maybe Text
-    - blockedInfo : [DriverBlockTransactions]
+    - blockedInfo: [DriverBlockTransactions]
   DriverLicenseAPIEntity:
     - driverLicenseId: Id DriverLicense
     - documentImageId1: Id Image
@@ -285,24 +285,24 @@ types:
     - verificationStatus: VerificationStatus
     - consent: Bool
     - consentTimestamp: UTCTime
-    # - createdAt: UTCTime # do we need it?
-    # - updatedAt UTCTime
+      # - createdAt: UTCTime # do we need it?
+      # - updatedAt UTCTime
   DriverBlockTransactions:
-    - reasonCode :  Maybe Text
-    - blockReason : Maybe Text
-    - blockTimeInHours : Maybe Int
-    - reportedAt : UTCTime
-    - blockLiftTime : Maybe UTCTime
-    - blockedBy : Text
-    - requestorId : Maybe Text
-    - blockReasonFlag : Maybe Text
+    - reasonCode: Maybe Text
+    - blockReason: Maybe Text
+    - blockTimeInHours: Maybe Int
+    - reportedAt: UTCTime
+    - blockLiftTime: Maybe UTCTime
+    - blockedBy: Text
+    - requestorId: Maybe Text
+    - blockReasonFlag: Maybe Text
   DriverRCAssociationAPIEntity:
     - associatedOn: UTCTime
     - associatedTill: Maybe UTCTime
     - isRcActive: Bool
     - details: VehicleRegistrationCertificateAPIEntity
-    # - consent: Bool #do we need it?
-    # - consentTimestamp: UTCTime
+      # - consent: Bool #do we need it?
+      # - consentTimestamp: UTCTime
   PlatformFee:
     - fee: HighPrecMoney
     - cgst: HighPrecMoney
@@ -331,8 +331,8 @@ types:
     - verificationStatus: VerificationStatus
     - fleetOwnerId: Maybe Text
     - vehicleVariant: Maybe VehicleVariant
-    # - createdAt: UTCTime # do we need it?
-    # - updatedAt UTCTime
+      # - createdAt: UTCTime # do we need it?
+      # - updatedAt UTCTime
   ExemptionAndCashCollectionDriverFeeReq:
     - paymentIds: [Text]
     - isExempt: Bool

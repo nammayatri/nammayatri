@@ -10,16 +10,16 @@ module: TrackRoute
 
 types:
   TrackingResp:
-    vehicleTrackingInfo : "[VehicleInfo]"
+    vehicleTrackingInfo: "[VehicleInfo]"
   VehicleInfoForRoute:
-    startTime : Maybe UTCTime
-    startDate : Maybe Text
-    scheduleRelationship : Maybe Text
-    tripId : Maybe Text
-    latitude : Maybe Double
-    longitude : Maybe Double
-    speed : Maybe Text
-    timestamp : Maybe Text
+    startTime: Maybe UTCTime
+    startDate: Maybe Text
+    scheduleRelationship: Maybe Text
+    tripId: Maybe Text
+    latitude: Maybe Double
+    longitude: Maybe Double
+    speed: Maybe Text
+    timestamp: Maybe Text
     derive: "Show"
 
   VehicleInfo:

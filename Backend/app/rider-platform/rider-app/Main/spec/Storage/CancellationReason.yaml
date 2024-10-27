@@ -13,14 +13,14 @@ CancellationReason:
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
   fields:
-    reasonCode : Domain.Types.Extra.CancellationReason.CancellationReasonCode|I
-    description : Text
-    enabled : Bool
-    onSearch : Bool
-    onInit : Bool
-    onConfirm : Bool
-    onAssign : Bool
-    priority : Int
+    reasonCode: Domain.Types.Extra.CancellationReason.CancellationReasonCode|I
+    description: Text
+    enabled: Bool
+    onSearch: Bool
+    onInit: Bool
+    onConfirm: Bool
+    onAssign: Bool
+    priority: Int
     createdAt: UTCTime
     updatedAt: UTCTime
 

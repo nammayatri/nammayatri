@@ -133,13 +133,13 @@ types:
     derive: "Show"
 
   FRFSCanCancelStatus:
-    cancellationCharges : Maybe HighPrecMoney
-    refundAmount : Maybe HighPrecMoney
-    isCancellable : Maybe Bool
+    cancellationCharges: Maybe HighPrecMoney
+    refundAmount: Maybe HighPrecMoney
+    isCancellable: Maybe Bool
 
   FRFSCancelStatus:
-    cancellationCharges : Maybe HighPrecMoney
-    refundAmount : Maybe HighPrecMoney
+    cancellationCharges: Maybe HighPrecMoney
+    refundAmount: Maybe HighPrecMoney
 
   FRFSConfigAPIRes:
     bookingStartTime: UTCTime

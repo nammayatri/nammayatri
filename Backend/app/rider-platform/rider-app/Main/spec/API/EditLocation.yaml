@@ -7,7 +7,7 @@ imports:
 module: EditLocation
 types:
   EditLocationResultAPIResp:
-    bookingUpdateRequestDetails : BookingUpdateRequest
+    bookingUpdateRequestDetails: BookingUpdateRequest
 
 apis:
   - GET:

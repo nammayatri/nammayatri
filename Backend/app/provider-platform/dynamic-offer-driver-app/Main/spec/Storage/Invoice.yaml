@@ -17,21 +17,21 @@ Invoice:
       derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
 
   fields:
-    id : Id Invoice
-    invoiceShortId : Text
-    driverFeeId : Id DriverFee
-    driverId : Id Person
-    invoiceStatus : InvoiceStatus
-    paymentMode : InvoicePaymentMode
-    bankErrorMessage : Maybe Text
-    bankErrorCode : Maybe Text
-    bankErrorUpdatedAt : Maybe UTCTime
-    merchantOperatingCityId : Id MerchantOperatingCity
-    lastStatusCheckedAt : Maybe UTCTime
-    maxMandateAmount : Maybe HighPrecMoney
-    serviceName : ServiceNames
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Id Invoice
+    invoiceShortId: Text
+    driverFeeId: Id DriverFee
+    driverId: Id Person
+    invoiceStatus: InvoiceStatus
+    paymentMode: InvoicePaymentMode
+    bankErrorMessage: Maybe Text
+    bankErrorCode: Maybe Text
+    bankErrorUpdatedAt: Maybe UTCTime
+    merchantOperatingCityId: Id MerchantOperatingCity
+    lastStatusCheckedAt: Maybe UTCTime
+    maxMandateAmount: Maybe HighPrecMoney
+    serviceName: ServiceNames
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <InvoiceStatus>

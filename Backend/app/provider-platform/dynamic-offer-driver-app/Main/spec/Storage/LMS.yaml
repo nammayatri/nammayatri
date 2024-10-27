@@ -17,36 +17,36 @@ imports:
   convertSideButtonConfigToTable: Storage.Queries.Transformers.ReelsData
 
 LmsModule:
-  tableName : lms_module
+  tableName: lms_module
 
   fields:
-    id : Id LmsModule
-    merchantOperatingCityId : Id MerchantOperatingCity
-    category : LmsCategory
-    createdAt : UTCTime
-    updatedAt : UTCTime
-    duration : Int
-    noOfVideos : Int
-    rank : Int
-    variant : Maybe VehicleVariant|NoRelation
-    moduleCompletionCriteria : ModuleCompletionCriteria
-    languagesAvailableForQuiz : "[Language]"
-    languagesAvailableForVideos : "[Language]"
+    id: Id LmsModule
+    merchantOperatingCityId: Id MerchantOperatingCity
+    category: LmsCategory
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    duration: Int
+    noOfVideos: Int
+    rank: Int
+    variant: Maybe VehicleVariant|NoRelation
+    moduleCompletionCriteria: ModuleCompletionCriteria
+    languagesAvailableForQuiz: "[Language]"
+    languagesAvailableForVideos: "[Language]"
 
   types:
     LmsCategory:
-      enum : "Safety, Financial, Training"
+      enum: "Safety, Financial, Training"
     ModuleCompletionCriteria:
-      enum : "ONLY_VIDEOS, VIDEOS_AND_QUIZ Int"
+      enum: "ONLY_VIDEOS, VIDEOS_AND_QUIZ Int"
 
   sqlType:
-    languagesAvailableForQuiz : "text[]"
-    languagesAvailableForVideos : "text[]"
+    languagesAvailableForQuiz: "text[]"
+    languagesAvailableForVideos: "text[]"
 
   default:
-    category : "'Training'"
-    languagesAvailableForQuiz : "'{}'"
-    languagesAvailableForVideos : "'{}'"
+    category: "'Training'"
+    languagesAvailableForQuiz: "'{}'"
+    languagesAvailableForVideos: "'{}'"
 
   queries:
     getAllModules:
@@ -57,22 +57,22 @@ LmsModule:
       where: id
 
 LmsModuleTranslation:
-  tableName : lms_module_translation
+  tableName: lms_module_translation
 
   fields:
-    moduleId : Id LmsModule
-    language : Language
-    name : Text
-    description : Text
-    thumbnailImage : Text
+    moduleId: Id LmsModule
+    language: Language
+    name: Text
+    description: Text
+    thumbnailImage: Text
 
   constraints:
-    moduleId : PrimaryKey
-    language : PrimaryKey
+    moduleId: PrimaryKey
+    language: PrimaryKey
 
   queries:
     getByModuleIdAndLanguage:
-      kvFunction : findOneWithKV
+      kvFunction: findOneWithKV
       where:
         and: [moduleId, language]
     getAllTranslationsByModuleId:
@@ -81,21 +81,21 @@ LmsModuleTranslation:
 
 
 LmsModuleVideoInformation:
-  tableName : lms_module_video_information
+  tableName: lms_module_video_information
 
   fields:
-    id : Id LmsModuleVideoInformation
-    moduleId : Id LmsModule
-    videoStatus : VideoStatus
-    rank : Int
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Id LmsModuleVideoInformation
+    moduleId: Id LmsModule
+    videoStatus: VideoStatus
+    rank: Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   excludedFields: [merchantId, merchantOperatingCityId]
 
   types:
     VideoStatus:
-      enum : "ACTIVE, INACTIVE"
+      enum: "ACTIVE, INACTIVE"
 
   default:
     videoStatus: "'ACTIVE'"
@@ -112,25 +112,25 @@ LmsModuleVideoInformation:
       where: id
 
 LmsVideoTranslation:
-  tableName : lms_video_translation
+  tableName: lms_video_translation
 
   fields:
-    videoId : Id LmsModuleVideoInformation
-    language : Language
-    url : Text
-    ytVideoId : Text
-    duration : Int
-    completedWatchCount : Int
+    videoId: Id LmsModuleVideoInformation
+    language: Language
+    url: Text
+    ytVideoId: Text
+    duration: Int
+    completedWatchCount: Int
     viewCount: Int
-    thumbnailImage : Text
-    title : Text
-    description : Text
-    thresholdEnabled : Bool
-    startThresholdInPercentage : Maybe Int
-    completedThresholdInPercentage : Maybe Int
-    sideButtonConfig : "[ReelRowButtonConfig]"
-    bottomButtonConfig : "[ReelRowButtonConfig]"
-    useMerchantOperatingCityDefaultLanguageVideoUrl : Bool
+    thumbnailImage: Text
+    title: Text
+    description: Text
+    thresholdEnabled: Bool
+    startThresholdInPercentage: Maybe Int
+    completedThresholdInPercentage: Maybe Int
+    sideButtonConfig: "[ReelRowButtonConfig]"
+    bottomButtonConfig: "[ReelRowButtonConfig]"
+    useMerchantOperatingCityDefaultLanguageVideoUrl: Bool
 
   excludedFields: [merchantId, merchantOperatingCityId]
 
@@ -151,16 +151,16 @@ LmsVideoTranslation:
     bottomButtonConfig: "Value"
 
   fromTType:
-    sideButtonConfig : getSideButtonConfigFromTable|I
-    bottomButtonConfig : getBottomButtonConfigFromTable|I
+    sideButtonConfig: getSideButtonConfigFromTable|I
+    bottomButtonConfig: getBottomButtonConfigFromTable|I
 
   toTType:
-    sideButtonConfig : convertSideButtonConfigToTable|I
-    bottomButtonConfig : convertBottomButtonConfigToTable|I
+    sideButtonConfig: convertSideButtonConfigToTable|I
+    bottomButtonConfig: convertBottomButtonConfigToTable|I
 
   constraints:
-    videoId : PrimaryKey
-    language : PrimaryKey
+    videoId: PrimaryKey
+    language: PrimaryKey
 
   queries:
     getVideoByLanguageAndVideoId:
@@ -183,17 +183,17 @@ LmsVideoTranslation:
 
 # This table will be used to track the driver module completion history
 DriverModuleCompletion:
-  tableName : driver_module_completion
+  tableName: driver_module_completion
 
   fields:
-    completionId : Id DriverModuleCompletion
-    driverId : Id Person
-    moduleId : Id LmsModule
-    status : ModuleCompletionStatus
-    entitiesCompleted : "[ModuleCompletionEntity]"
-    startedAt : UTCTime
-    completedAt : Maybe UTCTime
-    ratingAtTheTimeOfCompletion : Maybe Centesimal
+    completionId: Id DriverModuleCompletion
+    driverId: Id Person
+    moduleId: Id LmsModule
+    status: ModuleCompletionStatus
+    entitiesCompleted: "[ModuleCompletionEntity]"
+    startedAt: UTCTime
+    completedAt: Maybe UTCTime
+    ratingAtTheTimeOfCompletion: Maybe Centesimal
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
 
@@ -206,12 +206,12 @@ DriverModuleCompletion:
 
   types:
     ModuleCompletionStatus:
-      enum : "MODULE_NOT_YET_STARTED, MODULE_ONGOING, MODULE_COMPLETED"
+      enum: "MODULE_NOT_YET_STARTED, MODULE_ONGOING, MODULE_COMPLETED"
     ModuleCompletionEntity:
-      enum : "QUIZ, VIDEO"
+      enum: "QUIZ, VIDEO"
 
   constraints:
-    completionId : PrimaryKey
+    completionId: PrimaryKey
 
   queries:
     findByDriverId:
@@ -237,16 +237,16 @@ DriverModuleCompletion:
 
 # This table will be used to track the completion entity history
 ModuleCompletionInformation:
-  tableName : module_completion_information
+  tableName: module_completion_information
 
   fields:
-    completionId : Id DriverModuleCompletion
+    completionId: Id DriverModuleCompletion
     entity: ModuleEntity
     entityId: Text # can be quiz ID | video ID
     selectedEntityId: "[Text]" # can be options ID | video ID -- ideally to track the options selected By user
     attempt: Int
     entityStatus: EntityStatus
-    createdAt : UTCTime
+    createdAt: UTCTime
 
   excludedFields: [merchantId, merchantOperatingCityId]
 
@@ -258,9 +258,9 @@ ModuleCompletionInformation:
 
   types:
     ModuleEntity:
-      enum : "QUIZ, VIDEO"
+      enum: "QUIZ, VIDEO"
     EntityStatus:
-      enum : "ENTITY_PASSED, ENTITY_FAILED, ENTITY_ONGOING"
+      enum: "ENTITY_PASSED, ENTITY_FAILED, ENTITY_ONGOING"
 
   queries:
     findAllByCompletionId:
@@ -283,11 +283,11 @@ ModuleCompletionInformation:
 
 # This table will be used for mapping each module with a set of questions and each question will have reward
 QuestionModuleMapping:
-  tableName : question_module_mapping
+  tableName: question_module_mapping
 
   fields:
-    moduleId : Id LmsModule
-    questionId : Id QuestionModuleMapping
+    moduleId: Id LmsModule
+    questionId: Id QuestionModuleMapping
 
   excludedFields: [merchantId, merchantOperatingCityId]
 
@@ -302,10 +302,10 @@ QuestionModuleMapping:
 
 # This table will store the information of each question along with its translated version
 QuestionInformation:
-  tableName : "question_information"
+  tableName: "question_information"
 
   fields:
-    questionId : Id QuestionModuleMapping
+    questionId: Id QuestionModuleMapping
     language: Language
     question: QuizQuestion
     questionType: QuizQuestionType
@@ -333,9 +333,9 @@ QuestionInformation:
     QuizQuestionType:
       enum: "SingleSelect, MultiSelect"
     OptionEntity:
-      option : SingleOption
-      optionId : Id OptionEntity # this optionEntity Id will be same accross the translations for that particular option
-      isCorrect : Bool
+      option: SingleOption
+      optionId: Id OptionEntity # this optionEntity Id will be same accross the translations for that particular option
+      isCorrect: Bool
       derive: "Read, Eq, Ord"
     SingleOption:
       enum: "TextOption Text, SingleLineImage Text Int Int, TwoColumnImage Text Int Int, TwoColumnOption Text"

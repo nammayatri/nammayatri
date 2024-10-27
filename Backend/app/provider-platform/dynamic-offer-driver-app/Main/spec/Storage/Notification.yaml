@@ -9,25 +9,25 @@ Notification:
   derives: "Generic, Eq, Show, FromJSON, ToJSON, ToSchema"
 
   fields:
-    id : Id Notification
-    shortId : Text
-    sourceAmount : HighPrecMoney
-    mandateId : Id Mandate
-    driverFeeId : Id DriverFee
-    txnDate : UTCTime
-    juspayProvidedId : Text
-    providerName : Maybe Text
-    notificationType : Maybe Text
-    description : Text
-    status : Domain.Types.Extra.Notification.NotificationStatus
-    responseCode : Maybe Text
-    responseMessage : Maybe Text
-    dateCreated : UTCTime
-    lastUpdated : UTCTime
-    merchantOperatingCityId : Id MerchantOperatingCity
-    lastStatusCheckedAt : Maybe UTCTime
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Id Notification
+    shortId: Text
+    sourceAmount: HighPrecMoney
+    mandateId: Id Mandate
+    driverFeeId: Id DriverFee
+    txnDate: UTCTime
+    juspayProvidedId: Text
+    providerName: Maybe Text
+    notificationType: Maybe Text
+    description: Text
+    status: Domain.Types.Extra.Notification.NotificationStatus
+    responseCode: Maybe Text
+    responseMessage: Maybe Text
+    dateCreated: UTCTime
+    lastUpdated: UTCTime
+    merchantOperatingCityId: Id MerchantOperatingCity
+    lastStatusCheckedAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
 
   constraints:

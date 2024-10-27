@@ -54,7 +54,7 @@ DriverInformation:
     paymentPending: Bool
     isSpecialLocWarrior: Bool
     preferredPrimarySpecialLoc: Maybe SpecialLocationWarrior
-    preferredSecondarySpecialLocIds : "[(Id SpecialLocation)]"
+    preferredSecondarySpecialLocIds: "[(Id SpecialLocation)]"
     referralCode: Maybe Text
     referredByDriverId: Maybe (Id Person)
     totalReferred: Maybe Int
@@ -86,7 +86,7 @@ DriverInformation:
     isInteroperable: Bool
     payoutRegistrationOrderId: Maybe Text
     latestScheduledPickup: Maybe LatLong
-    latestScheduledBooking : Maybe UTCTime
+    latestScheduledBooking: Maybe UTCTime
     payoutVpaStatus: Maybe PayoutVpaStatus
     payoutVpaBankAccount: Maybe Text
     dailyCancellationRateBlockingCooldown: Maybe UTCTime
@@ -112,7 +112,7 @@ DriverInformation:
     aadhaarVerified: "false"
     acRestrictionLiftCount: "0"
     hasAdvanceBooking: "false"
-    isInteroperable : "false"
+    isInteroperable: "false"
   constraints:
     driverId: PrimaryKey
 
@@ -132,7 +132,7 @@ DriverInformation:
     forwardBatchingEnabled: Maybe Bool
     isInteroperable: Maybe Bool
     isSpecialLocWarrior: Maybe Bool
-    preferredSecondarySpecialLocIds : "Maybe [Text]"
+    preferredSecondarySpecialLocIds: "Maybe [Text]"
 
   sqlType:
     preferredSecondarySpecialLocIds: "text[]"
@@ -146,7 +146,7 @@ DriverInformation:
     forwardBatchingEnabled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     isInteroperable: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     latestScheduledPickup: Storage.Queries.Transformers.Ride.mkLatLong|I
-    preferredPrimarySpecialLoc : Storage.Queries.Transformers.DriverInformation.getPreferredPrimarySpecialLoc preferredPrimarySpecialLocId|EM
+    preferredPrimarySpecialLoc: Storage.Queries.Transformers.DriverInformation.getPreferredPrimarySpecialLoc preferredPrimarySpecialLocId|EM
     preferredSecondarySpecialLocIds: Kernel.Prelude.maybe [] (map Kernel.Types.Id.Id) preferredSecondarySpecialLocIds|E
 
   toTType:
@@ -160,7 +160,7 @@ DriverInformation:
     latestScheduledPickupLat: Kernel.Prelude.fmap (.lat)|I
     latestScheduledPickupLon: Kernel.Prelude.fmap (.lon)|I
     preferredPrimarySpecialLocId: (Kernel.Types.Id.getId . (.id)) <$> preferredPrimarySpecialLoc|E
-    preferredSecondarySpecialLocIds:  Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds)|E
+    preferredSecondarySpecialLocIds: Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds)|E
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -232,7 +232,7 @@ DriverInformation:
       where: driverId
     updateTollRelatedIssueCount:
       kvFunction: updateOneWithKV
-      params : [tollRelatedIssueCount]
+      params: [tollRelatedIssueCount]
       where: driverId
     updateForwardBatchingEnabled:
       kvFunction: updateOneWithKV

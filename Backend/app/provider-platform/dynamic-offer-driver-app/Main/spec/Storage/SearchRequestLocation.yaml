@@ -8,22 +8,22 @@ SearchReqLocation:
 
 
   fields:
-    id : Id SearchReqLocation
-    lat : Double
-    lon : Double
-    street : Maybe Text
-    door : Maybe Text
-    city : Maybe Text
-    state : Maybe Text
-    country : Maybe Text
-    building : Maybe Text
-    areaCode : Maybe Text
-    area : Maybe Text
-    full_address : Maybe Text
-    instructions : Maybe Text
-    extras : Maybe Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Id SearchReqLocation
+    lat: Double
+    lon: Double
+    street: Maybe Text
+    door: Maybe Text
+    city: Maybe Text
+    state: Maybe Text
+    country: Maybe Text
+    building: Maybe Text
+    areaCode: Maybe Text
+    area: Maybe Text
+    full_address: Maybe Text
+    instructions: Maybe Text
+    extras: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
 
 

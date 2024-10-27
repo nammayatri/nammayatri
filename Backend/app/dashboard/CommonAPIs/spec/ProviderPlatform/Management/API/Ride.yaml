@@ -25,15 +25,13 @@ apis:
         currency: Currency
         from: UTCTime
         to: UTCTime
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_LIST
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_LIST
       response:
         type: RideListRes
   - POST: # MultipleRideEndAPI
       endpoint: /end
       name: PostRideEndMultiple
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES MULTIPLE_RIDE_END
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES MULTIPLE_RIDE_END
       request:
         type: MultipleRideEndReq
       response:
@@ -45,8 +43,7 @@ apis:
   - POST: # MultipleRideCancelAPI
       endpoint: /cancel
       name: PostRideCancelMultiple
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES MULTIPLE_RIDE_CANCEL
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES MULTIPLE_RIDE_CANCEL
       request:
         type: MultipleRideCancelReq
       response:
@@ -57,16 +54,14 @@ apis:
         endpointV2:
   - GET: # RideInfoAPI
       endpoint: /{rideId}/info
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_INFO
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_INFO
       params:
         rideId: Id Ride
       response:
         type: RideInfoRes
   - POST: # RideSyncAPI
       endpoint: /{rideId}/sync
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_SYNC
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_SYNC
       params:
         rideId: Id Ride
       response:
@@ -77,8 +72,7 @@ apis:
   - POST: # MultipleRideSyncAPI
       endpoint: /sync
       name: PostRideSyncMultiple
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES MULTIPLE_RIDE_SYNC
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES MULTIPLE_RIDE_SYNC
       request:
         type: MultipleRideSyncReq
       response:
@@ -88,16 +82,14 @@ apis:
         endpointV2:
   - POST: # RideRouteAPI
       endpoint: /{rideId}/route
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_ROUTE
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_ROUTE
       params:
         rideId: Id Ride
       response:
         type: RideRouteRes
   - GET: # TicketRideListAPI
       endpoint: /kapture/list
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES TICKET_RIDE_LIST_API
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES TICKET_RIDE_LIST_API
       query:
         - rideShortId: ShortId Ride
         - countryCode: Text

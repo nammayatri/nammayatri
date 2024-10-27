@@ -1,7 +1,7 @@
 imports:
   Text: Data.Text
   Ride: Domain.Types.Ride
-  PriceAPIEntity : Kernel.Types.Price
+  PriceAPIEntity: Kernel.Types.Price
 module: EstimateBP
 types:
   EstimateDetailsRes:

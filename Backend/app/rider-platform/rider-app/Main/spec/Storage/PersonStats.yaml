@@ -7,20 +7,20 @@ PersonStats:
   tableName: person_stats
 
   fields:
-    personId : Id Person
-    userCancelledRides : Int
-    driverCancelledRides : Int
-    completedRides : Int
-    weekendRides : Int
-    weekdayRides : Int
-    offPeakRides : Int
-    eveningPeakRides : Int
-    morningPeakRides : Int
-    weekendPeakRides : Int
-    referralCount : Int
+    personId: Id Person
+    userCancelledRides: Int
+    driverCancelledRides: Int
+    completedRides: Int
+    weekendRides: Int
+    weekdayRides: Int
+    offPeakRides: Int
+    eveningPeakRides: Int
+    morningPeakRides: Int
+    weekendPeakRides: Int
+    referralCount: Int
     ticketsBookedInEvent: Maybe Int
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   constraints:
     personId: PrimaryKey

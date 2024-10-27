@@ -16,22 +16,22 @@ DriverOffer:
     BPPQuote: {}
 
   fields:
-    id : Id DriverOffer
-    estimateId : Id Estimate
-    merchantId : Maybe (Id Merchant)
-    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
-    driverName : Text
-    durationToPickup : Maybe Int
-    distanceToPickup : Maybe Distance
-    distanceUnit : DistanceUnit
-    validTill : UTCTime
-    bppQuoteId : Text
+    id: Id DriverOffer
+    estimateId: Id Estimate
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    driverName: Text
+    durationToPickup: Maybe Int
+    distanceToPickup: Maybe Distance
+    distanceUnit: DistanceUnit
+    validTill: UTCTime
+    bppQuoteId: Text
     isUpgradedToCab: Maybe Bool
-    rating : Maybe Centesimal
-    status : DriverOfferStatus
+    rating: Maybe Centesimal
+    status: DriverOfferStatus
     createdAt: UTCTime
-    updatedAt : UTCTime
-    fareProductType : Maybe FareProductType # TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
+    updatedAt: UTCTime
+    fareProductType: Maybe FareProductType # TODO :: For backward compatibility, please do not maintain this in future. `fareProductType` is replaced with `tripCategory`.
 
   beamType:
     createdAt: Maybe UTCTime

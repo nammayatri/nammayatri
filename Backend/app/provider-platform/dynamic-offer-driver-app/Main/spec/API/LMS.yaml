@@ -29,75 +29,75 @@ types:
     remaining: "[LmsModuleRes]"
 
   LmsModuleRes:
-    moduleId : Id LmsModule
-    category : LmsCategory
-    duration : Int
-    noOfVideos : Int
-    rank : Int
-    variant : Maybe VehicleVariant
-    name : Text
-    description : Text
-    thumbnailImage : Text
-    moduleCompletionStatus : ModuleCompletionStatus
-    completedAt :  Maybe UTCTime
-    noOfVideosCompleted : Int
-    moduleCompletionCriteria : ModuleCompletionCriteria
-    languagesAvailableForQuiz : "[Language]"
-    languagesAvailableForVideos : "[Language]"
+    moduleId: Id LmsModule
+    category: LmsCategory
+    duration: Int
+    noOfVideos: Int
+    rank: Int
+    variant: Maybe VehicleVariant
+    name: Text
+    description: Text
+    thumbnailImage: Text
+    moduleCompletionStatus: ModuleCompletionStatus
+    completedAt: Maybe UTCTime
+    noOfVideosCompleted: Int
+    moduleCompletionCriteria: ModuleCompletionCriteria
+    languagesAvailableForQuiz: "[Language]"
+    languagesAvailableForVideos: "[Language]"
 
   LmsGetVideosRes:
     completed: "[LmsVideoRes]"
-    pending : "[LmsVideoRes]"
-    selectedModuleInfo : LmsTranslatedModuleInfoRes
-    quizEnabled : Bool
+    pending: "[LmsVideoRes]"
+    selectedModuleInfo: LmsTranslatedModuleInfoRes
+    quizEnabled: Bool
     quizStatus: LmsEntityCompletionStatus
 
   LmsEntityCompletionStatus:
     enum: "ENTITY_COMPLETED, ENTITY_INCOMPLETE"
 
   LmsTranslatedModuleInfoRes:
-    moduleId : Id LmsModule
-    category : LmsCategory
-    duration : Int
-    noOfVideos : Int
-    rank : Int
-    variant : Maybe VehicleVariant
-    name : Text
-    description : Text
-    thumbnailImage : Text
-    moduleCompletionCriteria : ModuleCompletionCriteria
-    languagesAvailableForQuiz : "[Language]"
-    languagesAvailableForVideos : "[Language]"
+    moduleId: Id LmsModule
+    category: LmsCategory
+    duration: Int
+    noOfVideos: Int
+    rank: Int
+    variant: Maybe VehicleVariant
+    name: Text
+    description: Text
+    thumbnailImage: Text
+    moduleCompletionCriteria: ModuleCompletionCriteria
+    languagesAvailableForQuiz: "[Language]"
+    languagesAvailableForVideos: "[Language]"
 
   LmsVideoRes:
-    videoId : Id LmsModuleVideoInformation
-    moduleId : Id LmsModule
-    language : Language
-    url : Text
-    ytVideoId : Text
-    duration : Int
-    completedWatchCount : Int
-    viewCount : Int
-    thumbnailImage : Text
-    title : Text
-    description : Text
-    thresholdEnabled : Bool
-    startThresholdInPercentage : Maybe Int
-    completedThresholdInPercentage : Maybe Int
-    videoCompletionStatus : LmsEntityCompletionStatus
-    attemptNumber : Int
-    rank : Int
-    completedAt : UTCTime
-    sideButtonConfig : "[[ReelButtonConfig]]"
-    bottomButtonConfig : "[[ReelButtonConfig]]"
+    videoId: Id LmsModuleVideoInformation
+    moduleId: Id LmsModule
+    language: Language
+    url: Text
+    ytVideoId: Text
+    duration: Int
+    completedWatchCount: Int
+    viewCount: Int
+    thumbnailImage: Text
+    title: Text
+    description: Text
+    thresholdEnabled: Bool
+    startThresholdInPercentage: Maybe Int
+    completedThresholdInPercentage: Maybe Int
+    videoCompletionStatus: LmsEntityCompletionStatus
+    attemptNumber: Int
+    rank: Int
+    completedAt: UTCTime
+    sideButtonConfig: "[[ReelButtonConfig]]"
+    bottomButtonConfig: "[[ReelButtonConfig]]"
 
   LmsGetQuizRes:
     questions: "[LmsQuestionRes]"
     selectedModuleInfo: LmsTranslatedModuleInfoRes
 
   LmsQuestionRes:
-    questionId : Id QuestionModuleMapping
-    moduleId : Id LmsModule
+    questionId: Id QuestionModuleMapping
+    moduleId: Id LmsModule
     language: Language
     question: QuizQuestion
     options: QuizOptions
@@ -112,7 +112,7 @@ types:
 
   LmsQuizHistory:
     attemptNumber: Int
-    selectedOptions : "[Text]"
+    selectedOptions: "[Text]"
     status: LmsQuestionStatus
 
   LmsQuestionStatus:
@@ -125,7 +125,7 @@ types:
 
   QuestionConfirmReq:
     questionId: Id QuestionModuleMapping
-    moduleId : Id LmsModule
+    moduleId: Id LmsModule
     language: Language
     selectedOption: SelectedOption
 

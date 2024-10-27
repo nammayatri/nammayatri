@@ -1,7 +1,7 @@
 imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  Person : Domain.Types.Person
+  Person: Domain.Types.Person
   DriverBlockReason: Domain.Types.DriverBlockReason
   BlockReasonFlag: Tools.Error
 DriverBlockTransactions:
@@ -9,17 +9,17 @@ DriverBlockTransactions:
 
   types:
     BlockedBy:
-          enum : "Dashboard, Application"
+      enum: "Dashboard, Application"
   fields:
-    id : Id DriverBlockTransactions
-    reasonCode :  Maybe Text
-    blockReason : Maybe Text
-    blockTimeInHours : Maybe Int
-    driverId : Id Person
-    reportedAt : UTCTime
-    blockLiftTime : Maybe UTCTime
-    blockedBy : BlockedBy
-    requestorId : Maybe Text
+    id: Id DriverBlockTransactions
+    reasonCode: Maybe Text
+    blockReason: Maybe Text
+    blockTimeInHours: Maybe Int
+    driverId: Id Person
+    reportedAt: UTCTime
+    blockLiftTime: Maybe UTCTime
+    blockedBy: BlockedBy
+    requestorId: Maybe Text
     blockReasonFlag: Maybe BlockReasonFlag
   constraints:
     id: PrimaryKey

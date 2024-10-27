@@ -12,7 +12,7 @@ DriverGullakAssociation:
     driverId: Id Person
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    gullakToken : Text
+    gullakToken: Text
     tokenExpiry: UTCTime
 
   constraints:

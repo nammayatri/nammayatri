@@ -32,30 +32,30 @@ Plan:
 
 
   fields:
-    id : Id Plan
-    paymentMode : PaymentMode
-    merchantId : Id Merchant
-    name : Text
-    description : Text
-    maxAmount : HighPrecMoney
-    registrationAmount : HighPrecMoney
-    isOfferApplicable : Bool
-    maxCreditLimit : HighPrecMoney
-    maxMandateAmount : HighPrecMoney
-    planBaseAmount : PlanBaseAmount
-    freeRideCount : Int
-    frequency : Frequency
-    planType : PlanType
-    cgstPercentage : HighPrecMoney
-    sgstPercentage : HighPrecMoney
-    subscribedFlagToggleAllowed : Bool
-    isDeprecated : Bool
-    eligibleForCoinDiscount : Bool
-    merchantOpCityId : Id MerchantOperatingCity
-    basedOnEntity : BasedOnEntity
-    serviceName : ServiceNames
-    vehicleVariant : Maybe VehicleVariant|NoRelation
-    vehicleCategory : VehicleCategory|NoRelation
+    id: Id Plan
+    paymentMode: PaymentMode
+    merchantId: Id Merchant
+    name: Text
+    description: Text
+    maxAmount: HighPrecMoney
+    registrationAmount: HighPrecMoney
+    isOfferApplicable: Bool
+    maxCreditLimit: HighPrecMoney
+    maxMandateAmount: HighPrecMoney
+    planBaseAmount: PlanBaseAmount
+    freeRideCount: Int
+    frequency: Frequency
+    planType: PlanType
+    cgstPercentage: HighPrecMoney
+    sgstPercentage: HighPrecMoney
+    subscribedFlagToggleAllowed: Bool
+    isDeprecated: Bool
+    eligibleForCoinDiscount: Bool
+    merchantOpCityId: Id MerchantOperatingCity
+    basedOnEntity: BasedOnEntity
+    serviceName: ServiceNames
+    vehicleVariant: Maybe VehicleVariant|NoRelation
+    vehicleCategory: VehicleCategory|NoRelation
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PaymentMode>

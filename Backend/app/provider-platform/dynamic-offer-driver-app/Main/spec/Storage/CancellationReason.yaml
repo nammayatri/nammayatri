@@ -15,10 +15,10 @@ CancellationReason:
       enum: CancellationReasonCode Text
 
   fields:
-    reasonCode : CancellationReasonCode
-    description : Text
-    enabled : Bool
-    priority : Int
+    reasonCode: CancellationReasonCode
+    description: Text
+    enabled: Bool
+    priority: Int
 
 
   constraints:

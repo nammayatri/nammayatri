@@ -7,17 +7,17 @@ DriverProfileQuestions:
   tableName: driver_profile_questions
 
   fields:
-    driverId : Id Person
-    hometown : Maybe Text
-    pledges : "[Text]"
-    aspirations : "Maybe [Text]"
-    vehicleTags : "Maybe [Text]"
-    createdAt : UTCTime
-    updatedAt : UTCTime
-    drivingSince : Maybe Int
+    driverId: Id Person
+    hometown: Maybe Text
+    pledges: "[Text]"
+    aspirations: "Maybe [Text]"
+    vehicleTags: "Maybe [Text]"
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    drivingSince: Maybe Int
     aboutMe: "Maybe Text"
     imageIds: "Maybe [Text]"
-    merchantOperatingCityId : Id MerchantOperatingCity
+    merchantOperatingCityId: Id MerchantOperatingCity
 
   default:
     imageIds: "'{}'"
@@ -26,7 +26,7 @@ DriverProfileQuestions:
     vehicleTags: "'{}'"
 
   constraints:
-    driverId : PrimaryKey
+    driverId: PrimaryKey
 
   extraOperations:
     - EXTRA_QUERY_FILE

@@ -9,18 +9,18 @@ imports:
 Refunds:
   tableName: refunds
   fields:
-    id : Id Refunds
-    shortId : Text
-    orderId : Id PaymentOrder
-    refundAmount : HighPrecMoney
-    idAssignedByServiceProvider : Maybe Text
-    merchantId : Text
-    status : RefundStatus
-    errorMessage : Maybe Text
-    errorCode : Maybe Text
-    initiatedBy : Maybe Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Id Refunds
+    shortId: Text
+    orderId: Id PaymentOrder
+    refundAmount: HighPrecMoney
+    idAssignedByServiceProvider: Maybe Text
+    merchantId: Text
+    status: RefundStatus
+    errorMessage: Maybe Text
+    errorCode: Maybe Text
+    initiatedBy: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   sqlType:
     id: character varying(36)

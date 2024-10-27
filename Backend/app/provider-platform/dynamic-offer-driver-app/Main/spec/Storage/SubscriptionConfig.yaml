@@ -44,15 +44,15 @@ SubscriptionConfig:
     genericJobRescheduleTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
     paymentLinkJobTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
     freeTrialRidesApplicable: Kernel.Prelude.fromMaybe False|I
-    isSubscriptionEnabledAtCategoryLevel : Kernel.Prelude.fromMaybe False|I
-    defaultCityVehicleCategory : Kernel.Prelude.fromMaybe Domain.Types.VehicleCategory.AUTO_CATEGORY|I
+    isSubscriptionEnabledAtCategoryLevel: Kernel.Prelude.fromMaybe False|I
+    defaultCityVehicleCategory: Kernel.Prelude.fromMaybe Domain.Types.VehicleCategory.AUTO_CATEGORY|I
     enableCityBasedFeeSwitch: Kernel.Prelude.fromMaybe False|I
   toTType:
     genericJobRescheduleTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     paymentLinkJobTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     freeTrialRidesApplicable: Kernel.Prelude.Just|I
-    isSubscriptionEnabledAtCategoryLevel : Kernel.Prelude.Just|I
-    defaultCityVehicleCategory : Kernel.Prelude.Just|I
+    isSubscriptionEnabledAtCategoryLevel: Kernel.Prelude.Just|I
+    defaultCityVehicleCategory: Kernel.Prelude.Just|I
     enableCityBasedFeeSwitch: Kernel.Prelude.Just|I
 
   beamType:
@@ -60,8 +60,8 @@ SubscriptionConfig:
     paymentLinkJobTime: Seconds
     freeTrialRidesApplicable: Maybe Bool
     isSubscriptionEnabledAtCategoryLevel: Maybe Bool
-    defaultCityVehicleCategory : Maybe VehicleCategory
-    enableCityBasedFeeSwitch : Maybe Bool
+    defaultCityVehicleCategory: Maybe VehicleCategory
+    enableCityBasedFeeSwitch: Maybe Bool
 
   constraints:
     serviceName: PrimaryKey
@@ -85,5 +85,5 @@ SubscriptionConfig:
     payoutServiceName: "'Payout_Juspay'"
 
   sqlType:
-   executionEnabledForVehicleCategories: text[]
-   subscriptionEnabledForVehicleCategories: text[]
+    executionEnabledForVehicleCategories: text[]
+    subscriptionEnabledForVehicleCategories: text[]

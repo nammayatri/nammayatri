@@ -32,8 +32,7 @@ apis:
         place: Text
         from: UTCTime
         to: UTCTime
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT VOLUNTEER VOLUNTEER_COLLECTION_HISTORY
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT VOLUNTEER VOLUNTEER_COLLECTION_HISTORY
       response:
         type: CollectionList
   - GET:
@@ -41,7 +40,6 @@ apis:
       query:
         from: UTCTime
         to: UTCTime
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT VOLUNTEER ALL_FEE_HISTORY
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT VOLUNTEER ALL_FEE_HISTORY
       response:
         type: '[AllFees]'

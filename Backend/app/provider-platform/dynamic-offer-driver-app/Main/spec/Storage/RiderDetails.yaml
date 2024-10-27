@@ -13,25 +13,25 @@ RiderDetails:
 
   types:
     PayoutFlagReason:
-        enum: "ExceededMaxReferral,MinRideDistanceInvalid,MinPickupDistanceInvalid,CustomerExistAsDriver,MultipleDeviceIdExists,RideConstraintInvalid"
+      enum: "ExceededMaxReferral,MinRideDistanceInvalid,MinPickupDistanceInvalid,CustomerExistAsDriver,MultipleDeviceIdExists,RideConstraintInvalid"
 
   fields:
-    id : Id RiderDetails
-    mobileCountryCode : Text
-    mobileNumber : EncryptedHashedField e Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
-    referralCode : Maybe (Id DriverReferral)
-    referredByDriver : Maybe (Id Person)
-    referredAt : Maybe UTCTime
-    hasTakenValidRide : Bool
-    hasTakenValidRideAt : Maybe UTCTime
-    cancellationDues : HighPrecMoney
-    currency : Currency
-    disputeChancesUsed : Int
-    merchantId : Id Merchant
-    otpCode : Maybe Text
-    nightSafetyChecks : Bool
+    id: Id RiderDetails
+    mobileCountryCode: Text
+    mobileNumber: EncryptedHashedField e Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    referralCode: Maybe (Id DriverReferral)
+    referredByDriver: Maybe (Id Person)
+    referredAt: Maybe UTCTime
+    hasTakenValidRide: Bool
+    hasTakenValidRideAt: Maybe UTCTime
+    cancellationDues: HighPrecMoney
+    currency: Currency
+    disputeChancesUsed: Int
+    merchantId: Id Merchant
+    otpCode: Maybe Text
+    nightSafetyChecks: Bool
     firstRideId: Maybe Text
     payoutFlagReason: Maybe PayoutFlagReason
     isDeviceIdExists: Maybe Bool
@@ -106,7 +106,7 @@ RiderDetails:
 
     updateFlagReasonAndIsDeviceIdExists:
       kvFunction: updateOneWithKV
-      params: [payoutFlagReason,isDeviceIdExists]
+      params: [payoutFlagReason, isDeviceIdExists]
       where: id
 
     updateIsDeviceIdExists:

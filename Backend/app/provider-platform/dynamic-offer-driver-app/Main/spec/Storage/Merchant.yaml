@@ -201,7 +201,7 @@ MerchantMessage:
         and: [merchantOperatingCityId, messageKey]
 
   extraOperations:
-   - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
 
 MerchantOperatingCity:
   derives: Generic, FromJSON, ToJSON, Show, Eq, ToSchema
@@ -676,7 +676,7 @@ TransporterConfig:
       black: Kilometers
       blackxl: Kilometers
       suvplus: Kilometers
-      deliveryLightGoodsVehicle : Kilometers
+      deliveryLightGoodsVehicle: Kilometers
       derive': Generic, Show, ToJSON, FromJSON, Read
     DashboardMediaSendingLimit:
       sms: Int
@@ -698,7 +698,7 @@ TransporterConfig:
       black: Maybe Seconds
       blackxl: Maybe Seconds
       suvplus: Maybe Seconds
-      deliveryLightGoodsVehicle : Maybe Seconds
+      deliveryLightGoodsVehicle: Maybe Seconds
       derive': Generic, Show, ToJSON, FromJSON, Read
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")]
@@ -721,8 +721,8 @@ TransporterConfig:
     mediaFileUrlPattern: Text
     mediaFileSizeUpperLimit: Int
     referralLinkPassword: Text
-    dpWhiteListedGeohash : Maybe [Text]
-    dpBlackListedGeohash : Maybe [Text]
+    dpWhiteListedGeohash: Maybe [Text]
+    dpBlackListedGeohash: Maybe [Text]
     dpGeoHashPercision: Maybe Int
     fcmConfig: Kernel.External.Notification.FCM.Types.FCMConfig
     onboardingTryLimit: Int
@@ -811,7 +811,7 @@ TransporterConfig:
     nightSafetyEndTime: Seconds
     cancellationFee: HighPrecMoney
     currency: Currency
-    exotelStatusCheckSchedulerDelay : Int
+    exotelStatusCheckSchedulerDelay: Int
     distanceUnit: DistanceUnit
     driverDistanceTravelledOnPickupThresholdOnCancel: Meters
     driverTimeSpentOnPickupThresholdOnCancel: Seconds
@@ -863,7 +863,7 @@ TransporterConfig:
     maxPayoutReferralForADay: Int
     exotelAppIdMapping: Maybe ExotelMapping
     createDocumentRequired: Maybe Bool
-    schedulePayoutForDay : Maybe Integer
+    schedulePayoutForDay: Maybe Integer
     isDeviceIdChecksRequired: Maybe Bool
     cachedDevicesOSForSearchRequest: "[Kernel.Types.Version.DeviceType]"
     cancellationRateWindow: Maybe Int
@@ -1092,8 +1092,8 @@ TransporterConfig:
     approxRideDistanceDiffThreshold: "1200"
     includeDriverCurrentlyOnRide: "true"
     dpGeoHashPercision: "5"
-    dpWhiteListedGeohash : "ARRAY[]::TEXT[]"
-    dpBlackListedGeohash : "ARRAY[]::TEXT[]"
+    dpWhiteListedGeohash: "ARRAY[]::TEXT[]"
+    dpBlackListedGeohash: "ARRAY[]::TEXT[]"
     minLocationAccuracy: "50"
     driverPaymentCycleDuration: "86400"
     driverPaymentCycleStartTime: "36000"
@@ -1331,7 +1331,7 @@ MerchantPushNotification:
         and: [merchantOperatingCityId, key, tripCategory]
 
 RideRelatedNotificationConfig:
-  tableName : ride_related_notification_config
+  tableName: ride_related_notification_config
   derives: "Generic,Show,ToJSON,FromJSON"
   types:
     NotificationType:
@@ -1342,7 +1342,7 @@ RideRelatedNotificationConfig:
       enum: "PreEvent,PostEvent,OnEvent"
   fields:
     id: Id RideRelatedNotificationConfig
-    timeDiff : NominalDiffTime
+    timeDiff: NominalDiffTime
     timeDiffEvent: TimeDiffEvent
     notificationType: NotificationType
     notificationKey: Text
@@ -1371,7 +1371,7 @@ RideRelatedNotificationConfig:
         and: [merchantOperatingCityId, timeDiffEvent]
 
 PayoutConfig:
-  tableName : payout_config
+  tableName: payout_config
   derives: "Generic,Show,ToJSON,FromJSON"
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity

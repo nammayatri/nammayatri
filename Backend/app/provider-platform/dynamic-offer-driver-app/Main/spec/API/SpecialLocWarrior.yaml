@@ -13,8 +13,8 @@ types:
     preferredSecondarySpecialLocIds: "[(Id SpecialLocation)]"
   SpecialLocWarriorInfoReq:
     isSpecialLocWarrior: Bool
-    preferredPrimarySpecialLocId : Maybe (Id SpecialLocation)
-    preferredSecondarySpecialLocIds : "[(Id SpecialLocation)]"
+    preferredPrimarySpecialLocId: Maybe (Id SpecialLocation)
+    preferredSecondarySpecialLocIds: "[(Id SpecialLocation)]"
 apis:
   - GET:
       endpoint: /specialLocation/list/category

@@ -93,7 +93,7 @@ _:
           cd "''${FLAKE_ROOT}/Backend"
           cabal run alchemist-generator-exe -- "$@"
           cd ..
-          treefmt --verbose
+          git diff --name-only HEAD | xargs treefmt --verbose
           hpack
 
           # Automatically applies Redundant bracket hint

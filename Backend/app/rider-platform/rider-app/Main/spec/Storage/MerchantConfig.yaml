@@ -7,21 +7,21 @@ MerchantConfig:
   tableName: merchant_config
 
   fields:
-    id : Id MerchantConfig
-    merchantId : Id Merchant
-    merchantOperatingCityId : Id MerchantOperatingCity
-    fraudBookingCancellationCountThreshold : Int
-    fraudBookingCancellationCountWindow : Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
-    fraudBookingTotalCountThreshold : Int
-    fraudBookingCancelledByDriverCountThreshold : Int
-    fraudBookingCancelledByDriverCountWindow : Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
-    fraudSearchCountThreshold : Int
-    fraudSearchCountWindow : Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
-    fraudRideCountThreshold : Int
-    fraudRideCountWindow : Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
-    createdAt : Maybe UTCTime
-    updatedAt : Maybe UTCTime
-    enabled : Bool
+    id: Id MerchantConfig
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    fraudBookingCancellationCountThreshold: Int
+    fraudBookingCancellationCountWindow: Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
+    fraudBookingTotalCountThreshold: Int
+    fraudBookingCancelledByDriverCountThreshold: Int
+    fraudBookingCancelledByDriverCountWindow: Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
+    fraudSearchCountThreshold: Int
+    fraudSearchCountWindow: Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
+    fraudRideCountThreshold: Int
+    fraudRideCountWindow: Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
+    createdAt: Maybe UTCTime
+    updatedAt: Maybe UTCTime
+    enabled: Bool
 
   beamInstance:
     - MakeTableInstances

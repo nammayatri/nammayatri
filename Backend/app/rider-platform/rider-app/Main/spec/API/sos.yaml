@@ -2,10 +2,10 @@ imports:
   Text: Data.Text
   Person: Domain.Types.Person
   Ride: Domain.Types.Ride
-  SosType : Domain.Types.Sos
-  SosStatus : Domain.Types.Sos
-  Sos : Domain.Types.Sos
-  LatLong : Kernel.External.Maps.Types
+  SosType: Domain.Types.Sos
+  SosStatus: Domain.Types.Sos
+  Sos: Domain.Types.Sos
+  LatLong: Kernel.External.Maps.Types
 
 module: Sos
 types:

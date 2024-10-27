@@ -10,14 +10,14 @@ RiderDriverCorrelation:
 
   types:
   fields:
-    riderDetailId : Id RiderDetails
-    driverId : Id Person
-    mobileNumber : EncryptedHashedField e Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
-    merchantId : Id Merchant
-    merchantOperatingCityId : Id MerchantOperatingCity
-    favourite : Bool
+    riderDetailId: Id RiderDetails
+    driverId: Id Person
+    mobileNumber: EncryptedHashedField e Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    favourite: Bool
 
   constraints:
     riderDetailId: PrimaryKey

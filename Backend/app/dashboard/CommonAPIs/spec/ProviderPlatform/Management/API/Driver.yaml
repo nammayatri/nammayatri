@@ -24,7 +24,7 @@ imports:
   PersonMobileNoReq: Dashboard.Common
   PersonRes: Dashboard.Common
   MandatoryQueryParam: Kernel.Utils.Common
-  DriverFeeStatus:  Dashboard.Common.Driver
+  DriverFeeStatus: Dashboard.Common.Driver
 
 module: Driver
 
@@ -378,16 +378,14 @@ apis:
       mandatoryQuery:
         phoneNo: Text
         countryCode: Text
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAN_AADHAAR_SELFIE_DETAILS
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAN_AADHAAR_SELFIE_DETAILS
       response:
         type: PanAadharSelfieDetailsResp
   - POST:
       endpoint: /syncDocAadharPan
       request:
         type: AadharPanSyncReq
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SYNC_DOC_AADHAR_PAN
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SYNC_DOC_AADHAR_PAN
       response:
         type: APISuccess
       migrate:
@@ -408,8 +406,7 @@ apis:
         driverId: Id Driver
       request:
         type: RefundByPayoutReq
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REFUND_BY_PAYOUT
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS REFUND_BY_PAYOUT
       response:
         type: APISuccess
   - GET:
@@ -418,8 +415,7 @@ apis:
         driverId: Id Driver
       query:
         - serviceName: ServiceNames
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SECURITY_DEPOSIT_STATUS
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SECURITY_DEPOSIT_STATUS
       response:
         type: ([SecurityDepositDfStatusRes])
   - GET:
@@ -427,8 +423,7 @@ apis:
       mandatoryQuery:
         docType: Text
         driverId: Id Driver
-      auth:
-        ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAN_AADHAAR_SELFIE_DETAILS_LIST
+      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAN_AADHAAR_SELFIE_DETAILS_LIST
       response:
         type: ([PanAadharSelfieDetailsListResp])
 types:
@@ -564,8 +559,8 @@ types:
     - serviceName: ServiceNames
     - feeType: DriverFeeType
     - platformFee: HighPrecMoney
-    - sgstPercentage : Maybe HighPrecMoney
-    - cgstPercentage : Maybe HighPrecMoney
+    - sgstPercentage: Maybe HighPrecMoney
+    - cgstPercentage: Maybe HighPrecMoney
     - currency: Maybe Currency
     - sendManualLink: Bool
   DriverFeeType:
@@ -597,25 +592,25 @@ types:
     - documentType: SyncDocType
     - derive: "'HideSecrets"
   SecurityDepositDfStatusRes:
-    - securityDepositStatus : DriverFeeStatus
-    - securityDepositAmountWithCurrency : Maybe PriceAPIEntity
-    - driverFeeId : Text
-    - createdAt : UTCTime
+    - securityDepositStatus: DriverFeeStatus
+    - securityDepositAmountWithCurrency: Maybe PriceAPIEntity
+    - driverFeeId: Text
+    - createdAt: UTCTime
   RefundByPayoutReq:
-    - serviceName : ServiceNames
-    - refundAmountDeduction : HighPrecMoney
-    - payerVpa : Maybe Text
-    - driverFeeType : DriverFeeType
-    - refundAmountSegregation : Maybe Text
+    - serviceName: ServiceNames
+    - refundAmountDeduction: HighPrecMoney
+    - payerVpa: Maybe Text
+    - driverFeeType: DriverFeeType
+    - refundAmountSegregation: Maybe Text
     - derive: "'HideSecrets"
   PanAadharSelfieDetailsListResp:
-    - transactionId : Text
-    - verificationStatus : Maybe Text
-    - failureReason : Maybe Text
-    - createdAt : UTCTime
-    - updatedAt : UTCTime
-    - imageId1 : Maybe Text
-    - imageId2 : Maybe Text
+    - transactionId: Text
+    - verificationStatus: Maybe Text
+    - failureReason: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - imageId1: Maybe Text
+    - imageId2: Maybe Text
 
 
 

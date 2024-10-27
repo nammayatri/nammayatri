@@ -7,13 +7,13 @@ KioskLocation:
 
 
   fields:
-    id : Id KioskLocation
-    merchantId : Id Merchant
-    address : Text
-    landmark : Text
-    contact : Text
-    longitude : Double
-    latitude : Double
+    id: Id KioskLocation
+    merchantId: Id Merchant
+    address: Text
+    landmark: Text
+    contact: Text
+    longitude: Double
+    latitude: Double
 
 
   constraints:

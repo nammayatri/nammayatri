@@ -94,7 +94,7 @@ InterCityDetails:
     nightShiftInfo: Storage.Queries.Transformers.RentalDetails.mkNightShiftInfo (Kernel.Prelude.roundToIntegral <$> nightShiftCharge) nightShiftCharge nightShiftEnd nightShiftStart (Just currency)|E
     kmPerPlannedExtraHour: (Kernel.Utils.Common.Distance kmPerPlannedExtraHour distanceUnit)|E
 
-  excludedFields: [merchantId,merchantOperatingCityId]
+  excludedFields: [merchantId, merchantOperatingCityId]
 
   excludedDefaultQueries:
     - createMany

@@ -13,7 +13,7 @@ imports:
   Currency: Kernel.Types.Common
   parseBaseUrl: Kernel.Prelude
   showBaseUrl: Kernel.Prelude
-  Device : Kernel.Types.Version
+  Device: Kernel.Types.Version
   DeviceType: Kernel.Types.Version
   Version: Kernel.Types.Version
   Minutes: Kernel.Types.Common
@@ -33,10 +33,10 @@ Estimate:
       derive': "Generic, Show, Kernel.Utils.GenericPretty.PrettyShow"
 
     EstimateBreakup:
-      id : Id EstimateBreakup
-      estimateId : Id Estimate
-      title : Text
-      price : EstimateBreakupPrice
+      id: Id EstimateBreakup
+      estimateId: Id Estimate
+      title: Text
+      price: EstimateBreakupPrice
       derive': "Generic, Show, Kernel.Utils.GenericPretty.PrettyShow"
 
     EstimateBreakupPrice:
@@ -45,10 +45,10 @@ Estimate:
       derive': "Generic, Show, Kernel.Utils.GenericPretty.PrettyShow"
 
     NightShiftInfo:
-      nightShiftCharge : Price
-      oldNightShiftCharge : Maybe Centesimal
-      nightShiftStart : TimeOfDay
-      nightShiftEnd : TimeOfDay
+      nightShiftCharge: Price
+      oldNightShiftCharge: Maybe Centesimal
+      nightShiftStart: TimeOfDay
+      nightShiftEnd: TimeOfDay
       derive': "Generic, Show"
 
     TollChargesInfo:
@@ -65,40 +65,40 @@ Estimate:
       derive': "Generic, Show"
 
   fields:
-    id : Id Estimate
-    requestId : Id SearchRequest
-    merchantId : Maybe (Id Merchant)
-    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
-    bppEstimateId : Id BPPEstimate
-    estimatedFare : Price
-    discount : Maybe Price
-    estimatedTotalFare : Price
-    totalFareRange : FareRange
-    estimatedDuration : Maybe Seconds
+    id: Id Estimate
+    requestId: Id SearchRequest
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    bppEstimateId: Id BPPEstimate
+    estimatedFare: Price
+    discount: Maybe Price
+    estimatedTotalFare: Price
+    totalFareRange: FareRange
+    estimatedDuration: Maybe Seconds
     estimatedStaticDuration: Maybe Seconds
-    estimatedDistance : Maybe Distance
-    estimatedPickupDuration : Maybe Seconds
-    device : Maybe Text
-    providerId : Text
-    providerUrl : BaseUrl
-    providerName : Text
-    providerMobileNumber : Text
-    providerCompletedRidesCount : Int
-    vehicleServiceTierType : ServiceTierType
-    vehicleServiceTierSeatingCapacity : Maybe Int
-    vehicleServiceTierAirConditioned : Maybe Double
+    estimatedDistance: Maybe Distance
+    estimatedPickupDuration: Maybe Seconds
+    device: Maybe Text
+    providerId: Text
+    providerUrl: BaseUrl
+    providerName: Text
+    providerMobileNumber: Text
+    providerCompletedRidesCount: Int
+    vehicleServiceTierType: ServiceTierType
+    vehicleServiceTierSeatingCapacity: Maybe Int
+    vehicleServiceTierAirConditioned: Maybe Double
     isAirConditioned: Maybe Bool
-    itemId : Text
-    tripTerms : Maybe TripTerms
-    estimateBreakupList : "[EstimateBreakup]"
-    nightShiftInfo : Maybe NightShiftInfo
-    status : EstimateStatus
-    waitingCharges : WaitingCharges
-    driversLocation : "[LatLong]"
-    specialLocationTag : Maybe Text
-    specialLocationName : Maybe Text
-    serviceTierName : Maybe Text
-    serviceTierShortDesc : Maybe Text
+    itemId: Text
+    tripTerms: Maybe TripTerms
+    estimateBreakupList: "[EstimateBreakup]"
+    nightShiftInfo: Maybe NightShiftInfo
+    status: EstimateStatus
+    waitingCharges: WaitingCharges
+    driversLocation: "[LatLong]"
+    specialLocationTag: Maybe Text
+    specialLocationName: Maybe Text
+    serviceTierName: Maybe Text
+    serviceTierShortDesc: Maybe Text
     clientSdkVersion: Maybe Version
     clientBundleVersion: Maybe Version
     clientConfigVersion: Maybe Version
@@ -110,10 +110,10 @@ Estimate:
     isBlockedRoute: Maybe Bool
     distanceUnit: DistanceUnit
     tripCategory: Maybe TripCategory
-    updatedAt : UTCTime
-    createdAt : UTCTime
-    validTill : UTCTime
-    vehicleIconUrl : Maybe BaseUrl
+    updatedAt: UTCTime
+    createdAt: UTCTime
+    validTill: UTCTime
+    vehicleIconUrl: Maybe BaseUrl
     smartTipSuggestion: Maybe HighPrecMoney
     smartTipReason: Maybe Text
 
@@ -150,15 +150,15 @@ Estimate:
       tripTermsId: Maybe Text
 
     nightShiftInfo:
-      nightShiftCharge : Maybe Money
-      nightShiftChargeAmount : Maybe HighPrecMoney
-      oldNightShiftCharge : Maybe Centesimal
-      nightShiftStart : Maybe TimeOfDay
-      nightShiftEnd : Maybe TimeOfDay
+      nightShiftCharge: Maybe Money
+      nightShiftChargeAmount: Maybe HighPrecMoney
+      oldNightShiftCharge: Maybe Centesimal
+      nightShiftStart: Maybe TimeOfDay
+      nightShiftEnd: Maybe TimeOfDay
 
     tollChargesInfo:
-      tollCharges : Maybe HighPrecMoney
-      tollNames : Maybe [Text]
+      tollCharges: Maybe HighPrecMoney
+      tollNames: Maybe [Text]
 
     waitingCharges:
       waitingChargePerMin: Maybe Money
@@ -195,13 +195,13 @@ Estimate:
     clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
-    clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
+    clientDevice: (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
     vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
 
   toTType:
     maxTotalFare: (mkMaxTotalFare totalFareRange)|E
-    minTotalFare:  (mkMinTotalFare totalFareRange)|E
+    minTotalFare: (mkMinTotalFare totalFareRange)|E
     waitingChargePerMin: ((.waitingChargePerMin) waitingCharges <&> (.amountInt))|E
     waitingChargePerMinAmount: ((.waitingChargePerMin) waitingCharges <&> (.amount))|E
     estimatedFare: ((.amount) estimatedFare)|E
@@ -224,8 +224,8 @@ Estimate:
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E
-    clientOsVersion:  (clientDevice <&> (.deviceVersion))|E
-    clientOsType:  (clientDevice <&> (.deviceType))|E
+    clientOsVersion: (clientDevice <&> (.deviceVersion))|E
+    clientOsType: (clientDevice <&> (.deviceType))|E
     clientModelName: (clientDevice <&> (.deviceModel))|E
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
     vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
@@ -275,7 +275,7 @@ Estimate:
     findBySRIdAndStatus:
       kvFunction: findOneWithKV
       where:
-        and: [status,requestId]
+        and: [status, requestId]
 
 
   extraOperations:

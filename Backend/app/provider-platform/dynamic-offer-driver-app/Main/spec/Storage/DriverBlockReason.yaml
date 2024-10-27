@@ -6,9 +6,9 @@ DriverBlockReason:
   tableName: driver_block_reason
 
   fields:
-    reasonCode : Id DriverBlockReason
-    blockReason : Maybe Text
-    blockTimeInHours : Maybe Int
+    reasonCode: Id DriverBlockReason
+    blockReason: Maybe Text
+    blockTimeInHours: Maybe Int
 
   constraints:
     reasonCode: PrimaryKey

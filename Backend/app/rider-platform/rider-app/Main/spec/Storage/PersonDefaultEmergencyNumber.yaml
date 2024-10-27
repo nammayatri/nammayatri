@@ -17,7 +17,7 @@ PersonDefaultEmergencyNumber:
     enableForShareRide: Bool
     merchantId: Maybe (Id Merchant)
     priority: Int
-    shareTripWithEmergencyContactOption : Maybe RideShareOptions
+    shareTripWithEmergencyContactOption: Maybe RideShareOptions
 
   # beamType: -- Why do this its already having a default value
   #   enableForShareRide: Maybe Bool

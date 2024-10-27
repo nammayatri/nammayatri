@@ -4,20 +4,20 @@ imports:
 module: DriverProfileQuestions
 types:
   DriverProfileQuesRes:
-    hometown : Maybe Text
-    pledges : "[Text]"
-    drivingSince : "Maybe Int"
-    aspirations : "[Text]"
-    vehicleTags : "[Text]"
+    hometown: Maybe Text
+    pledges: "[Text]"
+    drivingSince: "Maybe Int"
+    aspirations: "[Text]"
+    vehicleTags: "[Text]"
     profileImage: "Maybe Text"
     otherImages: "[Text]"
     otherImageIds: "[Text]"
   DriverProfileQuesReq:
-    aspirations : "[Text]"
-    drivingSince : "Maybe Int"
-    hometown : Maybe Text
-    pledges : "[Text]"
-    vehicleTags : "[Text]"
+    aspirations: "[Text]"
+    drivingSince: "Maybe Int"
+    hometown: Maybe Text
+    pledges: "[Text]"
+    vehicleTags: "[Text]"
     imageIds: "[Text]"
 apis:
   # POST /DriverProfileQues

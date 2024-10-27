@@ -13,9 +13,9 @@ BapMetadata:
   tableName: bap_metadata
 
   fields:
-    id : Id BapMetadata
-    name : Text
-    logoUrl : Maybe BaseUrl
+    id: Id BapMetadata
+    name: Text
+    logoUrl: Maybe BaseUrl
     domain: Maybe Text # TODO: Use Domain type here
 
   constraints:

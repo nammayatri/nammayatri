@@ -30,6 +30,24 @@
         ./nix/pre-commit.nix
       ];
 
+      treefmt.config = {
+        settings.formatter = {
+          "yamlfmt" = {
+            command = "${pkgs.bash}/bin/bash";
+            options = [
+              "-c"
+              ''
+                for file in "$@"; do
+                  ${lib.getExe pkgs.yamlfmt} -formatter retain_line_breaks=true,trim_trailing_whitespace=true $file || exit 1
+                done
+              ''
+              "--"
+            ];
+            includes = [ "Backend/*/spec/*.yaml" ];
+          };
+        };
+      };
+
       haskellProjects.default = {
         projectRoot = ./.;
         imports = [

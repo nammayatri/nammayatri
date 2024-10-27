@@ -6,7 +6,7 @@ types:
     expiry: Maybe UTCTime
 
 apis:
- # GET /driver/sdkToken
+  # GET /driver/sdkToken
   - GET:
       endpoint: /driver/sdkToken
       auth: TokenAuth PROVIDER_TYPE

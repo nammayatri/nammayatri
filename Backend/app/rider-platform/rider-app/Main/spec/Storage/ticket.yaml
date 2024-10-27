@@ -19,7 +19,7 @@ imports:
   ServicePeopleCategory: Domain.Types.ServicePeopleCategory
   BusinessHourType: Domain.Types.BusinessHour
   Value: Data.Aeson
-  TimeBound : Kernel.Types.TimeBound
+  TimeBound: Kernel.Types.TimeBound
   BookingStatus: Domain.Types.Extra.TicketBooking
 
 TicketPlace:
@@ -100,7 +100,7 @@ TicketService:
       where: placesId
 
   extraOperations:
-  - EXTRA_QUERY_FILE
+    - EXTRA_QUERY_FILE
 
 SpecialOccasion:
   tableName: special_occasion
@@ -227,7 +227,7 @@ ServicePeopleCategory:
       where: id
 
   extraOperations:
-  - EXTRA_QUERY_FILE
+    - EXTRA_QUERY_FILE
 
 SeatManagement:
   tableName: seat_management
@@ -331,8 +331,8 @@ TicketBooking:
       where: id
 
   extraOperations:
-  - EXTRA_QUERY_FILE
-  - EXTRA_DOMAIN_TYPE_FILE
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE
 
 TicketBookingService:
   tableName: ticket_booking_service
@@ -399,7 +399,7 @@ TicketBookingService:
       where: id
 
   extraOperations:
-  - EXTRA_QUERY_FILE
+    - EXTRA_QUERY_FILE
 
 TicketBookingServiceCategory:
   tableName: ticket_booking_service_category
@@ -453,7 +453,7 @@ TicketBookingServiceCategory:
     bookedSeats: "0"
 
   extraOperations:
-  - EXTRA_QUERY_FILE
+    - EXTRA_QUERY_FILE
 
 TicketBookingPeopleCategory:
   tableName: ticket_booking_people_category
@@ -493,4 +493,4 @@ TicketBookingPeopleCategory:
       where: id
 
   extraOperations:
-  - EXTRA_QUERY_FILE
+    - EXTRA_QUERY_FILE

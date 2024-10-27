@@ -69,7 +69,7 @@ Location:
       area: Maybe Text
       fullAddress: Maybe Text
       instructions: Maybe Text
-      id : Id Location
+      id: Id Location
       extras: Maybe Text
       derive': Generic,Show,FromJSON,ToJSON,Data.OpenApi.ToSchema
   fields:

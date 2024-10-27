@@ -3,7 +3,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   CancellationReasonCode: Domain.Types.CancellationReason
   CancellationStage: Domain.Types.CancellationReason
-  Booking:  Domain.Types.Booking
+  Booking: Domain.Types.Booking
   Ride: Domain.Types.Ride
   LatLong: Kernel.External.Maps
 
@@ -16,16 +16,16 @@ BookingCancellationReason:
 
 
   fields:
-    bookingId : Id Booking
-    rideId : Maybe (Id Ride)
-    merchantId : Maybe (Id Merchant)
-    source : CancellationSource
-    reasonCode : Maybe CancellationReasonCode
-    reasonStage : Maybe CancellationStage
-    additionalInfo : Maybe Text
-    driverCancellationLocation : Maybe LatLong
-    driverDistToPickup : Maybe Distance
-    distanceUnit : DistanceUnit
+    bookingId: Id Booking
+    rideId: Maybe (Id Ride)
+    merchantId: Maybe (Id Merchant)
+    source: CancellationSource
+    reasonCode: Maybe CancellationReasonCode
+    reasonStage: Maybe CancellationStage
+    additionalInfo: Maybe Text
+    driverCancellationLocation: Maybe LatLong
+    driverDistToPickup: Maybe Distance
+    distanceUnit: DistanceUnit
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -39,7 +39,7 @@ BookingCancellationReason:
       driverCancellationLocationLon: Maybe Double
     driverDistToPickup:
       driverDistToPickup: Maybe Meters
-      driverDistToPickupValue : Maybe HighPrecDistance
+      driverDistToPickupValue: Maybe HighPrecDistance
     distanceUnit:
       distanceUnit: Maybe DistanceUnit
 

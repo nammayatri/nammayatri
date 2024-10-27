@@ -11,7 +11,7 @@ imports:
   Area: Lib.Types.SpecialLocation
   Common: Domain.Types.Common
   Common: Kernel.Types.Common
-  TimeBound : Kernel.Types.TimeBound
+  TimeBound: Kernel.Types.TimeBound
   Currency: Kernel.Utils.Common
   DayOfWeek: Data.Time
   Centesimal: Kernel.Types.Common
@@ -48,7 +48,7 @@ DriverPoolConfig:
     timeBounds: TimeBound|NoRelation
     batchSizeOnRide: Int
     batchSizeOnRideWithStraightLineDistance: Maybe Int
-    useOneToOneOsrmMapping : Maybe Bool
+    useOneToOneOsrmMapping: Maybe Bool
     onRideRadiusConfig: "[OnRideRadiusConfig]"
     onRideBatchSplitConfig: "[BatchSplitByPickupDistanceOnRide]"
     enableForwardBatching: Bool
@@ -59,7 +59,7 @@ DriverPoolConfig:
     maxParallelSearchRequestsOnRide: Int
     thresholdToIgnoreActualDistanceThreshold: Maybe Meters
     actualDistanceThresholdOnRide: Maybe Meters
-    currentRideTripCategoryValidForForwardBatching : "[Text]"
+    currentRideTripCategoryValidForForwardBatching: "[Text]"
     distanceUnit: DistanceUnit
     enableUnifiedPooling: Maybe Bool
     dynamicBatchSize: Vector Int
@@ -202,13 +202,13 @@ CancellationFarePolicy:
   tableName: cancellation_fare_policy
 
   fields:
-    id : Id CancellationFarePolicy
+    id: Id CancellationFarePolicy
     currency: Currency
     minCancellationCharge: HighPrecMoney
     maxCancellationCharge: HighPrecMoney
     perMetreCancellationCharge: HighPrecMoney
     perMinuteCancellationCharge: HighPrecMoney
-    maxWaitingTimeAtPickupSeconds:  Seconds
+    maxWaitingTimeAtPickupSeconds: Seconds
     freeCancellationTimeSeconds: Seconds
     percentageOfRideFareToBeCharged: Centesimal
     description: Text

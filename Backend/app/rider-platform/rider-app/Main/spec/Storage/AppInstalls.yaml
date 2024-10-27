@@ -1,21 +1,21 @@
 imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  Version : Kernel.Types.Version
+  Version: Kernel.Types.Version
 
 AppInstalls:
   tableName: app_installs
 
   fields:
-    id : Id AppInstalls
-    deviceToken : Text
-    source : Text
-    merchantId : Id Merchant
-    appVersion : Maybe Version
-    bundleVersion : Maybe Version
-    platform : Maybe Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Id AppInstalls
+    deviceToken: Text
+    source: Text
+    merchantId: Id Merchant
+    appVersion: Maybe Version
+    bundleVersion: Maybe Version
+    platform: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   constraints:
     id: PrimaryKey

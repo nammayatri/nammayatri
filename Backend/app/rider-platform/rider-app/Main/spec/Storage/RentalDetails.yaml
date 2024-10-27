@@ -104,7 +104,7 @@ RentalDetails:
     nightShiftInfo: Storage.Queries.Transformers.RentalDetails.mkNightShiftInfo nightShiftCharge nightShiftChargeAmount nightShiftEnd nightShiftStart currency|E
     includedDistancePerHr: (Kernel.Utils.Common.mkDistanceWithDefaultMeters distanceUnit includedDistancePerHrValue $ Kernel.Utils.Common.kilometersToMeters includedKmPerHr)|E
 
-  excludedFields: [updatedAt,createdAt,merchantId,merchantOperatingCityId]
+  excludedFields: [updatedAt, createdAt, merchantId, merchantOperatingCityId]
 
   excludedDefaultQueries:
     - createMany

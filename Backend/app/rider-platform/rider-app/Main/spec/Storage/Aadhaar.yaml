@@ -8,23 +8,23 @@ AadhaarOtpReq:
   tableName: aadhaar_otp_req
 
   fields:
-    id : Id AadhaarOtpReq
-    personId : Id Person
-    requestId : Text
-    statusCode : Text
-    transactionId : Maybe Text
-    requestMessage : Text
-    createdAt : UTCTime
+    id: Id AadhaarOtpReq
+    personId: Id Person
+    requestId: Text
+    statusCode: Text
+    transactionId: Maybe Text
+    requestMessage: Text
+    createdAt: UTCTime
     updatedAt: UTCTime
 
   beamType:
-      updatedAt: Maybe UTCTime
+    updatedAt: Maybe UTCTime
 
   fromTType:
-      updatedAt: Kernel.Prelude.fromMaybe createdAt|I
+    updatedAt: Kernel.Prelude.fromMaybe createdAt|I
 
   toTType:
-      updatedAt: Kernel.Prelude.Just|I
+    updatedAt: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
@@ -42,23 +42,23 @@ AadhaarOtpVerify:
   tableName: aadhaar_otp_verify
 
   fields:
-    id : Id AadhaarOtpVerify
-    personId : Id Person
-    requestId : Text
-    statusCode : Text
-    transactionId : Text
-    requestMessage : Text
-    createdAt : UTCTime
+    id: Id AadhaarOtpVerify
+    personId: Id Person
+    requestId: Text
+    statusCode: Text
+    transactionId: Text
+    requestMessage: Text
+    createdAt: UTCTime
     updatedAt: UTCTime
 
   beamType:
-      updatedAt: Maybe UTCTime
+    updatedAt: Maybe UTCTime
 
   fromTType:
-      updatedAt: Kernel.Prelude.fromMaybe createdAt|I
+    updatedAt: Kernel.Prelude.fromMaybe createdAt|I
 
   toTType:
-      updatedAt: Kernel.Prelude.Just|I
+    updatedAt: Kernel.Prelude.Just|I
 
   constraints:
     id: PrimaryKey
@@ -78,15 +78,15 @@ AadhaarVerification:
   derives: "Generic, ToJSON, FromJSON, Show"
 
   fields:
-    personName : Text
-    personId : Id Person
-    personGender : Text
-    personDob : Text
-    personImagePath : Maybe Text
-    aadhaarNumberHash : Maybe DbHash
-    isVerified : Bool
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    personName: Text
+    personId: Id Person
+    personGender: Text
+    personDob: Text
+    personImagePath: Maybe Text
+    aadhaarNumberHash: Maybe DbHash
+    isVerified: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   queries:
     findByPersonId:

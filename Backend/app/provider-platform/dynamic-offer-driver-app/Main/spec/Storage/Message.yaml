@@ -26,38 +26,38 @@ Message:
       enum: "Action Text, Read"
 
     RawMessage:
-      id : Id Message
-      _type : MessageType
-      title : Text
-      description : Text
-      shortDescription : Text
-      label : Maybe Text
-      likeCount : Int
-      viewCount : Int
-      alwaysTriggerOnOnboarding : Bool
-      mediaFiles : "[Id MediaFile]"
-      merchantId : Id Merchant
-      createdAt : UTCTime
+      id: Id Message
+      _type: MessageType
+      title: Text
+      description: Text
+      shortDescription: Text
+      label: Maybe Text
+      likeCount: Int
+      viewCount: Int
+      alwaysTriggerOnOnboarding: Bool
+      mediaFiles: "[Id MediaFile]"
+      merchantId: Id Merchant
+      createdAt: UTCTime
 
     MessageDict:
-      defaultMessage : RawMessage
-      translations : Data.Map.Map Text RawMessage
+      defaultMessage: RawMessage
+      translations: Data.Map.Map Text RawMessage
 
   fields:
-    id : Id Message
-    _type : MessageType
-    title : Text
-    description : Text
-    shortDescription : Text
-    label : Maybe Text
-    likeCount : Int
-    viewCount : Int
-    mediaFiles : "[Id MediaFile]"
-    messageTranslations : "[MessageTranslation]"
-    alwaysTriggerOnOnboarding : Bool
-    merchantId : Id Merchant
-    merchantOperatingCityId : Id MerchantOperatingCity
-    createdAt : UTCTime
+    id: Id Message
+    _type: MessageType
+    title: Text
+    description: Text
+    shortDescription: Text
+    label: Maybe Text
+    likeCount: Int
+    viewCount: Int
+    mediaFiles: "[Id MediaFile]"
+    messageTranslations: "[MessageTranslation]"
+    alwaysTriggerOnOnboarding: Bool
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
 
   beamType:
     alwaysTriggerOnOnboarding: Maybe Bool
@@ -109,8 +109,8 @@ Message:
     - EXTRA_QUERY_FILE
 
   excludedDefaultQueries:
-  - create
-  - createMany
+    - create
+    - createMany
 
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
@@ -123,15 +123,15 @@ MessageReport:
       enum: "Success, Failed, Queued, Sending"
 
   fields:
-    messageId : Id Message
-    driverId : Id Driver
-    deliveryStatus : DeliveryStatus
-    readStatus : Bool
-    likeStatus : Bool
-    reply : Maybe Text
-    messageDynamicFields : MessageDynamicFieldsType
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    messageId: Id Message
+    driverId: Id Driver
+    deliveryStatus: DeliveryStatus
+    readStatus: Bool
+    likeStatus: Bool
+    reply: Maybe Text
+    messageDynamicFields: MessageDynamicFieldsType
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   beamType:
     messageDynamicFields: Data.Aeson.Value
@@ -186,13 +186,13 @@ MessageTranslation:
 
 
   fields:
-    messageId : Id Message
-    language : Language
-    title : Text
-    label : Maybe Text
-    description : Text
-    shortDescription : Text
-    createdAt : UTCTime
+    messageId: Id Message
+    language: Language
+    title: Text
+    label: Maybe Text
+    description: Text
+    shortDescription: Text
+    createdAt: UTCTime
 
   beamType:
     createdAt: LocalTime

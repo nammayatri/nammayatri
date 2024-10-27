@@ -8,104 +8,104 @@ imports:
 
 
 Estimate:
-    tableName: estimate
+  tableName: estimate
 
-    derives: "Generic,Show"
+  derives: "Generic,Show"
 
-    beamInstance: MakeTableInstancesWithTModifier []
+  beamInstance: "MakeTableInstancesWithTModifier []"
 
-    fields:
-      id: Id Estimate
-      requestId: Id SearchRequest
-      vehicleServiceTier: ServiceTierType|NoRelation
-      vehicleServiceTierName: Maybe Text
-      tripCategory: TripCategory
-      minFare: HighPrecMoney
-      maxFare: HighPrecMoney
-      dpVersion : Maybe Text
-      currency: Currency
-      estimatedDistance: Maybe Meters
-      supplyDemandRatioFromLoc : Maybe Double
-      supplyDemandRatioToLoc : Maybe Double
-      smartTipSuggestion: Maybe HighPrecMoney
-      smartTipReason: Maybe Text
-      distanceUnit: DistanceUnit
-      fareParams: Maybe FareParameters|WithIdCreate
-      farePolicy: Maybe FarePolicy|NoRelation
-      specialLocationTag: Maybe Text
-      isScheduled: Bool
-      isCustomerPrefferedSearchRoute: Maybe Bool
-      isBlockedRoute: Maybe Bool
-      tollNames: Maybe [Text]
-      eligibleForUpgrade: Bool
-      createdAt: UTCTime
-      updatedAt: UTCTime
+  fields:
+    id: Id Estimate
+    requestId: Id SearchRequest
+    vehicleServiceTier: ServiceTierType|NoRelation
+    vehicleServiceTierName: Maybe Text
+    tripCategory: TripCategory
+    minFare: HighPrecMoney
+    maxFare: HighPrecMoney
+    dpVersion: Maybe Text
+    currency: Currency
+    estimatedDistance: Maybe Meters
+    supplyDemandRatioFromLoc: Maybe Double
+    supplyDemandRatioToLoc: Maybe Double
+    smartTipSuggestion: Maybe HighPrecMoney
+    smartTipReason: Maybe Text
+    distanceUnit: DistanceUnit
+    fareParams: Maybe FareParameters|WithIdCreate
+    farePolicy: Maybe FarePolicy|NoRelation
+    specialLocationTag: Maybe Text
+    isScheduled: Bool
+    isCustomerPrefferedSearchRoute: Maybe Bool
+    isBlockedRoute: Maybe Bool
+    tollNames: Maybe [Text]
+    eligibleForUpgrade: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
-    excludedFields:
-      - merchantId
-      - merchantOperatingCityId
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
 
-    beamFields:
-      farePolicy:
-        farePolicyId: Maybe Text
-      vehicleServiceTier: "vehicleVariant"
-      minFare:
-        minFare: Money
-        minFareAmount: Maybe HighPrecMoney
-      maxFare:
-        maxFare: Money
-        maxFareAmount: Maybe HighPrecMoney
-      currency:
-        currency: Maybe Currency
+  beamFields:
+    farePolicy:
+      farePolicyId: Maybe Text
+    vehicleServiceTier: "vehicleVariant"
+    minFare:
+      minFare: Money
+      minFareAmount: Maybe HighPrecMoney
+    maxFare:
+      maxFare: Money
+      maxFareAmount: Maybe HighPrecMoney
+    currency:
+      currency: Maybe Currency
 
-    sqlType:
-      farePolicyId: character varying(36)
-    beamType:
-      updatedAt: Maybe UTCTime
-      isScheduled: Maybe Bool
-      tripCategory: Maybe TripCategory
-      distanceUnit: Maybe DistanceUnit
-      eligibleForUpgrade: Maybe Bool
+  sqlType:
+    farePolicyId: character varying(36)
+  beamType:
+    updatedAt: Maybe UTCTime
+    isScheduled: Maybe Bool
+    tripCategory: Maybe TripCategory
+    distanceUnit: Maybe DistanceUnit
+    eligibleForUpgrade: Maybe Bool
 
-    constraints:
-      id: PrimaryKey
-      requestId: SecondaryKey
+  constraints:
+    id: PrimaryKey
+    requestId: SecondaryKey
 
-    fromTType:
-      updatedAt: Kernel.Prelude.fromMaybe createdAt|I
-      isScheduled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
-      tripCategory: Kernel.Prelude.fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer)|I
-      farePolicy: maybe (pure Nothing) ((Storage.Cac.FarePolicy.findById Nothing) . Kernel.Types.Id.Id)|IM
-      minFare: Kernel.Types.Common.mkAmountWithDefault minFareAmount minFare|E
-      maxFare: Kernel.Types.Common.mkAmountWithDefault maxFareAmount maxFare|E
-      currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
-      distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
-      eligibleForUpgrade: Kernel.Prelude.fromMaybe False|I
+  fromTType:
+    updatedAt: Kernel.Prelude.fromMaybe createdAt|I
+    isScheduled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    tripCategory: Kernel.Prelude.fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer)|I
+    farePolicy: maybe (pure Nothing) ((Storage.Cac.FarePolicy.findById Nothing) . Kernel.Types.Id.Id)|IM
+    minFare: Kernel.Types.Common.mkAmountWithDefault minFareAmount minFare|E
+    maxFare: Kernel.Types.Common.mkAmountWithDefault maxFareAmount maxFare|E
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+    eligibleForUpgrade: Kernel.Prelude.fromMaybe False|I
 
-    toTType:
-      updatedAt: Kernel.Prelude.Just|I
-      isScheduled: Kernel.Prelude.Just|I
-      tripCategory: Kernel.Prelude.Just|I
-      farePolicyId: (Kernel.Types.Id.getId . (.id) <$>)
-      minFare:  Kernel.Prelude.roundToIntegral|I
-      minFareAmount: Kernel.Prelude.Just|I
-      currency: Kernel.Prelude.Just|I
-      maxFare:  Kernel.Prelude.roundToIntegral|I
-      maxFareAmount: Kernel.Prelude.Just|I
-      distanceUnit: Kernel.Prelude.Just|I
-      eligibleForUpgrade: Kernel.Prelude.Just|I
+  toTType:
+    updatedAt: Kernel.Prelude.Just|I
+    isScheduled: Kernel.Prelude.Just|I
+    tripCategory: Kernel.Prelude.Just|I
+    farePolicyId: (Kernel.Types.Id.getId . (.id) <$>)
+    minFare: Kernel.Prelude.roundToIntegral|I
+    minFareAmount: Kernel.Prelude.Just|I
+    currency: Kernel.Prelude.Just|I
+    maxFare: Kernel.Prelude.roundToIntegral|I
+    maxFareAmount: Kernel.Prelude.Just|I
+    distanceUnit: Kernel.Prelude.Just|I
+    eligibleForUpgrade: Kernel.Prelude.Just|I
 
-    queries:
-      findById:
-        kvFunction: findOneWithKV
-        where:
-          and: [id]
-      updateSupplyDemandRatioByReqIdAndServiceTier:
-        kvFunction: updateWithKV
-        params: [supplyDemandRatioFromLoc, supplyDemandRatioToLoc]
-        where:
-          and: [requestId,vehicleServiceTier]
-      findEligibleForCabUpgrade:
-        kvFunction: findAllWithKVAndConditionalDB
-        where:
-          and: [requestId, eligibleForUpgrade]
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where:
+        and: [id]
+    updateSupplyDemandRatioByReqIdAndServiceTier:
+      kvFunction: updateWithKV
+      params: [supplyDemandRatioFromLoc, supplyDemandRatioToLoc]
+      where:
+        and: [requestId, vehicleServiceTier]
+    findEligibleForCabUpgrade:
+      kvFunction: findAllWithKVAndConditionalDB
+      where:
+        and: [requestId, eligibleForUpgrade]

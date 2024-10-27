@@ -15,20 +15,20 @@ CallStatus:
       enum: "Attempted, Resolved, Failed, Pending"
 
   fields:
-    id : Id CallStatus
-    callId : Text
-    rideId : Maybe (Id Ride)
-    dtmfNumberUsed : Maybe Text
-    status : Kernel.External.Call.Interface.Types.CallStatus
-    recordingUrl : Maybe Text
-    conversationDuration : Int
-    merchantId : Maybe Text
-    merchantOperatingCityId : Maybe (Id MerchantOperatingCity)
-    callService : Maybe CallService
-    callError : Maybe Text
-    callAttempt : Maybe CallAttemptStatus
-    createdAt : UTCTime
-    customerIvrResponse : Maybe Text
+    id: Id CallStatus
+    callId: Text
+    rideId: Maybe (Id Ride)
+    dtmfNumberUsed: Maybe Text
+    status: Kernel.External.Call.Interface.Types.CallStatus
+    recordingUrl: Maybe Text
+    conversationDuration: Int
+    merchantId: Maybe Text
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    callService: Maybe CallService
+    callError: Maybe Text
+    callAttempt: Maybe CallAttemptStatus
+    createdAt: UTCTime
+    customerIvrResponse: Maybe Text
 
   sqlType:
     callId: character varying(255)

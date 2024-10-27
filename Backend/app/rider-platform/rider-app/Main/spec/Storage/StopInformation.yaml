@@ -15,11 +15,11 @@ StopInformation:
 
   fields:
     id: Id StopInformation
-    rideId : Id Ride
-    waitingTimeStart : UTCTime
-    waitingTimeEnd : Maybe UTCTime
-    stopId : Id Location
-    stopOrder : Int
+    rideId: Id Ride
+    waitingTimeStart: UTCTime
+    waitingTimeEnd: Maybe UTCTime
+    stopId: Id Location
+    stopOrder: Int
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -28,7 +28,7 @@ StopInformation:
     findById:
       kvFunction: findOneWithKV
       where: id
-        # and: [id]
+      # and: [id]
     findAllByRideId:
       kvFunction: findAllWithKVAndConditionalDB
       where: rideId

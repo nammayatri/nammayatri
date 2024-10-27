@@ -15,7 +15,7 @@ types:
 
   ReferralEarningsRes:
     totalReferralCount: Int
-    dailyEarnings : [DailyEarning]
+    dailyEarnings: [DailyEarning]
     vpaId: Maybe Text
     orderId: Maybe Text
     orderStatus: Maybe TransactionStatus

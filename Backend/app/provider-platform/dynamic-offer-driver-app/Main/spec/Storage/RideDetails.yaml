@@ -13,19 +13,19 @@ RideDetails:
 
 
   fields:
-    id : Id Ride
-    driverName : Text
-    driverNumber : Maybe (EncryptedHashedField e Text)
-    driverCountryCode : Maybe Text
-    vehicleNumber : Text
-    vehicleColor : Maybe Text
-    vehicleVariant : Maybe VehicleVariant|NoRelation
-    vehicleModel : Maybe Text
-    vehicleClass : Maybe Text
-    vehicleAge : Maybe Months
-    fleetOwnerId : Maybe Text
-    defaultServiceTierName : Maybe Text
-    createdAt : Maybe UTCTime
+    id: Id Ride
+    driverName: Text
+    driverNumber: Maybe (EncryptedHashedField e Text)
+    driverCountryCode: Maybe Text
+    vehicleNumber: Text
+    vehicleColor: Maybe Text
+    vehicleVariant: Maybe VehicleVariant|NoRelation
+    vehicleModel: Maybe Text
+    vehicleClass: Maybe Text
+    vehicleAge: Maybe Months
+    fleetOwnerId: Maybe Text
+    defaultServiceTierName: Maybe Text
+    createdAt: Maybe UTCTime
 
 
   constraints:

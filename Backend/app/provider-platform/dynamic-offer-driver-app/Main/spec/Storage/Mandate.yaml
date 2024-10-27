@@ -12,18 +12,18 @@ Mandate:
 
 
   fields:
-    id : Id Mandate
-    status : MandateStatus
-    payerVpa : Maybe Text
-    startDate : UTCTime
-    endDate : UTCTime
-    maxAmount : HighPrecMoney
-    currency : Currency
-    payerApp : Maybe Text
-    payerAppName : Maybe Text
-    mandatePaymentFlow : Maybe Text
-    createdAt : UTCTime
-    updatedAt : UTCTime
+    id: Id Mandate
+    status: MandateStatus
+    payerVpa: Maybe Text
+    startDate: UTCTime
+    endDate: UTCTime
+    maxAmount: HighPrecMoney
+    currency: Currency
+    payerApp: Maybe Text
+    payerAppName: Maybe Text
+    mandatePaymentFlow: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
 
   beamType:
     currency: Maybe Currency
