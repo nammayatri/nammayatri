@@ -22,6 +22,7 @@ import MerchantConfig.Types (Language)
 import Prelude ((==))
 import PrestoDOM (Margin(..))
 import Screens.Types as ST
+import Common.RemoteConfig as RC
 
 primaryButtonConfig :: ST.ChooseLanguageScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
@@ -46,7 +47,7 @@ menuButtonConfig state language = let
       }
       ,subTitleConfig
       {
-        text = language.subTitle
+        text = language.subtitle
       }
       , id = language.value
       , isSelected = (language.value == state.props.selectedLanguage)
