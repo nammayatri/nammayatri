@@ -2214,7 +2214,7 @@ window.getMerchantConfig = function () {
         }
       },
       {
-        "cityName" : "Bhubaneswar",
+        "cityName" : "Bhubaneshwar",
         "mapImage" : "ny_ic_location_map",
         "cityCode": "std:00112", //// check this from backend
         "showSubscriptions" : false,
@@ -2224,7 +2224,7 @@ window.getMerchantConfig = function () {
         "cityLat" : 20.2376,
         "cityLong" : 84.2700,
         "supportNumber" : "08069724919",
-        "languageKey" : "KN_IN",
+        "languageKey" : "OD_IN",
         "showScheduledRides" : false,
         "showDriverReferral" : false,
         "showCustomerReferral" : true,
