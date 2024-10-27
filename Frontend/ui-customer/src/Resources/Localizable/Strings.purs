@@ -20,7 +20,6 @@ import Language.Types (STR)
 import MerchantConfig.Utils (getStringFromConfig, getStringWithVar)
 import Prelude (($))
 import Data.Maybe (Maybe(..))
-import Debug (spy)
 import ConfigJBridge (getKeyInSharedPrefKeysConfig)
 import Locale.Utils
 import Data.String as DS
