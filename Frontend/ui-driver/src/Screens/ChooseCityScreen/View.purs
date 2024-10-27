@@ -52,6 +52,7 @@ import PrestoDOM.Types.DomAttributes as PTD
 import Components.ErrorModal as ErrorModal
 import Mobility.Prelude
 import Locale.Utils
+import Common.RemoteConfig as RC
 
 screen :: ChooseCityScreenState -> Screen Action ChooseCityScreenState ScreenOutput
 screen initialState =
@@ -233,7 +234,10 @@ currentLanguageView state push =
 
 radioButtonView :: ChooseCityScreenState -> (Action -> Effect Unit) -> Boolean -> forall w . PrestoDOM (Effect Unit) w
 radioButtonView state push visibility' =
-  let items = if state.props.currentStage == SELECT_LANG then state.data.config.languageList else transformCityConfig state.data.merchantOperatingCityConfig
+  let appName = JB.getAppName unit
+      getLanguageList = if state.props.currentStage == SELECT_LANG then RC.appLanguageConfig appName else []
+      languageList = if not DA.null getLanguageList then getLanguageList else state.data.config.languageList
+      items = if state.props.currentStage == SELECT_LANG then languageList else transformCityConfig state.data.merchantOperatingCityConfig
       subTitle = if state.props.currentStage == SELECT_LANG then SELECT_LANGUAGE_DESC else SELECT_LOCATION_DESC
       selectedVal = if state.props.currentStage == SELECT_LANG then state.props.radioMenuFocusedLang else state.props.radioMenuFocusedCity
   in

@@ -211,7 +211,7 @@ type SuggestedDestinationAndTripsConfig = {
 type Language =  {
   name :: String,
   value :: String,
-  subTitle :: String
+  subtitle :: String
  }
 
 type BannerViewState = {
