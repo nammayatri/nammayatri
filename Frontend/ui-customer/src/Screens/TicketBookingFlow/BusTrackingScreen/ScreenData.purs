@@ -49,6 +49,7 @@ initData =
         , vehicleTrackingData: DM.empty
         , previousStopsMap: DM.empty
         , rideType : Nothing
+        , vehicleData : []
         }
     , props:
         { showRouteDetailsTab: true
@@ -211,14 +212,4 @@ mockRoute =
               , lon: 77.611986
               }
           ]
-    }
-
-type VehicleData
-  = { vehicleId :: String
-    , nextStop :: String
-    , nextStopDistance :: Number
-    , vehicleLat :: Number
-    , vehicleLon :: Number
-    , nextStopLat ::Number
-    , nextStopLon ::Number
     }

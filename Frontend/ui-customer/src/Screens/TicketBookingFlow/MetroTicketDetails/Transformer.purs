@@ -44,6 +44,7 @@ metroTicketDetailsTransformer (MetroTicketBookingStatus metroTicketBookingStatus
       , ticketPrice = metroTicketBookingStatus.price
       , vehicleType = metroTicketBookingStatus.vehicleType
       , route = metroTicketBookingStatus.routeStations
+      , transactionId = extractTransactionId metroTicketBookingStatus.payment
       }
     , props {
         stage = MetroTicketDetailsStage
@@ -108,3 +109,9 @@ ticketsInfoTransformer tickets =
     , status : ticket.status
   }) tickets
 
+extractTransactionId :: Maybe FRFSBookingPaymentAPI -> String
+extractTransactionId payment =
+  let dummyTransactionId = "12345678ABCD"
+  in case payment of
+      Just (FRFSBookingPaymentAPI paymentInfo) -> fromMaybe dummyTransactionId paymentInfo.transactionId
+      Nothing -> dummyTransactionId

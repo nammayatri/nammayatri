@@ -4086,7 +4086,8 @@ newtype VehicleInfo = VehicleInfo {
   -- location:: LatLong,
   nextStop:: RouteStopMapping,
   vehicleId:: String,
-  vehicleInfo:: VehicleInfoForRoute
+  vehicleInfo:: VehicleInfoForRoute,
+  nextStopTravelTime :: Maybe String
 }
 
 newtype VehicleInfoForRoute = VehicleInfoForRoute {
@@ -4096,7 +4097,7 @@ newtype VehicleInfoForRoute = VehicleInfoForRoute {
     tripId :: Maybe String,
     latitude :: Maybe Number,
     longitude :: Maybe Number,
-    speed :: Maybe String,
+    speed :: Maybe String, -- Number,
     timestamp :: Maybe String
 }
 
@@ -4243,7 +4244,10 @@ newtype FrfsGetRouteResp = FrfsGetRouteResp {
   startPoint :: LatLong,
   totalStops :: Maybe Int,
   waypoints :: Maybe (Array LatLong),
-  stations :: Maybe (Array GetMetroStationResp)
+  stations :: Maybe (Array GetMetroStationResp),
+  travelTime :: Maybe String,
+  vehicleServiceTier :: Maybe FRFSVehicleServiceTierAPI
+  -- priceWithCurrency :: Maybe PriceAPIEntity
 }
 
 derive instance genericFrfsGetRouteReq :: Generic FrfsGetRouteReq _
@@ -4262,6 +4266,23 @@ instance encodeFrfsGetRouteResp :: Encode FrfsGetRouteResp where encode = defaul
 instance makeFrfsGetRouteReq :: RestEndpoint FrfsGetRouteReq where
     makeRequest reqBody@(FrfsGetRouteReq routeCode city vehicleType) headers = defaultMakeRequest GET (EP.frfsRoute routeCode city vehicleType) headers reqBody Nothing
     encodeRequest = standardEncode
+
+newtype FRFSVehicleServiceTierAPI = FRFSVehicleServiceTierAPI
+  { _type :: String
+  , shortName :: String
+  , longName :: String
+  , description :: String
+  }
+
+derive instance genericFRFSVehicleServiceTierAPI :: Generic FRFSVehicleServiceTierAPI _
+-- derive instance newtypeFRFSVehicleServiceTierAPI :: Newtype FRFSVehicleServiceTierAPI _
+instance standardFRFSVehicleServiceTierAPI :: StandardEncode FRFSVehicleServiceTierAPI where 
+  standardEncode (FRFSVehicleServiceTierAPI body) = standardEncode body
+instance showFRFSVehicleServiceTierAPI :: Show FRFSVehicleServiceTierAPI where show = genericShow
+instance encodeFRFSVehicleServiceTierAPI :: Encode FRFSVehicleServiceTierAPI where encode = defaultEncode
+instance decodeFRFSVehicleServiceTierAPI :: Decode FRFSVehicleServiceTierAPI where decode = defaultDecode
+instance eqFRFSVehicleServiceTierAPI :: Eq FRFSVehicleServiceTierAPI where eq = genericEq
+
 
  --------------------------------------------------- confirmMetroQuote ----------------------------------------------------
 
@@ -4333,4 +4354,3 @@ instance standardDiscountItem :: StandardEncode DiscountItem where
 instance showDiscountItem :: Show DiscountItem where show = genericShow
 instance decodeDiscountItem :: Decode DiscountItem where decode = defaultDecode
 instance encodeDiscountItem :: Encode DiscountItem where encode = defaultEncode
-

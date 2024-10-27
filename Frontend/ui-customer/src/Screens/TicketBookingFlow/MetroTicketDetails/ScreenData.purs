@@ -35,6 +35,7 @@ initData = {
   , ticketPrice : 0.0
   , vehicleType : ""
   , route : Nothing
+  , transactionId : ""
   }
 , props :  {
     dummyProps : ""

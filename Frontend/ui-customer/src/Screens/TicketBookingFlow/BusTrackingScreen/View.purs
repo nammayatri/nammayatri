@@ -571,7 +571,7 @@ stopView (API.GetMetroStationResp stop) showOnlyBullet marginTop state push inde
     -- , padding $ Padding 0 marginTop 0 0
     ]
     [ linearLayout
-        [ height $ V 32
+        [ height $ V $ totalHeight / 3
         , width MATCH_PARENT
         ]
         [ verticalLineView push ("verticalLineView1" <> show showOnlyBullet <> show index) showOnlyBullet $ DM.lookup stop.code state.data.vehicleTrackingData
@@ -598,7 +598,7 @@ stopView (API.GetMetroStationResp stop) showOnlyBullet marginTop state push inde
         --     ]
         ]
     , linearLayout
-        [ height $ V 30
+        [ height $ V totalHeight
         , width MATCH_PARENT
         , gravity CENTER_VERTICAL
         -- , margin $ Margin 0 marginTop 0 0
@@ -617,20 +617,30 @@ stopView (API.GetMetroStationResp stop) showOnlyBullet marginTop state push inde
                 , visibility $ boolToVisibility showOnlyBullet
                 ]
             ]
-        , textView
+        , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          , id $ EHC.getNewIDWithTag $ "textviewstop" <> show index
+          ]
+          [ textView
             $ [ text stop.name
               , margin $ MarginLeft if showOnlyBullet || not state.props.showRouteDetailsTab then 8 else 0
               , visibility $ boolToVisibility $ not showOnlyBullet
               , width $ if showOnlyBullet then V 0 else WRAP_CONTENT
-              , id $ EHC.getNewIDWithTag $ "textviewstop" <> show index
+              -- , id $ EHC.getNewIDWithTag $ "textviewstop" <> show index
               , singleLine true
               , ellipsize true
               ]
             <> FontStyle.body1 CTA.TypoGraphy
+          , showETAView push state index $ API.GetMetroStationResp stop
+          ]
         ]
     ]
   where
   b = JB.getLayoutBounds $ EHC.getNewIDWithTag $ "textviewstop" <> show index
+
+  totalHeight = if (Mb.isJust $ findStopInVehicleData (API.GetMetroStationResp stop) state) then 72 else 40
 
 separatorView :: forall w. String -> Margin -> PrestoDOM (Effect Unit) w
 separatorView color' margin' =
@@ -677,9 +687,9 @@ busLocationTracking duration id routeCode push = do
 
                   (API.LatLong nextStopPosition) = nextStop.stopPoint
                 void $ EHC.liftFlow $ JB.showMarker markerConfig lat lon 160 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
-                pure { vehicleId: item.vehicleId, nextStop: nextStop.stopCode, nextStopDistance: HU.getDistanceBwCordinates lat lon nextStopPosition.lat nextStopPosition.lon, vehicleLat: lat, vehicleLon: lon, nextStopLat: nextStopPosition.lat, nextStopLon: nextStopPosition.lon }
+                pure { vehicleId: item.vehicleId, nextStop: nextStop.stopCode, nextStopDistance: HU.getDistanceBwCordinates lat lon nextStopPosition.lat nextStopPosition.lon, vehicleLat: lat, vehicleLon: lon, nextStopLat: nextStopPosition.lat, nextStopLon: nextStopPosition.lon, nextStopTravelTime : item.nextStopTravelTime}
         let
-          _ = spy "trackingInfo" trackingInfo
+          _ = spy "trackingInfo-debug" trackingInfo
         EHC.liftFlow $ push $ UpdateTracking trackingInfo
         void $ delay $ Milliseconds $ duration
         busLocationTracking duration id routeCode push
@@ -736,3 +746,32 @@ busLocationTracking duration id routeCode push = do
 --             }
 --         ]
 --     }
+
+showETAView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Int -> API.GetMetroStationResp -> PrestoDOM (Effect Unit) w
+showETAView push state index (API.GetMetroStationResp stop) =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation HORIZONTAL
+  , stroke $ "1," <> Color.grey900
+  , padding $ Padding 8 8 8 8
+  , cornerRadius 12.0
+  -- , margin $ MarginHorizontal 8 8
+  , visibility $ boolToVisibility $ Mb.isJust $ findStopInVehicleData (API.GetMetroStationResp stop) state
+  ]
+  [ textView
+    $ [ text $ "Next Bus in " <> (Mb.maybe "10" (\item -> Mb.fromMaybe "10" item.nextStopTravelTime) $ findStopInVehicleData (API.GetMetroStationResp stop) state) <> " min"
+      , margin $ MarginLeft 8
+      ]
+    <> FontStyle.body1 CTA.TypoGraphy
+  , linearLayout [weight 1.0] []
+  , textView
+    $ [ text $  extractTimeInHHMMA $ EHC.getCurrentUTC "" -- $ Mb.maybe (EHC.getCurrentUTC "") (\item -> Mb.fromMaybe (EHC.getCurrentUTC "") item.nextStopTravelTime) $ findStopInVehicleData (API.GetMetroStationResp stop) state
+      ]
+    <> FontStyle.body1 CTA.TypoGraphy
+  ]
+  where
+    extractTimeInHHMMA timeStr = EHC.convertUTCtoISC timeStr "hh" <> ":" <> EHC.convertUTCtoISC timeStr "mm" <> " " <> EHC.convertUTCtoISC timeStr "a"
+
+findStopInVehicleData :: API.GetMetroStationResp -> ST.BusTrackingScreenState -> Mb.Maybe ST.VehicleData
+findStopInVehicleData (API.GetMetroStationResp stop) state = DA.find (\item -> item.nextStop == stop.code) state.data.vehicleData -- && Mb.isJust item.nextStopTravelTime

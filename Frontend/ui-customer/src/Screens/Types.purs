@@ -2029,6 +2029,7 @@ type MetroTicketDetailsScreenData = {
 , noOfTickets :: Int
 , vehicleType :: String
 , route :: Maybe (Array FrfsGetRouteResp)
+, transactionId :: String
 }
 
 type MetroTicketInfo = {
@@ -3015,8 +3016,20 @@ type BusTrackingScreenData = {
   bookingId :: String,
   previousStopsMap :: DM.Map String GetMetroStationResp,
   vehicleTrackingData :: DM.Map String (Array Number),
-  rideType :: Maybe RideType
+  rideType :: Maybe RideType,
+  vehicleData :: Array VehicleData
 }
+
+type VehicleData
+  = { vehicleId :: String
+    , nextStop :: String
+    , nextStopDistance :: Number
+    , vehicleLat :: Number
+    , vehicleLon :: Number
+    , nextStopLat ::Number
+    , nextStopLon ::Number
+    , nextStopTravelTime :: Maybe String
+    }
 
 type BusTrackingScreenProps = {
   showRouteDetailsTab :: Boolean, 

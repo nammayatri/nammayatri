@@ -80,7 +80,7 @@ data Action
   = AfterRender
   | BackPressed
   -- | MetroCardAction MetroCard.Action
-  | UpdateTracking (Array VehicleData)
+  | UpdateTracking (Array ST.VehicleData)
   | MapReady String String String
   | NoAction
   | BookTicketButtonAction PrimaryButton.Action
@@ -160,7 +160,7 @@ eval (UpdateTracking trackingData) state = do
         )
         (DT.Tuple DM.empty Mb.Nothing) trackingData
   
-  continueWithCmd state {data { vehicleTrackingData = DT.fst finalMap}, props {busNearSource = Mb.isJust $ DT.snd finalMap}} [ do 
+  continueWithCmd state {data { vehicleTrackingData = DT.fst finalMap, vehicleData = trackingData}, props {busNearSource = Mb.isJust $ DT.snd finalMap}} [ do 
     case DT.snd finalMap of 
       Mb.Just pt -> void $ JB.animateCamera pt.lat pt.lon 17.0 "ZOOM" 
       Mb.Nothing -> pure unit

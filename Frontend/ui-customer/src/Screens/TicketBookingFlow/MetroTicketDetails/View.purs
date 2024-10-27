@@ -61,6 +61,7 @@ import Screens.TicketBookingFlow.MetroTicketDetails.ComponentConfig as Config
 import Components.SourceToDestination.View as SourceToDestinationView
 import Styles.Types as Style
 import Data.Int as DI
+import Services.API as API
 
 screen :: ST.MetroTicketDetailsScreenState -> Screen Action ST.MetroTicketDetailsScreenState ScreenOutput
 screen initialState =
@@ -460,7 +461,7 @@ ticketDetailsView push state =
       , cornerRadii $ Corners 15.0 true true true true
       ] $ [] <>
         if isBusTicketBooking state 
-          then mapWithIndex (\_ _ -> busRouteAndStopsView push state) $ fromMaybe [] state.data.route
+          then map (\route -> busRouteAndStopsView push state route) $ fromMaybe [] state.data.route
           else [originAndDestinationView push state VERTICAL (FontStyle.body3 TypoGraphy) (FontStyle.body1 TypoGraphy) LEFT]
     ]
 
@@ -616,7 +617,7 @@ qrCodeView push state =
       , text $ headerText
       , color Color.black500
       , gravity CENTER
-      , visibility $ boolToVisibility $ not $ isBusTicketBooking state
+      -- , visibility $ boolToVisibility $ not $ isBusTicketBooking state
       ] <> FontStyle.subHeading1 TypoGraphy
     , linearLayout[
         width MATCH_PARENT
@@ -1073,22 +1074,18 @@ routeDetailsItemView push index routeDetails =
 isBusTicketBooking :: ST.MetroTicketDetailsScreenState -> Boolean
 isBusTicketBooking state = state.data.vehicleType == "BUS"
 
-busRouteAndStopsView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
-busRouteAndStopsView push state =
+busRouteAndStopsView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> FrfsGetRouteResp -> PrestoDOM (Effect Unit) w
+busRouteAndStopsView push state (FrfsGetRouteResp route) =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
   ]
   [ textView $
-    [ text $ "Route No: " <> maybe "" (\routes -> 
-                                        case head routes of
-                                          Just (FrfsGetRouteResp route) -> route.code
-                                          Nothing -> ""
-                                      ) state.data.route
+    [ text $ "Route No: " <> route.code
     , color Color.grey900
     ] <> FontStyle.tags TypoGraphy
-  , busStopsView push state
+  , busStopsView push state $ FrfsGetRouteResp route
   -- , linearLayout
   --   [ height WRAP_CONTENT
   --   , width MATCH_PARENT
@@ -1097,8 +1094,8 @@ busRouteAndStopsView push state =
   --   [ SourceToDestinationView.view (push <<< SourceToDestinationAC) (Config.sourceToDestinationConfig state) ]
   ]
 
-busStopsView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
-busStopsView push state =
+busStopsView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> FrfsGetRouteResp -> PrestoDOM (Effect Unit) w
+busStopsView push state (FrfsGetRouteResp route) =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -1106,26 +1103,28 @@ busStopsView push state =
   , gravity CENTER_VERTICAL
   , margin $ MarginTop 16
   ]
-  [ singleStopView push state true
+  [ singleStopView push route.stations true
   , textView $
     [ height $ V 18
     , width $ V 2
     , background Color.black650
     , margin $ MarginLeft 2 
     ]
-  , singleStopView push state false
+  , singleStopView push route.stations false
   ]
 
-singleStopView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> Boolean -> PrestoDOM (Effect Unit) w
-singleStopView push state isSourceView =
-  let originStop = maybe "" (\stop -> stop.name) $ state.data.metroRoute !! 0
-      destinationStop = maybe "" (\stop -> stop.name) $ state.data.metroRoute !! ((length state.data.metroRoute) - 1)
+singleStopView :: forall w. (Action -> Effect Unit) -> Maybe (Array API.GetMetroStationResp) -> Boolean -> PrestoDOM (Effect Unit) w
+singleStopView push frfsStopsResp isSourceView =
+  let frfsStops = map (\(API.GetMetroStationResp resp) -> resp) $ fromMaybe [] frfsStopsResp
+      originStop = maybe "" (\stop -> stop.name) $ frfsStops !! 0
+      destinationStop = maybe "" (\stop -> stop.name) $ frfsStops !! ((length frfsStops) - 1)
   in
     linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , orientation HORIZONTAL
     , gravity CENTER_VERTICAL
+    , visibility $ boolToVisibility $ isJust frfsStopsResp
     ]
     [ imageView
       [ width $ V 8
@@ -1189,7 +1188,7 @@ paymentDetailsView push state =
     , margin $ MarginTop 24
     , visibility $ boolToVisibility state.props.paymentDetailsExpanded
     ]
-    [ singleTitleSubTitleView "Transaction ID" "ABC12345678D" 0 -- dummy-codex
+    [ singleTitleSubTitleView "Transaction ID" state.data.transactionId 0
     , singleTitleSubTitleView "Total Amount" ("₹" <> (show $ DI.round state.data.ticketPrice)) 24
     ]
   ]
