@@ -23,6 +23,7 @@ module Domain.Action.UI.Frontend
 where
 
 import qualified Data.HashMap.Strict as HM
+import Domain.Action.UI.Booking
 import Domain.Action.UI.Quote
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Merchant as DM
@@ -59,17 +60,35 @@ newtype NotifyEventReq = NotifyEventReq
 
 type NotifyEventResp = APISuccess
 
-getPersonFlowStatus :: Id DP.Person -> Id DM.Merchant -> Maybe Bool -> Flow GetPersonFlowStatusRes
-getPersonFlowStatus personId _ _ = do
+getPersonFlowStatus :: Id DP.Person -> Id DM.Merchant -> Maybe Bool -> Maybe Bool -> Flow GetPersonFlowStatusRes
+getPersonFlowStatus personId merchantId _ pollActiveBooking = do
   personStatus' <- QPFS.getStatus personId
   case personStatus' of
     Just personStatus -> do
       case personStatus of
         DPFS.WAITING_FOR_DRIVER_OFFERS _ _ _ providerId -> findValueAddNP personStatus providerId
         DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ _ _ -> expirePersonStatusIfNeeded personStatus Nothing
-        _ -> return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
-    Nothing -> return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
+        _ -> checkForActiveBooking
+    Nothing -> checkForActiveBooking
   where
+    checkForActiveBooking :: Flow GetPersonFlowStatusRes
+    checkForActiveBooking = do
+      if (isJust pollActiveBooking)
+        then do
+          activeBookings <- bookingList (personId, merchantId) Nothing Nothing (Just True) Nothing Nothing
+          if null activeBookings.list
+            then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_BOOKINGS activeBookings.list) Nothing
+            else do
+              pendingFeedbackBookings <- bookingList (personId, merchantId) (Just 1) Nothing (Just False) Nothing Nothing
+              case pendingFeedbackBookings.list of
+                [booking] -> do
+                  let isRated = isJust $ booking.rideList & listToMaybe >>= (.rideRating)
+                  if isRated
+                    then return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
+                    else return $ GetPersonFlowStatusRes Nothing (DPFS.FEEDBACK_PENDING booking) Nothing
+                _ -> return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
+        else return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
+
     findValueAddNP personStatus providerId = do
       isValueAddNP_ <- maybe (pure True) QNP.isValueAddNP providerId
       expirePersonStatusIfNeeded personStatus (Just isValueAddNP_)

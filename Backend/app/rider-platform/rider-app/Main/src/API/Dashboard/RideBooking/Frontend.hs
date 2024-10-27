@@ -45,6 +45,7 @@ type PersonFlowStatusAPI =
   "flowStatus"
     :> Capture "customerId" (Id DP.Person)
     :> QueryParam "isPolling" Bool
+    :> QueryParam "checkForActiveBooking" Bool
     :> Get '[JSON] DFrontend.GetPersonFlowStatusRes
 
 type NotifyEventAPI =
@@ -58,10 +59,10 @@ handler =
   callGetPersonFlowStatus
     :<|> callNotifyEvent
 
-callGetPersonFlowStatus :: Id DP.Person -> Maybe Bool -> FlowHandler DFrontend.GetPersonFlowStatusRes
-callGetPersonFlowStatus personId isPolling = withFlowHandlerAPI $ do
+callGetPersonFlowStatus :: Id DP.Person -> Maybe Bool -> Maybe Bool -> FlowHandler DFrontend.GetPersonFlowStatusRes
+callGetPersonFlowStatus personId isPolling checkForActiveBooking = withFlowHandlerAPI $ do
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId) --
-  DFrontend.getPersonFlowStatus personId person.merchantId isPolling
+  DFrontend.getPersonFlowStatus personId person.merchantId isPolling checkForActiveBooking
 
 callNotifyEvent :: Id DP.Person -> DFrontend.NotifyEventReq -> FlowHandler DFrontend.NotifyEventResp
 callNotifyEvent personId = withFlowHandlerAPI . DFrontend.notifyEvent personId
