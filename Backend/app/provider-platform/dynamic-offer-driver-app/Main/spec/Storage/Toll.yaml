@@ -16,9 +16,11 @@ Toll:
     tollStartGates : "[LineSegment]"
     tollEndGates : "[LineSegment]"
     isAutoRickshawAllowed : Bool
+    isTwoWheelerAllowed : Maybe Bool
     price: Price
     createdAt : UTCTime
     updatedAt : UTCTime
+
 
   sqlType:
     tollStartGates: text[]
@@ -26,6 +28,7 @@ Toll:
 
   default:
     isAutoRickshawAllowed: 'false'
+    isTwoWheelerAllowed: 'false'
 
   constraints:
     id: PrimaryKey

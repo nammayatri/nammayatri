@@ -226,7 +226,15 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id False srcPt (Just dropLatLong) (Just (TransactionId (Id booking.transactionId))) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) booking.dynamicPricingLogicVersion booking.tripCategory
             farePolicy <- getFarePolicy (Just srcPt) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) merchantOperatingCity.id False booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just booking.startTime) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId)))
             mbTollInfo <- getTollInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
-            let isTollAllowed = maybe True (\(_, _, isAutoRickshawAllowed) -> (booking.vehicleServiceTier == DVST.AUTO_RICKSHAW && isAutoRickshawAllowed) || booking.vehicleServiceTier /= DVST.AUTO_RICKSHAW) mbTollInfo
+            let isTollAllowed =
+                  maybe
+                    True
+                    ( \(_, _, isAutoRickshawAllowed, isTwoWheelerAllowed) ->
+                        (booking.vehicleServiceTier == DVST.AUTO_RICKSHAW && isAutoRickshawAllowed)
+                          || (booking.vehicleServiceTier == DVST.BIKE && fromMaybe False isTwoWheelerAllowed)
+                          || (booking.vehicleServiceTier /= DVST.AUTO_RICKSHAW && booking.vehicleServiceTier /= DVST.BIKE)
+                    )
+                    mbTollInfo
             when (not isTollAllowed) $ do
               sendUpdateEditDestErrToBAP booking bapBookingUpdateRequestId "Trip Update Request Not Available" "Auto rickshaw not allowed for toll route."
               throwError $ InvalidRequest "Auto rickshaw not allowed for toll route."
@@ -251,7 +259,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                     estimatedDistance = Just estimatedDistance,
                     estimatedRideDuration = Nothing,
                     timeDiffFromUtc = Nothing,
-                    tollCharges = mbTollInfo <&> (\(tollCharges, _, _) -> tollCharges),
+                    tollCharges = mbTollInfo <&> (\(tollCharges, _, _, _) -> tollCharges),
                     currency = booking.currency,
                     distanceUnit = booking.distanceUnit
                   }

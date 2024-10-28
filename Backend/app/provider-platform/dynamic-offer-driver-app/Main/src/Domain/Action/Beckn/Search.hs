@@ -210,7 +210,7 @@ handler ValidatedDSearchReq {..} sReq = do
   fromLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.pickupAddress sReq.customerLanguage sReq.pickupLocation
   stops <- mapM (\stop -> buildSearchReqLocation merchant.id merchantOpCityId sessiontoken stop.address sReq.customerLanguage stop.gps) sReq.stops
 
-  (mbSetRouteInfo, mbToLocation, mbDistance, mbDuration, mbIsCustomerPrefferedSearchRoute, mbIsBlockedRoute, mbTollCharges, mbTollNames, mbIsAutoRickshawAllowed) <-
+  (mbSetRouteInfo, mbToLocation, mbDistance, mbDuration, mbIsCustomerPrefferedSearchRoute, mbIsBlockedRoute, mbTollCharges, mbTollNames, mbIsAutoRickshawAllowed, mbIsTwoWheelerAllowed) <-
     case sReq.dropLocation of
       Just dropLoc -> do
         serviceableRoute <- getRouteServiceability merchant.id merchantOpCityId cityDistanceUnit sReq.pickupLocation dropLoc sReq.routePoints sReq.routeDistance sReq.routeDuration sReq.multipleRoutes
@@ -227,13 +227,24 @@ handler ValidatedDSearchReq {..} sReq = do
               )
         logDebug $ "Route serviceability: " <> show serviceableRoute.multipleRoutes
         mbTollChargesAndNames <- getTollInfoOnRoute merchantOpCityId Nothing serviceableRoute.routePoints
-        return (Just setRouteInfo, Just toLocation, Just estimatedDistance, Just estimatedDuration, Just serviceableRoute.isCustomerPrefferedSearchRoute, Just serviceableRoute.isBlockedRoute, (\(charges, _, _) -> charges) <$> mbTollChargesAndNames, (\(_, names, _) -> names) <$> mbTollChargesAndNames, (\(_, _, isAutoRickshawAllowed) -> isAutoRickshawAllowed) <$> mbTollChargesAndNames)
-      _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration, Nothing, Nothing, Nothing, Nothing, Nothing) -- estimate distance and durations by user
+        return
+          ( Just setRouteInfo,
+            Just toLocation,
+            Just estimatedDistance,
+            Just estimatedDuration,
+            Just serviceableRoute.isCustomerPrefferedSearchRoute,
+            Just serviceableRoute.isBlockedRoute,
+            (\(charges, _, _, _) -> charges) <$> mbTollChargesAndNames,
+            (\(_, names, _, _) -> names) <$> mbTollChargesAndNames,
+            (\(_, _, isAutoRickshawAllowed, _) -> isAutoRickshawAllowed) <$> mbTollChargesAndNames,
+            join ((\(_, _, _, isTwoWheelerAllowed) -> isTwoWheelerAllowed) <$> mbTollChargesAndNames)
+          )
+      _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing) -- estimate distance and durations by user
   let localTimeZoneSeconds = 19800 -- fix this ------once live in another country
   localTime <- getLocalCurrentTime localTimeZoneSeconds
   (_, mbVersion) <- getAppDynamicLogic (cast merchantOpCityId) LYT.DYNAMIC_PRICING_UNIFIED localTime Nothing
   allFarePoliciesProduct <- combineFarePoliciesProducts <$> ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation (Just (TransactionId (Id sReq.transactionId))) fromLocGeohash toLocGeohash mbDistance mbDuration mbVersion) `mapM` possibleTripOption.tripCategories)
-  let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed allFarePoliciesProduct.farePolicies
+  let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed allFarePoliciesProduct.farePolicies
   now <- getCurrentTime
   (mbSpecialZoneGateId, mbDefaultDriverExtra) <- getSpecialPickupZoneInfo allFarePoliciesProduct.specialLocationTag fromLocation
   logDebug $ "Pickingup Gate info result : " <> show (mbSpecialZoneGateId, mbDefaultDriverExtra)
@@ -332,12 +343,14 @@ handler ValidatedDSearchReq {..} sReq = do
             ..
           }
 
-    selectFarePolicy distance duration mbIsAutoRickshawAllowed =
+    selectFarePolicy distance duration mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed =
       filter isValid
       where
-        isValid farePolicy = checkDistanceBounds farePolicy && checkExtendUpto farePolicy && autosAllowedOnTollRoute farePolicy
+        isValid farePolicy = checkDistanceBounds farePolicy && checkExtendUpto farePolicy && (autosAllowedOnTollRoute farePolicy || bikesAllowedOnTollRoute farePolicy)
 
         autosAllowedOnTollRoute farePolicy = if farePolicy.vehicleServiceTier == AUTO_RICKSHAW then fromMaybe True mbIsAutoRickshawAllowed else True
+
+        bikesAllowedOnTollRoute farePolicy = if farePolicy.vehicleServiceTier == BIKE then fromMaybe True mbIsTwoWheelerAllowed else True
 
         checkDistanceBounds farePolicy = maybe True checkBounds farePolicy.allowedTripDistanceBounds
 

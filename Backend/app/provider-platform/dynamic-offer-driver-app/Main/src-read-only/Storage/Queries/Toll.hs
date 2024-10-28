@@ -37,6 +37,7 @@ updateByPrimaryKey (Domain.Types.Toll.Toll {..}) = do
   updateWithKV
     [ Se.Set Beam.createdAt createdAt,
       Se.Set Beam.isAutoRickshawAllowed isAutoRickshawAllowed,
+      Se.Set Beam.isTwoWheelerAllowed isTwoWheelerAllowed,
       Se.Set Beam.name name,
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
       Se.Set Beam.price ((.amount) price),
@@ -56,6 +57,7 @@ instance FromTType' Beam.Toll Domain.Types.Toll.Toll where
           { createdAt = createdAt,
             id = Kernel.Types.Id.Id id,
             isAutoRickshawAllowed = isAutoRickshawAllowed,
+            isTwoWheelerAllowed = isTwoWheelerAllowed,
             name = name,
             price = Kernel.Types.Common.mkPrice currency price,
             tollEndGates = tollEndGates,
@@ -71,6 +73,7 @@ instance ToTType' Beam.Toll Domain.Types.Toll.Toll where
       { Beam.createdAt = createdAt,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAutoRickshawAllowed = isAutoRickshawAllowed,
+        Beam.isTwoWheelerAllowed = isTwoWheelerAllowed,
         Beam.name = name,
         Beam.currency = (Kernel.Prelude.Just . (.currency)) price,
         Beam.price = (.amount) price,
