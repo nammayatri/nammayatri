@@ -42,10 +42,11 @@ getCalculateFare (_, merchantId, merchanOperatingCityId) distanceWeightage dropL
   (_, mbDistance, mbDuration, mbRoute, _) <- calculateDistanceAndRoutes merchantId merchanOperatingCityId distanceWeightage [pickupLatlong, dropLatLong] -----------------if you want congestionCharges to be considered then pass geohash imstead of nothing
   fareProducts <- FP.getAllFarePoliciesProduct merchantId merchanOperatingCityId False pickupLatlong (Just dropLatLong) Nothing Nothing Nothing mbDistance mbDuration Nothing (DTC.OneWay DTC.OneWayOnDemandDynamicOffer)
   mbTollChargesAndNames <- TD.getTollInfoOnRoute merchanOperatingCityId Nothing (maybe [] (\x -> x.points) mbRoute)
-  let mbTollCharges = (\(tollCharges, _, _) -> tollCharges) <$> mbTollChargesAndNames
-  let mbTollNames = (\(_, tollNames, _) -> tollNames) <$> mbTollChargesAndNames
-  let mbIsAutoRickshawAllowed = (\(_, _, mbIsAutoRickshawAllowed') -> mbIsAutoRickshawAllowed') <$> mbTollChargesAndNames
-  let allFarePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed fareProducts.farePolicies
+  let mbTollCharges = (\(tollCharges, _, _, _) -> tollCharges) <$> mbTollChargesAndNames
+  let mbTollNames = (\(_, tollNames, _, _) -> tollNames) <$> mbTollChargesAndNames
+  let mbIsAutoRickshawAllowed = (\(_, _, mbIsAutoRickshawAllowed', _) -> mbIsAutoRickshawAllowed') <$> mbTollChargesAndNames
+  let mbIsTwoWheelerAllowed = join ((\(_, _, _, isTwoWheelerAllowed) -> isTwoWheelerAllowed) <$> mbTollChargesAndNames)
+  let allFarePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed fareProducts.farePolicies
   estimates <- mapM (\fp -> buildEstimateHelper fp mbTollCharges mbTollNames mbDistance now) allFarePolicies
   let estimateAPIEntity = map buildEstimateApiEntity estimates
   return API.Types.UI.FareCalculator.FareResponse {estimatedFares = estimateAPIEntity}
@@ -56,11 +57,12 @@ getCalculateFare (_, merchantId, merchanOperatingCityId) distanceWeightage dropL
           >>= fromMaybeM (VehicleServiceTierNotFound $ show fp.vehicleServiceTier)
       DBS.buildEstimate merchanOperatingCityId INR Meter Nothing now False Nothing False mbDistance Nothing mbTollCharges mbTollNames Nothing Nothing 0 Nothing False vehicleServiceTierItem fp
 
-    selectFarePolicy distance' duration' mbIsAutoRickshawAllowed' =
+    selectFarePolicy distance' duration' mbIsAutoRickshawAllowed' mbIsTwoWheelerAllowed' =
       filter isValid
       where
-        isValid farePolicy = checkDistanceBounds farePolicy && checkExtendUpto farePolicy && autosAllowedOnTollRoute farePolicy
+        isValid farePolicy = checkDistanceBounds farePolicy && checkExtendUpto farePolicy && (autosAllowedOnTollRoute farePolicy || bikesAllowedOnTollRoute farePolicy)
         autosAllowedOnTollRoute farePolicy = if farePolicy.vehicleServiceTier == DVST.AUTO_RICKSHAW then fromMaybe True mbIsAutoRickshawAllowed' else True
+        bikesAllowedOnTollRoute farePolicy = if farePolicy.vehicleServiceTier == DVST.BIKE then fromMaybe True mbIsTwoWheelerAllowed' else True
         checkDistanceBounds farePolicy = maybe True checkBounds farePolicy.allowedTripDistanceBounds
         checkBounds bounds = bounds.minAllowedTripDistance <= distance' && distance' <= bounds.maxAllowedTripDistance
         checkExtendUpto farePolicy = case farePolicy.farePolicyDetails of
