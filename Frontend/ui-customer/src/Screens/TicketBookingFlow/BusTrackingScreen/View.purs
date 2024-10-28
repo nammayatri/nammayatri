@@ -410,7 +410,7 @@ busDetailsView push state =
             , gravity if state.props.showRouteDetailsTab then CENTER else LEFT
             ]
             [ textView
-                $ [ text $ "Bus No: " <> state.data.busRouteCode
+                $ [ text $ "Bus No: " <> state.data.routeShortName
                   , margin $ MarginLeft 8
                   ]
                 <> FontStyle.h2 CTA.TypoGraphy
