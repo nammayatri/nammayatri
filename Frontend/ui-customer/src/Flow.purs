@@ -4943,16 +4943,18 @@ metroMyTicketsFlow = do
         (MetroTicketBookingStatus metroTicketBookingStatus) = resp
         tickets = metroTicketBookingStatus.tickets
       if (metroTicketBookingStatus.status == "CONFIRMED") then do
-        let goToTracking = maybe false (\(API.FRFSTicketAPI i) -> i.status /= "EXPIRED") (tickets !! 0)
+        let goToTracking = true --maybe false (\(API.FRFSTicketAPI i) -> i.status /= "EXPIRED") (tickets !! 0)
         if metroTicketBookingStatus.vehicleType == "BUS" && goToTracking then  do
-          let route = (fromMaybe [] metroTicketBookingStatus.routeStations) !! 0
+          let route = spy "route" $ (fromMaybe [] metroTicketBookingStatus.routeStations) !! 0
+              _ = spy "metroTicketBookingStatus" metroTicketBookingStatus
           let stationList = fromMaybe [] (getStationsFromBusRoute <$> route)
-          let code = case route of 
-                      Just (FrfsGetRouteResp r) -> r.code
-                      Nothing -> ""
+          let routeDetails = case route of 
+                      Just (FrfsGetRouteResp r) -> {code : r.code, shortName : r.shortName}
+                      Nothing -> {code : "", shortName : ""}
+ 
           let source = maybe Nothing (\(GetMetroStationResp s) -> Just {stationName : s.name,stationCode :s.code}) (stationList !! 0)
           let dest = maybe Nothing (\(GetMetroStationResp s) -> Just {stationName : s.name,stationCode :s.code}) (stationList !! (length stationList -1))
-          modifyScreenState $ BusTrackingScreenStateType (\busScreen -> busScreen { data { sourceStation = source, destinationStation = dest, stopsList = [], busRouteCode = code, bookingId = bookingId}, props{ showRouteDetailsTab = false } })
+          modifyScreenState $ BusTrackingScreenStateType (\busScreen -> busScreen { data { sourceStation = source, destinationStation = dest, stopsList = [], busRouteCode = routeDetails.code, bookingId = bookingId, stationResponse = Nothing, routeShortName = routeDetails.shortName}, props{ showRouteDetailsTab = false } })
           busTrackingScreenFlow
         else do
           modifyScreenState
@@ -5641,7 +5643,7 @@ predictionClickedFlow prediction state = do
               --     modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusRouteSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , routeSelected = busRouteSelected}, data {ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing , stopsSearchedList = state.data.updatedStopsSearchedList , updatedStopsSearchedList = state.data.updatedStopsSearchedList } })
               -- searchLocationFlow
               -- PS change
-              modifyScreenState $ BusTrackingScreenStateType (\busScreen -> busScreen { data { sourceStation = Nothing, destinationStation = Nothing, busRouteCode = state.props.routeSelected, stopsList = []} , props {srcLat = currentState.homeScreen.props.sourceLat , srcLon = currentState.homeScreen.props.sourceLong,showRouteDetailsTab = true } })
+              modifyScreenState $ BusTrackingScreenStateType (\busScreen -> busScreen { data { sourceStation = Nothing, destinationStation = Nothing, busRouteCode = state.props.routeSelected, stopsList = [], stationResponse = Nothing, routeShortName = prediction.title} , props {srcLat = currentState.homeScreen.props.sourceLat , srcLon = currentState.homeScreen.props.sourceLong,showRouteDetailsTab = true } })
               busTrackingScreenFlow
         
           else do
@@ -7113,6 +7115,7 @@ selectBusRouteScreenFlow srcCode destCode = do
               modifyScreenState $ BusTrackingScreenStateType (\busScreen -> busScreen { data {sourceStation = Nothing
                                                                                             , destinationStation = Nothing
                                                                                             , busRouteCode = route.code
+                                                                                            , routeShortName = route.shortName
                                                                                             , stopsList = []
                                                                                             , rideType = Just STOP
                                                                                             }

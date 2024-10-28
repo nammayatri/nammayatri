@@ -93,10 +93,13 @@ eval :: Action -> ST.BusTrackingScreenState -> Eval Action ScreenOutput ST.BusTr
 -- eval (MetroCardAction MetroCard.ExpandStops) state = continue state
 -- eval (VehicleCardAction VehicleCard.ExpandStops) state = continue state
 eval (MapReady _ _ _) state =
-  continueWithCmd state
+  continueWithCmd state {props{gotMapReady = true}}
     [ do
-        -- void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
-        -- drawDriverRouteMock mockRoute
+        void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
+          -- EHC.liftFlow $ JB.setMapPadding 0 0 0 0
+          case state.data.stationResponse of  
+            (Mb.Just stations) -> drawDriverRoute stations state
+            _ -> pure unit
         --   -- defaultMockInviteFlow 0 state 
         --   let _ = spy "defaultMockInviteFlow" "defaultMockInviteFlow"
         --   pure unit
@@ -124,11 +127,11 @@ eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state = do
               Mb.Just stop -> acc { outputMap= DM.insert station.code stop acc.outputMap, previousStop= Mb.Just item }
         )
         { outputMap: DM.empty, previousStop: Mb.Nothing } filteredResp
-  continueWithCmd state { data { stopsList = filteredResp, previousStopsMap = finalMap.outputMap } }
+  continueWithCmd state { data { stopsList = filteredResp, previousStopsMap = finalMap.outputMap, stationResponse = Mb.Just metroResponse } }
     [ do
         void $ launchAff $ EHC.flowRunner defaultGlobalState
           $ do
-              drawDriverRoute mockRoute metroResponse state
+              when state.props.gotMapReady $ drawDriverRoute metroResponse state
               -- drawDriverRouteMock mockRoute
               let
                 _ = spy "defaultMockInviteFlow" "defaultMockInviteFlow"
@@ -170,8 +173,8 @@ eval (UpdateTracking trackingData) state = do
 
 eval _ state = update state
 
-drawDriverRoute :: API.Route -> Array API.GetMetroStationResp -> ST.BusTrackingScreenState -> Flow GlobalState Unit
-drawDriverRoute route resp state = do
+drawDriverRoute ::  Array API.GetMetroStationResp -> ST.BusTrackingScreenState -> Flow GlobalState Unit
+drawDriverRoute resp state = do
   let
     srcCode = Mb.maybe "" (\item -> item.stationCode) state.data.sourceStation
 
@@ -210,7 +213,7 @@ drawDriverRoute route resp state = do
     --                         else if index == ln - 1  then markers.destMarker
     --                         else "ny_ic_stop_black"
     -- markers = HU.normalRoute ""
-  void $ delay $ Milliseconds 500.0
+  -- void $ delay $ Milliseconds 500.0
   void $ pure $ JB.removeAllPolylines ""
   void $ pure $ JB.removeAllMarkers ""
   EHC.liftFlow $ JB.drawRoute [ routeConfig ] (EHC.getNewIDWithTag "BusTrackingScreenMap")

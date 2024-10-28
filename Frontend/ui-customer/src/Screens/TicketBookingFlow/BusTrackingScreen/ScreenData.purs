@@ -50,6 +50,8 @@ initData =
         , previousStopsMap: DM.empty
         , rideType : Nothing
         , vehicleData : []
+        , stationResponse : Mb.Nothing
+        , routeShortName : ""
         }
     , props:
         { showRouteDetailsTab: true
@@ -58,6 +60,7 @@ initData =
         , srcLat: 0.0
         , srcLon: 0.0
         , busNearSource: false
+        , gotMapReady : false
         }
     }
 

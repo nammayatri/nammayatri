@@ -3017,7 +3017,9 @@ type BusTrackingScreenData = {
   previousStopsMap :: DM.Map String GetMetroStationResp,
   vehicleTrackingData :: DM.Map String (Array Number),
   rideType :: Maybe RideType,
-  vehicleData :: Array VehicleData
+  vehicleData :: Array VehicleData,
+  stationResponse :: Maybe (Array GetMetroStationResp),
+  routeShortName :: String
 }
 
 type VehicleData
@@ -3036,7 +3038,9 @@ type BusTrackingScreenProps = {
   expandStopsView :: Boolean, 
   verticalLineHeight :: Int,
   srcLat :: Number,
-  srcLon :: Number,busNearSource :: Boolean
+  srcLon :: Number,
+  busNearSource :: Boolean,
+  gotMapReady :: Boolean
 }
 
 type AlertWidgetConfig = {}
