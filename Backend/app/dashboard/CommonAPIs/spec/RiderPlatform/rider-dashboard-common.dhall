@@ -209,7 +209,7 @@ let defaultImports =
         , _generationType = GeneratorType.DOMAIN_HANDLER_DASHBOARD
         }
       , { _simpleImports =
-          [ "EulerHS.Prelude hiding (id)"
+          [ "EulerHS.Prelude hiding (id, state)"
           , "Servant"
           , "Data.OpenApi (ToSchema)"
           , "Servant.Client"

@@ -15,7 +15,7 @@
 module API.RiderPlatform.RideBooking.Registration where
 
 import qualified "rider-app" API.Dashboard.RideBooking.Registration as BAP
-import qualified Dashboard.RiderPlatform.Customer as Common
+import qualified Dashboard.Common as Common
 import qualified "rider-app" Domain.Action.UI.Registration as DR
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.Person as SP
