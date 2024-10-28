@@ -44,6 +44,8 @@ import Effect.Class (liftEffect)
 import Mobility.Prelude (boolToVisibility)
 import Data.Time.Duration (Milliseconds(..))
 import Helpers.Pooling (delay)
+import Helpers.Utils as HU
+import Data.Function.Uncurried (runFn1)
 
 screen :: String -> String -> SD.SelectBusRouteScreenState -> Screen Action SD.SelectBusRouteScreenState ScreenOutput
 screen fromStationCode toStationCode initialState =
@@ -81,15 +83,38 @@ view push state =
         , width MATCH_PARENT
         , background Color.greySmoke
         ][]
+      , pickupAndDestView state push
       , linearLayout
         [ width MATCH_PARENT
-        , margin $ Margin 16 24 16 20
         , height WRAP_CONTENT
-        , orientation VERTICAL
-        ][  pickupAndDestView state push
-          , routeListView state push
+        , margin $ Margin 16 32 16 0
+        , visibility $ boolToVisibility $ DA.length state.data.quotes > 0
+        ][textView $
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text "Route/Bus Number"
+          , color Color.black800
+          , margin $ MarginBottom 8
+          ] <> FontStyle.body3 TypoGraphy
         ]
-      , seeRouteButton state push
+      , frameLayout
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        , gravity BOTTOM
+        , alignParentBottom "true,-1"
+        ][scrollView
+          [ height $ WRAP_CONTENT
+          , width MATCH_PARENT
+          , margin $ Margin 16 0 16 100
+          ][  linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              ][  routeListView state push
+              ]
+          ]
+        , seeRouteButton state push
+        ]
       ]
   ]
 
@@ -99,6 +124,7 @@ pickupAndDestView state push =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
+  , margin $ Margin 16 24 16 0
   ][  textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -111,31 +137,15 @@ pickupAndDestView state push =
 routeListView :: forall w. SD.SelectBusRouteScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 routeListView state push =
   linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , margin $ MarginTop 32
-  , orientation VERTICAL
-  , visibility $ boolToVisibility $ DA.length state.data.quotes > 0
-  ][linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
-    ][textView $
-      [ width WRAP_CONTENT
-      , height WRAP_CONTENT
-      , text "Route/Bus Number"
-      , color Color.black800
-      , margin $ MarginBottom 8
-      ] <> FontStyle.body3 TypoGraphy
-    ]
-  , linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , visibility $ boolToVisibility $ DA.length state.data.quotes > 0
     ](
         DA.mapWithIndex (\index quote ->
           routeRadioComponent state push quote
         ) state.data.quotes
     )
-  ]
 
 routeRadioComponent :: forall w. SD.SelectBusRouteScreenState -> (Action -> Effect Unit) -> FrfsQuote -> PrestoDOM (Effect Unit) w
 routeRadioComponent state push (FrfsQuote quote) =
@@ -297,11 +307,11 @@ headerView state push =
       
 getSearchId :: (Action -> Effect Unit) -> ((Array FrfsQuote) -> Action) -> String -> String -> Flow GlobalState Unit
 getSearchId push action srcCode destCode = do
-  resp <- Remote.frfsSearch "BUS" (Remote.makeSearchMetroReq srcCode destCode 1 (Just "TVWyRoDx"))
+  resp <- Remote.frfsSearch "BUS" (Remote.makeSearchMetroReq srcCode destCode 1 Nothing)
   case resp of
     Right (FrfsSearchResp response) -> do
       _ <- pure $ spy "debug route searchId" response.searchId
-      void $ delay $ Milliseconds 1000.0
+      void $ delay $ Milliseconds 500.0
       getQuotes push action response.searchId
     Left err -> do
       pure unit
@@ -323,6 +333,7 @@ seeRouteButton state push =
   , width MATCH_PARENT
   , gravity BOTTOM
   , alignParentBottom "true,-1"
+  , weight 1.0
   , background Color.transparent
   , orientation VERTICAL
   ]
@@ -348,3 +359,7 @@ dummyView state =
   [height $ V 0
   , width $ V 0
   ][]
+
+getSeeRouteButton :: String -> Int 
+getSeeRouteButton id = 
+  HU.getDefaultPixelSize $ (runFn1 JB.getLayoutBounds $ getNewIDWithTag id).height - 82

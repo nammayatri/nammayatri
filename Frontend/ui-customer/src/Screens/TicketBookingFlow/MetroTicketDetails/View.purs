@@ -1082,7 +1082,7 @@ busRouteAndStopsView push state (FrfsGetRouteResp route) =
   , orientation VERTICAL
   ]
   [ textView $
-    [ text $ "Route No: " <> route.code
+    [ text $ "Route No: " <> route.shortName
     , color Color.grey900
     ] <> FontStyle.tags TypoGraphy
   , busStopsView push state $ FrfsGetRouteResp route
