@@ -4441,7 +4441,7 @@ metroTicketBookingFlow = do
     Just stations -> do
       let diffSec = runFn2 differenceBetweenTwoUTCInMinutes (getCurrentUTC "") stations.lastUpdatedAt
           metroTicketBookingScreen = currentState.metroTicketBookingScreen
-          (MetroBookingConfigRes metroBookingConfigResp) = metroTicketBookingScreen.data.metroBookingConfigResp
+          (FRFSConfigAPIRes metroBookingConfigResp) = metroTicketBookingScreen.data.metroBookingConfigResp
           metroStationValidTill = metroBookingConfigResp.metroStationTtl
       if diffSec > metroStationValidTill
         then fetchMetroStations currentCity metroStationsList metroTicketBookingScreen.props.isEmptyRoute (show metroTicketBookingScreen.props.ticketServiceType) currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong currentState.metroTicketBookingScreen.data.srcCode currentState.metroTicketBookingScreen.data.destCode
@@ -4485,7 +4485,7 @@ metroTicketBookingFlow = do
           (FrfsSearchResp searchMetroResp) <- Remote.frfsSearchBT (show state.props.ticketServiceType) (Remote.makeSearchMetroReq state.data.srcCode state.data.destCode state.data.ticketCount (if state.props.ticketServiceType == BUS then Just state.props.isEmptyRoute else Nothing))
           modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data { searchId = searchMetroResp.searchId }, props { currentStage = GetMetroQuote } })
       else if state.props.currentStage == ConfirmMetroQuote then do
-        metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 state.data.quoteId $ API.ConfirmMetroQuoteReqV2Body {discounts: fromMaybe [] state.data.applyDiscounts}
+        metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 state.data.quoteId $ API.FRFSQuoteConfirmReq {discounts: fromMaybe [] state.data.applyDiscounts}
         updateMetroBookingQuoteInfo metroBookingStatus
       else
         pure unit
@@ -4546,11 +4546,11 @@ metroTicketBookingFlow = do
     GO_TO_AADHAAR_VERIFICATION_SCREEN state offerType -> do
       (GetProfileRes profileResponse) <- Remote.getProfileBT ""
       if (profileResponse.aadhaarVerified == Just true) then do
-        let appliedDiscountItem = Just $ [ API.DiscountItem
+        let appliedDiscountItem = Just $ [ API.FRFSDiscountReq
                 { code: offerType
                 , quantity: 1
                 } ]
-        metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 state.data.quoteId $ API.ConfirmMetroQuoteReqV2Body {discounts: fromMaybe [] appliedDiscountItem}
+        metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 state.data.quoteId $ API.FRFSQuoteConfirmReq {discounts: fromMaybe [] appliedDiscountItem}
         updateMetroBookingQuoteInfo metroBookingStatus
         modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data {applyDiscounts = appliedDiscountItem}, props { currentStage = GetMetroQuote} })
         metroTicketBookingFlow
@@ -4571,7 +4571,7 @@ metroTicketBookingFlow = do
     modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { props { srcLat = srcLat , srcLong = srcLong , currentStage = BusTicketSelection } , data {routeList =  busRoutesResp } })
     pure parsedStations_
 
-  getMetroStations :: String -> Array GetMetroStationResp -> Array MetroStations -> Array ST.MetroStations
+  getMetroStations :: String -> Array FRFSStationAPI -> Array MetroStations -> Array ST.MetroStations
   getMetroStations city metroStationsResp metroStationArr =
     let
       currentCity = getCityFromString city
@@ -4597,10 +4597,10 @@ metroTicketBookingFlow = do
       else
         Arr.find (\station -> station.city == currentCity) stations
 
-  parseMetroStations :: Array GetMetroStationResp -> Array Station
+  parseMetroStations :: Array FRFSStationAPI -> Array Station
   parseMetroStations stations =
     map
-      ( \(GetMetroStationResp item) ->
+      ( \(FRFSStationAPI item) ->
           { stationName: item.name
           , stationCode: item.code
           }
@@ -4628,7 +4628,7 @@ metroTicketPaymentFlow (CreateOrderRes orderResp) bookingId = do
   modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusScreen { data { bookingId = bookingId } })
   (GetMetroBookingStatusResp getMetroStatusResp) <- Remote.getMetroStatusBT bookingId
   let
-    (MetroTicketBookingStatus metroTicketStatusResp2) = getMetroStatusResp
+    (FRFSTicketBookingStatusAPIRes metroTicketStatusResp2) = getMetroStatusResp
   void $ pure $ toggleBtnLoader "" false
   void $ lift $ lift $ toggleLoader false
   case metroTicketStatusResp2.payment of
@@ -4940,7 +4940,7 @@ metroMyTicketsFlow = do
     GO_TO_METRO_TICKET_DETAILS_FLOW bookingId -> do
       (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT bookingId
       let
-        (MetroTicketBookingStatus metroTicketBookingStatus) = resp
+        (FRFSTicketBookingStatusAPIRes metroTicketBookingStatus) = resp
         tickets = metroTicketBookingStatus.tickets
       if (metroTicketBookingStatus.status == "CONFIRMED") then do
         let goToTracking = maybe false (\(API.FRFSTicketAPI i) -> i.status /= "EXPIRED") (tickets !! 0)
@@ -4949,11 +4949,11 @@ metroMyTicketsFlow = do
               _ = spy "metroTicketBookingStatus" metroTicketBookingStatus
           let stationList = fromMaybe [] (getStationsFromBusRoute <$> route)
           let routeDetails = case route of 
-                      Just (FrfsGetRouteResp r) -> {code : r.code, shortName : r.shortName}
+                      Just (FRFSRouteAPI r) -> {code : r.code, shortName : r.shortName}
                       Nothing -> {code : "", shortName : ""}
  
-          let source = maybe Nothing (\(GetMetroStationResp s) -> Just {stationName : s.name,stationCode :s.code}) (stationList !! 0)
-          let dest = maybe Nothing (\(GetMetroStationResp s) -> Just {stationName : s.name,stationCode :s.code}) (stationList !! (length stationList -1))
+          let source = maybe Nothing (\(FRFSStationAPI s) -> Just {stationName : s.name,stationCode :s.code}) (stationList !! 0)
+          let dest = maybe Nothing (\(FRFSStationAPI s) -> Just {stationName : s.name,stationCode :s.code}) (stationList !! (length stationList -1))
           modifyScreenState $ BusTrackingScreenStateType (\busScreen -> busScreen { data { sourceStation = source, destinationStation = dest, stopsList = [], busRouteCode = routeDetails.code, bookingId = bookingId, stationResponse = Nothing, routeShortName = routeDetails.shortName}, props{ showRouteDetailsTab = false } })
           busTrackingScreenFlow
         else do
@@ -5012,7 +5012,7 @@ viewTicketDetialsFlow mbBookingId = do
       response <- lift $ lift $ Remote.getMetroBookingStatus bookingId
       case response of
         (Right (GetMetroBookingStatusResp resp)) -> do
-          let  (MetroTicketBookingStatus metroTicketBookingStatus) = resp
+          let  (FRFSTicketBookingStatusAPIRes metroTicketBookingStatus) = resp
           if (metroTicketBookingStatus.status == "CONFIRMED") then do
             modifyScreenState
               $ MetroTicketDetailsScreenStateType
@@ -5064,7 +5064,7 @@ metroTicketStatusFlow = do
       void $ lift $ lift $ toggleLoader true
       (GetMetroBookingStatusResp metroStatusResp) <- Remote.getMetroStatusBT state.data.bookingId
       let
-        (MetroTicketBookingStatus metroTicketStatusResp) = metroStatusResp
+        (FRFSTicketBookingStatusAPIRes metroTicketStatusResp) = metroStatusResp
 
         paymentOrder = metroTicketStatusResp.payment >>= (\(FRFSBookingPaymentAPI payment') -> payment'.paymentOrder)
 
@@ -5077,12 +5077,12 @@ metroTicketStatusFlow = do
       metroTicketStatusFlow
     GO_TO_TRY_AGAIN_PAYMENT state -> do
       let 
-        (MetroTicketBookingStatus resp) = state.data.resp
+        (FRFSTicketBookingStatusAPIRes resp) = state.data.resp
         ticketServiceType = if resp.vehicleType == "BUS" then BUS else API.METRO
-        routeCode = case (resp.routeStations :: Maybe (Array FrfsGetRouteResp)) of
+        routeCode = case (resp.routeStations :: Maybe (Array FRFSRouteAPI)) of
                   Nothing -> ""
                   Just routes -> case head routes of
-                                  Just (FrfsGetRouteResp route) -> route.code
+                                  Just (FRFSRouteAPI route) -> route.code
                                   Nothing -> ""
         sourceName = case (resp.stations :: Array FRFSStationAPI) of
                           routes -> case head routes of
@@ -5770,19 +5770,19 @@ predictionClickedFlow prediction state = do
       void $ lift $ lift $ toggleLoader false
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> searchLocationFlow)
   
-  getStationWithLeastDistance :: GetMetroStationResponse -> Array GetMetroStationResp
+  getStationWithLeastDistance :: GetMetroStationResponse -> Array FRFSStationAPI
   getStationWithLeastDistance (GetMetroStationResponse stations) = 
     let
-      stationsWithDistance = filter (\(GetMetroStationResp s) -> 
+      stationsWithDistance = filter (\(FRFSStationAPI s) -> 
           case s.distance of
             Just _ -> true
             Nothing -> false
         ) stations
-      --sortBy (comparing (fromMaybe 0 <<< \(GetMetroStationResp s) -> s.distance)) stationsWithDistance
+      --sortBy (comparing (fromMaybe 0 <<< \(FRFSStationAPI s) -> s.distance)) stationsWithDistance
     in
-      sortBy (comparing (fromMaybe 0 <<< \(GetMetroStationResp s) -> s.distance)) stationsWithDistance
+      sortBy (comparing (fromMaybe 0 <<< \(FRFSStationAPI s) -> s.distance)) stationsWithDistance
       -- case head sortedStations of
-      --   Just (GetMetroStationResp station) -> Just station.name
+      --   Just (FRFSStationAPI station) -> Just station.name
       --   Nothing -> Nothing
   mkSrcAndDestLoc :: Number -> Number -> SearchLocationScreenState -> SearchLocationTextField -> LocationListItemState -> Maybe String -> { sourceLoc :: Maybe LocationInfo, destinationLoc :: Maybe LocationInfo, updatedState :: LocationInfo }
   mkSrcAndDestLoc placeLat placeLon state currTextField prediction city =
@@ -6899,19 +6899,19 @@ busTicketBookingFlow = do
      modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , srcLat = state.props.srcLat , srcLong = state.props.srcLong }, data {fromScreen =(Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN), rideType = rideType ,ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = sortedStops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = sortedStops } })
      searchLocationFlow
      where 
-          sortStops :: Array GetMetroStationResp -> Array GetMetroStationResp
+          sortStops :: Array FRFSStationAPI -> Array FRFSStationAPI
           sortStops stops =
             let
               maxBound = top
-              distanceValue :: GetMetroStationResp -> Int
-              distanceValue (GetMetroStationResp { distance }) =
+              distanceValue :: FRFSStationAPI -> Int
+              distanceValue (FRFSStationAPI { distance }) =
                 fromMaybe maxBound distance
             in
               sortBy (comparing distanceValue) stops
     BusTicketBookingController.GoToMetroTicketDetailsFlow bookingId -> do
       (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT bookingId
       let
-        (MetroTicketBookingStatus metroTicketBookingStatus) = resp
+        (FRFSTicketBookingStatusAPIRes metroTicketBookingStatus) = resp
       if (metroTicketBookingStatus.status == "CONFIRMED") then do
         modifyScreenState
           $ MetroTicketDetailsScreenStateType
@@ -6945,12 +6945,12 @@ busTicketBookingFlow = do
         metroTicketStatusFlow
       else
         metroMyTicketsFlow
-    BusTicketBookingController.GoToMetroTicketDetailsScreen (MetroTicketBookingStatus metroTicketStatusApiResp) -> do
+    BusTicketBookingController.GoToMetroTicketDetailsScreen (FRFSTicketBookingStatusAPIRes metroTicketStatusApiResp) -> do
       let _ = spy "metroTicketStatusApiResp" metroTicketStatusApiResp
-          routeCode = case (metroTicketStatusApiResp.routeStations :: Maybe (Array FrfsGetRouteResp)) of
+          routeCode = case (metroTicketStatusApiResp.routeStations :: Maybe (Array FRFSRouteAPI)) of
                             Nothing -> ""
                             Just routes -> case head routes of
-                                            Just (FrfsGetRouteResp route) -> route.code
+                                            Just (FRFSRouteAPI route) -> route.code
                                             Nothing -> ""
           sourceName = case (metroTicketStatusApiResp.stations :: Array FRFSStationAPI) of
                             routes -> case head routes of
@@ -6994,7 +6994,7 @@ busTrackingScreenFlow = do
     BusTrackingScreen.GoToViewTicket state -> do 
       (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT state.data.bookingId
       let
-        (MetroTicketBookingStatus metroTicketBookingStatus) = resp
+        (FRFSTicketBookingStatusAPIRes metroTicketBookingStatus) = resp
       -- if (metroTicketBookingStatus.status == "CONFIRMED") then do --check
       modifyScreenState
           $ MetroTicketDetailsScreenStateType
@@ -7044,11 +7044,11 @@ aadhaarVerificationFlow offerType = do
           let _ = spy "ahaksdfdf" resp
           if resp.code == "1002"
             then do
-              let appliedDiscountItem = Just $ [ API.DiscountItem
+              let appliedDiscountItem = Just $ [ API.FRFSDiscountReq
                 { code: offerType
                 , quantity: 1
                 } ]
-              metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 currentGlobalState.metroTicketBookingScreen.data.quoteId $ API.ConfirmMetroQuoteReqV2Body $ {discounts: fromMaybe [] appliedDiscountItem}
+              metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 currentGlobalState.metroTicketBookingScreen.data.quoteId $ API.FRFSQuoteConfirmReq $ {discounts: fromMaybe [] appliedDiscountItem}
               updateMetroBookingQuoteInfo metroBookingStatus
               modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data {applyDiscounts = appliedDiscountItem}, props { currentStage = GetMetroQuote} })
               metroTicketBookingFlow
@@ -7110,7 +7110,7 @@ selectBusRouteScreenFlow srcCode destCode = do
       case state.data.selectedQuote of
         Just quote -> 
           case HU.getFirstRoute quote of
-            Just (FrfsGetRouteResp route) -> do
+            Just (FRFSRouteAPI route) -> do
               modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data { routeList = []}, props {routeName = route.shortName, isEmptyRoute = route.code } })
               modifyScreenState $ BusTrackingScreenStateType (\busScreen -> busScreen { data {sourceStation = Nothing
                                                                                             , destinationStation = Nothing
@@ -7160,10 +7160,10 @@ dummyListItem = {
   , types : Nothing
 }   
 
-updateMetroBookingQuoteInfo :: (Either ErrorResponse MetroTicketBookingStatus) -> FlowBT String Unit
+updateMetroBookingQuoteInfo :: (Either ErrorResponse FRFSTicketBookingStatusAPIRes) -> FlowBT String Unit
 updateMetroBookingQuoteInfo metroBookingStatus = do
   case metroBookingStatus of
-    Right (MetroTicketBookingStatus metroBookingStatus) -> do
+    Right (FRFSTicketBookingStatusAPIRes metroBookingStatus) -> do
       modifyScreenState
           $ MetroTicketBookingScreenStateType
               ( \state ->

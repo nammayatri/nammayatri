@@ -116,12 +116,12 @@ eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state = do
     filteredResp = case state.data.destinationStation of
           Mb.Nothing -> metroResponse
           Mb.Just dest -> do
-            case DA.findIndex (\(API.GetMetroStationResp x) -> x.code == dest.stationCode) metroResponse of
+            case DA.findIndex (\(API.FRFSStationAPI x) -> x.code == dest.stationCode) metroResponse of
               Mb.Nothing -> metroResponse -- If the item isn't found, return the original array
               Mb.Just index -> DA.take (index + 1) metroResponse
     finalMap =
       DA.foldl
-        ( \acc item@(API.GetMetroStationResp station) -> 
+        ( \acc item@(API.FRFSStationAPI station) -> 
             case acc.previousStop of 
               Mb.Nothing -> acc {previousStop = Mb.Just item}
               Mb.Just stop -> acc { outputMap= DM.insert station.code stop acc.outputMap, previousStop= Mb.Just item }
@@ -154,7 +154,7 @@ eval (UpdateTracking trackingData) state = do
                 zoomIn = (item.nextStop == (Mb.maybe "" (\i -> i.stationCode) state.data.sourceStation))
             case mbPreviousStop of 
               Mb.Nothing -> acc
-              Mb.Just (API.GetMetroStationResp previousStop) -> do
+              Mb.Just (API.FRFSStationAPI previousStop) -> do
                 let distanceFromPreviousStop = HU.getDistanceBwCordinates (Mb.fromMaybe 0.0 previousStop.lat) (Mb.fromMaybe 0.0 previousStop.lon) item.vehicleLat item.vehicleLon
                     travelDistancePercent = item.nextStopDistance / (distanceFromPreviousStop + item.nextStopDistance)
                     currentValues = Mb.fromMaybe [] $ DM.lookup item.nextStop (DT.fst  acc)
@@ -173,7 +173,7 @@ eval (UpdateTracking trackingData) state = do
 
 eval _ state = update state
 
-drawDriverRoute ::  Array API.GetMetroStationResp -> ST.BusTrackingScreenState -> Flow GlobalState Unit
+drawDriverRoute ::  Array API.FRFSStationAPI -> ST.BusTrackingScreenState -> Flow GlobalState Unit
 drawDriverRoute resp state = do
   let
     srcCode = Mb.maybe "" (\item -> item.stationCode) state.data.sourceStation
@@ -182,7 +182,7 @@ drawDriverRoute resp state = do
   response <- HelpersAPI.callApi $ API.FrfsGetRouteReq state.data.busRouteCode (getValueToLocalStore CUSTOMER_LOCATION) "BUS"
   let
     route = case response of
-      Right (API.FrfsGetRouteResp routeResp) ->
+      Right (API.FRFSRouteAPI routeResp) ->
         API.Route
           { boundingBox: Mb.Nothing
           , distance: 1671
@@ -230,7 +230,7 @@ drawDriverRoute resp state = do
 -- void $ EHC.liftFlow $ JB.showMarker routeConfig.startMarkerConfig routeConfig.startMarkerConfig.position.lat routeConfig.startMarkerConfig.position.lng 110 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
 -- void $ EHC.liftFlow $ JB.showMarker routeConfig.endMarkerConfig routeConfig.endMarkerConfig.position.lat routeConfig.endMarkerConfig.position.lng 110 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
 -- EHC.liftFlow $ JB.animateCamera routeConfig.startMarkerConfig.position.lat routeConfig.startMarkerConfig.position.lng 10.0 "NO_ZOOM"
--- defaultMockInviteFlow :: Int -> ST.BusTrackingScreenState -> Array API.GetMetroStationResp  -> Flow GlobalState Unit
+-- defaultMockInviteFlow :: Int -> ST.BusTrackingScreenState -> Array API.FRFSStationAPI  -> Flow GlobalState Unit
 -- defaultMockInviteFlow id state resp  = do
 --   -- localDelay 1000.0
 --   let

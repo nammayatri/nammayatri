@@ -46,7 +46,7 @@ import Presto.Core.Types.Language.Flow (doAff, Flow, delay)
 import Language.Strings
 import Language.Types
 import Data.String as DS
-import Services.API (MetroBookingSoftCancelStatusResp(..), MetroBookingHardCancelStatusResp(..), FrfsGetRouteResp(..))
+import Services.API (MetroBookingSoftCancelStatusResp(..), MetroBookingHardCancelStatusResp(..), FRFSRouteAPI(..))
 import Screens.Types
 import Services.Backend as Remote
 import Data.Either (Either(..))
@@ -1074,8 +1074,8 @@ routeDetailsItemView push index routeDetails =
 isBusTicketBooking :: ST.MetroTicketDetailsScreenState -> Boolean
 isBusTicketBooking state = state.data.vehicleType == "BUS"
 
-busRouteAndStopsView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> FrfsGetRouteResp -> PrestoDOM (Effect Unit) w
-busRouteAndStopsView push state (FrfsGetRouteResp route) =
+busRouteAndStopsView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> FRFSRouteAPI -> PrestoDOM (Effect Unit) w
+busRouteAndStopsView push state (FRFSRouteAPI route) =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -1085,7 +1085,7 @@ busRouteAndStopsView push state (FrfsGetRouteResp route) =
     [ text $ "Route No: " <> route.shortName
     , color Color.grey900
     ] <> FontStyle.tags TypoGraphy
-  , busStopsView push state $ FrfsGetRouteResp route
+  , busStopsView push state $ FRFSRouteAPI route
   -- , linearLayout
   --   [ height WRAP_CONTENT
   --   , width MATCH_PARENT
@@ -1094,8 +1094,8 @@ busRouteAndStopsView push state (FrfsGetRouteResp route) =
   --   [ SourceToDestinationView.view (push <<< SourceToDestinationAC) (Config.sourceToDestinationConfig state) ]
   ]
 
-busStopsView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> FrfsGetRouteResp -> PrestoDOM (Effect Unit) w
-busStopsView push state (FrfsGetRouteResp route) =
+busStopsView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> FRFSRouteAPI -> PrestoDOM (Effect Unit) w
+busStopsView push state (FRFSRouteAPI route) =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -1113,9 +1113,9 @@ busStopsView push state (FrfsGetRouteResp route) =
   , singleStopView push route.stations false
   ]
 
-singleStopView :: forall w. (Action -> Effect Unit) -> Maybe (Array API.GetMetroStationResp) -> Boolean -> PrestoDOM (Effect Unit) w
+singleStopView :: forall w. (Action -> Effect Unit) -> Maybe (Array API.FRFSStationAPI) -> Boolean -> PrestoDOM (Effect Unit) w
 singleStopView push frfsStopsResp isSourceView =
-  let frfsStops = map (\(API.GetMetroStationResp resp) -> resp) $ fromMaybe [] frfsStopsResp
+  let frfsStops = map (\(API.FRFSStationAPI resp) -> resp) $ fromMaybe [] frfsStopsResp
       originStop = maybe "" (\stop -> stop.name) $ frfsStops !! 0
       destinationStop = maybe "" (\stop -> stop.name) $ frfsStops !! ((length frfsStops) - 1)
   in

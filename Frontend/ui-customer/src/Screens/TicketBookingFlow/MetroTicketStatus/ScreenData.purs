@@ -41,9 +41,9 @@ initData =
     }
   }
 
-dummyMetroBookingStatus :: MetroTicketBookingStatus
+dummyMetroBookingStatus :: FRFSTicketBookingStatusAPIRes
 dummyMetroBookingStatus = 
-  MetroTicketBookingStatus {
+  FRFSTicketBookingStatusAPIRes {
     _type: "SingleJourney",
     createdAt : "",
     bookingId : "",

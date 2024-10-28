@@ -43,7 +43,7 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import RemoteConfig as RC
-import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), MetroTicketBookingStatus(..),GetMetroStationResp(..),TicketCategoriesResp(..), FrfsQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), MetroBookingConfigRes, RideShareOptions, DeliveryDetails(..), PersonLocationAndInstruction(..), InitiatedAs(..), InstructionAndAddress(..), RideAPIEntity(..),RideBookingListRes, SearchRideType(..), FrfsGetRouteResp)
+import Services.API (DeadKmFare, AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..), FRFSTicketBookingStatusAPIRes(..),FRFSStationAPI(..),TicketCategoriesResp(..), FrfsQuote, RideShareOptions(..), SavedLocationsListRes,  Route(..), FRFSConfigAPIRes, RideShareOptions, DeliveryDetails(..), PersonLocationAndInstruction(..), InitiatedAs(..), InstructionAndAddress(..), RideAPIEntity(..),RideBookingListRes, SearchRideType(..), FRFSRouteAPI)
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent, ChatContacts)
 import Screens(ScreenName)
@@ -2028,7 +2028,7 @@ type MetroTicketDetailsScreenData = {
 , ticketPrice :: Number
 , noOfTickets :: Int
 , vehicleType :: String
-, route :: Maybe (Array FrfsGetRouteResp)
+, route :: Maybe (Array FRFSRouteAPI)
 , transactionId :: String
 }
 
@@ -2117,7 +2117,7 @@ type MetroTicketCardData = {
   , destinationName :: String
   , createdAt :: String
   , noOfTickets :: Int
-  , metroTicketStatusApiResp :: MetroTicketBookingStatus
+  , metroTicketStatusApiResp :: FRFSTicketBookingStatusAPIRes
   , status :: String
   , validUntill :: String
 }
@@ -2202,10 +2202,10 @@ type SearchLocationScreenData =
     predictionSelectedFromHome :: LocationListItemState,
     quotesList :: Array QuotesList,
     rideDetails :: RideDetails,
-    routeSearchedList :: Array FrfsGetRouteResp,
-    stopsSearchedList :: Array GetMetroStationResp,
-    updatedStopsSearchedList :: Array GetMetroStationResp,
-    updatedRouteSearchedList :: Array FrfsGetRouteResp,
+    routeSearchedList :: Array FRFSRouteAPI,
+    stopsSearchedList :: Array FRFSStationAPI,
+    updatedStopsSearchedList :: Array FRFSStationAPI,
+    updatedRouteSearchedList :: Array FRFSRouteAPI,
     ticketServiceType :: API.TicketServiceType,
     rideType :: RideType,
     searchRideType :: SearchRideType
@@ -2592,7 +2592,7 @@ type MetroStation = {
 
 type MetroStations = {
   city :: City,
-  stations :: Array GetMetroStationResp,
+  stations :: Array FRFSStationAPI,
   lastUpdatedAt :: String
 }
 
@@ -2616,14 +2616,14 @@ type MetroTicketBookingScreenData = {
   , bookingId :: String
   , quoteId :: String
   , quoteResp :: Array FrfsQuote
-  , routeSearchedList :: Array FrfsGetRouteResp
-  , routeList :: Array FrfsGetRouteResp
-  , stopsSearchedList :: Array GetMetroStationResp
-  , metroBookingConfigResp :: MetroBookingConfigRes
+  , routeSearchedList :: Array FRFSRouteAPI
+  , routeList :: Array FRFSRouteAPI
+  , stopsSearchedList :: Array FRFSStationAPI
+  , metroBookingConfigResp :: FRFSConfigAPIRes
   , eventDiscountAmount :: Maybe Int
   , searchRideType :: SearchRideType
-  , discounts :: Array API.DiscountObj
-  , applyDiscounts :: Maybe (Array API.DiscountItem)
+  , discounts :: Array API.FRFSDiscountRes
+  , applyDiscounts :: Maybe (Array API.FRFSDiscountReq)
 }
 
 type MetroTicketBookingScreenProps = {
@@ -2672,7 +2672,7 @@ type MetroTicketStatusScreenData = {
   keyValArray :: Array KeyVal,
   validUntil :: String,
   bookingId :: String,
-  resp :: MetroTicketBookingStatus,
+  resp :: FRFSTicketBookingStatusAPIRes,
   timerId :: String,
   quoteId :: String
 }
@@ -3010,15 +3010,15 @@ type BusTrackingScreenState = {
 type BusTrackingScreenData = {
   appConfig :: AppConfig,
   busRouteCode :: String,
-  stopsList :: Array GetMetroStationResp,
+  stopsList :: Array FRFSStationAPI,
   sourceStation :: Maybe Station,
   destinationStation :: Maybe Station,
   bookingId :: String,
-  previousStopsMap :: DM.Map String GetMetroStationResp,
+  previousStopsMap :: DM.Map String FRFSStationAPI,
   vehicleTrackingData :: DM.Map String (Array Number),
   rideType :: Maybe RideType,
   vehicleData :: Array VehicleData,
-  stationResponse :: Maybe (Array GetMetroStationResp),
+  stationResponse :: Maybe (Array FRFSStationAPI),
   routeShortName :: String
 }
 

@@ -18,7 +18,7 @@ module Screens.SelectBusRoute.ScreenData where
 import ConfigProvider
 import Screens.Types as ST
 import Data.Maybe (Maybe(..))
-import Services.API (FrfsGetRouteResp(..), FrfsQuote(..))
+import Services.API (FRFSRouteAPI(..), FrfsQuote(..))
 
 initData :: SelectBusRouteScreenState
 initData = {

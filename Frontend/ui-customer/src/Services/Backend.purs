@@ -1300,7 +1300,7 @@ getBusRoutesBT city startStationCode endStationCode= do
     errorHandler errorPayload = do
       BackT $ pure GoBack
 
-frfsSearchBT :: String -> FrfsSearchReq -> FlowBT String FrfsSearchResp
+frfsSearchBT :: String -> FRFSSearchAPIReq -> FlowBT String FrfsSearchResp
 frfsSearchBT vehicleType requestBody = do
     headers <- getHeaders' "" false
     withAPIResultBT (EP.frfsSearch vehicleType) (\x -> x) errorHandler (lift $ lift $ callAPI headers (FrfsSearchRequest requestBody vehicleType))
@@ -1308,7 +1308,7 @@ frfsSearchBT vehicleType requestBody = do
     errorHandler errorPayload = do
       BackT $ pure GoBack
 
-frfsSearch :: String -> FrfsSearchReq -> Flow GlobalState (Either ErrorResponse FrfsSearchResp)
+frfsSearch :: String -> FRFSSearchAPIReq -> Flow GlobalState (Either ErrorResponse FrfsSearchResp)
 frfsSearch vehicleType requestBody = do
     headers <- getHeaders "" false
     withAPIResult (EP.frfsSearch vehicleType) identity $ callAPI headers (FrfsSearchRequest requestBody vehicleType)
@@ -1322,8 +1322,8 @@ busAutoCompleteBT vehicleType city location input limit offset = do
       BackT $ pure GoBack 
 
 
-makeSearchMetroReq :: String -> String -> Int -> Maybe String-> FrfsSearchReq
-makeSearchMetroReq srcCode destCode count routeCode = FrfsSearchReq {
+makeSearchMetroReq :: String -> String -> Int -> Maybe String-> FRFSSearchAPIReq
+makeSearchMetroReq srcCode destCode count routeCode = FRFSSearchAPIReq {
     "fromStationCode" : srcCode,
     "toStationCode" : destCode,
     "quantity" : count,
@@ -1345,7 +1345,7 @@ frfsQuotes searchId = do
   where
   unwrapResponse x = x
  
-confirmMetroQuoteBT :: String -> FlowBT String MetroTicketBookingStatus
+confirmMetroQuoteBT :: String -> FlowBT String FRFSTicketBookingStatusAPIRes
 confirmMetroQuoteBT quoteId = do
         headers <- getHeaders' "" false
         withAPIResultBT (EP.confirmMetroQuote quoteId) (\x → x) errorHandler (lift $ lift $ callAPI headers (ConfirmMetroQuoteReq quoteId))
@@ -1353,7 +1353,7 @@ confirmMetroQuoteBT quoteId = do
           errorHandler _ = do
                 BackT $ pure GoBack
 
-confirmMetroQuote :: String -> Flow GlobalState (Either ErrorResponse MetroTicketBookingStatus)
+confirmMetroQuote :: String -> Flow GlobalState (Either ErrorResponse FRFSTicketBookingStatusAPIRes)
 confirmMetroQuote quoteId = do
   headers <- getHeaders "" false
   withAPIResult (EP.confirmMetroQuote quoteId) unwrapResponse $ callAPI headers (ConfirmMetroQuoteReq quoteId)
@@ -1414,10 +1414,10 @@ metroBookingHardCancelStatus bookingId = do
     where
     unwrapResponse x = x
 
-getMetroBookingConfigBT :: String -> FlowBT String MetroBookingConfigRes
-getMetroBookingConfigBT city = do
+getFRFSBookingConfigBT :: String -> FlowBT String FRFSConfigAPIRes
+getFRFSBookingConfigBT city = do
     headers <- getHeaders' "" true
-    withAPIResultBT (EP.getMetroBookingConfig city) identity errorHandler (lift $ lift $ callAPI headers (MetroBookingConfigReq city))
+    withAPIResultBT (EP.getFRFSBookingConfig city) identity errorHandler (lift $ lift $ callAPI headers (MetroBookingConfigReq city))
     where
     errorHandler errorPayload = do
       BackT $ pure GoBack
@@ -1557,9 +1557,9 @@ verifyAadhaarOtp aadhaarNumber = do
     unwrapResponse x = x
 
 ---------------------------------------- confirmMetroQuoteV2 ---------------------------------------------
-confirmMetroQuoteV2 :: String -> ConfirmMetroQuoteReqV2Body -> Flow GlobalState (Either ErrorResponse MetroTicketBookingStatus)
+confirmMetroQuoteV2 :: String -> FRFSQuoteConfirmReq -> Flow GlobalState (Either ErrorResponse FRFSTicketBookingStatusAPIRes)
 confirmMetroQuoteV2 quoteId confirmQuoteReqV2Body = do
   headers <- getHeaders "" false
-  withAPIResult (EP.confirmMetroQuoteV2 quoteId) unwrapResponse $ callAPI headers (ConfirmMetroQuoteReqV2 quoteId confirmQuoteReqV2Body)
+  withAPIResult (EP.confirmMetroQuoteV2 quoteId) unwrapResponse $ callAPI headers (ConfirmFRFSQuoteReqV2 quoteId confirmQuoteReqV2Body)
   where
     unwrapResponse x = x

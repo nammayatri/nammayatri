@@ -301,8 +301,8 @@ confirmEditLocResult :: String -> String
 confirmEditLocResult bookingUpdateRequestId = (getBaseUrl "60") <> "/edit/result/" <> bookingUpdateRequestId <> "/confirm"
 
 
-getMetroBookingConfig :: String -> String
-getMetroBookingConfig city = (getBaseUrl "58") <> "/frfs/config?city=" <> city
+getFRFSBookingConfig :: String -> String
+getFRFSBookingConfig city = (getBaseUrl "58") <> "/frfs/config?city=" <> city
 
 getEmergencyContactsTrackingStatus :: String -> String
 getEmergencyContactsTrackingStatus rideId = (getBaseUrl "59") <> "/followRide/ECStatus/" <> rideId
@@ -333,6 +333,7 @@ verifyAadhaarOTP _ = (getBaseUrl "") <> "/verifyAadhaar/verifyOtp"
 
 -- unVerifiedAadhaarData :: String -> String
 -- unVerifiedAadhaarData _ = (getBaseUrl "") <> "/driver/register/unVerifiedAadhaarData"
+
 frfsRoute :: String -> String -> String -> String
 frfsRoute routeCode city vehicleType = (getBaseUrl "61") <> "/frfs/route/" <> routeCode <> "?vehicleType=" <> show vehicleType <> "&city=" <> city
 

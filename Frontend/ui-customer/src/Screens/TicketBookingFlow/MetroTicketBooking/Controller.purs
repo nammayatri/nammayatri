@@ -60,7 +60,7 @@ data Action = BackPressed
             | ShowMetroBookingTimeError Boolean
             | InfoCardAC InfoCard.Action 
             | GetSDKPollingAC CreateOrderRes
-            | MetroBookingConfigAction MetroBookingConfigRes
+            | MetroBookingConfigAction FRFSConfigAPIRes
             | ListExpandAinmationEnd
             | SelectRoutes String String
             | SelectRouteslistView
@@ -90,7 +90,7 @@ eval (ApplyOffer offerType) state =
   let updatedState = state 
         { data 
           { applyDiscounts = 
-            Just $ [ API.DiscountItem
+            Just $ [ API.FRFSDiscountReq
               { code: offerType
               , quantity: 1
               } ] 
@@ -132,7 +132,7 @@ eval DecrementTicket state = do
 eval MetroRouteMapAction state = exit $ GoToMetroRouteMap
 
 eval (ChangeTicketTab ticketType cityMetroConfig) state = do 
-  let (MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
+  let (FRFSConfigAPIRes metroBookingConfigResp) = state.data.metroBookingConfigResp
   if state.props.currentStage == ST.ConfirmMetroQuote then do
     let ticketTypeUpdatedState = state {data {ticketType = ticketType}}
     updateQuotes state.data.quoteResp state
@@ -195,7 +195,7 @@ updateQuotes quotes state = do
       void $ pure $ toast $ getString NO_QOUTES_AVAILABLE
       continue state { props {currentStage  = if state.props.ticketServiceType == API.BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
     Just (FrfsQuote quoteData) -> do
-      let updatedState = state { data {discounts = quoteData.discounts, ticketPrice = quoteData.price, quoteId = quoteData.quoteId, quoteResp = quotes, eventDiscountAmount = DI.round <$> quoteData.eventDiscountAmount}, props { currentStage = ST.ConfirmMetroQuote}}
+      let updatedState = state { data {discounts = fromMaybe [] quoteData.discounts, ticketPrice = quoteData.price, quoteId = quoteData.quoteId, quoteResp = quotes, eventDiscountAmount = DI.round <$> quoteData.eventDiscountAmount}, props { currentStage = ST.ConfirmMetroQuote}}
       updateAndExit updatedState $ Refresh updatedState
   where
     getTicketType :: String -> ST.TicketType

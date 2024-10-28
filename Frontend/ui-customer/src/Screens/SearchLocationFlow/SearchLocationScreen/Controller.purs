@@ -63,7 +63,7 @@ import Screens (getScreen, ScreenName(..))
 import Screens.HomeScreen.Transformer (getQuotesTransformer, getFilteredQuotes, transformQuote, getFareProductType, extractFareProductType)
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationConfig)
 import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo, initData) as SearchLocationScreenData
-import Services.API (QuoteAPIEntity(..), GetQuotesRes(..), OfferRes(..), RentalQuoteAPIDetails(..), QuoteAPIContents(..), Snapped(..), LatLong(..), Route(..), FrfsGetRouteResp(..),SearchRideType(..),GetMetroStationResp(..), TicketServiceType(..))
+import Services.API (QuoteAPIEntity(..), GetQuotesRes(..), OfferRes(..), RentalQuoteAPIDetails(..), QuoteAPIContents(..), Snapped(..), LatLong(..), Route(..), FRFSRouteAPI(..),SearchRideType(..),FRFSStationAPI(..), TicketServiceType(..))
 import Services.Backend (walkCoordinates, walkCoordinate)
 import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..))
 import Types.App (GlobalState(..), defaultGlobalState, FlowBT, ScreenType(..))
@@ -205,8 +205,8 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
      mbRoutes = filterRoutesForCache item.title state.data.updatedRouteSearchedList
      cachedStops = getKeyInSharedPrefKeys (show RECENT_BUS_STOPS)
      cachedRoutes = getKeyInSharedPrefKeys (show RECENT_BUS_ROUTES)
-     (decodedCachedStops :: MB.Maybe (Array GetMetroStationResp)) = (decodeForeignAny (parseJSON cachedStops) MB.Nothing)
-     (decodedCachedRoutes :: MB.Maybe (Array FrfsGetRouteResp)) = (decodeForeignAny (parseJSON cachedRoutes) MB.Nothing)
+     (decodedCachedStops :: MB.Maybe (Array FRFSStationAPI)) = (decodeForeignAny (parseJSON cachedStops) MB.Nothing)
+     (decodedCachedRoutes :: MB.Maybe (Array FRFSRouteAPI)) = (decodeForeignAny (parseJSON cachedRoutes) MB.Nothing)
      validDecodedStops = MB.fromMaybe [] decodedCachedStops
      validDecodedRoutes = MB.fromMaybe [] decodedCachedRoutes
  case mbStops of
@@ -623,15 +623,15 @@ handleBackPress state = do
 findStationWithPrefix :: String -> Array Station -> Array Station
 findStationWithPrefix prefix arr = DA.filter (\station -> containString prefix station.stationName) arr
 
-findRouteWithPrefix :: String -> Array FrfsGetRouteResp -> Array FrfsGetRouteResp
+findRouteWithPrefix :: String -> Array FRFSRouteAPI -> Array FRFSRouteAPI
 findRouteWithPrefix prefix arr = DA.filter matchesPrefix arr
   where
-    matchesPrefix (FrfsGetRouteResp route) = containString prefix route.code
+    matchesPrefix (FRFSRouteAPI route) = containString prefix route.code
 
-findStopWithPrefix :: String -> Array GetMetroStationResp -> Array GetMetroStationResp
+findStopWithPrefix :: String -> Array FRFSStationAPI -> Array FRFSStationAPI
 findStopWithPrefix prefix arr =  DA.filter matchesPrefix arr
   where
-    matchesPrefix (GetMetroStationResp stop) = containString prefix stop.name
+    matchesPrefix (FRFSStationAPI stop) = containString prefix stop.name
 
 
 containString :: String -> String -> Boolean
@@ -754,25 +754,25 @@ quotesFlow res state = do
             in compare quoteEntity1.estimatedFare quoteEntity2.estimatedFare
           _ , _ -> EQ
 
-filterStopsBySequenceInc :: String -> Array GetMetroStationResp -> Array GetMetroStationResp
+filterStopsBySequenceInc :: String -> Array FRFSStationAPI -> Array FRFSStationAPI
 filterStopsBySequenceInc title updatedStopsSearchedList = 
-  case DA.find (\(GetMetroStationResp stop) -> stop.name == title) updatedStopsSearchedList of
-    MB.Just (GetMetroStationResp foundStop) -> 
+  case DA.find (\(FRFSStationAPI stop) -> stop.name == title) updatedStopsSearchedList of
+    MB.Just (FRFSStationAPI foundStop) -> 
       let foundSequence = foundStop.sequenceNum
-      in DA.filter (\(GetMetroStationResp stop) -> stop.sequenceNum > foundSequence) updatedStopsSearchedList
+      in DA.filter (\(FRFSStationAPI stop) -> stop.sequenceNum > foundSequence) updatedStopsSearchedList
     MB.Nothing -> 
       updatedStopsSearchedList
-filterStopsBySequenceDec :: String -> Array GetMetroStationResp -> Array GetMetroStationResp
+filterStopsBySequenceDec :: String -> Array FRFSStationAPI -> Array FRFSStationAPI
 filterStopsBySequenceDec title updatedStopsSearchedList = 
-  case DA.find (\(GetMetroStationResp stop) -> stop.name == title) updatedStopsSearchedList of
-    MB.Just (GetMetroStationResp foundStop) -> 
+  case DA.find (\(FRFSStationAPI stop) -> stop.name == title) updatedStopsSearchedList of
+    MB.Just (FRFSStationAPI foundStop) -> 
       let foundSequence = foundStop.sequenceNum
-      in DA.filter (\(GetMetroStationResp stop) -> stop.sequenceNum < foundSequence) updatedStopsSearchedList
+      in DA.filter (\(FRFSStationAPI stop) -> stop.sequenceNum < foundSequence) updatedStopsSearchedList
     MB.Nothing -> 
       updatedStopsSearchedList
 
-filterStopsForCache :: String -> Array GetMetroStationResp -> MB.Maybe GetMetroStationResp
-filterStopsForCache title updatedStopsSearchedList =  DA.find (\(GetMetroStationResp stop) -> stop.name == title) updatedStopsSearchedList
+filterStopsForCache :: String -> Array FRFSStationAPI -> MB.Maybe FRFSStationAPI
+filterStopsForCache title updatedStopsSearchedList =  DA.find (\(FRFSStationAPI stop) -> stop.name == title) updatedStopsSearchedList
 
-filterRoutesForCache :: String -> Array FrfsGetRouteResp -> MB.Maybe FrfsGetRouteResp
-filterRoutesForCache title updatedRouteSearchedList =  DA.find (\(FrfsGetRouteResp route) -> route.code == title) updatedRouteSearchedList
+filterRoutesForCache :: String -> Array FRFSRouteAPI -> MB.Maybe FRFSRouteAPI
+filterRoutesForCache title updatedRouteSearchedList =  DA.find (\(FRFSRouteAPI route) -> route.code == title) updatedRouteSearchedList

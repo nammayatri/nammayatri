@@ -28,10 +28,10 @@ import Language.Types
 import Domain.Payments as PP
 
 
-metroTicketStatusTransformer :: MetroTicketBookingStatus -> MetroTicketStatusScreenState -> MetroTicketStatusScreenState
-metroTicketStatusTransformer (MetroTicketBookingStatus metroTicketBookingStatus) state = 
+metroTicketStatusTransformer :: FRFSTicketBookingStatusAPIRes -> MetroTicketStatusScreenState -> MetroTicketStatusScreenState
+metroTicketStatusTransformer (FRFSTicketBookingStatusAPIRes metroTicketBookingStatus) state = 
   let 
-    keyValArray' = metroTicketDetailsKeyVals (MetroTicketBookingStatus metroTicketBookingStatus)
+    keyValArray' = metroTicketDetailsKeyVals (FRFSTicketBookingStatusAPIRes metroTicketBookingStatus)
     paymentStatus' = case metroTicketBookingStatus.status of 
       "CONFIRMED" -> PP.Success
       "PAYMENT_PENDING" -> PP.Pending
@@ -50,7 +50,7 @@ metroTicketStatusTransformer (MetroTicketBookingStatus metroTicketBookingStatus)
       , shortOrderId = transactionId
       , validUntil = validUntil'
       , bookingId = bookingId'
-      , resp = MetroTicketBookingStatus metroTicketBookingStatus
+      , resp = FRFSTicketBookingStatusAPIRes metroTicketBookingStatus
       }
     , props{
         paymentStatus =  paymentStatus'
@@ -58,8 +58,8 @@ metroTicketStatusTransformer (MetroTicketBookingStatus metroTicketBookingStatus)
     }
 
 
-metroTicketDetailsKeyVals ::  MetroTicketBookingStatus -> Array KeyVal 
-metroTicketDetailsKeyVals (MetroTicketBookingStatus metroTicketBookingStatus) = 
+metroTicketDetailsKeyVals ::  FRFSTicketBookingStatusAPIRes -> Array KeyVal 
+metroTicketDetailsKeyVals (FRFSTicketBookingStatusAPIRes metroTicketBookingStatus) = 
   let 
     payment = metroTicketBookingStatus.payment
     date = convertUTCtoISC metroTicketBookingStatus.createdAt "hh:mm A, Do MMM YYYY"

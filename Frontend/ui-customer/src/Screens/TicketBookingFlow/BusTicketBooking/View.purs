@@ -400,13 +400,13 @@ ticketCardView push ticketData =
   where
     isActive :: Boolean
     isActive = do
-      let (MetroTicketBookingStatus ticketBookingStatusResp) = ticketData.metroTicketStatusApiResp
+      let (FRFSTicketBookingStatusAPIRes ticketBookingStatusResp) = ticketData.metroTicketStatusApiResp
           ticketStatus = DA.head $ map (\(FRFSTicketAPI ticketD) -> ticketD.status) ticketBookingStatusResp.tickets
       (DA.any (_ == ticketData.status) ["CONFIRMED", "CONFIRMING", "ACTIVE"]) && (DA.any (_ == ticketStatus) [Just "CONFIRMED", Just "CONFIRMING", Just "ACTIVE"])
 
     isVerified :: Boolean
     isVerified = do
-      let (MetroTicketBookingStatus ticketBookingStatusResp) = ticketData.metroTicketStatusApiResp
+      let (FRFSTicketBookingStatusAPIRes ticketBookingStatusResp) = ticketData.metroTicketStatusApiResp
           ticketStatus = DA.head $ map (\(FRFSTicketAPI ticketD) -> ticketD.status) ticketBookingStatusResp.tickets
       (DA.any (_ == ticketStatus) [Just "USED"])
 
@@ -415,7 +415,7 @@ ticketCardView push ticketData =
 
     extractTicketNumber :: String
     extractTicketNumber = do
-      let (MetroTicketBookingStatus ticketBookingStatusResp) = ticketData.metroTicketStatusApiResp
+      let (FRFSTicketBookingStatusAPIRes ticketBookingStatusResp) = ticketData.metroTicketStatusApiResp
           ticketAPIData = map (\(FRFSTicketAPI tickets) -> tickets.ticketNumber) ticketBookingStatusResp.tickets
       fromMaybe (defaultTicketNumber ticketBookingStatusResp.bookingId) $ DA.head ticketAPIData
     

@@ -25,8 +25,8 @@ import Data.Int as INT
 import Engineering.Helpers.Commons
 import Helpers.Utils (getCityNameFromCode)
 
-metroTicketDetailsTransformer :: MetroTicketBookingStatus -> MetroTicketDetailsScreenState -> MetroTicketDetailsScreenState 
-metroTicketDetailsTransformer (MetroTicketBookingStatus metroTicketBookingStatus) state = 
+metroTicketDetailsTransformer :: FRFSTicketBookingStatusAPIRes -> MetroTicketDetailsScreenState -> MetroTicketDetailsScreenState 
+metroTicketDetailsTransformer (FRFSTicketBookingStatusAPIRes metroTicketBookingStatus) state = 
   let
     
     metroRoute' = metroRouteTrasformer metroTicketBookingStatus.stations

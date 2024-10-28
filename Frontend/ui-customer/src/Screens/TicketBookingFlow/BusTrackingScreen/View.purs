@@ -415,7 +415,7 @@ busDetailsView push state =
                   ]
                 <> FontStyle.h2 CTA.TypoGraphy
             , textView
-                $ [ text $ "Towards " <> (Mb.maybe "" (\(API.GetMetroStationResp item) -> item.name) (DA.last state.data.stopsList))
+                $ [ text $ "Towards " <> (Mb.maybe "" (\(API.FRFSStationAPI item) -> item.name) (DA.last state.data.stopsList))
                   , margin $ MarginLeft 8
                   ]
                 <> FontStyle.body3 CTA.TypoGraphy
@@ -450,9 +450,9 @@ busStopsView push state = do
         , orientation VERTICAL
         , margin $ MarginHorizontal 16 16
         ]
-        [ journeyLegTitleView true (Mb.maybe "" (\(API.GetMetroStationResp item) -> item.name) (DA.head state.data.stopsList)) state
+        [ journeyLegTitleView true (Mb.maybe "" (\(API.FRFSStationAPI item) -> item.name) (DA.head state.data.stopsList)) state
         , linearLayout [ width MATCH_PARENT, height WRAP_CONTENT ] [ stopListView push state true, stopListView push state false ]
-        , journeyLegTitleView false (Mb.maybe "" (\(API.GetMetroStationResp item) -> item.name) (DA.last state.data.stopsList)) state --fromMaybe ""  (state.data.destinationStation <#> ._stationName) --"KSR Bengaluru Railway Station, M.G. Railway Colony, Sevashrama, Bengaluru, Karnataka 560023"
+        , journeyLegTitleView false (Mb.maybe "" (\(API.FRFSStationAPI item) -> item.name) (DA.last state.data.stopsList)) state --fromMaybe ""  (state.data.destinationStation <#> ._stationName) --"KSR Bengaluru Railway Station, M.G. Railway Colony, Sevashrama, Bengaluru, Karnataka 560023"
         ]
     ]
 
@@ -562,8 +562,8 @@ stopsViewHeader push state showOnlyBullet =
 --     ]
 --     [ 
 --     ]
-stopView :: forall w. API.GetMetroStationResp -> Boolean -> Int -> ST.BusTrackingScreenState -> (Action -> Effect Unit) -> Int -> PrestoDOM (Effect Unit) w
-stopView (API.GetMetroStationResp stop) showOnlyBullet marginTop state push index =
+stopView :: forall w. API.FRFSStationAPI -> Boolean -> Int -> ST.BusTrackingScreenState -> (Action -> Effect Unit) -> Int -> PrestoDOM (Effect Unit) w
+stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -633,14 +633,14 @@ stopView (API.GetMetroStationResp stop) showOnlyBullet marginTop state push inde
               , ellipsize true
               ]
             <> FontStyle.body1 CTA.TypoGraphy
-          , showETAView push state index $ API.GetMetroStationResp stop
+          , showETAView push state index $ API.FRFSStationAPI stop
           ]
         ]
     ]
   where
   b = JB.getLayoutBounds $ EHC.getNewIDWithTag $ "textviewstop" <> show index
 
-  totalHeight = if (Mb.isJust $ findStopInVehicleData (API.GetMetroStationResp stop) state) then 72 else 40
+  totalHeight = if (Mb.isJust $ findStopInVehicleData (API.FRFSStationAPI stop) state) then 72 else 40
 
 separatorView :: forall w. String -> Margin -> PrestoDOM (Effect Unit) w
 separatorView color' margin' =
@@ -659,7 +659,7 @@ busLocationTracking duration id routeCode push = do
   if Mb.isJust trackingId && trackingId /= Mb.Just routeCode then
     pure unit
   else do
-    void $ delay $ Milliseconds $ 2000.0
+    -- void $ delay $ Milliseconds $ 2000.0
     -- let (API.BusTrackingRouteResp dummy) = dummyData
     -- for_ dummy.vehicleTrackingInfo $ \(API.VehicleInfo item) -> do
     --     -- void $ map (\(API.VehicleInfo item) -> do
@@ -747,8 +747,8 @@ busLocationTracking duration id routeCode push = do
 --         ]
 --     }
 
-showETAView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Int -> API.GetMetroStationResp -> PrestoDOM (Effect Unit) w
-showETAView push state index (API.GetMetroStationResp stop) =
+showETAView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Int -> API.FRFSStationAPI -> PrestoDOM (Effect Unit) w
+showETAView push state index (API.FRFSStationAPI stop) =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -757,21 +757,21 @@ showETAView push state index (API.GetMetroStationResp stop) =
   , padding $ Padding 8 8 8 8
   , cornerRadius 12.0
   -- , margin $ MarginHorizontal 8 8
-  , visibility $ boolToVisibility $ Mb.isJust $ findStopInVehicleData (API.GetMetroStationResp stop) state
+  , visibility $ boolToVisibility $ Mb.isJust $ findStopInVehicleData (API.FRFSStationAPI stop) state
   ]
   [ textView
-    $ [ text $ "Next Bus in " <> (Mb.maybe "10" (\item -> Mb.fromMaybe "10" item.nextStopTravelTime) $ findStopInVehicleData (API.GetMetroStationResp stop) state) <> " min"
+    $ [ text $ "Next Bus in " <> (Mb.maybe "10" (\item -> Mb.fromMaybe "10" item.nextStopTravelTime) $ findStopInVehicleData (API.FRFSStationAPI stop) state) <> " min"
       , margin $ MarginLeft 8
       ]
     <> FontStyle.body1 CTA.TypoGraphy
   , linearLayout [weight 1.0] []
   , textView
-    $ [ text $  extractTimeInHHMMA $ EHC.getCurrentUTC "" -- $ Mb.maybe (EHC.getCurrentUTC "") (\item -> Mb.fromMaybe (EHC.getCurrentUTC "") item.nextStopTravelTime) $ findStopInVehicleData (API.GetMetroStationResp stop) state
+    $ [ text $  extractTimeInHHMMA $ EHC.getCurrentUTC "" -- $ Mb.maybe (EHC.getCurrentUTC "") (\item -> Mb.fromMaybe (EHC.getCurrentUTC "") item.nextStopTravelTime) $ findStopInVehicleData (API.FRFSStationAPI stop) state
       ]
     <> FontStyle.body1 CTA.TypoGraphy
   ]
   where
     extractTimeInHHMMA timeStr = EHC.convertUTCtoISC timeStr "hh" <> ":" <> EHC.convertUTCtoISC timeStr "mm" <> " " <> EHC.convertUTCtoISC timeStr "a"
 
-findStopInVehicleData :: API.GetMetroStationResp -> ST.BusTrackingScreenState -> Mb.Maybe ST.VehicleData
-findStopInVehicleData (API.GetMetroStationResp stop) state = DA.find (\item -> item.nextStop == stop.code) state.data.vehicleData -- && Mb.isJust item.nextStopTravelTime
+findStopInVehicleData :: API.FRFSStationAPI -> ST.BusTrackingScreenState -> Mb.Maybe ST.VehicleData
+findStopInVehicleData (API.FRFSStationAPI stop) state = DA.find (\item -> item.nextStop == stop.code) state.data.vehicleData -- && Mb.isJust item.nextStopTravelTime

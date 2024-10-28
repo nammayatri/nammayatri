@@ -356,7 +356,7 @@ data TICKET_BOOKING_SCREEN_OUTPUT =  GET_BOOKING_INFO_SCREEN TicketBookingScreen
                                     | GO_TO_TICKET_BOOK TicketBookingScreenState String
                                     
 
-data METRO_TICKET_STATUS_SCREEN_OUTPUT = GO_TO_METRO_TICKET_DETAILS MetroTicketStatusScreenState MetroTicketBookingStatus
+data METRO_TICKET_STATUS_SCREEN_OUTPUT = GO_TO_METRO_TICKET_DETAILS MetroTicketStatusScreenState FRFSTicketBookingStatusAPIRes
                                        | REFRESH_STATUS_AC MetroTicketStatusScreenState
                                        | GO_TO_TRY_AGAIN_PAYMENT MetroTicketStatusScreenState
                                        | GO_TO_HOME_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN 
@@ -383,7 +383,7 @@ data METRO_TICKET_DETAILS_SCREEN_OUTPUT = METRO_TICKET_DETAILS_SCREEN_OUTPUT_NO_
 
 data METRO_MY_TICKETS_SCREEN_OUTPUT = METRO_MY_TICKETS_SCREEN_OUTPUT_NO_OUTPUT
                                     | GO_TO_METRO_TICKET_DETAILS_FLOW String
-                                    | GO_TO_METRO_TICKET_STAUS_FLOW MetroTicketBookingStatus 
+                                    | GO_TO_METRO_TICKET_STAUS_FLOW FRFSTicketBookingStatusAPIRes 
                                     | GO_HOME_FROM_MEtRO_MY_TICKETS_SCREEN 
                                     | GO_HOME_FROM_METRO_MY_TICKETS
                                     | GO_METRO_BOOKING_FROM_METRO_MY_TICKETS

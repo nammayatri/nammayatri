@@ -20,7 +20,7 @@ import Common.Types.App as Common
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Screens.SelectBusRoute.ScreenData (SelectBusRouteScreenState)
-import Services.API (FrfsQuote(..), FrfsGetRouteResp(..))
+import Services.API (FrfsQuote(..), FRFSRouteAPI(..))
 
 instance showAction :: Show Action where
   show _ = ""

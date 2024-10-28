@@ -86,8 +86,8 @@ screen initialState =
     getQuotes push = do
       let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-        (MetroBookingConfigRes fcResponse) <- Remote.getMetroBookingConfigBT (show city)
-        liftFlowBT $ push $ MetroBookingConfigAction (MetroBookingConfigRes fcResponse)
+        (FRFSConfigAPIRes fcResponse) <- Remote.getFRFSBookingConfigBT (show city)
+        liftFlowBT $ push $ MetroBookingConfigAction (FRFSConfigAPIRes fcResponse)
           
 
         let config = getAppConfig appConfig
@@ -105,7 +105,7 @@ getSDKPolling bookingId delayDuration state push action = do
   let localPoolingStatus = runFn3 getFromCache (show METRO_PAYMENT_SDK_POLLING) Nothing Just
       
   if state.props.currentStage == PaymentSDKPooling && localPoolingStatus == Just true then do
-      (GetMetroBookingStatusResp (MetroTicketBookingStatus metroTicketStatusResp)) <- Remote.getMetroStatusBT bookingId 
+      (GetMetroBookingStatusResp (FRFSTicketBookingStatusAPIRes metroTicketStatusResp)) <- Remote.getMetroStatusBT bookingId 
       let orderResp = metroTicketStatusResp.payment >>= \(FRFSBookingPaymentAPI paymentInfo) -> paymentInfo.paymentOrder 
       case orderResp of
         Just (CreateOrderRes createOrderResp) -> do
@@ -139,7 +139,7 @@ view :: forall w . (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -
 view push state =
   let
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-    MetroBookingConfigRes metroBookingConfigResp = state.data.metroBookingConfigResp
+    FRFSConfigAPIRes metroBookingConfigResp = state.data.metroBookingConfigResp
     cityMetroConfig = getMetroConfigFromCity city metroBookingConfigResp.isEventOngoing (show state.props.ticketServiceType)
     config = getAppConfig appConfig
     metroConfig = getMetroConfigFromAppConfig config (show city)
@@ -193,7 +193,7 @@ routeListView state push =
     , stroke ("1," <> Color.borderColorLight)
     , cornerRadius 5.0
     , onAnimationEnd push $ const ListExpandAinmationEnd
-    ](DA.mapWithIndex (\index (FrfsGetRouteResp route) ->
+    ](DA.mapWithIndex (\index (FRFSRouteAPI route) ->
         let
           routeCode = route.code
           routeName = route.shortName
@@ -530,7 +530,7 @@ headerView state push =
 
 incrementDecrementView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> MetroConfig -> Boolean -> PrestoDOM (Effect Unit) w
 incrementDecrementView push state metroConfig busClicked=
-  let (MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
+  let (FRFSConfigAPIRes metroBookingConfigResp) = state.data.metroBookingConfigResp
       ticketLimit = if state.data.ticketType == ST.ROUND_TRIP_TICKET then metroBookingConfigResp.roundTripTicketLimit else metroBookingConfigResp.oneWayTicketLimit
       limitReached = (state.data.ticketType == ST.ROUND_TRIP_TICKET && state.data.ticketCount >= ticketLimit) || (state.data.ticketType == ST.ONE_WAY_TICKET && state.data.ticketCount >= ticketLimit) || (busClicked)
   in 
@@ -596,7 +596,7 @@ incrementDecrementView push state metroConfig busClicked=
 
 limitReachedView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
 limitReachedView push state = 
-  let (MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
+  let (FRFSConfigAPIRes metroBookingConfigResp) = state.data.metroBookingConfigResp
       ticketLimit = if state.data.ticketType == ST.ROUND_TRIP_TICKET then metroBookingConfigResp.roundTripTicketLimit else metroBookingConfigResp.oneWayTicketLimit
       limitReached = (state.data.ticketType == ST.ROUND_TRIP_TICKET && state.data.ticketCount >= ticketLimit) || (state.data.ticketType == ST.ONE_WAY_TICKET && state.data.ticketCount >= ticketLimit)
   in 
@@ -796,15 +796,15 @@ offerInfoView push state =
   , margin $ Margin 4 8 0 0
   ]  <> FontStyle.paragraphText TypoGraphy
   where
-    (MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
+    (FRFSConfigAPIRes metroBookingConfigResp) = state.data.metroBookingConfigResp
     ticketsBookedInEvent = fromMaybe 0 metroBookingConfigResp.ticketsBookedInEvent
     freeTicketInterval = fromMaybe 9999 metroBookingConfigResp.freeTicketInterval
     freeTicketCount = ((ticketsBookedInEvent + state.data.ticketCount) `div` freeTicketInterval) - (ticketsBookedInEvent `div` freeTicketInterval)
     ticketsAfterLastFreeTicket = ((ticketsBookedInEvent + state.data.ticketCount) `mod` freeTicketInterval)
-    offerTextConfig = getOfferTextConfig freeTicketCount freeTicketInterval ticketsAfterLastFreeTicket (MetroBookingConfigRes metroBookingConfigResp)
+    offerTextConfig = getOfferTextConfig freeTicketCount freeTicketInterval ticketsAfterLastFreeTicket (FRFSConfigAPIRes metroBookingConfigResp)
 
-    getOfferTextConfig :: Int -> Int -> Int -> MetroBookingConfigRes -> {color :: String, text :: String, visibility :: Boolean}
-    getOfferTextConfig freeTicketCount freeTicketInterval ticketsAfterLastFreeTicket (MetroBookingConfigRes metroBookingConfigResp) = do
+    getOfferTextConfig :: Int -> Int -> Int -> FRFSConfigAPIRes -> {color :: String, text :: String, visibility :: Boolean}
+    getOfferTextConfig freeTicketCount freeTicketInterval ticketsAfterLastFreeTicket (FRFSConfigAPIRes metroBookingConfigResp) = do
       if freeTicketCount > 0 then {color : Color.green900, text : (getString $ FREE_TICKET_AVAILABLE (show $ freeTicketCount * (fromMaybe 0 metroBookingConfigResp.maxFreeTicketCashback)) (show freeTicketCount)), visibility : true}
         else if ticketsAfterLastFreeTicket == (freeTicketInterval - 1) then {color : Color.metroBlue, text : (getString NEXT_FREE_TICKET), visibility : true} 
         else {color : Color.transparent, text : "", visibility : false}
@@ -846,8 +846,8 @@ offersInfoView push state =
     appliedDiscountCodes :: Array String
     appliedDiscountCodes = maybe [] extractDiscountCodes state.data.applyDiscounts
 
-    extractDiscountCodes :: Array DiscountItem -> Array String
-    extractDiscountCodes discounts = map (\(DiscountItem discountItem) -> discountItem.code) discounts
+    extractDiscountCodes :: Array FRFSDiscountReq -> Array String
+    extractDiscountCodes discounts = map (\(FRFSDiscountReq discountItem) -> discountItem.code) discounts
     
     offerText :: String
     offerText = case DA.find (\discount -> discount.code == (fromMaybe "" $ DA.head appliedDiscountCodes)) state.data.discounts of
@@ -879,7 +879,7 @@ offerSelectionView push state =
     ] <> map (\discount -> offerCardView push state discount) state.data.discounts
   ]
 
-offerCardView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> DiscountObj -> PrestoDOM (Effect Unit) w
+offerCardView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> FRFSDiscountRes -> PrestoDOM (Effect Unit) w
 offerCardView push state discount =
   -- let 
   --   allTexts = 

@@ -17,7 +17,7 @@ import Components.PrimaryButton as PrimaryButton
 import Font.Style as FontStyle
 import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC, getNewIDWithTag)
 import Helpers.Utils (convertUTCToISTAnd12HourFormat, fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, getFirstRoute)
-import Services.API (FrfsGetRouteResp(..), FrfsSearchResp(..), FrfsQuotesRes(..), FrfsQuote(..)) --(BookingStatus(..), TicketPlaceResp(..), PlaceType(..))
+import Services.API (FRFSRouteAPI(..), FrfsSearchResp(..), FrfsQuotesRes(..), FrfsQuote(..)) --(BookingStatus(..), TicketPlaceResp(..), PlaceType(..))
 import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
 import Halogen.VDom.DOM.Prop (Prop)
 import Data.Array as DA
@@ -157,7 +157,7 @@ routeRadioComponent state push (FrfsQuote quote) =
   in
   case route of
     Nothing -> dummyView state
-    Just (FrfsGetRouteResp route') -> 
+    Just (FRFSRouteAPI route') -> 
       linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT

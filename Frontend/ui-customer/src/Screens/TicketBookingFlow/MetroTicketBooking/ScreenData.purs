@@ -17,7 +17,7 @@ module Screens.TicketBookingFlow.MetroTicketBooking.ScreenData where
 import Prelude
 import Screens.Types as ST
 import ConfigProvider
-import Services.API (MetroBookingConfigRes(..), FrfsGetRouteResp(..))
+import Services.API (FRFSConfigAPIRes(..), FRFSRouteAPI(..))
 import Data.Maybe as Mb
 import Data.Array 
 import Services.API as API
@@ -41,10 +41,10 @@ initData = {
   , routeList : []
   , stopsSearchedList : []
   , searchRideType : API.BUS_DESTINATION
-  , metroBookingConfigResp : MetroBookingConfigRes {bookingEndTime: "", bookingStartTime: "", oneWayTicketLimit: 0, roundTripTicketLimit: 0, metroStationTtl: 10080, discount: 0.0, customEndTime : "", customDates : [], isEventOngoing : Mb.Nothing, freeTicketInterval : Mb.Nothing, maxFreeTicketCashback : Mb.Nothing, ticketsBookedInEvent : Mb.Nothing , isCancellationAllowed : Mb.Just true}
+  , metroBookingConfigResp : FRFSConfigAPIRes {bookingEndTime: "", bookingStartTime: "", oneWayTicketLimit: 0, roundTripTicketLimit: 0, metroStationTtl: 10080, discount: 0.0, customEndTime : "", customDates : [], isEventOngoing : Mb.Nothing, freeTicketInterval : Mb.Nothing, maxFreeTicketCashback : Mb.Nothing, ticketsBookedInEvent : Mb.Nothing , isCancellationAllowed : Mb.Just true}
   , eventDiscountAmount : Mb.Nothing
-  , discounts : [] -- [womenDiscount] <> [seniorCitizenDiscount]
-  , applyDiscounts : Nothing -- Just exampleDiscounts 
+  , discounts : []
+  , applyDiscounts : Nothing
   },
   props: {
     isLimitExceeded : false
@@ -65,39 +65,3 @@ initData = {
   },
   config :  getAppConfig appConfig
 }
-
-
-
-womenDiscount :: API.DiscountObj
-womenDiscount = 
-  { code: "WOMEN"
-  , description: "Women Discount"
-  , eligibility: false
-  , price: 
-      { amount: 20.0
-      , currency: "INR"
-      }
-  , title: "Women 50% Off"
-  , tnc: "<b>Only eligible for women above 18 years old</b>"
-  }
-
-seniorCitizenDiscount :: API.DiscountObj
-seniorCitizenDiscount = 
-  { code: "SENIORCITIZEN"
-  , description: "Senior Citizen Discount"
-  , eligibility: true
-  , price: 
-      { amount: 16.0
-      , currency: "INR"
-      }
-  , title: "Senior Citizen 40% Off"
-  , tnc: "<b>Only eligible for adults with age above 70 years</b>"
-  }
-
-exampleDiscounts :: Array API.DiscountItem
-exampleDiscounts =
-  [ API.DiscountItem
-    { code: "SENIORCITIZEN"
-    , quantity: 1
-    }
-  ]

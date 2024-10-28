@@ -78,7 +78,7 @@ import Resources.Constants (getDelayForAutoComplete)
 import Screens.SearchLocationScreen.ComponentConfig (locationTagBarConfig, separatorConfig, primaryButtonConfig, mapInputViewConfig, menuButtonConfig, confirmLocBtnConfig, locUnserviceablePopUpConfig, primaryButtonRequestRideConfig, rentalRateCardConfig, chooseYourRideConfig,noStopRouteConfig)
 import Screens.SearchLocationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps, Station, ZoneType(..),RideType(..))
-import Services.API(GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..),FrfsGetRouteResp(..),GetMetroStationResp(..))
+import Services.API(GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..),FRFSRouteAPI(..),FRFSStationAPI(..))
 import Services.Backend (getQuotes, rideBooking)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
@@ -593,8 +593,8 @@ navbarlayout state push =
  let 
   cachedStops = getKeyInSharedPrefKeys (show RECENT_BUS_STOPS)
   cachedRoutes = getKeyInSharedPrefKeys (show RECENT_BUS_ROUTES)
-  (decodedCachedStops :: MB.Maybe (Array GetMetroStationResp)) = (decodeForeignAny (parseJSON cachedStops) MB.Nothing)
-  (decodedCachedRoutes :: MB.Maybe (Array FrfsGetRouteResp)) = (decodeForeignAny (parseJSON cachedRoutes) MB.Nothing)
+  (decodedCachedStops :: MB.Maybe (Array FRFSStationAPI)) = (decodeForeignAny (parseJSON cachedStops) MB.Nothing)
+  (decodedCachedRoutes :: MB.Maybe (Array FRFSRouteAPI)) = (decodeForeignAny (parseJSON cachedRoutes) MB.Nothing)
   validDecodedStops = MB.fromMaybe [] decodedCachedStops
   validDecodedRoutes = MB.fromMaybe [] decodedCachedRoutes
  in
@@ -676,8 +676,8 @@ searchLocationView push state globalProps = let
     findPlaceConfig :: SearchLocationScreenState -> InfoState
     findPlaceConfig state =
       let appName = MB.fromMaybe state.appConfig.appData.name $ runFn3 getAnyFromWindow "appName" MB.Nothing MB.Just
-          (decodedCachedStops :: (Array GetMetroStationResp)) = MB.fromMaybe [] (decodeForeignAny (parseJSON (getKeyInSharedPrefKeys (show RECENT_BUS_STOPS))) MB.Nothing)
-          (decodedCachedRoutes :: (Array FrfsGetRouteResp)) = MB.fromMaybe [] (decodeForeignAny (parseJSON (getKeyInSharedPrefKeys (show RECENT_BUS_ROUTES))) MB.Nothing)
+          (decodedCachedStops :: (Array FRFSStationAPI)) = MB.fromMaybe [] (decodeForeignAny (parseJSON (getKeyInSharedPrefKeys (show RECENT_BUS_STOPS))) MB.Nothing)
+          (decodedCachedRoutes :: (Array FRFSRouteAPI)) = MB.fromMaybe [] (decodeForeignAny (parseJSON (getKeyInSharedPrefKeys (show RECENT_BUS_ROUTES))) MB.Nothing)
       in { 
         descImg : "ny_ic_empty_suggestions"
       , viewVisibility : boolToVisibility $ 
@@ -715,8 +715,8 @@ predictionsView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenStat
 predictionsView push state globalProps = let 
   cachedStops = getKeyInSharedPrefKeys (show RECENT_BUS_STOPS)
   cachedRoutes = getKeyInSharedPrefKeys (show RECENT_BUS_ROUTES)
-  (decodedCachedStops :: MB.Maybe (Array GetMetroStationResp)) = (decodeForeignAny (parseJSON cachedStops) MB.Nothing)
-  (decodedCachedRoutes :: MB.Maybe (Array FrfsGetRouteResp)) = (decodeForeignAny (parseJSON cachedRoutes) MB.Nothing)
+  (decodedCachedStops :: MB.Maybe (Array FRFSStationAPI)) = (decodeForeignAny (parseJSON cachedStops) MB.Nothing)
+  (decodedCachedRoutes :: MB.Maybe (Array FRFSRouteAPI)) = (decodeForeignAny (parseJSON cachedRoutes) MB.Nothing)
   validDecodedStops = MB.fromMaybe [] decodedCachedStops
   validDecodedRoutes = MB.fromMaybe [] decodedCachedRoutes
   viewVisibility = boolToVisibility $ 
@@ -849,9 +849,9 @@ predictionsView push state globalProps = let
               , types : MB.Nothing
               }) filteredStations
     
-    busRouteArray :: Array FrfsGetRouteResp -> Array LocationListItemState
+    busRouteArray :: Array FRFSRouteAPI -> Array LocationListItemState
     busRouteArray busRoute = 
-      map (\(FrfsGetRouteResp route) -> {
+      map (\(FRFSRouteAPI route) -> {
           prefixImageUrl: fetchImage FF_ASSET "ny_ic_route_bus",
           postfixImageUrl: "",
           postfixImageVisibility: false,
@@ -883,9 +883,9 @@ predictionsView push state globalProps = let
           types: MB.Nothing 
         }) busRoute
 
-    busStopArray :: Array GetMetroStationResp -> Array LocationListItemState
+    busStopArray :: Array FRFSStationAPI -> Array LocationListItemState
     busStopArray busStops = 
-      map (\(GetMetroStationResp stops) -> {
+      map (\(FRFSStationAPI stops) -> {
           prefixImageUrl: fetchImage FF_ASSET "ny_ic_loc_grey",
           postfixImageUrl: "",
           postfixImageVisibility: false,
