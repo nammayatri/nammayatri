@@ -41,7 +41,6 @@ import qualified "dashboard-helper-api" Dashboard.Common.SpecialZone as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Ride as Common
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Volunteer as Common
-import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Customer as Common
 import qualified "dashboard-helper-api" Dashboard.SafetyPlatform as Safety
 import qualified Data.List as List
 import Data.OpenApi hiding (email, name)
@@ -102,7 +101,6 @@ data Endpoint
   = RideAPI Common.RideEndpoint
   | DriverAPI Common.DriverEndpoint
   | DriverRegistrationAPI Common.DriverRegistrationEndpoint
-  | CustomerAPI Common.CustomerEndpoint
   | ExotelAPI Common.ExotelEndpoint
   | IssueAPI Common.IssueEndpoint
   | VolunteerAPI Common.VolunteerEndpoint
@@ -134,7 +132,6 @@ instance Show Endpoint where
     RideAPI e -> "RideAPI " <> show e
     DriverAPI e -> "DriverAPI " <> show e
     DriverRegistrationAPI e -> "DriverRegistrationAPI " <> show e
-    CustomerAPI e -> "CustomerAPI " <> show e
     ExotelAPI e -> "ExotelAPI " <> show e
     IssueAPI e -> "IssueAPI " <> show e
     VolunteerAPI e -> "VolunteerAPI " <> show e
@@ -190,10 +187,6 @@ instance Read Endpoint where
                ]
             ++ [ (DriverRegistrationAPI v1, r2)
                  | r1 <- stripPrefix "DriverRegistrationAPI " r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1
-               ]
-            ++ [ (CustomerAPI v1, r2)
-                 | r1 <- stripPrefix "CustomerAPI " r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
             ++ [ (ExotelAPI v1, r2)

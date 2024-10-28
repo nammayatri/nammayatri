@@ -15,7 +15,7 @@
 module API.RiderPlatform.RideBooking.Frontend where
 
 import qualified "rider-app" API.Dashboard.RideBooking.Frontend as BAP
-import qualified Dashboard.RiderPlatform.Customer as Common
+import qualified Dashboard.Common as Common
 import qualified "rider-app" Domain.Action.UI.Frontend as DFrontend
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "rider-app" Domain.Types.Person as DP
