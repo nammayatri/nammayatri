@@ -159,21 +159,29 @@ headerView push state =
       , linearLayout
         [ weight 1.0
         ] []
-      , imageView
-        [ width $ V 32
-        , height $ V 32
-        , gravity RIGHT
-        , padding $ Padding 4 4 4 4
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , orientation HORIZONTAL
         , onClick push $ const TicketIconClicked
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_ticket_icon_yellow"
-        , rippleColor Color.rippleShade
+        , gravity CENTER_VERTICAL
         ]
-      , textView $
-        [ text "Tickets"
-        , color Color.yellow900
-        , gravity RIGHT
-        , singleLine true
-        , maxLines 1
+        [ imageView
+          [ width $ V 32
+          , height $ V 32
+          , gravity RIGHT
+          , padding $ Padding 4 4 4 4
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_ticket_icon_yellow"
+          , rippleColor Color.rippleShade
+          ]
+        , textView $
+          [ text "Tickets"
+          , color Color.yellow900
+          , gravity RIGHT
+          , singleLine true
+          , maxLines 1
+          , rippleColor Color.rippleShade
+          ]
         ]
       ]
     , linearLayout
@@ -358,6 +366,7 @@ ticketCardView push ticketData =
     , width MATCH_PARENT
     , orientation VERTICAL
     , gravity CENTER_VERTICAL
+    , margin $ MarginBottom 18
     ]
     [ singleStopView push ticketData true
     , textView $
@@ -369,8 +378,7 @@ ticketCardView push ticketData =
     , singleStopView push ticketData false
     ]
   , linearLayout 
-    [ margin $ MarginVertical 18 0 
-    , visibility $ boolToVisibility isTicketExpired
+    [ visibility $ boolToVisibility isTicketExpired
     ] 
     [ horizontalDottedSeparatorView ]
   , linearLayout

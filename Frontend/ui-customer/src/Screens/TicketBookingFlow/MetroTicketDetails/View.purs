@@ -599,9 +599,10 @@ qrCodeView push state =
     headerText = (show $ state.props.currentTicketIndex + 1) 
                   <> if state.data.noOfTickets > 1 then  "/" <> (show $ length state.data.ticketsInfo) else "" 
                   <> ticketStr
-    qrAplha = case currentTicket of 
-      Just ticket -> if ticket.status == "EXPIRED" then 0.25 else 1.0
-      Nothing -> 1.0
+    qrAplha = if isTicketExpired then 0.25 else 1.0
+    isTicketExpired = case currentTicket of 
+                        Just ticket -> ticket.status == "EXPIRED"
+                        Nothing -> false
   in 
     linearLayout [
       width MATCH_PARENT
@@ -617,21 +618,21 @@ qrCodeView push state =
       , text $ headerText
       , color Color.black500
       , gravity CENTER
-      -- , visibility $ boolToVisibility $ not $ isBusTicketBooking state
+      , visibility $ boolToVisibility $ not $ isBusTicketBooking state
       ] <> FontStyle.subHeading1 TypoGraphy
     , linearLayout[
         width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       , gravity CENTER
-      , alpha qrAplha
+      -- , alpha qrAplha
       ][
         imageView [
           width $ V 32
         , height $ V 32
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left_grey"
         , onClick push $ const PrevTicketClick
-        , visibility $  boolToInvisibility $ state.data.noOfTickets > 1 
+        , visibility $ boolToInvisibility $ state.data.noOfTickets > 1 
         ]
       , linearLayout [
           height WRAP_CONTENT
@@ -641,8 +642,18 @@ qrCodeView push state =
           width $ V 218
         , height $ V 218
         , id $ getNewIDWithTag "metro_ticket_qr_code"
-        , cornerRadius 12.0
+        , cornerRadius 24.0
+        , visibility $ boolToVisibility $ not $ isTicketExpired
         , onAnimationEnd push (const (TicketQRRendered (getNewIDWithTag "metro_ticket_qr_code") qrString))
+        ]
+      , PrestoAnim.animationSet [ Anim.fadeInWithDelay 50 true ] $ imageView [
+          width $ V 218
+        , height $ V 218
+        , id $ getNewIDWithTag "metro_ticket_qr_code"
+        , cornerRadius 24.0
+        , visibility $ boolToVisibility $ isTicketExpired
+        -- , onAnimationEnd push (const (TicketQRRendered (getNewIDWithTag "metro_ticket_qr_code") qrString))
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_qr_code_expired"
         ]
       , linearLayout [
           height WRAP_CONTENT

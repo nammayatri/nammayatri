@@ -3411,8 +3411,6 @@ newtype FRFSTicketAPI = FRFSTicketAPI {
 -- FRFSTicketBookingStatus = NEW | APPROVED | PAYMENT_PENDING | CONFIRMING | FAILED | CONFIRMED
 -- FRFSTicketStatus = ACTIVE | EXPIRED | USED
 
-data FRFSTicketStatus = ACTIVE | EXPIRED | USED
-
 instance makeConfirmMetroQuoteReq :: RestEndpoint ConfirmMetroQuoteReq  where
  makeRequest reqBody@(ConfirmMetroQuoteReq quoteId) headers = defaultMakeRequest POST (EP.confirmMetroQuote quoteId) headers reqBody Nothing
  encodeRequest req = standardEncode req

@@ -157,7 +157,7 @@ foreign import setEnabled :: String -> Boolean -> Unit
 
 foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
 
-generateQR:: EffectFn4 String String Int Int Unit
+generateQR :: EffectFn4 String String Int Int Unit
 generateQR  = mkEffectFn4 \qrString viewId size margin ->  launchAff_  $ void $ makeAff $
   \cb ->
     (runEffectFn5 _generateQRCode qrString viewId size margin (Right >>> cb))

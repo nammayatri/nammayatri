@@ -7030,9 +7030,9 @@ aadhaarVerificationFlow offerType = do
           let errorCode = HU.decodeErrorCode errorPayload.response.errorMessage
           case errorCode of
             "AADHAAR_NUMBER_NOT_EXIST" -> pure $ toast "Aadhaar Does not exist"
-            "AADHAAR_ALREADY_LINKED" -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+            "AADHAAR_ALREADY_LINKED" -> pure $ toast $ HU.decodeErrorMessage errorPayload.response.errorMessage
             "INVALID_AADHAAR" -> pure $ toast $ HU.decodeErrorMessage errorPayload.response.errorMessage
-            _ -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+            _ -> pure $ toast $ HU.decodeErrorMessage errorPayload.response.errorMessage
           aadhaarVerificationFlow offerType
     VERIFY_AADHAAR_OTP state -> do
       let _ = spy "coming aa rha hai?" ""
@@ -7041,7 +7041,6 @@ aadhaarVerificationFlow offerType = do
       void $ lift $ lift $ toggleLoader false
       case res of
         Right (VerifyAadhaarOTPResp resp) -> do
-          let _ = spy "ahaksdfdf" resp
           if resp.code == "1002"
             then do
               let appliedDiscountItem = Just $ [ API.FRFSDiscountReq
@@ -7083,22 +7082,6 @@ aadhaarVerificationFlow offerType = do
             _ -> pure $ toast $ HU.decodeErrorMessage errorPayload.response.errorMessage
           modifyScreenState $ AadhaarVerificationScreenType (\aadhaarVerification -> aadhaarVerification{props{currentStage = EnterAadhaar, btnActive = false}})
           aadhaarVerificationFlow offerType
-    -- GO_TO_HOME_FROM_AADHAAR -> do
-    --   (GlobalState state) <- getState
-    --   modifyScreenState $ AadhaarVerificationScreenType (\_ -> state.aadhaarVerificationScreen)
-    --   getDriverInfoFlow Nothing Nothing Nothing false Nothing false
-    -- LOGOUT_FROM_AADHAAR -> logoutFlow
-    -- SEND_UNVERIFIED_AADHAAR_DATA state -> do
-    --   void $ lift $ lift $ toggleLoader true
-    --   unVerifiedAadhaarDataResp <- lift $ lift $ Remote.unVerifiedAadhaarData state.data.driverName state.data.driverGender state.data.driverDob
-    --   case unVerifiedAadhaarDataResp of
-    --     Right resp -> do
-    --       void $ lift $ lift $ toggleLoader false
-    --       if state.props.fromHomeScreen then getDriverInfoFlow Nothing Nothing Nothing false Nothing false else onBoardingFlow
-    --     Left errorPayload -> do
-    --       void $ lift $ lift $ toggleLoader false
-    --       void $ pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
-    --       aadhaarVerificationFlow
     GO_TO_TICKET_BOOKING_FROM_AADHAAR -> metroTicketBookingFlow
     _ -> aadhaarVerificationFlow offerType
 
