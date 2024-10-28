@@ -4245,7 +4245,7 @@ newtype FrfsGetRouteResp = FrfsGetRouteResp {
   totalStops :: Maybe Int,
   waypoints :: Maybe (Array LatLong),
   stations :: Maybe (Array GetMetroStationResp),
-  travelTime :: Maybe String,
+  -- travelTime :: Maybe String,
   vehicleServiceTier :: Maybe FRFSVehicleServiceTierAPI
   -- priceWithCurrency :: Maybe PriceAPIEntity
 }
