@@ -142,16 +142,6 @@ public class Utils {
                             break;
 
                         case SplitInstallSessionStatus.INSTALLED:
-                            SplitInstallHelper.loadLibrary(context, "jsinspector");
-                            SplitInstallHelper.loadLibrary(context, "jscexecutor");
-                            SplitInstallHelper.loadLibrary(context, "turbomodulejsijni");
-                            SplitInstallHelper.loadLibrary(context, "imagepipeline");
-                            SplitInstallHelper.loadLibrary(context, "reactnativeblob");
-                            SplitInstallHelper.loadLibrary(context, "native-imagetranscoder");
-                            SplitInstallHelper.loadLibrary(context, "logger");
-                            SplitInstallHelper.loadLibrary(context, "yoga");
-                            SplitInstallHelper.loadLibrary(context, "fbjni");
-                            SplitInstallHelper.loadLibrary(context, "reactnativejni");
                             if (sharedPref!= null) sharedPref.edit().putBoolean("GLSDK_INSTALLED", true).apply();
                             if (!installOnly){
                                 Intent intent = new Intent();
@@ -170,7 +160,19 @@ public class Utils {
         splitInstallManager.registerListener(listener);
         splitInstallManager
                 .startInstall(request)
-                .addOnSuccessListener(sessionId -> Log.d("successSessionId", "" + sessionId))
+                .addOnSuccessListener(sessionId -> {
+                    Log.d("successSessionId", "" + sessionId);
+                    SplitInstallHelper.loadLibrary(context, "jsinspector");
+                    SplitInstallHelper.loadLibrary(context, "jscexecutor");
+                    SplitInstallHelper.loadLibrary(context, "turbomodulejsijni");
+                    SplitInstallHelper.loadLibrary(context, "imagepipeline");
+                    SplitInstallHelper.loadLibrary(context, "reactnativeblob");
+                    SplitInstallHelper.loadLibrary(context, "native-imagetranscoder");
+                    SplitInstallHelper.loadLibrary(context, "logger");
+                    SplitInstallHelper.loadLibrary(context, "yoga");
+                    SplitInstallHelper.loadLibrary(context, "fbjni");
+                    SplitInstallHelper.loadLibrary(context, "reactnativejni");
+                })
                 .addOnFailureListener(exception -> FirebaseCrashlytics.getInstance().recordException(exception));
     }
 }
