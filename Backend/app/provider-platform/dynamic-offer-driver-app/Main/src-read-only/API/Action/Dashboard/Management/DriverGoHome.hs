@@ -24,13 +24,13 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getDriverGoHomeGetHomeLocation merchantId city :<|> postDriverGoHomeUpdateHomeLocation merchantId city :<|> postDriverGoHomeIncrementGoToCount merchantId city :<|> getDriverGoHomeGetGoHomeInfo merchantId city
 
 getDriverGoHomeGetHomeLocation :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverGoHome.GetHomeLocationsRes)
-getDriverGoHomeGetHomeLocation a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverGoHome.getDriverGoHomeGetHomeLocation a3 a2 a1
+getDriverGoHomeGetHomeLocation a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverGoHome.getDriverGoHomeGetHomeLocation a3 a2 a1
 
 postDriverGoHomeUpdateHomeLocation :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverGoHome.UpdateDriverHomeLocationReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postDriverGoHomeUpdateHomeLocation a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverGoHome.postDriverGoHomeUpdateHomeLocation a4 a3 a2 a1
+postDriverGoHomeUpdateHomeLocation a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverGoHome.postDriverGoHomeUpdateHomeLocation a4 a3 a2 a1
 
 postDriverGoHomeIncrementGoToCount :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postDriverGoHomeIncrementGoToCount a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverGoHome.postDriverGoHomeIncrementGoToCount a3 a2 a1
+postDriverGoHomeIncrementGoToCount a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverGoHome.postDriverGoHomeIncrementGoToCount a3 a2 a1
 
 getDriverGoHomeGetGoHomeInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverGoHome.CachedGoHomeRequestInfoRes)
-getDriverGoHomeGetGoHomeInfo a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverGoHome.getDriverGoHomeGetGoHomeInfo a3 a2 a1
+getDriverGoHomeGetGoHomeInfo a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverGoHome.getDriverGoHomeGetGoHomeInfo a3 a2 a1

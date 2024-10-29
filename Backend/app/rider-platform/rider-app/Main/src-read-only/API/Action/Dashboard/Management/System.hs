@@ -23,4 +23,4 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = postSystemRunQuery merchantId city
 
 postSystemRunQuery :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.System.QueryData -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postSystemRunQuery a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.System.postSystemRunQuery a3 a2 a1
+postSystemRunQuery a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.System.postSystemRunQuery a3 a2 a1
