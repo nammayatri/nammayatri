@@ -70,6 +70,7 @@ data Action =
             | RideCompletedAC RideCompletedCard.Action
             | PrimaryButtonCarousel PrimaryButton.Action
             | PrimaryBtnRentalTripDetailsAC PrimaryButton.Action
+            | KeyboardCallback String
 
 instance showAction :: Show Action where
     show _ = ""
@@ -288,6 +289,14 @@ eval (SetIssueReportBannerItems bannerItem) state = continue state {
 }
 
 eval (BannerChanged item) state = continue state{customerIssue{currentPageIndex = fromMaybe 0 (fromString item)}}
+
+eval (KeyboardCallback keyBoardState) state = do 
+  let _ = spy "keyBoardState" keyBoardState 
+  let isOpen = case keyBoardState of
+                    "onKeyboardOpen" -> true
+                    "onKeyboardClose" -> false
+                    _ -> false 
+  continue state{isKeyBoardOpen = isOpen}
 
 eval _ state = update state
 

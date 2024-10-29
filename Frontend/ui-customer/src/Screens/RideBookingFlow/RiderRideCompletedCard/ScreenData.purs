@@ -54,6 +54,7 @@ initData = let
       wasOfferedAssistance : Nothing,
       nightSafety : Nothing
     }
+  , isKeyBoardOpen : false
   , rideRatingState : dummyPreviousRiderating
   , isSafetyCenterDisabled : false
   , bookingId : ""
