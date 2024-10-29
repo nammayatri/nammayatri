@@ -1749,6 +1749,9 @@ getRiderName req = do
       tagValue = Utils.getTagV2 Tags.RATING_TAGS Tags.RIDER_NAME tagGroups
    in tagValue
 
+getCancellationReason :: Spec.CancelReq -> Maybe Text
+getCancellationReason req = req.cancelReqMessage.cancelReqMessageDescriptor >>= (.descriptorShortDesc)
+
 mkFulfillmentState :: Enums.FulfillmentState -> Spec.FulfillmentState
 mkFulfillmentState stateCode =
   Spec.FulfillmentState
