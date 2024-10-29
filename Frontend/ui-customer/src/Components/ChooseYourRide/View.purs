@@ -107,8 +107,8 @@ addTipView push state =
   , gravity CENTER
   , clickable $ not isOneWaySpecialZoneRide
   , alpha $ if (not isOneWaySpecialZoneRide) then 1.0 else 0.5
-  , afterRender push $ const $ NoAction
-  , onClick push $ const $ if state.tipViewProps.stage == DEFAULT && (not isOneWaySpecialZoneRide) then AddTip else NoAction 
+  , afterRender push $ const $ NoAction state
+  , onClick push $ const $ if state.tipViewProps.stage == DEFAULT && (not isOneWaySpecialZoneRide) then AddTip state.tipViewProps else NoAction state
   , visibility $ boolToVisibility state.enableTips
   ] $ (case state.tipViewProps.stage of 
           DEFAULT -> [defaultTipView push state]
@@ -133,7 +133,7 @@ bottomLayoutView push config visibility' id' =
   , visibility visibility'
   , alignParentBottom "true,-1"
   , clickable true
-  , afterRender push $ const $ NoAction
+  , afterRender push $ const $ NoAction config
   , padding $ Padding 16 (if config.showPreferences then 16 else 0) 16 16
   , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5 
   ][ 
@@ -147,7 +147,7 @@ defaultTipView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , onClick push $ const $ AddTip
+  , onClick push $ const $ AddTip state.tipViewProps
   , gravity CENTER
   , clickable true
   ][textView $ 
@@ -167,7 +167,7 @@ tipSelectedView push state =
   , width MATCH_PARENT
   , gravity CENTER
   , clickable true
-  , onClick push $ const $ ChangeTip
+  , onClick push $ const $ ChangeTip state.tipViewProps
   ][ textView $ 
     [ text $ "₹" <> (show $ state.tipForDriver) <> " " <> getString TIP_ADDED
     , color Color.black900
@@ -191,7 +191,7 @@ selectTipView push state =
   , gravity CENTER
   , orientation VERTICAL
   ][ textView $ 
-    [ text $ getString A_TIP_HELPS_FIND_A_RIDE_QUICKER
+    [ text state.tipViewProps.primaryText
     , color Color.black900
     , margin $ MarginBottom 12
     ] <> FontStyle.body1 LanguageStyle
@@ -225,7 +225,7 @@ tipsHorizontalView push state =
             , gravity CENTER
             , padding $ if index == 0 then PaddingHorizontal 8 8 else Padding 0 0 0 0
             , stroke $ "1," <> (if (state.tipViewProps.activeIndex == index) then Color.blue800 else Color.grey900)
-            , onClick push $ const $ TipBtnClick index (fromMaybe 0 (state.customerTipArrayWithValues !! index))
+            , onClick push $ const $ TipBtnClick index (fromMaybe 0 (state.customerTipArrayWithValues !! index)) state.customerTipArrayWithValues
             , accessibility ENABLE
             , accessibilityHint $ "₹" <> show (fromMaybe 0 (state.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " : Button")
             ][textView $ 
@@ -412,7 +412,7 @@ chooseYourRideView push config =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , onAnimationEnd push (const NoAction)
+  , onAnimationEnd push (const $ NoAction config)
   ][  linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -619,7 +619,7 @@ quoteListView push config =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , afterRender push (const NoAction)
+    , afterRender push (const NoAction config)
     , margin $ MarginBottom if EHC.os == "IOS" then 44 else 0
     ]
     [scrollView
@@ -661,7 +661,7 @@ quoteListView push config =
                                 bookAnyConfig = getBookAnyProps estimates
                                 price = getMinMaxPrice bookAnyConfig item estimates
                                 capacity = getMinMaxCapacity bookAnyConfig item estimates
-                            ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length variantBasedList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
+                            ChooseVehicle.view (push <<< ChooseVehicleAC config.tipViewProps) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length variantBasedList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
                         ) variantBasedList
                   else 
                     Tuple "TopProvider" $ linearLayout
@@ -676,7 +676,7 @@ quoteListView push config =
                                 bookAnyConfig = getBookAnyProps estimates
                                 price = getMinMaxPrice bookAnyConfig item estimates
                                 capacity = getMinMaxCapacity bookAnyConfig item estimates
-                            ChooseVehicle.view (push <<< ChooseVehicleAC) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length topProviderList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
+                            ChooseVehicle.view (push <<< ChooseVehicleAC config.tipViewProps) (item{selectedEstimateHeight = config.selectedEstimateHeight, price = price, showInfo = true, capacity = capacity, singleVehicle = (length topProviderList == 1), currentEstimateHeight = config.currentEstimateHeight, services = services})
                         ) topProviderList)
            , if EHC.os /= "IOS" then bottomLayoutViewKeyed push config "BottomLayoutView" else Tuple "EmptyLL" $ linearLayout[][]-- TODO:: Temporary fix, should make scrollable list better
           ]
@@ -720,7 +720,7 @@ quoteListView push config =
       , id $ EHC.getNewIDWithTag id'
       , alignParentBottom "true,-1"
       , clickable true
-      , afterRender push $ const $ NoAction
+      , afterRender push $ const $ NoAction config
       , padding $ Padding 16 (if config.showPreferences then 16 else 0) 16 16
       , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5 
       ][ 
