@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">Namma Yatri</string>
+    <string name="app_name" translatable="false">Namma MTC</string>
     <string name="client_id" translatable="false">nammayatriconsumer</string>
     <string name="service" translatable="false">nammayatriconsumer</string>
     <string name="dev_port" translatable="false">8081</string>

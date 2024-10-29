@@ -141,7 +141,7 @@ logoView state =
         ][  imageView
               [ height $ V 52
               , width $ V 176
-              , imageWithFallback appLogo
+              , imageWithFallback "ny_ic_invoice_logo"
               ]
           ]
 
