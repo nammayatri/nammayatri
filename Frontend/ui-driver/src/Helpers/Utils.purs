@@ -375,6 +375,7 @@ getVehicleType vehicleType =
     "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getString OXYGEN
     "AMBULANCE_VENTILATOR" -> getString VENTILATOR
     "SUV_PLUS" -> getString XL_PLUS
+    "DELIVERY_LIGHT_GOODS_VEHICLE" -> getString TRUCK
     _ -> ""
 
 getRideLabelData :: Maybe String -> LabelConfig
@@ -1087,6 +1088,7 @@ getVehicleVariantName variant =
                   CarCategory -> getString CAB
                   BikeCategory -> getString BIKE_TAXI
                   AmbulanceCategory -> getString AMBULANCE
+                  TruckCategory -> getString TRUCK
                   UnKnown -> ""
 
 getRegisterationStepClickEventName :: ST.RegisterationStep -> String

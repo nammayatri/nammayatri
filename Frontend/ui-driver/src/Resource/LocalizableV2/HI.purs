@@ -1761,4 +1761,6 @@ getHi =
     , parcel_is_inappropriate : "पार्सल अनुचित है"
     , sender_asking_different_location : "प्रेषक ने किसी अन्य स्थान पर आने के लिए कहा है"
     , sender_unavailable_unreachable : "प्रेषक अनुपलब्ध है / संपर्क नहीं हो पा रहा"
+    , truck : "ट्रक"
+    , register_your_truck : "रेअपने ट्रक को रजिस्टर करें"
     }

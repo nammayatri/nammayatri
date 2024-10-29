@@ -1761,4 +1761,6 @@ getTa =
     , parcel_is_inappropriate : "பார்சல் பொருத்தமற்றது"
     , sender_asking_different_location : "அனுப்புநர் வேறொரு இடத்திற்கு வருமாறு கேட்டுக்கொள்கிறார்"
     , sender_unavailable_unreachable : "அனுப்புநர் கிடைக்கவில்லை / தொடர்பு கொள்ள முடியவில்லை"
+    , truck : "லாரி"
+    , register_your_truck : "உங்கள் லாரியை பதிவு செய்க"
     }
