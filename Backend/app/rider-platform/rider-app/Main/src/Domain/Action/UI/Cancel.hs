@@ -81,7 +81,8 @@ data CancelRes = CancelRes
     merchant :: DM.Merchant,
     cancelStatus :: Text,
     city :: Context.City,
-    vehicleVariant :: DVeh.VehicleVariant
+    vehicleVariant :: DVeh.VehicleVariant,
+    cancellationReason :: Maybe Text
   }
 
 data CancelSearch = CancelSearch
@@ -121,6 +122,7 @@ softCancel bookingId _ = do
         merchant = merchant,
         cancelStatus = show Enums.SOFT_CANCEL,
         vehicleVariant = DVeh.castServiceTierToVariant booking.vehicleServiceTierType,
+        cancellationReason = Nothing,
         ..
       }
 
@@ -171,6 +173,7 @@ cancel booking mRide req cancellationSource = do
             buildBookingCancellationReason Nothing Nothing (Just booking.merchantId) distanceUnit
       Nothing -> buildBookingCancellationReason Nothing Nothing (Just booking.merchantId) distanceUnit
   QBCR.upsert cancellationReason
+  isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   return $
     CancelRes
       { bppBookingId = bppBookingId,
@@ -180,6 +183,7 @@ cancel booking mRide req cancellationSource = do
         merchant = merchant,
         cancelStatus = show Enums.CONFIRM_CANCEL,
         vehicleVariant = DVeh.castServiceTierToVariant booking.vehicleServiceTierType,
+        cancellationReason = if isValueAddNP then Just $ SCR.getCancellationReasonCode req.reasonCode else Nothing,
         ..
       }
   where

@@ -30,3 +30,6 @@ instance FromBackendRow Postgres CancellationReasonCode
 newtype CancellationReasonCode = CancellationReasonCode Text
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+getCancellationReasonCode :: CancellationReasonCode -> Text
+getCancellationReasonCode (CancellationReasonCode text) = text
