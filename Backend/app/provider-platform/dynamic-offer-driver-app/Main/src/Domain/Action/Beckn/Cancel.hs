@@ -30,6 +30,7 @@ import Domain.Action.UI.Ride.CancelRide (driverDistanceToPickup)
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.CancellationReason as DTCR
 import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
@@ -83,7 +84,8 @@ data CancelReq = CancelSearch CancelSearchReq | CancelRide CancelRideReq
 data CancelRideReq = CancelRideReq
   { bookingId :: Id SRB.Booking,
     cancelStatus :: Maybe Text,
-    userReallocationEnabled :: Maybe Bool
+    userReallocationEnabled :: Maybe Bool,
+    cancellationReason :: Maybe Text
   }
   deriving (Show)
 
@@ -171,7 +173,7 @@ cancel req merchant booking mbActiveSearchTry = do
             rideId = Nothing,
             merchantId = Just booking.providerId,
             source = DBCR.ByUser,
-            reasonCode = Nothing,
+            reasonCode = DTCR.CancellationReasonCode <$> req.cancellationReason,
             driverId = Nothing,
             additionalInfo = Nothing,
             driverCancellationLocation = currentLocation,
