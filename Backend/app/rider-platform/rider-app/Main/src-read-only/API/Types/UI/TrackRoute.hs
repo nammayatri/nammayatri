@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.UI.TrackRoute where
@@ -10,11 +9,11 @@ import qualified Kernel.Prelude
 import Servant
 import Tools.Auth
 
-data TrackingResp = TrackingResp {vehicleTrackingInfo :: [API.Types.UI.TrackRoute.VehicleInfo]}
+data TrackingResp = TrackingResp {vehicleTrackingInfo :: [VehicleInfo]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data VehicleInfo = VehicleInfo {nextStop :: Domain.Types.RouteStopMapping.RouteStopMapping, vehicleId :: Kernel.Prelude.Text, vehicleInfo :: API.Types.UI.TrackRoute.VehicleInfoForRoute}
+data VehicleInfo = VehicleInfo {nextStop :: Domain.Types.RouteStopMapping.RouteStopMapping, vehicleId :: Kernel.Prelude.Text, vehicleInfo :: VehicleInfoForRoute}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

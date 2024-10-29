@@ -111,7 +111,7 @@ data MapsAPIs = MapsAPIs
   }
 
 data FlowStatusAPIs = FlowStatusAPIs
-  { personFlowStatus :: Id DP.Person -> Maybe Bool -> Euler.EulerClient DFrontend.GetPersonFlowStatusRes,
+  { personFlowStatus :: Id DP.Person -> Maybe Bool -> Maybe Bool -> Euler.EulerClient DFrontend.GetPersonFlowStatusRes,
     notifyEvent :: Id DP.Person -> DFrontend.NotifyEventReq -> Euler.EulerClient DFrontend.NotifyEventResp
   }
 

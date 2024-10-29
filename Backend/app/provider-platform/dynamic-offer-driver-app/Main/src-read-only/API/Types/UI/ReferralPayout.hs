@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.UI.ReferralPayout where
@@ -26,7 +25,7 @@ data DailyEarning = DailyEarning
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data ReferralEarningsRes = ReferralEarningsRes
-  { dailyEarnings :: [API.Types.UI.ReferralPayout.DailyEarning],
+  { dailyEarnings :: [DailyEarning],
     orderId :: Kernel.Prelude.Maybe Data.Text.Text,
     orderStatus :: Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.Common.TransactionStatus,
     payoutRegistrationAmount :: Kernel.Types.Common.HighPrecMoney,

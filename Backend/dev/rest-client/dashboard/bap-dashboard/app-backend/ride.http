@@ -10,6 +10,7 @@ GET {{bap-dashboard-host}}
 
 GET {{bap-dashboard-host}}/bap/YATRI/ride/list
 ?bookingStatus="RCOMPLETED"
+token: {{customer_service}}
 # &customerPhoneNo=9999999999
 # &limit=10
 # &offset=0

@@ -19,7 +19,7 @@ module Dashboard.ProviderPlatform.Management.Driver
   )
 where
 
-import API.Types.ProviderPlatform.Management.Driver as Reexport
+import API.Types.ProviderPlatform.Management.Endpoints.Driver
 import Dashboard.Common as Reexport
 import Dashboard.Common.Driver as Reexport
 import Kernel.Prelude
@@ -46,4 +46,7 @@ validateUpdateDriverNameReq UpdateDriverNameReq {..} =
     ]
 
 instance HideSecrets ClearDriverFeeReq where
+  hideSecrets = identity
+
+instance HideSecrets [DriverEncDataReq] where
   hideSecrets = identity

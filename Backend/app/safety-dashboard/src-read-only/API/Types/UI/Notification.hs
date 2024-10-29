@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.UI.Notification where
@@ -8,10 +7,10 @@ import qualified Data.Text
 import qualified Domain.Types.Notification
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
-import Servant
+import Servant hiding (Summary)
 import "lib-dashboard" Tools.Auth
 
-data NotificationList = NotificationList {list :: [Domain.Types.Notification.Notification], summary :: API.Types.UI.Notification.Summary}
+data NotificationList = NotificationList {list :: [Domain.Types.Notification.Notification], summary :: Summary}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

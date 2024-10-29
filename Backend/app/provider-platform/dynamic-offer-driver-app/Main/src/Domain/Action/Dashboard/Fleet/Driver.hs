@@ -24,8 +24,8 @@ module Domain.Action.Dashboard.Fleet.Driver
   )
 where
 
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import Data.Time
 import qualified Domain.Action.Dashboard.Driver as DDriver
 import qualified Domain.Action.Dashboard.Fleet.Registration as Fleet

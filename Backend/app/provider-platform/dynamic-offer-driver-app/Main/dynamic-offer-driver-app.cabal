@@ -621,7 +621,9 @@ library
       Tools.Utils
       Tools.Verification
       Tools.Whatsapp
+      API.Action.Dashboard.Fleet
       API.Action.Dashboard.Fleet.Driver
+      API.Action.Dashboard.Management
       API.Action.Dashboard.Management.Booking
       API.Action.Dashboard.Management.Driver
       API.Action.Dashboard.Management.DriverCoins
@@ -635,6 +637,7 @@ library
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.System
+      API.Action.Dashboard.RideBooking
       API.Action.Dashboard.RideBooking.Driver
       API.Action.UI.Cac
       API.Action.UI.DemandHotspots

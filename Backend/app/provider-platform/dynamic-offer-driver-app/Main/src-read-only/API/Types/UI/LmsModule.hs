@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.UI.LmsModule where
@@ -27,21 +26,15 @@ data LmsEntityCompletionStatus
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LmsGetModuleRes = LmsGetModuleRes {completed :: [API.Types.UI.LmsModule.LmsModuleRes], remaining :: [API.Types.UI.LmsModule.LmsModuleRes]}
+data LmsGetModuleRes = LmsGetModuleRes {completed :: [LmsModuleRes], remaining :: [LmsModuleRes]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LmsGetQuizRes = LmsGetQuizRes {questions :: [API.Types.UI.LmsModule.LmsQuestionRes], selectedModuleInfo :: API.Types.UI.LmsModule.LmsTranslatedModuleInfoRes}
+data LmsGetQuizRes = LmsGetQuizRes {questions :: [LmsQuestionRes], selectedModuleInfo :: LmsTranslatedModuleInfoRes}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LmsGetVideosRes = LmsGetVideosRes
-  { completed :: [API.Types.UI.LmsModule.LmsVideoRes],
-    pending :: [API.Types.UI.LmsModule.LmsVideoRes],
-    quizEnabled :: Kernel.Prelude.Bool,
-    quizStatus :: API.Types.UI.LmsModule.LmsEntityCompletionStatus,
-    selectedModuleInfo :: API.Types.UI.LmsModule.LmsTranslatedModuleInfoRes
-  }
+data LmsGetVideosRes = LmsGetVideosRes {completed :: [LmsVideoRes], pending :: [LmsVideoRes], quizEnabled :: Kernel.Prelude.Bool, quizStatus :: LmsEntityCompletionStatus, selectedModuleInfo :: LmsTranslatedModuleInfoRes}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -68,8 +61,8 @@ data LmsModuleRes = LmsModuleRes
 data LmsQuestionRes = LmsQuestionRes
   { language :: Kernel.External.Types.Language,
     moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
-    options :: API.Types.UI.LmsModule.QuizOptions,
-    previousHistory :: Data.Maybe.Maybe API.Types.UI.LmsModule.LmsQuizHistory,
+    options :: QuizOptions,
+    previousHistory :: Data.Maybe.Maybe LmsQuizHistory,
     question :: Domain.Types.LmsEnumTypes.QuizQuestion,
     questionId :: Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping
   }
@@ -82,7 +75,7 @@ data LmsQuestionStatus
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LmsQuizHistory = LmsQuizHistory {attemptNumber :: Kernel.Prelude.Int, selectedOptions :: [Data.Text.Text], status :: API.Types.UI.LmsModule.LmsQuestionStatus}
+data LmsQuizHistory = LmsQuizHistory {attemptNumber :: Kernel.Prelude.Int, selectedOptions :: [Data.Text.Text], status :: LmsQuestionStatus}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -120,7 +113,7 @@ data LmsVideoRes = LmsVideoRes
     thumbnailImage :: Data.Text.Text,
     title :: Data.Text.Text,
     url :: Data.Text.Text,
-    videoCompletionStatus :: API.Types.UI.LmsModule.LmsEntityCompletionStatus,
+    videoCompletionStatus :: LmsEntityCompletionStatus,
     videoId :: Kernel.Types.Id.Id Domain.Types.LmsModuleVideoInformation.LmsModuleVideoInformation,
     viewCount :: Kernel.Prelude.Int,
     ytVideoId :: Data.Text.Text
@@ -136,12 +129,12 @@ data QuestionConfirmReq = QuestionConfirmReq
   { language :: Kernel.External.Types.Language,
     moduleId :: Kernel.Types.Id.Id Domain.Types.LmsModule.LmsModule,
     questionId :: Kernel.Types.Id.Id Domain.Types.QuestionModuleMapping.QuestionModuleMapping,
-    selectedOption :: API.Types.UI.LmsModule.SelectedOption
+    selectedOption :: SelectedOption
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data QuestionConfirmRes = QuestionConfirmRes {validation :: API.Types.UI.LmsModule.QuestionValidation, validationRes :: API.Types.UI.LmsModule.SelectedOptionValidation}
+data QuestionConfirmRes = QuestionConfirmRes {validation :: QuestionValidation, validationRes :: SelectedOptionValidation}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -152,8 +145,8 @@ data QuestionValidation
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data QuizOptions
-  = SingleSelect API.Types.UI.LmsModule.Options
-  | MultiSelect API.Types.UI.LmsModule.Options
+  = SingleSelect Options
+  | MultiSelect Options
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -164,8 +157,8 @@ data SelectedOption
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SelectedOptionValidation
-  = SingleSelectedOptionValidation API.Types.UI.LmsModule.ValidationResult
-  | MultiSelectedOptionValidation [API.Types.UI.LmsModule.ValidationResult]
+  = SingleSelectedOptionValidation ValidationResult
+  | MultiSelectedOptionValidation [ValidationResult]
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

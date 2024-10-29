@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.UI.MultimodalConfirm where
@@ -9,7 +8,7 @@ import qualified Kernel.Prelude
 import Servant
 import Tools.Auth
 
-data JourneyConfirmReq = JourneyConfirmReq {journeyConfirmReqElements :: [API.Types.UI.MultimodalConfirm.JourneyConfirmReqElement]}
+data JourneyConfirmReq = JourneyConfirmReq {journeyConfirmReqElements :: [JourneyConfirmReqElement]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

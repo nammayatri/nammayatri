@@ -14,18 +14,12 @@
 
 module API.Dashboard where
 
-import qualified API.Action.Dashboard.Management.Booking as BookingDSL
-import qualified API.Action.Dashboard.Management.FRFSTicket as FRFSTicketDSL
-import qualified API.Action.Dashboard.Management.Invoice as InvoiceDSL
-import qualified API.Action.Dashboard.Management.Merchant as MerchantDSL
-import qualified API.Action.Dashboard.Management.NammaTag as NammaTagDSL
-import qualified API.Action.Dashboard.Management.System as SystemDSL
-import qualified API.Dashboard.Customer as Customer
+import qualified API.Action.Dashboard.Management as ManagementDSL
+-- import qualified API.Action.Dashboard.RideBooking as RideBookingDSL
 import qualified API.Dashboard.Exotel as Exotel
 import qualified API.Dashboard.HotSpot as HotSpot
 import qualified API.Dashboard.Issue as Issue
 import qualified API.Dashboard.IssueList as IssueList
-import qualified API.Dashboard.Ride as Ride
 import qualified API.Dashboard.RideBooking as RideBookings
 import qualified API.Dashboard.Tickets as Tickets
 import qualified Domain.Types.Merchant as DM
@@ -51,29 +45,27 @@ type APIV2 =
            :> Capture "city" Context.City
            :> ( OperationsAPI
                   :<|> RideBookingAPI
+                  :<|> ManagementDSLAPI
+                  -- :<|> RideBookingDSLAPI
               )
        )
     :<|> ExotelAPI
 
 type OperationsAPI =
   DashboardTokenAuth
-    :> ( Customer.API
-           :<|> Ride.API
-           :<|> IssueList.API
+    :> ( IssueList.API
            :<|> Issue.API
            :<|> Tickets.API
            :<|> HotSpot.API
-           :<|> BookingDSL.API
-           :<|> MerchantDSL.API
-           :<|> InvoiceDSL.API
-           :<|> FRFSTicketDSL.API
-           :<|> NammaTagDSL.API
-           :<|> SystemDSL.API
        )
 
 type RideBookingAPI =
   DashboardTokenAuth
     :> RideBookings.API
+
+type ManagementDSLAPI = DashboardTokenAuth :> ManagementDSL.API
+
+-- type RideBookingDSLAPI = DashboardTokenAuth :> ManagementDSL.API
 
 -- TODO :: Deprecated, Remove after successful deployment
 handler :: FlowServer API
@@ -96,26 +88,26 @@ handlerV2 =
   ( \merchantId city ->
       operationHandler merchantId city
         :<|> rideBookingHandler merchantId city
+        :<|> managementDSLHandler merchantId city
+        -- :<|> rideBookingDSLHandler merchantId city
   )
     :<|> exotelHandler
 
 operationHandler :: ShortId DM.Merchant -> Context.City -> FlowServer OperationsAPI
-operationHandler merchantId city _ = do
-  Customer.handler merchantId city
-    :<|> Ride.handler merchantId
-    :<|> IssueList.handler merchantId
+operationHandler merchantId city _auth = do
+  IssueList.handler merchantId
     :<|> Issue.handler merchantId city
     :<|> Tickets.handler merchantId
     :<|> HotSpot.handler merchantId
-    :<|> BookingDSL.handler merchantId city
-    :<|> MerchantDSL.handler merchantId city
-    :<|> InvoiceDSL.handler merchantId city
-    :<|> FRFSTicketDSL.handler merchantId city
-    :<|> NammaTagDSL.handler merchantId city
-    :<|> SystemDSL.handler merchantId city
 
 rideBookingHandler :: ShortId DM.Merchant -> Context.City -> FlowServer RideBookingAPI
-rideBookingHandler merchantId _ _ = RideBookings.handler merchantId
+rideBookingHandler merchantId _ _auth = RideBookings.handler merchantId
+
+managementDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer ManagementDSLAPI
+managementDSLHandler merchantId city _auth = ManagementDSL.handler merchantId city
+
+-- rideBookingDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer RideBookingDSLAPI
+-- rideBookingDSLHandler merchantId city _auth = ManagementDSL.handler merchantId city
 
 type ExotelAPI =
   DashboardTokenAuth

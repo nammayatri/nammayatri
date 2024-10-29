@@ -292,27 +292,33 @@ window.getMerchantConfig = function () {
       "variantInfo" : {
         "hatchback" : {
           "name" : "Hatchback",
-          "image" : "ic_hatchback_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_hatchback_ac.png"
+          "image" : "ic_hatchback_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_hatchback_ac.png",
+          "leftViewImage": "ny_ic_hatchback_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_hatchback_left_view.png"
           },
         "taxiPlus" : {
           "name" : "AC Taxi",
-          "image" : "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_sedan_ac.png"
+          "image" : "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_sedan_ac.png",
+          "leftViewImage": "ny_ic_sedan_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_sedan_left_view.png"
         },
         "sedan" : {
           "name" : "Sedan",
-          "image" : "ny_ic_sedan_ac_new,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_sedan_ac.png"
+          "image" : "ny_ic_sedan_ac_new,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_sedan_ac.png",
+          "leftViewImage": "ny_ic_sedan_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_sedan_left_view.png"
         },
         "taxi" : {
           "name" : "Non-AC Taxi",
-          "image" : "ic_taxi,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_taxi.png"
+          "image" : "ic_taxi,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_taxi.png",
+          "leftViewImage": "ny_ic_sedan_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_sedan_left_view.png"
         },
         "suv" : {
           "name" : "SUV",
-          "image" : "ic_suv_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_suv_ac.png"
+          "image" : "ic_suv_ac,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ic_suv_ac.png",
+          "leftViewImage": "ny_ic_suv_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_suv_left_view.png"
         },
         "autoRickshaw" : {
           "name" : "Auto Rickshaw",
-          "image" : "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png"
+          "image" : "ny_ic_auto_shadow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_shadow.png",
+          "leftViewImage": "ny_ic_auto_left_view,https://assets.moving.tech/beckn/common/user/images/ny_ic_auto_left_view.png"
         },
         "bookAny" : {
           "name" : "Book Any",
@@ -321,7 +327,7 @@ window.getMerchantConfig = function () {
         "bike" : {
           "name" : "Bike",
           "image": "ny_ic_bike_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_bike_side.png",
-          "leftViewImage" : "ny_ic_bike_left_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_bike_left_side.png"
+          "leftViewImage" : "ny_ic_bike_left_side,https://assets.moving.tech/beckn/nammayatri/user/images/ny_ic_bike_left_side.png",
         },
         "suvPlus" : {
           "name" : "XL Plus",

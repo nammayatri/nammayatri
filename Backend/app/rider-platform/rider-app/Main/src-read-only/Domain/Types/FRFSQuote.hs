@@ -60,6 +60,6 @@ data FRFSQuoteType = SingleJourney | ReturnJourney | Pass | SpecialFareSingleJou
 
 data FRFSRoutes = Bus (Kernel.Types.Id.Id Domain.Types.Route.Route) | Metro [Kernel.Types.Id.Id Domain.Types.Route.Route] deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSQuoteType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSQuoteType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSRoutes))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSRoutes)

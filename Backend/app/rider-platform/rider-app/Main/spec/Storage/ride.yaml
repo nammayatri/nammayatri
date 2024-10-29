@@ -283,6 +283,7 @@ Ride:
     updateDestinationReachedAt:
       kvFunction: updateOneWithKV
       params: [destinationReachedAt]
+      where: id
     updateTipByRideId:
       kvFunction: updateOneWithKV
       params: [tipAmount]

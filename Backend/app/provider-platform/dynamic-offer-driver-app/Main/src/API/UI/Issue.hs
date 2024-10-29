@@ -1,7 +1,7 @@
 module API.UI.Issue where
 
+import qualified API.Types.ProviderPlatform.Management.Ride as DRide
 import qualified API.Types.ProviderPlatform.Management.Ride as PPMR
-import qualified Dashboard.ProviderPlatform.Management.Ride as DRide
 import Domain.Action.Dashboard.Ride as DRide
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC

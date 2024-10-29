@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.UI.MultiModal where
@@ -17,18 +16,18 @@ import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
-data MetroLegInfo = MetroLegInfo {metroLines :: [API.Types.UI.MultiModal.MetroLineInfo]}
+data MetroLegInfo = MetroLegInfo {metroLines :: [MetroLineInfo]}
   deriving stock (Generic, Eq, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MetroLineInfo = MetroLineInfo
-  { endStation :: API.Types.UI.MultiModal.MetroStationInfo,
+  { endStation :: MetroStationInfo,
     estimatedFare :: Kernel.Types.Common.PriceAPIEntity,
     lineColor :: Kernel.Prelude.Text,
     lineName :: Kernel.Prelude.Text,
-    lineStations :: [API.Types.UI.MultiModal.MetroStationInfo],
-    lineTimings :: API.Types.UI.MultiModal.MetroLineTiming,
-    startStation :: API.Types.UI.MultiModal.MetroStationInfo
+    lineStations :: [MetroStationInfo],
+    lineTimings :: MetroLineTiming,
+    startStation :: MetroStationInfo
   }
   deriving stock (Generic, Eq, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -62,26 +61,21 @@ data MultiModalEstimate = MultiModalEstimate
 data MultiModalRouteDetails = MultiModalRouteDetails
   { automaticBooking :: Kernel.Prelude.Bool,
     estimatedFare :: Kernel.Types.Common.PriceAPIEntity,
-    routeLegs :: [API.Types.UI.MultiModal.MultiModalRouteLeg],
+    routeLegs :: [MultiModalRouteLeg],
     totalDistance :: Kernel.Types.Common.Distance,
     totalDuration :: Kernel.Types.Common.Seconds
   }
   deriving stock (Generic, Eq, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data MultiModalRouteLeg = MultiModalRouteLeg
-  { distance :: Kernel.Types.Common.Distance,
-    duration :: Kernel.Types.Common.Seconds,
-    legInfo :: API.Types.UI.MultiModal.MultiModalRouteLegInfo,
-    status :: API.Types.UI.MultiModal.MultiModalRouteLegStatus
-  }
+data MultiModalRouteLeg = MultiModalRouteLeg {distance :: Kernel.Types.Common.Distance, duration :: Kernel.Types.Common.Seconds, legInfo :: MultiModalRouteLegInfo, status :: MultiModalRouteLegStatus}
   deriving stock (Generic, Eq, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MultiModalRouteLegInfo
-  = WalkLeg API.Types.UI.MultiModal.WalkLegInfo
-  | MetroLeg API.Types.UI.MultiModal.MetroLegInfo
-  | TaxiLeg API.Types.UI.MultiModal.TaxiLegInfo
+  = WalkLeg WalkLegInfo
+  | MetroLeg MetroLegInfo
+  | TaxiLeg TaxiLegInfo
   deriving stock (Generic, Eq, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -91,7 +85,7 @@ data MultiModalRouteLegStatus
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TaxiLegInfo = TaxiLegInfo {endLocation :: Domain.Types.Location.LocationAPIEntity, legStage :: API.Types.UI.MultiModal.TaxiLegStage, startLocation :: Domain.Types.Location.LocationAPIEntity}
+data TaxiLegInfo = TaxiLegInfo {endLocation :: Domain.Types.Location.LocationAPIEntity, legStage :: TaxiLegStage, startLocation :: Domain.Types.Location.LocationAPIEntity}
   deriving stock (Generic, Eq, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

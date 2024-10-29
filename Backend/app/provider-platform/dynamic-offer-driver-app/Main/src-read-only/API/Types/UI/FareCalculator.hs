@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Types.UI.FareCalculator where
@@ -28,6 +27,6 @@ data EstimateApi = EstimateApi
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FareResponse = FareResponse {estimatedFares :: [API.Types.UI.FareCalculator.EstimateApi]}
+data FareResponse = FareResponse {estimatedFares :: [EstimateApi]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

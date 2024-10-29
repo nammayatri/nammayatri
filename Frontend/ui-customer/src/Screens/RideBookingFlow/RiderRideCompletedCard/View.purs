@@ -80,6 +80,7 @@ screen initialState =
     globalEvents' :: (Action -> Effect Unit) -> RiderRideCompletedScreenState -> Effect (Effect Unit)
     globalEvents' push state = do 
       void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
+      void $ runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
       when (isNothing state.customerIssue.bannerComputedView) $ void $ launchAff $ flowRunner defaultGlobalState $ computeIssueReportBanners push
       pure $ pure unit
 
@@ -777,7 +778,7 @@ stickyButtonView state push =
       , height WRAP_CONTENT
       , cornerRadii $ Corners 16.0 true true false false
       , background Color.white900
-      , padding $ Padding 16 16 16 16
+      , padding $ Padding 16 0 16 0
       , adjustViewWithKeyboard "true"
       ][PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)]
 
@@ -1203,7 +1204,6 @@ riderFeedback state push =
           , color Color.black700
           , maxLines 2
           , margin $ MarginTop 3
-          , weight 1.0
           ] <> FontStyle.body3 LanguageStyle
       ]
     , linearLayout[
@@ -1227,7 +1227,7 @@ title state =
     text $ getString WRITE_REVIEW
     , color Color.black
     , maxLines 1
-    , margin $ Margin 0 20 0 0
+    , margin $ MarginTop 20
     , visibility $ boolToVisibility $ not state.ratingCard.favDriver && not state.recordedView && (state.driverInfoCardState.isAlreadyFav || state.ratingCard.rating < 4)
     ] <> FontStyle.subHeading1 LanguageStyle
 

@@ -43,10 +43,9 @@ jobs:
           fi
           echo "has_backend=${has_backend}" >> $GITHUB_OUTPUT
           echo "Label check result: ${has_backend}"
-
   build:
     needs: [process-labels]
-    runs-on: ubuntu-latest
+    runs-on: x86_64-linux
     if: |
       needs.process-labels.outputs.has-backend == 'true' && 
       (github.event_name != 'pull_request' || github.event.pull_request.merged == true || github.event.action != 'closed')

@@ -577,6 +577,7 @@ type RiderRideCompletedScreenState =
   , additionalCharges :: Array AdditionalCharges
   , customerIssue :: CustomerIssueReportData
   , showSafetyCenter :: Boolean
+  , isKeyBoardOpen :: Boolean
   }
 
 type CustomerIssueReportData = {

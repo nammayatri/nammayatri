@@ -91,14 +91,14 @@ module Domain.Action.Dashboard.Driver
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as DC
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverGoHome as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.RideBooking.Driver as Common
 import Control.Applicative ((<|>))
 import "dashboard-helper-api" Dashboard.Common (HideSecrets (hideSecrets))
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Fleet.Driver as DC
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Driver as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common hiding (ApproveDetails (..), DocumentType (..))
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.RideBooking.Driver as Common
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce

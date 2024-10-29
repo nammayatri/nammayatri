@@ -308,7 +308,7 @@ window.getMerchantConfig = function () {
             "perMinCharges" : 2.0
           },
           "auto" : {
-            "freeSeconds" : 180,
+            "freeSeconds" : 300,
             "perMinCharges" : 2.0
           },
           "bike" : {

@@ -1703,11 +1703,11 @@
     "json-logic-hs": {
       "flake": false,
       "locked": {
-        "lastModified": 1723372497,
-        "narHash": "sha256-Hk86zecu93zKZaAMWJEbwXQVFSzA6ZQe4cZdOJaELGI=",
+        "lastModified": 1729878913,
+        "narHash": "sha256-ahpXlsVQW/b7jTK465Jo/nUijQPshK+83J+htfRqNug=",
         "owner": "nammayatri",
         "repo": "json-logic-hs",
-        "rev": "64c39fd39523384da7f1b3edc8a06212815865f1",
+        "rev": "d2d9945c64ffdcb1053dc5592d59c8da10b5fcf2",
         "type": "github"
       },
       "original": {
@@ -1897,11 +1897,11 @@
         "common": "common_2"
       },
       "locked": {
-        "lastModified": 1729682093,
-        "narHash": "sha256-W1gngBfq9FhNSf3F97v34niAF53ZtJAFolfUmc2uEZ0=",
+        "lastModified": 1730093667,
+        "narHash": "sha256-mek5/AFD24UaHf7K//SdYY72aSdSYbBdzc9BQqT8X+w=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "1af496703fe9554633adca759fec7cd7925d3d4e",
+        "rev": "ab6a0c0ba0d710e3f6107d88c7e9b0fc8223c3c3",
         "type": "github"
       },
       "original": {
@@ -3098,13 +3098,13 @@
     "osrm-pbf": {
       "flake": false,
       "locked": {
-        "narHash": "sha256-KEpT7YUG3UsaEM4V8vtWVmxU4Mz8gl0gyC6X07GVbao=",
+        "narHash": "sha256-cyhgTR+py8e5RBTHM94ZAIxTe5V3fy8peba+4bp/IVQ=",
         "type": "file",
-        "url": "https://download.geofabrik.de/asia/india/southern-zone-230101.osm.pbf"
+        "url": "https://download.geofabrik.de/asia/india/southern-zone-240101.osm.pbf"
       },
       "original": {
         "type": "file",
-        "url": "https://download.geofabrik.de/asia/india/southern-zone-230101.osm.pbf"
+        "url": "https://download.geofabrik.de/asia/india/southern-zone-240101.osm.pbf"
       }
     },
     "passetto": {

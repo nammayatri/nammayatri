@@ -1,6 +1,6 @@
 imports:
   Driver: Dashboard.Common
-  DriverCoinsFunctionType: Dashboard.Common.DriverCoinsExtra
+  DriverCoinsFunctionType: Dashboard.Common.DriverCoins
 
 module: DriverCoins # module: Driver.Coins TODO Driver.Coins.yaml should generate Driver.Coins.hs
 apiPrefix: coins
@@ -8,21 +8,25 @@ apiPrefix: coins
 apis:
   - POST: # BulkUploadCoinsAPI
       endpoint: bulkUploadCoins
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BULK_UPLOAD
+      auth: ApiAuthV2
       request:
         type: BulkUploadCoinsReq
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BULK_UPLOAD
   - POST: # BulkUploadCoinsAPIV2
       endpoint: bulkUploadCoinsV2
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BULK_UPLOAD_V2
+      auth: ApiAuthV2
       request:
         type: BulkUploadCoinsReqV2
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_BULK_UPLOAD_V2
   - GET: # CoinHistoryAPI
       endpoint: coinHistory/{driverId}
-      auth: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_HISTORY
+      auth: ApiAuthV2
       params:
         driverId: Id Driver
       query:
@@ -30,6 +34,8 @@ apis:
         - offset: Integer
       response:
         type: CoinHistoryRes
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_COIN_HISTORY
 
 types:
   BulkUploadCoinsReq:
@@ -84,3 +90,6 @@ types:
     - enum: "Used, Remaining"
     - derive: "Read, Ord"
 
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE
