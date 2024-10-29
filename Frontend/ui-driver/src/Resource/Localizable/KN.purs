@@ -1593,3 +1593,5 @@ getKN stringKey =
         RECORD_AUDIO -> "ಧ್ವನಿ ದಾಖಲಿಸಿ"
         CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY -> "Go-To ಬೇರೆ ಬೇರೆ ನಗರಗಳಿಗೆ ಸಕ್ರಿಯಗೊಳಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ"
         XL_PLUS -> "XL ಪ್ಲಸ್"
+        TRUCK -> "ಟ್ರಕ್"
+        REGISTER_YOUR_TRUCK -> "ನಿಮ್ಮ ಟ್ರಕ್ ನೋಂದಣಿಯನ್ನು ಮಾಡಿ"
