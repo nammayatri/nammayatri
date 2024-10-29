@@ -1698,3 +1698,5 @@ getML stringKey =
         UPLOAD_PARCEL_IMAGE -> "പാക്കേജിന്റെ ചിത്രം അപ്‌ലോഡ് ചെയ്യുക"
         PICKUP_INSTRUCTION -> "പിക്കപ്പ് നിർദേശം"
         DROP_INSTRUCTION -> "ഡ്രോപ്പ് നിർദേശം"
+        TRUCK -> "ട്രക്ക്"
+        REGISTER_YOUR_TRUCK -> "നിങ്ങളുടെ ട്രക്ക് നിബന്ധിക്കുക"

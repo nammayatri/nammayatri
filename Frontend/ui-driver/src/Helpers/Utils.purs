@@ -372,6 +372,7 @@ getVehicleType vehicleType =
     "AMBULANCE_AC_OXY" -> getString AC <> "\x00B7" <> getString OXYGEN
     "AMBULANCE_VENTILATOR" -> getString VENTILATOR
     "SUV_PLUS" -> getString XL_PLUS
+    "DELIVERY_LIGHT_GOODS_VEHICLE" -> getString TRUCK
     _ -> ""
 
 getRideLabelData :: Maybe String -> LabelConfig

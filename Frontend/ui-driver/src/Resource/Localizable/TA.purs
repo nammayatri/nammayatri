@@ -1699,3 +1699,5 @@ getTA stringKey =
         UPLOAD_PARCEL_IMAGE -> "பார்சலின் புகைப்படத்தை பதிவேற்றவும்"
         PICKUP_INSTRUCTION -> "பிக்அப் வழிமுறை"
         DROP_INSTRUCTION -> "டிராப் வழிமுறை"
+        TRUCK -> "லாரி"
+        REGISTER_YOUR_TRUCK -> "உங்கள் லாரியை பதிவு செய்க"

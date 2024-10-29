@@ -1700,3 +1700,5 @@ getEN stringKey =
         UPLOAD_PARCEL_IMAGE -> "Upload Parcel Image"
         PICKUP_INSTRUCTION -> "Pickup Instruction"
         DROP_INSTRUCTION -> "Drop Instruction"
+        TRUCK -> "Truck"
+        REGISTER_YOUR_TRUCK -> "Register your Truck"

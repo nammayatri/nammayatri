@@ -1700,3 +1700,5 @@ getTE stringKey =
         UPLOAD_PARCEL_IMAGE -> "పార్సెల్ చిత్రాన్ని అప్‌లోడ్ చేయండి"
         PICKUP_INSTRUCTION -> "పికప్ సూచన"
         DROP_INSTRUCTION -> "డ్రాప్ సూచన"
+        TRUCK -> "ట్రక్"
+        REGISTER_YOUR_TRUCK -> "మీ ట్రక్‌ను నమోదు చేయండి"

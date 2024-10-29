@@ -1700,3 +1700,5 @@ getBN stringKey =
         UPLOAD_PARCEL_IMAGE -> "পার্সেল ছবি আপলোড করুন"
         PICKUP_INSTRUCTION -> "পিকআপ নির্দেশাবলী"
         DROP_INSTRUCTION -> "ড্রপ নির্দেশাবলী"
+        TRUCK -> "ট্রাক"
+        REGISTER_YOUR_TRUCK -> "আপনার ট্রাক রেজিস্টার করুন"

@@ -1698,3 +1698,5 @@ getHI stringKey =
         UPLOAD_PARCEL_IMAGE -> "पार्सल छवि अपलोड करें"
         PICKUP_INSTRUCTION -> "पिकअप निर्देश"
         DROP_INSTRUCTION -> "ड्रॉप निर्देश"
+        TRUCK -> "ट्रक"
+        REGISTER_YOUR_TRUCK -> "रेअपने ट्रक को रजिस्टर करें"

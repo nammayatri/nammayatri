@@ -1697,3 +1697,5 @@ getKN stringKey =
         UPLOAD_PARCEL_IMAGE -> "ಪಾರ್ಸೆಲ್ ಚಿತ್ರವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಿ"
         PICKUP_INSTRUCTION -> "ಪಿಕಪ್ ಸೂಚನೆ"
         DROP_INSTRUCTION -> "ಡ್ರಾಪ್ ಸೂಚನೆ"
+        TRUCK -> "ಟ್ರಕ್"
+        REGISTER_YOUR_TRUCK -> "ನಿಮ್ಮ ಟ್ರಕ್ ನೋಂದಣಿಯನ್ನು ಮಾಡಿ"
