@@ -1318,7 +1318,7 @@ recentSearchesAndFavourites state push hideSavedLocsView hideRecentSearches =
   ]([ if (not hideSavedLocsView) then savedLocationsView state push else linearLayout[visibility GONE][]
     , shimmerView state
     , additionalServicesView push state
-    , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][]
+    , if (isJust state.data.rentalsInfo && (isLocalStageOn HomeScreen || state.props.currentStage == HomeScreen)) then rentalBanner push state else linearLayout[visibility GONE][]
     , suggestionsView push state
     , emptySuggestionsBanner state push
     ]
@@ -3666,7 +3666,7 @@ homeScreenContent push state =  let
        , orientation VERTICAL
        , id $ getNewIDWithTag "homescreenContent"
       ][ mapView' push state "CustomerHomeScreenMap"
-        , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][]
+        , if (isJust state.data.rentalsInfo && (isLocalStageOn HomeScreen || state.props.currentStage == HomeScreen)) then rentalBanner push state else linearLayout[visibility GONE][]
         , suggestionsView push state
         , servicesView push state
         , contentView state
@@ -4685,7 +4685,7 @@ rentalBanner push state =
     , width MATCH_PARENT
     , padding $ Padding 8 0 8 0
     , margin $ Margin 8 24 8 0
-    , visibility $ boolToVisibility $ (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) 
+    , visibility $ boolToVisibility $ (isJust state.data.rentalsInfo && (isLocalStageOn HomeScreen || state.props.currentStage == HomeScreen))
     , gradient (Linear 0.0 [Color.transparent, "#FFFFFF" , "#FFFFFF" , "#FFFFFF"])
     ][  if state.props.showShimmer then 
           textView[]

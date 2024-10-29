@@ -3280,7 +3280,7 @@ eval (ServicesOnClick service) state = do
     RC.INTERCITY ->
       if updatedState.data.currentCityConfig.enableIntercity then do 
         void $ pure $ updateLocalStage SearchLocationModel 
-        continue updatedState { data { source=(getString CURRENT_LOCATION), rentalsInfo = Nothing}, props{isSource = Just false, canScheduleRide = true, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }, isIntercityFlow = true}}
+        continue updatedState { data { source=(getString CURRENT_LOCATION)}, props{isSource = Just false, canScheduleRide = true, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }, isIntercityFlow = true}}
         else do
           void $ pure $ toast $ getString INTERCITY_RIDES_COMING_SOON
           continue updatedState
