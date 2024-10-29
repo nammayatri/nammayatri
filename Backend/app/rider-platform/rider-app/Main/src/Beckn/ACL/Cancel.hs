@@ -60,7 +60,7 @@ mkCancelMessageV2 res reallocate =
           Spec.Descriptor
             { descriptorName = Just "Cancel Ride",
               descriptorCode = Just res.cancelStatus, -- TODO::Beckn, confirm mapping according to spec.
-              descriptorShortDesc = Nothing
+              descriptorShortDesc = res.cancellationReason
             }
     }
 
