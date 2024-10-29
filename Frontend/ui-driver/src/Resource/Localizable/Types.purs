@@ -1760,6 +1760,8 @@ data STR = LETS_GET_STARTED
         | UPLOAD_PARCEL_IMAGE
         | PICKUP_INSTRUCTION
         | DROP_INSTRUCTION
+        | TRUCK
+        | REGISTER_YOUR_TRUCK
 
 -- instance showSTR :: Show STR
 --   show = case _ of

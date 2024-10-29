@@ -1745,4 +1745,6 @@ getMl =
     , parcel_is_inappropriate : "പാഴ്സൽ അനുയോജ്യമല്ല"
     , sender_asking_different_location : "അയച്ചയാള്‍ വ്യത്യസ്ത സ്ഥലം ആവശ്യപ്പെടുന്നു"
     , sender_unavailable_unreachable : "അയച്ചയാള്‍ ലഭ്യമല്ല / എത്തിക്കാനായില്ല"
+    , truck : "ട്രക്ക്"
+    , register_your_truck : "നിങ്ങളുടെ ട്രക്ക് നിബന്ധിക്കുക"
     }

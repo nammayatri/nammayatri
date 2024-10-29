@@ -1745,4 +1745,6 @@ getTe =
     , parcel_is_inappropriate : "పార్సెల్ అననుకూలంగా ఉంది"
     , sender_asking_different_location : "పంపిణీదారు వేరే ప్రదేశానికి రావాలని అడుగుతున్నారు"
     , sender_unavailable_unreachable : "పంపిణీదారు అందుబాటులో లేరు / చేరడం సాధ్యం కాలేదు"
+    , truck : "ట్రక్"
+    , register_your_truck : "మీ ట్రక్‌ను నమోదు చేయండి"
     }

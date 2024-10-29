@@ -1745,4 +1745,6 @@ getBn =
     , parcel_is_inappropriate : "পার্সেল অনুপযুক্ত"
     , sender_asking_different_location : "প্রেরক ভিন্ন স্থানে আসতে বলছে"
     , sender_unavailable_unreachable : "প্রেরক অনুপলব্ধ / পৌঁছানো যাচ্ছে না"
+    , truck : "ট্রাক"
+    , register_your_truck : "আপনার ট্রাক রেজিস্টার করুন" 
     }
