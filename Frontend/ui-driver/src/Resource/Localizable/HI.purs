@@ -1593,3 +1593,5 @@ getHI stringKey =
         RECORD_AUDIO -> "ऑडियो रिकॉर्ड करें"
         CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY -> "Go-To अलग-अलग शहर के लिए सक्षम नहीं किया जा सकता।"
         XL_PLUS -> "XL प्लस"
+        TRUCK -> "ट्रक"
+        REGISTER_YOUR_TRUCK -> "रेअपने ट्रक को रजिस्टर करें"

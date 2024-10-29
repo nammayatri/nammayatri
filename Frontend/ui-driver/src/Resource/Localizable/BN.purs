@@ -1594,3 +1594,5 @@ getBN stringKey =
         RECORD_AUDIO -> "অডিও রেকর্ড করুন"
         CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY -> "Go-To ভিন্ন শহরের জন্য সক্ষম করা যাবে না।"
         XL_PLUS -> "XL প্লাস"
+        TRUCK -> "ট্রাক"
+        REGISTER_YOUR_TRUCK -> "আপনার ট্রাক রেজিস্টার করুন"

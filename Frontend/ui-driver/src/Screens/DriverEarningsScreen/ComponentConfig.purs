@@ -25,6 +25,7 @@ import Components.PopUpModal as PopUpModalConfig
 import Components.PrimaryButton.Controller as PrimaryButtonConfig
 import Components.PrimaryButton.View as PrimaryButton
 import Components.RequestInfoCard as RequestInfoCard
+import Data.Array as DA
 import Data.Int (toNumber)
 import Data.Maybe (isJust)
 import Engineering.Helpers.Utils (getCurrentDay)
@@ -264,34 +265,23 @@ coinsInfoCardConfig _ =
 
 errorModalConfig :: ST.DriverEarningsScreenState -> ErrorModal.Config
 errorModalConfig state =
-  let isVehicleRickshaw = (getValueFromCache (show VEHICLE_VARIANT) JB.getKeyInSharedPrefKeys) == "AUTO_RICKSHAW"
-      isVehicleBike = (getValueFromCache (show VEHICLE_VARIANT) JB.getKeyInSharedPrefKeys) == "BIKE"
-      isVehicleAmbulance = case getValueFromCache (show VEHICLE_VARIANT) JB.getKeyInSharedPrefKeys of
-                             "AMBULANCE" -> true
-                             "AMBULANCE_TAXI" -> true
-                             "AMBULANCE_TAXI_OXY" -> true
-                             "AMBULANCE_AC" -> true
-                             "AMBULANCE_AC_OXY" -> true
-                             "AMBULANCE_VENTILATOR" -> true
-                             _ -> false
+  let vehicleVariantLocalStore = getValueFromCache (show VEHICLE_VARIANT) JB.getKeyInSharedPrefKeys
+      isVehicleRickshaw = vehicleVariantLocalStore == "AUTO_RICKSHAW"
+      isVehicleBike = vehicleVariantLocalStore == "BIKE"
+      isVehicleAmbulance = vehicleVariantLocalStore `DA.elem` ["AMBULANCE", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]
+      isVehicleTruck = vehicleVariantLocalStore == "DELIVERY_LIGHT_GOODS_VEHICLE"
   in ErrorModal.config
     { imageConfig
       { imageUrl =
         if isVehicleRickshaw 
         then
             HU.fetchImage HU.FF_ASSET $
-                if state.props.subView == ST.EARNINGS_VIEW then
-                    "ny_ic_no_rides_history"
-                else
-                    "ny_ic_no_coins_history"
-        else if isVehicleBike
-        then
-            HU.fetchImage HU.FF_ASSET "ny_ic_no_rides_history_bike"
-        else if isVehicleAmbulance
-        then
-            HU.fetchImage HU.FF_ASSET "ny_ic_no_rides_history_ambulance"
-        else
-            "ny_ic_no_rides_history_cab,https://assets.moving.tech/beckn/jatrisaathi/driver/images/ny_ic_no_rides_history_cab.png"
+                if state.props.subView == ST.EARNINGS_VIEW then "ny_ic_no_rides_history"
+                else "ny_ic_no_coins_history"
+        else if isVehicleBike then HU.fetchImage HU.FF_ASSET "ny_ic_no_rides_history_bike"
+        else if isVehicleAmbulance then HU.fetchImage HU.FF_ASSET "ny_ic_no_rides_history_ambulance"
+        else if isVehicleTruck then HU.fetchImage HU.FF_ASSET "ny_ic_no_rides_history_truck"
+        else "w,https://assets.moving.tech/beckn/jatrisaathi/driver/images/ny_ic_no_rides_history_cab.png"
       , height = V if state.props.subView == ST.EARNINGS_VIEW then 110 else 115
       , width = V if state.props.subView == ST.EARNINGS_VIEW then 124 else 200
       , margin = MarginBottom 61

@@ -162,6 +162,7 @@ transformVehicleType vehicletype =
      Just "AUTO_CATEGORY" -> Just ST.AutoCategory
      Just "MOTORCYCLE" -> Just ST.BikeCategory
      Just "AMBULANCE" -> Just ST.AmbulanceCategory
+     Just "TRUCK" -> Just ST.TruckCategory
      _ -> Nothing
 
 decodeVehicleType :: String -> Maybe ST.VehicleCategory
@@ -170,6 +171,7 @@ decodeVehicleType value = case value of
   "CarCategory" -> Just ST.CarCategory
   "BikeCategory" -> Just ST.BikeCategory
   "AmbulanceCategory" -> Just ST.AmbulanceCategory
+  "TruckCategory" -> Just ST.TruckCategory
   _ -> Nothing
 rideTypeConstructor :: Maybe TripCategory -> ST.TripType
 rideTypeConstructor ( tripCategory) = 

@@ -2069,6 +2069,7 @@ vehicleNotSupportedPopup state =
         imageUrl = case state.data.linkedVehicleCategory of 
                    "BIKE" -> fetchImage FF_ASSET "ny_ic_bike_not_supported"
                    "AUTO_RICKSHAW" -> fetchImage FF_ASSET "ny_ic_auto_not_supported"
+                   "DELIVERY_LIGHT_GOODS_VEHICLE" -> fetchImage FF_ASSET "ny_ic_truck_not_supported"
                    _ | elem state.data.linkedVehicleCategory ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"] -> fetchImage FF_ASSET "ny_ic_ambulance_not_supported"
                    _ -> fetchImage FF_ASSET cityConfig.vehicleNSImg
       , visibility = VISIBLE
