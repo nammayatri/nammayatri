@@ -5656,23 +5656,26 @@ predictionClickedFlow prediction state = do
                   autoCompleteBusStop = state.props.autoCompleteBusStop || state.props.actionType == BusSearchSelectionAction
                 (GetMetroStationResponse getBusStopResp) <- if autoCompleteBusStop then  Remote.getMetroStationBT (show state.data.ticketServiceType) currentCity "" state.props.stopCodeSelected (show currentState.homeScreen.props.sourceLat <> "," <> show currentState.homeScreen.props.sourceLong) else pure $ GetMetroStationResponse []
                 let leastDistanceStationName = getStationWithLeastDistance (GetMetroStationResponse getBusStopResp)
-                modifyScreenState $ SearchLocationScreenStateType (\slsState -> SearchLocationScreenData.initData{ props { actionType = BusStopSelectionAction ,  canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSelected = busRouteSelected, autoCompleteBusStop = autoCompleteBusStop,srcLat =  state.props.srcLat , srcLong = state.props.srcLong }, data { fromScreen =(Screen.getScreen Screen.BUS_ROUTE_STOPS_SEARCH_SCREEN) , srcLoc = srcLocation, destLoc = destLocation, stopsSearchedList = if autoCompleteBusStop then  leastDistanceStationName else state.data.updatedStopsSearchedList , updatedStopsSearchedList = if autoCompleteBusStop then leastDistanceStationName else state.data.updatedStopsSearchedList, rideType = STOP } })
-                let srcLoc = 
-                      case state.data.srcLoc of
-                        Just loc -> 
-                          case state.data.updatedStopsSearchedList !! 0 of
-                            Just (GetMetroStationResp stop) -> Just loc { address = stop.name
-                                                  , busStopInfo = Just { stationName : stop.name, stationCode : stop.code }
-                                                  , stationCode = stop.code }
-                            Nothing -> Just loc
+                let newState = SearchLocationScreenData.initData{ props { actionType = BusStopSelectionAction ,  canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSelected = busRouteSelected, autoCompleteBusStop = autoCompleteBusStop,srcLat =  state.props.srcLat , srcLong = state.props.srcLong }, data { fromScreen =(Screen.getScreen Screen.BUS_ROUTE_STOPS_SEARCH_SCREEN) , srcLoc = srcLocation, destLoc = destLocation, stopsSearchedList = if autoCompleteBusStop then  leastDistanceStationName else state.data.updatedStopsSearchedList , updatedStopsSearchedList = if autoCompleteBusStop then leastDistanceStationName else state.data.updatedStopsSearchedList, rideType = STOP } }
+                -- modifyScreenState $ SearchLocationScreenStateType (\slsState -> )
+                let srcLoc =
+                      case newState.data.updatedStopsSearchedList !! 0 of
+                        Just (GetMetroStationResp stop) -> 
+                          Just SearchLocationScreenData.dummyLocationInfo
+                            { address = stop.name
+                            , busStopInfo = Just { stationName : stop.name, stationCode : stop.code }
+                            , stationCode = stop.code }
                         Nothing -> Nothing
-                modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{ data { srcLoc = srcLoc } })
+                modifyScreenState $ SearchLocationScreenStateType (\slsState -> newState{ data { srcLoc = srcLoc } })
                 pure $ setText (getNewIDWithTag (show SearchLocPickup)) ""
-                case currentState.globalProps.cachedSearches !! 0 of
-                  Just pred -> do
-                    (GlobalState globalState) <- getState
-                    predictionClickedFlow pred globalState.searchLocationScreen
-                  Nothing -> searchLocationFlow
+                (GlobalState globalState) <- getState
+                _ <- pure $ spy "debug route globalState.searchLocationScreen after modify" globalState.searchLocationScreen
+                predictionClickedFlow prediction globalState.searchLocationScreen
+                -- case currentState.globalProps.cachedSearches !! 0 of
+                --   Just pred -> do
+                --     (GlobalState globalState) <- getState
+                --     predictionClickedFlow pred globalState.searchLocationScreen
+                --   Nothing -> searchLocationFlow
   else if state.props.actionType == NoBusRouteSelectionAction then do
     let { lat, lon, placeId } = { lat: fromMaybe 0.0 prediction.lat, lon: fromMaybe 0.0 prediction.lon, placeId: prediction.placeId }
     (GetPlaceNameResp resp) <- getPlaceNameResp (prediction.title <> ", " <> prediction.subTitle) placeId lat lon prediction
@@ -7136,6 +7139,7 @@ selectBusRouteScreenFlow srcCode destCode = do
               busTrackingScreenFlow
             Nothing -> pure unit
         Nothing -> pure unit
+      modifyScreenState $ SelectBusRouteScreenType (\state -> state{ data{ quotes = Nothing } })
       selectBusRouteScreenFlow srcCode destCode
     GO_TO_SEARCH_LOCATION_FROM_SELECT_ROUTE -> searchLocationFlow
 

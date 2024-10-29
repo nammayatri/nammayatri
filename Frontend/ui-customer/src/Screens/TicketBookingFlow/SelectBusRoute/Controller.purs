@@ -58,6 +58,6 @@ eval (UpdateQuotes quotes) state = do
           map (\quote ->
             getFirstRoute quote
           ) quotes
-  continue state{ data{ quotes = quotes } }
+  continue state{ data{ quotes = Just quotes } }
 
 eval _ state = continue state
