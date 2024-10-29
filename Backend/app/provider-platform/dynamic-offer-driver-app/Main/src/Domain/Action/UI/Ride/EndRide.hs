@@ -49,6 +49,7 @@ import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.Yudhishthira as Y
 import Environment (Flow)
 import EulerHS.Prelude hiding (id, pi)
+import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Maps
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
@@ -123,6 +124,12 @@ data CronJobEndRideReq = CronJobEndRideReq
   { point :: Maybe LatLong,
     merchantId :: Id DM.Merchant
   }
+
+data RideInterpolationData = RideInterpolationData
+  { interpolatedPoints :: [LatLong],
+    rideId :: Id DRide.Ride
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 newtype CallBasedEndRideReq = CallBasedEndRideReq
   { requestor :: DP.Person
@@ -373,12 +380,23 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
 
                 let (tollCharges, tollNames, tollConfidence) = do
                       let distanceCalculationFailure = distanceCalculationFailed || (maybe False (> 0) updRide.numberOfSelfTuned)
-                      if isJust updRide.estimatedTollCharges && isJust updRide.tollCharges && distanceCalculationFailure
-                        then (updRide.tollCharges, updRide.tollNames, Just Neutral)
-                        else
-                          if (isJust updRide.estimatedTollCharges || isJust updRide.tollCharges) && distanceCalculationFailure
-                            then (Nothing, Nothing, Just Unsure)
-                            else (updRide.tollCharges, updRide.tollNames, Just Sure)
+                      if distanceCalculationFailure
+                        then
+                          if isJust updRide.estimatedTollCharges
+                            then
+                              if isJust updRide.tollCharges
+                                then (updRide.tollCharges, updRide.tollNames, Just Neutral)
+                                else
+                                  if updRide.driverDeviatedToTollRoute == Just True
+                                    then (updRide.estimatedTollCharges, updRide.estimatedTollNames, Just Neutral)
+                                    else (Nothing, Nothing, Just Unsure)
+                            else (Nothing, Nothing, Just Unsure)
+                        else (updRide.tollCharges, updRide.tollNames, Just Sure)
+
+                fork "ride-interpolation" $ do
+                  interpolatedPoints <- getInterpolatedPoints updRide.driverId
+                  let rideInterpolationData = RideInterpolationData {interpolatedPoints = interpolatedPoints, rideId = updRide.id}
+                  when (isJust updRide.driverDeviatedToTollRoute && tollConfidence == Just Sure && maybe True (== 0) tollCharges && isJust updRide.estimatedTollCharges) $ pushToKafka rideInterpolationData "ride-interpolated-waypoints" updRide.id.getId
 
                 let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollConfidence = tollConfidence, distanceCalculationFailed = Just distanceCalculationFailed}
 
