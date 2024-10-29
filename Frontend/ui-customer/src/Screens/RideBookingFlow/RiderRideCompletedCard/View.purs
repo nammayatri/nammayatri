@@ -1203,7 +1203,6 @@ riderFeedback state push =
           , color Color.black700
           , maxLines 2
           , margin $ MarginTop 3
-          , weight 1.0
           ] <> FontStyle.body3 LanguageStyle
       ]
     , linearLayout[
