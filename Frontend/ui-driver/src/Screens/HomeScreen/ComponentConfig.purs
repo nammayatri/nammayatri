@@ -619,6 +619,7 @@ paymentPendingPopupConfig state =
       text = "<span style='color:#2194FF'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>"
     , textStyle = SubHeading2
     , margin = MarginBottom 24
+    , isClickable = true
     , suffixImage = {
         visibility : VISIBLE
         , imageUrl : fetchImage FF_ASSET "ny_ic_youtube"
