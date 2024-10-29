@@ -1010,7 +1010,7 @@ intercityRateCardConfig state =
     driverMaxAllowanceVal = case driverMaxAllowance of 
                               (Just driverMaxAllowance') -> driverMaxAllowance'.val
                               _ -> ""
-    nightShiftCharges = ((DA.head $ DA.filter (\item -> (item.key == "NIGHT_SHIFT_CHARGES")) state.data.rateCard.extraFare))
+    nightShiftCharges = ((DA.head $ DA.filter (\item -> (item.key == "Night Shift Charges*")) state.data.rateCard.extraFare))
     nightShiftChargesVal = case nightShiftCharges of 
                               (Just nightShiftCharges') -> nightShiftCharges'.val
                               _ -> ""
@@ -1028,7 +1028,7 @@ intercityRateCardConfig state =
     intercityBaseFareLimit = "30"
     expectedFareList = 
                       (if baseFareVal /= "0.0" then[{key : (getString FIXED_CHARGES), val : (getCurrency appConfig) <> (baseFareVal)},{key:(getString DISTANCE_FARE),val :(getCurrency appConfig) <> (plannedPerKmChargesVal) <> " /km"}] else [{key : getString DISTANCE_FARE,val : ((getCurrency appConfig) <> plannedPerKmChargesVal <> " /km")}])<>
-                      DA.filter (\item -> all (\key -> item.key /= key) ["DRIVER_ALLOWANCE", "PER_DAY_MAX_ALLOWANCE", "NIGHT_SHIFT_CHARGES", "BASE_FARE", "PLANNED_PER_KM_CHARGES","EXTRA_TIME_FARE","EXTRA_DISTANCE_FARE"]) state.data.rateCard.extraFare
+                      DA.filter (\item -> all (\key -> item.key /= key) ["DRIVER_ALLOWANCE", "PER_DAY_MAX_ALLOWANCE", "Night Shift Charges*", "BASE_FARE", "PLANNED_PER_KM_CHARGES","EXTRA_TIME_FARE","EXTRA_DISTANCE_FARE"]) state.data.rateCard.extraFare
     intercityRateCardConfig' = 
       config'
       {

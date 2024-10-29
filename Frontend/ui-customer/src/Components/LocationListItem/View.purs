@@ -161,9 +161,7 @@ getLocationTagImage mbTypes fallback description =
     Nothing -> fallback
   where 
     checkBusStation :: Boolean 
-    checkBusStation = 
-      let _ = spy "checkBusStation" description 
-      in spy "checkBusStationResp" $ any (\item -> DS.contains (DS.Pattern item)  $ DS.toLower description) ["bus"]
+    checkBusStation = any (\item -> DS.contains (DS.Pattern item)  $ DS.toLower description) ["bus"]
 
     checkTrainStation :: Boolean
     checkTrainStation = any (\item -> DS.contains(DS.Pattern item) $ DS.toLower description) ["train", "metro"] 
