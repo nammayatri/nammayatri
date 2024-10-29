@@ -1775,6 +1775,8 @@ newtype Keymap
   , parcel_is_inappropriate :: String
   , sender_asking_different_location :: String
   , sender_unavailable_unreachable :: String
+  , truck :: String
+  , register_your_truck :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7048,3 +7050,9 @@ sender_asking_different_location = a
 
 sender_unavailable_unreachable :: Proxy "sender_unavailable_unreachable"
 sender_unavailable_unreachable = a
+
+truck :: Proxy "truck"
+truck = a
+
+register_your_truck :: Proxy "register_your_truck"
+register_your_truck = a

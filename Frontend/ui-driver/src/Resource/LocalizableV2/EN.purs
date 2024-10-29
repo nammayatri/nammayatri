@@ -1761,4 +1761,6 @@ getEn =
     , parcel_is_inappropriate : "Parcel is inappropriate"
     , sender_asking_different_location : "Sender asking to come to different location"
     , sender_unavailable_unreachable : "Sender unavailable / unreachable"
+    , truck : "Truck"
+    , register_your_truck : "Register your Truck"
     }

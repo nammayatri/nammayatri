@@ -1761,4 +1761,6 @@ getKn =
     , parcel_is_inappropriate : "ಪಾರ್ಸೆಲ್ ಅನನುಕೂಲಕರವಾಗಿದೆ"
     , sender_asking_different_location : "ಕಳುಹಿಸುವವರು ಬೇರೆ ಸ್ಥಳಕ್ಕೆ ಬರಲು ಕೇಳುತ್ತಿದ್ದಾರೆ"
     , sender_unavailable_unreachable : "ಕಳುಹಿಸುವವರು ಲಭ್ಯವಿಲ್ಲ / ಸಂಪರ್ಕಿಸಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ"
+    , truck : "ಟ್ರಕ್"
+    , register_your_truck : "ನಿಮ್ಮ ಟ್ರಕ್ ನೋಂದಣಿಯನ್ನು ಮಾಡಿ"
     }

@@ -442,6 +442,8 @@ manageVehicleItem state vehicle push =
       "ny_ic_bike_side"
     else if category == ST.AmbulanceCategory then
       "ny_ic_ambulance_side"
+    else if category == ST.TruckCategory then
+      "ny_ic_truck_side"
     else
       "ny_ic_silhouette"
 
@@ -779,6 +781,7 @@ tabImageView state push =
       "MALE" | vc == ST.CarCategory -> "ny_ic_white_avatar_profile"
       "MALE" | vc == ST.BikeCategory -> "ny_ic_new_avatar_profile"
       "MALE" | vc == ST.AmbulanceCategory -> "ny_ic_new_avatar_profile"
+      "MALE" | vc == ST.TruckCategory -> "ny_ic_new_avatar_profile"
       "FEMALE" -> "ny_ic_profile_female"
       _ -> "ny_ic_generic_mascot"
     per = (state.data.completingProfileRes.completed*100)/4
@@ -897,6 +900,7 @@ tabImageView state push =
       ST.CarCategory -> "ny_ic_sedan"
       ST.BikeCategory -> "ny_ic_bike_side"
       ST.AmbulanceCategory -> "ny_ic_ambulance_side"
+      ST.TruckCategory -> "ny_ic_truck_side"
       _ -> "ny_ic_silhouette"
 
   getAutoImage :: CityConfig -> String
@@ -1673,7 +1677,7 @@ profileOptionsLayout state push =
   where
   visibilityCondition optionItem = case optionItem.menuOptions of
     GO_TO_LOCATIONS -> state.props.enableGoto
-    DRIVER_BOOKING_OPTIONS -> state.data.config.profile.showBookingOption && not (state.data.driverVehicleType `elem` ["AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR"]) -- Temporary Fix until Ambulance Ride Flow is complete
+    DRIVER_BOOKING_OPTIONS -> state.data.config.profile.showBookingOption && not (state.data.driverVehicleType `elem` ["BIKE", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR","DELIVERY_LIGHT_GOODS_VEHICLE"]) -- Temporary Fix until Ambulance Ride Flow is complete
     LIVE_STATS_DASHBOARD -> state.data.config.dashboard.enable && not DS.null state.data.config.dashboard.url
     _ -> true
 
@@ -1812,7 +1816,7 @@ vehicleListItem state push vehicle =
         , orientation HORIZONTAL
         , background Color.blue600
         , cornerRadius 8.0
-        , visibility $ MP.boolToVisibility $ vehicle.isActive && vehicle.isVerified && not (vehicle.userSelectedVehicleCategory == ST.AmbulanceCategory)
+        , visibility $ MP.boolToVisibility $ vehicle.isActive && vehicle.isVerified && not (vehicle.userSelectedVehicleCategory `elem` [ST.AmbulanceCategory, ST.BikeCategory, ST.TruckCategory])
         , padding $ Padding 16 8 16 8
         , margin $ MarginTop 16
         , onClick push $ const $ OptionClick DRIVER_BOOKING_OPTIONS
@@ -1845,6 +1849,8 @@ vehicleListItem state push vehicle =
       "ny_ic_bike_side"
     else if category == ST.AmbulanceCategory then
       "ny_ic_ambulance_side"
+    else if category == ST.TruckCategory then
+      "ny_ic_truck_side"
     else
       "ny_ic_silhouette"
 
