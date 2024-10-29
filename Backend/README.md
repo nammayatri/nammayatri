@@ -12,16 +12,11 @@ To build or develop the project, you need to install the following.
 [Nix](https://nixos.asia/en/nix) is central to building and developing the [Namamayatri][nammayatri] project. To prepare your system for a pleasant [Nix-based development](https://nixos.asia/en/dev), follow these four steps:
 
 1. [Install **Nix**](https://nixos.asia/en/install)
-1. Setup the Nix **binary cache** (to avoid compiling locally for hours):
-    ```sh
-    nix run nixpkgs#cachix use nammayatri
-    ```
-    - For this command to succeed, you should add yourself to the `trusted-users` list of `nix.conf` and then restart the Nix daemon using `sudo pkill nix-daemon`.
-1. Install **home-manager**[^hm] and setup **nix-direnv** and **starship** by following the instructions [in this home-manager template](https://github.com/juspay/nix-dev-home).[^direnv] You want this to facilitate a nice Nix develoment environment. Read more about direnv [here](https://nixos.asia/en/direnv).
-1. Run `nix --accept-flake-config run github:juspay/omnix health github:nammayatri/nammayatri` and make sure that everything is green (✅) or Amber (🟧)
+1. [Install **direnv**](https://github.com/juspay/nixos-unified-template).[^direnv]
+    - You want this to facilitate a nice Nix develoment environment. Read more about direnv [here](https://nixos.asia/en/direnv).
+1. Enter the Nix devshell by running `ln -s .envrc.backend .envrc && direnv allow` in the project directory.
 
-[^hm]: Unless you are using NixOS in which case home-manager is not strictly needed.
-[^direnv]: Not strictly required to develop nammayatri. If you do not use `direnv` however you would have to remember to manually restart the `nix develop` shell, and know when exactly to do this each time.
+[^direnv]: Not strictly required to develop nammayatri. If you do not use `direnv` however you would have to remember to manually restart the `nix develop` shell, and know when exactly to do this each time. Also, you need setup binary cache manually, using `cachix use nammayatri`.
 
 ### Building
 
