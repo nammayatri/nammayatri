@@ -23,7 +23,7 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = postDriverReferralReferralOpsPassword merchantId city :<|> postDriverReferralLinkReferral merchantId city
 
 postDriverReferralReferralOpsPassword :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.DriverReferral.ReferralLinkPasswordUpdateAPIReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postDriverReferralReferralOpsPassword a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverReferral.postDriverReferralReferralOpsPassword a3 a2 a1
+postDriverReferralReferralOpsPassword a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverReferral.postDriverReferralReferralOpsPassword a3 a2 a1
 
 postDriverReferralLinkReferral :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.DriverReferral.ReferralLinkReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverReferral.LinkReport)
-postDriverReferralLinkReferral a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverReferral.postDriverReferralLinkReferral a3 a2 a1
+postDriverReferralLinkReferral a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverReferral.postDriverReferralLinkReferral a3 a2 a1

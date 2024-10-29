@@ -24,4 +24,4 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getInvoiceInvoice merchantId city
 
 getInvoiceInvoice :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.UTCTime -> Data.Text.Text -> Kernel.Prelude.UTCTime -> Environment.FlowHandler [API.Types.RiderPlatform.Management.Invoice.InvoiceRes])
-getInvoiceInvoice a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Invoice.getInvoiceInvoice a5 a4 a3 a2 a1
+getInvoiceInvoice a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Invoice.getInvoiceInvoice a5 a4 a3 a2 a1

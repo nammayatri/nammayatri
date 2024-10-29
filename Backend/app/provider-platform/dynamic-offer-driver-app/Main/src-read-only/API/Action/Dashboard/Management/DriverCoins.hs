@@ -25,10 +25,10 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = postDriverCoinsBulkUploadCoins merchantId city :<|> postDriverCoinsBulkUploadCoinsV2 merchantId city :<|> getDriverCoinsCoinHistory merchantId city
 
 postDriverCoinsBulkUploadCoins :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.DriverCoins.BulkUploadCoinsReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postDriverCoinsBulkUploadCoins a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverCoins.postDriverCoinsBulkUploadCoins a3 a2 a1
+postDriverCoinsBulkUploadCoins a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverCoins.postDriverCoinsBulkUploadCoins a3 a2 a1
 
 postDriverCoinsBulkUploadCoinsV2 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.DriverCoins.BulkUploadCoinsReqV2 -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postDriverCoinsBulkUploadCoinsV2 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverCoins.postDriverCoinsBulkUploadCoinsV2 a3 a2 a1
+postDriverCoinsBulkUploadCoinsV2 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverCoins.postDriverCoinsBulkUploadCoinsV2 a3 a2 a1
 
 getDriverCoinsCoinHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverCoins.CoinHistoryRes)
-getDriverCoinsCoinHistory a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverCoins.getDriverCoinsCoinHistory a5 a4 a3 a2 a1
+getDriverCoinsCoinHistory a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverCoins.getDriverCoinsCoinHistory a5 a4 a3 a2 a1
