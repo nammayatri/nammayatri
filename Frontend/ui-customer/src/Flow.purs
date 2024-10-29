@@ -852,10 +852,11 @@ currentFlowStatus prioritizeRating = do
         (GlobalState currentState) <- getState
         let
           tipViewData = case (getTipViewData "LazyCheck") of
-            Just (TipViewData tipView) -> do
+            Just (TipViewData tipView) -> do  
               currentState.homeScreen.props.tipViewProps { stage = tipView.stage, activeIndex = tipView.activeIndex, isVisible = tipView.activeIndex >= 0 }
             Nothing -> do
               currentState.homeScreen.props.tipViewProps
+        void $ pure $ spy "CURRENT STATE -------------------------------->" currentState
         case (getFlowStatusData "LazyCheck") of
           Just (FlowStatusData flowStatusData) -> do
             modifyScreenState
