@@ -192,6 +192,7 @@ defaultCoinsConfig = {
   rideCompletedCoinEvent : false,
   twoRideCoinEvent : false,
   fiveRideCoinEvent : false,
+  sixRideCoinEvent : false,
   eightRideCoinEvent : false,
   tenRideCoinEvent : false,
   prupleRideCoinEvent : false,

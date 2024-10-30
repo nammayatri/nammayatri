@@ -3036,6 +3036,7 @@ data CoinEarnedPopupType =
   | REFER_AND_EARN_COIN 
   | CONVERT_COINS_TO_CASH 
   | NO_COIN_POPUP
+  | SIX_RIDE_COMPLETED
 
 derive instance genericCoinEarnedPopupType :: Generic CoinEarnedPopupType _
 instance showCoinEarnedPopupType :: Show CoinEarnedPopupType where show = genericShow
@@ -3047,6 +3048,7 @@ type CoinEarnedPopupTypeShown = {
   oneMoreRide :: String,
   twoRideCompleted :: String,
   fiveRideCompleted :: String,
+  sixRideCompleted :: String,
   eightRideCompleted :: String,
   referAndEarnCoin :: String,
   convertCoinsToCash :: String,
