@@ -1617,6 +1617,7 @@ getProxy str = case str of
   I_PLEDGE -> \a -> a @~ i_pledge
   ONLY_5_MORE_RIDES_FOR_N_POINTS arg1 -> \a -> (a @~ only_5_more_rides_for_n_points) arg1
   ONLY_3_MORE_RIDES_FOR_N_POINTS arg1 -> \a -> (a @~ only_3_more_rides_for_n_points) arg1
+  ONLY_4_MORE_RIDES_FOR_N_POINTS arg1 -> \a -> (a @~ only_4_more_rides_for_n_points) arg1
   YOU_GOT_N_POINTS arg1 -> \a -> (a @~ you_got_n_points) arg1
   DISCOUNTED -> \a -> a @~ discounted
   YATRI_POINTS_FAQS_QUES1_ANS4 arg1 -> \a -> (a @~ yatri_points_faqs_ques1_ans4) arg1

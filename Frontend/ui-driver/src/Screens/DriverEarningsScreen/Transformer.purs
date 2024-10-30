@@ -92,6 +92,10 @@ checkPopupShowToday popupType appConfig hsState = do
       if isPopupShownToday coinPopupInfo.eightRideCompleted && checkCoinIsEnabled && coinsConfig.eightRideCoinEvent && isAutoRicksaw && (not isDateGreaterThan coinsConfig.monsoonOfferDate)
         then ST.EIGHT_RIDE_COMPLETED
         else ST.NO_COIN_POPUP
+    ST.SIX_RIDE_COMPLETED ->
+      if isPopupShownToday coinPopupInfo.sixRideCompleted && checkCoinIsEnabled && coinsConfig.sixRideCoinEvent && isAutoRicksaw && (not isDateGreaterThan coinsConfig.monsoonOfferDate)
+        then ST.SIX_RIDE_COMPLETED
+        else ST.NO_COIN_POPUP
     ST.FIVE_RIDE_COMPLETED ->
       if isPopupShownToday coinPopupInfo.fiveRideCompleted && checkCoinIsEnabled && coinsConfig.fiveRideCoinEvent && isAutoRicksaw && (not isDateGreaterThan coinsConfig.monsoonOfferDate)
         then ST.FIVE_RIDE_COMPLETED
