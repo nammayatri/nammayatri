@@ -1559,6 +1559,7 @@ newtype Keymap
   , i_pledge :: String
   , only_5_more_rides_for_n_points :: String -> String
   , only_3_more_rides_for_n_points :: String -> String
+  , only_4_more_rides_for_n_points :: String -> String
   , you_got_n_points :: String -> String
   , discounted :: String
   , yatri_points_faqs_ques1_ans4 :: String -> String
@@ -6358,6 +6359,9 @@ only_5_more_rides_for_n_points = a
 
 only_3_more_rides_for_n_points :: Proxy "only_3_more_rides_for_n_points"
 only_3_more_rides_for_n_points = a
+
+only_4_more_rides_for_n_points :: Proxy "only_4_more_rides_for_n_points"
+only_4_more_rides_for_n_points = a
 
 you_got_n_points :: Proxy "you_got_n_points"
 you_got_n_points = a

@@ -1524,6 +1524,7 @@ eval (CoinEarnedPopupAC PopUpModal.OnButton1Click) state = do
     ST.EIGHT_RIDE_COMPLETED -> updateAndExit newState $ EarningsScreen newState true 
     ST.TWO_RIDE_COMPLETED -> updateAndExit newState $ EarningsScreen newState true 
     ST.FIVE_RIDE_COMPLETED -> updateAndExit newState $ EarningsScreen newState true 
+    ST.SIX_RIDE_COMPLETED -> updateAndExit newState $ EarningsScreen newState true 
     _ -> continue newState
 
 eval (CoinEarnedPopupAC PopUpModal.OptionWithHtmlClick) state = do
@@ -1921,6 +1922,7 @@ updateCoinPopupLocalStoreVal state = do
         ST.ONE_MORE_RIDE -> popupInfo { oneMoreRide = getCurrentUTC "" }
         ST.EIGHT_RIDE_COMPLETED -> popupInfo { eightRideCompleted = getCurrentUTC "" }
         ST.FIVE_RIDE_COMPLETED -> popupInfo { fiveRideCompleted = getCurrentUTC "" }
+        ST.SIX_RIDE_COMPLETED -> popupInfo { sixRideCompleted = getCurrentUTC "" }
         ST.TEN_RIDE_COMPLETED -> popupInfo { tenRideCompleted = getCurrentUTC "" }
         ST.TWO_RIDE_COMPLETED -> popupInfo { twoRideCompleted = getCurrentUTC "" }
         ST.REFER_AND_EARN_COIN -> popupInfo { referAndEarnCoin = getCurrentUTC "" }
@@ -1929,7 +1931,7 @@ updateCoinPopupLocalStoreVal state = do
   void $ pure $ setValueToCache "COIN_EARNED_POPUP_TYPE" newPopupInfo stringifyJSON
 
 getCoinPopupStatus :: String -> ST.CoinEarnedPopupTypeShown
-getCoinPopupStatus key = decodeForeignAny (parseJSON (getKeyInSharedPrefKeys key)) {rideMoreEarnCoin : "" , twoMoreRides : "", oneMoreRide : "", eightRideCompleted : "", fiveRideCompleted : "", tenRideCompleted : "", twoRideCompleted : "", referAndEarnCoin : "", convertCoinsToCash : ""}
+getCoinPopupStatus key = decodeForeignAny (parseJSON (getKeyInSharedPrefKeys key)) {rideMoreEarnCoin : "" , twoMoreRides : "", oneMoreRide : "", eightRideCompleted : "", fiveRideCompleted : "", sixRideCompleted : "", tenRideCompleted : "", twoRideCompleted : "", referAndEarnCoin : "", convertCoinsToCash : ""}
 
 fetchStageFromRideStatus :: ST.ActiveRide -> ST.HomeScreenStage
 fetchStageFromRideStatus activeRide = 
