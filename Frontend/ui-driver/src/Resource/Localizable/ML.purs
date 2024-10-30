@@ -1593,5 +1593,3 @@ getML stringKey =
         RECORD_AUDIO -> "ഓഡിയോ റെക്കോർഡുചെയ്യുക"
         CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY -> "Go-To വ്യത്യസ്ത നഗരങ്ങൾക്കായി പ്രവർത്തനക്ഷമമാക്കാൻ കഴിയില്ല"
         XL_PLUS -> "XL പ്ലസ്"
-        TRUCK -> "ട്രക്ക്"
-        REGISTER_YOUR_TRUCK -> "നിങ്ങളുടെ ട്രക്ക് നിബന്ധിക്കുക"

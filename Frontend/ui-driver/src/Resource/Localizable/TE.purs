@@ -1595,5 +1595,3 @@ getTE stringKey =
         RECORD_AUDIO -> "ఆడియో రికార్డ్ చేయండి"
         CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY -> "Go-To వివిధ నగరాల కోసం ప్రారంభించబడదు"
         XL_PLUS -> "XL ప్లస్"
-        TRUCK -> "ట్రక్"
-        REGISTER_YOUR_TRUCK -> "మీ ట్రక్‌ను నమోదు చేయండి"
