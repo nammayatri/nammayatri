@@ -4,7 +4,7 @@
 
 module Storage.Queries.SeatManagement where
 
-import qualified Data.Time.Calendar
+import qualified Data.Time
 import qualified Domain.Types.SeatManagement
 import qualified Domain.Types.ServiceCategory
 import Kernel.Beam.Functions
@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findByTicketServiceCategoryIdAndDate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> m (Maybe Domain.Types.SeatManagement.SeatManagement))
+  (Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Day -> m (Maybe Domain.Types.SeatManagement.SeatManagement))
 findByTicketServiceCategoryIdAndDate ticketServiceCategoryId date = do
   findOneWithKV
     [ Se.And
@@ -34,7 +34,7 @@ findByTicketServiceCategoryIdAndDate ticketServiceCategoryId date = do
         ]
     ]
 
-updateBlockedSeats :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> m ())
+updateBlockedSeats :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Day -> m ())
 updateBlockedSeats blocked ticketServiceCategoryId date = do
   _now <- getCurrentTime
   updateWithKV
@@ -47,7 +47,7 @@ updateBlockedSeats blocked ticketServiceCategoryId date = do
 
 updateBookedAndBlockedSeats ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Int -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> m ())
+  (Kernel.Prelude.Int -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Day -> m ())
 updateBookedAndBlockedSeats booked blocked ticketServiceCategoryId date = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -57,7 +57,7 @@ updateBookedAndBlockedSeats booked blocked ticketServiceCategoryId date = do
     ]
     [Se.And [Se.Is Beam.ticketServiceCategoryId $ Se.Eq (Kernel.Types.Id.getId ticketServiceCategoryId), Se.Is Beam.date $ Se.Eq date]]
 
-updateBookedSeats :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Calendar.Day -> m ())
+updateBookedSeats :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Data.Time.Day -> m ())
 updateBookedSeats booked ticketServiceCategoryId date = do
   _now <- getCurrentTime
   updateWithKV

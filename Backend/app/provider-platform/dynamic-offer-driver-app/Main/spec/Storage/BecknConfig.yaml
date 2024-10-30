@@ -53,6 +53,10 @@ BecknConfig:
     findById:
       kvFunction: findOneWithKV
       where: id
+    findAllByMerchantId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId]
 
   beamType:
     subscriberUrl: Text

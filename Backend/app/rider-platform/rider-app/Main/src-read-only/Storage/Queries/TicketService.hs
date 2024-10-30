@@ -40,6 +40,8 @@ updateByPrimaryKey (Domain.Types.TicketService.TicketService {..}) = do
       Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours),
       Se.Set Beam.expiry expiry,
       Se.Set Beam.maxVerification maxVerification,
+      Se.Set Beam.operationalEndDate (operationalDate <&> (.eneDate)),
+      Se.Set Beam.operationalStartDate (operationalDate <&> (.startDate)),
       Se.Set Beam.operationalDays operationalDays,
       Se.Set Beam.placesId placesId,
       Se.Set Beam.service service,

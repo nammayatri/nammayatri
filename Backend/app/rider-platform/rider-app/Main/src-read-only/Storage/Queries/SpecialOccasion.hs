@@ -4,7 +4,7 @@
 
 module Storage.Queries.SpecialOccasion where
 
-import qualified Data.Time.Calendar
+import qualified Data.Time
 import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.SpecialOccasion
 import Kernel.Beam.Functions
@@ -23,14 +23,12 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.SpecialOccasion.SpecialOccasion] -> m ())
 createMany = traverse_ create
 
-findAllSpecialOccasionByEntityId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> m [Domain.Types.SpecialOccasion.SpecialOccasion])
+findAllSpecialOccasionByEntityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Day -> m [Domain.Types.SpecialOccasion.SpecialOccasion])
 findAllSpecialOccasionByEntityId entityId date = do findAllWithKV [Se.And [Se.Is Beam.entityId $ Se.Eq entityId, Se.Is Beam.date $ Se.Eq date]]
 
 findBySplDayAndEntityIdAndDate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.SpecialOccasion.SpecialDayType -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> m (Maybe Domain.Types.SpecialOccasion.SpecialOccasion))
+  (Domain.Types.SpecialOccasion.SpecialDayType -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Day -> m (Maybe Domain.Types.SpecialOccasion.SpecialOccasion))
 findBySplDayAndEntityIdAndDate specialDayType entityId date = do
   findOneWithKV
     [ Se.And
@@ -42,7 +40,7 @@ findBySplDayAndEntityIdAndDate specialDayType entityId date = do
 
 findSpecialOccasionByEntityIdAndDate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> m (Maybe Domain.Types.SpecialOccasion.SpecialOccasion))
+  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Day -> m (Maybe Domain.Types.SpecialOccasion.SpecialOccasion))
 findSpecialOccasionByEntityIdAndDate entityId date = do findOneWithKV [Se.And [Se.Is Beam.entityId $ Se.Eq entityId, Se.Is Beam.date $ Se.Eq date]]
 
 findSpecialOccasionByEntityIdAndDayOfWeek ::

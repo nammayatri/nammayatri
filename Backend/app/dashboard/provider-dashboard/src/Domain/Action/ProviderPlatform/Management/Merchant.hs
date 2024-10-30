@@ -332,11 +332,33 @@ postMerchantConfigOperatingCityCreate merchantShortId opCity apiTokenInfo req@Co
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   -- update entry in dashboard
-  merchant <- SQM.findByShortId merchantShortId >>= fromMaybeM (InvalidRequest $ "Merchant not found with shortId " <> show merchantShortId)
+  baseMerchant <- SQM.findByShortId merchantShortId >>= fromMaybeM (InvalidRequest $ "Merchant not found with shortId " <> show merchantShortId)
   geom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom.")
+  now <- getCurrentTime
+  merchant <-
+    case merchantData of
+      Just merchantD -> do
+        SQM.findByShortId (ShortId merchantD.shortId) >>= \case
+          Nothing -> do
+            let newMerchant = buildMerchant now merchantD baseMerchant
+            SQM.create newMerchant
+            return newMerchant
+          Just newMerchant -> return newMerchant
+      Nothing -> return baseMerchant
   unless (req.city `elem` merchant.supportedOperatingCities) $
-    SQM.updateSupportedOperatingCities merchantShortId (merchant.supportedOperatingCities <> [req.city])
+    SQM.updateSupportedOperatingCities merchant.shortId (merchant.supportedOperatingCities <> [req.city])
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigOperatingCityCreate) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, ..}
+  where
+    buildMerchant now merchantD DM.Merchant {..} =
+      DM.Merchant
+        { id = Id merchantD.subscriberId,
+          shortId = ShortId merchantD.shortId,
+          defaultOperatingCity = req.city,
+          supportedOperatingCities = [req.city],
+          createdAt = now,
+          enabled = Just enableForMerchant,
+          ..
+        }
 
 postMerchantSchedulerTrigger ::
   ShortId DM.Merchant ->
