@@ -314,6 +314,7 @@
       "ny_ic_delete_icon" : true,
       "ny_ic_delivery" : true,
       "ny_ic_delivery_instructions" : true,
+      "ny_ic_delhi_metro" : true,
       "ny_ic_delivery_service" : true,
       "ny_ic_demo_location" : true,
       "ny_ic_dest_dot" : true,

@@ -1027,6 +1027,7 @@ getEN stringKey =
         GET_FARE -> "Get Fare"
         METRO_BOOKING_TIMINGS -> "Metro Booking Timings"
         CHENNAI_METRO_TIME startTime endTime -> "Chennai Metro allows QR ticket purchase from "<> startTime <>" to "<> endTime <> " on all days. "
+        DELHI_METRO_TIME startTime endTime -> "Delhi Metro allows QR ticket purchase from "<>startTime<>" to "<>endTime<>" on all days. "
         PLEASE_COME_BACK_LATER_METRO -> "Please come back later during the eligible time to purchase tickets."
         NO_QOUTES_AVAILABLE -> "No quotes available"
         I_AGREE_TO_THE -> "I agree to the"
@@ -1060,8 +1061,9 @@ getEN stringKey =
         EXPERIENCE_HASSLE_FREE_METRO_BOOKING appName -> "Experience hassle-free metro bookings on " <> appName
         KOCHI_METRO_TERM_1 -> "The tickets can be purchased between 5:00 AM to 11:45 PM on all days."
         KOCHI_METRO_TERM_2 -> "Once Entry is done, passengers should exit within 120 mins from the destination."
-        KOCHI_METRO_TIME -> "Kochi Metro allows QR ticket purchase from 5:00 AM to 11:45 PM on all days. "
+        KOCHI_METRO_TIME startTime endTime -> "Kochi Metro allows QR ticket purchase from"<>startTime<>" to"<>startTime<>" on all days. "
         BOOK_TICKET -> "Book Ticket"
+        TICKETS_FOR_DELHI_METRO -> "Tickets for Delhi Metro"
         ORIGIN -> "Origin"
         HISTORY -> "History"
         ALWAYS -> "Always"

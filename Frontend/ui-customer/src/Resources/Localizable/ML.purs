@@ -1019,6 +1019,7 @@ getML stringKey =
         GET_FARE -> "കടപ്പാട് ലഭ്യമാക്കുക"
         METRO_BOOKING_TIMINGS -> "മെട്രോ ബുക്കിംഗ് സമയം"
         CHENNAI_METRO_TIME startTime endTime  -> "ചെന്നൈ മെട്രോ 4:30 ബജി മുതൽ 10:30 ബജി വരെ ക്യൂആർ ടിക്കറ്റ് വാങ്ങാൻ അനുമതിക്കുന്നു."
+        DELHI_METRO_TIME startTime endTime -> "ദില്ലി മെട്രോ " <> startTime <> " ബജി മുതൽ " <> endTime <> " ബജി വരെ ക്യൂആർ ടിക്കറ്റ് വാങ്ങാൻ അനുമതിക്കുന്നു."
         PLEASE_COME_BACK_LATER_METRO -> "ദയവായി പുനരാരംഭിക്കുക, ടിക്കറ്റ് വാങ്ങാൻ അനുമതിക്കുന്ന സമയത്തിൽ തിരികെ വാ."
         NO_QOUTES_AVAILABLE -> "ഉദ്ധാരണികൾ ലഭ്യമില്ല"
         I_AGREE_TO_THE -> "ഞാൻ അംഗീകരിക്കുന്നു"
@@ -1052,8 +1053,9 @@ getML stringKey =
         EXPERIENCE_HASSLE_FREE_METRO_BOOKING appName -> "ഹാസിൽ-ഫ്രീ മെട്രോ ബുക്കിംഗ് അനുഭവിക്കുക " <> appName
         KOCHI_METRO_TERM_1 -> "എല്ലാ ദിവസവും രാവിലെ 5:00 മുതൽ 11:45 PM വരെ ടിക്കറ്റുകൾ വാങ്ങാം."
         KOCHI_METRO_TERM_2 -> "പ്രവേശനം ചെയ്തുകഴിഞ്ഞാൽ, യാത്രക്കാർ ലക്ഷ്യസ്ഥാനത്ത് നിന്ന് 120 മിനിറ്റിനുള്ളിൽ പുറത്തുകടക്കണം."
-        KOCHI_METRO_TIME -> "എല്ലാ ദിവസവും രാവിലെ 5:00 മുതൽ രാത്രി 11:45 വരെ QR ടിക്കറ്റ് വാങ്ങാൻ കൊച്ചി മെട്രോ അനുവദിക്കുന്നു."
+        KOCHI_METRO_TIME startTime endTime -> "എല്ലാ ദിവസവും രാവിലെ " <> startTime <> " മുതൽ രാത്രി " <> endTime <> " വരെ QR ടിക്കറ്റ് വാങ്ങാൻ കൊച്ചി മെട്രോ അനുവദിക്കുന്നു."
         BOOK_TICKET -> "ടിക്കറ്റ് ബുക്ക് ചെയ്യുക"
+        TICKETS_FOR_DELHI_METRO -> "ദില്ലി മെട്രോ ടിക്കറ്റുകൾ"
         ORIGIN -> "ഉത്ഭവം"
         HISTORY -> "ചരിത്രം"
         ALWAYS -> "എല്ലാ സമയങ്ങളിലും"

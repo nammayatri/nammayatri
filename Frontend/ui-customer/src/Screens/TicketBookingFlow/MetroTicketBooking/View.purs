@@ -135,8 +135,8 @@ view :: forall w . (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -
 view push state =
   let
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
-    MetroBookingConfigRes metroBookingConfigResp = state.data.metroBookingConfigResp
-    cityMetroConfig = getMetroConfigFromCity city metroBookingConfigResp.isEventOngoing
+    resp@(MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
+    cityMetroConfig = getMetroConfigFromCity city (Just resp)
     config = getAppConfig appConfig
     metroConfig = getMetroConfigFromAppConfig config (show city)
   in
@@ -203,6 +203,7 @@ infoSelectioView state push city cityMetroConfig metroConfig =
                         [ height WRAP_CONTENT
                         , width MATCH_PARENT
                         , margin $ MarginTop 10
+                        , visibility $ boolToVisibility $ city /= Delhi
                             ][ textView $ 
                                 [ text $ getString UNCERTAIN_ABOUT_METRO_ROUTES
                                 , color Color.black800
