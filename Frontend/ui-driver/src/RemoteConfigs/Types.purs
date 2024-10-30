@@ -103,6 +103,7 @@ type CoinsConfig = {
   rideCompletedCoinEvent :: Boolean,
   twoRideCoinEvent :: Boolean,
   fiveRideCoinEvent :: Boolean,
+  sixRideCoinEvent :: Boolean,
   eightRideCoinEvent :: Boolean,
   tenRideCoinEvent :: Boolean,
   prupleRideCoinEvent :: Boolean,

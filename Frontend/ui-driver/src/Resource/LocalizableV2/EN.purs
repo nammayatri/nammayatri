@@ -1545,6 +1545,7 @@ getEn =
     , i_pledge: "✋🏼  I Pledge"
     , only_5_more_rides_for_n_points: (\n -> "Only 5 more rides for " <> n <> " points")
     , only_3_more_rides_for_n_points: (\n -> "Only 3 more rides for " <> n <> " points")
+    , only_4_more_rides_for_n_points: (\n -> "Only 4 more rides for " <> n <> " points")
     , you_got_n_points: (\points -> "You got " <> points <> " points")
     , discounted: "Discounted"
     , gst_with_percentage: (\per -> "GST (" <> per <> "%)")

@@ -1564,6 +1564,7 @@ data STR = LETS_GET_STARTED
         | I_PLEDGE
         | ONLY_5_MORE_RIDES_FOR_N_POINTS String
         | ONLY_3_MORE_RIDES_FOR_N_POINTS String
+        | ONLY_4_MORE_RIDES_FOR_N_POINTS String
         | YOU_GOT_N_POINTS String
         | DISCOUNTED
         | YATRI_POINTS_FAQS_QUES1_ANS4 String
