@@ -1590,5 +1590,3 @@ getEN stringKey =
         RECORD_AUDIO -> "Record Audio"
         CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY -> "Cannot Enable Go-To for different City."
         XL_PLUS -> "XL Plus"
-        TRUCK -> "Truck"
-        REGISTER_YOUR_TRUCK -> "Register your Truck"

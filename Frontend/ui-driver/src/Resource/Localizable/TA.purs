@@ -1594,5 +1594,3 @@ getTA stringKey =
         RECORD_AUDIO -> "ஒலி பதிவு"
         CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY -> "Go-To வெவ்வேறு நகரங்களுக்கு செயல்படுத்த முடியாது"
         XL_PLUS -> "XL பிளஸ்"
-        TRUCK -> "லாரி"
-        REGISTER_YOUR_TRUCK -> "உங்கள் லாரியை பதிவு செய்க"
