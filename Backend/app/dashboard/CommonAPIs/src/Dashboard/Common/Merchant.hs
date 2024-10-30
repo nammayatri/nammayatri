@@ -23,10 +23,12 @@ where
 import Control.Applicative ((<|>))
 import Dashboard.Common as Reexport
 import Data.Aeson
+import qualified Data.ByteString.Lazy as BL
 import Data.Either (isRight)
 import Data.List.Extra (anySame)
 import Data.OpenApi hiding (description, name, password, url)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Kernel.External.Call.Types
 import Kernel.External.Encryption (encrypt)
 import qualified Kernel.External.Maps as Maps
@@ -564,6 +566,16 @@ validateSmsServiceUsageConfigUpdateReq SmsServiceUsageConfigUpdateReq {..} = do
 
 ---- CreateMerchantOperatingCity ------------------------
 
+data MerchantData = MerchantData
+  { name :: Text,
+    shortId :: Text,
+    subscriberId :: Text,
+    uniqueKeyId :: Text,
+    networkParticipantId :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
   { file :: FilePath,
     reqContentType :: Text,
@@ -578,7 +590,8 @@ data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
     exophone :: Text,
     rcNumberPrefixList :: Maybe [Text],
     currency :: Maybe Currency,
-    distanceUnit :: Maybe DistanceUnit
+    distanceUnit :: Maybe DistanceUnit,
+    merchantData :: Maybe MerchantData
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -600,6 +613,7 @@ instance FromMultipart Tmp CreateMerchantOperatingCityReq where
       <*> parseMaybeInput "rcNumberPrefixList" form
       <*> parseMaybeInput "currency" form
       <*> parseMaybeInput "distanceUnit" form
+      <*> parseMaybeJsonInput "merchantData" form
 
 parseInput :: Read b => Text -> MultipartData tag -> Either String b
 parseInput fieldName form = case lookupInput fieldName form of
@@ -609,6 +623,14 @@ parseInput fieldName form = case lookupInput fieldName form of
 parseMaybeInput :: Read b => Text -> MultipartData tag -> Either String (Maybe b)
 parseMaybeInput fieldName form = case lookupInput fieldName form of
   Right val -> Right $ readMaybe (T.unpack val)
+  Left _ -> Right Nothing
+
+parseMaybeJsonInput :: FromJSON b => Text -> MultipartData tag -> Either String (Maybe b)
+parseMaybeJsonInput fieldName form = case lookupInput fieldName form of
+  Right val -> do
+    case eitherDecode $ BL.fromStrict (TE.encodeUtf8 val) of
+      Right jsonVal -> Right $ Just jsonVal
+      Left err -> Left err
   Left _ -> Right Nothing
 
 newtype CreateMerchantOperatingCityRes = CreateMerchantOperatingCityRes
@@ -630,7 +652,8 @@ data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
     exophone :: Text,
     rcNumberPrefixList :: Maybe [Text],
     currency :: Maybe Currency,
-    distanceUnit :: Maybe DistanceUnit
+    distanceUnit :: Maybe DistanceUnit,
+    merchantData :: Maybe MerchantData
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

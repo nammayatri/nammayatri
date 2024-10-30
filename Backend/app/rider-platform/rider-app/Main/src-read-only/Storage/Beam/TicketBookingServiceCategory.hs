@@ -5,7 +5,7 @@
 
 module Storage.Beam.TicketBookingServiceCategory where
 
-import qualified Data.Time.Calendar
+import qualified Data.Time
 import qualified Database.Beam as B
 import qualified Domain.Types.BusinessHour
 import Domain.Types.Common ()
@@ -28,7 +28,7 @@ data TicketBookingServiceCategoryT f = TicketBookingServiceCategoryT
     name :: B.C f Kernel.Prelude.Text,
     serviceCategoryId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     ticketBookingServiceId :: B.C f Kernel.Prelude.Text,
-    visitDate :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
+    visitDate :: B.C f (Kernel.Prelude.Maybe Data.Time.Day),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

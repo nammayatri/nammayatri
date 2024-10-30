@@ -4,7 +4,7 @@
 
 module Storage.Queries.TicketBookingServiceCategory (module Storage.Queries.TicketBookingServiceCategory, module ReExport) where
 
-import qualified Data.Time.Calendar
+import qualified Data.Time
 import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.TicketBookingService
 import qualified Domain.Types.TicketBookingServiceCategory
@@ -28,7 +28,7 @@ createMany = traverse_ create
 
 findAllByServiceCategoryIdDateAndBtype ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Domain.Types.BusinessHour.BusinessHourType -> m [Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory])
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.Day -> Kernel.Prelude.Maybe Domain.Types.BusinessHour.BusinessHourType -> m [Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory])
 findAllByServiceCategoryIdDateAndBtype serviceCategoryId visitDate btype = do
   findAllWithKV
     [ Se.And

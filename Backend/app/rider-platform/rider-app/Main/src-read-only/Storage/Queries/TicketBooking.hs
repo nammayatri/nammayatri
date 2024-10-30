@@ -4,7 +4,7 @@
 
 module Storage.Queries.TicketBooking (module Storage.Queries.TicketBooking, module ReExport) where
 
-import qualified Data.Time.Calendar
+import qualified Data.Time
 import qualified Domain.Types.Extra.TicketBooking
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -50,7 +50,7 @@ getAllBookingsByPersonId limit offset personId merchantOperatingCityId status = 
 
 getAllBookingsByPlaceIdAndVisitDate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Data.Time.Calendar.Day -> Domain.Types.Extra.TicketBooking.BookingStatus -> m [Domain.Types.TicketBooking.TicketBooking])
+  (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Data.Time.Day -> Domain.Types.Extra.TicketBooking.BookingStatus -> m [Domain.Types.TicketBooking.TicketBooking])
 getAllBookingsByPlaceIdAndVisitDate ticketPlaceId visitDate status = do
   findAllWithKV
     [ Se.And
