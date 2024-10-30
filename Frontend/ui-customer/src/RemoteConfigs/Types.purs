@@ -102,3 +102,7 @@ type SafetyConfig = {
   bannerPosition :: Int,
   showOnRide :: String
 }
+
+type MetroConfig = {
+  tnc :: String
+}

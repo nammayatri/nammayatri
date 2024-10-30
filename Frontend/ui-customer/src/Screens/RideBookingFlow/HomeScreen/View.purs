@@ -3756,7 +3756,7 @@ horizontalServiceView push index service =
 verticalServiceView :: forall w. (Action -> Effect Unit) -> Int -> RemoteConfig.Service -> PrestoDOM (Effect Unit) w
 verticalServiceView push index service = 
   relativeLayout
-  [ height WRAP_CONTENT
+  [ height if service.hasSecondaryPill then WRAP_CONTENT else MATCH_PARENT
   , weight 1.0
   , orientation VERTICAL
   , gravity CENTER
@@ -3766,7 +3766,7 @@ verticalServiceView push index service =
   , margin $ MarginLeft $ if index == 0 then 0 else 16
   , onClick push $ const $ ServicesOnClick service
   ][linearLayout 
-    [ height WRAP_CONTENT
+    [ height if service.hasSecondaryPill then WRAP_CONTENT else MATCH_PARENT
     , width MATCH_PARENT
     , gravity CENTER
     , visibility $ boolToVisibility service.hasSecondaryPill
