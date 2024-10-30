@@ -175,6 +175,7 @@ getTicketPlacesServices _ placeId mbDate = do
             specialDayDescription = (.description) =<< mbSpecialOcc,
             specialDayType = (.specialDayType) <$> mbSpecialOcc,
             operationalDays = maybe service.operationalDays (: []) mbOperationalDay,
+            operationalDate = service.operationalDate,
             categories
           }
 
