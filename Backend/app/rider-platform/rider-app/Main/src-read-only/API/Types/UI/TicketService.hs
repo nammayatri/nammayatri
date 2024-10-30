@@ -28,6 +28,7 @@ data BusinessHourResp = BusinessHourResp
   { categories :: [API.Types.UI.TicketService.CategoriesResp],
     endTime :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     id :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
+    operationalDate :: Kernel.Prelude.Maybe Domain.Types.TicketService.OperationalDate,
     operationalDays :: [Data.Text.Text],
     slot :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     specialDayDescription :: Kernel.Prelude.Maybe Data.Text.Text,

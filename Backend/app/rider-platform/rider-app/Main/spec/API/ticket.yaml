@@ -2,6 +2,7 @@ imports:
   Text: Data.Text
   Seconds: Kernel.Types.Common
   TicketService: Domain.Types.TicketService
+  OperationalDate: Domain.Types.TicketService
   BusinessHour: Domain.Types.BusinessHour
   SpecialOccasion: Domain.Types.SpecialOccasion
   SpecialDayType: Domain.Types.SpecialOccasion
@@ -44,6 +45,7 @@ types:
     specialDayDescription: Maybe Text
     specialDayType: Maybe SpecialDayType
     operationalDays: [Text]
+    operationalDate: Maybe OperationalDate
     categories: [CategoriesResp]
 
   CategoriesResp:
