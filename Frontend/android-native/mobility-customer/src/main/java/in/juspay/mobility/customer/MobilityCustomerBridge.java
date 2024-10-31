@@ -121,6 +121,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         }
         double locationOnPathThres = Double.parseDouble(getKeysInSharedPref("ACCURACY_THRESHOLD").equals("__failed") ? "30.0" : getKeysInSharedPref("ACCURACY_THRESHOLD"));
         resultIndex = PolyUtil.locationIndexOnEdgeOrPath(currPoint, path, PolyUtil.isClosedPolygon(path), true, locationOnPathThres);
+        System.out.println("resultIndex" + resultIndex);
         if (resultIndex == -1) {
             result.put("points", coordinates);
             result.put("eta", 0);

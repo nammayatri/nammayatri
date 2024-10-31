@@ -33,6 +33,9 @@ import Screens.Types (FareProductType(..)) as FPT
 import Components.MessagingView.Controller (dummyChatRecipient)
 import Data.Map as DM
 import Data.Maybe (Maybe(..))
+import Prelude (class Eq)
+import Data.Eq.Generic (genericEq)
+import Data.Generic.Rep (class Generic)
 
 initData :: ST.BusTrackingScreenState
 initData =
@@ -52,15 +55,20 @@ initData =
         , vehicleData : []
         , stationResponse : Mb.Nothing
         , routeShortName : ""
+        , routePts : {points : []}
         }
     , props:
         { showRouteDetailsTab: true
-        , expandStopsView: false
+        , expandStopsView: true
         , verticalLineHeight: 0
         , srcLat: 0.0
         , srcLon: 0.0
-        , busNearSource: false
+        , busNearSourceData: Mb.Nothing
         , gotMapReady : false
+        , showShimmer : true
+        , individualBusTracking : false
+        , vehicleTrackingId : Mb.Nothing
+        , userAndBuslocationMatchCount : 0
         }
     }
 
@@ -216,3 +224,8 @@ mockRoute =
               }
           ]
     }
+
+data StopType = SOURCE_STOP | DESTINATION_STOP | NORMAL_STOP | ROUTE_SOURCE
+
+derive instance genericStopType :: Generic StopType _
+instance eqStopType :: Eq StopType where eq = genericEq

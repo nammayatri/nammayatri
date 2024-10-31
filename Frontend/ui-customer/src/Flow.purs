@@ -4943,7 +4943,7 @@ metroMyTicketsFlow = do
         (MetroTicketBookingStatus metroTicketBookingStatus) = resp
         tickets = metroTicketBookingStatus.tickets
       if (metroTicketBookingStatus.status == "CONFIRMED") then do
-        let goToTracking = maybe false (\(API.FRFSTicketAPI i) -> i.status /= "EXPIRED") (tickets !! 0)
+        let goToTracking = true --maybe false (\(API.FRFSTicketAPI i) -> i.status /= "EXPIRED") (tickets !! 0)
         if metroTicketBookingStatus.vehicleType == "BUS" && goToTracking then  do
           let route = spy "route" $ (fromMaybe [] metroTicketBookingStatus.routeStations) !! 0
               _ = spy "metroTicketBookingStatus" metroTicketBookingStatus
@@ -6912,16 +6912,30 @@ busTicketBookingFlow = do
       (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT bookingId
       let
         (MetroTicketBookingStatus metroTicketBookingStatus) = resp
-      if (metroTicketBookingStatus.status == "CONFIRMED") then do
-        modifyScreenState
-          $ MetroTicketDetailsScreenStateType
-              ( \metroTicketDetailsState ->
-                  let
-                    transformedState = metroTicketDetailsTransformer resp metroTicketDetailsState
-                  in
-                    transformedState { props { fromScreen = Just (Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN), previousScreenStage = ST.MetroMyTicketsStage } }
-              )
-        metroTicketDetailsFlow
+      if (metroTicketBookingStatus.status == "CONFIRMED") then do 
+        let goToTracking = true --maybe false (\(API.FRFSTicketAPI i) -> i.status /= "EXPIRED") (tickets !! 0)
+        if metroTicketBookingStatus.vehicleType == "BUS" && goToTracking then  do
+          let route = spy "route" $ (fromMaybe [] metroTicketBookingStatus.routeStations) !! 0
+              _ = spy "metroTicketBookingStatus" metroTicketBookingStatus
+          let stationList = fromMaybe [] (getStationsFromBusRoute <$> route)
+          let routeDetails = case route of 
+                      Just (FrfsGetRouteResp r) -> {code : r.code, shortName : r.shortName}
+                      Nothing -> {code : "", shortName : ""}
+ 
+          let source = maybe Nothing (\(GetMetroStationResp s) -> Just {stationName : s.name,stationCode :s.code}) (stationList !! 0)
+          let dest = maybe Nothing (\(GetMetroStationResp s) -> Just {stationName : s.name,stationCode :s.code}) (stationList !! (length stationList -1))
+          modifyScreenState $ BusTrackingScreenStateType (\busScreen -> busScreen { data { sourceStation = source, destinationStation = dest, stopsList = [], busRouteCode = routeDetails.code, bookingId = bookingId, stationResponse = Nothing, routeShortName = routeDetails.shortName}, props{ showRouteDetailsTab = false } })
+          busTrackingScreenFlow
+        else do
+          modifyScreenState
+            $ MetroTicketDetailsScreenStateType
+                ( \metroTicketDetailsState ->
+                    let
+                      transformedState = metroTicketDetailsTransformer resp metroTicketDetailsState
+                    in
+                      transformedState { props { fromScreen = Just (Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN), previousScreenStage = ST.MetroMyTicketsStage } }
+                )
+          metroTicketDetailsFlow
       else if (metroTicketBookingStatus.status == "CANCELLED") then do
         modifyScreenState
           $ MetroTicketDetailsScreenStateType
@@ -7112,20 +7126,22 @@ selectBusRouteScreenFlow srcCode destCode = do
           case HU.getFirstRoute quote of
             Just (FrfsGetRouteResp route) -> do
               modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data { routeList = []}, props {routeName = route.shortName, isEmptyRoute = route.code } })
-              modifyScreenState $ BusTrackingScreenStateType (\busScreen -> busScreen { data {sourceStation = Nothing
-                                                                                            , destinationStation = Nothing
+              modifyScreenState $ BusTrackingScreenStateType (\busScreen -> busScreen { data {sourceStation = Just $ mkStation state.data.srcLoc srcCode
+                                                                                            , destinationStation = Just $ mkStation state.data.destLoc destCode
                                                                                             , busRouteCode = route.code
                                                                                             , routeShortName = route.shortName
                                                                                             , stopsList = []
                                                                                             , rideType = Just STOP
-                                                                                            }
+                                                                                            },
+                                                                                        props {showRouteDetailsTab = true}
                                                                                       })
               busTrackingScreenFlow
             Nothing -> pure unit
         Nothing -> pure unit
       selectBusRouteScreenFlow srcCode destCode
     GO_TO_SEARCH_LOCATION_FROM_SELECT_ROUTE -> searchLocationFlow
-
+  where
+    mkStation name code = {stationName : name, stationCode : code}
 
 dummyListItem :: LocationListItemState
 dummyListItem = {
