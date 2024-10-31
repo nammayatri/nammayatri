@@ -295,6 +295,7 @@
       "ny_ic_default_contact" : true,
       "ny_ic_delete_account" : true,
       "ny_ic_delete_bin" : true,
+      "ny_ic_delhi_metro" : true,
       "ny_ic_delivery_service" : true,
       "ny_ic_demo_location" : true,
       "ny_ic_dest_marker" : true,

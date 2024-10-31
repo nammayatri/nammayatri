@@ -88,3 +88,7 @@ data ServiceType = INSTANT | TRANSIT | INTERCITY | RENTAL | DELIVERY | INTERCITY
 derive instance genericServiceType :: Generic ServiceType _
 instance eqServiceType :: Eq ServiceType where eq = genericEq
 instance showServiceType :: Show ServiceType where show = genericShow
+
+type MetroConfig = {
+  tnc :: String
+}

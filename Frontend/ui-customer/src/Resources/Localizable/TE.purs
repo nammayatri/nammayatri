@@ -1029,6 +1029,7 @@ getTE stringKey =
     GET_FARE -> "ఫేర్ పొందండి"
     METRO_BOOKING_TIMINGS -> "మెట్రో బుకింగ్ టైమింగ్స్"
     CHENNAI_METRO_TIME startTime endTime -> "చెన్నై మెట్రో అనుమతించిన క్యూఆర్ టికెట్ కొనుగోలు "<>startTime<>" నుండి "<> endTime <>" వరకు అన్ని రోజులు."
+    DELHI_METRO_TIME startTime endTime -> "దిల్లీ మెట్రో అనుమతించిన క్యూఆర్ టికెట్ కొనుగోలు "<>startTime<>" నుండి "<> endTime <>" వరకు అన్ని రోజులు."
     PLEASE_COME_BACK_LATER_METRO -> "దయచేసి ప్రారంభ సమయంలో టికెట్లు కొనుగోలు చేయడానికి తరువాత తిరిగి రాయండి."
     NO_QOUTES_AVAILABLE -> "ములాకాతులు లేవు"
     I_AGREE_TO_THE -> "నేను సమ్మతిస్తాను"
@@ -1062,7 +1063,8 @@ getTE stringKey =
     EXPERIENCE_HASSLE_FREE_METRO_BOOKING appName -> "అనుభవించండి హాసల్ ఫ్రీ మెట్రో బుకింగ్లను " <> appName
     KOCHI_METRO_TERM_1 -> "టికెట్లను అన్ని రోజులలో 5:00 AM నుండి 11:45 PM మధ్య కొనుగోలు చేయవచ్చు."
     KOCHI_METRO_TERM_2 -> "ప్రవేశం పూర్తయిన తర్వాత, ప్రయాణీకులు గమ్యస్థానం నుండి 120 నిమిషాలలోపు నిష్క్రమించాలి."
-    KOCHI_METRO_TIME -> "కొచ్చి మెట్రో అన్ని రోజులలో 5:00 AM నుండి 11:45 PM వరకు QR టిక్కెట్ కొనుగోలును అనుమతిస్తుంది."
+    KOCHI_METRO_TIME startTime endTime -> "కొచ్చి మెట్రో అన్ని రోజులలో " <> startTime <> " AM నుండి " <> endTime <> " PM వరకు QR టిక్కెట్ కొనుగోలును అనుమతిస్తుంది."
+    TICKETS_FOR_DELHI_METRO -> "దిల్లీ మెట్రో టికెట్లు"
     BOOK_TICKET -> "టికెట్ బుక్"
     ORIGIN -> "మూలం"
     HISTORY -> "చరిత్ర"
