@@ -14,6 +14,8 @@ imports:
   UpsertSpecialLocationReqT: Dashboard.Common.Merchant
   UpsertSpecialLocationGateReq: Dashboard.Common.Merchant
   UpsertSpecialLocationGateReqT: Dashboard.Common.Merchant
+  UpsertSpecialLocationCsvReq: Dashboard.Common.Merchant
+  APISuccessWithUnprocessedEntities: Dashboard.Common.Merchant
   City: Kernel.Types.Beckn.Context
   ToParamSchema: Kernel.Prelude
   FromHttpApiData: Servant
@@ -115,6 +117,17 @@ apis:
         endpoint: MerchantAPI CreateMerchantOperatingCityEndpoint
         endpointV2:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
+  - POST: # UpsertSpecialLocationCsvAPI
+      endpoint: /config/specialLocation/upsert/
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertSpecialLocationCsvReq
+      response:
+        type: APISuccessWithUnprocessedEntities
+      migrate:
+        endpoint: MerchantAPI UpsertSpecialLocationCsvEndpoint
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_CSV
   - POST: # UpsertSpecialLocationAPI
       endpoint: /specialLocation/upsert
       query:
@@ -141,7 +154,7 @@ apis:
   - DELETE: # DeleteSpecialLocationAPI
       endpoint: /specialLocation/{specialLocationId}/delete
       params:
-        specialLocationId : Id SpecialLocation
+        specialLocationId: Id SpecialLocation
       auth: ApiAuthV2
       response:
         type: APISuccess
@@ -152,7 +165,7 @@ apis:
   - POST: # UpsertSpecialLocationGateAPI
       endpoint: /specialLocation/{specialLocationId}/gates/upsert
       params:
-        specialLocationId : Id SpecialLocation
+        specialLocationId: Id SpecialLocation
       auth: ApiAuthV2
       multipart:
         type: UpsertSpecialLocationGateReq
@@ -162,7 +175,7 @@ apis:
         - POST:
             endpoint: /specialLocation/{specialLocationId}/gates/upsert
             params:
-              specialLocationId : Id SpecialLocation
+              specialLocationId: Id SpecialLocation
             auth: ApiAuthV2
             request:
               type: UpsertSpecialLocationGateReqT
@@ -175,7 +188,7 @@ apis:
   - DELETE: # DeleteSpecialLocationGateAPI
       endpoint: /specialLocation/{specialLocationId}/gates/delete/{gateName}
       params:
-        specialLocationId : Id SpecialLocation
+        specialLocationId: Id SpecialLocation
         gateName: Text
       auth: ApiAuthV2
       response:
@@ -223,7 +236,6 @@ types:
   UpsertTicketConfigResp:
     - unprocessedTicketConfigs: [Text]
     - success: Text
-
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

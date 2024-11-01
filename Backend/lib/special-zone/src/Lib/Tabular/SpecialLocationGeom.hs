@@ -25,19 +25,22 @@ import qualified Lib.Types.SpecialLocation as Domain
 deriving instance Read Domain.GatesInfo
 
 derivePersistField "Domain.GatesInfo"
+derivePersistField "Domain.SpecialLocationType"
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
     SpecialLocationGeomT sql=special_location
-      id Text
+      id Text      
       locationName Text
       category Text
       gates (PostgresList Domain.GatesInfo)
       merchantId Text Maybe
       merchantOperatingCityId Text Maybe
-      linkedLocationsIds (PostgresList Text),
+      linkedLocationsIds (PostgresList Text),   
+      locationType Domain.SpecialLocationType   
       geom Text Maybe
+      enabled Bool
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

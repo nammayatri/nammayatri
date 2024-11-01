@@ -851,3 +851,32 @@ data PriorityListWrapperType = PriorityListWrapperType
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+--- Upsert special location using csv file ----
+
+data UpsertSpecialLocationCsvReq = UpsertSpecialLocationCsvReq {locationGeoms :: [(Text, Kernel.Prelude.FilePath)], gateGeoms :: [(Text, Kernel.Prelude.FilePath)], file :: Kernel.Prelude.FilePath}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpsertSpecialLocationCsvReq where
+  hideSecrets = identity
+
+instance FromMultipart Tmp UpsertSpecialLocationCsvReq where
+  fromMultipart form = do
+    let locationGeoms = map (\file -> (fdFileName file, fdPayload file)) (filter (\file -> fdInputName file == T.pack "locationGeoms") $ files form)
+        gateGeoms = map (\file -> (fdFileName file, fdPayload file)) (filter (\file -> fdInputName file == T.pack "gateGeoms") $ files form)
+    csvFile <- fmap fdPayload (lookupFile "file" form)
+    return $ UpsertSpecialLocationCsvReq locationGeoms gateGeoms csvFile
+
+instance ToMultipart Tmp UpsertSpecialLocationCsvReq where
+  toMultipart form =
+    MultipartData
+      []
+      ( [FileData "file" (T.pack form.file) "" (form.file)]
+          <> (map (\(fileName, file) -> FileData "locationGeoms" fileName (T.pack file) file) form.locationGeoms)
+          <> (map (\(fileName, file) -> FileData "gateGeoms" fileName (T.pack file) file) form.gateGeoms)
+      )
+
+newtype APISuccessWithUnprocessedEntities = APISuccessWithUnprocessedEntities {unprocessedEntities :: [Kernel.Prelude.Text]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

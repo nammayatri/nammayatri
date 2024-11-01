@@ -23,7 +23,7 @@ import API.Types.ProviderPlatform.Management.Endpoints.Merchant as Reexport
 import Dashboard.Common as ReExport
 import Dashboard.Common.Merchant
 import Data.Aeson
-import Data.Text as T
+import qualified Data.Text as T
 import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Types.Common
