@@ -532,6 +532,12 @@ let getAllCityConfig = () => {
           freeSeconds: 180,
           perMinCharges: 2.0
         }
+      },
+      variantSubscriptionConfig: {
+        enableVariantBasedSubscription: true,
+        variantList: ["CarCategory","BikeCategory","AutoCategory"],
+        enableCabsSubscriptionView: true,
+        staticViewPlans: []
       }
     }),
     Object.assign({}, baseCityConfig, {
@@ -548,7 +554,7 @@ let getAllCityConfig = () => {
         variantList: ["CarCategory","BikeCategory","AutoCategory"],
         enableCabsSubscriptionView: true,
         staticViewPlans: []
-      },
+      }
     }),
     Object.assign({}, baseCityConfig, {
       cityName: "Durgapur",
@@ -562,7 +568,7 @@ let getAllCityConfig = () => {
         variantList: ["CarCategory","BikeCategory","AutoCategory"],
         enableCabsSubscriptionView: true,
         staticViewPlans: []
-      },
+      }
     }),
     Object.assign({}, baseCityConfig, {
       cityName: "Petrapole",
