@@ -6903,6 +6903,7 @@ busTicketBookingFlow = do
       (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT bookingId
       let
         (FRFSTicketBookingStatusAPIRes metroTicketBookingStatus) = resp
+        tickets = metroTicketBookingStatus.tickets
       if (metroTicketBookingStatus.status == "CONFIRMED") then do 
         let goToTracking = maybe false (\(API.FRFSTicketAPI i) -> i.status /= "EXPIRED") (tickets !! 0)
         if metroTicketBookingStatus.vehicleType == "BUS" && goToTracking then  do
