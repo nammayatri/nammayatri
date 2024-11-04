@@ -381,9 +381,9 @@ let getAllCityConfig = () => {
         "whatsappSupport" : true
     },
     "variantSubscriptionConfig" : {
-      "enableVariantBasedSubscription" : true,
-      "variantList" : ["CarCategory","BikeCategory","AutoCategory"],
-      "enableCabsSubscriptionView" : true,
+      "enableVariantBasedSubscription" : false,
+      "variantList" : ["CarCategory"],
+      "enableCabsSubscriptionView" : false,
       "staticViewPlans" : []
     },
     "showEarningSection" : true,
@@ -542,7 +542,13 @@ let getAllCityConfig = () => {
       cityLat: 23.6889,
       cityLong: 86.9661,
       supportNumber: "08069724949",
-      languageKey: "BN_IN"
+      languageKey: "BN_IN",
+      variantSubscriptionConfig: {
+        enableVariantBasedSubscription: true,
+        variantList: ["CarCategory","BikeCategory","AutoCategory"],
+        enableCabsSubscriptionView: true,
+        staticViewPlans: []
+      },
     }),
     Object.assign({}, baseCityConfig, {
       cityName: "Durgapur",
@@ -550,7 +556,13 @@ let getAllCityConfig = () => {
       cityCode: "std:0342",
       cityLat: 23.5204,
       cityLong: 87.3119,
-      showSubscriptions: true
+      showSubscriptions: true,
+      variantSubscriptionConfig: {
+        enableVariantBasedSubscription: true,
+        variantList: ["CarCategory","BikeCategory","AutoCategory"],
+        enableCabsSubscriptionView: true,
+        staticViewPlans: []
+      },
     }),
     Object.assign({}, baseCityConfig, {
       cityName: "Petrapole",
