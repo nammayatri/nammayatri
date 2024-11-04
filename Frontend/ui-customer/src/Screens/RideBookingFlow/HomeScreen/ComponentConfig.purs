@@ -2454,7 +2454,7 @@ getAllServices dummy =
   , {type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY_STR, backgroundColor: "#fef9eb" , preferredEstimateOrder : []}
   , {type: RemoteConfig.INTERCITY_BUS, image: fetchImage COMMON_ASSET "ny_ic_intercity_bus_service", name: INTERCITY_BUS, backgroundColor: "#fdf3ec" , preferredEstimateOrder : []}
   , {type: RemoteConfig.BIKE_TAXI, image: fetchImage COMMON_ASSET "ny_ic_bike_taxi_service", name: BIKE_TAXI, backgroundColor: "#F0FAF0" , preferredEstimateOrder : ["BIKE"]}
-  , {type: RemoteConfig.BUS, image: fetchImage COMMON_ASSET "ny_ic_bus_icon", name: BUS__, backgroundColor: "#FFF3EB" , preferredEstimateOrder : ["BUS"]}
+  , {type: RemoteConfig.BUS, image: fetchImage COMMON_ASSET "ny_ic_bus_icon", name: METRO_RIDE, backgroundColor: "#FFF3EB" , preferredEstimateOrder : ["BUS"]}
   , {type: RemoteConfig.METRO_RIDE, image: fetchImage COMMON_ASSET "ny_ic_metro_icon", name: METRO_RIDE, backgroundColor: "#faeeee" , preferredEstimateOrder : ["METRO_RIDE"]}
   ]
 

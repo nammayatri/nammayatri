@@ -140,7 +140,7 @@ view push state =
   let
     city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
     resp@(MetroBookingConfigRes metroBookingConfigResp) = state.data.metroBookingConfigResp
-    cityMetroConfig = getMetroConfigFromCity city (Just resp)
+    cityMetroConfig = getMetroConfigFromCity city (Just resp) ""
     config = getAppConfig appConfig
     metroConfig = getMetroConfigFromAppConfig config (show city)
   in

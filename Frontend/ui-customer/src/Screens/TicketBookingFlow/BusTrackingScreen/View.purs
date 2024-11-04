@@ -48,7 +48,7 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Mobility.Prelude (boolToInvisibility, boolToVisibility, layoutWithWeight)
+import Mobility.Prelude (boolToInvisibility, boolToVisibility)
 import Mobility.Prelude as MP
 import Presto.Core.Types.Language.Flow (Flow)
 import PrestoDOM.Animation as PrestoAnim
@@ -78,6 +78,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Data.Traversable (traverse, for_)
 import Data.Function.Uncurried (runFn2, runFn3)
 import LocalStorage.Cache
+import Components.Safety.Utils (layoutWithWeight)
 
 screen :: ST.BusTrackingScreenState -> Screen Action ST.BusTrackingScreenState ScreenOutput
 screen initialState =

@@ -3456,7 +3456,7 @@ instance encodeSearchMetroRequest :: Encode SearchMetroRequest where encode = de
 
 data GetMetroQuotesReq = GetMetroQuotesReq String
 
-newtype GetMetroQuotesRes = GetMetroQuotesRes (Array MetroQuote)
+newtype GetMetroQuotesRes = GetMetroQuotesRes (Array FrfsQuote)
 
 newtype FRFSStationAPI = FRFSStationAPI {
   code :: String
@@ -3470,7 +3470,7 @@ newtype FRFSStationAPI = FRFSStationAPI {
   , color :: Maybe String
 }
 
-newtype MetroQuote = MetroQuote {
+newtype FrfsQuote = FrfsQuote {
   quoteId :: String
   , _type :: String--FRFSQuoteType
   , vehicleType :: String--FRFSVehicleType
@@ -3501,12 +3501,12 @@ instance showGetMetroQuotesRes :: Show GetMetroQuotesRes where show = genericSho
 instance decodeGetMetroQuotesRes :: Decode GetMetroQuotesRes where decode = defaultDecode
 instance encodeGetMetroQuotesRes :: Encode GetMetroQuotesRes where encode = defaultEncode
 
-derive instance genericMetroQuote :: Generic MetroQuote _
-derive instance newtypeMetroQuote :: Newtype MetroQuote _
-instance standardEncodeMetroQuote :: StandardEncode MetroQuote where standardEncode (MetroQuote body) = standardEncode body
-instance showMetroQuote :: Show MetroQuote where show = genericShow
-instance decodeMetroQuote :: Decode MetroQuote where decode = defaultDecode
-instance encodeMetroQuote :: Encode MetroQuote where encode = defaultEncode
+derive instance genericMetroQuote :: Generic FrfsQuote _
+derive instance newtypeMetroQuote :: Newtype FrfsQuote _
+instance standardEncodeMetroQuote :: StandardEncode FrfsQuote where standardEncode (FrfsQuote body) = standardEncode body
+instance showMetroQuote :: Show FrfsQuote where show = genericShow
+instance decodeMetroQuote :: Decode FrfsQuote where decode = defaultDecode
+instance encodeMetroQuote :: Encode FrfsQuote where encode = defaultEncode
 
 derive instance genericFRFSStationAPI :: Generic FRFSStationAPI _
 derive instance newtypeFRFSStationAPI :: Newtype FRFSStationAPI _

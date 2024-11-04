@@ -78,7 +78,7 @@ import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations,Stage)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo, BookingTime, VehicleViewType(..), FareProductType(..))
-import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..), MetroBookingConfigRes,RideBookingRes(..),RideBookingAPIDetails(..),RideBookingDetails(..),RideBookingListRes(..),BookingLocationAPIEntity(..), MetroBookingConfigRes (..))
+import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..), MetroBookingConfigRes,RideBookingRes(..),RideBookingAPIDetails(..),RideBookingDetails(..),RideBookingListRes(..),BookingLocationAPIEntity(..), MetroBookingConfigRes (..), FrfsQuote(..), GetBusRouteResp(..))
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
@@ -184,6 +184,12 @@ foreign import setRefreshing :: String -> Boolean -> Unit
 foreign import setEnabled :: String -> Boolean -> Unit
 
 foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
+
+foreign import clearTimer :: String -> Unit
+
+foreign import startTimer :: forall action. Int -> Boolean -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
+
+foreign import decodeErrorMessage :: String -> String
 
 generateQR:: EffectFn4 String String Int Int Unit
 generateQR  = mkEffectFn4 \qrString viewId size margin ->  launchAff_  $ void $ makeAff $
@@ -1019,8 +1025,8 @@ getMetroConfigFromAppConfig config city = do
      }
     Just cfg -> cfg
 
-getMetroConfigFromCity :: City -> Maybe MetroBookingConfigRes -> CityMetroConfig
-getMetroConfigFromCity city fcResponse = 
+getMetroConfigFromCity :: City -> Maybe MetroBookingConfigRes -> String -> CityMetroConfig
+getMetroConfigFromCity city fcResponse vehicleType = 
     let
         bookingStartTime = maybe "04:30:00" (\(MetroBookingConfigRes r) -> r.bookingStartTime) fcResponse
         bookingEndTime = maybe "22:30:00" (\(MetroBookingConfigRes r) -> r.bookingEndTime) fcResponse
@@ -1053,20 +1059,33 @@ getMetroConfigFromCity city fcResponse =
                 true
                 config
         Chennai ->
-            mkCityBasedConfig
-                "ny_ic_chennai_metro"
-                (getString TICKETS_FOR_CHENNAI_METRO)
-                "ny_ic_chennai_metro_map"
-                "ny_ic_chennai_metro_banner"
-                "#D8E2FF"
-                Color.metroBlue
-                ([ getString CHENNAI_METRO_TERM_2
-                , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else getString CHENNAI_METRO_TERM_1
-                , if isEventOngoing == Just true then getString FREE_TICKET_CASHBACK else ""
-                ])
-                (getString $ CHENNAI_METRO_TIME convertedBookingStartTime convertedBookingEndTime)
+            mkCityBasedConfig 
+                (if vehicleType == "BUS" then "ny_ic_kolkata_bus" else "ny_ic_chennai_metro") 
+                (if vehicleType == "BUS" then "Tickets for Chennai Bus" else getString TICKETS_FOR_CHENNAI_METRO) 
+                "ny_ic_chennai_metro_map" 
+                "ny_ic_chennai_metro_banner" 
+                "#D8E2FF" 
+                Color.metroBlue 
+                -- "https://metro-terms.triffy.in/chennai/index.html" 
+                (if vehicleType == "BUS" then ["Cancellation of tickets is not applicable" , "The ticket is valid for only 30 minutes from the time of booking" ,"Fare is commission-free and determined by the MTC"] else [getString CHENNAI_METRO_TERM_2 , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else getString CHENNAI_METRO_TERM_1, if isEventOngoing == Just true then getString FREE_TICKET_CASHBACK else "" ]) 
+                (getString $ CHENNAI_METRO_TIME "04:30:00" "22:30:00") 
                 false
                 config
+        -- Chennai ->
+        --     mkCityBasedConfig
+        --         "ny_ic_chennai_metro"
+        --         (getString TICKETS_FOR_CHENNAI_METRO)
+        --         "ny_ic_chennai_metro_map"
+        --         "ny_ic_chennai_metro_banner"
+        --         "#D8E2FF"
+        --         Color.metroBlue
+        --         ([ getString CHENNAI_METRO_TERM_2
+        --         , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else getString CHENNAI_METRO_TERM_1
+        --         , if isEventOngoing == Just true then getString FREE_TICKET_CASHBACK else ""
+        --         ])
+        --         (getString $ CHENNAI_METRO_TIME convertedBookingStartTime convertedBookingEndTime)
+        --         false
+        --         config
         Delhi ->
             mkCityBasedConfig
                 "ny_ic_delhi_metro"
@@ -1089,8 +1108,7 @@ getMetroConfigFromCity city fcResponse =
                 "" 
                 "" 
                 "" 
-                "" 
-                "" 
+                ""
                 ["Cancellation of tickets is not applicable" , "The ticket is valid for only 30 minutes from the time of booking" ,"Fare is commission-free and determined by the MTC"] 
                 "" 
                 false
@@ -1528,3 +1546,12 @@ disableChat fareProductType =
 isDeliveryInitiator :: Maybe (Array String) -> Boolean
 isDeliveryInitiator maybeTags = 
   maybe true (\tags -> elem "Initiator" tags) maybeTags
+
+getFirstRoute :: FrfsQuote -> Maybe GetBusRouteResp
+getFirstRoute (GetBusRouteResp quote) =
+  case quote.routeStations of
+    Just routes ->
+      case routes !! 0 of
+        Just route -> Just route
+        Nothing -> Nothing
+    Nothing -> Nothing
