@@ -36,6 +36,7 @@ data Action = AfterRender
             | SeeRouteButtonAction PrimaryButton.Action
             | UpdateQuotes (Array FrfsQuote)
             | SelectQuote FrfsQuote
+            | EditStops
 
 data ScreenOutput = TrackBus SelectBusRouteScreenState
                   | GoBack
@@ -43,6 +44,8 @@ data ScreenOutput = TrackBus SelectBusRouteScreenState
 eval :: Action -> SelectBusRouteScreenState -> Eval Action ScreenOutput SelectBusRouteScreenState
 
 eval BackPressed state = exit GoBack
+
+eval EditStops state = continueWithCmd state [do pure BackPressed]
 
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
 
@@ -58,6 +61,6 @@ eval (UpdateQuotes quotes) state = do
           map (\quote ->
             getFirstRoute quote
           ) quotes
-  continue state{ data{ quotes = quotes } }
+  continue state{ data{ quotes = Just quotes } }
 
 eval _ state = continue state

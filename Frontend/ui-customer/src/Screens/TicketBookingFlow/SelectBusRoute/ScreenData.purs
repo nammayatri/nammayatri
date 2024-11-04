@@ -25,7 +25,7 @@ initData = {
   data : {
       srcLoc : ""
     , destLoc : ""
-    , quotes : []
+    , quotes : Nothing
     , selectedQuote : Nothing
   },
   props : {
@@ -41,7 +41,7 @@ type SelectBusRouteScreenState = {
 type SelectBusRouteScreenData = {
     srcLoc :: String
   , destLoc :: String
-  , quotes :: Array FrfsQuote
+  , quotes :: Maybe (Array FrfsQuote)
   , selectedQuote :: Maybe FrfsQuote
 }
 

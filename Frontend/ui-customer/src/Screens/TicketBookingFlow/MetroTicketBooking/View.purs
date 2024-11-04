@@ -333,7 +333,7 @@ infoSelectioView state push city cityMetroConfig metroConfig =
                             , margin $ if state.props.ticketServiceType == BUS then  MarginTop 35 else MarginTop 5
                             ] <> FontStyle.body2 TypoGraphy)
                     , locationSelectionView push state
-                    -- , incrementDecrementView push state metroConfig isBusTicketService
+                    , incrementDecrementView push state metroConfig isBusTicketService
                     , limitReachedView push state
                     , offerInfoView push state
                     , roundTripCheckBox push state metroConfig
