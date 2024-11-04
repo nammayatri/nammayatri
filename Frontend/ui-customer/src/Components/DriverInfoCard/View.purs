@@ -568,7 +568,7 @@ trackRideView push state =
   , width WRAP_CONTENT
   , clipChildren false
   , clickable true
-  , visibility $ boolToVisibility $ (not $ rideNotStarted state) || state.props.stageBeforeChatScreen == RideStarted
+  , visibility $ boolToVisibility $ ((not $ rideNotStarted state) || state.props.stageBeforeChatScreen == RideStarted) && state.data.fareProductType /= FPT.DELIVERY
   ][ linearLayout
     [ height $ V 40
     , width WRAP_CONTENT
