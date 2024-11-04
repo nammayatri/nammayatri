@@ -684,6 +684,8 @@ getEstimates  state (EstimateAPIEntity estimate) estimates variant index activeI
       , hasTollCharges = if estimate.serviceTierName == Just "Book Any" then checkSelectedServicesHasFareKey estimates selectedServices "TOLL_CHARGES" else checkFareBreakupHasKey (EstimateAPIEntity estimate) "TOLL_CHARGES"
       , hasParkingCharges = if estimate.serviceTierName == Just "Book Any" then checkSelectedServicesHasFareKey estimates selectedServices "PARKING_CHARGE" else checkFareBreakupHasKey (EstimateAPIEntity estimate) "PARKING_CHARGE"
       , specialLocationTag = estimate.specialLocationTag
+      , smartTipReason = estimate.smartTipReason
+      , smartTipSuggestion = estimate.smartTipSuggestion
       }
     
     where 
@@ -879,6 +881,8 @@ dummyEstimateEntity =
     , providerId : Nothing
     , isValueAddNP : Nothing
     , validTill : ""
+    , smartTipReason : Nothing
+    , smartTipSuggestion : Nothing
     }
 
 createEstimateForBookAny :: Array EstimateAPIEntity -> Array EstimateAPIEntity
@@ -912,6 +916,8 @@ createEstimateForBookAny estimates =
                 , airConditioned: Nothing
                 , isValueAddNP: Just true
                 , validTill : ""
+                , smartTipReason : Nothing
+                , smartTipSuggestion : Nothing
                 }
         in DA.singleton bookAnyEstimate
       else []

@@ -18,6 +18,7 @@ import Foreign.Generic (decodeJSON, encodeJSON)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
 import RemoteConfig (getTipConfigRC)
+import Debug (spy)
 
 type TipConfig = {
   customerTipArray :: Array String,
@@ -69,29 +70,41 @@ yatriSathiConfig variant =
     "AUTO_RICKSHAW" -> mkTipConfig [0, 10, 20, 30]
     _ -> mkTipConfig [0, 20, 30, 50]
 
-getTipViewProps :: TipViewProps -> String -> TipViewProps
-getTipViewProps tipViewProps vehicleVariant = do
+getTipViewProps :: TipViewProps -> String -> Maybe String -> Maybe Int -> TipViewProps
+getTipViewProps tipViewProps vehicleVariant smartTipReason smartTipSuggestion = do
+  let smartTipSuggestionValue = fromMaybe 10 smartTipSuggestion
+      tipConfig = getTipConfig vehicleVariant
+      customerTipArrWithValues = if smartTipSuggestion == Nothing then tipConfig.customerTipArrayWithValues else if smartTipSuggestionValue <= 10 then [0, 10, 20, 30] else [0, roundUpToNearest10 (smartTipSuggestionValue `div` 2), smartTipSuggestionValue, smartTipSuggestionValue + 10]
+      customerTipArray = if smartTipSuggestion == Nothing then tipConfig.customerTipArray else getTips customerTipArrWithValues
+      tipViewPropsModified = tipViewProps{customerTipArray = if tipViewProps.customerTipArray == [] then customerTipArray else tipViewProps.customerTipArray, customerTipArrayWithValues = if tipViewProps.customerTipArrayWithValues == [] then customerTipArrWithValues else tipViewProps.customerTipArrayWithValues}
   case tipViewProps.stage of
-    DEFAULT ->  tipViewProps{ stage = DEFAULT
+    DEFAULT -> do
+      let activeIndex = if smartTipSuggestion == Nothing then tipViewProps.activeIndex else if smartTipSuggestionValue <= 10 then 1 else 2
+          tipViewPropsModified' = tipViewPropsModified{activeIndex = activeIndex}
+      tipViewProps{ stage = if smartTipSuggestion == Nothing then DEFAULT else TIP_AMOUNT_SELECTED
                             , onlyPrimaryText = false
-                            , isprimaryButtonVisible = false
-                            , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
+                            , isprimaryButtonVisible = if smartTipSuggestion == Nothing then false else true
+                            , primaryText = fromMaybe (getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER) smartTipReason
                             , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
+                            , customerTipArray = customerTipArray
+                            , customerTipArrayWithValues = customerTipArrWithValues
+                            , primaryButtonText = getTipViewText tipViewPropsModified' vehicleVariant (getString CONTINUE_SEARCH_WITH)
+                            , activeIndex = activeIndex
                             }
-    TIP_AMOUNT_SELECTED -> tipViewProps{ stage = TIP_AMOUNT_SELECTED
+    TIP_AMOUNT_SELECTED -> tipViewPropsModified{ stage = TIP_AMOUNT_SELECTED
                                        , onlyPrimaryText = false
                                        , isprimaryButtonVisible = true
-                                       , primaryText = getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER
+                                       , primaryText = fromMaybe (getString ADD_A_TIP_TO_FIND_A_RIDE_QUICKER) smartTipReason
                                        , secondaryText = getString IT_SEEMS_TO_BE_TAKING_LONGER_THAN_USUAL
-                                       , primaryButtonText = getTipViewText tipViewProps vehicleVariant (getString CONTINUE_SEARCH_WITH)
+                                       , primaryButtonText = getTipViewText tipViewPropsModified vehicleVariant (getString CONTINUE_SEARCH_WITH)
                                        }
-    TIP_ADDED_TO_SEARCH -> tipViewProps{ onlyPrimaryText = true, isprimaryButtonVisible = false, primaryText = (getTipViewText tipViewProps vehicleVariant (getString SEARCHING_WITH)) <> "." }
-    RETRY_SEARCH_WITH_TIP -> tipViewProps{ onlyPrimaryText = true , isprimaryButtonVisible = false, primaryText = (getTipViewText tipViewProps vehicleVariant (getString SEARCHING_WITH)) <> "." }
+    TIP_ADDED_TO_SEARCH -> tipViewPropsModified { onlyPrimaryText = true, isprimaryButtonVisible = false, primaryText = (getTipViewText tipViewPropsModified vehicleVariant (getString SEARCHING_WITH)) <> "." }
+    RETRY_SEARCH_WITH_TIP -> tipViewPropsModified { onlyPrimaryText = true , isprimaryButtonVisible = false, primaryText = (getTipViewText tipViewPropsModified vehicleVariant (getString SEARCHING_WITH)) <> "." }
 
 getTipViewText :: TipViewProps -> String-> String -> String
 getTipViewText tipViewProps vehicleVariant prefixString = do
   let tipConfig = getTipConfig vehicleVariant
-      tip = show (fromMaybe 10 (tipConfig.customerTipArrayWithValues !! tipViewProps.activeIndex))
+      tip = show (fromMaybe 10 (tipViewProps.customerTipArrayWithValues !! tipViewProps.activeIndex))
   if tip == "0" then 
     case tipViewProps.stage of
       TIP_AMOUNT_SELECTED -> getString CONTINUE_SEARCH_WITH_NO_TIP
@@ -109,3 +122,6 @@ isTipEnabled tipConfig vehicleVariant =
 
 setTipViewData :: Encode TipViewData => TipViewData -> Effect Unit
 setTipViewData object = void $ pure $ setValueToLocalStore TIP_VIEW_DATA (encodeJSON object)
+
+roundUpToNearest10 :: Int -> Int
+roundUpToNearest10 n = ((n + 9) `div` 10) * 10
