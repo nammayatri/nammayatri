@@ -647,7 +647,9 @@ newtype EstimateAPIEntity = EstimateAPIEntity {
   providerName :: Maybe String,
   providerId :: Maybe String,
   isValueAddNP :: Maybe Boolean,
-  validTill :: String
+  validTill :: String,
+  smartTipSuggestion :: Maybe Int,
+  smartTipReason :: Maybe String
 }
 
 newtype NightShiftRate = NightShiftRate {

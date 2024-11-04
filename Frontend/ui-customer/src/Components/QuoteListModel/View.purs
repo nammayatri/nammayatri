@@ -104,7 +104,7 @@ paymentView state =
           [ id (getNewIDWithTag "lottieLoaderAnimProgress")
           , afterRender (\action-> do
                         void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/progress_loader_line.json", lottieId = (getNewIDWithTag "lottieLoaderAnimProgress"), minProgress = state.progress, scaleType = "CENTER_CROP"}
-                        )(const NoAction)
+                        )(const NoAction state.tipViewProps)
           , height WRAP_CONTENT
           , width MATCH_PARENT
           , visibility if state.showProgress || state.isRentalSearch then VISIBLE else GONE
@@ -277,7 +277,7 @@ findingRidesView state push =
         [ id (getNewIDWithTag "lottieLoaderAnim")
         , afterRender (\action-> do
                       void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = lottieRawJson, lottieId = (getNewIDWithTag "lottieLoaderAnim") }
-                      pure unit)(const NoAction)
+                      pure unit)(const NoAction state.tipViewProps)
         , height $ V state.appConfig.quoteListModel.lottieHeight
         , accessibility DISABLE
         , width $ V state.appConfig.quoteListModel.lottieWidth
