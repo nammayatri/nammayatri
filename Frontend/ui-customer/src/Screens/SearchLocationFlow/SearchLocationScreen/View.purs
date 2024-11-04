@@ -639,7 +639,7 @@ navpillView state item push idx =
     [ imageView  
         [ width $ V 18  
         , height $ V 18  
-        , imageWithFallback $ fetchImage FF_ASSET (if idx == 0 then "ny_ic_route_bus" else "ny_ic_loc_grey")
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET (if idx == 0 then "ny_ic_bus_white" else "ny_ic_location_white")
         , margin $ MarginRight 8
         ]
     , textView

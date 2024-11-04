@@ -75,11 +75,10 @@ data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | SelectSrcDest ST.LocationActionId ST.MetroTicketBookingScreenState
                   | Refresh ST.MetroTicketBookingScreenState
                   | GotoPaymentPage CreateOrderRes String
-                  | GotoPreviosStopScreen ST.MetroTicketBookingScreenState
-                  | GoToBusSearchScreen ST.MetroTicketBookingScreenState
                   | GotoSearchScreen ST.MetroTicketBookingScreenState
                   -- | GET_ROUTES ST.MetroTicketBookingScreenState
                   | AadhaarVerificationSO ST.MetroTicketBookingScreenState String
+                  | EditStops ST.MetroTicketBookingScreenState
 
 eval :: Action -> ST.MetroTicketBookingScreenState -> Eval Action ScreenOutput ST.MetroTicketBookingScreenState
 
@@ -144,12 +143,8 @@ eval (ChangeTicketTab ticketType cityMetroConfig) state = do
 
 eval (SelectLocation loc) state = 
   if state.props.ticketServiceType == BUS
-    then do
-      if loc == ST.Dest then do
-          exit $ GotoPreviosStopScreen state
-      else 
-          exit $ GoToBusSearchScreen state
-    else updateAndExit state { props { currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection }} $ SelectSrcDest loc state { props { currentStage = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection }}
+  then exit $ EditStops state
+  else updateAndExit state { props { currentStage  = ST.MetroTicketSelection }} $ SelectSrcDest loc state { props { currentStage = ST.MetroTicketSelection }}
 
 eval (GetMetroQuotesAction resp) state = do 
   void $ pure $ toggleBtnLoader "" false

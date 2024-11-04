@@ -2639,7 +2639,8 @@ export const debounceFunction = function (delay) {
             if (timerIdDebounce) clearTimeout(timerIdDebounce);
             timerIdDebounce = setTimeout(() => {
               timerIdDebounce = "MAKEAPICALL";
-              cb(action(inputForDebounce)(isSource))();
+              if (inputForDebounce) cb(action(inputForDebounce)(isSource))();
+              else console.error("please update input for debounce using updateInputString function")
             }, delay);
           });
           window.callUICallback(callback);

@@ -3,7 +3,7 @@ module Screens.SelectBusRoute.View where
 import Animation as Anim 
 import Animation.Config (translateYAnimConfig, translateYAnimMapConfig, removeYAnimFromTopConfig)
 import JBridge as JB 
-import Prelude (not, Unit, bind, const, pure, unit, discard, void, ($), (&&), (/=), (<<<),(<>), (==), map, show, (||), show, (-), (*), (/), (>))
+import Prelude (not, Unit, bind, const, pure, unit, discard, void, ($), (&&), (/=), (<<<),(<>), (==), map, show, (||), show, (-), (*), (/), (>), when, (+))
 import PrestoDOM
 import PrestoDOM.Animation as PrestoAnim
 import Screens.SelectBusRoute.Controller (Action(..), ScreenOutput, eval)
@@ -21,7 +21,7 @@ import Services.API (FRFSRouteAPI(..), FrfsSearchResp(..), FrfsQuotesRes(..), Fr
 import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
 import Halogen.VDom.DOM.Prop (Prop)
 import Data.Array as DA
-import Data.Maybe (fromMaybe, Maybe(..), maybe)
+import Data.Maybe (fromMaybe, Maybe(..), maybe, isNothing)
 import Debug
 import Data.List ((:))
 import Effect.Uncurried  (runEffectFn1)
@@ -54,7 +54,8 @@ screen fromStationCode toStationCode initialState =
   , name : "SelectBusRoute"
   , globalEvents : [(\push -> do
                       _ <- pure $ spy "debug route" (fromStationCode <> " " <> toStationCode)
-                      void $ launchAff $ flowRunner defaultGlobalState $ getSearchId push UpdateQuotes fromStationCode toStationCode
+                      when (isNothing initialState.data.quotes) $
+                        void $ launchAff $ flowRunner defaultGlobalState $ getSearchId push UpdateQuotes fromStationCode toStationCode
                       pure $ pure unit)
                     ]
   , eval :
@@ -88,7 +89,6 @@ view push state =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , margin $ Margin 16 32 16 0
-        , visibility $ boolToVisibility $ DA.length state.data.quotes > 0
         ][textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
@@ -102,17 +102,20 @@ view push state =
         , height MATCH_PARENT
         , gravity BOTTOM
         , alignParentBottom "true,-1"
-        ][scrollView
-          [ height $ WRAP_CONTENT
-          , width MATCH_PARENT
-          , margin $ Margin 16 0 16 100
-          ][  linearLayout
-              [ height WRAP_CONTENT
-              , width MATCH_PARENT
-              , orientation VERTICAL
-              ][  routeListView state push
-              ]
-          ]
+        ][
+           scrollView
+            [ height $ WRAP_CONTENT
+            , width MATCH_PARENT
+            , margin $ Margin 16 0 16 100
+            ][  linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , orientation VERTICAL
+                ][case state.data.quotes of
+                    Just quotes -> routeListView quotes state push
+                    Nothing -> routeListShimmerView
+                ]
+            ]
         , seeRouteButton state push
         ]
       ]
@@ -134,17 +137,38 @@ pickupAndDestView state push =
     , locationSelectionView push state
   ]
 
-routeListView :: forall w. SD.SelectBusRouteScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-routeListView state push =
+routeListView :: forall w. (Array FrfsQuote) -> SD.SelectBusRouteScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+routeListView quotes state push =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , visibility $ boolToVisibility $ DA.length state.data.quotes > 0
     ](
-        DA.mapWithIndex (\index quote ->
-          routeRadioComponent state push quote
-        ) state.data.quotes
+      DA.mapWithIndex (\index quote ->
+        routeRadioComponent state push quote
+      ) quotes
+    )
+
+routeListShimmerView :: forall w. PrestoDOM (Effect Unit) w
+routeListShimmerView =
+  shimmerFrameLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , margin $ MarginTop 8
+    ](
+      DA.mapWithIndex (\index quote ->
+        linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , stroke ("1," <> Color.grey900)
+        , padding $ Padding 20 25 20 25
+        , cornerRadius 8.0
+        , gravity CENTER_VERTICAL
+        , background Color.borderGreyColor
+        , margin $ MarginTop $ index * (50 + 12)
+        ][]
+      ) [1,2,3,4]
     )
 
 routeRadioComponent :: forall w. SD.SelectBusRouteScreenState -> (Action -> Effect Unit) -> FrfsQuote -> PrestoDOM (Effect Unit) w
@@ -243,6 +267,7 @@ locationSelectionView push state =
       , cornerRadius 10.0 
       , margin $ Margin 0 46 16 0
       , alignParentRight "true,-1"
+      , onClick push $ const $ EditStops
       ]
 ]
 
@@ -311,7 +336,7 @@ getSearchId push action srcCode destCode = do
   case resp of
     Right (FrfsSearchResp response) -> do
       _ <- pure $ spy "debug route searchId" response.searchId
-      void $ delay $ Milliseconds 500.0
+      void $ delay $ Milliseconds 1000.0
       getQuotes push action response.searchId
     Left err -> do
       pure unit
