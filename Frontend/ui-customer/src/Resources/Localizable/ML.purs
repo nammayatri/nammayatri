@@ -1567,3 +1567,4 @@ getML stringKey =
         QUICK_DELIVERY_WITH str ->  str <> " കൂടെ വേഗത്തിലുള്ള ഡെലിവറികൾ"
         STEP -> "ഘടന"
         BOOKING_CANNOT_PROCEED_ONE_PARTY_HAS_ACTIVE_BOOKING -> "ബുക്കിംഗ് തുടരാനാകില്ല: ഒരാൾക്ക് സജീവമായ യാത്ര ഉണ്ട്. ദയവായി ശേഷം ശ്രമിക്കുക!"
+        MAX_PARCEL_SIZE l b h -> "പരമാവധി പാർസൽ വലിപ്പം: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm"

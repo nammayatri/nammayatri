@@ -386,9 +386,10 @@ separatorView push state =
 
 instructionData :: Array { title :: String, image :: String }
 instructionData = 
-  [ { title: getString $ ITEMS_SHOULD_FIT_IN_BACKPACK "5", image: "ny_ic_backpack" }
+  [ { title: getString $ ITEMS_SHOULD_FIT_IN_BACKPACK "15", image: "ny_ic_backpack" }
   , { title: getString AVOID_SENDING_HIGH_VALUE_ITEMS, image: "ny_ic_streamline_fragile_solid" }
   , { title: getString ILLEGAL_ITEMS_PROHIBITED, image: "ny_ic_prohibited" }
+  , { title: getString $ MAX_PARCEL_SIZE "40" "40" "40", image: "ny_ic_backpack" }
   ]
 
 

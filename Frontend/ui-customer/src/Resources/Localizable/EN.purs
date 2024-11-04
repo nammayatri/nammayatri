@@ -1568,4 +1568,4 @@ getEN stringKey =
         QUICK_DELIVERY_WITH str -> "Quick Deliveries with " <> str
         STEP -> "Step"
         BOOKING_CANNOT_PROCEED_ONE_PARTY_HAS_ACTIVE_BOOKING -> "Booking can't proceed: One party has an active ride. Please try later!"
-        
+        MAX_PARCEL_SIZE l b h -> "Max parcel size: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm"

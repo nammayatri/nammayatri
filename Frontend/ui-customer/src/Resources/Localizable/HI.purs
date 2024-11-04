@@ -1568,3 +1568,4 @@ getHI stringKey =
         QUICK_DELIVERY_WITH str -> str <> " के साथ तेज़ डिलीवरी"
         STEP -> "स्टेप"
         BOOKING_CANNOT_PROCEED_ONE_PARTY_HAS_ACTIVE_BOOKING -> "बुकिंग आगे नहीं बढ़ सकती: एक पक्ष की एक सक्रिय सवारी है। कृपया बाद में प्रयास करें!"
+        MAX_PARCEL_SIZE l b h -> "अधिकतम पार्सल आकार: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm"

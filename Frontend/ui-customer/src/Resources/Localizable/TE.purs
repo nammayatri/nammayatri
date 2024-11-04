@@ -1581,3 +1581,4 @@ getTE stringKey =
     QUICK_DELIVERY_WITH str -> str <> " తో త్వరిత డెలివరీలు"
     STEP -> "ఘటన"
     BOOKING_CANNOT_PROCEED_ONE_PARTY_HAS_ACTIVE_BOOKING -> "బుకింగ్ కొనసాగించలేరు: ఒక పక్షానికి క్రియాశీల రైడ్ ఉంది. దయచేసి తర్వాత ప్రయత్నించండి!"
+    MAX_PARCEL_SIZE l b h -> "గరిష్ట పార్సల్ పరిమాణం: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm"
