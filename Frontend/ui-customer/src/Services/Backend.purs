@@ -25,6 +25,7 @@ import Control.Monad.Except.Trans (lift, runExceptT)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..), runBackT)
 import Data.Array ((!!), catMaybes, concat, take, any, singleton, find, filter, length, null, mapMaybe, head)
 import Data.Either (Either(..), either)
+import Data.Int as INT
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String as DS
@@ -1308,10 +1309,10 @@ getMetroBookingStatus shortOrderID = do
   where
     unwrapResponse x = x
 
-getMetroBookingStatusListBT :: FlowBT String GetMetroBookingListResp
-getMetroBookingStatusListBT = do
+getMetroBookingStatusListBT :: String -> FlowBT String GetMetroBookingListResp
+getMetroBookingStatusListBT vehicleType= do
       headers <- getHeaders' "" false
-      withAPIResultBT (EP.getMetroBookingList "") (\x → x) errorHandler (lift $ lift $ callAPI headers (GetMetroBookingListReq))
+      withAPIResultBT (EP.getMetroBookingList vehicleType) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetMetroBookingListReq vehicleType))
       where
         errorHandler _ = do
             BackT $ pure GoBack
@@ -1332,27 +1333,44 @@ retryMetroTicketPayment quoteId = do
   where
     unwrapResponse x = x
 
-getMetroStationBT :: String -> FlowBT String GetMetroStationResponse
-getMetroStationBT city = do
+getMetroStationBT :: String -> String -> String -> String-> String -> FlowBT String GetMetroStationResponse
+getMetroStationBT vehicleType city routeCode endStationCode location = do
     headers <- getHeaders' "" false
-    withAPIResultBT (EP.getMetroStations city) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ GetMetroStationReq city)
+    withAPIResultBT (EP.getMetroStations vehicleType city routeCode endStationCode location) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ GetMetroStationReq vehicleType city routeCode endStationCode location)
     where
     errorHandler errorPayload = do
       BackT $ pure GoBack 
 
-searchMetroBT :: SearchMetroReq -> FlowBT String SearchMetroResp
-searchMetroBT  requestBody = do
+getBusRoutesBT :: String -> String -> String -> FlowBT String GetBusRoutesResponse
+getBusRoutesBT city startStationCode endStationCode= do
     headers <- getHeaders' "" false
-    withAPIResultBT (EP.searchMetro "") (\x -> x) errorHandler (lift $ lift $ callAPI headers requestBody)
+    withAPIResultBT (EP.getBusRoutes city startStationCode endStationCode ) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ GetBusRoutesReq city startStationCode endStationCode)
+    where
+    errorHandler errorPayload = do
+      BackT $ pure GoBack
+searchMetroBT :: String -> SearchMetroReq -> FlowBT String SearchMetroResp
+searchMetroBT vehicleType requestBody = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.searchMetro vehicleType) (\x -> x) errorHandler (lift $ lift $ callAPI headers (SearchMetroRequest requestBody vehicleType))
     where
     errorHandler errorPayload = do
       BackT $ pure GoBack 
 
-makeSearchMetroReq :: String -> String -> Int -> SearchMetroReq
-makeSearchMetroReq srcCode destCode count = SearchMetroReq {
+busAutoCompleteBT :: String -> String -> String -> Maybe String -> FlowBT String AutoCompleteResp
+busAutoCompleteBT vehicleType city location input = do 
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.busAutoComplete vehicleType city location input) (\x -> x) errorHandler (lift $ lift $ callAPI headers $ BusAutoCompleteReq vehicleType city location input)
+    where
+    errorHandler errorPayload = do
+      BackT $ pure GoBack 
+
+
+makeSearchMetroReq :: String -> String -> Int -> Maybe String-> SearchMetroReq
+makeSearchMetroReq srcCode destCode count routeCode = SearchMetroReq {
     "fromStationCode" : srcCode,
     "toStationCode" : destCode,
-    "quantity" : count
+    "quantity" : count,
+    "routeCode" : routeCode
     }
 
 getMetroQuotesBT :: String -> FlowBT String GetMetroQuotesRes
@@ -1536,7 +1554,6 @@ makeEditLocationResultRequest bookingUpdateRequestId = GetEditLocResultReq booki
 makeEditLocResultConfirmReq :: String -> EditLocResultConfirmReq
 makeEditLocResultConfirmReq bookingUpdateRequestId = EditLocResultConfirmReq bookingUpdateRequestId
 
-
 ------------------------------------------------------------------------------- Intercity ---------------------------------------------------------------------------------
 makeRoundTripReq :: Number -> Number -> Number -> Number -> Address -> Address -> String -> Maybe String ->  Boolean -> SearchReq
 makeRoundTripReq slat slong dlat dlong srcAdd desAdd startTime returnTime roundTrip =
@@ -1582,3 +1599,29 @@ getDeliveryImageBT rideId = do
     where
     errorHandler errorPayload = do
         BackT $ pure GoBack
+
+---------------------------------------- triggerAadhaarOtp ---------------------------------------------
+triggerAadhaarOtp :: String -> Flow GlobalState (Either ErrorResponse GenerateAadhaarOTPResp)
+triggerAadhaarOtp aadhaarNumber = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.triggerAadhaarOTP "") unwrapResponse $ callAPI headers $ makeReq aadhaarNumber
+  where
+    makeReq :: String -> GenerateAadhaarOTPReq
+    makeReq number = GenerateAadhaarOTPReq {
+      aadhaarNumber : number,
+      consent : "Y"
+    }
+    unwrapResponse x = x
+
+---------------------------------------- verifyAadhaarOtp ---------------------------------------------
+verifyAadhaarOtp :: String -> Flow GlobalState (Either ErrorResponse VerifyAadhaarOTPResp)
+verifyAadhaarOtp aadhaarNumber = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.verifyAadhaarOTP "") unwrapResponse $ callAPI headers $ makeReq aadhaarNumber
+  where
+    makeReq :: String -> VerifyAadhaarOTPReq
+    makeReq otp = VerifyAadhaarOTPReq {
+      otp : fromMaybe 0 $ INT.fromString otp
+    , shareCode : DS.take 4 otp
+    }
+    unwrapResponse x = x

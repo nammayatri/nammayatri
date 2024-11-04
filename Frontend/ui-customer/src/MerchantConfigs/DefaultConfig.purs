@@ -787,6 +787,7 @@ config =
       enableNonAcPopup : false,
       showAfterTime : 5
     }
+  , enableDeliveryService : false
 }
 
 defaultCityConfig :: CityConfig

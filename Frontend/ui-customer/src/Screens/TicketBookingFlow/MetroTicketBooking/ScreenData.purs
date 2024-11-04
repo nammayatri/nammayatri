@@ -17,8 +17,10 @@ module Screens.TicketBookingFlow.MetroTicketBooking.ScreenData where
 import Prelude
 import Screens.Types as ST
 import ConfigProvider
-import Services.API (MetroBookingConfigRes(..))
+import Services.API (MetroBookingConfigRes(..), GetBusRouteResp(..))
 import Data.Maybe as Mb
+import Data.Array 
+import Services.API as API
 
 initData :: ST.MetroTicketBookingScreenState
 initData = {
@@ -34,8 +36,13 @@ initData = {
   , bookingId : ""
   , quoteId : ""
   , quoteResp : []
-  , metroBookingConfigResp : MetroBookingConfigRes {bookingEndTime: "", bookingStartTime: "", oneWayTicketLimit: 0, roundTripTicketLimit: 0, metroStationTtl: 10080, discount: 0, customEndTime : "", customDates : [], isEventOngoing : Mb.Nothing, freeTicketInterval : Mb.Nothing, maxFreeTicketCashback : Mb.Nothing, ticketsBookedInEvent : Mb.Nothing}
+  , routeSearchedList : []
+  , routeList : []
+  , stopsSearchedList : []
+  , searchRideType : API.BUS_DESTINATION
+  , metroBookingConfigResp : MetroBookingConfigRes {bookingEndTime: "", bookingStartTime: "", oneWayTicketLimit: 0, roundTripTicketLimit: 0, metroStationTtl: 10080, discount: 0, customEndTime : "", customDates : [], isEventOngoing : Mb.Nothing, freeTicketInterval : Mb.Nothing, maxFreeTicketCashback : Mb.Nothing, ticketsBookedInEvent : Mb.Nothing , isCancellationAllowed : Mb.Just true}
   , eventDiscountAmount : Mb.Nothing
+  , discounts : [] -- [womenDiscount] <> [seniorCitizenDiscount]
   },
   props: {
     isLimitExceeded : false
@@ -44,6 +51,43 @@ initData = {
     , isButtonActive : false
     , showMetroBookingTimeError : false
     , showShimmer : true
+    , busClicked : false
+    , routeList : false
+    , showRouteOptions : false
+    , isEmptyRoute : ""
+    , ticketServiceType : API.METRO
+    , srcLat : 0.00
+    , srcLong : 0.00
+    , routeName : ""
+    
   },
   config :  getAppConfig appConfig
 }
+
+
+
+womenDiscount :: API.DiscountObj
+womenDiscount = 
+  { code: "WOMEN"
+  , description: "Women Discount"
+  , eligibility: false
+  , price: 
+      { amount: 20.0
+      , currency: "INR"
+      }
+  , title: "Women 50% Off"
+  , tnc: "<b>Only eligible for women above 18 years old</b>"
+  }
+
+seniorCitizenDiscount :: API.DiscountObj
+seniorCitizenDiscount = 
+  { code: "SENIORCITIZEN"
+  , description: "Senior Citizen Discount"
+  , eligibility: true
+  , price: 
+      { amount: 16.0
+      , currency: "INR"
+      }
+  , title: "Senior Citizen 40% Off"
+  , tnc: "<b>Only eligible for adults with age above 70 years</b>"
+  }

@@ -43,4 +43,5 @@ metroTicketDetailsScreen = do
     HardCancelBooking updatedState -> do
       void $ modifyScreenState $ MetroTicketDetailsScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ HARD_CANCEL_BOOKING updatedState)
+    GoToBusTicketBookingScreen -> App.BackT $ App.NoBack <$> (pure $ GO_TO_BUS_TICKET_BOOKING_SCREEN_FROM_METRO_TICKET_DETAILS_SCREEN)
     _  -> App.BackT $ App.NoBack <$> (pure $ METRO_TICKET_DETAILS_SCREEN_OUTPUT_NO_OUTPUT)

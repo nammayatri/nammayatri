@@ -1992,6 +1992,8 @@ locationTagBarConfig state =
             <> (if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else [])
             <> ([{image: "ny_ic_delivery", text: (getString DELIVERY_STR), id: "DELIVERY", background: Color.seashell, showBanner: GONE }])
             <> if state.data.currentCityConfig.enableIntercityBus then [ { image: "ny_ic_intercity_bus", text: getString INTERCITY_BUS, id: "INTERCITY_BUS", background: Color.blue600', showBanner: GONE } ] else []
+            <> ([{image: "ny_ic_bus_icon", text: "Bus", id: "BUS", background: Color.amber, showBanner: GONE }])
+            <> ([{image: "ny_ic_metro_icon", text: "Metro", id: "METRO_RIDE", background: Color.mutedRed, showBanner: GONE }])
         )
   in
     { tagList: locTagList }
@@ -2452,6 +2454,8 @@ getAllServices dummy =
   , {type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY_STR, backgroundColor: "#fef9eb" , preferredEstimateOrder : []}
   , {type: RemoteConfig.INTERCITY_BUS, image: fetchImage COMMON_ASSET "ny_ic_intercity_bus_service", name: INTERCITY_BUS, backgroundColor: "#fdf3ec" , preferredEstimateOrder : []}
   , {type: RemoteConfig.BIKE_TAXI, image: fetchImage COMMON_ASSET "ny_ic_bike_taxi_service", name: BIKE_TAXI, backgroundColor: "#F0FAF0" , preferredEstimateOrder : ["BIKE"]}
+  , {type: RemoteConfig.BUS, image: fetchImage COMMON_ASSET "ny_ic_bus_icon", name: BUS__, backgroundColor: "#FFF3EB" , preferredEstimateOrder : ["BUS"]}
+  , {type: RemoteConfig.METRO_RIDE, image: fetchImage COMMON_ASSET "ny_ic_metro_icon", name: METRO_RIDE, backgroundColor: "#faeeee" , preferredEstimateOrder : ["METRO_RIDE"]}
   ]
 
 getChatDetails :: ST.HomeScreenState -> Array NewContacts -> Array ChatContacts

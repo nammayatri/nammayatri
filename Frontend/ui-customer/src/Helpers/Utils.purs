@@ -1082,7 +1082,19 @@ getMetroConfigFromCity city fcResponse =
                 (getString $ DELHI_METRO_TIME convertedBookingStartTime convertedBookingEndTime)
                 false
                 config
-
+        Kolkata -> 
+            mkCityBasedConfig 
+                "ny_ic_kolkata_bus" 
+                "Tickets for kolkata Bus" 
+                "" 
+                "" 
+                "" 
+                "" 
+                "" 
+                ["Cancellation of tickets is not applicable" , "The ticket is valid for only 30 minutes from the time of booking" ,"Fare is commission-free and determined by the MTC"] 
+                "" 
+                false
+                config
         _ ->
             mkCityBasedConfig "" "" "" "" "" "" [] "" false config 
   where

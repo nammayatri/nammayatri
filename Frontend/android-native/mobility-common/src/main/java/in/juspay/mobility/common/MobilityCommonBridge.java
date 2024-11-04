@@ -1819,7 +1819,9 @@ public class MobilityCommonBridge extends HyperBridge {
                     for (Map.Entry<String, Marker> marker : markers.entrySet()) {
                         Marker m = marker.getValue();
                         m.setVisible(false);
+                        m.remove();
                     }
+                    markers.clear();
                 }
             } catch (Exception e) {
                 Log.e(MAPS, "RemoveAllMarkers error ", e);

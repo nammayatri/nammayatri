@@ -600,6 +600,8 @@ export const openUrlInMailApp = function (str) {
 
 export const showMarkerImpl = function (showMarkerConfig) {
   if (window.JBridge.showMarker) {
+    console.log("showMarkerImpl");
+    
     window.JBridge.showMarker(JSON.stringify(showMarkerConfig));
   } else {
     window.JBridge.upsertMarker(showMarkerConfig.markerConfig.pointerIcon, showMarkerConfig.lat, showMarkerConfig.lng, showMarkerConfig.markerSize, showMarkerConfig.anchorV, showMarkerConfig.anchorV1);
@@ -3024,9 +3026,7 @@ export const getResourceIdentifier = function (resourceName) {
 }
 }
 
-
-export const rsEncryption = (str) => window.JBridge.rsEncryption ? window.JBridge.rsEncryption(str) : "";
-  
+export const rsEncryption = (str) => window.JBridge.rsEncryption ? window.JBridge.rsEncryption(str) : "";  
 
 export const launchCustomTab = (url, cb) => {
   if (window.JBridge.launchCustomTab) {
