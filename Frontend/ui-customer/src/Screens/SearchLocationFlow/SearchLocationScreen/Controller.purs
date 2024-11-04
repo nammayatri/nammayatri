@@ -427,27 +427,27 @@ eval (RateCardAC action) state =
     RateCardController.PrimaryButtonAC (PrimaryButtonController.NoAction) -> continue state
     _ -> continue state { props {showRateCard = false}}
     
-eval (ChooseYourRideAC (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect variant))) state = do 
+eval (ChooseYourRideAC (ChooseYourRideController.ChooseVehicleAC tipProps (ChooseVehicleController.OnSelect variant))) state = do 
   let updatedQuotes = map (\item -> 
                               item {activeIndex = variant.index , quoteDetails {activeIndex = variant.index}}) state.data.quotesList
       selectedQuote = (fetchSelectedQuote updatedQuotes)
       newState = if variant.activeIndex == variant.index then state else state{props{customerTip = SearchLocationScreenData.initData.props.customerTip, tipViewProps = SearchLocationScreenData.initData.props.tipViewProps}}
   continue newState { data { quotesList = updatedQuotes , selectedQuote = selectedQuote}}
 
-eval (ChooseYourRideAC (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config))) state = do 
+eval (ChooseYourRideAC (ChooseYourRideController.ChooseVehicleAC _ (ChooseVehicleController.ShowRateCard config))) state = do 
   continue state { props { showRateCard = true }}
 
-eval (ChooseYourRideAC ChooseYourRideController.AddTip) state = do
-  continue state { props { tipViewProps {stage = TIP_AMOUNT_SELECTED}}}
+eval (ChooseYourRideAC (ChooseYourRideController.AddTip tipViewProps)) state = do
+  continue state { props { tipViewProps = tipViewProps {stage = TIP_AMOUNT_SELECTED}}}
   
-eval (ChooseYourRideAC ChooseYourRideController.ChangeTip) state = do
-  continue state { props {tipViewProps { activeIndex = state.props.customerTip.tipActiveIndex, stage = TIP_AMOUNT_SELECTED}}} 
+eval (ChooseYourRideAC (ChooseYourRideController.ChangeTip tipViewProps)) state = do
+  continue state { props {tipViewProps = tipViewProps { activeIndex = state.props.customerTip.tipActiveIndex, stage = TIP_AMOUNT_SELECTED}}} 
 
-eval (ChooseYourRideAC (ChooseYourRideController.TipBtnClick index value)) state = do 
+eval (ChooseYourRideAC (ChooseYourRideController.TipBtnClick index value customerTipArrayWithValues)) state = do 
   let quoteSelected = MB.maybe dummyQuote identity state.data.selectedQuote
       vehicleVariant = quoteSelected.quoteDetails.vehicleVariant
       tipConfig = getTipConfig vehicleVariant
-      customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
+      -- customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
       tip = MB.fromMaybe 0 (customerTipArrayWithValues DA.!! index)
       isTipSelected = tip > 0
       customerTip = if isTipSelected then 
@@ -461,7 +461,7 @@ eval (ChooseYourRideAC (ChooseYourRideController.TipBtnClick index value)) state
 
 eval (ChooseYourRideAC (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = exit $ SelectedQuote state
 
-eval (ChooseYourRideAC (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.NoAction config))) state = do
+eval (ChooseYourRideAC (ChooseYourRideController.ChooseVehicleAC _ (ChooseVehicleController.NoAction config))) state = do
   let height = (runFn1 getLayoutBounds $ getNewIDWithTag config.id).height
       updatedState = state{props{currentEstimateHeight = if config.vehicleVariant == "BOOK_ANY" then height else state.props.currentEstimateHeight, selectedEstimateHeight = if config.vehicleVariant /= "BOOK_ANY" then height else state.props.selectedEstimateHeight}}
   continue updatedState

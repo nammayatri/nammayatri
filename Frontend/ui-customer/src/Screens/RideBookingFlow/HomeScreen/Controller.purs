@@ -68,7 +68,7 @@ import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, un
 import Data.Function.Uncurried (runFn3, runFn2)
 import Data.Int (toNumber, round, fromString, fromNumber, ceil, floor)
 import Data.Lens ((^.), view)
-import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe , isNothing)
 import Data.Number (fromString, round) as NUM
 import Data.String as STR
 import Debug (spy)
@@ -1866,13 +1866,17 @@ eval (QuoteListModelActionController (QuoteListModelController.CancelAutoAssigni
   continue state
 
 
+eval (QuoteListModelActionController (QuoteListModelController.NoAction tipViewProps)) state = do
+  continue state { props{tipViewProps = tipViewProps}}
+
 eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryButtonClick PrimaryButtonController.OnClick)) state = do
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".Tip") "true"
-  let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
-      customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
+  let tipViewProps = getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant state.data.selectedEstimatesObject.smartTipReason state.data.selectedEstimatesObject.smartTipSuggestion
+      customerTipArrayWithValues = tipViewProps.customerTipArrayWithValues
   _ <- pure $ clearTimerWithId state.props.timerId
   let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH, onlyPrimaryText = true}
-  let newState = state{ props{rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }, findingRidesAgain = true ,searchExpire = (getSearchExpiryTime true), currentStage = TryAgain, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 0 (customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex, isTipSelected = true } }, data{nearByDrivers = Nothing}}
+  let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH, onlyPrimaryText = true, activeIndex = if state.props.tipViewProps.activeIndex == -1 && tipViewProps.activeIndex /= -1 then tipViewProps.activeIndex else state.props.tipViewProps.activeIndex}
+  let newState = state{ props{rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }, findingRidesAgain = true ,searchExpire = (getSearchExpiryTime true), currentStage = TryAgain, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 0 (customerTipArrayWithValues !! tipViewData.activeIndex)) , tipActiveIndex = tipViewData.activeIndex, isTipSelected = true } }, data{nearByDrivers = Nothing}}
   _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
   updateAndExit newState $ RetryFindingQuotes false newState
 
@@ -2505,12 +2509,12 @@ eval (MenuButtonActionController (MenuButtonController.OnClick config)) state = 
       _ <- animateCamera config.lat config.lng 25.0 "NO_ZOOM"
       pure NoAction
     ]
-eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.NoAction config))) state = do
+eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC _ (ChooseVehicleController.NoAction config))) state = do
   let height = (runFn1 getLayoutBounds $ getNewIDWithTag config.id).height
       updatedState = state{props{defaultPickUpPoint = "", currentEstimateHeight = if config.vehicleVariant == "BOOK_ANY" then height else state.props.currentEstimateHeight, selectedEstimateHeight = if config.vehicleVariant /= "BOOK_ANY" then height else state.props.selectedEstimateHeight}}
   continue updatedState
 
-eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ServicesOnClick config item))) state = do
+eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC _ (ChooseVehicleController.ServicesOnClick config item))) state = do
   let updatedServices = if elem item config.selectedServices then delete item config.selectedServices else insert item config.selectedServices
   if length updatedServices < 1 then continue state
   else do
@@ -2536,19 +2540,22 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
     ) state.data.specialZoneQuoteList 
 
 
-eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.OnSelect config))) state = do
+eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC _ (ChooseVehicleController.OnSelect config))) state = do
+  let tipViewProps = state.props.tipViewProps {stage = DEFAULT}
+  let tipProps = getTipViewProps tipViewProps config.vehicleVariant config.smartTipReason config.smartTipSuggestion
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".ChooseVehicle") "true"
   let updatedQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
-      props = if config.activeIndex == config.index then state.props else state.props{customerTip = HomeScreenData.initData.props.customerTip, tipViewProps = HomeScreenData.initData.props.tipViewProps}
+      tip = fromMaybe 0 (tipProps.customerTipArrayWithValues !! tipProps.activeIndex)
+      isTipSelected = tip > 0
+      customerTip = if isTipSelected then state.props.customerTip {isTipSelected = isTipSelected, enableTips = isTipEnabled state, tipForDriver = tip, tipActiveIndex = tipProps.activeIndex} else state.props.customerTip
+      props = if config.activeIndex == config.index then state.props else if isNothing config.smartTipSuggestion then state.props{customerTip = HomeScreenData.initData.props.customerTip, tipViewProps = HomeScreenData.initData.props.tipViewProps{customerTipArrayWithValues = tipProps.customerTipArrayWithValues, customerTipArray = tipProps.customerTipArray }}  else state.props{customerTip = customerTip, tipViewProps = tipProps}
       newState = state{data{specialZoneQuoteList = updatedQuotes}, props = props}
       selectedEstimates = if config.vehicleVariant == "BOOK_ANY" then foldl(\acc item -> if elem (fromMaybe "" item.serviceTierName) config.selectedServices then acc <> [item.id] else acc) [] state.data.specialZoneQuoteList else [] 
       estimateId = if config.vehicleVariant == "BOOK_ANY" then fromMaybe "" (head selectedEstimates) else config.id
       otherSelectedEstimates = fromMaybe [] $ tail $ selectedEstimates
   void $ pure $ setValueToLocalNativeStore SELECTED_VARIANT (config.vehicleVariant)
   let updatedSpecialZOneQuotes = map (\item -> item{activeIndex = config.index}) state.data.specialZoneQuoteList
-      props = if config.activeIndex == config.index then state.props else state.props{customerTip = HomeScreenData.initData.props.customerTip, tipViewProps = HomeScreenData.initData.props.tipViewProps}
       updatedQuoteList = map (\item -> item{activeIndex = config.index}) state.data.quoteList
-      newState = state{data{specialZoneQuoteList = updatedSpecialZOneQuotes, quoteList = updatedQuoteList}, props = props}
   
   if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then do
     _ <- pure $ spy "ChooseYourRideAction 2" config.activeIndex 
@@ -2569,7 +2576,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
   else 
     continue newState{props{estimateId = estimateId }, data {selectedEstimatesObject = config{activeIndex = config.index}, otherSelectedEstimates = otherSelectedEstimates}}
 
-eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config))) state = do
+eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC _ (ChooseVehicleController.ShowRateCard config))) state = do
   let _ = unsafePerformEffect $ Events.addEventData ("External.Clicked.Search." <> state.props.searchId <> ".RateCard") "true"
   continue state{ props { showRateCard = true }
                 , data {  rateCard {  onFirstPage = false
@@ -2603,8 +2610,8 @@ eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionControll
     exit $ RefreshHomeScreen state { data { iopState { providerSelectionStage = true}, otherSelectedEstimates = otherSelectedEstimates}, props {estimateId = estimateId}}
   else do
     let customerTip = if state.props.tipViewProps.activeIndex == -1 then HomeScreenData.initData.props.customerTip else state.props.customerTip
-        tipViewProps = if state.props.tipViewProps.activeIndex == -1 then HomeScreenData.initData.props.tipViewProps 
-                          else if state.props.tipViewProps.stage == TIP_AMOUNT_SELECTED then state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH}
+        tipViewProps = if state.props.tipViewProps.activeIndex == -1 || customerTip.tipForDriver <= 0 then HomeScreenData.initData.props.tipViewProps{customerTipArrayWithValues = state.props.tipViewProps.customerTipArrayWithValues, customerTipArray = state.props.tipViewProps.customerTipArray}
+                          else if state.props.tipViewProps.stage == TIP_AMOUNT_SELECTED && customerTip.tipForDriver > 0  then state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH}
                           else state.props.tipViewProps
         updatedState = state{props{ searchExpire = (getSearchExpiryTime true), customerTip = customerTip, tipViewProps = tipViewProps, estimateId = estimateId}, data{otherSelectedEstimates = otherSelectedEstimates}}
     void $ pure $ setTipViewData (TipViewData { stage : tipViewProps.stage , activeIndex : tipViewProps.activeIndex , isVisible : tipViewProps.isVisible })
@@ -2616,8 +2623,11 @@ eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionControll
 
 eval ConfirmDeliveryRide state = exit $ SelectEstimateAndQuotes state
 
-eval (ChooseYourRideAction ChooseYourRideController.NoAction) state = do
-  continue state{ props{ defaultPickUpPoint = "" } }
+eval (ChooseYourRideAction (ChooseYourRideController.NoAction config)) state = do
+  let tip = fromMaybe 0 (config.tipViewProps.customerTipArrayWithValues !! config.tipViewProps.activeIndex)
+      isTipSelected = tip > 0
+      customerTip = if isTipSelected then state.props.customerTip {isTipSelected = isTipSelected, enableTips = isTipEnabled state, tipForDriver = tip, tipActiveIndex = config.tipViewProps.activeIndex} else state.props.customerTip
+  continue state{ props{ defaultPickUpPoint = "", tipViewProps = config.tipViewProps, customerTip = customerTip} }
 
 eval (QuoteListModelActionController (QuoteListModelController.CancelTimer)) state = do
   void $ pure $ clearTimerWithId state.data.iopState.timerId
@@ -2671,26 +2681,27 @@ eval (ChooseYourRideAction ChooseYourRideController.SpecialZoneInfoTag) state = 
 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.NoAction))) state = continueWithCmd state{data {triggerPatchCounter = state.data.triggerPatchCounter + 1}} [pure NoAction]
 
-eval (ChooseYourRideAction (ChooseYourRideController.TipBtnClick index value)) state = do
+eval (ChooseYourRideAction (ChooseYourRideController.TipBtnClick index value customerTipArrayWithValues)) state = do
   let tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
-      customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
       tip = fromMaybe 0 (customerTipArrayWithValues !! index)
-      isTipSelected = tip > 0
+      customerTipArray = getTips customerTipArrayWithValues
+      isZeroTipSelected = tip == value && value == 0
+      isTipSelected = tip > 0 || isZeroTipSelected
       customerTip = if isTipSelected then 
-                      state.props.customerTip {isTipSelected = isTipSelected, enableTips = isTipEnabled state, tipForDriver = tip, tipActiveIndex = index}
+                      state.props.customerTip {isTipSelected = tip > 0, enableTips = isTipEnabled state, tipForDriver = tip, tipActiveIndex = index}
                       else HomeScreenData.initData.props.customerTip
       tipViewProps = if isTipSelected then 
-                      state.props.tipViewProps{ stage = RETRY_SEARCH_WITH_TIP, activeIndex = index, onlyPrimaryText = true}
-                      else HomeScreenData.initData.props.tipViewProps
-  void $ pure $ setTipViewData (TipViewData { stage : tipViewProps.stage , activeIndex : tipViewProps.activeIndex , isVisible : tipViewProps.isVisible })
+                      state.props.tipViewProps{ stage = if isZeroTipSelected then state.props.tipViewProps.stage else RETRY_SEARCH_WITH_TIP, activeIndex = index, onlyPrimaryText = true}
+                      else HomeScreenData.initData.props.tipViewProps {customerTipArrayWithValues = customerTipArrayWithValues, customerTipArray = customerTipArray }
+  void $ pure $ setTipViewData (TipViewData { stage : tipViewProps.stage , activeIndex : tipViewProps.activeIndex , isVisible : if isZeroTipSelected then false else tipViewProps.isVisible })
   continue state { props {customerTip = customerTip , tipViewProps = tipViewProps }}
 
-eval (ChooseYourRideAction ChooseYourRideController.AddTip) state = do
+eval (ChooseYourRideAction (ChooseYourRideController.AddTip tipViewProps)) state = do
   if state.data.selectedEstimatesObject.searchResultType == ChooseVehicleController.QUOTES ChooseVehicleController.OneWaySpecialZoneAPIDetails then continue state
-  else continue state { props { tipViewProps {stage = TIP_AMOUNT_SELECTED}}}
+  else continue state { props { tipViewProps = tipViewProps {stage = TIP_AMOUNT_SELECTED}}}
 
-eval (ChooseYourRideAction ChooseYourRideController.ChangeTip) state = do
-  continue state { props {tipViewProps { activeIndex = state.props.customerTip.tipActiveIndex, stage = TIP_AMOUNT_SELECTED}}} 
+eval (ChooseYourRideAction (ChooseYourRideController.ChangeTip tipViewProps)) state = do
+  continue state { props {tipViewProps = tipViewProps { activeIndex = state.props.customerTip.tipActiveIndex, stage = TIP_AMOUNT_SELECTED}}} 
 
 eval CheckAndAskNotificationPermission state = do 
   _ <- pure $ checkAndAskNotificationPermission false

@@ -109,6 +109,7 @@ import Screens.Types as ST
 import Services.API as API
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
+import Debug (spy)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state =
@@ -160,7 +161,6 @@ cancelAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 cancelAppConfig state =
   let
     config' = PopUpModal.config
-
     popUpConfig' =
       config'
         { gravity = BOTTOM
@@ -1392,8 +1392,8 @@ quoteListModelViewState :: ST.HomeScreenState -> QuoteListModel.QuoteListModelSt
 quoteListModelViewState state =
   let
     vehicleVariant = state.data.selectedEstimatesObject.vehicleVariant
-
     tipConfig = getTipConfig state.data.selectedEstimatesObject.vehicleVariant
+    tipProps = getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant state.data.selectedEstimatesObject.smartTipReason state.data.selectedEstimatesObject.smartTipSuggestion
   in
     { source: state.data.source
     , destination: state.data.destination
@@ -1402,14 +1402,14 @@ quoteListModelViewState state =
     , autoSelecting: state.props.autoSelecting
     , searchExpire: state.props.searchExpire
     , showProgress: isLocalStageOn ConfirmingQuotes || (DA.null state.data.quoteListModelState) && isLocalStageOn FindingQuotes
-    , tipViewProps: getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant
+    , tipViewProps: tipProps
     , findingRidesAgain: state.props.findingRidesAgain
     , progress: state.props.findingQuotesProgress
     , appConfig: state.data.config
     , vehicleVariant: vehicleVariant
     , city: state.props.city
-    , customerTipArray: tipConfig.customerTipArray
-    , customerTipArrayWithValues: tipConfig.customerTipArrayWithValues
+    , customerTipArray: tipProps.customerTipArray
+    , customerTipArrayWithValues: tipProps.customerTipArrayWithValues
     , providerSelectionStage: state.data.iopState.providerSelectionStage
     , quoteList: state.data.specialZoneQuoteList
     , selectProviderTimer: state.data.iopState.timerVal
@@ -1601,6 +1601,7 @@ chooseYourRideConfig state =
     startTimeUTC = if state.data.startTimeUTC == "" then Nothing else Just state.data.startTimeUTC
     returnTimeUTC = if state.data.returnTimeUTC == "" || state.props.searchLocationModelProps.tripType == ONE_WAY_TRIP then Nothing else Just state.data.returnTimeUTC
     roundTrip = isJust returnTimeUTC
+    tipProps = getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant state.data.selectedEstimatesObject.smartTipReason state.data.selectedEstimatesObject.smartTipSuggestion
   in
     ChooseYourRide.config
       { rideDistance = state.data.rideDistance
@@ -1614,10 +1615,10 @@ chooseYourRideConfig state =
       , intercity = isIntercity
       , selectedEstimateHeight = state.props.selectedEstimateHeight
       , zoneType = state.props.zoneType.sourceTag
-      , tipViewProps = getTipViewProps state.props.tipViewProps state.data.selectedEstimatesObject.vehicleVariant
+      , tipViewProps = tipProps
       , tipForDriver = state.props.customerTip.tipForDriver
-      , customerTipArray = tipConfig.customerTipArray
-      , customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
+      , customerTipArray = tipProps.customerTipArray
+      , customerTipArrayWithValues = tipProps.customerTipArrayWithValues
       , enableTips = not isIntercity && state.data.config.tipsEnabled && (elem city state.data.config.tipEnabledCities) && (DA.length tipConfig.customerTipArray) > 0 && not state.data.iopState.showMultiProvider
       , currentEstimateHeight = state.props.currentEstimateHeight
       , fareProductType = state.data.fareProductType

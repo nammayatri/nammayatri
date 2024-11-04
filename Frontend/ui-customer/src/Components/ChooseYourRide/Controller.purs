@@ -10,16 +10,16 @@ import Prelude (negate)
 import Resources.Constants (intMin, intMax)
 
 data Action
-  = NoAction
-  | ChooseVehicleAC ChooseVehicleController.Action
+  = NoAction Config
+  | ChooseVehicleAC TipViewProps ChooseVehicleController.Action
   | PrimaryButtonActionController PrimaryButtonController.Action
   | PreferencesDropDown
   | RadioButtonClick Boolean
   | OnIconClick Boolean
   | SpecialZoneInfoTag
-  | TipBtnClick Int Int
-  | AddTip
-  | ChangeTip
+  | TipBtnClick Int Int (Array Int)
+  | AddTip TipViewProps
+  | ChangeTip TipViewProps
 
 
 type Config

@@ -25,7 +25,7 @@ import Components.ChooseVehicle.Controller as CVC
 import Components.ProviderModel as PM
 
 data Action = GoBack
-            | NoAction
+            | NoAction TipViewProps
             | PrimaryButtonActionController PrimaryButtonController.Action
             | QuoteListItemActionController QuoteListItemController.Action
             | CancelAutoAssigning

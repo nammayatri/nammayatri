@@ -1703,7 +1703,7 @@ homeScreenFlow = do
       if valid then do
         setValueToLocalStore LOCAL_STAGE $ show FindingQuotes
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = FindingQuotes } })
-        void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled) state.data.deliveryDetailsInfo) (state.props.estimateId)
+        void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected && state.props.customerTip.tipForDriver > 0 then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled) state.data.deliveryDetailsInfo) (state.props.estimateId)
         logStatus "finding_quotes" ("estimateId : " <> state.props.estimateId)
         homeScreenFlow
       else do
@@ -1720,7 +1720,7 @@ homeScreenFlow = do
             ChooseVehicle.ESTIMATES -> do
               let valid = timeValidity (getCurrentUTC "") selectedEstimateOrQuote.validTill
               if valid then do
-                void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled) state.data.deliveryDetailsInfo) selectedEstimateOrQuote.id
+                void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected && state.props.customerTip.tipForDriver > 0 then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled) state.data.deliveryDetailsInfo) selectedEstimateOrQuote.id
                 void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
                 setValueToLocalStore LOCAL_STAGE $ show FindingQuotes
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindingQuotes
