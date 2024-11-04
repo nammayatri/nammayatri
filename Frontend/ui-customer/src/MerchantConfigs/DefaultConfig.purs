@@ -408,10 +408,6 @@ config =
       [ defaultCityConfig 
           { cityName = "Bangalore",
             cityCode = "std:080",
-            geoCodeConfig
-              { radius = 250000,
-                strictBounds = true
-              },
             featureConfig {
               enableCabBanner = true
             }
@@ -434,10 +430,6 @@ config =
             featureConfig {
               enableCabBanner = true
             },
-            geoCodeConfig
-              { radius = 250000
-              , strictBounds = true
-              },
             enableAcViews = true,
             enableRentals = true,
             waitingChargeConfig  {
@@ -453,10 +445,6 @@ config =
             featureConfig {
               enableCabBanner = true
             },
-            geoCodeConfig
-              { radius = 250000
-              , strictBounds = true
-              },
             enableAcViews = true,
             enableRentals = true,
             waitingChargeConfig  {
@@ -469,10 +457,6 @@ config =
         defaultCityConfig 
           {   cityName = "Chennai"
             , cityCode = "std:044"
-            , geoCodeConfig
-                { radius = 50000
-                , strictBounds = true
-                }
             , enableCabs = true
             , enableRentals = true 
             , enableIntercity = false
@@ -487,10 +471,6 @@ config =
            defaultCityConfig 
           {   cityName = "Vellore"
             , cityCode = "std:0452"
-            , geoCodeConfig
-                { radius = 50000
-                , strictBounds = true
-                }
             , enableCabs = true
             , enableRentals = true 
             , enableIntercity = false
@@ -505,10 +485,6 @@ config =
            defaultCityConfig 
           {   cityName = "Tirunelveli"
             , cityCode = "std:0462"
-            , geoCodeConfig
-                { radius = 50000
-                , strictBounds = true
-                }
             , enableCabs = true
             , enableRentals = true 
             , enableIntercity = false
@@ -523,10 +499,6 @@ config =
            defaultCityConfig 
           {   cityName = "Thanjavur"
             , cityCode = "std:04362"
-            , geoCodeConfig
-                { radius = 50000
-                , strictBounds = true
-                }
             , enableCabs = true
             , enableRentals = true 
             , enableIntercity = false
@@ -541,10 +513,6 @@ config =
            defaultCityConfig 
           {   cityName = "Madurai"
             , cityCode = "std:0452"
-            , geoCodeConfig
-                { radius = 50000
-                , strictBounds = true
-                }
             , enableCabs = true
             , enableRentals = true 
             , enableIntercity = false
@@ -559,10 +527,6 @@ config =
            defaultCityConfig 
           {   cityName = "Salem"
             , cityCode = "std:0427"
-            , geoCodeConfig
-                { radius = 50000
-                , strictBounds = true
-                }
             , enableCabs = true
             , enableRentals = true 
             , enableIntercity = false
@@ -577,10 +541,6 @@ config =
            defaultCityConfig 
           {   cityName = "Hosur"
             , cityCode = "std:04344"
-            , geoCodeConfig
-                { radius = 50000
-                , strictBounds = true
-                }
             , enableCabs = true
             , enableRentals = true 
             , enableIntercity = false
@@ -595,10 +555,6 @@ config =
            defaultCityConfig 
           {   cityName = "Trichy"
             , cityCode = "std:0431"
-            , geoCodeConfig
-                { radius = 50000
-                , strictBounds = true
-                }
             , enableCabs = true
             , enableRentals = true 
             , enableIntercity = false
@@ -614,10 +570,6 @@ config =
            defaultCityConfig 
           {   cityName = "TamilNaduCities"
             , cityCode = "std:0422"
-            , geoCodeConfig
-                { radius = 50000
-                , strictBounds = true
-                }
             , enableCabs = true
             , enableRentals = true 
             , enableIntercity = false
@@ -672,10 +624,6 @@ config =
               { domain = "https://www.yatrisathi.in",
                 customerAppId = "in.juspay.jatrisaathi"
               }
-            , geoCodeConfig
-              { radius = 700000
-              , strictBounds = true
-              }
             , enableRentals = true
             , enableIntercity = true
             , enableCabs = true
@@ -711,10 +659,6 @@ config =
             referral
               { domain = "https://www.yatrisathi.in",
                 customerAppId = "in.juspay.jatrisaathi"
-              }
-            , geoCodeConfig
-              { radius = 700000
-              , strictBounds = true
               }
             , enableRentals = true 
             , enableIntercity = true
@@ -827,7 +771,7 @@ defaultCityConfig =
         estimateAndQuoteConfig : {
               showInfoIcon : true},
         geoCodeConfig :
-          { radius : 100000
+          { radius : 50000
           , strictBounds : false
           },
         enableCabs : false,
@@ -901,7 +845,7 @@ ysDefaultCityConfig =
           showInfoIcon : true
     },
     geoCodeConfig :
-      { radius : 100000
+      { radius : 50000
       , strictBounds : false
       },
     enableCabs : true,
