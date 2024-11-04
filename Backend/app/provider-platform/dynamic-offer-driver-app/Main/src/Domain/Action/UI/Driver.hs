@@ -335,7 +335,8 @@ data DriverInformationRes = DriverInformationRes
     totalRidesTaken :: Maybe Int,
     favCount :: Maybe Int,
     subscriptionEnabledForVehicleCategory :: Bool,
-    isSubscriptionEnabledAtCategoryLevel :: Bool
+    isSubscriptionEnabledAtCategoryLevel :: Bool,
+    isSpecialLocWarrior :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -388,7 +389,8 @@ data DriverEntityRes = DriverEntityRes
     freeTrialRides :: Int,
     totalRidesTaken :: Maybe Int,
     subscriptionEnabledForVehicleCategory :: Bool,
-    isSubscriptionEnabledAtCategoryLevel :: Bool
+    isSubscriptionEnabledAtCategoryLevel :: Bool,
+    isSpecialLocWarrior :: Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -927,6 +929,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) = do
         payoutVpaStatus = driverInfo.payoutVpaStatus,
         payoutVpaBankAccount = driverInfo.payoutVpaBankAccount,
         subscriptionEnabledForVehicleCategory = isEnabledForCategory,
+        isSpecialLocWarrior = driverInfo.isSpecialLocWarrior,
         ..
       }
 
