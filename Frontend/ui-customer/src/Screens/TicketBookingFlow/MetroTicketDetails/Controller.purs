@@ -71,12 +71,14 @@ data ScreenOutput =
   | SoftCancelBooking ST.MetroTicketDetailsScreenState 
   | HardCancelBooking ST.MetroTicketDetailsScreenState 
   | GoToBusTicketBookingScreen
+  | GoToBusTrackingScreen
 
 eval :: Action -> MetroTicketDetailsScreenState -> Eval Action ScreenOutput MetroTicketDetailsScreenState
 
 eval BackPressed state = 
   if state.props.fromScreen == Just (getScreen BUS_TICKET_BOOKING_SCREEN) then
     exit GoToBusTicketBookingScreen
+  else if state.props.fromScreen == Just (getScreen BUS_TRACKING_SCREEN) then exit GoToBusTrackingScreen
   else if (state.props.stage == MetroMapStage || state.props.stage == MetroRouteDetailsStage) && state.props.previousScreenStage == MetroMyTicketsStage then 
     continue
       state {

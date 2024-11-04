@@ -14,6 +14,7 @@
 -}
 module Screens.TicketBookingFlow.BusTrackingScreen.Controller where
 
+import PrestoDOM.Core (getPushFn)
 import Engineering.Helpers.Commons as EHC
 import Data.Traversable (traverse, for_)
 import JBridge as JB
@@ -37,12 +38,14 @@ import Constants (languageKey)
 import SessionCache (getValueFromWindow)
 import Data.Array as DA
 import Data.Int as DI
+import Data.Number as DN
 import Data.Maybe as Mb
 import PrestoDOM.List (ListItem)
 import Components.BoxContainer as BoxContainer
 import Components.DropDownWithHeader.Controller as DropDownWithHeader
 import Components.PrimaryButton as PrimaryButton
 import Services.API as API
+import Styles.Colors as Color
 import Helpers.API as HelpersAPI
 -- import Screens.MultiModalFlow.Components.MetroCard as MetroCard
 -- import Screens.MultiModalFlow.Components.VehicleCard as VehicleCard
@@ -63,6 +66,7 @@ import Data.Either
 import Data.Map as DM
 import Data.Newtype (unwrap)
 import Data.Tuple as DT
+import Data.Foldable (foldM)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -79,7 +83,7 @@ data ScreenOutput
 data Action
   = AfterRender
   | BackPressed
-  -- | MetroCardAction MetroCard.Action
+  | CurrentLocationCallBack String String String
   | UpdateTracking (Array ST.VehicleData)
   | MapReady String String String
   | NoAction
@@ -87,54 +91,49 @@ data Action
   | ToggleStops
   | UpdateStops API.GetMetroStationResponse
   | ViewTicket
+  | UserBoarded
+  | SaveRoute JB.Locations
 
 -- | API.BusTrackingRouteResp
 eval :: Action -> ST.BusTrackingScreenState -> Eval Action ScreenOutput ST.BusTrackingScreenState
--- eval (MetroCardAction MetroCard.ExpandStops) state = continue state
--- eval (VehicleCardAction VehicleCard.ExpandStops) state = continue state
 eval (MapReady _ _ _) state =
-  continueWithCmd state {props{gotMapReady = true}}
+  continueWithCmd state { props { gotMapReady = true } }
     [ do
-        void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
-          -- EHC.liftFlow $ JB.setMapPadding 0 0 0 0
-          case state.data.stationResponse of  
-            (Mb.Just stations) -> drawDriverRoute stations state
-            _ -> pure unit
-        --   -- defaultMockInviteFlow 0 state 
-        --   let _ = spy "defaultMockInviteFlow" "defaultMockInviteFlow"
-        --   pure unit
+        void $ launchAff $ EHC.flowRunner defaultGlobalState
+          $ do
+              case state.data.stationResponse of
+                (Mb.Just stations) -> drawDriverRoute stations state
+                _ -> pure unit
         pure NoAction
     ]
 
 eval ToggleStops state = do
-  let
-    ht = JB.getLayoutBounds $ EHC.getNewIDWithTag $ "aaaaaaa" <> "false"
-  continue state { props { expandStopsView = not state.props.expandStopsView, verticalLineHeight = ht.height } }
+  continue state { props { expandStopsView = not state.props.expandStopsView } }
 
 eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state = do
   let
     filteredResp = case state.data.destinationStation of
-          Mb.Nothing -> metroResponse
-          Mb.Just dest -> do
-            case DA.findIndex (\(API.FRFSStationAPI x) -> x.code == dest.stationCode) metroResponse of
-              Mb.Nothing -> metroResponse -- If the item isn't found, return the original array
-              Mb.Just index -> DA.take (index + 1) metroResponse
+      Mb.Nothing -> metroResponse
+      Mb.Just dest -> do
+        case DA.findIndex (\(API.FRFSStationAPI x) -> x.code == dest.stationCode) metroResponse of
+          Mb.Nothing -> metroResponse -- If the item isn't found, return the original array
+          Mb.Just index -> DA.take (index + 1) metroResponse
+
     finalMap =
       DA.foldl
-        ( \acc item@(API.FRFSStationAPI station) -> 
-            case acc.previousStop of 
-              Mb.Nothing -> acc {previousStop = Mb.Just item}
-              Mb.Just stop -> acc { outputMap= DM.insert station.code stop acc.outputMap, previousStop= Mb.Just item }
+        ( \acc item@(API.FRFSStationAPI station) -> case acc.previousStop of
+            Mb.Nothing -> acc { previousStop = Mb.Just item }
+            Mb.Just stop -> acc { outputMap = DM.insert station.code stop acc.outputMap, previousStop = Mb.Just item }
         )
-        { outputMap: DM.empty, previousStop: Mb.Nothing } filteredResp
-  continueWithCmd state { data { stopsList = filteredResp, previousStopsMap = finalMap.outputMap, stationResponse = Mb.Just metroResponse } }
+        { outputMap: DM.empty, previousStop: Mb.Nothing }
+        filteredResp
+  continueWithCmd state { data { stopsList = filteredResp, previousStopsMap = finalMap.outputMap, stationResponse = Mb.Just metroResponse }, props { showShimmer = false } }
     [ do
         void $ launchAff $ EHC.flowRunner defaultGlobalState
           $ do
               when state.props.gotMapReady $ drawDriverRoute metroResponse state
               -- drawDriverRouteMock mockRoute
-              let
-                _ = spy "defaultMockInviteFlow" "defaultMockInviteFlow"
+              
               pure unit
         pure NoAction
     ]
@@ -146,34 +145,109 @@ eval BackPressed state = exit $ GoToBusTicketBooking state
 eval ViewTicket state = exit $ GoToViewTicket state
 
 eval (UpdateTracking trackingData) state = do
-  let
-    finalMap =
-      DA.foldl
-        ( \acc item -> do
-            let mbPreviousStop = DM.lookup item.nextStop state.data.previousStopsMap
-                zoomIn = (item.nextStop == (Mb.maybe "" (\i -> i.stationCode) state.data.sourceStation))
-            case mbPreviousStop of 
-              Mb.Nothing -> acc
-              Mb.Just (API.FRFSStationAPI previousStop) -> do
-                let distanceFromPreviousStop = HU.getDistanceBwCordinates (Mb.fromMaybe 0.0 previousStop.lat) (Mb.fromMaybe 0.0 previousStop.lon) item.vehicleLat item.vehicleLon
-                    travelDistancePercent = item.nextStopDistance / (distanceFromPreviousStop + item.nextStopDistance)
-                    currentValues = Mb.fromMaybe [] $ DM.lookup item.nextStop (DT.fst  acc)
-                DT.Tuple (DM.insert item.nextStop (currentValues <> [travelDistancePercent]) (DT.fst acc )) (if zoomIn && (Mb.isNothing $ DT.snd acc)   then Mb.Just {lat : item.nextStopLat, lon : item.nextStopLon} else Mb.Nothing)
+  case state.props.vehicleTrackingId of
+    Mb.Just id -> do
+      let vehicleDetails = DA.find (\item -> item.vehicleId == id) trackingData
+      case vehicleDetails of 
+        Mb.Just details -> do
+          continueWithCmd state [do
+            void $ launchAff $ EHC.flowRunner defaultGlobalState $ userBoardedActions state trackingData details
+            pure NoAction
+          ]
+        Mb.Nothing -> processTrackingData
+    Mb.Nothing -> processTrackingData
+  where
+    processTrackingData = do
+      let
+        finalMap =
+          DA.foldl
+            ( \acc item -> do
+                let
+                  mbPreviousStop = DM.lookup item.nextStop state.data.previousStopsMap
 
-        )
-        (DT.Tuple DM.empty Mb.Nothing) trackingData
-  
-  continueWithCmd state {data { vehicleTrackingData = DT.fst finalMap, vehicleData = trackingData}, props {busNearSource = Mb.isJust $ DT.snd finalMap}} [ do 
-    case DT.snd finalMap of 
-      Mb.Just pt -> void $ JB.animateCamera pt.lat pt.lon 17.0 "ZOOM" 
-      Mb.Nothing -> pure unit
+                  zoomIn = (item.nextStop == (Mb.maybe "" (\i -> i.stationCode) state.data.sourceStation))
+                  
+                  
+                case mbPreviousStop of 
+                  Mb.Nothing -> acc
+                  Mb.Just (API.FRFSStationAPI previousStop) -> do
+                    let
+                      distanceFromPreviousStop = HU.getDistanceBwCordinates (Mb.fromMaybe 0.0 previousStop.lat) (Mb.fromMaybe 0.0 previousStop.lon) item.vehicleLat item.vehicleLon
+
+                      travelDistancePercent = item.nextStopDistance / (distanceFromPreviousStop + item.nextStopDistance)
+
+                      currentValues = Mb.fromMaybe [] $ DM.lookup item.nextStop (DT.fst acc)
+                      isBusNearer = item.nextStopDistance < (Mb.fromMaybe 1000000.0 $ (DT.snd acc) <#> _.nextStopDistance)
+                    DT.Tuple (DM.insert item.nextStop (currentValues <> [ travelDistancePercent ]) (DT.fst acc))
+                      ( if (zoomIn && ((Mb.isNothing $ DT.snd acc) || isBusNearer)) then
+                          Mb.Just item
+                        else
+                          DT.snd acc
+                      )
+            )
+            (DT.Tuple DM.empty Mb.Nothing)
+            trackingData
+
+      let nearByBusPosition =  Mb.maybe Mb.Nothing (\item -> Mb.Just {lat : item.vehicleLat, lng : item.vehicleLon}) (DT.snd finalMap)
+      continueWithCmd
+        state
+          { data { vehicleTrackingData = DT.fst finalMap, vehicleData = trackingData }
+          , props
+            { busNearSourceData = DT.snd finalMap--true --Mb.isJust $ DT.snd finalMap
+            }
+          }
+        [ do
+            case DT.snd finalMap of
+              Mb.Just pt -> do
+                void $ JB.animateCamera pt.vehicleLat pt.vehicleLon 17.0 "ZOOM"
+              Mb.Nothing -> pure unit
+            pure NoAction
+        ]
+
+eval (CurrentLocationCallBack lat lon _) state = case state.props.busNearSourceData of
+    Mb.Just location -> do
+      let distance = spy "getDistanceBwCordinates" $ HU.getDistanceBwCordinates (parseCoordinate lat) (parseCoordinate lon) location.vehicleLat location.vehicleLon
+      if distance < 0.050 && state.props.userAndBuslocationMatchCount + 1 == 5
+        then continue state{props{individualBusTracking = true, userAndBuslocationMatchCount = state.props.userAndBuslocationMatchCount + 1}}
+      else if distance < 0.050 then continue state{props{userAndBuslocationMatchCount = state.props.userAndBuslocationMatchCount + 1}}
+      else continue state {props{userAndBuslocationMatchCount = 0}}
+    Mb.Nothing -> continue state
+  where
+    parseCoordinate pt = Mb.fromMaybe 0.0 $ DN.fromString pt
+
+eval UserBoarded state = do
+  let filterStopsIndex = DA.findIndex (\(API.FRFSStationAPI item) -> item.code == sourceCode) state.data.stopsList
+      sourceCode = Mb.fromMaybe "" $ state.data.sourceStation <#> _.stationCode
+      filteredStops = case filterStopsIndex of 
+        Mb.Just index -> DA.slice index (DA.length state.data.stopsList) state.data.stopsList
+        Mb.Nothing -> state.data.stopsList
+      vId = state.props.busNearSourceData <#> _.vehicleId
+  continueWithCmd state {props{individualBusTracking = true, vehicleTrackingId = vId}, data{stopsList = filteredStops}}[do
+    -- void $ launchAff $ EHC.flowRunner defaultGlobalState $ userBoardedActions state
     pure NoAction
   ]
 
+eval (SaveRoute route) state = continue state {data{routePts = route}}
 
 eval _ state = update state
 
-drawDriverRoute ::  Array API.FRFSStationAPI -> ST.BusTrackingScreenState -> Flow GlobalState Unit
+userBoardedActions :: ST.BusTrackingScreenState -> Array ST.VehicleData -> ST.VehicleData -> Flow GlobalState Unit 
+userBoardedActions state vehicles vehicle = do
+  for_ vehicles
+    $ \(item) -> do
+        if item.vehicleId /= vehicle.vehicleId then do
+          let _ = JB.removeMarker item.vehicleId
+          pure unit
+        else pure unit
+  locationResp <- EHC.liftFlow $ JB.isCoordOnPath state.data.routePts (vehicle.vehicleLat) (vehicle.vehicleLon) 1
+  let routeConfig = JB.mkRouteConfig { points: locationResp.points } JB.defaultMarkerConfig JB.defaultMarkerConfig Mb.Nothing "NORMAL" "LineString" true JB.DEFAULT $ HU.mkMapRouteConfig "" "" false getPolylineAnimationConfig 
+  EHC.liftFlow $ JB.drawRoute [ routeConfig{routeColor = Color.black600} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
+
+  -- let markerConfig = JB.defaultMarkerConfig { markerId = item.vehicleId, pointerIcon = "ny_ic_bus_marker" }
+  -- void $ EHC.liftFlow $ JB.showMarker markerConfig vehicle.vehicleLat vehicle.vehicleLon 160 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+  pure unit
+
+drawDriverRoute :: Array API.FRFSStationAPI -> ST.BusTrackingScreenState -> Flow GlobalState Unit
 drawDriverRoute resp state = do
   let
     srcCode = Mb.maybe "" (\item -> item.stationCode) state.data.sourceStation
@@ -181,64 +255,44 @@ drawDriverRoute resp state = do
     destinationCode = Mb.maybe "" (\item -> item.stationCode) state.data.destinationStation
   response <- HelpersAPI.callApi $ API.FrfsGetRouteReq state.data.busRouteCode (getValueToLocalStore CUSTOMER_LOCATION) "BUS"
   let
-    route = case response of
-      Right (API.FRFSRouteAPI routeResp) ->
-        API.Route
-          { boundingBox: Mb.Nothing
-          , distance: 1671
-          , duration: 150
-          , pointsForRentals: Mb.Nothing
-          , points:
-              API.Snapped
-                $ Mb.fromMaybe [] routeResp.waypoints
-          , snappedWaypoints: API.Snapped []
-          }
-      Left err ->
-        API.Route
-          { boundingBox: Mb.Nothing
-          , distance: 1671
-          , duration: 150
-          , pointsForRentals: Mb.Nothing
-          , points:
-              API.Snapped
-                []
-          , snappedWaypoints: API.Snapped []
-          }
+    route =
+      Remote.walkCoordinates $ API.Snapped
+        $ case response of
+            Right (API.FRFSRouteAPI routeResp) -> DA.reverse $ Mb.fromMaybe [] routeResp.waypoints
+            Left err -> []
+
+    destinationStation = DA.find (\(API.FRFSStationAPI item) -> item.code == destinationCode) resp
+  filteredRoute <- case destinationStation of
+    Mb.Just (API.FRFSStationAPI dest) -> do
+      locationResp <- EHC.liftFlow $ JB.isCoordOnPath route (Mb.fromMaybe 0.0 dest.lat) (Mb.fromMaybe 0.0 dest.lon) 1
+      let
+        _ = spy "isCoordOnPath" locationResp
+      pure $ if locationResp.isInPath then { points: locationResp.points } else route
+    Mb.Nothing -> pure route
+  push <- EHC.liftFlow $ getPushFn Mb.Nothing "BusTrackingScreen"
+  EHC.liftFlow $ push $ SaveRoute filteredRoute
   let
-    routeConfig = spy "transformStationsForMap" $ transformStationsForMap resp route srcCode destinationCode
-    -- getMarkerImage code index ln = if srcCode /= "" && srcCode == code then markers.srcMarker 
-    --                         else if destCode /= "" && destCode == code then markers.destMarker
-    --                         else if srcCode /= "" && destCode /= "" then "ny_ic_stop_black"
-    --                         else if index == 0 then markers.srcMarker 
-    --                         else if index == ln - 1  then markers.destMarker
-    --                         else "ny_ic_stop_black"
-    -- markers = HU.normalRoute ""
-  -- void $ delay $ Milliseconds 500.0
+    routeConfig = spy "transformStationsForMap" $ transformStationsForMap resp filteredRoute srcCode destinationCode
   void $ pure $ JB.removeAllPolylines ""
   void $ pure $ JB.removeAllMarkers ""
   EHC.liftFlow $ JB.drawRoute [ routeConfig ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
-  EHC.liftFlow $ JB.setMapPadding 0 0 0 400
-  -- EHC.liftFlow $ JB.showMarker routeConfig.sourceMarkerConfig (EHC.getNewIDWithTag "BusTrackingScreenMap")
-  -- void $ runExceptT $ runBackT $ Remote.drawMapRoute srcPoint.lat srcPoint.lng ride.destinationLat ride.destinationLng srcMarkerConfig destMarkerConfig "NORMAL" route "trip" $ (HSConfig.specialLocationConfig "" "" false getPolylineAnimationConfig) { autoZoom = false }
-  -- when showRipples $ do
-  --   EHC.liftFlow $ addAndUpdateSOSRipples srcPoint
-  for_ (routeConfig.stopMarkerConfigs)
-    $ \ ( item) -> do
-        -- void $ map (\(API.VehicleInfo item) -> do
-        EHC.liftFlow $ JB.showMarker item item.position.lat item.position.lng (if item.pointerIcon == "ny_ic_stop_black" then 20 else 90) 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
-  
--- void $ EHC.liftFlow $ JB.showMarker routeConfig.startMarkerConfig routeConfig.startMarkerConfig.position.lat routeConfig.startMarkerConfig.position.lng 110 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
--- void $ EHC.liftFlow $ JB.showMarker routeConfig.endMarkerConfig routeConfig.endMarkerConfig.position.lat routeConfig.endMarkerConfig.position.lng 110 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
--- EHC.liftFlow $ JB.animateCamera routeConfig.startMarkerConfig.position.lat routeConfig.startMarkerConfig.position.lng 10.0 "NO_ZOOM"
--- defaultMockInviteFlow :: Int -> ST.BusTrackingScreenState -> Array API.FRFSStationAPI  -> Flow GlobalState Unit
--- defaultMockInviteFlow id state resp  = do
---   -- localDelay 1000.0
---   let
---     srcPoint = getPoint mockDriverLocation
---     _ = spy "srcPoint" srcPoint
---   -- pure unit
---   -- pushAction $ UpdateMockData mockDriverInfo { vehicleDetails = "AUTO_RICKSHAW", vehicleVariant = "AUTO_RICKSHAW"}
---   drawDriverRoute mockDriverInfo srcPoint mockRoute false
+  EHC.liftFlow $ JB.setMapPadding 0 0 0 300
+  void $ foldM processStop 0 state.data.stopsList
+  where
+  processStop index (API.FRFSStationAPI item) = do
+    let
+      lat = Mb.fromMaybe 0.0 item.lat
+    let
+      lon = Mb.fromMaybe 0.0 item.lon
+    let
+      markerId = item.code
+    let
+      pointertype = getStopType item.code index state
+    let
+      size = getStopMarkerSize pointertype
+    void $ EHC.liftFlow $ JB.showMarker JB.defaultMarkerConfig { markerId = item.code, pointerIcon = getStopMarker pointertype } lat lon size 0.5 0.9 (EHC.getNewIDWithTag "BusTrackingScreenMap")
+    pure (index + 1)
+
 drawDriverRouteMock :: API.Route -> Flow GlobalState Unit
 drawDriverRouteMock (API.Route route) = do
   let
@@ -250,13 +304,9 @@ drawDriverRouteMock (API.Route route) = do
 
     destMarkerConfig = JB.defaultMarkerConfig { markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = "getString DROP" }
   let
-    routeConfig = spy "mkRouteConfig" $ JB.mkRouteConfig (Remote.walkCoordinates route.points) srcMarkerConfig destMarkerConfig Mb.Nothing "NORMAL" "LineString" true JB.DEFAULT $ HU.mkMapRouteConfig "" "" false getPolylineAnimationConfig
+    routeConfig = JB.mkRouteConfig (Remote.walkCoordinates route.points) srcMarkerConfig destMarkerConfig Mb.Nothing "NORMAL" "LineString" true JB.DEFAULT $ HU.mkMapRouteConfig "" "" false getPolylineAnimationConfig
   EHC.liftFlow $ JB.drawRoute [ routeConfig ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
   pure unit
 
--- void $ runExceptT $ runBackT $ Remote.drawMapRoute srcPoint.lat srcPoint.lng ride.destinationLat ride.destinationLng srcMarkerConfig destMarkerConfig "NORMAL" route "trip" $ (HSConfig.specialLocationConfig "" "" false getPolylineAnimationConfig) { autoZoom = false }
--- when showRipples $ do
---   EHC.liftFlow $ addAndUpdateSOSRipples srcPoint
--- EHC.liftFlow $ JB.animateCamera srcPoint.lat srcPoint.lng 16.0 "ZOOM"
 getPoint :: API.GetDriverLocationResp -> CTA.Paths
 getPoint (API.GetDriverLocationResp resp) = { lat: resp ^. _lat, lng: resp ^. _lon }

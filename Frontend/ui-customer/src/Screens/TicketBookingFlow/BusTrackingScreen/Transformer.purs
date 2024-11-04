@@ -28,9 +28,10 @@ import JBridge as JB
 import Services.Backend as Remote 
 import Constants.Configs (getPolylineAnimationConfig)
 import Debug
+import Screens.TicketBookingFlow.BusTrackingScreen.ScreenData (StopType (..))
 
-transformStationsForMap :: Array API.FRFSStationAPI -> API.Route -> String -> String -> JB.RouteConfig
-transformStationsForMap stations (API.Route route) srcCode destCode = do
+transformStationsForMap :: Array API.FRFSStationAPI -> JB.Locations -> String -> String -> JB.RouteConfig
+transformStationsForMap stations route srcCode destCode = do
   let res = DA.foldl (\acc word -> if acc.index == 0 then acc{src = Just word, index = acc.index + 1}
                       else if acc.index == (DA.length stations -1)  then acc{dest = Just word, index = acc.index + 1}
                       else acc{stops = acc.stops <> [word], index = acc.index + 1} ) {src : Nothing, dest : Nothing, stops : [], index : 0} stations
@@ -48,16 +49,16 @@ transformStationsForMap stations (API.Route route) srcCode destCode = do
           len = DA.length stops
           sourcePosition = {lat : fromMaybe 0.0 s.lat, lng :fromMaybe 0.0  s.lon}
           destPosition = {lat : fromMaybe 0.0 d.lat, lng :fromMaybe 0.0 d.lon}
-          srcMarkerConfig = JB.defaultMarkerConfig{ markerId = s.code, pointerIcon = getMarkerImage s.code 0 len, primaryText = s.name, position = sourcePosition, markerSize = if getMarkerImage s.code 0 len == "ny_ic_stop_black" then 20.0 else 90.0, useMarkerSize = true}
-          destMarkerConfig = JB.defaultMarkerConfig{ markerId = d.code, pointerIcon = getMarkerImage d.code (len-1) len, primaryText = d.name, position = destPosition, markerSize = if getMarkerImage d.code (len-1) len == "ny_ic_stop_black" then 20.0 else 90.0, useMarkerSize = true}
-          stopsConfig = DA.mapWithIndex (\index (API.FRFSStationAPI item) -> JB.defaultMarkerConfig{ markerId = item.code, pointerIcon = getMarkerImage item.code (index+1) len, position = {lat : fromMaybe 0.0 item.lat, lng : fromMaybe 0.0  item.lon}, markerSize = 10.0, useMarkerSize = true}) stops
-      JB.mkRouteConfig (Remote.walkCoordinates route.points) srcMarkerConfig destMarkerConfig (Just stopsConfig) "NORMAL" "LineString" true JB.DEFAULT $ HU.mkMapRouteConfig "" "" false getPolylineAnimationConfig 
+          srcMarkerConfig = JB.defaultMarkerConfig  { markerId = s.code, pointerIcon = getMarkerImage s.code (-1) len, primaryText = s.name, position = sourcePosition, markerSize = if getMarkerImage s.code (-1) len == "ny_ic_stop_black" then 20.0 else 90.0, useMarkerSize = true}
+          destMarkerConfig = JB.defaultMarkerConfig { markerId = d.code, pointerIcon = getMarkerImage d.code len len, primaryText = d.name, position = destPosition, markerSize = if getMarkerImage d.code (len) len == "ny_ic_stop_black" then 20.0 else 90.0, useMarkerSize = true}
+          stopsConfig = DA.mapWithIndex (\index (API.FRFSStationAPI item) -> JB.defaultMarkerConfig{ markerId = item.code, pointerIcon = getMarkerImage item.code index len, position = {lat : fromMaybe 0.0 item.lat, lng : fromMaybe 0.0  item.lon}, markerSize = 10.0, useMarkerSize = true}) stops
+      JB.mkRouteConfig route JB.defaultMarkerConfig JB.defaultMarkerConfig Nothing "NORMAL" "LineString" true JB.DEFAULT $ HU.mkMapRouteConfig "" "" false getPolylineAnimationConfig 
     _,_ -> JB.routeConfig
     where 
       getMarkerImage code index ln = if srcCode /= "" && srcCode == code then markers.srcMarker 
                             else if destCode /= "" && destCode == code then markers.destMarker
                             else if srcCode /= "" && destCode /= "" then "ny_ic_stop_black"
-                            else if index == 0 then markers.srcMarker 
+                            else if index == -1 then markers.srcMarker 
                             else if index == ln  then markers.destMarker
                             else "ny_ic_stop_black"
       markers = HU.normalRoute ""
@@ -89,3 +90,39 @@ transformStationsForMap stations (API.Route route) srcCode destCode = do
 
 getStationsFromBusRoute ::  API.FRFSRouteAPI -> Array API.FRFSStationAPI 
 getStationsFromBusRoute (API.FRFSRouteAPI stop) = fromMaybe [] stop.stations
+
+getStopImage :: StopType -> String 
+getStopImage stopType = 
+  case stopType of
+    SOURCE_STOP -> "ny_ic_source_dot"
+    DESTINATION_STOP -> "ny_ic_dest_dot"
+    NORMAL_STOP -> "ny_ic_stop_black"
+    ROUTE_SOURCE -> "ny_ic_stop_black"
+
+getStopMarker :: StopType -> String 
+getStopMarker stopType = do
+  let markers = HU.normalRoute ""
+  case stopType of
+    SOURCE_STOP -> markers.srcMarker
+    DESTINATION_STOP -> markers.destMarker
+    NORMAL_STOP -> "ny_ic_stop_black"
+    ROUTE_SOURCE -> "ny_ic_stop_black"
+
+getStopMarkerSize :: StopType -> Int 
+getStopMarkerSize stopType = 
+  case stopType of
+    SOURCE_STOP -> 90
+    DESTINATION_STOP -> 90
+    NORMAL_STOP -> 20
+    ROUTE_SOURCE -> 50
+
+getStopType :: String -> Int -> BusTrackingScreenState-> StopType 
+getStopType code index state = do
+  let srcCode = state.data.sourceStation <#> _.stationCode
+      destCode = state.data.destinationStation <#> _.stationCode
+  if isJust srcCode  && srcCode == Just code then SOURCE_STOP
+  else if isJust destCode  && destCode == Just code then DESTINATION_STOP
+  else if isJust srcCode  &&  index == 0 then ROUTE_SOURCE
+  else if index == 0 then SOURCE_STOP
+  else if index == DA.length state.data.stopsList - 1 then DESTINATION_STOP
+  else NORMAL_STOP

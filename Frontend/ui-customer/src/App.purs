@@ -380,6 +380,7 @@ data METRO_TICKET_DETAILS_SCREEN_OUTPUT = METRO_TICKET_DETAILS_SCREEN_OUTPUT_NO_
                                         | SOFT_CANCEL_BOOKING MetroTicketDetailsScreenState
                                         | HARD_CANCEL_BOOKING MetroTicketDetailsScreenState
                                         | GO_TO_BUS_TICKET_BOOKING_SCREEN_FROM_METRO_TICKET_DETAILS_SCREEN
+                                        | GO_TO_BUS_TRACKING
 
 data METRO_MY_TICKETS_SCREEN_OUTPUT = METRO_MY_TICKETS_SCREEN_OUTPUT_NO_OUTPUT
                                     | GO_TO_METRO_TICKET_DETAILS_FLOW String

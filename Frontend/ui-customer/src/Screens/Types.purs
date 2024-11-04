@@ -48,7 +48,7 @@ import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent, ChatContacts)
 import Screens(ScreenName)
 import PrestoDOM.List
-import JBridge (Location)
+import JBridge (Location, Locations)
 import Data.HashMap as DHM
 import Data.Map as DM
 import MerchantConfig.Types as MRC
@@ -3019,7 +3019,8 @@ type BusTrackingScreenData = {
   rideType :: Maybe RideType,
   vehicleData :: Array VehicleData,
   stationResponse :: Maybe (Array FRFSStationAPI),
-  routeShortName :: String
+  routeShortName :: String,
+  routePts :: Locations
 }
 
 type VehicleData
@@ -3039,9 +3040,20 @@ type BusTrackingScreenProps = {
   verticalLineHeight :: Int,
   srcLat :: Number,
   srcLon :: Number,
-  busNearSource :: Boolean,
-  gotMapReady :: Boolean
+  gotMapReady :: Boolean,
+  busNearSourceData :: Maybe VehicleData,
+  showShimmer :: Boolean,
+  individualBusTracking :: Boolean,
+  userAndBuslocationMatchCount :: Int,
+  vehicleTrackingId :: Maybe String,
+  previousScreen :: PreviousScreenForTracking
 }
+
+data PreviousScreenForTracking = PreStopRouteSelection | BusHomeScreen
+
+derive instance genericPreviousScreenForTracking :: Generic PreviousScreenForTracking _
+instance eqPreviousScreenForTracking :: Eq PreviousScreenForTracking where eq = genericEq
+
 
 type AlertWidgetConfig = {}
 
