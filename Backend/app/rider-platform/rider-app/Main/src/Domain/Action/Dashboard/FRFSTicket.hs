@@ -108,7 +108,9 @@ postFRFSTicketFrfsRouteAdd merchantShortId opCity code vehicleType req = do
                 merchantOperatingCityId = merchantOpCity.id,
                 polyline = req.polyline,
                 createdAt = now,
-                updatedAt = now
+                updatedAt = now,
+                firstStopName = req.firstStopName,
+                lastStopName = req.lastStopName
               }
       QRoute.create newRoute
       pure Success

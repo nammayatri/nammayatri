@@ -21,6 +21,7 @@ import qualified Data.Text as T
 import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSSearch as Search
 import Domain.Types.Merchant
+import Domain.Types.Route (Route)
 import qualified Domain.Types.StationType as Station
 import Environment
 import Kernel.Beam.Functions
@@ -31,10 +32,12 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.CachedQueries.RouteStopMapping as CQRouteStopMapping
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.PersonStats as QPStats
 import qualified Storage.Queries.Route as QRoute
+import qualified Storage.Queries.RouteStopMapping as QRouteStopMapping
 import qualified Storage.Queries.Station as QStation
 import Tools.Error
 
@@ -133,26 +136,27 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
 
   startStation <- QStation.findByStationCode dStartStation.stationCode >>= fromMaybeM (InternalError $ "Station not found: " <> dStartStation.stationCode)
   endStation <- QStation.findByStationCode dEndStation.stationCode >>= fromMaybeM (InternalError $ "Station not found: " <> dEndStation.stationCode)
-  routeId <-
+  (routeStations', routeId, routes) <-
     case vehicleType of
       Spec.BUS -> do
-        maybe
-          (pure Nothing)
-          ( \rStation -> do
-              route <- QRoute.findByRouteCode rStation.routeCode >>= fromMaybeM (RouteNotFound rStation.routeCode)
-              return $ Just (Quote.Bus route.id)
-          )
-          $ listToMaybe routeStations
+        let maybeFirstRouteStation = listToMaybe routeStations
+        case maybeFirstRouteStation of
+          Nothing -> pure (routeStations, Nothing, Nothing)
+          Just rStation -> do
+            route <- QRoute.findByRouteCode rStation.routeCode >>= fromMaybeM (RouteNotFound rStation.routeCode)
+            return (routeStations, Just (Quote.Bus route.id), Nothing)
       Spec.METRO -> do
+        -- routeStations will be empty in case of metro to keep ACL pure
+        metroRouteStations <- mkRouteStations stations
         routes <-
           mapM
             ( \rStation -> QRoute.findByRouteCode rStation.routeCode >>= fromMaybeM (RouteNotFound rStation.routeCode)
             )
-            $ sortOn (.routeSequenceNum) routeStations
-        return $ Just (Quote.Metro (map (.id) routes))
+            $ sortOn (.routeSequenceNum) metroRouteStations
+        return (metroRouteStations, Just (Quote.Metro (map (.id) routes)), Just routes)
   let freeTicketInterval = fromMaybe (maxBound :: Int) mbFreeTicketInterval
   let stationsJSON = stations & map castStationToAPI & encodeToText
-  let routeStationsJSON = routeStations & map castRouteStationToAPI & encodeToText
+  routeStationsJSON <- encodeToText <$> mapM (castRouteStationToAPI routes) routeStations'
   let discountsJSON = discounts & map castDiscountToAPI & encodeToText
   let maxFreeTicketCashback = fromMaybe 0 mbMaxFreeTicketCashback
   uid <- generateGUID
@@ -198,6 +202,33 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
         ..
       }
 
+mkRouteStations :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [DStation] -> m [DRouteStation]
+mkRouteStations allStations = do
+  concat
+    <$> mapM
+      ( \station -> do
+          routeStationMappings <- QRouteStopMapping.findByStopCode station.stationCode
+          mapM
+            ( \routeStationMapping -> do
+                route <- QRoute.findByRouteCode routeStationMapping.routeCode >>= fromMaybeM (RouteNotFound routeStationMapping.routeCode)
+                allRouteStations <- QRouteStopMapping.findByRouteCode route.code
+                let routeStations = filter (\station' -> station'.stationCode `elem` map (.stopCode) allRouteStations) allStations
+                return $
+                  DRouteStation
+                    { routeCode = route.code,
+                      routeLongName = route.longName,
+                      routeShortName = route.shortName,
+                      routeStartPoint = route.startPoint,
+                      routeEndPoint = route.endPoint,
+                      routeStations = routeStations,
+                      routeSequenceNum = Just routeStationMapping.sequenceNum,
+                      routeColor = route.color
+                    }
+            )
+            routeStationMappings
+      )
+      allStations
+
 getStartStation :: [DStation] -> Maybe DStation
 getStartStation = find (\station -> station.stationType == Station.START)
 
@@ -216,21 +247,42 @@ castStationToAPI DStation {..} =
       API.stationType = Just stationType,
       API.sequenceNum = stopSequence,
       API.distance = Nothing,
-      API.towards = Nothing
+      API.towards = Nothing,
+      API.routeName = Nothing
     }
 
-castRouteStationToAPI :: DRouteStation -> API.FRFSRouteStationsAPI
-castRouteStationToAPI DRouteStation {..} =
-  API.FRFSRouteStationsAPI
-    { API.code = routeCode,
-      API.color = routeColor,
-      API.startPoint = routeStartPoint,
-      API.endPoint = routeEndPoint,
-      API.longName = routeLongName,
-      API.shortName = routeShortName,
-      API.sequenceNum = routeSequenceNum,
-      API.stations = map castStationToAPI routeStations
-    }
+castStationToAPI' :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe [Route] -> DRouteStation -> DStation -> m API.FRFSStationAPI
+castStationToAPI' allRoutes route station@DStation {..} = do
+  towards' <- if stationType == Station.TRANSIT then evaluateTowardsStation station route allRoutes else pure Nothing
+  pure $
+    API.FRFSStationAPI
+      { API.address = Nothing,
+        API.code = stationCode,
+        API.color = Nothing,
+        API.lat = stationLat,
+        API.lon = stationLon,
+        API.name = stationName,
+        API.stationType = Just stationType,
+        API.sequenceNum = stopSequence,
+        API.distance = Nothing,
+        API.towards = towards',
+        API.routeName = Just route.routeLongName
+      }
+
+castRouteStationToAPI :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe [Route] -> DRouteStation -> m API.FRFSRouteStationsAPI
+castRouteStationToAPI allRoutes route@DRouteStation {..} = do
+  stations <- mapM (castStationToAPI' allRoutes route) routeStations
+  pure $
+    API.FRFSRouteStationsAPI
+      { API.code = routeCode,
+        API.color = routeColor,
+        API.startPoint = routeStartPoint,
+        API.endPoint = routeEndPoint,
+        API.longName = routeLongName,
+        API.shortName = routeShortName,
+        API.sequenceNum = routeSequenceNum,
+        API.stations = stations
+      }
 
 castDiscountToAPI :: DDiscount -> API.FRFSDiscountRes
 castDiscountToAPI DDiscount {..} =
@@ -242,3 +294,13 @@ castDiscountToAPI DDiscount {..} =
       API.tnc = tnc,
       API.eligibility = eligibility
     }
+
+evaluateTowardsStation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DStation -> DRouteStation -> Maybe [Route] -> m (Maybe Text)
+evaluateTowardsStation DStation {..} route allRoutes = do
+  let filteredRoute = allRoutes >>= find (\r -> r.code == route.routeCode)
+  case (filteredRoute, towards) of
+    (Just requiredRoute, Just nextStationCode) -> do
+      nextStop <- CQRouteStopMapping.findByRouteCodeAndStopCode route.routeCode nextStationCode >>= fromMaybeM (InternalError $ "Route Station Mapping not found: " <> nextStationCode)
+      currentStop <- CQRouteStopMapping.findByRouteCodeAndStopCode route.routeCode stationCode >>= fromMaybeM (InternalError $ "Route Station Mapping not found: " <> stationCode)
+      return $ if currentStop.sequenceNum < nextStop.sequenceNum then requiredRoute.lastStopName else requiredRoute.firstStopName
+    _ -> pure Nothing

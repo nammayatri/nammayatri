@@ -103,8 +103,14 @@ parseFulfillments item fulfillments fulfillmentId = do
 
   stations <-
     if isParentIdAvailable fulfillmentStops
-      then fulfillmentStops & sequenceStops & mapWithIndex (\idx stop -> mkDStation stop (Just $ idx + 1))
-      else traverse (\s -> mkDStation s Nothing) fulfillmentStops
+      then
+        fulfillmentStops & sequenceStops
+          & mapWithIndex
+            ( \idx stop -> do
+                let nextStop = if idx + 1 < length fulfillmentStops then Just (fulfillmentStops !! (idx + 1)) else Nothing
+                mkDStation stop (Just $ idx + 1) nextStop
+            )
+      else traverse (\s -> mkDStation s Nothing Nothing) fulfillmentStops
   price <- item.itemPrice >>= Utils.parsePrice & fromMaybeM (InvalidRequest "Price not found")
   vehicleCategory <- fulfillment.fulfillmentVehicle >>= (.vehicleCategory) & fromMaybeM (InvalidRequest "VehicleType not found")
   vehicleType <- vehicleCategory & castVehicleVariant & fromMaybeM (InvalidRequest "VehicleType not found")
@@ -125,13 +131,14 @@ parseFulfillments item fulfillments fulfillmentId = do
         _type = quoteType
       }
 
-mkDStation :: (MonadFlow m) => Spec.Stop -> Maybe Int -> m Domain.DStation
-mkDStation stop seqNumber = do
+mkDStation :: (MonadFlow m) => Spec.Stop -> Maybe Int -> Maybe Spec.Stop -> m Domain.DStation
+mkDStation stop seqNumber nextStop = do
   stationCode <- stop.stopLocation >>= (.locationDescriptor) >>= (.descriptorCode) & fromMaybeM (InvalidRequest "Stop Location code not found")
   stationName <- stop.stopLocation >>= (.locationDescriptor) >>= (.descriptorName) & fromMaybeM (InvalidRequest "Stop Location name not found")
   let mLatLon = stop.stopLocation >>= (.locationGps) >>= Utils.parseGPS
   stopType <- stop.stopType & fromMaybeM (InvalidRequest "Stop Location type not found")
   stationType <- stopType & castStationType & fromMaybeM (InvalidRequest "Stop Location type not found")
+  let towards = nextStop >>= (\ns -> ns.stopLocation >>= (.locationDescriptor) >>= (.descriptorCode)) -- putting next stop code here to keep function pure (will be nothing incase of offboarding and just incase of boarding)
   return
     Domain.DStation
       { stationCode,
@@ -140,7 +147,7 @@ mkDStation stop seqNumber = do
         stopSequence = seqNumber,
         stationLat = fst <$> mLatLon,
         stationLon = snd <$> mLatLon,
-        towards = Nothing
+        towards = if stationType == TRANSIT then towards else Nothing
       }
 
 sequenceStops :: [Spec.Stop] -> [Spec.Stop]

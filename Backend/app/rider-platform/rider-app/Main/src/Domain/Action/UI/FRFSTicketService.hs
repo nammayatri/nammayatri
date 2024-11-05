@@ -76,6 +76,8 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant as QMerc
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person as CQP
+import qualified Storage.CachedQueries.Route as CQRoute
+import qualified Storage.CachedQueries.RouteStopMapping as CQRouteStopMapping
 import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
@@ -230,7 +232,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin mbRouteCode mb
                       address = Nothing,
                       distance = Nothing,
                       color = Nothing,
-                      towards = Nothing
+                      towards = Nothing,
+                      routeName = Nothing
                     }
               )
               possibleStartStops
@@ -238,6 +241,7 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin mbRouteCode mb
     -- Return possible End stops, when Route & Start Stop is Known
     (Just routeCode, Just startStationCode, Nothing) -> do
       routeStops <- B.runInReplica $ QRouteStopMapping.findByRouteCode routeCode
+      route <- QRoute.findByRouteCode routeCode >>= fromMaybeM (RouteNotFound routeCode)
       currentTime <- getCurrentTime
       let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
           startSeqNum = fromMaybe 0 ((.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) serviceableStops)
@@ -254,8 +258,9 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin mbRouteCode mb
                       sequenceNum = Just routeStop.sequenceNum,
                       address = Nothing,
                       distance = Nothing,
-                      color = Nothing,
-                      towards = Nothing
+                      color = route.color,
+                      towards = Nothing,
+                      routeName = Just route.longName
                     }
               )
               filteredRouteStops
@@ -264,6 +269,7 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin mbRouteCode mb
     (Just routeCode, Nothing, Nothing) -> do
       currentTime <- getCurrentTime
       routeStops <- B.runInReplica $ QRouteStopMapping.findByRouteCode routeCode
+      route <- QRoute.findByRouteCode routeCode >>= fromMaybeM (RouteNotFound routeCode)
       let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
           stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) serviceableStops
       let stops =
@@ -278,8 +284,9 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin mbRouteCode mb
                       sequenceNum = Just routeStop.sequenceNum,
                       address = Nothing,
                       distance = Nothing,
-                      color = Nothing,
-                      towards = Nothing
+                      color = route.color,
+                      towards = Nothing,
+                      routeName = Just route.longName
                     }
               )
               stopsSortedBySequenceNumber
@@ -300,9 +307,11 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin mbRouteCode mb
                      in sortBy (compare `on` (.sequenceNum)) $ filter (\stop -> maybe False (\startStopSequence -> stop.stopCode /= startStationCode && stop.sequenceNum > startStopSequence) mbStartStopSequence) stops
                 )
                 groupedStopsByRouteCode
+      routes <- QRoute.findByRouteCodes (map (.routeCode) possibleEndStops)
+      let stopsWithRoutes = map (\stop -> (stop, find (\route -> route.code == stop.routeCode) routes)) possibleEndStops
       let endStops =
             map
-              ( \routeStop ->
+              ( \(routeStop, mbRoute) ->
                   FRFSStationAPI
                     { name = routeStop.stopName,
                       code = routeStop.stopCode,
@@ -312,28 +321,36 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin mbRouteCode mb
                       sequenceNum = Nothing,
                       address = Nothing,
                       distance = Nothing,
-                      color = Nothing,
-                      towards = Nothing
+                      color = mbRoute >>= (.color),
+                      towards = Nothing,
+                      routeName = mbRoute <&> (.longName)
                     }
               )
-              possibleEndStops
+              stopsWithRoutes
       mkStationsAPIWithDistance merchantOpCity endStops mbOrigin
     -- Return all the Stops
     _ -> do
-      stations <- B.runInReplica $ QStation.findByMerchantOperatingCityIdAndVehicleType Nothing Nothing merchantOpCity.id vehicleType_
+      mappings <- B.runInReplica $ CQRouteStopMapping.findAllByMerchantOperatingCityAndVehicleType merchantOpCity.id vehicleType_
+      routes <- B.runInReplica $ CQRoute.findAllByMerchantOperatingCityAndVehicleType merchantOpCity.id vehicleType_
+      let stationsWithRoutes = map (\stop -> (stop, find (\route -> route.code == stop.routeCode) routes)) mappings
       let stops =
             map
-              ( \Station {..} ->
+              ( \(routeStop, mbRoute) ->
                   FRFSStationAPI
-                    { color = Nothing,
+                    { name = routeStop.stopName,
+                      code = routeStop.stopCode,
+                      lat = Just routeStop.stopPoint.lat,
+                      lon = Just routeStop.stopPoint.lon,
+                      address = Nothing,
                       distance = Nothing,
                       sequenceNum = Nothing,
                       stationType = Nothing,
+                      color = mbRoute >>= (.color),
                       towards = Nothing,
-                      ..
+                      routeName = mbRoute <&> (.longName)
                     }
               )
-              stations
+              stationsWithRoutes
       mkStationsAPIWithDistance merchantOpCity stops mbOrigin
   where
     mkStationsAPIWithDistance merchantOpCity stations = \case
@@ -984,6 +1001,7 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset opCity origin vehicle = do
                 sequenceNum = Nothing,
                 stationType = Nothing,
                 towards = Nothing,
+                routeName = Nothing,
                 ..
               }
         )
@@ -1023,7 +1041,7 @@ tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops = do
                     travelMode = Just Maps.CAR
                   }
           case res of
-            Left _ -> return $ map (\StationResult {..} -> FRFSStationAPI {lat = Just lat, lon = Just lon, address = Nothing, color = Nothing, distance = Nothing, towards = Nothing, ..}) batch
+            Left _ -> return $ map (\StationResult {..} -> FRFSStationAPI {lat = Just lat, lon = Just lon, address = Nothing, color = Nothing, distance = Nothing, towards = Nothing, routeName = Nothing, ..}) batch
             Right stopsDistanceResp ->
               return $ map (\stop -> mkStopToAPI stop.origin stop.distance) (NonEmpty.toList stopsDistanceResp)
 
@@ -1040,5 +1058,6 @@ tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops = do
           sequenceNum = stop.sequenceNum,
           address = Nothing,
           color = Nothing,
-          towards = Nothing
+          towards = Nothing,
+          routeName = Nothing
         }

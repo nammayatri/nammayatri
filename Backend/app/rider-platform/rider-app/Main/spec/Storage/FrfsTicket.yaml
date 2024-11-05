@@ -601,6 +601,8 @@ Route:
     timeBounds: TimeBound
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    firstStopName: Maybe Text
+    lastStopName: Maybe Text
   default:
     timeBounds: "'Unbounded'"
   sqlType:
@@ -645,6 +647,17 @@ Route:
     deleteByRouteCode:
       kvFunction: deleteWithKV
       where: code
+    findAllByMerchantOperatingCityAndVehicleTypeWithoutOptions:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleType]
+  cachedQueries:
+    findAllByMerchantOperatingCityAndVehicleType:
+      keyParams: [merchantOperatingCityId, vehicleType]
+      dbQuery: findAllByMerchantOperatingCityAndVehicleTypeWithoutOptions
+      dbQueryParams: [merchantOperatingCityId, vehicleType]
+      queryType: FindAndCache
+
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -691,7 +704,25 @@ RouteStopMapping:
       where:
         and:
           - in: [routeCode]
-
+    findAllByMerchantOperatingCityAndVehicleType:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [merchantOperatingCityId, vehicleType]
+    findAllByMerchantOperatingCityAndVehicleTypeWithoutOptions:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleType]
+  cachedQueries:
+    findAllByMerchantOperatingCityAndVehicleType:
+      keyParams: [merchantOperatingCityId, vehicleType]
+      dbQuery: findAllByMerchantOperatingCityAndVehicleTypeWithoutOptions
+      dbQueryParams: [merchantOperatingCityId, vehicleType]
+      queryType: FindAndCache
+    findByRouteCodeAndStopCode:
+      keyParams: [routeCode, stopCode]
+      dbQuery: findByRouteCodeAndStopCode
+      dbQueryParams: [routeCode, stopCode]
+      queryType: FindAndCache
 FRFSRouteFareProduct:
   tableName: frfs_route_fare_product
   fields:
