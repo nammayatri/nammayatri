@@ -463,7 +463,7 @@ let getAllCityConfig = () => {
       cityLong: 88.2649516,
       variantSubscriptionConfig: {
         enableVariantBasedSubscription: true,
-        variantList: ["CarCategory"],
+        variantList: ["CarCategory","BikeCategory"],
         enableCabsSubscriptionView: true,
         staticViewPlans: []
       },

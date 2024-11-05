@@ -53,11 +53,11 @@ import Services.Config as SC
 import Services.EndPoints as EP
 import Engineering.Helpers.Events as Events
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalStore, getValueToLocalNativeStore)
-import Storage (getValueToLocalStore, KeyStore(..))
+import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..))
 import Tracker (trackApiCallFlow, trackExceptionFlow)
 import Tracker.Labels (Label(..))
 import Tracker.Types as Tracker
-import Types.App (FlowBT, GlobalState(..), ScreenType(..))
+import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREENOUTPUT(..), NAVIGATION_ACTIONS(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Types.ModifyScreenState (modifyScreenState)
 import Data.Boolean (otherwise)
@@ -70,6 +70,8 @@ import MerchantConfig.Types as MCT
 import Common.RemoteConfig.Utils as CommonRC
 import Screens.NoInternetScreen.Handler as NoInternetScreen
 import Helpers.API as HAPI
+import Resource.Localizable.TypesV2 as LT2
+import Resource.Localizable.StringsV2 as StringsV2
 
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
@@ -287,10 +289,16 @@ driverActiveInactiveBT status status_n = do
         errorHandler (ErrorPayload errorPayload) =  do
             let codeMessage = decodeErrorCode errorPayload.response.errorMessage
                 accountBlocked = errorPayload.code == 403 && codeMessage == "DRIVER_ACCOUNT_BLOCKED"
+                noPlanSelectedForDriver = errorPayload.code == 400 && codeMessage == "NO_PLAN_SELECTED"
             if accountBlocked then modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { accountBlockedPopup = true }})
             else modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { goOfflineModal = false }})
-            pure if not accountBlocked then toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN else unit
+            pure if noPlanSelectedForDriver then 
+                    toast $ (StringsV2.getStringV2 LT2.no_plan_selected)
+                else if not accountBlocked then 
+                    toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN 
+                else unit
             void $ lift $ lift $ toggleLoader false
+            if noPlanSelectedForDriver then void $ pure $ setValueToLocalStore GO_TO_PLANS_PAGE "true" else void $ pure unit
             BackT $ pure GoBack
 
 driverActiveInactive :: String -> String -> Flow GlobalState (Either ErrorResponse DriverActiveInactiveResp)

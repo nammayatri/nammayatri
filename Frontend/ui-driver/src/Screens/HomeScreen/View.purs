@@ -298,7 +298,9 @@ screen initialState (GlobalState globalState) =
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification initialState
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.invoiceId 4 5000.0 initialState push PaymentStatusAction
                                 when initialState.data.plansState.cityOrVehicleChanged $ void $ launchAff $ EHC.flowRunner defaultGlobalState $ getPlansList push PlanListResponse
-
+                                if getValueToLocalStore GO_TO_PLANS_PAGE == "true" then do
+                                  void $ pure $ setValueToLocalStore GO_TO_PLANS_PAGE "false"
+                                  void $ push $ (BottomNavBarAction (BottomNavBar.OnNavigate "Join")) else pure unit
                                 pure unit
           runEffectFn1 consumeBP unit
           pure $ pure unit

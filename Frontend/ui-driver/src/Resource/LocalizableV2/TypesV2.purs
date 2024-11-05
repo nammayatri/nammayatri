@@ -1761,6 +1761,7 @@ newtype Keymap
   , sender_unavailable_unreachable :: String
   , truck :: String
   , register_your_truck :: String
+  , no_plan_selected :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -6992,3 +6993,7 @@ truck = a
 
 register_your_truck :: Proxy "register_your_truck"
 register_your_truck = a
+
+no_plan_selected :: Proxy "no_plan_selected"
+no_plan_selected = a
+

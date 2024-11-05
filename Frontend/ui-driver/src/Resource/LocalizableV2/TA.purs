@@ -1747,4 +1747,5 @@ getTa =
     , sender_unavailable_unreachable : "அனுப்புநர் கிடைக்கவில்லை / தொடர்பு கொள்ள முடியவில்லை"
     , truck : "லாரி"
     , register_your_truck : "உங்கள் லாரியை பதிவு செய்க"
+    , no_plan_selected : "ஒரு திட்டம் தேர்ந்தெடுக்கப்படவில்லை"
     }

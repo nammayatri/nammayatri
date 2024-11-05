@@ -1747,4 +1747,5 @@ getMl =
     , sender_unavailable_unreachable : "അയച്ചയാള്‍ ലഭ്യമല്ല / എത്തിക്കാനായില്ല"
     , truck : "ട്രക്ക്"
     , register_your_truck : "നിങ്ങളുടെ ട്രക്ക് നിബന്ധിക്കുക"
+    , no_plan_selected : "ഒരു പ്ലാൻ തിരഞ്ഞെടുക്കിയില്ല"
     }

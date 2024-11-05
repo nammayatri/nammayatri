@@ -1747,4 +1747,5 @@ getKn =
     , sender_unavailable_unreachable : "ಕಳುಹಿಸುವವರು ಲಭ್ಯವಿಲ್ಲ / ಸಂಪರ್ಕಿಸಲು ಸಾಧ್ಯವಾಗುತ್ತಿಲ್ಲ"
     , truck : "ಟ್ರಕ್"
     , register_your_truck : "ನಿಮ್ಮ ಟ್ರಕ್ ನೋಂದಣಿಯನ್ನು ಮಾಡಿ"
+    , no_plan_selected : "ಯೋಜನೆ ಆಯ್ಕೆಯಾಗಿಲ್ಲ"
     }

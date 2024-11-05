@@ -1747,4 +1747,5 @@ getTe =
     , sender_unavailable_unreachable : "పంపిణీదారు అందుబాటులో లేరు / చేరడం సాధ్యం కాలేదు"
     , truck : "ట్రక్"
     , register_your_truck : "మీ ట్రక్‌ను నమోదు చేయండి"
+    , no_plan_selected : "యొక్క యోజన ఎంచుకోలేదు"
     }
