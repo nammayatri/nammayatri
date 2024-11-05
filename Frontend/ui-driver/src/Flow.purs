@@ -311,6 +311,7 @@ checkRideAndInitiate event driverInfoResponse = do
         pure (Tuple (Just $ GetRidesHistoryResp rideListResponse) activeRide)
   void $ lift $ lift $ fork $ checkAndDownloadMLModel
   liftFlowBT $ markPerformance "CHECK_RIDE_AND_INITIATE_END"
+  modifyScreenState $ HomeScreenStateType (\homeScreenState → homeScreenState { props { retryRideList = activeRide }})
   activeRide ?
     currentRideFlow mbRideListResponse (Just activeRide)
     $ do
@@ -2300,9 +2301,10 @@ currentRideFlow activeRideResp isActiveRide = do
             void $ updateStage $ HomeScreenStage stage
             void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "Yes"}]
             let stateChange = if (ride.bookingType == Just ADVANCED) 
-                                  then (HomeScreenStateType (\homeScreen -> homeScreen { data{ advancedRideData = Just activeRide{source = sourceMod, destination = destinationMod}}, props{ silentPopUpView = false, goOfflineModal = false}})) 
-                                  else (HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod,destination = destinationMod, lastStopAddress = lastStopAddressMod, nextStopAddress = nextStopAddressMod}}, props{ silentPopUpView = false, goOfflineModal = false,isOdometerReadingsRequired = (activeRide.tripType == ST.Rental) && (maybe true (\val -> val) ride.isOdometerReadingsRequired)}}))
+                                  then (HomeScreenStateType (\homeScreen -> homeScreen { data{ advancedRideData = Just activeRide{source = sourceMod, destination = destinationMod}}, props{ silentPopUpView = false, goOfflineModal = false, retryRideList = false}})) 
+                                  else (HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod,destination = destinationMod, lastStopAddress = lastStopAddressMod, nextStopAddress = nextStopAddressMod}}, props{ silentPopUpView = false, goOfflineModal = false,isOdometerReadingsRequired = (activeRide.tripType == ST.Rental) && (maybe true (\val -> val) ride.isOdometerReadingsRequired), retryRideList  = false}}))
             modifyScreenState $ stateChange
+            
     noActiveRidePatch allState onBoardingSubscriptionViewCount = do
       setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
       void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
@@ -2745,7 +2747,7 @@ homeScreenFlow = do
           let (GlobalState defGlobalState) = defaultGlobalState
           when (isJust defGlobalState.homeScreen.data.activeRide.disabilityTag) $ do
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {showAccessbilityPopup = true, specialZoneProps{ currentGeoHash = "" }}})
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {mapRendered = true,rentalInfoPopUp = homeScreen.data.activeRide.tripType == ST.Rental ,intercityInfoPopUp = homeScreen.data.activeRide.tripType == ST.Intercity , currentStage = RideAccepted , checkUpcomingRide = true}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {mapRendered = true,rentalInfoPopUp = homeScreen.data.activeRide.tripType == ST.Rental ,intercityInfoPopUp = homeScreen.data.activeRide.tripType == ST.Intercity , currentStage = RideAccepted , checkUpcomingRide = true, retryRideList = true}})
           currentRideFlow Nothing Nothing
         "RIDE_REQUESTED"    -> do
           void $ updateStage $ HomeScreenStage RideRequested

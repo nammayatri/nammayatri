@@ -2847,7 +2847,6 @@ eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do
     "DELIVERY" -> exit $ GoToParcelInstructions state
     "INTERCITY_BUS" -> do 
       let hasPhoneNumberPermission = getValueToLocalStore INTERCITY_BUS_PHONE_NUMBER_PERMISSION 
-      let _ = spy "INTERCITY_BUS" hasPhoneNumberPermission
       continueWithCmd state { data { intercityBus {
         showWebView = hasPhoneNumberPermission == "true" || hasPhoneNumberPermission == "false"
       , showPermissionPopUp = hasPhoneNumberPermission /= "true" && hasPhoneNumberPermission /= "false"
