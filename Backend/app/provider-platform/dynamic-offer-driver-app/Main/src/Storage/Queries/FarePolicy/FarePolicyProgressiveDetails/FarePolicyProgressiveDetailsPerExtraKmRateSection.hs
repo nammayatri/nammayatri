@@ -35,6 +35,14 @@ findAll' ::
   m [BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection]
 findAll' farePolicyId = findAllWithOptionsKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamFPPDP.startDistance) Nothing Nothing
 
+findAll ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DFP.FarePolicy ->
+  m [DFP.FPProgressiveDetailsPerExtraKmRateSection]
+findAll farePolicyId = do
+  fppdp <- findAllWithOptionsKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamFPPDP.startDistance) Nothing Nothing
+  return $ map snd fppdp
+
 findByIdAndStartDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id DFP.FarePolicy -> Meters -> m (Maybe BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection)
 findByIdAndStartDistance farePolicyId' startDistance = findOneWithKV [Se.And [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId'), Se.Is BeamFPPDP.startDistance $ Se.Eq startDistance]]
 
@@ -55,7 +63,8 @@ instance FromTType' BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection 
           DFP.FPProgressiveDetailsPerExtraKmRateSection
             { startDistance = startDistance,
               perExtraKmRate = perExtraKmRate,
-              distanceUnit = fromMaybe Meter distanceUnit
+              distanceUnit = fromMaybe Meter distanceUnit,
+              perExtraKmRoundTripRate = perExtraKmRoundTripRate
             }
         )
 
@@ -66,5 +75,6 @@ instance ToTType' BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection Be
         farePolicyId = farePolicyId,
         startDistance = startDistance,
         perExtraKmRate = perExtraKmRate,
+        perExtraKmRoundTripRate = perExtraKmRoundTripRate,
         distanceUnit = Just distanceUnit
       }

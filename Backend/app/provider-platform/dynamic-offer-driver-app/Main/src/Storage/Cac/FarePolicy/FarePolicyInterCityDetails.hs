@@ -10,7 +10,7 @@
 
 module Storage.Cac.FarePolicy.FarePolicyInterCityDetails where
 
-import Data.List.NonEmpty
+import Data.List.NonEmpty hiding (map)
 import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -18,6 +18,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.FarePolicy.FarePolicyInterCityDetails as BeamFPRD
 import qualified Storage.Cac.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as CQFPTCDPS
+import qualified Storage.Cac.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as CQueriesFPPDP
 import Storage.Queries.FarePolicy.FarePolicyInterCityDetails (fromTTypeFarePolicyInterCityDetails)
 import Utils.Common.CacUtils
 
@@ -31,6 +32,7 @@ findFarePolicyInterCityDetailsFromCAC context tenant id toss = do
 instance FromCacType (BeamFPRD.FarePolicyInterCityDetails, [(CacContext, Value)], String, Id Domain.FarePolicy, Int) Domain.FullFarePolicyInterCityDetails where
   fromCacType (farePolicyInterCityDetails, context, tenant, id, toss) = do
     fullFPICDPS <- CQFPTCDPS.findFarePolicyInterCityDetailsPricingSlabsFromCAC context tenant id toss
-    case nonEmpty fullFPICDPS of
-      Just fPICDPS -> pure $ Just $ fromTTypeFarePolicyInterCityDetails farePolicyInterCityDetails fPICDPS
+    fullFPPDP <- CQueriesFPPDP.findFarePolicyProgressiveDetailsPerExtraKmRateSectionFromCAC context tenant id toss
+    case (nonEmpty fullFPICDPS, nonEmpty fullFPPDP) of
+      (Just fPICDPS, Just fPPDP) -> pure $ Just $ fromTTypeFarePolicyInterCityDetails farePolicyInterCityDetails fPICDPS fPPDP
       _ -> pure Nothing

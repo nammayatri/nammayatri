@@ -21,10 +21,11 @@ import Tools.Beam.UtilsTH
 data FarePolicyInterCityDetailsT f = FarePolicyInterCityDetailsT
   { farePolicyId :: B.C f Text,
     baseFare :: B.C f HighPrecMoney,
+    baseDistance :: B.C f (Maybe Meters),
     perHourCharge :: B.C f HighPrecMoney,
-    perKmRateOneWay :: B.C f HighPrecMoney,
-    perKmRateRoundTrip :: B.C f HighPrecMoney,
-    perExtraKmRate :: B.C f HighPrecMoney,
+    perKmRateOneWay :: B.C f HighPrecMoney, -- deprecated
+    perKmRateRoundTrip :: B.C f HighPrecMoney, -- deprecated
+    perExtraKmRate :: B.C f HighPrecMoney, -- deprecated
     perExtraMinRate :: B.C f HighPrecMoney,
     kmPerPlannedExtraHour :: B.C f Kilometers,
     deadKmFare :: B.C f HighPrecMoney,

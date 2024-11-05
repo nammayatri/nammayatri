@@ -994,6 +994,7 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     defaultStepFee :: Text,
     extraKmRateStartDistance :: Text,
     perExtraKmRate :: Text,
+    perExtraKmRoundTripRate :: Text,
     peakTimings :: Text,
     peakDays :: Text,
     cancellationFarePolicyDescription :: Text,
@@ -1077,6 +1078,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "default_step_fee"
       <*> r .: "extra_km_rate_start_distance"
       <*> r .: "per_extra_km_rate"
+      <*> r .: "per_extra_km_round_trip_rate"
       <*> r .: "peak_timings"
       <*> r .: "peak_days"
       <*> r .: "cancellation_fare_policy_description"
@@ -1442,7 +1444,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                       }
             startDistance :: Meters <- readCSVField idx row.extraKmRateStartDistance "Extra Km Rate Start Distance"
             perExtraKmRate :: HighPrecMoney <- readCSVField idx row.perExtraKmRate "Per Extra Km Rate"
-            let perExtraKmRateSections = NE.fromList [FarePolicy.FPProgressiveDetailsPerExtraKmRateSection {startDistance, distanceUnit, perExtraKmRate}]
+            let perExtraKmRateSections = NE.fromList [FarePolicy.FPProgressiveDetailsPerExtraKmRateSection {startDistance, distanceUnit, perExtraKmRate, perExtraKmRoundTripRate = Nothing}]
             -- TODO: Add support for per min rate sections in csv file
             let perMinRateSections = Nothing
             return $ FarePolicy.ProgressiveDetails FarePolicy.FPProgressiveDetails {nightShiftCharge = mbNightCharges, ..}
@@ -1506,11 +1508,14 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             timePercentage :: Int <- readCSVField idx row.timePercentage "Time Percentage"
             distancePercentage :: Int <- readCSVField idx row.distancePercentage "Distance Percentage"
             farePercentage :: Int <- readCSVField idx row.farePercentage "Fare Percentage"
-            includeActualTimePercentage :: Bool <- readCSVField idx row.includeActualTimePercentage "Include ActualTime Percentage"
-            includeActualDistPercentage :: Bool <- readCSVField idx row.includeActualDistPercentage "Nnclude Actual Dist Percentage"
-
+            includeActualTimePercentage :: Bool <- readCSVField idx row.includeActualTimePercentage "Include Actual Time Percentage"
+            includeActualDistPercentage :: Bool <- readCSVField idx row.includeActualDistPercentage "Include Actual Dist Percentage"
+            startDistance :: Meters <- readCSVField idx row.extraKmRateStartDistance "Extra Km Rate Start Distance"
+            let baseDistance :: Maybe Meters = readMaybeCSVField idx row.baseDistance "Base Distance"
+            let perExtraKmRoundTripRate :: Maybe HighPrecMoney = readMaybeCSVField idx row.perExtraKmRoundTripRate "Per Extra Km Round Trip Rate"
             let pricingSlabs = NE.fromList [FPIDPS.FPInterCityDetailsPricingSlabs {..}]
-            return $ FarePolicy.InterCityDetails FarePolicy.FPInterCityDetails {nightShiftCharge = mbNightCharges, perDayMaxAllowanceInMins = mbPerDayMaxAllowanceInMins, ..}
+            let perKmRateSections = NE.fromList [FarePolicy.FPProgressiveDetailsPerExtraKmRateSection {startDistance, distanceUnit, perExtraKmRate, perExtraKmRoundTripRate}]
+            return $ FarePolicy.InterCityDetails FarePolicy.FPInterCityDetails {nightShiftCharge = mbNightCharges, perDayMaxAllowanceInMins = mbPerDayMaxAllowanceInMins, perKmRateSections, ..}
           _ -> throwError $ InvalidRequest "Fare Policy Type not supported"
 
       driverExtraFeeBounds <- do

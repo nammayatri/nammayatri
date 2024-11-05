@@ -13,11 +13,14 @@ import Data.Aeson as DA
 import Domain.Types.Common
 import Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as Reexport
 import qualified Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Domain
+import Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as Reexport
 import Kernel.Prelude
 import Kernel.Types.Common
 
 data FPInterCityDetailsD (s :: UsageSafety) = FPInterCityDetails
   { baseFare :: HighPrecMoney,
+    baseDistance :: Maybe Meters,
+    perKmRateSections :: NonEmpty (FPProgressiveDetailsPerExtraKmRateSectionD s),
     perHourCharge :: HighPrecMoney,
     perKmRateOneWay :: HighPrecMoney,
     perKmRateRoundTrip :: HighPrecMoney,

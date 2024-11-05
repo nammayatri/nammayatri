@@ -404,8 +404,7 @@ calculateFareParameters params = do
           extraTimeFare = HighPrecMoney $ toRational extraMins * perExtraMinRate.getHighPrecMoney
           fareByTime = HighPrecMoney $ (toRational (estimatedDurationInMins + allowanceMins) / 60) * perHourCharge.getHighPrecMoney
 
-      let perKmRate = if params.roundTrip then perKmRateRoundTrip else perKmRateOneWay
-          estimatedDistance = maybe 0 (.getMeters) params.estimatedDistance
+      let estimatedDistance = maybe 0 (.getMeters) params.estimatedDistance
           estimatedDistanceInKm = estimatedDistance `div` 1000
           actualDistance = (.getMeters) <$> params.actualDistance
           actualDistanceInKm = fromMaybe 0 actualDistance `div` 1000
@@ -413,7 +412,12 @@ calculateFareParameters params = do
           extraDistanceFare = HighPrecMoney $ toRational extraDist * perExtraKmRate.getHighPrecMoney
           extraTimeSpent = max 0 ((diffUTCTime (fromMaybe params.rideTime params.returnTime) params.rideTime) - intToNominalDiffTime estimatedDuration) / 60
           extraHoursSpent = max 0 (realToFrac extraTimeSpent - fromIntegral (defaultWaitTimeAtDestination.getMinutes)) / 60.0 :: Double
-          fareByDist = HighPrecMoney $ toRational ((extraHoursSpent * fromIntegral kmPerPlannedExtraHour.getKilometers) + fromIntegral estimatedDistanceInKm) * fromRational (perKmRate.getHighPrecMoney)
+          extraHoursKm = toRational (extraHoursSpent * fromIntegral kmPerPlannedExtraHour.getKilometers)
+          mbDistanceOverBase =
+            let actualDistance_ = toRational (fromMaybe 0 actualDistance)
+                baseDistance_ = toRational (fromMaybe 0 baseDistance)
+             in (actualDistance_ + extraHoursKm - baseDistance_) & (\dist -> if dist > 0 then Just dist else Nothing)
+          fareByDist = maybe 0 (processFPProgressiveDetailsPerExtraKmFare perKmRateSections params.roundTrip) (Meters . round <$> mbDistanceOverBase)
 
       let distPercent = case (actualDistance, estimatedDistance) of
             (Just ad, ed) -> if ed == 0 then 1 else min 1 (fromIntegral ad / (fromIntegral ed :: Double))
@@ -488,7 +492,7 @@ calculateFareParameters params = do
             (fromMaybe 0 params.actualDistance) - baseDistance
               & (\dist -> if dist > 0 then Just dist else Nothing)
           mbEstimatedRideDurationInMins = ceiling . (fromIntegral @_ @Double) . (`div` 60) . (.getSeconds) <$> params.estimatedRideDuration
-          mbExtraKmFare = processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections <$> mbExtraDistance
+          mbExtraKmFare = processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections False <$> mbExtraDistance
           (mbRideDurationFare, debugLogs) = maybe (Nothing, []) (processFPProgressiveDetailsPerRideDurationMinFare perMinRateSections) mbEstimatedRideDurationInMins
       ( debugLogs,
         baseFare,
@@ -502,20 +506,20 @@ calculateFareParameters params = do
             }
         )
 
-    processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections (extraDistance :: Meters) = do
+    processFPProgressiveDetailsPerExtraKmFare perExtraKmRateSections isRoundTrip (extraDistance :: Meters) = do
       let sortedPerExtraKmFareSections = NE.sortBy (comparing (.startDistance)) perExtraKmRateSections
       processFPProgressiveDetailsPerExtraKmFare' sortedPerExtraKmFareSections extraDistance
       where
         processFPProgressiveDetailsPerExtraKmFare' _ 0 = 0 :: HighPrecMoney
         processFPProgressiveDetailsPerExtraKmFare' sortedPerExtraKmFareSectionsLeft (extraDistanceLeft :: Meters) =
           case sortedPerExtraKmFareSectionsLeft of
-            aSection :| [] -> HighPrecMoney $ toRational extraDistanceLeft * (getPerExtraMRate aSection.perExtraKmRate).getHighPrecMoney
+            aSection :| [] -> HighPrecMoney $ toRational extraDistanceLeft * getPerExtraMRate aSection
             aSection :| bSection : leftSections -> do
               let sectionDistance = bSection.startDistance - aSection.startDistance
                   extraDistanceWithinSection = min sectionDistance extraDistanceLeft
-              HighPrecMoney (toRational extraDistanceWithinSection * (getPerExtraMRate aSection.perExtraKmRate).getHighPrecMoney)
+              HighPrecMoney (toRational extraDistanceWithinSection * getPerExtraMRate aSection)
                 + processFPProgressiveDetailsPerExtraKmFare' (bSection :| leftSections) (extraDistanceLeft - extraDistanceWithinSection)
-        getPerExtraMRate perExtraKmRate = perExtraKmRate / 1000
+        getPerExtraMRate aSection = (if isRoundTrip then fromMaybe aSection.perExtraKmRate aSection.perExtraKmRoundTripRate else aSection.perExtraKmRate).getHighPrecMoney / 1000
 
     processFPProgressiveDetailsPerRideDurationMinFare mbPerMinRateSections rideDurationInMins =
       case mbPerMinRateSections of

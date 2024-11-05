@@ -402,7 +402,11 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges estimatedTot
         <> (newNightShiftChargeBreakups det.nightShiftCharge)
 
     mkAdditionalInterCityBreakups det = do
-      let minFareCaption = show Tags.MIN_FARE
+      let perKmFareSections = NE.sortBy (comparing (.startDistance)) det.perKmRateSections
+          perKmStepFareItems = mkPerKmStepFareItem [] (toList perKmFareSections) (fromMaybe 0 det.baseDistance).getMeters
+          perKmRoundTripStepFareItems = mkPerKmRoundTripStepFareItem [] (toList perKmFareSections) (fromMaybe 0 det.baseDistance).getMeters
+
+          minFareCaption = show Tags.MIN_FARE
           minFareItem = mkBreakupItem minFareCaption . mkValue $ show det.baseFare
 
           perHourChargeCaption = show Tags.PER_HOUR_CHARGE
@@ -417,6 +421,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges estimatedTot
           includedKmPerHrCaption = show Tags.PER_HOUR_DISTANCE_KM
           includedKmPerHrItem = mkBreakupItem includedKmPerHrCaption . mkValue $ show det.kmPerPlannedExtraHour
 
+          -- not compatible
           plannedPerKmRateCaption = show Tags.PLANNED_PER_KM_CHARGE
           plannedPerKmRateItem = mkBreakupItem plannedPerKmRateCaption . mkValue $ show det.perKmRateOneWay
 
@@ -433,9 +438,37 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges estimatedTot
           pickupChargeBreakup = mkBreakupItem pickupChargeCaption (mkValue $ show det.deadKmFare)
 
       [minFareItem, pickupChargeBreakup, perHourChargeItem, perExtraMinRateItem, perExtraKmRateItem, includedKmPerHrItem, plannedPerKmRateItem, plannedPerKmRateRoundItem, perDayMaxHourAllowanceItem]
+        <> perKmStepFareItems
+        <> perKmRoundTripStepFareItems
         <> catMaybes [perDayMaxAllowanceInMinutesItem]
         <> (oldNightShiftChargeBreakups det.nightShiftCharge)
         <> (newNightShiftChargeBreakups det.nightShiftCharge)
+      where
+        mkPerKmStepFareItem perKmStepFareItems [] _ = perKmStepFareItems
+        mkPerKmStepFareItem perKmStepFareItems [s1] baseDistance = do
+          let startDistance = s1.startDistance.getMeters + baseDistance
+              perKmStepFareCaption = show $ Tags.PER_KM_STEP_FARE startDistance Nothing
+              perKmStepFareItem = mkBreakupItem perKmStepFareCaption (mkValue $ highPrecMoneyToText s1.perExtraKmRate)
+          perKmStepFareItems <> [perKmStepFareItem]
+        mkPerKmStepFareItem perKmStepFareItems (s1 : s2 : ss) baseDistance = do
+          let startDistance = s1.startDistance.getMeters + baseDistance
+              endDistance = s2.startDistance.getMeters + baseDistance
+              perKmStepFareCaption = show $ Tags.PER_KM_ROUND_TRIP_STEP_FARE startDistance (Just endDistance)
+              perKmStepFareItem = mkBreakupItem perKmStepFareCaption (mkValue $ highPrecMoneyToText s1.perExtraKmRate)
+          mkPerKmStepFareItem (perKmStepFareItems <> [perKmStepFareItem]) (s2 : ss) baseDistance
+
+        mkPerKmRoundTripStepFareItem perKmStepFareItems [] _ = perKmStepFareItems
+        mkPerKmRoundTripStepFareItem perKmStepFareItems [s1] baseDistance = do
+          let startDistance = s1.startDistance.getMeters + baseDistance
+              perKmStepFareCaption = show $ Tags.PER_KM_ROUND_TRIP_STEP_FARE startDistance Nothing
+              perKmStepFareItem = mkBreakupItem perKmStepFareCaption (mkValue $ highPrecMoneyToText (fromMaybe s1.perExtraKmRate s1.perExtraKmRoundTripRate))
+          perKmStepFareItems <> [perKmStepFareItem]
+        mkPerKmRoundTripStepFareItem perKmStepFareItems (s1 : s2 : ss) baseDistance = do
+          let startDistance = s1.startDistance.getMeters + baseDistance
+              endDistance = s2.startDistance.getMeters + baseDistance
+              perKmStepFareCaption = show $ Tags.PER_KM_ROUND_TRIP_STEP_FARE startDistance (Just endDistance)
+              perKmStepFareItem = mkBreakupItem perKmStepFareCaption (mkValue $ highPrecMoneyToText (fromMaybe s1.perExtraKmRate s1.perExtraKmRoundTripRate))
+          mkPerKmRoundTripStepFareItem (perKmStepFareItems <> [perKmStepFareItem]) (s2 : ss) baseDistance
 
     mkAdditionalProgressiveBreakups det = do
       let perExtraKmFareSections = NE.sortBy (comparing (.startDistance)) det.perExtraKmRateSections
