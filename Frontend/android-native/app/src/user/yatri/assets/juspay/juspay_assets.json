@@ -745,6 +745,9 @@
       "zone_curve" : true,
       "ny_ic_id_filled" : true,
       "ny_ic_bike_nav_on_map" : true,
-      "ny_ic_bike_pickup_nav_on_map" : true
+      "ny_ic_bike_pickup_nav_on_map" : true,
+      "ny_ic_bike_taxi_service" : true,
+      "ny_ic_id_filled" : true,
+      "ny_ic_ticket_clip_background" : true
    }
 }

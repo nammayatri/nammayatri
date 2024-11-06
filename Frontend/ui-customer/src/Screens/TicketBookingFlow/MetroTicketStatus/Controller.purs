@@ -66,15 +66,16 @@ data Action = BackPressed
             | Copy String
             | NoAction
             | RefreshStatusAC PrimaryButton.Action
-            | MetroPaymentStatusAction MetroTicketBookingStatus
+            | MetroPaymentStatusAction FRFSTicketBookingStatusAPIRes
             | ViewTicketBtnOnClick PrimaryButton.Action
             | CountDown Int String String
 
 data ScreenOutput = GoToHomeScreen
-                  | GoToMetroTicketDetails MetroTicketStatusScreenState MetroTicketBookingStatus
+                  | GoToMetroTicketDetails MetroTicketStatusScreenState FRFSTicketBookingStatusAPIRes
                   | RefreshPaymentStatus MetroTicketStatusScreenState
                   | GoToTryAgainPayment MetroTicketStatusScreenState
                   | GoToMyMetroTicketsScreen
+                  | GoToBusTicketBookingScreen
 
 eval :: Action -> MetroTicketStatusScreenState -> Eval Action ScreenOutput MetroTicketStatusScreenState
 
@@ -82,12 +83,13 @@ eval (BackPressed) state =
   case state.props.entryPoint of 
     HomescreenToMetroTicketStatus -> exit GoToHomeScreen 
     MyMetroTicketsToMetroTicketStatus -> exit GoToMyMetroTicketsScreen
+    BusTicketToMetroTicketStatus -> exit GoToBusTicketBookingScreen
 
-eval (MetroPaymentStatusAction (MetroTicketBookingStatus metroTicketBookingStatus)) state = do
+eval (MetroPaymentStatusAction (FRFSTicketBookingStatusAPIRes metroTicketBookingStatus)) state = do
   case metroTicketBookingStatus.status of 
     "CONFIRMED" -> do
       void $ pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
-      continueWithCmd state{ props{paymentStatus = PP.Success, showShimmer = false}, data {resp = (MetroTicketBookingStatus metroTicketBookingStatus)}} [do
+      continueWithCmd state{ props{paymentStatus = PP.Success, showShimmer = false}, data {resp = (FRFSTicketBookingStatusAPIRes metroTicketBookingStatus)}} [do
             push <- getPushFn Nothing "MetroTicketStatusScreen"
             void $ launchAff $ flowRunner defaultGlobalState $ do
               void $ delay $ Milliseconds 4000.0 
@@ -95,12 +97,12 @@ eval (MetroPaymentStatusAction (MetroTicketBookingStatus metroTicketBookingStatu
             pure NoAction]
     "FAILED" -> do
       void $ pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
-      continue state{ props{paymentStatus = PP.Failed, showShimmer = false}, data {resp = (MetroTicketBookingStatus metroTicketBookingStatus)}}
+      continue state{ props{paymentStatus = PP.Failed, showShimmer = false}, data {resp = (FRFSTicketBookingStatusAPIRes metroTicketBookingStatus)}}
     "EXPIRED" -> do
       void $ pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
-      continue state{ props{paymentStatus = PP.Failed, showShimmer = false}, data {resp = (MetroTicketBookingStatus metroTicketBookingStatus)}}
+      continue state{ props{paymentStatus = PP.Failed, showShimmer = false}, data {resp = (FRFSTicketBookingStatusAPIRes metroTicketBookingStatus)}}
     "PAYMENT_PENDING" -> 
-      continue $ metroTicketStatusTransformer ( MetroTicketBookingStatus metroTicketBookingStatus) state
+      continue $ metroTicketStatusTransformer ( FRFSTicketBookingStatusAPIRes metroTicketBookingStatus) state
     _ -> continue state
 
 eval (RefreshStatusAC PrimaryButton.OnClick) state = exit $ RefreshPaymentStatus state

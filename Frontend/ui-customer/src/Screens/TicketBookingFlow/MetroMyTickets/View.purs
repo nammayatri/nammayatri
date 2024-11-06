@@ -56,7 +56,7 @@ screen initialState =
       ( \push -> do
         void $ launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do 
           void $ lift $ lift $ EHU.toggleLoader true
-          (API.GetMetroBookingListResp resp)<- Remote.getMetroBookingStatusListBT
+          (API.GetMetroBookingListResp resp)<- Remote.getMetroBookingStatusListBT (show initialState.props.ticketServiceType)
           lift $ lift $ doAff do liftEffect $ push $ MetroBookingListRespAC resp
           void $ lift $ lift $ EHU.toggleLoader false
         pure $ pure unit
@@ -245,11 +245,11 @@ activeTicketsListView push state =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , margin $ MarginTop 13
-    ] $ map (\ ticket -> activeTicketView push ticket) state.data.activeTickets
+    ] $ map (\ ticket -> activeTicketView push ticket (show state.props.ticketServiceType)) state.data.activeTickets
   ]
 
-activeTicketView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketCardData -> PrestoDOM (Effect Unit) w
-activeTicketView push ticketCard = 
+activeTicketView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketCardData -> String -> PrestoDOM (Effect Unit) w
+activeTicketView push ticketCard vehicleType= 
   let
     isStatusPending = ticketCard.status == "PAYMENT_PENDING"
   in
@@ -284,7 +284,7 @@ activeTicketView push ticketCard =
           imageView [
             width $ V 41
           , height $ V 41
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET (Config.getMetroLogoImage ticketCard)
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET (Config.getMetroLogoImage ticketCard vehicleType)
           ]
         ]
       , linearLayout [
@@ -406,11 +406,11 @@ pastTicketsListView push state =
     , orientation VERTICAL
     , margin $ MarginTop 13
     , orientation VERTICAL
-    ] $ map (\ticket ->  pastTicketView push ticket) (reverse state.data.pastTickets)
+    ] $ map (\ticket ->  pastTicketView push ticket (show state.props.ticketServiceType)) (reverse state.data.pastTickets)
   ]
 
-pastTicketView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketCardData -> PrestoDOM (Effect Unit) w
-pastTicketView push ticketCard = 
+pastTicketView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketCardData ->String-> PrestoDOM (Effect Unit) w
+pastTicketView push ticketCard vehicleType= 
   linearLayout [
     width MATCH_PARENT
   , height WRAP_CONTENT
@@ -436,7 +436,7 @@ pastTicketView push ticketCard =
         imageView [
           width $ V 30
         , height $ V 30
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET (Config.getMetroLogoImage ticketCard)
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET (Config.getMetroLogoImage ticketCard vehicleType)
         ]
       ]
     , linearLayout [

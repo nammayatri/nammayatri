@@ -1681,4 +1681,5 @@ getHi = Keymap {
 , confirm_contacts : "संपर्कों की पुष्टि करें"
 , tickets_for_delhi_metro : "दिल्ली मेट्रो के लिए टिकट"
 , max_parcel_size : (\l b h -> "अधिकतम पार्सल आकार: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, bus__ : "बस"
 }

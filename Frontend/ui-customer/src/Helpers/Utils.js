@@ -615,3 +615,62 @@ export const decodeErrorCode = function (a) {
     return " ";
   }
 };
+
+export const clearTimer = function (a)
+{ if(timerIdForTimeout){
+  clearTimeout(timerIdForTimeout);
+}
+if(window.timerId){
+  clearInterval(window.timerId);
+}
+};
+
+export const startTimer = function(input) {
+  return function (isCountDown) {
+    return function (cb) {
+      return function (action) {
+        return function () {
+          const callback = callbackMapper.map(function () {
+            let time = input;
+            function startCountDown(seconds) {
+              if (seconds >= 0) {
+                timerIdForTimeout = setTimeout(() => {
+                  if (seconds <= 0) {
+                    clearTimeout(timerIdForTimeout);
+                    console.log("EXPIRED");
+                    console.log(seconds + "seconds");
+                    cb(action("EXPIRED"))();
+                  } else {
+                    const timer = seconds + "s ";
+                    console.log(timer + "seconds");
+                    cb(action(timer))();
+                    startCountDown(seconds + (isCountDown ? -1 : 1));
+                  }
+                }, 1000);
+              }
+            }
+            time = time + (isCountDown ? -1 : 1);
+            startCountDown(time);
+            console.log("inside startTimer");
+            console.log("timerId : " + timerIdForTimeout);
+          });
+          window.callUICallback(callback);
+        }
+      }
+    }
+  }
+}
+
+export const decodeErrorMessage = function (a) {
+  try {
+    const errorMessagee = JSON.parse(a).errorMessage;
+    if(errorMessagee === null)
+    {
+      return "";
+    }
+    return  errorMessagee;
+  } catch (e) {
+    console.log(e);
+    return " ";
+  }
+};

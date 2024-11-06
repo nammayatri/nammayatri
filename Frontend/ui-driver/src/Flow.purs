@@ -975,6 +975,7 @@ aadhaarVerificationFlow = do
           aadhaarVerificationFlow
     VERIFY_AADHAAR_OTP state -> do
       void $ lift $ lift $ toggleLoader true
+      let _ = spy "ComingHere" state
       res <- lift $ lift $ Remote.verifyAadhaarOtp state.data.otp
       void $ lift $ lift $ toggleLoader false
       case res of
