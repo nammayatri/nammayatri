@@ -76,7 +76,6 @@ seeRouteButtonConfig state =
         , cornerRadius = 8.0
         , margin = (Margin 16 16 16 0)
         , id = "PrimaryButtonSeeRoute"
-        , enableLoader = (JB.getBtnLoader "PrimaryButtonSeeRoute")
         , isClickable = enableButton
         , alpha = if enableButton then 1.0 else 0.5
         }

@@ -201,15 +201,20 @@ routeRadioComponent state push (FrfsQuote quote) =
           , padding $ PaddingLeft 8
           ] <> FontStyle.body25 LanguageStyle
         , textView $
+          [ textFromHtml $ HU.secondsToHms $ fromMaybe 0 route'.travelTime
+          , color Color.black700
+          , padding $ PaddingLeft 16
+          ] <> FontStyle.paragraphText LanguageStyle
+        , textView $
           [ textFromHtml "&#x2022"
           , color Color.black600
           , padding $ PaddingLeft 8
-          ] <> FontStyle.body3 LanguageStyle
+          ] <> FontStyle.paragraphText LanguageStyle
         , textView $
           [ textFromHtml $ "₹" <> show quote.price
           , color Color.black800
           , padding $ PaddingLeft 8
-          ] <> FontStyle.body3 LanguageStyle
+          ] <> FontStyle.paragraphText LanguageStyle
         ]
       , linearLayout
         [ width MATCH_PARENT

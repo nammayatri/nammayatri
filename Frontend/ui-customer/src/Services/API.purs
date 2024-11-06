@@ -4187,7 +4187,7 @@ newtype FRFSRouteAPI = FRFSRouteAPI {
   totalStops :: Maybe Int,
   waypoints :: Maybe (Array LatLong),
   stations :: Maybe (Array FRFSStationAPI),
-  -- travelTime :: Maybe Int,
+  travelTime :: Maybe Int,
   vehicleServiceTier :: Maybe FRFSVehicleServiceTierAPI
   -- priceWithCurrency :: Maybe PriceAPIEntity
 }
