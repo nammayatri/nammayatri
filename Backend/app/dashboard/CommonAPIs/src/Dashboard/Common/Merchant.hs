@@ -192,7 +192,8 @@ data GoogleCfgUpdateReq = GoogleCfgUpdateReq
     useAdvancedDirections :: Bool,
     googleRouteConfig :: Maps.GoogleRouteConfig,
     googlePlaceNewUrl :: BaseUrl,
-    useNewPlaces :: Bool
+    useNewPlaces :: Bool,
+    googleAutocompleteParams :: Maybe [Text]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -216,7 +217,8 @@ data MMICfgUpdateReq = MMICfgUpdateReq
     mmiAuthSecret :: Text,
     mmiApiKey :: Text,
     mmiKeyUrl :: BaseUrl,
-    mmiNonKeyUrl :: BaseUrl
+    mmiNonKeyUrl :: BaseUrl,
+    mmiAutocompleteParams :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
