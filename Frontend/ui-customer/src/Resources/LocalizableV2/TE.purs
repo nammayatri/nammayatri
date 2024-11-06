@@ -1681,4 +1681,5 @@ getTe = Keymap {
 , confirm_contacts : "పరిచయాలను నిర్ధారించండి"
 , tickets_for_delhi_metro : "దిల్లీ మెట్రో టికెట్లు"
 , max_parcel_size : (\l b h -> "గరిష్ట పార్సల్ పరిమాణం: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, bus__ : "బస్"
 }

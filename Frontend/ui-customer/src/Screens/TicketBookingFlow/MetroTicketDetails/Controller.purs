@@ -38,6 +38,7 @@ import Components.PopUpModal.Controller as PopUpModalController
 import Components.PrimaryButton.Controller as PrimaryButton
 import Components.PopUpModal.Controller as PopUpModal
 import Debug
+import Components.SourceToDestination.Controller as SourceToDestinationController
 
 instance showAction :: Show Action where
   show _ = ""
@@ -58,13 +59,27 @@ data Action = NoAction
             | ShowCancelBookingPopup MetroBookingSoftCancelStatusResp
             | CancelBookingPopUpAC PopUpModalController.Action
             | ShowMetroBookingCancelledView MetroBookingHardCancelStatusResp
+            | SourceToDestinationAC (SourceToDestinationController.Action)
+            | PaymentDetailsClick
 
-data ScreenOutput = NoOutput | GoBack | BackToSearchMetroLocation | GoToHome | GoToMyMetroTickets | SoftCancelBooking ST.MetroTicketDetailsScreenState | HardCancelBooking ST.MetroTicketDetailsScreenState
+data ScreenOutput = 
+    NoOutput 
+  | GoBack 
+  | BackToSearchMetroLocation 
+  | GoToHome 
+  | GoToMyMetroTickets 
+  | SoftCancelBooking ST.MetroTicketDetailsScreenState 
+  | HardCancelBooking ST.MetroTicketDetailsScreenState 
+  | GoToBusTicketBookingScreen
+  | GoToBusTrackingScreen
 
 eval :: Action -> MetroTicketDetailsScreenState -> Eval Action ScreenOutput MetroTicketDetailsScreenState
 
 eval BackPressed state = 
-  if (state.props.stage == MetroMapStage || state.props.stage == MetroRouteDetailsStage) && state.props.previousScreenStage == MetroMyTicketsStage then 
+  if state.props.fromScreen == Just (getScreen BUS_TICKET_BOOKING_SCREEN) then
+    exit GoToBusTicketBookingScreen
+  else if state.props.fromScreen == Just (getScreen BUS_TRACKING_SCREEN) then exit GoToBusTrackingScreen
+  else if (state.props.stage == MetroMapStage || state.props.stage == MetroRouteDetailsStage) && state.props.previousScreenStage == MetroMyTicketsStage then 
     continue
       state {
         props {
@@ -200,6 +215,8 @@ eval (ShowMetroBookingCancelledView (MetroBookingHardCancelStatusResp resp)) sta
         showLoader = false
       }
     }
+
+eval PaymentDetailsClick state = continue state { props { paymentDetailsExpanded = not state.props.paymentDetailsExpanded } }
 
 eval _ state = update state
 

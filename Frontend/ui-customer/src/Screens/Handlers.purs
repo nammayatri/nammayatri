@@ -71,3 +71,7 @@ import Screens.CustomerUtils.FavouriteDriverTrips.Handler (favouriteDriverTrips)
 import Screens.RideSummaryScreen.Handler (rideSummaryScreen) as UI
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.View (parcelDeliveryScreen) as UI
 import Screens.SelectContactsFlow.SelectContactsScreen.Handler (selectContactsScreen) as UI
+import Screens.TicketBookingFlow.BusTicketBooking.View (busTicketBookingScreen) as UI
+import Screens.TicketBookingFlow.BusTrackingScreen.Handler (busTrackingScreen) as UI
+import Screens.AadhaarVerificationScreen.Handler (aadhaarVerificationScreen) as UI
+import Screens.SelectBusRoute.Handler (selectBusRouteScreen) as UI

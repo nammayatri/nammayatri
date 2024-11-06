@@ -2873,9 +2873,13 @@ eval (HideIntercityBusView _) state = continue state { data { intercityBus { sho
   
 eval (RentalBannerClick) state = maybe (exit $ GoToScheduledRides state Nothing) (\rentalsInfo -> if rentalsInfo.multipleScheduled then exit (PastRides state true) else exit $ GoToScheduledRides state (Just rentalsInfo.bookingId)) state.data.rentalsInfo
 eval (BottomNavBarAction id) state = do 
-  let newState = state {props {focussedBottomIcon = id}}
+  let newState = state {props {focussedBottomIcon = id , busClicked = true}}
   case id of 
     TICKETING -> updateAndExit newState $ GoToTicketBookingFlow newState
+    BUS_ -> do
+      let updatedState = newState { props { ticketServiceType = API.BUS } }
+      updateAndExit updatedState $ GoToBusTicketBookingFlow state
+      -- updateAndExit updatedState $ GoToSearchLocationScreenForRoutes updatedState ST.Src
     MOBILITY -> continue newState 
     _ -> update state 
     
@@ -3295,6 +3299,11 @@ eval (ServicesOnClick service) state = do
       , hasPhoneNumberPermission = hasPhoneNumberPermission == "true"
       }}} [pure $ IntercityBusAC]
     RC.DELIVERY -> exit $ GoToParcelInstructions state
+    RC.DELIVERY -> exit $ GoToParcelInstructions state
+    RC.BUS -> do
+      let newState = updatedState { props { ticketServiceType = API.BUS } }
+      updateAndExit newState $ GoToBusTicketBookingFlow state
+    RC.METRO_RIDE -> exit $ GoToMetroTicketBookingFlow updatedState
     _ -> continue state
 eval (IntercityBusPermissionAction (PopUpModal.OnButton1Click)) state = do
   void $ pure $ setValueToLocalStore INTERCITY_BUS_PHONE_NUMBER_PERMISSION "false"

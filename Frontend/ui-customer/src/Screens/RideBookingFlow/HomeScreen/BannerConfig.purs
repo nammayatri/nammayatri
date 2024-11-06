@@ -168,7 +168,7 @@ metroBannerConfig state action =
     config = BannerCarousel.config action
     appConfig' = state.data.config
     cityMetroAppConfig = getMetroConfigFromAppConfig appConfig' (show state.props.city)
-    (CityMetroConfig cityConfig) = getMetroConfigFromCity state.props.city Nothing
+    (CityMetroConfig cityConfig) = getMetroConfigFromCity state.props.city Nothing ""
     appName = fromMaybe state.data.config.appData.name $ runFn3 getAnyFromWindow "appName" Nothing Just
     config' = config
       {

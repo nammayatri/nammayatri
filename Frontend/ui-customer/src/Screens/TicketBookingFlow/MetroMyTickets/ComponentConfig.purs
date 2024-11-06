@@ -47,12 +47,12 @@ getTicketStatusConfig ticketCard =
         statusIcon
       }
 
-getMetroLogoImage :: ST.MetroTicketCardData -> String
-getMetroLogoImage ticketCard = 
+getMetroLogoImage :: ST.MetroTicketCardData -> String ->  String
+getMetroLogoImage ticketCard vehicleType = 
   let
-    (API.MetroTicketBookingStatus resp) = ticketCard.metroTicketStatusApiResp
+    (API.FRFSTicketBookingStatusAPIRes resp) = ticketCard.metroTicketStatusApiResp
     city = getCityNameFromCode $ Just resp.city
-    (CityMetroConfig config) = getMetroConfigFromCity city Nothing
+    (CityMetroConfig config) = getMetroConfigFromCity city Nothing vehicleType
   in
     config.logoImage
 

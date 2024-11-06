@@ -600,6 +600,8 @@ export const openUrlInMailApp = function (str) {
 
 export const showMarkerImpl = function (showMarkerConfig) {
   if (window.JBridge.showMarker) {
+    console.log("showMarkerImpl");
+    
     window.JBridge.showMarker(JSON.stringify(showMarkerConfig));
   } else {
     window.JBridge.upsertMarker(showMarkerConfig.markerConfig.pointerIcon, showMarkerConfig.lat, showMarkerConfig.lng, showMarkerConfig.markerSize, showMarkerConfig.anchorV, showMarkerConfig.anchorV1);
@@ -2637,7 +2639,8 @@ export const debounceFunction = function (delay) {
             if (timerIdDebounce) clearTimeout(timerIdDebounce);
             timerIdDebounce = setTimeout(() => {
               timerIdDebounce = "MAKEAPICALL";
-              cb(action(inputForDebounce)(isSource))();
+              if (inputForDebounce) cb(action(inputForDebounce)(isSource))();
+              else console.error("please update input for debounce using updateInputString function")
             }, delay);
           });
           window.callUICallback(callback);

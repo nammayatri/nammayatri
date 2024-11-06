@@ -753,6 +753,7 @@
       "tip_banner_rectangle" : true,
       "widget_close_gradient" : true,
       "zone_curve" : true,
+      "ny_ic_bike_taxi_service" : true,
       "ny_ic_delivery_instructions" : true,
       "ny_ic_backpack" : true,
       "ny_ic_prohibited" : true,
@@ -763,6 +764,7 @@
       "ny_ic_wallet_outline": true,
       "ny_ic_refresh" : true,
       "ny_ic_bike_nav_on_map" : true,
-      "ny_ic_bike_pickup_nav_on_map" : true
+      "ny_ic_bike_pickup_nav_on_map" : true,
+      "ny_ic_ticket_clip_background" : true
    }
 }
