@@ -346,11 +346,14 @@ handler ValidatedDSearchReq {..} sReq = do
     selectFarePolicy distance duration mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed =
       filter isValid
       where
-        isValid farePolicy = checkDistanceBounds farePolicy && checkExtendUpto farePolicy && (autosAllowedOnTollRoute farePolicy || bikesAllowedOnTollRoute farePolicy)
+        isValid farePolicy =
+          checkDistanceBounds farePolicy && checkExtendUpto farePolicy
+            && vehicleAllowedOnTollRoute farePolicy
 
-        autosAllowedOnTollRoute farePolicy = if farePolicy.vehicleServiceTier == AUTO_RICKSHAW then fromMaybe True mbIsAutoRickshawAllowed else True
-
-        bikesAllowedOnTollRoute farePolicy = if farePolicy.vehicleServiceTier == BIKE then fromMaybe True mbIsTwoWheelerAllowed else True
+        vehicleAllowedOnTollRoute farePolicy = case farePolicy.vehicleServiceTier of
+          AUTO_RICKSHAW -> fromMaybe True mbIsAutoRickshawAllowed
+          BIKE -> fromMaybe True mbIsTwoWheelerAllowed
+          _ -> True
 
         checkDistanceBounds farePolicy = maybe True checkBounds farePolicy.allowedTripDistanceBounds
 
