@@ -32,7 +32,10 @@ import PrestoDOM.Types.Core (class Loggable)
 import Components.PrimaryButton as PrimaryButton 
 import Services.API
 import Screens.TicketBookingFlow.MetroMyTickets.Transformer (metroTicketListApiToMyTicketsTransformer)
-
+import Data.Maybe (Maybe(..))
+import Data.Array as DA
+import Accessor (_vehicleType)
+import Data.Lens ((^.))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -44,16 +47,17 @@ instance loggableAction :: Loggable Action where
 data Action = NoAction
             | BackPressed
             | AfterRender
-            | TicketPressed MetroTicketBookingStatus
-            | PastTicketPressed MetroTicketBookingStatus
-            | MetroBookingListRespAC (Array MetroTicketBookingStatus)
+            | TicketPressed FRFSTicketBookingStatusAPIRes
+            | PastTicketPressed FRFSTicketBookingStatusAPIRes
+            | MetroBookingListRespAC (Array FRFSTicketBookingStatusAPIRes)
             | GoToMetroBookingScreen PrimaryButton.Action
 
 data ScreenOutput = NoOutput
                   | GoToMetroTicketDetailsFlow String
-                  | GoToMetroTicketStatusFlow MetroTicketBookingStatus
+                  | GoToMetroTicketStatusFlow FRFSTicketBookingStatusAPIRes
                   | GoToHomeScreen
                   | GoToMetroBooking
+                  | GoToBusBookingScreen
 
 
 eval :: Action -> MetroMyTicketsScreenState -> Eval Action ScreenOutput MetroMyTicketsScreenState
@@ -62,7 +66,7 @@ eval :: Action -> MetroMyTicketsScreenState -> Eval Action ScreenOutput MetroMyT
 eval (MetroBookingListRespAC bookingList) state = 
   continue $ metroTicketListApiToMyTicketsTransformer bookingList state
 
-eval (TicketPressed (MetroTicketBookingStatus ticketApiResp)) state = do 
+eval (TicketPressed (FRFSTicketBookingStatusAPIRes ticketApiResp)) state = do 
   exit $ GoToMetroTicketDetailsFlow ticketApiResp.bookingId
 
 eval (PastTicketPressed ticketApiResp) state = exit $ GoToMetroTicketStatusFlow ticketApiResp
@@ -74,12 +78,20 @@ eval AfterRender state =
     }
   }
 
-eval (GoToMetroBookingScreen PrimaryButton.OnClick) state = 
-  exit $ GoToMetroBooking
+eval (GoToMetroBookingScreen PrimaryButton.OnClick) state =
+  exit $ if state.props.fromScreen == Just (getScreen BUS_TICKET_BOOKING_SCREEN)
+    then GoToBusBookingScreen
+    else
+      case DA.head $ state.data.activeTickets <> state.data.pastTickets of
+        Just ticket -> if (ticket.metroTicketStatusApiResp ^. _vehicleType) == "BUS" then GoToBusBookingScreen else GoToMetroBooking
+        Nothing -> GoToMetroBooking
 
 eval BackPressed state = 
   case state.props.entryPoint of 
     HomeScreenToMetroMyTickets -> exit GoToHomeScreen
-    MetroTicketBookingToMetroMyTickets -> exit GoToMetroBooking
+    MetroTicketBookingToMetroMyTickets ->
+      if state.props.fromScreen == Just (getScreen BUS_TICKET_BOOKING_SCREEN)
+        then exit GoToBusBookingScreen
+        else exit GoToHomeScreen
 
 eval _ state = update state

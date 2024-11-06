@@ -100,7 +100,7 @@ screen initialState =
     pure $ pure unit
 --------------------------------------------------------------------------------------------
 -- Spy is required to debug the flow
-metroPaymentStatusPooling :: forall action. String -> String -> Number -> ST.MetroTicketStatusScreenState -> (action -> Effect Unit) -> (MetroTicketBookingStatus -> action) -> Flow GlobalState Unit
+metroPaymentStatusPooling :: forall action. String -> String -> Number -> ST.MetroTicketStatusScreenState -> (action -> Effect Unit) -> (FRFSTicketBookingStatusAPIRes -> action) -> Flow GlobalState Unit
 metroPaymentStatusPooling bookingId validUntil delayDuration state push action = do
   let diffSec = runFn2 JB.differenceBetweenTwoUTC  validUntil (getCurrentUTC "")
   if (getValueToLocalStore METRO_PAYMENT_STATUS_POOLING) == "true" && bookingId /= "" then do
@@ -108,7 +108,7 @@ metroPaymentStatusPooling bookingId validUntil delayDuration state push action =
     void $ pure $ spy "ticketStatus" ticketStatus
     case ticketStatus of
       Right (API.GetMetroBookingStatusResp resp) -> do
-        let (MetroTicketBookingStatus statusResp) = resp
+        let (FRFSTicketBookingStatusAPIRes statusResp) = resp
         case statusResp.payment of
           Just (FRFSBookingPaymentAPI paymentInfo) -> do
             if paymentInfo.status == "NEW" then do
@@ -133,7 +133,7 @@ metroPaymentStatusPooling bookingId validUntil delayDuration state push action =
   else pure unit
 
 
-metroPaymentStatusfinitePooling :: forall action. String -> String -> Int -> Number -> ST.MetroTicketStatusScreenState -> (action -> Effect Unit) -> (MetroTicketBookingStatus -> action) -> Flow GlobalState Unit
+metroPaymentStatusfinitePooling :: forall action. String -> String -> Int -> Number -> ST.MetroTicketStatusScreenState -> (action -> Effect Unit) -> (FRFSTicketBookingStatusAPIRes -> action) -> Flow GlobalState Unit
 metroPaymentStatusfinitePooling bookingId validUntil count delayDuration state push action = do
   let diffSec = runFn2 JB.differenceBetweenTwoUTC  validUntil (getCurrentUTC "")
   if count > 0 then do
@@ -142,7 +142,7 @@ metroPaymentStatusfinitePooling bookingId validUntil count delayDuration state p
       void $ pure $ spy "metroPaymentStatusfinitePooling" ticketStatus
       case ticketStatus of
         Right (API.GetMetroBookingStatusResp resp) -> do
-          let (MetroTicketBookingStatus statusResp) = resp
+          let (FRFSTicketBookingStatusAPIRes statusResp) = resp
           case statusResp.payment of
             Just (FRFSBookingPaymentAPI paymentInfo) -> do
               if paymentInfo.status == "NEW" then do
@@ -291,9 +291,9 @@ copyTransactionIdView state push  =
 bookingStatusBody :: forall w. ST.MetroTicketStatusScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus ->  PrestoDOM (Effect Unit) w
 bookingStatusBody state push paymentStatus = 
   let 
-    (API.MetroTicketBookingStatus resp) = state.data.resp
+    (API.FRFSTicketBookingStatusAPIRes resp) = state.data.resp
     city = getCityNameFromCode $ Just resp.city
-    (CityMetroConfig config) = getMetroConfigFromCity city Nothing
+    (CityMetroConfig config) = getMetroConfigFromCity city Nothing ""
     headerImgConfig = {
                         src : fetchImage FF_COMMON_ASSET config.logoImage
                       , width : V 41

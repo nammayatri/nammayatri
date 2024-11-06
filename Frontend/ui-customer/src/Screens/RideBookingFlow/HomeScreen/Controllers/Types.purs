@@ -39,7 +39,7 @@ import PrestoDOM.List (ListItem)
 import Prelude (class Show)
 import Data.Maybe (Maybe)
 
-import Screens.Types (BottomNavBarIcon, CallType, CancelSearchType, CardType, HomeScreenState, LocationListItemState, NewContacts, PermissionScreenStage, ReferralType, Trip,NotificationBody, LocationType, LocationType(..))
+import Screens.Types (BottomNavBarIcon, CallType, CancelSearchType, CardType, HomeScreenState, LocationListItemState, NewContacts, PermissionScreenStage, ReferralType, Trip, NotificationBody, LocationType, LocationType(..), LocationActionId)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 
 import Services.API (FollowRideRes, GetDriverLocationResp, GetEditLocResultResp, GetQuotesRes, RideBookingListRes, RideBookingRes,RideBookingStatusRes, SelectListRes, GetEmergencySettingsRes)
@@ -133,6 +133,8 @@ data ScreenOutput = LogoutUser
   | GoToParcelInstructions HomeScreenState
   | GetDeliveryImage HomeScreenState
   | GoToDeliveryDetails HomeScreenState
+  | GoToSearchLocationScreenForRoutes HomeScreenState LocationActionId
+  | GoToBusTicketBookingFlow HomeScreenState
 
 data Action = NoAction
   | BackPressed

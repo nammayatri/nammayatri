@@ -170,3 +170,4 @@ insertArrayAtPosition pos value arr =
       after = DA.slice pos (DA.length arr) arr
     in
       DA.concat [before, value, after]
+      

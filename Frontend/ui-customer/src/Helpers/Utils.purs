@@ -78,7 +78,7 @@ import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations,Stage)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo, BookingTime, VehicleViewType(..), FareProductType(..))
-import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..), MetroBookingConfigRes,RideBookingRes(..),RideBookingAPIDetails(..),RideBookingDetails(..),RideBookingListRes(..),BookingLocationAPIEntity(..), MetroBookingConfigRes (..))
+import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..), FRFSConfigAPIRes, RideBookingRes(..),RideBookingAPIDetails(..),RideBookingDetails(..),RideBookingListRes(..),BookingLocationAPIEntity(..), FRFSConfigAPIRes (..), FrfsQuote(..), FRFSRouteAPI(..))
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
@@ -186,7 +186,7 @@ foreign import setEnabled :: String -> Boolean -> Unit
 
 foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
 
-generateQR:: EffectFn4 String String Int Int Unit
+generateQR :: EffectFn4 String String Int Int Unit
 generateQR  = mkEffectFn4 \qrString viewId size margin ->  launchAff_  $ void $ makeAff $
   \cb ->
     (runEffectFn5 _generateQRCode qrString viewId size margin (Right >>> cb))
@@ -1020,14 +1020,14 @@ getMetroConfigFromAppConfig config city = do
      }
     Just cfg -> cfg
 
-getMetroConfigFromCity :: City -> Maybe MetroBookingConfigRes -> CityMetroConfig
-getMetroConfigFromCity city fcResponse = 
+getMetroConfigFromCity :: City -> Maybe FRFSConfigAPIRes -> String -> CityMetroConfig
+getMetroConfigFromCity city fcResponse vehicleType = 
     let
-        bookingStartTime = maybe "04:30:00" (\(MetroBookingConfigRes r) -> r.bookingStartTime) fcResponse
-        bookingEndTime = maybe "22:30:00" (\(MetroBookingConfigRes r) -> r.bookingEndTime) fcResponse
-        customEndTime = maybe Nothing (\(MetroBookingConfigRes r) -> Just r.customEndTime) fcResponse
-        customDates = maybe [] (\(MetroBookingConfigRes r) -> r.customDates) fcResponse
-        isEventOngoing = maybe Nothing (\(MetroBookingConfigRes r) -> r.isEventOngoing) fcResponse
+        bookingStartTime = maybe "04:30:00" (\(FRFSConfigAPIRes r) -> r.bookingStartTime) fcResponse
+        bookingEndTime = maybe "22:30:00" (\(FRFSConfigAPIRes r) -> r.bookingEndTime) fcResponse
+        customEndTime = maybe Nothing (\(FRFSConfigAPIRes r) -> Just r.customEndTime) fcResponse
+        customDates = maybe [] (\(FRFSConfigAPIRes r) -> r.customDates) fcResponse
+        isEventOngoing = maybe Nothing (\(FRFSConfigAPIRes r) -> r.isEventOngoing) fcResponse
 
         convertedBookingStartTime = EHC.convertUTCtoISC bookingStartTime "HH:mm:ss"
         convertedBookingEndTime = 
@@ -1055,16 +1055,24 @@ getMetroConfigFromCity city fcResponse =
                 config
         Chennai ->
             mkCityBasedConfig
-                "ny_ic_chennai_metro"
-                (getString TICKETS_FOR_CHENNAI_METRO)
+                (if vehicleType == "BUS" then "ny_ic_kolkata_bus" else  "ny_ic_chennai_metro")
+                (if vehicleType == "BUS" then "Tickets for Chennai Bus" else getString TICKETS_FOR_CHENNAI_METRO)
                 "ny_ic_chennai_metro_map"
                 "ny_ic_chennai_metro_banner"
                 "#D8E2FF"
                 Color.metroBlue
-                ([ getString CHENNAI_METRO_TERM_2
-                , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else getString CHENNAI_METRO_TERM_1
-                , if isEventOngoing == Just true then getString FREE_TICKET_CASHBACK else ""
-                ])
+                ( if vehicleType == "BUS" 
+                  then 
+                    [ "Cancellation of tickets is not applicable" 
+                    , "The ticket is valid for only 30 minutes from the time of booking"
+                    , "Fare is commission-free and determined by the WBTC" 
+                    ] 
+                  else
+                    [ getString CHENNAI_METRO_TERM_2
+                    , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else getString CHENNAI_METRO_TERM_1
+                    , if isEventOngoing == Just true then getString FREE_TICKET_CASHBACK else ""
+                    ]
+                )
                 (getString $ CHENNAI_METRO_TIME convertedBookingStartTime convertedBookingEndTime)
                 false
                 config
@@ -1083,7 +1091,18 @@ getMetroConfigFromCity city fcResponse =
                 (getString $ DELHI_METRO_TIME convertedBookingStartTime convertedBookingEndTime)
                 false
                 config
-
+        Kolkata -> 
+          mkCityBasedConfig 
+            "ny_ic_kolkata_bus" 
+            "Tickets for kolkata Bus" 
+            "" 
+            "" 
+            "" 
+            "" 
+            ["Cancellation of tickets is not applicable" , "The ticket is valid for only 30 minutes from the time of booking" ,"Fare is commission-free and determined by the WBTC"] 
+            "" 
+            false 
+            config
         _ ->
             mkCityBasedConfig "" "" "" "" "" "" [] "" false config 
   where
@@ -1526,3 +1545,16 @@ disableChat fareProductType =
 isDeliveryInitiator :: Maybe (Array String) -> Boolean
 isDeliveryInitiator maybeTags = 
   maybe true (\tags -> elem "Initiator" tags) maybeTags
+
+foreign import clearTimer :: String -> Unit
+foreign import startTimer :: forall action. Int -> Boolean -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import decodeErrorMessage :: String -> String
+
+getFirstRoute :: FrfsQuote -> Maybe FRFSRouteAPI
+getFirstRoute (FrfsQuote quote) =
+  case quote.routeStations of
+    Just routes ->
+      case routes !! 0 of
+        Just route -> Just route
+        Nothing -> Nothing
+    Nothing -> Nothing

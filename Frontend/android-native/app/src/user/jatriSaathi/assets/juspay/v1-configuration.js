@@ -395,5 +395,6 @@ window.getMerchantConfig = function () {
       "minLocationsToBeShown" : 1,
       "minTripsToBeShown" : 1,
     }
+    , "enableDeliveryService" : false
   })
 }

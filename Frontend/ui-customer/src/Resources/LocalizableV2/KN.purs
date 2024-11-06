@@ -1681,4 +1681,5 @@ getKn = Keymap {
 , confirm_contacts : "ಸಂಪರ್ಕಗಳನ್ನು ದೃಢೀಕರಿಸಿ"
 , tickets_for_delhi_metro : "ದೆಹಲಿ ಮೆಟ್ರೋ ಟಿಕೆಟ್ಗಳು"
 , max_parcel_size : (\l b h -> "ಗರಿಷ್ಠ ಪಾರ್ಸೆಲ್ ಗಾತ್ರ: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, bus__ : "ಬಸ್"
 }
