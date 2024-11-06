@@ -1605,14 +1605,20 @@ export const showDialer = function (str) {
   }
 };
 
-export const showDialerVoip = function (str) {
-  return function (call) {
-    try {
-      window.JBridge.showDialerVoip(str, call);
-    } catch (error) {
-      window.JBridge.showDialerVoip(str);
-    }
+export const voipDialer = function (cuid) {
+  return function (isDriver) {
+      window.JBridge.voipDialer(cuid,isDriver);
   }
+};
+
+export const initSignedCall = function (cuid) {
+  return function (isDriver) {
+      window.JBridge.initSignedCall(cuid,isDriver);
+  }
+};
+
+export const destroySignedCall = function () {
+  return window.JBridge.destroySignedCall();
 };
 
 export const startLocationPollingAPI = function () {

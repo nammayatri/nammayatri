@@ -80,6 +80,7 @@ type AppConfigCustomer a =
   , safety :: Safety
   , enableBookAny :: Boolean
   , acPopupConfig :: AcPopupConfig
+  , voipDialerSwitch :: Boolean
   , showCheckoutRentalBanner :: Boolean
   , riderRideCompletedCard :: RiderRideCompletedCard
   | a

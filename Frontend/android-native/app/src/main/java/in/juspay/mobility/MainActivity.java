@@ -63,6 +63,7 @@ import com.clevertap.android.sdk.interfaces.NotificationHandler;
 import com.clevertap.android.signedcall.exception.InitException;
 import com.clevertap.android.signedcall.fcm.SignedCallNotificationHandler;
 import com.clevertap.android.signedcall.init.SignedCallAPI;
+//import com.clevertap.android.signedcall.init.SignedCallInitConfiguration;
 import com.clevertap.android.signedcall.init.SignedCallInitConfiguration;
 import com.clevertap.android.signedcall.interfaces.SignedCallInitResponse;
 import com.facebook.soloader.SoLoader;
@@ -455,10 +456,6 @@ public class MainActivity extends AppCompatActivity {
         CleverTapAPI.setDebugLevel(CleverTapAPI.LogLevel.VERBOSE);
         cleverTap.enableDeviceNetworkInfoReporting(true);
         CleverTapAPI.setNotificationHandler((NotificationHandler)new PushTemplateNotificationHandler());
-        initSignedCall();
-        // this below call is for setting up secondary channel using FCM for signed calls
-        // if the socket connection fails / not initiated for some reason, we can still receive calls on FCM channel
-        // CleverTapAPI.setSignedCallNotificationHandler(new SignedCallNotificationHandler());
 
         sharedPref.edit().putString("DEVICE_DETAILS", getDeviceDetails()).apply();
         sharedPref.edit().putString("UNIQUE_DD", NotificationUtils.uniqueDeviceDetails()).apply();
@@ -483,50 +480,6 @@ public class MainActivity extends AppCompatActivity {
         countAppUsageDays();
         startForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> handleGlResp(result, hyperServices, MainActivity.this));
 
-    }
-    private void initSignedCall(){
-        // initiating it here may increase battery usage
-        // to prevent this we can initialise it when the ride has actually been confirmed and deactivate it back when ride is completed or cancelled
-        // we can also have a listener for signed calls to do some operations by knowing status of the calls
-        // right now initialisation is failing becoz of account id and api key missing
-        // also the call will close when the user changes app or swipes off the call screen, to set it to foreground there are few changes
-        JSONObject initOptions = new JSONObject();
-        String cuid = UUID.randomUUID().toString().replaceAll("-", "");
-        // Create and store new cuid if not already created
-        // Or use some ID which we already have, just check the cuid restrictions on format
-        try {
-            initOptions.put("accountId", "id");
-            initOptions.put("apiKey", "key");
-            initOptions.put("cuid", cuid);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        SignedCallInitResponse signedCallInitListener = new SignedCallInitResponse() {
-            @Override
-            public void onSuccess() {
-                Log.d("SignedCallIntitation: ", "Successfully initiated Signed Call (voip)");
-                // //App is notified on the main thread when the Signed Call SDK is initialized
-            }
-            @Override
-            public void onFailure(@NonNull InitException initException) {
-                //App is notified on the main thread when the initialization is failed
-                Log.d("SignedCall: ", "error code: " + initException.getErrorCode()
-                        + "\n error message: " + initException.getMessage()
-                        + "\n error explanation: " + initException.getExplanation());
-                if (initException.getErrorCode() == InitException.SdkNotInitializedException.getErrorCode()) {
-                    //Handle this error here
-                    Log.d("SignedCall: ", "error code: " + initException.getErrorCode()
-                            + "\n error message: " + initException.getMessage()
-                            + "\n error explanation: " + initException.getExplanation());
-
-                }
-            }
-        };
-        SignedCallInitConfiguration initConfiguration = new SignedCallInitConfiguration.Builder(initOptions, true)
-        //                .promptReceiverReadPhoneStatePermission(false)
-                          .build();
-        CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(getApplicationContext());
-        SignedCallAPI.getInstance().init(getApplicationContext(), initConfiguration, cleverTapAPI, signedCallInitListener);
     }
 
     private void initiateRSIntegration() {
@@ -1216,6 +1169,8 @@ public class MainActivity extends AppCompatActivity {
         MyFirebaseMessagingService.deRegisterBundleUpdateCallback(bundleUpdateCallBack);
         MyFirebaseMessagingService.deRegisterShowNotificationCallBack(inappCallBack);
         inAppNotification = null;
+        SignedCallAPI.getInstance().disconnectSignallingSocket(getApplicationContext());
+        SignedCallAPI.getInstance().logout(getApplicationContext());
         super.onDestroy();
     }
 

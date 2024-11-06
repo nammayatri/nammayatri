@@ -1089,6 +1089,7 @@ type HomeScreenData =  {
 , onRideBannerTimerID :: String
 , onRideBannerTimer :: Int
 , scheduleRideCount :: Maybe (Tuple Int String)
+, voipDialerSwitch :: Boolean
 }
 
 type PlansState = {

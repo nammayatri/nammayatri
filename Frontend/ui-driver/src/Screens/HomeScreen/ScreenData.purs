@@ -175,6 +175,7 @@ initData =
       , onRideBannerTimerID :""
       , onRideBannerTimer : 0
       , scheduleRideCount : Nothing
+      , voipDialerSwitch : true
     }
   , props:
       { isFreeRide: false

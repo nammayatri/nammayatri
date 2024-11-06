@@ -327,6 +327,8 @@ screen initialState =
               PickUpFarFromCurrentLocation -> 
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
               RideAccepted -> do
+                when (initialState.data.config.voipDialerSwitch) $ do
+                  void $ pure $ JB.initSignedCall initialState.data.driverInfoCardState.bppRideId false
                 void $ pure $ setValueToLocalStore RATING_SKIPPED "false"
                 when 
                   (initialState.data.config.notifyRideConfirmationConfig.notify && any (_ == getValueToLocalStore NOTIFIED_CUSTOMER) ["false" , "__failed" , "(null)"])

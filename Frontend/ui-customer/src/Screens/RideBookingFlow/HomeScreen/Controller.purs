@@ -81,7 +81,7 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWi
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey, emChatSuggestion, chatSuggestion)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
-import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp,openUrlInMailApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, showDialerVoip, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers)
+import JBridge (showMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp,openUrlInMailApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, voipDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent, getKeyInSharedPrefKeys, generateSessionId, enableMyLocation, setMapPadding, defaultMarkerConfig, drawRoute, showDateTimePicker, removeAllMarkers)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels, getAssetsBaseUrl, getCityConfig, compareDate, getCurrentDatev2, getDateAfterNDaysv2, decodeBookingTimeList, encodeBookingTimeList, invalidBookingTime, shuffle, getUTCDay, getUTCMonth , getUTCFullYear, getUTCDate, getUTCHours, getUTCMinutes, getUTCSeconds , getISTDate, getISTMonth, getISTFullYear, getISTHours, getISTMinutes, getISTSeconds,formatMonth,calculateDateInfo)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -641,14 +641,19 @@ eval (DriverInfoCardActionController DriverInfoCardController.RateCardInfo) stat
 eval(MessagingViewActionController (MessagingView.Call)) state = do
   void $ pure $ performHapticFeedback unit
   void $ pure $ hideKeyboardOnNavigation true
-  if state.props.isChatWithEMEnabled || true
-    then do
-          _ <- pure $ spy "we came here" "adsasd"
-          void $ pure $ showDialer state.data.driverInfoCardState.currentChatRecipient.number true
+  if state.data.config.voipDialerSwitch then do
+          let driverCuid = if state.data.driverInfoCardState.bppRideId /= "" then "driver" <> state.data.driverInfoCardState.bppRideId else ""
+          when (driverCuid /= "") do
+                    void $ pure $ voipDialer driverCuid false
           continue state
-    -- else if length state.data.config.callOptions > 1 then
-    --   continue state { props { showCallPopUp = true } }
-    else callDriver state $ fromMaybe "ANONYMOUS" $ state.data.config.callOptions !! 0
+          -- TODO : handle other cases here
+  else if state.props.isChatWithEMEnabled 
+      then do
+            void $ pure $ showDialer state.data.driverInfoCardState.currentChatRecipient.number true
+            continue state
+  else if length state.data.config.callOptions > 1 then
+        continue state { props { showCallPopUp = true } }
+  else callDriver state $ fromMaybe "ANONYMOUS" $ state.data.config.callOptions !! 0
 
 eval (MessagingViewActionController (MessagingView.SendMessage)) state = do
   if state.data.messageToBeSent /= ""
@@ -3558,10 +3563,12 @@ findingQuotesSearchExpired gotQuotes isNormalRide =
 callDriver :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
 callDriver state callType = do
   let newState = state{props{ showCallPopUp = false }}
-      driverNumber = "12345"
+      driverNumber = case callType of
+                        "DIRECT" ->(fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber)
+                        _ -> if (STR.take 1 state.data.driverInfoCardState.merchantExoPhone) == "0" then state.data.driverInfoCardState.merchantExoPhone else "0" <> state.data.driverInfoCardState.merchantExoPhone
   updateWithCmdAndExit newState
     [ do
-        _ <- pure $ showDialerVoip driverNumber false
+        _ <- pure $ showDialer driverNumber false
         let _ = unsafePerformEffect $ logEventWithTwoParams state.data.logField ("ny_user_"<> callType <>"_call_click") "trip_id" (state.props.bookingId) "user_id" (getValueToLocalStore CUSTOMER_ID)
         pure NoAction
     ] $ CallDriver newState (if callType == "DIRECT" then DIRECT_CALLER else ANONYMOUS_CALLER) driverNumber

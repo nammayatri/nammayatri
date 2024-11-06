@@ -2270,7 +2270,8 @@ currentRideFlow activeRideResp isActiveRide = do
               pure $ Just lastStopMod)  decodeLastStopAddress
 
             setValueToLocalNativeStore IS_RIDE_ACTIVE  "true"
-            
+            when state.data.config.voipDialerSwitch do
+              void $ pure $ JB.initSignedCall activeRide.id true
             -- Night Ride Safety PopUp 
             when (activeRide.disabilityTag == Just ST.SAFETY) $ do 
               let curr_time = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
@@ -2581,6 +2582,7 @@ homeScreenFlow = do
             void $ pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
             void $ lift $ lift $ Remote.driverActiveInactive "true" $ toUpper $ show Online
             void $ pure $ setValueToLocalNativeStore TRIP_STATUS "ended"
+            void $ pure $ JB.destroySignedCall
             liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ride_completed" $ [{key : "Service Tier", value : unsafeToForeign state.data.activeRide.serviceTier},
                                                                                             {key : "Driver Vehicle", value : unsafeToForeign state.data.activeRide.driverVehicle}]
             void $ pure $ setValueToLocalStore IS_DRIVER_STATS_CALLED "false"
@@ -2693,6 +2695,7 @@ homeScreenFlow = do
       void $ lift $ lift $ Remote.driverActiveInactive "true" $ toUpper $ show Online
       void $ pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
       void $ updateStage $ HomeScreenStage HomeScreen
+      void $ pure $ JB.destroySignedCall
       when state.data.driverGotoState.isGotoEnabled do
         driverInfoResp <- Remote.getDriverInfoBT ""
         modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just driverInfoResp, gotoPopupType = if (fromMaybe false cancelRideResp.isGoHomeDisabled) then ST.REDUCED 0 else ST.NO_POPUP_VIEW})

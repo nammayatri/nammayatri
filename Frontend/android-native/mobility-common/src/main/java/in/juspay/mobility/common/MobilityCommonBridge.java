@@ -229,6 +229,7 @@ public class MobilityCommonBridge extends HyperBridge {
     public static final int LOCATION_PERMISSION_REQ_CODE = 1;
     public static final int BACKGROUND_LOCATION_REQ_CODE = 190;
     public static final int REQUEST_CALL = 8;
+    public static final int REQUEST_MICROPHONE = 9; // or any unique value
     protected static final int STORAGE_PERMISSION = 67;
     //Constants
     private static final int IMAGE_CAPTURE_REQ_CODE = 101;
@@ -4157,30 +4158,29 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public void showDialer(String phoneNum, boolean call) {
-        System.out.println("Inside show dialer function -------------------------------------------------------------------------------------------");
-        showDialerVoip(phoneNum, call);
-//        Intent intent = new Intent(call ? Intent.ACTION_CALL : Intent.ACTION_DIAL);
-//        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-//        intent.setData(Uri.parse("tel:" + phoneNum));
-//        if (call && ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
-//            phoneNumber = phoneNum;
-//            ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL);
-//        } else {
-//            bridgeComponents.getContext().startActivity(intent);
-//        }
+       Intent intent = new Intent(call ? Intent.ACTION_CALL : Intent.ACTION_DIAL);
+       intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+       intent.setData(Uri.parse("tel:" + phoneNum));
+       if (call && ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+           phoneNumber = phoneNum;
+           ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL);
+       } else {
+           bridgeComponents.getContext().startActivity(intent);
+       }
     }
 
- @JavascriptInterface
-    public void showDialerVoip(String phoneNum, boolean call) {
-       // new function can be created that will be used later for passing CUID of receiver for making outgoing the call
-      callOutgoing();
- }
-    public static void callOutgoing() {
-        // v.imp we need to have receiver CUID before proceeding with the outgoing call
-        // to get that we need to have it stored somewhere when the ride is booked ( for both rider and driver ), by passing in some existing API calls
+    @JavascriptInterface
+    public void voipDialer(String receiverCuid, boolean isDriver) {
         // this may fail if the user has not given mic and other permission
-        // that has to be handled in initialisation step by passing extra build param for push primer notifications
-        // also checking for call quality can be done here
+        if (ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_MICROPHONE);
+        }
+        receiverCuid = receiverCuid.replace("-", "");
+        String callContext;
+        if(isDriver){
+            callContext = "Calling Customer";
+        } else callContext = "Calling Driver";
+
         OutgoingCallResponse outgoingCallResponseListener = new OutgoingCallResponse() {
             @Override
             public void onSuccess() {
@@ -4205,15 +4205,68 @@ public class MobilityCommonBridge extends HyperBridge {
         };
         JSONObject callOptions = new JSONObject();
         try {
-            // Add optional properties to the callOptions JSON object
-            callOptions.put("receiver_image", "https://example.com/path/to/receiver/image.jpg"); // Optional
-            callOptions.put("initiator_image", "https://example.com/path/to/initiator/image.jpg"); // Optional
+            callOptions.put("remoteContext", isDriver ? "driver is calling" : "calling customer");
         } catch (JSONException e) {
             e.printStackTrace();
         }
-        // receiver id required here to make the call
-        SignedCallAPI.getInstance().call(getApplicationContext(), "receiver_id", "test", callOptions, outgoingCallResponseListener);
+
+        System.out.println("signed call cuid " + receiverCuid);
+
+        SignedCallAPI.getInstance().call(getApplicationContext(), receiverCuid, callContext, callOptions, outgoingCallResponseListener);
     }
+    @JavascriptInterface
+    public void initSignedCall(String cuid, boolean isDriver){
+        JSONObject initOptions = new JSONObject();
+        cuid = cuid.replace("-", "");
+        String Cuid = (isDriver) ? "driver" + cuid : "customer" + cuid;
+
+        try {
+            initOptions.put("accountId", "6715f01d5b143458ec1c1200");
+            initOptions.put("apiKey", "C82XhWtydCwnmFPRicYXcs9q6FUINbEiBCJBsUxhyB0fW1i5JOjkm2nTUwmGWV7j");
+            initOptions.put("cuid", Cuid);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        SignedCallInitResponse signedCallInitListener = new SignedCallInitResponse() {
+            @Override
+            public void onSuccess() {
+                Log.d("SignedCallIntitation: ", "Successfully initiated Signed Call (voip)");
+                System.out.println("Signed call " + "Successfully initiated Signed Call (voip)");
+                SignedCallAPI.setDebugLevel(SignedCallAPI.LogLevel.VERBOSE);
+                // //App is notified on the main thread when the Signed Call SDK is initialized
+            }
+            @Override
+            public void onFailure(@NonNull InitException initException) {
+                //App is notified on the main thread when the initialization is failed
+                Log.d("SignedCall: ", "error code: " + initException.getErrorCode()
+                        + "\n error message: " + initException.getMessage()
+                        + "\n error explanation: " + initException.getExplanation());
+                        System.out.println("failed signed call init");
+
+                if (initException.getErrorCode() == InitException.SdkNotInitializedException.getErrorCode()) {
+                    //Handle this error here
+                    Log.d("SignedCall: ", "error code: " + initException.getErrorCode()
+                            + "\n error message: " + initException.getMessage()
+                            + "\n error explanation: " + initException.getExplanation());
+                            System.out.println("failed signed call init");
+                }
+            }
+        };
+
+        SignedCallInitConfiguration initConfiguration = new SignedCallInitConfiguration.Builder(initOptions, false)
+                                                            .build();
+        CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(getApplicationContext());
+  
+        SignedCallAPI.getInstance().init(getApplicationContext(), initConfiguration, cleverTapAPI, signedCallInitListener);
+    }
+    
+    @JavascriptInterface
+    public void destroySignedCall() {
+        SignedCallAPI.getInstance().disconnectSignallingSocket(getApplicationContext());
+        SignedCallAPI.getInstance().logout(getApplicationContext());
+    }
+   
     @JavascriptInterface
     public void openUrlInApp(String url) {
         ExecutorManager.runOnMainThread(() -> {

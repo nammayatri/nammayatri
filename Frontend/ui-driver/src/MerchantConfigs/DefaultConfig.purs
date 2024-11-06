@@ -1119,6 +1119,7 @@ config =
   , scheduledRideConfig : {
     scheduledBannerTimerValue : 1800
   }
+  , voipDialerSwitch : true
 }
 
 registrationConfig :: RegistrationConfig

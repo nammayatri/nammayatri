@@ -49,6 +49,7 @@ type AppConfigDriver a =
     acExplanation :: Boolean,
     showMonthlyLeaderBoard :: Boolean,
     rentalRideVideoConfig :: RentalRideVideoConfig,
+    voipDialerSwitch :: Boolean,
     scheduledRideConfig :: ScheduledRideConfig
     | a
   } 

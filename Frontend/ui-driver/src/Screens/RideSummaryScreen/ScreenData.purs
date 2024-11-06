@@ -21,7 +21,8 @@ type RideSummaryScreenData = {
   fareDetails :: Array RateCardItem,
   cancelRidePopUpData :: S.CancelRidePopUpData,
   activeRideData :: S.ActiveRide,
-  route :: Maybe Route
+  route :: Maybe Route,
+  voipDialerSwitch :: Boolean
 }
 
 type RideSummaryScreenProps = {
@@ -190,6 +191,7 @@ initData = {
         }
     , activeRideData :dummyActiveRideData
     , route: Nothing
+    , voipDialerSwitch: true
   },
   props: {
     pickUpOpen : true,
