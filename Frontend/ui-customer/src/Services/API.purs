@@ -16,7 +16,7 @@
 module Services.API where
 
 import Data.Maybe
-
+import Foreign.Generic.Class (Options, SumEncoding(..),class GenericDecode, defaultOptions, decodeWithOptions, encodeWithOptions, SumEncoding(..), decodeOpts)
 import Control.Alt ((<|>))
 import Control.Monad.Except (runExcept,except)
 import Common.Types.App (Version(..), FeedbackAnswer)
@@ -30,7 +30,7 @@ import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 import Foreign (ForeignError(..), fail,unsafeFromForeign)
 import Foreign.Class (class Decode, class Encode, decode, encode)
-import Foreign.Generic (decodeJSON)
+import Foreign.Generic (decodeJSON, genericDecode)
 import Prelude (class Show, class Eq, show, ($), (<$>), (>>=))
 import Presto.Core.Types.API (class RestEndpoint, class StandardEncode, ErrorPayload, Method(..), defaultDecodeResponse, defaultMakeRequestWithoutLogs, standardEncode, defaultMakeRequestString)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
@@ -47,6 +47,7 @@ import Data.Lens ((^.))
 import Accessor (_amount)
 import DecodeUtil
 import Data.Function.Uncurried (runFn3)
+import Debug
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorPayload
 
@@ -691,17 +692,19 @@ newtype QuoteAPIEntity = QuoteAPIEntity {
   isValueAddNP :: Maybe Boolean
 }
 
-newtype QuoteAPIDetails = QuoteAPIDetails {
-  contents :: QuoteAPIContents,
-  fareProductType :: String
-}
-
-data QuoteAPIContents
+data QuoteAPIDetails
   = ONE_WAY OneWayQuoteAPIDetails
   | RENTAL RentalQuoteAPIDetails
   | DRIVER_OFFER DriverOfferAPIEntity
-  | SPECIAL_ZONE SpecialZoneQuoteAPIDetails
+  | AMBULANCE AmbulanceBookingAPIDetails
   | INTER_CITY IntercityQuoteAPIDetails
+  | DELIVERY DriverOfferAPIEntity
+  | OneWaySpecialZoneAPIDetails SpecialZoneQuoteAPIDetails
+
+
+newtype AmbulanceBookingAPIDetails = AmbulanceBookingAPIDetails { 
+  toLocation :: LocationAPIEntity
+}
 
 newtype OneWayQuoteAPIDetails = OneWayQuoteAPIDetails {
   distanceToNearestDriver :: String
@@ -887,6 +890,13 @@ instance showIntercityQuoteAPIDetails :: Show IntercityQuoteAPIDetails where sho
 instance decodeIntercityQuoteAPIDetails :: Decode IntercityQuoteAPIDetails where decode = defaultDecode
 instance encodeIntercityQuoteAPIDetails  :: Encode IntercityQuoteAPIDetails where encode = defaultEncode
 
+derive instance genericAmbulanceBookingAPIDetails :: Generic AmbulanceBookingAPIDetails _
+derive instance newtypeAmbulanceBookingAPIDetails :: Newtype AmbulanceBookingAPIDetails _
+instance standardEncodeAmbulanceBookingAPIDetails :: StandardEncode AmbulanceBookingAPIDetails where standardEncode (AmbulanceBookingAPIDetails body) = standardEncode body
+instance showAmbulanceBookingAPIDetails :: Show AmbulanceBookingAPIDetails where show = genericShow
+instance decodeAmbulanceBookingAPIDetails :: Decode AmbulanceBookingAPIDetails where decode = defaultDecode
+instance encodeAmbulanceBookingAPIDetails  :: Encode AmbulanceBookingAPIDetails where encode = defaultEncode
+
 
 derive instance genericOfferRes :: Generic OfferRes _
 instance standardEncodeOfferRes :: StandardEncode OfferRes where
@@ -904,33 +914,6 @@ instance encodeOfferRes  :: Encode OfferRes where
   encode (Metro body) = encode body
   encode (Public body) = encode body
 
-derive instance genericQuoteAPIContents :: Generic QuoteAPIContents _
-instance standardEncodeQuoteAPIContents :: StandardEncode QuoteAPIContents where
-  standardEncode (ONE_WAY body) = standardEncode body
-  standardEncode (DRIVER_OFFER body) = standardEncode body
-  standardEncode (SPECIAL_ZONE body) = standardEncode body
-  standardEncode (RENTAL body) = standardEncode body
-  standardEncode (INTER_CITY body) = standardEncode body
-instance showQuoteAPIContents :: Show QuoteAPIContents where
-  show = genericShow
-instance decodeQuoteAPIContents :: Decode QuoteAPIContents where
-  decode body =
-    case (runExcept $ (readProp "fareProductType" body) >>= decode) of
-      Right fareProductType -> case fareProductType of
-          "ONE_WAY"                          -> ONE_WAY <$> decode body
-          "DRIVER_OFFER"                     -> DRIVER_OFFER <$> decode body
-          "INTER_CITY"                       -> INTER_CITY <$> decode body
-          "RENTAL"                           -> RENTAL <$> decode body
-          "ONE_WAY_SPECIAL_ZONE"             -> SPECIAL_ZONE <$> decode body
-          _                                  -> (fail $ ForeignError "Unknown response but inside f")
-      Left err -> (fail $ ForeignError "Unknown response but outside fpt")
-instance encodeQuoteAPIContents :: Encode QuoteAPIContents where
-  encode (ONE_WAY body) = encode body
-  encode (DRIVER_OFFER body) = encode body
-  encode (SPECIAL_ZONE body) = encode body
-  encode (RENTAL body) = encode body
-  encode (INTER_CITY body) = encode body
-
 
 derive instance genericQuoteAPIEntity :: Generic QuoteAPIEntity _
 derive instance newtypeQuoteAPIEntity :: Newtype QuoteAPIEntity _
@@ -940,18 +923,16 @@ instance decodeQuoteAPIEntity :: Decode QuoteAPIEntity where decode = defaultDec
 instance encodeQuoteAPIEntity  :: Encode QuoteAPIEntity where encode = defaultEncode
 
 derive instance genericQuoteAPIDetails :: Generic QuoteAPIDetails _
-derive instance newtypeQuoteAPIDetails :: Newtype QuoteAPIDetails _ 
-instance standardEncodeQuoteAPIDetails :: StandardEncode QuoteAPIDetails where standardEncode (QuoteAPIDetails body) = standardEncode body
+-- derive instance newtypeQuoteAPIDetails :: Newtype QuoteAPIDetails _ 
+instance standardEncodeQuoteAPIDetails :: StandardEncode QuoteAPIDetails where standardEncode body = standardEncode body
 instance showQuoteAPIDetails :: Show QuoteAPIDetails where show = genericShow 
+instance genericDecodeQuoteAPIDetails :: GenericDecode QuoteAPIDetails where decodeOpts = genericDecode 
 instance decodeQuoteAPIDetails :: Decode QuoteAPIDetails where
-      decode body = case (runExcept $ (readProp "fareProductType" body)) of
-                      Right fareProductType -> 
-                        case (runExcept $ (readProp "contents" body)) of
-                          Right contents ->
-                            let updatedBody = runFn3 unsafeSetForeign "contents" body $ runFn3 unsafeSetForeign "fareProductType" contents fareProductType
-                            in defaultDecode $ updatedBody
-                          Left err     -> (fail $ ForeignError "Unknown response")
-                      Left err     -> (fail $ ForeignError "Unknown response")
+      decode body = do 
+        let (TaggedObject sumEncoding) = defaultOptions.sumEncoding
+        let updatedSumEncoding = TaggedObject sumEncoding{tagFieldName = "fareProductType"}
+        let updatedOptions = defaultOptions{sumEncoding = updatedSumEncoding}
+        decodeOpts updatedOptions body
   
 instance encodeQuoteAPIDetails  :: Encode QuoteAPIDetails where encode = defaultEncode
 

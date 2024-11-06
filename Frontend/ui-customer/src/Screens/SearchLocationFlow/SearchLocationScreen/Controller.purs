@@ -51,7 +51,7 @@ import Effect.Aff (launchAff)
 import Effect.Uncurried (runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isTrue, flowRunner, liftFlow)
-import Helpers.Utils (updateLocListWithDistance, setText, getSavedLocationByTag, getCurrentLocationMarker, normalRoute)
+import Helpers.Utils (updateLocListWithDistance, setText, getSavedLocationByTag, getCurrentLocationMarker, normalRoute, getFareProductTypeByData)
 import JBridge (currentPosition, toast, hideKeyboardOnNavigation, updateInputString, locateOnMap, locateOnMapConfig, scrollViewFocus, showKeyboard, scrollViewFocus, animateCamera, hideKeyboardOnNavigation, exitLocateOnMap, removeMarker, Location, setMapPadding, getExtendedPath, drawRoute, defaultMarkerConfig, getLayoutBounds, mkRouteConfig, removeAllPolylines)
 import JBridge as JB
 import Log (trackAppActionClick)
@@ -63,7 +63,7 @@ import Screens (getScreen, ScreenName(..))
 import Screens.HomeScreen.Transformer (getQuotesTransformer, getFilteredQuotes, transformQuote, getFareProductType, extractFareProductType)
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationConfig)
 import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo, initData) as SearchLocationScreenData
-import Services.API (QuoteAPIEntity(..), GetQuotesRes(..), OfferRes(..), RentalQuoteAPIDetails(..), QuoteAPIContents(..), Snapped(..), LatLong(..), Route(..))
+import Services.API (QuoteAPIEntity(..), GetQuotesRes(..), OfferRes(..), RentalQuoteAPIDetails(..), Snapped(..), LatLong(..), Route(..))
 import Services.Backend (walkCoordinates, walkCoordinate)
 import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..))
 import Types.App (GlobalState(..), defaultGlobalState, FlowBT, ScreenType(..))
@@ -71,6 +71,7 @@ import Language.Strings (getString)
 import Components.ChooseYourRide.Controller as ChooseYourRideController
 import Language.Types (STR(..))
 import Helpers.TipConfig
+import Services.API as API
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -593,7 +594,7 @@ drawRouteOnMap state =
 
 quotesFlow res state = do
   let quoteList = getQuotesTransformer res.quotes state.appConfig.estimateAndQuoteConfig MB.Nothing
-      fareProductType = getFareProductType $ MB.maybe "" extractFareProductType (DA.head res.quotes)
+      fareProductType = getFareProductTypeByData $ MB.maybe MB.Nothing extractFareProductType (DA.head res.quotes)
       filteredQuoteList = (getFilteredQuotes res.quotes state.appConfig.estimateAndQuoteConfig)
       sortedByFare = DA.sortBy compareByFare filteredQuoteList
       rentalsQuoteList =  (DA.mapWithIndex (\index quote -> 
@@ -601,8 +602,8 @@ quotesFlow res state = do
         fareDetails = case quote of 
           RentalQuotes body -> 
             let (QuoteAPIEntity quoteEntity) = body.onRentalCab
-            in case (quoteEntity.quoteDetails)^._contents of
-              (RENTAL contents) -> 
+            in case quoteEntity.quoteDetails of
+              (API.RENTAL contents) -> 
                 let (RentalQuoteAPIDetails quoteDetails) = contents 
                 in (transFormQuoteDetails quoteDetails)
               _ -> dummyFareQuoteDetails

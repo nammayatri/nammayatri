@@ -462,6 +462,7 @@ data Action = NoAction
             | HomeScreenBannerCountDownTimer Int String String
             | OnRideBannerCountDownTimer Int String String
             | GetRideCount Int
+            | UpdateRetryRideList Boolean
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -1648,6 +1649,8 @@ eval (UpComingRideDetails  resp) state = do
 
 eval ScheduledRideBannerClick state  =  exit $ GoToRideSummaryScreen state
 
+eval (UpdateRetryRideList retry) state = continue state {props {retryRideList = retry}}
+ 
 eval _ state = update state
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Boolean -> Effect Unit
