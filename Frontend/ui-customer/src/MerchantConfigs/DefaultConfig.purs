@@ -271,7 +271,8 @@ config =
     enableAcPopup : false,
     enableRentalReallocation : true,
     enableEditDestination : false,
-    enableHelpAndSupport : true
+    enableHelpAndSupport : true,
+    enableBusBooking : false
   }
 
   , rideCompletedCardConfig : {
@@ -677,7 +678,7 @@ config =
             , rentalWaitingChargeConfig {
                 cabs {
                   freeMinutes = 3.0
-                , perMinCharges = 1.0
+                , perMinCharges = 2.0
                 }
               }
             , intercityWaitingChargeConfig {
@@ -792,6 +793,7 @@ config =
       enableNonAcPopup : false,
       showAfterTime : 5
     }
+  , enableDeliveryService : false
 }
 
 defaultCityConfig :: CityConfig

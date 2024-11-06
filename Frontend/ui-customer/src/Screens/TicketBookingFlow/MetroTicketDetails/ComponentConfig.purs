@@ -17,9 +17,10 @@ module Screens.TicketBookingFlow.MetroTicketDetails.ComponentConfig where
 import Prelude
 import Data.String as DS
 import Screens.Types as ST
-import Data.Maybe(Maybe(..))
+import Data.Maybe(Maybe(..), maybe)
 import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton.Controller as PrimaryButton
+import Components.SourceToDestination.Controller as SourceToDestination
 import Types.App
 import PrestoDOM 
 import Language.Strings
@@ -32,6 +33,7 @@ import Data.Tuple(Tuple(..))
 import Data.Array
 import Debug
 import Helpers.Utils (getMetroConfigFromCity, CityMetroConfig(..))
+import Helpers.Utils as HU
 
 newtype CancelBookingPopUpData = CancelBookingPopUpData { 
     title :: String
@@ -51,7 +53,7 @@ cancelBookingButtonConfig :: ST.MetroTicketDetailsScreenState -> PrimaryButton.C
 cancelBookingButtonConfig state = 
   let
     config = PrimaryButton.config
-    (CityMetroConfig cityMetroConfig) = getMetroConfigFromCity state.data.city Nothing
+    (CityMetroConfig cityMetroConfig) = getMetroConfigFromCity state.data.city Nothing ""
     (StatusPillConfig pillConfig) = getStatusPillConfig state
     cancelButtonVisibility = case pillConfig.ticketStatus of
       "ACTIVE" -> true
@@ -172,7 +174,7 @@ getStatusPillConfig state =
       Just ticket ->  case ticket.status of
            "ACTIVE" -> mkStatusPillConfig ticket.status (getString ACTIVE_STR) Color.green900
            "EXPIRED" -> mkStatusPillConfig ticket.status (getString  EXPIRED_STR) Color.red900
-           "USED" -> mkStatusPillConfig ticket.status (getString USED_STR) Color.greyDavy 
+           "USED" -> mkStatusPillConfig ticket.status (getString VERIFIED) Color.greyDavy 
            _ -> mkStatusPillConfig ticket.status ticket.status Color.grey900 
       Nothing -> mkStatusPillConfig "" "" Color.grey900 
   where
@@ -182,3 +184,43 @@ getStatusPillConfig state =
         statusString,
         statusPillColor
       }
+
+sourceToDestinationConfig :: ST.MetroTicketDetailsScreenState -> SourceToDestination.Config
+sourceToDestinationConfig state =
+  let
+    config = SourceToDestination.config
+    originStop = state.data.metroRoute !! 0
+    destinationStop = state.data.metroRoute !! ((length state.data.metroRoute) - 1)
+    sourceToDestinationConfig' =
+      config
+        { sourceImageConfig
+          { imageUrl = HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_green_circle"
+          , margin = MarginTop 3
+          , width = V 8
+          , height = V 8
+          }
+        , sourceTextConfig
+          { text = maybe "" (\stop -> stop.name) originStop
+          , margin = MarginHorizontal 16 15
+          , color = Color.black500
+          , ellipsize = true
+          , maxLines = 1
+          , textStyle = FontStyle.Body1
+          }
+        , destinationImageConfig
+          { imageUrl = HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_red_circle"
+          , margin = MarginTop 3
+          , width = V 8
+          , height = V 8
+          }
+        , destinationTextConfig
+          { text = maybe "" (\stop -> stop.name) destinationStop
+          , margin = MarginHorizontal 16 15
+          , color = Color.black500
+          , ellipsize = true
+          , maxLines = 1
+          , textStyle = FontStyle.Body1
+          }
+        }
+  in
+    sourceToDestinationConfig'

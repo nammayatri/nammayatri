@@ -110,6 +110,13 @@ import Services.API as API
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
 import Debug (spy)
+import Data.Int
+import Components.CommonComponentConfig as CommonComponentConfig
+import RemoteConfig as RemoteConfig
+import MerchantConfig.Types
+import Data.Tuple as DT
+import Screens.NammaSafetyFlow.Components.SafetyUtils as SU
+import Components.MessagingView.Controller as CMC
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state =
@@ -1998,6 +2005,7 @@ locationTagBarConfig state =
             <> (if state.data.currentCityConfig.enableIntercity then [ { image: "ny_ic_intercity", text: (getString INTER_CITY_), id: "INTER_CITY", background: Color.blue600', showBanner: GONE } ] else [])
             <> ([{image: "ny_ic_delivery", text: (getString DELIVERY_STR), id: "DELIVERY", background: Color.seashell, showBanner: GONE }])
             <> if state.data.currentCityConfig.enableIntercityBus then [ { image: "ny_ic_intercity_bus", text: getString INTERCITY_BUS, id: "INTERCITY_BUS", background: Color.blue600', showBanner: GONE } ] else []
+            <> ([{image: "ny_ic_bus_icon", text: "Bus", id: "BUS", background: Color.amber, showBanner: GONE }])
         )
   in
     { tagList: locTagList }
@@ -2441,7 +2449,9 @@ getMarkerActionImageConifg state driverWithinPickupThreshold = do
 nammaServices :: LazyCheck -> Array RemoteConfig.Service
 nammaServices dummy = 
   let enabledServices = RemoteConfig.getEnabledServices $ DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
+      _ = spy "enabledServices" enabledServices
       allServices = getAllServices FunctionCall
+      _ = spy "allServices" allServices
   in DA.foldl (\acc x -> do 
                           let mbService = DA.find(\service -> (show service.type == x)) allServices
                           case mbService of 
@@ -2451,16 +2461,19 @@ nammaServices dummy =
 
 getAllServices :: LazyCheck -> Array RemoteConfig.Service
 getAllServices dummy = 
-  [ {type: RemoteConfig.INSTANT, image: fetchImage COMMON_ASSET "ny_ic_instant_new", name: INSTANT, backgroundColor: "#f2f9f3" , preferredEstimateOrder : [], secondaryPillColor : "#f2f9f3", hasSecondaryPill: false}
-  , {type: RemoteConfig.TRANSIT, image: fetchImage COMMON_ASSET "ny_ic_transit", name: TRANSIT, backgroundColor: "#faeeee" , preferredEstimateOrder : [], secondaryPillColor : "#faeeee", hasSecondaryPill: false}
-  , {type: RemoteConfig.INTERCITY, image: fetchImage COMMON_ASSET "ny_ic_intercity_service", name: INTERCITY_STR, backgroundColor: "#f1f8fe" , preferredEstimateOrder : [], secondaryPillColor : "#f1f8fe", hasSecondaryPill: false}
-  , {type: RemoteConfig.RENTAL, image: fetchImage COMMON_ASSET "ny_ic_rental_service", name: RENTAL_STR, backgroundColor: "#fef9eb" , preferredEstimateOrder : [], secondaryPillColor : "#fef9eb", hasSecondaryPill: false}
-  , {type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY_STR, backgroundColor: "#fef9eb" , preferredEstimateOrder : [], secondaryPillColor : "#fef9eb", hasSecondaryPill: false}
-  , {type: RemoteConfig.INTERCITY_BUS, image: fetchImage COMMON_ASSET "ny_ic_intercity_bus_service", name: INTERCITY_BUS, backgroundColor: "#fdf3ec" , preferredEstimateOrder : [], secondaryPillColor : "#fdf3ec", hasSecondaryPill: false}
-  , {type: RemoteConfig.BIKE_TAXI, image: fetchImage COMMON_ASSET "ny_ic_bike_taxi_service", name: BIKE_TAXI, backgroundColor: "#F0FAF0" , preferredEstimateOrder : ["BIKE"], secondaryPillColor : "#F0FAF0", hasSecondaryPill: false}
-  , {type: RemoteConfig.METRO, image: fetchImage COMMON_ASSET "ny_ic_metro_service", name: METRO_TICKETS, backgroundColor: "#1AE55454" , preferredEstimateOrder : [], secondaryPillColor : "#E55454", hasSecondaryPill: false}
-  , {type: RemoteConfig.METRO_OFFER, image: fetchImage COMMON_ASSET "ny_ic_metro_service", name: METRO_TICKETS, backgroundColor: "#1AE55454" , preferredEstimateOrder : [], secondaryPillColor : "#E55454", hasSecondaryPill: true}
-  ]
+  let config = getAppConfig appConfig
+      enableBusBooking = config.feature.enableBusBooking -- For backward Compatibility
+  in
+    [ {type: RemoteConfig.INSTANT, image: fetchImage COMMON_ASSET "ny_ic_instant_new", name: INSTANT, backgroundColor: "#f2f9f3" , preferredEstimateOrder : [], secondaryPillColor : "#f2f9f3", hasSecondaryPill: false}
+    , {type: RemoteConfig.TRANSIT, image: fetchImage COMMON_ASSET "ny_ic_transit", name: TRANSIT, backgroundColor: "#faeeee" , preferredEstimateOrder : [], secondaryPillColor : "#faeeee", hasSecondaryPill: false}
+    , {type: RemoteConfig.INTERCITY, image: fetchImage COMMON_ASSET "ny_ic_intercity_service", name: INTERCITY_STR, backgroundColor: "#f1f8fe" , preferredEstimateOrder : [], secondaryPillColor : "#f1f8fe", hasSecondaryPill: false}
+    , {type: RemoteConfig.RENTAL, image: fetchImage COMMON_ASSET "ny_ic_rental_service", name: RENTAL_STR, backgroundColor: "#fef9eb" , preferredEstimateOrder : [], secondaryPillColor : "#fef9eb", hasSecondaryPill: false}
+    , {type: RemoteConfig.INTERCITY_BUS, image: fetchImage COMMON_ASSET "ny_ic_intercity_bus_service", name: INTERCITY_BUS, backgroundColor: "#fdf3ec" , preferredEstimateOrder : [], secondaryPillColor : "#fdf3ec", hasSecondaryPill: false}
+    , {type: RemoteConfig.BIKE_TAXI, image: fetchImage COMMON_ASSET "ny_ic_bike_taxi_service", name: BIKE_TAXI, backgroundColor: "#F0FAF0" , preferredEstimateOrder : ["BIKE"], secondaryPillColor : "#F0FAF0", hasSecondaryPill: false}
+    , {type: RemoteConfig.METRO, image: fetchImage COMMON_ASSET "ny_ic_metro_service", name: METRO_TICKETS, backgroundColor: "#1AE55454" , preferredEstimateOrder : [], secondaryPillColor : "#E55454", hasSecondaryPill: false}
+    , {type: RemoteConfig.METRO_OFFER, image: fetchImage COMMON_ASSET "ny_ic_metro_service", name: METRO_TICKETS, backgroundColor: "#1AE55454" , preferredEstimateOrder : [], secondaryPillColor : "#E55454", hasSecondaryPill: true}
+    ] <> (if config.enableDeliveryService then [{type: RemoteConfig.DELIVERY, image: fetchImage COMMON_ASSET "ny_ic_delivery_service", name: DELIVERY_STR, backgroundColor: "#fef9eb", preferredEstimateOrder : [], secondaryPillColor : "#E55454", hasSecondaryPill: false}] else [])
+      <> (if enableBusBooking then [{type: RemoteConfig.BUS, image: fetchImage COMMON_ASSET "ny_ic_bus_icon", name: BUS__, backgroundColor: "#FFF3EB" , preferredEstimateOrder : ["BUS"], secondaryPillColor : "#E55454", hasSecondaryPill: false}] else [])
 
 getChatDetails :: ST.HomeScreenState -> Array NewContacts -> Array ChatContacts
 getChatDetails state contacts = 
@@ -2654,7 +2667,7 @@ fetchRideDetails state =
       isScheduled : isScheduled,
       returnTime : Just returnTime,
       roundTrip : Just (state.props.searchLocationModelProps.tripType == ROUND_TRIP),
-      isAirConditioned: Just false,
+      isAirConditioned: selectedEstimatesObject.airConditioned,
       startTime : startTime,
       toLocation : Just (ST.LocationInformation {
         address : state.data.destinationAddress,

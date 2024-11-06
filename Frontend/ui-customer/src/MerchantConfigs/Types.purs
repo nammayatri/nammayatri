@@ -83,6 +83,7 @@ type AppConfigCustomer a =
   , acPopupConfig :: AcPopupConfig
   , showCheckoutRentalBanner :: Boolean
   , riderRideCompletedCard :: RiderRideCompletedCard
+  , enableDeliveryService :: Boolean
   | a
   }
 
@@ -271,7 +272,8 @@ type Features = {
   enableAcPopup :: Boolean,
   enableRentalReallocation :: Boolean,
   enableEditDestination :: Boolean,
-  enableHelpAndSupport :: Boolean
+  enableHelpAndSupport :: Boolean,
+  enableBusBooking :: Boolean
   }
 
 type RideCompletedCardConfig = {

@@ -26,7 +26,7 @@ import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Pay
 import Components.LocationListItem.Controller (locationListStateObj)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume, runFree)
-import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find, elem)
+import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find, elem, catMaybes)
 import Data.Array.NonEmpty (fromArray)
 import Data.Boolean (otherwise)
 import Data.Date (Date)
@@ -78,7 +78,7 @@ import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations,Stage)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo, BookingTime, VehicleViewType(..), FareProductType(..))
-import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..), MetroBookingConfigRes,RideBookingRes(..),RideBookingAPIDetails(..),RideBookingDetails(..),RideBookingListRes(..),BookingLocationAPIEntity(..), MetroBookingConfigRes (..))
+import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..), FRFSConfigAPIRes, RideBookingRes(..),RideBookingAPIDetails(..),RideBookingDetails(..),RideBookingListRes(..),BookingLocationAPIEntity(..), FRFSConfigAPIRes (..))
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
@@ -114,6 +114,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Debug
 import RemoteConfig as RC
 import Services.API as API
+import Data.Bounded (top)
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -186,7 +187,7 @@ foreign import setEnabled :: String -> Boolean -> Unit
 
 foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
 
-generateQR:: EffectFn4 String String Int Int Unit
+generateQR :: EffectFn4 String String Int Int Unit
 generateQR  = mkEffectFn4 \qrString viewId size margin ->  launchAff_  $ void $ makeAff $
   \cb ->
     (runEffectFn5 _generateQRCode qrString viewId size margin (Right >>> cb))
@@ -1039,14 +1040,14 @@ getMetroConfigFromAppConfig config city = do
      }
     Just cfg -> cfg
 
-getMetroConfigFromCity :: City -> Maybe MetroBookingConfigRes -> CityMetroConfig
-getMetroConfigFromCity city fcResponse =
+getMetroConfigFromCity :: City -> Maybe FRFSConfigAPIRes -> String -> CityMetroConfig
+getMetroConfigFromCity city fcResponse vehicleType = 
     let
-        bookingStartTime = maybe "04:30:00" (\(MetroBookingConfigRes r) -> r.bookingStartTime) fcResponse
-        bookingEndTime = maybe "22:30:00" (\(MetroBookingConfigRes r) -> r.bookingEndTime) fcResponse
-        customEndTime = maybe Nothing (\(MetroBookingConfigRes r) -> Just r.customEndTime) fcResponse
-        customDates = maybe [] (\(MetroBookingConfigRes r) -> r.customDates) fcResponse
-        isEventOngoing = maybe Nothing (\(MetroBookingConfigRes r) -> r.isEventOngoing) fcResponse
+        bookingStartTime = maybe "04:30:00" (\(FRFSConfigAPIRes r) -> r.bookingStartTime) fcResponse
+        bookingEndTime = maybe "22:30:00" (\(FRFSConfigAPIRes r) -> r.bookingEndTime) fcResponse
+        customEndTime = maybe Nothing (\(FRFSConfigAPIRes r) -> Just r.customEndTime) fcResponse
+        customDates = maybe [] (\(FRFSConfigAPIRes r) -> r.customDates) fcResponse
+        isEventOngoing = maybe Nothing (\(FRFSConfigAPIRes r) -> r.isEventOngoing) fcResponse
 
         convertedBookingStartTime = EHC.convertUTCtoISC bookingStartTime "HH:mm:ss"
         convertedBookingEndTime =
@@ -1068,11 +1069,19 @@ getMetroConfigFromCity city fcResponse =
                 config
         Chennai ->
             mkCityBasedConfig
-                (getString TICKETS_FOR_CHENNAI_METRO)
-                ([ getString CHENNAI_METRO_TERM_2
-                , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else getString CHENNAI_METRO_TERM_1
-                , if isEventOngoing == Just true then getString FREE_TICKET_CASHBACK else ""
-                ])
+                (if vehicleType == "BUS" then getString TICKETS_FOR_CHENNAI_BUS else getString TICKETS_FOR_CHENNAI_METRO)
+                ( if vehicleType == "BUS" 
+                  then 
+                    [ "Cancellation of tickets is not applicable" 
+                    , "The ticket is valid for only 30 minutes from the time of booking"
+                    , "Fare is commission-free and determined by the WBTC" 
+                    ] 
+                  else
+                    [ getString CHENNAI_METRO_TERM_2
+                    , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else getString CHENNAI_METRO_TERM_1
+                    , if isEventOngoing == Just true then getString FREE_TICKET_CASHBACK else ""
+                    ]
+                )
                 (getString $ CHENNAI_METRO_TIME convertedBookingStartTime convertedBookingEndTime)
                 config
         Delhi ->
@@ -1084,6 +1093,12 @@ getMetroConfigFromCity city fcResponse =
                 ])
                 (getString $ DELHI_METRO_TIME convertedBookingStartTime convertedBookingEndTime)
                 config
+        Kolkata -> 
+          mkCityBasedConfig 
+            (getString TICKETS_FOR_KOLKATA_BUS)
+            [getString CHENNAI_METRO_TERM_1 , getString TICKET_VALIDITY_30_MINUTES , getString FARE_COMMISSION_FREE_WBTC] 
+            "" 
+            config
         _ ->
             mkCityBasedConfig "" [] "" config
   where
@@ -1529,3 +1544,5 @@ isDeliveryInitiator maybeTags =
   maybe true (\tags -> elem "Initiator" tags) maybeTags
 
 foreign import isHybridApp :: Effect Boolean
+
+foreign import decodeErrorMessage :: String -> String

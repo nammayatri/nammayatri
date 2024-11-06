@@ -21,7 +21,7 @@ import Components.InputView.Controller
 import Components.SeparatorView.View as SeparatorView
 import Styles.Colors as Color
 import Mobility.Prelude (boolToVisibility)
-import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..),Accessiblity(..),linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, clickable, afterRender, textSize, rippleColor ,accessibilityHint , accessibility)
+import PrestoDOM (PrestoDOM(..),alpha, Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..),Accessiblity(..),linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, clickable, afterRender, textSize, rippleColor ,accessibilityHint , accessibility)
 import Data.Array (mapWithIndex, length)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Engineering.Helpers.Commons (getNewIDWithTag, isTrue)
@@ -32,6 +32,7 @@ import JBridge (debounceFunction, showKeyboard)
 import Resources.Constants (getDelayForAutoComplete)
 import Helpers.CommonView (emptyTextView)
 import Debug (spy)
+import Data.String (null)
 
 view :: forall w. (Action -> Effect Unit) -> InputViewConfig -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -40,7 +41,7 @@ view push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , padding $ PaddingHorizontal 16 16
-    , background Color.black900 
+    , background Color.black900
     ][  if state.headerVisibility then backPressView state push else emptyTextView
       , linearLayout
         [ height WRAP_CONTENT
@@ -104,6 +105,7 @@ inputImageView push config =
           [ height $ config.prefixImage.height
           , width $ config.prefixImage.width
           , imageWithFallback $ fetchImage FF_COMMON_ASSET config.prefixImage.imageName
+          , visibility $ boolToVisibility $ not $ null config.prefixImage.imageName
           ]
       , if showSeparator then SeparatorView.view (config.imageSeparator) else emptyTextView
       ]
@@ -181,6 +183,7 @@ nonEditableTextView push config = let
     , margin $ config.inputTextConfig.margin
     , cornerRadius $ config.inputTextConfig.cornerRadius
     , clickable $ config.isClickable 
+    , alpha config.alpha
     , onClick push $ const $ TextFieldFocusChanged config.inputTextConfig.id true true
     , rippleColor $ Color.rippleShade
     , stroke $ strokeValue 

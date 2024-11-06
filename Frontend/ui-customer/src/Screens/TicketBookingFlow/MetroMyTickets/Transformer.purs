@@ -25,11 +25,11 @@ import Engineering.Helpers.Commons
 import Data.Function.Uncurried as DFU
 import JBridge as JB
 
-metroTicketListApiToMyTicketsTransformer ::  (Array MetroTicketBookingStatus) -> MetroMyTicketsScreenState -> MetroMyTicketsScreenState 
+metroTicketListApiToMyTicketsTransformer ::  (Array FRFSTicketBookingStatusAPIRes) -> MetroMyTicketsScreenState -> MetroMyTicketsScreenState 
 metroTicketListApiToMyTicketsTransformer ticketList state = 
   let 
-    activeTickets' = metroTicketCardTransformer $ filter (\ (MetroTicketBookingStatus bookingStatus) -> activeTicketEvaluator bookingStatus.status bookingStatus.tickets) ticketList
-    pastTickets' = reverse $ metroTicketCardTransformer $ filter (\ (MetroTicketBookingStatus bookingStatus) -> pastTicketEvaluator bookingStatus.status bookingStatus.tickets) ticketList
+    activeTickets' = metroTicketCardTransformer $ filter (\ (FRFSTicketBookingStatusAPIRes bookingStatus) -> activeTicketEvaluator bookingStatus.status bookingStatus.tickets) ticketList
+    pastTickets' = reverse $ metroTicketCardTransformer $ filter (\ (FRFSTicketBookingStatusAPIRes bookingStatus) -> pastTicketEvaluator bookingStatus.status bookingStatus.tickets) ticketList
   in
     state {
       data {
@@ -49,11 +49,11 @@ metroTicketListApiToMyTicketsTransformer ticketList state =
       in (any (_ == status) ["CANCELLED", "FAILED", "CANCEL_INITIATED", "TECHNICAL_CANCEL_REJECTED"]) || (isTicketExpired validTill)
 
 
-metroTicketCardTransformer :: Array MetroTicketBookingStatus -> Array MetroTicketCardData
+metroTicketCardTransformer :: Array FRFSTicketBookingStatusAPIRes -> Array MetroTicketCardData
 metroTicketCardTransformer  ticketList = map ticketItemTransformer ticketList
 
-ticketItemTransformer :: MetroTicketBookingStatus -> MetroTicketCardData
-ticketItemTransformer (MetroTicketBookingStatus bookingItem) = 
+ticketItemTransformer :: FRFSTicketBookingStatusAPIRes -> MetroTicketCardData
+ticketItemTransformer (FRFSTicketBookingStatusAPIRes bookingItem) = 
   let 
     sourceStationEnum = bookingItem.stations !! 0
     destinationStationEnum = bookingItem.stations !! ((length bookingItem.stations)- 1)
@@ -63,7 +63,7 @@ ticketItemTransformer (MetroTicketBookingStatus bookingItem) =
     destinationName' = getStationName destinationStationEnum
     noOfTickets' = bookingItem.quantity
     createdAt' = (convertUTCtoISC bookingItem.createdAt "Do MMM YYYY")
-    metroTicketStatusApiResp' = (MetroTicketBookingStatus bookingItem)
+    metroTicketStatusApiResp' = (FRFSTicketBookingStatusAPIRes bookingItem)
     status' = bookingItem.status
     validUntill' = (convertUTCtoISC bookingItem.validTill "hh:mm A") <> ", " <> (convertUTCtoISC bookingItem.validTill "Do MMM YYYY") 
   in 
