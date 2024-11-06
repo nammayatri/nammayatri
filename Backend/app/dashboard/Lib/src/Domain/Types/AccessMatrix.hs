@@ -22,8 +22,10 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet as Prov
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as ProviderManagement
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.RideBooking as ProviderRideBooking
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management as RiderManagement
+import qualified Data.Aeson as A
 import qualified Data.List
 import Data.Singletons.TH
+import qualified Data.Text as T
 import Domain.Types.Merchant
 import Domain.Types.Role as DRole
 import Domain.Types.ServerName as DSN
@@ -46,7 +48,7 @@ data UserAccessType
 $(mkBeamInstancesForEnum ''UserAccessType)
 
 newtype UserActionTypeWrapper = UserActionTypeWrapper {getUserActionType :: UserActionType}
-  deriving newtype (ToJSON, FromJSON, ToSchema, Eq, Ord)
+  deriving newtype (ToSchema, Eq, Ord)
 
 instance Text.Show.Show UserActionTypeWrapper where
   show (UserActionTypeWrapper uat) = case uat of
@@ -89,6 +91,15 @@ instance Text.Read.Read UserActionTypeWrapper where
     where
       app_prec = 9
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
+
+instance FromJSON UserActionTypeWrapper where
+  parseJSON = A.withText "uerActionType" $ \str -> do
+    case Text.Read.readEither @UserActionTypeWrapper (T.unpack str) of
+      Left _err -> fail "Could not parse UserActionType"
+      Right uat -> pure uat
+
+instance ToJSON UserActionTypeWrapper where
+  toJSON = A.String . T.pack . Text.Show.show @UserActionTypeWrapper
 
 -- TODO remove old
 data UserActionType
@@ -349,7 +360,7 @@ data UserActionType
   | PROVIDER_RIDE_BOOKING ProviderRideBooking.RideBookingUserActionType
   | RIDER_MANAGEMENT RiderManagement.ManagementUserActionType
   -- -- | RIDER_RIDE_BOOKING RiderRideBooking.RideBookingUserActionType
-  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
+  deriving (Show, Read, Generic, ToSchema, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''UserActionTypeWrapper)
 
