@@ -4210,12 +4210,12 @@ public class MobilityCommonBridge extends HyperBridge {
             e.printStackTrace();
         }
 
-        System.out.println("signed call cuid " + receiverCuid);
-
         SignedCallAPI.getInstance().call(getApplicationContext(), receiverCuid, callContext, callOptions, outgoingCallResponseListener);
     }
     @JavascriptInterface
     public void initSignedCall(String cuid, boolean isDriver){
+        // We are initialising only at the time of ride booking 
+        // Also currently its implemented only for normal rides, not for scheduled and others.
         JSONObject initOptions = new JSONObject();
         cuid = cuid.replace("-", "");
         String Cuid = (isDriver) ? "driver" + cuid : "customer" + cuid;

@@ -191,7 +191,7 @@ initData = {
         }
     , activeRideData :dummyActiveRideData
     , route: Nothing
-    , voipDialerSwitch: true
+    , voipDialerSwitch: false -- keep false until Full development is done for Voip
   },
   props: {
     pickUpOpen : true,
