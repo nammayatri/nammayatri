@@ -3031,7 +3031,7 @@ type VehicleData
     , vehicleLon :: Number
     , nextStopLat ::Number
     , nextStopLon ::Number
-    , nextStopTravelTime :: Maybe String
+    , nextStopTravelTime :: Maybe Int
     }
 
 type BusTrackingScreenProps = {

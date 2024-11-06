@@ -443,7 +443,7 @@ busStopsView push state = do
   let
     lb = spy "getLayoutBoundsgetLayoutBounds" $ JB.getLayoutBounds $ EHC.getNewIDWithTag "stopListView"
 
-    showScrollView = lb.height > 400
+    scrollViewHeight = if lb.height > 300 then 300 else lb.height
   scrollView
     [ height $ V 300 --if showScrollView then V 400 else WRAP_CONTENT
     , width MATCH_PARENT      
@@ -481,7 +481,7 @@ stopListView push state showOnlyBullet =
   linearLayout
     ( [ height WRAP_CONTENT
       , orientation VERTICAL
-      , id $ EHC.getNewIDWithTag $ spy "ssssss" $ "stopListView"  <> if showOnlyBullet then "fa" else ""
+      , id $ EHC.getNewIDWithTag $ spy "ssssss" $ "stopListView"  <> if showOnlyBullet then "onlyBullet" else ""
       , margin $ MarginHorizontal 0 16
       ]
         <> if showOnlyBullet then
@@ -509,13 +509,14 @@ stopListView push state showOnlyBullet =
         , orientation VERTICAL
         , visibility $ boolToVisibility $ state.props.showRouteDetailsTab || state.props.expandStopsView
         ]
-        (DA.mapWithIndex (\index item@(API.FRFSStationAPI station) -> stopView item showOnlyBullet stopMarginTop state push index (getStopType station.code index state)) (if state.props.individualBusTracking && DA.length state.data.stopsList > 2 then stops else state.data.stopsList))
+        (DA.mapWithIndex (\index item@(API.FRFSStationAPI station) -> stopView item showOnlyBullet stopMarginTop state push index (getStopType station.code index state) (findNextBusETA index)) (if state.props.individualBusTracking && DA.length state.data.stopsList > 2 then stops else state.data.stopsList))
     ]
   where
   stopMarginTop = if state.props.showRouteDetailsTab then 32 else 12
   
   stops = if DA.length state.data.stopsList <= 2 then [] else DA.slice 1 (DA.length state.data.stopsList - 1) state.data.stopsList
-  
+
+  findNextBusETA index = Mb.maybe Mb.Nothing (\stop -> (findStopInVehicleData stop state) >>= (\item -> item.nextStopTravelTime)) (stops DA.!! (index - 1))
 
 stopsViewHeader :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Boolean -> PrestoDOM (Effect Unit) w
 stopsViewHeader push state showOnlyBullet =
@@ -582,8 +583,8 @@ stopsViewHeader push state showOnlyBullet =
 --     ]
 --     [ 
 --     ]
-stopView :: forall w. API.FRFSStationAPI -> Boolean -> Int -> ST.BusTrackingScreenState -> (Action -> Effect Unit) -> Int -> StopType -> PrestoDOM (Effect Unit) w
-stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index stopType =
+stopView :: forall w. API.FRFSStationAPI -> Boolean -> Int -> ST.BusTrackingScreenState -> (Action -> Effect Unit) -> Int -> StopType -> Mb.Maybe Int -> PrestoDOM (Effect Unit) w
+stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index stopType etaTime =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -591,13 +592,13 @@ stopView (API.FRFSStationAPI stop) showOnlyBullet marginTop state push index sto
     -- , padding $ Padding 0 marginTop 0 0
     ]
     [ linearLayout
-        [ height $ if stopType == SOURCE_STOP && index /=0  then WRAP_CONTENT else V 32
+        [ height $ if stopType == SOURCE_STOP && index /=0 && Mb.isJust etaTime then WRAP_CONTENT else V 32
         , width MATCH_PARENT
         , visibility $ boolToVisibility $ index /= 0
         ]
         [ verticalLineView push ("verticalLineView1" <> show showOnlyBullet <> show index) showOnlyBullet $ DM.lookup stop.code state.data.vehicleTrackingData
         , if stopType == SOURCE_STOP && index /=0 
-            then showETAView push state index (API.FRFSStationAPI stop) showOnlyBullet
+            then showETAView push state index (API.FRFSStationAPI stop) showOnlyBullet etaTime
             else 
               MP.noView
         ]
@@ -754,8 +755,8 @@ busLocationTracking duration id routeCode push = do
 --         ]
 --     }
 
-showETAView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Int -> API.FRFSStationAPI -> Boolean -> PrestoDOM (Effect Unit) w
-showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight =
+showETAView :: forall w. (Action -> Effect Unit) -> ST.BusTrackingScreenState -> Int -> API.FRFSStationAPI -> Boolean -> Mb.Maybe Int -> PrestoDOM (Effect Unit) w
+showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight nextStopTravelTime =
   linearLayout
   ([ height if showOnlyHeight then V (HU.getDefaultPixelSize lb.height) else WRAP_CONTENT
   , width  MATCH_PARENT
@@ -764,11 +765,11 @@ showETAView push state index (API.FRFSStationAPI stop) showOnlyHeight =
   , padding $ Padding 8 8 8 8
   , cornerRadius 12.0
   -- , margin $ MarginHorizontal 8 8
-  -- , visibility $ boolToVisibility $ Mb.isJust $ findStopInVehicleData (API.FRFSStationAPI stop) state
+  , visibility $ boolToVisibility $ Mb.isJust nextStopTravelTime
   
   ] <> if showOnlyHeight then [] else [id $ EHC.getNewIDWithTag $ "ETAVIEW" <> show index])
   [ textView
-    $ [ text $ "Next Bus in " <> (Mb.maybe "10" (\item -> Mb.fromMaybe "10" item.nextStopTravelTime) $ findStopInVehicleData (API.FRFSStationAPI stop) state) <> " min"
+    $ [ text $ "Next Bus in " <> (show $ Mb.fromMaybe 0 nextStopTravelTime) <> " min"
       , margin $ MarginLeft 8
   , visibility $ boolToVisibility $ not showOnlyHeight
       ]
