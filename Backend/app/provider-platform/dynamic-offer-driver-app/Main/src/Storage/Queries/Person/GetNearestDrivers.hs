@@ -81,6 +81,7 @@ getNearestDrivers NearestDriversReq {..} = do
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
+  logDebug $ "MetroWarriorDebugging Result:- getNearestDrivers --------person tags driverInfos----" <> show driverInfos
   driverBankAccounts <-
     if onlinePayment
       then QDBA.getDrivers (driverLocs <&> (.driverId))
@@ -89,6 +90,7 @@ getNearestDrivers NearestDriversReq {..} = do
   logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
   let res = linkArrayList driverLocs driverInfos vehicle drivers driverBankAccounts
   logDebug $ "GetNearestDrivers Result:- " <> show (length res)
+  logDebug $ "MetroWarriorDebugging Result:- getNearestDrivers --------person tags res----" <> show res
   return res
   where
     linkArrayList driverLocations driverInformations vehicles persons driverBankAccounts =

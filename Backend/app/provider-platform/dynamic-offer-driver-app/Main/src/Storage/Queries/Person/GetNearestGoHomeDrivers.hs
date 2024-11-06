@@ -91,6 +91,7 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
   driverHomeLocs <- Int.getDriverGoHomeReqNearby (driverLocs <&> (.driverId))
   driverInfoWithoutSpecialLocWarrior <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False isRental isInterCity
   let driverInfos = specialLocWarriorDriverInfos <> driverInfoWithoutSpecialLocWarrior
+  logDebug $ "MetroWarriorDebugging getNearestGoHomeDrivers" <> show specialLocWarriorDriverInfos
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
@@ -102,6 +103,7 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
   logDebug $ "GetNearestDriver - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicles:- " <> show (length vehicle) <> " Drivers:- " <> show (length drivers)
   let res = linkArrayList driverLocs driverInfos vehicle drivers driverBankAccounts
   logDebug $ "GetNearestGoHomeDrivers Result:- " <> show (length res)
+  logDebug $ "MetroWarriorDebugging Result:- getNearestGoHomeDrivers -" <> show res
   return res
   where
     linkArrayList driverLocations driverInformations vehicles persons driverBankAccounts =
