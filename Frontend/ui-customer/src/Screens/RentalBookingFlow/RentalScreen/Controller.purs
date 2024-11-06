@@ -53,7 +53,7 @@ import PrestoDOM (class Loggable, Eval, continue, continueWithCmd, exit, updateA
 import PrestoDOM.Core (getPushFn)
 import Screens (getScreen, ScreenName(..))
 import Screens.Types (RentalScreenStage(..), RentalScreenState, BookingTime)
-import Services.API (GetQuotesRes(..), RideBookingRes(..), OfferRes(..), QuoteAPIEntity(..), QuoteAPIContents(..), RentalQuoteAPIDetails(..))
+import Services.API (GetQuotesRes(..), RideBookingRes(..), OfferRes(..), QuoteAPIEntity(..), RentalQuoteAPIDetails(..))
 import Data.Number (fromString)
 import Data.Lens
 import Accessor

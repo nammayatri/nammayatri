@@ -98,7 +98,7 @@ import Services.Accessor (_lat, _lon)
 import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
 import Styles.Colors as Color
-import Types.App (GlobalState(..), defaultGlobalState)
+import Types.App (GlobalState(..), defaultGlobalState, FlowBT)
 import Constants (defaultDensity)
 import Components.ErrorModal as ErrorModal
 import Timers
@@ -143,9 +143,12 @@ screen initialState (GlobalState globalState) =
                   let advancedRide = (DA.find (\(RidesInfo x) -> x.bookingType == Just ADVANCED) activeRideResponse.list)
                   lift $ lift $ doAff do liftEffect $ push $ RideActiveAction ride advancedRide
                 Nothing -> do
-                           setValueToLocalStore IS_RIDE_ACTIVE "false"
-                           void $ pure $ JB.setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "No"}]
-          else pure unit 
+                  setValueToLocalStore IS_RIDE_ACTIVE "false"
+                  void $ pure $ JB.setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "No"}]
+          else pure unit
+
+          -- Polling to get the active ride details
+          if initialState.props.retryRideList && initialState.data.activeRide.status == NOTHING then void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getActiveRideDetails push 1000.0 15 else pure unit 
           
           if  initialState.props.checkUpcomingRide then do  
              void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do  
@@ -313,6 +316,23 @@ screen initialState (GlobalState globalState) =
       let _ = spy "HomeScreen--------action" action
       eval action state)
   }
+
+getActiveRideDetails :: (Action -> Effect Unit) -> Number -> Int -> FlowBT String Unit
+getActiveRideDetails push delayTime retryCount = do 
+  lift $ lift $ doAff $ liftEffect $ push $ UpdateRetryRideList false
+  if retryCount > 0 then do
+    (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
+    case (activeRideResponse.list DA.!! 0) of
+      Just ride -> do
+        let advancedRide = (DA.find (\(RidesInfo x) -> x.bookingType == Just ADVANCED) activeRideResponse.list)
+        lift $ lift $ doAff $ liftEffect $ push $ RideActiveAction ride advancedRide
+      Nothing -> do 
+        void $ lift $ lift $ delay $ Milliseconds delayTime
+        getActiveRideDetails push (delayTime * 2.0) (retryCount - 1)
+  else do
+    setValueToLocalStore IS_RIDE_ACTIVE "false"
+    pure $ JB.setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "No"}]
+
 
 checkAndStartChatService :: forall w . (Action -> Effect Unit) -> Int -> String -> HomeScreenState -> Flow GlobalState Unit
 checkAndStartChatService push retry rideId state = 

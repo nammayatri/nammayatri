@@ -105,6 +105,7 @@ import Data.Array as DA
 import Components.MessagingView.Controller (ChatContacts(..))
 import Services.API as API
 import JBridge as JB
+import Services.API as API
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -553,7 +554,7 @@ fetchImage fetchImageFrom imageName = do
     FF_COMMON_ASSET -> imageName <> "," <> (getCommonAssetLink FunctionCall) <> imageName <> ".png"
     COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/user/images/" <> imageName <> ".png"
     GLOBAL_COMMON_ASSET -> imageName <> "," <> "https://" <> assetDomain <> "/beckn/common/common/images/" <> imageName <> ".png"
-    APP_ASSET -> imageName <> "," <> (getAppAssetUrl FunctionCall) <> imageName <> ".png"
+    APP_ASSET -> imageName <> "," <> (getAppAssetUrl FunctionCall) <> "images/" <> imageName <> ".png"
 
 data FetchImageFrom = FF_ASSET | FF_COMMON_ASSET | COMMON_ASSET | GLOBAL_COMMON_ASSET | APP_ASSET
 
@@ -1317,7 +1318,16 @@ calculateEstimatedDistanceInKm :: Maybe Int  -> Int
 calculateEstimatedDistanceInKm distance =
   let estimatedDistance = fromMaybe 0 distance
    in estimatedDistance `div` 1000
-  
+
+getFareProductTypeByData :: Maybe API.QuoteAPIDetails -> FareProductType
+getFareProductTypeByData quoteDetails = 
+  case quoteDetails of 
+    Just (API.OneWaySpecialZoneAPIDetails _) -> ONE_WAY_SPECIAL_ZONE
+    Just (API.INTER_CITY _) -> INTER_CITY
+    Just (API.RENTAL _) -> RENTAL
+    Just (API.DRIVER_OFFER _) -> DRIVER_OFFER
+    Just (API.ONE_WAY _) -> ONE_WAY
+    _ -> ONE_WAY
 
 getFareProductType :: String ->  FareProductType
 getFareProductType fareProductType = 

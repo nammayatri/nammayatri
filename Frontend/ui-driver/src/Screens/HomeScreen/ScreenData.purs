@@ -268,6 +268,7 @@ initData =
       }
       , showIntercityRateCard : false
       , intercityInfoPopUp : false
+      , retryRideList : false
       }
   }
 

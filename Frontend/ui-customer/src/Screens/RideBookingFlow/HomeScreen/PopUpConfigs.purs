@@ -12,7 +12,6 @@ import Engineering.Helpers.Commons
 import Language.Strings
 import Language.Types
 
-
 finalFareExcludesToll :: HomeScreenState -> PopUpModal.Config
 finalFareExcludesToll lazyCheck = PopUpModal.config{
   margin = MarginHorizontal 24 24
