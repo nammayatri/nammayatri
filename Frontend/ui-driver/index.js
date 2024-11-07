@@ -33,8 +33,13 @@ if (window.JBridge.firebaseLogEventWithParams){
         if (shouldLog) {
           window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
         }
-        const result = window.JBridgeProxy[fnName](...arguments);
-        return result;
+        try{
+          const result = window.JBridgeProxy[fnName](...arguments);
+          return result;
+        }catch(e){
+          console.error(e);
+          return;
+        }
       };
     });
 }
