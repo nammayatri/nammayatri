@@ -1,9 +1,10 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Action.UI.MultimodalConfirm (postMultimodalConfirm, getMultimodalSwitchTaxi) where
+module Domain.Action.UI.MultimodalConfirm (postMultimodalConfirm, getMultimodalSwitchTaxi, getJourneyQuotes) where
 
 import qualified API.Types.UI.MultimodalConfirm
+import qualified BecknV2.FRFS.Enums as BecknEnums
 import Data.OpenApi (ToSchema)
 import Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import Domain.Action.UI.Select as Select
@@ -14,6 +15,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import Domain.Types.SearchRequest
 import qualified Domain.Types.ServiceTierType as DSTT
+import qualified Domain.Types.Trip as DTrip
 import Environment
 import EulerHS.Prelude hiding (find, forM_, id)
 import Kernel.Prelude
@@ -111,3 +113,44 @@ getMultimodalSwitchTaxi (_, _) searchRequestId estimateId = do
   newEstimatedPrice <- price1 `addPrice` newEstimate.estimatedTotalFare
   QJourney.updateEstimatedFare (Just newEstimatedPrice) (Id journeyId)
   pure Kernel.Types.APISuccess.Success
+
+getJourneyQuotes ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
+  )
+getJourneyQuotes (_, _) journeyId = do
+  searchReqs <- QSearchRequest.findAllByJourneyId journeyId
+  searchReqData :: [API.Types.UI.MultimodalConfirm.JourneyInfoElement] <-
+    forM searchReqs $ \searchReq -> do
+      let mode_ = DTrip.Taxi
+      journeyInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "journeySearchData not found")
+      let journeyLegOrder_ = journeyInfo.journeyLegOrder
+      pricingId_ <- journeyInfo.pricingId & fromMaybeM (InvalidRequest "pricingId not found")
+      pure $
+        API.Types.UI.MultimodalConfirm.JourneyInfoElement
+          { mode = mode_,
+            journeyLegOrder = journeyLegOrder_,
+            pricingId = pricingId_
+          }
+
+  frfsSearchReqs <- QFRFSSearch.findAllByJourneyId journeyId
+  frfsSearchReqData :: [API.Types.UI.MultimodalConfirm.JourneyInfoElement] <-
+    forM frfsSearchReqs $ \frfsSearchReq -> do
+      let mode_ = case frfsSearchReq.vehicleType of
+            BecknEnums.BUS -> DTrip.Bus
+            BecknEnums.METRO -> DTrip.Metro
+      journeyInfo <- frfsSearchReq.journeyLegInfo & fromMaybeM (InvalidRequest "journeySearchData not found")
+      let journeyLegOrder_ = journeyInfo.journeyLegOrder
+      pricingId_ <- journeyInfo.pricingId & fromMaybeM (InvalidRequest "pricingId not found")
+      pure $
+        API.Types.UI.MultimodalConfirm.JourneyInfoElement
+          { mode = mode_,
+            journeyLegOrder = journeyLegOrder_,
+            pricingId = pricingId_
+          }
+
+  let combinedPricingData = searchReqData ++ frfsSearchReqData
+  pure $ API.Types.UI.MultimodalConfirm.JourneyInfoResp {journeyInfoElements = combinedPricingData}

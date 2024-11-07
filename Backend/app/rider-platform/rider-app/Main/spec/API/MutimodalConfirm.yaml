@@ -2,6 +2,7 @@ imports:
   Journey: Domain.Types.Journey
   SearchRequest: Domain.Types.SearchRequest
   Estimate: Domain.Types.Estimate
+  TravelMode: Domain.Types.Trip
 
 module: MultimodalConfirm
 
@@ -11,6 +12,13 @@ types:
   JourneyConfirmReqElement:
     journeyLegOrder: Int
     skipBooking: Bool
+  JourneyInfoResp:
+    journeyInfoElements: "[JourneyInfoElement]"
+  JourneyInfoElement:
+    journeyLegOrder: Int
+    pricingId: Text
+    mode: TravelMode
+
 
 apis:
   - POST:
@@ -29,3 +37,10 @@ apis:
         estimateId: Id Estimate
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  - GET:
+      endpoint: /journey/{journeyId}/quotes
+      params:
+        journeyId: Id Journey
+      response:
+        type: JourneyInfoResp
