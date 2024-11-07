@@ -239,7 +239,9 @@ baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
   when callInitUI $ initUIWrapper ""
   let bundleSplashConfig = RemoteConfig.getBundleSplashConfig "lazy"
-  if callInitUI && bundleSplashConfig.enable then toggleSetupSplash true else pure unit
+      hybridInit = fromMaybe true $ gPayload ^. _payload ^. _show_splash
+  if callInitUI && bundleSplashConfig.enable && hybridInit then toggleSetupSplash true else pure unit
+  if isJust (gPayload ^. _payload ^. _appToken) then upateTokenFromHybridFlow $ gPayload ^. _payload ^. _appToken else pure unit
   let _ = setKeyInWindow "forceAppToNoInternetScreen" true
   lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "v1-assets_downloader.jsa" "https://assets.moving.tech/beckn/bundles/mobility-core/0.0.8/v1-assets_downloader.jsa" (cb <<< Right) $> nonCanceler
   liftFlowBT $ markPerformance "BASE_APP_FLOW"
@@ -248,8 +250,6 @@ baseAppFlow gPayload callInitUI = do
   baseAppLogs
   liftFlowBT $ runEffectFn1 resetIdMap ""
   liftFlowBT $ resetAllTimers
-  let
-    showSplashScreen = fromMaybe false $ gPayload ^. _payload ^. _show_splash
   tokenValidity <- validateToken signatureAuthData
   lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
   if tokenValidity then

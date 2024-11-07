@@ -59,6 +59,10 @@ validateSignaturePayload signatureAuth resp =
       void $ pure $ setValueInWindow (show MOBILE_NUMBER) mobileNumber
 
 
+upateTokenFromHybridFlow :: Maybe String -> FlowBT String Unit
+upateTokenFromHybridFlow appToken = 
+  -- void $ pure $ spy "AppTOken Updated" appToken  
+  setValueToLocalStore REGISTERATION_TOKEN $ fromMaybe "__hybriTokenFailed" appToken 
 
 
 validateToken :: Maybe SignatureAuthData -> FlowBT String Boolean

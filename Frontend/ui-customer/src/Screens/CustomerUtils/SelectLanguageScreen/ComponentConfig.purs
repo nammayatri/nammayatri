@@ -74,7 +74,7 @@ menuButtonConfig state language = MenuButton.config {
 genericHeaderConfig :: ST.SelectLanguageScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
   config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
-  btnVisibility = if isParentView FunctionCall then GONE else config.prefixImageConfig.visibility
+  btnVisibility =  config.prefixImageConfig.visibility
   titleVisibility = if showTitle FunctionCall then config.visibility else GONE
   in config 
     {
