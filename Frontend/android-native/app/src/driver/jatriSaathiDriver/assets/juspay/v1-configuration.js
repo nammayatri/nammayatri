@@ -461,6 +461,11 @@ let getAllCityConfig = () => {
       showSubscriptions: true,
       cityLat: 22.5354064,
       cityLong: 88.2649516,
+      registration : {
+        supportWAN : "918088065549",
+        callSupport : true,
+        whatsappSupport : true
+      },
       variantSubscriptionConfig: {
         enableVariantBasedSubscription: true,
         variantList: ["CarCategory","BikeCategory"],
