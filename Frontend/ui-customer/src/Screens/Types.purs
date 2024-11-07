@@ -1191,6 +1191,8 @@ data City
   | Udupi
   | Odisha
   | Bhubaneswar
+  | Cuttack
+  | Puri
 
 derive instance genericCity :: Generic City _
 instance showCity :: Show City where show = genericShow
