@@ -1067,7 +1067,7 @@ getOd stringKey =
       EXPERIENCE_HASSLE_FREE_METRO_BOOKING appName -> "ସହଜ ଓ ସଂଯୋଗବାହୀ ମେଟ୍ରୋ ବୁକିଂ ଅନୁଭବ କରନ୍ତୁ " <> appName
       KOCHI_METRO_TERM_1 -> "ଟିକେଟ୍ ପ୍ରତ୍ୟେକ ଦିନ 5:00 AM ରୁ 11:45 PM ମଧ୍ୟରେ କ୍ରୟ କରାଯାଇପାରେ।"
       KOCHI_METRO_TERM_2 -> "ଏକ ଥାନେ ଭିତରକୁ ପ୍ରବେଶ କରିବା ପରେ ଯାତ୍ରୀମାନେ ଗନ୍ତବ୍ୟ ସ୍ଥାନରୁ 120 ମିନିଟ୍ ମଧ୍ୟରେ ବାହାରୁଅଛି।"
-      KOCHI_METRO_TIME -> "କୋଚି ମେଟ୍ରୋ ପ୍ରତ୍ୟେକ ଦିନ 5:00 AM ରୁ 11:45 PM ମଧ୍ୟରେ QR ଟିକେଟ୍ କ୍ରୟ କରିବାକୁ ଅନୁମତି ଦେଇଛି।"
+      KOCHI_METRO_TIME startTime endTime -> "କୋଚି ମେଟ୍ରୋ ପ୍ରତ୍ୟେକ ଦିନ" <> startTime <> " AM ରୁ " <> endTime <> " PM ମଧ୍ୟରେ QR ଟିକେଟ୍ କ୍ରୟ କରିବାକୁ ଅନୁମତି ଦେଇଛି।"
       BOOK_TICKET -> "ଟିକେଟ୍ ବୁକ୍ କରନ୍ତୁ"
       ORIGIN -> "ଆରମ୍ଭ ସ୍ଥାନ"
       HISTORY -> "ଇତିହାସ"
@@ -1659,3 +1659,7 @@ getOd stringKey =
       INTERCITY_BUS -> "ଆନ୍ତରିକ ଟ୍ରାଭେଲ୍ ବସ୍"
       DRIVER_ASSIGNED -> "ଡ୍ରାଇଭର ନିଯୁକ୍ତ"
       EXPLORE -> "ଅନୁସନ୍ଧାନ"
+      METRO_TICKETS -> "ମେଟ୍ରୋ ଟିକେଟ୍"
+      TICKETS_FOR_DELHI_METRO -> "ଦିଲ୍ଲୀ ମେଟ୍ରୋ ପାଇଁ ଟିକେଟ୍"
+      OFFERS -> "ଅଫର୍ସ"
+      DELHI_METRO_TIME startTime endTime -> "ଦିଲ୍ଲୀ ମେଟ୍ରୋରେ QR ଟିକେଟ୍ କିଣିବା "<>startTime<>"ରୁ "<>endTime<>" ପର୍ଯ୍ୟନ୍ତ ସମସ୍ତ ଦିନ ଉପଲବ୍ଧ ଅଛି।"
