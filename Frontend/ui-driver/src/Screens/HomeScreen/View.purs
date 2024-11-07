@@ -118,6 +118,7 @@ import Components.SelectPlansModal as SelectPlansModal
 import Services.API as APITypes
 import Helpers.SplashUtils as HS
 import Resource.Constants
+import RemoteConfig as RC
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
@@ -199,6 +200,7 @@ screen initialState (GlobalState globalState) =
                                   pure unit
                                   else pure unit
             "RideAccepted"   -> do
+                                void $ playRideAssignedAudio initialState.data.activeRide.tripType initialState.data.activeRide.id push
                                 void $ pure $ setValueToLocalStore RIDE_END_ODOMETER ""
                                 void $ pure $ setValueToLocalStore RIDE_START_ODOMETER "" 
                                 let waitTime = DS.split (DS.Pattern "<$>") (getValueToLocalStore WAITING_TIME_VAL)
@@ -328,6 +330,29 @@ getActiveRideDetails push delayTime retryCount = do
   else do
     setValueToLocalStore IS_RIDE_ACTIVE "false"
     pure $ JB.setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "No"}]
+
+
+playRideAssignedAudio :: ST.TripType -> String ->  (Action -> Effect Unit) -> Effect Unit
+playRideAssignedAudio tripCategory rideId push = do 
+  let lastPlayedRideId = getValueToLocalStore LAST_PLAYED_RIDE_ID
+  if(lastPlayedRideId /= rideId) && rideId /= "" then do
+    void $ pure $ setValueToLocalStore LAST_PLAYED_RIDE_ID rideId
+    let 
+      city = getValueToLocalStore DRIVER_LOCATION
+      config = RC.fetchRideAssignedAudioConfig city
+      audioUrl = case tripCategory of
+        ST.Rental ->  config.rental
+        ST.Intercity -> config.intercity
+        ST.RoundTrip -> config.roundTrip
+        ST.Delivery -> config.delivery
+        ST.OneWay -> config.oneWay
+        ST.RideShare -> config.rideShare
+    case audioUrl of
+      Just url -> do
+        pure $ runFn4 JB.startAudioPlayer url push OnRideAssignedAudioCompleted  "0"
+        pure unit
+      Nothing -> pure unit
+  else pure unit
 
 
 fetchAndUpdateLocationUpdateServiceVars :: String -> Boolean -> Effect Unit

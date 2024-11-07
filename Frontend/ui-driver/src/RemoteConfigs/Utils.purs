@@ -253,3 +253,25 @@ defEventsConfig = {
   pushEventChunkSize : 10,
   loggingIntervalInMs : 10000.0
 }
+
+
+fetchRideAssignedAudioConfig :: String -> RideAssignedAudioConfig
+fetchRideAssignedAudioConfig city =
+  let 
+    config = fetchRemoteConfigString "ride_assigned_audio"
+    value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultRideAssignedAudioConfig
+  in 
+    getCityBasedConfig value $ toLower city
+  
+  where 
+    defaultRideAssignedAudioConfig :: RideAssignedAudioConfig
+    defaultRideAssignedAudioConfig = {
+      rideShare : Nothing
+    , intercity : Nothing
+    , roundTrip : Nothing
+    , oneWay : Nothing
+    , delivery : Nothing
+    , rental : Nothing
+    }
+
+    

@@ -472,6 +472,7 @@ data Action = NoAction
             | DeliveryCall ST.DeliverCallType
             | NotifyReachedDestination
             | UpdateRetryRideList Boolean
+            | OnRideAssignedAudioCompleted String
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
