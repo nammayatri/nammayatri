@@ -644,7 +644,12 @@ navpillView state item push idx =
     [ imageView  
         [ width $ V 18  
         , height $ V 18  
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET (if idx == 0 then "ny_ic_bus_white" else "ny_ic_location_white")
+        , imageWithFallback $ fetchImage COMMON_ASSET $ if item == ROUTES then
+                                                          if state.data.activeRideIndex == 0 then "ny_ic_bus_white"
+                                                          else "ny_ic_black_bus"
+                                                        else
+                                                          if state.data.activeRideIndex == 1 then "ny_ic_location_white"
+                                                          else "ny_ic_black_location"
         , margin $ MarginRight 8
         ]
     , textView
@@ -751,7 +756,6 @@ predictionsView push state globalProps = let
   scrollView
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , padding (PaddingBottom 60)
     , background Color.white900
     , scrollBarY false
     , visibility viewVisibility
@@ -797,15 +801,9 @@ predictionsView push state globalProps = let
                                     BusStopSelectionAction ->  busStopArray state.data.updatedStopsSearchedList
                                     NoBusRouteSelectionAction -> state.data.locationList
                                     _ -> state.data.locationList)
-          , footerView
         ]
       ]
   where
-    footerView :: PrestoDOM (Effect Unit) w
-    footerView = linearLayout
-                  [ height $ V 80
-                  , width MATCH_PARENT][]
-
     predictionArrayView :: Array LocationListItemState -> PrestoDOM (Effect Unit) w
     predictionArrayView locList =
         linearLayout

@@ -212,15 +212,15 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
      validDecodedRoutes = MB.fromMaybe [] decodedCachedRoutes
  case mbStops of
    (MB.Just stops) -> do
-    if DA.elem stops validDecodedStops && state.props.actionType /= BusStationSelectionAction
-      then pure unit 
-    else void $ pure $ setValueToCache (show RECENT_BUS_STOPS) ([stops] <> validDecodedStops) (stringifyJSON <<< encode)
+    if not (DA.elem stops validDecodedStops) && state.props.actionType == BusSearchSelectionAction
+      then void $ pure $ setValueToCache (show RECENT_BUS_STOPS) ([stops] <> validDecodedStops) (stringifyJSON <<< encode)
+    else pure unit
    _ -> pure unit
  case mbRoutes of
    (MB.Just routes) -> do
-    if DA.elem routes validDecodedRoutes && state.props.actionType /= BusStationSelectionAction
-      then pure unit 
-    else void $ pure $ setValueToCache (show RECENT_BUS_ROUTES) ([routes] <> validDecodedRoutes) (stringifyJSON <<< encode)
+    if not (DA.elem routes validDecodedRoutes) && state.props.actionType == BusSearchSelectionAction
+      then void $ pure $ setValueToCache (show RECENT_BUS_ROUTES) ([routes] <> validDecodedRoutes) (stringifyJSON <<< encode)
+    else pure unit
    _ -> pure unit
 
  if state.props.actionType == NoBusRouteSelectionAction then do
@@ -314,12 +314,17 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
 
 eval (InputViewAC globalProps (InputViewController.ClearTextField textField)) state = do 
   pure $ setText (getNewIDWithTag textField) $ ""
-  if state.props.focussedTextField == MB.Just SearchLocPickup then
-    continue state { data {locationList = fetchSortedCachedSearches state globalProps textField, updatedMetroStations = state.data.metroStations, srcLoc = MB.Nothing,updatedStopsSearchedList = state.data.stopsSearchedList}
-                   , props {canClearText = false, isAutoComplete = false, locUnserviceable = false}}
-  else
-    continue state { data {locationList = fetchSortedCachedSearches state globalProps textField, updatedMetroStations = state.data.metroStations, destLoc = MB.Nothing , updatedStopsSearchedList = state.data.stopsSearchedList}
-                   , props {canClearText = false, isAutoComplete = false, locUnserviceable = false}}
+  let updatedStopsSearchedList = getStopListForFocussedTextField state ""
+      srcLoc =  if state.props.focussedTextField == MB.Just SearchLocPickup then
+                  MB.Nothing
+                else 
+                  state.data.srcLoc
+      destLoc = if state.props.focussedTextField == MB.Just SearchLocDrop then
+                  MB.Nothing
+                else
+                  state.data.destLoc
+  continue state { data {locationList = fetchSortedCachedSearches state globalProps textField, updatedMetroStations = state.data.metroStations, srcLoc = srcLoc, destLoc = destLoc, updatedStopsSearchedList = updatedStopsSearchedList}
+                 , props {canClearText = false, isAutoComplete = false, locUnserviceable = false}}
   
 eval (InputViewAC _ (InputViewController.BackPressed)) state = do
   void $ pure $ hideKeyboardOnNavigation true
@@ -379,15 +384,30 @@ eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textFie
         
       canClear = STR.length setTextTo > 2
       sortedCachedLoc = fetchSortedCachedSearches state globalProps textField
+      updatedState = state  { props
+                                { focussedTextField = mkTextFieldTag textField 
+                                , canClearText = canClear
+                                }
+                            , data 
+                                { locationList = sortedCachedLoc }
+                            }
 
-    continue state
-      { props
-          { focussedTextField = mkTextFieldTag textField 
-          , canClearText = canClear
-          }
-      , data 
-          { locationList = sortedCachedLoc }
-      }
+    if state.props.actionType == BusStopSelectionAction then do
+      let updatedStopsSearchedList = getStopListForFocussedTextField updatedState ""
+      case state.props.focussedTextField of
+        MB.Just SearchLocPickup -> do
+          if MB.isNothing state.data.destLoc then
+            pure $ setText (getNewIDWithTag (show SearchLocDrop)) $ ""
+          else pure unit
+          continue updatedState{ data{ updatedStopsSearchedList = updatedStopsSearchedList } }
+        MB.Just SearchLocDrop -> do
+          if MB.isNothing state.data.srcLoc then
+            pure $ setText (getNewIDWithTag (show SearchLocPickup)) $ ""
+          else pure unit
+          continue updatedState{ data{ updatedStopsSearchedList = updatedStopsSearchedList } }
+        _ -> continue updatedState
+    else 
+      continue updatedState
   else 
     continue state
 
@@ -417,43 +437,13 @@ eval (InputViewAC _ (InputViewController.AutoCompleteCallBack value pickUpchange
     exit $ GoToRouteBusSearch state value 
   else if state.props.actionType == BusRouteSelectionAction then continue state
   else if state.props.actionType == BusStopSelectionAction then do
-    case state.props.focussedTextField of
-      MB.Just SearchLocPickup -> do
-        let length = DA.length state.data.stopsSearchedList
-        let endIndex =
-              case state.data.destLoc of
-                MB.Just loc ->
-                  case DA.findIndex (\(FRFSStationAPI stop) -> stop.code == loc.stationCode) state.data.stopsSearchedList of
-                    MB.Just index -> index
-                    MB.Nothing -> length
-                MB.Nothing -> length
-        let newStopList = DA.dropEnd (length - endIndex) state.data.stopsSearchedList 
-        let updatedStopsSearchedList =
-              if DS.length value > 2
-              then findStopWithPrefix value newStopList
-              else newStopList
-        continue state {data {updatedStopsSearchedList = updatedStopsSearchedList} , props {canClearText = true , isAutoComplete = true}}
-      MB.Just SearchLocDrop -> do
-        let length = DA.length state.data.stopsSearchedList
-        let startIndex =
-              case state.data.srcLoc of
-                MB.Just loc ->
-                  case DA.findIndex (\(FRFSStationAPI stop) -> stop.code == loc.stationCode) state.data.stopsSearchedList of
-                    MB.Just index -> index
-                    MB.Nothing -> 0
-                MB.Nothing -> 0
-        let newStopList = DA.drop (startIndex + 1) state.data.stopsSearchedList 
-        let updatedStopsSearchedList =
-              if DS.length value > 2
-              then findStopWithPrefix value newStopList
-              else newStopList
-        continue state {data {updatedStopsSearchedList = updatedStopsSearchedList} , props {canClearText = true , isAutoComplete = true}}
-      _ -> continue state
+    let updatedStopsSearchedList = getStopListForFocussedTextField state value
+    continue state {data {updatedStopsSearchedList = updatedStopsSearchedList} , props {canClearText = true , isAutoComplete = true}}
   else if (state.props.isAutoComplete && state.data.fromScreen /= getScreen METRO_TICKET_BOOKING_SCREEN) then -- so that selecting from favourites doesn't trigger autocomplete
     autoCompleteAPI state value $ if pickUpchanged then SearchLocPickup else SearchLocDrop
     else continue state
 
-eval (InputViewAC _ (InputViewController.InputChanged value)) state = do 
+eval (InputViewAC globalProps (InputViewController.InputChanged value)) state = do 
   if (state.props.actionType == MetroStationSelectionAction || state.props.actionType == BusStationSelectionAction )&& not (STR.null value) then do
     void $ pure $ spy "InputChanged" value
     let newArray = findStationWithPrefix value state.data.metroStations
@@ -464,8 +454,14 @@ eval (InputViewAC _ (InputViewController.InputChanged value)) state = do
     ]
     else if (state.props.actionType == BusRouteSelectionAction || state.props.actionType == BusStopSelectionAction) then do
       continueWithCmd state [ do
-        void $ pure $ updateInputString value 
-        pure NoAction
+        void $ pure $ updateInputString value
+        if value == "" then
+          case state.props.focussedTextField of
+            MB.Just textField -> do
+              pure (InputViewAC globalProps (InputViewController.ClearTextField (show textField)))
+            MB.Nothing -> pure NoAction
+        else 
+          pure NoAction
       ]
     else do
       let canClearText = STR.length value > 2
@@ -815,3 +811,38 @@ filterStopsForCache title updatedStopsSearchedList =  DA.find (\(FRFSStationAPI 
 
 filterRoutesForCache :: String -> Array FRFSRouteAPI -> MB.Maybe FRFSRouteAPI
 filterRoutesForCache title updatedRouteSearchedList =  DA.find (\(FRFSRouteAPI route) -> route.shortName == title) updatedRouteSearchedList
+
+getStopListForFocussedTextField :: SearchLocationScreenState -> String -> Array FRFSStationAPI
+getStopListForFocussedTextField state value =
+  case state.props.focussedTextField of
+    MB.Just SearchLocPickup ->
+      let length = DA.length state.data.stopsSearchedList
+          endIndex =
+            case state.data.destLoc of
+              MB.Just loc ->
+                case DA.findIndex (\(FRFSStationAPI stop) -> stop.code == loc.stationCode) state.data.stopsSearchedList of
+                  MB.Just index -> index
+                  MB.Nothing -> length-1
+              MB.Nothing -> length-1
+          newStopList = DA.dropEnd (length - endIndex) state.data.stopsSearchedList 
+          updatedStopsSearchedList =
+            if DS.length value > 2
+            then findStopWithPrefix value newStopList
+            else newStopList
+      in updatedStopsSearchedList
+    MB.Just SearchLocDrop ->
+      let length = DA.length state.data.stopsSearchedList
+          startIndex =
+            case state.data.srcLoc of
+              MB.Just loc ->
+                case DA.findIndex (\(FRFSStationAPI stop) -> stop.code == loc.stationCode) state.data.stopsSearchedList of
+                  MB.Just index -> index
+                  MB.Nothing -> 0
+              MB.Nothing -> 0
+          newStopList = DA.drop (startIndex + 1) state.data.stopsSearchedList 
+          updatedStopsSearchedList =
+            if DS.length value > 2
+            then findStopWithPrefix value newStopList
+            else newStopList
+      in updatedStopsSearchedList
+    _ -> state.data.updatedStopsSearchedList
