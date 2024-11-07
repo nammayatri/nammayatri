@@ -643,13 +643,23 @@ getInformationV2 ::
   UpdateProfileInfoPoints ->
   m DriverInformationRes
 getInformationV2 (personId, merchantId, merchantOpCityId) toss tenant' context req = do
-  whenJust req.isAdvancedBookingEnabled $ \isAdvancedBookingEnabled ->
-    QDriverInformation.updateForwardBatchingEnabled isAdvancedBookingEnabled personId
-  whenJust req.isInteroperable $ \isInteroperable ->
-    QDriverInformation.updateIsInteroperable isInteroperable personId
-  whenJust req.isCategoryLevelSubscriptionEnabled $ \isCategoryLevelSubscriptionEnabled ->
-    QDriverPlan.updateIsSubscriptionEnabledAtCategoryLevel personId YATRI_SUBSCRIPTION isCategoryLevelSubscriptionEnabled
+  updateForwardBatchingEnabledFork <-
+    case req.isAdvancedBookingEnabled of
+      Just isAdvancedBookingEnabled -> awaitableFork "getInformationV2->updateForwardBatchingEnabled" $ QDriverInformation.updateForwardBatchingEnabled isAdvancedBookingEnabled personId
+      Nothing -> awaitableFork "getInformationV2->updateForwardBatchingEnabled" $ pure ()
+  updateIsInteroperableFork <-
+    case req.isInteroperable of
+      Just isInteroperable -> awaitableFork "getInformationV2->updateIsInteroperable" $ QDriverInformation.updateIsInteroperable isInteroperable personId
+      Nothing -> awaitableFork "getInformationV2->updateForwardBatchingEnabled" $ pure ()
+  updateIsSubscriptionEnabledAtCategoryLevelFork <-
+    case req.isCategoryLevelSubscriptionEnabled of
+      Just isCategoryLevelSubscriptionEnabled -> awaitableFork "getInformationV2->updateIsSubscriptionEnabledAtCategoryLevel" $ QDriverPlan.updateIsSubscriptionEnabledAtCategoryLevel personId YATRI_SUBSCRIPTION isCategoryLevelSubscriptionEnabled
+      Nothing -> awaitableFork "updateIsSubscriptionEnabledAtCategoryLevelFork" $ pure ()
+
+  awaitAll [updateForwardBatchingEnabledFork, updateIsInteroperableFork, updateIsSubscriptionEnabledAtCategoryLevelFork]
   getInformation (personId, merchantId, merchantOpCityId) toss tenant' context
+  where
+    awaitAll = mapM_ (L.await Nothing)
 
 getInformation ::
   ( CacheFlow m r,
