@@ -579,6 +579,7 @@ library
       Domain.Types.Route
       Domain.Types.RouteStopFare
       Domain.Types.RouteStopMapping
+      Domain.Types.RouteTripMapping
       Domain.Types.SafetySettings
       Domain.Types.SavedReqLocation
       Domain.Types.SearchReqLocation
@@ -683,6 +684,7 @@ library
       Storage.Beam.Route
       Storage.Beam.RouteStopFare
       Storage.Beam.RouteStopMapping
+      Storage.Beam.RouteTripMapping
       Storage.Beam.SafetySettings
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchReqLocation
@@ -830,6 +832,7 @@ library
       Storage.Queries.Route
       Storage.Queries.RouteStopFare
       Storage.Queries.RouteStopMapping
+      Storage.Queries.RouteTripMapping
       Storage.Queries.SafetySettings
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchReqLocation
