@@ -463,6 +463,7 @@ data Action = NoAction
             | OnRideBannerCountDownTimer Int String String
             | GetRideCount Int
             | UpdateRetryRideList Boolean
+            | OnRideAssignedAudioCompleted String
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {

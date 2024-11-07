@@ -115,3 +115,12 @@ type EventsConfig = {
   pushEventChunkSize :: Int,
   loggingIntervalInMs :: Number
 }
+
+type RideAssignedAudioConfig = {
+  rideShare :: Maybe String 
+, intercity :: Maybe String
+, roundTrip :: Maybe String
+, oneWay :: Maybe String
+, delivery :: Maybe String
+, rental :: Maybe String
+}

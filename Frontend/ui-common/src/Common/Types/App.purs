@@ -152,6 +152,7 @@ newtype Payload = Payload
   , deeplinkOptions :: Maybe DeeplinkOptions
   , deepLinkJSON :: Maybe QueryParam
   , chatMessageData :: Maybe ChatFCMData
+  , appToken :: Maybe String
   }
 
 newtype QueryParam = QueryParam {
