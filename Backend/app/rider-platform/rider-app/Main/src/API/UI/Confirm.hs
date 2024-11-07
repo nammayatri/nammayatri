@@ -15,7 +15,7 @@
 module API.UI.Confirm
   ( API,
     handler,
-    confirm,
+    confirm',
     ConfirmRes (..),
   )
 where
@@ -70,8 +70,16 @@ confirm ::
   Maybe Payment.PaymentMethodId ->
   Maybe Bool ->
   FlowHandler ConfirmRes
-confirm (personId, _) quoteId mbPaymentMethodId isAdvanceBookingEnabled =
-  withFlowHandlerAPI . withPersonIdLogTag personId $ do
+confirm (personId, merchantId) quoteId mbPaymentMethodId = withFlowHandlerAPI . confirm' (personId, merchantId) quoteId mbPaymentMethodId
+
+confirm' ::
+  (Id SP.Person, Id Merchant.Merchant) ->
+  Id Quote.Quote ->
+  Maybe Payment.PaymentMethodId ->
+  Maybe Bool ->
+  Flow ConfirmRes
+confirm' (personId, _) quoteId mbPaymentMethodId isAdvanceBookingEnabled =
+  withPersonIdLogTag personId $ do
     dConfirmRes <- DConfirm.confirm personId quoteId mbPaymentMethodId isAdvanceBookingEnabled
     becknInitReq <- ACL.buildInitReqV2 dConfirmRes
     moc <- CQMOC.findByMerchantIdAndCity dConfirmRes.merchant.id dConfirmRes.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> dConfirmRes.merchant.id.getId <> "-city-" <> show dConfirmRes.city)

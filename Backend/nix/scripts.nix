@@ -151,6 +151,7 @@ _:
               applyHint "''${FLAKE_ROOT}/Backend/app/provider-platform/dynamic-offer-driver-app/Main/src-read-only" "$allArg"
               applyHint "''${FLAKE_ROOT}/Backend/lib/yudhishthira/src-read-only" "$allArg"
               applyHint "''${FLAKE_ROOT}/Backend/lib/payment/src-read-only" "$allArg"
+              applyHint "''${FLAKE_ROOT}/Backend/lib/shared-services/src-read-only" "$allArg"
               applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/provider-dashboard/src-read-only" "$allArg"
               applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/rider-dashboard/src-read-only" "$allArg"
               applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/CommonAPIs/src-read-only" "$allArg"

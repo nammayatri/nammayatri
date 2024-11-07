@@ -28,9 +28,9 @@ handler merchantId city = getMediaMediaImage merchantId city
 
 type GetMediaMediaImage =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.MEDIA) / ('API.Types.ProviderPlatform.Management.Media.GET_MEDIA_MEDIA_IMAGE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MEDIA / 'API.Types.ProviderPlatform.Management.Media.GET_MEDIA_MEDIA_IMAGE)
       :> API.Types.ProviderPlatform.Management.Media.GetMediaMediaImage
   )
 

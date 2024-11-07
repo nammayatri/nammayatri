@@ -1,0 +1,35 @@
+imports:
+  Person: Domain.Types.Person
+  ProfileRes: Domain.Action.UI.Profile
+  UpdateProfileReq: Domain.Action.UI.Profile
+
+importPackageOverrides:
+  Domain.Types.Person: "rider-app"
+  Domain.Action.UI.Profile: "rider-app"
+
+module: Profile
+
+apis:
+  - GET: # CustomerGetProfileAPI
+      endpoint: /detail/{customerId}
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      response:
+        type: ProfileRes
+      migrate:
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS PERSONDETAIL
+  - POST:  # CustomerUpdateProfileAPI
+      endpoint:  /update/{customerId}
+      auth: ApiAuthV2
+      params:
+        customerId: Id Person
+      request:
+        type: UpdateProfileReq
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth APP_BACKEND CUSTOMERS UPDATEPERSON
+        endpoint: ProfileAPI UpdatePersonEndPoint
+
+types: {}

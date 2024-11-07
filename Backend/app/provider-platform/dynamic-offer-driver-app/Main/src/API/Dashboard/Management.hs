@@ -14,7 +14,6 @@
 
 module API.Dashboard.Management where
 
-import qualified API.Dashboard.Management.Issue as Issue
 import qualified API.Dashboard.Management.Overlay as Overlay
 import qualified API.Dashboard.Management.Subscription as Subscription
 import qualified Domain.Types.Merchant as DM
@@ -28,11 +27,9 @@ type API =
   DashboardTokenAuth
     :> ( Subscription.API
            :<|> Overlay.API
-           :<|> Issue.API
        )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantId city _ =
   Subscription.handler merchantId city
     :<|> Overlay.handler merchantId city
-    :<|> Issue.handler merchantId city

@@ -1,7 +1,5 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
--- {-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.UI.FareCalculator where
 
 import qualified API.Types.UI.FareCalculator

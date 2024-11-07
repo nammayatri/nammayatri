@@ -21,8 +21,6 @@ where
 import "dynamic-offer-driver-app" API.Dashboard.Management as BPP
 import qualified API.Dashboard.Management.Subscription as MSubscription
 import qualified Dashboard.ProviderPlatform.Management.Driver as Driver
-import qualified Data.Aeson as A
-import qualified Data.ByteString.Lazy as LBS
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Driver as DDriver
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Overlay as Overlay
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Driver as ADriver
@@ -33,12 +31,6 @@ import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "dynamic-offer-driver-app" Domain.Types.Plan as DPlan
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
-import IssueManagement.Common
-import qualified IssueManagement.Common.Dashboard.Issue as Issue
-import IssueManagement.Domain.Types.Issue.IssueCategory
-import IssueManagement.Domain.Types.Issue.IssueMessage
-import IssueManagement.Domain.Types.Issue.IssueOption
-import IssueManagement.Domain.Types.Issue.IssueReport
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
@@ -49,8 +41,7 @@ import Tools.Client
 
 data DriverOperationAPIs = DriverOperationAPIs
   { subscription :: SubscriptionAPIs,
-    overlay :: OverlayAPIs,
-    issue :: IssueAPIs
+    overlay :: OverlayAPIs
   }
 
 data OverlayAPIs = OverlayAPIs
@@ -59,22 +50,6 @@ data OverlayAPIs = OverlayAPIs
     listOverlay :: Euler.EulerClient Overlay.ListOverlayResp,
     overlayInfo :: Text -> Maybe Text -> Euler.EulerClient Overlay.OverlayInfoResp,
     scheduleOverlay :: Overlay.ScheduleOverlay -> Euler.EulerClient APISuccess
-  }
-
-data IssueAPIs = IssueAPIs
-  { issueCategoryList :: Euler.EulerClient Issue.IssueCategoryListRes,
-    issueList :: Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> Euler.EulerClient Issue.IssueReportListResponse,
-    issueInfo :: Id IssueReport -> Euler.EulerClient Issue.IssueInfoRes,
-    issueInfoV2 :: Maybe (Id IssueReport) -> Maybe (ShortId IssueReport) -> Euler.EulerClient Issue.IssueInfoRes,
-    issueUpdate :: Id IssueReport -> Issue.IssueUpdateByUserReq -> Euler.EulerClient APISuccess,
-    issueAddComment :: Id IssueReport -> Issue.IssueAddCommentByUserReq -> Euler.EulerClient APISuccess,
-    issueFetchMedia :: Text -> Euler.EulerClient Text,
-    ticketStatusCallBack :: A.Value -> Euler.EulerClient APISuccess,
-    createIssueCategory :: Issue.CreateIssueCategoryReq -> Euler.EulerClient Issue.CreateIssueCategoryRes,
-    updateIssueCategory :: Id IssueCategory -> Issue.UpdateIssueCategoryReq -> Euler.EulerClient APISuccess,
-    createIssueOption :: Id IssueCategory -> Id IssueMessage -> Issue.CreateIssueOptionReq -> Euler.EulerClient Issue.CreateIssueOptionRes,
-    updateIssueOption :: Id IssueOption -> Issue.UpdateIssueOptionReq -> Euler.EulerClient APISuccess,
-    upsertIssueMessage :: (LBS.ByteString, Issue.UpsertIssueMessageReq) -> Euler.EulerClient Issue.UpsertIssueMessageRes
   }
 
 data SubscriptionAPIs = SubscriptionAPIs
@@ -101,13 +76,11 @@ data SubscriptionAPIs = SubscriptionAPIs
 mkDriverOperationAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> DriverOperationAPIs
 mkDriverOperationAPIs merchantId city token = do
   let subscription = SubscriptionAPIs {..}
-  let issue = IssueAPIs {..}
   let overlay = OverlayAPIs {..}
   DriverOperationAPIs {..}
   where
     subscriptionClient
-      :<|> overlayClient
-      :<|> issueClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
+      :<|> overlayClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
 
     planListV2
       :<|> planSelectV2
@@ -133,20 +106,6 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> listOverlay
       :<|> overlayInfo
       :<|> scheduleOverlay = overlayClient
-
-    issueCategoryList
-      :<|> issueList
-      :<|> issueInfo
-      :<|> issueInfoV2
-      :<|> issueUpdate
-      :<|> issueAddComment
-      :<|> issueFetchMedia
-      :<|> ticketStatusCallBack
-      :<|> createIssueCategory
-      :<|> updateIssueCategory
-      :<|> createIssueOption
-      :<|> updateIssueOption
-      :<|> upsertIssueMessage = issueClient
 
 callDriverOfferBPPOperations ::
   forall m r b c.

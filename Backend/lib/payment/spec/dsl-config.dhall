@@ -206,6 +206,7 @@ in  { _output = outputPath
       , GeneratorType.BEAM_QUERIES
       , GeneratorType.SQL
       ]
+    , _packageMapping = [] : List { _1 : GeneratorType, _2 : Text }
     , _apiKind = ApiKind.UI
     , _serverName = None Text
     , _folderName = None Text
