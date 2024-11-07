@@ -160,6 +160,7 @@ data KeyStore = USER_NAME
                 | LOGS_TRACKING
                 | FUNCTION_EXECUTED_IN_SESSION
                 | EVENT_STORAGE
+                | LAST_PLAYED_RIDE_ID 
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
