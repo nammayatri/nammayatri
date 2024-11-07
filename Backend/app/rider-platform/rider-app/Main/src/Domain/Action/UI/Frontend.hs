@@ -76,7 +76,7 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
       if (isJust pollActiveBooking)
         then do
           activeBookings <- bookingList (personId, merchantId) Nothing Nothing (Just True) Nothing Nothing
-          if null activeBookings.list
+          if not (null activeBookings.list)
             then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_BOOKINGS activeBookings.list) Nothing
             else do
               pendingFeedbackBookings <- bookingList (personId, merchantId) (Just 1) Nothing (Just False) Nothing Nothing
