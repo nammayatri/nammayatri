@@ -124,7 +124,12 @@ in  { esqDBCfg
     , encTools
     , exotelToken = sec.exotelToken
     , dataServers =
-      [ driverOfferBpp, driverOfferBppManagement, appBackend, specialZone ]
+      [ driverOfferBpp
+      , driverOfferBppManagement
+      , appBackend
+      , appBackendManagement
+      , specialZone
+      ]
     , merchantUserAccountNumber = +100
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True

@@ -34,7 +34,6 @@ library
       API.ProviderPlatform.DynamicOfferDriver.CacAuth
       API.ProviderPlatform.DynamicOfferDriver.Driver
       API.ProviderPlatform.DynamicOfferDriver.Driver.Registration
-      API.ProviderPlatform.DynamicOfferDriver.Issue
       API.ProviderPlatform.DynamicOfferDriver.Maps
       API.ProviderPlatform.DynamicOfferDriver.Overlay
       API.ProviderPlatform.DynamicOfferDriver.Ride
@@ -43,6 +42,7 @@ library
       API.SpecialZone
       App
       Domain.Action.ProviderPlatform.Fleet.Driver
+      Domain.Action.ProviderPlatform.IssueManagement.Issue
       Domain.Action.ProviderPlatform.Management.Booking
       Domain.Action.ProviderPlatform.Management.Driver
       Domain.Action.ProviderPlatform.Management.DriverCoins
@@ -67,6 +67,8 @@ library
       Storage.Beam.CommonInstances
       API.Action.ProviderPlatform.Fleet
       API.Action.ProviderPlatform.Fleet.Driver
+      API.Action.ProviderPlatform.IssueManagement
+      API.Action.ProviderPlatform.IssueManagement.Issue
       API.Action.ProviderPlatform.Management
       API.Action.ProviderPlatform.Management.Booking
       API.Action.ProviderPlatform.Management.Driver
@@ -85,6 +87,7 @@ library
       API.Action.ProviderPlatform.RideBooking
       API.Action.ProviderPlatform.RideBooking.Driver
       API.Client.ProviderPlatform.Fleet
+      API.Client.ProviderPlatform.IssueManagement
       API.Client.ProviderPlatform.Management
       API.Client.ProviderPlatform.RideBooking
   other-modules:

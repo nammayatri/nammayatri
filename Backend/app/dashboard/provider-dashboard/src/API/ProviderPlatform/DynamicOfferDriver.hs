@@ -23,12 +23,12 @@ module API.ProviderPlatform.DynamicOfferDriver
 where
 
 import qualified API.Action.ProviderPlatform.Fleet as FleetDSL
+import qualified API.Action.ProviderPlatform.IssueManagement as IssueManagementDSL
 import qualified API.Action.ProviderPlatform.Management as ManagementDSL
 import qualified API.Action.ProviderPlatform.RideBooking as RideBookingDSL
 import qualified API.ProviderPlatform.DynamicOfferDriver.CacAuth as CacAuth
 import qualified API.ProviderPlatform.DynamicOfferDriver.Driver as Driver
 import qualified API.ProviderPlatform.DynamicOfferDriver.Driver.Registration as DriverRegistration
-import qualified API.ProviderPlatform.DynamicOfferDriver.Issue as Issue
 import qualified API.ProviderPlatform.DynamicOfferDriver.Maps as Maps
 import qualified API.ProviderPlatform.DynamicOfferDriver.Overlay as Overlay
 import qualified API.ProviderPlatform.DynamicOfferDriver.Ride as Ride
@@ -61,12 +61,12 @@ type API' =
     :<|> Ride.API
     :<|> Subscription.API
     :<|> DriverRegistration.API
-    :<|> Issue.API
     :<|> Volunteer.API
     :<|> Overlay.API
     :<|> Maps.API
     :<|> FleetDSL.API
     :<|> ManagementDSL.API
+    :<|> IssueManagementDSL.API
     :<|> RideBookingDSL.API
 
 -- TODO: Deprecated, Remove after successful deployment
@@ -77,12 +77,12 @@ handler merchantId = do
     :<|> Ride.handler merchantId city
     :<|> Subscription.handler merchantId city
     :<|> DriverRegistration.handler merchantId city
-    :<|> Issue.handler merchantId city
     :<|> Volunteer.handler merchantId city
     :<|> Overlay.handler merchantId city
     :<|> Maps.handler merchantId city
     :<|> FleetDSL.handler merchantId city
     :<|> ManagementDSL.handler merchantId city
+    :<|> IssueManagementDSL.handler merchantId city
     :<|> RideBookingDSL.handler merchantId city
   where
     getCity = \case
@@ -97,12 +97,12 @@ handlerV2 merchantId city =
     :<|> Ride.handler merchantId city
     :<|> Subscription.handler merchantId city
     :<|> DriverRegistration.handler merchantId city
-    :<|> Issue.handler merchantId city
     :<|> Volunteer.handler merchantId city
     :<|> Overlay.handler merchantId city
     :<|> Maps.handler merchantId city
     :<|> FleetDSL.handler merchantId city
     :<|> ManagementDSL.handler merchantId city
+    :<|> IssueManagementDSL.handler merchantId city
     :<|> RideBookingDSL.handler merchantId city
 
 handlerV3 :: FlowServer CacAPI

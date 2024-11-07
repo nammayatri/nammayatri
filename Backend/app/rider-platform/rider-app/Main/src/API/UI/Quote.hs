@@ -16,7 +16,7 @@ module API.UI.Quote
   ( DQuote.GetQuotesRes (..),
     DQuote.OfferRes (..),
     API,
-    getQuotes,
+    getQuotes',
     handler,
   )
 where
@@ -45,4 +45,7 @@ handler =
   getQuotes
 
 getQuotes :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DQuote.GetQuotesRes
-getQuotes searchRequestId _ = withFlowHandlerAPI $ DQuote.getQuotes searchRequestId
+getQuotes searchRequestId = withFlowHandlerAPI . getQuotes' searchRequestId
+
+getQuotes' :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> Flow DQuote.GetQuotesRes
+getQuotes' searchRequestId _ = DQuote.getQuotes searchRequestId

@@ -7,13 +7,18 @@ let folderName = "RideBooking"
 let outputPath =
           defaultOutput
       //  { _apiRelatedTypes =
-              defaultOutput._apiRelatedTypes ++ "/" ++ folderName
+                  common.outputPrefixRiderAppReadOnly
+              ++  "API/Types/Dashboard/"
+              ++  folderName
           , _extraApiRelatedTypes =
-              defaultOutput._extraApiRelatedTypes ++ "/" ++ folderName
+                  common.outputPrefixRiderApp
+              ++  "API/Types/Dashboard/"
+              ++  folderName
+              ++  "/OrphanInstances"
           , _domainHandlerDashboard =
               defaultOutput._domainHandlerDashboard ++ "/" ++ folderName
           , _servantApi = defaultOutput._servantApi ++ "/" ++ folderName
-          , _domainHandler = common.outputPrefixRiderApp ++ "/" ++ folderName
+          , _domainHandler = defaultOutput._domainHandler ++ "/" ++ folderName
           , _servantApiDashboard =
               defaultOutput._servantApiDashboard ++ "/" ++ folderName
           , _servantApiClient =
@@ -26,4 +31,9 @@ in      common.defaultConfigs
     //  { _output = outputPath
         , _serverName = serverName
         , _folderName = Some folderName
+        , _packageMapping =
+          [ { _1 = common.GeneratorType.API_TYPES, _2 = "rider-app" }
+          , { _1 = common.GeneratorType.SERVANT_API, _2 = "rider-app" }
+          , { _1 = common.GeneratorType.DOMAIN_HANDLER, _2 = "rider-app" }
+          ]
         }

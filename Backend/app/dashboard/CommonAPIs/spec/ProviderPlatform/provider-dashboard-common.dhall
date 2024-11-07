@@ -374,6 +374,7 @@ let defaultConfigs =
         , GeneratorType.API_TREE_CLIENT
         , GeneratorType.SQL
         ]
+      , _packageMapping = [] : List { _1 : GeneratorType, _2 : Text }
       , _apiKind = ApiKind.DASHBOARD
       , _serverName = None
       , _endpointPrefix = Some "Provider"
