@@ -15,6 +15,7 @@
 module API.Dashboard where
 
 import qualified API.Action.Dashboard.Fleet as FleetDSL
+import qualified API.Action.Dashboard.IssueManagement as IssueManagementDSL
 import qualified API.Action.Dashboard.Management as ManagementDSL
 import qualified API.Action.Dashboard.RideBooking as RideBookingDSL
 import qualified API.Dashboard.Exotel as Exotel
@@ -36,6 +37,7 @@ type API =
            :<|> RideBooking.API
            :<|> Fleet.API
            :<|> ManagementDSLAPI
+           :<|> IssueManagementDSLAPI
            :<|> RideBookingDSLAPI
            :<|> FleetDSLAPI
        )
@@ -49,12 +51,15 @@ type APIV2 =
            :<|> RideBooking.API
            :<|> Fleet.API
            :<|> ManagementDSLAPI
+           :<|> IssueManagementDSLAPI
            :<|> RideBookingDSLAPI
            :<|> FleetDSLAPI
        )
     :<|> Exotel.API
 
 type ManagementDSLAPI = DashboardTokenAuth :> ManagementDSL.API
+
+type IssueManagementDSLAPI = DashboardTokenAuth :> IssueManagementDSL.API
 
 type RideBookingDSLAPI = DashboardTokenAuth :> RideBookingDSL.API
 
@@ -69,6 +74,7 @@ handler =
         :<|> RideBooking.handler merchantId city
         :<|> Fleet.handler merchantId city
         :<|> managementDSLHandler merchantId city
+        :<|> issueManagementDSLHandler merchantId city
         :<|> rideBookingDSLHandler merchantId city
         :<|> fleetDSLHandler merchantId city
   )
@@ -89,6 +95,7 @@ handlerV2 =
         :<|> RideBooking.handler merchantId city
         :<|> Fleet.handler merchantId city
         :<|> managementDSLHandler merchantId city
+        :<|> issueManagementDSLHandler merchantId city
         :<|> rideBookingDSLHandler merchantId city
         :<|> fleetDSLHandler merchantId city
   )
@@ -96,6 +103,9 @@ handlerV2 =
 
 managementDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer ManagementDSLAPI
 managementDSLHandler merchantId city _auth = ManagementDSL.handler merchantId city
+
+issueManagementDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer IssueManagementDSLAPI
+issueManagementDSLHandler merchantId city _auth = IssueManagementDSL.handler merchantId city
 
 rideBookingDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer RideBookingDSLAPI
 rideBookingDSLHandler merchantId city _auth = RideBookingDSL.handler merchantId city

@@ -21,9 +21,9 @@ data GetImageResponse = GetImageResponse {imageBase64 :: Kernel.Prelude.Text}
 
 type API = GetMediaMediaImage
 
-type GetMediaMediaImage = ("media" :> "image" :> Capture "imageId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) :> Get ('[JSON]) GetImageResponse)
+type GetMediaMediaImage = ("media" :> "image" :> Capture "imageId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) :> Get '[JSON] GetImageResponse)
 
-newtype MediaAPIs = MediaAPIs {getMediaMediaImage :: (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile -> EulerHS.Types.EulerClient GetImageResponse)}
+newtype MediaAPIs = MediaAPIs {getMediaMediaImage :: Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile -> EulerHS.Types.EulerClient GetImageResponse}
 
 mkMediaAPIs :: (Client EulerHS.Types.EulerClient API -> MediaAPIs)
 mkMediaAPIs mediaClient = (MediaAPIs {..})
@@ -36,10 +36,10 @@ data MediaUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON MediaUserActionType where
-  toJSON (GET_MEDIA_MEDIA_IMAGE) = Data.Aeson.String "GET_MEDIA_MEDIA_IMAGE"
+  toJSON GET_MEDIA_MEDIA_IMAGE = Data.Aeson.String "GET_MEDIA_MEDIA_IMAGE"
 
 instance FromJSON MediaUserActionType where
   parseJSON (Data.Aeson.String "GET_MEDIA_MEDIA_IMAGE") = pure GET_MEDIA_MEDIA_IMAGE
   parseJSON _ = fail "GET_MEDIA_MEDIA_IMAGE expected"
 
-$(Data.Singletons.TH.genSingletons [(''MediaUserActionType)])
+$(Data.Singletons.TH.genSingletons [''MediaUserActionType])

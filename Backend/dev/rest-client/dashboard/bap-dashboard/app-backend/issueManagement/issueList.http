@@ -1,0 +1,19 @@
+# access tokens with different roles
+@customer = {{bap-dashboard/token/YATRI/customer}}
+@driver = {{bap-dashboard/token/YATRI/driver}}
+@juspay_ops = {{bap-dashboard/token/YATRI/juspay_ops}}
+@juspay_admin = {{bap-dashboard/token/YATRI/juspay_admin}}
+@customer_service = {{bap-dashboard/token/YATRI/customer_service}}
+
+# @name healthcheck
+GET {{bap-dashboard-host}}
+
+###
+
+# @name ListCustomerIssue
+
+GET {{bap-dashboard-host}}/bap/YATRI/issue/list
+?limit=10
+&offset=0
+content-type: application/json
+token: {{juspay_admin}}

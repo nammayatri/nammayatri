@@ -44,7 +44,6 @@ library
       API.Dashboard.Fleet.Operations
       API.Dashboard.Fleet.Registration
       API.Dashboard.Management
-      API.Dashboard.Management.Issue
       API.Dashboard.Management.Overlay
       API.Dashboard.Management.Subscription
       API.Dashboard.RideBooking
@@ -146,6 +145,7 @@ library
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.Fleet.Driver
       Domain.Action.Dashboard.Fleet.Registration
+      Domain.Action.Dashboard.IssueManagement.Issue
       Domain.Action.Dashboard.Management.Booking
       Domain.Action.Dashboard.Management.Driver
       Domain.Action.Dashboard.Management.DriverCoins
@@ -627,6 +627,8 @@ library
       Tools.Whatsapp
       API.Action.Dashboard.Fleet
       API.Action.Dashboard.Fleet.Driver
+      API.Action.Dashboard.IssueManagement
+      API.Action.Dashboard.IssueManagement.Issue
       API.Action.Dashboard.Management
       API.Action.Dashboard.Management.Booking
       API.Action.Dashboard.Management.Driver

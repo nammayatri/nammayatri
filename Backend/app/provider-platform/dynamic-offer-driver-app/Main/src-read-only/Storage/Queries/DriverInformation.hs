@@ -222,12 +222,12 @@ updateRentalAndInterCitySwitch canSwitchToRental canSwitchToInterCity driverId =
 
 updateSpecialLocWarriorInfo ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Lib.Queries.SpecialLocation.SpecialLocationWarrior -> [(Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation)] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+  (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Lib.Queries.SpecialLocation.SpecialLocationWarrior -> [Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateSpecialLocWarriorInfo isSpecialLocWarrior preferredPrimarySpecialLoc preferredSecondarySpecialLocIds driverId = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.isSpecialLocWarrior (Kernel.Prelude.Just isSpecialLocWarrior),
-      Se.Set Beam.preferredPrimarySpecialLocId (((Kernel.Types.Id.getId . (.id)) <$> preferredPrimarySpecialLoc)),
+      Se.Set Beam.preferredPrimarySpecialLocId (Kernel.Types.Id.getId . (.id) <$> preferredPrimarySpecialLoc),
       Se.Set Beam.preferredSecondarySpecialLocIds (Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds)),
       Se.Set Beam.updatedAt _now
     ]
@@ -310,7 +310,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.payoutVpa payoutVpa,
       Se.Set Beam.payoutVpaBankAccount payoutVpaBankAccount,
       Se.Set Beam.payoutVpaStatus payoutVpaStatus,
-      Se.Set Beam.preferredPrimarySpecialLocId (((Kernel.Types.Id.getId . (.id)) <$> preferredPrimarySpecialLoc)),
+      Se.Set Beam.preferredPrimarySpecialLocId (Kernel.Types.Id.getId . (.id) <$> preferredPrimarySpecialLoc),
       Se.Set Beam.preferredSecondarySpecialLocIds (Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds)),
       Se.Set Beam.referralCode referralCode,
       Se.Set Beam.referredByDriverId (Kernel.Types.Id.getId <$> referredByDriverId),

@@ -20,13 +20,10 @@ module API.RiderPlatform
   )
 where
 
+import qualified API.Action.RiderPlatform.AppManagement as AppManagementDSL
+import qualified API.Action.RiderPlatform.IssueManagement as IssueManagementDSL
 import qualified API.Action.RiderPlatform.Management as ManagementDSL
--- import qualified API.Action.RiderPlatform.RideBooking as RideBookingDSL
-import qualified API.RiderPlatform.HotSpot as HotSpot
-import qualified API.RiderPlatform.Issue as Issue
-import qualified API.RiderPlatform.IssueList as IssueList
-import qualified API.RiderPlatform.RideBooking as RideBooking
-import qualified API.RiderPlatform.Tickets as Tickets
+import qualified API.Action.RiderPlatform.RideBooking as RideBookingDSL
 import qualified "lib-dashboard" Domain.Types.Merchant as DMerchant
 import "lib-dashboard" Environment
 import qualified Kernel.Types.Beckn.City as City
@@ -46,28 +43,20 @@ type APIV2 =
     :> API'
 
 type API' =
-  RideBooking.API
-    :<|> IssueList.API
-    :<|> Issue.API
-    :<|> Tickets.API
-    :<|> HotSpot.API
-    :<|> ManagementDSL.API
-
--- :<|> RideBookingDSL.API
+  ManagementDSL.API
+    :<|> AppManagementDSL.API
+    :<|> IssueManagementDSL.API
+    :<|> ("rideBooking" :> RideBookingDSL.API)
 
 -- TODO: Deprecated, Remove after successful deployment
 handler :: FlowServer API
 handler merchantId = do
   let city = getCity merchantId.getShortId
-  RideBooking.handler merchantId city
-    :<|> IssueList.handler merchantId city
-    :<|> Issue.handler merchantId city
-    :<|> Tickets.handler merchantId city
-    :<|> HotSpot.handler merchantId city
-    :<|> ManagementDSL.handler merchantId city
+  ManagementDSL.handler merchantId city
+    :<|> AppManagementDSL.handler merchantId city
+    :<|> IssueManagementDSL.handler merchantId city
+    :<|> RideBookingDSL.handler merchantId city
   where
-    -- :<|> RideBookingDSL.handler merchantId city
-
     getCity = \case
       "NAMMA_YATRI" -> City.Bangalore
       "YATRI" -> City.Kochi
@@ -76,11 +65,7 @@ handler merchantId = do
 
 handlerV2 :: FlowServer APIV2
 handlerV2 merchantId city =
-  RideBooking.handler merchantId city
-    :<|> IssueList.handler merchantId city
-    :<|> Issue.handler merchantId city
-    :<|> Tickets.handler merchantId city
-    :<|> HotSpot.handler merchantId city
-    :<|> ManagementDSL.handler merchantId city
-
--- :<|> RideBokingDSL.handler merchantId city
+  ManagementDSL.handler merchantId city
+    :<|> AppManagementDSL.handler merchantId city
+    :<|> IssueManagementDSL.handler merchantId city
+    :<|> RideBookingDSL.handler merchantId city

@@ -46,21 +46,6 @@ library
       API.Beckn.OnUpdate
       API.Dashboard
       API.Dashboard.Exotel
-      API.Dashboard.HotSpot
-      API.Dashboard.Issue
-      API.Dashboard.IssueList
-      API.Dashboard.RideBooking
-      API.Dashboard.RideBooking.Booking
-      API.Dashboard.RideBooking.Cancel
-      API.Dashboard.RideBooking.Confirm
-      API.Dashboard.RideBooking.Frontend
-      API.Dashboard.RideBooking.Maps
-      API.Dashboard.RideBooking.Profile
-      API.Dashboard.RideBooking.Quote
-      API.Dashboard.RideBooking.Registration
-      API.Dashboard.RideBooking.Search
-      API.Dashboard.RideBooking.Select
-      API.Dashboard.Tickets
       API.FRFS
       API.IGM
       API.Internal
@@ -158,16 +143,29 @@ library
       Domain.Action.Beckn.OnStatus
       Domain.Action.Beckn.OnTrack
       Domain.Action.Beckn.OnUpdate
+      Domain.Action.Dashboard.AppManagement.HotSpot
+      Domain.Action.Dashboard.AppManagement.Tickets
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Customer
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.FRFSTicket
       Domain.Action.Dashboard.Invoice
-      Domain.Action.Dashboard.IssueList
+      Domain.Action.Dashboard.IssueManagement.Issue
+      Domain.Action.Dashboard.IssueManagement.IssueList
       Domain.Action.Dashboard.Merchant
       Domain.Action.Dashboard.NammaTag
       Domain.Action.Dashboard.NammaTag.Handle
       Domain.Action.Dashboard.Ride
+      Domain.Action.Dashboard.RideBooking.Booking
+      Domain.Action.Dashboard.RideBooking.Cancel
+      Domain.Action.Dashboard.RideBooking.Confirm
+      Domain.Action.Dashboard.RideBooking.Frontend
+      Domain.Action.Dashboard.RideBooking.Maps
+      Domain.Action.Dashboard.RideBooking.Profile
+      Domain.Action.Dashboard.RideBooking.Quote
+      Domain.Action.Dashboard.RideBooking.Registration
+      Domain.Action.Dashboard.RideBooking.Search
+      Domain.Action.Dashboard.RideBooking.Select
       Domain.Action.Dashboard.Route
       Domain.Action.Dashboard.System
       Domain.Action.Internal.Cac
@@ -457,6 +455,12 @@ library
       Tools.Streaming.Kafka
       Tools.Ticket
       Tools.Whatsapp
+      API.Action.Dashboard.AppManagement
+      API.Action.Dashboard.AppManagement.HotSpot
+      API.Action.Dashboard.AppManagement.Tickets
+      API.Action.Dashboard.IssueManagement
+      API.Action.Dashboard.IssueManagement.Issue
+      API.Action.Dashboard.IssueManagement.IssueList
       API.Action.Dashboard.Management
       API.Action.Dashboard.Management.Booking
       API.Action.Dashboard.Management.Customer
@@ -466,6 +470,17 @@ library
       API.Action.Dashboard.Management.NammaTag
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.System
+      API.Action.Dashboard.RideBooking
+      API.Action.Dashboard.RideBooking.Booking
+      API.Action.Dashboard.RideBooking.Cancel
+      API.Action.Dashboard.RideBooking.Confirm
+      API.Action.Dashboard.RideBooking.Frontend
+      API.Action.Dashboard.RideBooking.Maps
+      API.Action.Dashboard.RideBooking.Profile
+      API.Action.Dashboard.RideBooking.Quote
+      API.Action.Dashboard.RideBooking.Registration
+      API.Action.Dashboard.RideBooking.Search
+      API.Action.Dashboard.RideBooking.Select
       API.Action.UI.Cac
       API.Action.UI.CustomerReferral
       API.Action.UI.EditLocation
@@ -483,6 +498,32 @@ library
       API.Action.UI.TicketService
       API.Action.UI.TrackRoute
       API.Action.UI.TriggerFCM
+      API.Types.Dashboard.AppManagement
+      API.Types.Dashboard.AppManagement.Endpoints.HotSpot
+      API.Types.Dashboard.AppManagement.Endpoints.Tickets
+      API.Types.Dashboard.AppManagement.HotSpot
+      API.Types.Dashboard.AppManagement.Tickets
+      API.Types.Dashboard.RideBooking
+      API.Types.Dashboard.RideBooking.Booking
+      API.Types.Dashboard.RideBooking.Cancel
+      API.Types.Dashboard.RideBooking.Confirm
+      API.Types.Dashboard.RideBooking.Endpoints.Booking
+      API.Types.Dashboard.RideBooking.Endpoints.Cancel
+      API.Types.Dashboard.RideBooking.Endpoints.Confirm
+      API.Types.Dashboard.RideBooking.Endpoints.Frontend
+      API.Types.Dashboard.RideBooking.Endpoints.Maps
+      API.Types.Dashboard.RideBooking.Endpoints.Profile
+      API.Types.Dashboard.RideBooking.Endpoints.Quote
+      API.Types.Dashboard.RideBooking.Endpoints.Registration
+      API.Types.Dashboard.RideBooking.Endpoints.Search
+      API.Types.Dashboard.RideBooking.Endpoints.Select
+      API.Types.Dashboard.RideBooking.Frontend
+      API.Types.Dashboard.RideBooking.Maps
+      API.Types.Dashboard.RideBooking.Profile
+      API.Types.Dashboard.RideBooking.Quote
+      API.Types.Dashboard.RideBooking.Registration
+      API.Types.Dashboard.RideBooking.Search
+      API.Types.Dashboard.RideBooking.Select
       API.Types.UI.CustomerReferral
       API.Types.UI.EditLocation
       API.Types.UI.EstimateBP

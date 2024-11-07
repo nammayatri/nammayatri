@@ -129,7 +129,7 @@ instance ToTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverIn
         Beam.payoutVpa = payoutVpa,
         Beam.payoutVpaBankAccount = payoutVpaBankAccount,
         Beam.payoutVpaStatus = payoutVpaStatus,
-        Beam.preferredPrimarySpecialLocId = ((Kernel.Types.Id.getId . (.id)) <$> preferredPrimarySpecialLoc),
+        Beam.preferredPrimarySpecialLocId = Kernel.Types.Id.getId . (.id) <$> preferredPrimarySpecialLoc,
         Beam.preferredSecondarySpecialLocIds = Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds),
         Beam.referralCode = referralCode,
         Beam.referredByDriverId = Kernel.Types.Id.getId <$> referredByDriverId,
