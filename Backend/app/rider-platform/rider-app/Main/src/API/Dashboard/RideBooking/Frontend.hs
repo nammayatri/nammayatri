@@ -65,4 +65,6 @@ callGetPersonFlowStatus personId isPolling checkForActiveBooking = withDashboard
   DFrontend.getPersonFlowStatus personId person.merchantId isPolling checkForActiveBooking
 
 callNotifyEvent :: Id DP.Person -> DFrontend.NotifyEventReq -> FlowHandler DFrontend.NotifyEventResp
-callNotifyEvent personId = withDashboardFlowHandlerAPI . DFrontend.notifyEvent personId
+callNotifyEvent personId req = withDashboardFlowHandlerAPI $ do
+  person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  DFrontend.notifyEvent personId person.merchantId req

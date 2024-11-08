@@ -301,6 +301,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         backendAppVersion = Just deploymentVersion.getDeploymentVersion,
         driversPreviousRideDropLoc = previousRideEndPos,
         showDriversPreviousRideDropLoc = isJust previousRideEndPos,
+        feedbackSkipped = False,
         tollConfidence = Nothing,
         distanceUnit = booking.distanceUnit,
         driverAccountId = req.onlinePaymentParameters <&> (.driverAccountId),
