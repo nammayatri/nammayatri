@@ -1763,4 +1763,5 @@ getEn =
     , sender_unavailable_unreachable : "Sender unavailable / unreachable"
     , truck : "Truck"
     , register_your_truck : "Register your Truck"
+    , no_plan_selected : "No Plan Selected"
     }

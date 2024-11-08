@@ -132,7 +132,14 @@ loadData push loadPlans loadAlternatePlans loadMyPlans loadHelpCentre onCityOrVe
           if cityOrVehicleChangedCondition resp' then do
             void $ fork $ onCityOrVehicleChange push onCityOrVehicleChangeAC
           else pure unit
-          doAff do liftEffect $ push $ loadMyPlans resp
+          case resp'.currentPlanDetails of
+            Nothing -> do
+              uiPlans <- Remote.getUiPlans "null"
+              case uiPlans of
+                Right plansResp -> do
+                  doAff do liftEffect $ push $ loadPlans plansResp
+                Left err -> doAff do liftEffect $ push $ errorAction err
+            Just _ -> do doAff do liftEffect $ push $ loadMyPlans resp
         Left err -> doAff do liftEffect $ push $ errorAction err
     else do
       currentPlan <- Remote.getCurrentPlan ""
