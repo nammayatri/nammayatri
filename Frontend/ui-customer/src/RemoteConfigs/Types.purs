@@ -133,3 +133,9 @@ type VariantBasedBoostSearchConfig = {
 type RemoteCancellationReason = {
     cancellationReasons :: Array OptionButtonList
 }
+
+type EventsConfig = {
+  enabled :: Boolean,
+  pushEventChunkSize :: Int,
+  loggingIntervalInMs :: Number
+}

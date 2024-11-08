@@ -235,6 +235,7 @@ import RemoteConfig as RemoteConfig
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ScreenData as ParcelDeliveryScreenData
 import Helpers.PrestoUtils
 import Common.RemoteConfig (fetchRemoteConfigString)
+import Engineering.Helpers.Events as EHE
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -244,6 +245,8 @@ baseAppFlow gPayload callInitUI = do
   if callInitUI && bundleSplashConfig.enable && hybridInit then toggleSetupSplash true else pure unit
   if isJust (gPayload ^. _payload ^. _appToken) then upateTokenFromHybridFlow $ gPayload ^. _payload ^. _appToken else pure unit
   let _ = setKeyInWindow "forceAppToNoInternetScreen" true
+  let _ = EHE.addEvent (EHE.defaultEventObject "splash_screen_loaded") { module = "onboarding"}
+  if callInitUI && bundleSplashConfig.enable then void $ lift $ lift $ fork $ EHE.runLogTracking else pure unit
   lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "v1-assets_downloader.jsa" "https://assets.moving.tech/beckn/bundles/mobility-core/0.0.10/v1-assets_downloader.jsa" (cb <<< Right) $> nonCanceler
   liftFlowBT $ markPerformance "BASE_APP_FLOW"
   -- checkVersion
@@ -1063,6 +1066,8 @@ enterMobileNumberScreenFlow = do
             case resp of
               Right resp -> do
                     void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_verify_otp"
+                    let eventLog = if state.props.autoFillOTPEnabled then  "otp_auto_detected_success" else "otp_manual_success"
+                    let _ = EHE.addEvent (EHE.defaultEventObject eventLog) { module = "onboarding"}
                     modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumberScreen → enterMobileNumberScreen {props {enterOTP = false}})
                     let (VerifyTokenResp response) = resp
                         customerId = ((response.person)^. _id)
@@ -1080,6 +1085,8 @@ enterMobileNumberScreenFlow = do
                     void $ liftFlowBT $ loginCleverTapUser unit
                     if isNothing (response.person ^. _firstName) then currentFlowStatus false else handleDeepLinks Nothing false
               Left err -> do
+                let eventLog = if state.props.autoFillOTPEnabled then  "otp_auto_detected_failure" else "otp_manual_failure"
+                let _ = EHE.addEvent (EHE.defaultEventObject eventLog) { module = "onboarding"}
                 pure $ setText (getNewIDWithTag "EnterOTPNumberEditText") ""
                 let errResp = err.response
                     codeMessage = decodeError errResp.errorMessage "errorCode"
@@ -1171,6 +1178,7 @@ accountSetUpScreenFlow = do
             Nothing -> pure unit
           void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_onboarded"
           void $ pure $ metaLogEvent "ny_user_onboarded"
+          let _ = EHE.addEvent (EHE.defaultEventObject "home_screen_loaded") { module = "onboarding"}
           pure unit
         Left err -> do
           void $ pure $ toast (getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
@@ -7190,3 +7198,4 @@ updateScheduledRides needApiCall updateRentals= do
       pure unit
     )
     pure unit
+

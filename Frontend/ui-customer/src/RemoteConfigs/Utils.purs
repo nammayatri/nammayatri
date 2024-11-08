@@ -22,6 +22,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Data.Show(show)
 import Debug (spy)
+import RemoteConfig.Types as Types
 
 safetyVideoConfigData :: String -> String -> Array SafetyVideoConfig
 safetyVideoConfigData city language = do
@@ -256,3 +257,14 @@ cancelReasons showAcReason =
             }]
       else []
   )
+eventsConfig :: String -> Types.EventsConfig
+eventsConfig key =
+    let stringifiedConf = fetchRemoteConfigString key
+    in decodeForeignObject (parseJSON stringifiedConf) defEventsConfig
+
+defEventsConfig :: Types.EventsConfig
+defEventsConfig = {
+  enabled : false,
+  pushEventChunkSize : 10,
+  loggingIntervalInMs : 10000.0
+}

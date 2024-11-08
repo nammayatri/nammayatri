@@ -33,6 +33,7 @@ import Engineering.Helpers.LogEvent (logEvent)
 import Data.Array as DA
 import Data.Lens ((^.))
 import Common.Types.App (LazyCheck(..))
+import Engineering.Helpers.Events as EHE
 
 instance showAction :: Show Action where
   show _ = ""
