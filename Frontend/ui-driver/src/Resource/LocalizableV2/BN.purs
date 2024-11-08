@@ -1763,4 +1763,5 @@ getBn =
     , sender_unavailable_unreachable : "প্রেরক অনুপলব্ধ / পৌঁছানো যাচ্ছে না"
     , truck : "ট্রাক"
     , register_your_truck : "আপনার ট্রাক রেজিস্টার করুন" 
+    , no_plan_selected : "কোন পরিকল্পনা নির্বাচিত নেই"
     }

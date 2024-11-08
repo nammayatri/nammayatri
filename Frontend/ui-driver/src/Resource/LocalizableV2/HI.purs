@@ -1763,4 +1763,5 @@ getHi =
     , sender_unavailable_unreachable : "प्रेषक अनुपलब्ध है / संपर्क नहीं हो पा रहा"
     , truck : "ट्रक"
     , register_your_truck : "रेअपने ट्रक को रजिस्टर करें"
+    , no_plan_selected : "कोई योजना चयनित नहीं है"
     }

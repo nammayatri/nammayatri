@@ -1950,7 +1950,8 @@ export const uploadFile = function (aspectRatio) {
   return function (canChooseFromFile) {
   return function () {
     try{
-      return JBridge.uploadFile(JSON.stringify(aspectRatio), canChooseFromFile);
+      if (window.__OS == "ANDROID" && methodArgumentCount("uploadFile") == 2) return JBridge.uploadFile(JSON.stringify(aspectRatio), canChooseFromFile);
+      else return JBridge.uploadFile();
     } catch (err2) {
       return JBridge.uploadFile();
     }

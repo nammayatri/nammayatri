@@ -303,7 +303,9 @@ screen initialState (GlobalState globalState) =
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification initialState
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.invoiceId 4 5000.0 initialState push PaymentStatusAction
                                 when initialState.data.plansState.cityOrVehicleChanged $ void $ launchAff $ EHC.flowRunner defaultGlobalState $ getPlansList push PlanListResponse
-
+                                if getValueToLocalStore GO_TO_PLANS_PAGE == "true" then do
+                                  void $ pure $ setValueToLocalStore GO_TO_PLANS_PAGE "false"
+                                  void $ push $ (BottomNavBarAction (BottomNavBar.OnNavigate "Join")) else pure unit
                                 pure unit
           runEffectFn1 consumeBP unit
           pure $ pure unit
@@ -633,7 +635,7 @@ driverMapsHeaderView push state =
               ] $ [addAadhaarOrOTPView state push]
                 <> [specialPickupZone push state]
                 <> if state.props.specialZoneProps.nearBySpecialZone then getCarouselView true false else getCarouselView (state.props.driverStatusSet == ST.Offline) true --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Offline] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
-                <> if not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW","BIKE", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR","DELIVERY_LIGHT_GOODS_VEHICLE"] )&& DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [bookingPreferenceNavView push state] else []
+                <> if not (state.data.linkedVehicleCategory `elem` ["AUTO_RICKSHAW", "AMBULANCE_TAXI", "AMBULANCE_TAXI_OXY", "AMBULANCE_AC", "AMBULANCE_AC_OXY", "AMBULANCE_VENTILATOR","DELIVERY_LIGHT_GOODS_VEHICLE"] )&& DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [bookingPreferenceNavView push state] else []
             ]
         ]
         , bottomNavBar push state
