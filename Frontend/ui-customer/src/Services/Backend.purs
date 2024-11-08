@@ -1417,6 +1417,13 @@ getMetroStatusBT bookingId = do
           errorHandler _ = do
                 BackT $ pure GoBack
 
+getMetroStatus :: String -> Flow GlobalState (Either ErrorResponse GetMetroBookingStatusResp)
+getMetroStatus bookingId = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.getMetroBookingStatus bookingId) unwrapResponse $ callAPI headers (GetMetroBookingStatusReq bookingId)
+  where
+  unwrapResponse x = x
+
 metroBookingSoftCancelBT :: String -> FlowBT String APISuccessResp
 metroBookingSoftCancelBT bookingId = do
     headers <- getHeaders' "" false

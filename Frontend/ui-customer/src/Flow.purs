@@ -5335,7 +5335,9 @@ searchLocationFlow = do
       (GlobalState globalState) <- getState
       fcmHandler notificationType globalState.homeScreen notificationBody
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  homeScreenFlow)
-    SearchLocationController.BusTicketBookingScreen state ->  (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  busTicketBookingFlow)
+    SearchLocationController.BusTicketBookingScreen state -> do
+      modifyScreenState $ BusTicketBookingScreenStateType (\bookingState -> bookingState{ data{ ticketServiceType = state.data.ticketServiceType } })
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  busTicketBookingFlow)
     SearchLocationController.BusRouteStopSearchScreen state -> do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData{ props{ actionType = BusSearchSelectionAction, focussedTextField = Just SearchLocPickup, canSelectFromFav = false, routeSearch = true } })
       searchLocationFlow
@@ -7326,57 +7328,67 @@ busTicketBookingFlow = do
             in
               sortBy (comparing distanceValue) stops
     BusTicketBookingController.GoToMetroTicketDetailsFlow bookingId -> do
-      (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT bookingId
-      let
-        (FRFSTicketBookingStatusAPIRes metroTicketBookingStatus) = resp
-        tickets = metroTicketBookingStatus.tickets
-      if (metroTicketBookingStatus.status == "CONFIRMED") then do 
-        let goToTracking = maybe false (\(API.FRFSTicketAPI i) -> i.status /= "EXPIRED") (metroTicketBookingStatus.tickets !! 0)
-        if metroTicketBookingStatus.vehicleType == "BUS" && goToTracking then  do
-          let route = spy "route" $ (fromMaybe [] metroTicketBookingStatus.routeStations) !! 0
-              _ = spy "metroTicketBookingStatus" metroTicketBookingStatus
-          let stationList = fromMaybe [] (getStationsFromBusRoute <$> route)
-          let routeDetails = case route of 
-                      Just (FRFSRouteAPI r) -> {code : r.code, shortName : r.shortName}
-                      Nothing -> {code : "", shortName : ""}
- 
-          let source = maybe Nothing (\(FRFSStationAPI s) -> Just {stationName : s.name,stationCode :s.code}) (stationList !! 0)
-          let dest = maybe Nothing (\(FRFSStationAPI s) -> Just {stationName : s.name,stationCode :s.code}) (stationList !! (length stationList -1))
-          modifyScreenState $ BusTrackingScreenStateType (\busScreen -> BusTrackingScreenData.initData { data { sourceStation = source, destinationStation = dest, busRouteCode = routeDetails.code, bookingId = bookingId, routeShortName = routeDetails.shortName}, props{ showRouteDetailsTab = false } })
+      -- (GetMetroBookingStatusResp resp) <- Remote.getMetroStatusBT bookingId 
+      ----------------------------
+      void $ lift $ lift $ toggleLoader true
+      res <- lift $ lift $ Remote.getMetroStatus bookingId
+      case res of
+        Right (GetMetroBookingStatusResp resp) -> do
+          void $ lift $ lift $ toggleLoader false
+          let
+            (FRFSTicketBookingStatusAPIRes metroTicketBookingStatus) = resp
+            tickets = metroTicketBookingStatus.tickets
+          if (metroTicketBookingStatus.status == "CONFIRMED") then do 
+            let goToTracking = maybe false (\(API.FRFSTicketAPI i) -> i.status /= "EXPIRED") (metroTicketBookingStatus.tickets !! 0)
+            if metroTicketBookingStatus.vehicleType == "BUS" && goToTracking then  do
+              let route = spy "route" $ (fromMaybe [] metroTicketBookingStatus.routeStations) !! 0
+                  _ = spy "metroTicketBookingStatus" metroTicketBookingStatus
+              let stationList = fromMaybe [] (getStationsFromBusRoute <$> route)
+              let routeDetails = case route of 
+                          Just (FRFSRouteAPI r) -> {code : r.code, shortName : r.shortName}
+                          Nothing -> {code : "", shortName : ""}
+    
+              let source = maybe Nothing (\(FRFSStationAPI s) -> Just {stationName : s.name,stationCode :s.code}) (stationList !! 0)
+              let dest = maybe Nothing (\(FRFSStationAPI s) -> Just {stationName : s.name,stationCode :s.code}) (stationList !! (length stationList -1))
+              modifyScreenState $ BusTrackingScreenStateType (\busScreen -> BusTrackingScreenData.initData { data { sourceStation = source, destinationStation = dest, busRouteCode = routeDetails.code, bookingId = bookingId, routeShortName = routeDetails.shortName}, props{ showRouteDetailsTab = false } })
+              busTrackingScreenFlow
+            else do
+              modifyScreenState
+                $ MetroTicketDetailsScreenStateType
+                    ( \metroTicketDetailsState ->
+                        let
+                          transformedState = metroTicketDetailsTransformer resp metroTicketDetailsState
+                        in
+                          transformedState { props { fromScreen = Just (Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN), previousScreenStage = ST.MetroMyTicketsStage } }
+                    )
+              metroTicketDetailsFlow
+          else if (metroTicketBookingStatus.status == "CANCELLED") then do
+            modifyScreenState
+              $ MetroTicketDetailsScreenStateType
+                  ( \metroTicketDetailsState ->
+                      let
+                        transformedState = metroTicketDetailsTransformer resp metroTicketDetailsState
+                      in
+                        transformedState { props { fromScreen = Just (Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN),  previousScreenStage = ST.MetroMyTicketsStage, stage = MetroHardCancelStatusStage } }
+                  )
+            metroTicketDetailsFlow
+          else if (any (_ == metroTicketBookingStatus.status) [ "PAYMENT_PENDING", "FAILED" ]) then do
+            modifyScreenState
+              $ MetroTicketStatusScreenStateType
+                  ( \metroTicketStatusScreen ->
+                      let
+                        transformedState = metroTicketStatusTransformer resp metroTicketStatusScreen
+                      in
+                        transformedState { props { entryPoint = BusTicketToMetroTicketStatus} }
+                  )
+            setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
+            metroTicketStatusFlow
+          else
+            metroMyTicketsFlow
+        Left errorPayload -> do
+          void $ lift $ lift $ toggleLoader false
           busTrackingScreenFlow
-        else do
-          modifyScreenState
-            $ MetroTicketDetailsScreenStateType
-                ( \metroTicketDetailsState ->
-                    let
-                      transformedState = metroTicketDetailsTransformer resp metroTicketDetailsState
-                    in
-                      transformedState { props { fromScreen = Just (Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN), previousScreenStage = ST.MetroMyTicketsStage } }
-                )
-          metroTicketDetailsFlow
-      else if (metroTicketBookingStatus.status == "CANCELLED") then do
-        modifyScreenState
-          $ MetroTicketDetailsScreenStateType
-              ( \metroTicketDetailsState ->
-                  let
-                    transformedState = metroTicketDetailsTransformer resp metroTicketDetailsState
-                  in
-                    transformedState { props { fromScreen = Just (Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN),  previousScreenStage = ST.MetroMyTicketsStage, stage = MetroHardCancelStatusStage } }
-              )
-        metroTicketDetailsFlow
-      else if (any (_ == metroTicketBookingStatus.status) [ "PAYMENT_PENDING", "FAILED" ]) then do
-        modifyScreenState
-          $ MetroTicketStatusScreenStateType
-              ( \metroTicketStatusScreen ->
-                  let
-                    transformedState = metroTicketStatusTransformer resp metroTicketStatusScreen
-                  in
-                    transformedState { props { entryPoint = BusTicketToMetroTicketStatus} }
-              )
-        setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
-        metroTicketStatusFlow
-      else
-        metroMyTicketsFlow
+      --------------------------------
     BusTicketBookingController.GoToMetroTicketDetailsScreen (FRFSTicketBookingStatusAPIRes metroTicketStatusApiResp) -> do
       let _ = spy "metroTicketStatusApiResp" metroTicketStatusApiResp
           routeCode = case (metroTicketStatusApiResp.routeStations :: Maybe (Array FRFSRouteAPI)) of
@@ -7541,6 +7553,7 @@ selectBusRouteScreenFlow srcCode destCode = do
         Just quote -> 
           case HU.getFirstRoute quote of
             Just (FRFSRouteAPI route) -> do
+              (GlobalState allStates) <- getState
               modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data { routeList = []}, props {routeName = route.shortName, isEmptyRoute = route.code } })
               modifyScreenState $ BusTrackingScreenStateType (\busScreen -> BusTrackingScreenData.initData { data {sourceStation = Just $ mkStation state.data.srcLoc srcCode
                                                                                             , destinationStation = Just $ mkStation state.data.destLoc destCode
@@ -7549,7 +7562,10 @@ selectBusRouteScreenFlow srcCode destCode = do
                                                                                             , rideType = Just STOP
                                                                                             },
                                                                                         props { showRouteDetailsTab = true
-                                                                                              , previousScreen = PreStopRouteSelection}
+                                                                                              , previousScreen = PreStopRouteSelection
+                                                                                              , srcLat = allStates.homeScreen.props.sourceLat
+                                                                                              , srcLon = allStates.homeScreen.props.sourceLong
+                                                                                              }
                                                                                       })
               busTrackingScreenFlow
             Nothing -> pure unit
