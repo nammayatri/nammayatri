@@ -403,7 +403,7 @@ let getAllCityConfig = () => {
         "perMinCharges" : 1.50
       },
       "bike" : {
-        "freeSeconds" : 300,
+        "freeSeconds" : 180,
         "perMinCharges" : 1.0
       }
     },
@@ -483,7 +483,7 @@ let getAllCityConfig = () => {
         },
         bike: {
           freeSeconds: 180,
-          perMinCharges: 2.0
+          perMinCharges: 1.0
         }
       },
       rentalWaitingChargesConfig: {
@@ -521,7 +521,7 @@ let getAllCityConfig = () => {
         },
         bike: {
           freeSeconds: 180,
-          perMinCharges: 2.0
+          perMinCharges: 1.0
         }
       },
       rentalWaitingChargesConfig: {
