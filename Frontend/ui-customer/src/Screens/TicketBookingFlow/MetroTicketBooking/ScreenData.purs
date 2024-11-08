@@ -61,6 +61,7 @@ initData = {
     , srcLat : 0.00
     , srcLong : 0.00
     , routeName : ""
+    , isRepeatRide : false
     
   },
   config :  getAppConfig appConfig

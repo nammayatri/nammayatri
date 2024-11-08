@@ -306,7 +306,7 @@ mapInputViewConfig state isEditable =
           , canClearText : DS.length (if addressOnMap /= "" && pickUpFocussed then addressOnMap else srcLoc) > 2
           , id : ST.SearchLocPickup
           , isEditable : (not $ (state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN) || (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN)))
-          , alpha : if state.props.actionType /= ST.BusStopSelectionAction then 1.0 else 0.3
+          , alpha : 1.0
           }] <> (if state.props.routeSearch then [] else 
           [{ textValue : destLoc
           , isFocussed : dropLocFocussed
@@ -315,7 +315,7 @@ mapInputViewConfig state isEditable =
           , placeHolder : getInputView.destPlaceHolder
           , canClearText : DS.length (if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc) > 2
           , id : ST.SearchLocDrop
-          , alpha : 1.0
+          , alpha : if state.props.actionType /= ST.BusStopSelectionAction then 1.0 else 0.5
           , isEditable : if DS.null state.props.routeSelected then false else true
           }] )
       

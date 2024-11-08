@@ -110,7 +110,7 @@ eval BackPressed state =
     else exit $ GoToHome
 
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
-    if state.props.ticketServiceType == API.BUS && state.props.isEmptyRoute == "" then do
+    if state.props.ticketServiceType == API.BUS && state.props.routeName == "" then do
      void $ pure $ toast $ "Please Select Route"
      void $ pure $ toggleBtnLoader "" false
      continue state 
@@ -142,7 +142,8 @@ eval (ChangeTicketTab ticketType cityMetroConfig) state = do
     continue state { data {ticketType = ticketType, ticketCount = updatedTicketCount}, props {currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection}}
 
 eval (SelectLocation loc) state = 
-  if state.props.ticketServiceType == BUS
+  if state.props.isRepeatRide then continue state
+  else if state.props.ticketServiceType == BUS
   then exit $ EditStops state
   else updateAndExit state { props { currentStage  = ST.MetroTicketSelection }} $ SelectSrcDest loc state { props { currentStage = ST.MetroTicketSelection }}
 

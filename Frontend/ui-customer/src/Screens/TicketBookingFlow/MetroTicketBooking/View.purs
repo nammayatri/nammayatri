@@ -307,13 +307,13 @@ infoSelectioView state push city cityMetroConfig metroConfig =
                                   , weight 4.0
                                   , cornerRadius 6.0
                                   , stroke ("3," <> Color.white900)
-                                  , alpha if state.props.isEmptyRoute == "" then 0.2 else 1.0
+                                  , alpha if state.props.routeName == "" then 0.2 else 1.0
                                   ] <> FontStyle.subHeading2 TypoGraphy
                                   , linearLayout
                                     [ width WRAP_CONTENT
                                     , height WRAP_CONTENT
                                     , gravity CENTER_VERTICAL
-                                    , visibility $ boolToVisibility $ DA.length state.data.routeList > 0 || (state.props.isEmptyRoute == "")
+                                    , visibility $ boolToVisibility $ DA.length state.data.routeList > 0 || (state.props.routeName == "")
                                     ][ imageView
                                         [ width (V 20)
                                         , height (V 20)
@@ -693,6 +693,7 @@ locationSelectionView push state =
       , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_src_dest_edit"
       , cornerRadius 10.0 
       , margin $ Margin 0 46 16 0
+      , visibility $ boolToVisibility (not state.props.isRepeatRide)
       , onClick push $ const (SelectLocation Src)
       , alignParentRight "true,-1"
       ]

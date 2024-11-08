@@ -4628,7 +4628,7 @@ metroTicketBookingFlow = do
           modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { props { currentStage  = if state.props.ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection } })
           metroTicketBookingFlow
         else do 
-          (FrfsSearchResp searchMetroResp) <- Remote.frfsSearchBT (show state.props.ticketServiceType) (Remote.makeSearchMetroReq state.data.srcCode state.data.destCode state.data.ticketCount (if state.props.ticketServiceType == BUS then Just state.props.isEmptyRoute else Nothing))
+          (FrfsSearchResp searchMetroResp) <- Remote.frfsSearchBT (show state.props.ticketServiceType) (Remote.makeSearchMetroReq state.data.srcCode state.data.destCode state.data.ticketCount (if state.props.ticketServiceType == BUS then Just state.props.routeName else Nothing))
           modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data { searchId = searchMetroResp.searchId }, props { currentStage = GetMetroQuote } })
       else if state.props.currentStage == ConfirmMetroQuote then do
         metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 state.data.quoteId $ API.FRFSQuoteConfirmReq {discounts: fromMaybe [] state.data.applyDiscounts}
@@ -5229,7 +5229,7 @@ metroTicketStatusFlow = do
                                           Just (FRFSStationAPI route) -> route.code
                                           Nothing -> ""
                           _ -> ""
-      modifyScreenState $ MetroTicketBookingScreenStateType (\mtbstate -> mtbstate { props { ticketServiceType = ticketServiceType , currentStage  = if ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection , isEmptyRoute = routeCode , srcLat = currentState.homeScreen.props.sourceLat , srcLong = currentState.homeScreen.props.sourceLong , isButtonActive = true}, data {ticketCount = 1 ,srcLoc = sourceName , destLoc = destinationName,srcCode = srcCode, destCode = destCode} })
+      modifyScreenState $ MetroTicketBookingScreenStateType (\mtbstate -> mtbstate { props { ticketServiceType = ticketServiceType , currentStage  = if ticketServiceType == BUS then ST.BusTicketSelection else  ST.MetroTicketSelection , routeName = routeCode , srcLat = currentState.homeScreen.props.sourceLat , srcLong = currentState.homeScreen.props.sourceLong , isButtonActive = true}, data {ticketCount = 1 ,srcLoc = sourceName , destLoc = destinationName,srcCode = srcCode, destCode = destCode} })
       metroTicketBookingFlow
     GO_TO_HOME_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN -> homeScreenFlow
     GO_TO_METRO_TICKETS_SCREEN_FROM_METRO_TICKET_STATUS_SCREEN -> metroMyTicketsFlow
@@ -7416,7 +7416,7 @@ busTicketBookingFlow = do
                                             Just (FRFSStationAPI route) -> route.code
                                             Nothing -> ""
                             _ -> ""
-      modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> MetroTicketBookingScreenData.initData { props { ticketServiceType = API.BUS, currentStage  = ST.BusTicketSelection , isEmptyRoute = routeCode , srcLat = currentState.homeScreen.props.sourceLat , srcLong = currentState.homeScreen.props.sourceLong , isButtonActive = true}, data {ticketCount = 1 , srcLoc = sourceName , destLoc = destinationName,srcCode = srcCode, destCode = destCode} })
+      modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> MetroTicketBookingScreenData.initData { props { ticketServiceType = API.BUS, currentStage  = ST.BusTicketSelection , routeName = routeCode , srcLat = currentState.homeScreen.props.sourceLat , srcLong = currentState.homeScreen.props.sourceLong , isButtonActive = true , isRepeatRide = true}, data {ticketCount = 1 , srcLoc = sourceName , destLoc = destinationName,srcCode = srcCode, destCode = destCode} })
       metroTicketBookingFlow
     _ -> pure unit
     

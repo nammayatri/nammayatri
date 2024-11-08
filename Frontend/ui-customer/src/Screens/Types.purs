@@ -2862,6 +2862,7 @@ type MetroTicketBookingScreenProps = {
 , srcLat :: Number 
 , srcLong :: Number
 , routeName :: String
+, isRepeatRide :: Boolean
 }
 
 data TicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote | PaymentSDKPooling | BusTicketSelection | OfferSelection
