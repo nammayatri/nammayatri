@@ -1650,3 +1650,5 @@ getFR stringKey =
         INTERCITY_BUS -> "Bus interurbain"
         DRIVER_ASSIGNED -> "Chauffeur attribué"
         EXPLORE -> "Explore"
+        METRO_TICKETS -> "Billets de métro"
+        OFFERS -> "Offres"

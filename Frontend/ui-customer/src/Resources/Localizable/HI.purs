@@ -1649,3 +1649,5 @@ getHI stringKey =
         INTERCITY_BUS -> "इंटरसिटी बस"
         DRIVER_ASSIGNED -> "ड्राइवर असाइन"
         EXPLORE -> "अन्वेषण करें"
+        METRO_TICKETS -> "मेटरो टिकट"
+        OFFERS -> "ऑफ़स"

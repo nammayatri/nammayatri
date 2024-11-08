@@ -1647,3 +1647,5 @@ getML stringKey =
         INTERCITY_BUS -> "ഇൻ്റർസിറ്റി ബസ്"
         DRIVER_ASSIGNED -> "ഡ്രൈവർ നൽകിയിരിക്കുന്നു"
         EXPLORE -> "പര്യവേക്ഷണം ചെയ്യുക"
+        METRO_TICKETS -> "മെട്രോ ടിക്കറ്റുകൾ"
+        OFFERS -> "ആഫ്രസ്"
