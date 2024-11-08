@@ -169,6 +169,7 @@ import RemoteConfig as RemoteConfig
 import Components.DeliveryParcelImageAndOtp as DeliveryParcelImageAndOtp
 import Foreign.Generic (class Decode, decodeJSON, encode, encodeJSON)
 import Common.RemoteConfig (fetchRemoteConfigString)
+import Engineering.Helpers.Events as EHE
 
 -- Controllers
 import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBannerController
@@ -1131,7 +1132,8 @@ eval OpenSearchLocation state = do
   _ <- pure $ firebaseLogEvent "ny_user_hs_pickup_click"
   let _ = unsafePerformEffect $ Events.addEventData "External.Clicked.PickupSearch" "true"
   let srcValue = if state.data.source == "" then (getString CURRENT_LOCATION) else state.data.source
-  _ <- pure $ updateLocalStage SearchLocationModel
+  _ <- pure $ updateLocalStage 
+  let _ = EHE.addEvent (EHE.defaultEventObject "destination_selection_clicked") { module = "onboarding"}
   exit $ UpdateSavedLocation state { props { homeScreenPrimaryButtonLottie = true, isSource = Just false, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = (STR.length srcValue) > 2},  rideSearchProps{ sessionId = generateSessionId unit }}, data {source=srcValue, locationList = state.data.recentSearchs.predictionArray} }
 
 eval (SourceUnserviceableActionController (ErrorModalController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = continueWithCmd state [ do pure $ OpenSearchLocation ]
@@ -1448,6 +1450,7 @@ eval WhereToClick state = do
 eval OpenSettings state = do
   _ <- pure $ hideKeyboardOnNavigation true
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_burger_menu"
+  let _ = EHE.addEvent (EHE.defaultEventObject "burger_menu_clicked") { module = "onboarding"}
   if state.props.isOffline then do
     void $ pure $ toast (getString CHECK_YOUR_INTERNET_CONNECTION_AND_TRY_AGAIN)
     continue state
@@ -3376,25 +3379,37 @@ eval (ServicesOnClick service) state = do
   void $ pure $ performHapticFeedback unit
   let updatedState = state{data{selectedService = Just service}}
   case service.type of
-    RC.RENTAL -> exit $ GoToRentalsFlow updatedState { data {rentalsInfo = Nothing } }
-    RC.INTERCITY ->
+    RC.RENTAL -> do
+      let _ = EHE.addEvent (EHE.defaultEventObject "services_interacted_rentals") { module = "onboarding"}
+      exit $ GoToRentalsFlow updatedState { data {rentalsInfo = Nothing } }
+    RC.INTERCITY -> do 
+      let _ = EHE.addEvent (EHE.defaultEventObject "services_interacted_intercity") { module = "onboarding"}
       if updatedState.data.currentCityConfig.enableIntercity then do
         void $ pure $ updateLocalStage SearchLocationModel
         continue updatedState { data { source=(getString CURRENT_LOCATION)}, props{isSource = Just false, canScheduleRide = true, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }, isIntercityFlow = true}}
         else do
           void $ pure $ toast $ getString INTERCITY_RIDES_COMING_SOON
           continue updatedState
-    RC.INSTANT -> continueWithCmd updatedState [ pure $ WhereToClick]
-    RC.TRANSIT -> exit $ GoToMetroTicketBookingFlow updatedState
-    RC.BIKE_TAXI -> continueWithCmd updatedState [ pure $ WhereToClick]
+    RC.INSTANT -> do 
+      let _ = EHE.addEvent (EHE.defaultEventObject "services_interacted_instant") { module = "onboarding"}
+      continueWithCmd updatedState [ pure $ WhereToClick]
+    RC.TRANSIT -> do 
+      let _ = EHE.addEvent (EHE.defaultEventObject "services_interacted_transit") { module = "onboarding"}
+      exit $ GoToMetroTicketBookingFlow updatedState
+    RC.BIKE_TAXI -> do
+      let _ = EHE.addEvent (EHE.defaultEventObject "services_interacted_bike_taxi") { module = "onboarding"}
+      continueWithCmd updatedState [ pure $ WhereToClick]
     RC.INTERCITY_BUS -> do
       let hasPhoneNumberPermission = getValueToLocalStore INTERCITY_BUS_PHONE_NUMBER_PERMISSION
+      let _ = EHE.addEvent (EHE.defaultEventObject "services_interacted_bus") { module = "onboarding"}
       continueWithCmd state { data { intercityBus {
         showWebView = hasPhoneNumberPermission == "true" || hasPhoneNumberPermission == "false"
       , showPermissionPopUp = hasPhoneNumberPermission /= "true" && hasPhoneNumberPermission /= "false"
       , hasPhoneNumberPermission = hasPhoneNumberPermission == "true"
       }}} [pure $ IntercityBusAC]
-    RC.DELIVERY -> exit $ GoToParcelInstructions state
+    RC.DELIVERY -> do 
+      let _ = EHE.addEvent (EHE.defaultEventObject "services_interacted_delivery") { module = "onboarding"}
+      exit $ GoToParcelInstructions state
     _ -> continue state
 eval (IntercityBusPermissionAction (PopUpModal.OnButton1Click)) state = do
   void $ pure $ setValueToLocalStore INTERCITY_BUS_PHONE_NUMBER_PERMISSION "false"
@@ -3552,6 +3567,7 @@ dummyListItem = {
 tagClickEvent :: CardType -> (Maybe LocationListItemState) -> HomeScreenState -> Boolean -> Eval Action ScreenOutput HomeScreenState
 tagClickEvent savedAddressType arrItem state isEditDestination = do
     let stage' = if os == "IOS" && state.props.currentStage == HomeScreen then ConfirmingLocation else LoadMap
+    let _ = EHE.addEvent (EHE.defaultEventObject "favourite_addition_clicked") { module = "onboarding", payload = show savedAddressType}
     case savedAddressType, arrItem of
         OTHER_TAG,_  -> do
           if state.props.currentStage == EditingDestinationLoc || isEditDestination then do

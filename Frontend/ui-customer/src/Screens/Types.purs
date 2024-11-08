@@ -216,7 +216,8 @@ type EnterMobileNumberScreenStateProps = {
   otpEdtFocused :: Boolean,
   editTextVal :: String,
   attemptLeft :: String,
-  countryCodeOptionExpanded :: Boolean
+  countryCodeOptionExpanded :: Boolean,
+  autoFillOTPEnabled ::  Boolean
 }
 
 type EnterMobileNumberScreenStateData = {
@@ -236,6 +237,7 @@ type EnterMobileNumberScreenStateData = {
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
 derive instance genericGender :: Generic Gender _
+instance showGender :: Show Gender where show = genericShow
 instance eqGender :: Eq Gender where eq = genericEq
 
 type AccountSetUpScreenState =
