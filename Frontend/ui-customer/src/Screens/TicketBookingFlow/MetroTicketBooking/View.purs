@@ -457,6 +457,7 @@ termsAndConditionsView push (CityMetroConfig cityMetroConfig) isMarginTop =
      [ height WRAP_CONTENT
      , width MATCH_PARENT
      , margin $ MarginBottom 12
+     , visibility GONE -- temp disable
      ][ imageView
         [ height $ V 16
         , width $ V 16 
