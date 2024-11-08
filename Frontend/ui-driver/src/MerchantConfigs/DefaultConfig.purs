@@ -43,7 +43,7 @@ config =
       veryHighRange : 67.0,
       highRange : 33.0,
       circleRadius : 1000.0,
-      centerDeviation : 1000.0,
+      centerDeviation : 0.0,
       showColorWithRelativeWeight : false,
       minCirclesNeededForSortedWeights : 10
     }
