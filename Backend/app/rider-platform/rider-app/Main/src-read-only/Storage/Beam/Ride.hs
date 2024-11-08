@@ -63,6 +63,7 @@ data RideT f = RideT
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     fare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     favCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    feedbackSkipped :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     isAlreadyFav :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
