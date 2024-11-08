@@ -1651,3 +1651,5 @@ getKN stringKey =
         INTERCITY_BUS -> "ಇಂಟರ್‌ಸಿಟಿ ಬಸ್"
         DRIVER_ASSIGNED -> "ಡ್ರೈವರ್ ನೀಡಲಾಗಿದೆ"
         EXPLORE -> "ಅನ್ವೇಷಿಸಿ"
+        METRO_TICKETS -> "ಮೆಟ್ರೋ ಟಿಕೆಟ್‌ಗಳು"
+        OFFERS -> "ಆಫ್‌ಸ್"

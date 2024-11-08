@@ -1668,3 +1668,5 @@ getTA stringKey =
     INTERCITY_BUS -> "இன்டர்சிட்டி பேருந்து"
     DRIVER_ASSIGNED -> "இயக்குனர் ஒதுக்கப்பட்டது"
     EXPLORE -> "ஆராயுங்கள்"
+    METRO_TICKETS -> "மெட்ரோ டிக்கெட்டுகள்"
+    OFFERS -> "ஆப்ஸ்"

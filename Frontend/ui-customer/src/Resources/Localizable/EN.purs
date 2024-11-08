@@ -1654,3 +1654,5 @@ getEN stringKey =
         INTERCITY_BUS -> "Intercity Bus" 
         DRIVER_ASSIGNED -> "Driver Assigned"
         EXPLORE -> "Explore"
+        METRO_TICKETS -> "Metro Tickets"
+        OFFERS -> "Offers"

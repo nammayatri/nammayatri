@@ -1662,3 +1662,5 @@ getTE stringKey =
     INTERCITY_BUS -> "ఇంటర్‌సిటీ బస్సు"
     DRIVER_ASSIGNED -> "డ్రైవర్ కేటాయించారు"
     EXPLORE -> "పరిశీలించండి"
+    METRO_TICKETS -> "మెట్రో టికెట్స్"
+    OFFERS -> "ఆఫ్‌స్"

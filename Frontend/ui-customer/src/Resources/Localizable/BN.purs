@@ -1647,3 +1647,5 @@ getBN stringKey =
         INTERCITY_BUS -> "ইন্টারসিটি বাস"
         DRIVER_ASSIGNED -> "ড্রাইভার নিযুক্ত"
         EXPLORE -> "অন্বেষণ করুন"
+        METRO_TICKETS -> "মেট্রো টিকিট"
+        OFFERS -> "অফিস"
