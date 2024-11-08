@@ -1950,7 +1950,13 @@ export const factoryResetApp = function (str) {
 export const uploadFile = function (aspectRatio) {
   return function (canChooseFromFile) {
   return function () {
+    try{
+      if (methodArgumentCount("uploadFile") > 1) return JBridge.uploadFile(JSON.stringify(aspectRatio), canChooseFromFile);
+      else if (methodArgumentCount("uploadFile") == 1) return JBridge.uploadFile(JSON.stringify(aspectRatio));
+      else JBridge.uploadFile();
+    } catch (err2) {
       return JBridge.uploadFile();
+    }
   };
   };
 };
