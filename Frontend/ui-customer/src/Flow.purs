@@ -446,7 +446,11 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
         "prof" -> hideSplashAndCallFlow myProfileScreenFlow
         "lang" -> hideSplashAndCallFlow $ selectLanguageScreenFlow HomeScreenFlow
         "tkts" -> hideSplashAndCallFlow placeListFlow
-        "safety" -> hideSplashAndCallFlow safetySettingsFlow
+        "safety" -> hideSplashAndCallFlow nammaSafetyFlow
+        "rentals" -> hideSplashAndCallFlow $ hybridFlow screen 
+        "intercity" -> hideSplashAndCallFlow $ hybridFlow screen 
+        "favourites" -> hideSplashAndCallFlow $ hybridFlow screen
+        "safetytools" -> hideSplashAndCallFlow $ hybridFlow screen
         "smd" -> do
           modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { showTestDrill = true } })
           hideSplashAndCallFlow activateSafetyScreenFlow
@@ -523,6 +527,67 @@ hideSplashAndCallFlow :: FlowBT String Unit -> FlowBT String Unit
 hideSplashAndCallFlow flow = do
   hideLoaderFlow
   flow
+
+hybridFlow :: String -> FlowBT String Unit
+hybridFlow flow = do
+  case spy "HybridFlow: " flow of
+    "rentals" -> do
+      currentLocation <- lift $ lift $ doAff do liftEffect getCurrentLatLong
+      latestScheduledRides <- FlowCache.fetchAndUpdateScheduledRides true
+      modifyScreenState
+        $ RentalScreenStateType
+            ( \_ ->
+                RentalScreenData.initData
+                  { data
+                    { pickUpLoc
+                      { address = getString STR.CURRENT_LOCATION
+                      , city = ST.Bangalore
+                      , lat = Just currentLocation.lat
+                      , lon = Just currentLocation.lng
+                      , placeId = Nothing
+                      }
+                    , latestScheduledRides = latestScheduledRides
+                    }
+                  }
+            )
+      rentalScreenFlow
+    "intercity" -> do
+      void $ updateLocalStage SearchLocationModel
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { source=(getString STR.CURRENT_LOCATION), rentalsInfo = Nothing}, props{isIntercityFlow = true,isSource = Just false, canScheduleRide = false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}})
+      homeScreenFlow
+    "favourites" -> savedLocationFlow HomeScreenFlow
+    "safetytools" -> do
+      modifyScreenState
+        $ NammaSafetyScreenStateType
+            ( \nammaSafetyScreen ->
+                nammaSafetyScreen
+                  { props
+                    { triggeringSos = false
+                    , timerValue = SafetyScreenData.defaultTimerValue
+                    , showTestDrill = true
+                    , showShimmer = true
+                    , confirmTestDrill = false
+                    , isSafetyCenterDisabled = false
+                    -- , checkPastRide = state.props.currentStage == HomeScreen
+                    , isAudioRecordingActive = false
+                    , showCallPolice = false
+                    , showMenu = false
+                    , recordedAudioUrl = Nothing
+                    , audioRecordingStatus = CTA.NOT_RECORDING
+                    , recordingTimer = "00 : 00"
+                    , defaultCallPopup = false
+                    , reportPastRide = false
+                    }
+                  , data
+                    { rideId = "" -- TODO:: Need to handle this case
+                    -- , vehicleDetails = 
+                    }
+                  }
+            )
+      activateSafetyScreenFlow
+    _ -> pure unit
+
+ 
 
 hideLoaderFlow :: FlowBT String Unit
 hideLoaderFlow = do

@@ -45,7 +45,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude ((*), (||), Unit, ($), (<<<), (/=), const, map, pure, unit, discard, bind, not, void, show, (<>), (==), (&&))
-import Presto.Core.Types.Language.Flow (Flow, doAff, getState)
+import Presto.Core.Types.Language.Flow (Flow, doAff, getState, fork, await)
 import PrestoDOM (singleLine, fontWeight, weight, imageView, lineHeight, maxLines, FontWeight(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), alignParentBottom, background, color, fontStyle, frameLayout, gravity, height, linearLayout, onBackPressed, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, visibility, width, relativeLayout, alignParentRight, margin, stroke, onClick, cornerRadius, afterRender, accessibility)
 import Screens.SavedLocationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -68,8 +68,7 @@ screen initialState st =
   , name : "SavedLocationScreen"
   , globalEvents : [
       (\push -> do
-        _ <- launchAff $ EHC.flowRunner st $ runExceptT $ runBackT $ getFavouriteDriverList push initialState
-        _ <- launchAff $ EHC.flowRunner st $ runExceptT $ runBackT $ getSavedLocationsList SavedLocationListAPIResponseAction push initialState
+        _ <- launchAff $ EHC.flowRunner st $ runExceptT $ runBackT $ getSavedLocationsList push initialState
         pure $ pure unit
           )
   ]
@@ -83,6 +82,7 @@ view push state = do
     , width MATCH_PARENT
     , background Color.white900
     , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
+    , onBackPressed push $ const BackPressed state.props.showDeleteLocationModel
     ][ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
     , linearLayout[
         height $ V 1
@@ -117,7 +117,6 @@ locationView push state =
                     ) (const AfterRender)
   , orientation VERTICAL
   , padding $ Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 24 else EHC.safeMarginBottom)
-  , onBackPressed push $ const BackPressed state.props.showDeleteLocationModel
   , margin $ MarginTop 120
   ]([  linearLayout
       [ height MATCH_PARENT
@@ -176,7 +175,7 @@ driverView push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ MarginTop 135
-    , onBackPressed push $ const Back
+    -- , onBackPressed push $ const Back
     ][
       linearLayout
       [
@@ -517,10 +516,22 @@ savedLocationsView push state =
         ]]
     ]
 
-getSavedLocationsList :: forall action. (SavedLocationsListRes -> action) -> (action -> Effect Unit) -> ST.SavedLocationScreenState -> FlowBT String Unit
-getSavedLocationsList action push state = do
+getSavedLocationsList :: (Action -> Effect Unit) -> ST.SavedLocationScreenState -> FlowBT String Unit
+getSavedLocationsList push state = do
+
   void $ lift $ lift $ EHU.toggleLoader true
+  responseFavDriver <- lift $ lift $ fork $ do
+      (favouriteDriversResp) <- Remote.getFavouriteDriverList 
+      case favouriteDriversResp of
+        Right resp -> do
+          EHC.liftFlow $ push $ GetFavouriteDriversListAPIResponseAction ( GetFavouriteDriverListRes resp)
+          pure unit
+        Left _ -> do
+          pure unit
+
   (SavedLocationsListRes savedLocationResp ) <- FlowCache.updateAndFetchSavedLocations false
+  liftFlowBT $ push $ SavedLocationListAPIResponseAction ( SavedLocationsListRes savedLocationResp)
+  lift $ lift $ await responseFavDriver
   void $ lift $ lift $ EHU.toggleLoader false
-  liftFlowBT $ push $ action ( SavedLocationsListRes savedLocationResp)
   pure unit
+
