@@ -174,7 +174,7 @@ headerView push state =
           , rippleColor Color.rippleShade
           ]
         , textView $
-          [ text "Tickets"
+          [ text $ getString TICKETS
           , color Color.yellow900
           , gravity RIGHT
           , singleLine true
@@ -201,13 +201,13 @@ headerView push state =
         , orientation VERTICAL
         ]
         [ textView $
-          [ text "Book Bus Ticket"
+          [ text $ getString BOOK_BUS_TICKET
           , color Color.white900
           , singleLine true
           , maxLines 1
           ] <> FontStyle.body25 TypoGraphy
         , textView $
-          [ text "Book a one-way instant bus ticket"
+          [ text $ getString BOOK_A_ONE_WAY_INSTANT_BUS_TICKET
           , color Color.black500
           , singleLine true
           , maxLines 1
@@ -237,7 +237,7 @@ dummyIllustrationView push state =
     , imageWithFallback $ fetchImage FF_ASSET "ny_ic_bus_ticket_illustration"
     ]
   , textView $
-    [ text $ "Experience hassle-free bus bookings with " <> appName
+    [ text $ getString EXPERIENCE_HASSLE_FREE_BUS_BOOKINGS_WITH <> appName
     , color Color.black800
     , margin $ MarginHorizontal 24 24
     , gravity CENTER_HORIZONTAL
@@ -287,7 +287,7 @@ recentTicketsView push state =
   , orientation VERTICAL
   ]
   [ textView $
-    [ text "Recent Tickets"
+    [ text $ getString RECENT_TICKETS
     , color Color.black800
     , singleLine true
     , maxLines 1
@@ -335,14 +335,14 @@ ticketCardView push ticketData =
       , orientation VERTICAL
       ]
       [ textView $
-        [ text "Bus Ticket"
+        [ text $ getString BUS_TICKET
         , color Color.black800
         , singleLine true
         , maxLines 1
         , margin $ MarginBottom 2
         ] <> FontStyle.body1 TypoGraphy
       , textView $
-        [ text $ "Ticket No: " <> extractTicketNumber 
+        [ text $ getString TICKET_NUMBER <> ": " <> extractTicketNumber 
         , color Color.black700
         , singleLine true
         , maxLines 1
@@ -396,7 +396,7 @@ ticketCardView push ticketData =
       , gravity CENTER_VERTICAL
       ]
     , textView $
-      [ text "Repeat Ride"
+      [ text $ getString REPEAT_RIDE
       , color Color.blue900
       , singleLine true
       , maxLines 1
@@ -465,7 +465,7 @@ viewMoreButton push state =
   , visibility $ boolToVisibility $ (not $ state.props.showAllTickets) && (DA.length $ getAllBusTickets state) > 3
   ]
   [ textView $
-    [ text "View More"
+    [ text $ getString VIEW_MORE
     , color Color.blue900
     ] <> FontStyle.body1 TypoGraphy
   ]

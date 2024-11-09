@@ -699,7 +699,7 @@ searchLocationView push state globalProps = let
                               NoBusRouteSelectionAction -> false
                               BusStopSelectionAction ->  DA.null state.data.updatedStopsSearchedList
                               _ -> DA.null state.data.locationList
-      , headerText : if DA.elem state.props.actionType [BusRouteSelectionAction,BusStopSelectionAction] then "Oops! Please check your spelling and try searching again" else (getVarString WELCOME_TEXT [appName]) <> "!"
+      , headerText : if DA.elem state.props.actionType [BusRouteSelectionAction,BusStopSelectionAction] then getString CHECK_SPELLING_AND_TRY_AGAIN else (getVarString WELCOME_TEXT [appName]) <> "!"
       , descText : if DA.elem state.props.actionType [BusRouteSelectionAction,BusStopSelectionAction] then "" else getString START_TYPING_TO_SEARCH_PLACES
         }
 

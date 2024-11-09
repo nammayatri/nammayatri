@@ -284,7 +284,7 @@ infoSelectioView state push city cityMetroConfig metroConfig =
                           ][  textView
                               ([ width WRAP_CONTENT
                               , height WRAP_CONTENT
-                              , text "Route/Bus Number"
+                              , text $ getString ROUTE_BUS_NO
                               , color Color.greyTextColor
                               , margin (MarginVertical 10 10)
                               ] <> FontStyle.body2 TypoGraphy)
@@ -303,7 +303,7 @@ infoSelectioView state push city cityMetroConfig metroConfig =
                                   , height WRAP_CONTENT
                                   , padding (Padding 19 17 0 17)
                                   , color Color.greyTextColor
-                                  , textFromHtml $ if state.props.routeName == "" then "Select Route Number" else  state.props.routeName                                            
+                                  , textFromHtml $ if state.props.routeName == "" then getString SELECT_ROUTE_NUMBER else  state.props.routeName                                            
                                   , weight 4.0
                                   , cornerRadius 6.0
                                   , stroke ("3," <> Color.white900)
@@ -327,7 +327,7 @@ infoSelectioView state push city cityMetroConfig metroConfig =
                     , textView
                             ([ width WRAP_CONTENT
                             , height WRAP_CONTENT
-                            , text "Pickup and Destination Stop"
+                            , text $ getString PICKUP_AND_DESTINATION_STOP
                             , color Color.greyTextColor
                             -- , margin (MarginVertical 10 10)
                             , margin $ if state.props.ticketServiceType == BUS then  MarginTop 35 else MarginTop 5
