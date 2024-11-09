@@ -1056,7 +1056,7 @@ getMetroConfigFromCity city fcResponse vehicleType =
         Chennai ->
             mkCityBasedConfig
                 (if vehicleType == "BUS" then "ny_ic_kolkata_bus" else  "ny_ic_chennai_metro")
-                (if vehicleType == "BUS" then "Tickets for Chennai Bus" else getString TICKETS_FOR_CHENNAI_METRO)
+                (if vehicleType == "BUS" then getString TICKETS_FOR_CHENNAI_BUS else getString TICKETS_FOR_CHENNAI_METRO)
                 "ny_ic_chennai_metro_map"
                 "ny_ic_chennai_metro_banner"
                 "#D8E2FF"
@@ -1094,12 +1094,12 @@ getMetroConfigFromCity city fcResponse vehicleType =
         Kolkata -> 
           mkCityBasedConfig 
             "ny_ic_kolkata_bus" 
-            "Tickets for kolkata Bus" 
+            (getString TICKETS_FOR_KOLKATA_BUS) 
             "" 
             "" 
             "" 
             "" 
-            ["Cancellation of tickets is not applicable" , "The ticket is valid for only 30 minutes from the time of booking" ,"Fare is commission-free and determined by the WBTC"] 
+            [getString CHENNAI_METRO_TERM_1 , getString TICKET_VALIDITY_30_MINUTES , getString FARE_COMMISSION_FREE_WBTC] 
             "" 
             false 
             config

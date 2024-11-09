@@ -510,7 +510,7 @@ metroHeaderView push state headerFontStyle detailVisibility =
       [ textView $ [
           width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text $ if isBusTicketBooking state then "Bus Ticket" else cityConfig.title
+        , text $ if isBusTicketBooking state then getString BUS_TICKET else cityConfig.title
         , color Color.white900
         ] <> headerFontStyle
       , linearLayout [

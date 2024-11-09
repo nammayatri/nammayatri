@@ -56,7 +56,7 @@ headerConfig state = let
           } 
         , padding = PaddingVertical 5 5
         , textConfig {
-            text = "Buy Bus Tickets"
+            text = getString BUY_BUS_TICKETS
           , color = Color.darkCharcoal
           }
         , suffixImageConfig {

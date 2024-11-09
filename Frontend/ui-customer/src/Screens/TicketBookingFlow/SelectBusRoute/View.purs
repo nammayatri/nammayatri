@@ -92,7 +92,7 @@ view push state =
         ][textView $
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text "Route/Bus Number"
+          , text $ getString ROUTE_BUS_NO
           , color Color.black800
           , margin $ MarginBottom 8
           ] <> FontStyle.body3 TypoGraphy
@@ -131,7 +131,7 @@ pickupAndDestView state push =
   ][  textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text "Pickup and Destination Stop"
+      , text $ getString PICKUP_AND_DESTINATION_STOP
       , color Color.black800
       ] <> FontStyle.body3 TypoGraphy
     , locationSelectionView push state

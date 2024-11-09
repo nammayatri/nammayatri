@@ -1776,4 +1776,23 @@ getProxy str =
     CONFIRM_CONTACTS -> \a -> a @~ confirm_contacts
     TICKETS_FOR_DELHI_METRO -> \a -> a @~ tickets_for_delhi_metro
     MAX_PARCEL_SIZE arg1 arg2 arg3 -> \a -> (a @~ max_parcel_size) arg1 arg2 arg3
+    TICKETS_FOR_CHENNAI_BUS -> \a -> a @~ tickets_for_chennai_bus
     BUS__ -> \a -> a @~ bus__
+    BUY_BUS_TICKETS -> \a -> a @~ buy_bus_tickets
+    BOOK_AND_PAY -> \a -> a @~ book_and_pay
+    BUS_TICKET -> \a -> a @~ bus_ticket
+    CHECK_SPELLING_AND_TRY_AGAIN -> \a -> a @~ check_spelling_and_try_again
+    BOOK_BUS_TICKET -> \a -> a @~ book_bus_ticket
+    BOOK_A_ONE_WAY_INSTANT_BUS_TICKET -> \a -> a @~ book_a_one_way_instant_bus_ticket
+    RECENT_TICKETS -> \a -> a @~ recent_ticket
+    EXPERIENCE_HASSLE_FREE_BUS_BOOKINGS_WITH -> \a -> a @~ experience_hassle_free_bus_bookings_with
+    ENTER_BUS_NUMBER_OR_DESTINATION -> \a -> a @~ enter_bus_number_or_destination
+    DESTINATION_STOPS -> \a -> a @~ destination_stop
+    ROUTE_BUS_NO -> \a -> a @~ route_bus_number
+    PICKUP_STOP -> \a -> a @~ pickup_stop
+    TICKETS_FOR_KOLKATA_BUS -> \a -> a @~ tickets_for_kolkata_bus
+    TICKET_VALIDITY_30_MINUTES -> \a -> a @~ ticket_validity_30_minutes
+    FARE_COMMISSION_FREE_WBTC -> \a -> a @~ fare_commission_free_wbtc
+    SELECT_ROUTE_NUMBER -> \a -> a @~ select_route_number
+    PICKUP_AND_DESTINATION_STOP -> \a -> a @~ pickup_and_destination_stop
+
