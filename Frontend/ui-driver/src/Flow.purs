@@ -53,7 +53,7 @@ import Data.String (Pattern(..), split, toUpper, drop, indexOf, toLower, take)
 import Data.String (length, null) as STR
 import Data.String as DS
 import Data.String.CodeUnits (splitAt)
-import Data.String.Common (joinWith, split, toUpper, trim)
+import Data.String.Common (joinWith, split, toUpper, trim, toLower)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (traverse, for_)
 import Data.Tuple (Tuple(..), fst, snd)
@@ -4600,7 +4600,7 @@ logDriverStatus category status = do
   let label = 
             "ny_driver_"
             <> case category of
-                Just category -> category
+                Just category -> toLower category
                 Nothing -> ""
             <> "_"
             <> toLower (show status)
