@@ -830,7 +830,10 @@ eval BackPressed state = do
         else do
           if (getSearchType unit) == "direct_search" then
             pure $ terminateApp state.props.currentStage false
-          else 
+          else if HU.isParentView FunctionCall 
+          then do 
+            pure $ HU.emitTerminateApp Nothing true
+          else
             pure unit
           void $ pure $ removeAllPolylines ""
           void $ pure $ updateLocalStage HomeScreen
