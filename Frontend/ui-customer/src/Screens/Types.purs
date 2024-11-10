@@ -857,6 +857,7 @@ type IntercityBusData = {
 , showWebView :: Boolean
 , hasPhoneNumberPermission :: Boolean
 , url :: Maybe String
+, sentPhoneNumberToWebView :: Boolean
 }
 
 type InteroperabilityState = {

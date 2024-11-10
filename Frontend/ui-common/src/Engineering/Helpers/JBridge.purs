@@ -234,6 +234,7 @@ foreign import getExtendedPath :: Locations -> Locations
 foreign import generateSessionId :: Unit -> String
 
 foreign import initialWebViewSetUp :: forall action. (action -> Effect Unit) -> String -> (String -> action) -> Effect Unit
+foreign import initiateWebviewWithInterface :: forall action. (action -> Effect Unit) -> String -> (String -> action) -> Effect Unit
 foreign import goBackPrevWebPage ::  String -> Effect Unit
 foreign import detectPhoneNumbers :: forall action. (action -> Effect Unit) -> (String  -> action) -> Effect Unit
 foreign import setCleverTapUserData :: String -> String -> Effect Unit
@@ -315,6 +316,8 @@ foreign import storeCallBackPickContact :: forall action. EffectFn2 (action -> E
 foreign import pickContact :: EffectFn1 String Boolean
 foreign import getResourceIdentifier :: String -> String -> Int
 foreign import executeJS :: Fn2 (Array String) String String
+foreign import setPSPermissionRequestCallback :: forall action. EffectFn2 (action -> Effect Unit) action Unit
+foreign import sentPhoneNumberToWebView :: EffectFn2 String String Unit
 
 type SliderConfig = { 
   id :: String,

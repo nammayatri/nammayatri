@@ -243,6 +243,8 @@ screen initialState =
               pure unit
             when (isNothing initialState.data.bannerData.bannerItem) $ void $ launchAff $ flowRunner defaultGlobalState $ computeListItem push
             when (isNothing initialState.data.rideCompletedData.issueReportData.bannerItem) $ void $ launchAff $ flowRunner defaultGlobalState $  computeIssueReportBanners push
+            void $ runEffectFn2 JB.setPSPermissionRequestCallback push TriggerIntercityPermissionPopUp
+
             case initialState.props.currentStage of
               SearchLocationModel -> case initialState.props.isSearchLocation of
                 LocateOnMap -> do
@@ -5330,7 +5332,7 @@ intercityWebView push state  =
           weight 1.0
         , width MATCH_PARENT
         , background Color.grey800
-        , afterRender( \_ ->initialWebViewSetUp push (getNewIDWithTag "intercityWebView") HideIntercityBusView) (const NoAction)
+        , afterRender( \_ -> JB.initiateWebviewWithInterface push (getNewIDWithTag "intercityWebView") HideIntercityBusView) (const NoAction)
         ][
           webView[ 
             url $ url'

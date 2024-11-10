@@ -352,6 +352,7 @@ data Action = NoAction
   | ConfirmDeliveryRide
   | RefreshDelveryParcelImage
   | DriverReachedDestinationAction String
+  | TriggerIntercityPermissionPopUp 
 
 instance showAction :: Show Action where show _ = ""
 instance loggableAction :: Loggable Action where

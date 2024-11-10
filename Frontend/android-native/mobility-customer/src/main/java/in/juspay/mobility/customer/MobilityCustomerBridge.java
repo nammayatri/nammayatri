@@ -621,4 +621,14 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         AccessibilityManager accessibilityManager = (AccessibilityManager) bridgeComponents.getContext().getSystemService(Context.ACCESSIBILITY_SERVICE);
         return accessibilityManager.isEnabled();
     }
+
+    @JavascriptInterface
+    public void setPSPermissionRequestCallback(String callback){
+        intercityBus.setPSPermissionRequestCallback(callback);
+    }
+
+    @JavascriptInterface
+    public void sentNumberToIntercityBus(String mobileNumber, String webviewid){
+        intercityBus.sentNumberToIntercityBus(mobileNumber, webviewid);
+    }
 }

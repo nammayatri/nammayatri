@@ -196,7 +196,6 @@ chatView config push =
   linearLayout
   [ height if config.spanParent then MATCH_PARENT else WRAP_CONTENT
   , width MATCH_PARENT
-  , weight 1.0 
   , orientation VERTICAL
   , margin config.chatMargin
   ] ([ scrollView
@@ -403,7 +402,7 @@ chatComponentView state push config nextConfig isLastItem index =
   ][ linearLayout
      [ padding (Padding 12 12 12 12)
      , height WRAP_CONTENT
-     , width $ if (os == "IOS" && (STR.length config.message) > (if state.languageKey == "HI_IN" then 50 else 30) && config.type /= "Image" && config.type /= "Audio") then MATCH_PARENT else WRAP_CONTENT
+     , width $ V 300 -- if (os == "IOS" && (STR.length config.message) > (if state.languageKey == "HI_IN" then 50 else 30) && config.type /= "Image" && config.type /= "Audio") then MATCH_PARENT else WRAP_CONTENT
      , background chatConfig.background
      , cornerRadii chatConfig.cornerRadii
      , gravity chatConfig.gravity
@@ -461,7 +460,7 @@ chatComponentView state push config nextConfig isLastItem index =
                                 ]
         "FARE_BREAKUP_MESSAGE" -> linearLayout
                                 [ height MATCH_PARENT
-                                , width MATCH_PARENT
+                                , width $ V 200
                                 , orientation VERTICAL
                                 , gravity chatConfig.gravity
                                 ][ textView $ 
@@ -475,7 +474,7 @@ chatComponentView state push config nextConfig isLastItem index =
                                     , background Color.white900
                                     , padding $ Padding 12 12 12 0
                                     , cornerRadius 12.0
-                                    , width MATCH_PARENT
+                                    , width $ V 200
                                     , margin $ MarginTop 12
                                     , orientation VERTICAL
                                     ][  textView $ 
@@ -483,6 +482,7 @@ chatComponentView state push config nextConfig isLastItem index =
                                         , singleLine false
                                         , margin $ MarginTop $ if state.languageKey == "KN_IN" then 6 else 0
                                         , color chatConfig.textColor
+                                        , width $ V 180
                                         ] <> FontStyle.body1 TypoGraphy
                                     ]
                                 ] 
