@@ -82,11 +82,6 @@ search _merchant _merchantOperatingCity providerConfig bapConfig searchReq = do
         DQuote
           { bppItemId = "Metro",
             _type = DFRFSQuote.SingleJourney,
-            serviceTierType = Nothing,
-            serviceTierProviderCode = Nothing,
-            serviceTierShortName = Nothing,
-            serviceTierDescription = Nothing,
-            serviceTierLongName = Nothing,
             discounts = [],
             ..
           }

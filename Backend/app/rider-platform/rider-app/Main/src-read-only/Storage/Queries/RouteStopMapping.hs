@@ -41,7 +41,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.RouteStopMapping.RouteStopMapping {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
+    [ Se.Set Beam.estimatedTravelTimeFromPreviousStop estimatedTravelTimeFromPreviousStop,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.providerCode providerCode,
       Se.Set Beam.sequenceNum sequenceNum,
@@ -60,7 +61,8 @@ instance FromTType' Beam.RouteStopMapping Domain.Types.RouteStopMapping.RouteSto
     pure $
       Just
         Domain.Types.RouteStopMapping.RouteStopMapping
-          { merchantId = Kernel.Types.Id.Id merchantId,
+          { estimatedTravelTimeFromPreviousStop = estimatedTravelTimeFromPreviousStop,
+            merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             providerCode = providerCode,
             routeCode = routeCode,
@@ -77,7 +79,8 @@ instance FromTType' Beam.RouteStopMapping Domain.Types.RouteStopMapping.RouteSto
 instance ToTType' Beam.RouteStopMapping Domain.Types.RouteStopMapping.RouteStopMapping where
   toTType' (Domain.Types.RouteStopMapping.RouteStopMapping {..}) = do
     Beam.RouteStopMappingT
-      { Beam.merchantId = Kernel.Types.Id.getId merchantId,
+      { Beam.estimatedTravelTimeFromPreviousStop = estimatedTravelTimeFromPreviousStop,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.providerCode = providerCode,
         Beam.routeCode = routeCode,
