@@ -74,7 +74,7 @@ import MerchantConfig.Types (AppConfig(..), MetroConfig(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, identity, otherwise, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*), max, min, (>>>), flip, (<#>))
-import Mobility.Prelude (capitalize, boolToInt)
+import Mobility.Prelude (capitalize, boolToInt, startsWith)
 import ModifyScreenState (modifyScreenState, updateSafetyScreenState, updateRepeatRideDetails, FlowState(..))
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField)
 import Helpers.Pooling (delay)
@@ -485,12 +485,45 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
             _ -> pure unit
         "delivery" -> currentFlowStatus false
         _ -> do
-          case breakPrefixAndId screen of
-            Just ( Tuple "metroBooking" bookingId )-> do
-              case bookingId of
-                Just id -> hideSplashAndCallFlow $ viewTicketDetialsFlow (Just id)
-                _ -> pure unit
-            _ -> if skipDefaultCase then pure unit else currentFlowStatus false
+          if startsWith "safetytools" screen then do
+            let safetyParam = DS.split (DS.Pattern "$$") screen
+                rideId = fromMaybe "" $ safetyParam !! 1
+                vehicleNumber = fromMaybe "" $ safetyParam !! 2
+            modifyScreenState
+              $ NammaSafetyScreenStateType
+                  ( \nammaSafetyScreen ->
+                      nammaSafetyScreen
+                        { props
+                          { triggeringSos = false
+                          , timerValue = SafetyScreenData.defaultTimerValue
+                          , showTestDrill = false
+                          , showShimmer = true
+                          , confirmTestDrill = false
+                          , isSafetyCenterDisabled = false
+                          , checkPastRide = false
+                          , isAudioRecordingActive = false
+                          , showCallPolice = false
+                          , showMenu = false
+                          , recordedAudioUrl = Nothing
+                          , audioRecordingStatus = CTA.NOT_RECORDING
+                          , recordingTimer = "00 : 00"
+                          , defaultCallPopup = false
+                          , reportPastRide = false
+                          }
+                        , data
+                          { rideId = rideId
+                          , vehicleDetails = vehicleNumber
+                          }
+                        }
+                  )
+            activateSafetyScreenFlow
+          else
+            case breakPrefixAndId screen of
+              Just ( Tuple "metroBooking" bookingId )-> do
+                case bookingId of
+                  Just id -> hideSplashAndCallFlow $ viewTicketDetialsFlow (Just id)
+                  _ -> pure unit
+              _ -> if skipDefaultCase then pure unit else currentFlowStatus false
       Nothing -> currentFlowStatus false
     Nothing -> do
       let
