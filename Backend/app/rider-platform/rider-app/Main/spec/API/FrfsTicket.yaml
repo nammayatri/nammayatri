@@ -9,6 +9,7 @@ imports:
   FRFSQuote: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBooking
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
+  TimeBound: Kernel.Types.TimeBound
   FRFSTicketStatus: Domain.Types.FRFSTicket
   HighPrecMoney: Kernel.Types.Common
   PriceAPIEntity: Kernel.Types.Common
@@ -39,10 +40,6 @@ types:
     quoteId: Id FRFSQuote
     _type: FRFSQuoteType
     vehicleType: VehicleCategory
-    serviceTierType: Maybe ServiceTierType
-    serviceTierShortName: Maybe Text
-    serviceTierLongName: Maybe Text
-    serviceTierDescription: Maybe Text
     quantity: Int
     discounts: Maybe [FRFSDiscountRes]
     price: HighPrecMoney
@@ -76,10 +73,6 @@ types:
     _type: FRFSQuoteType
     quantity: Int
     vehicleType: VehicleCategory
-    serviceTierType: Maybe ServiceTierType
-    serviceTierShortName: Maybe Text
-    serviceTierLongName: Maybe Text
-    serviceTierDescription: Maybe Text
     price: HighPrecMoney
     priceWithCurrency: PriceAPIEntity
     validTill: UTCTime
@@ -92,6 +85,14 @@ types:
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
 
+  FRFSVehicleServiceTierAPI:
+    _type: ServiceTierType
+    providerCode: Text
+    shortName: Text
+    longName: Text
+    description: Text
+    derive: "Show"
+
   FRFSRouteStationsAPI:
     code: Text
     shortName: Text
@@ -100,6 +101,9 @@ types:
     endPoint: LatLong
     color: Maybe Text
     stations: [FRFSStationAPI]
+    travelTime: Maybe Seconds
+    vehicleServiceTier: Maybe FRFSVehicleServiceTierAPI
+    priceWithCurrency: PriceAPIEntity
     sequenceNum: Maybe Int
     derive: "Show"
 
@@ -165,6 +169,7 @@ types:
     endPoint: LatLong
     totalStops: Maybe Int
     waypoints: Maybe [LatLong]
+    timeBounds: Maybe TimeBound
     derive: "Show"
 
   AutocompleteRes:

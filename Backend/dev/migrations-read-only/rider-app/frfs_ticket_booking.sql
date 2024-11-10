@@ -108,10 +108,11 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN route_stations_json text ;
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN route_id TYPE text;
-
+ALTER TABLE atlas_app.frfs_ticket_booking DROP COLUMN route_id;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN route_id text;
 
 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN discounts_json text ;
+

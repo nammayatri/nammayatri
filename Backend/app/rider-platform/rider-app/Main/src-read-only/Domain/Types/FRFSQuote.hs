@@ -11,7 +11,6 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
-import qualified Domain.Types.Route
 import qualified Domain.Types.Station
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -39,14 +38,8 @@ data FRFSQuote = FRFSQuote
     providerName :: Kernel.Prelude.Text,
     quantity :: Kernel.Prelude.Int,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    routeId :: Kernel.Prelude.Maybe Domain.Types.FRFSQuote.FRFSRoutes,
     routeStationsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
-    serviceTierDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    serviceTierLongName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    serviceTierProviderCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    serviceTierShortName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     stationsJson :: Kernel.Prelude.Text,
     toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     validTill :: Kernel.Prelude.UTCTime,
@@ -58,8 +51,4 @@ data FRFSQuote = FRFSQuote
 
 data FRFSQuoteType = SingleJourney | ReturnJourney | Pass | SpecialFareSingleJourney deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data FRFSRoutes = Bus (Kernel.Types.Id.Id Domain.Types.Route.Route) | Metro [Kernel.Types.Id.Id Domain.Types.Route.Route] deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSQuoteType)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSRoutes)

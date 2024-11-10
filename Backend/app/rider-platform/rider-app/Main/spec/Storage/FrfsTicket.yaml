@@ -142,17 +142,11 @@ FRFSQuote:
     _type: FRFSQuoteType
     fromStationId: Id Station
     toStationId: Id Station
-    routeId: Maybe FRFSRoutes
     quantity: Int
     stationsJson: Text
     routeStationsJson: Maybe Text
     discountsJson: Maybe Text
     vehicleType: VehicleCategory
-    serviceTierProviderCode: Maybe Text
-    serviceTierType: Maybe ServiceTierType
-    serviceTierShortName: Maybe Text
-    serviceTierLongName: Maybe Text
-    serviceTierDescription: Maybe Text
     bppSubscriberId: Text
     bppSubscriberUrl: Text
     providerId: Text
@@ -180,9 +174,6 @@ FRFSQuote:
   types:
     FRFSQuoteType:
       enum: "SingleJourney, ReturnJourney, Pass, SpecialFareSingleJourney"
-    # For Bus it would be one route per leg, but for Metro it can be more than one route with transit stations for a single Journey leg.
-    FRFSRoutes:
-      enum: "Bus (Id Route), Metro [Id Route]"
 
   fromTType:
     price: Kernel.Types.Common.mkPrice currency price|E
@@ -225,14 +216,8 @@ FRFSTicketBooking:
     _type: FRFSQuoteType
     fromStationId: Id Station
     toStationId: Id Station
-    routeId: Maybe FRFSRoutes
     quantity: Int
     vehicleType: VehicleCategory
-    serviceTierProviderCode: Maybe Text
-    serviceTierType: Maybe ServiceTierType
-    serviceTierShortName: Maybe Text
-    serviceTierLongName: Maybe Text
-    serviceTierDescription: Maybe Text
     bppSubscriberId: Text
     bppSubscriberUrl: Text
     providerId: Text
@@ -657,6 +642,7 @@ RouteStopMapping:
     stopName: Text
     stopPoint: LatLong
     sequenceNum: Int
+    estimatedTravelTimeFromPreviousStop: Maybe Seconds
     vehicleType: VehicleCategory
     timeBounds: TimeBound
     merchantId: Id Merchant

@@ -100,7 +100,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode = do
           logDebug $ "distancesFromCurrLocation " <> show distancesFromCurrLocation
           pure (minDistance, snd (fst stopPairWithWaypoints))
       let nextStop = List.minimumBy (comparing fst) minDistancesWithPoint
-      pure $ TrackRoute.VehicleInfo {nextStop = snd nextStop, vehicleId = vehicleId_, vehicleInfo = vi}
+      pure $ TrackRoute.VehicleInfo {nextStop = snd nextStop, nextStopTravelTime = Just $ Seconds 300, vehicleId = vehicleId_, vehicleInfo = vi} -- TODO :: `nextStopTravelTime` should be calculated as (Avg Speed / Distance), where Average speed should be stored by Bus Tracking in VehicleInfo ?
   pure $ TrackRoute.TrackingResp {vehicleTrackingInfo = trackingResp}
 
 mkLatLong :: Double -> Double -> Maps.LatLong

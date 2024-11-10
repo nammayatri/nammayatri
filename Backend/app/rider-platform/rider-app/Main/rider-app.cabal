@@ -258,12 +258,12 @@ library
       Environment
       ExternalBPP.Bus.ExternalAPI.CallAPI
       ExternalBPP.Bus.ExternalAPI.CUMTA.Order
-      ExternalBPP.Bus.ExternalAPI.CUMTA.Verification
+      ExternalBPP.Bus.ExternalAPI.CUMTA.Status
       ExternalBPP.Bus.ExternalAPI.EBIX.Auth
       ExternalBPP.Bus.ExternalAPI.EBIX.Order
       ExternalBPP.Bus.ExternalAPI.EBIX.Payment
       ExternalBPP.Bus.ExternalAPI.EBIX.Status
-      ExternalBPP.Bus.ExternalAPI.EBIX.Verification
+      ExternalBPP.Bus.ExternalAPI.Types
       ExternalBPP.Bus.Flow
       ExternalBPP.CallAPI
       ExternalBPP.Metro.ExternalAPI.CallAPI
