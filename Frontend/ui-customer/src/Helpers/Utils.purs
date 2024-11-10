@@ -1526,3 +1526,5 @@ disableChat fareProductType =
 isDeliveryInitiator :: Maybe (Array String) -> Boolean
 isDeliveryInitiator maybeTags = 
   maybe true (\tags -> elem "Initiator" tags) maybeTags
+
+foreign import isHybridApp :: Effect Boolean

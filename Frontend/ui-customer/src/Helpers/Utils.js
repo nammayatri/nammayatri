@@ -615,3 +615,11 @@ export const decodeErrorCode = function (a) {
     return " ";
   }
 };
+
+export const isHybridApp = ()=>{
+  try {
+    return (window.__payload.payload.isHybrid === true);
+  } catch (unhandled){
+    return false;
+  }
+}
