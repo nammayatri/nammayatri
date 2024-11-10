@@ -324,6 +324,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected LocateOnMapManager locateOnMapManager = null;
     private static Hashtable<String, Hashtable <String, PolyLineAnimationTimers>> polylineAnimationTimers = new Hashtable<>();
     protected BridgeComponents bridgeComponents ;
+    protected IntercityBus intercityBus;
 
    public MobilityCommonBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
@@ -349,6 +350,8 @@ public class MobilityCommonBridge extends HyperBridge {
         callBack = this::callImageUploadCallBack;
         Utils.registerCallback(callBack);
         fetchAndUpdateLastKnownLocation();
+        this.intercityBus = new IntercityBus();
+        this.intercityBus.setBridgeComponents(bridgeComponents);
     }
 
     protected enum AppType {
@@ -4592,7 +4595,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void initialWebViewSetUp(String callback, String id) {
+    public void initialWebViewSetUp(String callback, String id, boolean addRedbusInterface) {
         storeDashboardCallBack = callback;
         Context context = bridgeComponents.getContext();
         Activity activity = bridgeComponents.getActivity();
@@ -4601,6 +4604,9 @@ public class MobilityCommonBridge extends HyperBridge {
                 @Override
                 public void run() {
                     WebView webView = activity.findViewById(Integer.parseInt(id));
+                    if(addRedbusInterface){
+                        webView.addJavascriptInterface(intercityBus, "nyRedBusEntity");
+                    }
                     if (webView == null) return;
                     webView.setWebChromeClient(new WebChromeClient() {
                         @Override

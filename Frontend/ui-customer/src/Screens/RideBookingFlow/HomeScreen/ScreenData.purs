@@ -813,4 +813,5 @@ initialIntercityBusData = {
 , showWebView: false
 , hasPhoneNumberPermission : false
 , url : Nothing
+, sentPhoneNumberToWebView : false
 }

@@ -1765,6 +1765,19 @@ export const storeOnPauseCallback = function (cb, action) {
   }
 }
 
+export const setPSPermissionRequestCallback = (push, action) => {
+  if (window.JBridge.setPSPermissionRequestCallback) {
+    const callback = () => push(action)();
+    window.JBridge.setPSPermissionRequestCallback(callback);
+  }
+}
+
+export const sentPhoneNumberToWebView  = (encryptedNumber, webviewId) => {
+  if (window.JBridge.sentPhoneNumberToWebView) {
+    window.JBridge.sentPhoneNumberToWebView(encryptedNumber, webviewId);
+  }
+}
+
 export const storeCallBackInternetAction = (cb, action, screenName) => {
   try {
     const callback = callbackMapper.map(isNetworkOn => {
@@ -2248,14 +2261,26 @@ export const initialWebViewSetUp = function (cb) {
             cb(action(val))();
           });
 
-          return JBridge.initialWebViewSetUp(callback, id);
+          return JBridge.initialWebViewSetUp(callback, id, false);
         } catch (err) {
           console.log("initialWebViewSetUp error " + err);
+          return JBridge.initialWebViewSetUp(callback, id);
         }
       };
     };
   };
 };
+
+export const initiateWebviewWithInterface = (cb, id, action) => {
+  try{
+    const callback = callbackMapper.map(function (val) {
+      cb(action(val))();
+    });
+    JBridge.initialWebViewSetUp(callback, id, true);
+  }catch(err){
+    console.log("Error in initiateWebviewWithInterface : ", err);
+  }
+}
 
 export const goBackPrevWebPage = function (id) {
   try {

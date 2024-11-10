@@ -2859,6 +2859,7 @@ eval IntercityBusAC state =
     encryptedPhoneNumber = if state.data.intercityBus.hasPhoneNumberPermission then JB.rsEncryption (getValueToLocalStore MOBILE_NUMBER) else ""
     remoteConfig = RemoteConfig.getInterCityBusConfig "lazy"
     url' = remoteConfig.baseUrl <> if  state.data.intercityBus.hasPhoneNumberPermission  then "?mobileNo=" <> encryptedPhoneNumber else ""
+
   in 
     if state.data.intercityBus.showWebView && os == "IOS" then
       continueWithCmd state [do
@@ -2866,7 +2867,10 @@ eval IntercityBusAC state =
         pure NoAction
       ]
     else 
-      continue state { data { intercityBus { url = if state.data.intercityBus.showWebView then Just url' else Nothing} } }
+      continueWithCmd state { data { intercityBus { url = if state.data.intercityBus.showWebView then Just url' else Nothing, showPermissionPopUp = true} } } [ do
+        void $ runEffectFn2 JB.sentPhoneNumberToWebView encryptedPhoneNumber (getNewIDWithTag "intercityBusWebView")
+        pure NoAction
+      ]
 
 eval (HideIntercityBusView _) state = continue state { data { intercityBus { showWebView = false, url = Nothing } } }
   
@@ -3299,7 +3303,7 @@ eval (IntercityBusPermissionAction (PopUpModal.OnButton1Click)) state = do
   void $ pure $ setValueToLocalStore INTERCITY_BUS_PHONE_NUMBER_PERMISSION "false"
   continueWithCmd state{data{intercityBus{showPermissionPopUp = false, showWebView = true, hasPhoneNumberPermission = false}}} [pure IntercityBusAC]
 
-eval (IntercityBusPermissionAction (PopUpModal.DismissPopup)) state = continue state { data { intercityBus { showPermissionPopUp = false } } }
+eval (IntercityBusPermissionAction (PopUpModal.DismissPopup)) state = continue state { data { intercityBus { showPermissionPopUp = false , sentPhoneNumberToWebView = false} } }
 
 eval (IntercityBusPermissionAction (PopUpModal.OnButton2Click)) state = do
   void $ pure $ setValueToLocalStore INTERCITY_BUS_PHONE_NUMBER_PERMISSION "true"
@@ -3308,6 +3312,8 @@ eval (IntercityBusPermissionAction (PopUpModal.OnButton2Click)) state = do
 eval (EnableShareRideForContact personId) state = do
   let updatedContactList = map (\item -> if item.contactPersonId == Just personId then item {enableForShareRide = true} else item) (fromMaybe [] state.data.contactList)
   continue state {data{contactList = Just updatedContactList, driverInfoCardState{currentChatRecipient{enableForShareRide = true}}}}
+
+eval TriggerIntercityPermissionPopUp state = continue state { data { intercityBus { showPermissionPopUp = true , sentPhoneNumberToWebView = true} } }
 
 eval _ state = update state
 
