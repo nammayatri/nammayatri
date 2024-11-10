@@ -239,7 +239,8 @@ data ParcelAction = GO_TO_PARCEL_INSTRUCTIONS HomeScreenState
                     | GO_TO_DELIVERY_DETAILS HomeScreenState
                     | GET_DELIVERY_IMAGE HomeScreenState
 
-data HOME_SCREEN_OUTPUT = LOGOUT
+data HOME_SCREEN_OUTPUT = HybridAppExit
+                        | LOGOUT
                         | RELOAD Boolean
                         | UPDATE_PICKUP_NAME HomeScreenState Number Number
                         | REFRESH_HOME_SCREEN

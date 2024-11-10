@@ -15,13 +15,14 @@
 
 module Screens.HomeScreen.Handler where
 
+
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Utils (toggleLoader)
 import Engineering.Helpers.Commons (markPerformance)
 import ModifyScreenState (modifyScreenState)
-import Prelude (bind, discard, ($), (<$>), pure, void)
+import Prelude (bind, discard, ($), (<$>), pure, void, (==), (&&))
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.HomeScreen.View as HomeScreen
 import Types.App (FlowBT, GlobalState(..), ScreenType(..), HOME_SCREEN_OUTPUT(..), ParcelAction(..))
@@ -30,9 +31,21 @@ import Screens.HomeScreen.Transformer(getTripDetailsState)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import Debug
 import Screens.HomeScreen.Controllers.Types
+import Screens.Types (Stage(HomeScreen))
+import Helpers.Utils as HU
+import Data.Maybe (Maybe(..))
 
 homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do
+  (GlobalState state) <- getState
+  isHybridApp' <- liftFlowBT HU.isHybridApp
+  if isHybridApp' && state.homeScreen.props.currentStage == HomeScreen then do
+    void $ pure $ HU.emitTerminateApp Nothing true
+    pure HybridAppExit
+  else homeScreen'
+
+homeScreen' ::FlowBT String HOME_SCREEN_OUTPUT
+homeScreen' = do
   liftFlowBT $ markPerformance "HOME_SCREEN_RUN"
   (GlobalState state) <- getState
   act <- lift $ lift $ runScreen $ HomeScreen.screen state.homeScreen

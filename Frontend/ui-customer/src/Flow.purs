@@ -1177,6 +1177,7 @@ homeScreenFlow = do
   flow <- UI.homeScreen
   void $ lift $ lift $ fork $ Remote.pushSDKEvents
   case flow of
+    HybridAppExit -> pure unit
     STAY_IN_HOME_SCREEN -> do
       updateLocalStage HomeScreen
       modifyScreenState $ HomeScreenStateType (\_ -> HomeScreenData.initData)
