@@ -1748,4 +1748,6 @@ getHi =
     , truck : "ट्रक"
     , register_your_truck : "रेअपने ट्रक को रजिस्टर करें"
     , no_plan_selected : "कोई योजना चयनित नहीं है"
+    , a_new_way_to_earn_parcel: "कमाई का एक नया ज़रिया, पार्सल 2W"
+    , seamless_earning_experience_click_below: "परेशानी मुक्त अनुभव के लिए क्लिक करें"
     }

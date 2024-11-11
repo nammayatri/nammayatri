@@ -1762,6 +1762,8 @@ newtype Keymap
   , truck :: String
   , register_your_truck :: String
   , no_plan_selected :: String
+  , a_new_way_to_earn_parcel :: String
+  , seamless_earning_experience_click_below :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -6997,3 +6999,8 @@ register_your_truck = a
 no_plan_selected :: Proxy "no_plan_selected"
 no_plan_selected = a
 
+a_new_way_to_earn_parcel :: Proxy "a_new_way_to_earn_parcel"
+a_new_way_to_earn_parcel = a
+
+seamless_earning_experience_click_below :: Proxy "seamless_earning_experience_click_below"
+seamless_earning_experience_click_below = a

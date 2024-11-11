@@ -89,6 +89,8 @@ import Components.SelectPlansModal.Controller as SelectPlansModal
 import RemoteConfig.Utils
 import Debug
 import Control.Apply as CA
+import Resource.Localizable.TypesV2 as LT2
+import Resource.Localizable.StringsV2 as StringsV2
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -2894,3 +2896,41 @@ customerDeliveryCallPopUpData state =
     }
     ]
   
+parcelIntroductionPopup :: ST.HomeScreenState -> PopUpModal.Config
+parcelIntroductionPopup state = PopUpModal.config {
+    gravity = CENTER,
+    backgroundClickable = true,
+    dismissPopup = true,
+    isVisible = true,
+    margin = MarginHorizontal 24 24,
+    padding = Padding 16 24 16 0,
+    optionButtonOrientation = "HORIZONTAL",
+    cornerRadius = PTD.Corners 15.0 true true true true,
+    primaryText {
+      text = StringsV2.getStringV2 LT2.a_new_way_to_earn_parcel,
+      textStyle = Heading2,
+      color = Color.black800,
+      margin = Margin 0 16 0 4
+      },
+    secondaryText{
+      text = StringsV2.getStringV2 LT2.seamless_earning_experience_click_below,
+      textStyle = SubHeading2,
+      color = Color.black700,
+      margin = MarginHorizontal 0 0
+      },
+    option1 {
+      text = StringsV2.getStringV2 LT2.watch_now,
+      color = Color.yellow900,
+      background = Color.black900,
+      textStyle = FontStyle.SubHeading3,
+      strokeColor = Color.black900,
+      margin = MarginTop 24
+    },
+    option2 { visibility = false },
+    coverImageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_ic_earn_through_parcel"
+    , visibility = VISIBLE
+    , width = V (EHC.screenWidth unit - 80)
+    , height = V (EHC.screenWidth unit - 180)
+    }
+  }

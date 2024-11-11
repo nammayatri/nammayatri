@@ -161,6 +161,7 @@ data KeyStore = USER_NAME
                 | FUNCTION_EXECUTED_IN_SESSION
                 | EVENT_STORAGE
                 | GO_TO_PLANS_PAGE
+                | SHOW_PARCEL_INTRODUCTION_POPUP
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

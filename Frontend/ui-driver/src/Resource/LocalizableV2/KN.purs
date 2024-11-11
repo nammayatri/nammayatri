@@ -1748,4 +1748,6 @@ getKn =
     , truck : "ಟ್ರಕ್"
     , register_your_truck : "ನಿಮ್ಮ ಟ್ರಕ್ ನೋಂದಣಿಯನ್ನು ಮಾಡಿ"
     , no_plan_selected : "ಯೋಜನೆ ಆಯ್ಕೆಯಾಗಿಲ್ಲ"
+    , a_new_way_to_earn_parcel: "ಸಾಮಾನ್ಯ ಆಮದು ಮಾಡುವ ಹೊಸ ಮಾರ್ಗ - ಪಾರ್ಸೆಲ್ 2W"
+    , seamless_earning_experience_click_below: "ನಿರ್ವಹಣೆಯಲ್ಲದ ಆದಾಯ ಅನುಭವಕ್ಕಾಗಿ, ಕೆಳಗೆ ಕ್ಲಿಕ್ ಮಾಡಿ"
     }

@@ -122,3 +122,7 @@ type EventsConfig = {
   pushEventChunkSize :: Int,
   loggingIntervalInMs :: Number
 }
+
+type ParcelConfig = {
+  introductionVideo :: String
+}

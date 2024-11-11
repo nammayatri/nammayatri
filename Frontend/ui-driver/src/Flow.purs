@@ -202,6 +202,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
     setValueToLocalStore CURRENCY (getCurrency Constants.appConfig)
     if getValueToLocalStore SHOW_SUBSCRIPTIONS == "__failed" then setValueToLocalStore SHOW_SUBSCRIPTIONS "false" else pure unit  
     liftFlowBT $ markPerformance "BASE_APP_FLOW_END"
+    when baseFlow $ showParcelIntroductionPopup
     initialFlow    
     where
     updateOperatingCity :: FlowBT String Unit
@@ -283,6 +284,18 @@ baseAppFlow baseFlow event driverInfoResponse = do
         setValueToLocalStore NIGHT_SAFETY_POP_UP "false"
       else 
         pure unit 
+
+    showParcelIntroductionPopup :: FlowBT String Unit
+    showParcelIntroductionPopup = do
+      let showParcelInfo = getValueToLocalStore SHOW_PARCEL_INTRODUCTION_POPUP
+      if showParcelInfo /= "false" then do
+        case driverInfoResponse of
+          Just (Right (GetDriverInfoResp driverInfoResp)) -> do      
+            case driverInfoResp.linkedVehicle of
+              Just (Vehicle vehicle) -> modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { showParcelIntroductionPopup = vehicle.serviceTierType == Just "BIKE" }})
+              Nothing -> pure unit
+          _ -> pure unit
+      else pure unit
 
 authenticationFlow :: String -> FlowBT String Unit
 authenticationFlow _ = do

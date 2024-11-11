@@ -270,6 +270,7 @@ initData =
       , intercityInfoPopUp : false
       , isSourceDetailsExpanded : false
       , showDeliveryCallPopup : false
+      , showParcelIntroductionPopup : false
       }
   }
 

@@ -1398,7 +1398,8 @@ type HomeScreenProps =  {
   homeScreenBannerVisibility :: Boolean,
   rideRequestPill :: RideRequestPill,
   showIntercityRateCard :: Boolean,
-  intercityInfoPopUp :: Boolean
+  intercityInfoPopUp :: Boolean,
+  showParcelIntroductionPopup :: Boolean
  }
 
 type RideRequestPill = {
