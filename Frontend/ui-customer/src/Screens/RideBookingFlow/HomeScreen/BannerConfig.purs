@@ -29,6 +29,8 @@ import DecodeUtil (getAnyFromWindow)
 import Components.RideCompletedCard as RideCompletedCard
 import Data.Foldable
 import ConfigProvider (getAppConfig)
+import Resources.LocalizableV2.Strings as StringsV2
+import Resources.LocalizableV2.Types as TypesV2
 
 getBannerConfigs :: forall action. HomeScreenState -> (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
 getBannerConfigs state action =
@@ -216,7 +218,7 @@ issueReportBannerConfigs state =
     tollIssue = state.data.rideCompletedData.issueReportData.hasTollIssue 
     nightSafetyIssue = state.data.rideCompletedData.issueReportData.hasSafetyIssue
     accessibilityIssue =  state.data.rideCompletedData.issueReportData.hasAccessibilityIssue
-
+    hasAskedToPayExtraIssue = state.data.rideCompletedData.issueReportData.hasAskedToPayExtraIssue
     customerResposeArray = state.data.rideCompletedData.issueReportData.customerResponse
 
 
@@ -247,10 +249,20 @@ issueReportBannerConfigs state =
     , noText : getString NO
     }
 
+    (askedToPayExtraIssueConfig :: RideCompletedCard.CustomerIssueCard) = {
+      issueType : AskedToPayExtra
+    , selectedYes : findYesNoState customerResposeArray AskedToPayExtra
+    , title : StringsV2.getStringV2 TypesV2.were_you_asked_to_pay_extra_q
+    , subTitle : StringsV2.getStringV2 TypesV2.were_you_asked_to_pay_extra_desc
+    , yesText : getString YES
+    , noText : getString NO
+    }
+
   in
     (if nightSafetyIssue then [nightSafetyIssueConfig] else [])
     <> (if tollIssue then [tollIssueConfig] else [])
     <> (if accessibilityIssue then [accessibilityIssueConfig] else [])
+    <> (if hasAskedToPayExtraIssue then [askedToPayExtraIssueConfig] else [])
 
   where 
     findYesNoState customerResp issueType = 

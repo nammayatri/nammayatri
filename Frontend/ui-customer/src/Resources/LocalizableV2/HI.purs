@@ -1679,4 +1679,7 @@ getHi = Keymap {
 , limit_reached : "सीमा पार हो गई है!"
 , confirm_contacts : "संपर्कों की पुष्टि करें"
 , max_parcel_size : (\l b h -> "अधिकतम पार्सल आकार: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, were_you_asked_to_pay_extra_q : "क्या आपसे ज़्यादा पैसे देने के लिए कहा गया?"
+, were_you_asked_to_pay_extra_desc : "अगर ड्राइवर/राइडर ने ऊपर दिखाए गए अंतिम किराए से ज़्यादा पैसे मांगे हों, तो हमें बताएं।"
+, we_are_sorry_to_hear_this_please_click_on_need_help : "हम असुविधा के लिए हार्दिक माफी चाहते हैं"
 }

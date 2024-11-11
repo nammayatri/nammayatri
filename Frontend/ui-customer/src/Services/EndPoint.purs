@@ -312,3 +312,6 @@ multiChat _ = (getBaseUrl "61") <> "/triggerFCM/message"
 
 getDeliveryImage :: String -> String
 getDeliveryImage rideId = (getBaseUrl "61") <> "/ride/" <> rideId <> "/deliveryImage"
+
+createIssue :: String
+createIssue = (getBaseUrl "62") <> "/issue"

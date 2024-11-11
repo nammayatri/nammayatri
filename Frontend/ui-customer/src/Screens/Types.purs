@@ -795,7 +795,7 @@ type IssueReportData = {
 , hasSafetyIssue :: Boolean
 , customerResponse :: Array {issueType :: CTA.CustomerIssueTypes, selectedYes :: Maybe Boolean}
 , respondedValidIssues :: Boolean
-
+, hasAskedToPayExtraIssue :: Boolean
 }
 
 type DisabilityT = 

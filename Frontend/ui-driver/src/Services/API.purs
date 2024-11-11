@@ -652,7 +652,8 @@ newtype RidesInfo = RidesInfo
       roundTrip :: Boolean,
       returnTime :: Maybe String,
       senderDetails :: Maybe PersonDetails,
-      receiverDetails :: Maybe PersonDetails
+      receiverDetails :: Maybe PersonDetails,
+      extraFareMitigationFlag :: Maybe Boolean
 }
 
 newtype CoinsEarned = CoinsEarned CoinsEarnedType

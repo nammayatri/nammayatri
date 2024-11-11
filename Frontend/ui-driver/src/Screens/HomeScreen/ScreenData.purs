@@ -266,6 +266,8 @@ initData =
       , intercityInfoPopUp : false
       , isSourceDetailsExpanded : false
       , showDeliveryCallPopup : false
+      , showAskedExtraFarePopUp : false
+      , showBlockedForNDaysPopUp : false
       }
   }
 

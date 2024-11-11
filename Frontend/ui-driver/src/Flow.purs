@@ -131,7 +131,7 @@ import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
 import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..), PayoutVpaStatus(..), DriverReachedReq(..))
 import Services.API as API
-import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos)
+import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos, _extraFareMitigationFlag)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
 import Services.Backend as Remote
 import Engineering.Helpers.Events as Events
@@ -2276,7 +2276,7 @@ currentRideFlow activeRideResp isActiveRide = do
             void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "Yes"}]
             let stateChange = if (ride.bookingType == Just ADVANCED) 
                                   then (HomeScreenStateType (\homeScreen -> homeScreen { data{ advancedRideData = Just activeRide{source = sourceMod, destination = destinationMod}}, props{ silentPopUpView = false, goOfflineModal = false}})) 
-                                  else (HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod,destination = destinationMod, lastStopAddress = lastStopAddressMod, nextStopAddress = nextStopAddressMod}}, props{ silentPopUpView = false, goOfflineModal = false,isOdometerReadingsRequired = (activeRide.tripType == ST.Rental) && (maybe true (\val -> val) ride.isOdometerReadingsRequired)}}))
+                                  else (HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod,destination = destinationMod, lastStopAddress = lastStopAddressMod, nextStopAddress = nextStopAddressMod}}, props{ silentPopUpView = false, goOfflineModal = false,isOdometerReadingsRequired = (activeRide.tripType == ST.Rental) && (maybe true (\val -> val) ride.isOdometerReadingsRequired), showAskedExtraFarePopUp = ride.extraFareMitigationFlag == Just true}}))
             modifyScreenState $ stateChange
     noActiveRidePatch allState onBoardingSubscriptionViewCount = do
       setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
@@ -2774,7 +2774,7 @@ homeScreenFlow = do
           case (rideList.list DA.!! 0) of
             Just ( rideInfo) -> do
               let currActiveRideDetails = activeRideDetail state rideInfo
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {route = [],activeRide = currActiveRideDetails}, props {routeVisible = true, arrivedAtStop = true}})
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {route = [],activeRide = currActiveRideDetails}, props {routeVisible = true, arrivedAtStop = true, showAskedExtraFarePopUp = (rideInfo ^. _extraFareMitigationFlag) == Just true}})
               pure unit
             Nothing -> pure unit
       homeScreenFlow

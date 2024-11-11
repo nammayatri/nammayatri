@@ -608,7 +608,7 @@ type RentalBookingConfig = {
 
 
 
-data CustomerIssueTypes = TollCharge | NightSafety | Accessibility | NoIssue | MoreIssues
+data CustomerIssueTypes = TollCharge | NightSafety | Accessibility | NoIssue | MoreIssues | AskedToPayExtra
 derive instance genericCustomerIssueTypes :: Generic CustomerIssueTypes _
 instance eqCustomerIssueTypes :: Eq CustomerIssueTypes where eq = genericEq
 instance priorityCustomerIssueTypes :: Priority CustomerIssueTypes where 
@@ -618,6 +618,7 @@ instance priorityCustomerIssueTypes :: Priority CustomerIssueTypes where
     Accessibility -> 2
     NoIssue -> 10
     MoreIssues -> 20
+    AskedToPayExtra -> 3
 
 
 class Priority a where
