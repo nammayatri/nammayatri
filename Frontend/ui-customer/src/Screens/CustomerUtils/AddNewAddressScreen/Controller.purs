@@ -52,6 +52,7 @@ import Screens.Types (AddNewAddressScreenState, CardType(..), LocationListItemSt
 import Services.API (AddressComponents, Prediction, SavedReqLocationAPIEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge (fromMetersToKm, Location)
+import Helpers.Utils (emitTerminateApp, isParentView)
 import Common.Resources.Constants (pickupZoomLevel)
 
 instance showAction :: Show Action where
@@ -206,7 +207,12 @@ eval (BackPressed backpressState) state = do
     _ , _ , _ , true -> do
       exit $ GoToHome
     _ , _ , _ , false -> do 
-      if (state.props.fromScreen == searchLocScreen) then exit $ GoToSearchLocScreen
+      if (state.props.fromScreen == searchLocScreen) then
+        if isParentView FunctionCall 
+        then do 
+          void $ pure $ emitTerminateApp Nothing true
+          continue state
+        else exit $ GoToSearchLocScreen
       else do 
         void $ pure $ hideKeyboardOnNavigation true
         void $ pure $ exitLocateOnMap ""

@@ -453,6 +453,8 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
         "safetytools" -> hideSplashAndCallFlow $ hybridFlow screen
         "rideConfirmed" -> hideSplashAndCallFlow $ hybridFlow screen
         "rideCompleted" -> hideSplashAndCallFlow $ hybridFlow screen
+        "addHome" -> addFavLocFlow SearchLocationScreenData.initData "HOME_TAG"
+        "addWork" -> addFavLocFlow SearchLocationScreenData.initData "WORK_TAG"
         "smd" -> do
           modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { showTestDrill = true } })
           hideSplashAndCallFlow activateSafetyScreenFlow
@@ -5650,47 +5652,6 @@ searchLocationFlow = do
         searchLocationFlow
       Left (err) -> searchLocationFlow
 
-  addFavLocFlow :: SearchLocationScreenState -> String -> FlowBT String Unit
-  addFavLocFlow state tag = do
-    modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
-    savedLoc <- fetchGlobalSavedLocations
-    (GlobalState globalState) <- getState
-    let
-      recents = globalState.globalProps.recentSearches
-    modifyScreenState
-      $ AddNewAddressScreenStateType
-          ( \addNewAddressScreen ->
-              addNewAddressScreen
-                { props
-                  { showSavePlaceView = false
-                  , fromScreen = Screen.getScreen Screen.SEARCH_LOCATION_SCREEN
-                  , editLocation = false
-                  , editSavedLocation = false
-                  , isLocateOnMap = false
-                  , isBtnActive = true
-                  , isSearchedLocationServiceable = true
-                  , tagExists = false
-                  , placeNameExists = false
-                  }
-                , data
-                  { addressSavedAs = ""
-                  , placeName = ""
-                  , savedLocations = savedLoc
-                  , locationList = recents
-                  , recentSearchs { predictionArray = recents }
-                  , selectedTag = getCardType tag
-                  , savedTags = getExistingTags savedLoc
-                  , address = ""
-                  , activeIndex =
-                    case tag of
-                      "HOME_TAG" -> Just 0
-                      "WORK_TAG" -> Just 1
-                      _ -> Just 2
-                  }
-                }
-          )
-    (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> addNewAddressScreenFlow "")
-
 predictionClickedFlow :: LocationListItemState -> SearchLocationScreenState -> FlowBT String Unit
 predictionClickedFlow prediction state = do
   modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
@@ -5797,6 +5758,47 @@ predictionClickedFlow prediction state = do
       $ do
           setSuggestionsMapInLocal prediction srcLat srcLon placeLat placeLon locServiceable state.appConfig
     pure unit
+
+addFavLocFlow :: SearchLocationScreenState -> String -> FlowBT String Unit
+addFavLocFlow state tag = do
+  modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
+  savedLoc <- fetchGlobalSavedLocations
+  (GlobalState globalState) <- getState
+  let
+    recents = globalState.globalProps.recentSearches
+  modifyScreenState
+    $ AddNewAddressScreenStateType
+        ( \addNewAddressScreen ->
+            addNewAddressScreen
+              { props
+                { showSavePlaceView = false
+                , fromScreen = Screen.getScreen Screen.SEARCH_LOCATION_SCREEN
+                , editLocation = false
+                , editSavedLocation = false
+                , isLocateOnMap = false
+                , isBtnActive = true
+                , isSearchedLocationServiceable = true
+                , tagExists = false
+                , placeNameExists = false
+                }
+              , data
+                { addressSavedAs = ""
+                , placeName = ""
+                , savedLocations = savedLoc
+                , locationList = recents
+                , recentSearchs { predictionArray = recents }
+                , selectedTag = getCardType tag
+                , savedTags = getExistingTags savedLoc
+                , address = ""
+                , activeIndex =
+                  case tag of
+                    "HOME_TAG" -> Just 0
+                    "WORK_TAG" -> Just 1
+                    _ -> Just 2
+                }
+              }
+        )
+  (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> addNewAddressScreenFlow "")
 
 checkForBothLocs :: SearchLocationScreenState -> Maybe LocationInfo -> Maybe LocationInfo -> FlowBT String Unit
 checkForBothLocs state sourceLoc destinationLoc =
