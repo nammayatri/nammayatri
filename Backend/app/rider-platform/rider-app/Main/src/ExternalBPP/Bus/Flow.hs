@@ -20,6 +20,7 @@ import Domain.Types.RouteStopMapping
 import Domain.Types.Station
 import Domain.Types.StationType
 import ExternalBPP.Bus.ExternalAPI.CallAPI as CallAPI
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto.Config as DB
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
@@ -38,7 +39,7 @@ import Storage.Queries.RouteStopMapping as QRouteStopMapping
 import Storage.Queries.Station as QStation
 import Tools.Error
 
-search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> DFRFSSearch.FRFSSearch -> m DOnSearch
+search :: (CoreMetrics m, ServiceFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> DFRFSSearch.FRFSSearch -> m DOnSearch
 search merchant merchantOperatingCity bapConfig searchReq = do
   fromStation <- QStation.findById searchReq.fromStationId >>= fromMaybeM (StationNotFound searchReq.fromStationId.getId)
   toStation <- QStation.findById searchReq.toStationId >>= fromMaybeM (StationNotFound searchReq.toStationId.getId)
@@ -56,7 +57,9 @@ search merchant merchantOperatingCity bapConfig searchReq = do
                 }
         mkSingleRouteQuote searchReq.vehicleType routeInfo
       Nothing -> do
-        transitRoutesInfo <- getPossibleTransitRoutesBetweenTwoStops fromStation.code toStation.code
+        transitRoutesInfo' <- getPossibleTransitRoutesBetweenTwoStops merchant.id merchantOperatingCity.id fromStation.code toStation.code
+        transitRoutesInfo <- return $ filter (not . null) transitRoutesInfo'
+        logDebug $ "transit routes for bus ticketing" <> show transitRoutesInfo
         if null transitRoutesInfo
           then do
             routesInfo <- getPossibleRoutesBetweenTwoStops fromStation.code toStation.code
@@ -71,7 +74,7 @@ search merchant merchantOperatingCity bapConfig searchReq = do
             quotes' <-
               mapM
                 ( \transitRouteInfo -> do
-                    mkTransitRoutesQuote searchReq.vehicleType transitRouteInfo
+                    mkTransitRoutesQuote searchReq.vehicleType (filterList transitRouteInfo)
                 )
                 transitRoutesInfo
             return $ concat quotes'
@@ -303,6 +306,8 @@ search merchant merchantOperatingCity bapConfig searchReq = do
               price = discountPrice,
               ..
             }
+    filterList :: [TransitRouteInfo] -> [RouteStopInfo]
+    filterList transitRouteInfo = [routeStopInfo | RouteStopLegInfo routeStopInfo <- transitRouteInfo]
 
 init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit
 init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking = do
