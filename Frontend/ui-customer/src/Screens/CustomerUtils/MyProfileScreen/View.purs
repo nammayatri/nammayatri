@@ -47,7 +47,7 @@ import PrestoDOM.Animation as PrestoAnim
 import Screens.MyProfileScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Services.Backend as Remote
-import Storage (KeyStore(..), getValueToLocalStore)
+import Storage (KeyStore(..), getValueToLocalStore, getValueFromLocalStoreMb)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 import Engineering.Helpers.Utils (toggleLoader, loaderText)
@@ -66,9 +66,7 @@ screen initialState =
   , globalEvents : [(\push -> do
                       _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
                         response <- Remote.getProfileBT ""
-                        if initialState.props.isEmailValid then
-                          lift $ lift $ doAff do liftEffect $ push $ UserProfile response
-                          else pure unit
+                        lift $ lift $ doAff do liftEffect $ push $ UserProfile response
                         pure unit
                       pure $ pure unit
                     )
@@ -233,7 +231,7 @@ personalDetails state push =
 personalDetailsArray :: ST.MyProfileScreenState ->  Array {title :: String, text :: String, fieldType :: ST.FieldType, supportText :: (Maybe String)}
 personalDetailsArray state =
   [ {title : (getString NAME), text : state.data.name, fieldType : ST.NAME, supportText : Nothing}
-  , {title : (getString MOBILE_NUMBER_STR) , text : (getValueToLocalStore MOBILE_NUMBER), fieldType : ST.MOBILE, supportText : Nothing}
+  , {title : (getString MOBILE_NUMBER_STR) , text : fromMaybe state.data.mobileNumber (getValueFromLocalStoreMb MOBILE_NUMBER), fieldType : ST.MOBILE, supportText : Nothing}
   , {title : (getString EMAIL_ID) , text :fromMaybe (getString ADD_NOW) state.data.emailId , fieldType : ST.EMAILID_ , supportText : Nothing }
   , {title : (getString GENDER_STR), text : (RSRC.getGender state.data.gender (getString SET_NOW)), fieldType : ST.GENDER_ , supportText : Nothing}
   , {title : (getString ASSISTANCE_REQUIRED) , text : case state.data.hasDisability of 
