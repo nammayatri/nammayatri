@@ -278,10 +278,20 @@ driverActiveInactiveBT status status_n = do
         headers <- getHeaders' "" false
         withAPIResultBT (EP.driverActiveInactiveSilent status status_n) identity errorHandler (lift $ lift $ callAPI headers (DriverActiveInactiveReq status status_n))
     where
-        errorHandler (ErrorPayload errorPayload) =  do
-            let codeMessage = decodeErrorCode errorPayload.response.errorMessage
-                accountBlocked = errorPayload.code == 403 && codeMessage == "DRIVER_ACCOUNT_BLOCKED"
-            if accountBlocked then modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { accountBlockedPopup = true }})
+        dummyErrorResponseDriverActivity = ErrorResponseDriverActivity {blockExpiryTime: "", blockReason : ""}
+        errorHandler (ErrorPayload errorResp) =  do
+            let codeMessage = decodeErrorCode errorResp.response.errorMessage
+                accountBlocked = errorResp.code == 403 && codeMessage == "DRIVER_ACCOUNT_BLOCKED"
+                noPlanSelectedForDriver = errorResp.code == 400 && codeMessage == "NO_PLAN_SELECTED"
+            (ErrorResponseDriverActivity errorPayload) <- case hush $ runExcept $ decode (decodeErrorPayload errorResp.response.errorMessage) of
+                Just resp -> pure resp
+                _ -> pure dummyErrorResponseDriverActivity
+            if accountBlocked then 
+                if ((ErrorResponseDriverActivity errorPayload) /= dummyErrorResponseDriverActivity) then 
+                    case errorPayload.blockReason of
+                        "ExtraFareDaily" -> modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { data { blockExpiryTime = errorPayload.blockExpiryTime }, props { showBlockedForNDaysPopUp = true}})
+                        _ -> modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { data { blockExpiryTime = errorPayload.blockExpiryTime }, props { accountBlockedPopupDueToCancellations = true }}) 
+                else modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { accountBlockedPopup = true }})
             else modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen { props { goOfflineModal = false }})
             pure if not accountBlocked then toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN else unit
             void $ lift $ lift $ toggleLoader false

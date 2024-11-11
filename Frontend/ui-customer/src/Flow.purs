@@ -6443,6 +6443,7 @@ fcmHandler notification state = do
                                 settings.enablePostRideSafetyCheck == ALWAYS_SHARE || showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime safetyCheckStartTime safetyCheckEndTime settings.enablePostRideSafetyCheck
                               Nothing -> false
           hasTollIssue' = (any (\(FareBreakupAPIEntity item) -> item.description == "TOLL_CHARGES") resp.fareBreakup) && not isBlindPerson
+          hasAskedToPayExtraIssue' = (fromMaybe "" resp.vehicleServiceTierType) == "BIKE" && state.data.fareProductType /= FPT.DELIVERY
         modifyScreenState
           $ HomeScreenStateType
               ( \homeScreen ->
@@ -6476,7 +6477,8 @@ fcmHandler notification state = do
                           hasAccessibilityIssue = hasAccessibilityIssue'
                         , hasSafetyIssue = hasSafetyIssue'
                         , hasTollIssue = hasTollIssue'
-                        , showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
+                        , hasAskedToPayExtraIssue = hasAskedToPayExtraIssue'
+                        , showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue' || hasAskedToPayExtraIssue'
                         }
                         }
                        , toll {

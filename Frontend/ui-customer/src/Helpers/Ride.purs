@@ -197,7 +197,7 @@ checkRideStatus rideAssigned = do
                   postRideCheckCache = SU.getPostRideCheckSettingsFromCache ""
                   hasSafetyIssue' = maybe false (\settings -> SU.showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime settings.safetyCheckStartSeconds settings.safetyCheckEndSeconds settings.enablePostRideSafetyCheck && not isBlindPerson) postRideCheckCache
                   hasTollIssue' =  (any (\(FareBreakupAPIEntity item) -> item.description == "TOLL_CHARGES") resp.estimatedFareBreakup) && not isBlindPerson
-
+                  hasAskedToPayExtraIssue' = (fromMaybe "" resp.vehicleServiceTierType) == "BIKE" && fareProductType /= FPT.DELIVERY
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
                     props { currentStage = RideCompleted
                           , estimatedDistance = contents.estimatedDistance
@@ -260,7 +260,8 @@ checkRideStatus rideAssigned = do
                                 hasAccessibilityIssue = hasAccessibilityIssue'
                               , hasSafetyIssue = hasSafetyIssue'
                               , hasTollIssue = hasTollIssue'
-                              , showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue'
+                              , hasAskedToPayExtraIssue = hasAskedToPayExtraIssue'
+                              , showIssueBanners = hasAccessibilityIssue' || hasSafetyIssue' || hasTollIssue' || hasAskedToPayExtraIssue'
                               }
                             }
                           , toll {

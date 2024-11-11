@@ -1679,4 +1679,7 @@ getTe = Keymap {
 , limit_reached : "పరిమితి చేరుకుంది!"
 , confirm_contacts : "పరిచయాలను నిర్ధారించండి"
 , max_parcel_size : (\l b h -> "గరిష్ట పార్సల్ పరిమాణం: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, were_you_asked_to_pay_extra_q : "మీకు ఎక్కువ డబ్బు ఇవ్వమని అడిగారా?"
+, were_you_asked_to_pay_extra_desc : "పైన చూపిన తుది చార్జీ కంటే డ్రైవర్/రైడర్ ఎక్కువ డబ్బు అడిగితే, మాకు తెలియజేయండి"
+, we_are_sorry_to_hear_this_please_click_on_need_help : "మేము అసౌకర్యం కోసం హృదయపూర్వకంగా క్షమాపణ తెలుపుతున్నాము"
 }

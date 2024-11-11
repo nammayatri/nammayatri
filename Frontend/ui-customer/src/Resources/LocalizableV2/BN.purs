@@ -1679,4 +1679,7 @@ getBn = Keymap {
 , limit_reached : "সীমা পৌঁছেছে!"
 , confirm_contacts : "কনফার্ম কন্ট্যাক্টস"
 , max_parcel_size : (\l b h -> "সর্বাধিক পার্সেল আকার: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, were_you_asked_to_pay_extra_q : "আপনাকে কি বেশি টাকা দিতে বলা হয়েছিল?"
+, were_you_asked_to_pay_extra_desc : "যদি চালক/রাইডার উপরে দেখানো চূড়ান্ত ভাড়ার চেয়ে বেশি টাকা চায়, তবে আমাদের জানান।"
+, we_are_sorry_to_hear_this_please_click_on_need_help : "আমরা অসুবিধার জন্য অন্তঃপুরে দুঃখিত"
 }

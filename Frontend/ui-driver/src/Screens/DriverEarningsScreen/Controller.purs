@@ -768,5 +768,6 @@ dummyRideHistoryItem = RidesInfo {
       parkingCharge : Nothing,
       senderDetails : Nothing,
       receiverDetails : Nothing,
-      coinsEarned : Nothing 
+      coinsEarned : Nothing,
+      extraFareMitigationFlag : Nothing
 }

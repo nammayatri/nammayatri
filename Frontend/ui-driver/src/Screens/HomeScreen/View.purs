@@ -414,7 +414,9 @@ view push state =
         state.props.showReferralEarnedPopUp,
         state.props.showReferNowPopUp,
         state.props.showAddUPIPopUp,
-        state.props.showVerifyUPIPopUp
+        state.props.showVerifyUPIPopUp,
+        state.props.showAskedExtraFarePopUp,
+        state.props.showBlockedForNDaysPopUp
       ])
     onRide = DA.any (_ == state.props.currentStage) [ST.RideAccepted,ST.RideStarted,ST.ChatWithCustomer, ST.RideCompleted]
     showEnterOdometerReadingModalView = state.props.isOdometerReadingsRequired && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal )
@@ -2340,6 +2342,8 @@ popupModals push state =
           ST.ReferNow -> referNowConfig state
           ST.AddUPI -> addUPIConfig state 
           ST.VerifyUPI -> verifyUPI state
+          ST.AskedExtraFare -> askedExtraFareConfig state
+          ST.BlockedForNDays -> blockedForNDaysConfig state
       ]
   where 
   
@@ -2354,6 +2358,8 @@ popupModals push state =
       else if state.props.showReferNowPopUp then ST.ReferNow
       else if state.props.showAddUPIPopUp then ST.AddUPI
       else if state.props.showVerifyUPIPopUp then ST.VerifyUPI
+      else if state.props.showAskedExtraFarePopUp then ST.AskedExtraFare
+      else if state.props.showBlockedForNDaysPopUp then ST.BlockedForNDays
       else ST.KnowMore
 
     clickAction popupType = case popupType of
@@ -2368,6 +2374,8 @@ popupModals push state =
           ST.ReferNow -> (ReferralPopUpAction popupType (Just REFER_NOW_LAST_SHOWN))
           ST.AddUPI -> (ReferralPopUpAction popupType (Just ADD_UPI_LAST_SHOWN))
           ST.VerifyUPI -> (ReferralPopUpAction popupType (Just VERIFY_UPI_LAST_SHOWN))
+          ST.AskedExtraFare -> AskedExtraFare
+          ST.BlockedForNDays -> BlockedForNDays
 
 enableCurrentLocation :: HomeScreenState -> Boolean
 enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true

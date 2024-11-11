@@ -1693,6 +1693,9 @@ newtype Keymap = Keymap {
 , limit_reached :: String
 , confirm_contacts :: String
 , max_parcel_size :: String -> String -> String -> String
+, were_you_asked_to_pay_extra_q :: String
+, were_you_asked_to_pay_extra_desc :: String 
+, we_are_sorry_to_hear_this_please_click_on_need_help :: String
 }
 
 
@@ -6744,3 +6747,12 @@ confirm_contacts = a
 
 max_parcel_size :: Proxy "max_parcel_size"
 max_parcel_size = a
+
+were_you_asked_to_pay_extra_q :: Proxy "were_you_asked_to_pay_extra_q"
+were_you_asked_to_pay_extra_q = a
+
+were_you_asked_to_pay_extra_desc :: Proxy "were_you_asked_to_pay_extra_desc"
+were_you_asked_to_pay_extra_desc = a
+
+we_are_sorry_to_hear_this_please_click_on_need_help :: Proxy "we_are_sorry_to_hear_this_please_click_on_need_help"
+we_are_sorry_to_hear_this_please_click_on_need_help = a
