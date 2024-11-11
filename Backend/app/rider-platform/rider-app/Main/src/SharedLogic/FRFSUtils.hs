@@ -18,6 +18,7 @@ import qualified API.Types.UI.FRFSTicketService as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
 import Data.Aeson as A
 import Data.List (groupBy, nub)
+import Data.Text (breakOn, drop)
 import Domain.Types.AadhaarVerification as DAadhaarVerification
 import qualified Domain.Types.FRFSConfig as Config
 import qualified Domain.Types.FRFSTicket as DT
@@ -31,7 +32,11 @@ import qualified Domain.Types.Route as Route
 import qualified Domain.Types.Station as Station
 import EulerHS.Prelude ((+||), (||+))
 import Kernel.Beam.Functions as B
-import Kernel.Prelude
+import Kernel.External.Maps.Google.MapsClient.Types
+import Kernel.External.MultiModal.Interface as MultiModal hiding (decode, encode)
+import Kernel.External.MultiModal.OpenTripPlanner.Types as MultiModal
+import Kernel.External.Types (ServiceFlow)
+import Kernel.Prelude hiding (drop)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
@@ -44,9 +49,12 @@ import qualified Storage.CachedQueries.Station as CQS
 import Storage.Queries.AadhaarVerification as QAV
 import Storage.Queries.FRFSTicketDiscount as QFRFSTicketDiscount
 import Storage.Queries.Route as QRoute
+import Storage.Queries.RouteStopMapping as QRSM
 import Storage.Queries.RouteStopMapping as QRouteStopMapping
+import Storage.Queries.Station as QStation
 import Tools.DynamicLogic
 import Tools.Error
+import Tools.MultiModal as TMultiModal
 
 mkTicketAPI :: DT.FRFSTicket -> APITypes.FRFSTicketAPI
 mkTicketAPI DT.FRFSTicket {..} = APITypes.FRFSTicketAPI {..}
@@ -127,6 +135,16 @@ data RouteStopInfo = RouteStopInfo
     totalStops :: Maybe Int,
     travelTime :: Maybe Seconds
   }
+  deriving stock (Show)
+
+data TransitRouteInfo = WalkLegInfo WalkInfo | RouteStopLegInfo RouteStopInfo
+  deriving stock (Show)
+
+data WalkInfo = WalkInfo
+  { travelTime :: Maybe Seconds,
+    travelDistance :: Distance
+  }
+  deriving stock (Show)
 
 getPossibleRoutesBetweenTwoStops :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m [RouteStopInfo]
 getPossibleRoutesBetweenTwoStops startStationCode endStationCode = do
@@ -186,8 +204,8 @@ getPossibleRoutesBetweenTwoStops startStationCode endStationCode = do
       routes
 
 -- TODO :: This to be handled from OTP, Currently Hardcode for Chennai
-getPossibleTransitRoutesBetweenTwoStops :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m [[RouteStopInfo]]
-getPossibleTransitRoutesBetweenTwoStops startStationCode endStationCode = do
+getPossibleTransitRoutesBetweenTwoStops :: (MonadFlow m, ServiceFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> m [[TransitRouteInfo]]
+getPossibleTransitRoutesBetweenTwoStops merchantId merchantOperatingCityId startStationCode endStationCode = do
   case (startStationCode, endStationCode) of
     ("MBTcSIip", "jQaLNViL") -> do
       routes <- QRoute.findByRouteCodes ["jylLjHej", "BTuKbmBy"]
@@ -196,22 +214,115 @@ getPossibleTransitRoutesBetweenTwoStops startStationCode endStationCode = do
             ( \route ->
                 if route.code == "jylLjHej"
                   then
-                    RouteStopInfo
-                      { route,
-                        totalStops = Just 6,
-                        startStopCode = "MBTcSIip",
-                        endStopCode = "TiulEaYs",
-                        travelTime = Just $ Seconds 660
-                      }
+                    RouteStopLegInfo $
+                      RouteStopInfo
+                        { route,
+                          totalStops = Just 6,
+                          startStopCode = "MBTcSIip",
+                          endStopCode = "TiulEaYs",
+                          travelTime = Just $ Seconds 660
+                        }
                   else
-                    RouteStopInfo
-                      { route,
-                        totalStops = Just 8,
-                        startStopCode = "TiulEaYs",
-                        endStopCode = "jQaLNViL",
-                        travelTime = Just $ Seconds 1440
-                      }
+                    RouteStopLegInfo $
+                      RouteStopInfo
+                        { route,
+                          totalStops = Just 8,
+                          startStopCode = "TiulEaYs",
+                          endStopCode = "jQaLNViL",
+                          travelTime = Just $ Seconds 1440
+                        }
             )
             routes
         ]
-    _ -> return []
+    _ -> do
+      resp <- try @_ @SomeException (getTransitRoutesForStops merchantId merchantOperatingCityId startStationCode endStationCode)
+      case resp of
+        Left _ -> do
+          logDebug $ "transit routes not available for startStopCode: " <> startStationCode <> " to endStopCode: " <> endStationCode
+          return $ []
+        Right transitRoute -> return transitRoute
+
+getTransitRoutesForStops :: (MonadFlow m, ServiceFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> m [[TransitRouteInfo]]
+getTransitRoutesForStops merchantId merchantOperatingCityId startStationCode endStationCode = do
+  now <- getCurrentTime
+  startStation <- QStation.findByStationCode startStationCode >>= fromMaybeM (InternalError "startStation not found")
+  endStation <- QStation.findByStationCode endStationCode >>= fromMaybeM (InternalError "endStation not found")
+  startLat <- startStation.lat & fromMaybeM (InternalError "startStationLat not found")
+  startLon <- startStation.lon & fromMaybeM (InternalError "startStationLon not found")
+  endLat <- endStation.lat & fromMaybeM (InternalError "endStationLat not found")
+  endLon <- endStation.lon & fromMaybeM (InternalError "endStationLon not found")
+
+  let transitRoutesReq =
+        GetTransitRoutesReq
+          { origin = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = startLat, longitude = startLon}}},
+            destination = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = endLat, longitude = endLon}}},
+            arrivalTime = Nothing,
+            departureTime = Just now,
+            mode = Nothing,
+            transitPreferences = Nothing,
+            transportModes = Just [Just MultiModal.TransportMode {mode = "BUS"}]
+          }
+
+  transitServiceReq <- TMultiModal.getTransitServiceReq merchantId merchantOperatingCityId
+
+  allRoutes :: MultiModal.MultiModalResponse <- MultiModal.getTransitRoutes transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
+
+  mapM
+    ( \transitRoute -> do
+        transitRoutes <-
+          mapM
+            ( \transitLeg -> do
+                case transitLeg.mode of
+                  MultiModal.Bus -> do
+                    startStopDetails <- transitLeg.fromStopDetails & fromMaybeM (InternalError $ "fromStopDetails not found for " <> show transitLeg)
+                    endStopDetails <- transitLeg.toStopDetails & fromMaybeM (InternalError $ "toStopDetails not found for " <> show transitLeg)
+                    startStopCodeFromOtp <- startStopDetails.gtfsId & fromMaybeM (InternalError $ "start stopCode not found for " <> show startStopDetails)
+                    endStopCodeFromOtp <- endStopDetails.gtfsId & fromMaybeM (InternalError $ "end stopCode not found for " <> show endStopDetails)
+                    routeDetails <- transitLeg.routeDetails & fromMaybeM (InternalError $ "routeDetails not found for " <> show transitLeg)
+                    routeCodeFromOtp <- routeDetails.gtfsId & fromMaybeM (InternalError $ "route shortName not found for " <> show routeDetails)
+                    let startStopCode = cutAfterColon startStopCodeFromOtp
+                        endStopCode = cutAfterColon endStopCodeFromOtp
+                        routeCode = cutAfterColon routeCodeFromOtp
+                    routeMapping <- QRoute.findByRouteCode routeCode
+                    startStopMapping <- QRSM.findByRouteCodeAndStopCode routeCode startStopCode
+                    endStopMapping <- QRSM.findByRouteCodeAndStopCode routeCode endStopCode
+                    case (routeMapping, startStopMapping, endStopMapping) of
+                      (Just route, Just startStop, Just endStop) ->
+                        return $
+                          RouteStopLegInfo $
+                            RouteStopInfo
+                              { route,
+                                totalStops = Just (endStop.sequenceNum - startStop.sequenceNum),
+                                startStopCode,
+                                endStopCode,
+                                travelTime = Just transitLeg.duration
+                              }
+                      (_, _, _) ->
+                        return $
+                          WalkLegInfo $
+                            WalkInfo
+                              { travelTime = Just transitLeg.duration,
+                                travelDistance = transitLeg.distance
+                              }
+                  _ ->
+                    return $
+                      WalkLegInfo $
+                        WalkInfo
+                          { travelTime = Just transitLeg.duration,
+                            travelDistance = transitLeg.distance
+                          }
+            )
+            transitRoute.legs
+        let busLegsCount = length $ filter isRouteStopLegInfo transitRoutes
+        if busLegsCount > 1 then return transitRoutes else return []
+    )
+    allRoutes.routes
+  where
+    cutAfterColon :: Text -> Text
+    cutAfterColon t =
+      case breakOn ":" t of
+        (_, "") -> t
+        (_, after) -> drop 1 after
+    isRouteStopLegInfo :: TransitRouteInfo -> Bool
+    isRouteStopLegInfo (RouteStopLegInfo _) = True
+    isRouteStopLegInfo _ = False
