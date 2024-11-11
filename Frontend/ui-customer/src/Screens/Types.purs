@@ -3360,3 +3360,20 @@ data AadhaarStage = EnterAadhaar | VerifyAadhaar | AadhaarDetails
 
 derive instance genericAadhaarStage :: Generic AadhaarStage _
 instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq
+
+-- ######################################### MultiModalFlow ####################################################
+
+type JourneyTrackingScreenState = {
+  data :: JourneyTrackingScreenData,
+  props :: JourneyTrackingScreenProps
+}
+
+type JourneyTrackingScreenData = {
+  appConfig :: AppConfig
+}
+
+type JourneyTrackingScreenProps = {
+  showRouteDetailsTab :: Boolean
+}
+
+type AlertWidgetConfig = {}

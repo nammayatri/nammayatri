@@ -767,6 +767,8 @@ export const drawRouteV2 = function (drawRouteConfig){
       console.log("Inside drawRouteV2")
       const configs = drawRouteConfig.routeConfigs;
       if (window.JBridge.drawRouteV2){
+        console.log("drawRouteConfig",drawRouteConfig);
+        
         return window.JBridge.drawRouteV2(JSON.stringify(drawRouteConfig));
       } else {
         const filteredConfig = configs.filter(function(config){if(config.routeKey === "DEFAULT"){return config}});

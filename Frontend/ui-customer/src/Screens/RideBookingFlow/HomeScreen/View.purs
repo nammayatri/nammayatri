@@ -13,7 +13,10 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.HomeScreen.View where
+module Screens.HomeScreen.View 
+  ( screen
+  , view
+  ) where
 
 import Components.MessagingView.Common.Types
 import Components.MessagingView.Common.View

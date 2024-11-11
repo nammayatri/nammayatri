@@ -99,6 +99,7 @@ import Screens.TicketBookingFlow.BusTrackingScreen.ScreenData as BusTrackingScre
 import Screens.Types as ST
 import Screens.AadhaarVerificationScreen.ScreenData as EnterAadhaarNumberScreenData
 import Screens.SelectBusRoute.ScreenData as SelectBusRouteScreenData
+import Screens.MultiModalFlow.JourneyTrackingScreen.ScreenData as JourneyTrackingScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -155,6 +156,7 @@ newtype GlobalState = GlobalState {
   , busTrackingScreen :: ST.BusTrackingScreenState
   , aadhaarVerificationScreen :: AadhaarVerificationScreenState
   , selectBusRouteScreen :: SelectBusRouteScreenData.SelectBusRouteScreenState
+  , journeyTrackingScreen :: ST.JourneyTrackingScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -211,6 +213,7 @@ defaultGlobalState = GlobalState {
   , busTrackingScreen : BusTrackingScreenData.initData
   , aadhaarVerificationScreen : EnterAadhaarNumberScreenData.initData
   , selectBusRouteScreen : SelectBusRouteScreenData.initData
+  , journeyTrackingScreen : JourneyTrackingScreenData.initData
   }
 
 defaultGlobalProps :: GlobalProps 
@@ -504,3 +507,4 @@ data ScreenType =
   | BusTrackingScreenStateType (ST.BusTrackingScreenState -> ST.BusTrackingScreenState)
   | AadhaarVerificationScreenType (AadhaarVerificationScreenState -> AadhaarVerificationScreenState)
   | SelectBusRouteScreenType (SelectBusRouteScreenData.SelectBusRouteScreenState -> SelectBusRouteScreenData.SelectBusRouteScreenState)
+  | JourneyTrackingScreenStateType (ST.JourneyTrackingScreenState -> ST.JourneyTrackingScreenState)

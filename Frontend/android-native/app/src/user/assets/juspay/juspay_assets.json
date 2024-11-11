@@ -588,6 +588,9 @@
       "ny_ic_bike_pickup_nav_on_map" : true,
       "ny_ic_bus_icon_light_blue" : true,
       "ny_ic_discount_percentage" : true,
-      "ny_ic_qr_code_expired" : true
+      "ny_ic_qr_code_expired" : true,
+      "zone_curve" : true,
+      "ny_ic_blue_alarm_clock" : true,
+      "ny_ic_bulleted_list" : true
    }
 }
