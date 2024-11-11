@@ -451,6 +451,8 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
         "intercity" -> hideSplashAndCallFlow $ hybridFlow screen 
         "favourites" -> hideSplashAndCallFlow $ hybridFlow screen
         "safetytools" -> hideSplashAndCallFlow $ hybridFlow screen
+        "rideConfirmed" -> hideSplashAndCallFlow $ hybridFlow screen
+        "rideCompleted" -> hideSplashAndCallFlow $ hybridFlow screen
         "smd" -> do
           modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { showTestDrill = true } })
           hideSplashAndCallFlow activateSafetyScreenFlow
@@ -556,6 +558,8 @@ hybridFlow flow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data { source=(getString STR.CURRENT_LOCATION), rentalsInfo = Nothing}, props{isIntercityFlow = true,isSource = Just false, canScheduleRide = false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}})
       homeScreenFlow
     "favourites" -> savedLocationFlow HomeScreenFlow
+    "rideConfirmed" -> checkRideStatus true false
+    "rideCompleted" -> checkRideStatus false false
     "safetytools" -> do
       modifyScreenState
         $ NammaSafetyScreenStateType
@@ -587,7 +591,6 @@ hybridFlow flow = do
       activateSafetyScreenFlow
     _ -> pure unit
 
- 
 
 hideLoaderFlow :: FlowBT String Unit
 hideLoaderFlow = do
