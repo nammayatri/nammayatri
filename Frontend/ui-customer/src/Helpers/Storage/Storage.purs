@@ -19,10 +19,10 @@ import Prelude
 import Control.Monad.Trans.Class (lift)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
+import Data.Maybe (Maybe(..))
 import JBridge as JBridge
 import Screens.Types (Stage)
 import Types.App (FlowBT)
-import LocalStorage.Cache (getValueFromCache, setValueToCache)
 
 data KeyStore
   = USER_NAME_KEY
@@ -131,6 +131,13 @@ setValueToLocalStore keyStore val = void $ lift $ lift $ pure $ JBridge.setKeyIn
 
 getValueToLocalStore :: KeyStore -> String
 getValueToLocalStore = JBridge.getKeyInSharedPrefKeys <<< show
+
+getValueFromLocalStoreMb :: KeyStore -> Maybe String
+getValueFromLocalStoreMb key = do
+  let val = getValueToLocalStore key
+  if val == "(null)" || val == "__failed"
+    then Nothing
+    else Just val
 
 deleteValueFromLocalStore :: KeyStore -> FlowBT String Unit
 deleteValueFromLocalStore = void <<< lift <<< lift <<< pure <<< JBridge.removeKeysInSharedPrefs <<< show
