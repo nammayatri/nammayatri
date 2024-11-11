@@ -24,6 +24,8 @@ types:
     endPoint: LatLong
     timeBounds: TimeBound
     polyline: Maybe Text
+    firstStopName: Maybe Text
+    lastStopName: Maybe Text
     derive: "'HideSecrets"
 
   FRFSStartStopsAPI:

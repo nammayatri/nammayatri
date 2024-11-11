@@ -4,6 +4,8 @@
 
 module Storage.Queries.RouteStopMapping where
 
+import qualified BecknV2.FRFS.Enums
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.RouteStopMapping
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -21,6 +23,31 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RouteStopMapping.RouteStopMapping] -> m ())
 createMany = traverse_ create
+
+findAllByMerchantOperatingCityAndVehicleType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.FRFS.Enums.VehicleCategory -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
+findAllByMerchantOperatingCityAndVehicleType limit offset merchantOperatingCityId vehicleType = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.vehicleType $ Se.Eq vehicleType
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset
+
+findAllByMerchantOperatingCityAndVehicleTypeWithoutOptions ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.FRFS.Enums.VehicleCategory -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
+findAllByMerchantOperatingCityAndVehicleTypeWithoutOptions merchantOperatingCityId vehicleType = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.vehicleType $ Se.Eq vehicleType
+        ]
+    ]
 
 findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RouteStopMapping.RouteStopMapping])
 findByRouteCode routeCode = do findAllWithKV [Se.Is Beam.routeCode $ Se.Eq routeCode]
