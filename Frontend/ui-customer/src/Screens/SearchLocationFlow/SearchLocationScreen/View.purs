@@ -527,6 +527,7 @@ locateOnMapFooterView push state = let
               linearLayout
                 [ height WRAP_CONTENT
                 , gravity CENTER_VERTICAL
+                , visibility $ boolToVisibility (not $ DA.null $ footerArray state)
                 , weight 1.0] $ 
                 [ linearLayout
                   [ height WRAP_CONTENT
