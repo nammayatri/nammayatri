@@ -72,7 +72,8 @@ data InitReq = InitReq
     riderPhoneNumber :: Text,
     mbRiderName :: Maybe Text,
     estimateId :: Text,
-    initReqDetails :: Maybe InitReqDetails
+    initReqDetails :: Maybe InitReqDetails,
+    isAdvanceBookingEnabled :: Maybe Bool
   }
 
 data InitReqDetails = InitReqDeliveryDetails DTDD.DeliveryDetails
@@ -116,6 +117,8 @@ handler merchantId req validatedReq = do
   let searchRequest = validatedReq.searchRequest
       riderName = req.mbRiderName
       riderPhoneNumber = req.riderPhoneNumber
+  whenJust req.isAdvanceBookingEnabled $ \isAdvanceBookingEnabled' -> do
+    QSR.updateIsAdvancedBookingEnabled isAdvanceBookingEnabled' searchRequest.id
   (mbPaymentMethod, paymentUrl) <- fetchPaymentMethodAndUrl searchRequest.merchantOperatingCityId
   (booking, driverName, driverId) <-
     case validatedReq.quote of
