@@ -58,6 +58,7 @@ import Data.Function.Uncurried (runFn3)
 import Mobility.Prelude (groupAdjacent, sortAccToDayName, boolToVisibility)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Data.Tuple (Tuple(..), fst, snd)
 
 screen :: ST.TicketBookingScreenState -> Screen Action ST.TicketBookingScreenState ScreenOutput
 screen initialState =
@@ -142,12 +143,22 @@ view push state =
       ST.DescriptionStage -> generalActionButtons state push
       _ -> generalActionButtons state push
   allowFutureBooking services = foldl (\acc service -> acc || service.allowFutureBooking) false services
-
-  serviceClosedView = if (state.props.currentStage == ST.ChooseTicketStage) && (not $ allowFutureBooking state.data.servicesInfo) && (placeClosed state.data.placeInfo) then (headerBannerView push state ("Booking closed currently. Opens after " <> getOpeningTiming state.data.placeInfo))
-                      else if (state.props.currentStage == ST.ChooseTicketStage) && (allowFutureBooking state.data.servicesInfo) && (placeClosedToday state.data.placeInfo state.data.dateOfVisit) then (headerBannerView push state ("Services closed for today. Tickets are available next day onwards"))
-                      else if (state.props.currentStage == ST.ChooseTicketStage) && (not $ allowFutureBooking state.data.servicesInfo) && (shouldHurry  state.data.placeInfo) then (headerBannerView push state ("Hurry! Booking closes at " <> getClosingTiming state.data.placeInfo))
-                      else if (state.props.currentStage == ST.ChooseTicketStage) && (checkIfSameDayBookingNotAllowedForToday state) then (headerBannerView push state ("Same-day booking is not allowed. Please select a future date for ticket booking."))
-                      else linearLayout [height $ V 0][]
+  
+  serviceClosedView = 
+    let (mbStartEndDate) = case head state.data.servicesInfo of
+          Just serviceCat -> case head serviceCat.serviceCategories of
+            Just category -> case category.operationalDate of
+                    Just (date :: ST.OperationalDate) -> (Tuple (Just date.startDate) (Just date.endDate))
+                    Nothing -> (Tuple Nothing Nothing)
+            Nothing -> (Tuple Nothing Nothing)
+          Nothing -> (Tuple Nothing Nothing)
+    in
+    if (state.props.currentStage == ST.ChooseTicketStage) && (not $ allowFutureBooking state.data.servicesInfo) && (placeClosed state.data.placeInfo) then (headerBannerView push state ("Booking closed currently. Opens after " <> getOpeningTiming state.data.placeInfo))
+    else if (state.props.currentStage == ST.ChooseTicketStage) && (allowFutureBooking state.data.servicesInfo) && (placeClosedToday state.data.placeInfo state.data.dateOfVisit) then (headerBannerView push state ("Services closed for today. Tickets are available next day onwards"))
+    else if (state.props.currentStage == ST.ChooseTicketStage) && (not $ allowFutureBooking state.data.servicesInfo) && (shouldHurry  state.data.placeInfo) then (headerBannerView push state ("Hurry! Booking closes at " <> getClosingTiming state.data.placeInfo))
+    else if (state.props.currentStage == ST.ChooseTicketStage) && (checkIfSameDayBookingNotAllowedForToday state) then (headerBannerView push state ("Same-day booking is not allowed. Please select a future date for ticket booking."))
+    else if (state.props.currentStage == ST.ChooseTicketStage) && (not $ isVisitDateWithinOperationalDate state) then (headerBannerView push state ("The selected date is outside the available booking period. Please choose a date between " <> fromMaybe "" (fst mbStartEndDate) <> " and " <> fromMaybe "" (snd mbStartEndDate)))
+    else linearLayout [height $ V 0][]
 
   shouldHurry mbPlaceInfo =
     case mbPlaceInfo of
@@ -565,6 +576,13 @@ chooseTicketsView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect 
 chooseTicketsView state push = 
   let filteredServiceDatav2  = filterServiceDataAccordingToOpDay state.props.selectedOperationalDay state.data.servicesInfo
       filteresServiceCatData = map (\service -> service { serviceCategories = (getFilteredServiceCategories state service.expiry service.serviceCategories) } ) state.data.servicesInfo
+      mbStartEndDate = case head filteresServiceCatData of
+          Just serviceCat -> case head serviceCat.serviceCategories of
+            Just category -> case category.operationalDate of
+                    Just (date :: ST.OperationalDate) -> (Tuple (Just date.startDate) (Just date.endDate))
+                    Nothing -> (Tuple Nothing Nothing)
+            Nothing -> (Tuple Nothing Nothing)
+          Nothing -> (Tuple Nothing Nothing)
   in
   PrestoAnim.animationSet [Anim.fadeIn ( state.props.currentStage == ST.ChooseTicketStage)]  $  
   linearLayout[
@@ -622,6 +640,7 @@ chooseTicketsView state push =
       , if length filteredServiceDatav2 == 0 then (noDataView state push "No services available for selected date")
         else if (checkIfServiceClosedForToday filteredServiceDatav2) then (noDataView state push "Services closed for today. Tickets are available next day onwards") -- refactor this 
         else if checkIfSameDayBookingNotAllowedForToday state then (noDataView state push "Same-day booking is not allowed. Please select a future date for ticket booking.")
+        else if not $ isVisitDateWithinOperationalDate state then (noDataView state push ("The selected date is outside the available booking period. Please choose a date between " <> fromMaybe "" (fst mbStartEndDate) <> " and " <> fromMaybe "" (snd mbStartEndDate)) )
         else (linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -746,7 +765,7 @@ individualServiceView push state service =
       ]
   ] <> (if service.isExpanded && (not bookingClosedForService) then [individualServiceBHView push state service] else [] )--[individualTicketBHView push state valBH service] else [])
   where
-    isValid serviceCategories = foldl (\acc serviceCategory -> acc || isServiceCatValid state service.expiry serviceCategory.validOpDay ) false serviceCategories
+    isValid serviceCategories = foldl (\acc serviceCategory -> acc || isServiceCatValid state service.expiry serviceCategory.validOpDay serviceCategory.operationalDate) false serviceCategories
     extractHeading :: String -> Maybe String
     extractHeading html = do
       startIndex <- DS.indexOf (Pattern "<h") html
@@ -1328,10 +1347,10 @@ filterServiceDataAccordingToOpDay selectedOpDay services = do
 
 
 getFilteredServiceCategories :: ST.TicketBookingScreenState -> ServiceExpiry -> Array ST.ServiceCategory -> Array ST.ServiceCategory
-getFilteredServiceCategories state expiry serviceCategories =  filter (\serviceCat -> isServiceCatValid state expiry serviceCat.validOpDay ) serviceCategories
+getFilteredServiceCategories state expiry serviceCategories =  filter (\serviceCat -> isServiceCatValid state expiry serviceCat.validOpDay serviceCat.operationalDate) serviceCategories
 
-isServiceCatValid :: ST.TicketBookingScreenState -> ServiceExpiry -> Maybe ST.OperationalDaysData -> Boolean
-isServiceCatValid state expiry mbValidOpDay = maybe false (\opday -> (not DA.null (getFilteredSlots opday.slot state)) || (getFilteredTime opday.timeIntervals)) mbValidOpDay
+isServiceCatValid :: ST.TicketBookingScreenState -> ServiceExpiry -> Maybe ST.OperationalDaysData -> Maybe ST.OperationalDate -> Boolean
+isServiceCatValid state expiry mbValidOpDay mbOperationalDate = maybe false (\opday -> (not DA.null (getFilteredSlots opday.slot state)) || (getFilteredTime opday.timeIntervals)) mbValidOpDay
   where
     getFilteredTime timeIntervals =
       let now = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
@@ -1353,7 +1372,7 @@ isServiceCatValid state expiry mbValidOpDay = maybe false (\opday -> (not DA.nul
             else if not DS.null startTime then now > startTime
             else if not DS.null newEndTime then now < newEndTime
             else false
-      else true
+      else maybe true (\oplDate -> state.data.dateOfVisit <= oplDate.endDate && state.data.dateOfVisit >= oplDate.startDate) mbOperationalDate
 
 getFilteredSlots :: Array ST.SlotInterval -> ST.TicketBookingScreenState -> Array ST.SlotInterval
 getFilteredSlots slots state =
@@ -1373,3 +1392,18 @@ checkIfSameDayBookingNotAllowedForToday state =
 isSameDayBookingAllowed placeInfo = case placeInfo of
       Just (TicketPlaceResp placeInfo) -> fromMaybe true placeInfo.allowSameDayBooking
       Nothing -> true
+  
+isVisitDateWithinOperationalDate :: ST.TicketBookingScreenState -> Boolean
+isVisitDateWithinOperationalDate state = 
+  let visitDate = convertUTCtoISC state.data.dateOfVisit "YYYY-MM-DD"
+      _ = spy "visitDate" visitDate
+      _ = spy "state.data.servicesInfo" state.data.servicesInfo
+      withinOperationDate = foldl 
+        (\acc1 (service :: ST.TicketServiceData) -> acc1 || 
+          foldl (\acc (serviceCategory :: ST.ServiceCategory) -> 
+            let _ = spy "serviceCategory.operationalDate" (maybe true (\oplDate -> visitDate <= oplDate.endDate && visitDate >= oplDate.startDate) serviceCategory.operationalDate)
+            in acc || maybe true (\oplDate -> visitDate <= oplDate.endDate && visitDate >= oplDate.startDate) serviceCategory.operationalDate) false service.serviceCategories)
+         false state.data.servicesInfo
+      
+      _ = spy "withinOperationDate" withinOperationDate
+  in withinOperationDate

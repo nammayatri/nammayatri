@@ -116,6 +116,7 @@ eval (UpdatePlacesData placeData mbServiceData) state = do
     Just (TicketServicesResponse serviceData) -> do
       let selectedOpDay = convertUTCtoISC (state.data.dateOfVisit) "dddFull"
           servicesInfo2 = mapWithIndex (\i it -> transformRespToStateDatav2 (i==0) it state selectedOpDay) serviceData
+          
       continue state { data { placeInfo = placeData, servicesInfo = servicesInfo2}, props {selectedOperationalDay = selectedOpDay, showShimmer = false } }
     Nothing -> do
       let newState = state { data { placeInfo = placeData }, props { showShimmer = false } }
