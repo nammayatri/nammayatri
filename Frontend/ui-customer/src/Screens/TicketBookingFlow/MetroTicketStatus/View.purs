@@ -451,6 +451,7 @@ keyValueView push state key value index =
     , width MATCH_PARENT
     , gravity CENTER_VERTICAL
     , orientation VERTICAL
+    , visibility $ boolToVisibility (value /= "")
     ][ linearLayout
         [ width MATCH_PARENT
         , margin $ Margin 5 12 5 12
@@ -473,8 +474,9 @@ keyValueView push state key value index =
         , textView $ 
             [ text value
             , color Color.black800
-            , gravity CENTER_VERTICAL
-            , width WRAP_CONTENT
+            , gravity RIGHT
+            , width if copyField then V 160 else WRAP_CONTENT
+            , singleLine true
             , height WRAP_CONTENT
             , ellipsize copyField
             ] <> FontStyle.body6 TypoGraphy

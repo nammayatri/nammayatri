@@ -1069,7 +1069,7 @@ getMetroConfigFromCity city fcResponse =
                 "ny_ic_chennai_metro_banner"
                 "#D8E2FF"
                 Color.metroBlue
-                ([ getString CHENNAI_METRO_TERM_2
+                ([ getString $ DELHI_METRO_TIME convertedBookingStartTime convertedBookingEndTime
                 , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else getString CHENNAI_METRO_TERM_1
                 , if isEventOngoing == Just true then getString FREE_TICKET_CASHBACK else ""
                 ])
