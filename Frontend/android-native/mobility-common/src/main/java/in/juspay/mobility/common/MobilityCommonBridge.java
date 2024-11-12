@@ -2841,7 +2841,7 @@ public class MobilityCommonBridge extends HyperBridge {
                                 int index = polyline.getPoints().size() - 1;
                                 rotation = (float) SphericalUtil.computeHeading(polyline.getPoints().get(index), polyline.getPoints().get(index - 1));
                                 }
-                                if (rotation != 0.0) currMarker.setRotation(rotation);
+                                if (rotation != 0.0 && currMarker != null) currMarker.setRotation(rotation);
                                 currMarker.setAnchor(sourceAnchorU, sourceAnchorV);
                                 markers.put(sourceIconId, currMarker);
                             } else {
