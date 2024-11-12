@@ -23,7 +23,7 @@ instance FromTType' Beam.TicketService Domain.Types.TicketService.TicketService 
             expiry = expiry,
             id = Kernel.Types.Id.Id id,
             maxVerification = maxVerification,
-            operationalDate = ((,) <$> operationalStartDate <*> operationalEndDate) <&> \(operationalStartDate', operationalEndDate') -> Domain.Types.TicketService.OperationalDate operationalStartDate' operationalEndDate',
+            operationalDate = ((,) <$> operationalStartDate <*> operationalEndDate) <&> \(operationalStartDate', operationalEndDate') -> Domain.Types.TicketService.OperationalDate operationalEndDate' operationalStartDate',
             operationalDays = operationalDays,
             placesId = placesId,
             service = service,
