@@ -283,8 +283,9 @@ eval (RideBookingListAPIResponseAction rideList status) state = do
                           }
                         }
                     else do
-                      let newState = (myRideListTransform state (rideList ^._list))!!0
-                      updateAndExit (fromMaybe initData newState) (UpdateState (fromMaybe initData newState))
+                      let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else "" 
+                          newState = fromMaybe initData $ (myRideListTransform state (rideList ^._list))!!0
+                      continue newState{data{email=email}}
       "failure"   -> continue updatedState{props{apiFailure = true}}
       _           -> continue updatedState
 
