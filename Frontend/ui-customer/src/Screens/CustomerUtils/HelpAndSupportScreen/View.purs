@@ -63,6 +63,8 @@ import Screens.HelpAndSupportScreen.ScreenData (HelpAndSupportScreenState)
 import Data.Maybe (Maybe(..), isJust, isNothing, fromMaybe)
 import Components.Loader.DotLoader as DotLoader
 import Components.Loader.Types as DotLoaderTypes
+import PrestoDOM.Animation as PrestoAnim
+import Animation as Anim
 
 screen :: HelpAndSupportScreenState -> Screen Action HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -277,7 +279,10 @@ recentRideViewShimmer  =
     ]
 ------------------------------- recentRide --------------------------
 recentRideView :: HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-recentRideView state push =
+recentRideView state push = 
+  let hiddenCondition = state.data.isNull || state.props.apiFailure
+  in
+  PrestoAnim.animationSet[ Anim.fadeIn $ not $ hiddenCondition] $
   linearLayout
   [ margin (Margin 16 16 16 16)
   , background Color.white900
@@ -286,7 +291,7 @@ recentRideView state push =
   , orientation VERTICAL
   , stroke ("1," <> Color.greyLight)
   , height WRAP_CONTENT
-  , visibility if state.data.isNull || state.props.apiFailure then GONE else VISIBLE
+  , visibility if hiddenCondition then GONE else VISIBLE
   , onClick push $ const ReportIssue
   ][
     linearLayout
