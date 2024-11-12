@@ -61,6 +61,8 @@ import Mobility.Prelude (boolToVisibility)
 import Locale.Utils
 import Screens.HelpAndSupportScreen.ScreenData (HelpAndSupportScreenState)
 import Data.Maybe (Maybe(..), isJust, isNothing, fromMaybe)
+import PrestoDOM.Animation as PrestoAnim
+import Animation as Anim
 
 screen :: HelpAndSupportScreenState -> Screen Action HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -158,7 +160,10 @@ view push state =
 
 ------------------------------- recentRide --------------------------
 recentRideView :: HelpAndSupportScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
-recentRideView state push =
+recentRideView state push = 
+  let hiddenCondition = state.data.isNull || state.props.apiFailure
+  in
+  PrestoAnim.animationSet[ Anim.fadeIn $ not $ hiddenCondition] $
   linearLayout
   [ margin (Margin 16 16 16 16)
   , background Color.white900
@@ -167,7 +172,7 @@ recentRideView state push =
   , orientation VERTICAL
   , stroke ("1," <> Color.greyLight)
   , height WRAP_CONTENT
-  , visibility if state.data.isNull || state.props.apiFailure then GONE else VISIBLE
+  , visibility if hiddenCondition then GONE else VISIBLE
   , onClick push $ const ReportIssue
   ][
     linearLayout
@@ -472,10 +477,7 @@ headingView state title =
 
 getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> HelpAndSupportScreenState ->  Flow GlobalState Unit
 getPastRides action push state = do
-  void $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
-  void $ EHU.toggleLoader true
   (rideBookingListResponse) <- Remote.rideBookingListWithStatus "1" "0" "COMPLETED" Nothing
-  void $ EHU.toggleLoader false
   case rideBookingListResponse of
       Right (RideBookingListRes  listResp) -> doAff do liftEffect $ push $ action (RideBookingListRes listResp) "success"
       Left (err) -> doAff do liftEffect $ push $ action (RideBookingListRes dummyListResp ) "failure"
