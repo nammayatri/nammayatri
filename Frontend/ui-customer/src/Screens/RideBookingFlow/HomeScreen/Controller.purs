@@ -1268,8 +1268,10 @@ eval (SettingSideBarActionController (SettingSideBarController.PastRides)) state
       updatedState = state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
   exit $ PastRides updatedState false
 
-eval (SettingSideBarActionController (SettingSideBarController.OnHelp)) state = do 
-  if state.data.config.feature.enableHelpAndSupport
+eval (SettingSideBarActionController (SettingSideBarController.OnHelp)) state =
+  let appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
+      isOdishaApp = appName == "Odisha Yatri" -- TODO: Need to make this city config instead of app config and replace hard coded values
+  in if state.data.config.feature.enableHelpAndSupport && not isOdishaApp
     then exit $ GoToHelp state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
     else continue state {props{isContactSupportPopUp = true}}
 
@@ -1844,7 +1846,10 @@ eval (ContactSupportAction (PopUpModal.OnSecondaryTextClick)) state =
     ]
 
 eval (ContactSupportAction (PopUpModal.OnButton1Click)) state = do
-    void $ pure $ showDialer (getSupportNumber "") false
+    let appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
+        isOdishaApp = appName == "Odisha Yatri" -- TODO: Need to make this city config instead of app config and replace hard coded values
+        supportNumber = if isOdishaApp then "08069724915" else getSupportNumber ""
+    void $ pure $ showDialer supportNumber false
     continue state{props{isContactSupportPopUp = false}}
 
 eval (ContactSupportAction (PopUpModal.OnButton2Click)) state = continueWithCmd state [pure $ ContactSupportAction (PopUpModal.DismissPopup)]
