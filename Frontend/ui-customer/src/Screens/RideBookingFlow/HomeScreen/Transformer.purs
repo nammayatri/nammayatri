@@ -592,13 +592,13 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
                 let
                   (QuoteAPIEntity quoteEntity) = body.onDemandCab
 
-                  orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex (fromMaybe "" (quoteEntity.serviceTierName)) orderList)
+                  orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex quoteEntity.vehicleVariant orderList)
                 in
                   { item: Just quote, order: orderNumber }
               RentalQuotes body -> 
                 let (QuoteAPIEntity quoteEntity) = body.onRentalCab
 
-                    orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex  (fromMaybe "" (quoteEntity.serviceTierName)) orderList)
+                    orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex  quoteEntity.vehicleVariant orderList)
 
                 in {item : Just quote, order : orderNumber}
               _ -> { item: Nothing, order: orderListLength }
@@ -620,11 +620,11 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
                   Quotes body -> do
                     let
                       (QuoteAPIEntity quoteEntity) = body.onDemandCab
-                    DA.any (_ == fromMaybe "" (quoteEntity.serviceTierName)) variant
+                    DA.any (_ == quoteEntity.vehicleVariant) variant
                   RentalQuotes body -> do
                     let 
                       (QuoteAPIEntity quoteEntity) = body.onRentalCab
-                    DA.any (_ == fromMaybe "" (quoteEntity.serviceTierName)) variant
+                    DA.any (_ == quoteEntity.vehicleVariant) variant
                   _ -> false
               )
               quotes
