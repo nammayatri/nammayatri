@@ -1765,4 +1765,6 @@ getBn =
     , truck : "ট্রাক"
     , register_your_truck : "আপনার ট্রাক রেজিস্টার করুন" 
     , no_plan_selected : "কোন পরিকল্পনা নির্বাচিত নেই"
+    , a_new_way_to_earn_parcel: "আয়ের নতুন উপায় - পার্সেল 2W"
+    , seamless_earning_experience_click_below: "সহজ আয়ের অভিজ্ঞতার জন্য নিচে ক্লিক করুন"
     }

@@ -303,6 +303,7 @@ screen initialState (GlobalState globalState) =
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ checkCurrentRide push Notification initialState
                                 _ <- launchAff $ EHC.flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.paymentState.invoiceId 4 5000.0 initialState push PaymentStatusAction
                                 when initialState.data.plansState.cityOrVehicleChanged $ void $ launchAff $ EHC.flowRunner defaultGlobalState $ getPlansList push PlanListResponse
+                                
                                 if getValueToLocalStore GO_TO_PLANS_PAGE == "true" then do
                                   void $ pure $ setValueToLocalStore GO_TO_PLANS_PAGE "false"
                                   void $ push $ (BottomNavBarAction (BottomNavBar.OnNavigate "Join")) else pure unit
@@ -457,6 +458,7 @@ view push state =
       , if state.props.isMockLocation && not cugUser then sourceUnserviceableView push state else dummyTextView
       , if state.data.plansState.showSwitchPlanModal then SelectPlansModal.view (push <<< SelectPlansModalAction) (selectPlansModalState state) else dummyTextView
       , if state.props.showDeliveryCallPopup then customerDeliveryCallPopUp push state else dummyTextView
+      , if state.props.currentStage == HomeScreen && state.props.showParcelIntroductionPopup then parcelIntroductionPopupView push state else dummyTextView
   ]
   where 
     showPopups = (DA.any (_ == true )
@@ -3047,3 +3049,10 @@ callCardView push state item =
         , padding (Padding 3 3 3 3)
         ]
     ]
+
+parcelIntroductionPopupView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+parcelIntroductionPopupView push state =
+  linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    ][ PopUpModal.view (push <<< ParcelIntroductionPopup) (parcelIntroductionPopup state)]

@@ -1765,4 +1765,6 @@ getTa =
     , truck : "லாரி"
     , register_your_truck : "உங்கள் லாரியை பதிவு செய்க"
     , no_plan_selected : "ஒரு திட்டம் தேர்ந்தெடுக்கப்படவில்லை"
+    , a_new_way_to_earn_parcel: "சமீபத்தில் வருமானம் பெறும் புதிய வழி - பார்சல் 2W"
+    , seamless_earning_experience_click_below: "சீரான வருமான அனுபவத்திற்காக, கீழே கிளிக் செய்யவும்"
     }

@@ -273,6 +273,7 @@ initData =
       , isSourceDetailsExpanded : false
       , showDeliveryCallPopup : false
       , retryRideList : false
+      , showParcelIntroductionPopup : false
       }
   }
 

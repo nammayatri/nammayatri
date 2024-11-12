@@ -1765,4 +1765,6 @@ getTe =
     , truck : "ట్రక్"
     , register_your_truck : "మీ ట్రక్‌ను నమోదు చేయండి"
     , no_plan_selected : "యొక్క యోజన ఎంచుకోలేదు"
+    , a_new_way_to_earn_parcel: "కమాయికి కొత్త మార్గం - పార్సెల్ 2W"
+    , seamless_earning_experience_click_below: "సునాయాసమైన సంపాదన అనుభవం కోసం, కింద క్లిక్ చేయండి"
     }
