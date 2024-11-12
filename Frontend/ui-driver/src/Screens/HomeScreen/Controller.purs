@@ -543,13 +543,13 @@ eval (ConfirmDisableGoto PopUpModal.OnButton1Click) state = updateAndExit state{
 eval (AccountBlockedDueToCancellationsAC PopUpModal.OnButton2Click) state = continue state { props { accountBlockedPopupDueToCancellations = false } }
 
 eval (AccountBlockedDueToCancellationsAC PopUpModal.OnButton1Click) state = do 
-  void $ pure $ showDialer (SC.getSupportNumber "") false 
+  void $ pure $ unsafePerformEffect $ contactSupportNumber ""
   continue state 
 
 eval (AccountBlockedAC PopUpModal.OnButton2Click) state = continue state { props { accountBlockedPopup = false } }
 
 eval (AccountBlockedAC PopUpModal.OnButton1Click) state = do 
-  void $ pure $ showDialer (SC.getSupportNumber "") false 
+  void $ pure $ unsafePerformEffect $ contactSupportNumber ""
   continue state 
 
 eval BookingOptions state = exit $ GoToBookingPreferences state  
