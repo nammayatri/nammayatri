@@ -35,7 +35,7 @@ import Debug (spy)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag,setText, getNewIDWithTag)
 import Engineering.Helpers.LogEvent (logEvent)
-import Helpers.Utils (getTime, getCurrentUTC, launchAppSettings, generateQR, downloadQR, getValueBtwRange)
+import Helpers.Utils (getTime, getCurrentUTC, launchAppSettings, generateQR, downloadQR, getValueBtwRange, contactSupportNumber)
 import JBridge (firebaseLogEvent, goBackPrevWebPage,differenceBetweenTwoUTC, toast, showDialer, hideKeyboardOnNavigation, shareImageMessage)
 import Language.Strings (getString)
 import Language.Types as STR
@@ -442,7 +442,7 @@ eval ShowDrvierBlockedPopup state = continue state {props { showDriverBlockedPop
 eval (DriverBLockedPopupAction PopUpModal.OnButton2Click) state = continue state { props { showDriverBlockedPopup = false } }
 
 eval (DriverBLockedPopupAction PopUpModal.OnButton1Click) state = do 
-  void $ pure $ showDialer (getSupportNumber "") false 
+  void $ pure $ unsafePerformEffect $ contactSupportNumber ""
   continue state 
 
 eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = do
