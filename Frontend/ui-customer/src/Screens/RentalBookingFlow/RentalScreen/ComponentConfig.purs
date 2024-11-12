@@ -146,7 +146,7 @@ mapInputViewConfig state =
           , gravity = CENTER_VERTICAL
           , accessibilityHint = if suffixButtonText == (getString NOW) then "Select to Schedule Ride" else "Selected Date : " <> suffixButtonText 
           }
-        , suffixButtonVisibility = VISIBLE 
+        , suffixButtonVisibility = GONE 
         , imageLayoutVisibility = boolToVisibility isSelectPackageStage
         , inputLayoutPading = if isSelectPackageStage then PaddingLeft 8 else PaddingLeft 0
         , inputView = map 

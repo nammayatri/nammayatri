@@ -817,13 +817,14 @@ getStopListForFocussedTextField state value =
   case state.props.focussedTextField of
     MB.Just SearchLocPickup ->
       let length = DA.length state.data.stopsSearchedList
+          removeEndStops = if DS.null state.props.routeSelected then 0 else 1
           endIndex =
             case state.data.destLoc of
               MB.Just loc ->
                 case DA.findIndex (\(FRFSStationAPI stop) -> stop.code == loc.stationCode) state.data.stopsSearchedList of
                   MB.Just index -> index
-                  MB.Nothing -> length-1
-              MB.Nothing -> length-1
+                  MB.Nothing -> length-removeEndStops
+              MB.Nothing -> length-removeEndStops
           newStopList = DA.dropEnd (length - endIndex) state.data.stopsSearchedList 
           updatedStopsSearchedList =
             if DS.length value > 2

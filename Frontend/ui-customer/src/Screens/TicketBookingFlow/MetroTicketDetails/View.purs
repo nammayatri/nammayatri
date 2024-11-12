@@ -410,7 +410,7 @@ ticketDetailsView push state =
           imageView [
           width MATCH_PARENT
         , height $ V 50
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET case config.ticketStatus of
+        , imageWithFallback $ fetchImage COMMON_ASSET case config.ticketStatus of
                                                               "ACTIVE" -> "ny_ic_active_state"
                                                               "EXPIRED" -> "ny_ic_expired_state"
                                                               _ -> "ny_ic_verified_state"
@@ -498,7 +498,7 @@ metroHeaderView push state headerFontStyle detailVisibility =
         width $ V 41
       , height $ V 41
       , margin $ MarginTop $ if isBusTicketBooking state then 4 else 0
-      , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if isBusTicketBooking state then "ny_ic_bus_icon_light_blue" else cityConfig.logoImage
+      , imageWithFallback $ if isBusTicketBooking state then fetchImage GLOBAL_COMMON_ASSET "ny_ic_bus_icon_light_blue" else fetchImage FF_COMMON_ASSET cityConfig.logoImage
       ]
     , linearLayout [
         width WRAP_CONTENT

@@ -855,7 +855,7 @@ predictionsView push state globalProps = let
     busRouteArray :: Array FRFSRouteAPI -> Array LocationListItemState
     busRouteArray busRoute = 
       map (\(FRFSRouteAPI route) -> {
-          prefixImageUrl: fetchImage FF_ASSET "ny_ic_route_bus",
+          prefixImageUrl: fetchImage COMMON_ASSET "ny_ic_route_bus",
           postfixImageUrl: "",
           postfixImageVisibility: false,
           title:route.shortName,

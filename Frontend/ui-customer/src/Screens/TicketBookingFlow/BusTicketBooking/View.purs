@@ -264,7 +264,7 @@ searchRouteButton push state =
     , accessibilityHint "Enter Bus No/Destination : Button"
     ]
     [ imageView
-      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_search_grey"
+      [ imageWithFallback $ fetchImage COMMON_ASSET "ny_ic_search_grey"
       , height $ V 16
       , width $ V 16
       , gravity CENTER_VERTICAL

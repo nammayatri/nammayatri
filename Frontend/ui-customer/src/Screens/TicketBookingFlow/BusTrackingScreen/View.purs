@@ -265,7 +265,7 @@ verticalLineView push idTag showOnlyBullet vehicles =  -- state isDotted =
         [ width MATCH_PARENT
         , height $ V 20
         , margin $ MarginTop $ marginTop
-        , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_bus_marker_with_arrow"
+        , imageWithFallback $ HU.fetchImage HU.COMMON_ASSET "ny_ic_bus_marker_with_arrow"
         ]
       ]
 

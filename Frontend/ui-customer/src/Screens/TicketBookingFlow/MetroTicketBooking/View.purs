@@ -729,7 +729,7 @@ textViewForLocation label actionId push state =
     [ imageView $ 
             [ height $ V 18
             , width $ V 18
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET (if actionId == Src then "ny_ic_pickup_indicator" else "ny_ic_drop_red_indicator")
+            , imageWithFallback $ fetchImage COMMON_ASSET (if actionId == Src then "ny_ic_pickup_indicator" else "ny_ic_drop_red_indicator")
             , cornerRadius 4.0 
             , margin $ MarginLeft 8
             ]
