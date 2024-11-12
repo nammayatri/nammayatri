@@ -43,6 +43,9 @@ import Styles.Colors as Color
 import Data.Maybe (Maybe(..))
 import Common.Types.App (LazyCheck(..))
 import Data.Array as DA
+import Data.Function.Uncurried (runFn3)
+import DecodeUtil (getAnyFromWindow)
+import Data.Maybe (fromMaybe)
 import Screens.Types (Stage(..),City(..))
 import Data.String as DS
 import Mobility.Prelude
@@ -94,6 +97,8 @@ view push state =
 settingsView :: forall w. SettingSideBarState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 settingsView state push =
   let city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
+      appName = fromMaybe "" $ runFn3 getAnyFromWindow "appName" Nothing Just
+      isOdishaApp = appName == "Odisha Yatri" -- TODO: Need to make this city config instead of app config and replace hard coded values
   in 
   linearLayout
   [ height WRAP_CONTENT
@@ -107,7 +112,7 @@ settingsView state push =
         "MetroTickets" -> if (DA.any (_ == city) [Kochi, Chennai, Delhi]) then settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey_small", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_MY_METRO_TICKETS, iconUrl : "", showNewTag: true} push else linearLayout[visibility GONE][]
         "Favorites" -> if DA.any (\stage -> isLocalStageOn stage)  [RideStarted, RideAccepted, RideCompleted] then emptyLayout else settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_fav", text : (getString FAVOURITES) , accessibilityHint : "Favourites " , tag : SETTINGS_FAVOURITES, iconUrl : "", showNewTag : false} push
         "NammaSafety" -> if state.appConfig.feature.enableSafetyFlow then settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_shield_heart", text : getString NAMMA_SAFETY, accessibilityHint : " Safety ", tag : SETTINGS_NAMMASAFETY, iconUrl : "", showNewTag : not state.hasCompletedSafetySetup} push else emptyLayout
-        "HelpAndSupport" -> settingsMenuView {imageUrl : fetchImage FF_ASSET  "ny_ic_help", text :  if state.appConfig.feature.enableHelpAndSupport then getString HELP_AND_SUPPORT else getString CONTACT_SUPPORT, accessibilityHint : "Help And Support", tag : SETTINGS_HELP, iconUrl : "", showNewTag : false} push
+        "HelpAndSupport" -> settingsMenuView {imageUrl : fetchImage FF_ASSET  "ny_ic_help", text :  if state.appConfig.feature.enableHelpAndSupport && not isOdishaApp then getString HELP_AND_SUPPORT else getString CONTACT_SUPPORT, accessibilityHint : "Help And Support", tag : SETTINGS_HELP, iconUrl : "", showNewTag : false} push
         "Language" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_change_language", text : (getString LANGUAGE), accessibilityHint : "Language ", tag : SETTINGS_LANGUAGE, iconUrl : "", showNewTag : false} push
         "ShareApp" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_share", text : (getString SHARE_AND_REFER), accessibilityHint : "Refer And Share ", tag : SETTINGS_SHARE_APP, iconUrl : "", showNewTag : false} push
         "LiveStatsDashboard" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_graph_black", accessibilityHint : "Live Stats Dashboard ",text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : liveStatsDashboardImage, showNewTag : false} push
