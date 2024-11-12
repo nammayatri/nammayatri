@@ -358,6 +358,15 @@ serviceTierItem state push service enabled opacity index =
               , height $ V 12
               , visibility $ MP.boolToVisibility $ state.props.rateCardLoaded && index /= -1 && state.data.config.rateCardScreen.showRateCard
               ]
+            , imageView
+              [
+                imageWithFallback $ fetchImage FF_ASSET "ny_ic_youtube"
+              , width $ V 12
+              , height $ V 12
+              , margin (MarginHorizontal 2 2)
+              , visibility $ MP.boolToVisibility $ service.serviceTierType == API.DELIVERY_BIKE
+              , onClick push $ const $ ServiceTierInfoVideo service.serviceTierType
+              ]
            ]
           , textView $
             [ height WRAP_CONTENT

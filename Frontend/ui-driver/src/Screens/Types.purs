@@ -1404,7 +1404,8 @@ type HomeScreenProps =  {
   rideRequestPill :: RideRequestPill,
   showIntercityRateCard :: Boolean,
   intercityInfoPopUp :: Boolean,
-  retryRideList :: Boolean
+  retryRideList :: Boolean,
+  showParcelIntroductionPopup :: Boolean
  }
 
 type RideRequestPill = {

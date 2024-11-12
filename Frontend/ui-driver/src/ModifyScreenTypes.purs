@@ -149,7 +149,7 @@ updateStage stage = do
         HomeScreen -> do
           _ <- pure $ removeAllPolylines ""
           _ <- pure $ spy "Inside HomeScreen" "removeAllPolyLines"
-          modifyScreenState $ HomeScreenStateType (\state -> HomeScreenData.initData)
+          modifyScreenState $ HomeScreenStateType (\state -> HomeScreenData.initData { props { showParcelIntroductionPopup = state.props.showParcelIntroductionPopup } })
         ChatWithCustomer -> do
           pure unit
         _ -> modifyScreenState $ HomeScreenStateType (\state -> state { props { currentStage = stage'} })

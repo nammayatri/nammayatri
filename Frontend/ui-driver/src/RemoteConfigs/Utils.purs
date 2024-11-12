@@ -174,6 +174,17 @@ defaultMetroCoinsEvent = {
   minDistance : 0
 }
 
+getParcelConfig :: String -> ParcelConfig
+getParcelConfig city  = 
+  let config = fetchRemoteConfigString "parcel_config"
+      decodedConfg = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultParcelConfig
+  in getCityBasedConfig decodedConfg $ toLower city
+
+defaultParcelConfig :: ParcelConfig
+defaultParcelConfig = {
+  introductionVideo : "https://www.youtube.com/playlist?list=PLvMgI4c44A9bZPI3XouAG6MSjG85QXjS3"
+}
+
 getBundleSplashConfig :: String -> BundleLottieConfig
 getBundleSplashConfig lazy = decodeForeignObject (parseJSON $ fetchRemoteConfigString "driver_bundle_splash_config") $ { lottieUrl : "https://assets.moving.tech/beckn/nammayatri/driver/lottie/ny_bundle_splash_lottie_new.json", enable : true}
 

@@ -1765,4 +1765,6 @@ getEn =
     , truck : "Truck"
     , register_your_truck : "Register your Truck"
     , no_plan_selected : "No Plan Selected"
+    , a_new_way_to_earn_parcel: "A New way to earn - Parcel 2W"
+    , seamless_earning_experience_click_below: "For a seamless earning experience, click below"
     }

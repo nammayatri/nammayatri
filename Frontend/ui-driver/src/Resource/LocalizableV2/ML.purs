@@ -1765,4 +1765,6 @@ getMl =
     , truck : "ട്രക്ക്"
     , register_your_truck : "നിങ്ങളുടെ ട്രക്ക് നിബന്ധിക്കുക"
     , no_plan_selected : "ഒരു പ്ലാൻ തിരഞ്ഞെടുക്കിയില്ല"
+    , a_new_way_to_earn_parcel: "ഉപജിവിക്കാനുള്ള പുതിയ മാർഗം - പാർസൽ 2W"
+    , seamless_earning_experience_click_below: "പ്രയാസമില്ലാതെ ഒരു വരുമാന അനുഭവത്തിന്, താഴെ ക്ലിക്ക് ചെയ്യുക"
     }

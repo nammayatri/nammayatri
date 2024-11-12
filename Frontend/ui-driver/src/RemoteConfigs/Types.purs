@@ -136,3 +136,7 @@ type RideAssignedAudioConfig = {
 , delivery :: Maybe String
 , rental :: Maybe String
 }
+
+type ParcelConfig = {
+  introductionVideo :: String
+}

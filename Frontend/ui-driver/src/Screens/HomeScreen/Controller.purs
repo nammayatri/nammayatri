@@ -473,6 +473,7 @@ data Action = NoAction
             | NotifyReachedDestination
             | UpdateRetryRideList Boolean
             | OnRideAssignedAudioCompleted String
+            | ParcelIntroductionPopup PopUpModal.Action
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -1721,6 +1722,21 @@ eval (UpComingRideDetails  resp) state = do
 eval ScheduledRideBannerClick state  =  exit $ GoToRideSummaryScreen state
 eval (UpdateRetryRideList retry) state = continue state {props {retryRideList = retry}}
  
+eval (ParcelIntroductionPopup action) state = do
+  let newState = state { props { showParcelIntroductionPopup = false } }
+      city = getValueToLocalStore DRIVER_LOCATION
+      parcelConfig = RC.getParcelConfig city
+  case action of
+    PopUpModal.DismissPopup -> continue newState
+    PopUpModal.OnCoverImageClick -> onClick newState parcelConfig.introductionVideo
+    PopUpModal.OnButton1Click -> onClick newState parcelConfig.introductionVideo
+    _ -> continue state
+  where
+    onClick newState parcelIntroductionVideo = do
+      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_parcel_introduction_clicked"
+      void $ pure $ setValueToLocalStore SHOW_PARCEL_INTRODUCTION_POPUP "false"
+      continueWithCmd newState [pure $ OpenLink parcelIntroductionVideo]
+
 eval _ state = update state 
 
 checkPermissionAndUpdateDriverMarker :: Boolean -> Effect Unit
