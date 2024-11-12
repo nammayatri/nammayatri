@@ -441,6 +441,7 @@ createIssueCategory merchantShortId city Common.CreateIssueCategoryReq {..} issu
             merchantId = merchantOperatingCity.merchantId,
             merchantOperatingCityId = merchantOperatingCity.id,
             allowedRideStatuses = allowedRideStatuses <|> Just defaultAllowedRideStatuses,
+            filterOptionFn = fromMaybe [] filterOptionFn,
             ..
           }
 
@@ -479,6 +480,8 @@ createIssueMessages merchantShortId city merchantOperatingCity issueCategoryId m
             createdAt = now,
             updatedAt = now,
             mediaFiles = [],
+            filterTags = fromMaybe [] filterTags,
+            filterOptionFn = fromMaybe [] filterOptionFn,
             ..
           }
 
@@ -581,6 +584,8 @@ createIssueOption merchantShortId city mbMerchantOpCity issueCategoryId issueMes
             merchantId = merchantOperatingCity.merchantId,
             merchantOperatingCityId = merchantOperatingCity.id,
             igmSubCategory = igmSubCategory,
+            filterTags = fromMaybe [] filterTags,
+            allowedAttachements = fromMaybe [] allowedAttachements,
             ..
           }
 
@@ -685,6 +690,8 @@ upsertIssueMessage merchantShortId city req issueHandle identifier = do
             messageTitle = req.messageTitle <|> ((.messageTitle) =<< mbIssueMessage),
             messageAction = req.messageAction <|> ((.messageAction) =<< mbIssueMessage),
             isActive = fromMaybe True (req.isActive <|> (mbIssueMessage <&> (.isActive))),
+            filterTags = maybe [] (.filterTags) mbIssueMessage,
+            filterOptionFn = maybe [] (.filterOptionFn) mbIssueMessage,
             ..
           }
 
