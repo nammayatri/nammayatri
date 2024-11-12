@@ -46,13 +46,14 @@ type CustomerConfirmAPI =
     :> Capture "quoteId" (Id Quote.Quote)
     :> "confirm"
     :> QueryParam "paymentMethodId" Payment.PaymentMethodId
+    :> QueryParam "isAdvancedBookingEnabled" Bool
     :> Post '[JSON] UC.ConfirmRes
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler =
   callConfirm
 
-callConfirm :: ShortId DM.Merchant -> Id DP.Person -> Id Quote.Quote -> Maybe Payment.PaymentMethodId -> FlowHandler UC.ConfirmRes
-callConfirm merchantId personId quote mbPaymentMethodId = do
+callConfirm :: ShortId DM.Merchant -> Id DP.Person -> Id Quote.Quote -> Maybe Payment.PaymentMethodId -> Maybe Bool -> FlowHandler UC.ConfirmRes
+callConfirm merchantId personId quote mbPaymentMethodId isAdvanceBookingEnabled = do
   m <- withDashboardFlowHandlerAPI $ findMerchantByShortId merchantId
-  UC.confirm (personId, m.id) quote mbPaymentMethodId
+  UC.confirm (personId, m.id) quote mbPaymentMethodId isAdvanceBookingEnabled

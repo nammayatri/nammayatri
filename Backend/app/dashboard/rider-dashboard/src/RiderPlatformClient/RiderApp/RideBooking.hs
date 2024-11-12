@@ -96,7 +96,7 @@ data SelectAPIs = SelectAPIs
   }
 
 newtype ConfirmAPIs = ConfirmAPIs
-  { rconfirm :: Id DP.Person -> Id Quote.Quote -> Maybe Payment.PaymentMethodId -> Euler.EulerClient UC.ConfirmRes
+  { rconfirm :: Id DP.Person -> Id Quote.Quote -> Maybe Payment.PaymentMethodId -> Maybe Bool -> Euler.EulerClient UC.ConfirmRes
   }
 
 data BookingAPIs = BookingAPIs

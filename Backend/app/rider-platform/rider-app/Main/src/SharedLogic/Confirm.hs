@@ -90,7 +90,8 @@ data DConfirmRes = DConfirmRes
     city :: Context.City,
     maxEstimatedDistance :: Maybe Distance,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
-    confirmResDetails :: Maybe DConfirmResDetails
+    confirmResDetails :: Maybe DConfirmResDetails,
+    isAdvanceBookingEnabled :: Maybe Bool
   }
   deriving (Show, Generic)
 
@@ -184,6 +185,7 @@ confirm DConfirmReq {..} = do
         maxEstimatedDistance = searchRequest.maxDistance,
         paymentMethodInfo = Nothing, -- can be removed later
         confirmResDetails,
+        isAdvanceBookingEnabled = searchRequest.isAdvanceBookingEnabled,
         ..
       }
   where
