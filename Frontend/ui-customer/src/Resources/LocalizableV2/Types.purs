@@ -1714,6 +1714,9 @@ newtype Keymap = Keymap {
 , fare_commission_free_wbtc :: String
 , select_route_number :: String
 , pickup_and_destination_stop :: String
+, bus_boarded_confirmation :: String
+, towards_station :: String -> String
+, bus_no :: String -> String
 }
 
 
@@ -6827,3 +6830,12 @@ select_route_number = a
 
 pickup_and_destination_stop :: Proxy "pickup_and_destination_stop"
 pickup_and_destination_stop = a
+
+bus_boarded_confirmation :: Proxy "bus_boarded_confirmation"
+bus_boarded_confirmation = a
+
+towards_station :: Proxy "towards_station"
+towards_station = a
+
+bus_no :: Proxy "bus_no"
+bus_no = a

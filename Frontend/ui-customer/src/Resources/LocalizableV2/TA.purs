@@ -1700,4 +1700,7 @@ getTa = Keymap {
 , fare_commission_free_wbtc : "கட்டணம் மற்றும் கமிஷன் இல்லாத WBTC பஸ் டிக்கெட்கள்"
 , select_route_number : "வழி எண்ணைத் தேர்ந்தெடுக்கவும்"
 , pickup_and_destination_stop : "பிக்கப் மற்றும் நிலையம் நிறுத்து"
+, bus_boarded_confirmation : "தயவுசெய்து நீங்கள் பஸ்சில் உள்ளீர்களா என்பதை உறுதிசெய்க?"
+, towards_station : (\s -> s <> " நோக்கி")
+, bus_no : (\s -> "பஸ் எண்: " <> s)
 }

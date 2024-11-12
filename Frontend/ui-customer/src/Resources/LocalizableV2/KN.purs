@@ -1700,4 +1700,7 @@ getKn = Keymap {
 , fare_commission_free_wbtc : "ಶುಲ್ಕ ಮತ್ತು ಕಮಿಷನ್ ಫ್ರೀ ಡಬ್ಲ್ಯೂಬಿಟಿಸಿ"
 , select_route_number : "ರೂಟ್ ಸಂಖ್ಯೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ"
 , pickup_and_destination_stop : "ಪಿಕಪ್ ಮತ್ತು ಗಮನಾರ್ಹ ನಿಲ್ದಾಣ"
+, bus_boarded_confirmation : "ನೀವು ಬಸ್ಸಿನಲ್ಲಿ ಇದ್ದೀರಾ ಎಂದು ದೃಢೀಕರಿಸಿ?"
+, towards_station : (\s -> s <> " ಕಡೆಗೆ")
+, bus_no : (\s -> "ಬಸ್ ಸಂಖ್ಯೆ: " <> s)
 }

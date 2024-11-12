@@ -1700,4 +1700,7 @@ getHi = Keymap {
 , fare_commission_free_wbtc : "किराया बिना कमीशन के है और WBTC द्वारा निर्धारित किया गया है।"
 , select_route_number : "मार्ग नंबर चुनें"
 , pickup_and_destination_stop : "पिकअप और गंतव्य स्टॉप"
+, bus_boarded_confirmation : "कृपया पुष्टि करें कि आप बस में हैं?"
+, towards_station : (\s -> s <> " की ओर")
+, bus_no : (\s -> "बस नंबर: " <> s)
 }

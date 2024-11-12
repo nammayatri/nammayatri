@@ -1701,4 +1701,7 @@ getMl = Keymap {
 , fare_commission_free_wbtc : "കൂലി കമ്മീഷനില്ലാതെ WBTC ആണ് നിശ്ചയിക്കുന്നത്"
 , select_route_number : "റൂട്ട് നമ്പർ തിരഞ്ഞെടുക്കുക"
 , pickup_and_destination_stop : "പിക്കപ്പ് അന്റ് ഗേറ്റ് സ്റ്റോപ്പ്"
+, bus_boarded_confirmation : "ദയവായി നിങ്ങൾ ബസിൽ ആണോ എന്ന് ഉറപ്പാക്കുക?"
+, towards_station : (\s -> s <> " ഭാഗത്തേക്ക്")
+, bus_no : (\s -> "ബസ് നമ്പർ: " <> s)
 }

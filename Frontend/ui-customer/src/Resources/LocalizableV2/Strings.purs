@@ -1795,4 +1795,7 @@ getProxy str =
     FARE_COMMISSION_FREE_WBTC -> \a -> a @~ fare_commission_free_wbtc
     SELECT_ROUTE_NUMBER -> \a -> a @~ select_route_number
     PICKUP_AND_DESTINATION_STOP -> \a -> a @~ pickup_and_destination_stop
-
+    BUS__ -> \a -> a @~ bus__
+    BUS_BOARDED_CONFIRMATION -> \a -> a @~ bus_boarded_confirmation
+    TOWARDS_STATION arg1 -> \a -> (a @~ towards_station) arg1
+    BUS_NO arg1 -> \a -> (a @~ bus_no) arg1

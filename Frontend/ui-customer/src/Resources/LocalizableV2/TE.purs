@@ -1700,4 +1700,7 @@ getTe = Keymap {
 , fare_commission_free_wbtc : "ఫేర్ మరియు కమిషన్ ఫ్రీ వెస్ట్ బెంగాల్ ట్రాన్స్పోర్ట్ కార్పొరేషన్ (WBTC)"
 , select_route_number : "రూట్ నంబర్ ఎంచుకోండి"
 , pickup_and_destination_stop : "పికప్ మరియు గంతవ్యం స్టాప్"
+, bus_boarded_confirmation : "మీరు బస్సులో ఉన్నారా అని దయచేసి నిర్ధారించండి?"
+, towards_station : (\s -> s <> " వైపు")
+, bus_no : (\s -> "బస్ నంబర్: " <> s)
 }

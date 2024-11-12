@@ -1700,4 +1700,7 @@ getEn = Keymap {
 , fare_commission_free_wbtc : "Fare is commission-free and determined by the WBTC"
 , select_route_number : "Select Route Number"
 , pickup_and_destination_stop : "Pickup and Destination Stop"
+, bus_boarded_confirmation : "Please confirm if you are inside the bus?"
+, towards_station : (\s -> "Towards " <> s)
+, bus_no : (\s -> "Bus No: " <> s)
 }

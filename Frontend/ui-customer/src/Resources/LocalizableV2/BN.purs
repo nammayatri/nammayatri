@@ -1700,4 +1700,7 @@ getBn = Keymap {
 , fare_commission_free_wbtc :"ভাড়া কমিশন-মুক্ত এবং WBTC দ্বারা নির্ধারিত।"
 , select_route_number : "রুট নম্বর নির্বাচন করুন"
 , pickup_and_destination_stop : "পিকআপ এবং গন্তব্য স্টপ"
+, bus_boarded_confirmation : "আপনি কি বাসে উঠেছেন নিশ্চিত করুন?"
+, towards_station : (\s -> "দিকে " <> s)
+, bus_no : (\s -> "বাস নম্বর: " <> s)
 }
