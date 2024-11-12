@@ -295,7 +295,7 @@ getTa =
     , vehicle_issue: "வாகனப் பிரச்சினை"
     , fare_updated: "கட்டணம் புதுப்பிக்கப்பட்டது"
     , frequent_cancellations_will_lead_to_less_rides: "சவாரிகளை அடிக்கடி ரத்து செய்வது குறைவான சவாரிகளுக்கு வழிவகுக்கும் மற்றும் மதிப்பீட்டைக் குறைக்கும்."
-    , frequent_cancellations_will_lead_to_blocking: "அடிக்கடி ரத்து செய்வது ஆன்லைன் செல்வதைப் தடுப்பதற்கும் , குறைந்த மதிப்பீட்டிற்கும் வலி வகுக்கும்"
+    , frequent_cancellations_will_lead_to_blocking: "அடிக்கடி ரத்து செய்வது ஆன்லைன் செல்வதைத் தடுப்பதற்கும் , குறைந்த மதிப்பீட்டிற்கும் வழி வகுக்கும்"
     , continue: "தொடரவும்"
     , more: "more"
     , less: "less"
