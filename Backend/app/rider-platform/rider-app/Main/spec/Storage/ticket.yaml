@@ -101,7 +101,7 @@ TicketService:
     operationalDates: text[]
 
   fromTType:
-    operationalDate: ((,) <$> operationalStartDate <*> operationalEndDate) <&> \(operationalStartDate', operationalEndDate') -> Domain.Types.TicketService.OperationalDate operationalStartDate' operationalEndDate'|E
+    operationalDate: ((,) <$> operationalStartDate <*> operationalEndDate) <&> \(operationalStartDate', operationalEndDate') -> Domain.Types.TicketService.OperationalDate operationalEndDate' operationalStartDate'|E
 
   toTType:
     operationalStartDate: operationalDate <&> (.startDate)|E
