@@ -1048,7 +1048,7 @@ export const startAudioRecording = function (fileName) {
       response = JBridge.startAudioRecording();
     }
     if (window.__OS == "IOS") {
-        return response == "0" ? false : true;
+      return response == "0" ? false : true;
     } else {
       return response
     }
@@ -1956,14 +1956,15 @@ export const factoryResetApp = function (str) {
 
 export const uploadFile = function (aspectRatio) {
   return function (canChooseFromFile) {
-  return function () {
-    try{
-      if (window.__OS == "ANDROID" && methodArgumentCount("uploadFile") == 2) return JBridge.uploadFile(JSON.stringify(aspectRatio), canChooseFromFile);
-      else return JBridge.uploadFile();
-    } catch (err2) {
-      return JBridge.uploadFile();
-    }
-  };
+    return function () {
+      try{
+        if (window.__OS == "ANDROID" && methodArgumentCount("uploadFile") == 2) return JBridge.uploadFile(JSON.stringify(aspectRatio), canChooseFromFile);
+        else if (window.__OS == "ANDROID" && methodArgumentCount("uploadFile") == 1) return JBridge.uploadFile(JSON.stringify(aspectRatio));
+        else return JBridge.uploadFile();
+      } catch (err2) {
+        return JBridge.uploadFile();
+      }
+    };
   };
 };
 
@@ -2090,7 +2091,7 @@ export const shareTextMessage = function (str) {
 export const shareImageMessage = function (message) {
   return function (data) {
     try {
-        JBridge.shareImageMessage(message, "", JSON.stringify(data));
+      JBridge.shareImageMessage(message, "", JSON.stringify(data));
     } catch (e) {
       if (JBridge.shareTextMessage) {
         JBridge.shareTextMessage("", message);
@@ -2927,7 +2928,7 @@ export const decodeAndStoreImage = function (base64Image) {
 }
 
 export const convertAudioToBase64 = function (base64Image) {
-    return JBridge.convertAudioToBase64(base64Image);
+  return JBridge.convertAudioToBase64(base64Image);
 }
 
 export const encodeToBase64 = function (url, delay, just, nothing, cb) {
@@ -3059,7 +3060,7 @@ export const getResourceIdentifier = function (resourceName) {
       console.log("Error in getResourceIdentifier", err);
       return 0;
     }
-}
+  }
 }
 
 

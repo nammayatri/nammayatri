@@ -616,7 +616,7 @@ hybridFlow flow = do
                   { props
                     { triggeringSos = false
                     , timerValue = SafetyScreenData.defaultTimerValue
-                    , showTestDrill = true
+                    , showTestDrill = false
                     , showShimmer = true
                     , confirmTestDrill = false
                     , isSafetyCenterDisabled = false
