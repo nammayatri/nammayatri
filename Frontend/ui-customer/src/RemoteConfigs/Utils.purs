@@ -168,5 +168,11 @@ getMetroConfig city = do
 
 defaultMetroConfig :: MetroConfig
 defaultMetroConfig = {
-  tnc : ""
+  tnc : "",
+  logoImage : "",
+  mapImage : "",
+  bannerImage : "",
+  bannerBackgroundColor : "",
+  bannerTextColor : "",
+  showCancelButton : false
 }
