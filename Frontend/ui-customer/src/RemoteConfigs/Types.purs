@@ -104,5 +104,11 @@ type SafetyConfig = {
 }
 
 type MetroConfig = {
-  tnc :: String
+  tnc :: String,
+  logoImage :: String,
+  mapImage :: String,
+  bannerImage :: String,
+  bannerBackgroundColor :: String,
+  bannerTextColor :: String,
+  showCancelButton :: Boolean
 }

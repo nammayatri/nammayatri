@@ -1032,65 +1032,46 @@ getMetroConfigFromCity city fcResponse =
     case city of
         Kochi ->
             mkCityBasedConfig
-                "ny_ic_kochi_metro"
                 (getString TICKETS_FOR_KOCHI_METRO)
-                "ny_ic_kochi_metro_map"
-                "ny_ic_kochi_metro_banner"
-                "#F5FFFF"
-                "#02B0AF"
                 ([ getString KOCHI_METRO_TERM_1
                 , getString KOCHI_METRO_TERM_2
                 , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else ""
                 , if isEventOngoing == Just true then getString FREE_TICKET_CASHBACK else ""
                 ])
                 (getString $ KOCHI_METRO_TIME convertedBookingStartTime convertedBookingEndTime)
-                true
                 config
         Chennai ->
             mkCityBasedConfig
-                "ny_ic_chennai_metro"
                 (getString TICKETS_FOR_CHENNAI_METRO)
-                "ny_ic_chennai_metro_map"
-                "ny_ic_chennai_metro_banner"
-                "#D8E2FF"
-                Color.metroBlue
                 ([ getString CHENNAI_METRO_TERM_2
                 , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else getString CHENNAI_METRO_TERM_1
                 , if isEventOngoing == Just true then getString FREE_TICKET_CASHBACK else ""
                 ])
                 (getString $ CHENNAI_METRO_TIME convertedBookingStartTime convertedBookingEndTime)
-                false
                 config
         Delhi ->
             mkCityBasedConfig
-                "ny_ic_delhi_metro"
                 (getString TICKETS_FOR_DELHI_METRO)
-                ""
-                "ny_ic_chennai_metro_banner"
-                "#D8E2FF"
-                Color.metroBlue
                 ([ getString $ DELHI_METRO_TIME convertedBookingStartTime convertedBookingEndTime
                 , if isEventOngoing == Just true then getString CHENNAI_METRO_TERM_EVENT else getString CHENNAI_METRO_TERM_1
                 , if isEventOngoing == Just true then getString FREE_TICKET_CASHBACK else ""
                 ])
                 (getString $ DELHI_METRO_TIME convertedBookingStartTime convertedBookingEndTime)
-                false
                 config
-
         _ ->
-            mkCityBasedConfig "" "" "" "" "" "" [] "" false config 
+            mkCityBasedConfig "" [] "" config 
   where
-    mkCityBasedConfig logoImage title mapImage bannerImage bannerBackgroundColor bannerTextColor termsAndConditions errorPopupTitle showCancelButton config =
+    mkCityBasedConfig title termsAndConditions errorPopupTitle config =
       CityMetroConfig
-        { logoImage
+        { logoImage : config.logoImage
         , title
-        , mapImage
-        , bannerImage
-        , bannerBackgroundColor
-        , bannerTextColor
+        , mapImage : config.mapImage
+        , bannerImage : config.bannerImage
+        , bannerBackgroundColor : config.bannerBackgroundColor
+        , bannerTextColor : config.bannerTextColor
         , termsAndConditions
         , errorPopupTitle
-        , showCancelButton
+        , showCancelButton : config.showCancelButton
         , termsAndConditionsUrl : config.tnc
         }
 
