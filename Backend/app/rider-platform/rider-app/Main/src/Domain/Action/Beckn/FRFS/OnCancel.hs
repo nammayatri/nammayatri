@@ -22,18 +22,22 @@ import qualified Domain.Types.FRFSTicketBookingPayment as DTBP
 import Domain.Types.Merchant as Merchant
 import Environment
 import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QTBP
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPS
+import qualified Tools.SMS as Sms
 
 data DOnCancel = DOnCancel
   { providerId :: Text,
@@ -59,6 +63,8 @@ validateRequest DOnCancel {..} = do
 onCancel :: Merchant -> Booking.FRFSTicketBooking -> DOnCancel -> Flow ()
 onCancel _ booking' dOnCancel = do
   let booking = booking' {Booking.bppOrderId = Just dOnCancel.bppOrderId}
+  person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  mRiderNumber <- mapM decrypt person.mobileNumber
   case dOnCancel.orderStatus of
     Spec.SOFT_CANCELLED -> do
       void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId dOnCancel.refundAmount dOnCancel.cancellationCharges (Just True) booking.id
@@ -80,6 +86,7 @@ onCancel _ booking' dOnCancel = do
           void $ Redis.del (makecancelledTtlKey booking.id)
       void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (booking.quantity))
       void $ CQP.clearPSCache booking.riderId
+      void $ sendTicketCancelSMS mRiderNumber person.mobileCountryCode
     Spec.CANCEL_INITIATED -> do
       void $ QTBooking.updateStatusById FTBooking.CANCEL_INITIATED booking.id
       void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCEL_INITIATED) booking.id
@@ -95,6 +102,24 @@ onCancel _ booking' dOnCancel = do
           when (Just charges /= dOnCancel.cancellationCharges) $
             throwError $ InternalError "Cancellation Charges mismatch in onCancel Req"
         _ -> throwError $ InternalError "Refund Amount or Cancellation Charges not found in booking"
+    sendTicketCancelSMS :: Maybe Text -> Maybe Text -> Flow ()
+    sendTicketCancelSMS mRiderNumber mRiderMobileCountryCode =
+      whenJust booking'.partnerOrgId $ \pOrgId -> do
+        fork "send ticket cancel sms" $
+          withLogTag ("SMS:FRFSBookingId:" <> booking'.id.getId) $ do
+            mobileNumber <- mRiderNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+            let mocId = booking'.merchantOperatingCityId
+                countryCode = fromMaybe "+91" mRiderMobileCountryCode
+                phoneNumber = countryCode <> mobileNumber
+
+            buildSmsReq <-
+              MessageBuilder.buildFRFSTicketCancelMessage mocId pOrgId $
+                MessageBuilder.BuildFRFSTicketCancelMessageReq
+                  { countOfTickets = booking'.quantity,
+                    bookingId = booking'.id
+                  }
+
+            Sms.sendSMS booking'.merchantId mocId (buildSmsReq phoneNumber) >>= Sms.checkSmsResult
 
 makecancelledTtlKey :: Id FTBooking.FRFSTicketBooking -> Text
 makecancelledTtlKey bookingId = "FRFS:OnConfirm:CancelledTTL:bookingId-" <> bookingId.getId
