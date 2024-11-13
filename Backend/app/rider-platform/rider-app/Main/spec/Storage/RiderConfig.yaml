@@ -60,6 +60,7 @@ RiderConfig:
     feedbackAlertRatingThreshold: Int
     postRideSafetyNotificationDelay: NominalDiffTime
     useUserSettingsForSafetyIVR: Bool
+    enableSlackForL0IssueDescription: Maybe Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

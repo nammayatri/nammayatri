@@ -259,7 +259,8 @@ data MerchantConfig = MerchantConfig
     counterPartyUrl :: BaseUrl,
     counterPartyApiKey :: Text,
     sensitiveWords :: Maybe [Text],
-    sensitiveWordsForExactMatch :: Maybe [Text]
+    sensitiveWordsForExactMatch :: Maybe [Text],
+    enableSlackForL0IssueDescription :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

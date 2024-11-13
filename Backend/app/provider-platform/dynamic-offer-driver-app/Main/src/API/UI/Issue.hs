@@ -251,7 +251,8 @@ buildMerchantConfig _merchantId merchantOpCityId mbPersonId = do
         counterPartyUrl = appBackendBapInternal.url,
         counterPartyApiKey = appBackendBapInternal.apiKey,
         sensitiveWords = Nothing,
-        sensitiveWordsForExactMatch = Nothing
+        sensitiveWordsForExactMatch = Nothing,
+        enableSlackForL0IssueDescription = Nothing
       }
   where
     mkCacKey = fmap (DriverId . cast) mbPersonId

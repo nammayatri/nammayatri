@@ -33,6 +33,7 @@ data RiderConfigT f = RiderConfigT
     emailOtpConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailOTPConfig),
     enableEmergencyContactAddedMessage :: B.C f Kernel.Prelude.Bool,
     enableLocalPoliceSupport :: B.C f Kernel.Prelude.Bool,
+    enableSlackForL0IssueDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableSupportForSafety :: B.C f Kernel.Prelude.Bool,
     executePaymentDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     exotelAppIdMapping :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.RiderConfig.ExotelMapping),

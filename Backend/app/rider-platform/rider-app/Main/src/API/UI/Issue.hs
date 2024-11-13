@@ -301,7 +301,8 @@ buildMerchantConfig merchantId merchantOpCityId _mbPersonId = do
         counterPartyUrl = merchant.driverOfferBaseUrl,
         counterPartyApiKey = merchant.driverOfferApiKey,
         sensitiveWords = riderConfig.sensitiveWords,
-        sensitiveWordsForExactMatch = riderConfig.sensitiveWordsForExactMatch
+        sensitiveWordsForExactMatch = riderConfig.sensitiveWordsForExactMatch,
+        enableSlackForL0IssueDescription = riderConfig.enableSlackForL0IssueDescription
       }
 
 findLatestBookingByRiderId :: Id Common.Person -> Flow (Maybe Common.Booking)
