@@ -215,7 +215,7 @@ window.getMerchantConfig = function () {
     , "fontKannada" : "NotoSansKannada"
     , "allowAllMobileNumber" : false
     , "acExplanation" : false
-    , "showMonthlyLeaderboard" : false // Disabled Monthly Leaderboard till September
+    , "showMonthlyLeaderboard" : true
     , "rcLimit" : 3
     , "showGenderBanner" : false
     , "defaultLanguage" : "EN_US"
