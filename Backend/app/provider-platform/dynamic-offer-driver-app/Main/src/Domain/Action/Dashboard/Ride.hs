@@ -345,7 +345,8 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         rideCity = Just $ show city.city,
         merchantOperatingCityId = Just ride.merchantOperatingCityId.getId,
         rideCreatedAt = ride.createdAt,
-        rideStatus = mkCommonRideStatus ride.status
+        rideStatus = mkCommonRideStatus ride.status,
+        deliveryParcelImageId = ride.deliveryFileIds >>= lastMay & fmap getId
       }
 
 -- TODO :: Deprecated, please do not maintain this in future. `DeprecatedTripCategory` is replaced with `TripCategory`

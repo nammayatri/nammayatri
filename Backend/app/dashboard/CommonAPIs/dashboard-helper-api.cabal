@@ -64,6 +64,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.DriverGoHome
       API.Types.ProviderPlatform.Management.Endpoints.DriverReferral
       API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
+      API.Types.ProviderPlatform.Management.Endpoints.Media
       API.Types.ProviderPlatform.Management.Endpoints.Merchant
       API.Types.ProviderPlatform.Management.Endpoints.Message
       API.Types.ProviderPlatform.Management.Endpoints.NammaTag
@@ -71,6 +72,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.Revenue
       API.Types.ProviderPlatform.Management.Endpoints.Ride
       API.Types.ProviderPlatform.Management.Endpoints.System
+      API.Types.ProviderPlatform.Management.Media
       API.Types.ProviderPlatform.Management.Merchant
       API.Types.ProviderPlatform.Management.Message
       API.Types.ProviderPlatform.Management.NammaTag
@@ -162,6 +164,7 @@ library
     , servant-multipart
     , servant-openapi3
     , servant-server
+    , shared-services
     , singletons
     , singletons-th
     , special-zone-a

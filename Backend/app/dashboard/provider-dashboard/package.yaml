@@ -85,6 +85,7 @@ dependencies:
   - beckn-services
   - utf8-string
   - yudhishthira
+  - shared-services
 
 ghc-options:
   - -Wall
@@ -156,3 +157,4 @@ executables:
       - beckn-spec
       - special-zone
       - special-zone-a
+      - shared-services
