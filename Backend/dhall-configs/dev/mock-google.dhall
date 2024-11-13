@@ -24,6 +24,7 @@ let doNotUseRealGoogle =
         , googleRouteConfig : googleRouteConfigType
         , googlePlaceNewUrl : Text
         , useNewPlaces : Bool
+        , googleAutocompleteParams : Optional (List Text)
         }
 
 in  { port = +8019
