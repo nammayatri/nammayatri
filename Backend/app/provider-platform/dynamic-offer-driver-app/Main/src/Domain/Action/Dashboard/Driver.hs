@@ -2634,7 +2634,7 @@ getDriverPanAadharSelfieDetailsList merchantShortId _opCity docType' driverID = 
       transactionId <- fromMaybeM (InternalError "could not find transactionId as Image does not exist !!!!!!") . join $ image1 <&> (.workflowTransactionId) -- these errors will never happen as all hyperverge workflow captured images have transactionId.
       return $
         Common.PanAadharSelfieDetailsListResp
-          { verificationStatus = image1 <&> show . (.verificationStatus),
+          { verificationStatus = image1 >>= (show <$>) . (.verificationStatus),
             imageId1 = image1 <&> getId . (.id),
             imageId2 = image2 <&> getId . (.id),
             failureReason = Nothing,
