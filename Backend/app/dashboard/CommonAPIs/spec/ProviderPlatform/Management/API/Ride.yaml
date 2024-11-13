@@ -215,6 +215,7 @@ types:
     - merchantOperatingCityId: Maybe Text
     - rideCreatedAt: UTCTime
     - rideStatus: RideStatus
+    - deliveryParcelImageId: Maybe Text
   LocationAPIEntity:
     - lat: Double
     - lon: Double

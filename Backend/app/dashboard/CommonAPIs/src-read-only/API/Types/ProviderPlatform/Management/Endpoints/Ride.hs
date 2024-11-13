@@ -230,7 +230,8 @@ data RideInfoRes = RideInfoRes
     rideCity :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rideCreatedAt :: Kernel.Prelude.UTCTime,
-    rideStatus :: RideStatus
+    rideStatus :: RideStatus,
+    deliveryParcelImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
