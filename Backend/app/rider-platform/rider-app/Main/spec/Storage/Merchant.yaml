@@ -30,6 +30,8 @@ imports:
   PaymentService: Kernel.External.Payment.Types
   TripCategory: Domain.Types.Trip
   MultiModalService: Kernel.External.MultiModal.Types
+  LLMChatCompletionService: ChatCompletion.Types
+  ServiceName: Domain.Types.Extra.MerchantServiceConfig
 
 Merchant:
   derives: "Generic,Show,'UsageSafety"
@@ -272,6 +274,43 @@ MerchantServiceConfig:
     - findByPrimaryKey
     - updateByPrimaryKey
 
+LlmPrompt:
+  derives: Generic,Show,'UsageSafety
+  types:
+    PromptKey:
+      enum: AzureOpenAI_RiderSupport_1
+    UseCase:
+      enum: RiderSupport
+  fields:
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    serviceName: ServiceName
+    promptTemplate: Text
+    promptKey: PromptKey
+    updatedAt: UTCTime
+    createdAt: UTCTime
+    useCase: UseCase
+  sqlType:
+    serviceName: character varying(255)
+    useCase: character varying(255)
+    promptKey: character varying(255)
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    serviceName: PrimaryKey
+    useCase: PrimaryKey
+    promptKey: PrimaryKey
+  excludedDefaultQueries:
+    - findByPrimaryKey
+    - updateByPrimaryKey
+  queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+    findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, serviceName, useCase, promptKey]
+
 MerchantServiceUsageConfig:
 
   derives: "Generic,Show,'UsageSafety"
@@ -312,21 +351,25 @@ MerchantServiceUsageConfig:
     updatedAt: UTCTime
     createdAt: UTCTime
     getMultiModalService: MultiModalService
+    llmChatCompletion: LLMChatCompletionService
 
   beamType:
     cancelPaymentIntent: Maybe PaymentService
     getFrfsAutocompleteDistances: Maybe MapsService
     getMultiModalService: Maybe MultiModalService
+    llmChatCompletion: Maybe LLMChatCompletionService
 
   fromTType:
     cancelPaymentIntent: fromMaybe (Kernel.External.Payment.Types.Stripe) cancelPaymentIntent|E
     getFrfsAutocompleteDistances: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
     getMultiModalService: fromMaybe (Kernel.External.MultiModal.Types.OTPTransit)|I
+    llmChatCompletion: Kernel.Prelude.fromMaybe ChatCompletion.Types.AzureOpenAI|I
 
   toTType:
     cancelPaymentIntent: Kernel.Prelude.Just|I
     getFrfsAutocompleteDistances: Kernel.Prelude.Just|I
     getMultiModalService: Kernel.Prelude.Just|I
+    llmChatCompletion: Kernel.Prelude.Just|I
 
   beamInstance:
     - MakeTableInstances
@@ -360,6 +403,7 @@ MerchantServiceUsageConfig:
     issueTicketService: character varying(30)
     getExophone: character varying (255)
     aadhaarVerificationService: character varying(30)
+    llmChatCompletion: character varying(30)
 
   default:
     getPickupRoutes: "'Google'"
@@ -380,6 +424,7 @@ MerchantServiceUsageConfig:
     getDistancesForScheduledRides: "'OSRM'"
     getFrfsAutocompleteDistances: "'OSRM'"
     getMultiModalService: "'OTPTransit'"
+    llmChatCompletion: "'AzureOpenAI'"
 
 MerchantPaymentMethod:
   derives: "Generic,'UsageSafety"

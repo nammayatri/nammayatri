@@ -6,13 +6,16 @@ import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride 
 import qualified Beckn.ACL.IGM.Issue as ACL
 import qualified Beckn.ACL.IGM.IssueStatus as ACL
 import Beckn.ACL.IGM.Utils
+import ChatCompletion.Interface.Types as CIT
 import qualified Data.Set as Set
 import qualified Domain.Action.Dashboard.Ride as DRide
 import Domain.Action.UI.IGM
 import Domain.Types.Booking
 import Domain.Types.FRFSTicketBooking
+import Domain.Types.LlmPrompt as DTL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.MerchantServiceConfig as DOSC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DR
 import Environment
@@ -45,9 +48,11 @@ import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CallIGMBPP as CallBPP
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
+import Storage.CachedQueries.LLMPrompt.LLMPrompt as SCL
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QOMC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.Person as CQPerson
 import qualified Storage.Queries.Booking as QB
@@ -59,6 +64,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.RideExtra as QRE
 import Tools.Auth
+import Tools.ChatCompletion as TC
 import Tools.Error
 import Tools.Ticket as TT
 
@@ -99,8 +105,54 @@ customerIssueHandle =
       mbSyncRide = Just syncRide,
       findByBookingId = castBookingById,
       findOneByBookingId = castRideByBookingId,
-      findByMerchantId = castMerchantById
+      findByMerchantId = castMerchantById,
+      mbFindByMerchantOperatingCityId = Just castMerchantServiceUsageConfigByMerchantOperatingCityId,
+      mbFindByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey = Just castLlmPromptByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey,
+      getChatCompletion = Just castChatCompletion
     }
+
+castMerchantServiceUsageConfigByMerchantOperatingCityId :: Id Common.MerchantOperatingCity -> Flow (Maybe Common.MerchantServiceUsageConfig)
+castMerchantServiceUsageConfigByMerchantOperatingCityId merchantOperatingCityId = do
+  orgLLMChatCompletionConfig <- QOMC.findByMerchantOperatingCityId (cast merchantOperatingCityId)
+  return $ fmap castMerchantServiceUsageConfig orgLLMChatCompletionConfig
+  where
+    castMerchantServiceUsageConfig orgLLMChatCompletionConfig =
+      Common.MerchantServiceUsageConfig
+        { llmChatCompletion = orgLLMChatCompletionConfig.llmChatCompletion
+        }
+
+castLlmPromptByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey :: Id Common.MerchantOperatingCity -> Common.ServiceName -> Common.UseCase -> Common.PromptKey -> Flow (Maybe Common.LlmPrompt)
+castLlmPromptByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey merchantOperatingCityId serviceName useCase promptKey = do
+  llmPrompt <- SCL.findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey (cast merchantOperatingCityId) (castServiceName serviceName) (castUseCase useCase) (castPromptKey promptKey)
+  return $ fmap castLlmPrompt llmPrompt
+  where
+    castLlmPrompt llmPrompt =
+      Common.LlmPrompt
+        { createdAt = llmPrompt.createdAt,
+          merchantId = cast llmPrompt.merchantId,
+          merchantOperatingCityId = cast llmPrompt.merchantOperatingCityId,
+          promptKey = promptKey,
+          promptTemplate = llmPrompt.promptTemplate,
+          serviceName = serviceName,
+          updatedAt = llmPrompt.updatedAt,
+          useCase = useCase
+        }
+
+    castServiceName :: Common.ServiceName -> DOSC.ServiceName
+    castServiceName = \case
+      Common.LLMChatCompletionService srv -> DOSC.LLMChatCompletionService srv
+
+    castUseCase :: Common.UseCase -> DTL.UseCase
+    castUseCase = \case
+      Common.RiderSupport -> DTL.RiderSupport
+
+    castPromptKey :: Common.PromptKey -> DTL.PromptKey
+    castPromptKey = \case
+      Common.AzureOpenAI_RiderSupport_1 -> DTL.AzureOpenAI_RiderSupport_1
+
+castChatCompletion :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> CIT.GeneralChatCompletionReq -> Flow CIT.GeneralChatCompletionResp
+castChatCompletion merchantId merchantOpCityId req = do
+  TC.getChatCompletion (cast merchantId) (cast merchantOpCityId) req
 
 castBookingById :: Id Common.Booking -> Flow (Maybe Common.Booking)
 castBookingById bookingId = do

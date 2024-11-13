@@ -3,6 +3,7 @@
 module IssueManagement.Domain.Action.UI.Issue where
 
 import qualified AWS.S3 as S3
+import ChatCompletion.Interface.Types as CIT
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
@@ -64,7 +65,10 @@ data ServiceHandle m = ServiceHandle
     mbReportIssue :: Maybe (BaseUrl -> Text -> Text -> IssueReportType -> m APISuccess),
     mbFindLatestBookingByPersonId :: Maybe (Id Person -> m (Maybe Booking)),
     mbFindRideByBookingId :: Maybe (Id Booking -> Id Merchant -> m (Maybe Ride)),
-    mbSyncRide :: Maybe (Id Merchant -> Id Ride -> m ())
+    mbSyncRide :: Maybe (Id Merchant -> Id Ride -> m ()),
+    mbFindByMerchantOperatingCityId :: Maybe (Id MerchantOperatingCity -> m (Maybe MerchantServiceUsageConfig)),
+    mbFindByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey :: Maybe (Id MerchantOperatingCity -> ServiceName -> UseCase -> PromptKey -> m (Maybe LlmPrompt)),
+    getChatCompletion :: Maybe (Id Merchant -> Id MerchantOperatingCity -> CIT.GeneralChatCompletionReq -> m CIT.GeneralChatCompletionResp)
   }
 
 getLanguage :: EsqDBReplicaFlow m r => Id Person -> Maybe Language -> ServiceHandle m -> m Language
@@ -396,7 +400,11 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
       updatedChats = updateChats chats_ shouldCreateTicket messages uploadedMediaFiles now
   config <- issueHandle.findMerchantConfig merchantId mocId (Just personId)
   processIssueReportTypeActions (personId, merchantId) mbOption mbRide (Just config) True identifier issueHandle
-  issueReport <- mkIssueReport mocId updatedChats shouldCreateTicket now
+  suggestedIDs <- suggestIssueCategoryId mocId category issueHandle language
+  let suggestedIssueCategoryId = fmap fst suggestedIDs
+      suggestedIssueOptionId = fmap snd suggestedIDs
+  logDebug $ show suggestedIssueCategoryId <> " " <> show suggestedIssueOptionId
+  issueReport <- mkIssueReport mocId updatedChats shouldCreateTicket now suggestedIssueCategoryId suggestedIssueOptionId
   let isLOFeedback = (identifier == CUSTOMER) && checkForLOFeedback config.sensitiveWords config.sensitiveWordsForExactMatch (Just description)
   when isLOFeedback $
     fork "notify on slack" $ do
@@ -418,7 +426,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
         logTagInfo "Create Ticket API failed - " $ show err
   pure $ Common.IssueReportRes {issueReportId = issueReport.id, issueReportShortId = issueReport.shortId, messages}
   where
-    mkIssueReport mocId updatedChats shouldCreateTicket now = do
+    mkIssueReport mocId updatedChats shouldCreateTicket now suggestedIssueCategoryId suggestedIssueOptionId = do
       id <- generateGUID
       shortId <- generateShortId
       pure $
@@ -441,8 +449,54 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             description,
             chats = updatedChats,
             merchantId = Just merchantId,
+            suggestedIssueCategoryId = suggestedIssueCategoryId,
+            suggestedIssueOptionId = suggestedIssueOptionId,
             becknIssueId
           }
+
+    suggestIssueCategoryId :: (BeamFlow m r, EncFlow m r, EsqDBReplicaFlow m r, CoreMetrics m) => Id MerchantOperatingCity -> D.IssueCategory -> ServiceHandle m -> Language -> m (Maybe (Id D.IssueCategory, Id D.IssueOption))
+    suggestIssueCategoryId mocId category iHandle language = case iHandle.mbFindByMerchantOperatingCityId of
+      Just findByMOCID -> do
+        orgLLMChatCompletionConfig <- findByMOCID mocId >>= fromMaybeM (MerchantServiceUsageConfigNotFound mocId.getId)
+        let promptServiceName = Common.LLMChatCompletionService $ (.llmChatCompletion) orgLLMChatCompletionConfig
+            promptKey = Common.AzureOpenAI_RiderSupport_1
+            useCase = Common.RiderSupport
+        case iHandle.mbFindByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey of
+          Just findByMOCIDserviceUseCasePromptkey -> do
+            llmPrompt <- findByMOCIDserviceUseCasePromptkey mocId promptServiceName useCase promptKey >>= fromMaybeM (LlmPromptNotFound mocId.getId (show promptServiceName) (show useCase) (show promptKey))
+            issueCategoryListRes <- getIssueCategory (personId, merchantId, mocId) mbLanguage iHandle identifier
+            let issueCategories = fmap (\cat -> (cat.category, cat.issueCategoryId)) issueCategoryListRes.categories
+                promptTemplate = llmPrompt.promptTemplate
+                promptCategory =
+                  T.replace "{#description#}" description
+                    . T.replace "{#categories#}" (show issueCategories)
+                    $ promptTemplate
+                gccreqCategory = CIT.GeneralChatCompletionReq {genMessages = [CIT.GeneralChatCompletionMessage {genRole = "user", genContent = promptCategory}]}
+            case iHandle.getChatCompletion of
+              Just getCC -> do
+                gccrespCategory <- getCC merchantId mocId gccreqCategory
+                let genContentCategory = gccrespCategory.genMessage.genContent
+                    genRoleCategory = gccrespCategory.genMessage.genRole
+                    (suggestedCategory, suggestedissueCategoryIdText) = parseResponse genContentCategory
+                    suggestedissueCategoryId = Id {getId = suggestedissueCategoryIdText}
+                issueOptionsTranslationsList <- CQIO.findAllByCategoryAndLanguage suggestedissueCategoryId language identifier
+                let issueOptions = fmap (\ot -> ((.option) (fst ot), (.id) (fst ot))) issueOptionsTranslationsList
+                    promptOption =
+                      T.replace "{#description#}" description
+                        . T.replace "{#categories#}" (show issueOptions)
+                        $ promptTemplate
+                    gccreqOption = CIT.GeneralChatCompletionReq {genMessages = [CIT.GeneralChatCompletionMessage {genRole = "user", genContent = promptOption}]}
+                gccrespOption <- getCC merchantId mocId gccreqOption
+                let genContentOption = gccrespOption.genMessage.genContent
+                    genRoleOption = gccrespOption.genMessage.genRole
+                    (suggestedOption, suggestedissueOptionIdText) = parseResponse genContentOption
+                    suggestedissueOptionId = Id {getId = suggestedissueOptionIdText}
+                logDebug $ "description - " <> description <> " categories - " <> show issueCategories <> " category - " <> show category.category <> " azure open AI api response for category - by " <> genRoleCategory <> " suggested category - " <> suggestedCategory <> " suggested categoryID - " <> show suggestedissueCategoryId <> " options - " <> show issueOptions <> " azure open AI api response for option - by " <> genRoleOption <> " suggested option - " <> suggestedOption <> " suggested optionID - " <> show suggestedissueOptionId
+                return $ Just (suggestedissueCategoryId, suggestedissueOptionId)
+              _ -> return Nothing
+          _ -> return Nothing
+      _ -> return Nothing
+
     createJsonMessage :: Text -> T.Text
     createJsonMessage descriptionText =
       let jsonValue :: A.Value
@@ -598,6 +652,12 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
     castIdentifierToClassification = \case
       DRIVER -> TIT.DRIVER
       CUSTOMER -> TIT.CUSTOMER
+
+    parseResponse :: Text -> (Text, Text)
+    parseResponse response =
+      case T.splitOn "," response of
+        [suggestedCat, suggestedissueCatId] -> (suggestedCat, suggestedissueCatId)
+        _ -> ("", "")
 
 issueInfo ::
   ( EsqDBReplicaFlow m r,

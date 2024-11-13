@@ -121,6 +121,8 @@ instance FromTType' BeamIR.IssueReport IssueReport where
             updatedAt = T.localTimeToUTC T.utc updatedAt,
             merchantId = Id <$> merchantId,
             becknIssueId = becknIssueId,
+            suggestedIssueCategoryId = Id <$> suggestedIssueCategoryId,
+            suggestedIssueOptionId = Id <$> suggestedIssueOptionId,
             ..
           }
 
@@ -145,5 +147,7 @@ instance ToTType' BeamIR.IssueReport IssueReport where
         BeamIR.updatedAt = T.utcToLocalTime T.utc updatedAt,
         BeamIR.chats = chats,
         BeamIR.merchantId = getId <$> merchantId,
-        BeamIR.becknIssueId = becknIssueId
+        BeamIR.becknIssueId = becknIssueId,
+        BeamIR.suggestedIssueCategoryId = getId <$> suggestedIssueCategoryId,
+        BeamIR.suggestedIssueOptionId = getId <$> suggestedIssueOptionId
       }

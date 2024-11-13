@@ -5,6 +5,8 @@
 
 module Domain.Types.Extra.MerchantServiceConfig where
 
+import ChatCompletion.Interface.Types
+import ChatCompletion.Types
 import qualified Data.List as List
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
@@ -48,6 +50,7 @@ data ServiceName
   | IncidentReportService IncidentReport.IncidentReportService
   | PayoutService Payout.PayoutService
   | MultiModalService MultiModal.MultiModalService
+  | LLMChatCompletionService ChatCompletion.Types.LLMChatCompletionService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -68,6 +71,7 @@ instance Show ServiceName where
   show (IncidentReportService s) = "IncidentReport_" <> show s
   show (PayoutService s) = "Payout_" <> show s
   show (MultiModalService s) = "MultiModal_" <> show s
+  show (LLMChatCompletionService s) = "LLMChatCompletion_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -130,6 +134,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "MultiModal_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (LLMChatCompletionService v1, r2)
+                 | r1 <- stripPrefix "LLMChatCompletion_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -150,6 +158,7 @@ data ServiceConfigD (s :: UsageSafety)
   | IncidentReportServiceConfig !IncidentReport.IncidentReportServiceConfig
   | PayoutServiceConfig !PayoutServiceConfig
   | MultiModalServiceConfig !MultiModal.MultiModalServiceConfig
+  | LLMChatCompletionServiceConfig !ChatCompletion.Interface.Types.LLMChatCompletionServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe

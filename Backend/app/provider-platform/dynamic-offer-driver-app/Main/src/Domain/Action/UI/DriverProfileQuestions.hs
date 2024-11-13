@@ -81,7 +81,7 @@ postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.U
       let promptServiceName = DOSC.LLMChatCompletionService $ (.llmChatCompletion) orgLLMChatCompletionConfig
           promptKey = DTL.AzureOpenAI_DriverProfileGen_1
           useCase = DTL.DriverProfileGen
-      llmPrompt <- SCL.findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey merchantOpCityId promptServiceName useCase promptKey >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+      llmPrompt <- SCL.findByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey merchantOpCityId promptServiceName useCase promptKey >>= fromMaybeM (LlmPromptNotFound merchantOpCityId.getId (show promptServiceName) (show useCase) (show promptKey))
       let promptTemplate = llmPrompt.promptTemplate
           prompt =
             T.replace "{#hometown#}" (hometownDetails req'.hometown)

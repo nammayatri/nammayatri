@@ -1,5 +1,7 @@
 module Storage.Queries.Transformers.MerchantServiceConfig where
 
+import ChatCompletion.Interface.Types as CIT
+import ChatCompletion.Types
 import qualified Data.Aeson as A
 import qualified Domain.Types.MerchantServiceConfig as Domain
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
@@ -56,6 +58,8 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.PayoutService Payout.Juspay -> Domain.PayoutServiceConfig . Payout.JuspayConfig <$> valueToMaybe configJSON
     Domain.MultiModalService MultiModal.GoogleTransit -> Domain.MultiModalServiceConfig . MultiModal.GoogleTransitConfig <$> valueToMaybe configJSON
     Domain.MultiModalService MultiModal.OTPTransit -> Domain.MultiModalServiceConfig . MultiModal.OTPTransitConfig <$> valueToMaybe configJSON
+    Domain.LLMChatCompletionService ChatCompletion.Types.AzureOpenAI -> Domain.LLMChatCompletionServiceConfig . CIT.AzureOpenAI <$> valueToMaybe configJSON
+    Domain.LLMChatCompletionService ChatCompletion.Types.Gemini -> Domain.LLMChatCompletionServiceConfig . CIT.Gemini <$> valueToMaybe configJSON
 
 getServiceNameConfigJson :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
 getServiceNameConfigJson = \case
@@ -102,3 +106,6 @@ getServiceNameConfigJson = \case
   Domain.MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
     MultiModal.GoogleTransitConfig cfg -> (Domain.MultiModalService MultiModal.GoogleTransit, toJSON cfg)
     MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalService MultiModal.OTPTransit, toJSON cfg)
+  Domain.LLMChatCompletionServiceConfig chatCompletionCfg -> case chatCompletionCfg of
+    CIT.AzureOpenAI cfg -> (Domain.LLMChatCompletionService ChatCompletion.Types.AzureOpenAI, toJSON cfg)
+    CIT.Gemini cfg -> (Domain.LLMChatCompletionService ChatCompletion.Types.Gemini, toJSON cfg)

@@ -5,6 +5,8 @@ module Storage.CachedQueries.PlaceBasedServiceConfig
   )
 where
 
+import ChatCompletion.Interface.Types as CIT
+import ChatCompletion.Types
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.MerchantServiceConfig
@@ -91,3 +93,6 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
   MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
     MultiModal.GoogleTransitConfig _ -> MultiModalService MultiModal.GoogleTransit
     MultiModal.OTPTransitConfig _ -> MultiModalService MultiModal.OTPTransit
+  LLMChatCompletionServiceConfig chatCompletionCfg -> case chatCompletionCfg of
+    CIT.AzureOpenAI _ -> LLMChatCompletionService ChatCompletion.Types.AzureOpenAI
+    CIT.Gemini _ -> LLMChatCompletionService ChatCompletion.Types.Gemini

@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.MerchantServiceUsageConfig where
 
+import qualified ChatCompletion.Types
 import qualified Domain.Types.MerchantServiceUsageConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -46,6 +47,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             getTripRoutes = getTripRoutes,
             initiateCall = initiateCall,
             issueTicketService = issueTicketService,
+            llmChatCompletion = Kernel.Prelude.fromMaybe ChatCompletion.Types.AzureOpenAI llmChatCompletion,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             notifyPerson = notifyPerson,
@@ -86,6 +88,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.getTripRoutes = getTripRoutes,
         Beam.initiateCall = initiateCall,
         Beam.issueTicketService = issueTicketService,
+        Beam.llmChatCompletion = Kernel.Prelude.Just llmChatCompletion,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.notifyPerson = notifyPerson,

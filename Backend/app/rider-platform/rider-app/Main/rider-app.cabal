@@ -330,6 +330,7 @@ library
       Storage.CachedQueries.FollowRide
       Storage.CachedQueries.FRFSConfig
       Storage.CachedQueries.HotSpotConfig
+      Storage.CachedQueries.LLMPrompt.LLMPrompt
       Storage.CachedQueries.Maps.LocationMapCache
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.Merchant
@@ -439,6 +440,7 @@ library
       Tools.Auth
       Tools.Beam.UtilsTH
       Tools.Call
+      Tools.ChatCompletion
       Tools.Constants
       Tools.Error
       Tools.Event
@@ -543,6 +545,7 @@ library
       Domain.Types.Issue
       Domain.Types.Journey
       Domain.Types.JourneyBooking
+      Domain.Types.LlmPrompt
       Domain.Types.Location
       Domain.Types.LocationMapping
       Domain.Types.Merchant
@@ -649,6 +652,7 @@ library
       Storage.Beam.Issue
       Storage.Beam.Journey
       Storage.Beam.JourneyBooking
+      Storage.Beam.LlmPrompt
       Storage.Beam.Location
       Storage.Beam.LocationMapping
       Storage.Beam.Merchant
@@ -756,6 +760,7 @@ library
       Storage.Queries.Issue
       Storage.Queries.Journey
       Storage.Queries.JourneyBooking
+      Storage.Queries.LlmPrompt
       Storage.Queries.Location
       Storage.Queries.LocationMapping
       Storage.Queries.Merchant

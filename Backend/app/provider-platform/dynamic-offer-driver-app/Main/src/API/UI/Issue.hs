@@ -74,7 +74,10 @@ driverIssueHandle =
       mbReportIssue = Nothing,
       mbFindLatestBookingByPersonId = Nothing,
       mbFindRideByBookingId = Nothing,
-      mbSyncRide = Nothing
+      mbSyncRide = Nothing,
+      mbFindByMerchantOperatingCityId = Nothing,
+      mbFindByMerchantOpCityIdAndServiceNameAndUseCaseAndPromptKey = Nothing,
+      getChatCompletion = Nothing
     }
 
 castPersonById :: Id Common.Person -> Flow (Maybe Common.Person)

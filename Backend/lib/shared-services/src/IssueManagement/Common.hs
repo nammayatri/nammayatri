@@ -14,8 +14,11 @@
 
 module IssueManagement.Common (module IssueManagement.Common, module Domain.Types.VehicleVariant) where
 
+import ChatCompletion.Interface.Types
+import qualified ChatCompletion.Types
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.List as List
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Data.Vector as V
@@ -353,3 +356,50 @@ checkSensitiveWords sensitiveWords sensitiveWordsForExactMatch feedbackDetails =
         replaceChar c
           | c `elem` ['?', '.', ',', '/'] = ' '
           | otherwise = c
+
+data MerchantServiceUsageConfig = MerchantServiceUsageConfig
+  { llmChatCompletion :: ChatCompletion.Types.LLMChatCompletionService
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data ServiceName
+  = LLMChatCompletionService ChatCompletion.Types.LLMChatCompletionService
+  deriving stock (Eq, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+instance Show ServiceName where
+  show (LLMChatCompletionService s) = "LLMChatCompletion_" <> show s
+
+instance Read ServiceName where
+  readsPrec d' =
+    readParen
+      (d' > app_prec)
+      ( \r ->
+          [ (LLMChatCompletionService v1, r2)
+            | r1 <- stripPrefix "LLMChatCompletion_" r,
+              (v1, r2) <- readsPrec (app_prec + 1) r1
+          ]
+      )
+    where
+      app_prec = 10
+      stripPrefix pref r = bool [] [List.drop (Kernel.Prelude.length pref) r] $ List.isPrefixOf pref r
+
+data ServiceConfig
+  = LLMChatCompletionServiceConfig !ChatCompletion.Interface.Types.LLMChatCompletionServiceConfig
+  deriving (Generic, Eq)
+
+data LlmPrompt = LlmPrompt
+  { createdAt :: Kernel.Prelude.UTCTime,
+    merchantId :: Kernel.Types.Id.Id Merchant,
+    merchantOperatingCityId :: Kernel.Types.Id.Id MerchantOperatingCity,
+    promptKey :: PromptKey,
+    promptTemplate :: Kernel.Prelude.Text,
+    serviceName :: ServiceName,
+    updatedAt :: Kernel.Prelude.UTCTime,
+    useCase :: UseCase
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data PromptKey = AzureOpenAI_RiderSupport_1 deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data UseCase = RiderSupport deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)

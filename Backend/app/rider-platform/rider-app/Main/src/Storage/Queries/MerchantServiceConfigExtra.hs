@@ -1,5 +1,7 @@
 module Storage.Queries.MerchantServiceConfigExtra where
 
+import ChatCompletion.Interface.Types as CIT
+import ChatCompletion.Types
 import qualified Data.Aeson as A
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -127,3 +129,6 @@ getServiceNameConfigJSON = \case
   Domain.MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
     MultiModal.GoogleTransitConfig cfg -> (Domain.MultiModalService MultiModal.GoogleTransit, toJSON cfg)
     MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalService MultiModal.OTPTransit, toJSON cfg)
+  Domain.LLMChatCompletionServiceConfig chatCompletionCfg -> case chatCompletionCfg of
+    CIT.AzureOpenAI cfg -> (Domain.LLMChatCompletionService ChatCompletion.Types.AzureOpenAI, toJSON cfg)
+    CIT.Gemini cfg -> (Domain.LLMChatCompletionService ChatCompletion.Types.Gemini, toJSON cfg)

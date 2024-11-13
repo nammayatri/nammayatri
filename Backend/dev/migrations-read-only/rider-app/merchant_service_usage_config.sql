@@ -65,3 +65,8 @@ ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_frfs_autocomp
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_multi_modal_service text  default 'OTPTransit';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN llm_chat_completion character varying(30)  default 'AzureOpenAI';
