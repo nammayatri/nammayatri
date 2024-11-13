@@ -396,7 +396,10 @@ calculateFareParameters params = do
             Nothing -> 840
           allowanceMins' = maybe 0 (\rt -> (calculateAllowanceMins (fromMaybe 19800 params.timeDiffFromUtc) perDayMaxAllowanceInMins' params.rideTime rt) - estimatedDurationInMins) params.returnTime
           allowanceMins = if params.roundTrip then max defaultWaitTimeAtDestination.getMinutes allowanceMins' else 0
-          extraMins = max 0 (actualDuration - estimatedDuration) `div` 60
+          reservedTime = case params.returnTime of
+            Just rt -> max estimatedDuration (round $ diffUTCTime rt params.rideTime)
+            _ -> estimatedDuration
+          extraMins = max 0 (actualDuration - reservedTime) `div` 60
           extraTimeFare = HighPrecMoney $ toRational extraMins * perExtraMinRate.getHighPrecMoney
           fareByTime = HighPrecMoney $ (toRational (estimatedDurationInMins + allowanceMins) / 60) * perHourCharge.getHighPrecMoney
 
