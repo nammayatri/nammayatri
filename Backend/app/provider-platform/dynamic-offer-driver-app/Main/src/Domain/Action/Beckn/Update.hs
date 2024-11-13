@@ -188,20 +188,29 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             (pickedWaypoints, currentPoint, snapToRoadFailed) <-
               if ride.status == DRide.INPROGRESS
                 then do
-                  currentLocationPointsBatch <- LTS.driverLocation rideId merchantOperatingCity.merchantId ride.driverId
-                  editDestinationWaypoints <- getEditDestinationWaypoints ride.driverId
-                  (snapToRoadFailed, editDestinationPoints) <- getLatlongsViaSnapToRoad (editDestinationWaypoints <> currentLocationPointsBatch.loc) merchantOperatingCity.merchantId merchantOperatingCity.id
+                  currentLocationPointsBatch <- LTS.driverLocation rideId merchantOperatingCity.merchantId ride.driverId -- gets list of driver lat longs of current actual driver location
+                  editDestinationWaypoints <- getEditDestinationWaypoints ride.driverId -- gets list of actual driver travelled lat longs it can be from A TO B or B TO C etc
+                  (snapToRoadFailed, newSnappedPoints) <- getLatlongsViaSnapToRoad (editDestinationWaypoints <> currentLocationPointsBatch.loc) merchantOperatingCity.merchantId merchantOperatingCity.id -- gets snappedwaypoints of driver travelled path
                   let (currentLocPoint :: Maps.LatLong) =
                         fromMaybe (Maps.LatLong ride.fromLocation.lat ride.fromLocation.lon) $
                           (if not $ null currentLocationPointsBatch.loc then Just (last currentLocationPointsBatch.loc) else Nothing)
                             <|> (if not $ null editDestinationWaypoints then Just (last editDestinationWaypoints) else Nothing)
-                  alreadySnappedPoints <- getEditDestinationSnappedWaypoints ride.driverId
-                  let currentPoint = if (snapToRoadFailed || null editDestinationPoints) then currentLocPoint else fst $ last editDestinationPoints
-                      alreadySnappedPointsWithCurrentPoint = alreadySnappedPoints <> editDestinationPoints <> [(currentPoint, True)]
+                  alreadySnappedPoints <- getEditDestinationSnappedWaypoints ride.driverId -- checks for exisitng snapped points of it can be from A TO B OR B TO C etc
+                  let currentPoint = if (snapToRoadFailed || null newSnappedPoints) then currentLocPoint else fst $ last newSnappedPoints
+                      alreadySnappedPointsWithCurrentPoint = alreadySnappedPoints <> newSnappedPoints <> [(currentPoint, True)]
                   whenJust (nonEmpty alreadySnappedPointsWithCurrentPoint) $ \alreadySnappedPointsWithCurrentPoint' -> do
                     addEditDestinationSnappedWayPoints ride.driverId alreadySnappedPointsWithCurrentPoint'
                   deleteEditDestinationWaypoints ride.driverId
-                  return (srcPt :| (pickedWaypointsForEditDestination (alreadySnappedPoints <> editDestinationPoints) ++ [currentPoint, dropLatLong]), Just currentPoint, Just snapToRoadFailed)
+                  let mergedPoints =
+                        if null alreadySnappedPoints || null newSnappedPoints
+                          then alreadySnappedPoints <> newSnappedPoints
+                          else
+                            let lastOldPoint = fst $ last alreadySnappedPoints
+                                firstNewPoint = fst $ head newSnappedPoints
+                             in if calculateDistance lastOldPoint firstNewPoint < 0.1
+                                  then init alreadySnappedPoints <> newSnappedPoints
+                                  else alreadySnappedPoints <> newSnappedPoints
+                  return (srcPt :| (pickedWaypointsForEditDestination mergedPoints ++ [currentPoint, dropLatLong]), Just currentPoint, Just snapToRoadFailed)
                 else return (srcPt :| [dropLatLong], Nothing, Nothing)
             logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show pickedWaypoints
             routeResponse <-

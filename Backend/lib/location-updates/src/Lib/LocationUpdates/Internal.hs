@@ -352,7 +352,7 @@ deleteEditDestinationSnappedWaypoints driverId = do
   let key = makeEditDestinationSnappedWaypointsRedisKey driverId
   Hedis.del key
 
-addEditDestinationPoints :: (HedisFlow m env) => Id person -> NonEmpty LatLong -> m ()
+addEditDestinationPoints :: (HedisFlow m env) => Id person -> NonEmpty LatLong -> m () -- waypoints are bulk location points
 addEditDestinationPoints driverId waypoints = do
   let key = makeEditDestinationWaypointsRedisKey driverId
   rPush key waypoints
