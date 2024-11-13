@@ -2263,9 +2263,9 @@ window.getMerchantConfig = function () {
         },
         "showEarningSection" : true,
         "referral" : {
-            "domain" : "https://nammayatri.in"
-          , "customerAppId" : "in.juspay.nammayatri"
-          , "driverAppId" : "in.juspay.nammayatripartner"
+            "domain" : "https://odishayatri.in"
+          , "customerAppId" : "in.mobility.odishayatri"
+          , "driverAppId" : "in.mobility.odishayatripartner"
         },
         "waitingCharges" : 1.50,
         "waitingChargesConfig" : defWaitingChargesConfig,
