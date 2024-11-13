@@ -159,6 +159,7 @@ myRideListTransform state listRes =
                   , faresList: updatedFareList
                   , config: config
                   , email: ""
+                  , isLoading: false
                   , fromScreen: state.data.fromScreen
                   , description: ""
                   , accountStatus: ACTIVE
