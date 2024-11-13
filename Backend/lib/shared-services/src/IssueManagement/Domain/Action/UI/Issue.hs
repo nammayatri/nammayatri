@@ -162,7 +162,7 @@ getIssueOption (personId, merchantId, merchantOpCityId) issueCategoryId issueOpt
     Nothing -> CQIM.findAllActiveByCategoryIdAndLanguage issueCategoryId language identifier
     Just optionId -> CQIM.findAllActiveByOptionIdAndLanguage optionId language identifier
 
-  let msgFilterFns = concat $ map (\(iM, _, _) -> iM.filterOptionFn) issueMessageTranslationList
+  let msgFilterFns = concatMap (\(iM, _, _) -> iM.filterOptionFn) issueMessageTranslationList
   let filterFns = msgFilterFns ++ category.filterOptionFn
   let issueMessages = mkIssueMessageList (Just issueMessageTranslationList) language issueConfig mbRideInfoRes
   issueOptionTranslationList <- do
