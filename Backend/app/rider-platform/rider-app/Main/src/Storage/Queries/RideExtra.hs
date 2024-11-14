@@ -3,6 +3,7 @@
 module Storage.Queries.RideExtra where
 
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride as Common
+import Data.List.Extra (notNull)
 import qualified Data.Text.Encoding as TE
 import Data.Time hiding (getCurrentTime)
 import qualified Database.Beam as B
@@ -45,21 +46,22 @@ import Tools.Metrics (CoreMetrics)
 createRide' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
 createRide' ride = createWithKV ride >> appendByDriverPhoneNumber ride
 
-create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
-create ride = do
-  _ <- whenNothingM_ (QL.findById ride.fromLocation.id) $ do QL.create ride.fromLocation
-  _ <- whenJust ride.toLocation $ \location -> processLocation location
-  createRide' ride
-  where
-    processLocation location = whenNothingM_ (QL.findById location.id) $ do QL.create location
-
 createRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
 createRide ride = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping ride.fromLocation.id ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId
-  mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildDropLocationMapping detail.id ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId) ride.toLocation
-  void $ QLM.create fromLocationMap
-  void $ whenJust mbToLocationMap $ \toLocMap -> QLM.create toLocMap
-  create ride
+  processSingleLocation ride.fromLocation SLM.buildPickUpLocationMapping
+  whenJust ride.toLocation $ \toLocation -> processSingleLocation toLocation SLM.buildDropLocationMapping
+  when (notNull ride.stops) $ processMultipleLocations ride.stops
+  createRide' ride
+  where
+    processSingleLocation location locationMappingCreator = do
+      locationMap <- locationMappingCreator location.id ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId
+      QLM.create locationMap
+      whenNothingM_ (QL.findById location.id) $ do QL.create location
+
+    processMultipleLocations locations = do
+      locationMappings <- SLM.buildStopsLocationMapping locations ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId
+      QLM.createMany locationMappings
+      QL.createMany locations
 
 data DatabaseWith3 table1 table2 table3 f = DatabaseWith3
   { dwTable1 :: f (B.TableEntity table1),

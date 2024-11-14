@@ -3,6 +3,7 @@
 
 module Storage.Queries.BookingExtra where
 
+import Data.List.Extra (notNull)
 import qualified Data.Text as T
 import qualified Data.Time as DT -- (Day, UTCTime (UTCTime), DT.secondsToDiffTime, utctDay, DT.addDays)
 import qualified Domain.Types as DTC
@@ -39,20 +40,22 @@ import Tools.Error
 createBooking' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Booking -> m ()
 createBooking' = createWithKV
 
-create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Booking -> m ()
-create dBooking = do
-  void $ whenNothingM_ (QL.findById dBooking.fromLocation.id) $ do QL.create dBooking.fromLocation
-  whenJust dBooking.toLocation $ \toLocation -> whenNothingM_ (QL.findById toLocation.id) $ do QL.create toLocation
-  createBooking' dBooking
-
-createBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Booking -> m ()
+createBooking :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> m ()
 createBooking booking = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING (Just booking.providerId) (Just booking.merchantOperatingCityId)
-  QLM.create fromLocationMap
-  whenJust booking.toLocation $ \toLocation -> do
-    toLocationMaps <- SLM.buildDropLocationMapping toLocation.id booking.id.getId DLM.BOOKING (Just booking.providerId) (Just booking.merchantOperatingCityId)
-    QLM.create toLocationMaps
-  create booking
+  processSingleLocation booking.fromLocation SLM.buildPickUpLocationMapping
+  whenJust booking.toLocation $ \toLocation -> processSingleLocation toLocation SLM.buildDropLocationMapping
+  when (notNull booking.stops) $ processMultipleLocations booking.stops
+  createBooking' booking
+  where
+    processSingleLocation location locationMappingCreator = do
+      locationMap <- locationMappingCreator location.id booking.id.getId DLM.BOOKING (Just booking.providerId) (Just booking.merchantOperatingCityId)
+      QLM.create locationMap
+      whenNothingM_ (QL.findById location.id) $ do QL.create location
+
+    processMultipleLocations locations = do
+      locationMappings <- SLM.buildStopsLocationMapping locations booking.id.getId DLM.BOOKING (Just booking.providerId) (Just booking.merchantOperatingCityId)
+      QLM.createMany locationMappings
+      QL.createMany locations
 
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
