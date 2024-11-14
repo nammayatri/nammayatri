@@ -1,0 +1,24 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name PostSystemRunQuery
+
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/system/runQuery
+content-type: application/json
+token: {{juspay_admin}}
+
+{ "queryType": "UPDATE",
+  "tableName": "TestTable",
+  "setClause": "Value1",
+  "whereClause": "Value2"
+}

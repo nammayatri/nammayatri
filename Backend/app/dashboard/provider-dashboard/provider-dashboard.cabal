@@ -32,15 +32,12 @@ library
       API.ProviderPlatform
       API.ProviderPlatform.DynamicOfferDriver
       API.ProviderPlatform.DynamicOfferDriver.CacAuth
-      API.ProviderPlatform.DynamicOfferDriver.Driver
-      API.ProviderPlatform.DynamicOfferDriver.Driver.Registration
-      API.ProviderPlatform.DynamicOfferDriver.Maps
-      API.ProviderPlatform.DynamicOfferDriver.Overlay
-      API.ProviderPlatform.DynamicOfferDriver.Ride
-      API.ProviderPlatform.DynamicOfferDriver.Subscription
-      API.ProviderPlatform.DynamicOfferDriver.Volunteer
       API.SpecialZone
       App
+      Domain.Action.ProviderPlatform.AppManagement.Driver
+      Domain.Action.ProviderPlatform.AppManagement.DriverSubscription
+      Domain.Action.ProviderPlatform.AppManagement.Overlay
+      Domain.Action.ProviderPlatform.AppManagement.Subscription
       Domain.Action.ProviderPlatform.Fleet.Driver
       Domain.Action.ProviderPlatform.IssueManagement.Issue
       Domain.Action.ProviderPlatform.Management.Booking
@@ -58,13 +55,20 @@ library
       Domain.Action.ProviderPlatform.Management.Ride
       Domain.Action.ProviderPlatform.Management.System
       Domain.Action.ProviderPlatform.RideBooking.Driver
+      Domain.Action.ProviderPlatform.RideBooking.DriverRegistration
+      Domain.Action.ProviderPlatform.RideBooking.Maps
+      Domain.Action.ProviderPlatform.RideBooking.Ride
+      Domain.Action.ProviderPlatform.RideBooking.Volunteer
       ProviderPlatformClient.DynamicOfferDriver.Exotel
       ProviderPlatformClient.DynamicOfferDriver.Fleet
-      ProviderPlatformClient.DynamicOfferDriver.Operations
-      ProviderPlatformClient.DynamicOfferDriver.RideBooking
       ProviderPlatformClient.SpecialZone
       RiderPlatformClient.RiderApp
       Storage.Beam.CommonInstances
+      API.Action.ProviderPlatform.AppManagement
+      API.Action.ProviderPlatform.AppManagement.Driver
+      API.Action.ProviderPlatform.AppManagement.DriverSubscription
+      API.Action.ProviderPlatform.AppManagement.Overlay
+      API.Action.ProviderPlatform.AppManagement.Subscription
       API.Action.ProviderPlatform.Fleet
       API.Action.ProviderPlatform.Fleet.Driver
       API.Action.ProviderPlatform.IssueManagement
@@ -86,6 +90,11 @@ library
       API.Action.ProviderPlatform.Management.System
       API.Action.ProviderPlatform.RideBooking
       API.Action.ProviderPlatform.RideBooking.Driver
+      API.Action.ProviderPlatform.RideBooking.DriverRegistration
+      API.Action.ProviderPlatform.RideBooking.Maps
+      API.Action.ProviderPlatform.RideBooking.Ride
+      API.Action.ProviderPlatform.RideBooking.Volunteer
+      API.Client.ProviderPlatform.AppManagement
       API.Client.ProviderPlatform.Fleet
       API.Client.ProviderPlatform.IssueManagement
       API.Client.ProviderPlatform.Management

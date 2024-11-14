@@ -1,0 +1,40 @@
+imports:
+  Person: Domain.Types.Person
+  AutoCompleteReq: Domain.Action.UI.Maps
+  AutoCompleteResp: Domain.Action.UI.Maps
+  GetPlaceNameReq: Domain.Action.UI.Maps
+  GetPlaceNameResp: Domain.Action.UI.Maps
+
+importPackageOverrides:
+  Domain.Types.Person: "dynamic-offer-driver-app"
+  Domain.Action.UI.Maps: "dynamic-offer-driver-app"
+
+
+module: Maps
+
+apis:
+  - POST: # RideAutoCompleteAPI
+      endpoint: /autoComplete/{driverId}
+      auth: ApiAuthV2
+      params:
+        driverId: Id Person
+      request:
+        type: AutoCompleteReq
+      response:
+        type: AutoCompleteResp
+      migrate:
+        endpoint: MapAPI AutoCompleteEndPoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS AUTOCOMPLETE
+  - POST: # RideGetPlaceNameAPI
+      endpoint: /getPlaceName/{driverId}
+      auth: ApiAuthV2
+      params:
+        driverId: Id Person
+      request:
+        type: GetPlaceNameReq
+      response:
+        type: GetPlaceNameResp
+      migrate:
+        endpoint: MapAPI GetPlaceNameEndPoint
+        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS PLACENAME
+types: {}

@@ -1898,7 +1898,7 @@
       },
       "locked": {
         "lastModified": 1731501300,
-        "narHash": "sha256-AmHplPP0IQE50Pjye8g0FmOVwVEHrKdqWh5nWPWpFFQ=",
+        "narHash": "sha256-NhbskWDPb5FA/3UU4eGU0sAG6Pxo+iwN6kXOzoDJjmw=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
         "rev": "708dc75ef5b1dd56e156d188ca589b307551e8e5",

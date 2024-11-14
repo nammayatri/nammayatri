@@ -386,4 +386,9 @@ let defaultConfigs =
         ]
       }
 
-in  { defaultConfigs, ClientName, outputPrefixDriverApp }
+in  { defaultConfigs
+    , ClientName
+    , outputPrefixDriverApp
+    , outputPrefixDriverAppReadOnly
+    , GeneratorType
+    }

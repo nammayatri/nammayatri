@@ -18,7 +18,7 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.UI.DriverOnboardingV2 as DO
 import Data.OpenApi (ToSchema)
-import qualified Domain.Action.Dashboard.Management.DriverRegistration as DReg
+import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DReg
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboardingV2 as Registration
 import qualified Domain.Action.UI.FleetDriverAssociation as FDA
