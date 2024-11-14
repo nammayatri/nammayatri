@@ -1,0 +1,22 @@
+imports:
+  Value: Data.Aeson
+
+module: UpdatePartnerOrgStationID
+
+apis:
+  - POST:
+      endpoint: /updatePartnerOrgStationID
+      auth: ApiAuthV2
+      request:
+        type: ReqData
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT PARTNER_ORG_ACTION UPDATE_PARTNER_ORG_STATION_ID
+
+types:
+  ReqData:
+    - oldPartnerOrgStationID : Text
+    - newPartnerOrgStationID : Text
+    - partnerOrgID : Text
+    - derive: "'HideSecrets"

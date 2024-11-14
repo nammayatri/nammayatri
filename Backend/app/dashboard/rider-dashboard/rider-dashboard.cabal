@@ -52,6 +52,7 @@ library
       Domain.Action.RiderPlatform.Management.NammaTag
       Domain.Action.RiderPlatform.Management.Ride
       Domain.Action.RiderPlatform.Management.System
+      Domain.Action.RiderPlatform.Management.UpdatePartnerOrgStationID
       RiderPlatformClient.RiderApp.Operations
       RiderPlatformClient.RiderApp.RideBooking
       Storage.Beam.CommonInstances
@@ -64,6 +65,7 @@ library
       API.Action.RiderPlatform.Management.NammaTag
       API.Action.RiderPlatform.Management.Ride
       API.Action.RiderPlatform.Management.System
+      API.Action.RiderPlatform.Management.UpdatePartnerOrgStationID
       API.Client.RiderPlatform.Management
   other-modules:
       Paths_rider_dashboard
