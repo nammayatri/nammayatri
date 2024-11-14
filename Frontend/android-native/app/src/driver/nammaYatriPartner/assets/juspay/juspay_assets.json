@@ -667,6 +667,7 @@
       "ny_ic_permit" : true,
       "ny_ic_permit_blur" : true,
       "ny_ic_permit_clear" : true,
+      "ny_ic_person_with_heart" : true,
       "ny_ic_phone_filled_blue" : true,
       "ny_ic_phone_filled_yellow" : true,
       "ny_ic_phone_unfilled" : true,

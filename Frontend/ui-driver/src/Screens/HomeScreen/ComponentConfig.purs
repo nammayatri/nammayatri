@@ -88,6 +88,7 @@ import RemoteConfig as RemoteConfig
 import Components.SelectPlansModal.Controller as SelectPlansModal
 import RemoteConfig.Utils
 import Debug
+import Components.FavouritePopUp.Controller as FavouritePopUp
 import Control.Apply as CA
 
 --------------------------------- rideActionModalConfig -------------------------------------
@@ -2812,6 +2813,12 @@ referNowConfig state =
         }
   in
     requestInfoCardConfig'
+
+favouritePopUpConfig :: ST.HomeScreenState -> FavouritePopUp.Config
+favouritePopUpConfig state = FavouritePopUp.config {
+  title = state.data.favPopUp.title,
+  message = state.data.favPopUp.message
+}
 
 addUPIConfig :: ST.HomeScreenState -> PopUpModal.Config
 addUPIConfig state =
