@@ -2005,8 +2005,14 @@ type ServiceCategory =
     isSelected :: Boolean,
     peopleCategories :: Array PeopleCategoriesData,
     operationalDays :: Array OperationalDaysData,
+    operationalDate :: Maybe OperationalDate,
     validOpDay :: Maybe OperationalDaysData
   }
+
+type OperationalDate = {
+  startDate :: String,
+  endDate :: String
+}
 
 type FlattenedBusinessHourData =
   { id :: String,
@@ -2016,6 +2022,7 @@ type FlattenedBusinessHourData =
     specialDayDescription :: Maybe String,
     specialDayType :: Maybe String,
     operationalDays :: Array String,
+    operationalDate :: Maybe OperationalDate,
     category :: TicketCategoriesResp
   }
 

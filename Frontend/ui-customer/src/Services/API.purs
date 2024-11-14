@@ -2588,7 +2588,13 @@ newtype BusinessHoursResp = BusinessHoursResp {
   specialDayDescription :: Maybe String,
   specialDayType :: Maybe String,
   operationalDays :: Array String,
+  operationalDate :: Maybe OperationalDateResp,
   categories :: Array TicketCategoriesResp
+}
+
+newtype OperationalDateResp = OperationalDateResp {
+  startDate :: String,
+  eneDate :: String
 }
 
 newtype TicketCategoriesResp = TicketCategoriesResp {
@@ -2771,6 +2777,13 @@ instance standardEncodeBusinessHoursResp :: StandardEncode BusinessHoursResp whe
 instance showBusinessHoursResp :: Show BusinessHoursResp where show = genericShow
 instance decodeBusinessHoursResp :: Decode BusinessHoursResp where decode = defaultDecode
 instance encodeBusinessHoursResp :: Encode BusinessHoursResp where encode = defaultEncode
+
+derive instance genericOperationalDateResp :: Generic OperationalDateResp _
+derive instance newtypeOperationalDateResp :: Newtype OperationalDateResp _
+instance standardEncodeOperationalDateResp :: StandardEncode OperationalDateResp where standardEncode (OperationalDateResp id) = standardEncode id
+instance showOperationalDateResp :: Show OperationalDateResp where show = genericShow
+instance decodeOperationalDateResp :: Decode OperationalDateResp where decode = defaultDecode
+instance encodeOperationalDateResp :: Encode OperationalDateResp where encode = defaultEncode
 
 -------------------------------------------- FetchIssueList -------------------------------------------
 
