@@ -155,7 +155,7 @@ rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity = do
       unless (rideOldStatus == rideNewStatus) $ do
         QRide.updateMultiple ride.id ride
     RenewedRide renewedRide -> do
-      QRide.create renewedRide
+      QRide.createRide renewedRide
 
 isStatusChanged :: DB.BookingStatus -> DB.BookingStatus -> RideEntity -> Bool
 isStatusChanged bookingOldStatus bookingNewStatus rideEntity = do
