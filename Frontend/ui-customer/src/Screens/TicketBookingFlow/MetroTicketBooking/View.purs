@@ -313,7 +313,7 @@ infoSelectioView state push city cityMetroConfig metroConfig =
                                     [ width WRAP_CONTENT
                                     , height WRAP_CONTENT
                                     , gravity CENTER_VERTICAL
-                                    , visibility $ boolToVisibility $ DA.length state.data.routeList > 0 || (state.props.routeName == "")
+                                    , visibility $ boolToVisibility $ DA.length state.data.routeList > 1 || (state.props.routeName == "")
                                     ][ imageView
                                         [ width (V 20)
                                         , height (V 20)
