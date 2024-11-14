@@ -30,7 +30,7 @@ import Screens.Types as ST
 metroMyTicketsScreen :: FlowBT String METRO_MY_TICKETS_SCREEN_OUTPUT
 metroMyTicketsScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ MetroMyTickets.screen state.metroMyTicketsScreen
+  action <- lift $ lift $ runScreen $ MetroMyTickets.screen state.metroMyTicketsScreen{ props{ showShimmer = true } }
   case action of
     GoToMetroTicketDetailsFlow bookingId -> do 
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_TICKET_DETAILS_FLOW bookingId)

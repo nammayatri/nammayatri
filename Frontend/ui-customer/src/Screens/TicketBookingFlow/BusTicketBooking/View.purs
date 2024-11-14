@@ -21,7 +21,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried as DFU
-import Data.Maybe (maybe, fromMaybe, Maybe(..), isNothing)
+import Data.Maybe (maybe, fromMaybe, Maybe(..), isNothing, isJust)
 import Data.String as DS
 import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple(..), fst, snd)
@@ -56,6 +56,8 @@ import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Helpers.CommonView
 import DecodeUtil as DU
+import Helpers.Pooling as HP
+import Data.Time.Duration (Milliseconds(..))
 
 busTicketBookingScreen :: ST.BusTicketBookingState -> Screen Action ST.BusTicketBookingState ScreenOutput
 busTicketBookingScreen initialState =
@@ -73,10 +75,8 @@ busTicketBookingScreen initialState =
     getTicketBookingListEvent push =
       if (isNothing initialState.data.ticketDetailsState) then do
         void $ launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do 
-          void $ lift $ lift $ EHU.toggleLoader true
-          (GetMetroBookingListResp resp)<- Remote.getMetroBookingStatusListBT (show initialState.data.ticketServiceType)
+          (GetMetroBookingListResp resp) <- Remote.getMetroBookingStatusListBT (show initialState.data.ticketServiceType)
           lift $ lift $ doAff do liftEffect $ push $ BusTicketBookingListRespAC resp
-          void $ lift $ lift $ EHU.toggleLoader false
         pure $ pure unit
       else pure $ pure unit
 
@@ -96,7 +96,7 @@ view push state =
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , visibility $ boolToVisibility $ not $ DA.null $ getAllBusTickets state
+      , visibility $ boolToVisibility $ (not $ DA.null $ getAllBusTickets state) || (isNothing state.data.ticketDetailsState)
       ]
       [ linearLayout
         [ height WRAP_CONTENT
@@ -104,11 +104,37 @@ view push state =
         , orientation VERTICAL
         , padding $ PaddingBottom 28
         ]
-        [ recentTicketsView push state
+        [ shimmerView state
+        , recentTicketsView push state
         -- , recentSearchesView push state -- To be done in v2
         , viewMoreButton push state
         ]
       ]
+    ]
+
+shimmerView :: forall w . ST.BusTicketBookingState -> PrestoDOM (Effect Unit) w
+shimmerView state =
+  shimmerFrameLayout[ 
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , visibility $ boolToVisibility $ isNothing state.data.ticketDetailsState
+  ][linearLayout[
+      width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , margin (MarginTop 15)
+    ] (DA.mapWithIndex 
+        (\index item ->
+            linearLayout
+              [ width MATCH_PARENT
+              , height (V 220)
+              , margin (Margin 16 16 16 0)
+              , cornerRadius 12.0
+              , background Color.greyDark
+              ][]
+        ) (1 DA... 2)
+      )
     ]
 
 headerView :: forall w. (Action -> Effect Unit) -> ST.BusTicketBookingState -> PrestoDOM (Effect Unit) w
@@ -227,7 +253,7 @@ dummyIllustrationView push state =
   , orientation VERTICAL
   , layoutGravity "center_vertical"
   , margin $ MarginTop 48
-  , visibility $ boolToVisibility $ DA.null $ getAllBusTickets state
+  , visibility $ boolToVisibility $ (DA.null $ getAllBusTickets state) && (isJust state.data.ticketDetailsState)
   ]
   [ imageView
     [ width $ V $ 280
@@ -285,6 +311,7 @@ recentTicketsView push state =
   , width MATCH_PARENT
   , margin $ Margin 16 24 16 16
   , orientation VERTICAL
+  , visibility $ boolToVisibility $ isJust state.data.ticketDetailsState
   ]
   [ textView $
     [ text $ getString RECENT_TICKETS

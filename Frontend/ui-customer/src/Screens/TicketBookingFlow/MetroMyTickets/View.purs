@@ -55,10 +55,8 @@ screen initialState =
   , globalEvents : [
       ( \push -> do
         void $ launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do 
-          void $ lift $ lift $ EHU.toggleLoader true
           (API.GetMetroBookingListResp resp)<- Remote.getMetroBookingStatusListBT (show initialState.props.ticketServiceType)
           lift $ lift $ doAff do liftEffect $ push $ MetroBookingListRespAC resp
-          void $ lift $ lift $ EHU.toggleLoader false
         pure $ pure unit
       )
     ]
@@ -83,8 +81,9 @@ view push state =
   , orientation VERTICAL
   , afterRender push $ const AfterRender
   ] [ headerView push state
-    , emptyTicketsView state push (boolToVisibility etvVisibility)
+    , emptyTicketsView state push (boolToVisibility $ etvVisibility && not state.props.showShimmer)
     , scrollableView push state (boolToVisibility$ not etvVisibility)
+    , shimmerView state
     ]
 
 shimmerView :: forall w . ST.MetroMyTicketsScreenState -> PrestoDOM (Effect Unit) w
@@ -93,31 +92,22 @@ shimmerView state =
     width MATCH_PARENT
   , height MATCH_PARENT
   , orientation VERTICAL
-  , background Color.white900
   , visibility $ boolToVisibility state.props.showShimmer
-  ][ 
-    linearLayout [ 
-      width MATCH_PARENT
-    , height (V 235)
-    , margin (Margin 16 15 16 0)
-    , background Color.greyDark
-    , cornerRadius 16.0
-    ] []
-  , linearLayout[
+  ][linearLayout[
       width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , margin (MarginTop 258)
+    , margin (MarginTop 15)
     ] (DA.mapWithIndex 
         (\index item ->
             linearLayout
               [ width MATCH_PARENT
-              , height (V 60)
+              , height (V 90)
               , margin (Margin 16 16 16 0)
               , cornerRadius 12.0
               , background Color.greyDark
               ][]
-        ) (1 .. 7)
+        ) (1 .. 4)
       )
     ]
 

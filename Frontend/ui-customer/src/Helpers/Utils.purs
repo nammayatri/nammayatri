@@ -26,7 +26,7 @@ import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Pay
 import Components.LocationListItem.Controller (locationListStateObj)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume, runFree)
-import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find, elem)
+import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find, elem, catMaybes)
 import Data.Array.NonEmpty (fromArray)
 import Data.Boolean (otherwise)
 import Data.Date (Date)
@@ -1558,3 +1558,13 @@ getFirstRoute (FrfsQuote quote) =
         Just route -> Just route
         Nothing -> Nothing
     Nothing -> Nothing
+
+getAllFirstRoutes :: Maybe (Array FrfsQuote) -> Array FRFSRouteAPI
+getAllFirstRoutes maybeQuotes =
+  catMaybes $
+    case maybeQuotes of
+      Just quotes ->
+        map (\quote ->
+              getFirstRoute quote
+            ) quotes
+      Nothing -> []

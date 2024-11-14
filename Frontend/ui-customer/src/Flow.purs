@@ -5341,6 +5341,7 @@ searchLocationFlow = do
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ ->  busTicketBookingFlow)
     SearchLocationController.BusRouteStopSearchScreen state -> do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData{ props{ actionType = BusSearchSelectionAction, focussedTextField = Just SearchLocPickup, canSelectFromFav = false, routeSearch = true } })
+      pure $ setText (getNewIDWithTag (show SearchLocPickup)) $ ""
       searchLocationFlow
     SearchLocationController.GO_TO_BUS_SEARCH state -> do
       modifyScreenState $ SearchLocationScreenStateType (\slsState -> SearchLocationScreenData.initData { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , srcLat = state.props.srcLat , srcLong = state.props.srcLong }, data {fromScreen =(Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN),ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing} })
@@ -7559,7 +7560,7 @@ selectBusRouteScreenFlow srcCode destCode = do
           case HU.getFirstRoute quote of
             Just (FRFSRouteAPI route) -> do
               (GlobalState allStates) <- getState
-              modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data { routeList = []}, props {routeName = route.shortName, isEmptyRoute = route.code } })
+              modifyScreenState $ MetroTicketBookingScreenStateType (\metroBookingState -> metroBookingState { data { routeList = (HU.getAllFirstRoutes state.data.quotes)}, props {routeName = route.shortName, isEmptyRoute = route.code } })
               let busConfig = RC.getBusFlowConfigs $ getValueToLocalStore CUSTOMER_LOCATION
               if busConfig.showBusTracking then do
                 modifyScreenState $ BusTrackingScreenStateType (\busScreen -> BusTrackingScreenData.initData { data {sourceStation = Just $ mkStation state.data.srcLoc srcCode

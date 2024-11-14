@@ -934,6 +934,7 @@ predictionsView push state globalProps = let
           , linearLayout
             [ height $ V 1
             , width MATCH_PARENT
+            , margin $ MarginVertical 1 1
             , background Color.lightGreyShade
             , visibility $ boolToVisibility $ not $ index == DA.length state.data.locationList - 1
             ][]

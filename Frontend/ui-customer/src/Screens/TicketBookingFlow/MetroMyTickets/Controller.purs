@@ -64,7 +64,7 @@ eval :: Action -> MetroMyTicketsScreenState -> Eval Action ScreenOutput MetroMyT
 
 
 eval (MetroBookingListRespAC bookingList) state = 
-  continue $ metroTicketListApiToMyTicketsTransformer bookingList state
+  continue $ (metroTicketListApiToMyTicketsTransformer bookingList state){ props{ showShimmer = false } }
 
 eval (TicketPressed (FRFSTicketBookingStatusAPIRes ticketApiResp)) state = do 
   exit $ GoToMetroTicketDetailsFlow ticketApiResp.bookingId
@@ -72,11 +72,7 @@ eval (TicketPressed (FRFSTicketBookingStatusAPIRes ticketApiResp)) state = do
 eval (PastTicketPressed ticketApiResp) state = exit $ GoToMetroTicketStatusFlow ticketApiResp
 
 eval AfterRender state =
-  continue state {
-    props{
-      showShimmer = false
-    }
-  }
+  continue state
 
 eval (GoToMetroBookingScreen PrimaryButton.OnClick) state =
   exit $ if state.props.fromScreen == Just (getScreen BUS_TICKET_BOOKING_SCREEN)
