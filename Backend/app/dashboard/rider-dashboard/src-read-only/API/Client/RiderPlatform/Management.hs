@@ -12,6 +12,7 @@ import qualified API.Types.RiderPlatform.Management.Merchant
 import qualified API.Types.RiderPlatform.Management.NammaTag
 import qualified API.Types.RiderPlatform.Management.Ride
 import qualified API.Types.RiderPlatform.Management.System
+import qualified API.Types.RiderPlatform.Management.UpdatePartnerOrgStationID
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.ServerName
 import Kernel.Prelude
@@ -28,7 +29,8 @@ data ManagementAPIs = ManagementAPIs
     merchantDSL :: API.Types.RiderPlatform.Management.Merchant.MerchantAPIs,
     nammaTagDSL :: API.Types.RiderPlatform.Management.NammaTag.NammaTagAPIs,
     rideDSL :: API.Types.RiderPlatform.Management.Ride.RideAPIs,
-    systemDSL :: API.Types.RiderPlatform.Management.System.SystemAPIs
+    systemDSL :: API.Types.RiderPlatform.Management.System.SystemAPIs,
+    updatePartnerOrgStationIDDSL :: API.Types.RiderPlatform.Management.UpdatePartnerOrgStationID.UpdatePartnerOrgStationIDAPIs
   }
 
 mkManagementAPIs :: (Tools.Auth.Merchant.CheckedShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.City.City -> Text -> ManagementAPIs)
@@ -41,9 +43,10 @@ mkManagementAPIs merchantId city token = do
   let nammaTagDSL = API.Types.RiderPlatform.Management.NammaTag.mkNammaTagAPIs nammaTagClientDSL
   let rideDSL = API.Types.RiderPlatform.Management.Ride.mkRideAPIs rideClientDSL
   let systemDSL = API.Types.RiderPlatform.Management.System.mkSystemAPIs systemClientDSL
+  let updatePartnerOrgStationIDDSL = API.Types.RiderPlatform.Management.UpdatePartnerOrgStationID.mkUpdatePartnerOrgStationIDAPIs updatePartnerOrgStationIDClientDSL
   (ManagementAPIs {..})
   where
-    bookingClientDSL :<|> customerClientDSL :<|> fRFSTicketClientDSL :<|> invoiceClientDSL :<|> merchantClientDSL :<|> nammaTagClientDSL :<|> rideClientDSL :<|> systemClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
+    bookingClientDSL :<|> customerClientDSL :<|> fRFSTicketClientDSL :<|> invoiceClientDSL :<|> merchantClientDSL :<|> nammaTagClientDSL :<|> rideClientDSL :<|> systemClientDSL :<|> updatePartnerOrgStationIDClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
 
 callManagementAPI ::
   forall m r b c.

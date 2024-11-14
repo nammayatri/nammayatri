@@ -170,6 +170,7 @@ library
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.Route
       Domain.Action.Dashboard.System
+      Domain.Action.Dashboard.UpdatePartnerOrgStationID
       Domain.Action.Internal.Cac
       Domain.Action.Internal.FRFS
       Domain.Action.Internal.Payout
@@ -391,6 +392,7 @@ library
       Storage.Queries.MerchantServiceUsageConfigExtra
       Storage.Queries.PartnerOrganizationExtra
       Storage.Queries.PartnerOrgConfigExtra
+      Storage.Queries.PartnerOrgStationExtra
       Storage.Queries.PersonDefaultEmergencyNumberExtra
       Storage.Queries.PersonExtra
       Storage.Queries.PersonStatsExtra
@@ -466,6 +468,7 @@ library
       API.Action.Dashboard.Management.NammaTag
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.System
+      API.Action.Dashboard.Management.UpdatePartnerOrgStationID
       API.Action.UI.Cac
       API.Action.UI.CustomerReferral
       API.Action.UI.EditLocation

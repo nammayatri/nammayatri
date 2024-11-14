@@ -11,6 +11,7 @@ import qualified API.Types.RiderPlatform.Management.Merchant
 import qualified API.Types.RiderPlatform.Management.NammaTag
 import qualified API.Types.RiderPlatform.Management.Ride
 import qualified API.Types.RiderPlatform.Management.System
+import qualified API.Types.RiderPlatform.Management.UpdatePartnerOrgStationID
 import qualified Data.List
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -27,6 +28,7 @@ data ManagementUserActionType
   | NAMMA_TAG API.Types.RiderPlatform.Management.NammaTag.NammaTagUserActionType
   | RIDE API.Types.RiderPlatform.Management.Ride.RideUserActionType
   | SYSTEM API.Types.RiderPlatform.Management.System.SystemUserActionType
+  | UPDATE_PARTNER_ORG_STATION_ID API.Types.RiderPlatform.Management.UpdatePartnerOrgStationID.UpdatePartnerOrgStationIDUserActionType
   deriving stock (Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -40,6 +42,7 @@ instance Text.Show.Show ManagementUserActionType where
     NAMMA_TAG e -> "NAMMA_TAG/" <> show e
     RIDE e -> "RIDE/" <> show e
     SYSTEM e -> "SYSTEM/" <> show e
+    UPDATE_PARTNER_ORG_STATION_ID e -> "UPDATE_PARTNER_ORG_STATION_ID/" <> show e
 
 instance Text.Read.Read ManagementUserActionType where
   readsPrec d' =
@@ -102,6 +105,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "SYSTEM/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( UPDATE_PARTNER_ORG_STATION_ID v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "UPDATE_PARTNER_ORG_STATION_ID/" r,
                    ( v1,
                      r2
                      ) <-
