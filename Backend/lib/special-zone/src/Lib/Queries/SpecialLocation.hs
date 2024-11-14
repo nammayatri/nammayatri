@@ -32,6 +32,7 @@ data SpecialLocationFull = SpecialLocationFull
     category :: Text,
     merchantOperatingCityId :: Maybe Text,
     linkedLocationsIds :: [Id D.SpecialLocation],
+    locationType :: D.SpecialLocationType,
     gatesInfo :: [GD.GateInfoFull],
     gates :: [D.GatesInfo], --TODO: deprecate this later
     geoJson :: Maybe Text,

@@ -38,6 +38,7 @@ data SpecialLocation = SpecialLocation
     gates :: [GatesInfo], --TODO: deprecate this later
     geom :: Maybe Text,
     linkedLocationsIds :: [Id SpecialLocation],
+    locationType :: SpecialLocationType,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -49,6 +50,11 @@ data GatesInfo = GatesInfo
     address :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
+data SpecialLocationType
+  = Open
+  | Closed
+  deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
 
 data Area
   = Pickup (Id SpecialLocation)

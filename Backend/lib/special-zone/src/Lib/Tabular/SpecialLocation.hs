@@ -27,6 +27,7 @@ import qualified Lib.Types.SpecialLocation as Domain
 deriving instance Read Domain.GatesInfo
 
 derivePersistField "Domain.GatesInfo"
+derivePersistField "Domain.SpecialLocationType"
 
 mkPersist
   defaultSqlSettings
@@ -38,6 +39,7 @@ mkPersist
       gates (PostgresList Domain.GatesInfo)
       merchantOperatingCityId Text Maybe
       linkedLocationsIds (PostgresList Text),
+      locationType Domain.SpecialLocationType Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -57,5 +59,6 @@ instance FromTType SpecialLocationT Domain.SpecialLocation where
           gates = unPostgresList gates,
           geom = Nothing,
           linkedLocationsIds = map Id (unPostgresList linkedLocationsIds),
+          locationType = fromMaybe Domain.Closed locationType,
           ..
         }
