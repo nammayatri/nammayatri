@@ -14,14 +14,13 @@
 
 module API.Dashboard where
 
+import qualified API.Action.Dashboard.AppManagement as AppManagementDSL
 import qualified API.Action.Dashboard.Fleet as FleetDSL
 import qualified API.Action.Dashboard.IssueManagement as IssueManagementDSL
 import qualified API.Action.Dashboard.Management as ManagementDSL
 import qualified API.Action.Dashboard.RideBooking as RideBookingDSL
 import qualified API.Dashboard.Exotel as Exotel
 import qualified API.Dashboard.Fleet as Fleet
-import qualified API.Dashboard.Management as Management
-import qualified API.Dashboard.RideBooking as RideBooking
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Types.Beckn.Context as Context
@@ -33,9 +32,8 @@ import Tools.Auth (DashboardTokenAuth)
 type API =
   "dashboard"
     :> Capture "merchantId" (ShortId DM.Merchant)
-    :> ( Management.API
-           :<|> RideBooking.API
-           :<|> Fleet.API
+    :> ( Fleet.API
+           :<|> AppManagementDSLAPI
            :<|> ManagementDSLAPI
            :<|> IssueManagementDSLAPI
            :<|> RideBookingDSLAPI
@@ -47,15 +45,16 @@ type APIV2 =
   "dashboard"
     :> Capture "merchantId" (ShortId DM.Merchant)
     :> Capture "city" Context.City
-    :> ( Management.API
-           :<|> RideBooking.API
-           :<|> Fleet.API
+    :> ( Fleet.API
+           :<|> AppManagementDSLAPI
            :<|> ManagementDSLAPI
            :<|> IssueManagementDSLAPI
            :<|> RideBookingDSLAPI
            :<|> FleetDSLAPI
        )
     :<|> Exotel.API
+
+type AppManagementDSLAPI = DashboardTokenAuth :> AppManagementDSL.API
 
 type ManagementDSLAPI = DashboardTokenAuth :> ManagementDSL.API
 
@@ -70,9 +69,8 @@ handler :: FlowServer API
 handler =
   ( \merchantId -> do
       let city = getCity merchantId.getShortId
-      Management.handler merchantId city
-        :<|> RideBooking.handler merchantId city
-        :<|> Fleet.handler merchantId city
+      Fleet.handler merchantId city
+        :<|> appManagementDSLHandler merchantId city
         :<|> managementDSLHandler merchantId city
         :<|> issueManagementDSLHandler merchantId city
         :<|> rideBookingDSLHandler merchantId city
@@ -91,15 +89,17 @@ handler =
 handlerV2 :: FlowServer APIV2
 handlerV2 =
   ( \merchantId city -> do
-      Management.handler merchantId city
-        :<|> RideBooking.handler merchantId city
-        :<|> Fleet.handler merchantId city
+      Fleet.handler merchantId city
+        :<|> appManagementDSLHandler merchantId city
         :<|> managementDSLHandler merchantId city
         :<|> issueManagementDSLHandler merchantId city
         :<|> rideBookingDSLHandler merchantId city
         :<|> fleetDSLHandler merchantId city
   )
     :<|> Exotel.handler
+
+appManagementDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer AppManagementDSLAPI
+appManagementDSLHandler merchantId city _auth = AppManagementDSL.handler merchantId city
 
 managementDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer ManagementDSLAPI
 managementDSLHandler merchantId city _auth = ManagementDSL.handler merchantId city

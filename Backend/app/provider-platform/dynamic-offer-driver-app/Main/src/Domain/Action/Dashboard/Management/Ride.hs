@@ -21,6 +21,7 @@ module Domain.Action.Dashboard.Management.Ride
     postRideSyncMultiple,
     postRideRoute,
     getRideKaptureList,
+    getRideFareBreakUp,
   )
 where
 
@@ -116,3 +117,6 @@ postRideRoute = DRide.rideRoute
 
 getRideKaptureList :: ShortId DM.Merchant -> Context.City -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.TicketRideListRes
 getRideKaptureList = DRide.ticketRideList
+
+getRideFareBreakUp :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Environment.Flow Common.FareBreakUpRes
+getRideFareBreakUp = DRide.fareBreakUp

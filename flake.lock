@@ -1897,11 +1897,11 @@
         "common": "common_2"
       },
       "locked": {
-        "lastModified": 1731501300,
+        "lastModified": 1732012551,
         "narHash": "sha256-NhbskWDPb5FA/3UU4eGU0sAG6Pxo+iwN6kXOzoDJjmw=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "708dc75ef5b1dd56e156d188ca589b307551e8e5",
+        "rev": "c08efc09b773595e5169c41730d5301b0b6a1868",
         "type": "github"
       },
       "original": {

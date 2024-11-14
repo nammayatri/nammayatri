@@ -2,13 +2,13 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module API.Action.Dashboard.RideBooking.Driver
-  ( API.Types.ProviderPlatform.RideBooking.Driver.API,
+  ( API.Types.Dashboard.RideBooking.Driver.API,
     handler,
   )
 where
 
+import qualified API.Types.Dashboard.RideBooking.Driver
 import qualified API.Types.ProviderPlatform.Fleet.Driver
-import qualified API.Types.ProviderPlatform.RideBooking.Driver
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
 import qualified Domain.Action.Dashboard.RideBooking.Driver as Domain.Action.Dashboard.RideBooking.Driver
@@ -23,10 +23,10 @@ import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 
-handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.ProviderPlatform.RideBooking.Driver.API)
+handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.Dashboard.RideBooking.Driver.API)
 handler merchantId city = getDriverPaymentDue merchantId city :<|> postDriverEnable merchantId city :<|> postDriverCollectCash merchantId city :<|> postDriverV2CollectCash merchantId city :<|> postDriverExemptCash merchantId city :<|> postDriverV2ExemptCash merchantId city :<|> getDriverInfo merchantId city :<|> postDriverUnlinkVehicle merchantId city :<|> postDriverEndRCAssociation merchantId city :<|> postDriverAddVehicle merchantId city :<|> postDriverSetRCStatus merchantId city :<|> postDriverExemptDriverFee merchantId city
 
-getDriverPaymentDue :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler [API.Types.ProviderPlatform.RideBooking.Driver.DriverOutstandingBalanceResp])
+getDriverPaymentDue :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler [API.Types.Dashboard.RideBooking.Driver.DriverOutstandingBalanceResp])
 getDriverPaymentDue a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.Driver.getDriverPaymentDue a4 a3 a2 a1
 
 postDriverEnable :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -44,7 +44,7 @@ postDriverExemptCash a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.D
 postDriverV2ExemptCash :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Dashboard.Common.Driver.ServiceNames -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverV2ExemptCash a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.Driver.postDriverV2ExemptCash a5 a4 a3 a2 a1
 
-getDriverInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Environment.FlowHandler API.Types.ProviderPlatform.RideBooking.Driver.DriverInfoRes)
+getDriverInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Environment.FlowHandler API.Types.Dashboard.RideBooking.Driver.DriverInfoRes)
 getDriverInfo a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.Driver.getDriverInfo a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
 
 postDriverUnlinkVehicle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -59,5 +59,5 @@ postDriverAddVehicle a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.D
 postDriverSetRCStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Fleet.Driver.RCStatusReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverSetRCStatus a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.Driver.postDriverSetRCStatus a4 a3 a2 a1
 
-postDriverExemptDriverFee :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Dashboard.Common.Driver.ServiceNames -> API.Types.ProviderPlatform.RideBooking.Driver.ExemptionAndCashCollectionDriverFeeReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postDriverExemptDriverFee :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Dashboard.Common.Driver.ServiceNames -> API.Types.Dashboard.RideBooking.Driver.ExemptionAndCashCollectionDriverFeeReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverExemptDriverFee a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.Driver.postDriverExemptDriverFee a6 a5 a4 a3 a2 a1

@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.ProviderPlatform.RideBooking.Driver
   ( getDriverPaymentDue,
     postDriverEnable,
@@ -18,33 +15,19 @@ module Domain.Action.ProviderPlatform.RideBooking.Driver
 where
 
 import qualified API.Client.ProviderPlatform.RideBooking as Client
-import qualified API.Types.ProviderPlatform.Fleet.Driver
+import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as CommonFleet
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.RideBooking
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.RideBooking as Common
-import qualified API.Types.ProviderPlatform.RideBooking.Driver
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.RideBooking.Driver as Common
-import qualified Dashboard.Common
-import qualified Dashboard.Common.Driver
-import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Role as DRole
-import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
-import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
-import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.City as City
-import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
-import qualified SharedLogic.Transaction
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Person as QP

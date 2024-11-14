@@ -15,15 +15,13 @@
 
 module Domain.Types.Transaction where
 
-import qualified "dynamic-offer-driver-app" API.Dashboard.Management.Overlay as BPP
-import qualified "dynamic-offer-driver-app" API.Dashboard.Management.Subscription as BPP
-import qualified "dynamic-offer-driver-app" API.Dashboard.RideBooking.Maps as BPP
+import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement as ProviderAppManagement
 import qualified "rider-app" API.Types.Dashboard.AppManagement as RiderAppManagement
+import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking as ProviderRideBooking
 import qualified "rider-app" API.Types.Dashboard.RideBooking as RiderRideBooking
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet as ProviderFleet
 import qualified "shared-services" API.Types.ProviderPlatform.IssueManagement as ProviderIssueManagement
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as ProviderManagement
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.RideBooking as ProviderRideBooking
 import qualified "shared-services" API.Types.RiderPlatform.IssueManagement as RiderIssueManagement
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management as RiderManagement
 import Control.Lens.Operators
@@ -31,9 +29,6 @@ import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Driver as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
 import qualified "dashboard-helper-api" Dashboard.Common.SpecialZone as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Ride as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Volunteer as Common
 import qualified "dashboard-helper-api" Dashboard.SafetyPlatform as Safety
 import qualified Data.List as List
 import Data.OpenApi hiding (email, name)
@@ -90,15 +85,9 @@ data RequestorAPIEntity = RequestorAPIEntity
 
 -- TODO to be deprecated after move all apis to DSL
 data Endpoint
-  = RideAPI Common.RideEndpoint
-  | DriverAPI Common.DriverEndpoint
-  | DriverRegistrationAPI Common.DriverRegistrationEndpoint
+  = DriverAPI Common.DriverEndpoint
   | ExotelAPI Common.ExotelEndpoint
-  | VolunteerAPI Common.VolunteerEndpoint
   | SpecialZoneAPI Common.SpecialZoneEndpoint
-  | SubscriptionAPI BPP.SubscriptionEndpoint
-  | OverlayAPI BPP.OverlayEndpoint
-  | MapAPI BPP.MapEndPoint
   | SafetyAPI Safety.SafetyEndpoint
   | RiderManagementAPI RiderManagement.ManagementUserActionType
   | RiderAppManagementAPI RiderAppManagement.AppManagementUserActionType
@@ -106,6 +95,7 @@ data Endpoint
   | RiderRideBookingAPI RiderRideBooking.RideBookingUserActionType
   | ProviderFleetAPI ProviderFleet.FleetUserActionType
   | ProviderManagementAPI ProviderManagement.ManagementUserActionType
+  | ProviderAppManagementAPI ProviderAppManagement.AppManagementUserActionType
   | ProviderIssueManagementAPI ProviderIssueManagement.IssueManagementUserActionType
   | ProviderRideBookingAPI ProviderRideBooking.RideBookingUserActionType
   | UnknownEndpoint -- Just to avoid unnecessary error throwing
@@ -113,15 +103,9 @@ data Endpoint
 
 instance Show Endpoint where
   show = \case
-    RideAPI e -> "RideAPI " <> show e
     DriverAPI e -> "DriverAPI " <> show e
-    DriverRegistrationAPI e -> "DriverRegistrationAPI " <> show e
     ExotelAPI e -> "ExotelAPI " <> show e
-    VolunteerAPI e -> "VolunteerAPI " <> show e
     SpecialZoneAPI e -> "SpecialZoneAPI " <> show e
-    SubscriptionAPI e -> "SubscriptionAPI " <> show e
-    OverlayAPI e -> "OverlayAPI " <> show e
-    MapAPI e -> "MapAPI " <> show e
     SafetyAPI e -> "SafetyAPI " <> show e
     RiderManagementAPI e -> "RIDER_MANAGEMENT/" <> show e
     RiderAppManagementAPI e -> "RIDER_APP_MANAGEMENT/" <> show e
@@ -129,6 +113,7 @@ instance Show Endpoint where
     RiderRideBookingAPI e -> "RIDER_RIDE_BOOKING/" <> show e
     ProviderFleetAPI e -> "PROVIDER_FLEET/" <> show e
     ProviderManagementAPI e -> "PROVIDER_MANAGEMENT/" <> show e
+    ProviderAppManagementAPI e -> "PROVIDER_APP_MANAGEMENT/" <> show e
     ProviderIssueManagementAPI e -> "PROVIDER_ISSUE_MANAGEMENT/" <> show e
     ProviderRideBookingAPI e -> "PROVIDER_RIDE_BOOKING/" <> show e
     UnknownEndpoint -> "UNKNOWN_ENDPOINT"
@@ -153,40 +138,16 @@ instance Read Endpoint where
     readParen
       (d' > app_prec)
       ( \r ->
-          [ (RideAPI v1, r2)
-            | r1 <- stripPrefix "RideAPI " r,
+          [ (DriverAPI v1, r2)
+            | r1 <- stripPrefix "DriverAPI " r,
               (v1, r2) <- readsPrec (app_prec + 1) r1
           ]
-            ++ [ (DriverAPI v1, r2)
-                 | r1 <- stripPrefix "DriverAPI " r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1
-               ]
-            ++ [ (DriverRegistrationAPI v1, r2)
-                 | r1 <- stripPrefix "DriverRegistrationAPI " r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1
-               ]
             ++ [ (ExotelAPI v1, r2)
                  | r1 <- stripPrefix "ExotelAPI " r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
-            ++ [ (VolunteerAPI v1, r2)
-                 | r1 <- stripPrefix "VolunteerAPI " r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1
-               ]
             ++ [ (SpecialZoneAPI v1, r2)
                  | r1 <- stripPrefix "SpecialZoneAPI " r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1
-               ]
-            ++ [ (SubscriptionAPI v1, r2)
-                 | r1 <- stripPrefix "SubscriptionAPI " r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1
-               ]
-            ++ [ (OverlayAPI v1, r2)
-                 | r1 <- stripPrefix "OverlayAPI " r,
-                   (v1, r2) <- readsPrec (app_prec + 1) r1
-               ]
-            ++ [ (MapAPI v1, r2)
-                 | r1 <- stripPrefix "MapAPI " r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
             ++ [ (SafetyAPI v1, r2)
@@ -217,6 +178,10 @@ instance Read Endpoint where
                  | r1 <- stripPrefix "PROVIDER_MANAGEMENT/" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (ProviderAppManagementAPI v1, r2)
+                 | r1 <- stripPrefix "PROVIDER_APP_MANAGEMENT/" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
             ++ [ (ProviderIssueManagementAPI v1, r2)
                  | r1 <- stripPrefix "PROVIDER_ISSUE_MANAGEMENT/" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
@@ -237,6 +202,7 @@ instance Read Endpoint where
 castEndpoint :: DMatrix.UserActionType -> Endpoint
 castEndpoint (DMatrix.PROVIDER_FLEET uat) = ProviderFleetAPI uat
 castEndpoint (DMatrix.PROVIDER_MANAGEMENT uat) = ProviderManagementAPI uat
+castEndpoint (DMatrix.PROVIDER_APP_MANAGEMENT uat) = ProviderAppManagementAPI uat
 castEndpoint (DMatrix.PROVIDER_ISSUE_MANAGEMENT uat) = ProviderIssueManagementAPI uat
 castEndpoint (DMatrix.PROVIDER_RIDE_BOOKING uat) = ProviderRideBookingAPI uat
 castEndpoint (DMatrix.RIDER_MANAGEMENT uat) = RiderManagementAPI uat

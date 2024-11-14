@@ -25,10 +25,8 @@ import Data.Aeson
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Storage.Esqueleto (derivePersistField)
-import Kernel.Types.Common (HighPrecMoney, PriceAPIEntity)
 import Kernel.Types.Id
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
-import Servant hiding (Summary, throwError)
 import qualified Text.Show
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
@@ -140,50 +138,6 @@ data VehicleRegistrationCertificate
 -- Get Route driver ids ---------------------------------------
 
 ----------- update driver fees ---------------
-
-type UpdateSubscriptionDriverFeeAndInvoiceAPI =
-  Capture "driverId" (Id Driver)
-    :> "update"
-    :> "driverFeeAndInvoiceInfo"
-    :> Capture "serviceName" ServiceNames
-    :> ReqBody '[JSON] SubscriptionDriverFeesAndInvoicesToUpdate
-    :> Post '[JSON] SubscriptionDriverFeesAndInvoicesToUpdate
-
-data SubscriptionDriverFeesAndInvoicesToUpdate = SubscriptionDriverFeesAndInvoicesToUpdate
-  { driverFees :: Maybe [DriverFeeInfoToUpdate],
-    invoices :: Maybe [InvoiceInfoToUpdate],
-    mkDuesToAmount :: Maybe HighPrecMoney,
-    mkDuesToAmountWithCurrency :: Maybe PriceAPIEntity,
-    subscribed :: Maybe Bool
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data DriverFeeInfoToUpdate = DriverFeeInfoToUpdate
-  { driverFeeId :: Text,
-    mkManualDue :: Maybe Bool,
-    mkAutoPayDue :: Maybe Bool,
-    mkCleared :: Maybe Bool,
-    platformFee :: Maybe HighPrecMoney,
-    sgst :: Maybe HighPrecMoney,
-    cgst :: Maybe HighPrecMoney,
-    platformFeeWithCurrency :: Maybe PriceAPIEntity,
-    sgstWithCurrency :: Maybe PriceAPIEntity,
-    cgstWithCurrency :: Maybe PriceAPIEntity
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data InvoiceInfoToUpdate = InvoiceInfoToUpdate
-  { invoiceId :: Text,
-    driverFeeId :: Maybe Text,
-    invoiceStatus :: Maybe Text
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance HideSecrets SubscriptionDriverFeesAndInvoicesToUpdate where
-  hideSecrets = identity
 
 data ReasonForDisablingServiceCharge = OUT_SICK | VEHICLE_UNDER_MAINTENANCE | EXITED_INITIATIVE | SWITCH_VEHICLE | PROMOTIIONAL_ACTIVITY | NOTIFIED_LEAVE | OTHER
   deriving (Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Read)

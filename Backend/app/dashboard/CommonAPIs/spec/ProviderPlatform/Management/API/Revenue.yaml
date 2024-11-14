@@ -1,6 +1,6 @@
 imports:
   Day: Data.Time
-  DriverFeeStatus: API.Types.ProviderPlatform.RideBooking.Driver
+  DriverFeeStatus:  Dashboard.Common.Driver
 
 module: Revenue
 

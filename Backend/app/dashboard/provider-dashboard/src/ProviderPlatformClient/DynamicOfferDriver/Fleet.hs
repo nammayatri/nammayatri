@@ -19,27 +19,18 @@ module ProviderPlatformClient.DynamicOfferDriver.Fleet
 where
 
 import "dynamic-offer-driver-app" API.Dashboard.Fleet as BPP
-import Data.Time
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Registration as Fleet
-import qualified "dynamic-offer-driver-app" Domain.Action.UI.Ride as DARide
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified "dynamic-offer-driver-app" Domain.Types.Person as DP
-import qualified "dynamic-offer-driver-app" Domain.Types.Ride as DRide
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
-import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Tools.Auth.Merchant (CheckedShortId)
 import Tools.Client
 import "lib-dashboard" Tools.Metrics
-
-newtype FleetOperationsAPIs = FleetOperationsAPIs
-  { listDriverRidesForFleet :: Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe DRide.RideStatus -> Maybe Day -> Maybe Text -> Maybe Int -> Euler.EulerClient DARide.DriverRideListRes
-  }
 
 data FleetRegistrationAPIs = FleetRegistrationAPIs
   { fleetOwnerLogin :: Fleet.FleetOwnerLoginReq -> Euler.EulerClient APISuccess,
@@ -47,23 +38,18 @@ data FleetRegistrationAPIs = FleetRegistrationAPIs
     fleetOwnerRegister :: Fleet.FleetOwnerRegisterReq -> Euler.EulerClient Fleet.FleetOwnerRegisterRes
   }
 
-data FleetAPIs = FleetAPIs
-  { operations :: FleetOperationsAPIs,
-    registration :: FleetRegistrationAPIs
+newtype FleetAPIs = FleetAPIs
+  { registration :: FleetRegistrationAPIs
   }
 
 mkDynamicOfferDriverAppFleetAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> FleetAPIs
 mkDynamicOfferDriverAppFleetAPIs merchantId city token = do
-  let operations = FleetOperationsAPIs {..}
-      registration = FleetRegistrationAPIs {..}
+  let registration = FleetRegistrationAPIs {..}
 
   -- TODO rename to operations
   FleetAPIs {..}
   where
-    fleetOperationsClient
-      :<|> fleetRegisterationClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
-
-    listDriverRidesForFleet = fleetOperationsClient
+    fleetRegisterationClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
 
     fleetOwnerLogin
       :<|> fleetOwnerVerify

@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 module Domain.Action.ProviderPlatform.Management.Ride
   ( getRideList,
     postRideEndMultiple,
@@ -10,24 +7,20 @@ module Domain.Action.ProviderPlatform.Management.Ride
     postRideSyncMultiple,
     postRideRoute,
     getRideKaptureList,
+    getRideFareBreakUp,
   )
 where
 
 import qualified API.Client.ProviderPlatform.Management as Client
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
-import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Ride as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
-import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Beckn.City as City
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow)
 import Kernel.Utils.Validation (runRequestValidation)
-import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Tools.Auth
@@ -114,3 +107,8 @@ getRideKaptureList merchantShortId opCity apiTokenInfo mbRideShortId mbCountryCo
   transaction <- buildManagementServerTransaction apiTokenInfo Nothing T.emptyRequest
   T.withResponseTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideKaptureList) mbRideShortId mbCountryCode mbPhoneNumber mbSupportPhoneNumber
+
+getRideFareBreakUp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Ride -> Flow Common.FareBreakUpRes
+getRideFareBreakUp merchantShortId opCity apiTokenInfo rideId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideFareBreakUp) rideId
