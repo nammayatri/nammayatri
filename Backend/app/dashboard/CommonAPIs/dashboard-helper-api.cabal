@@ -43,7 +43,6 @@ library
       Dashboard.ProviderPlatform.Management.Merchant
       Dashboard.ProviderPlatform.Management.Message
       Dashboard.ProviderPlatform.Management.Ride
-      Dashboard.ProviderPlatform.Volunteer
       Dashboard.RiderPlatform.Management.FRFSTicket
       Dashboard.RiderPlatform.Management.Merchant
       Dashboard.RiderPlatform.Management.Ride
@@ -80,9 +79,6 @@ library
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
       API.Types.ProviderPlatform.Management.System
-      API.Types.ProviderPlatform.RideBooking
-      API.Types.ProviderPlatform.RideBooking.Driver
-      API.Types.ProviderPlatform.RideBooking.Endpoints.Driver
       API.Types.RiderPlatform.Management
       API.Types.RiderPlatform.Management.Booking
       API.Types.RiderPlatform.Management.Customer

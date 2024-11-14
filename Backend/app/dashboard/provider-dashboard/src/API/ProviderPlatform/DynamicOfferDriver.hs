@@ -22,18 +22,12 @@ module API.ProviderPlatform.DynamicOfferDriver
   )
 where
 
+import qualified API.Action.ProviderPlatform.AppManagement as AppManagementDSL
 import qualified API.Action.ProviderPlatform.Fleet as FleetDSL
 import qualified API.Action.ProviderPlatform.IssueManagement as IssueManagementDSL
 import qualified API.Action.ProviderPlatform.Management as ManagementDSL
 import qualified API.Action.ProviderPlatform.RideBooking as RideBookingDSL
 import qualified API.ProviderPlatform.DynamicOfferDriver.CacAuth as CacAuth
-import qualified API.ProviderPlatform.DynamicOfferDriver.Driver as Driver
-import qualified API.ProviderPlatform.DynamicOfferDriver.Driver.Registration as DriverRegistration
-import qualified API.ProviderPlatform.DynamicOfferDriver.Maps as Maps
-import qualified API.ProviderPlatform.DynamicOfferDriver.Overlay as Overlay
-import qualified API.ProviderPlatform.DynamicOfferDriver.Ride as Ride
-import qualified API.ProviderPlatform.DynamicOfferDriver.Subscription as Subscription
-import qualified API.ProviderPlatform.DynamicOfferDriver.Volunteer as Volunteer
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
 import qualified Kernel.Types.Beckn.City as City
@@ -57,14 +51,8 @@ type CacAPI =
     :> CacAuth.API
 
 type API' =
-  Driver.API
-    :<|> Ride.API
-    :<|> Subscription.API
-    :<|> DriverRegistration.API
-    :<|> Volunteer.API
-    :<|> Overlay.API
-    :<|> Maps.API
-    :<|> FleetDSL.API
+  FleetDSL.API
+    :<|> AppManagementDSL.API
     :<|> ManagementDSL.API
     :<|> IssueManagementDSL.API
     :<|> RideBookingDSL.API
@@ -73,14 +61,8 @@ type API' =
 handler :: FlowServer API
 handler merchantId = do
   let city = getCity merchantId.getShortId
-  Driver.handler merchantId city
-    :<|> Ride.handler merchantId city
-    :<|> Subscription.handler merchantId city
-    :<|> DriverRegistration.handler merchantId city
-    :<|> Volunteer.handler merchantId city
-    :<|> Overlay.handler merchantId city
-    :<|> Maps.handler merchantId city
-    :<|> FleetDSL.handler merchantId city
+  FleetDSL.handler merchantId city
+    :<|> AppManagementDSL.handler merchantId city
     :<|> ManagementDSL.handler merchantId city
     :<|> IssueManagementDSL.handler merchantId city
     :<|> RideBookingDSL.handler merchantId city
@@ -93,14 +75,8 @@ handler merchantId = do
 
 handlerV2 :: FlowServer APIV2
 handlerV2 merchantId city =
-  Driver.handler merchantId city
-    :<|> Ride.handler merchantId city
-    :<|> Subscription.handler merchantId city
-    :<|> DriverRegistration.handler merchantId city
-    :<|> Volunteer.handler merchantId city
-    :<|> Overlay.handler merchantId city
-    :<|> Maps.handler merchantId city
-    :<|> FleetDSL.handler merchantId city
+  FleetDSL.handler merchantId city
+    :<|> AppManagementDSL.handler merchantId city
     :<|> ManagementDSL.handler merchantId city
     :<|> IssueManagementDSL.handler merchantId city
     :<|> RideBookingDSL.handler merchantId city

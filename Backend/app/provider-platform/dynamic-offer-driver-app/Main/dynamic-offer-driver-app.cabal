@@ -41,16 +41,7 @@ library
       API.Dashboard
       API.Dashboard.Exotel
       API.Dashboard.Fleet
-      API.Dashboard.Fleet.Operations
       API.Dashboard.Fleet.Registration
-      API.Dashboard.Management
-      API.Dashboard.Management.Overlay
-      API.Dashboard.Management.Subscription
-      API.Dashboard.RideBooking
-      API.Dashboard.RideBooking.Driver
-      API.Dashboard.RideBooking.Maps
-      API.Dashboard.RideBooking.Ride
-      API.Dashboard.RideBooking.Volunteer
       API.IGM
       API.Internal
       API.Internal.Auth
@@ -140,6 +131,10 @@ library
       Domain.Action.Beckn.Status
       Domain.Action.Beckn.Track
       Domain.Action.Beckn.Update
+      Domain.Action.Dashboard.AppManagement.Driver
+      Domain.Action.Dashboard.AppManagement.DriverSubscription
+      Domain.Action.Dashboard.AppManagement.Overlay
+      Domain.Action.Dashboard.AppManagement.Subscription
       Domain.Action.Dashboard.Driver
       Domain.Action.Dashboard.Driver.Notification
       Domain.Action.Dashboard.Exotel
@@ -161,10 +156,12 @@ library
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
       Domain.Action.Dashboard.Management.System
-      Domain.Action.Dashboard.Overlay
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.RideBooking.Driver
-      Domain.Action.Dashboard.Volunteer
+      Domain.Action.Dashboard.RideBooking.DriverRegistration
+      Domain.Action.Dashboard.RideBooking.Maps
+      Domain.Action.Dashboard.RideBooking.Ride
+      Domain.Action.Dashboard.RideBooking.Volunteer
       Domain.Action.Internal.Auth
       Domain.Action.Internal.BulkLocUpdate
       Domain.Action.Internal.Cac
@@ -625,6 +622,11 @@ library
       Tools.Utils
       Tools.Verification
       Tools.Whatsapp
+      API.Action.Dashboard.AppManagement
+      API.Action.Dashboard.AppManagement.Driver
+      API.Action.Dashboard.AppManagement.DriverSubscription
+      API.Action.Dashboard.AppManagement.Overlay
+      API.Action.Dashboard.AppManagement.Subscription
       API.Action.Dashboard.Fleet
       API.Action.Dashboard.Fleet.Driver
       API.Action.Dashboard.IssueManagement
@@ -646,6 +648,10 @@ library
       API.Action.Dashboard.Management.System
       API.Action.Dashboard.RideBooking
       API.Action.Dashboard.RideBooking.Driver
+      API.Action.Dashboard.RideBooking.DriverRegistration
+      API.Action.Dashboard.RideBooking.Maps
+      API.Action.Dashboard.RideBooking.Ride
+      API.Action.Dashboard.RideBooking.Volunteer
       API.Action.UI.Cac
       API.Action.UI.DemandHotspots
       API.Action.UI.DriverOnboardingV2
@@ -661,6 +667,26 @@ library
       API.Action.UI.SpecialLocationWarrior
       API.Action.UI.Tokenization
       API.Action.UI.VehicleDetails
+      API.Types.Dashboard.AppManagement
+      API.Types.Dashboard.AppManagement.Driver
+      API.Types.Dashboard.AppManagement.DriverSubscription
+      API.Types.Dashboard.AppManagement.Endpoints.Driver
+      API.Types.Dashboard.AppManagement.Endpoints.DriverSubscription
+      API.Types.Dashboard.AppManagement.Endpoints.Overlay
+      API.Types.Dashboard.AppManagement.Endpoints.Subscription
+      API.Types.Dashboard.AppManagement.Overlay
+      API.Types.Dashboard.AppManagement.Subscription
+      API.Types.Dashboard.RideBooking
+      API.Types.Dashboard.RideBooking.Driver
+      API.Types.Dashboard.RideBooking.DriverRegistration
+      API.Types.Dashboard.RideBooking.Endpoints.Driver
+      API.Types.Dashboard.RideBooking.Endpoints.DriverRegistration
+      API.Types.Dashboard.RideBooking.Endpoints.Maps
+      API.Types.Dashboard.RideBooking.Endpoints.Ride
+      API.Types.Dashboard.RideBooking.Endpoints.Volunteer
+      API.Types.Dashboard.RideBooking.Maps
+      API.Types.Dashboard.RideBooking.Ride
+      API.Types.Dashboard.RideBooking.Volunteer
       API.Types.UI.DemandHotspots
       API.Types.UI.DriverOnboardingV2
       API.Types.UI.DriverProfileQuestions

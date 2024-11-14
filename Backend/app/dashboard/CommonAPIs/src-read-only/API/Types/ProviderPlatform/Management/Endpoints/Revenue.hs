@@ -3,7 +3,7 @@
 
 module API.Types.ProviderPlatform.Management.Endpoints.Revenue where
 
-import qualified API.Types.ProviderPlatform.RideBooking.Driver
+import qualified Dashboard.Common.Driver
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Data.Time
@@ -15,7 +15,7 @@ import Servant
 import Servant.Client
 
 data AllFees = AllFees
-  { status :: API.Types.ProviderPlatform.RideBooking.Driver.DriverFeeStatus,
+  { status :: Dashboard.Common.Driver.DriverFeeStatus,
     numRides :: Kernel.Prelude.Int,
     numDrivers :: Kernel.Prelude.Int,
     totalAmount :: Kernel.Prelude.Int,
