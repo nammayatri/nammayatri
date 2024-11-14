@@ -300,6 +300,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             updatedAt = now,
             merchantOperatingCityId = (.id.getId) <$> merchantOperatingCity,
             linkedLocationsIds = maybe [] (.linkedLocationsIds) mbExistingSpLoc,
+            locationType = SL.Closed,
             ..
           }
 
