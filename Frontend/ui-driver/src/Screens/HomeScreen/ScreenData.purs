@@ -175,6 +175,7 @@ initData =
       , onRideBannerTimerID :""
       , onRideBannerTimer : 0
       , scheduleRideCount : Nothing
+      , favPopUp : defaultFavPopUpData
       , blockExpiryTime : ""
     }
   , props:
@@ -284,6 +285,13 @@ initialTollState = {
 , tollAmbigous : false
 , estimatedCharge : 0.0
 }
+
+defaultFavPopUpData :: FavouritePopUp
+defaultFavPopUpData = {
+    visibility : false,
+    title : "",
+    message : ""
+  }
 
 dummyDriverRideStats :: DriverProfileStatsResp
 dummyDriverRideStats =

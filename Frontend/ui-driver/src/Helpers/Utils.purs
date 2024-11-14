@@ -18,7 +18,7 @@ module Helpers.Utils
     , module ReExport
     ) where
 
-import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..), VehicleCategory(..))
+import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..), NotificationBody(..), VehicleCategory(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Data.Array ((!!), elemIndex, length, slice, last, find, singleton, null, elemIndex) as DA
@@ -133,7 +133,7 @@ foreign import setEnabled :: String -> Boolean -> Unit
 foreign import decodeErrorCode :: String -> String
 foreign import decodeErrorPayload :: String -> Foreign
 foreign import decodeErrorMessage :: String -> String
-foreign import storeCallBackForNotification :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import storeCallBackForNotification :: forall action. (action -> Effect Unit) -> (String -> NotificationBody -> action) -> Effect Unit 
 foreign import storeCallBackForAddRideStop :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import secondsLeft :: String -> Int
 foreign import objectToAllocationType :: String -> AllocationData
@@ -1090,6 +1090,12 @@ getVehicleVariantName variant =
                   AmbulanceCategory -> getString AMBULANCE
                   TruckCategory -> getString TRUCK
                   UnKnown -> ""
+
+defaultNotificationBody :: NotificationBody
+defaultNotificationBody = {
+  title : "",
+  message : ""
+}
 
 getRegisterationStepClickEventName :: ST.RegisterationStep -> String
 getRegisterationStepClickEventName step = case step of

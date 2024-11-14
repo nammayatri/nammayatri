@@ -197,25 +197,15 @@ priceAndDistanceUpdateView state push =
           , orientation HORIZONTAL
           , gravity CENTER
           ][
-            linearLayout[ 
-              height WRAP_CONTENT
-            , width MATCH_PARENT
-            , weight 1.0
-            , gravity CENTER
-            ][ imageView
+              linearLayout[weight 1.0][]
+            , imageView
                 [ width $ V 55
                 , height $ V 47
-                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_green_tick" 
-                , margin $ MarginLeft 70
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_green_tick"
+                , margin $ MarginLeft $ if state.showSafetyCenter then 80 else 0
                 ]
-            ]
-          , linearLayout[
-              width WRAP_CONTENT
-            , height WRAP_CONTENT
-            , visibility $ boolToVisibility $ state.showSafetyCenter
-            ][
-              sosButtonView state push  
-            ]
+            , linearLayout[weight 1.0][]
+            , sosButtonView state push 
           ]
         , textView $
           [ width MATCH_PARENT
@@ -850,8 +840,9 @@ sosButtonView config push =
   , cornerRadius if os == "IOS" then 18.0 else 25.0
   , background Color.blue900
   , padding $ Padding 8 8 8 8
-  , margin $ Margin 0 0 18 25
+  , margin $ Margin 0 0 18 0
   , onClick push $ const GoToSOS
+  , visibility $ boolToVisibility $ config.showSafetyCenter
   ]
   [ imageView
       [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_shield_blue"
