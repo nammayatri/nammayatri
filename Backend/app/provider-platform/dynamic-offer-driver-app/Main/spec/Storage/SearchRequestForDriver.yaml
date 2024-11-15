@@ -89,6 +89,7 @@ SearchRequestForDriver:
     previousDropGeoHash : Maybe Text
     renderedAt : Maybe UTCTime
     respondedAt: Maybe UTCTime
+    isFavourite : Maybe Bool
 
   beamType:
     clientBundleVersion: Maybe Text
