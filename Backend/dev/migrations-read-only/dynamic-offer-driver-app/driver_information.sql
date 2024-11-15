@@ -146,3 +146,14 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN payout_reg_amou
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN preferred_secondary_special_loc_ids text[] ;
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN preferred_primary_special_loc_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_special_loc_warrior boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN driver_trip_end_location_lon double precision ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN driver_trip_end_location_lat double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN on_ride_trip_category text ;
