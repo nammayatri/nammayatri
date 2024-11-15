@@ -14,6 +14,8 @@
 
 module Domain.Action.Beckn.Init where
 
+import Data.Text (pack)
+import Data.Time (defaultTimeLocale, formatTime)
 import qualified Domain.Action.UI.DemandHotspots as DemandHotspots
 import Domain.Types
 import qualified Domain.Types.Booking as DRB
@@ -33,11 +35,13 @@ import qualified Domain.Types.VehicleVariant as Veh
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.Booking
 import qualified SharedLogic.RiderDetails as SRD
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Cac.TransporterConfig as CCT
@@ -99,6 +103,9 @@ data InitRes = InitRes
     estimateId :: Text
   }
 
+-- decodeBookingFromByteString :: BS.ByteString -> Maybe DRB.Booking
+-- decodeBookingFromByteString bs = decode (BL.fromStrict bs)
+
 handler ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -123,12 +130,23 @@ handler merchantId req validatedReq = do
         booking <- buildBooking searchRequest driverQuote driverQuote.id.getId driverQuote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl (Just driverQuote.distanceToPickup) req.initReqDetails
         triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
         QRB.createBooking booking
-
         QST.updateStatus DST.COMPLETED (searchTry.id)
         return (booking, Just driverQuote.driverName, Just driverQuote.driverId.getId)
       ValidatedQuote quote -> do
         booking <- buildBooking searchRequest quote quote.id.getId quote.tripCategory now (mbPaymentMethod <&> (.id)) paymentUrl Nothing req.initReqDetails
         QRB.createBooking booking
+        let score = ceiling $ calculateSortedSetScore booking.startTime
+            expirationSeconds = secondsRemainingInDay booking.startTime
+            vehicleCategory = Veh.castServiceTierToVehicleCategory booking.vehicleServiceTier
+            redisKey = createRedisKey booking.startTime booking.merchantOperatingCityId vehicleCategory
+            redisKeyForHset = createRedisKeyForHset booking.startTime booking.merchantOperatingCityId
+
+        let member = booking.id.getId <> "|" <> convertToText booking.fromLocation.lat <> "|" <> convertToText booking.fromLocation.lon <> "|" <> (pack . formatTime defaultTimeLocale "%FT%T%z" $ booking.startTime) <> "|" <> (pack $ show booking.vehicleServiceTier)
+        logDebug $ "redisKey : " <> show redisKey
+        logDebug $ "score : " <> show score
+        logDebug $ "expirationSeconds : " <> show expirationSeconds
+        void $ Redis.zAddExp redisKey member score expirationSeconds
+        void $ Redis.hSetExp redisKeyForHset booking.id.getId booking expirationSeconds
         return (booking, Nothing, Nothing)
   fork "Updating Demand Hotspots on booking" $ do
     let lat = searchRequest.fromLocation.lat
@@ -142,6 +160,8 @@ handler merchantId req validatedReq = do
       cancellationFee = Nothing
   pure InitRes {vehicleVariant = req.vehicleVariant, ..}
   where
+    convertToText = pack . show
+
     buildBooking ::
       ( CacheFlow m r,
         EsqDBFlow m r,

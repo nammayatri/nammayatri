@@ -29,6 +29,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.Vehicle as DVeh
+import Domain.Types.VehicleVariant
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis as Redis
@@ -38,6 +39,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler (SchedulerType)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
+import SharedLogic.Booking
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool as DP
@@ -153,6 +155,17 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId
       QQuote.create newQuote
       QRB.createBooking newBooking
+      let score = calculateSortedSetScore booking.startTime
+          expirationSeconds = secondsRemainingInDay booking.startTime
+          vehicleCategory = castServiceTierToVehicleCategory booking.vehicleServiceTier
+      let redisKey = createRedisKey booking.startTime booking.merchantOperatingCityId vehicleCategory
+          redisKeyForHset = createRedisKeyForHset booking.startTime booking.merchantOperatingCityId
+      logDebug $ "redisKey : " <> show redisKey
+      logDebug $ "score : " <> show score
+      logDebug $ "expirationSeconds : " <> show expirationSeconds
+      void $ Redis.zAdd redisKey [(score, booking.id.getId)]
+      void $ Redis.expire redisKey expirationSeconds
+      void $ Redis.hSetExp redisKeyForHset booking.id.getId booking expirationSeconds
       let driverSearchBatchInput =
             DriverSearchBatchInput
               { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
