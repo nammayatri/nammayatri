@@ -78,6 +78,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     dailyOffenceSuspensionTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     defaultPopupDelay :: Kernel.Types.Common.Seconds,
     demandHotspotsConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DemandHotspotsConfig,
+    disableListScheduledBookingAPI :: Kernel.Prelude.Bool,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     dlNumberVerification :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     dpBlackListedGeohash :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
