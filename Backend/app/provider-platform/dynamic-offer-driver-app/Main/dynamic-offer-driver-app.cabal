@@ -70,6 +70,7 @@ library
       API.Internal.ReportACIssue
       API.Internal.ReportIssue
       API.Internal.Ride
+      API.Internal.StopDetection
       API.UI
       API.UI.Call
       API.UI.CallEvent
@@ -180,6 +181,7 @@ library
       Domain.Action.Internal.ReportACIssue
       Domain.Action.Internal.ReportIssue
       Domain.Action.Internal.Ride
+      Domain.Action.Internal.StopDetection
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent

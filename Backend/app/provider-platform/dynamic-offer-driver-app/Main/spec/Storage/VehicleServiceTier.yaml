@@ -36,6 +36,8 @@ VehicleServiceTier:
     defaultForVehicleVariant: '[VehicleVariant]'
     vehicleIconUrl: Maybe BaseUrl
     priority: Int
+    stopFcmThreshold: Maybe Int
+    stopFcmSuppressCount: Maybe Int
   sqlType:
     allowedVehicleVariant: text[]
     defaultForVehicleVariant: text[]

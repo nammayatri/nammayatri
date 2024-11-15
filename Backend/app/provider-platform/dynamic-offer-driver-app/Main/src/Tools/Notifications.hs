@@ -900,6 +900,36 @@ sendCancellationRateNudgeOverlay mOpCityId person fcmType req entityData = do
     notifTitle = FCMNotificationTitle $ fromMaybe "Title" req.title
     body = FCMNotificationBody $ fromMaybe "Description" req.description
 
+driverStopDetectionAlert ::
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Notification.Category ->
+  Text ->
+  Text ->
+  Person ->
+  Maybe FCM.FCMRecipientToken ->
+  m ()
+driverStopDetectionAlert merchantOpCityId category title body driver mbDeviceToken = runWithServiceConfigForProviders merchantOpCityId notificationData EulerHS.Prelude.id (clearDeviceToken driver.id)
+  where
+    notificationData =
+      Notification.NotificationReq
+        { category = category,
+          subCategory = Nothing,
+          showNotification = Notification.DO_NOT_SHOW,
+          messagePriority = Just Notification.HIGH,
+          entity = Notification.Entity Notification.Person driver.id.getId EmptyDynamicParam,
+          dynamicParams = EmptyDynamicParam,
+          title = title,
+          body = body,
+          auth = Notification.Auth driver.id.getId ((.getFCMRecipientToken) <$> mbDeviceToken) Nothing,
+          ttl = Nothing,
+          sound = Nothing
+        }
+
 mkOverlayReq :: DTMO.Overlay -> FCM.FCMOverlayReq -- handle mod Title
 mkOverlayReq _overlay@DTMO.Overlay {..} =
   FCM.FCMOverlayReq
