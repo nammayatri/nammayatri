@@ -9,6 +9,7 @@ where
 import qualified API.Action.Dashboard.Management.Booking
 import qualified API.Action.Dashboard.Management.Customer
 import qualified API.Action.Dashboard.Management.FRFSTicket
+import qualified API.Action.Dashboard.Management.InsertPartnerOrgStation
 import qualified API.Action.Dashboard.Management.Invoice
 import qualified API.Action.Dashboard.Management.Merchant
 import qualified API.Action.Dashboard.Management.NammaTag
@@ -21,7 +22,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Servant
 
-type API = (API.Action.Dashboard.Management.Booking.API :<|> API.Action.Dashboard.Management.Customer.API :<|> API.Action.Dashboard.Management.FRFSTicket.API :<|> API.Action.Dashboard.Management.Invoice.API :<|> API.Action.Dashboard.Management.Merchant.API :<|> API.Action.Dashboard.Management.NammaTag.API :<|> API.Action.Dashboard.Management.Ride.API :<|> API.Action.Dashboard.Management.System.API :<|> API.Action.Dashboard.Management.UpdatePartnerOrgStationID.API)
+type API = (API.Action.Dashboard.Management.Booking.API :<|> API.Action.Dashboard.Management.Customer.API :<|> API.Action.Dashboard.Management.FRFSTicket.API :<|> API.Action.Dashboard.Management.InsertPartnerOrgStation.API :<|> API.Action.Dashboard.Management.Invoice.API :<|> API.Action.Dashboard.Management.Merchant.API :<|> API.Action.Dashboard.Management.NammaTag.API :<|> API.Action.Dashboard.Management.Ride.API :<|> API.Action.Dashboard.Management.System.API :<|> API.Action.Dashboard.Management.UpdatePartnerOrgStationID.API)
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = API.Action.Dashboard.Management.Booking.handler merchantId city :<|> API.Action.Dashboard.Management.Customer.handler merchantId city :<|> API.Action.Dashboard.Management.FRFSTicket.handler merchantId city :<|> API.Action.Dashboard.Management.Invoice.handler merchantId city :<|> API.Action.Dashboard.Management.Merchant.handler merchantId city :<|> API.Action.Dashboard.Management.NammaTag.handler merchantId city :<|> API.Action.Dashboard.Management.Ride.handler merchantId city :<|> API.Action.Dashboard.Management.System.handler merchantId city :<|> API.Action.Dashboard.Management.UpdatePartnerOrgStationID.handler merchantId city
+handler merchantId city = API.Action.Dashboard.Management.Booking.handler merchantId city :<|> API.Action.Dashboard.Management.Customer.handler merchantId city :<|> API.Action.Dashboard.Management.FRFSTicket.handler merchantId city :<|> API.Action.Dashboard.Management.InsertPartnerOrgStation.handler merchantId city :<|> API.Action.Dashboard.Management.Invoice.handler merchantId city :<|> API.Action.Dashboard.Management.Merchant.handler merchantId city :<|> API.Action.Dashboard.Management.NammaTag.handler merchantId city :<|> API.Action.Dashboard.Management.Ride.handler merchantId city :<|> API.Action.Dashboard.Management.System.handler merchantId city :<|> API.Action.Dashboard.Management.UpdatePartnerOrgStationID.handler merchantId city

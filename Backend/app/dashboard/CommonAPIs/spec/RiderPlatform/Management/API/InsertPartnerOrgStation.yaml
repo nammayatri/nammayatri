@@ -1,0 +1,25 @@
+imports:
+  Value: Data.Aeson
+
+module: InsertPartnerOrgStation
+
+apis:
+  - POST:
+      endpoint: /insertPartnerOrgStation
+      auth: ApiAuthV2
+      request:
+        type: InsertData
+      response:
+        type: APISuccess
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT PARTNER_ORG_ACTION INSERT_PARTNER_ORG_STATION
+
+types:
+  InsertData:
+    - partnerOrgStationID : Text
+    - partnerOrgID : Text
+    - stationID : Text
+    - stationName : Text
+    - derive: "'HideSecrets"
+
+
