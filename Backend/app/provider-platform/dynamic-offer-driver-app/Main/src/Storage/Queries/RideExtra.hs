@@ -82,8 +82,8 @@ createRide' = createWithKV
 createRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Ride -> m ()
 createRide ride = do
   processSingleLocation ride.fromLocation SLM.buildPickUpLocationMapping
-  whenJust ride.toLocation $ \toLocation -> processSingleLocation toLocation SLM.buildDropLocationMapping
   when (notNull ride.stops) $ processMultipleLocations ride.stops
+  whenJust ride.toLocation $ \toLocation -> processSingleLocation toLocation SLM.buildDropLocationMapping
   createRide' ride
   where
     processSingleLocation location locationMappingCreator = do

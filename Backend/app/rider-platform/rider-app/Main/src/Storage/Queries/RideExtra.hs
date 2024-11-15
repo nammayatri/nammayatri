@@ -49,8 +49,8 @@ createRide' ride = createWithKV ride >> appendByDriverPhoneNumber ride
 createRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "storeRidesTimeLimit" r Int) => Ride -> m ()
 createRide ride = do
   processSingleLocation ride.fromLocation SLM.buildPickUpLocationMapping
-  whenJust ride.toLocation $ \toLocation -> processSingleLocation toLocation SLM.buildDropLocationMapping
   when (notNull ride.stops) $ processMultipleLocations ride.stops
+  whenJust ride.toLocation $ \toLocation -> processSingleLocation toLocation SLM.buildDropLocationMapping
   createRide' ride
   where
     processSingleLocation location locationMappingCreator = do
