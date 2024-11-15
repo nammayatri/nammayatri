@@ -1547,6 +1547,7 @@ newtype Keymap
   , refresh_payment :: String
   , by :: String
   , customers :: String
+  , customer :: String
   , rating :: String
   , cancellation :: String
   , i_speak :: String
@@ -6364,6 +6365,9 @@ by = a
 
 customers :: Proxy "customers"
 customers = a
+
+customer :: Proxy "customer"
+customer = a
 
 rating :: Proxy "rating"
 rating = a

@@ -1546,6 +1546,7 @@ getMl =
     , refresh_payment: "പുതുക്കുക"
     , by: "നിലവില്‍"
     , customers: "ഉപഭോക്താക്കള്‍"
+    , customer: "ഉപഭോക്താവ്"
     , rating: "റേറ്റിംഗ്"
     , cancellation: "റദ്ദാക്കല്‍"
     , i_speak: "ഞാന്‍ സംസാരിക്കുന്നു"

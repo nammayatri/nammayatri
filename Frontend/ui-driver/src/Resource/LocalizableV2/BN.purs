@@ -1546,6 +1546,7 @@ getBn =
     , refresh_payment: "রিফ্রেশ"
     , by: "দ্বারা"
     , customers: "গ্রাহকরা"
+    , customer: "গ্রাহক"
     , rating: "রেটিং"
     , cancellation: "বাতিল"
     , i_speak: "আমি বলি"

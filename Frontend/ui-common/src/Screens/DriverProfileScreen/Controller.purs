@@ -15,9 +15,10 @@ import Debug (spy)
 import JBridge as JB
 import Effect.Uncurried(runEffectFn1)
 import Engineering.Helpers.Commons (getNewIDWithTag, screenWidth)
-import Data.String (joinWith)
+import Data.String (joinWith, null)
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
+import Effect (Effect)
 
 data ScreenOutput = GoToBack
 
@@ -36,6 +37,11 @@ instance loggableAction :: Loggable Action where
 getImage :: DriverProfileScreenCommonState -> String
 getImage state = joinWith "" $ (DA.mapWithIndex(\index item -> if index == state.data.imgIdx then item else "")state.data.displayImages)
 
+renderBase64 :: String -> Effect Unit
+renderBase64 image = do
+  if not (null image) then void $ runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source = image, id = getNewIDWithTag "add_image_component_images" , scaleType =  "FIT_CENTER", adjustViewBounds = false, inSampleSize = 2} else pure unit
+  pure unit
+
 eval :: Action -> DriverProfileScreenCommonState -> Eval Action ScreenOutput DriverProfileScreenCommonState
 
 eval (GetDriverProfileAPIResponseAction (DriverProfileRes resp)) state = do 
@@ -43,21 +49,24 @@ eval (GetDriverProfileAPIResponseAction (DriverProfileRes resp)) state = do
       updatedState = state{data = getDriverProfile response}
   _ <- pure $ EHU.toggleLoader false
   continueWithCmd updatedState [do 
-    void $ runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source = getImage updatedState, id = getNewIDWithTag "add_image_component_images" , scaleType =  "FIT_CENTER", adjustViewBounds = false, inSampleSize = 2}
+    let image = getImage updatedState
+    renderBase64 image
     pure NoAction
   ]
 
 eval (PrevImg) state = do 
   let updatedState = state{data{ imgIdx = if state.data.imgIdx /= 0 then state.data.imgIdx - 1 else 0 }}
   continueWithCmd updatedState [do 
-    void $ runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source = getImage updatedState, id = getNewIDWithTag "add_image_component_images" , scaleType =  "FIT_CENTER", adjustViewBounds = false, inSampleSize = 2}
+    let image = getImage updatedState
+    renderBase64 image
     pure NoAction
   ]
 
 eval (NextImg) state = do 
   let updatedState = state{data{ imgIdx = if DA.length state.data.displayImages - 1 /= state.data.imgIdx then state.data.imgIdx + 1 else state.data.imgIdx }}
   continueWithCmd updatedState [do 
-    void $ runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source = getImage updatedState, id = getNewIDWithTag "add_image_component_images" , scaleType =  "FIT_CENTER", adjustViewBounds = false, inSampleSize = 2}
+    let image = getImage updatedState
+    renderBase64 image
     pure NoAction
   ]
 
@@ -113,6 +122,7 @@ getVariant variant = do
     AMBULANCE_AC_OXY -> "Ambulance Ac Oxy"
     AMBULANCE_VENTILATOR -> "Ambulance Ventilator"
     SUV_PLUS -> "Suv Plus"
+    _ -> ""
 
 getPillText :: String -> String
 getPillText pill = do

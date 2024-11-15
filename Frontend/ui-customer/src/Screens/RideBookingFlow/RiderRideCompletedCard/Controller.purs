@@ -55,7 +55,7 @@ data Action =
             | OnClickDone
             | OnClickClose
             | OnClickPause
-            | FeedbackChanged String
+            | FeedbackChanged String String
             | OnAudioCompleted String
             | GoToDriverProfile
             | CountDown Int String String
@@ -156,7 +156,7 @@ eval (CountDown seconds status timerID) state = do
 
 eval (GoToDriverProfile) state = exit $ GoToDriversProfile state 
 
-eval (FeedbackChanged value) state = continue state { ratingCard { feedbackText = value } } 
+eval (FeedbackChanged id value) state = continue state { ratingCard { feedbackText = value } } 
 
 eval ( RateClick index ) state = do
   continue state { ratingCard { rating = index }, isRatingCard = true }
@@ -291,11 +291,11 @@ eval (SetIssueReportBannerItems bannerItem) state = continue state {
 eval (BannerChanged item) state = continue state{customerIssue{currentPageIndex = fromMaybe 0 (fromString item)}}
 
 eval (KeyboardCallback keyBoardState) state = do 
-  let _ = spy "keyBoardState" keyBoardState 
   let isOpen = case keyBoardState of
                     "onKeyboardOpen" -> true
                     "onKeyboardClose" -> false
                     _ -> false 
+  when(keyBoardState == "onKeyboardOpen") $ void $ pure $ JB.scrollToEnd (getNewIDWithTag "RideCompletedScrollView") true
   continue state{isKeyBoardOpen = isOpen}
 
 eval _ state = update state

@@ -1368,6 +1368,7 @@ getEn = Keymap {
 , booking: "Booking"
 , by: "By"
 , customers: "customers"
+, customer : "customer"
 , rating: "Rating"
 , cancellation: "Cancellation"
 , trips: "Trips"

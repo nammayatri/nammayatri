@@ -3014,6 +3014,9 @@ followRideScreenFlow callInitUI = do
             destLng = ride.destinationLng
           void $ pure $ openNavigation sourceLat sourceLng "DIRECTION"
           followRideScreenFlow false
+    GO_TO_DRIVER_PROFILE_FROM_FOLLOWRIDE state -> do
+      modifyScreenState $ DriverProfileScreenCommonStateType ( \driverProfileScreen -> driverProfileScreen { props { rideId = fromMaybe "" $ (\a -> a.rideId) <$> state.data.driverInfoCardState } } ) 
+      driverProfileScreenFlow
 
 getDistanceDiff :: HomeScreenState -> Number -> Number -> FlowBT String Unit
 getDistanceDiff state lat lon = do

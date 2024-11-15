@@ -1364,6 +1364,7 @@ getTa = Keymap {
 , booking: "பதிவு"
 , by: "மூலம்"
 , customers: "வாடிக்கையாளர்கள்"
+, customer: "வாடிக்கையாளர்"
 , rating: "மதிப்பீடு"
 , cancellation: "ரத்தாக்கல்"
 , trips: "பயணங்கள்"

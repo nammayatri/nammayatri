@@ -38,4 +38,6 @@ followRideScreen = do
     OpenNavigation updatedState -> do
       modifyScreenState $ FollowRideScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ OPEN_GOOGLE_MAPS_FOLLOW_RIDE updatedState)
-    
+    GoToDriverProfiles updatedState -> do
+      modifyScreenState $ FollowRideScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_DRIVER_PROFILE_FROM_FOLLOWRIDE updatedState)

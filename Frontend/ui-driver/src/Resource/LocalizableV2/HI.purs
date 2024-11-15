@@ -1546,6 +1546,7 @@ getHi =
     , refresh_payment: "ताज़ा करना"
     , by: "द्वारा"
     , customers: "ग्राहक"
+    , customer: "ग्राहक"
     , rating: "रेटिंग"
     , cancellation: "रद्दीकरण"
     , i_speak: "मैं बोलता हूँ"

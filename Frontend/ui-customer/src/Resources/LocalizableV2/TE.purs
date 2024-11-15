@@ -1365,6 +1365,7 @@ getTe = Keymap {
 , booking: "బుకింగ్"
 , by: "ద్వారా"
 , customers: "వినియోగదారులు"
+, customer: "కస్టమర్"
 , rating: "రేటింగ్"
 , cancellation: "రద్దు"
 , trips: "ప్రయాణాలు"
