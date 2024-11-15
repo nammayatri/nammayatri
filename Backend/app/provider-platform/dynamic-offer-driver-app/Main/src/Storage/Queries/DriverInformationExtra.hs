@@ -18,6 +18,7 @@ import EulerHS.Prelude hiding (find, foldl, foldl', id, map)
 import Kernel.Beam.Functions
 import Kernel.Beam.Functions as BF
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -337,3 +338,15 @@ updatePayoutVpaAndStatusByDriverIds payoutVpa payoutVpaStatus driverIds = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.In (getId <$> driverIds))]
+
+updateTripCategoryAndTripEndLocationByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Common.TripCategory -> Maybe Maps.LatLong -> m ()
+updateTripCategoryAndTripEndLocationByDriverId driverId tripCategory tripEndLocation = do
+  now <- getCurrentTime
+  updateOneWithKV
+    ( [Se.Set BeamDI.onRideTripCategory tripCategory | isJust tripCategory]
+        <> [ Se.Set BeamDI.driverTripEndLocationLat (fmap (.lat) tripEndLocation),
+             Se.Set BeamDI.driverTripEndLocationLon (fmap (.lon) tripEndLocation),
+             Se.Set BeamDI.updatedAt now
+           ]
+    )
+    [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]

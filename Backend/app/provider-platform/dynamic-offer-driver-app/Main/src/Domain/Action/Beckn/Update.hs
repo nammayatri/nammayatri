@@ -281,6 +281,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             when (bookingUpdateReq.validTill < now) $ throwError (InvalidRequest "BookingUpdateRequest is expired")
             when (bookingUpdateReq.status /= DBUR.SOFT) $ throwError (InvalidRequest "BookingUpdateRequest is not in SOFT state")
             QBUR.updateStatusById DBUR.USER_CONFIRMED bookingUpdateReq.id
+            QDI.updateTripEndLocation (Just dropLatLong) person.id
             updatePassedThroughDrop person.id
             if transporterConfig.editLocDriverPermissionNeeded
               then do

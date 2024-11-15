@@ -36,6 +36,7 @@ import qualified Domain.Types.Vehicle as DVeh
 import Domain.Utils
 import Environment
 import Kernel.External.Maps (LatLong (..))
+import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -98,7 +99,10 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   QRide.createRide ride
   QRideD.create rideDetails
   Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey driver.id.getId) 4 4 $ do
-    when (not booking.isScheduled) $ QDI.updateOnRide True (cast driver.id)
+    when (not booking.isScheduled) $ do
+      whenJust (booking.toLocation) $ \toLoc -> do
+        QDI.updateTripCategoryAndTripEndLocationByDriverId (cast driver.id) (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
+      QDI.updateOnRide True (cast driver.id)
     Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
     when (isJust previousRideInprogress) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
     Redis.unlockRedis (editDestinationLockKey ride.driverId)

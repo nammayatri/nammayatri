@@ -6,6 +6,7 @@ imports:
   UTCTime: Kernel.Prelude
   LatLong: Kernel.External.Maps
   DriverMode: Domain.Types.Common
+  TripCategory: Domain.Types.Common
   BlockReasonFlag: Tools.Error
 
 DriverInformation:
@@ -88,6 +89,8 @@ DriverInformation:
     weeklyCancellationRateBlockingCooldown: Maybe UTCTime
     blockReasonFlag: Maybe BlockReasonFlag
     payoutRegAmountRefunded: Maybe HighPrecMoney
+    driverTripEndLocation: Maybe LatLong
+    onRideTripCategory: Maybe TripCategory
 
   default:
     active: "false"
@@ -115,6 +118,9 @@ DriverInformation:
     latestScheduledPickup:
       latestScheduledPickupLat: Maybe Double
       latestScheduledPickupLon: Maybe Double
+    driverTripEndLocation:
+      driverTripEndLocationLat: Maybe Double
+      driverTripEndLocationLon: Maybe Double
 
 
   beamType:
@@ -133,6 +139,7 @@ DriverInformation:
     forwardBatchingEnabled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     isInteroperable: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     latestScheduledPickup: Storage.Queries.Transformers.Ride.mkLatLong|I
+    driverTripEndLocation: Storage.Queries.Transformers.Ride.mkLatLong|I
 
   toTType:
     canSwitchToRental: Kernel.Prelude.Just|I
@@ -143,6 +150,8 @@ DriverInformation:
     isInteroperable: Kernel.Prelude.Just|I
     latestScheduledPickupLat: Kernel.Prelude.fmap (.lat)|I
     latestScheduledPickupLon: Kernel.Prelude.fmap (.lon)|I
+    driverTripEndLocationLat: Kernel.Prelude.fmap (.lat)|I
+    driverTripEndLocationLon: Kernel.Prelude.fmap (.lon)|I
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -258,5 +267,9 @@ DriverInformation:
       where: driverId    updatePayoutRegAmountRefunded:
       kvFunction: updateOneWithKV
       params: [payoutRegAmountRefunded]
+      where: driverId
+    updateTripEndLocation:
+      kvFunction: updateOneWithKV
+      params: [driverTripEndLocation]
       where: driverId
 
