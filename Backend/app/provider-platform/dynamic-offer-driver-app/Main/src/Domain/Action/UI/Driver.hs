@@ -2176,23 +2176,26 @@ listScheduledBookings ::
   Maybe LatLong ->
   Flow ScheduledBookingRes
 listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay mbTripCategory mbDLoc = do
-  case (mbFromDay, mbToDay) of
-    (Just from, Just to) -> when (from > to) $ throwError $ InvalidRequest "From date should be less than to date"
-    _ -> pure ()
   transporterConfig <- SCTC.findByMerchantOpCityId cityId Nothing >>= fromMaybeM (TransporterConfigNotFound cityId.getId)
-  vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
-  driverInfo <- runInReplica $ QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
-  case driverInfo.latestScheduledBooking of
-    Just _ -> return $ ScheduledBookingRes []
-    Nothing -> do
-      -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
-      cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId
-      let availableServiceTiers = (.serviceTierType) <$> (map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers))
-      scheduledBookings <- runInReplica $ QBooking.findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay DRB.NEW mbTripCategory availableServiceTiers True cityId transporterConfig.timeDiffFromUtc
-      bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) scheduledBookings
-      filteredBookings <- filterM (\booking -> isAbleToReach booking.bookingDetails vehicle.variant transporterConfig.avgSpeedOfVehicle) (catMaybes bookings)
-      let sortedBookings = sortBookingsByDistance filteredBookings
-      return $ ScheduledBookingRes sortedBookings
+  if transporterConfig.disableListScheduledBookingAPI
+    then pure $ ScheduledBookingRes []
+    else do
+      case (mbFromDay, mbToDay) of
+        (Just from, Just to) -> when (from > to) $ throwError $ InvalidRequest "From date should be less than to date"
+        _ -> pure ()
+      vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
+      driverInfo <- runInReplica $ QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
+      case driverInfo.latestScheduledBooking of
+        Just _ -> return $ ScheduledBookingRes []
+        Nothing -> do
+          -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
+          cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId
+          let availableServiceTiers = (.serviceTierType) <$> (map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers))
+          scheduledBookings <- runInReplica $ QBooking.findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay DRB.NEW mbTripCategory availableServiceTiers True cityId transporterConfig.timeDiffFromUtc
+          bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) scheduledBookings
+          filteredBookings <- filterM (\booking -> isAbleToReach booking.bookingDetails vehicle.variant transporterConfig.avgSpeedOfVehicle) (catMaybes bookings)
+          let sortedBookings = sortBookingsByDistance filteredBookings
+          return $ ScheduledBookingRes sortedBookings
   where
     isAbleToReach :: BookingAPIEntity -> DV.VehicleVariant -> Maybe AvgSpeedOfVechilePerKm -> Flow Bool
     isAbleToReach bookingDetails variant avgSpeeds = do
