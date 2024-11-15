@@ -6,4 +6,4 @@ nix_direnv_watch_file \
     Backend/*.nix \
     Backend/nix/*.nix
 
-use omnix .#backend
+use flake .#backend
