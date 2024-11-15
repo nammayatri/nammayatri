@@ -28,7 +28,6 @@ import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
 import qualified Storage.Queries.Person.Internal as Int
-import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle.Internal as Int
 import qualified Tools.Utils as TU
 
@@ -97,33 +96,28 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
       then QDBA.getDrivers (driverLocs <&> (.driverId))
       else return []
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
-  rideCurrentlyInProgress <- filter (\ride -> show ride.tripCategory `elem` currentRideTripCategoryValidForForwardBatching) <$> QRide.getInProgressByDriverIds (map (.id) drivers)
-  let rideEndLocations = mapMaybe (.toLocation) rideCurrentlyInProgress
-  logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> "Rides" <> show (length rideCurrentlyInProgress) <> "RideLocs:- " <> show (length rideEndLocations)
-  let res = linkArrayListForOnRide rideCurrentlyInProgress rideEndLocations driverLocs driverInfos vehicles drivers driverBankAccounts (fromIntegral onRideRadius :: Double)
+  let driversCurrentlyOnRideForForwardBatch = filter (\di -> (show di.onRideTripCategory `elem` currentRideTripCategoryValidForForwardBatching) && (di.driverTripEndLocation /= Nothing)) driverInfos
+  logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> "driversCurrentlyOnRideForForwardBatch: " <> show driversCurrentlyOnRideForForwardBatch
+  let res = linkArrayListForOnRide driverLocs driversCurrentlyOnRideForForwardBatch vehicles drivers driverBankAccounts (fromIntegral onRideRadius :: Double)
   logDebug $ "GetNearestDriversCurrentlyOnRide Result:- " <> show (length res)
   return res
   where
-    linkArrayListForOnRide rideCurrentlyInProgress rideEndLocations driverLocations driverInformations vehicles persons driverBankAccounts onRideRadius =
+    linkArrayListForOnRide driverLocations driverInformations vehicles persons driverBankAccounts onRideRadius =
       let locationHashMap = HashMap.fromList $ (\loc -> (loc.driverId, loc)) <$> driverLocations
           personHashMap = HashMap.fromList $ (\p -> (p.id, p)) <$> persons
           -- driverStatsHashMap = HashMap.fromList $ (\stats -> (stats.driverId, stats)) <$> driverStats
-          rideByDriverIdHashMap = HashMap.fromList $ (\ride -> (ride.driverId, ride)) <$> rideCurrentlyInProgress
-          rideToLocsHashMap = HashMap.fromList $ (\loc -> (loc.id, loc)) <$> rideEndLocations
           driverInfoHashMap = HashMap.fromList $ (\info -> (info.driverId, info)) <$> driverInformations
           driverBankAccountHashMap = HashMap.fromList $ catMaybes $ (\dba -> if dba.chargesEnabled then Just (dba.driverId, dba.accountId) else Nothing) <$> driverBankAccounts
-       in concat $ mapMaybe (buildFullDriverListOnRide rideByDriverIdHashMap rideToLocsHashMap locationHashMap driverInfoHashMap personHashMap driverBankAccountHashMap onRideRadius) vehicles
+       in concat $ mapMaybe (buildFullDriverListOnRide locationHashMap driverInfoHashMap personHashMap driverBankAccountHashMap onRideRadius) vehicles
 
-    buildFullDriverListOnRide rideByDriverIdHashMap rideToLocsHashMap locationHashMap driverInfoHashMap personHashMap driverBankAccountHashMap onRideRadius vehicle = do
+    buildFullDriverListOnRide locationHashMap driverInfoHashMap personHashMap driverBankAccountHashMap onRideRadius vehicle = do
       let driverId' = vehicle.driverId
       location <- HashMap.lookup driverId' locationHashMap
-      ride <- HashMap.lookup driverId' rideByDriverIdHashMap
-      rideToLoc <- ride.toLocation
-      rideToLocation <- HashMap.lookup rideToLoc.id rideToLocsHashMap
       info <- HashMap.lookup driverId' driverInfoHashMap
       person <- HashMap.lookup driverId' personHashMap
       _ <- if onlinePayment then HashMap.lookup driverId' driverBankAccountHashMap else Just T.empty -- is there any better way to do this?
       -- driverStats <- HashMap.lookup driverId' driverStatsHashMap
+      let rideToLocation = fromJust info.driverTripEndLocation
       let driverLocationPoint = LatLong {lat = location.lat, lon = location.lon}
           destinationPoint = LatLong {lat = rideToLocation.lat, lon = rideToLocation.lon}
           distanceFromDriverToDestination = realToFrac $ distanceBetweenInMeters driverLocationPoint destinationPoint
