@@ -562,6 +562,7 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
   Id DMOC.MerchantOperatingCity ->
   m ([DriverPoolWithActualDistResult], [Id DP.Driver])
 filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = do
+  logDebug $ "MetroWarriorDebugging randomDriverPool -----" <> show randomDriverPool
   now <- getCurrentTime
   goHomeRequests <-
     mapMaybeM
@@ -572,11 +573,13 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
       )
       randomDriverPool
   let specialLocWarriorDrivers = filter (\driver -> driver.isSpecialLocWarrior) randomDriverPool -- specialLocWarriorDriversInfo <- Int.getSpecialLocWarriorDriverInfo specialLocWarriorDrivers
+  logDebug $ "MetroWarriorDebugging specialLocWarriorDrivers -----" <> show specialLocWarriorDrivers
   specialLocgoHomeRequests <-
     mapMaybeM
       ( \specialLocWarriorDriver -> runMaybeT $ do
           driverInfo <- MaybeT $ Int.getSpecialLocWarriorDriverInfo specialLocWarriorDriver.driverId.getId
-          preferredLoc <- MaybeT $ return driverInfo.preferredPrimarySpecialLoc
+          specialLocWarriorDriverInfo <- MaybeT $ return $ if driverInfo.isSpecialLocWarrior then Just driverInfo else Nothing
+          preferredLoc <- MaybeT $ return specialLocWarriorDriverInfo.preferredPrimarySpecialLoc
           preferredLocGate <- MaybeT $ return $ listToMaybe preferredLoc.gates
           let gHR =
                 DDGR.DriverGoHomeRequest
@@ -593,6 +596,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           return (gHR, specialLocWarriorDriver)
       )
       specialLocWarriorDrivers
+  logDebug $ "MetroWarriorDebugging specialLocgoHomeRequests -----" <> show specialLocgoHomeRequests
   let convertedDriverPoolRes = map (\(ghr, driver) -> (ghr,driver,) $ makeDriverPoolRes driver) (goHomeRequests <> specialLocgoHomeRequests)
   driverGoHomePoolWithActualDistance <-
     case convertedDriverPoolRes of
@@ -723,6 +727,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
   let driverPoolResult = makeDriverPoolResult <$> driversWithLessThanNParallelRequests
   logDebug $ "driverPoolResult: " <> show driverPoolResult
+  logDebug $ "driverPoolResult: MetroWarriorDebugging-------" <> show driverPoolResult
   pure driverPoolResult
   where
     getParallelSearchRequestCount dObj = getValidSearchRequestCount merchantId (cast dObj.driverId) now
