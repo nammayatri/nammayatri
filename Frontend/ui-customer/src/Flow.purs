@@ -1270,6 +1270,20 @@ homeScreenFlow = do
       findEstimates updatedState
     GO_TO_RIDE_SUMMARY_SCREEN updatedState -> do 
       modifyScreenState $ RideSummaryScreenStateType (\rideSummaryScreen -> RideSummaryScreenData.initData{ data { rideDetails = fetchRideDetails updatedState,extraFare = fetchExtraFares updatedState,fromScreen = (Screen.getScreen Screen.RIDE_SUMMARY_SCREEN)},props{pickUpOpen = true,shimmerVisibility=false}} )
+      let 
+        isRoundTrip = updatedState.props.searchLocationModelProps.tripType == ROUND_TRIP
+        currentSelectedEstimatesObject = updatedState.data.selectedEstimatesObject
+        currIndex = currentSelectedEstimatesObject.index
+        selectedEstimatesObject = if (currIndex == 0) then (fromMaybe currentSelectedEstimatesObject ((updatedState.data.quoteList)!!0)) else currentSelectedEstimatesObject
+        startTime = if updatedState.data.startTimeUTC == "" then (getCurrentUTC "") else updatedState.data.startTimeUTC
+        isScheduledRideSearch = startTime > (getCurrentUTC "")
+      liftFlowBT $ logEventWithMultipleParams logField_ "user_intercity_ride_details_shown"
+                                                                $ [ { key: "Vehicle Variant", value: unsafeToForeign selectedEstimatesObject.vehicleVariant }
+                                                                  , { key: "RoundTrip", value: unsafeToForeign isRoundTrip }
+                                                                  , { key: "Estimated Fare", value: unsafeToForeign selectedEstimatesObject.price}
+                                                                  , { key: "ScheduledRide", value: unsafeToForeign isScheduledRideSearch }
+                                                                  ]
+                                                                <> (maybe [] (\rideVehicleServiceTier -> [{ key: "Vehicle ServiceTierName", value: unsafeToForeign $ rideVehicleServiceTier}]) selectedEstimatesObject.serviceTierName )
       rideSummaryScreenFlow 
     RETRY_FINDING_QUOTES showLoader -> do
       void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS) -- TODO : Handled Loader in IOS Side
@@ -2815,6 +2829,8 @@ rideSearchRequestFlow updatedState = do
     startTimeUTC = if (state.data.fareProductType == FPT.INTER_CITY && state.data.startTimeUTC /= "") then state.data.startTimeUTC else (getCurrentUTC "")
     isRoundTrip = state.props.searchLocationModelProps.tripType == ROUND_TRIP
     returnTimeUTC = if isRoundTrip then (Just state.data.returnTimeUTC) else Nothing
+    isScheduledRideSearch = startTimeUTC > (getCurrentUTC "")
+    currentTime = convertUTCtoISC (getCurrentUTC "")  "hh:mm A"
   let searchReq = if (state.data.fareProductType == FPT.INTER_CITY) then Remote.makeRoundTripReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress startTimeUTC returnTimeUTC isRoundTrip
                   else Remote.makeRideSearchReq state.props.sourceLat state.props.sourceLong state.props.destinationLat state.props.destinationLong state.data.sourceAddress state.data.destinationAddress startTimeUTC state.props.rideSearchProps.sourceManuallyMoved state.props.rideSearchProps.destManuallyMoved state.props.rideSearchProps.sessionId state.props.isSpecialZone state.data.fareProductType
   (SearchRes rideSearchRes) <- Remote.rideSearchBT $ searchReq
@@ -2824,6 +2840,13 @@ rideSearchRequestFlow updatedState = do
     void $ lift $ lift $ liftFlow $ showMarker srcMarkerConfig 9.9 9.9 160 0.5 0.9 (getNewIDWithTag "CustomerHomeScreen")
   logStatus "ride_search" rideSearchRes
   void $ pure $ deleteValueFromLocalStore TIP_VIEW_DATA
+  when (state.data.fareProductType == FPT.INTER_CITY) (do liftFlowBT $ logEventWithMultipleParams logField_ "user_intercity_ride_search"
+                                                                $ [ { key: "Pickup", value: unsafeToForeign state.data.source }
+                                                                  , { key: "Destination", value: unsafeToForeign state.data.destination }
+                                                                  , { key: "ScheduledRideSearch", value: unsafeToForeign isScheduledRideSearch}
+                                                                  , { key: "RoundTrip", value: unsafeToForeign isRoundTrip }
+                                                                  , { key: "Ride Search Time", value : unsafeToForeign currentTime}
+                                                                  ] )
   case rideSearchRes.routeInfo of
     Just (Route response) -> do
       let
@@ -7071,6 +7094,7 @@ rideSummaryScreenFlow = do
           if isNow then do
             enterRentalRideSearchFlow bookingId
           else do
+            logField_ <- lift $ lift $ getLogFields
             modifyScreenState $ RideSummaryScreenStateType (\rideSummaryScreen -> rideSummaryScreen
               {  data {bookingId = Just bookingId},
                 props {
@@ -7081,6 +7105,9 @@ rideSummaryScreenFlow = do
                   isBookingAccepted = true
                   } 
                 })
+            let 
+              currentTime = convertUTCtoISC (getCurrentUTC "")  "hh:mm A"
+            liftFlowBT $ logEventWithMultipleParams logField_ "user_intercity_scheduled_ride_confirmed" $ [{ key: "Booking Scheduled Time", value: unsafeToForeign currentTime }] 
             rideSummaryScreenFlow
         Left err -> do
           if ((decodeError err.response.errorMessage "errorCode") == "INVALID_REQUEST" && (decodeError err.response.errorMessage "errorMessage") == "ACTIVE_BOOKING_PRESENT") then do
