@@ -882,6 +882,7 @@ TransporterConfig:
     weeklyConditionCooldownTimeHours: Maybe Int
     driverDrivenSearchReqExpiry: Maybe NominalDiffTime
     otpRideStartRestrictionRadius: Maybe Meters
+    disableListScheduledBookingAPI: Bool
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -924,6 +925,7 @@ TransporterConfig:
     demandHotspotsConfig: Maybe Value
     scheduledRideSearchRepeatLimit: Maybe Int
     driverDrivenSearchReqExpiry: Maybe Seconds
+    disableListScheduledBookingAPI: Maybe Bool
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -975,6 +977,7 @@ TransporterConfig:
     demandHotspotsConfig: Kernel.Prelude.toJSON <$> demandHotspotsConfig|E
     scheduledRideSearchRepeatLimit: Just scheduledRideSearchRepeatLimit|E
     driverDrivenSearchReqExpiry: Kernel.Utils.Common.nominalDiffTimeToSeconds <$> driverDrivenSearchReqExpiry|E
+    disableListScheduledBookingAPI: Just disableListScheduledBookingAPI|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1030,6 +1033,7 @@ TransporterConfig:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< demandHotspotsConfig|E
     scheduledRideSearchRepeatLimit: fromMaybe 10 scheduledRideSearchRepeatLimit|E
     driverDrivenSearchReqExpiry: Kernel.Utils.Common.secondsToNominalDiffTime <$> driverDrivenSearchReqExpiry|E
+    disableListScheduledBookingAPI: fromMaybe False disableListScheduledBookingAPI|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1209,6 +1213,7 @@ TransporterConfig:
     scheduledRideSearchRepeatLimit: "10"
     dailyConditionCooldownTimeHours: "24"
     weeklyConditionCooldownTimeHours: "168"
+    disableListScheduledBookingAPI: "false"
 
   excludedDefaultQueries:
     - findByPrimaryKey

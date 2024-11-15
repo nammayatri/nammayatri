@@ -75,6 +75,7 @@ data TransporterConfigT f = TransporterConfigT
     dailyOffenceSuspensionTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     defaultPopupDelay :: B.C f Kernel.Types.Common.Seconds,
     demandHotspotsConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    disableListScheduledBookingAPI :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     dlNumberVerification :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     dpBlackListedGeohash :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
