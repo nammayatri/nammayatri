@@ -1365,6 +1365,7 @@ getHi = Keymap {
 , booking: "बुकिंग"
 , by: "द्वारा"
 , customers: "ग्राहक"
+, customer: "ग्राहक"
 , rating: "रेटिंग"
 , cancellation: "रद्दीकरण"
 , trips: "यात्राएँ"

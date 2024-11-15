@@ -1378,6 +1378,7 @@ newtype Keymap = Keymap {
 , booking :: String
 , by :: String
 , customers :: String
+, customer :: String
 , rating :: String
 , cancellation :: String
 , trips :: String
@@ -5779,6 +5780,9 @@ by = a
 
 customers :: Proxy "customers"
 customers = a
+
+customer :: Proxy "customer"
+customer = a
 
 rating :: Proxy "rating"
 rating = a

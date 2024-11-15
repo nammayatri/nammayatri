@@ -1459,6 +1459,7 @@ getProxy str =
     BOOKING -> \a -> a @~ booking
     BY -> \a -> a @~ by
     CUSTOMERS -> \a -> a @~ customers
+    CUSTOMER -> \a -> a @~ customer
     RATING -> \a -> a @~ rating
     CANCELLATION -> \a -> a @~ cancellation
     TRIPS -> \a -> a @~ trips

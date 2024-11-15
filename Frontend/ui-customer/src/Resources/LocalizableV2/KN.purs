@@ -1365,6 +1365,7 @@ getKn = Keymap {
 , booking: "ಬುಕ್"
 , by: "ಇವರಿಂದ"
 , customers: "ಗ್ರಾಹಕರು"
+, customer: "ಗ್ರಾಹಕ"
 , rating: "ಮೌಲ್ಯಮಾಪನ"
 , cancellation: "ರದ್ದತಿ"
 , trips: "ಪ್ರಯಾಣಗಳು"

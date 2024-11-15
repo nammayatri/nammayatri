@@ -1546,6 +1546,7 @@ getKn =
     , refresh_payment: "ರಿಫ್ರೆಶ್ ಮಾಡಿ"
     , by: "ಇವರಿಂದ"
     , customers: "ಗ್ರಾಹಕರು"
+    , customer: "ಗ್ರಾಹಕ"
     , rating: "ಮೌಲ್ಯಮಾಪನ"
     , cancellation: "ರದ್ದತಿ"
     , i_speak: "ನಾನು ಮಾತನಾಡುತ್ತೇನೆ"

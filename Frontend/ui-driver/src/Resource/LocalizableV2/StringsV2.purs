@@ -1605,6 +1605,7 @@ getProxy str = case str of
   REFRESH_PAYMENT -> \a -> a @~ refresh_payment
   BY -> \a -> a @~ by
   CUSTOMERS -> \a -> a @~ customers
+  CUSTOMER -> \a -> a @~ customer
   RATING -> \a -> a @~ rating
   CANCELLATION -> \a -> a @~ cancellation
   I_SPEAK -> \a -> a @~ i_speak

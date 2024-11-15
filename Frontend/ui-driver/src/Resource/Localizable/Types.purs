@@ -1552,6 +1552,7 @@ data STR = LETS_GET_STARTED
         | REFRESH_PAYMENT
         | BY
         | CUSTOMERS 
+        | CUSTOMER
         | RATING 
         | CANCELLATION 
         | I_SPEAK

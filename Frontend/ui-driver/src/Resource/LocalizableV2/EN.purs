@@ -1546,6 +1546,7 @@ getEn =
     , refresh_payment: "Refresh"
     , by: "By"
     , customers: "customers"
+    , customer: "customer"
     , rating: "Rating"
     , cancellation: "Cancellation"
     , i_speak: "I Speak"

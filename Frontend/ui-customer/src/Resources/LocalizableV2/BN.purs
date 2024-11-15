@@ -1364,6 +1364,7 @@ getBn = Keymap {
 , booking: "বুকিং"
 , by: "দ্বারা"
 , customers: "গ্রাহকরা"
+, customer: "গ্রাহক"
 , rating: "রেটিং"
 , cancellation: "বাতিল"
 , trips: "যাত্রা"

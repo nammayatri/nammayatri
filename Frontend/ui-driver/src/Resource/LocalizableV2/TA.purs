@@ -1547,6 +1547,7 @@ getTa =
     , refresh_payment: "புதுப்பிப்பு"
     , by: "மூலம்"
     , customers: "வாடிக்கையாளர்கள்"
+    , customer: "வாடிக்கையாளர்"
     , rating: "மதிப்பீடு"
     , cancellation: "ரத்தாக்கல்"
     , i_speak: "நான் பேசுகிறேன்"

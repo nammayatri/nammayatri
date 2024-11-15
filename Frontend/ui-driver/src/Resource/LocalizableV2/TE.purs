@@ -1547,6 +1547,7 @@ getTe =
     , refresh_payment: "రిఫ్రెష్ చేయండి"
     , by: "ద్వారా"
     , customers: "వినియోగదారులు"
+    , customer: "కస్టమర్"
     , rating: "రేటింగ్"
     , cancellation: "రద్దు"
     , i_speak: "నేను మాట్లాడతాను"

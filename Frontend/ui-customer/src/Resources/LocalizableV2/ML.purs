@@ -1366,6 +1366,7 @@ getMl = Keymap {
 , booking: "ബുക്കിംഗ്"
 , by: "നിലവില്‍"
 , customers: "ഉപഭോക്താക്കള്‍"
+, customer: "ഉപഭോക്താവ്"
 , rating: "റേറ്റിംഗ്"
 , cancellation: "റദ്ദാക്കല്‍"
 , trips: "യാത്രകള്‍"

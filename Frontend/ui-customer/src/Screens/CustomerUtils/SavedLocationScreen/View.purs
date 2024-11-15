@@ -44,7 +44,7 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((*), (||), Unit, ($), (<<<), (/=), const, map, pure, unit, discard, bind, not, void, show, (<>), (==), (&&))
+import Prelude ((*), (||), Unit, ($), (<<<), (/=), const, map, pure, unit, discard, bind, not, void, show, (<>), (==), (&&), (>))
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, fork, await)
 import PrestoDOM (singleLine, fontWeight, weight, imageView, lineHeight, maxLines, FontWeight(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), alignParentBottom, background, color, fontStyle, frameLayout, gravity, height, linearLayout, onBackPressed, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textSize, textView, visibility, width, relativeLayout, alignParentRight, margin, stroke, onClick, cornerRadius, afterRender, accessibility)
 import Screens.SavedLocationScreen.Controller (Action(..), ScreenOutput, eval)
@@ -170,7 +170,7 @@ locationView push state =
 
 driverView :: forall w. (Action -> Effect Unit) -> ST.SavedLocationScreenState -> PrestoDOM (Effect Unit) w
 driverView push state =
-  linearLayout
+  Anim.screenAnimation $ linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
@@ -375,7 +375,7 @@ favouriteDriverViews push state =
                         [ height WRAP_CONTENT
                         , width WRAP_CONTENT
                         , gravity CENTER
-                        , text $ (getString BY) <> " " <> show item.favCount <> " " <> (getString CUSTOMERS)
+                        , text $ (getString BY) <> " " <> show item.favCount <> " " <> if item.favCount > 1 then getString CUSTOMERS else getString CUSTOMER
                         , color Color.black800
                         , margin $ MarginLeft 5
                         , textSize FontSize.a_15

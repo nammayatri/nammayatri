@@ -1376,6 +1376,7 @@ data STR
   | BOOKING
   | BY
   | CUSTOMERS 
+  | CUSTOMER
   | RATING 
   | CANCELLATION 
   | TRIPS
