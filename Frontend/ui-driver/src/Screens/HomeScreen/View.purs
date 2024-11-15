@@ -184,7 +184,7 @@ screen initialState (GlobalState globalState) =
           when (isNothing initialState.data.bannerData.bannerItem) $ void $ launchAff $ EHC.flowRunner defaultGlobalState $ computeListItem push
           void $ launchAff $ flowRunner defaultGlobalState $ checkBgLocation push BgLocationAC initialState globalState.globalProps.bgLocPopupShown
           void $ triggerOnRideBannerTimer push initialState 
-          void $ launchAff $ EHC.flowRunner defaultGlobalState $ getScheduledRidecount push GetRideCount initialState
+          -- void $ launchAff $ EHC.flowRunner defaultGlobalState $ getScheduledRidecount push GetRideCount initialState -- needs to be check later 
           case localStage of
             "RideRequested"  -> do
                                 if (getValueToLocalStore RIDE_STATUS_POLLING) == "False" then do
@@ -1703,7 +1703,7 @@ rideRequestButton push state =
     ] 
     [ pillView state push
     , pillShimmer state push
-    , scheduledRideCountView state push
+    -- , scheduledRideCountView state push
     ]
 pillView :: forall w . HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 pillView state push =
