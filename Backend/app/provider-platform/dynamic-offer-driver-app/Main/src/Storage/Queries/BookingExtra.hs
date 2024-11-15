@@ -43,8 +43,8 @@ createBooking' = createWithKV
 createBooking :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> m ()
 createBooking booking = do
   processSingleLocation booking.fromLocation SLM.buildPickUpLocationMapping
-  whenJust booking.toLocation $ \toLocation -> processSingleLocation toLocation SLM.buildDropLocationMapping
   when (notNull booking.stops) $ processMultipleLocations booking.stops
+  whenJust booking.toLocation $ \toLocation -> processSingleLocation toLocation SLM.buildDropLocationMapping
   createBooking' booking
   where
     processSingleLocation location locationMappingCreator = do
