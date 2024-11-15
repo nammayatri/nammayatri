@@ -19,6 +19,7 @@ import qualified API.Internal.PopulateTipAmount as PopulateTipAmount
 import qualified API.Internal.ReportACIssue as ReportACIssue
 import qualified API.Internal.ReportIssue as ReportIssue
 import qualified API.Internal.Ride as Ride
+import qualified API.Internal.StopDetection as StopDetection
 import Environment
 import Servant
 import Tools.Auth ()
@@ -40,6 +41,7 @@ type API =
            :<|> DriverCoordinates.API
            :<|> PopulateTipAmount.API
            :<|> Ride.API
+           :<|> StopDetection.API
        )
 
 handler :: FlowServer API
@@ -59,3 +61,4 @@ handler =
     :<|> DriverCoordinates.handler
     :<|> PopulateTipAmount.handler
     :<|> Ride.handler
+    :<|> StopDetection.handler
