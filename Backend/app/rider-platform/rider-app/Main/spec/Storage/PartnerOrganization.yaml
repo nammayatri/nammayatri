@@ -126,8 +126,6 @@ PartnerOrgStation:
   excludedFields: [merchantId, merchantOperatingCityId]
 
   excludedDefaultQueries:
-    - create
-    - createMany
     - findByPrimaryKey
     - updateByPrimaryKey
 
