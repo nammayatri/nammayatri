@@ -139,3 +139,14 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN block_reason_fl
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN payout_reg_amount_refunded double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN driver_trip_end_location_lon double precision ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN driver_trip_end_location_lat double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN on_ride_trip_category text ;
