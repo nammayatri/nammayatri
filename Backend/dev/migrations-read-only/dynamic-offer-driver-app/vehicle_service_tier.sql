@@ -367,6 +367,18 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN fare_addition
 ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN base_vehicle_service_tier boolean ;
 
 
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN stop_fcm_threshold integer ;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN stop_fcm_suppress_count integer ;
+
+
+------- SQL updates -------
+
+
+
+
 ------- SQL updates -------
 
 

@@ -37,6 +37,8 @@ data VehicleServiceTier = VehicleServiceTier
     seatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     serviceTierType :: Domain.Types.Common.ServiceTierType,
     shortDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    stopFcmSuppressCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    stopFcmThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     vehicleIconUrl :: Kernel.Prelude.Maybe Kernel.Types.Common.BaseUrl,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
