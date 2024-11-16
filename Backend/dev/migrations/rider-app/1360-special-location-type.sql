@@ -1,1 +1,1 @@
-ALTER TABLE atlas_app.special_location ADD COLUMN special_location_type text;
+ALTER TABLE atlas_app.special_location ADD COLUMN location_type text;
