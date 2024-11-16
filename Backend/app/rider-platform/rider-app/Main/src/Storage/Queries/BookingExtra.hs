@@ -15,9 +15,9 @@ import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
 import qualified EulerHS.Language as L
-import EulerHS.Prelude (whenNothingM_)
+import EulerHS.Prelude (forM_, whenNothingM_)
 import Kernel.Beam.Functions
-import Kernel.Prelude
+import Kernel.Prelude hiding (forM_)
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -63,7 +63,8 @@ createBooking booking = do
     processMultipleLocations locations = do
       locationMappings <- SLM.buildStopsLocationMapping locations booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
       QLM.createMany locationMappings
-      QL.createMany locations
+      locations `forM_` \location ->
+        whenNothingM_ (QL.findById location.id) $ do QL.create location
 
 updateStatus :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do

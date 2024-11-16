@@ -32,8 +32,8 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.Sos as DSos
+import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.Trip as Trip
--- import qualified Domain.Types.StopInformation as DSI
 import EulerHS.Prelude hiding (elem, find, id, length, map, null)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
@@ -131,7 +131,8 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     driverArrivalTime :: Maybe UTCTime,
     sosStatus :: Maybe DSos.SosStatus,
     driversPreviousRideDropLocLat :: Maybe Double,
-    driversPreviousRideDropLocLon :: Maybe Double
+    driversPreviousRideDropLocLon :: Maybe Double,
+    stopInfo :: [DSI.StopInformation]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -448,6 +449,7 @@ buildBookingAPIEntity booking personId = do
 buildBookingStatusAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m BookingStatusAPIEntity
 buildBookingStatusAPIEntity booking = do
   mbActiveRide <- runInReplica $ QRideLite.findActiveByRBIdLite booking.id
+  stopsInfo <- if (fromMaybe False booking.hasStops) then maybe (pure []) (\ride -> QSI.findAllByRideId ride.id) mbActiveRide else return []
   let showPrevDropLocationLatLon = maybe False (.showDriversPreviousRideDropLoc) mbActiveRide
       driversPreviousRideDropLocLat = if showPrevDropLocationLatLon then fmap (.lat) (mbActiveRide >>= (.driversPreviousRideDropLoc)) else Nothing
       driversPreviousRideDropLocLon = if showPrevDropLocationLatLon then fmap (.lon) (mbActiveRide >>= (.driversPreviousRideDropLoc)) else Nothing
@@ -455,7 +457,7 @@ buildBookingStatusAPIEntity booking = do
       estimatedEndTimeRange = mbActiveRide >>= (.estimatedEndTimeRange)
       driverArrivalTime = mbActiveRide >>= (.driverArrivalTime)
   sosStatus <- getActiveSos' mbActiveRide booking.riderId
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus estimatedEndTimeRange driverArrivalTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus estimatedEndTimeRange driverArrivalTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
@@ -463,7 +465,7 @@ favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
 -- TODO move to Domain.Types.Ride.Extra
 buildRideAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => DRide.Ride -> m RideAPIEntity
 buildRideAPIEntity DRide.Ride {..} = do
-  stopsInfo <- QSI.findAllByRideId id
+  stopsInfo <- if (fromMaybe False hasStops) then QSI.findAllByRideId id else return []
   let driverMobileNumber' = if status `elem` [DRide.UPCOMING, DRide.NEW, DRide.INPROGRESS] then Just driverMobileNumber else Just "xxxx"
       oneYearAgo = - (365 * 24 * 60 * 60)
       driverRegisteredAt' = fromMaybe (addUTCTime oneYearAgo createdAt) driverRegisteredAt

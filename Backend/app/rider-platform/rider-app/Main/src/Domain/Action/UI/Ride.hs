@@ -194,7 +194,6 @@ getRideStatus ::
   m GetRideStatusResp
 getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  -- stopsInfo <- QSI.findAllByRideId rideId
   mbPos <-
     if ride.status == COMPLETED || ride.status == CANCELLED
       then return Nothing
@@ -255,6 +254,9 @@ editLocation rideId (personId, merchantId) req = do
       when (ride.status /= SRide.NEW) do
         throwError (InvalidRequest $ "Customer is not allowed to change pickup as the ride is not NEW for rideId: " <> ride.id.getId)
       pickupLocationMappings <- QLM.findAllByEntityIdAndOrder ride.id.getId 0
+      {-
+        Sorting down will sort mapping like this v-2, v-1, LATEST
+      -}
       oldestMapping <- (listToMaybe $ sortBy (comparing (Down . (.version))) pickupLocationMappings) & fromMaybeM (InternalError $ "Latest mapping not found for rideId: " <> ride.id.getId)
       initialLocationForRide <- QL.findById oldestMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId:" <> oldestMapping.locationId.getId)
       let initialLatLong = Maps.LatLong {lat = initialLocationForRide.lat, lon = initialLocationForRide.lon}
