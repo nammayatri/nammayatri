@@ -20,11 +20,11 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import qualified EulerHS.Language as L
-import EulerHS.Prelude (ByteString, whenNothingM_)
+import EulerHS.Prelude (ByteString, forM_, whenNothingM_)
 import EulerHS.Types (KVDBAnswer)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.Prelude
+import Kernel.Prelude hiding (forM_)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common (distanceToHighPrecDistance, distanceToHighPrecMeters)
 import Kernel.Types.Id
@@ -61,7 +61,8 @@ createRide ride = do
     processMultipleLocations locations = do
       locationMappings <- SLM.buildStopsLocationMapping locations ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId
       QLM.createMany locationMappings
-      QL.createMany locations
+      locations `forM_` \location ->
+        whenNothingM_ (QL.findById location.id) $ do QL.create location
 
 data DatabaseWith3 table1 table2 table3 f = DatabaseWith3
   { dwTable1 :: f (B.TableEntity table1),

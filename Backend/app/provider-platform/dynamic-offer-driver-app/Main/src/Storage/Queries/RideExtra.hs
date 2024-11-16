@@ -33,7 +33,7 @@ import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (all, elem, id, length, null, sum, traverse_, whenJust)
+import EulerHS.Prelude hiding (all, elem, forM_, id, length, null, sum, traverse_, whenJust)
 import IssueManagement.Domain.Types.MediaFile as DMF
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -94,7 +94,8 @@ createRide ride = do
     processMultipleLocations locations = do
       locationMappings <- SLM.buildStopsLocationMapping locations ride.id.getId DLM.RIDE ride.merchantId (Just ride.merchantOperatingCityId)
       QLM.createMany locationMappings
-      QL.createMany locations
+      locations `forM_` \location ->
+        whenNothingM_ (QL.findById location.id) $ do QL.create location
 
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> m (Maybe Ride)
 findById (Id rideId) = findOneWithKV [Se.Is BeamR.id $ Se.Eq rideId]

@@ -17,10 +17,10 @@ import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.RiderDetails (RiderDetails)
 import qualified Domain.Types.SearchTry as DST
-import EulerHS.Prelude (whenNothingM_)
+import EulerHS.Prelude (forM_, whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import Kernel.Prelude
+import Kernel.Prelude hiding (forM_)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (UTCTime)
@@ -55,7 +55,8 @@ createBooking booking = do
     processMultipleLocations locations = do
       locationMappings <- SLM.buildStopsLocationMapping locations booking.id.getId DLM.BOOKING (Just booking.providerId) (Just booking.merchantOperatingCityId)
       QLM.createMany locationMappings
-      QL.createMany locations
+      locations `forM_` \location ->
+        whenNothingM_ (QL.findById location.id) $ do QL.create location
 
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
