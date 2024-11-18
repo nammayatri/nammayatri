@@ -309,6 +309,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           vehicleServiceTierType = quote.vehicleServiceTierType,
           vehicleServiceTierSeatingCapacity = quote.vehicleServiceTierSeatingCapacity,
           vehicleServiceTierAirConditioned = quote.vehicleServiceTierAirConditioned,
+          vehicleIconUrl = quote.vehicleIconUrl,
           isAirConditioned = quote.isAirConditioned,
           serviceTierShortDesc = quote.serviceTierShortDesc,
           clientBundleVersion = quote.clientBundleVersion,
