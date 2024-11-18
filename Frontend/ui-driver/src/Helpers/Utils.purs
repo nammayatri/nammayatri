@@ -28,7 +28,7 @@ import Data.String as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.String.Common as DSC
 import MerchantConfig.Utils
-import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, CategoryListType(..))
+import Common.Types.App (EventPayload(..), LazyCheck(..), CalendarDate, CalendarWeek, CategoryListType(..))
 import Domain.Payments (PaymentStatus(..))
 import Common.Types.Config (GeoJson, GeoJsonFeature, GeoJsonGeometry)
 import Common.DefaultConfig as CC
@@ -51,7 +51,7 @@ import Effect.Aff (Aff (..), error, killFiber, launchAff, launchAff_, makeAff, n
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (parseFloat, setText, getCurrentUTC, getPastDays, getPastYears, getPastWeeks, toStringJSON) as ReExport
 import Foreign (Foreign)
-import Foreign.Class (class Decode, class Encode, decode)
+import Foreign.Class (class Decode, class Encode, decode, encode)
 import Juspay.OTP.Reader (initiateSMSRetriever)
 import Juspay.OTP.Reader as Readers
 import Juspay.OTP.Reader.Flow as Reader
@@ -75,7 +75,7 @@ import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PromotionPopupConfig, BookingTypes(..), RidesInfo, GetCategoriesRes(..), Category(..))
 import Services.API as SA
 import Storage (KeyStore) 
-import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer, getKeyInSharedPrefKeys, Location)
+import JBridge (emitJOSEvent, getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer, getKeyInSharedPrefKeys, Location)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3, EffectFn7, runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -730,6 +730,22 @@ splitBasedOnLanguage str =
                 "TA_IN" | len > 5 -> 5
                 "TE_IN" | len > 6 -> 6
                 _ -> 0
+
+emitTerminateApp :: Maybe String -> Boolean -> Unit
+emitTerminateApp screen exitApp = runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
+    event : "process_result"
+  , payload : Just {
+    action : "terminate"
+  , trip_amount : Nothing
+  , ride_status : Nothing
+  , trip_id : Nothing
+  , screen : screen
+  , exit_app : exitApp
+  }
+}
+
+isParentView :: LazyCheck -> Boolean
+isParentView lazy = false -- NOTE:: Adding this temporary to pass the build check
 
 generateReferralLink :: String -> String -> String -> String -> String -> DriverReferralType -> String
 generateReferralLink source medium term content campaign driverReferralType =

@@ -29,7 +29,7 @@ import Control.Monad.Trans.Class (lift)
 import Data.Either(Either(..))
 import PrestoDOM.Animation 
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Presto.Core.Types.Language.Flow (delay)
+import Presto.Core.Types.Language.Flow (delay, fork, await)
 import Effect.Uncurried(runEffectFn1)
 import Debug (spy)
 import Data.Int (fromNumber, round, fromString)
@@ -66,18 +66,19 @@ getDriverProfile :: forall action. (Action -> Effect Unit) -> DriverProfileScree
 getDriverProfile push state = do
   void $ lift $ lift $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   void $ lift $ lift $ EHU.toggleLoader true
-  (driversProfileResp) <- lift $ lift $ if state.props.rideId == "" 
-    then SB.getDriverProfileById state.props.driverId false
-    else SB.getDriverProfile state.props.rideId false
-  case driversProfileResp of
+  driversProfileResponse <- lift $ lift $ fork $ do
+    (driversProfileResp) <- if state.props.rideId == "" 
+        then SB.getDriverProfileById state.props.driverId false
+        else SB.getDriverProfile state.props.rideId false
+    case driversProfileResp of
         Right resp -> do
-            void $ lift $ lift $ EHU.toggleLoader false
-            liftFlowBT $ push $ GetDriverProfileAPIResponseAction resp
+            EHC.liftFlow $ push $ GetDriverProfileAPIResponseAction resp
+            pure unit
         Left _ -> do
             void $ pure $ JB.toast $ getString NOT_AVAILABLE
-            void $ lift $ lift $ EHU.toggleLoader false
-            liftFlowBT $ push $ GoBack
-
+            EHC.liftFlow $ push $ GoBack
+            pure unit
+  
   (driversProfileRespWithImage) <- lift $ lift $ if state.props.rideId == "" 
     then SB.getDriverProfileById state.props.driverId true
     else SB.getDriverProfile state.props.rideId true
@@ -90,6 +91,9 @@ getDriverProfile push state = do
             liftFlowBT $ push $ GoBack
             pure unit
 
+  lift $ lift $ await driversProfileResponse
+  void $ lift $ lift $ EHU.toggleLoader false
+  pure unit
 
 view :: forall w. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> PrestoDOM (Effect Unit) w
 view push state =

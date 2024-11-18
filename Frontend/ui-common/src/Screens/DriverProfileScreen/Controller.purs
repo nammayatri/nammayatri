@@ -18,7 +18,9 @@ import Engineering.Helpers.Commons (getNewIDWithTag, screenWidth)
 import Data.String (joinWith, null)
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
+import Helpers.Utils (emitTerminateApp, isParentView)
 import Effect (Effect)
+import Common.Types.App (LazyCheck(..))
 
 data ScreenOutput = GoToBack
 
@@ -47,7 +49,6 @@ eval :: Action -> DriverProfileScreenCommonState -> Eval Action ScreenOutput Dri
 eval (GetDriverProfileAPIResponseAction (DriverProfileRes resp)) state = do 
   let response = resp.response
       updatedState = state{data = getDriverProfile response}
-  _ <- pure $ EHU.toggleLoader false
   continueWithCmd updatedState [do 
     let image = getImage updatedState
     renderBase64 image
@@ -70,7 +71,12 @@ eval (NextImg) state = do
     pure NoAction
   ]
 
-eval GoBack state = exit $ GoToBack
+eval GoBack state = 
+  if isParentView FunctionCall 
+    then do 
+      void $ pure $ emitTerminateApp Nothing true
+      continue state
+    else exit $ GoToBack
 
 eval _ state = update state
 

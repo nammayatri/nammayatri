@@ -457,6 +457,7 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
         "tripDetail" -> hideSplashAndCallFlow $ hybridFlow screen
         "addHome" -> addFavLocFlow SearchLocationScreenData.initData "HOME_TAG"
         "addWork" -> addFavLocFlow SearchLocationScreenData.initData "WORK_TAG"
+        "driverprofile" -> hideSplashAndCallFlow $ hybridFlow screen
         "smd" -> do
           modifyScreenState $ NammaSafetyScreenStateType (\safetyScreen -> safetyScreen { props { showTestDrill = true } })
           hideSplashAndCallFlow activateSafetyScreenFlow
@@ -529,6 +530,11 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
             let bookingResp = (RideBookingRes rideBookingResponse)
             modifyScreenState $ TripDetailsScreenStateType (\_ -> getTripDetailsState bookingResp state.tripDetailsScreen)
             tripDetailsScreenFlow
+          else if startsWith "driverprofile" screen then do
+            let safetyParam = DS.split (DS.Pattern "$$") screen
+                rideId = fromMaybe "" $ safetyParam !! 1
+            modifyScreenState $ DriverProfileScreenCommonStateType ( \driverProfileScreen -> driverProfileScreen { props { rideId = rideId } } )
+            driverProfileScreenFlow
           else
             case breakPrefixAndId screen of
               Just ( Tuple "metroBooking" bookingId )-> do
