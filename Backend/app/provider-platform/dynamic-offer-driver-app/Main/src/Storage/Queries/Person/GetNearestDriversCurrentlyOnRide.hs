@@ -96,7 +96,7 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
       then QDBA.getDrivers (driverLocs <&> (.driverId))
       else return []
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
-  let driversCurrentlyOnRideForForwardBatch = filter (\di -> (show di.onRideTripCategory `elem` currentRideTripCategoryValidForForwardBatching) && (di.driverTripEndLocation /= Nothing)) driverInfos
+  let driversCurrentlyOnRideForForwardBatch = filter (\di -> (show di.onRideTripCategory `elem` currentRideTripCategoryValidForForwardBatching) && (isJust di.driverTripEndLocation)) driverInfos
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> "driversCurrentlyOnRideForForwardBatch: " <> show driversCurrentlyOnRideForForwardBatch
   let res = linkArrayListForOnRide driverLocs driversCurrentlyOnRideForForwardBatch vehicles drivers driverBankAccounts (fromIntegral onRideRadius :: Double)
   logDebug $ "GetNearestDriversCurrentlyOnRide Result:- " <> show (length res)
@@ -117,7 +117,7 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
       person <- HashMap.lookup driverId' personHashMap
       _ <- if onlinePayment then HashMap.lookup driverId' driverBankAccountHashMap else Just T.empty -- is there any better way to do this?
       -- driverStats <- HashMap.lookup driverId' driverStatsHashMap
-      let rideToLocation = fromJust info.driverTripEndLocation
+      rideToLocation <- info.driverTripEndLocation
       let driverLocationPoint = LatLong {lat = location.lat, lon = location.lon}
           destinationPoint = LatLong {lat = rideToLocation.lat, lon = rideToLocation.lon}
           distanceFromDriverToDestination = realToFrac $ distanceBetweenInMeters driverLocationPoint destinationPoint
