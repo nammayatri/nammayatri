@@ -393,39 +393,7 @@ cancelReasons showAcReason =
               , textBoxRequired : false
             }]
       else []
-  ) <>
-  ([
-    { reasonCode: "GOT_ANOTHER_RIDE"
-    , description: getString GOT_ANOTHER_RIDE_ELSE_WHERE
-    , subtext: Just $ getString CANCELLING_AS_I_GOT_A_RIDE_ON_ANOTHER_APP
-    , textBoxRequired : false
-    }
-  , { reasonCode: "DRIVER_NOT_MOVING"
-    , description: getString DRIVER_IS_NOT_MOVING
-    , subtext: Just $ getString DRIVER_LOCATION_WASNT_CHANGING_ON_THE_MAP
-    , textBoxRequired : false
-    }
-  , { reasonCode: "WAIT_TIME_TOO_LONG"
-    , description: getString WAIT_TIME_TOO_LONG
-    , subtext: Just $ getString DRIVER_WAS_TAKING_TOO_LONG_TO_REACH_THE_PICKUP_LOCATION
-    , textBoxRequired : false
-    }
-  , { reasonCode: "WRONG_PICKUP_LOCATION"
-    , description: getString WRONG_PICKUP_LOCATION
-    , subtext: Just $ getString THE_PICKUP_LOCATION_ENTERED_WAS_WRONG
-    , textBoxRequired : false
-    }
-  , { reasonCode: "DIFFERENT_VEHICLE_NUMBER"
-    , description: getString DIFFERENT_VEHICLE_NUMBER
-    , subtext: Just $ getString VEHICLE_NUMBER_IS_DIFFERENT_FROM_WHAT_IS_SHOWN_IN_THE_APP
-    , textBoxRequired : false
-    }
-  , { reasonCode: "OTHER"
-    , description: getString OTHER
-    , subtext: Just $ getString SOME_OTHER_REASON
-    , textBoxRequired : true
-    }
-  ])
+  )  
 
 dummyCancelReason :: OptionButtonList
 dummyCancelReason =
