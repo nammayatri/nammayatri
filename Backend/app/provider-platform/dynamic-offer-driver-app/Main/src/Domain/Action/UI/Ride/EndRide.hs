@@ -384,13 +384,16 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                         then
                           if isJust updRide.estimatedTollCharges
                             then
-                              if isJust updRide.tollCharges
-                                then (updRide.tollCharges, updRide.tollNames, Just Neutral)
+                              if updRide.estimatedTollCharges == Just 0
+                                then (Nothing, Nothing, Nothing)
                                 else
-                                  if updRide.driverDeviatedToTollRoute == Just True
-                                    then (updRide.estimatedTollCharges, updRide.estimatedTollNames, Just Neutral)
-                                    else (Nothing, Nothing, Just Unsure)
-                            else (Nothing, Nothing, Just Unsure)
+                                  if isJust updRide.tollCharges
+                                    then (updRide.tollCharges, updRide.tollNames, Just Neutral)
+                                    else
+                                      if updRide.driverDeviatedToTollRoute == Just True
+                                        then (updRide.estimatedTollCharges, updRide.estimatedTollNames, Just Neutral)
+                                        else (Nothing, Nothing, Just Unsure)
+                            else (Nothing, Nothing, Nothing)
                         else (updRide.tollCharges, updRide.tollNames, Just Sure)
 
                 fork "ride-interpolation" $ do
