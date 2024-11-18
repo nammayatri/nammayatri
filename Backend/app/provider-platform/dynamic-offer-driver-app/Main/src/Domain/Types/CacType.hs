@@ -17,6 +17,7 @@ import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRenta
 import qualified Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs as FPRDPS
 import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as FPSS
 import Storage.Beam.GoHomeConfig as GHC
+import qualified Storage.Beam.MerchantServiceUsageConfig as MSUC
 import Storage.Beam.TransporterConfig as MTC
 
 checkParseCommon :: (String, A.Value) -> Bool
@@ -38,5 +39,6 @@ checkParseCommon (key, value) = do
         "farePolicyRentalDetails" -> checkParse (Proxy @FPRD.FarePolicyRentalDetailsT) tableColumn value
         "farePolicy" -> checkParse (Proxy @FP.FarePolicyT) tableColumn value
         "farePolicyAmbulanceDetails" -> checkParse (Proxy @FPAD.FarePolicyAmbulanceDetailsSlabT) tableColumn value
+        "merchantServiceUsageConfig" -> checkParse (Proxy @MSUC.MerchantServiceUsageConfigT) tableColumn value
         _ -> True
     _ -> True
