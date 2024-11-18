@@ -103,6 +103,7 @@ data BookingAPIEntity = BookingAPIEntity
     vehicleServiceTierType :: DVST.ServiceTierType,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     vehicleServiceTierAirConditioned :: Maybe Double,
+    vehicleIconUrl :: Maybe Text,
     isAirConditioned :: Maybe Bool,
     serviceTierName :: Maybe Text,
     serviceTierShortDesc :: Maybe Text,
@@ -296,7 +297,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         isAlreadyFav = activeRide >>= (.isAlreadyFav),
         favCount = activeRide >>= (.favCount),
         tripCategory = booking.tripCategory,
-        estimatedEndTimeRange = activeRide >>= (.estimatedEndTimeRange)
+        estimatedEndTimeRange = activeRide >>= (.estimatedEndTimeRange),
+        vehicleIconUrl = fmap showBaseUrl booking.vehicleIconUrl
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
