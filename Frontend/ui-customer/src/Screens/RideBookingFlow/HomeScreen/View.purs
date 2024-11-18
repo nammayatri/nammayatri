@@ -3784,7 +3784,7 @@ verticalServiceView push index service =
     , width MATCH_PARENT
     , padding $ Padding 8 8 8 8
     , background service.backgroundColor
-    , margin $ MarginTop 9
+    , margin $ MarginVertical 9 16
     , cornerRadius 12.0
     , gravity CENTER_HORIZONTAL
     , orientation VERTICAL
@@ -3793,13 +3793,15 @@ verticalServiceView push index service =
       , height $ V 32
       , width $ V 32
       ]
+    ]
     , textView $ 
       [ text $ getString $ service.name
       , color Color.black800
-      , margin $ MarginTop 4
+      , width MATCH_PARENT
       , gravity CENTER
+      , singleLine true
+      , alignParentBottom "true,-1"
       ] <> FontStyle.body33 TypoGraphy
-    ]
   ]
 
 isHomeScreenView :: HomeScreenState -> Boolean

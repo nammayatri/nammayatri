@@ -2397,7 +2397,8 @@ type SearchLocationScreenData =
     updatedMetroStations :: Array Station,
     predictionSelectedFromHome :: LocationListItemState,
     quotesList :: Array QuotesList,
-    rideDetails :: RideDetails
+    rideDetails :: RideDetails,
+    listItem :: Maybe ListItem
   }
 
 type RideDetails = {
