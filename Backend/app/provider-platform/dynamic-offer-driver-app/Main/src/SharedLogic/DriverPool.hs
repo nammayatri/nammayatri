@@ -621,7 +621,10 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           driversRoutes
   let goHomeDriverIdsToDest = map (\(driver, _, _, _) -> driver.driverId) driversOnWayToHome
   let goHomeDriverIdsNotToDest = map (\(_, driver, _) -> driver.driverId) $ filter (\(_, driver, _) -> driver.driverId `notElem` goHomeDriverIdsToDest) driverGoHomePoolWithActualDistance
+  logDebug $ "MetroWarriorDebugging goHomeDriverIdsToDest -----" <> show goHomeDriverIdsToDest
+  logDebug $ "MetroWarriorDebugging goHomeDriverIdsNotToDest -----" <> show goHomeDriverIdsNotToDest
   let goHomeDriverPoolWithActualDist = makeDriverPoolWithActualDistResult <$> driversOnWayToHome
+  logDebug $ "MetroWarriorDebugging goHomeDriverPoolWithActualDist -----" <> show goHomeDriverPoolWithActualDist
   return (take (getBatchSize driverPoolCfg.dynamicBatchSize (-1) driverPoolCfg.driverBatchSize) goHomeDriverPoolWithActualDist, goHomeDriverIdsNotToDest)
   where
     filterFunc threshold estDist distanceToPickup =
