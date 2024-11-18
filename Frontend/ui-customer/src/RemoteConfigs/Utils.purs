@@ -1,7 +1,7 @@
 module RemoteConfig.Utils where
 
 import Prelude
-import DecodeUtil (decodeForeignObject, parseJSON)
+import DecodeUtil (decodeForeignObject, parseJSON , decodeForeignAny)
 import Foreign (Foreign)
 import Foreign.Index (readProp)
 import Common.RemoteConfig (fetchRemoteConfigString, getCityBasedConfig, defaultCityRemoteConfig, BundleLottieConfig, RemoteAC(..))
@@ -18,6 +18,10 @@ import RemoteConfig.Types
 import Data.Array as DA
 import Locale.Utils(getLanguageLocale)
 import Constants (languageKey)
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Data.Show(show)
+import Debug (spy)
 
 safetyVideoConfigData :: String -> String -> Array SafetyVideoConfig
 safetyVideoConfigData city language = do
@@ -213,3 +217,42 @@ getBoostSearchConfig city variant =
         "BOOK_ANY" -> cityConfig.bookAny
         "DELIVERY_BIKE" -> cityConfig.bike
         _ -> cityConfig.default
+
+
+
+
+cancelBookingReasonsConfigData :: String -> Boolean -> Array OptionButtonList
+cancelBookingReasonsConfigData  language showAcReason  = 
+  let 
+    remoteConfig =  fetchRemoteConfigString ("cancel_booking_reasons_config_" <> language)
+    utilsConfig = cancelReasons showAcReason
+    (decodedConfg::RemoteCancellationReason) = decodeForeignAny (parseJSON remoteConfig) $ {cancellationReasons : defaultCancelReasons} 
+    config =utilsConfig <> decodedConfg.cancellationReasons
+  in
+    config
+   
+
+defaultCancelReasons :: Array OptionButtonList
+defaultCancelReasons =
+  [  { reasonCode: ""
+  , description: ""
+  , textBoxRequired: false
+  , subtext: Nothing
+  }]
+
+cancelReasons :: Boolean -> Array OptionButtonList
+cancelReasons showAcReason =
+  ([ { reasonCode: "CHANGE_OF_PLANS"
+    , description: getString CHANGE_OF_PLANS
+    , subtext: Just $ getString NO_LONGER_REQUIRE_A_RIDE_DUE_TO_CHANGE_IN_PLANS
+    , textBoxRequired : false
+    }
+  ]) <>
+  (if showAcReason 
+      then [ { reasonCode: "AC_NOT_TURNED_ON"
+              , description: getString AC_IS_NOT_AVAILABLE_ON_THIS_RIDE
+              , subtext: Just $ getString AC_NOT_WORKING_DESC
+              , textBoxRequired : false
+            }]
+      else []
+  )

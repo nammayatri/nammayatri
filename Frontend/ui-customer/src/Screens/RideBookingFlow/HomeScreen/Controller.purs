@@ -172,6 +172,7 @@ import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBanner
 import Screens.HomeScreen.Controllers.PopUpModelControllers as PopUpModelControllers
 import Services.API as API
 import Screens.NammaSafetyFlow.Components.SafetyUtils (showNightSafetyFlow, checkRideShareOptionConstraint)
+import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, (?), fetchLanguage, capitalizeFirstChar, getCityFromCode, handleUpdatedTerms, getReferralCode)
 
 eval2 :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval2 action  = 
@@ -1519,7 +1520,7 @@ eval (CancelSearchAction PopUpModal.OnButton1Click) state = do
 eval (CancelSearchAction PopUpModal.OnButton2Click) state = do
   let isAcCab = ServiceTierCard.showACDetails (fromMaybe "" state.data.driverInfoCardState.serviceTierName) Nothing
                 && state.data.currentCityConfig.enableAcViews
-      cancellationReasons = cancelReasons isAcCab
+      cancellationReasons = RemoteConfig.cancelBookingReasonsConfigData (EHU.fetchLanguage $ getLanguageLocale languageKey) isAcCab
       noOfReasons = length cancellationReasons
       shuffledCancellationReason = shuffle (take ( noOfReasons - 1) cancellationReasons ) <> (take 1 (drop (noOfReasons - 1) cancellationReasons) )
   continue state { props {  isCancelRide = true

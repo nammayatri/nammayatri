@@ -1780,7 +1780,7 @@ homeScreenFlow = do
         cancelReasonCode = if cancelType == NORMAL_RIDE_CANCEL then state.props.cancelReasonCode else "Cancelling Rentals Quotes Search"
 
         cancelDescription = if cancelType == NORMAL_RIDE_CANCEL then state.props.cancelDescription else "Rental reallocation"
-      response <- lift $ lift $ Remote.cancelRide (Remote.makeCancelRequest cancelReasonCode cancelDescription) (state.props.bookingId)
+      response <- lift $ lift $ Remote.cancelRide (Remote.makeCancelRequest cancelDescription cancelReasonCode ) (state.props.bookingId)
       case response of
         Right _ -> do
           void $ pure $ currentPosition ""
