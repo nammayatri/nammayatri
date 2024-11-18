@@ -1736,6 +1736,14 @@ export const storeCallBackDriverLocationPermission = function (cb) {
   }
 }
 
+export const cleanOnResumeCallback = function () {
+  window.onResumeListeners = [];
+}
+
+export const cleanOnPauseCallback = function () {
+  window.onPauseListeners = [];
+}
+
 export const storeOnResumeCallback = function (cb, action) {
   try {
     const callback = function () {
