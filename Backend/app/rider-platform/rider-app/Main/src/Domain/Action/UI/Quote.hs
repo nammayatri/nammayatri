@@ -188,6 +188,7 @@ mkQAPIEntityList _ _ _ = [] -- This should never happen as all the list are of s
 data GetQuotesRes = GetQuotesRes
   { fromLocation :: DL.LocationAPIEntity,
     toLocation :: Maybe DL.LocationAPIEntity,
+    stops :: [DL.LocationAPIEntity],
     quotes :: [OfferRes],
     estimates :: [UEstimate.EstimateAPIEntity],
     paymentMethods :: [DMPM.PaymentMethodAPIEntity]
@@ -228,6 +229,7 @@ getQuotes searchRequestId = do
       GetQuotesRes
         { fromLocation = DL.makeLocationAPIEntity searchRequest.fromLocation,
           toLocation = DL.makeLocationAPIEntity <$> searchRequest.toLocation,
+          stops = DL.makeLocationAPIEntity <$> searchRequest.stops,
           quotes = offers,
           estimates,
           paymentMethods = []

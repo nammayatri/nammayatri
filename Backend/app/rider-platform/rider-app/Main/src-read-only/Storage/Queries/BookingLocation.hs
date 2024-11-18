@@ -36,6 +36,7 @@ updateAddress address id = do
       Se.Set Beam.placeId (Domain.Types.LocationAddress.placeId address),
       Se.Set Beam.state (Domain.Types.LocationAddress.state address),
       Se.Set Beam.street (Domain.Types.LocationAddress.street address),
+      Se.Set Beam.title (Domain.Types.LocationAddress.title address),
       Se.Set Beam.ward (Domain.Types.LocationAddress.ward address),
       Se.Set Beam.updatedAt _now
     ]
@@ -46,7 +47,7 @@ instance FromTType' Beam.BookingLocation Domain.Types.BookingLocation.BookingLoc
     pure $
       Just
         Domain.Types.BookingLocation.BookingLocation
-          { address = Domain.Types.LocationAddress.LocationAddress {street, door, city, state, country, building, areaCode, area, ward, placeId, instructions, extras},
+          { address = Domain.Types.LocationAddress.LocationAddress {street, door, city, state, country, building, areaCode, area, ward, placeId, instructions, title, extras},
             id = Kernel.Types.Id.Id id,
             lat = lat,
             lon = lon,
@@ -68,6 +69,7 @@ instance ToTType' Beam.BookingLocation Domain.Types.BookingLocation.BookingLocat
         Beam.placeId = Domain.Types.LocationAddress.placeId address,
         Beam.state = Domain.Types.LocationAddress.state address,
         Beam.street = Domain.Types.LocationAddress.street address,
+        Beam.title = Domain.Types.LocationAddress.title address,
         Beam.ward = Domain.Types.LocationAddress.ward address,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.lat = lat,

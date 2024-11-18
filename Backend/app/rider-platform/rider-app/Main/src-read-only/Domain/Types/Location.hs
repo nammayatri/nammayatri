@@ -36,6 +36,7 @@ data LocationAPIEntity = LocationAPIEntity
     placeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     state :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     street :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    title :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ward :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)

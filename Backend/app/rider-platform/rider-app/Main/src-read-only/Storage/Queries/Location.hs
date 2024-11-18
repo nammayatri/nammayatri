@@ -40,6 +40,7 @@ updateAddress address id = do
       Se.Set Beam.placeId (Domain.Types.LocationAddress.placeId address),
       Se.Set Beam.state (Domain.Types.LocationAddress.state address),
       Se.Set Beam.street (Domain.Types.LocationAddress.street address),
+      Se.Set Beam.title (Domain.Types.LocationAddress.title address),
       Se.Set Beam.ward (Domain.Types.LocationAddress.ward address),
       Se.Set Beam.updatedAt _now
     ]
@@ -70,6 +71,7 @@ updateByPrimaryKey (Domain.Types.Location.Location {..}) = do
       Se.Set Beam.placeId (Domain.Types.LocationAddress.placeId address),
       Se.Set Beam.state (Domain.Types.LocationAddress.state address),
       Se.Set Beam.street (Domain.Types.LocationAddress.street address),
+      Se.Set Beam.title (Domain.Types.LocationAddress.title address),
       Se.Set Beam.ward (Domain.Types.LocationAddress.ward address),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.lat lat,
@@ -83,7 +85,7 @@ instance FromTType' Beam.Location Domain.Types.Location.Location where
     pure $
       Just
         Domain.Types.Location.Location
-          { address = Domain.Types.LocationAddress.LocationAddress {street, door, city, state, country, building, areaCode, area, ward, placeId, instructions, extras},
+          { address = Domain.Types.LocationAddress.LocationAddress {street, door, city, state, country, building, areaCode, area, ward, placeId, instructions, title, extras},
             createdAt = createdAt,
             id = Kernel.Types.Id.Id id,
             lat = lat,
@@ -105,6 +107,7 @@ instance ToTType' Beam.Location Domain.Types.Location.Location where
         Beam.placeId = Domain.Types.LocationAddress.placeId address,
         Beam.state = Domain.Types.LocationAddress.state address,
         Beam.street = Domain.Types.LocationAddress.street address,
+        Beam.title = Domain.Types.LocationAddress.title address,
         Beam.ward = Domain.Types.LocationAddress.ward address,
         Beam.createdAt = createdAt,
         Beam.id = Kernel.Types.Id.getId id,
