@@ -40,7 +40,7 @@ getPickupSpecialLocation ::
   DSpecialLocation.SpecialLocation ->
   m (DSpecialLocation.SpecialLocation, Int)
 getPickupSpecialLocation merchantOpCityId pickupSpecialLocation = do
-  pickupSpecialLocationPriority <- B.runInReplica $ QSpecialLocationPriority.findByMerchantOpCityIdAndCategory merchantOpCityId.getId pickupSpecialLocation.category
+  pickupSpecialLocationPriority <- Esq.runInReplica $ QSpecialLocationPriority.findByMerchantOpCityIdAndCategory merchantOpCityId.getId pickupSpecialLocation.category
   return (pickupSpecialLocation, maybe 999 (.pickupPriority) pickupSpecialLocationPriority)
 
 getDropSpecialLocation ::

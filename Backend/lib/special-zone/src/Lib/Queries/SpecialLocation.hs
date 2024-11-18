@@ -94,9 +94,9 @@ makeFullSpecialLocation (D.SpecialLocation {..}, specialShape) = do
         ..
       }
 
-buildSpecialLocationWithGates :: Transactionable m => D.SpecialLocation -> m D.SpecialLocation
+buildSpecialLocationWithGates :: (Transactionable m, EsqDBReplicaFlow m r) => D.SpecialLocation -> m D.SpecialLocation
 buildSpecialLocationWithGates specialLocation = do
-  gates <- QGI.findAllGatesBySpecialLocationIdWithoutGeoJson specialLocation.id
+  gates <- Esq.runInReplica $ QGI.findAllGatesBySpecialLocationIdWithoutGeoJson specialLocation.id
   pure specialLocation {D.gates = map (\(GD.GateInfo {..}) -> D.GatesInfo {..}) gates}
 
 fullSpecialLocationRedisKey :: Text
@@ -125,7 +125,7 @@ findFullSpecialLocationsByMerchantOperatingCityId' mocId = do
       return (specialLocation, F.getGeomGeoJSON)
   mapM makeFullSpecialLocation mbRes
 
-findSpecialLocationsWarriorByMerchantOperatingCityId :: (Transactionable m, CacheFlow m r) => Text -> Text -> m [D.SpecialLocation]
+findSpecialLocationsWarriorByMerchantOperatingCityId :: (Transactionable m, CacheFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> m [D.SpecialLocation]
 findSpecialLocationsWarriorByMerchantOperatingCityId mocId category = do
   Hedis.safeGet (specialLocationWarriorRedisKey category) >>= \case
     Just a -> pure a
@@ -134,7 +134,7 @@ findSpecialLocationsWarriorByMerchantOperatingCityId mocId category = do
       Hedis.set (specialLocationWarriorRedisKey category) specialLocations
       pure specialLocations
 
-findSpecialLocationsWarriorByMerchantOperatingCityId' :: (Transactionable m, CacheFlow m r) => Text -> Text -> m [D.SpecialLocation]
+findSpecialLocationsWarriorByMerchantOperatingCityId' :: (Transactionable m, CacheFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> m [D.SpecialLocation]
 findSpecialLocationsWarriorByMerchantOperatingCityId' mocId category = do
   specialLocationWithoutGates <- Esq.findAll $ do
     specialLocation <- from $ table @SpecialLocationT
@@ -168,7 +168,7 @@ findPickupSpecialLocationByLatLong point = do
   mbSpecialLocation <- Esq.runInReplica $ findSpecialLocationByLatLong' point
   case mbSpecialLocation of
     Just specialLocation -> pure $ Just specialLocation
-    Nothing -> maybe (pure Nothing) (Lib.Queries.SpecialLocation.findById . (.specialLocationId)) =<< QGI.findGateInfoByLatLongWithoutGeoJson point
+    Nothing -> maybe (pure Nothing) (Esq.runInReplica . Lib.Queries.SpecialLocation.findById . (.specialLocationId)) =<< (Esq.runInReplica $ QGI.findGateInfoByLatLongWithoutGeoJson point)
 
 findSpecialLocationByLatLong' :: Transactionable m => LatLong -> m (Maybe D.SpecialLocation)
 findSpecialLocationByLatLong' point = do
