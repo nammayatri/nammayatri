@@ -21,7 +21,7 @@ import qualified API.Internal as Internal
 import qualified API.UI as UI
 import qualified Data.ByteString as BS
 import Data.OpenApi
-import qualified Domain.Action.UI.DriverOnboarding.HyperVergeWebhook as HyperVergeResultWebhook
+import qualified Domain.Action.UI.DriverOnboarding.HyperVergeWebhook as HyperVergeWebhook
 import qualified Domain.Action.UI.DriverOnboarding.IdfyWebhook as DriverOnboarding
 import qualified Domain.Action.UI.Payment as Payment
 import qualified Domain.Action.UI.Payout as Payout
@@ -74,7 +74,8 @@ type MainAPI =
              :> Capture "city" Context.City
              :> SafetyWebhook.SafetyWebhookAPI
          )
-    :<|> HyperVergeResultWebhook.HyperVergeResultWebhookAPI
+    :<|> HyperVergeWebhook.HyperVergeResultWebhookAPI
+    :<|> HyperVergeWebhook.HyperVergeVerificationWebhookAPI
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> JuspayPayout.JuspayPayoutWebhookAPI
          )
@@ -102,6 +103,7 @@ mainServer =
     :<|> juspayWebhookHandlerV2
     :<|> safetyWebhookHandler
     :<|> hyperVergeResultWebhookHandler
+    :<|> hyperVergeVerificaitonWebhookHandler
     :<|> juspayPayoutWebhookHandler
     :<|> juspayPayoutWebhookHandlerV2
     :<|> Dashboard.handler
@@ -193,7 +195,14 @@ hyperVergeResultWebhookHandler ::
   Value ->
   FlowHandler AckResponse
 hyperVergeResultWebhookHandler =
-  withFlowHandlerAPI . HyperVergeResultWebhook.hyperVergeResultWebhookHandler
+  withFlowHandlerAPI . HyperVergeWebhook.hyperVergeResultWebhookHandler
+
+hyperVergeVerificaitonWebhookHandler ::
+  BasicAuthData ->
+  Value ->
+  FlowHandler AckResponse
+hyperVergeVerificaitonWebhookHandler authData =
+  withFlowHandlerAPI . HyperVergeWebhook.hyperVergeVerificaitonWebhookHandler authData
 
 juspayPayoutWebhookHandler ::
   ShortId DM.Merchant ->
