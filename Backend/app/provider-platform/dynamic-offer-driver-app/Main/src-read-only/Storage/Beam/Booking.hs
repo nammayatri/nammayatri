@@ -9,6 +9,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.Booking
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
+import qualified Domain.Types.PrioritizeDriver
 import qualified Domain.Types.Trip
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -47,6 +48,7 @@ data BookingT f = BookingT
     paymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     primaryExophone :: B.C f Kernel.Prelude.Text,
+    prioritizeDrivers :: B.C f (Kernel.Prelude.Maybe [Domain.Types.PrioritizeDriver.PrioritizeDriver]),
     providerId :: B.C f Kernel.Prelude.Text,
     quoteId :: B.C f Kernel.Prelude.Text,
     receiverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

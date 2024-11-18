@@ -251,3 +251,13 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_ra
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_rate_calculation_threshold integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN favourite_driver_buffer_percentage double precision  default 50.0;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN current_scheduled_display_days integer  default 2;

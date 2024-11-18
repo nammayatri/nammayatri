@@ -17,6 +17,8 @@ imports:
   Estimate: Domain.Types.Estimate
   DeliveryPersonDetails: Domain.Types.DeliveryPersonDetails
   TripParty: Domain.Types.Trip
+  Person: Domain.Types.Person
+  PrioritizeDriver : Domain.Types.PrioritizeDriver
 
 Booking:
   derives: "Generic"
@@ -77,6 +79,7 @@ Booking:
     senderDetails: Maybe DeliveryPersonDetails
     receiverDetails: Maybe DeliveryPersonDetails
     initiatedAs: Maybe TripParty
+    prioritizeDrivers : "Maybe [PrioritizeDriver]"
 
   excludedFields:
     - merchantId
@@ -95,6 +98,7 @@ Booking:
     merchantOperatingCityId: Maybe Text
     distanceUnit: Maybe DistanceUnit
     isDashboardRequest: Maybe Bool
+    prioritizeDrivers : Maybe [PrioritizeDriver]
   beamFields:
     tripCategory:
       tripCategory: Maybe TripCategory
@@ -184,6 +188,7 @@ Booking:
     currency: character varying(255)
     tollNames: "text[]"
     estimateId: character varying(255)
+    prioritizeDrivers : "text[]"
 
   default:
       bookingType: "'NormalBooking'"

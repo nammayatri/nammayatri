@@ -13,6 +13,7 @@ import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod
+import qualified Domain.Types.PrioritizeDriver
 import qualified Domain.Types.RiderDetails
 import qualified Domain.Types.Trip
 import Kernel.Prelude
@@ -52,6 +53,7 @@ data Booking = Booking
     paymentMethodId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantPaymentMethod.MerchantPaymentMethod),
     paymentUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     primaryExophone :: Kernel.Prelude.Text,
+    prioritizeDrivers :: Kernel.Prelude.Maybe [Domain.Types.PrioritizeDriver.PrioritizeDriver],
     providerId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     quoteId :: Kernel.Prelude.Text,
     receiverDetails :: Kernel.Prelude.Maybe Domain.Types.DeliveryPersonDetails.DeliveryPersonDetails,

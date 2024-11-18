@@ -65,6 +65,7 @@ data BookingT f = BookingT
     paymentStatus :: B.C f (Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.PaymentStatus),
     paymentUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     primaryExophone :: B.C f Kernel.Prelude.Text,
+    prioritizeDrivers :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     providerId :: B.C f Kernel.Prelude.Text,
     providerUrl :: B.C f Kernel.Prelude.Text,
     quoteId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

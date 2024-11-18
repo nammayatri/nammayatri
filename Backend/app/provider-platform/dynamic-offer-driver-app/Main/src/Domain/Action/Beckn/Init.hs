@@ -24,6 +24,8 @@ import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.Person as DP
+import Domain.Types.PrioritizeDriver as PrioritizeDriver
 import qualified Domain.Types.Quote as DQ
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
@@ -69,7 +71,8 @@ data InitReq = InitReq
     riderPhoneNumber :: Text,
     mbRiderName :: Maybe Text,
     estimateId :: Text,
-    initReqDetails :: Maybe InitReqDetails
+    initReqDetails :: Maybe InitReqDetails,
+    prioritizeDrivers :: Maybe [Id DP.Person]
   }
 
 data InitReqDetails = InitReqDeliveryDetails DTDD.DeliveryDetails
@@ -211,6 +214,7 @@ handler merchantId req validatedReq = do
             estimateId = Just $ Id req.estimateId,
             paymentId = Nothing,
             isDashboardRequest = searchRequest.isDashboardRequest,
+            prioritizeDrivers = (Just . map PrioritizeDriver.FavDriverScheduled) =<< req.prioritizeDrivers,
             ..
           }
     makeBookingDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DSR.SearchRequest -> DTDD.DeliveryDetails -> Id DM.Merchant -> m (Maybe TripParty, Maybe DTDPD.DeliveryPersonDetails, Maybe DTDPD.DeliveryPersonDetails)

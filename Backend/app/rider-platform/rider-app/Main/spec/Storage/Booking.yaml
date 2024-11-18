@@ -162,6 +162,8 @@ Booking:
       distance: Distance
       otpCode: Maybe Text
       derive': Show
+    ConfirmReqV2:
+      prioritizeDrivers: "Maybe [Id Person]"
 
   fields:
     id: Id Booking
@@ -216,6 +218,7 @@ Booking:
     backendAppVersion: Maybe Text
     tripCategory: Maybe TripCategory
     initiatedBy: Maybe TripParty
+    prioritizeDrivers : "[Id Person]"
 
   beamFields:
     estimatedDistance:
@@ -265,6 +268,7 @@ Booking:
     backendConfigVersion: Maybe Text
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
+    prioritizeDrivers : Maybe [Text]
 
   sqlType:
     id: character(36)
@@ -313,6 +317,7 @@ Booking:
     distanceUnit: character varying(255)
     distanceValue: double precision
     estimatedDistanceValue: double precision
+    prioritizeDrivers : "text[]"
 
   default:
     fareProductType: "'ONE_WAY'"
@@ -350,6 +355,7 @@ Booking:
     clientConfigVersion: Kernel.Utils.Version.versionToText <$> clientConfigVersion|E
     backendConfigVersion: Kernel.Utils.Version.versionToText <$> backendConfigVersion|E
     bppEstimateId: itemId|E
+    prioritizeDrivers: if null prioritizeDrivers then Nothing else Just (fmap Kernel.Types.Id.getId prioritizeDrivers)|E
 
   intermediateTransformers:
     toTType:
@@ -377,6 +383,7 @@ Booking:
     clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer|E
     backendConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)|EM
     itemId: bppEstimateId|E
+    prioritizeDrivers: fmap Kernel.Types.Id.Id (fromMaybe [] prioritizeDrivers)|E
 
   extraOperations:
     - EXTRA_QUERY_FILE

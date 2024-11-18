@@ -77,7 +77,7 @@ tfOrderFulfillments uiConfirm isValueAddNP = do
   let fulfillmentId_ = Just uiConfirm.bppQuoteId
   let fulfillmentState_ = Nothing
   let fulfillmentStops_ = Beckn.OnDemand.Utils.Init.mkStops uiConfirm.fromLoc uiConfirm.toLoc Nothing
-  let fulfillmentTags_ = if isValueAddNP then Beckn.OnDemand.Utils.Init.mkFulfillmentTags uiConfirm.maxEstimatedDistance else Nothing
+  let fulfillmentTags_ = if isValueAddNP then Beckn.OnDemand.Utils.Init.mkFulfillmentTags uiConfirm.maxEstimatedDistance uiConfirm.booking.prioritizeDrivers else Nothing
   let fulfillmentType_ = Utils.tripCategoryToFulfillmentType <$> uiConfirm.booking.tripCategory
   let fulfillmentVehicle_ = tfFulfillmentVehicle uiConfirm & Just
   BecknV2.OnDemand.Types.Fulfillment {fulfillmentAgent = fulfillmentAgent_, fulfillmentCustomer = fulfillmentCustomer_, fulfillmentId = fulfillmentId_, fulfillmentState = fulfillmentState_, fulfillmentStops = fulfillmentStops_, fulfillmentTags = fulfillmentTags_, fulfillmentType = fulfillmentType_, fulfillmentVehicle = fulfillmentVehicle_}

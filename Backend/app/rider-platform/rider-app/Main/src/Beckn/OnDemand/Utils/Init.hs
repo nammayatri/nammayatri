@@ -25,9 +25,11 @@ import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Location as Location
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.Person as DP
 import EulerHS.Prelude hiding (id, state)
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Gps as Gps
+import Kernel.Types.Id
 import Kernel.Utils.Common
 
 mkStops :: Location.Location -> Maybe Location.Location -> Maybe Text -> Maybe [Spec.Stop]
@@ -93,17 +95,15 @@ castDPaymentType :: DMPM.PaymentType -> Text
 castDPaymentType DMPM.ON_FULFILLMENT = show Enums.ON_FULFILLMENT
 castDPaymentType DMPM.POSTPAID = show Enums.ON_FULFILLMENT
 
-mkFulfillmentTags :: Maybe Distance -> Maybe [Spec.TagGroup]
-mkFulfillmentTags mbMaxDistance = do
-  if isJust mbMaxDistance
-    then
-      Just
+mkFulfillmentTags :: Maybe Distance -> [Id DP.Person] -> Maybe [Spec.TagGroup]
+mkFulfillmentTags mbMaxDistance prioritizeDrivers =
+  let mbTagGroup' =
         [ Spec.TagGroup
             { tagGroupDescriptor =
                 Just $
                   Spec.Descriptor
-                    { descriptorCode = Just $ show Tag.ESTIMATIONS,
-                      descriptorName = Just $ show Tag.ESTIMATIONS,
+                    { descriptorCode = Just $ show Tag.PRIORITIZE_DRIVERS,
+                      descriptorName = Just $ show Tag.PRIORITIZE_DRIVERS,
                       descriptorShortDesc = Nothing
                     },
               tagGroupDisplay = Just True,
@@ -113,14 +113,44 @@ mkFulfillmentTags mbMaxDistance = do
                       { tagDescriptor =
                           Just $
                             Spec.Descriptor
-                              { descriptorCode = (\_ -> Just $ show Tag.MAX_ESTIMATED_DISTANCE) =<< mbMaxDistance,
-                                descriptorName = (\_ -> Just $ show Tag.MAX_ESTIMATED_DISTANCE) =<< mbMaxDistance,
+                              { descriptorCode = Just $ show Tag.PRIORITIZE_DRIVERS_BOOKING,
+                                descriptorName = Just $ show Tag.PRIORITIZE_DRIVERS_BOOKING,
                                 descriptorShortDesc = Nothing
                               },
-                        tagDisplay = (\_ -> Just True) =<< mbMaxDistance,
-                        tagValue = (Just . show . distanceToHighPrecMeters) =<< mbMaxDistance
+                        tagDisplay = Just True,
+                        tagValue = Just $ show prioritizeDrivers
                       }
                   ]
             }
         ]
-    else Nothing
+          <> maybe
+            []
+            ( \maxDistance ->
+                [ Spec.TagGroup
+                    { tagGroupDescriptor =
+                        Just $
+                          Spec.Descriptor
+                            { descriptorCode = Just $ show Tag.ESTIMATIONS,
+                              descriptorName = Just $ show Tag.ESTIMATIONS,
+                              descriptorShortDesc = Nothing
+                            },
+                      tagGroupDisplay = Just True,
+                      tagGroupList =
+                        Just
+                          [ Spec.Tag
+                              { tagDescriptor =
+                                  Just $
+                                    Spec.Descriptor
+                                      { descriptorCode = Just $ show Tag.MAX_ESTIMATED_DISTANCE,
+                                        descriptorName = Just $ show Tag.MAX_ESTIMATED_DISTANCE,
+                                        descriptorShortDesc = Nothing
+                                      },
+                                tagDisplay = Just True,
+                                tagValue = Just $ show (distanceToHighPrecMeters maxDistance)
+                              }
+                          ]
+                    }
+                ]
+            )
+            mbMaxDistance
+   in Just mbTagGroup'

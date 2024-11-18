@@ -816,6 +816,8 @@ TransporterConfig:
     cachedDevicesOSForSearchRequest: "[Kernel.Types.Version.DeviceType]"
     cancellationRateWindow: Maybe Int
     cancellationRateCalculationThreshold: Maybe Int
+    favouriteDriverBufferPercentage : Maybe Double
+    currentScheduledDisplayDays : Maybe Int
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1123,6 +1125,8 @@ TransporterConfig:
     maxPayoutReferralForADay: "5"
     exotelStatusCheckSchedulerDelay: "120"
     cachedDevicesOSForSearchRequest: "'{}'"
+    favouriteDriverBufferPercentage : "50.0"
+    currentScheduledDisplayDays : "2"
 
   excludedDefaultQueries:
     - findByPrimaryKey

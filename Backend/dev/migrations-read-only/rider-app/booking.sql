@@ -140,6 +140,13 @@ ALTER TABLE atlas_app.booking ADD COLUMN estimated_static_duration integer ;
 
 
 
+ALTER TABLE atlas_app.booking ADD COLUMN prioritize_drivers text[] ;
+
+
+------- SQL updates -------
+
+
+
 
 ------- SQL updates -------
 

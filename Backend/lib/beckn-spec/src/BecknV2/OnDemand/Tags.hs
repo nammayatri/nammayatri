@@ -87,6 +87,7 @@ data BecknTagGroup
   | SETTLEMENT_DETAILS
   | DEVICE_ID_INFO
   | DELIVERY
+  | PRIORITIZE_DRIVERS
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance CompleteTagGroup BecknTagGroup where
@@ -427,6 +428,7 @@ data BecknTag
   | RECEIVER_NAME
   | RECEIVER_LOCATION_INSTRUCTIONS
   | INITIATED_AS
+  | PRIORITIZE_DRIVERS_BOOKING
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where

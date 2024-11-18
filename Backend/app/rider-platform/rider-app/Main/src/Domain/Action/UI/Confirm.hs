@@ -55,8 +55,9 @@ confirm ::
   Id DP.Person ->
   Id DQuote.Quote ->
   Maybe Payment.PaymentMethodId ->
+  [Id DP.Person] ->
   m SConfirm.DConfirmRes
-confirm personId quoteId paymentMethodId = do
+confirm personId quoteId paymentMethodId prioritizeDrivers = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   isLockAcquired <- SConfirm.tryInitTriggerLock quote.requestId
   unless isLockAcquired $ do

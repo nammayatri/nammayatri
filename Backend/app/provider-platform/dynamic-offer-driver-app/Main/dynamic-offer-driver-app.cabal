@@ -283,6 +283,7 @@ library
       Domain.Types.LmsEnumTypes
       Domain.Types.OnCancel
       Domain.Types.OnUpdate
+      Domain.Types.PrioritizeDriver
       Domain.Types.Quote
       Domain.Types.RideRoute
       Domain.Types.UtilsTH

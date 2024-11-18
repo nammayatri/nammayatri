@@ -106,7 +106,8 @@ data BookingAPIEntity = BookingAPIEntity
     isScheduled :: Bool,
     isAlreadyFav :: Maybe Bool,
     favCount :: Maybe Int,
-    cancellationReason :: Maybe BookingCancellationReasonAPIEntity
+    cancellationReason :: Maybe BookingCancellationReasonAPIEntity,
+    prioritizeDrivers :: [Id Person.Person]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -287,7 +288,8 @@ makeBookingAPIEntity booking activeRide allRides estimatedFareBreakups fareBreak
         cancellationReason = mbCancellationReason,
         isAlreadyFav = activeRide >>= (.isAlreadyFav),
         favCount = activeRide >>= (.favCount),
-        tripCategory = booking.tripCategory
+        tripCategory = booking.tripCategory,
+        prioritizeDrivers = booking.prioritizeDrivers
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds

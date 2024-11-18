@@ -60,6 +60,7 @@ data Booking = Booking
     paymentStatus :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.PaymentStatus,
     paymentUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     primaryExophone :: Kernel.Prelude.Text,
+    prioritizeDrivers :: [Kernel.Types.Id.Id Domain.Types.Person.Person],
     providerId :: Kernel.Prelude.Text,
     providerUrl :: Kernel.Types.Common.BaseUrl,
     quoteId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Quote.Quote),
@@ -96,6 +97,8 @@ data BookingDetails
   | DeliveryDetails Domain.Types.Booking.DeliveryBookingDetails
   | OneWayScheduledDetails Domain.Types.Booking.OneWayScheduledBookingDetails
   deriving (Show)
+
+data ConfirmReqV2 = ConfirmReqV2 {prioritizeDrivers :: Kernel.Prelude.Maybe [Kernel.Types.Id.Id Domain.Types.Person.Person]} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data DeliveryBookingDetails = DeliveryBookingDetails {distance :: Kernel.Types.Common.Distance, otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, toLocation :: Domain.Types.Location.Location}
   deriving (Generic, Show)

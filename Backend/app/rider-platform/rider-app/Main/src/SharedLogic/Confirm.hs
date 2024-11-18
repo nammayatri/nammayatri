@@ -68,7 +68,8 @@ import TransactionLogs.Types
 data DConfirmReq = DConfirmReq
   { personId :: Id DP.Person,
     quote :: DQuote.Quote,
-    paymentMethodId :: Maybe Payment.PaymentMethodId
+    paymentMethodId :: Maybe Payment.PaymentMethodId,
+    prioritizeDrivers :: [Id DP.Person]
   }
 
 data DConfirmRes = DConfirmRes
@@ -140,7 +141,7 @@ confirm DConfirmReq {..} = do
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
   let isScheduled = merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
-  (booking, bookingParties) <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled
+  (booking, bookingParties) <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled prioritizeDrivers
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   riderPhone <-
@@ -269,8 +270,9 @@ buildBooking ::
   Maybe Text ->
   Maybe Payment.PaymentMethodId ->
   Bool ->
+  [Id DP.Person] ->
   m (DRB.Booking, [DBPL.BookingPartiesLink])
-buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId isScheduled = do
+buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode paymentMethodId isScheduled prioritizeDrivers = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   bookingParties <- buildPartiesLinks id
@@ -328,7 +330,8 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           specialLocationName = quote.specialLocationName,
           isDashboardRequest = searchRequest.isDashboardRequest,
           tripCategory = quote.tripCategory,
-          initiatedBy = searchRequest.initiatedBy
+          initiatedBy = searchRequest.initiatedBy,
+          prioritizeDrivers = prioritizeDrivers
         },
       bookingParties
     )

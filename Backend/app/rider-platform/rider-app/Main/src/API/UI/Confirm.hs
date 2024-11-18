@@ -49,6 +49,14 @@ type API =
     :> "confirm"
     :> QueryParam "paymentMethodId" Payment.PaymentMethodId
     :> Post '[JSON] ConfirmRes
+    :<|> "rideSearch"
+      :> TokenAuth
+      :> "quotes"
+      :> Capture "quoteId" (Id Quote.Quote)
+      :> "confirmV2"
+      :> QueryParam "paymentMethodId" Payment.PaymentMethodId
+      :> ReqBody '[JSON] (Maybe DRB.ConfirmReqV2)
+      :> Post '[JSON] ConfirmRes
 
 data ConfirmRes = ConfirmRes
   { bookingId :: Id DRB.Booking,
@@ -61,6 +69,7 @@ data ConfirmRes = ConfirmRes
 handler :: FlowServer API
 handler =
   confirm
+    :<|> confirmV2
 
 -- It is confirm UI EP, but we call init beckn EP inside it. confirm beckn EP will be called in on_init
 confirm ::
@@ -70,7 +79,40 @@ confirm ::
   FlowHandler ConfirmRes
 confirm (personId, _) quoteId mbPaymentMethodId =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
-    dConfirmRes <- DConfirm.confirm personId quoteId mbPaymentMethodId
+    dConfirmRes <- DConfirm.confirm personId quoteId mbPaymentMethodId []
+    becknInitReq <- ACL.buildInitReqV2 dConfirmRes
+    bapConfig <- QBC.findByMerchantIdDomainAndVehicle dConfirmRes.merchant.id "MOBILITY" (Utils.mapVariantToVehicle dConfirmRes.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
+    initTtl <- bapConfig.initTTLSec & fromMaybeM (InternalError "Invalid ttl")
+    confirmTtl <- bapConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl")
+    confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
+    let ttlInInt = initTtl + confirmTtl + confirmBufferTtl
+    handle (errHandler dConfirmRes.booking) $ do
+      Metrics.startMetricsBap Metrics.INIT dConfirmRes.merchant.name dConfirmRes.searchRequestId.getId dConfirmRes.booking.merchantOperatingCityId.getId
+      void . withShortRetry $ CallBPP.initV2 dConfirmRes.providerUrl becknInitReq dConfirmRes.merchant.id
+
+    return $
+      ConfirmRes
+        { bookingId = dConfirmRes.booking.id,
+          confirmTtl = ttlInInt
+        }
+  where
+    errHandler booking exc
+      | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking booking
+      | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancelBooking booking
+      | otherwise = throwM exc
+
+confirmV2 ::
+  (Id SP.Person, Id Merchant.Merchant) ->
+  Id Quote.Quote ->
+  Maybe Payment.PaymentMethodId ->
+  Maybe DRB.ConfirmReqV2 ->
+  FlowHandler ConfirmRes
+confirmV2 (personId, _) quoteId mbPaymentMethodId mbConfirmReq =
+  withFlowHandlerAPI . withPersonIdLogTag personId $ do
+    let prioritizeDrivers = case mbConfirmReq of
+          Just req -> fromMaybe [] req.prioritizeDrivers
+          Nothing -> []
+    dConfirmRes <- DConfirm.confirm personId quoteId mbPaymentMethodId prioritizeDrivers
     becknInitReq <- ACL.buildInitReqV2 dConfirmRes
     bapConfig <- QBC.findByMerchantIdDomainAndVehicle dConfirmRes.merchant.id "MOBILITY" (Utils.mapVariantToVehicle dConfirmRes.vehicleVariant) >>= fromMaybeM (InternalError "Beckn Config not found")
     initTtl <- bapConfig.initTTLSec & fromMaybeM (InternalError "Invalid ttl")

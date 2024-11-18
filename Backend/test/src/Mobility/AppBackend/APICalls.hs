@@ -56,7 +56,8 @@ mkAppCancelReq stage =
   CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing Nothing
 
 appConfirmRide :: Text -> Id AbeQuote.Quote -> Maybe Payment.PaymentMethodId -> ClientM ConfirmAPI.ConfirmRes
-appConfirmRide = client (Proxy :: Proxy ConfirmAPI.API)
+appConfirmRideV2 :: Text -> Id AbeQuote.Quote -> Maybe Payment.PaymentMethodId -> Maybe BRB.ConfirmReqV2 -> ClientM ConfirmAPI.ConfirmRes
+appConfirmRide :<|> appConfirmRideV2 = client (Proxy :: Proxy ConfirmAPI.API)
 
 knowYourDriver :: Text -> Id BRide.Ride -> ClientM AppFeedback.DriverProfileResponse
 knowYourFavDriver :: Text -> Text -> ClientM AppFeedback.DriverProfileResponse

@@ -5,10 +5,12 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.Utils as Utils
 import Data.Text as T
 import qualified Domain.Types.MerchantPaymentMethod as DMPM (PaymentCollector (..), PaymentInstrument (..), PaymentMethodInfo (..), PaymentType (..))
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleVariant as VehVar
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error (GenericError (..))
+import Kernel.Types.Id
 import Kernel.Utils.Common (decodeFromText, fromMaybeM)
 
 castVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.VehicleVariant
@@ -55,3 +57,9 @@ mkPaymentMethodInfo Spec.Payment {..} = do
   pType <- fmap (fromMaybe DMPM.ON_FULFILLMENT . decodeFromText) (paymentType & fromMaybeM (InvalidRequest "Payment Params not found"))
   paymentInstrument <- castPaymentInstrument _params
   return $ Just $ DMPM.PaymentMethodInfo {paymentType = pType, ..}
+
+getPrioritizeDrivers :: [Spec.TagGroup] -> Maybe [Id DP.Person]
+getPrioritizeDrivers tagGroups = do
+  tagValue <- Utils.getTagV2 Tag.PRIORITIZE_DRIVERS Tag.PRIORITIZE_DRIVERS_BOOKING (Just tagGroups)
+  mbPrioritizeDrivers <- readMaybe $ T.unpack tagValue
+  Just mbPrioritizeDrivers

@@ -141,6 +141,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
 import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as Plan
+import Domain.Types.PrioritizeDriver as PrioritizeDriver
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchRequestForDriver as DSRD
@@ -427,7 +428,8 @@ data BookingAPIEntity = BookingAPIEntity
     roundTrip :: Maybe Bool,
     returnTime :: Maybe UTCTime,
     distanceToPickup :: Maybe Meters,
-    isScheduled :: Bool
+    isScheduled :: Bool,
+    prioritizeDrivers :: Maybe [PrioritizeDriver.PrioritizeDriver]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -2104,9 +2106,18 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
       let driverLocation = LatLong {lat = dloc.lat, lon = dloc.lon}
       bookings <- mapM (buildBookingAPIEntityFromBooking driverLocation) scheduledBookings
       filteredBookings <- filterM (\booking -> isAbleToReach booking.bookingDetails vehicle.variant transporterConfig.avgSpeedOfVehicle) bookings
-      let sortedBookings = sortBookingsByDistance filteredBookings
-      return $ ScheduledBookingRes sortedBookings
+      filteredBookingsOnValidTime <- filterM (\booking -> isWithinTimeWindow booking.bookingDetails transporterConfig.scheduleRideBufferTime transporterConfig.favouriteDriverBufferPercentage transporterConfig.currentScheduledDisplayDays) filteredBookings
+      excludedBookings <- filterM (\booking -> not <$> isWithinTimeWindow booking.bookingDetails transporterConfig.scheduleRideBufferTime transporterConfig.favouriteDriverBufferPercentage transporterConfig.currentScheduledDisplayDays) filteredBookings
+      filteredBookingsOnFavourite <- filterM (\booking -> validFavDriverFilter booking.bookingDetails.prioritizeDrivers personId) filteredBookingsOnValidTime
+      let sortedBookings = sortBookingsByDistance excludedBookings
+          sortFavBookings = sortBookingsByDistance filteredBookingsOnFavourite
+      return $ ScheduledBookingRes (sortFavBookings <> sortedBookings)
   where
+    validFavDriverFilter :: Maybe [PrioritizeDriver] -> Id SP.Person -> Flow Bool
+    validFavDriverFilter mbPrioritizeDrivers currentDriverId = do
+      let prioritizeDrivers = fromMaybe [] mbPrioritizeDrivers
+      return $ any (\(PrioritizeDriver.FavDriverScheduled favPersonId) -> favPersonId == currentDriverId) prioritizeDrivers
+
     isAbleToReach :: BookingAPIEntity -> DV.VehicleVariant -> Maybe AvgSpeedOfVechilePerKm -> Flow Bool
     isAbleToReach bookingDetails variant avgSpeeds = do
       now <- getCurrentTime
@@ -2142,6 +2153,23 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
             price = priceObject.amountInt,
             priceWithCurrency = mkPriceAPIEntity priceObject
           }
+    isWithinTimeWindow :: BookingAPIEntity -> NominalDiffTime -> Maybe Double -> Maybe Int -> Flow Bool
+    isWithinTimeWindow bookingDetails scheduleRideBufferTime favouriteDriverBufferPercentage currentScheduledDisplayDays = do
+      now <- getCurrentTime
+      let bookingCreatedAt = bookingDetails.createdAt
+          scheduledDisplayDaysToSeconds = realToFrac $ (fromMaybe 2 currentScheduledDisplayDays) * 86400
+          percentageFavValue = realToFrac $ (fromMaybe 50.0 favouriteDriverBufferPercentage) / 100
+          bookingActualStartTime = addUTCTime (-1 * scheduleRideBufferTime) bookingDetails.startTime
+          validBufferTime = (diffUTCTime bookingActualStartTime bookingCreatedAt)
+          validBufferTimeExtended =
+            if (validBufferTime > scheduledDisplayDaysToSeconds)
+              then scheduledDisplayDaysToSeconds * percentageFavValue
+              else validBufferTime * percentageFavValue
+          bufferTimeFromCreated = addUTCTime validBufferTimeExtended bookingCreatedAt
+          validFilter = bufferTimeFromCreated >= now
+      return $ validFilter && not (isNothing bookingDetails.prioritizeDrivers)
+
+-- need to check if more varient to prioritize are added
 
 acceptScheduledBooking ::
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
