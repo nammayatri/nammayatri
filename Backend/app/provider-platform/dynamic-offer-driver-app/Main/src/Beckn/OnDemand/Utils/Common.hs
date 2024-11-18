@@ -1361,7 +1361,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                       descriptorName = Just "Smart Tip Reason",
                       descriptorShortDesc = Nothing
                     },
-              tagValue = show <$> pricing.smartTipReason
+              tagValue = pricing.smartTipReason
             }
     specialLocationTagSingleton specialLocationTag
       | isNothing specialLocationTag = Nothing
