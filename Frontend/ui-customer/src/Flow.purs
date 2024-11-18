@@ -99,7 +99,7 @@ import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
-import Screens.HomeScreen.Transformer (getLocationList, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getTripFromRideHistory, getFormattedContacts, getFareProductType, getEstimateIdFromSelectedServices)
+import Screens.HomeScreen.Transformer (getLocationList, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getTripFromRideHistory, getFormattedContacts, getFareProductType, getEstimateIdFromSelectedServices, getTripDetailsState)
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
@@ -453,6 +453,7 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
         "safetytools" -> hideSplashAndCallFlow $ hybridFlow screen
         "rideConfirmed" -> hideSplashAndCallFlow $ hybridFlow screen
         "rideCompleted" -> hideSplashAndCallFlow $ hybridFlow screen
+        "tripDetail" -> hideSplashAndCallFlow $ hybridFlow screen
         "addHome" -> addFavLocFlow SearchLocationScreenData.initData "HOME_TAG"
         "addWork" -> addFavLocFlow SearchLocationScreenData.initData "WORK_TAG"
         "smd" -> do
@@ -519,6 +520,15 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
                         }
                   )
             activateSafetyScreenFlow
+          else if startsWith "tripDetail" screen then do
+            (GlobalState state) <- getState
+            let tripDetailParam = DS.split (DS.Pattern "$$") screen
+                bookingId = fromMaybe "" $ tripDetailParam !! 1
+            modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { props { fromMyRides = RideCompletedScreen } })
+            (RideBookingRes rideBookingResponse) <- Remote.rideBookingBT bookingId
+            let bookingResp = (RideBookingRes rideBookingResponse)
+            _ <- pure $ getTripDetailsState bookingResp state.tripDetailsScreen
+            tripDetailsScreenFlow
           else
             case breakPrefixAndId screen of
               Just ( Tuple "metroBooking" bookingId )-> do
@@ -595,6 +605,9 @@ hybridFlow flow = do
     "favourites" -> savedLocationFlow HomeScreenFlow
     "rideConfirmed" -> checkRideStatus true false
     "rideCompleted" -> checkRideStatus false false
+    "tripDetail" -> do
+      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { props { fromMyRides = RideCompletedScreen } })
+      tripDetailsScreenFlow
     "safetytools" -> do
       modifyScreenState
         $ NammaSafetyScreenStateType
