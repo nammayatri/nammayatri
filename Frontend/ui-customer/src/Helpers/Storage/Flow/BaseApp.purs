@@ -47,6 +47,7 @@ baseAppStorage = do
     versionName <- lift $ lift $ liftFlow $ getVersionName
     setValueToLocalStore VERSION_NAME $ joinWith "." $ take 3 $ split (Pattern ".") versionName
     setValueToLocalStore BUNDLE_VERSION bundle
+    setValueToLocalStore CONFIRM_QUOTES_POLLING_COUNT "100"
     setValueToLocalStore CONFIG_VERSION config
     setValueToLocalNativeStore BUNDLE_VERSION bundle
     setValueToLocalStore TRACKING_ENABLED "True"
@@ -64,7 +65,7 @@ baseAppStorage = do
     setValueToLocalStore BUNDLE_TIME_OUT "1000"
     setValueToLocalStore MESSAGES_DELAY "0"
     setValueToLocalStore REALLOCATE_PRODUCT_ENABLED (show appConfig.feature.enableReAllocation)
-    let getFirstRide = getValueToLocalStore CUSTOMER_FIRST_RIDE 
+    let getFirstRide = getValueToLocalStore CUSTOMER_FIRST_RIDE
         firstRideEvent = if getFirstRide == "__failed" then "false" else getFirstRide
     setValueToLocalStore CUSTOMER_FIRST_RIDE firstRideEvent
     when (sessionId `elem` ["__failed", "(null)"]) do
