@@ -10,6 +10,7 @@ import Data.Maybe (Maybe)
 import Language.Types(STR(..))
 import Data.Show.Generic (genericShow)
 import Common.RemoteConfig.Types as CRT
+import Common.Types.App
 
 type TipsConfigRC = {
   sedan :: Array Int,
@@ -129,4 +130,8 @@ type VariantBasedBoostSearchConfig = {
   suvPlus :: BoostSearchConfig,
   default :: BoostSearchConfig,
   bookAny :: BoostSearchConfig
+}
+
+type RemoteCancellationReason = {
+    cancellationReasons :: Array OptionButtonList
 }
