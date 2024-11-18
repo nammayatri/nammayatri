@@ -313,7 +313,7 @@ activeTicketView push ticketCard vehicleType=
           , textView $ [
               width WRAP_CONTENT
             , height WRAP_CONTENT
-            , text $ (show ticketCard.noOfTickets) <> " " <> (getString TICKETS)
+            , text $ (show ticketCard.noOfTickets) <> " " <> if ticketCard.noOfTickets > 1 then (getString TICKETS) else (getString TICKET)
             , color Color.black700
             ] <> FontStyle.tags TypoGraphy
           ]

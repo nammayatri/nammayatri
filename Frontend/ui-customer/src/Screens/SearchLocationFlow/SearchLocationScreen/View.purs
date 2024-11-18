@@ -62,7 +62,7 @@ import Data.Maybe (isNothing, maybe, Maybe(..), isJust, fromMaybe ) as MB
 import Resources.Constants (getDelayForAutoComplete)
 import Engineering.Helpers.Commons as EHC
 import Helpers.CommonView (emptyTextView)
-import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getLocationName, fetchAndUpdateCurrentLocation, getDefaultPixelSize, getCurrentLocationMarker, storeCallBackCustomer, getCityFromString, getDistanceString)
+import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getLocationName, fetchAndUpdateCurrentLocation, getDefaultPixelSize, getCurrentLocationMarker, storeCallBackCustomer, getCityFromString, getDistanceString,getSortedStops )
 import JBridge (showMap, debounceFunction, startLottieProcess, toast, lottieAnimationConfig, storeCallBackLocateOnMap, getLayoutBounds, setMapPadding, removeMarker, handleLocateOnMapCallback, getKeyInSharedPrefKeys)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
@@ -696,10 +696,10 @@ searchLocationView push state globalProps = let
                               BusStationSelectionAction -> DA.null state.data.updatedMetroStations
                               BusSearchSelectionAction -> ( DA.null state.data.updatedStopsSearchedList &&  DA.null state.data.updatedRouteSearchedList ) && (DA.length decodedCachedRoutes == 0  && DA.length decodedCachedStops == 0)
                               BusRouteSelectionAction -> DA.null state.data.updatedStopsSearchedList
-                              NoBusRouteSelectionAction -> false
+                              NoBusRouteSelectionAction -> DA.null state.data.locationList
                               BusStopSelectionAction ->  DA.null state.data.updatedStopsSearchedList
                               _ -> DA.null state.data.locationList
-      , headerText : if DA.elem state.props.actionType [BusRouteSelectionAction,BusStopSelectionAction] then getString CHECK_SPELLING_AND_TRY_AGAIN else (getVarString WELCOME_TEXT [appName]) <> "!"
+      , headerText : if DA.elem state.props.actionType [BusRouteSelectionAction,BusStopSelectionAction] || (state.props.actionType == NoBusRouteSelectionAction && DA.length state.data.locationList == 0 ) then getString CHECK_SPELLING_AND_TRY_AGAIN else (getVarString WELCOME_TEXT [appName]) <> "!"
       , descText : if DA.elem state.props.actionType [BusRouteSelectionAction,BusStopSelectionAction] then "" else getString START_TYPING_TO_SEARCH_PLACES
         }
 
@@ -798,7 +798,7 @@ predictionsView push state globalProps = let
                                                                then busRouteArray validDecodedRoutes
                                                                else busStopArray validDecodedStops
                                     BusRouteSelectionAction -> busStopArray state.data.updatedStopsSearchedList
-                                    BusStopSelectionAction ->  busStopArray state.data.updatedStopsSearchedList
+                                    BusStopSelectionAction ->  busStopArray $ if state.props.focussedTextField == MB.Just SearchLocPickup  then getSortedStops state.data.updatedStopsSearchedList else state.data.updatedStopsSearchedList
                                     NoBusRouteSelectionAction -> state.data.locationList
                                     _ -> state.data.locationList)
         ]

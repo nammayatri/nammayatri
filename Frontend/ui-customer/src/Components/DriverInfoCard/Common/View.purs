@@ -364,7 +364,7 @@ sourceDestinationView push config =
         , cornerRadius if os == "IOS" then 20.0 else 32.0
         , stroke $ "1," <> Color.grey900
         , padding $ Padding 12 8 12 8
-        , visibility $ boolToVisibility $ (config.isEditPickupEnabled && config.rideAccepted)
+        , visibility $ boolToVisibility $ (config.isEditPickupEnabled && config.rideAccepted) && (config.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE)
         , onClick push $ const config.editingPickupLocation
         , rippleColor Color.rippleShade
         , accessibility DISABLE

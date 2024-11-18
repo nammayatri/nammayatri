@@ -328,7 +328,10 @@ recentTicketsView push state =
   ]
   where 
     showAllOrTrimmed :: Array ST.MetroTicketCardData -> Array ST.MetroTicketCardData
-    showAllOrTrimmed ticketData = if state.props.showAllTickets then ticketData else DA.take 3 ticketData
+    showAllOrTrimmed ticketData = if state.props.showAllTickets then 
+                                    if DA.length ticketData > 4 then DA.take 5 ticketData 
+                                    else ticketData
+                                  else DA.take 3 ticketData
 
 ticketCardView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketCardData -> PrestoDOM (Effect Unit) w
 ticketCardView push ticketData =
