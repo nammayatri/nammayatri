@@ -191,7 +191,8 @@ selectTipView push state =
   ][ textView $ 
     [ text state.tipViewProps.primaryText
     , color Color.black900
-    , margin $ MarginBottom 12
+    , gravity CENTER
+    , margin $ MarginBottom 6
     ] <> FontStyle.body1 LanguageStyle
   , tipsHorizontalView push state
   ]
@@ -214,27 +215,48 @@ tipsHorizontalView push state =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , gravity CENTER
-          ][ linearLayout
-            [ width $ if index == 0 then WRAP_CONTENT else V 84
-            , height $ V 36
-            , background Color.white900
-            , margin $ MarginLeft if index == 0 then 0 else 8
-            , cornerRadius 7.0
-            , gravity CENTER
-            , padding $ if index == 0 then PaddingHorizontal 8 8 else Padding 0 0 0 0
-            , stroke $ "1," <> (if (state.tipViewProps.activeIndex == index) then Color.blue800 else Color.grey900)
-            , onClick push $ const $ TipBtnClick index (fromMaybe 0 (state.customerTipArrayWithValues !! index)) state.customerTipArrayWithValues
-            , accessibility ENABLE
-            , accessibilityHint $ "₹" <> show (fromMaybe 0 (state.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " : Button")
-            ][textView $ 
-              [ text $ item
-              , color $ Color.black800
-              , width WRAP_CONTENT
-              , height WRAP_CONTENT
-              , lineHeight "12"
-              , accessibility DISABLE
-              ] <> FontStyle.body6 LanguageStyle
+          ][
+            relativeLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
             ]
+            [ linearLayout
+              [ width $ if index == 0 then WRAP_CONTENT else V 84
+              , height $ V 36
+              , background Color.white900
+              , margin $ if index == 0 then Margin 0 12 0 0 else Margin 8 12 0 0
+              , cornerRadius 7.0
+              , gravity CENTER
+              , padding $ if index == 0 then PaddingHorizontal 8 8 else Padding 0 0 0 0
+              , stroke $ "1," <> (if (state.tipViewProps.activeIndex == index) then Color.green900 else Color.grey900)
+              , onClick push $ const $ TipBtnClick index (fromMaybe 0 (state.customerTipArrayWithValues !! index)) state.customerTipArrayWithValues
+              , accessibility ENABLE
+              , accessibilityHint $ "₹" <> show (fromMaybe 0 (state.customerTipArrayWithValues !! index)) <> " Tip"<> (if (state.tipViewProps.activeIndex == index) then " Selected" else " : Button")
+              ][textView $ 
+                [ text $ item
+                , color $ Color.black800
+                , width WRAP_CONTENT
+                , height WRAP_CONTENT
+                , lineHeight "12"
+                , accessibility DISABLE
+                ] <> FontStyle.body6 LanguageStyle
+              ],
+              linearLayout 
+              [  height WRAP_CONTENT
+              , width $ V 64
+              , margin $ Margin 18 0 0 0
+              , gravity CENTER
+              , gradient (Linear 90.0 [Color.green900, Color.darkGreen])
+              , cornerRadius 40.0
+              , visibility $ boolToVisibility $ state.tipViewProps.activeIndex == index
+              ][ textView $ [
+                text "Selected"
+              , color Color.white900
+              , padding $ Padding 6 2 6 2
+              ] <> FontStyle.tags TypoGraphy
+              ]
+          ]
           ]
       ) state.customerTipArray
     )
