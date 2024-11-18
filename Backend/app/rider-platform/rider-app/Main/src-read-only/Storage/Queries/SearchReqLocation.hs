@@ -40,6 +40,7 @@ updateByPrimaryKey (Domain.Types.SearchReqLocation.SearchReqLocation {..}) = do
       Se.Set Beam.placeId (Domain.Types.LocationAddress.placeId address),
       Se.Set Beam.state (Domain.Types.LocationAddress.state address),
       Se.Set Beam.street (Domain.Types.LocationAddress.street address),
+      Se.Set Beam.title (Domain.Types.LocationAddress.title address),
       Se.Set Beam.ward (Domain.Types.LocationAddress.ward address),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.lat lat,
@@ -53,7 +54,7 @@ instance FromTType' Beam.SearchReqLocation Domain.Types.SearchReqLocation.Search
     pure $
       Just
         Domain.Types.SearchReqLocation.SearchReqLocation
-          { address = mkLocationAddress area areaCode building city country door extras instructions placeId state street ward,
+          { address = mkLocationAddress area areaCode building city country door extras instructions placeId state street title ward,
             createdAt = createdAt,
             id = Kernel.Types.Id.Id id,
             lat = lat,
@@ -75,6 +76,7 @@ instance ToTType' Beam.SearchReqLocation Domain.Types.SearchReqLocation.SearchRe
         Beam.placeId = Domain.Types.LocationAddress.placeId address,
         Beam.state = Domain.Types.LocationAddress.state address,
         Beam.street = Domain.Types.LocationAddress.street address,
+        Beam.title = Domain.Types.LocationAddress.title address,
         Beam.ward = Domain.Types.LocationAddress.ward address,
         Beam.createdAt = createdAt,
         Beam.id = Kernel.Types.Id.getId id,

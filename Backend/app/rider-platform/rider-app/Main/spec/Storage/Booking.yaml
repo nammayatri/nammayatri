@@ -58,6 +58,7 @@ BookingLocation:
       ward: Maybe Text
       placeId: Maybe Text
       instructions: Maybe Text
+      title: Maybe Text
       extras: Maybe Text
 
   beamFields:
@@ -73,6 +74,7 @@ BookingLocation:
       ward: Maybe Text
       placeId: Maybe Text
       instructions: Maybe Text
+      title: Maybe Text
       extras: Maybe Text
 
   toTType:
@@ -87,10 +89,11 @@ BookingLocation:
     ward: Domain.Types.LocationAddress.ward|I
     placeId: Domain.Types.LocationAddress.placeId|I
     instructions: Domain.Types.LocationAddress.instructions|I
+    title: Domain.Types.LocationAddress.title|I
     extras: Domain.Types.LocationAddress.extras|I
 
   fromTType:
-    address: Domain.Types.LocationAddress.LocationAddress {street,door,city,state,country,building,areaCode,area,ward,placeId,instructions,extras}|E
+    address: Domain.Types.LocationAddress.LocationAddress {street,door,city,state,country,building,areaCode,area,ward,placeId,instructions,title,extras}|E
 
   excludedFields: [merchantId, merchantOperatingCityId]
 
