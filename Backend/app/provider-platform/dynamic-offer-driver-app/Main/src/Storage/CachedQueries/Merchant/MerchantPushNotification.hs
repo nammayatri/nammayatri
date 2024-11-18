@@ -18,6 +18,7 @@ module Storage.CachedQueries.Merchant.MerchantPushNotification
     findAllByMerchantOpCityId,
     findMatchingMerchantPN,
     clearCache,
+    clearCacheById,
   )
 where
 
@@ -87,3 +88,7 @@ makeMerchantOpCityIdAndMessageKeyAndTripCategory id messageKey tripCategory = "C
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> m ()
 clearCache merchantOpCityId messageKey tripCategory = do
   Hedis.del (makeMerchantOpCityIdAndMessageKeyAndTripCategory merchantOpCityId messageKey tripCategory)
+
+clearCacheById :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
+clearCacheById merchantOpCityId = do
+  Hedis.del (makeMerchantOpCityIdKey merchantOpCityId)

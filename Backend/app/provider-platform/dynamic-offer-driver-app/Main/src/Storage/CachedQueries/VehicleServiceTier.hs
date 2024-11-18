@@ -69,3 +69,7 @@ findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOpCityId = do
   Hedis.safeGet (makeVehicleCategoryAndCityIdKey vehicleCategory merchantOpCityId) >>= \case
     Just a -> return a
     Nothing -> cacheByMerchantOpCityIdAndVehicleCategory vehicleCategory merchantOpCityId /=<< Queries.findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOpCityId
+
+clearCache :: Hedis.HedisFlow m r => Id DMOC.MerchantOperatingCity -> m ()
+clearCache merchantOperatingCityId = do
+  Hedis.del (makeMerchantOpCityIdKey merchantOperatingCityId)

@@ -19,6 +19,7 @@ module Storage.CachedQueries.Merchant.MerchantServiceConfig
     findByServiceAndCity,
     findOne,
     clearCache,
+    clearCacheById,
     cacheMerchantServiceConfig,
     upsertMerchantServiceConfig,
   )
@@ -96,3 +97,7 @@ clearCache serviceName opCity = do
 
 upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> Id DMOC.MerchantOperatingCity -> m ()
 upsertMerchantServiceConfig = Queries.upsertMerchantServiceConfig
+
+clearCacheById :: Hedis.HedisFlow m r => Id DMOC.MerchantOperatingCity -> m ()
+clearCacheById opCity = do
+  Hedis.withCrossAppRedis $ Hedis.del (makeMerchantOpCityIdKey opCity)

@@ -1623,6 +1623,7 @@ normalizeName = T.strip . T.toLower
 
 postMerchantConfigOperatingCityCreate :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
 postMerchantConfigOperatingCityCreate merchantShortId city req = do
+  when (req.city == Context.AnyCity) $ throwError $ InvalidRequest "This Operation is not Allowed For AnyCity"
   baseMerchant <- findMerchantByShortId merchantShortId
   let baseMerchantId = baseMerchant.id
   baseOperatingCityId <- CQMOC.getMerchantOpCityId Nothing baseMerchant (Just city)
@@ -1829,42 +1830,63 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             return $ Just newBecknConfig
           _ -> return Nothing
       Nothing -> return Nothing
+  finally
+    ( do
+        whenJust mbGeometry $ \geometry -> QGEO.create geometry
+        whenJust mbNewMerchant $ \newMerchant -> QM.create newMerchant
+        whenJust mbNewOperatingCity $ \newOperatingCity -> CQMOC.create newOperatingCity
+        whenJust mbInteglligentPoolConfig $ \newIntelligentPoolConfig -> CQDIPC.create newIntelligentPoolConfig
+        whenJust mbDriverPoolConfigs $ \newDriverPoolConfigs -> mapM_ CQDPC.create newDriverPoolConfigs
+        whenJust mbFareProducts $ \newFareProducts -> mapM_ CQFProduct.create newFareProducts
+        whenJust mbVehicleServiceTier $ \newVehicleServiceTiers -> CQVST.createMany newVehicleServiceTiers
+        whenJust mbGoHomeConfig $ \newGoHomeConfig -> CQGHC.create newGoHomeConfig
+        whenJust mbLeaderBoardConfig $ \newLeaderBoardConfigs -> mapM_ CQLBC.create newLeaderBoardConfigs
+        whenJust mbMerchantMessages $ \newMerchantMessages -> mapM_ CQMM.create newMerchantMessages
+        whenJust mbMerchantOverlays $ \newMerchantOverlays -> mapM_ CQMO.create newMerchantOverlays
+        whenJust mbMerchantPaymentMethods $ \newMerchantPaymentMethods -> mapM_ CQMPM.create newMerchantPaymentMethods
+        whenJust mbMerchantServiceUsageConfig $ \newMerchantServiceUsageConfig -> CQMSUC.create newMerchantServiceUsageConfig
+        whenJust mbMerchantServiceConfigs $ \newMerchantServiceConfigs -> mapM_ CQMSC.create newMerchantServiceConfigs
+        whenJust mbMerchantPushNotification $ \newMerchantPushNotifications -> mapM_ CQMPN.create newMerchantPushNotifications
+        whenJust mbDocumentVerificationConfigs $ \newDocumentVerificationConfigs -> mapM_ CQDVC.create newDocumentVerificationConfigs
+        whenJust mbPayoutConfigs $ \newPayoutConfigs -> mapM_ CPC.create newPayoutConfigs
+        whenJust mbTransporterConfig $ \newTransporterConfig -> CQTC.create newTransporterConfig
+        whenJust mbBecknConfig $ \becknConfig -> mapM_ SQBC.create becknConfig
 
-  whenJust mbGeometry $ \geometry -> QGEO.create geometry
-  whenJust mbNewMerchant $ \newMerchant -> QM.create newMerchant
-  whenJust mbNewOperatingCity $ \newOperatingCity -> CQMOC.create newOperatingCity
-  whenJust mbInteglligentPoolConfig $ \newIntelligentPoolConfig -> CQDIPC.create newIntelligentPoolConfig
-  whenJust mbDriverPoolConfigs $ \newDriverPoolConfigs -> mapM_ CQDPC.create newDriverPoolConfigs
-  whenJust mbFareProducts $ \newFareProducts -> mapM_ CQFProduct.create newFareProducts
-  whenJust mbVehicleServiceTier $ \newVehicleServiceTiers -> CQVST.createMany newVehicleServiceTiers
-  whenJust mbGoHomeConfig $ \newGoHomeConfig -> CQGHC.create newGoHomeConfig
-  whenJust mbLeaderBoardConfig $ \newLeaderBoardConfigs -> mapM_ CQLBC.create newLeaderBoardConfigs
-  whenJust mbMerchantMessages $ \newMerchantMessages -> mapM_ CQMM.create newMerchantMessages
-  whenJust mbMerchantOverlays $ \newMerchantOverlays -> mapM_ CQMO.create newMerchantOverlays
-  whenJust mbMerchantPaymentMethods $ \newMerchantPaymentMethods -> mapM_ CQMPM.create newMerchantPaymentMethods
-  whenJust mbMerchantServiceUsageConfig $ \newMerchantServiceUsageConfig -> CQMSUC.create newMerchantServiceUsageConfig
-  whenJust mbMerchantServiceConfigs $ \newMerchantServiceConfigs -> mapM_ CQMSC.create newMerchantServiceConfigs
-  whenJust mbMerchantPushNotification $ \newMerchantPushNotifications -> mapM_ CQMPN.create newMerchantPushNotifications
-  whenJust mbDocumentVerificationConfigs $ \newDocumentVerificationConfigs -> mapM_ CQDVC.create newDocumentVerificationConfigs
-  whenJust mbPayoutConfigs $ \newPayoutConfigs -> mapM_ CPC.create newPayoutConfigs
-  whenJust mbTransporterConfig $ \newTransporterConfig -> CQTC.create newTransporterConfig
-  whenJust mbBecknConfig $ \becknConfig -> mapM_ SQBC.create becknConfig
+        whenJust mbExophone $ \exophones ->
+          whenJust (find (\exophone -> exophone.exophoneType == DExophone.CALL_RIDE) exophones) $ \exophone -> do
+            exophone' <- buildNewExophone newMerchantId newMerchantOperatingCityId now exophone
+            CQExophone.create exophone'
+        whenJust mbIssueConfig $ \newIssueConfig -> CQIssueConfig.create newIssueConfig
 
-  whenJust mbExophone $ \exophones ->
-    whenJust (find (\exophone -> exophone.exophoneType == DExophone.CALL_RIDE) exophones) $ \exophone -> do
-      exophone' <- buildNewExophone newMerchantId newMerchantOperatingCityId now exophone
-      CQExophone.create exophone'
-  whenJust mbIssueConfig $ \newIssueConfig -> CQIssueConfig.create newIssueConfig
+        when (req.enableForMerchant) $ do
+          let origin = maybe baseMerchant.geofencingConfig.origin (.geofencingConfig.origin) mbNewMerchant
+              destination = maybe baseMerchant.geofencingConfig.destination (.geofencingConfig.destination) mbNewMerchant
+              newOrigin = updateGeoRestriction origin
+              newDestination = updateGeoRestriction destination
 
-  when (req.enableForMerchant) $ do
-    let origin = maybe baseMerchant.geofencingConfig.origin (.geofencingConfig.origin) mbNewMerchant
-        destination = maybe baseMerchant.geofencingConfig.destination (.geofencingConfig.destination) mbNewMerchant
-        newOrigin = updateGeoRestriction origin
-        newDestination = updateGeoRestriction destination
-
-    when (checkGeofencingConfig origin && checkGeofencingConfig destination) $ do
-      CQM.updateGeofencingConfig newMerchantId newOrigin newDestination
-      CQM.clearCache $ fromMaybe baseMerchant mbNewMerchant
+          when (checkGeofencingConfig origin && checkGeofencingConfig destination) $ do
+            CQM.updateGeofencingConfig newMerchantId newOrigin newDestination
+            CQM.clearCache $ fromMaybe baseMerchant mbNewMerchant
+    )
+    ( do
+        CQDIPC.clearCache newMerchantOperatingCityId
+        CQDPC.clearCache newMerchantOperatingCityId
+        CQFProduct.clearCacheById newMerchantOperatingCityId
+        CQVST.clearCache newMerchantOperatingCityId
+        CQLBC.clearCache newMerchantOperatingCityId
+        CQMM.clearCacheById newMerchantOperatingCityId
+        CQMO.clearCache newMerchantOperatingCityId
+        CQMPM.clearCache newMerchantOperatingCityId
+        CQMSUC.clearCache newMerchantOperatingCityId
+        CQMSC.clearCacheById newMerchantOperatingCityId
+        CQMPN.clearCacheById newMerchantOperatingCityId
+        CQDVC.clearCache newMerchantOperatingCityId
+        CPC.clearCacheById newMerchantOperatingCityId
+        CQTC.clearCache newMerchantOperatingCityId
+        CQIssueConfig.clearIssueConfigCache (cast newMerchantOperatingCityId) ICommon.DRIVER
+        exoPhone <- CQExophone.findAllCallExophoneByMerchantOpCityId newMerchantOperatingCityId
+        CQExophone.clearCache newMerchantOperatingCityId exoPhone
+    )
 
   pure $ Common.CreateMerchantOperatingCityRes newMerchantOperatingCityId.getId
   where

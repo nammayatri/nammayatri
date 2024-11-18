@@ -364,6 +364,7 @@ normalizeName = T.strip . T.toLower
 
 postMerchantConfigOperatingCityCreate :: ShortId DM.Merchant -> Context.City -> Common.CreateMerchantOperatingCityReqT -> Flow Common.CreateMerchantOperatingCityRes
 postMerchantConfigOperatingCityCreate merchantShortId city req = do
+  when (req.city == Context.AnyCity) $ throwError $ InvalidRequest "This Operation is not Allowed For AnyCity"
   baseMerchant <- findMerchantByShortId merchantShortId
   baseOperatingCity <- CQMOC.findByMerchantIdAndCity baseMerchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> baseMerchant.id.getId <> "-city-" <> show city)
   now <- getCurrentTime
@@ -463,9 +464,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- issue config
   mbIssueConfig <-
-    CQIssueConfig.findByMerchantOpCityId (cast newMerchantOperatingCityId) ICommon.DRIVER >>= \case
+    CQIssueConfig.findByMerchantOpCityId (cast newMerchantOperatingCityId) ICommon.CUSTOMER >>= \case
       Nothing -> do
-        issueConfig <- CQIssueConfig.findByMerchantOpCityId (cast baseOperatingCityId) ICommon.DRIVER >>= fromMaybeM (InvalidRequest "Issue Config not found")
+        issueConfig <- CQIssueConfig.findByMerchantOpCityId (cast baseOperatingCityId) ICommon.CUSTOMER >>= fromMaybeM (InvalidRequest "Issue Config not found")
         newIssueConfig <- buildIssueConfig newMerchantId newMerchantOperatingCityId now issueConfig
         return $ Just newIssueConfig
       _ -> return Nothing
@@ -479,32 +480,43 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         return $ Just newBecknConfig
       _ -> return Nothing
 
-  whenJust mbGeometry $ \geometry -> QGEO.create geometry
-  whenJust mbNewMerchant $ \newMerchant -> QM.create newMerchant
-  whenJust mbNewOperatingCity $ \newOperatingCity -> CQMOC.create newOperatingCity
-  whenJust mbMerchantMessages $ \merchantMessages -> mapM_ CQMM.create merchantMessages
-  whenJust mbMerchantPaymentMethods $ \mPM -> mapM_ CQMPM.create mPM
-  whenJust mbMerchantServiceUsageConfig $ \mSUC -> CQMSUC.create mSUC
-  whenJust mbMerchantServiceConfig $ \merchantServiceConfigs -> mapM_ SQMSC.create merchantServiceConfigs
-  whenJust mbBecknConfig $ \becknConfig -> mapM_ SQBC.create becknConfig
-  whenJust mbRiderConfig $ \riderConfig -> CQRC.create riderConfig
+  finally
+    ( do
+        whenJust mbGeometry $ \geometry -> QGEO.create geometry
+        whenJust mbNewMerchant $ \newMerchant -> QM.create newMerchant
+        whenJust mbNewOperatingCity $ \newOperatingCity -> CQMOC.create newOperatingCity
+        whenJust mbMerchantMessages $ \merchantMessages -> mapM_ CQMM.create merchantMessages
+        whenJust mbMerchantPaymentMethods $ \mPM -> mapM_ CQMPM.create mPM
+        whenJust mbMerchantServiceUsageConfig $ \mSUC -> CQMSUC.create mSUC
+        whenJust mbMerchantServiceConfig $ \merchantServiceConfigs -> mapM_ SQMSC.create merchantServiceConfigs
+        whenJust mbBecknConfig $ \becknConfig -> mapM_ SQBC.create becknConfig
+        whenJust mbRiderConfig $ \riderConfig -> CQRC.create riderConfig
 
-  whenJust mbExophone $ \exophones -> do
-    whenJust (find (\ex -> ex.callService == Exotel) exophones) $ \exophone -> do
-      exophone' <- buildNewExophone newMerchantId newMerchantOperatingCityId now exophone
-      CQExophone.create exophone'
-  whenJust mbIssueConfig $ \issueConfig -> CQIssueConfig.create issueConfig
+        whenJust mbExophone $ \exophones -> do
+          whenJust (find (\ex -> ex.callService == Exotel) exophones) $ \exophone -> do
+            exophone' <- buildNewExophone newMerchantId newMerchantOperatingCityId now exophone
+            CQExophone.create exophone'
+        whenJust mbIssueConfig $ \issueConfig -> CQIssueConfig.create issueConfig
 
-  when (req.enableForMerchant) $ do
-    let origin = maybe baseMerchant.geofencingConfig.origin (.geofencingConfig.origin) mbNewMerchant
-        destination = maybe baseMerchant.geofencingConfig.destination (.geofencingConfig.destination) mbNewMerchant
-        newOrigin = updateGeoRestriction origin
-        newDestination = updateGeoRestriction destination
+        when (req.enableForMerchant) $ do
+          let origin = maybe baseMerchant.geofencingConfig.origin (.geofencingConfig.origin) mbNewMerchant
+              destination = maybe baseMerchant.geofencingConfig.destination (.geofencingConfig.destination) mbNewMerchant
+              newOrigin = updateGeoRestriction origin
+              newDestination = updateGeoRestriction destination
 
-    when (checkGeofencingConfig origin && checkGeofencingConfig destination) $ do
-      CQM.updateGeofencingConfig newMerchantId newOrigin newDestination
-      CQM.clearCache $ fromMaybe baseMerchant mbNewMerchant
-
+          when (checkGeofencingConfig origin && checkGeofencingConfig destination) $ do
+            CQM.updateGeofencingConfig newMerchantId newOrigin newDestination
+            CQM.clearCache $ fromMaybe baseMerchant mbNewMerchant
+    )
+    ( do
+        CQMM.clearCacheById newMerchantOperatingCityId
+        CQMPM.clearCache newMerchantOperatingCityId
+        CQMSUC.clearCache newMerchantOperatingCityId
+        CQRC.clearCache newMerchantOperatingCityId
+        CQIssueConfig.clearIssueConfigCache (cast newMerchantOperatingCityId) ICommon.CUSTOMER
+        exoPhone <- CQExophone.findAllByMerchantOperatingCityId newMerchantOperatingCityId
+        CQExophone.clearCache newMerchantOperatingCityId exoPhone
+    )
   pure $ Common.CreateMerchantOperatingCityRes newMerchantOperatingCityId.getId
   where
     updateGeoRestriction = \case

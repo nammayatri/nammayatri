@@ -18,6 +18,7 @@ module Storage.CachedQueries.Merchant.Overlay
     findAllByMerchantOpCityId,
     findByMerchantOpCityIdPNKeyLangaugeUdf,
     clearMerchantIdPNKeyLangaugeUdf,
+    clearCache,
   )
 where
 
@@ -69,3 +70,7 @@ makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1 = "CachedQueries:Overlay:M
 
 clearMerchantIdPNKeyLangaugeUdf :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> m ()
 clearMerchantIdPNKeyLangaugeUdf merchantOpCityId overlayKey language udf1 = Hedis.del $ makeMerchantIdPNKeyLangaugeUdf merchantOpCityId overlayKey language udf1
+
+clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
+clearCache merchantOperatingCityId = do
+  Hedis.del (makeMerchantOpCityIdKey merchantOperatingCityId)
