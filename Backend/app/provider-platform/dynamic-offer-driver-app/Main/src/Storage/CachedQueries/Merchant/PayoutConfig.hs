@@ -19,6 +19,7 @@ module Storage.CachedQueries.Merchant.PayoutConfig
     findByPrimaryKey,
     findByMerchantOpCityIdAndIsPayoutEnabled,
     clearCache,
+    clearCacheById,
   )
 where
 
@@ -82,3 +83,6 @@ makeCityIdKey id = "driver-offer:CachedQueries:MerchantPayoutConfig:CityId-" <> 
 -- Call it after any update
 clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> Bool -> m ()
 clearCache merchantOpCityId isPayoutEnabled = Hedis.del (makeMerchantOpCityIdKey merchantOpCityId isPayoutEnabled)
+
+clearCacheById :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
+clearCacheById merchantOpCityId = Hedis.del (makeCityIdKey merchantOpCityId)
