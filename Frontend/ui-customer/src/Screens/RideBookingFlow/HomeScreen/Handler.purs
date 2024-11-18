@@ -41,7 +41,6 @@ homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do
   (GlobalState state) <- getState
   isHybridApp' <- liftFlowBT HU.isHybridApp
-  let _ = spy "utkarsh" state.homeScreen.props.currentStage
   if isHybridApp' then
     if state.homeScreen.props.currentStage == HomeScreen then do
         void $ pure $ HU.emitTerminateApp Nothing true
