@@ -676,7 +676,7 @@ config =
             , rentalWaitingChargeConfig {
                 cabs {
                   freeMinutes = 3.0
-                , perMinCharges = 1.0
+                , perMinCharges = 2.0
                 }
               }
             , intercityWaitingChargeConfig {

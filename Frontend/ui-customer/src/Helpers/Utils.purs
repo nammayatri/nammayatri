@@ -78,7 +78,7 @@ import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations,Stage)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo, BookingTime, VehicleViewType(..), FareProductType(..))
-import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..), FRFSConfigAPIRes, RideBookingRes(..),RideBookingAPIDetails(..),RideBookingDetails(..),RideBookingListRes(..),BookingLocationAPIEntity(..), FRFSConfigAPIRes (..), FrfsQuote(..), FRFSRouteAPI(..))
+import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..), FRFSConfigAPIRes, RideBookingRes(..),RideBookingAPIDetails(..),RideBookingDetails(..),RideBookingListRes(..),BookingLocationAPIEntity(..), FRFSConfigAPIRes (..), FrfsQuote(..), FRFSRouteAPI(..),FRFSStationAPI(..))
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
@@ -114,6 +114,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Debug 
 import RemoteConfig as RC
 import Services.API as API
+import Data.Bounded (top)
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -1568,3 +1569,13 @@ getAllFirstRoutes maybeQuotes =
               getFirstRoute quote
             ) quotes
       Nothing -> []
+
+getSortedStops :: Array FRFSStationAPI -> Array FRFSStationAPI
+getSortedStops stops =
+  let
+    maxBound = top
+    distanceValue :: FRFSStationAPI -> Int
+    distanceValue (FRFSStationAPI { distance }) =
+      fromMaybe maxBound distance
+  in
+    sortBy (comparing distanceValue) stops

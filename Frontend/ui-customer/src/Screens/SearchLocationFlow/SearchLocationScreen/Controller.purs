@@ -212,15 +212,13 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
      validDecodedRoutes = MB.fromMaybe [] decodedCachedRoutes
  case mbStops of
    (MB.Just stops) -> do
-    let (FRFSStationAPI currentStop) = stops
-    if MB.isNothing (DA.find (\(FRFSStationAPI stop) -> stop.code == currentStop.code && stop.name == currentStop.name) validDecodedStops) && state.props.actionType == BusSearchSelectionAction
+    if not (DA.elem stops validDecodedStops) && state.props.actionType == BusSearchSelectionAction
       then void $ pure $ setValueToCache (show RECENT_BUS_STOPS) ([stops] <> validDecodedStops) (stringifyJSON <<< encode)
     else pure unit
    _ -> pure unit
  case mbRoutes of
    (MB.Just routes) -> do
-    let (FRFSRouteAPI currentRoute) = routes
-    if MB.isNothing (DA.find (\(FRFSRouteAPI route) -> route.code == currentRoute.code && route.longName == currentRoute.longName) validDecodedRoutes) && state.props.actionType == BusSearchSelectionAction
+    if not (DA.elem routes validDecodedRoutes) && state.props.actionType == BusSearchSelectionAction
       then void $ pure $ setValueToCache (show RECENT_BUS_ROUTES) ([routes] <> validDecodedRoutes) (stringifyJSON <<< encode)
     else pure unit
    _ -> pure unit
@@ -440,37 +438,39 @@ eval (InputViewAC _ (InputViewController.AutoCompleteCallBack value pickUpchange
   else if state.props.actionType == BusRouteSelectionAction then continue state
   else if state.props.actionType == BusStopSelectionAction then do
     let updatedStopsSearchedList = getStopListForFocussedTextField state value
-    continue state {data {updatedStopsSearchedList = updatedStopsSearchedList} , props {canClearText = true , isAutoComplete = true}}
+    continue state {data {updatedStopsSearchedList = updatedStopsSearchedList} , props {isAutoComplete = true}}
   else if (state.props.isAutoComplete && state.data.fromScreen /= getScreen METRO_TICKET_BOOKING_SCREEN) then -- so that selecting from favourites doesn't trigger autocomplete
     autoCompleteAPI state value $ if pickUpchanged then SearchLocPickup else SearchLocDrop
     else continue state
 
 eval (InputViewAC globalProps (InputViewController.InputChanged value)) state = do 
-  if (state.props.actionType == MetroStationSelectionAction || state.props.actionType == BusStationSelectionAction )&& not (STR.null value) then do
+  if (state.props.actionType == MetroStationSelectionAction || state.props.actionType == BusStationSelectionAction) && not (STR.null value) then do
     void $ pure $ spy "InputChanged" value
     let newArray = findStationWithPrefix value state.data.metroStations
         canClearText = STR.length value > 2
-    continueWithCmd state{ data { updatedMetroStations = newArray},props { canClearText = canClearText, isAutoComplete = canClearText} } [ do
+    continueWithCmd state { data { updatedMetroStations = newArray }, props { canClearText = canClearText, isAutoComplete = canClearText }} [ do
       void $ pure $ updateInputString value 
       pure NoAction
     ]
-    else if (state.props.actionType == BusRouteSelectionAction || state.props.actionType == BusStopSelectionAction) then do
-      continueWithCmd state [ do
-        void $ pure $ updateInputString value
-        if value == "" then
-          case state.props.focussedTextField of
-            MB.Just textField -> do
-              pure (InputViewAC globalProps (InputViewController.ClearTextField (show textField)))
-            MB.Nothing -> pure NoAction
-        else 
-          pure NoAction
-      ]
-    else do
-      let canClearText = STR.length value > 2
-      continueWithCmd state {props { canClearText = canClearText, isAutoComplete = canClearText}} [ do 
-        void $ pure $ updateInputString value 
+  else if (state.props.actionType == BusRouteSelectionAction || state.props.actionType == BusStopSelectionAction) then do
+    let canClearText = STR.length value > 2
+    continueWithCmd state { props { canClearText = canClearText, isAutoComplete = canClearText }} [ do
+      void $ pure $ updateInputString value
+      if value == "" then
+        case state.props.focussedTextField of
+          MB.Just textField -> do
+            pure (InputViewAC globalProps (InputViewController.ClearTextField (show textField)))
+          MB.Nothing -> pure NoAction
+      else 
         pure NoAction
-      ]
+    ]
+  else do
+    let canClearText = STR.length value > 2
+    continueWithCmd state { props { canClearText = canClearText, isAutoComplete = canClearText }} [ do 
+      void $ pure $ updateInputString value 
+      pure NoAction
+    ]
+
   
   
 
@@ -637,7 +637,7 @@ handleBackPress state = do
         void $ pure $ hideKeyboardOnNavigation true
         if DA.elem state.props.actionType [BusRouteSelectionAction,NoBusRouteSelectionAction,BusStopSelectionAction] then exit $ BusRouteStopSearchScreen state
         else if state.data.fromScreen == getScreen HOME_SCREEN then exit $ HomeScreen state 
-        else if state.data.fromScreen == getScreen BUS_ROUTE_STOPS_SEARCH_SCREEN then continue state {props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = MB.Just SearchLocPickup , routeSearch = true , isAutoComplete = false }, data {fromScreen =(getScreen BUS_TICKET_BOOKING_SCREEN),ticketServiceType = BUS , srcLoc = MB.Nothing, destLoc = MB.Nothing }}
+        else if state.data.fromScreen == getScreen BUS_ROUTE_STOPS_SEARCH_SCREEN then continue state {props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = MB.Just SearchLocPickup , routeSearch = true , isAutoComplete = false }, data {fromScreen =(getScreen BUS_TICKET_BOOKING_SCREEN),ticketServiceType = BUS , srcLoc = MB.Nothing, destLoc = MB.Nothing }} 
         else if state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN then exit $ RideScheduledScreen state
         else if state.data.fromScreen == getScreen BUS_TICKET_BOOKING_SCREEN then exit $ BusTicketBookingScreen state
         else exit $ RentalsScreen state 
