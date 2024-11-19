@@ -92,6 +92,7 @@ import Control.Monad.Extra (mapMaybeM)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Message as Common
 import qualified Data.Aeson as DA
 import qualified Data.Aeson.KeyMap as DAKM
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Digest.Pure.MD5 as MD5
 import Data.Either.Extra (eitherToMaybe)
@@ -101,7 +102,8 @@ import qualified Data.Map as M
 import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
-import Data.Time (Day, diffDays, fromGregorian)
+import Data.Text.Encoding (decodeUtf8)
+import Data.Time (Day, addDays, defaultTimeLocale, diffDays, fromGregorian, parseTimeM)
 import qualified Data.Tuple.Extra as DTE
 import Domain.Action.Beckn.Search
 import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
@@ -149,13 +151,15 @@ import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchTry as DST
+import Domain.Types.ServiceTierType
 import Domain.Types.TransporterConfig
 import Domain.Types.Vehicle (Vehicle (..), VehicleAPIEntity)
 import qualified Domain.Types.VehicleCategory as DVC
+import Domain.Types.VehicleVariant
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id, state)
+import EulerHS.Prelude hiding (decodeUtf8, id, state)
 import qualified EulerHS.Prelude as Prelude
 import GHC.Records.Extra
 import qualified IssueManagement.Common.UI.Issue as Issue
@@ -1360,6 +1364,7 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   whenJust reqOfferedValue $ \_ -> throwError (InvalidRequest "Driver can't offer rental fare")
   quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
   booking <- QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)
+  when booking.isScheduled $ removeBookingFromRedis booking
   transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   isBookingAssignmentInprogress' <- CS.isBookingAssignmentInprogress booking.id
   when isBookingAssignmentInprogress' $ throwError RideRequestAlreadyAccepted
@@ -2179,33 +2184,63 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
   transporterConfig <- SCTC.findByMerchantOpCityId cityId Nothing >>= fromMaybeM (TransporterConfigNotFound cityId.getId)
   if transporterConfig.disableListScheduledBookingAPI
     then pure $ ScheduledBookingRes []
-    else do
-      case (mbFromDay, mbToDay) of
-        (Just from, Just to) -> when (from > to) $ throwError $ InvalidRequest "From date should be less than to date"
-        _ -> pure ()
-      vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
-      driverInfo <- runInReplica $ QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
-      case driverInfo.latestScheduledBooking of
-        Just _ -> return $ ScheduledBookingRes []
-        Nothing -> do
-          -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
-          cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId
-          let availableServiceTiers = (.serviceTierType) <$> (map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers))
-          scheduledBookings <- runInReplica $ QBooking.findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay DRB.NEW mbTripCategory availableServiceTiers True cityId transporterConfig.timeDiffFromUtc
-          bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) scheduledBookings
-          filteredBookings <- filterM (\booking -> isAbleToReach booking.bookingDetails vehicle.variant transporterConfig.avgSpeedOfVehicle) (catMaybes bookings)
-          let sortedBookings = sortBookingsByDistance filteredBookings
-          return $ ScheduledBookingRes sortedBookings
+    else case (mbFromDay, mbToDay, mbDLoc) of
+      (Just from, Just to, Just dLoc) -> do
+        when (from > to) $ throwError (InvalidRequest "From date should be less than to date")
+        driverInfo <- runInReplica $ QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
+        case driverInfo.latestScheduledBooking of
+          Just _ -> pure $ ScheduledBookingRes []
+          Nothing -> do
+            now <- getCurrentTime
+            vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
+            -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
+            cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId
+            let availableServiceTiers = (.serviceTierType) <$> (map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers))
+                vehicleVariants = nub $ castServiceTierToVariant <$> availableServiceTiers
+                tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
+                currentDay = utctDay now
+                limit = fromMaybe 10 mbLimit
+                offset = fromMaybe 0 mbOffset
+                safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
+
+            scheduledBookings <-
+              if currentDay >= from
+                then getTodayScheduledBookings now cityId vehicleVariants dLoc vehicle transporterConfig availableServiceTiers tripCategory limit offset safelimit
+                else getTommorowScheduledBookings now (UTCTime from 0) cityId vehicleVariants dLoc vehicle transporterConfig availableServiceTiers tripCategory limit offset
+
+            bookings <- mapM (buildBookingAPIEntityFromBooking mbDLoc) (catMaybes scheduledBookings)
+            let sortedBookings = sortBookingsByDistance (catMaybes bookings)
+            return $ ScheduledBookingRes sortedBookings
+      _ -> throwError (InvalidRequest "LOCATION_NOT_FOUND")
   where
-    isAbleToReach :: BookingAPIEntity -> DV.VehicleVariant -> Maybe AvgSpeedOfVechilePerKm -> Flow Bool
-    isAbleToReach bookingDetails variant avgSpeeds = do
-      now <- getCurrentTime
-      let distanceToPickup = fromMaybe 0 bookingDetails.distanceToPickup
+    possibleScheduledTripCategories :: [DTC.TripCategory]
+    possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing]
+
+    filterNearbyBookings :: UTCTime -> LatLong -> DV.VehicleVariant -> Maybe AvgSpeedOfVechilePerKm -> [(Text, Double, Double, UTCTime, ServiceTierType)] -> [ServiceTierType] -> [Text]
+    filterNearbyBookings currentTime dLoc variant avgSpeeds parsedRes possibleServiceTierTypes = map (\(id, _, _, _, _) -> id) $ filter (\(_, lat, lon, pickupTime, bookingServiceTier) -> checkNearbyBookingsWithServiceTier currentTime pickupTime lat lon dLoc variant avgSpeeds possibleServiceTierTypes bookingServiceTier) parsedRes
+
+    parseMember :: Text -> Maybe (Text, Double, Double, UTCTime, ServiceTierType)
+    parseMember member = do
+      let parts = T.splitOn "|" member
+      case parts of
+        [idText, latText, lonText, startTimeText, serviceTierTypeText] -> do
+          lat <- readMaybe (T.unpack latText) :: Maybe Double
+          lon <- readMaybe (T.unpack lonText) :: Maybe Double
+          startTime <- parseTimeM True defaultTimeLocale "%FT%T%z" (T.unpack startTimeText)
+          serviceTierType <- readMaybe (T.unpack serviceTierTypeText) :: Maybe ServiceTierType
+          return (idText, lat, lon, startTime, serviceTierType)
+        _ -> Nothing
+
+    checkNearbyBookingsWithServiceTier :: UTCTime -> UTCTime -> Double -> Double -> LatLong -> DV.VehicleVariant -> Maybe AvgSpeedOfVechilePerKm -> [ServiceTierType] -> ServiceTierType -> Bool
+    checkNearbyBookingsWithServiceTier currentTime pickupTime lat lon dLoc variant avgSpeeds possibleServiceTierTypes bookingServiceTierType =
+      let bookingLoc = LatLong {..}
+          distanceToPickup = highPrecMetersToMeters $ distanceBetweenInMeters bookingLoc dLoc
           distanceInKm = metersToKilometers distanceToPickup
           avgSpeedOfVehicleInKM = maybe 0 (SDP.getVehicleAvgSpeed variant) avgSpeeds
           speedInMinPerKm = if avgSpeedOfVehicleInKM.getKilometers == 0 then 3 else truncate (60 / (toRational avgSpeedOfVehicleInKM.getKilometers))
           estimatedTime = intToNominalDiffTime $ distanceInKm.getKilometers * speedInMinPerKm * 60
-      return $ addUTCTime estimatedTime now <= bookingDetails.startTime
+          isValidServiceTierType = bookingServiceTierType `elem` possibleServiceTierTypes
+       in (isValidServiceTierType && addUTCTime estimatedTime currentTime <= pickupTime)
 
     sortBookingsByDistance :: [ScheduleBooking] -> [ScheduleBooking]
     sortBookingsByDistance = sortBy (compareDistances `on` (\booking -> booking.bookingDetails.distanceToPickup))
@@ -2237,6 +2272,40 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
             price = priceObject.amountInt,
             priceWithCurrency = mkPriceAPIEntity priceObject
           }
+    getTodayScheduledBookings :: UTCTime -> Id DMOC.MerchantOperatingCity -> [VehicleVariant] -> LatLong -> Vehicle -> TransporterConfig -> [ServiceTierType] -> [DTC.TripCategory] -> Integer -> Integer -> Integer -> Flow [Maybe DRB.Booking]
+    getTodayScheduledBookings now mocCityId vehicleVariants dLoc vehicle transporterConfig possibleServiceTierTypes tripCategories limit offset safelimit = do
+      let nextDay = addDays 1 (utctDay now)
+          nextDayStartTime = UTCTime nextDay 0
+          redisKeys = createRedisKeysForCombinations now mocCityId tripCategories vehicleVariants
+          redisKeyForHset = createRedisKeyForHset now mocCityId
+          startScore = calculateSortedSetScore $ addUTCTime 1800 now
+          endScore = calculateSortedSetScore $ addUTCTime (3600 * 2) now
+          startScore2 = calculateSortedSetScore $ addUTCTime ((3600 * 2) + 1) now
+          end = calculateSortedSetScore nextDayStartTime
+
+      res <- mapM (\key -> Redis.zRangeByScoreByCount key startScore endScore offset safelimit) redisKeys
+      res2 <- mapM (\key -> Redis.zRangeByScoreByCount key startScore2 end offset limit) redisKeys
+
+      returnFilteredBookings now (concat (res ++ res2)) dLoc vehicle.variant transporterConfig.avgSpeedOfVehicle possibleServiceTierTypes redisKeyForHset limit
+
+    getTommorowScheduledBookings :: UTCTime -> UTCTime -> Id DMOC.MerchantOperatingCity -> [VehicleVariant] -> LatLong -> Vehicle -> TransporterConfig -> [ServiceTierType] -> [DTC.TripCategory] -> Integer -> Integer -> Flow [Maybe DRB.Booking]
+    getTommorowScheduledBookings now dayStartTime mocCityId vehicleVariants dLoc vehicle transporterConfig possibleServiceTierTypes tripCategories limit offset = do
+      let redisKeys = createRedisKeysForCombinations dayStartTime mocCityId tripCategories vehicleVariants
+          redisKeyForHset = createRedisKeyForHset dayStartTime mocCityId
+          startScore = calculateSortedSetScore dayStartTime
+          endScore = calculateSortedSetScore $ addUTCTime (3600 * 24) dayStartTime
+
+      res <- mapM (\key -> Redis.zRangeByScoreByCount key startScore endScore offset limit) redisKeys
+
+      returnFilteredBookings now (concat res) dLoc vehicle.variant transporterConfig.avgSpeedOfVehicle possibleServiceTierTypes redisKeyForHset limit
+
+    returnFilteredBookings :: UTCTime -> [BS.ByteString] -> LatLong -> VehicleVariant -> Maybe AvgSpeedOfVechilePerKm -> [ServiceTierType] -> Text -> Integer -> Flow [Maybe DRB.Booking]
+    returnFilteredBookings now res dLoc variant avgSpeedOfVehicle possibleServiceTierTypes redisKeyForHset limit = do
+      let parsedRes = mapMaybe (parseMember . decodeUtf8) res
+          nearbyBookings = take (fromIntegral limit) $ filterNearbyBookings now dLoc variant avgSpeedOfVehicle parsedRes possibleServiceTierTypes
+      if not $ null nearbyBookings
+        then Redis.hmGet redisKeyForHset nearbyBookings
+        else pure []
 
 acceptScheduledBooking ::
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->

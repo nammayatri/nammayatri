@@ -166,6 +166,7 @@ data TransporterConfigT f = TransporterConfigT
     popupDelayToAddAsPenalty :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     ratingAsDecimal :: B.C f Kernel.Prelude.Bool,
     rcLimit :: B.C f Kernel.Prelude.Int,
+    recentScheduledBookingsSafeLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     recomputeIfPickupDropNotOutsideOfThreshold :: B.C f Kernel.Prelude.Bool,
     referralLinkPassword :: B.C f Kernel.Prelude.Text,
     refillVehicleModel :: B.C f Kernel.Prelude.Bool,
