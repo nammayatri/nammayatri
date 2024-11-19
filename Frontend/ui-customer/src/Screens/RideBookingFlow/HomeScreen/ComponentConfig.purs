@@ -1406,6 +1406,10 @@ quoteListModelViewState state =
     , animEndTime: state.data.currentCityConfig.iopConfig.autoSelectTime
     , isRentalSearch: isLocalStageOn ConfirmingQuotes
     , hasToll : state.data.selectedEstimatesObject.hasTollCharges
+    , showBookAnyOptions : state.props.showBookAnyOptions
+    , showBoostSearch : state.props.showBoostSearch
+    , boostSearchEstimate : state.data.boostSearchEstimate
+    , fareProductType : state.data.fareProductType
     }
 
 rideRequestAnimConfig :: AnimConfig.AnimConfig

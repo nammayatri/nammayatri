@@ -262,6 +262,7 @@ screen initialState =
               FindingEstimate -> do
                 logStatus "find_estimate" ("searchId : " <> initialState.props.searchId)
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+                void $ pure $ setValueToLocalStore BOOSTED_SEARCH "false"
                 estimatesPolling <- runEffectFn1 getValueFromIdMap "EstimatePolling"
               
                 if initialState.data.currentCityConfig.iopConfig.enable then do 
@@ -314,6 +315,7 @@ screen initialState =
                 --   void $ launchAff $ flowRunner defaultGlobalState $ confirmRide (getValueToLocalStore TRACKING_ID) GetRideConfirmation CheckFlowStatusAction GoToHomeScreen polling_count 120000.0 push initialState
               SettingPrice -> do
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
+                void $ pure $ setValueToLocalStore BOOSTED_SEARCH "false"
 
                 let isRepeatRideVariantAvailable =  (isNothing initialState.props.repeatRideServiceTierName) || (checkRecentRideVariant initialState)
                 if (initialState.props.isRepeatRide && isRepeatRideVariantAvailable && initialState.data.iopState.hasTopProviderEstimate )then do

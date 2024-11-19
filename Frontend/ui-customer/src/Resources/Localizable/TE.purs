@@ -1666,3 +1666,8 @@ getTE stringKey =
     EXPLORE -> "పరిశీలించండి"
     METRO_TICKETS -> "మెట్రో టికెట్స్"
     OFFERS -> "ఆఫ్‌స్"
+    BOOST_SEARCH_INSTANTLY -> "మీ శోధనను తక్షణమే పెంచుకోండి!"
+    ADD_A_TIP -> "టిప్ ను జోడించండి"
+    UPDATED_FARE_STR -> "అప్‌డేట్ చేసిన ఛార్జీ"
+    BOOK_ANY_DETAILS -> "బుక్ ఏనీ వివరాలు"
+    BOOST_SEARCH -> "శోధనను పెంచండి"

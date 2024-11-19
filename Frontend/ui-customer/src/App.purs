@@ -278,7 +278,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | ON_RESUME_APP
                         | CHECK_CURRENT_STATUS
                         | CHECK_FLOW_STATUS
-                        | RETRY_FINDING_QUOTES Boolean
+                        | RETRY_FINDING_QUOTES Boolean String
                         | ON_CALL HomeScreenState CallType String
                         | TRIGGER_PERMISSION_FLOW PermissionScreenStage
                         | RIDE_DETAILS_SCREEN HomeScreenState

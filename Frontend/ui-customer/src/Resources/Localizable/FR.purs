@@ -1654,3 +1654,8 @@ getFR stringKey =
         EXPLORE -> "Explore"
         METRO_TICKETS -> "Billets de métro"
         OFFERS -> "Offres"
+        BOOST_SEARCH_INSTANTLY -> "অবিলম্বে আপনার অনুসন্ধান বুস্ট!"
+        ADD_A_TIP -> "একটি টিপ যোগ করুন"
+        UPDATED_FARE_STR -> "আপডেট করা ভাড়া"
+        BOOK_ANY_DETAILS -> "যেকোনো বিস্তারিত বুক করুন"
+        BOOST_SEARCH -> "বুস্ট সার্চ"

@@ -118,6 +118,8 @@ data KeyStore
   | TICKETS_BOOKED_IN_EVENT
   | POST_RIDE_CHECK_SETTINGS
   | INTERCITY_BUS_PHONE_NUMBER_PERMISSION
+  | LOCAL_ESTIMATES
+  | BOOSTED_SEARCH
 
 derive instance genericKeyStore :: Generic KeyStore _
 
