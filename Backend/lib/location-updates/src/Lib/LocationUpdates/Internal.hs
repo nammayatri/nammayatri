@@ -431,6 +431,7 @@ interpolatePointsAndCalculateDistanceAndTollImplementation isEndRide snapToRoadC
     then pure (0, take 1 wps, [], False, Nothing)
     else do
       (servicesUsed, res) <- snapToRoadCall rectifyDistantPointsFailureUsing $ Maps.SnapToRoadReq {points = wps, distanceUnit = Meter}
+      logDebug $ "For ride of driver: ||" <> driverId.getId <> "|| with service being used as: ||" <> show servicesUsed <> "|| with res as: ||" <> show res <> "|| for batchwaypoints: ||" <> show wps <> "||"
       case res of
         Left _ -> pure (0, [], [], True, Nothing)
         Right response -> do
