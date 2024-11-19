@@ -348,6 +348,7 @@ playRideAssignedAudio tripCategory rideId push = do
         ST.Rental ->  config.rental
         ST.Intercity -> config.intercity
         ST.RoundTrip -> config.roundTrip
+        ST.Delivery -> config.delivery
         ST.OneWay -> config.oneWay
         ST.RideShare -> config.rideShare
     case audioUrl of
