@@ -214,6 +214,8 @@ castVehicleVariant = \case
   VehVar.AMBULANCE_VENTILATOR -> (show Enums.AMBULANCE, "AMBULANCE_VENTILATOR")
   VehVar.SUV_PLUS -> (show Enums.CAB, "SUV_PLUS")
   VehVar.DELIVERY_LIGHT_GOODS_VEHICLE -> (show Enums.TRUCK, "DELIVERY_LIGHT_GOODS_VEHICLE")
+  VehVar.BUS_NON_AC -> (show Enums.BUS, "BUS_NON_AC")
+  VehVar.BUS_AC -> (show Enums.BUS, "BUS_AC")
 
 parseVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.VehicleVariant
 parseVehicleVariant mbCategory mbVariant =
@@ -416,6 +418,7 @@ mapTextToVehicle = \case
   "MOTORCYCLE" -> Just Enums.MOTORCYCLE
   "AMBULANCE" -> Just Enums.AMBULANCE
   "TRUCK" -> Just Enums.TRUCK
+  "BUS" -> Just Enums.BUS
   _ -> Nothing
 
 getServiceTierType :: Spec.Item -> Maybe DVST.ServiceTierType
