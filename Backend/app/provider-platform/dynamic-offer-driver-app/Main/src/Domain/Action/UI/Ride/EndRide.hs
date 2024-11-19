@@ -397,7 +397,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
                 fork "ride-interpolation" $ do
                   interpolatedPoints <- getInterpolatedPoints updRide.driverId
                   let rideInterpolationData = RideInterpolationData {interpolatedPoints = interpolatedPoints, rideId = updRide.id}
-                  when (isJust updRide.driverDeviatedToTollRoute && tollConfidence == Just Sure && maybe True (> 0) tollCharges && isJust updRide.estimatedTollCharges) $ pushToKafka rideInterpolationData "ride-interpolated-waypoints" updRide.id.getId
+                  when (isJust updRide.driverDeviatedToTollRoute && tollConfidence == Just Sure && maybe True (== 0) tollCharges && isJust updRide.estimatedTollCharges) $ pushToKafka rideInterpolationData "ride-interpolated-waypoints" updRide.id.getId
 
                 let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollConfidence = tollConfidence, distanceCalculationFailed = Just distanceCalculationFailed}
 
