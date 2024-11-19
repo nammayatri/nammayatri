@@ -270,9 +270,6 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             dailyCancellationRateBlockingCooldown = Nothing,
             weeklyCancellationRateBlockingCooldown = Nothing,
             blockReasonFlag = Nothing,
-            preferredPrimarySpecialLoc = Nothing,
-            preferredSecondarySpecialLocIds = [],
-            isSpecialLocWarrior = False,
             driverTripEndLocation = Nothing,
             onRideTripCategory = Nothing
           }
