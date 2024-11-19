@@ -524,10 +524,9 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
             (GlobalState state) <- getState
             let tripDetailParam = DS.split (DS.Pattern "$$") screen
                 bookingId = fromMaybe "" $ tripDetailParam !! 1
-            modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen { props { fromMyRides = RideCompletedScreen } })
             (RideBookingRes rideBookingResponse) <- Remote.rideBookingBT bookingId
             let bookingResp = (RideBookingRes rideBookingResponse)
-            _ <- pure $ getTripDetailsState bookingResp state.tripDetailsScreen
+            modifyScreenState $ TripDetailsScreenStateType (\_ -> getTripDetailsState bookingResp state.tripDetailsScreen)
             tripDetailsScreenFlow
           else
             case breakPrefixAndId screen of
