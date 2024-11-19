@@ -3791,6 +3791,7 @@ verticalServiceView push index service =
   , textView $ 
     [ text $ getString $ service.name
     , color Color.black800
+    , padding $ PaddingHorizontal 2 2
     , margin $ MarginTop 4
     , gravity CENTER
     ] <> FontStyle.body33 TypoGraphy

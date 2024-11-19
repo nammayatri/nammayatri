@@ -240,6 +240,7 @@ import Screens.TicketBookingFlow.BusTrackingScreen.Controller as BusTrackingScre
 import Screens.TicketBookingFlow.BusTrackingScreen.Transformer (getStationsFromBusRoute)
 import Screens.AadhaarVerificationScreen.ScreenData as AadhaarVerificationScreenData
 import Screens.TicketBookingFlow.BusTrackingScreen.ScreenData as BusTrackingScreenData
+import Helpers.FrfsUtils (getFirstRoute, getAllFirstRoutes, getSortedStops)
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -7318,7 +7319,7 @@ busTicketBookingFlow = do
      modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> MetroTicketBookingScreenData.initData)
      (AutoCompleteResp routeStopresponse) <- Remote.busAutoCompleteBT "BUS" currentCity "0.0,0.0" Nothing "10" Nothing --(show currentState.homeScreen.props.sourceLat <> "," <> show currentState.homeScreen.props.sourceLong) (Nothing)
      let rideType = if null routeStopresponse.stops then ROUTES else STOP
-         sortedStops = HU.getSortedStops routeStopresponse.stops
+         sortedStops = getSortedStops routeStopresponse.stops
      modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
      modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState { props { actionType = BusSearchSelectionAction, canSelectFromFav = false, focussedTextField = Just SearchLocPickup , routeSearch = true , isAutoComplete = false , srcLat = state.props.srcLat , srcLong = state.props.srcLong }, data {fromScreen =(Screen.getScreen Screen.BUS_TICKET_BOOKING_SCREEN), rideType = rideType ,ticketServiceType = BUS , srcLoc = Nothing, destLoc = Nothing, routeSearchedList = routeStopresponse.routes , stopsSearchedList = sortedStops , updatedRouteSearchedList = routeStopresponse.routes , updatedStopsSearchedList = sortedStops } })
      searchLocationFlow
@@ -7547,10 +7548,10 @@ selectBusRouteScreenFlow srcCode destCode = do
     TRACK_BUS state -> do
       case state.data.selectedQuote of
         Just quote -> 
-          case HU.getFirstRoute quote of
+          case getFirstRoute quote of
             Just (FRFSRouteAPI route) -> do
               (GlobalState allStates) <- getState
-              modifyScreenState $ MetroTicketBookingScreenStateType (\metroBookingState -> metroBookingState { data { routeList = (HU.getAllFirstRoutes state.data.quotes)}, props {routeName = route.shortName, isEmptyRoute = route.code } })
+              modifyScreenState $ MetroTicketBookingScreenStateType (\metroBookingState -> metroBookingState { data { routeList = (getAllFirstRoutes state.data.quotes)}, props {routeName = route.shortName, isEmptyRoute = route.code } })
               let busConfig = RC.getBusFlowConfigs $ getValueToLocalStore CUSTOMER_LOCATION
               if busConfig.showBusTracking then do
                 modifyScreenState $ BusTrackingScreenStateType (\busScreen -> BusTrackingScreenData.initData { data {sourceStation = Just $ mkStation state.data.srcLoc srcCode

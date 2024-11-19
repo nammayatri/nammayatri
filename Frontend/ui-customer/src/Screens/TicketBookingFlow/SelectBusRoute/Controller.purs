@@ -5,7 +5,7 @@ import Prelude (void, class Show, discard, pure, unit, bind, ($), not, (+), (-),
 import PrestoDOM (Eval, update, continue, exit, updateAndExit, continueWithCmd, continueWithCmd)
 import Screens (ScreenName(..), getScreen)
 import PrestoDOM.Types.Core (class Loggable)
-import Helpers.Utils (compareDate, getCurrentDate, generateQR, getFirstRoute)
+import Helpers.Utils (compareDate, getCurrentDate, generateQR)
 import Effect.Uncurried (runEffectFn2)
 import Effect.Unsafe (unsafePerformEffect)
 import Components.GenericHeader as GenericHeader
@@ -21,6 +21,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Screens.SelectBusRoute.ScreenData (SelectBusRouteScreenState)
 import Services.API (FrfsQuote(..), FRFSRouteAPI(..))
+import Helpers.FrfsUtils (getFirstRoute)
 
 instance showAction :: Show Action where
   show _ = ""

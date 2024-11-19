@@ -58,6 +58,7 @@ import Helpers.CommonView
 import DecodeUtil as DU
 import Helpers.Pooling as HP
 import Data.Time.Duration (Milliseconds(..))
+import Helpers.FrfsUtils
 
 busTicketBookingScreen :: ST.BusTicketBookingState -> Screen Action ST.BusTicketBookingState ScreenOutput
 busTicketBookingScreen initialState =
@@ -335,6 +336,8 @@ recentTicketsView push state =
 
 ticketCardView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketCardData -> PrestoDOM (Effect Unit) w
 ticketCardView push ticketData =
+  let (TicketStatus ticketStatus) = getTicketStatus ticketData
+  in
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -381,9 +384,9 @@ ticketCardView push ticketData =
       ]
     , linearLayout [weight 1.0] []
     , textView $
-      [ text $ if isActive then "Active" else if isVerified then "Verified" else "Expired"
-      , color $ if isActive then Color.white900 else if isVerified then Color.white900 else Color.black650
-      , background $ if isActive then Color.green900 else Color.grey900
+      [ text $ (show ticketStatus.status)
+      , color $ ticketStatus.textColor
+      , background $ ticketStatus.statusColor
       , padding $ Padding 12 6 12 6
       , cornerRadius 20.0
       , layoutGravity "right"
@@ -407,14 +410,14 @@ ticketCardView push ticketData =
     , singleStopView push ticketData false
     ]
   , linearLayout 
-    [ visibility $ boolToVisibility isTicketExpired
+    [ visibility $ boolToVisibility $ DA.any (_ == ticketStatus.status) [FRFS_EXPIRED, FRFS_FAILED]
     ] 
     [ horizontalDottedSeparatorView ]
   , linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , gravity CENTER
-    , visibility $ boolToVisibility isTicketExpired
+    , visibility $ boolToVisibility $ DA.any (_ == ticketStatus.status) [FRFS_EXPIRED, FRFS_FAILED]
     , padding $ Padding 16 12 16 16
     , onClick push $ const $ RepeatRideClicked ticketData.metroTicketStatusApiResp
     , rippleColor Color.rippleShade
@@ -435,21 +438,6 @@ ticketCardView push ticketData =
     ]
   ]
   where
-    isActive :: Boolean
-    isActive = do
-      let (FRFSTicketBookingStatusAPIRes ticketBookingStatusResp) = ticketData.metroTicketStatusApiResp
-          ticketStatus = DA.head $ map (\(FRFSTicketAPI ticketD) -> ticketD.status) ticketBookingStatusResp.tickets
-      (DA.any (_ == ticketData.status) ["CONFIRMED", "CONFIRMING", "ACTIVE"]) && (DA.any (_ == ticketStatus) [Just "CONFIRMED", Just "CONFIRMING", Just "ACTIVE"])
-
-    isVerified :: Boolean
-    isVerified = do
-      let (FRFSTicketBookingStatusAPIRes ticketBookingStatusResp) = ticketData.metroTicketStatusApiResp
-          ticketStatus = DA.head $ map (\(FRFSTicketAPI ticketD) -> ticketD.status) ticketBookingStatusResp.tickets
-      (DA.any (_ == ticketStatus) [Just "USED"])
-
-    isTicketExpired :: Boolean
-    isTicketExpired = not $ isActive || isVerified
-
     extractTicketNumber :: String
     extractTicketNumber = do
       let (FRFSTicketBookingStatusAPIRes ticketBookingStatusResp) = ticketData.metroTicketStatusApiResp

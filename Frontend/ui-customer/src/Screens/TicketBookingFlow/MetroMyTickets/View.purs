@@ -46,6 +46,7 @@ import Services.API as API
 import Engineering.Helpers.Utils as EHU
 import Screens.TicketBookingFlow.MetroMyTickets.ComponentConfig as Config
 import Components.PrimaryButton as PrimaryButton 
+import Helpers.FrfsUtils (TicketStatus(..), getTicketStatus)
 
 screen :: ST.MetroMyTicketsScreenState -> Screen Action ST.MetroMyTicketsScreenState ScreenOutput
 screen initialState =
@@ -477,7 +478,7 @@ pastTicketView push ticketCard vehicleType=
 statusView :: forall w . ST.MetroTicketCardData -> Visibility -> PrestoDOM (Effect Unit) w
 statusView ticketCard statusVisibility = 
   let
-    (Config.StatusConfig statusConfig) = Config.getTicketStatusConfig ticketCard
+    (TicketStatus ticketStatus) = getTicketStatus ticketCard
   in
     linearLayout [
       width WRAP_CONTENT
@@ -489,13 +490,13 @@ statusView ticketCard statusVisibility =
       imageView [
         width $ V 16
       , height $ V 16
-      , imageWithFallback statusConfig.statusIcon
+      , imageWithFallback ticketStatus.statusIcon
       , margin $ MarginRight 4
       ]
     , textView $ [
         width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text $ statusConfig.status
-      , color statusConfig.statusColor
+      , text $ (show ticketStatus.status)
+      , color ticketStatus.statusColor
       ] <> FontStyle.body3 TypoGraphy
     ]
