@@ -10,6 +10,7 @@ type AppConfigCustomer a =
   {
     primaryTextColor :: String,
     primaryBackground :: String,
+    submitIssueBtnColor :: String,
     estimateConfirmText :: String,
     autoConfirmingLoaderColor :: String,
     quoteListModelBackground :: String,

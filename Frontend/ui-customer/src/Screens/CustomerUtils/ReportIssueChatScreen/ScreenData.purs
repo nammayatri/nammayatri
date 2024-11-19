@@ -32,6 +32,7 @@ import Services.API (Chat)
 import Screens.Types (IndividualRideCardState)
 import MerchantConfig.Types (AppConfig)
 import Common.Types.App (CategoryListType)
+import ConfigProvider
 
 initData :: ReportIssueChatScreenState
 initData = {
@@ -57,7 +58,7 @@ initData = {
         selectedRide : Nothing, 
         entryPoint : TripDetailsScreenEntry,
         issueReportShortId : Nothing,
-        config : DC.config
+        config : getAppConfig appConfig
     },
     props : {
       showSubmitComp: false,

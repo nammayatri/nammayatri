@@ -102,14 +102,15 @@ type UnderLineConfig =
 config :: Config
 config = 
   let 
-    btnConfig = (getAppConfig appConfig).primaryButtonConfig
+    appConfigVal = getAppConfig appConfig
+    btnConfig = appConfigVal.primaryButtonConfig
   in {
     textConfig  :
     { text : ""
     , textStyle : SubHeading1
     , gravity : CENTER
     , visibility : VISIBLE
-    , color : Color.yellow900
+    , color : appConfigVal.primaryTextColor
     , height : WRAP_CONTENT
     , width : WRAP_CONTENT
     , accessibilityHint : ""
@@ -127,7 +128,7 @@ config =
   , alpha: 1.0
   , isClickable: true
   , visibility: VISIBLE
-  , background : Color.black900
+  , background : appConfigVal.primaryBackground
   , gravity : CENTER
   , isSuffixImage : false
   , weight : Nothing
