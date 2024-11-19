@@ -206,6 +206,7 @@ initData = let
     , deliveryImage : Nothing
     , deliveryDetailsInfo : Nothing
     , requestorPartyRoles : Nothing
+    , boostSearchEstimate : CV.config
     },
     props: {
       rideRequestFlow : false
@@ -419,6 +420,8 @@ initData = let
     , showDeliveryImageAndOtpModal : false
     , loadingDeliveryImage : false
     , fromDeliveryScreen : false
+    , showBookAnyOptions : false
+    , showBoostSearch : false
   }
 }
 

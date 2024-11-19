@@ -1682,4 +1682,9 @@ getTa = Keymap {
 , confirm_contacts : "தொடர்புகளை உறுதிப்படுத்தவும்"
 , tickets_for_delhi_metro : "டெல்ஹி மெட்ரோ டிக்கெட்கள்"
 , max_parcel_size : (\l b h -> "அதிகபட்ச பார்சல் அளவு: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, boost_search_instantly : "உங்கள் தேடலை உடனடியாக அதிகரிக்கவும்!"
+, add_a_tip : "உதவிக்குறிப்பைச் சேர்க்கவும்"
+, updated_fare_str : "புதுப்பிக்கப்பட்ட கட்டணம்"
+, book_any_details : "எந்த விவரங்களையும் பதிவு செய்யவும்"
+, boost_search : "தேடலை அதிகரிக்கவும்"
 }

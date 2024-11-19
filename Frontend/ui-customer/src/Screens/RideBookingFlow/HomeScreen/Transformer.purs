@@ -451,6 +451,7 @@ transformQuote quote index tripType = do
     , extraFare = getQuotesFareList quoteEntity.quoteDetails tripType
     , nightChargeTill = fromMaybe "" (getFareFromQuotes quoteEntity.quoteDetails "nightChargeTill")
     , nightChargeFrom = fromMaybe "" (getFareFromQuotes quoteEntity.quoteDetails "nightChargeFrom")
+    , smartTipReason = Nothing
   }
 
 getFareFromQuotes :: QuoteAPIDetails -> String -> Maybe String
@@ -1019,6 +1020,7 @@ getSpecialZoneQuote quote index isIntercity tripType=
       , extraFare = getQuotesFareList quoteEntity.quoteDetails tripType
       , nightChargeTill = fromMaybe "" (getFareFromQuotes quoteEntity.quoteDetails "nightChargeTill")
       , nightChargeFrom = fromMaybe "" (getFareFromQuotes quoteEntity.quoteDetails "nightChargeFrom")
+      , smartTipReason = Nothing
       }
     RentalQuotes body -> let (QuoteAPIEntity quoteEntity) = body.onRentalCab
       in ChooseVehicle.config {
@@ -1036,6 +1038,7 @@ getSpecialZoneQuote quote index isIntercity tripType=
       , serviceTierName = quoteEntity.serviceTierName
       , serviceTierShortDesc = quoteEntity.serviceTierShortDesc
       , specialLocationTag = quoteEntity.specialLocationTag
+      , smartTipReason = Nothing
       }
     Metro body -> ChooseVehicle.config
     Public body -> ChooseVehicle.config

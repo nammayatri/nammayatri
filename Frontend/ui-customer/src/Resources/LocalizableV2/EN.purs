@@ -1682,4 +1682,9 @@ getEn = Keymap {
 , confirm_contacts :  "Confirm Contacts"
 , tickets_for_delhi_metro : "Tickets for Delhi Metro"
 , max_parcel_size : (\l b h -> "Max parcel size: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, boost_search_instantly : "Boost your search instantly!"
+, add_a_tip : "Add a Tip"
+, updated_fare_str : "Updated Fare"
+, book_any_details : "Book Any Details"
+, boost_search : "Boost Search"
 }

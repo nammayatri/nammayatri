@@ -92,7 +92,7 @@ data ScreenOutput = LogoutUser
   | CheckCurrentStatus
   | CheckFlowStatus HomeScreenState
   | ExitToPermissionFlow PermissionScreenStage
-  | RetryFindingQuotes Boolean HomeScreenState
+  | RetryFindingQuotes Boolean String HomeScreenState
   | GoToTicketBookingFlow HomeScreenState
   | GoToMyTickets HomeScreenState
   | RepeatTrip HomeScreenState Trip
