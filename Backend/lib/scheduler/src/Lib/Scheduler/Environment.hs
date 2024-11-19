@@ -15,6 +15,7 @@
 
 module Lib.Scheduler.Environment where
 
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
@@ -157,7 +158,7 @@ runSchedulerM schedulerConfig env action = do
         ( forever $ do
             handleExceptions $ do
               kvConfigs <- QSC.findById "kv_configs" >>= pure . decodeFromText' @Tables
-              L.setOption KBT.Tables (fromMaybe (KUC.Tables [] [] [] False []) kvConfigs)
+              L.setOption KBT.Tables (fromMaybe (KUC.Tables [] HM.empty [] False []) kvConfigs)
             threadDelay (env.kvConfigUpdateFrequency * 1000000)
         )
       pure flowRt
