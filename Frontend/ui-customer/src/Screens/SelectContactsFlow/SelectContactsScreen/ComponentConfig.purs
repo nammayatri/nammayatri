@@ -76,13 +76,12 @@ contactListPrimaryButtonConfig state =
         { textConfig
           { text = if enableBtn then (getString CONFIRM_CONTACTS) else (getString SELECT_CONTACTS)
           , accessibilityHint = (if enableBtn then (getString CONFIRM_CONTACTS) else (getString SELECT_CONTACTS)) <> " : Button"
-          , color = if enableBtn then Color.yellow900 else Color.yellow800
           }
-        , background = if enableBtn then Color.black900 else Color.black600
         , isClickable = if enableBtn then true else false
         , id = "ContactListPrimaryButton"
         , enableRipple = if enableBtn then true else false
         , margin = (MarginBottom 0)
+        , alpha = if enableBtn then 1.0 else 0.6
         }
   in
     primaryButtonConfig'
