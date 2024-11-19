@@ -110,3 +110,21 @@ type MetroConfig = {
   bannerTextColor :: String,
   showCancelButton :: Boolean
 }
+
+type BoostSearchConfig = {
+  selectedEstimates :: Array String,
+  selectedTip :: Int
+}
+
+type VariantBasedBoostSearchConfig = {
+  sedan :: BoostSearchConfig,
+  suv :: BoostSearchConfig,
+  hatchback :: BoostSearchConfig,
+  autoRickshaw :: BoostSearchConfig,
+  taxi :: BoostSearchConfig,
+  taxiPlus :: BoostSearchConfig,
+  bike :: BoostSearchConfig,
+  suvPlus :: BoostSearchConfig,
+  default :: BoostSearchConfig,
+  bookAny :: BoostSearchConfig
+}

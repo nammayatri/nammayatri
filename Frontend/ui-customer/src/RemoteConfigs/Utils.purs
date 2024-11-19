@@ -176,3 +176,40 @@ defaultMetroConfig = {
   bannerTextColor : "",
   showCancelButton : false
 }
+
+defaultBoostSearchConfig :: BoostSearchConfig
+defaultBoostSearchConfig = {
+    selectedEstimates : [],
+    selectedTip : 0
+}
+
+defaultVariantBasedBoostSearchConfig :: VariantBasedBoostSearchConfig
+defaultVariantBasedBoostSearchConfig = {
+  sedan : defaultBoostSearchConfig,
+  suv : defaultBoostSearchConfig,
+  hatchback : defaultBoostSearchConfig,
+  autoRickshaw : defaultBoostSearchConfig,
+  taxi : defaultBoostSearchConfig,
+  taxiPlus : defaultBoostSearchConfig,
+  bike : defaultBoostSearchConfig,
+  suvPlus : defaultBoostSearchConfig,
+  default : defaultBoostSearchConfig,
+  bookAny : defaultBoostSearchConfig
+}
+
+getBoostSearchConfig :: String -> String -> BoostSearchConfig
+getBoostSearchConfig city variant = 
+    let config = fetchRemoteConfigString "boost_search_config"
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultVariantBasedBoostSearchConfig
+        cityConfig = getCityBasedConfig value city
+    in case variant of 
+        "SEDAN" -> cityConfig.sedan
+        "SUV" -> cityConfig.suv
+        "SUV_PLUS" -> cityConfig.suvPlus
+        "HATCHBACK" -> cityConfig.hatchback
+        "AUTO_RICKSHAW" -> cityConfig.autoRickshaw
+        "TAXI" -> cityConfig.taxi
+        "TAXI_PLUS" -> cityConfig.taxiPlus
+        "BOOK_ANY" -> cityConfig.bookAny
+        "DELIVERY_BIKE" -> cityConfig.bike
+        _ -> cityConfig.default

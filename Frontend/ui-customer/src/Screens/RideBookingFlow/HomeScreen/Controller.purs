@@ -113,7 +113,7 @@ import Effect.Class (liftEffect)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
 import Screens.RideBookingFlow.HomeScreen.Config (reportIssueOptions, safetyIssueOptions)
-import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails, PermissionScreenStage(..), SuggestionsMap(..), SosBannerType(..), ReferralType(..), ReferralStage(..))
+import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails, PermissionScreenStage(..), SuggestionsMap(..), SosBannerType(..), ReferralType(..), ReferralStage(..), FareProductType(..))
 import Screens.Types as ST
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import PrestoDOM.Properties (sheetState) as PP
@@ -167,6 +167,8 @@ import Data.Enum
 import Services.FlowCache as FlowCache
 import RemoteConfig as RemoteConfig
 import Components.DeliveryParcelImageAndOtp as DeliveryParcelImageAndOtp
+import Foreign.Generic (class Decode, decodeJSON, encode, encodeJSON)
+import Common.RemoteConfig (fetchRemoteConfigString)
 
 -- Controllers
 import Screens.HomeScreen.Controllers.CarouselBannerController as CarouselBannerController
@@ -976,7 +978,11 @@ eval BackPressed state = do
                       continue state{props{isSource = Just false,isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation}}
     FindingQuotes ->  do
                       void $ pure $ performHapticFeedback unit
-                      continue $ state { props{isPopUp = ConfirmBack}}
+                      if state.props.showBookAnyOptions then continue state{props{showBookAnyOptions = false}}
+                      else if state.props.showBoostSearch then do 
+                        void $ pure $ setValueToLocalStore BOOSTED_SEARCH "false"
+                        continue state{props{showBoostSearch = false}}
+                      else continue $ state { props{isPopUp = ConfirmBack}}
     FavouriteLocationModel -> do
                       void $ pure $ performHapticFeedback unit
                       _ <- pure $ updateLocalStage (if state.props.isSearchLocation == NoView then HomeScreen else SearchLocationModel)
@@ -1451,11 +1457,18 @@ eval (SearchExpireCountDown seconds status timerID) state = do
   if status == "EXPIRED" then do
     _ <- pure $ clearTimerWithId timerID
     let tipViewData = HomeScreenData.initData.props.tipViewProps
+    let enableTips = isTipEnabled state
     _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
-    continue state { props { searchExpire = seconds, currentStage = QuoteList } }
+    void $ pure $ setValueToLocalStore BOOSTED_SEARCH "false"
+    continue state { props { searchExpire = seconds, currentStage = QuoteList, tipViewProps{isVisible = enableTips}, showBoostSearch = false}}
   else do
     let enableTips = isTipEnabled state
-    if any ( _ == state.props.currentStage) [FindingQuotes , QuoteList] then continue state { props { searchExpire = seconds ,timerId = timerID , tipViewProps {isVisible = enableTips && (seconds <= (getSearchExpiryTime true)-state.data.config.tipDisplayDuration || state.props.tipViewProps.isVisible || state.props.tipViewProps.activeIndex >= 0)}, customerTip{enableTips = enableTips}} }
+        boostSearchDuration = fromMaybe 30 (fromString (fetchRemoteConfigString "boost_search_duration"))
+        enableBoostSearch = fetchRemoteConfigString "enable_boost_search" == "true"
+        showBoostSearch = seconds <= (getSearchExpiryTime true)-boostSearchDuration && (getValueToLocalStore BOOSTED_SEARCH /= "true") && length state.data.specialZoneQuoteList > 0 && any (_ == state.data.fareProductType) [ONE_WAY, DRIVER_OFFER] && enableBoostSearch
+        showTipView = enableTips && (seconds <= (getSearchExpiryTime true)-state.data.config.tipDisplayDuration || state.props.tipViewProps.isVisible || state.props.tipViewProps.activeIndex >= 0) && ((not $ any (_ == state.data.fareProductType) [ONE_WAY, DRIVER_OFFER]) || not enableBoostSearch || length state.data.specialZoneQuoteList < 1)
+        newState = if showBoostSearch && not state.props.showBoostSearch then updateBoostSearchConfig state else state
+    if any ( _ == state.props.currentStage) [FindingQuotes, QuoteList] then continue newState {props {searchExpire = seconds ,timerId = timerID , showBoostSearch = showBoostSearch, tipViewProps {isVisible = showTipView}, customerTip{enableTips = enableTips}} }
       else do
         _ <- pure $ clearTimerWithId timerID
         continue state { props { searchExpire = (getSearchExpiryTime true) ,timerId = timerID , tipViewProps {isVisible = false}} }
@@ -1881,7 +1894,7 @@ eval (QuoteListModelActionController (QuoteListModelController.TipViewPrimaryBut
   let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH, onlyPrimaryText = true, activeIndex = if state.props.tipViewProps.activeIndex == -1 && tipViewProps.activeIndex /= -1 then tipViewProps.activeIndex else state.props.tipViewProps.activeIndex}
   let newState = state{ props{rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }, findingRidesAgain = true ,searchExpire = (getSearchExpiryTime true), currentStage = TryAgain, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 0 (customerTipArrayWithValues !! tipViewData.activeIndex)) , tipActiveIndex = tipViewData.activeIndex, isTipSelected = true } }, data{nearByDrivers = Nothing}}
   _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
-  updateAndExit newState $ RetryFindingQuotes false newState
+  updateAndExit newState $ RetryFindingQuotes false newState.props.estimateId newState
 
 eval (QuoteListModelActionController (QuoteListModelController.TipsViewActionController (TipsView.TipBtnClick index value))) state = do
   let check = index == state.props.tipViewProps.activeIndex
@@ -1947,11 +1960,14 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
     void $ pure $ performHapticFeedback unit
     let _ = unsafePerformEffect $ logEvent state.data.logField if state.props.customerTip.isTipSelected then ("ny_added_tip_for_" <> (show state.props.currentStage)) else "ny_no_tip_added"
     _ <- pure $ clearTimerWithId state.props.timerId
-    let tipViewData = state.props.tipViewProps{stage = RETRY_SEARCH_WITH_TIP , isVisible = not (state.props.customerTip.tipActiveIndex == 0) , activeIndex = state.props.customerTip.tipActiveIndex, onlyPrimaryText = true}
+    void $ pure $ setValueToLocalStore BOOSTED_SEARCH "false"
+    let enableBoostSearch = fetchRemoteConfigString "enable_boost_search" == "true"
+        enableTipView = any (_ /= state.data.fareProductType) [ONE_WAY, DRIVER_OFFER] && not enableBoostSearch
+    let tipViewData = state.props.tipViewProps{stage = RETRY_SEARCH_WITH_TIP , isVisible = not (state.props.customerTip.tipActiveIndex == 0) && enableTipView , activeIndex = state.props.customerTip.tipActiveIndex, onlyPrimaryText = true}
     let newState = state{ props{findingRidesAgain = true ,searchExpire = (getSearchExpiryTime true), currentStage = RetryFindingQuote, isPopUp = NoPopUp ,tipViewProps = tipViewData, rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH } }}
     _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
     logInfo "retry_finding_quotes" ( "TipConfirmed : Current Stage: " <> (show newState.props.currentStage) <> " LOCAL_STAGE : " <> (getValueToLocalStore LOCAL_STAGE) <> "Estimate Id:" <> state.props.estimateId)
-    exit $ RetryFindingQuotes true newState
+    exit $ RetryFindingQuotes true newState.props.estimateId newState
   Logout -> continue state{props{isPopUp = NoPopUp}}
   CancelConfirmingQuotes -> continue state{props{isPopUp = NoPopUp}}
   _ -> do
@@ -1959,17 +1975,18 @@ eval (PopUpModalAction (PopUpModal.OnButton1Click)) state =   case state.props.i
     _ <- pure $ firebaseLogEvent "ny_tip_not_applicable"
     if (isLocalStageOn FindingQuotes ) then do
         _ <- pure $ clearTimerWithId state.props.timerId
+        void $ pure $ setValueToLocalStore BOOSTED_SEARCH "false"
         let tipViewData = HomeScreenData.initData.props.tipViewProps
         _ <- pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
-        exit $ RepeatSearch state{props{customerTip = HomeScreenData.initData.props.customerTip, tipViewProps = HomeScreenData.initData.props.tipViewProps, isPopUp = NoPopUp, selectedQuote = Nothing, isRepeatRide = false}, data{quoteListModelState = []}}
+        exit $ RepeatSearch state{props{showBoostSearch = false, customerTip = HomeScreenData.initData.props.customerTip, tipViewProps = HomeScreenData.initData.props.tipViewProps, isPopUp = NoPopUp, selectedQuote = Nothing, isRepeatRide = false}, data{quoteListModelState = []}}
       else if state.data.iopState.providerSelectionStage then do
       _ <- pure $ updateLocalStage SearchLocationModel
       void $ pure $ clearTimerWithId state.data.iopState.timerId
       continue state{data{rideHistoryTrip = Nothing, iopState{ providerSelectionStage = false}},props{ isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation, isRepeatRide = false}}
       else do
       _ <- pure $ clearTimerWithId state.props.timerId
-      let newState = state{props{findingRidesAgain = true , searchExpire = (getSearchExpiryTime true), currentStage = RetryFindingQuote, isPopUp = NoPopUp, rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }}}
-      updateAndExit newState $ RetryFindingQuotes true newState
+      let newState = state{props{showBoostSearch = false, findingRidesAgain = true , searchExpire = (getSearchExpiryTime true), currentStage = RetryFindingQuote, isPopUp = NoPopUp, rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }}}
+      updateAndExit newState $ RetryFindingQuotes true newState.props.estimateId newState
 
 eval (PopUpModalAction (PopUpModal.OnButton2Click)) state = case state.props.isPopUp of
     TipsPopUp -> case state.props.currentStage of
@@ -2101,6 +2118,7 @@ eval (GetEstimates (GetQuotesRes quotesRes) count ) state = do
 
     -- topProviderEstimates = filter (\element -> element.providerType == ONUS) quoteList -- filter the ny provider estimates
     -- shouldShowEstimates = not $ null quoteList-- if iop is not enabled then show ny provider else show multi provider
+  void $ pure $ setValueToLocalStore LOCAL_ESTIMATES (encodeJSON estimates)
   if not $ null quoteList then do -- if choosing multiple provider is not enabled then only show ny
     let
       _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_quote"
@@ -2602,6 +2620,7 @@ eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionControll
       (Tuple estimateId otherSelectedEstimates) = getEstimateId state.data.specialZoneQuoteList state.data.selectedEstimatesObject
   void $ pure $ setValueToLocalStore FARE_ESTIMATE_DATA state.data.selectedEstimatesObject.price
   void $ pure $ setValueToLocalStore SELECTED_VARIANT (state.data.selectedEstimatesObject.vehicleVariant)
+  void $ pure $ setValueToLocalStore LOCAL_ESTIMATES (encodeJSON state.data.specialZoneQuoteList)
   void $ pure $ cacheRateCard state
   if state.data.fareProductType  == FPT.ONE_WAY_SPECIAL_ZONE then do
     _ <- pure $ updateLocalStage ConfirmingRide
@@ -2650,6 +2669,70 @@ eval (QuoteListModelActionController (QuoteListModelController.ProviderModelAC (
   case selectedItem of
     Just quote -> continue state { data { selectedEstimatesObject = quote}, props { estimateId = item.id}}
     _ -> continue state
+
+eval (QuoteListModelActionController (QuoteListModelController.GotItAction PrimaryButtonController.OnClick)) state = do
+  void $ pure $ performHapticFeedback unit
+  continue state{props{showBookAnyOptions = false}}
+
+eval (QuoteListModelActionController (QuoteListModelController.CloseBoostSearch)) state = 
+  if state.props.showBookAnyOptions then continue state{props{showBookAnyOptions = false}}
+  else do 
+    void $ pure $ setValueToLocalStore BOOSTED_SEARCH "true"
+    continue state{props{showBoostSearch = false}}
+
+eval (QuoteListModelActionController (QuoteListModelController.ShowBookAnyInfo)) state = do
+  void $ pure $ performHapticFeedback unit
+  continue state{props{showBookAnyOptions = true}}
+
+eval (QuoteListModelActionController (QuoteListModelController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config))) state =
+  continueWithCmd state [do 
+    pure $ ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC state.props.tipViewProps (ChooseVehicleController.ShowRateCard config))
+  ]
+
+eval (QuoteListModelActionController (QuoteListModelController.ServicesOnClick config item)) state = do 
+  let updatedServices = if elem item config.selectedServices then delete item config.selectedServices else insert item config.selectedServices
+  if length updatedServices < 1 then continue state
+  else continue state{data{boostSearchEstimate{selectedServices = updatedServices}}}
+
+eval (QuoteListModelActionController (QuoteListModelController.BoostSearchAction (PrimaryButtonController.OnClick))) state = do 
+  let tipViewData = state.props.tipViewProps{stage = TIP_ADDED_TO_SEARCH, onlyPrimaryText = true}
+  void $ pure $ setTipViewData (TipViewData { stage : tipViewData.stage , activeIndex : tipViewData.activeIndex , isVisible : tipViewData.isVisible })
+  let tipConfig = getTipConfig state.data.boostSearchEstimate.vehicleVariant
+      updatedServices = state.data.boostSearchEstimate.selectedServices
+      customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
+      bookAnyEstimate = fromMaybe ChooseVehicleController.config (find(\item -> item.vehicleVariant == "BOOK_ANY") state.data.specialZoneQuoteList)
+      newState = state{ props{rideSearchProps{ sourceSelectType = ST.RETRY_SEARCH }, showBookAnyOptions = false, showBoostSearch = false, findingRidesAgain = true ,searchExpire = (getSearchExpiryTime true), currentStage = TryAgain, isPopUp = NoPopUp ,tipViewProps = tipViewData ,customerTip {tipForDriver = (fromMaybe 0 (customerTipArrayWithValues !! state.props.tipViewProps.activeIndex)) , tipActiveIndex = state.props.tipViewProps.activeIndex, isTipSelected = true } }, data{nearByDrivers = Nothing}}
+      selectedEstimates = foldl(\acc item -> if elem (fromMaybe "" item.serviceTierName) updatedServices then acc <> [item.id] else acc) [] state.data.specialZoneQuoteList
+      estimateId = fromMaybe "" (head selectedEstimates)
+      otherSelectedEstimates = fromMaybe [] $ tail $ selectedEstimates
+      selectedEstimatesObject = if bookAnyEstimate.vehicleVariant == "BOOK_ANY" then bookAnyEstimate{selectedServices = updatedServices, activeIndex = bookAnyEstimate.index, id = estimateId} else state.data.selectedEstimatesObject
+      updatedState = newState{data{specialZoneQuoteList = getUpdatedQuotes updatedServices bookAnyEstimate.index, otherSelectedEstimates = otherSelectedEstimates, selectedEstimatesObject = selectedEstimatesObject}, props {estimateId = estimateId}}
+  void $ pure $ cacheRateCard updatedState
+  void $ pure $ setValueToLocalStore FARE_ESTIMATE_DATA updatedState.data.selectedEstimatesObject.price
+  void $ pure $ setValueToLocalStore SELECTED_VARIANT (updatedState.data.selectedEstimatesObject.vehicleVariant)
+  void $ pure $ setValueToLocalStore LOCAL_ESTIMATES (encodeJSON updatedState.data.specialZoneQuoteList)
+  void $ pure $ setValueToLocalStore BOOSTED_SEARCH "true"
+  void $ pure $ clearTimerWithId updatedState.props.timerId
+  updateAndExit updatedState $ RetryFindingQuotes true state.props.estimateId updatedState
+  where 
+    filterSelectedServiceConfigs :: Array ChooseVehicleController.Config -> Array String -> Array ChooseVehicleController.Config 
+    filterSelectedServiceConfigs chooseVehicleConfigs selectedServices = DA.filter (\chooseVehicleConfg -> DA.any (\selectedService -> (Just selectedService) == chooseVehicleConfg.serviceTierName) selectedServices) chooseVehicleConfigs
+
+    getUpdatedQuotes :: Array String -> Int -> Array ChooseVehicleController.Config
+    getUpdatedQuotes updatedServices activeIndex = map (\item -> 
+      if item.vehicleVariant == "BOOK_ANY" then 
+        item {
+          selectedServices = updatedServices
+        , hasTollCharges =  DA.any (\chooseVehicleConfg -> chooseVehicleConfg.hasTollCharges) $ filterSelectedServiceConfigs state.data.specialZoneQuoteList updatedServices
+        , hasParkingCharges =  DA.any (\chooseVehicleConfg -> chooseVehicleConfg.hasParkingCharges) $ filterSelectedServiceConfigs state.data.specialZoneQuoteList updatedServices
+        , activeIndex = activeIndex
+        }
+      else item{activeIndex = activeIndex}
+    ) state.data.specialZoneQuoteList 
+
+eval (QuoteListModelActionController (QuoteListModelController.TipBtnClick index value)) state = do
+  let check = index == state.props.tipViewProps.activeIndex
+  continue state { props {tipViewProps { stage = (if check then DEFAULT else TIP_AMOUNT_SELECTED) , isprimaryButtonVisible = not check , activeIndex = (if check then -1 else index)}}}
 
 eval (ProviderAutoSelected seconds status timerID) state = do
   if status == "EXPIRED" then do
@@ -3328,6 +3411,27 @@ eval (EnableShareRideForContact personId) state = do
 
 eval _ state = update state
 
+updateBoostSearchConfig :: HomeScreenState -> HomeScreenState
+updateBoostSearchConfig state = do 
+  let tipConfig = getTipConfig state.data.boostSearchEstimate.vehicleVariant
+      userCity = DS.toLower $ getValueToLocalStore CUSTOMER_LOCATION
+      customerTipArrayWithValues = tipConfig.customerTipArrayWithValues
+      boostSearchConfig = RC.getBoostSearchConfig userCity state.data.selectedEstimatesObject.vehicleVariant
+      selectedTipIndex = fromMaybe 1 (findIndex (\item -> item == boostSearchConfig.selectedTip) customerTipArrayWithValues)
+      bookAnyEstimate = find (\item -> item.vehicleVariant == "BOOK_ANY") state.data.specialZoneQuoteList
+      selectedEstimates = foldl(\acc item -> if elem (fromMaybe "" item.serviceTierName) boostSearchConfig.selectedEstimates then acc <> [item.id] else acc) [] state.data.specialZoneQuoteList
+      estimateId = fromMaybe state.props.estimateId (head selectedEstimates)
+      otherSelectedEstimates = fromMaybe state.data.otherSelectedEstimates $ tail $ selectedEstimates
+      selectedIndex = fromMaybe state.data.selectedEstimatesObject.activeIndex (findIndex(\item -> item.vehicleVariant == "BOOK_ANY") state.data.specialZoneQuoteList)
+      bookAnySerices = RC.getBookAnyServices userCity
+      updatedBookAny = case bookAnyEstimate of 
+                          Just estimate -> do 
+                                             let filteredEstimates = filter(\item -> item `elem` bookAnySerices) estimate.availableServices
+                                             let sortedEstimates =  DA.sortWith (\item -> not $ item `elem` boostSearchConfig.selectedEstimates) filteredEstimates
+                                             estimate{selectedServices = boostSearchConfig.selectedEstimates, availableServices = sortedEstimates, activeIndex = selectedIndex}
+                          Nothing -> state.data.selectedEstimatesObject
+  state{data{boostSearchEstimate = updatedBookAny}, props { tipViewProps {activeIndex = selectedTipIndex}}}
+
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
 validateSearchInput state searchString =
   if STR.length (STR.trim searchString) > 2 && searchString /= state.data.source && searchString /= (getString CURRENT_LOCATION) && (searchString /= state.data.destination || ((getSearchType unit) == "direct_search") && (state.props.isSearchLocation == SearchLocation)) then
@@ -3590,6 +3694,7 @@ estimatesListTryAgainFlow (GetQuotesRes quotesRes) state = do
     estimatedPrice = if (isJust (estimatedVarient !! 0)) then (fromMaybe dummyEstimateEntity (estimatedVarient !! 0)) ^. _estimatedFare else 0
     quoteList = getEstimateList state estimatedVarient state.data.config.estimateAndQuoteConfig state.data.selectedEstimatesObject.activeIndex
     defaultQuote = fromMaybe ChooseVehicleController.config (quoteList !! 0)
+  void $ pure $ setValueToLocalStore LOCAL_ESTIMATES (encodeJSON quoteList)
   case (null estimatedVarient) of
     true -> do
       _ <- pure $ hideKeyboardOnNavigation true
@@ -3816,3 +3921,9 @@ triggerFCM state message = do
 isValidDate :: Int -> String -> Boolean
 isValidDate maxDateBooking selectedDateString = (unsafePerformEffect $ runEffectFn2 compareDate (getDateAfterNDaysv2 maxDateBooking) selectedDateString)
                                                 && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
+
+getCachedEstimates :: String -> Array ChooseVehicleController.Config
+getCachedEstimates dummy =
+  case runExcept (decodeJSON (getValueToLocalStore LOCAL_ESTIMATES) :: _ (Array ChooseVehicleController.Config)) of
+    Right estimates -> estimates
+    Left err -> []

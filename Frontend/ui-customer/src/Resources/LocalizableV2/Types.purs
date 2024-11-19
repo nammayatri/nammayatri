@@ -1696,6 +1696,11 @@ newtype Keymap = Keymap {
 , confirm_contacts :: String
 , tickets_for_delhi_metro :: String
 , max_parcel_size :: String -> String -> String -> String
+, boost_search_instantly :: String
+, add_a_tip :: String
+, updated_fare_str :: String
+, book_any_details :: String
+, boost_search :: String
 }
 
 
@@ -6755,3 +6760,18 @@ tickets_for_delhi_metro = a
 
 max_parcel_size :: Proxy "max_parcel_size"
 max_parcel_size = a
+
+boost_search_instantly :: Proxy "boost_search_instantly"
+boost_search_instantly = a  
+
+add_a_tip :: Proxy "add_a_tip"
+add_a_tip = a  
+
+updated_fare_str :: Proxy "updated_fare_str"
+updated_fare_str = a  
+
+book_any_details :: Proxy "book_any_details"
+book_any_details = a  
+
+boost_search :: Proxy "boost_search"
+boost_search = a  

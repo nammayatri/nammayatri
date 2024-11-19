@@ -93,7 +93,7 @@ import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.Handlers as UI
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
 import Screens.HelpAndSupportScreen.Transformer (reportIssueMessageTransformer)
-import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, findingQuotesSearchExpired, tipEnabledState)
+import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, findingQuotesSearchExpired, tipEnabledState, getCachedEstimates)
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.ScreenData as HomeScreenData
@@ -234,6 +234,7 @@ import Data.Int (ceil)
 import RemoteConfig as RemoteConfig
 import Screens.ParcelDeliveryFlow.ParcelDeliveryScreen.ScreenData as ParcelDeliveryScreenData
 import Helpers.PrestoUtils
+import Common.RemoteConfig (fetchRemoteConfigString)
 
 baseAppFlow :: GlobalPayload -> Boolean -> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -965,12 +966,19 @@ currentFlowStatus prioritizeRating = do
         setValueToLocalStore FINDING_QUOTES_POLLING "false"
         setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
         (GlobalState currentState) <- getState
+        let enableBoostSearch = fetchRemoteConfigString "enable_boost_search" == "true"
+            enableTipView = any (_ /= currentState.homeScreen.data.fareProductType) [FPT.ONE_WAY, FPT.DRIVER_OFFER] && not enableBoostSearch
         let
           tipViewData = case (getTipViewData "LazyCheck") of
             Just (TipViewData tipView) -> do
-              currentState.homeScreen.props.tipViewProps { stage = tipView.stage, activeIndex = tipView.activeIndex, isVisible = tipView.activeIndex >= 0 }
+              currentState.homeScreen.props.tipViewProps { stage = tipView.stage, activeIndex = tipView.activeIndex, isVisible = tipView.activeIndex >= 0 && enableTipView }
             Nothing -> do
               currentState.homeScreen.props.tipViewProps
+          estimates = if length currentState.homeScreen.data.specialZoneQuoteList > 0 then currentState.homeScreen.data.specialZoneQuoteList else map (\item -> item{validTill = ""}) (getCachedEstimates "")
+          selectedVariant = getValueToLocalStore SELECTED_VARIANT
+          selectedEstimate = case selectedVariant of 
+                                "BOOK_ANY" -> fromMaybe ChooseVehicle.config $ DA.find (\item -> item.vehicleVariant == "BOOK_ANY") estimates
+                                _ -> fromMaybe ChooseVehicle.config $ DA.find (\item -> item.id == estimateId) estimates
         case (getFlowStatusData "LazyCheck") of
           Just (FlowStatusData flowStatusData) -> do
             modifyScreenState
@@ -998,10 +1006,8 @@ currentFlowStatus prioritizeRating = do
                           , sourceAddress = flowStatusData.sourceAddress
                           , otherSelectedEstimates = fromMaybe [] otherSelectedEstimates
                           , destinationAddress = flowStatusData.destinationAddress
-                          , selectedEstimatesObject
-                            { vehicleVariant = getValueToLocalStore SELECTED_VARIANT
-                            , providerType = providerType
-                            }
+                          , specialZoneQuoteList = estimates
+                          , selectedEstimatesObject = selectedEstimate {vehicleVariant = selectedVariant, providerType = providerType}
                           }
                         }
                   )
@@ -1297,7 +1303,7 @@ homeScreenFlow = do
                                                                   ]
                                                                 <> (maybe [] (\rideVehicleServiceTier -> [{ key: "Vehicle ServiceTierName", value: unsafeToForeign $ rideVehicleServiceTier}]) selectedEstimatesObject.serviceTierName )
       rideSummaryScreenFlow
-    RETRY_FINDING_QUOTES showLoader -> do
+    RETRY_FINDING_QUOTES showLoader estimateId -> do
       void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS) -- TODO : Handled Loader in IOS Side
       void $ lift $ lift $ toggleLoader showLoader
       (GlobalState newState) <- getState
@@ -1313,7 +1319,7 @@ homeScreenFlow = do
           ]
       if (not (isLocalStageOn QuoteList)) then do
         void $ pure $ firebaseLogEvent "ny_user_cancel_and_retry_request_quotes"
-        cancelEstimate state.props.estimateId
+        cancelEstimate estimateId
       else do
         void $ pure $ firebaseLogEvent "ny_user_retry_request_quotes"
       setValueToLocalStore AUTO_SELECTING "false"
@@ -6955,11 +6961,13 @@ fcmHandler notification state notificationBody= do
         removeChatService ""
         setValueToLocalStore PICKUP_DISTANCE "0"
         (GlobalState updatedState) <- getState
+        let enableBoostSearch = fetchRemoteConfigString "enable_boost_search" == "true"
+            enableTipView = any (_ /= updatedState.homeScreen.data.fareProductType) [FPT.ONE_WAY, FPT.DRIVER_OFFER] && not enableBoostSearch
         let
-          homeScreenState = updatedState.homeScreen { data { quoteListModelState = [] }, props { isBanner = state.props.isBanner, currentStage = ReAllocated, estimateId = updatedState.homeScreen.props.estimateId, reAllocation { showPopUp = true }, tipViewProps { isVisible = updatedState.homeScreen.props.tipViewProps.activeIndex >= 0 }, selectedQuote = Nothing, isCancelRide = false, cancelSearchCallDriver = false, showRateCard = false } }
+          homeScreenState = updatedState.homeScreen { data { quoteListModelState = [] }, props { isBanner = state.props.isBanner, currentStage = ReAllocated, estimateId = updatedState.homeScreen.props.estimateId, reAllocation { showPopUp = true }, tipViewProps { isVisible = updatedState.homeScreen.props.tipViewProps.activeIndex >= 0 && enableTipView }, selectedQuote = Nothing, isCancelRide = false, cancelSearchCallDriver = false, showRateCard = false } }
         let
           updatedState = case (getTipViewData "LazyCheck") of
-            Just (TipViewData tipView) -> homeScreenState { props { tipViewProps { stage = tipView.stage, activeIndex = tipView.activeIndex, isVisible = tipView.activeIndex >= 0 } } }
+            Just (TipViewData tipView) -> homeScreenState { props { tipViewProps { stage = tipView.stage, activeIndex = tipView.activeIndex, isVisible = tipView.activeIndex >= 0 && enableTipView } } }
             Nothing -> homeScreenState { props { tipViewProps = HomeScreenData.initData.props.tipViewProps } }
         modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState {data {driverInfoCardState {driverArrived = false}}})
         void $ pure $ clearTimerWithId <$> state.props.waitingTimeTimerIds
