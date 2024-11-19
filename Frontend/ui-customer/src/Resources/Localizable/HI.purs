@@ -1653,3 +1653,8 @@ getHI stringKey =
         EXPLORE -> "अन्वेषण करें"
         METRO_TICKETS -> "मेटरो टिकट"
         OFFERS -> "ऑफ़स"
+        BOOST_SEARCH_INSTANTLY -> "अपनी खोज को तुरंत बढ़ावा दें!"
+        ADD_A_TIP -> "एक टिप जोड़ें"
+        UPDATED_FARE_STR -> "अद्यतन किराया"
+        BOOK_ANY_DETAILS -> "कोई भी विवरण बुक करें"
+        BOOST_SEARCH -> "खोज को बढ़ावा दें"

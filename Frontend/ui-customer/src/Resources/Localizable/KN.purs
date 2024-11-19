@@ -1655,3 +1655,8 @@ getKN stringKey =
         EXPLORE -> "ಅನ್ವೇಷಿಸಿ"
         METRO_TICKETS -> "ಮೆಟ್ರೋ ಟಿಕೆಟ್‌ಗಳು"
         OFFERS -> "ಆಫ್‌ಸ್"
+        BOOST_SEARCH_INSTANTLY -> "ನಿಮ್ಮ ಹುಡುಕಾಟವನ್ನು ತಕ್ಷಣವೇ ಹೆಚ್ಚಿಸಿ!"
+        ADD_A_TIP -> "ಸಲಹೆಯನ್ನು ಸೇರಿಸಿ"
+        UPDATED_FARE_STR -> "ನವೀಕರಿಸಿದ ದರ"
+        BOOK_ANY_DETAILS -> "ಯಾವುದೇ ವಿವರಗಳನ್ನು ಬುಕ್ ಮಾಡಿ"
+        BOOST_SEARCH -> "ಹುಡುಕಾಟವನ್ನು ಹೆಚ್ಚಿಸಿ"

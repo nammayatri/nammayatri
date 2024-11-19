@@ -828,6 +828,7 @@ type HomeScreenStateData =
   , upcomingRideDetails :: Maybe UpcomingRideDetails
   , selectedService :: Maybe RC.Service
   , intercityBus :: IntercityBusData
+  , boostSearchEstimate :: ChooseVehicle.Config
 }
 
 type UpcomingRideDetails = {
@@ -1129,6 +1130,8 @@ type HomeScreenStateProps =
   , showEditPickupPopupOnCancel :: Boolean
   , isIntercityFlow :: Boolean 
   , isTripSchedulable :: Boolean
+  , showBookAnyOptions :: Boolean
+  , showBoostSearch :: Boolean
   }
 
 type EditedLocation = {
@@ -1781,6 +1784,8 @@ data SearchResultType = QUOTES FareProductType | ESTIMATES
 derive instance genericSearchResultType :: Generic SearchResultType _
 instance eqSearchResultType :: Eq SearchResultType where eq = genericEq
 instance showSearchResultType :: Show SearchResultType where show = genericShow
+instance encodeSearchResultType :: Encode SearchResultType where encode = defaultEncode
+instance decodeSearchResultType:: Decode SearchResultType where decode = defaultDecode
 
 type LocationTagBarState =
   { savedLocations :: Array LocationListItemState }
@@ -3024,6 +3029,8 @@ data FareProductType = RENTAL | INTER_CITY | ONE_WAY | ONE_WAY_SPECIAL_ZONE | DR
 derive instance genericFareProductType :: Generic FareProductType _
 instance showFareProductType :: Show FareProductType where show = genericShow
 instance eqFareProductType :: Eq FareProductType where eq = genericEq
+instance encodeFareProductType :: Encode FareProductType where encode = defaultEncode
+instance decodeFareProductType :: Decode FareProductType where decode = defaultDecode
 
 data CancelSearchType = NORMAL_RIDE_CANCEL | RENTAL_SEARCH_CANCEL
 

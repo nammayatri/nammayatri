@@ -6,7 +6,7 @@ import Animation (translateYAnim,translateYAnimFromTop, fadeIn)
 import PrestoDOM.Animation as PrestoAnim
 import Animation.Config as Animation
 import Components.ChooseVehicle as ChooseVehicle
-import Components.ChooseYourRide.Controller (Action(..), Config, BookAnyProps, bookAnyProps)
+import Components.ChooseYourRide.Controller (Action(..), Config, BookAnyProps, bookAnyProps, getBookAnyProps, getMinMaxPrice, getMinMaxCapacity)
 import Components.PrimaryButton as PrimaryButton
 import Data.Array (mapWithIndex, length, (!!), filter, nubBy, any, foldl, filter, elem, null)
 import Data.Function.Uncurried (runFn1)
@@ -759,36 +759,6 @@ quoteListView push config =
         , background Color.greyDark
         ]
         []
-
-getBookAnyProps :: Array ChooseVehicle.Config -> BookAnyProps
-getBookAnyProps estimates = foldl (\acc item -> getMinMax acc item) bookAnyProps estimates
-  where 
-    getMinMax :: BookAnyProps -> ChooseVehicle.Config -> BookAnyProps
-    getMinMax bookAnyProps item = 
-      let minPrice = bookAnyProps.minPrice `min` (fromMaybe item.basePrice item.minPrice)
-          maxPrice = bookAnyProps.maxPrice `max` (fromMaybe item.basePrice item.maxPrice)
-          minCapacity = bookAnyProps.minCapacity `min` (fromMaybe 0 (fromString item.capacity))
-          maxCapacity = bookAnyProps.maxCapacity `max` (fromMaybe 0 (fromString item.capacity))
-      in bookAnyProps{minPrice = minPrice, maxPrice = maxPrice, minCapacity = minCapacity, maxCapacity = maxCapacity}
-
-getMinMaxPrice :: BookAnyProps -> ChooseVehicle.Config -> Array ChooseVehicle.Config -> String
-getMinMaxPrice bookAnyProps estimate estimates =
-  let currency = getCurrency appConfig
-  in case (length estimates), estimate.vehicleVariant == "BOOK_ANY" of 
-      0, true -> "-"
-      _, true -> if bookAnyProps.minPrice == bookAnyProps.maxPrice then (currency <> (show bookAnyProps.minPrice))
-                 else (currency <> (show bookAnyProps.minPrice) <> " - " <> currency <> (show bookAnyProps.maxPrice))
-      _ , false -> estimate.price
-      _,_ -> "-"
-
-getMinMaxCapacity :: BookAnyProps -> ChooseVehicle.Config -> Array ChooseVehicle.Config -> String
-getMinMaxCapacity bookAnyProps estimate estimates =
-  case (length estimates), estimate.vehicleVariant == "BOOK_ANY" of 
-    0, true -> "-"
-    _, true -> if bookAnyProps.minCapacity == bookAnyProps.maxCapacity then (show bookAnyProps.minCapacity)
-               else (show bookAnyProps.minCapacity) <> " - " <> (show bookAnyProps.maxCapacity)
-    _ , false -> estimate.capacity
-    _,_ -> "-"
 
 getQuoteListViewHeight :: Config -> Int -> Int
 getQuoteListViewHeight config len =

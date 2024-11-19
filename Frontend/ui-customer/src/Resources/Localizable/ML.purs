@@ -1651,3 +1651,8 @@ getML stringKey =
         EXPLORE -> "പര്യവേക്ഷണം ചെയ്യുക"
         METRO_TICKETS -> "മെട്രോ ടിക്കറ്റുകൾ"
         OFFERS -> "ആഫ്രസ്"
+        BOOST_SEARCH_INSTANTLY -> "നിങ്ങളുടെ തിരയൽ തൽക്ഷണം വർദ്ധിപ്പിക്കുക!"
+        ADD_A_TIP -> "ഒരു നുറുങ്ങ് ചേർക്കുക"
+        UPDATED_FARE_STR -> "പുതുക്കിയ നിരക്ക്"
+        BOOK_ANY_DETAILS -> "ഏത് വിശദാംശങ്ങളും ബുക്ക് ചെയ്യുക"
+        BOOST_SEARCH -> "തിരയൽ ബൂസ്റ്റ് ചെയ്യുക"

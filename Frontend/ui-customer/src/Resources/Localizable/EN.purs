@@ -1658,3 +1658,8 @@ getEN stringKey =
         EXPLORE -> "Explore"
         METRO_TICKETS -> "Metro Tickets"
         OFFERS -> "Offers"
+        BOOST_SEARCH_INSTANTLY -> "Boost your search instantly!"
+        ADD_A_TIP -> "Add a Tip"
+        UPDATED_FARE_STR -> "Updated Fare"
+        BOOK_ANY_DETAILS -> "Book Any Details"
+        BOOST_SEARCH -> "Boost Search"

@@ -203,6 +203,7 @@ initData = let
     , upcomingRideDetails : Nothing
     , selectedService : Nothing
     , intercityBus : initialIntercityBusData
+    , boostSearchEstimate : CV.config
     },
     props: {
       rideRequestFlow : false
@@ -412,6 +413,8 @@ initData = let
     , safetySettings : Nothing
     , isIntercityFlow : false
     , isTripSchedulable : false
+    , showBookAnyOptions : false
+    , showBoostSearch : false
   }
 }
 

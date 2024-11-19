@@ -175,9 +175,9 @@ homeScreen = do
     CheckFlowStatus updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure CHECK_FLOW_STATUS)
-    RetryFindingQuotes showLoader updatedState -> do
+    RetryFindingQuotes showLoader estimateId updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ RETRY_FINDING_QUOTES showLoader)
+      App.BackT $ App.BackPoint <$> (pure $ RETRY_FINDING_QUOTES showLoader estimateId)
     CallDriver updatedState callType exophoneNumber -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ ON_CALL updatedState callType exophoneNumber)

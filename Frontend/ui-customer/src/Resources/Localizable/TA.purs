@@ -1672,3 +1672,8 @@ getTA stringKey =
     EXPLORE -> "ஆராயுங்கள்"
     METRO_TICKETS -> "மெட்ரோ டிக்கெட்டுகள்"
     OFFERS -> "ஆப்ஸ்"
+    BOOST_SEARCH_INSTANTLY -> "உங்கள் தேடலை உடனடியாக அதிகரிக்கவும்!"
+    ADD_A_TIP -> "உதவிக்குறிப்பைச் சேர்க்கவும்"
+    UPDATED_FARE_STR -> "புதுப்பிக்கப்பட்ட கட்டணம்"
+    BOOK_ANY_DETAILS -> "எந்த விவரங்களையும் பதிவு செய்யவும்"
+    BOOST_SEARCH -> "தேடலை அதிகரிக்கவும்"
