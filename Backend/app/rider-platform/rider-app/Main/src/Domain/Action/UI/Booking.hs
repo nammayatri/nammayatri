@@ -195,7 +195,7 @@ processStop bookingId loc merchantId isEdit = do
   uuid <- generateGUID
   merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   validateStopReq booking isEdit loc merchant
-  location <- buildLocation loc
+  location <- buildLocation merchantId booking.merchantOperatingCityId loc
   prevOrder <- QLM.maxOrderByEntity booking.id.getId
   locationMapping <- buildLocationMapping location.id booking.id.getId isEdit (Just booking.merchantId) (Just booking.merchantOperatingCityId) prevOrder
   QL.create location
@@ -249,8 +249,13 @@ validateStopReq booking isEdit loc merchant = do
     (Just nearest, Just source) -> unless (nearest.currentCity.city == source.currentCity.city) $ throwError (InvalidRequest "Outside city stops are allowed in Intercity rides only.")
     _ -> throwError (InvalidRequest "Ride Unserviceable")
 
-buildLocation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => StopReq -> m Location
-buildLocation req = do
+buildLocation ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  StopReq ->
+  m Location
+buildLocation merchantId merchantOperatingCityId req = do
   id <- generateGUID
   now <- getCurrentTime
   return $
@@ -260,6 +265,8 @@ buildLocation req = do
         address = req.address,
         createdAt = now,
         updatedAt = now,
+        merchantId = Just merchantId,
+        merchantOperatingCityId = Just merchantOperatingCityId,
         ..
       }
 

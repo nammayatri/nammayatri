@@ -336,8 +336,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ clientId de
   riderCfg <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
   searchRequestId <- generateGUID
   RouteDetails {..} <- getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip originCity riderCfg req
-  fromLocation <- buildSearchReqLoc origin
-  stopLocations <- buildSearchReqLoc `mapM` stops
+  fromLocation <- buildSearchReqLoc merchant.id merchantOperatingCityId origin
+  stopLocations <- buildSearchReqLoc merchant.id merchantOperatingCityId `mapM` stops
   searchRequest <-
     buildSearchRequest
       searchRequestId
@@ -596,13 +596,14 @@ multiModalSearch personId merchantId searchReq bundleVersion clientVersion clien
           logDebug $ "journey for multi-modal: " <> show journey
 
           when (idx == 0) $ do
-            fork "child searches for multi-modal journey" $ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest (Id journeyId) journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ now maximumWalkDistance
+            fork "child searches for multi-modal journey" $ makeChildSearchReqs personId merchantId merchantOperatingCityId journeyPlannerLegs searchReq searchRequest (Id journeyId) journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ now maximumWalkDistance
       )
       allRoutes.routes
 
 makeChildSearchReqs ::
   Id Person.Person ->
   Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   [MultiModal.MultiModalLeg] ->
   OneWaySearchReq ->
   SearchRequest.SearchRequest ->
@@ -617,7 +618,7 @@ makeChildSearchReqs ::
   UTCTime ->
   Meters ->
   Flow ()
-makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchRequest journeyId journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ now maximumWalkDistance = do
+makeChildSearchReqs personId merchantId merchantOperatingCityId journeyPlannerLegs searchReq searchRequest journeyId journeyLegsCount bundleVersion clientVersion clientConfigVersion_ clientId device isDashboardRequest_ now maximumWalkDistance = do
   void $
     mapWithIndex
       ( \idx journeyPlannerLeg -> do
@@ -667,8 +668,8 @@ makeChildSearchReqs personId merchantId journeyPlannerLegs searchReq searchReque
               void $ FRFSTicketService.postFrfsSearch (Just personId, merchantId) Spec.BUS frfsSearchReq
             -- poll getFrfsSearchQuote from frontend
             DTrip.Walk -> do
-              fromLocation_ <- buildSearchReqLoc $ SearchReqLocation {gps = LatLong {lat = journeyPlannerLeg.startLocation.latLng.latitude, lon = journeyPlannerLeg.startLocation.latLng.longitude}, address = dummyAddress}
-              toLocation_ <- buildSearchReqLoc $ SearchReqLocation {gps = LatLong {lat = journeyPlannerLeg.endLocation.latLng.latitude, lon = journeyPlannerLeg.endLocation.latLng.longitude}, address = dummyAddress}
+              fromLocation_ <- buildSearchReqLoc merchantId merchantOperatingCityId $ SearchReqLocation {gps = LatLong {lat = journeyPlannerLeg.startLocation.latLng.latitude, lon = journeyPlannerLeg.startLocation.latLng.longitude}, address = dummyAddress}
+              toLocation_ <- buildSearchReqLoc merchantId merchantOperatingCityId $ SearchReqLocation {gps = LatLong {lat = journeyPlannerLeg.endLocation.latLng.latitude, lon = journeyPlannerLeg.endLocation.latLng.longitude}, address = dummyAddress}
               walkeLegid <- generateGUID
               let walkLeg =
                     DWalkLeg.WalkLegMultimodal
@@ -885,8 +886,13 @@ data SearchReqLocation = SearchReqLocation
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-buildSearchReqLoc :: MonadFlow m => SearchReqLocation -> m Location.Location
-buildSearchReqLoc SearchReqLocation {..} = do
+buildSearchReqLoc ::
+  MonadFlow m =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  SearchReqLocation ->
+  m Location.Location
+buildSearchReqLoc merchantId merchantOperatingCityId SearchReqLocation {..} = do
   now <- getCurrentTime
   locId <- generateGUID
   return
@@ -895,6 +901,8 @@ buildSearchReqLoc SearchReqLocation {..} = do
         lat = gps.lat,
         lon = gps.lon,
         address = address,
+        merchantId = Just merchantId,
+        merchantOperatingCityId = Just merchantOperatingCityId,
         createdAt = now,
         updatedAt = now
       }
