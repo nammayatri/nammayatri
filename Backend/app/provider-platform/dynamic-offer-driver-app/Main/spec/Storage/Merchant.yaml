@@ -884,6 +884,7 @@ TransporterConfig:
     otpRideStartRestrictionRadius: Maybe Meters
     disableListScheduledBookingAPI: Bool
     minDistanceForStopFcm: HighPrecMeters
+    recentScheduledBookingsSafeLimit: Int
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -928,6 +929,7 @@ TransporterConfig:
     driverDrivenSearchReqExpiry: Maybe Seconds
     disableListScheduledBookingAPI: Maybe Bool
     minDistanceForStopFcm: Maybe HighPrecMeters
+    recentScheduledBookingsSafeLimit: Maybe Int
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -981,6 +983,7 @@ TransporterConfig:
     driverDrivenSearchReqExpiry: Kernel.Utils.Common.nominalDiffTimeToSeconds <$> driverDrivenSearchReqExpiry|E
     disableListScheduledBookingAPI: Just disableListScheduledBookingAPI|E
     minDistanceForStopFcm: Just minDistanceForStopFcm|E
+    recentScheduledBookingsSafeLimit: Just recentScheduledBookingsSafeLimit|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1038,6 +1041,7 @@ TransporterConfig:
     driverDrivenSearchReqExpiry: Kernel.Utils.Common.secondsToNominalDiffTime <$> driverDrivenSearchReqExpiry|E
     disableListScheduledBookingAPI: fromMaybe False disableListScheduledBookingAPI|E
     minDistanceForStopFcm: fromMaybe 100 minDistanceForStopFcm|E
+    recentScheduledBookingsSafeLimit: fromMaybe 50 recentScheduledBookingsSafeLimit|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1219,6 +1223,7 @@ TransporterConfig:
     dailyConditionCooldownTimeHours: "24"
     weeklyConditionCooldownTimeHours: "168"
     disableListScheduledBookingAPI: "false"
+    recentScheduledBookingsSafeLimit: "50"
     minDistanceForStopFcm: "100"
 
   excludedDefaultQueries:
