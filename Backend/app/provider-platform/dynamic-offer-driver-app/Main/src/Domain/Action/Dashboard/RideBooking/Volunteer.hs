@@ -89,6 +89,8 @@ getVolunteerBooking merchantShortId opCity otpCode = do
     convertVehicleVariant DVST.AMBULANCE_VENTILATOR = Common.AMBULANCE_VENTILATOR
     convertVehicleVariant DVST.SUV_PLUS = Common.SUV_PLUS
     convertVehicleVariant DVST.DELIVERY_LIGHT_GOODS_VEHICLE = Common.DELIVERY_LIGHT_GOODS_VEHICLE
+    convertVehicleVariant DVST.BUS_NON_AC = Common.BUS_NON_AC
+    convertVehicleVariant DVST.BUS_AC = Common.BUS_AC
 
     buildBookingLocation Domain.Location {..} =
       Common.Location

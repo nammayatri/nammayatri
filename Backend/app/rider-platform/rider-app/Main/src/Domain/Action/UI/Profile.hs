@@ -119,7 +119,8 @@ data ProfileRes = ProfileRes
     customerReferralCode :: Maybe Text,
     deviceId :: Maybe Text,
     androidId :: Maybe Text,
-    aadhaarVerified :: Bool
+    aadhaarVerified :: Bool,
+    hasTakenValidBusRide :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -213,6 +214,7 @@ getPersonDetails (personId, _) toss tenant' context = do
       hasTakenValidFirstBikeRide = validRideCount hasTakenValidRide BecknEnums.MOTORCYCLE
       hasTakenValidAmbulanceRide = validRideCount hasTakenValidRide BecknEnums.AMBULANCE
       hasTakenValidTruckRide = validRideCount hasTakenValidRide BecknEnums.TRUCK
+      hasTakenValidBusRide = validRideCount hasTakenValidRide BecknEnums.BUS
   newCustomerReferralCode <-
     if isNothing person.customerReferralCode
       then do
@@ -224,9 +226,9 @@ getPersonDetails (personId, _) toss tenant' context = do
             pure $ Just newCustomerReferralCode
           else pure Nothing
       else pure person.customerReferralCode
-  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide safetySettings
+  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings
   where
-    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide safetySettings = do
+    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings = do
       ProfileRes
         { maskedMobileNumber = maskText <$> mobileNumber,
           maskedDeviceToken = maskText <$> deviceToken,
@@ -237,6 +239,7 @@ getPersonDetails (personId, _) toss tenant' context = do
           hasTakenValidBikeRide = hasTakenValidFirstBikeRide,
           hasTakenValidAmbulanceRide = hasTakenValidAmbulanceRide,
           hasTakenValidTruckRide = hasTakenValidTruckRide,
+          hasTakenValidBusRide = hasTakenValidBusRide,
           isSafetyCenterDisabled = isSafetyCenterDisabled_,
           customerReferralCode = newCustomerReferralCode,
           bundleVersion = clientBundleVersion,
