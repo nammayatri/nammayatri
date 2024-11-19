@@ -210,11 +210,11 @@ priceAndDistanceUpdateView state push =
             , width MATCH_PARENT
             , weight 1.0
             , gravity CENTER
+            , margin $ MarginLeft if state.showSafetyCenter then 60 else 0
             ][ imageView
                 [ width $ V 55
                 , height $ V 47
                 , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_green_tick" 
-                , margin $ MarginLeft 70
                 ]
             ]
           , linearLayout[
