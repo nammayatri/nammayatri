@@ -78,7 +78,7 @@ import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), MetroStations,Stage)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo, BookingTime, VehicleViewType(..), FareProductType(..))
-import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..), FRFSConfigAPIRes, RideBookingRes(..),RideBookingAPIDetails(..),RideBookingDetails(..),RideBookingListRes(..),BookingLocationAPIEntity(..), FRFSConfigAPIRes (..), FrfsQuote(..), FRFSRouteAPI(..),FRFSStationAPI(..))
+import Services.API (Prediction, SavedReqLocationAPIEntity(..), GateInfoFull(..), FRFSConfigAPIRes, RideBookingRes(..),RideBookingAPIDetails(..),RideBookingDetails(..),RideBookingListRes(..),BookingLocationAPIEntity(..), FRFSConfigAPIRes (..))
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
@@ -1550,32 +1550,3 @@ isDeliveryInitiator maybeTags =
 foreign import clearTimer :: String -> Unit
 foreign import startTimer :: forall action. Int -> Boolean -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import decodeErrorMessage :: String -> String
-
-getFirstRoute :: FrfsQuote -> Maybe FRFSRouteAPI
-getFirstRoute (FrfsQuote quote) =
-  case quote.routeStations of
-    Just routes ->
-      case routes !! 0 of
-        Just route -> Just route
-        Nothing -> Nothing
-    Nothing -> Nothing
-
-getAllFirstRoutes :: Maybe (Array FrfsQuote) -> Array FRFSRouteAPI
-getAllFirstRoutes maybeQuotes =
-  catMaybes $
-    case maybeQuotes of
-      Just quotes ->
-        map (\quote ->
-              getFirstRoute quote
-            ) quotes
-      Nothing -> []
-
-getSortedStops :: Array FRFSStationAPI -> Array FRFSStationAPI
-getSortedStops stops =
-  let
-    maxBound = top
-    distanceValue :: FRFSStationAPI -> Int
-    distanceValue (FRFSStationAPI { distance }) =
-      fromMaybe maxBound distance
-  in
-    sortBy (comparing distanceValue) stops

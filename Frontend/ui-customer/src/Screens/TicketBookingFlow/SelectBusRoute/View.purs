@@ -16,7 +16,7 @@ import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Font.Style as FontStyle
 import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC, getNewIDWithTag)
-import Helpers.Utils (convertUTCToISTAnd12HourFormat, fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, getFirstRoute)
+import Helpers.Utils (convertUTCToISTAnd12HourFormat, fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer)
 import Services.API (FRFSRouteAPI(..), FrfsSearchResp(..), FrfsQuotesRes(..), FrfsQuote(..)) --(BookingStatus(..), TicketPlaceResp(..), PlaceType(..))
 import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
 import Halogen.VDom.DOM.Prop (Prop)
@@ -46,6 +46,7 @@ import Data.Time.Duration (Milliseconds(..))
 import Helpers.Pooling (delay)
 import Helpers.Utils as HU
 import Data.Function.Uncurried (runFn1)
+import Helpers.FrfsUtils (getFirstRoute)
 
 screen :: String -> String -> SD.SelectBusRouteScreenState -> Screen Action SD.SelectBusRouteScreenState ScreenOutput
 screen fromStationCode toStationCode initialState =

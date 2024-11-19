@@ -3498,15 +3498,11 @@ newtype FRFSBookingPaymentAPI = FRFSBookingPaymentAPI {
 }
 
 newtype FRFSTicketAPI = FRFSTicketAPI {
-    status :: String --FRFSTicketStatus
+    status :: String
   , qrData :: String
   , validTill :: String
   , ticketNumber :: String
   }
-
--- For understanding and debugging types 
--- FRFSTicketBookingStatus = NEW | APPROVED | PAYMENT_PENDING | CONFIRMING | FAILED | CONFIRMED
--- FRFSTicketStatus = ACTIVE | EXPIRED | USED
 
 instance makeConfirmMetroQuoteReq :: RestEndpoint ConfirmMetroQuoteReq  where
  makeRequest reqBody@(ConfirmMetroQuoteReq quoteId) headers = defaultMakeRequestWithoutLogs POST (EP.confirmMetroQuote quoteId) headers reqBody Nothing
