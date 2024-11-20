@@ -303,6 +303,7 @@
       "ny_ic_blue_share" : true,
       "ny_ic_blue_shield_white_plus" : true,
       "ny_ic_blue_toll" : true,
+      "ny_ic_bus_side" : true,
       "ny_ic_calendar" : true,
       "ny_ic_calendar_black" : true,
       "ny_ic_calendar_blue" : true,

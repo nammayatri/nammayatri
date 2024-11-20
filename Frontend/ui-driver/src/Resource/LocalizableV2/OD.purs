@@ -1781,4 +1781,5 @@ getOd =
     , metro_warriors : "ମେଟ୍ରୋ ୱାରିଅର୍"
     , search : "ଖୋଜନ୍ତୁ"
    , we_are_not_able_to_fetch_your_current_location : "ଆମେ ଆପଣଙ୍କର ବର୍ତ୍ତମାନ ସ୍ଥାନ ଅନ୍ଧାର କରିପାରୁ ନାହିଁ।"
+    , bus__ : "ବସ୍"  
   }

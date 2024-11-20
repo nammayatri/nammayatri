@@ -378,6 +378,8 @@ getVehicleType vehicleType =
     "AMBULANCE_VENTILATOR" -> getString VENTILATOR
     "SUV_PLUS" -> getString XL_PLUS
     "DELIVERY_LIGHT_GOODS_VEHICLE" -> getString TRUCK
+    "BUS_NON_AC" -> "Non AC Bus"
+    "BUS_AC" -> "AC Bus"
     _ -> ""
 
 getRideLabelData :: Maybe String -> LabelConfig
@@ -1120,6 +1122,7 @@ getVehicleVariantName variant =
                   BikeCategory -> getString BIKE_TAXI
                   AmbulanceCategory -> getString AMBULANCE
                   TruckCategory -> getString TRUCK
+                  BusCategory ->  "BUS"
                   UnKnown -> ""
 
 defaultNotificationBody :: NotificationBody

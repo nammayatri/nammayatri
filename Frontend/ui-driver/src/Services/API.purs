@@ -845,7 +845,7 @@ instance showRidesInfo :: Show RidesInfo where show = genericShow
 instance decodeRidesInfo :: Decode RidesInfo where decode = defaultDecode
 instance encodeRidesInfo :: Encode RidesInfo where encode = defaultEncode
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS | DELIVERY_LIGHT_GOODS_VEHICLE
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT | BIKE | AMBULANCE_TAXI | AMBULANCE_TAXI_OXY | AMBULANCE_AC | AMBULANCE_AC_OXY | AMBULANCE_VENTILATOR | SUV_PLUS | DELIVERY_LIGHT_GOODS_VEHICLE | BUS_NON_AC | BUS_AC
 
 derive instance genericVehicleVariant :: Generic VehicleVariant _
 instance showVehicleVariant :: Show VehicleVariant where show = genericShow
@@ -865,7 +865,8 @@ instance standardEncodeVehicleVariant :: StandardEncode VehicleVariant
  standardEncode AMBULANCE_VENTILATOR = standardEncode {}
  standardEncode SUV_PLUS = standardEncode {}
  standardEncode DELIVERY_LIGHT_GOODS_VEHICLE = standardEncode {}
-
+ standardEncode BUS_NON_AC = standardEncode {}
+ standardEncode BUS_AC = standardEncode {}
 
 data Status = NEW | INPROGRESS | COMPLETED | CANCELLED | NOTHING | UPCOMING
 
@@ -4353,7 +4354,8 @@ newtype OnboardingDocsRes = OnboardingDocsRes {
   cabs :: Maybe (Array OnboardingDoc),
   bikes :: Maybe (Array OnboardingDoc),
   ambulances :: Maybe (Array OnboardingDoc),
-  trucks :: Maybe (Array OnboardingDoc)
+  trucks :: Maybe (Array OnboardingDoc),
+  bus :: Maybe (Array OnboardingDoc)
 }
 
 newtype OnboardingDoc = OnboardingDoc {

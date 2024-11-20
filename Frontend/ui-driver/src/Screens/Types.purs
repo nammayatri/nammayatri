@@ -295,6 +295,7 @@ type RegistrationScreenData = {
   registerationStepsBike :: Array StepProgress,
   registerationStepsAmbulance :: Array StepProgress,
   registerationStepsTruck :: Array StepProgress,
+  registerationStepsBus :: Array StepProgress,
   phoneNumber :: String,
   drivingLicenseStatus :: StageStatus,
   vehicleDetailsStatus :: StageStatus,
@@ -389,7 +390,7 @@ data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED | MANUAL_VERIF
 derive instance genericStageStatus :: Generic StageStatus _
 instance eqStageStatus :: Eq StageStatus where eq = genericEq
 
-data VehicleCategory = AutoCategory | CarCategory | BikeCategory | AmbulanceCategory | TruckCategory | UnKnown
+data VehicleCategory = AutoCategory | CarCategory | BikeCategory | AmbulanceCategory | TruckCategory | BusCategory | UnKnown
 
 derive instance genericVehicleCategory :: Generic VehicleCategory _
 instance eqVehicleCategory :: Eq VehicleCategory where eq = genericEq
@@ -1099,6 +1100,7 @@ type HomeScreenData =  {
 , completingProfileRes :: CompletingProfileRes
 , favPopUp :: FavouritePopUp
 , isSpecialLocWarrior :: Boolean
+, bus_number :: String
 }
 
 type FavouritePopUp = {
@@ -1421,7 +1423,9 @@ type HomeScreenProps =  {
   intercityInfoPopUp :: Boolean,
   retryRideList :: Boolean,
   showParcelIntroductionPopup :: Boolean,
-  showMetroWarriorWarningPopup :: Boolean
+  showMetroWarriorWarningPopup :: Boolean,
+  setBusOnline :: Boolean,
+  bus_input_data :: String
  }
 
 type RideRequestPill = {

@@ -827,6 +827,7 @@ mkCategory category =
         Just ST.BikeCategory -> Just "MOTORCYCLE"
         Just ST.AmbulanceCategory -> Just "AMBULANCE"
         Just ST.TruckCategory -> Just "TRUCK"
+        Just ST.BusCategory -> Just "BUS"
         Just ST.UnKnown -> Nothing
         Nothing -> case (getValueToLocalStore VEHICLE_CATEGORY) of
                 "CarCategory" -> Just "CAR"
@@ -834,6 +835,7 @@ mkCategory category =
                 "BikeCategory" -> Just "MOTORCYCLE"
                 "AmbulanceCategory" -> Just "AMBULANCE"
                 "TruckCategory" -> Just "TRUCK"
+                "BusCategory" -> Just "BUS"
                 _ -> Nothing
 
 registerDriverDLBT :: DriverDLReq -> FlowBT String  ApiSuccessResult
