@@ -21,7 +21,7 @@ import qualified Environment
 import EulerHS.Prelude hiding (elem, filter, id, map, whenJust)
 import Kernel.Prelude
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, throwError)
+import Kernel.Utils.Common (fromMaybeM, logDebug, throwError)
 import qualified Lib.Queries.SpecialLocation
 import qualified Lib.Queries.SpecialLocation as SpecialLocation
 import Servant hiding (throwError)
@@ -75,10 +75,11 @@ postUpdateInfoSpecialLocWarrior (_, _, _merchantOperatingCityId) personId Specia
     MaybeT $ TDI.getPreferredPrimarySpecialLoc (Just preferredPrimarySpecialLocId'.getId) -- >>= fromMaybeM (InvalidRequest $ "SpecialLocWarrior Loc not found with id : " <> preferredPrimarySpecialLocId'.getId)
   let preferredPrimarySpecialLocation = primarySpecialLocation <|> driverInfo.preferredPrimarySpecialLoc
   when (isSpecialLocWarrior && isNothing preferredPrimarySpecialLocation) $ throwError (InvalidRequest "preferredPrimarySpecialLoc is required when isSpecialLocWarrior is true")
-  QDI.updateSpecialLocWarriorInfo isSpecialLocWarrior preferredPrimarySpecialLocation preferredSecondarySpecialLocIds personId
   mbOlderDriverTag <- runMaybeT $ do
     preferredPrimarySpecialLocation' <- MaybeT $ pure driverInfo.preferredPrimarySpecialLoc
     getDriverTag preferredPrimarySpecialLocation' driverInfo.preferredSecondarySpecialLocIds
+
+  QDI.updateSpecialLocWarriorInfo isSpecialLocWarrior preferredPrimarySpecialLocation preferredSecondarySpecialLocIds personId
 
   mbDriverTag <- runMaybeT $ do
     preferredPrimarySpecialLocation' <- MaybeT $ pure preferredPrimarySpecialLocation
@@ -87,8 +88,12 @@ postUpdateInfoSpecialLocWarrior (_, _, _merchantOperatingCityId) personId Specia
     if isSpecialLocWarrior
       then unless (maybe False (elem driverTag) driver.driverTag) $ do
         whenJust mbOlderDriverTag $ \olderDriverTag -> do
-          QPerson.updateDriverTag (Just $ removeDriverTag driver.driverTag olderDriverTag) personId
-        QPerson.updateDriverTag (Just $ addDriverTag driver.driverTag driverTag) personId
+          let updatedTag = addDriverTag (Just $ removeDriverTag driver.driverTag olderDriverTag) driverTag
+          logDebug $ "Driver Tag olderDriverTag: ----------" <> personId.getId <> "  " <> show olderDriverTag
+          logDebug $ "Driver Tag removeDriverTag: ----------" <> personId.getId <> "  " <> show (removeDriverTag driver.driverTag olderDriverTag)
+          QPerson.updateDriverTag (Just updatedTag) personId
+        whenNothing_ mbOlderDriverTag $ QPerson.updateDriverTag (Just $ addDriverTag driver.driverTag driverTag) personId
+        logDebug $ "Driver Tag addDriverTag: ----------" <> personId.getId <> "  " <> show (addDriverTag driver.driverTag driverTag)
       else when (maybe False (elem driverTag) driver.driverTag) $ QPerson.updateDriverTag (Just $ removeDriverTag driver.driverTag driverTag) personId
   return $
     SpecialLocWarriorInfoRes
