@@ -16,6 +16,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.TH
 import qualified Lib.Queries.SpecialLocation
 import qualified Lib.Types.SpecialLocation
+import qualified SharedLogic.BehaviourManagement.IssueBreach
 import qualified Tools.Beam.UtilsTH
 import qualified Tools.Error
 
@@ -45,10 +46,12 @@ data DriverInformation = DriverInformation
     driverTripEndLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     enabled :: Kernel.Prelude.Bool,
     enabledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    extraFareMitigationFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     forwardBatchingEnabled :: Kernel.Prelude.Bool,
     hasAdvanceBooking :: Kernel.Prelude.Bool,
     isInteroperable :: Kernel.Prelude.Bool,
     isSpecialLocWarrior :: Kernel.Prelude.Bool,
+    issueBreachCooldownTimes :: Kernel.Prelude.Maybe [SharedLogic.BehaviourManagement.IssueBreach.IssueBreachCooldownTime],
     lastACStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     lastEnabledOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     latestScheduledBooking :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

@@ -19,6 +19,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Lib.Queries.SpecialLocation
 import qualified Lib.Types.SpecialLocation
 import qualified Sequelize as Se
+import qualified SharedLogic.BehaviourManagement.IssueBreach
 import qualified Storage.Beam.DriverInformation as Beam
 import Storage.Queries.DriverInformationExtra as ReExport
 
@@ -138,6 +139,11 @@ updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngrade
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateExtraFareMitigation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateExtraFareMitigation extraFareMitigationFlag driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.extraFareMitigationFlag extraFareMitigationFlag, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateForwardBatchingEnabled :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateForwardBatchingEnabled forwardBatchingEnabled driverId = do
   _now <- getCurrentTime
@@ -147,6 +153,13 @@ updateIsInteroperable :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.
 updateIsInteroperable isInteroperable driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isInteroperable (Kernel.Prelude.Just isInteroperable), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
+updateIssueBreachCooldownTimes ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe [SharedLogic.BehaviourManagement.IssueBreach.IssueBreachCooldownTime] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateIssueBreachCooldownTimes issueBreachCooldownTimes driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.issueBreachCooldownTimes (Kernel.Prelude.toJSON <$> issueBreachCooldownTimes), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateLastACStatusCheckedAt :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateLastACStatusCheckedAt lastACStatusCheckedAt driverId = do
@@ -290,10 +303,12 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.driverTripEndLocationLon (Kernel.Prelude.fmap (.lon) driverTripEndLocation),
       Se.Set Beam.enabled enabled,
       Se.Set Beam.enabledAt enabledAt,
+      Se.Set Beam.extraFareMitigationFlag extraFareMitigationFlag,
       Se.Set Beam.forwardBatchingEnabled (Kernel.Prelude.Just forwardBatchingEnabled),
       Se.Set Beam.hasAdvanceBooking (Kernel.Prelude.Just hasAdvanceBooking),
       Se.Set Beam.isInteroperable (Kernel.Prelude.Just isInteroperable),
       Se.Set Beam.isSpecialLocWarrior (Kernel.Prelude.Just isSpecialLocWarrior),
+      Se.Set Beam.issueBreachCooldownTimes (Kernel.Prelude.toJSON <$> issueBreachCooldownTimes),
       Se.Set Beam.lastACStatusCheckedAt lastACStatusCheckedAt,
       Se.Set Beam.lastEnabledOn lastEnabledOn,
       Se.Set Beam.latestScheduledBooking latestScheduledBooking,

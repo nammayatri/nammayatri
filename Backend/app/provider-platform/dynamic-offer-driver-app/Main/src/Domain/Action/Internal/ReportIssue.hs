@@ -15,20 +15,25 @@
 module Domain.Action.Internal.ReportIssue where
 
 import Domain.Types.Ride
+import Domain.Types.ServiceTierType
 import Environment
 import qualified IssueManagement.Common as ICommon
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
-import Kernel.Utils.Error
+import Kernel.Utils.Common
+import SharedLogic.BehaviourManagement.IssueBreach (IssueBreachType (..))
+import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import SharedLogic.DriverOnboarding
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import Utils.Common.Cac.KeyNameConstants
 
 reportIssue :: Id Ride -> ICommon.IssueReportType -> Maybe Text -> Flow APISuccess
 reportIssue rideId issueType apiKey = do
@@ -43,6 +48,7 @@ reportIssue rideId issueType apiKey = do
       incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers ride.driverId
     ICommon.DRIVER_TOLL_RELATED_ISSUE -> handleTollRelatedIssue ride
     ICommon.SYNC_BOOKING -> pure ()
+    ICommon.EXTRA_FARE_MITIGATION -> handleExtraFareMitigation ride booking.vehicleServiceTier
   return Success
 
 handleTollRelatedIssue :: Ride -> Flow ()
@@ -50,3 +56,16 @@ handleTollRelatedIssue ride = do
   driverInfo <- QDI.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
   let tollRelatedIssueCount = fromMaybe 0 driverInfo.tollRelatedIssueCount + 1
   void $ QDI.updateTollRelatedIssueCount (Just tollRelatedIssueCount) ride.driverId
+
+handleExtraFareMitigation :: Ride -> ServiceTierType -> Flow ()
+handleExtraFareMitigation ride serviceTierType = do
+  driverInfo <- QDI.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (DriverId (cast ride.driverId))) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
+  let ibConfig = IBM.getIssueBreachConfig EXTRA_FARE_MITIGATION transporterConfig
+  let allowedSTiers = ibConfig <&> (.ibAllowedServiceTiers)
+  let isRideAllowedForCounting = maybe False (\allowedServiceTiers -> null allowedServiceTiers || serviceTierType `elem` allowedServiceTiers) allowedSTiers
+  when isRideAllowedForCounting $
+    whenJust ibConfig $ \config -> do
+      QDI.updateExtraFareMitigation (pure True) ride.driverId
+      IBM.incrementIssueBreachCounter EXTRA_FARE_MITIGATION ride.driverId (toInteger config.ibCountWindowSizeInDays)
+      IBM.issueBreachMitigation EXTRA_FARE_MITIGATION transporterConfig driverInfo

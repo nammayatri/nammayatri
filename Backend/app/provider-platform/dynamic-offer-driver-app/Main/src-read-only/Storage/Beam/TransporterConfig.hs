@@ -127,6 +127,7 @@ data TransporterConfigT f = TransporterConfigT
     isAvoidToll :: B.C f Kernel.Prelude.Bool,
     isDeviceIdChecksRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPlanMandatory :: B.C f Kernel.Prelude.Bool,
+    issueBreachConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     kaptureDisposition :: B.C f Kernel.Prelude.Text,
     kaptureQueue :: B.C f Kernel.Prelude.Text,
     languagesToBeTranslated :: B.C f [Kernel.External.Types.Language],

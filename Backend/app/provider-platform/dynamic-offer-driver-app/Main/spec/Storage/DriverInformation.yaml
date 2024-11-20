@@ -10,6 +10,8 @@ imports:
   BlockReasonFlag: Tools.Error
   SpecialLocationWarrior: Lib.Queries.SpecialLocation
   SpecialLocation: Lib.Types.SpecialLocation
+  IssueBreachCooldownTime: SharedLogic.BehaviourManagement.IssueBreach
+  Value: Data.Aeson
 
 DriverInformation:
   tableName: driver_information
@@ -82,6 +84,7 @@ DriverInformation:
     lastACStatusCheckedAt: Maybe UTCTime
     hasAdvanceBooking: Bool
     tollRelatedIssueCount: Maybe Int
+    extraFareMitigationFlag: Maybe Bool
     forwardBatchingEnabled: Bool
     payoutVpa: Maybe Text
     isInteroperable: Bool
@@ -96,6 +99,7 @@ DriverInformation:
     payoutRegAmountRefunded: Maybe HighPrecMoney
     driverTripEndLocation: Maybe LatLong
     onRideTripCategory: Maybe TripCategory
+    issueBreachCooldownTimes: Maybe [IssueBreachCooldownTime]
 
   default:
     active: "false"
@@ -139,9 +143,11 @@ DriverInformation:
     isInteroperable: Maybe Bool
     isSpecialLocWarrior: Maybe Bool
     preferredSecondarySpecialLocIds : "Maybe [Text]"
+    issueBreachCooldownTimes: Maybe Value
 
   sqlType:
     preferredSecondarySpecialLocIds: "text[]"
+    issueBreachCooldownTimes: "json"
 
   fromTType:
     canSwitchToRental: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
@@ -155,6 +161,8 @@ DriverInformation:
     preferredPrimarySpecialLoc : Storage.Queries.Transformers.DriverInformation.getPreferredPrimarySpecialLoc preferredPrimarySpecialLocId|EM
     preferredSecondarySpecialLocIds: Kernel.Prelude.maybe [] (map Kernel.Types.Id.Id) preferredSecondarySpecialLocIds|E
     driverTripEndLocation: Storage.Queries.Transformers.Ride.mkLatLong|I
+    issueBreachCooldownTimes: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachCooldownTimes|E
 
   toTType:
     canSwitchToRental: Kernel.Prelude.Just|I
@@ -170,6 +178,7 @@ DriverInformation:
     preferredSecondarySpecialLocIds:  Kernel.Prelude.Just (map Kernel.Types.Id.getId preferredSecondarySpecialLocIds)|E
     driverTripEndLocationLat: Kernel.Prelude.fmap (.lat)|I
     driverTripEndLocationLon: Kernel.Prelude.fmap (.lon)|I
+    issueBreachCooldownTimes: Kernel.Prelude.toJSON <$> issueBreachCooldownTimes|E
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -243,6 +252,10 @@ DriverInformation:
       kvFunction: updateOneWithKV
       params : [tollRelatedIssueCount]
       where: driverId
+    updateExtraFareMitigation:
+      kvFunction: updateOneWithKV
+      params : [extraFareMitigationFlag]
+      where: driverId
     updateForwardBatchingEnabled:
       kvFunction: updateOneWithKV
       params: [forwardBatchingEnabled]
@@ -294,5 +307,9 @@ DriverInformation:
     updateTripEndLocation:
       kvFunction: updateOneWithKV
       params: [driverTripEndLocation]
+      where: driverId
+    updateIssueBreachCooldownTimes:
+      kvFunction: updateOneWithKV
+      params: [issueBreachCooldownTimes]
       where: driverId
 

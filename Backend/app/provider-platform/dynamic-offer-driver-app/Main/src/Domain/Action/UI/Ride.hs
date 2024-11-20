@@ -251,7 +251,8 @@ data DriverRideRes = DriverRideRes
     tipAmount :: Maybe PriceAPIEntity,
     penalityCharge :: Maybe PriceAPIEntity,
     senderDetails :: Maybe DeliveryPersonDetailsAPIEntity,
-    receiverDetails :: Maybe DeliveryPersonDetailsAPIEntity
+    receiverDetails :: Maybe DeliveryPersonDetailsAPIEntity,
+    extraFareMitigationFlag :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -427,7 +428,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         tipAmount = flip PriceAPIEntity ride.currency <$> ride.tipAmount,
         penalityCharge = flip PriceAPIEntity ride.currency <$> ride.cancellationFeeIfCancelled,
         senderDetails = booking.senderDetails <&> (\sd -> DeliveryPersonDetailsAPIEntity (sd.name) sd.primaryExophone),
-        receiverDetails = booking.receiverDetails <&> (\rd -> DeliveryPersonDetailsAPIEntity (rd.name) rd.primaryExophone)
+        receiverDetails = booking.receiverDetails <&> (\rd -> DeliveryPersonDetailsAPIEntity (rd.name) rd.primaryExophone),
+        extraFareMitigationFlag = driverInfo >>= (.extraFareMitigationFlag)
       }
 
 makeStop :: [DSI.StopInformation] -> DLoc.Location -> Stop
