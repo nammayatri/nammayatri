@@ -3161,18 +3161,18 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState expCounter
               else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) || (hasCurrentLocAndPrevDropLoc && isNothing state.data.routeCacheForAdvancedBooking) || hasCurrentLocAndPrevDropLoc /= state.data.previousRideDrop then do
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
-                routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
+                routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon (if routeState == "pickup" then Just rideId else Nothing) 
                 when (not $ isLocalStageOn EditPickUpLocation) $ do
                     routeResponseAdvanced <- do
                       case state.data.routeCacheForAdvancedBooking, mbPreviousDropLat, mbPreviousDropLon, routeResponse of
                         Nothing , Just previousDropLat, Just previousDropLon, Right (GetRouteResp routeResp) -> do
                           let routes = maybe (Nothing) (\(Route route) -> Just route) (routeResp !! 0)
-                          {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon dstLat dstLon routes
+                          {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon dstLat dstLon routes rideId
                           let normalRoutePoints = fromMaybe {points : []} points
                               lastPointInRoute = Arr.last normalRoutePoints.points
                               previousDropLat' = maybe previousDropLat (\resp -> resp.lat) lastPointInRoute
                               previousDropLon' = maybe previousDropLon (\resp -> resp.lng) lastPointInRoute
-                          let routeReq = makeGetRouteReq previousDropLat' previousDropLon' state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng
+                          let routeReq = makeGetRouteReq previousDropLat' previousDropLon' state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng (if routeState == "pickup" then Just rideId else Nothing) 
                           Just <$> getRoute routeState routeReq
                         Just advRoute, Just previousDropLat, Just previousDropLon, _ -> pure $ Just (Right (GetRouteResp ([advRoute])))
                         _, _, _, _ -> pure $ Just (Right (GetRouteResp []))
@@ -3182,12 +3182,12 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                         case ((routeResp) !! 0), ((routeRespAdvanced) !! 0), hasCurrentLocAndPrevDropLoc of
                           Just (Route routes), Just (Route routesAdvanced), true -> do
                             when (not $ isLocalStageOn EditPickUpLocation) $ void $ pure $ removeAllPolylines ""    
-                            {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon dstLat dstLon (Just routes)
+                            {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon dstLat dstLon (Just routes) rideId
                             let newPoints = points
                                 newRoute = route
                                 routeDistanceNormal = fromMaybe 0 routeDistance
                                 routeDurationNormal = fromMaybe 0 routeDuration
-                            {points, route, routeDistance, routeDuration} <- createRouteHelper routeState dstLat dstLon state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng (Just routesAdvanced)
+                            {points, route, routeDistance, routeDuration} <- createRouteHelper routeState dstLat dstLon state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng (Just routesAdvanced) rideId
                             let newPointsAdv = points
                                 newRouteAdv = route
                                 routeDistanceAdvanced = fromMaybe 0 routeDistance 
@@ -3211,7 +3211,7 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                             void $ delay $ Milliseconds duration
                             driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = newRoute, routeCacheForAdvancedBooking = newRouteAdv, previousRideDrop = true, speed = (routeDistanceNormal + routeDistanceAdvanced) / (routeDurationNormal + routeDurationAdvanced) } } routeState expCounter
                           Just (Route routes), Nothing, false -> do
-                            {points, route, routeDistance, routeDuration} <- createRouteHelper routeState dstLat dstLon ( maybe (0.0) (\loc -> loc.lat) state.props.stopLoc) (maybe 0.0 (\loc -> loc.lng) state.props.stopLoc) Nothing--state.data.driverInfoCardState.destinationLng
+                            {points, route, routeDistance, routeDuration} <- createRouteHelper routeState dstLat dstLon ( maybe (0.0) (\loc -> loc.lat) state.props.stopLoc) (maybe 0.0 (\loc -> loc.lng) state.props.stopLoc) Nothing rideId--state.data.driverInfoCardState.destinationLng
                             let rentalPoints = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideAccepted then points else Nothing
                                 rentalRoute = route 
                                 callback = runFn2 getMarkerCallback push MarkerLabelOnClick
@@ -3222,8 +3222,8 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                                 rentalDuration = routeDuration
                                 destLat = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideStarted then (maybe dstLat (\loc -> loc.lat) state.props.stopLoc) else dstLat 
                                 destLon = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideStarted then (maybe dstLon (\loc -> loc.lng) state.props.stopLoc) else dstLon
-                            {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon destLat destLon (Just routes)
-                            if (srcLat /= 0.0 && srcLon /= 0.0 && destLat /= 0.0 && destLon /= 0.0) then do 
+                            {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon destLat destLon (Just routes) rideId
+                            if (srcLat /= 0.0 && srcLon /= 0.0 && destLat /= 0.0 && destLon /= 0.0) then do
                               when (not $ isLocalStageOn EditPickUpLocation) $ void $ pure $ removeAllPolylines ""
                               let srcMarkerConfig = defaultMarkerConfig{ markerId = markers.srcMarker, pointerIcon = markers.srcMarker, primaryText = getMarkerPrimaryText routes.distance }
                                   destMarkerConfig = defaultMarkerConfig{ markerId = markers.destMarker, pointerIcon = markers.destMarker, primaryText = destMarkerPrimaryText, anchorV = 1.0, markerCallback = callback, actionImage = getMarkerActionImageConifg state driverWithinPickupThreshold }
@@ -5097,12 +5097,12 @@ bookingPrefOptions push state =
   
 
 
-createRouteHelper routeState startLat startLon endLat endLon mbRoute = do
+createRouteHelper routeState startLat startLon endLat endLon mbRoute rideId = do
   route <- do
     case mbRoute of
       Just routeCalculated  -> pure $ Just routeCalculated
       Nothing -> do
-        routeResp <- getRoute routeState $ makeGetRouteReq startLat startLon endLat endLon
+        routeResp <- getRoute routeState $ makeGetRouteReq startLat startLon endLat endLon (if routeState == "pickup" then Just rideId else Nothing) 
         case routeResp of 
           Right (GetRouteResp resp) -> do 
             case (head resp) of 
