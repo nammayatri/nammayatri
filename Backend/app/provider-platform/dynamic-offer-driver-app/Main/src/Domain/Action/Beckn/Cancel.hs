@@ -114,7 +114,7 @@ cancel req merchant booking mbActiveSearchTry = do
 
     (disToPickup, mbLocation) <- getDistanceToPickup booking mbRide
     let currentLocation = getCoordinates <$> mbLocation
-    bookingCR <- buildBookingCancellationReason disToPickup currentLocation
+    bookingCR <- buildBookingCancellationReason disToPickup currentLocation mbRide
     QBCR.upsert bookingCR
     QRB.updateStatus booking.id SRB.CANCELLED
 
@@ -166,15 +166,15 @@ cancel req merchant booking mbActiveSearchTry = do
 
     return (isReallocated, cancellationCharge)
   where
-    buildBookingCancellationReason disToPickup currentLocation = do
+    buildBookingCancellationReason disToPickup currentLocation mbRide = do
       return $
         DBCR.BookingCancellationReason
           { bookingId = req.bookingId,
-            rideId = Nothing,
+            rideId = (.id) <$> mbRide,
             merchantId = Just booking.providerId,
             source = DBCR.ByUser,
             reasonCode = DTCR.CancellationReasonCode <$> req.cancellationReason,
-            driverId = Nothing,
+            driverId = (.driverId) <$> mbRide,
             additionalInfo = Nothing,
             driverCancellationLocation = currentLocation,
             driverDistToPickup = disToPickup,

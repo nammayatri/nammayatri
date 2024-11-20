@@ -40,7 +40,7 @@ type API =
     :<|> "pickup"
       :> "route"
       :> TokenAuth
-      :> ReqBody '[JSON] Maps.GetRoutesReq
+      :> ReqBody '[JSON] DRoute.GetPickupRoutesReq
       :> Post '[JSON] Maps.GetRoutesResp
     :<|> "trip"
       :> "route"
@@ -54,7 +54,7 @@ handler = getRoute :<|> getPickupRoute :<|> getTripRoute
 getRoute :: (Id Person.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
 getRoute (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getRoutes (personId, merchantId)
 
-getPickupRoute :: (Id Person.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
+getPickupRoute :: (Id Person.Person, Id Merchant.Merchant) -> DRoute.GetPickupRoutesReq -> FlowHandler Maps.GetRoutesResp
 getPickupRoute (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getPickupRoutes (personId, merchantId)
 
 getTripRoute :: (Id Person.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp

@@ -195,3 +195,8 @@ ALTER TABLE atlas_app.ride ADD COLUMN has_stops boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN feedback_skipped boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN pickup_route_call_count integer ;
