@@ -105,11 +105,15 @@ getRoutes isAvoidToll personId merchantId mbMOCId req = do
   mOCId <- getMerchantOperatingCityId personId mbMOCId
   runWithServiceConfig (Maps.getRoutes $ fromMaybe merchant.isAvoidToll isAvoidToll) (.getRoutes) merchantId mOCId req
 
-getPickupRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
-getPickupRoutes personId merchantId mbMOCId req = do
+getPickupRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> MapsService -> GetRoutesReq -> m GetRoutesResp
+getPickupRoutes merchantId merchantOperatingCityId service req = do
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  mOCId <- getMerchantOperatingCityId personId mbMOCId
-  runWithServiceConfig (Maps.getRoutes merchant.isAvoidToll) (.getPickupRoutes) merchantId mOCId req
+  merchantMapsServiceConfig <-
+    QMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (DMSC.MapsService service)
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show service))
+  case merchantMapsServiceConfig.serviceConfig of
+    DMSC.MapsServiceConfig msc -> Maps.getRoutes merchant.isAvoidToll msc req
+    _ -> throwError $ InternalError "Unknown Service Config"
 
 getFrfsAutocompleteDistances ::
   ( ServiceFlow m r,
