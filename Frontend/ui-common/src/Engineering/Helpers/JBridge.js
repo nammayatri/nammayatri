@@ -1607,7 +1607,9 @@ export const showDialer = function (str) {
 
 export const voipDialer = function (cuid) {
   return function (isDriver) {
-      window.JBridge.voipDialer(cuid,isDriver);
+    return function (phoneNum) {
+      window.JBridge.voipDialer(cuid,isDriver,phoneNum);
+    }
   }
 };
 

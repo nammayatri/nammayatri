@@ -164,7 +164,7 @@ foreign import generatePDF :: forall invoiceScreenState. invoiceScreenState -> S
 foreign import requestKeyboardShow :: String -> Effect Unit
 foreign import showKeyboard :: String -> Effect Unit
 foreign import showDialer :: String -> Boolean -> Unit
-foreign import voipDialer :: String -> Boolean -> Unit
+foreign import voipDialer :: String -> Boolean -> String -> Unit
 foreign import initSignedCall :: String -> Boolean -> Unit
 foreign import destroySignedCall :: Unit -> Unit
 foreign import getAAID :: String -> String

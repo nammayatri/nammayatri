@@ -45,6 +45,7 @@ dependencies {
     implementation 'com.google.android.material:material:1.6.0'
 
     implementation project(':mobility-common')
+    implementation libs.clevertap.android.sdk
     compileOnly project(':mobility-app')
     implementation 'in.juspay:hyper:2.1.33-nammayatri.07'
     implementation 'androidx.work:work-runtime:2.8.1'
@@ -70,5 +71,5 @@ dependencies {
     implementation 'com.facebook.react:react-android:0.72.3'
     implementation "com.github.bumptech.glide:okhttp3-integration:4.12.0"
     implementation "com.facebook.soloader:soloader:0.10.5"
-    implementation "com.clevertap.android:clevertap-signedcall-sdk:0.0.7.3"
+    implementation "com.clevertap.android:clevertap-signedcall-sdk:0.0.7.4"
 }

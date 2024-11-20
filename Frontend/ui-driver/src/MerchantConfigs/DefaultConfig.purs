@@ -1119,7 +1119,7 @@ config =
   , scheduledRideConfig : {
     scheduledBannerTimerValue : 1800
   }
-  , voipDialerSwitch : false -- keep false until Full development is done for Voip
+  , voipDialerSwitch : true -- keep false until Full development is done for Voip
 }
 
 registrationConfig :: RegistrationConfig

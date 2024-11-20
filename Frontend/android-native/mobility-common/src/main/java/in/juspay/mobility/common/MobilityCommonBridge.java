@@ -128,14 +128,18 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import com.airbnb.lottie.LottieAnimationView;
-import com.clevertap.android.sdk.CleverTapInstanceConfig;
+//import com.clevertap.android.sdk.CleverTapInstanceConfig;
 import com.clevertap.android.signedcall.exception.CallException;
 import com.clevertap.android.signedcall.exception.InitException;
 import com.clevertap.android.signedcall.init.SignedCallAPI;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.signedcall.init.SignedCallInitConfiguration;
+import com.clevertap.android.signedcall.interfaces.MissedCallNotificationOpenedHandler;
 import com.clevertap.android.signedcall.interfaces.OutgoingCallResponse;
 import com.clevertap.android.signedcall.interfaces.SignedCallInitResponse;
+import com.clevertap.android.signedcall.models.MissedCallAction;
+import com.clevertap.android.signedcall.models.MissedCallNotificationOpenResult;
+import com.clevertap.android.signedcall.models.SignedCallScreenBranding;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -4170,7 +4174,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void voipDialer(String receiverCuid, boolean isDriver) {
+    public void voipDialer(String receiverCuid, boolean isDriver, String phoneNum) {
         // this may fail if the user has not given mic and other permission
         if (ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_MICROPHONE);
@@ -4180,7 +4184,7 @@ public class MobilityCommonBridge extends HyperBridge {
         if(isDriver){
             callContext = "Calling Customer";
         } else callContext = "Calling Driver";
-
+        
         OutgoingCallResponse outgoingCallResponseListener = new OutgoingCallResponse() {
             @Override
             public void onSuccess() {
@@ -4194,24 +4198,28 @@ public class MobilityCommonBridge extends HyperBridge {
                     + "\n error message: " + callException.getMessage()
                     + "\n error explanation: " + callException.getExplanation());
 
-                if (callException.getErrorCode() == CallException.BadNetworkException.getErrorCode()) {
-                    //Handle this error here
-                         Log.d("SignedCall: ", "error code: " + callException.getErrorCode()
-                    + "\n error message: " + callException.getMessage()
-                    + "\n error explanation: " + callException.getExplanation());
-
+                System.out.println("Signed call: " + "Failed signed call, should go ahead with normal call");
+                System.out.println("Signed call: " + "Failed signed call " + phoneNum);
+                if(callException.getErrorCode() != CallException.CanNotProcessCallRequest.getErrorCode()){
+                    ExecutorManager.runOnMainThread(() -> {
+                        System.out.println("Signed call: " + "Failed signed call, should go ahead with normal call");
+                        System.out.println("Signed call: " + "Failed signed call " + phoneNum);
+                        boolean call = !isDriver; 
+                        showDialer(phoneNum,call);
+                    });
                 }
             }
         };
         JSONObject callOptions = new JSONObject();
         try {
-            callOptions.put("remoteContext", isDriver ? "driver is calling" : "calling customer");
+            callOptions.put("remote_context", isDriver ? "Driver Calling" : "Customer Calling");
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
         SignedCallAPI.getInstance().call(getApplicationContext(), receiverCuid, callContext, callOptions, outgoingCallResponseListener);
     }
+
     @JavascriptInterface
     public void initSignedCall(String cuid, boolean isDriver){
         // We are initialising only at the time of ride booking 
@@ -4242,22 +4250,24 @@ public class MobilityCommonBridge extends HyperBridge {
                 Log.d("SignedCall: ", "error code: " + initException.getErrorCode()
                         + "\n error message: " + initException.getMessage()
                         + "\n error explanation: " + initException.getExplanation());
-                        System.out.println("failed signed call init");
-
-                if (initException.getErrorCode() == InitException.SdkNotInitializedException.getErrorCode()) {
-                    //Handle this error here
-                    Log.d("SignedCall: ", "error code: " + initException.getErrorCode()
-                            + "\n error message: " + initException.getMessage()
-                            + "\n error explanation: " + initException.getExplanation());
-                            System.out.println("failed signed call init");
-                }
+                System.out.println("failed signed call init");
             }
         };
+        List<MissedCallAction> missedCallActionsList = new ArrayList<>();
+        missedCallActionsList.add(new MissedCallAction("callback", "Callback"));
+        missedCallActionsList.add(new MissedCallAction("dismiss", "Dismiss"));
+
+        SignedCallScreenBranding callScreenBranding = new SignedCallScreenBranding(
+                "#29252E", "#ffffff", "https://play-lh.googleusercontent.com/gXd_U6YU9CiP0tFFLHIhEzaZwM8sbdipuStn87ITLaNcII78tP9cCaf_ZRmLzC6Y5Q", SignedCallScreenBranding.ButtonTheme.LIGHT);
+        callScreenBranding.setShowPoweredBySignedCall(false); //set false to hide the label from VoIP call screens. Default value is true. 
 
         SignedCallInitConfiguration initConfiguration = new SignedCallInitConfiguration.Builder(initOptions, false)
+                                                            .setSwipeOffBehaviourInForegroundService(SignedCallInitConfiguration.SCSwipeOffBehaviour.PERSIST_CALL)
+                                                            .overrideDefaultBranding(callScreenBranding)
+                                                            .networkCheckBeforeOutgoingCallScreen(true)
+                                                            .setMissedCallActions(missedCallActionsList)
                                                             .build();
         CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(getApplicationContext());
-  
         SignedCallAPI.getInstance().init(getApplicationContext(), initConfiguration, cleverTapAPI, signedCallInitListener);
     }
     

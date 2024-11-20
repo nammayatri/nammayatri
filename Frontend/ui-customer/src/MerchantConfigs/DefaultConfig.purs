@@ -782,7 +782,7 @@ config =
       enableNonAcPopup : false,
       showAfterTime : 5
     }
-  , voipDialerSwitch : false -- keep false until Full development is done for Voip
+  , voipDialerSwitch : true -- keep false until Full development is done for Voip
 }
 
 defaultCityConfig :: CityConfig

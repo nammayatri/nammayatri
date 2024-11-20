@@ -643,10 +643,11 @@ eval(MessagingViewActionController (MessagingView.Call)) state = do
   void $ pure $ hideKeyboardOnNavigation true
   if state.data.config.voipDialerSwitch then do
           let driverCuid = if state.data.driverInfoCardState.bppRideId /= "" then "driver" <> state.data.driverInfoCardState.bppRideId else ""
-          when (driverCuid /= "") do
-                    void $ pure $ voipDialer driverCuid false
-          continue state
-          -- TODO : handle other cases here
+          if (driverCuid /= "") then do
+              void $ pure $ voipDialer driverCuid false (fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber)
+              continue state
+          else 
+              continue state { props { showCallPopUp = true } }
   else if state.props.isChatWithEMEnabled 
       then do
             void $ pure $ showDialer state.data.driverInfoCardState.currentChatRecipient.number true

@@ -119,6 +119,7 @@ import in.juspay.mobility.app.TranslatorMLKit;
 import in.juspay.mobility.app.WidgetService;
 import in.juspay.mobility.app.callbacks.ShowNotificationCallBack;
 import in.juspay.mobility.app.services.MobilityAppUpdate;
+import in.juspay.mobility.common.MissedCallActionsHandler;
 import in.juspay.mobility.common.utils.CipherUtil;
 import in.juspay.mobility.common.utils.Utils;
 import in.juspay.mobility.common.services.MobilityAPIResponse;
@@ -436,7 +437,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
         initApp();
-
+        CleverTapAPI.setSignedCallNotificationHandler(new SignedCallNotificationHandler());
+        SignedCallAPI.getInstance().setMissedCallNotificationOpenedHandler(new MissedCallActionsHandler());
         handleSplashScreen();
 
         WebView.setWebContentsDebuggingEnabled(true);
@@ -1169,8 +1171,6 @@ public class MainActivity extends AppCompatActivity {
         MyFirebaseMessagingService.deRegisterBundleUpdateCallback(bundleUpdateCallBack);
         MyFirebaseMessagingService.deRegisterShowNotificationCallBack(inappCallBack);
         inAppNotification = null;
-        SignedCallAPI.getInstance().disconnectSignallingSocket(getApplicationContext());
-        SignedCallAPI.getInstance().logout(getApplicationContext());
         super.onDestroy();
     }
 
