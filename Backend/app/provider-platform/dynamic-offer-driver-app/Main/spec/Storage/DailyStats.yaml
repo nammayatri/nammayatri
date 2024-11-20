@@ -13,7 +13,7 @@ DailyStats:
   derives: "Generic,Show,ToJSON,FromJSON"
   types:
     PayoutStatus:
-      enum: "Verifying,Processing,Success,Failed,ManualReview,PendingForVpa"
+      enum: "Verifying,Processing,Success,Failed,ManualReview,PendingForVpa,Initialized"
   fields:
     id : Text
     driverId : Id Person
@@ -61,7 +61,7 @@ DailyStats:
     referralEarnings: getHighPrecMoney
     activatedValidRides:  Kernel.Prelude.fromMaybe 0|I
     referralCounts: Kernel.Prelude.fromMaybe 0|I
-    payoutStatus: Kernel.Prelude.fromMaybe Domain.Types.DailyStats.Verifying|I
+    payoutStatus: Kernel.Prelude.fromMaybe Domain.Types.DailyStats.Initialized|I
     tollCharges: Kernel.Prelude.fromMaybe 0|I
     bonusEarnings: Kernel.Prelude.fromMaybe 0|I
     tipAmount: Kernel.Prelude.fromMaybe 0|I

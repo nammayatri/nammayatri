@@ -39,6 +39,6 @@ data DailyStats = DailyStats
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-data PayoutStatus = Verifying | Processing | Success | Failed | ManualReview | PendingForVpa deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data PayoutStatus = Verifying | Processing | Success | Failed | ManualReview | PendingForVpa | Initialized deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutStatus)
