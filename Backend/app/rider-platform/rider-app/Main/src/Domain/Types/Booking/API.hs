@@ -183,6 +183,7 @@ data OneWayBookingAPIDetails = OneWayBookingAPIDetails
 
 data InterCityBookingAPIDetails = InterCityBookingAPIDetails
   { toLocation :: LocationAPIEntity,
+    stops :: [LocationAPIEntity],
     estimatedDistance :: HighPrecMeters,
     otpCode :: Maybe Text,
     estimatedDistanceWithUnit :: Distance
@@ -341,6 +342,7 @@ mkBookingAPIDetails booking requesterId = case booking.bookingDetails of
         { toLocation = SLoc.makeLocationAPIEntity toLocation,
           estimatedDistance = distanceToHighPrecMeters distance,
           estimatedDistanceWithUnit = distance,
+          stops = map SLoc.makeLocationAPIEntity stops,
           ..
         }
     mkAmbulanceAPIDetails AmbulanceBookingDetails {..} =
