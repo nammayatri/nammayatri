@@ -12,6 +12,7 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as DTE
 import qualified Database.Redis as R
+import qualified EulerHS.KVConnector.Compression as C
 import EulerHS.Language (runIO)
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (fail, id, succ)
@@ -39,17 +40,33 @@ peekDBCommand dbStreamKey count = do
     parseReadStreams = (>>= (\(R.XReadResponse _ entries) -> Just $ entryToTuple <$> entries))
     entryToTuple (R.StreamsRecord recordId items) = (parseStreamEntryId recordId, first decodeToText <$> items)
 
+getDecompressedValue :: ByteString -> Flow ByteString
+getDecompressedValue val = do
+  if C.isCompressionAllowed
+    then do
+      decompressedObject <- EL.runIO $ C.decompress val
+      case decompressedObject of
+        Left err -> do
+          EL.logError ("DECOMPRESSION_ERROR" :: Text) $ "Error while decompressing " <> show err
+          pure val
+        Right decompressedObject' -> do
+          EL.logDebug ("DECOMPRESSION_RESULT_SUCCESS" :: Text) $ "Original Decompressed value size: " <> show (length decompressedObject') <> " compressed value size: " <> show (length val)
+          pure decompressedObject'
+    else do
+      pure val
+
 -- Try to Parse to DBCommand
 -- If the key is dirty which means its already been pushed to mysql, then we will discard other we return the parsed DBCommand
 parseDBCommand :: Text -> (EL.KVDBStreamEntryID, [(Text, ByteString)]) -> Flow (Maybe (EL.KVDBStreamEntryID, DBCommand, ByteString))
 parseDBCommand dbStreamKey entries =
   case entries of
-    (id, [("command", val)]) ->
+    (id, [("command", val')]) -> do
+      val <- getDecompressedValue val'
       case A.eitherDecode $ BL.fromStrict val of
         Right cmd -> do
           pure $ Just (id, cmd, val)
         Left err -> do
-          logParseError $ ("Bad entries: " :: Text) <> show err
+          logParseError $ ("Bad entries: " :: Text) <> show err <> ("Unparsable values in stream" :: Text) <> show val
           void $
             publishDBSyncMetric $
               uncurry Event.ParseDBCommandError $

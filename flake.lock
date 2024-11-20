@@ -697,11 +697,11 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1729171003,
-        "narHash": "sha256-xpy4MIpqSITxeKc0Xt3qlbMDVmYLkWAxgXhXosk0glg=",
+        "lastModified": 1732110296,
+        "narHash": "sha256-Wj3mUMfm3BDENJl7FZShxeZPTyU8L2FSgGE/JsMEwjg=",
         "owner": "nammayatri",
         "repo": "euler-hs",
-        "rev": "0260a70cede65f232c47f4893b4d2c18f47b1b2b",
+        "rev": "cd0e8d3ec24ef58bf12e672e62d47044baeaba14",
         "type": "github"
       },
       "original": {
@@ -1652,16 +1652,16 @@
     "hedis": {
       "flake": false,
       "locked": {
-        "lastModified": 1715851947,
-        "narHash": "sha256-R1ykEbhpCXDJ3N309PccIIhAZysKWPS305ECZ7EoF6g=",
+        "lastModified": 1730967537,
+        "narHash": "sha256-RDF/G/ptWazyFxCQOv+fTTQVV4hzDxTV630rnmhH3i4=",
         "ref": "refs/heads/master",
-        "rev": "b04adb840be7119f391afbf009cbbc02135175c0",
-        "revCount": 736,
+        "rev": "5547eb306006243f57d54e8ebb5225a055d40e73",
+        "revCount": 741,
         "type": "git",
         "url": "https://github.com/juspay/hedis"
       },
       "original": {
-        "rev": "b04adb840be7119f391afbf009cbbc02135175c0",
+        "rev": "5547eb306006243f57d54e8ebb5225a055d40e73",
         "type": "git",
         "url": "https://github.com/juspay/hedis"
       }
@@ -3802,11 +3802,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1732109040,
-        "narHash": "sha256-lvin1o8Q/StsiQJm3Z9+nYdkh5e1Eph+LJU+srq4zVY=",
+        "lastModified": 1732111467,
+        "narHash": "sha256-lthtxl2jqLhoJIqtJIarjl53gCY4ueJnCxpRHC/mSdE=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "6638bd06e0fb8cf95251327d6a6d51f00f362739",
+        "rev": "203d1a7e6ea074b796c670c7198ecd2a245bae95",
         "type": "github"
       },
       "original": {
