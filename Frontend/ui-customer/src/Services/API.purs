@@ -1564,6 +1564,7 @@ newtype GetRouteReq = GetRouteReq {
   waypoints :: Array LatLong
 , mode :: Maybe String
 , calcPoints :: Boolean
+, rideId :: Maybe String
 }
 
 newtype GetRouteResp = GetRouteResp (Array Route)

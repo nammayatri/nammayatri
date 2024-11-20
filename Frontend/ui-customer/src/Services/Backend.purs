@@ -760,8 +760,8 @@ getRouteBT routeState body = do
     where
     errorHandler errorPayload = BackT $ pure GoBack
 
-makeGetRouteReq :: Number -> Number -> Number -> Number -> GetRouteReq
-makeGetRouteReq slat slng dlat dlng = GetRouteReq {
+makeGetRouteReq :: Number -> Number -> Number -> Number -> Maybe String -> GetRouteReq
+makeGetRouteReq slat slng dlat dlng mbRideId = GetRouteReq {
     "waypoints": [
       LatLong {
           "lon": slng,
@@ -772,7 +772,8 @@ makeGetRouteReq slat slng dlat dlng = GetRouteReq {
           "lat": dlat
       }],
     "mode": Just "CAR",
-    "calcPoints": true
+    "calcPoints": true,
+    "rideId": mbRideId
 }
 
 walkCoordinate :: Number -> Number -> Number -> Number -> Locations
@@ -894,11 +895,11 @@ drawMapRoute srcLat srcLng destLat destLng sourceMarkerConfig destMarkerConfig r
             let (Snapped points) = route.points
             case points of
                 [] -> do
-                    (GetRouteResp routeResponse) <- getRouteBT routeAPIType (makeGetRouteReq srcLat srcLng destLat destLng)
+                    (GetRouteResp routeResponse) <- getRouteBT routeAPIType (makeGetRouteReq srcLat srcLng destLat destLng Nothing)
                     callDrawRoute ((routeResponse) !! 0)
                 _  -> callDrawRoute existingRoute
         Nothing -> do
-            (GetRouteResp routeResponse) <- getRouteBT routeAPIType (makeGetRouteReq srcLat srcLng destLat destLng)
+            (GetRouteResp routeResponse) <- getRouteBT routeAPIType (makeGetRouteReq srcLat srcLng destLat destLng Nothing)
             _ <- pure $ printLog "drawRouteResponse" routeResponse
             let ios = (os == "IOS")
             let route = ((routeResponse) !! 0)
