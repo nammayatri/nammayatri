@@ -36,14 +36,11 @@ createStopsLocation = QL.createMany
 createDSReq :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SearchRequest -> m ()
 createDSReq searchRequest = do
   fromLocationMap <- SLM.buildPickUpLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)
-  logError $ "Create DS (buildPickUpLocationMapping) for txnId (" <> searchRequest.id.getId <> ") : " <> show fromLocationMap
   void $ QLM.create fromLocationMap
   void $ createStopsLocation searchRequest.stops
   stopsLocMapping <- SLM.buildStopsLocationMapping searchRequest.stops searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)
-  logError $ "Create DS (stopsLocMapping) for txnId (" <> searchRequest.id.getId <> ") : " <> show stopsLocMapping
   void $ QLM.createMany stopsLocMapping
   mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildDropLocationMapping detail.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)) searchRequest.toLocation
-  logError $ "Create DS (mbToLocationMap) for txnId (" <> searchRequest.id.getId <> ") : " <> show mbToLocationMap
   void $ whenJust mbToLocationMap $ \toLocMap -> QLM.create toLocMap
   create searchRequest
 
