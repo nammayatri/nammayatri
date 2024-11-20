@@ -240,7 +240,7 @@ baseAppFlow gPayload callInitUI = do
   let bundleSplashConfig = RemoteConfig.getBundleSplashConfig "lazy"
   if callInitUI && bundleSplashConfig.enable then toggleSetupSplash true else pure unit
   let _ = setKeyInWindow "forceAppToNoInternetScreen" true
-  lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "v1-assets_downloader.jsa" "https://assets.moving.tech/beckn/bundles/mobility-core/0.0.9/v1-assets_downloader.jsa" (cb <<< Right) $> nonCanceler
+  lift $ lift $ void $ fork $ doAff $ makeAff \cb -> runEffectFn3 renewFile "v1-assets_downloader.jsa" "https://assets.moving.tech/beckn/bundles/mobility-core/0.0.10/v1-assets_downloader.jsa" (cb <<< Right) $> nonCanceler
   liftFlowBT $ markPerformance "BASE_APP_FLOW"
   -- checkVersion
   baseAppStorage -- TODO:: Restructure the files and names
