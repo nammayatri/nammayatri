@@ -163,7 +163,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
     pickupMapForSearchReq <- SLM.buildPickUpLocationMapping startLocation.id searchReq.id.getId DLM.SEARCH_REQUEST (Just person.merchantId) (Just person.merchantOperatingCityId)
     QLM.create pickupMapForSearchReq
     driverInfo <- QDI.findById person.id >>= fromMaybeM DriverInfoNotFound
-    overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf person.merchantOperatingCityId "EDIT_LOCATION" (fromMaybe ENGLISH person.language) Nothing >>= fromMaybeM (InternalError "Overlay not found for EDIT_LOCATION")
+    overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory person.merchantOperatingCityId "EDIT_LOCATION" (fromMaybe ENGLISH person.language) Nothing Nothing >>= fromMaybeM (InternalError "Overlay not found for EDIT_LOCATION")
     let fcmOverlayReq = Notify.mkOverlayReq overlay
     let entityData = Notify.EditPickupLocationReq {hasAdvanceBooking = driverInfo.hasAdvanceBooking, ..}
     Notify.sendPickupLocationChangedOverlay person fcmOverlayReq entityData
@@ -303,7 +303,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                           oldEstimatedFare = bookingUpdateReq.oldEstimatedFare,
                           validTill = bookingUpdateReq.validTill
                         }
-                overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf booking.merchantOperatingCityId "UPDATE_LOC_FCM" (fromMaybe ENGLISH person.language) (Just udf1) >>= fromMaybeM (InternalError "Overlay not found for UPDATE_LOC_FCM")
+                overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory booking.merchantOperatingCityId "UPDATE_LOC_FCM" (fromMaybe ENGLISH person.language) (Just udf1) Nothing >>= fromMaybeM (InternalError "Overlay not found for UPDATE_LOC_FCM")
                 let locationLat = if ride.status == DRide.INPROGRESS then dropLocation.lat else ride.fromLocation.lat
                     locationLon = if ride.status == DRide.INPROGRESS then dropLocation.lon else ride.fromLocation.lon
                     actions2 = map (mkActions2 bookingUpdateReq.id.getId locationLat locationLon) overlay.actions2

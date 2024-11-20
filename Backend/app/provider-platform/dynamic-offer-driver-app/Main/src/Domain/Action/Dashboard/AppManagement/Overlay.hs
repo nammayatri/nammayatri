@@ -54,7 +54,7 @@ postOverlayCreate :: ShortId DM.Merchant -> Context.City -> DAO.CreateOverlayReq
 postOverlayCreate merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  overlayPresent <- SQMO.findAllByOverlayKeyUdf merchantOpCityId req.overlayKey req.udf1
+  overlayPresent <- SQMO.findAllByOverlayKeyUdfVehicleCategory merchantOpCityId req.overlayKey req.udf1 req.vehicleCategory
   unless (null overlayPresent) $ throwError $ OverlayKeyAndUdfAlreadyPresent ("overlayKey : " <> req.overlayKey <> " and " <> "udf : " <> show req.udf1)
   overlays <- mapM (buildOverlay merchant.id merchantOpCityId req) req.contents
   SQMO.createMany overlays
@@ -69,6 +69,7 @@ postOverlayCreate merchantShortId opCity req = do
             merchantId,
             merchantOperatingCityId = merchantOpCityId,
             actions2 = fromMaybe [] actions2,
+            vehicleCategory = vehicleCategory,
             ..
           }
 
@@ -82,10 +83,10 @@ postOverlayDelete :: ShortId DM.Merchant -> Context.City -> DAO.DeleteOverlayReq
 postOverlayDelete merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  overlayPresent <- SQMO.findAllByOverlayKeyUdf merchantOpCityId req.overlayKey req.udf1
+  overlayPresent <- SQMO.findAllByOverlayKeyUdfVehicleCategory merchantOpCityId req.overlayKey req.udf1 req.vehicleCategory
   when (null overlayPresent) $ throwError $ OverlayKeyAndUdfNotFound ("overlayKey : " <> req.overlayKey <> " and " <> "udf : " <> show req.udf1)
   SQMO.deleteByOverlayKeyMerchantOpCityIdUdf merchantOpCityId req.overlayKey req.udf1
-  mapM_ (\language -> CMP.clearMerchantIdPNKeyLangaugeUdf merchantOpCityId req.overlayKey language req.udf1) availableLanguages
+  mapM_ (\language -> CMP.clearMerchantIdPNKeyLangaugeUdf merchantOpCityId req.overlayKey language req.udf1 req.vehicleCategory) availableLanguages
   pure Success
 
 -- ============================================
@@ -120,6 +121,7 @@ getOverlayInfo merchantShortId opCity udf1Req overlayReqKey = do
             DAO.CreateOverlayReq
               { contents = groupedContents,
                 actions2 = Just actions2,
+                vehicleCategory = vehicleCategory,
                 ..
               }
 
