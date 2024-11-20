@@ -41,16 +41,10 @@ homeScreen ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen = do
   (GlobalState state) <- getState
   isHybridApp' <- liftFlowBT HU.isHybridApp
-  if isHybridApp' then
-    if state.homeScreen.props.currentStage == HomeScreen then do
-        void $ pure $ HU.emitTerminateApp Nothing true
-        pure HybridAppExit
-      else if state.homeScreen.props.currentStage `elem` [RideAccepted, ReAllocated] then do
-        let bookingId = state.homeScreen.props.bookingId
-        void $ pure $ HU.nudgeRNApp bookingId  Nothing ("rideStarted")
-        pure HybridAppExit
+  if isHybridApp' && state.homeScreen.props.currentStage == HomeScreen then do
+      void $ pure $ HU.emitTerminateApp Nothing true
+      pure HybridAppExit
       else homeScreen'
-  else homeScreen'
 
 homeScreen' ::FlowBT String HOME_SCREEN_OUTPUT
 homeScreen' = do
