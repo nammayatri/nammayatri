@@ -1851,3 +1851,4 @@ getProxy str = case str of
   CHOOSE_PREFERRED_METRO -> \a -> a @~ choose_preferred_metro
   METRO_WARRIORS -> \a -> a @~ metro_warriors
   SEARCH -> \a -> a @~ search
+  BUS__ -> \a -> a @~ bus__

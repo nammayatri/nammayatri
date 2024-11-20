@@ -1781,4 +1781,5 @@ getTe =
     , choose_preferred_metro : "ప్రాధాన్యమైన మెట్రోను ఎంచుకోండి"
     , metro_warriors : "మెట్రో వారియర్స్"
     , search : "వెతకండి"  
+    , bus__ : "బస్"
     }

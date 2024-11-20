@@ -82,7 +82,7 @@ import MerchantConfig.Types (RideStartAudio(..), StartAudioUrls(..))
 import PaymentPage (consumeBP)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), ($>), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
-import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, shadow, clipChildren, textFromHtml, shimmerFrameLayout, accessibilityHint, accessibility, disableClickFeedback)
+import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX, shadow, clipChildren, textFromHtml, shimmerFrameLayout, accessibilityHint, accessibility, disableClickFeedback,editText,hint,pattern,onChange,inputTypeI)
 import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
@@ -442,6 +442,7 @@ view push state =
       , if state.props.showBonusInfo then requestInfoCardView push state else dummyTextView
       , if state.props.specialZoneProps.specialZonePopup then specialZonePopup push state else dummyTextView
       , if state.props.silentPopUpView then popupModelSilentAsk push state else dummyTextView
+      , if state.props.setBusOnline then busOnline push state else dummyTextView
       , if state.data.activeRide.waitTimeInfo then waitTimeInfoPopUp push state else dummyTextView
       , if state.props.showAccessbilityPopup then accessibilityPopUpView push state else dummyTextView
       , if state.props.rentalInfoPopUp || state.props.intercityInfoPopUp then rentalInfoPopUp push state else dummyTextView
@@ -3288,3 +3289,89 @@ metroWarriorsToggleView push state =
 
     switchButtonView push isActive = 
       SwitchButtonView.view (push <<< MetroWarriorSwitchAction) $ SwitchButtonView.config {isActive = isActive}
+
+busOnline :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+busOnline push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , background Color.black9000
+    , visibility $ boolToVisibility state.props.setBusOnline
+    , onClick push $ const HideBusOnline
+    , gravity BOTTOM
+    , adjustViewWithKeyboard "true"
+    ]
+    [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , PP.cornerRadii $ PTD.Corners 16.0 true true false false
+        , orientation VERTICAL
+        , clickable true
+        , onClick push $ const NoAction
+        , background Color.white900
+        ]
+        [ scrollView
+            [height MATCH_PARENT
+            , width MATCH_PARENT
+            ]
+          [  linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      ][  linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , orientation HORIZONTAL
+          , margin $ Margin 16 25 16 2
+          ][  textView
+              ([ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , text "Bus Number"
+              , color Color.greyTextColor
+              , margin (MarginBottom 5)
+              ] <> FontStyle.body3 TypoGraphy)
+            ] 
+        , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , orientation HORIZONTAL
+          , margin $ Margin 16 0 16 15
+          , stroke ("1," <> Color.borderColorLight)
+          , cornerRadius 4.0
+          ][  textView
+              [ width $ V 20
+              , height WRAP_CONTENT
+              ]
+            , editText
+              ([ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , padding (Padding 0 17 0 17)
+              , color Color.greyTextColor
+              , text state.props.bus_input_data
+              , hint "Enter Bus Number"
+              , weight 1.0
+              , cornerRadius 4.0
+              , pattern "[0-9a-zA-Z]*,10"
+              , stroke ("1," <> Color.white900)
+              , onChange push (const BusNumber state.props.bus_input_data)
+              , inputTypeI 4097
+              ] <> FontStyle.subHeading1 TypoGraphy)
+            ]
+        , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , orientation HORIZONTAL
+          , margin $ Margin 16 5 16 2
+          ][  textView
+              ([ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , text "Bus Type"
+              , color Color.greyTextColor
+              , margin (MarginBottom 5)
+              ] <> FontStyle.body3 TypoGraphy) 
+          ]
+        ]
+      ]
+    ]
+  ]

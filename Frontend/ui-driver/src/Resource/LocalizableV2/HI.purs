@@ -1781,4 +1781,5 @@ getHi =
     , choose_preferred_metro : "पसंदीदा मेट्रो चुनें"
     , metro_warriors : "मेट्रो वॉरियर्स"
     , search : "खोजें"  
+    , bus__ : "बस"
     }

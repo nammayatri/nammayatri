@@ -66,6 +66,7 @@ appOnboardingNavBarConfig state =
               Just ST.BikeCategory -> getString REGISTER_YOUR_BIKE
               Just ST.AmbulanceCategory -> getString REGISTER_YOUR_AMBULANCE
               Just ST.TruckCategory -> getString REGISTER_YOUR_TRUCK
+              Just ST.BusCategory ->  "Register your Bus"
               Just ST.UnKnown -> getString REGISTRATION
               Nothing -> getString REGISTRATION
       },

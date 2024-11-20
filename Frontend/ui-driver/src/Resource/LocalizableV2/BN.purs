@@ -1781,4 +1781,5 @@ getBn =
     , choose_preferred_metro : "পছন্দের মেট্রো নির্বাচন করুন"
     , metro_warriors : "মেট্রো ওয়ারিয়র্স"
     , search : "অনুসন্ধান করুন"  
+    , bus__ : "বাস"
     }
