@@ -16,6 +16,7 @@ module Storage.CachedQueries.PartnerOrgStation
   ( findByPOrgIdAndPOrgStationId,
     findByStationIdAndPOrgId,
     findStationWithPOrgName,
+    clearCache,
   )
 where
 
@@ -47,7 +48,9 @@ cacheByPOrgIdAndPOrgStationId :: (CacheFlow m r) => PartnerOrgStation -> m ()
 cacheByPOrgIdAndPOrgStationId pOrgStation = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let key = makePOrgIdAndPOrgStationIdKey pOrgStation.partnerOrgId pOrgStation.partnerOrgStationId
+  let key2 = makeStationIdAndPOrgIdKey pOrgStation.stationId pOrgStation.partnerOrgId
   Hedis.setExp key pOrgStation expTime
+  Hedis.setExp key2 pOrgStation expTime
 
 findByStationIdAndPOrgId :: (CacheFlow m r, EsqDBFlow m r) => Id Station -> Id PartnerOrganization -> m (Maybe PartnerOrgStation)
 findByStationIdAndPOrgId stationId partnerOrgId = do
@@ -74,3 +77,12 @@ findStationWithPOrgName partnerOrgId partnerOrgStationId = do
   station <- CQS.findById stationId >>= fromMaybeM (StationNotFound $ "StationId:" +|| stationId.getId ||+ "")
   let stationWithPOrgName = station {DStation.name = partnerOrgStation.name}
   return stationWithPOrgName
+
+clearCache :: (CacheFlow m r, EsqDBFlow m r, FromJSON PartnerOrgStation) => Id PartnerOrganization -> Id PartnerOrgStation -> m ()
+clearCache partnerOrgId partnerOrgStationId = do
+  let key = makePOrgIdAndPOrgStationIdKey partnerOrgId partnerOrgStationId
+  Hedis.safeGet key >>= \case
+    Just (a :: PartnerOrgStation) -> do
+      Hedis.del $ makePOrgIdAndPOrgStationIdKey partnerOrgId partnerOrgStationId
+      Hedis.del $ makeStationIdAndPOrgIdKey (getField @"stationId" a) partnerOrgId
+    Nothing -> return ()

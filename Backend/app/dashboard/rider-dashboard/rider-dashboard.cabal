@@ -50,6 +50,7 @@ library
       Domain.Action.RiderPlatform.Management.Invoice
       Domain.Action.RiderPlatform.Management.Merchant
       Domain.Action.RiderPlatform.Management.NammaTag
+      Domain.Action.RiderPlatform.Management.PartnerOrgStation
       Domain.Action.RiderPlatform.Management.Ride
       Domain.Action.RiderPlatform.Management.System
       RiderPlatformClient.RiderApp.Operations
@@ -62,6 +63,7 @@ library
       API.Action.RiderPlatform.Management.Invoice
       API.Action.RiderPlatform.Management.Merchant
       API.Action.RiderPlatform.Management.NammaTag
+      API.Action.RiderPlatform.Management.PartnerOrgStation
       API.Action.RiderPlatform.Management.Ride
       API.Action.RiderPlatform.Management.System
       API.Client.RiderPlatform.Management

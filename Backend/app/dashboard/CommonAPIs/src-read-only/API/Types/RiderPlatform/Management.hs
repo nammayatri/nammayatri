@@ -9,6 +9,7 @@ import qualified API.Types.RiderPlatform.Management.FRFSTicket
 import qualified API.Types.RiderPlatform.Management.Invoice
 import qualified API.Types.RiderPlatform.Management.Merchant
 import qualified API.Types.RiderPlatform.Management.NammaTag
+import qualified API.Types.RiderPlatform.Management.PartnerOrgStation
 import qualified API.Types.RiderPlatform.Management.Ride
 import qualified API.Types.RiderPlatform.Management.System
 import qualified Data.List
@@ -25,6 +26,7 @@ data ManagementUserActionType
   | INVOICE API.Types.RiderPlatform.Management.Invoice.InvoiceUserActionType
   | MERCHANT API.Types.RiderPlatform.Management.Merchant.MerchantUserActionType
   | NAMMA_TAG API.Types.RiderPlatform.Management.NammaTag.NammaTagUserActionType
+  | PARTNER_ORG_STATION API.Types.RiderPlatform.Management.PartnerOrgStation.PartnerOrgStationUserActionType
   | RIDE API.Types.RiderPlatform.Management.Ride.RideUserActionType
   | SYSTEM API.Types.RiderPlatform.Management.System.SystemUserActionType
   deriving stock (Generic, Eq, Ord)
@@ -38,6 +40,7 @@ instance Text.Show.Show ManagementUserActionType where
     INVOICE e -> "INVOICE/" <> show e
     MERCHANT e -> "MERCHANT/" <> show e
     NAMMA_TAG e -> "NAMMA_TAG/" <> show e
+    PARTNER_ORG_STATION e -> "PARTNER_ORG_STATION/" <> show e
     RIDE e -> "RIDE/" <> show e
     SYSTEM e -> "SYSTEM/" <> show e
 
@@ -84,6 +87,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "NAMMA_TAG/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( PARTNER_ORG_STATION v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "PARTNER_ORG_STATION/" r,
                    ( v1,
                      r2
                      ) <-
