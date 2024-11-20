@@ -101,7 +101,12 @@ data BookingDetails
 data DeliveryBookingDetails = DeliveryBookingDetails {distance :: Kernel.Types.Common.Distance, otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, toLocation :: Domain.Types.Location.Location}
   deriving (Generic, Show)
 
-data InterCityBookingDetails = InterCityBookingDetails {distance :: Kernel.Types.Common.Distance, otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, toLocation :: Domain.Types.Location.Location}
+data InterCityBookingDetails = InterCityBookingDetails
+  { distance :: Kernel.Types.Common.Distance,
+    otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    stops :: [Domain.Types.Location.Location],
+    toLocation :: Domain.Types.Location.Location
+  }
   deriving (Show)
 
 data OneWayBookingDetails = OneWayBookingDetails

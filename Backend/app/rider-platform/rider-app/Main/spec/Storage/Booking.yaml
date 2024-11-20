@@ -152,6 +152,7 @@ Booking:
     InterCityBookingDetails:
       toLocation: Location
       distance: Distance
+      stops: "[Location]"
       otpCode: Maybe Text
       derive': Show
     AmbulanceBookingDetails:

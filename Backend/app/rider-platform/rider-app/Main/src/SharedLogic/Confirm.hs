@@ -343,6 +343,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
       -- we need to throw errors here because of some redundancy of our domain model
       toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
+      let stops = searchRequest.stops
       pure DRB.InterCityBookingDetails {..}
     buildOneWayDetails isUpgradedToCab = do
       -- we need to throw errors here because of some redundancy of our domain model
