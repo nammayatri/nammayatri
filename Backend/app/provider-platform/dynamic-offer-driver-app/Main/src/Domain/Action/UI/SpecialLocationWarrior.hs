@@ -21,7 +21,7 @@ import qualified Environment
 import EulerHS.Prelude hiding (elem, filter, id, map, whenJust)
 import Kernel.Prelude
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, throwError)
+import Kernel.Utils.Common (fromMaybeM, logDebug, throwError)
 import qualified Lib.Queries.SpecialLocation
 import qualified Lib.Queries.SpecialLocation as SpecialLocation
 import Servant hiding (throwError)
@@ -70,6 +70,8 @@ postUpdateInfoSpecialLocWarrior ::
 postUpdateInfoSpecialLocWarrior (_, _, _merchantOperatingCityId) personId SpecialLocWarriorInfoReq {..} = do
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
+  logDebug $ "Driver Tag driverInfo: ----------" <> personId.getId <> "  " <> show driverInfo
+  logDebug $ "Driver Tag driver:driverTag ----------" <> personId.getId <> "  " <> show driver.driverTag
   primarySpecialLocation <- runMaybeT $ do
     preferredPrimarySpecialLocId' <- MaybeT $ pure preferredPrimarySpecialLocId
     MaybeT $ TDI.getPreferredPrimarySpecialLoc (Just preferredPrimarySpecialLocId'.getId) -- >>= fromMaybeM (InvalidRequest $ "SpecialLocWarrior Loc not found with id : " <> preferredPrimarySpecialLocId'.getId)
@@ -78,17 +80,23 @@ postUpdateInfoSpecialLocWarrior (_, _, _merchantOperatingCityId) personId Specia
   mbOlderDriverTag <- runMaybeT $ do
     preferredPrimarySpecialLocation' <- MaybeT $ pure driverInfo.preferredPrimarySpecialLoc
     getDriverTag preferredPrimarySpecialLocation' driverInfo.preferredSecondarySpecialLocIds
+  logDebug $ "Driver Tag mbOlderDriverTag: ----------" <> personId.getId <> "  " <> show mbOlderDriverTag
   QDI.updateSpecialLocWarriorInfo isSpecialLocWarrior preferredPrimarySpecialLocation preferredSecondarySpecialLocIds personId
 
   mbDriverTag <- runMaybeT $ do
     preferredPrimarySpecialLocation' <- MaybeT $ pure preferredPrimarySpecialLocation
     getDriverTag preferredPrimarySpecialLocation' preferredSecondarySpecialLocIds
+  logDebug $ "Driver Tag mbDriverTag: ----------" <> personId.getId <> "  " <> show mbDriverTag
   whenJust mbDriverTag $ \driverTag -> do
     if isSpecialLocWarrior
       then unless (maybe False (elem driverTag) driver.driverTag) $ do
+        logDebug $ "Driver Tag driverTag: ----------" <> personId.getId <> "  " <> show driverTag
         whenJust mbOlderDriverTag $ \olderDriverTag -> do
+          logDebug $ "Driver Tag olderDriverTag: ----------" <> personId.getId <> "  " <> show olderDriverTag
+          logDebug $ "Driver Tag removeDriverTag: ----------" <> personId.getId <> "  " <> show (removeDriverTag driver.driverTag olderDriverTag)
           QPerson.updateDriverTag (Just $ removeDriverTag driver.driverTag olderDriverTag) personId
         QPerson.updateDriverTag (Just $ addDriverTag driver.driverTag driverTag) personId
+        logDebug $ "Driver Tag addDriverTag: ----------" <> personId.getId <> "  " <> show (addDriverTag driver.driverTag driverTag)
       else when (maybe False (elem driverTag) driver.driverTag) $ QPerson.updateDriverTag (Just $ removeDriverTag driver.driverTag driverTag) personId
   return $
     SpecialLocWarriorInfoRes
