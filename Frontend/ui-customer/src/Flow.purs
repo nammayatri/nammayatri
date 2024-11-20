@@ -2936,7 +2936,7 @@ checkForScheduled  rideStartTime rideEndTime rideScheduledBufferTime = do
 
 getRouteInfo::  Number -> Number -> Number -> Number ->  FlowBT String {estDistance :: Int , estDuration :: Int}
 getRouteInfo srcLat srcLong destLat destLng = do
-  (GetRouteResp routeResponse) <- Remote.getRouteBT "intercity" (Remote.makeGetRouteReq srcLat srcLong destLat destLng)
+  (GetRouteResp routeResponse) <- Remote.getRouteBT "intercity" (Remote.makeGetRouteReq srcLat srcLong destLat destLng Nothing)
   case (head routeResponse) of
     Just (Route route) -> do
           pure $ { estDistance : route.distance , estDuration : route.duration }

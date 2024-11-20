@@ -896,7 +896,7 @@ driverLocationTracking push action duration id routeState = do
       destSpecialTagIcon = zoneLabelIcon state.data.zoneType.destinationTag
 
       specialLocationTag = HSConfig.specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig
-    routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
+    routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon Nothing
     case routeResponse of
       Right (GetRouteResp routeResp) -> do
         case ((routeResp) !! 0) of
