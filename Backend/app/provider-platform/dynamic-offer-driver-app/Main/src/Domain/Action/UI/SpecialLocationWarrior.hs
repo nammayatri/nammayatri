@@ -69,13 +69,29 @@ postUpdateInfoSpecialLocWarrior ::
   )
 postUpdateInfoSpecialLocWarrior (_, _, _merchantOperatingCityId) personId SpecialLocWarriorInfoReq {..} = do
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  logDebug $ "Driver Tag driver:preferredPrimarySpecialLocId ----------" <> personId.getId <> "  " <> show preferredPrimarySpecialLocId
   driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   logDebug $ "Driver Tag driverInfo: ----------" <> personId.getId <> "  " <> show driverInfo
   logDebug $ "Driver Tag driver:driverTag ----------" <> personId.getId <> "  " <> show driver.driverTag
-  primarySpecialLocation <- runMaybeT $ do
-    preferredPrimarySpecialLocId' <- MaybeT $ pure preferredPrimarySpecialLocId
-    MaybeT $ TDI.getPreferredPrimarySpecialLoc (Just preferredPrimarySpecialLocId'.getId) -- >>= fromMaybeM (InvalidRequest $ "SpecialLocWarrior Loc not found with id : " <> preferredPrimarySpecialLocId'.getId)
+  primarySpecialLocation <-
+    maybe
+      (pure Nothing)
+      ( \locId -> do
+          loc <- TDI.getPreferredPrimarySpecialLoc (Just locId.getId)
+          logDebug $ "Driver Tag TDI.getPreferredPrimarySpecialLoc': ----------" <> personId.getId <> "  " <> show loc
+          return loc
+      )
+      preferredPrimarySpecialLocId
+  -- primarySpecialLocation <- runMaybeT $ do
+  --   preferredPrimarySpecialLocId' <- MaybeT $ pure preferredPrimarySpecialLocId
+  --   logDebug $ "Driver Tag preferredPrimarySpecialLocId': ----------" <> personId.getId <> "  " <> show preferredPrimarySpecialLocId'
+  --   loc <- MaybeT $ TDI.getPreferredPrimarySpecialLoc (Just preferredPrimarySpecialLocId'.getId) -- >>= fromMaybeM (InvalidRequest $ "SpecialLocWarrior Loc not found with id : " <> preferredPrimarySpecialLocId'.getId)
+  --   logDebug $ "Driver Tag TDI.getPreferredPrimarySpecialLoc': ----------" <> personId.getId <> "  " <> show loc
+  --   pure loc
+  logDebug $ "Driver Tag primarySpecialLocation': ----------" <> personId.getId <> "  " <> show primarySpecialLocation
   let preferredPrimarySpecialLocation = primarySpecialLocation <|> driverInfo.preferredPrimarySpecialLoc
+  logDebug $ "Driver Tag primarySpecialLocation': ----------" <> personId.getId <> "  " <> show primarySpecialLocation
+
   when (isSpecialLocWarrior && isNothing preferredPrimarySpecialLocation) $ throwError (InvalidRequest "preferredPrimarySpecialLoc is required when isSpecialLocWarrior is true")
   mbOlderDriverTag <- runMaybeT $ do
     preferredPrimarySpecialLocation' <- MaybeT $ pure driverInfo.preferredPrimarySpecialLoc
