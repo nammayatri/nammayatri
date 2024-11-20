@@ -169,7 +169,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   let validRide = isValidRide ride
   sendReferralFCM validRide ride mbRiderDetails thresholdConfig
   when validRide $ updateLeaderboardZScore booking.providerId booking.merchantOperatingCityId ride
-  DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride, fareParameter = Just newFareParams}
+  DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride, fareParameter = Just newFareParams, ..}
   let currency = booking.currency
   let customerCancellationDues = fromMaybe 0.0 newFareParams.customerCancellationDues
   when (thresholdConfig.canAddCancellationFee && customerCancellationDues > 0.0) $ do

@@ -145,7 +145,7 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN payout_reg_amou
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN driver_trip_end_location_lon double precision ;
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN driver_trip_end_location_lat double precision ;
-
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN extra_fare_mitigation_flag boolean ;
 
 ------- SQL updates -------
 
@@ -157,3 +157,4 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_special_loc_
 
 
 ------- SQL updates -------
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN issue_breach_cooldown_times json ;

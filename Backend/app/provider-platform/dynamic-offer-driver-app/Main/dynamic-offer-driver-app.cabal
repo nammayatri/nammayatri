@@ -324,6 +324,9 @@ library
       SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
       SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
       SharedLogic.Beckn.Common
+      SharedLogic.BehaviourManagement.CancellationRate
+      SharedLogic.BehaviourManagement.IssueBreach
+      SharedLogic.BehaviourManagement.IssueBreachMitigation
       SharedLogic.BlockedRouteDetector
       SharedLogic.Booking
       SharedLogic.Cac
@@ -331,7 +334,6 @@ library
       SharedLogic.CallBAPInternal
       SharedLogic.CallIGMBAP
       SharedLogic.Cancel
-      SharedLogic.CancellationRate
       SharedLogic.DeleteDriver
       SharedLogic.DriverFee
       SharedLogic.DriverOnboarding

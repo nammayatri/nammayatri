@@ -41,6 +41,7 @@ imports:
   ExotelMapping: Domain.Types.Extra.TransporterConfig
   Expand: Kernel.External.Payout.Interface.Types
   TripCategory: Domain.Types.Trip
+  IssueBreachConfig: SharedLogic.BehaviourManagement.IssueBreach
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -883,6 +884,7 @@ TransporterConfig:
     driverDrivenSearchReqExpiry: Maybe NominalDiffTime
     otpRideStartRestrictionRadius: Maybe Meters
     disableListScheduledBookingAPI: Bool
+    issueBreachConfig: Maybe [IssueBreachConfig]
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -926,6 +928,7 @@ TransporterConfig:
     scheduledRideSearchRepeatLimit: Maybe Int
     driverDrivenSearchReqExpiry: Maybe Seconds
     disableListScheduledBookingAPI: Maybe Bool
+    issueBreachConfig: Maybe Value
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -978,6 +981,7 @@ TransporterConfig:
     scheduledRideSearchRepeatLimit: Just scheduledRideSearchRepeatLimit|E
     driverDrivenSearchReqExpiry: Kernel.Utils.Common.nominalDiffTimeToSeconds <$> driverDrivenSearchReqExpiry|E
     disableListScheduledBookingAPI: Just disableListScheduledBookingAPI|E
+    issueBreachConfig: Kernel.Prelude.toJSON <$> issueBreachConfig|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1034,6 +1038,8 @@ TransporterConfig:
     scheduledRideSearchRepeatLimit: fromMaybe 10 scheduledRideSearchRepeatLimit|E
     driverDrivenSearchReqExpiry: Kernel.Utils.Common.secondsToNominalDiffTime <$> driverDrivenSearchReqExpiry|E
     disableListScheduledBookingAPI: fromMaybe False disableListScheduledBookingAPI|E
+    issueBreachConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachConfig|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1087,6 +1093,7 @@ TransporterConfig:
     crossTravelCities: "text[]"
     arrivalTimeBufferOfVehicle: json
     demandHotspotsConfig: json
+    issueBreachConfig: json
 
   default:
     mediaFileUrlPattern: |-

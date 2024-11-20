@@ -172,7 +172,7 @@ import Kernel.Utils.Validation (runRequestValidation)
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import qualified Lib.Yudhishthira.Flow.Dashboard as Yudhishthira
 import SharedLogic.Allocator
-import qualified SharedLogic.CancellationRate as SCR
+import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
