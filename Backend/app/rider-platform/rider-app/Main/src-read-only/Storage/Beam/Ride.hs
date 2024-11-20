@@ -73,6 +73,7 @@ data RideT f = RideT
     onlinePayment :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     otp :: B.C f Kernel.Prelude.Text,
     paymentStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.PaymentStatus),
+    pickupRouteCallCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     rideEndTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     rideRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     rideStartTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
