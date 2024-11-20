@@ -113,6 +113,7 @@ Ride:
     destinationReachedAt: Maybe UTCTime
     estimatedEndTimeRange: Maybe EstimatedEndTimeRange
     tipAmount: Maybe Price
+    pickupRouteCallCount: Maybe Int
 
   sqlType:
     allowedEditLocationAttempts: int
@@ -297,6 +298,10 @@ Ride:
     updateFeedbackSkipped:
       kvFunction: updateOneWithKV
       params: [feedbackSkipped]
+      where: id
+    updatePickupRouteCallCount:
+      kvFunction: updateOneWithKV
+      params: [pickupRouteCallCount]
       where: id
 
   excludedDefaultQueries:

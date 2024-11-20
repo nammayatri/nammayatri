@@ -315,6 +315,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         estimatedEndTimeRange = Nothing,
         tipAmount = Nothing,
         hasStops = booking.hasStops,
+        pickupRouteCallCount = Just 0,
         ..
       }
 
