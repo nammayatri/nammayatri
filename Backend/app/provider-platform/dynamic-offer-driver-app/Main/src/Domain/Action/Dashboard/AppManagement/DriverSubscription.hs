@@ -60,6 +60,7 @@ import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Message as MQuery
 import qualified Storage.Queries.MessageTranslation as MTQuery
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
 import qualified Tools.Notifications as TN
 import qualified Tools.SMS as Sms
@@ -75,6 +76,8 @@ postDriverSubscriptionSendSms merchantShortId opCity driverId volunteerId _req@D
   void $ checkIfDriverSMSReceivingLimitExceeded driverId.getId transporterConfig.driverSmsReceivingLimit channel
 
   let personId = cast @Common.Driver @DP.Person driverId
+  mbVehicle <- QVehicle.findById personId
+  let mbVehicleCategory = mbVehicle >>= (.category)
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- merchant access check
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
@@ -86,14 +89,14 @@ postDriverSubscriptionSendSms merchantShortId opCity driverId volunteerId _req@D
     case channel of
       SMS -> do
         mkey <- fromMaybeM (InvalidRequest "Message Key field is required for channel : SMS") messageKey --whenJust messageKey $ \mkey -> do
-        (mbSender, message) <- MessageBuilder.buildGenericMessage merchantOpCityId mkey MessageBuilder.BuildGenericMessageReq {}
+        (mbSender, message) <- MessageBuilder.buildGenericMessage merchantOpCityId mkey mbVehicleCategory MessageBuilder.BuildGenericMessageReq {}
         let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS driver.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
           >>= Sms.checkSmsResult
       WHATSAPP -> do
         mkey <- fromMaybeM (InvalidRequest "Message Key field is required for channel : WHATSAPP") messageKey -- whenJust messageKey $ \mkey -> do
         merchantMessage <-
-          QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId mkey
+          QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId mkey mbVehicleCategory
             >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show mkey))
         let jsonData = merchantMessage.jsonData
         result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI driver.merchantId merchantOpCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId jsonData.var1 jsonData.var2 jsonData.var3 Nothing (Just merchantMessage.containsUrlButton))
@@ -101,7 +104,7 @@ postDriverSubscriptionSendSms merchantShortId opCity driverId volunteerId _req@D
       OVERLAY -> do
         oKey <- fromMaybeM (InvalidRequest "Overlay Key field is required for channel : OVERLAY") overlayKey --whenJust overlayKey $ \oKey -> do
         manualDues <- getManualDues personId transporterConfig.timeDiffFromUtc transporterConfig.driverFeeOverlaySendingTimeLimitInDays
-        overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf merchantOpCityId oKey (fromMaybe ENGLISH driver.language) Nothing >>= fromMaybeM (OverlayKeyNotFound oKey)
+        overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory merchantOpCityId oKey (fromMaybe ENGLISH driver.language) Nothing mbVehicleCategory >>= fromMaybeM (OverlayKeyNotFound oKey)
         let okButtonText = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.okButtonText
         let description = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.description
         let overlay' = overlay{okButtonText, description}

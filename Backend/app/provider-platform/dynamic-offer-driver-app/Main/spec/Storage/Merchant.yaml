@@ -166,6 +166,7 @@ MerchantMessage:
     jsonData: MerchantMessageDefaultDataJSON
     containsUrlButton: Bool
     senderHeader: Maybe Text
+    vehicleCategory: Maybe VehicleCategory|NoRelation
     updatedAt: UTCTime
     createdAt: UTCTime
 
@@ -202,6 +203,10 @@ MerchantMessage:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, messageKey]
+    findByMerchantOpCityIdAndMessageKeyVehicleCategory:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, messageKey, vehicleCategory]
 
   extraOperations:
    - EXTRA_DOMAIN_TYPE_FILE
@@ -371,6 +376,7 @@ Overlay:
     toastMessage: Maybe Text
     secondaryActions: "Maybe [Text]"
     socialMediaLinks: "Maybe [FCMMediaLink]"
+    vehicleCategory: Maybe VehicleCategory|NoRelation
     showPushNotification: Maybe Bool
 
   excludedFields:
@@ -432,6 +438,22 @@ Overlay:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, overlayKey, language, udf1]
+    deleteByOverlayKeyMerchantOpCityIdUdfMbVehicleCategory:
+      kvFunction: deleteWithKV
+      where:
+        and: [merchantOperatingCityId, overlayKey, udf1, vehicleCategory]
+    findAllByLanguageVehicleCategory:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, language, vehicleCategory]
+    findAllByOverlayKeyUdfVehicleCategory:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, overlayKey, udf1, vehicleCategory]
+    findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, overlayKey, language, udf1, vehicleCategory]
 
 # LeaderBoardConfigs:
 #   derives: "Generic,ToJSON,FromJSON,ToSchema"

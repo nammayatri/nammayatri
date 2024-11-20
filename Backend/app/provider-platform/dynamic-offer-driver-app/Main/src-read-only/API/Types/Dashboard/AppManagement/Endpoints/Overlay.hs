@@ -37,7 +37,8 @@ data CreateOverlayReq = CreateOverlayReq
     actions2 :: Kernel.Prelude.Maybe [Kernel.External.Notification.FCM.Types.FCMActions],
     socialMediaLinks :: Kernel.Prelude.Maybe [Kernel.External.Notification.FCM.Types.FCMMediaLink],
     secondaryActions2 :: Kernel.Prelude.Maybe [Kernel.External.Notification.FCM.Types.FCMActions],
-    showPushNotification :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    showPushNotification :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -45,7 +46,7 @@ data CreateOverlayReq = CreateOverlayReq
 instance Kernel.Types.HideSecrets.HideSecrets CreateOverlayReq where
   hideSecrets = Kernel.Prelude.identity
 
-data DeleteOverlayReq = DeleteOverlayReq {overlayKey :: Kernel.Prelude.Text, udf1 :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+data DeleteOverlayReq = DeleteOverlayReq {overlayKey :: Kernel.Prelude.Text, udf1 :: Kernel.Prelude.Maybe Kernel.Prelude.Text, vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
