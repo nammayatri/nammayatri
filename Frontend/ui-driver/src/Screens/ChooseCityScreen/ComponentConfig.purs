@@ -95,14 +95,14 @@ getLocationMapImage :: ChooseCityScreenState -> String
 getLocationMapImage state =
   if shouldShowUndetectable then "ny_ic_driver_location_undetectable" else cityConfig.mapImage
   where 
-    cityConfig = getCityConfig state.data.config.cityConfig $ Mb.fromMaybe "" state.data.locationSelected
+    cityConfig = getCityConfig state.data.config.cityConfigObj $ Mb.fromMaybe "" state.data.locationSelected
     shouldShowUndetectable = state.props.locationUnserviceable || state.props.locationDetectionFailed || DSC.null cityConfig.mapImage
 
 getChangeLanguageText :: Maybe String -> AppConfig -> String
 getChangeLanguageText value config = 
   StringsV2.getString cityConfig.languageKey CHANGE_LANGUAGE_STR 
   where 
-    cityConfig = getCityConfig config.cityConfig $ Mb.fromMaybe "" value
+    cityConfig = getCityConfig config.cityConfigObj $ Mb.fromMaybe "" value
 
 
 

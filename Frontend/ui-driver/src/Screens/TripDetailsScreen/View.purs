@@ -544,7 +544,7 @@ getVehicleImage state =
     YATRI     -> getVehicleVariantImage state.data.vehicleServiceTier
     YATRISATHI -> getVehicleVariantImage state.data.vehicleServiceTier
     NAMMAYATRI -> getVehicleVariantImage state.data.vehicleServiceTier
-    _           -> mkAsset $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+    _           -> mkAsset $ getCityConfig state.data.config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
   
   where
     mkAsset cityConfig =

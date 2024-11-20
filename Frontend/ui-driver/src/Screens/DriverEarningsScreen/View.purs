@@ -235,7 +235,7 @@ view push state =
         [ BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.DRIVER_EARNINGS_SCREEN state.data.config.bottomNavConfig) ]
     ]
   where
-  cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  cityConfig = getCityConfig state.data.config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
 
   showGenericHeader = state.props.subView == ST.USE_COINS_VIEW || not (state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins)
 
@@ -298,7 +298,7 @@ lottieView state push =
 tabView :: forall w. (Action -> Effect Unit) -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w
 tabView push state =
   let
-    cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+    cityConfig = getCityConfig state.data.config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
 
     setVisibility = if ((state.props.subView == ST.EARNINGS_VIEW || state.props.subView == ST.YATRI_COINS_VIEW) && state.data.config.feature.enableYatriCoins && cityConfig.enableYatriCoins) then VISIBLE else GONE
   in
@@ -983,7 +983,7 @@ tableItemView (API.CoinInfo item) index state =
               [ textView
                   ( [ height WRAP_CONTENT
                     , width WRAP_CONTENT
-                    , text $ if index /= 0 then  (if item.coins > 0 then "+" else "-") <> (show item.coins) else getString YATRI_POINTS_STR
+                    , text $ if index /= 0 then  (if item.coins > 0 then "+" else "") <> (show item.coins) else getString YATRI_POINTS_STR
                     , color Color.black900
                     ]
                       <> if index == 0 then FontStyle.h2 TypoGraphy else FontStyle.subHeading2 TypoGraphy

@@ -410,7 +410,7 @@ getDriverInfoBT :: String -> FlowBT String GetDriverInfoResp
 getDriverInfoBT dummy = do
      headers <- getHeaders' "" true
      let config = getAppConfig appConfig
-         cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+         cityConfig = getCityConfig config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
      if (not cityConfig.callDriverInfoPost)
         then getDriverInfoBTGet
         else getDriverInfoBTPost cityConfig
@@ -442,7 +442,7 @@ getDriverInfoApi dummy = do
     --  _ <- pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) before effect" (liftEffect $ (getValueToLocalStoreNew REGISTERATION_TOKEN))
      headers <- getHeaders "" true
      let config = getAppConfig appConfig
-         cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+         cityConfig = getCityConfig config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
     --  pure $ printLog "headers" headers
      _ <- pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) after" (getValueToLocalStore REGISTERATION_TOKEN)
      _ <- pure $ spy "(getValueToLocalStore REGISTERATION_TOKEN) after" (getValueToLocalStore REGISTERATION_TOKEN)

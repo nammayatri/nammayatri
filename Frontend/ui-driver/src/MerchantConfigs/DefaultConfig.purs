@@ -6,6 +6,7 @@ import Engineering.Helpers.Commons as EHC
 import MerchantConfig.Utils as MU
 import Common.Types.App as CTA
 import Data.Maybe
+import Foreign.Object (fromHomogeneous)
 
 config :: AppConfig
 config =
@@ -145,8 +146,8 @@ config =
       { animationDuration : 500
       }
   , unserviceableThreshold : 250.0
-  , cityConfig : [
-            {
+  , cityConfigObj : fromHomogeneous {
+            "Bangalore" : {
               cityName : "Bangalore",
               mapImage : "ny_ic_bengalore_map",
               cityCode : "std:080",
@@ -227,7 +228,7 @@ config =
                 bike : defaultStartAudioUrls
               }
             },
-            {
+            "Hyderabad" : {
               cityName : "Hyderabad",
               mapImage : "ny_ic_hyderabad_map",
               cityCode : "std:040",
@@ -303,7 +304,7 @@ config =
                 bike : defaultStartAudioUrls
               }
             },
-            {
+            "Mysore" : {
               cityName : "Mysore",
               mapImage : "ny_ic_mysuru_map",
               cityCode : "std:0821",
@@ -374,7 +375,7 @@ config =
                 bike : defaultStartAudioUrls
               }
             },
-            {
+            "Delhi" : {
               cityName : "Delhi",
               mapImage : "ny_ic_delhi_map",
               cityCode : "std:011",
@@ -445,7 +446,7 @@ config =
                 bike : defaultStartAudioUrls
               }
             },
-            {
+            "Chennai" : {
               cityName : "Chennai",
               mapImage : "ny_ic_chennai_map",
               cityCode : "std:044",
@@ -516,7 +517,7 @@ config =
                 bike : defaultStartAudioUrls
               }
             },
-            {
+            "Coimbatore" : {
               cityName : "Coimbatore",
               mapImage : "ny_ic_coimbatore_map",
               cityCode : "std:0422",
@@ -587,7 +588,7 @@ config =
                 bike : defaultStartAudioUrls
               }
             },
-            {
+            "Puducherry" : {
               cityName : "Puducherry",
               mapImage : "ny_ic_puducherry_map",
               cityCode : "std:0413",
@@ -658,7 +659,7 @@ config =
                 bike : defaultStartAudioUrls
               }
             },
-            {
+            "Gurugram" : {
               cityName : "Gurugram",
               mapImage : "ny_ic_gurugram_map",
               cityCode : "std:0124",
@@ -729,7 +730,7 @@ config =
                 bike : defaultStartAudioUrls
               }
             },
-            {             
+            "Noida" : {             
               cityName : "Noida",
               mapImage : "ny_ic_noida_map",
               cityCode : "std:01189",
@@ -800,7 +801,7 @@ config =
                 bike : defaultStartAudioUrls
               }
             },
-            {
+            "TamilNaduCities" : {
               cityName : "TamilNaduCities",
               mapImage : "ny_ic_tamilnadu_map",
               cityCode :  "std:0422",
@@ -871,7 +872,7 @@ config =
                 bike : defaultStartAudioUrls
               }
             },
-            {
+            "Kolkata" : {
               cityName : "Kolkata",
               mapImage : "",
               cityCode : "std:033",
@@ -955,7 +956,7 @@ config =
                 bike : defaultStartAudioUrls
               }
             }, 
-            {
+            "Kochi" : {
               cityName : "Kochi",
               mapImage : "ny_ic_kochi_map",
               cityCode : "std:0484",
@@ -1042,7 +1043,7 @@ config =
             --   languageKey : "TA_IN",
             --   enableYatriCoins : false
             -- }
-        ]
+  }
   , enableMockLocation : false
   , permissions : {
       locationPermission : false,

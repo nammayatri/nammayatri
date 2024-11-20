@@ -667,7 +667,7 @@ chooseVehicleView push state =
 
 variantListView :: forall w . (Action -> Effect Unit) -> ST.RegistrationScreenState -> PrestoDOM (Effect Unit) w
 variantListView push state = 
-  let cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  let cityConfig = getCityConfig state.data.config.cityConfigObj (getValueToLocalStore DRIVER_LOCATION)
     in linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT

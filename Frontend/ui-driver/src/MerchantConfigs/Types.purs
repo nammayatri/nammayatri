@@ -2,6 +2,7 @@ module MerchantConfig.Types where
 
 import Common.Types.Config
 import Data.Maybe
+import Foreign.Object (Object)
 
 type AppConfig = AppConfigDriver CommonAppConfig
 
@@ -23,7 +24,7 @@ type AppConfigDriver a =
     purpleRideConfig :: PurpleRideConfig,
     mapConfig :: MapConfig,
     waitTimeConfig :: WaitTimeConfig,
-    cityConfig :: Array CityConfig,
+    cityConfigObj :: Object CityConfig,
     unserviceableThreshold :: Number,
     enableMockLocation :: Boolean,
     flowConfig :: FlowConfig,

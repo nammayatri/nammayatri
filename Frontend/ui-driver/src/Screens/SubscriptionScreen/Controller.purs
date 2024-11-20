@@ -288,7 +288,7 @@ eval RefreshPage state = exit $ Refresh
 
 eval (LoadPlans plans) state = do
   let (UiPlansResp planResp) = plans
-      cityConfig = getCityConfig state.data.config.cityConfig $ getValueToLocalStore DRIVER_LOCATION
+      cityConfig = getCityConfig state.data.config.cityConfigObj $ getValueToLocalStore DRIVER_LOCATION
   _ <- pure $ setValueToLocalStore DRIVER_SUBSCRIBED "false"
   continue state {
       data{ joinPlanData {allPlans = planListTransformer plans state.data.config.subscriptionConfig.enableIntroductoryView state.data.config.subscriptionConfig cityConfig,
@@ -409,7 +409,7 @@ eval (DueDetailsListAction (DueDetailsListController.SelectDue dueItem)) state =
 -- eval (TogglePlanDescription _) state = continue state{data{myPlanData{planEntity{isSelected = not state.data.myPlanData.planEntity.isSelected}}}} --Always expended
 
 eval EnableIntroductoryView state = do
-  let cityConfig = getCityConfig state.data.config.cityConfig $ getValueToLocalStore DRIVER_LOCATION
+  let cityConfig = getCityConfig state.data.config.cityConfigObj $ getValueToLocalStore DRIVER_LOCATION
   continue state{props{subView = JoinPlan, showShimmer = false, joinPlanProps{isIntroductory = true}}, data{joinPlanData {allPlans = fetchIntroductoryPlans state.data.config.subscriptionConfig cityConfig}}}
 
 eval (OpenReelsView index) state = do

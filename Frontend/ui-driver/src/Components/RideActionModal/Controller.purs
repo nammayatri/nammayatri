@@ -119,7 +119,7 @@ config :: Config
 config = {
   startRideActive : false,
   arrivedStopActive : false,
-  cityConfig : HU.getCityConfig (getAppConfig appConfig).cityConfig (getValueToLocalStore DRIVER_LOCATION),
+  cityConfig : HU.getCityConfig (getAppConfig appConfig).cityConfigObj (getValueToLocalStore DRIVER_LOCATION),
   driverVehicle : "",
   totalDistance : "",
   customerName : "",
