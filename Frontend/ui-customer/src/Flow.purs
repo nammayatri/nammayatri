@@ -1564,38 +1564,6 @@ homeScreenFlow = do
       checkRideStatus true false
       homeScreenFlow
 
-    GET_QUOTES state -> do
-      setValueToLocalStore AUTO_SELECTING "false"
-      setValueToLocalStore FINDING_QUOTES_POLLING "false"
-      setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
-      liftFlowBT $ logEvent logField_ "ny_user_request_quotes"
-      liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_request_quote"
-        $ [ { key: "Request Type", value: unsafeToForeign if (getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then "Auto Assign" else "Manual Assign" }
-          , { key: "Estimate Fare (₹)", value: unsafeToForeign (state.data.suggestedAmount + state.data.rateCard.additionalFare) }
-          , { key: "Estimated Ride Distance", value: unsafeToForeign state.data.rideDistance }
-          , { key: "Night Ride", value: unsafeToForeign state.data.rateCard.isNightShift }
-          ]
-      if (getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then do
-        void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_auto_confirm"
-        pure unit
-      else do
-        pure unit
-      void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
-      let
-        topProvider = filter (\quotes -> quotes.providerType == ONUS && quotes.serviceTierName /= Just "Book Any") state.data.specialZoneQuoteList
-        finalEstimate = if (null topProvider) then filter (\quotes -> quotes.providerType == OFFUS && quotes.serviceTierName /= Just "Book Any") state.data.specialZoneQuoteList else topProvider
-        selectedEstimate = fromMaybe ChooseVehicle.config (head topProvider)
-        valid = timeValidity (getCurrentUTC "") selectedEstimate.validTill
-
-      if valid then do
-        setValueToLocalStore LOCAL_STAGE $ show FindingQuotes
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { currentStage = FindingQuotes } })
-        void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected && state.props.customerTip.tipForDriver > 0 then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled)) (state.props.estimateId)
-        logStatus "finding_quotes" ("estimateId : " <> state.props.estimateId)
-        homeScreenFlow
-      else do
-        void $ pure $ toast $ getString STR.ESTIMATES_EXPIRY_ERROR_AND_FETCH_AGAIN
-        findEstimates state
     SELECT_ESTIMATE_AND_QUOTES state -> do
           let selectedEstimateOrQuote = state.data.selectedEstimatesObject
           setValueToLocalStore AUTO_SELECTING "false"
@@ -1603,6 +1571,17 @@ homeScreenFlow = do
           setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
           setValueToLocalStore FARE_ESTIMATE_DATA selectedEstimateOrQuote.price
           setValueToLocalStore SELECTED_VARIANT selectedEstimateOrQuote.vehicleVariant
+
+          -- Logs
+          liftFlowBT $ logEvent logField_ "ny_user_request_quotes"
+          liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_request_quote"
+            $ [ { key: "Request Type", value: unsafeToForeign if (getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then "Auto Assign" else "Manual Assign" }
+              , { key: "Estimate Fare (₹)", value: unsafeToForeign (state.data.suggestedAmount + state.data.rateCard.additionalFare) }
+              , { key: "Estimated Ride Distance", value: unsafeToForeign state.data.rideDistance }
+              , { key: "Night Ride", value: unsafeToForeign state.data.rateCard.isNightShift }
+            ]
+          if (getValueToLocalStore FLOW_WITHOUT_OFFERS == "true") then void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_auto_confirm" else pure unit
+
           case selectedEstimateOrQuote.searchResultType of
             ChooseVehicle.ESTIMATES -> do
               let valid = timeValidity (getCurrentUTC "") selectedEstimateOrQuote.validTill
@@ -1610,6 +1589,7 @@ homeScreenFlow = do
                 void $ Remote.selectEstimateBT (Remote.makeEstimateSelectReq (flowWithoutOffers WithoutOffers) (if state.props.customerTip.enableTips && state.props.customerTip.isTipSelected && state.props.customerTip.tipForDriver > 0 then Just state.props.customerTip.tipForDriver else Nothing) state.data.otherSelectedEstimates (state.data.config.isAdvancedBookingEnabled)) selectedEstimateOrQuote.id
                 void $ pure $ setValueToLocalStore FINDING_QUOTES_START_TIME (getCurrentUTC "LazyCheck")
                 setValueToLocalStore LOCAL_STAGE $ show FindingQuotes
+                logStatus "finding_quotes" ("estimateId : " <> selectedEstimateOrQuote.id)
                 modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { currentStage = FindingQuotes
                                                                                           , estimateId = selectedEstimateOrQuote.id
                                                                                           , isPopUp = NoPopUp
