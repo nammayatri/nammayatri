@@ -28,7 +28,8 @@ data LocationT f = LocationT
     id :: B.C f Kernel.Prelude.Text,
     lat :: B.C f Kernel.Prelude.Double,
     lon :: B.C f Kernel.Prelude.Double,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 

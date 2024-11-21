@@ -21,3 +21,8 @@ ALTER TABLE atlas_driver_offer_bpp.location ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_driver_offer_bpp.location ADD COLUMN instructions text ;
 ALTER TABLE atlas_driver_offer_bpp.location ADD COLUMN extras text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.location ADD COLUMN merchant_id character varying(36) ;

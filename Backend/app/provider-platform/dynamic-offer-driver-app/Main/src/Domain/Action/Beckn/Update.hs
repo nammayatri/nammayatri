@@ -357,8 +357,8 @@ mkSecondaryActions2 bookingUpdateReqId action = do
   let dependentActions' = map (mkSecondaryActions2 bookingUpdateReqId) action.dependentActions
   FCM.FCMActions {primaryAction = primaryAction', dependentActions = dependentActions'}
 
-buildLocation :: MonadFlow m => Common.Location -> m DL.Location
-buildLocation location = do
+buildLocation :: MonadFlow m => Id DM.Merchant -> Common.Location -> m DL.Location
+buildLocation merchantId location = do
   guid <- generateGUID
   now <- getCurrentTime
   return $
@@ -381,7 +381,8 @@ buildLocation location = do
               fullAddress = mkFullAddress location.address,
               instructions = Nothing,
               extras = Nothing
-            }
+            },
+        merchantId = Just merchantId
       }
 
 mkFullAddress :: Common.Address -> Maybe Text

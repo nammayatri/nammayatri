@@ -1695,8 +1695,8 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
             tags = if isValueAddNP then dTags else Nothing
           }
 
-buildLocation :: MonadFlow m => Spec.Stop -> m DL.Location
-buildLocation stop = do
+buildLocation :: MonadFlow m => Id DM.Merchant -> Spec.Stop -> m DL.Location
+buildLocation merchantId stop = do
   location <- stop.stopLocation & fromMaybeM (InvalidRequest "Location not present")
   guid <- generateGUID
   now <- getCurrentTime
@@ -1709,7 +1709,8 @@ buildLocation stop = do
         updatedAt = now,
         lat = gps.lat,
         lon = gps.lon,
-        address
+        address,
+        merchantId = Just merchantId
       }
 
 castPaymentCollector :: MonadFlow m => Text -> m DMPM.PaymentCollector
