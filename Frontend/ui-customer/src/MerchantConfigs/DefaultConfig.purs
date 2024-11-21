@@ -739,23 +739,27 @@ config =
         defaultCityConfig
           { cityName = "Kochi",
             cityCode = "std:0484",
+            enableIntercity = true,
             waitingChargeConfig = keralaWTC
           },
         defaultCityConfig
           { cityName = "Trivandrum",
             cityCode = "std:0471",
-            waitingChargeConfig = keralaWTC
+            waitingChargeConfig = keralaWTC,
+            enableIntercity = true
           },
         defaultCityConfig
           { cityName = "Thrissur",
             cityCode = "std:0487",
-            waitingChargeConfig = keralaWTC
+            waitingChargeConfig = keralaWTC,
+            enableIntercity = true
           },
 
         defaultCityConfig
           { cityName = "Kozhikode",
             cityCode = "std:0495",
-            waitingChargeConfig = keralaWTC
+            waitingChargeConfig = keralaWTC,
+            enableIntercity = true
           }
 
       
