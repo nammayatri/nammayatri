@@ -69,6 +69,7 @@ screen initialState st =
   , globalEvents : [
       (\push -> do
         _ <- launchAff $ EHC.flowRunner st $ runExceptT $ runBackT $ getSavedLocationsList push initialState
+        _ <- launchAff $ EHC.flowRunner st $ runExceptT $ runBackT $ getFavouriteDriverList push initialState
         pure $ pure unit
           )
   ]
@@ -100,6 +101,7 @@ getFavouriteDriverList push state = do
   (favouriteDriversResp) <- lift $ lift $ Remote.getFavouriteDriverList 
   case favouriteDriversResp of
     Right resp -> do
+      void $ lift $ lift $ EHU.toggleLoader false
       liftFlowBT $ push $ GetFavouriteDriversListAPIResponseAction ( GetFavouriteDriverListRes resp)
       pure unit
     Left _ -> do
@@ -518,20 +520,7 @@ savedLocationsView push state =
 
 getSavedLocationsList :: (Action -> Effect Unit) -> ST.SavedLocationScreenState -> FlowBT String Unit
 getSavedLocationsList push state = do
-
-  void $ lift $ lift $ EHU.toggleLoader true
-  responseFavDriver <- lift $ lift $ fork $ do
-      (favouriteDriversResp) <- Remote.getFavouriteDriverList 
-      case favouriteDriversResp of
-        Right resp -> do
-          EHC.liftFlow $ push $ GetFavouriteDriversListAPIResponseAction ( GetFavouriteDriverListRes resp)
-          pure unit
-        Left _ -> do
-          pure unit
-
   (SavedLocationsListRes savedLocationResp ) <- FlowCache.updateAndFetchSavedLocations false
   liftFlowBT $ push $ SavedLocationListAPIResponseAction ( SavedLocationsListRes savedLocationResp)
-  lift $ lift $ await responseFavDriver
-  void $ lift $ lift $ EHU.toggleLoader false
   pure unit
 

@@ -153,8 +153,7 @@ eval (SavedLocationListAPIResponseAction respList) state = do
   let otherLocation = (filter (\x -> not  ((toLower x.tag) == "home" || (toLower x.tag) == "work")) (getSavedLocation (respList ^. _list)))
   continue state{data{savedLocations = home <> work <> otherLocation}, props{apiRespReceived = true}}
 
-eval (GetFavouriteDriversListAPIResponseAction (GetFavouriteDriverListRes respList)) state = do 
-  _ <- pure $ EHU.toggleLoader false
+eval (GetFavouriteDriversListAPIResponseAction (GetFavouriteDriverListRes respList)) state = do
   continue state{data{favouriteDriversList = getFavouriteDriverList(respList)}}
 
 eval (ChangeView view) state = continue state{data{current = view}} 
