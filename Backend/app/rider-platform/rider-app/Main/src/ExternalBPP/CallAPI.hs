@@ -36,8 +36,8 @@ search :: Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch
 search merchant merchantOperatingCity bapConfig searchReq = do
   integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory searchReq.vehicleType) >>= return . fmap (.providerConfig)
   case (bapConfig.vehicleCategory, integratedBPPConfig) of
-    (METRO, Nothing) -> do
-      fork "FRFS ONDC METRO SearchReq" $ do
+    (_, Nothing) -> do
+      fork ("FRFS ONDC SearchReq" <> show bapConfig.vehicleCategory) $ do
         fromStation <- QStation.findById searchReq.fromStationId >>= fromMaybeM (StationNotFound searchReq.fromStationId.getId)
         toStation <- QStation.findById searchReq.toStationId >>= fromMaybeM (StationNotFound searchReq.toStationId.getId)
         bknSearchReq <- ACL.buildSearchReq searchReq bapConfig fromStation toStation merchantOperatingCity.city
