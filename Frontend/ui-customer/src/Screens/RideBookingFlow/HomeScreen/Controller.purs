@@ -1504,7 +1504,14 @@ eval (DriverInfoCardActionController (DriverInfoCardController.RideSupport)) sta
 eval (CancelSearchAction PopUpModal.DismissPopup) state = do continue state {props { cancelSearchCallDriver = false }}
 
 eval (CancelSearchAction PopUpModal.OnButton1Click) state = do
-  if length state.data.config.callOptions > 1 then
+  if state.data.config.voipDialerSwitch then do
+      let driverCuid = if state.data.driverInfoCardState.bppRideId /= "" then "driver" <> state.data.driverInfoCardState.bppRideId else ""
+      if (driverCuid /= "") then do
+          void $ pure $ voipDialer driverCuid false (fromMaybe state.data.driverInfoCardState.merchantExoPhone state.data.driverInfoCardState.driverNumber)
+          continue state
+      else 
+          continue state { props { showCallPopUp = true } }
+  else if length state.data.config.callOptions > 1 then
     continue state { props { showCallPopUp = true, cancelSearchCallDriver = false } }
   else callDriver state $ fromMaybe "ANONYMOUS" $ state.data.config.callOptions !! 0
 
