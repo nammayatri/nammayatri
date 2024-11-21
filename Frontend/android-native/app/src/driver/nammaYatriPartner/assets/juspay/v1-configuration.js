@@ -9,10 +9,10 @@ const appName = sessionInfo.app_name.toLowerCase();
 window.getMerchantConfig = function () {
   return JSON.stringify({
     "RC_VALIDATION_TEXT": "KA|AP|TS|DL|TN|PY|UP|HR|TG",
-    "DOCUMENT_LINK": "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc",
+    "DOCUMENT_LINK": "https://docs.google.com/document/d/1uL6CzKl_rt1ZSngcAOiafnTaI7Q4vO_6Ja9NHvYX3RU",
     "APP_LINK": "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner",
     "USER_APP_LINK": "https://nammayatri.in/link/rider/mvnw",
-    "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9",
+    "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1N3ZJVwilWO9cIGFJXgl8h8au7lpdRyhXNMZJ8OXq4YY",
     "SPECIAL_ZONE_OTP_VIEW": "false",
     "StringKeys": ["NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "WHAT_IS_NAMMA_YATRI_BONUS", "EARNED_ON_APP", "TRAVELLED_ON_APP", "GUARANTEED_FIXED_PRICE", "GET_READY_FOR_YS_SUBSCRIPTION"],
     "fontType": "Assets",
