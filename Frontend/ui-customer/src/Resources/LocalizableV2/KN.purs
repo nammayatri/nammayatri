@@ -1121,6 +1121,7 @@ getKn = Keymap {
 , please_stay_calm_team_alerted: (\appName -> "ದಯವಿಟ್ಟು ಶಾಂತವಾಗಿರಿ, "<> appName <>" ಸುರಕ್ಷಾ ತಂಡ ಎಚ್ಚರಿಸಲಾಗಿದೆ!")
 , indication_to_emergency_contacts: (\appName -> appName <>" ನಿಮ್ಮ ಎಮರ್ಜೆನ್ಸಿ ಸಂಪರ್ಕಗಳಿಗೆ ಇದು ಪರೀಕ್ಷೆ ಗಾಯನವಾಗಿದೆ, ನಿಮ್ಮ ಎಮರ್ಜೆನ್ಸಿ ಸಂಪರ್ಕಗಳಿಗೆ ಇದು ತವಕಪಡಿಸದ ಅನುಭವ ಮಾಡುತ್ತದೆ.")
 , book: (\name -> name <> " ಬುಕ್ ಮಾಡಿ")
+, book_for_: (\name -> name <> " ಗೆ ಬುಕ್ ಮಾಡಿ")
 , fare_for: (\limit -> limit <> " ಗಾಗಿ ಶುಲ್ಕ")
 , waiting_charge_limit: (\timeLimit -> "ಕಾಯಿದಾರಿ ಶುಲ್ಕಗಳು ("<> timeLimit <>" ನಿಮಿಷಗಳ ನಂತರ)")
 , time_taken: "ಒಟ್ಟು ಸಮಯ"

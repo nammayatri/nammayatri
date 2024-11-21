@@ -1121,6 +1121,7 @@ getHi = Keymap {
 , please_stay_calm_team_alerted: (\appName -> "कृपया शांत रहें, "<> appName <>" सुरक्षा टीम को सूचित किया गया है!")
 , indication_to_emergency_contacts: (\appName -> appName <>" आपके इमरजेंसी संपर्क को इसे एक परीक्षण ड्रिल बताएगा, जिससे उन्हें तनावमुक्त अनुभव होगा।")
 , book: (\name -> name <> " बुक करें")
+, book_for_: (\name -> name <> " में बुक करें")
 , fare_for: (\limit -> limit <> " के लिए किराया")
 , waiting_charge_limit: (\timeLimit -> "इंतजार शुल्क ("<> timeLimit <>" मिनट के बाद)")
 , time_taken: "सवारी की अवधि"

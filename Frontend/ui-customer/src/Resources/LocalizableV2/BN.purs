@@ -1121,6 +1121,7 @@ getBn = Keymap {
 , please_stay_calm_team_alerted: (\appName -> "দয়া করে শান্ত থাকুন, "<> appName <>" সুরক্ষা দলকে সতর্ক করা হয়েছে!")
 , indication_to_emergency_contacts: (\appName -> appName <> "আপনার আত্মীয়দের জানাবে যে এটি একটি পরীক্ষামূলক ড্রিল, যাতে তারা স্ট্রেস-ফ্রি অভিজ্ঞতা পাবেন।")
 , book: (\name -> "বুক " <> name)
+, book_for_: (\name -> name <> " এ বুক করুন")
 , fare_for: (\limit -> limit <> " এর জন্য ভাড়া")
 , waiting_charge_limit: (\timeLimit -> "অপেক্ষা চার্জ (" <> timeLimit <> " মিনিটের পরে)")
 , time_taken: "সময় নেয়া"

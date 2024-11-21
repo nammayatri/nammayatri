@@ -1135,6 +1135,7 @@ newtype Keymap = Keymap {
 , applicable_toll_charges :: String
 , update_tip_str :: String
 , book :: String -> String
+, book_for_ :: String -> String
 , fare_for :: String -> String
 , waiting_charge_limit :: String -> String
 , time_taken :: String
@@ -5056,6 +5057,9 @@ update_tip_str = a
 
 book :: Proxy "book"
 book = a
+
+book_for_ :: Proxy "book_for_"
+book_for_ = a
 
 fare_for :: Proxy "fare_for"
 fare_for = a

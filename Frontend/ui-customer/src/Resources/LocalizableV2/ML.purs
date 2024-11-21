@@ -1122,6 +1122,7 @@ getMl = Keymap {
 , please_stay_calm_team_alerted: (\appName -> "ദയവായി ശാന്തമായി ഇരുക്കുക, "<> appName <>" സുരക്ഷ ടീമ് അറിയിക്കപ്പെടുന്നു!")
 , indication_to_emergency_contacts: (\appName -> appName <>" നിങ്ങളുടെ എമർജൻസി കോൺടാക്റ്റുകൾക്ക് ഇത് ഒരു പരീക്ഷണ പരിശീലനമായി ഇരിക്കുന്നുവെന്ന് സൂചിപ്പിക്കുന്നു.")
 , book: (\name -> "ബുക്ക് " <> name)
+, book_for_: (\name -> name <> " വരെ ബുക്ക് ചെയ്യുക")
 , fare_for: (\limit -> limit <> " കോടതി")
 , waiting_charge_limit: (\timeLimit -> "കാത്തിരിക്കൽ ചാർജുകൾ ("<> timeLimit <>" മിനിറ്റ് ശേഷം)")
 , time_taken: "മൊത്തം സമയം"
