@@ -3211,15 +3211,11 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
                             void $ delay $ Milliseconds duration
                             driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = newRoute, routeCacheForAdvancedBooking = newRouteAdv, previousRideDrop = true, speed = (routeDistanceNormal + routeDistanceAdvanced) / (routeDurationNormal + routeDurationAdvanced) } } routeState expCounter
                           Just (Route routes), Nothing, false -> do
-                            {points, route, routeDistance, routeDuration} <- createRouteHelper routeState dstLat dstLon ( maybe (0.0) (\loc -> loc.lat) state.props.stopLoc) (maybe 0.0 (\loc -> loc.lng) state.props.stopLoc) Nothing rideId--state.data.driverInfoCardState.destinationLng
-                            let rentalPoints = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideAccepted then points else Nothing
-                                rentalRoute = route 
-                                callback = runFn2 getMarkerCallback push MarkerLabelOnClick
+                            rentalPoints <- if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideAccepted then getRentalPoints routeState dstLat dstLon state rideId else pure Nothing
+                            let callback = runFn2 getMarkerCallback push MarkerLabelOnClick
                                 distanceBwDriverAndPickup = (getDistanceBwCordinates srcLat srcLon state.data.driverInfoCardState.sourceLat state.data.driverInfoCardState.sourceLng) * 1000.0
                                 driverWithinPickupThreshold = distanceBwDriverAndPickup > state.data.config.mapConfig.locateOnMapConfig.editPickUpThreshold
                                 destMarkerPrimaryText = if (any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]) then state.data.driverInfoCardState.source else state.data.driverInfoCardState.destination
-                                rentalDistance = routeDistance
-                                rentalDuration = routeDuration
                                 destLat = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideStarted then (maybe dstLat (\loc -> loc.lat) state.props.stopLoc) else dstLat 
                                 destLon = if state.data.fareProductType == FPT.RENTAL && isLocalStageOn RideStarted then (maybe dstLon (\loc -> loc.lng) state.props.stopLoc) else dstLon
                             {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon destLat destLon (Just routes) rideId
@@ -3362,6 +3358,10 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
         fromMaybe "" state.data.driverInfoCardState.sourceAddress.area
       else 
         metersToKm distance (state.props.currentStage == RideStarted)
+
+    getRentalPoints routeState dstLat dstLon state rideId = do
+      {points, route, routeDistance, routeDuration} <- createRouteHelper routeState dstLat dstLon ( maybe (0.0) (\loc -> loc.lat) state.props.stopLoc) (maybe 0.0 (\loc -> loc.lng) state.props.stopLoc) Nothing rideId--state.data.driverInfoCardState.destinationLng
+      pure points
 
 confirmRide :: forall action. String -> (RideBookingRes -> action) -> action -> action -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
 confirmRide trackingId rideConfirmationAction checkFlowStatusAction goToHomeScreenAction count duration push state = do
