@@ -1660,3 +1660,4 @@ getKN stringKey =
         UPDATED_FARE_STR -> "ನವೀಕರಿಸಿದ ದರ"
         BOOK_ANY_DETAILS -> "ಯಾವುದೇ ವಿವರಗಳನ್ನು ಬುಕ್ ಮಾಡಿ"
         BOOST_SEARCH -> "ಹುಡುಕಾಟವನ್ನು ಹೆಚ್ಚಿಸಿ"
+        BOOK_FOR_ pricerange -> pricerange <> " ಗೆ ಬುಕ್ ಮಾಡಿ"

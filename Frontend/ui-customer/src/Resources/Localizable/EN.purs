@@ -1663,3 +1663,4 @@ getEN stringKey =
         UPDATED_FARE_STR -> "Updated Fare"
         BOOK_ANY_DETAILS -> "Book Any Details"
         BOOST_SEARCH -> "Boost Search"
+        BOOK_FOR_ pricerange -> "Book for " <> pricerange

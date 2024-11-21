@@ -1659,3 +1659,4 @@ getFR stringKey =
         UPDATED_FARE_STR -> "আপডেট করা ভাড়া"
         BOOK_ANY_DETAILS -> "যেকোনো বিস্তারিত বুক করুন"
         BOOST_SEARCH -> "বুস্ট সার্চ"
+        BOOK_FOR_ pricerange -> "Book for " <> pricerange

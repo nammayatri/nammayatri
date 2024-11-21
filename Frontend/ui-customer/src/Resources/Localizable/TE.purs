@@ -1671,3 +1671,4 @@ getTE stringKey =
     UPDATED_FARE_STR -> "అప్‌డేట్ చేసిన ఛార్జీ"
     BOOK_ANY_DETAILS -> "బుక్ ఏనీ వివరాలు"
     BOOST_SEARCH -> "శోధనను పెంచండి"
+    BOOK_FOR_ pricerange -> pricerange <> " కి బుక్ చేయండి"
