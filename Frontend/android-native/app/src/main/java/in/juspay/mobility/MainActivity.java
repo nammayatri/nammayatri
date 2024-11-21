@@ -125,6 +125,7 @@ import co.hyperverge.hyperkyc.HyperKyc;
 import co.hyperverge.hyperkyc.data.models.HyperKycConfig;
 import co.hyperverge.hyperkyc.data.models.result.HyperKycResult;
 
+import in.org.npci.bbps.BBPSService;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -820,7 +821,8 @@ public class MainActivity extends AppCompatActivity {
                             Log.e("Error Occurred while calling Hyperverge SDK ", e.toString());
                         }
                         break;
-
+                    case "launchBBPSSdk":
+//                        initBBPSSdk();
                     default:
                         Log.e(LOG_TAG, "json_payload" + json);
                 }
@@ -1237,7 +1239,7 @@ public class MainActivity extends AppCompatActivity {
         oldSharedPref.edit().clear().apply();
         return true;
     }
-    
+
     public void initHyperVergeSdk(String accessToken,  String workFlowId, String transactionId, boolean useLocation, String defLanguageCode, String inputsJson) {
         if (isClassAvailable ("co.hyperverge.hyperkyc.data.models.HyperKycConfig")) {
                 HyperKycConfig config = new HyperKycConfig(accessToken, workFlowId, transactionId);
@@ -1267,5 +1269,26 @@ public class MainActivity extends AppCompatActivity {
 
         }
         }
+    
+//    private void initBBPSSdk() { // BBPS SDK Integration
+//        try {
+//            //initData.put("mobileNumber", mobileNumber);
+//            JSONObject initData = new JSONObject();
+//            String authToken = "JWT_TOKEN";
+           
+//            // initData.put("email", email); // Optional
+//            initData.put("appId", appId);
+//            initData.put("deviceId", deviceId);
+//            initData.put("agentId", agentId);
+//            initData.put("authToken", authToken);
 
+//            // Initializing and Booting up the SDK to make it ready for all the operations
+//            bbpsService = new BBPSService(getApplicationContext(), initData, new BBPSAgent());
+//            // Payment Gateway is service you will call to do transaction.
+//            PaymentGateway.setBBPSService(bbpsService);
+//        }
+//        catch (Exception e) {
+//            Log.e("Error in initiating BBPS SDK", e.toString());
+//        }
+//    }
 }
