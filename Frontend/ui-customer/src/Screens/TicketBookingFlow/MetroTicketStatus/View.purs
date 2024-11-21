@@ -96,7 +96,7 @@ screen initialState =
     if city == ST.Chennai then
       void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusPooling initialState.data.bookingId initialState.data.validUntil 3000.0 initialState push MetroPaymentStatusAction
     else
-      void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusfinitePooling initialState.data.bookingId initialState.data.validUntil 5 5000.0 initialState push MetroPaymentStatusAction
+      void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusfinitePooling initialState.data.bookingId initialState.data.validUntil 10 4000.0 initialState push MetroPaymentStatusAction
     pure $ pure unit
 --------------------------------------------------------------------------------------------
 -- Spy is required to debug the flow
@@ -158,14 +158,18 @@ metroPaymentStatusfinitePooling bookingId validUntil count delayDuration state p
                     void $ pure $ spy "case 3" (show diffSec)
                     _ <- pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
                     doAff do liftEffect $ push $ action resp
-                  else do
-                    void $ pure $ spy "case 4" bookingId
-                    void $ delay $ Milliseconds delayDuration
-                    metroPaymentStatusfinitePooling bookingId validUntil (count - 1) delayDuration state push action
-            _ -> pure unit
-        Left _ -> pure unit
+                  else
+                    defaultCase
+            _ -> defaultCase
+        Left _ -> defaultCase
     else pure unit
   else pure unit
+  where
+    defaultCase :: Flow GlobalState Unit
+    defaultCase = do
+      void $ pure $ spy "case default" bookingId
+      void $ delay $ Milliseconds delayDuration
+      metroPaymentStatusfinitePooling bookingId validUntil (count - 1) delayDuration state push action
 
 view :: forall w . (Action -> Effect Unit) -> ST.MetroTicketStatusScreenState -> PrestoDOM (Effect Unit) w
 view push state =
