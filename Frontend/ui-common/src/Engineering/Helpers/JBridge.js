@@ -3105,3 +3105,20 @@ export const executeJS = (params, codeString) => {
   }
 
 }
+
+export const startBBPSMicroApp = function (viewId, mobileNumber) {
+  try {
+    const jsonObjectPayload = {
+      event : "launchBBPSSdk",
+      viewId : viewId,
+      bbpsPayload : {
+        action: "Main",
+        mobileNumber: mobileNumber
+      }
+    };
+    window.JOS.emitEvent("java")("onEvent")(JSON.stringify(jsonObjectPayload))()();
+  }
+  catch (err) {
+    console.error("error in startBBPSMicroApp", err);
+  }
+}

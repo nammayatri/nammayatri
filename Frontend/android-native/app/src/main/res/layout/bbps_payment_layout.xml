@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+xmlns:app="http://schemas.android.com/apk/res-auto"
+xmlns:tools="http://schemas.android.com/tools"
+android:layout_width="match_parent"
+android:layout_height="match_parent"
+android:background="@android:color/white"
+tools:context=".PaymentGateway">
+
+<TextView
+    android:id="@+id/payment_option_label"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:text="Saved Payment Options"
+    android:textSize="22sp"
+    android:textColor="@android:color/black"
+    android:gravity="center"
+    android:padding="16dp"
+    app:layout_constraintTop_toTopOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintEnd_toEndOf="parent" />
+
+<TextView
+    android:id="@+id/payment_info"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:text="Select One of the payment Option"
+    android:textSize="14sp"
+    android:textColor="@android:color/black"
+    android:paddingHorizontal="16dp"
+    app:layout_constraintTop_toBottomOf="@id/payment_option_label"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintEnd_toEndOf="parent" />
+
+<LinearLayout
+    android:id="@+id/payment_options_container"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/rounded_corner_background"
+    android:padding="16dp"
+    android:elevation="4dp"
+    app:layout_constraintTop_toBottomOf="@id/payment_info"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintEnd_toEndOf="parent"
+    android:layout_margin="16dp">
+
+    <LinearLayout
+        android:id="@+id/debit_card_option_1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:onClick="startMicroForSuccessTxn"
+        android:focusable="true"
+        android:layout_marginBottom="8dp">
+
+        <ImageView
+            android:id="@+id/debit_card_icon_1"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_card"
+            android:layout_gravity="center_vertical"
+            app:tint="@android:color/white" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginStart="16dp"
+            android:layout_gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/debit_card_label_1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Axis Card"
+                android:textSize="18sp"
+                android:textColor="@android:color/black" />
+
+            <TextView
+                android:id="@+id/debit_card_number_1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="**** **** **** 4567 (No OTP needed)"
+                android:textSize="16sp"
+                android:textColor="@android:color/black" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@android:color/black"
+        android:layout_marginVertical="8dp" />
+
+    <LinearLayout
+        android:id="@+id/debit_card_option_2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:onClick="startMicroForSuccessTxn"
+        android:focusable="true"
+        android:layout_marginBottom="8dp">
+
+        <ImageView
+            android:id="@+id/debit_card_icon_2"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_card"
+            android:layout_gravity="center_vertical"
+            app:tint="@android:color/white" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginStart="16dp"
+            android:layout_gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/debit_card_label_2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="BOB Card"
+                android:textSize="18sp"
+                android:textColor="@android:color/black" />
+
+            <TextView
+                android:id="@+id/debit_card_number_2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="**** **** **** 4342 (No OTP needed)"
+                android:textSize="16sp"
+                android:textColor="@android:color/black" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@android:color/black"
+        android:layout_marginVertical="8dp" />
+
+    <LinearLayout
+        android:id="@+id/debit_card_option_3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:onClick="startMicroForSuccessTxn"
+        android:focusable="true">
+
+        <ImageView
+            android:id="@+id/debit_card_icon_3"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_card"
+            android:layout_gravity="center_vertical"
+            app:tint="@android:color/white" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginStart="16dp"
+            android:layout_gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/debit_card_label_3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="HDFC Card"
+                android:textSize="18sp"
+                android:textColor="@android:color/black" />
+
+            <TextView
+                android:id="@+id/debit_card_number_3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="**** **** **** 1234 (No OTP needed)"
+                android:textSize="16sp"
+                android:textColor="@android:color/black" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
