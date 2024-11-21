@@ -331,7 +331,6 @@ screen initialState =
               PickUpFarFromCurrentLocation -> 
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
               RideAccepted -> do
-                void $ pure $ setValueToLocalStore RATING_SKIPPED "false"
                 when 
                   (initialState.data.config.notifyRideConfirmationConfig.notify && any (_ == getValueToLocalStore NOTIFIED_CUSTOMER) ["false" , "__failed" , "(null)"])
                     $ startTimer 5 "notifyCustomer" "1" push NotifyDriverStatusCountDown
@@ -373,6 +372,7 @@ screen initialState =
                 pure unit
               RideStarted -> do
                 void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
+                void $ pure $ setValueToLocalStore RATING_SKIPPED "false"
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
@@ -3772,12 +3772,12 @@ verticalServiceView push index service =
   , accessibility ENABLE
   , accessibility DISABLE_DESCENDANT
   , accessibilityHint $ getEN service.name
-  , margin $ MarginLeft $ if index == 0 then 0 else 16
+  , margin $ MarginLeft $ if index == 0 then 0 else 12
   , onClick push $ const $ ServicesOnClick service
   ][linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , padding $ Padding 8 8 8 8
+    , padding $ Padding 5 5 5 5
     , background service.backgroundColor
     , cornerRadius 12.0
     , gravity CENTER_HORIZONTAL
@@ -3791,7 +3791,6 @@ verticalServiceView push index service =
   , textView $ 
     [ text $ getString $ service.name
     , color Color.black800
-    , padding $ PaddingHorizontal 2 2
     , margin $ MarginTop 4
     , gravity CENTER
     ] <> FontStyle.body33 TypoGraphy

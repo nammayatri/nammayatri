@@ -268,7 +268,7 @@ getFaresList fares chargeableRideDistance isSpecialZone =
 getMerchSpecBaseFare :: Array FareBreakupAPIEntity -> Number
 getMerchSpecBaseFare fares =
   case getMerchant FunctionCall of
-    YATRISATHI -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE", "PICKUP_CHARGES", "DEAD_KILOMETER_FARE", "SERVICE_CHARGE", "PLATFORM_FEE"]
+    YATRISATHI -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE", "NIGHT_SHIFT_CHARGE", "PICKUP_CHARGES", "DEAD_KILOMETER_FARE", "SERVICE_CHARGE", "PLATFORM_FEE", "CGST", "SGST"]
     _ -> getAllFareFromArray fares ["EXTRA_DISTANCE_FARE"]
 
 

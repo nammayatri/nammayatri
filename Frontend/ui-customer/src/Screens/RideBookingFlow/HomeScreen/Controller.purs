@@ -2954,7 +2954,10 @@ eval (ShareRideAction (PopupWithCheckboxController.CallContact index)) state = d
     Nothing -> continue state
 
 eval (UpdateBookingDetails (RideBookingRes response)) state = do
-  let rideStatus = (fromMaybe dummyRideAPIEntity ((response.rideList) !! 0)) ^. _status
+  let (RideBookingAPIDetails bookingDetails) = response.bookingDetails
+      (RideBookingDetails contents) = bookingDetails.contents
+      otpCode = contents.otpCode
+      rideStatus = (fromMaybe dummyRideAPIEntity ((response.rideList) !! 0)) ^. _status
       newState = state{ props { currentStage =
                       case rideStatus of
                         "NEW" -> if state.props.currentStage == ChatWithDriver then ChatWithDriver else RideAccepted
@@ -2964,7 +2967,7 @@ eval (UpdateBookingDetails (RideBookingRes response)) state = do
                         _ -> RideAccepted
                     , bookingId = response.id
                     }, data { 
-                      driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE) state.data.driverInfoCardState}}
+                      driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes response) (state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE || isJust otpCode) state.data.driverInfoCardState}}
   continue newState
   
 eval (DriverInfoCardActionController (DriverInfoCardController.ShowEndOTP)) state = continue state { props { showEndOTP = true } }
