@@ -316,7 +316,7 @@ mapInputViewConfig state isEditable =
           , canClearText : DS.length (if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc) > 2
           , id : ST.SearchLocDrop
           , alpha : if state.props.actionType /= ST.BusStopSelectionAction then 1.0 else 0.5
-          , isEditable : if DS.null state.props.routeSelected then false else true
+          , isEditable : if (DS.null state.props.routeSelected && state.props.actionType == ST.BusStopSelectionAction) then false else true
           }] )
       
     getInputViewConfigBasedOnActionType :: ST.SearchLocationActionType -> { srcPrefixImageName :: String, destPrefixImageName :: String, srcPlaceHolder :: String, destPlaceHolder :: String, inputViewMargin :: Margin, headerVisibility :: Boolean, imageLayoutMargin :: Margin }

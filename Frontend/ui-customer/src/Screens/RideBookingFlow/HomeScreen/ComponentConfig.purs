@@ -2661,7 +2661,7 @@ fetchRideDetails state =
       isScheduled : isScheduled,
       returnTime : Just returnTime,
       roundTrip : Just (state.props.searchLocationModelProps.tripType == ROUND_TRIP),
-      isAirConditioned: Just false,
+      isAirConditioned: selectedEstimatesObject.airConditioned,
       startTime : startTime,
       toLocation : Just (ST.LocationInformation {
         address : state.data.destinationAddress,

@@ -687,7 +687,7 @@ newtype QuoteAPIEntity = QuoteAPIEntity {
   agencyCompletedRidesCount :: Maybe Int,
   serviceTierName :: Maybe String,
   serviceTierShortDesc :: Maybe String,
-  airConditioned :: Maybe Boolean,
+  isAirConditioned :: Maybe Boolean,
   specialLocationTag :: Maybe String,
   isValueAddNP :: Maybe Boolean
 }
