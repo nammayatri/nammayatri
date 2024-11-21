@@ -126,6 +126,7 @@ import co.hyperverge.hyperkyc.data.models.HyperKycConfig;
 import co.hyperverge.hyperkyc.data.models.result.HyperKycResult;
 
 import in.org.npci.bbps.BBPSService;
+import in.org.npci.bbps.BBPSAgentInterface;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -1268,27 +1269,53 @@ public class MainActivity extends AppCompatActivity {
             } else {
 
         }
-        }
-    
-//    private void initBBPSSdk() { // BBPS SDK Integration
-//        try {
-//            //initData.put("mobileNumber", mobileNumber);
-//            JSONObject initData = new JSONObject();
-//            String authToken = "JWT_TOKEN";
-           
-//            // initData.put("email", email); // Optional
-//            initData.put("appId", appId);
-//            initData.put("deviceId", deviceId);
-//            initData.put("agentId", agentId);
-//            initData.put("authToken", authToken);
+    }
 
-//            // Initializing and Booting up the SDK to make it ready for all the operations
-//            bbpsService = new BBPSService(getApplicationContext(), initData, new BBPSAgent());
-//            // Payment Gateway is service you will call to do transaction.
-//            PaymentGateway.setBBPSService(bbpsService);
-//        }
-//        catch (Exception e) {
-//            Log.e("Error in initiating BBPS SDK", e.toString());
-//        }
-//    }
+    public class BBPSAgent implements BBPSAgentInterface {
+        /*
+         *  BBPSAgent functions needs to populated by
+         *  the client. These functions will be invoked by
+         *  the SDK during processing.
+         *
+         * */
+
+        @Override
+        public void doPayment(JSONObject billDetails) {
+            //Trigger payment page
+//        Intent intent = new Intent(MainActivity.this, PaymentGateway.class);
+//        MainActivity.this.startActivity(intent);
+        }
+
+        @Override
+        public void setTxnStatus(JSONObject txnStatus) {
+//        Intent intent = new Intent("CLOSE_PAYMENT_ACTIVITY");
+//        sendBroadcast(intent);
+            // callback from SDK to Application
+            // to store the transaction status
+        }
+
+
+    }
+    
+   private void initBBPSSdk() { // BBPS SDK Integration
+       try {
+           //initData.put("mobileNumber", mobileNumber);
+           JSONObject initData = new JSONObject();
+           String authToken = "";
+           
+           // initData.put("email", email); // Optional
+           initData.put("appId", "1234"); // Dummy for now
+           initData.put("deviceId", "1234"); // Dummy for now
+           initData.put("agentId", "1234"); // Dummy for now
+           initData.put("authToken", authToken); // Dummy for now
+
+           // Initializing and Booting up the SDK to make it ready for all the operations
+           BBPSService bbpsService = new BBPSService(getApplicationContext(), initData, new BBPSAgent());
+           // Payment Gateway is service you will call to do transaction.
+        //    PaymentGateway.setBBPSService(bbpsService);
+       }
+       catch (Exception e) {
+           Log.e("Error in initiating BBPS SDK", e.toString());
+       }
+   }
 }
