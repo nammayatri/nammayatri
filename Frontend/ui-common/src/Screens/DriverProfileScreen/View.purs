@@ -52,6 +52,7 @@ screen initialState =
     , globalEvents : [
     (\push -> do
        _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getDriverProfile push initialState
+       _ <- launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ getDriverProfileWithImages push initialState
        pure $ pure unit
       )
     ]
@@ -61,6 +62,20 @@ screen initialState =
             let _ = spy "DriverProfileScreen action " action
             eval action state
     }
+
+getDriverProfileWithImages :: forall action. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> FlowBT String Unit
+getDriverProfileWithImages push state = do
+    (driversProfileRespWithImage) <- lift $ lift $ if state.props.rideId == "" 
+    then SB.getDriverProfileById state.props.driverId true
+    else SB.getDriverProfile state.props.rideId true
+    case driversProfileRespWithImage of
+            Right resp -> do
+                liftFlowBT $ push $ GetDriverProfileAPIResponseAction resp
+                pure unit
+            Left _ -> do
+                void $ pure $ JB.toast $ getString NOT_AVAILABLE
+                liftFlowBT $ push $ GoBack
+                pure unit
 
 getDriverProfile :: forall action. (Action -> Effect Unit) -> DriverProfileScreenCommonState -> FlowBT String Unit
 getDriverProfile push state = do
@@ -77,18 +92,6 @@ getDriverProfile push state = do
         Left _ -> do
             void $ pure $ JB.toast $ getString NOT_AVAILABLE
             EHC.liftFlow $ push $ GoBack
-            pure unit
-  
-  (driversProfileRespWithImage) <- lift $ lift $ if state.props.rideId == "" 
-    then SB.getDriverProfileById state.props.driverId true
-    else SB.getDriverProfile state.props.rideId true
-  case driversProfileRespWithImage of
-        Right resp -> do
-            liftFlowBT $ push $ GetDriverProfileAPIResponseAction resp
-            pure unit
-        Left _ -> do
-            void $ pure $ JB.toast $ getString NOT_AVAILABLE
-            liftFlowBT $ push $ GoBack
             pure unit
 
   lift $ lift $ await driversProfileResponse
