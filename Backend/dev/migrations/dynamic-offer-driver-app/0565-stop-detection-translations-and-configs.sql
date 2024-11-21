@@ -21,6 +21,6 @@ FROM
         ('DRIVER_STOP_DETECTED', 'STOP_DETECTION_KEY', 'வாடிக்கையாளர் காத்திருக்கிறார்!', 'பிக் அப் இடத்திற்கு செல்லத் தொடங்குங்கள்', 'TAMIL'),
         ('DRIVER_STOP_DETECTED', 'STOP_DETECTION_KEY', 'കസ്റ്റമർ കാത്തിരിക്കുന്നു!', 'ദയവായി പിക്കപ്പ് ലൊക്കേഷനിലേക്ക് നീങ്ങാൻ തുടങ്ങൂ', 'MALAYALAM'),
         ('DRIVER_STOP_DETECTED', 'STOP_DETECTION_KEY', 'కస్టమర్ వెయిట్ చేస్తున్నారు!', 'పికప్ లొకేషన్ వైపు కదలడం ప్రారంభించండి', 'TELUGU'),
-        ('DRIVER_STOP_DETECTED', 'STOP_DETECTION_KEY', 'গ্রাহক অপেক্ষা করছেন!', 'দয়া করে পিকআপ লোকেশনের দিকে এগিয়ে যান', 'BENGALI'),
+        ('DRIVER_STOP_DETECTED', 'STOP_DETECTION_KEY', 'গ্রাহক অপেক্ষা করছেন!', 'দয়া করে পিকআপ লোকেশনের দিকে এগিয়ে যান', 'BENGALI')
     ) AS pn(fcm_notification_type, key, title, body, language),
     atlas_driver_offer_bpp.merchant_operating_city AS moc;
