@@ -98,11 +98,13 @@ data NearestOperatingAndCurrentCity = NearestOperatingAndCurrentCity
   { nearestOperatingCity :: CityState,
     currentCity :: CityState
   }
+  deriving (Eq, Show)
 
 data CityState = CityState
   { city :: Context.City,
     state :: Context.IndianState
   }
+  deriving (Eq, Show)
 
 getNearestOperatingAndCurrentCity ::
   ( CacheFlow m r,
