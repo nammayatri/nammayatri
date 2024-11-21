@@ -167,9 +167,9 @@ window.getMerchantConfig = function () {
       "genericAccessibilityVideo" : "https://youtu.be/5s21p2rI58c"
     }
     , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
-    , "termsLink" : "https://docs.google.com/document/d/1K68xvtReD9FVpx-IshtKNMt4baQNgKXt"
-    , "termsVersion" : 2.0
-    , "privacyLink" : "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9"
+    , "termsLink" : "https://docs.google.com/document/d/1WkiqYIIk7wxVlis2ArlarVM6Dszb2z4G2qAePlKBEn8"
+    , "termsVersion" : 3.0
+    , "privacyLink" : "https://docs.google.com/document/d/1Di7oP7t6X-hz9MI3ZIOl4oZI5OTLGNQtunhhZQaqht4"
     , "feature" : {
       "enableBonus" : true
       , "enableImageUpload" : false

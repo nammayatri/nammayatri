@@ -243,7 +243,9 @@ window.getMerchantConfig = function () {
     ]
     , "callOptions" : ["ANONYMOUS", "DIRECT"]
     , "tipDisplayDuration" : 30
-    , "termsVersion" : 2.0
+    , "termsVersion" : 3.0
+    , "termsLink" :"https://docs.google.com/document/d/1WkiqYIIk7wxVlis2ArlarVM6Dszb2z4G2qAePlKBEn8"
+    , "privacyLink" : "https://docs.google.com/document/d/1Di7oP7t6X-hz9MI3ZIOl4oZI5OTLGNQtunhhZQaqht4"
     , "showDisabilityBanner" : false
     , "enableContactSupport" : false
     , "enableGeocoder" : true
