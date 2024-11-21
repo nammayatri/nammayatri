@@ -1658,3 +1658,4 @@ getHI stringKey =
         UPDATED_FARE_STR -> "अद्यतन किराया"
         BOOK_ANY_DETAILS -> "कोई भी विवरण बुक करें"
         BOOST_SEARCH -> "खोज को बढ़ावा दें"
+        BOOK_FOR_ pricerange -> pricerange <> " में बुक करें"

@@ -1677,3 +1677,4 @@ getTA stringKey =
     UPDATED_FARE_STR -> "புதுப்பிக்கப்பட்ட கட்டணம்"
     BOOK_ANY_DETAILS -> "எந்த விவரங்களையும் பதிவு செய்யவும்"
     BOOST_SEARCH -> "தேடலை அதிகரிக்கவும்"
+    BOOK_FOR_ pricerange -> pricerange <> " க்கு புக் செய்யுங்கள்"

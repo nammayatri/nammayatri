@@ -1656,3 +1656,4 @@ getML stringKey =
         UPDATED_FARE_STR -> "പുതുക്കിയ നിരക്ക്"
         BOOK_ANY_DETAILS -> "ഏത് വിശദാംശങ്ങളും ബുക്ക് ചെയ്യുക"
         BOOST_SEARCH -> "തിരയൽ ബൂസ്റ്റ് ചെയ്യുക"
+        BOOK_FOR_ pricerange -> pricerange <> " വരെ ബുക്ക് ചെയ്യുക"
