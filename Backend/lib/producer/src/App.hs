@@ -16,7 +16,6 @@
 module App (startProducer) where
 
 import Data.Function hiding (id)
-import qualified Data.HashMap.Strict as HM
 import Debug.Trace as T
 import Environment
 import EulerHS.Interpreters (runFlow)
@@ -65,7 +64,7 @@ startProducerWithEnv flowRt appCfg appEnv = do
           appCfg.kvConfigUpdateFrequency
       )
         >> L.setOption KafkaConn appEnv.kafkaProducerTools
-        >> L.setOption Tables (KUC.Tables [] HM.empty [] False [])
+        >> L.setOption Tables KUC.defaultTableData
         >> L.setOption KVCM.KVMetricCfg appEnv.coreMetrics.kvRedisMetricsContainer
     )
   let producers = map (\_ -> PF.runProducer) [1 .. appCfg.producersPerPod]
