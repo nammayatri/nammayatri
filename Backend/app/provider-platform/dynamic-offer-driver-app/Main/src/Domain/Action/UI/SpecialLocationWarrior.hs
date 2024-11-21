@@ -90,6 +90,7 @@ postUpdateInfoSpecialLocWarrior (_, _, _merchantOperatingCityId) personId Specia
   --   pure loc
   logDebug $ "Driver Tag primarySpecialLocation': ----------" <> personId.getId <> "  " <> show primarySpecialLocation
   let preferredPrimarySpecialLocation = primarySpecialLocation <|> driverInfo.preferredPrimarySpecialLoc
+  let _a = "Hello"
   logDebug $ "Driver Tag primarySpecialLocation': ----------" <> personId.getId <> "  " <> show primarySpecialLocation
 
   when (isSpecialLocWarrior && isNothing preferredPrimarySpecialLocation) $ throwError (InvalidRequest "preferredPrimarySpecialLoc is required when isSpecialLocWarrior is true")
