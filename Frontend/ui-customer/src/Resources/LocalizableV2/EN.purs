@@ -1121,6 +1121,7 @@ getEn = Keymap {
 , applicable_toll_charges: "Toll Charges are included in your fare"
 , update_tip_str: "Update Tip"
 , book: (\name -> "Book " <> name)
+, book_for_: (\name -> "Book for " <> name)
 , fare_for: (\limit -> "Fare for " <> limit)
 , waiting_charge_limit: (\timeLimit -> "Waiting Charges (after " <> timeLimit <> " mins)")
 , time_taken: "Time Taken"

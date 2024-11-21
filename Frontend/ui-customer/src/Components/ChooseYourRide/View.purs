@@ -246,8 +246,8 @@ tipsHorizontalView push state =
               ],
               linearLayout
               [  height WRAP_CONTENT
-              , width $ V 64
-              , margin $ Margin 18 0 0 0
+              , width $ if index == 0 then WRAP_CONTENT else V 64
+              , margin $ if index == 0 then Margin 0 0 0 0 else Margin 18 0 0 0
               , gravity CENTER
               , gradient (Linear 90.0 [Color.green900, Color.darkGreen])
               , cornerRadius 40.0
@@ -802,6 +802,7 @@ primaryButtonRequestRideConfig config id' = PrimaryButton.config
   , rippleColor = Color.rippleShade
   }
   where
+    currencySymbol = getCurrency appConfig
     selectedItem = case config.quoteList !! config.activeIndex of
               Just selectedItem -> selectedItem
               Nothing -> ChooseVehicle.config
@@ -811,7 +812,16 @@ primaryButtonRequestRideConfig config id' = PrimaryButton.config
                             RENTAL -> "Rental"
                             INTER_CITY -> "Intercity"
                             _ -> ""
-    title = if selectedItem.vehicleVariant == "BOOK_ANY" then getString $ BOOK_ANY else getString $ BOOK ( additionalString <> " " <> name )
+    tip = fromMaybe 0 (config.tipViewProps.customerTipArrayWithValues !! config.tipViewProps.activeIndex)
+    bookAnyProps = getBookAnyProps (filter (\estimate -> elem (fromMaybe "" estimate.serviceTierName) selectedItem.selectedServices) config.quoteList)
+    maximumPrice = if selectedItem.vehicleVariant == "BOOK_ANY" then Just bookAnyProps.maxPrice else selectedItem.maxPrice
+    minimumPrice = if selectedItem.vehicleVariant == "BOOK_ANY" then bookAnyProps.minPrice else selectedItem.basePrice
+    priceRange = if isJust maximumPrice && maximumPrice /= Just selectedItem.basePrice  then currencySymbol <> show (minimumPrice + tip)  <> " - " <> currencySymbol <> show ((fromMaybe minimumPrice maximumPrice) + tip) else currencySymbol <> show (minimumPrice + tip)
+    title = case config.fareProductType of
+              RENTAL -> if selectedItem.vehicleVariant == "BOOK_ANY" then getString $ BOOK_ANY else getString $ BOOK ( "Rental" <> " " <> name )
+              INTER_CITY -> if selectedItem.vehicleVariant == "BOOK_ANY" then getString $ BOOK_ANY else getString $ BOOK ( "Intercity" <> " " <> name )
+              _ -> getString $ BOOK_FOR_ priceRange 
+    
 
 filterVariantAndEstimate :: Array ChooseVehicle.Config -> Array ChooseVehicle.Config -- showing unique quotes based on variant and arrange price range (In case of multiple provider)
 filterVariantAndEstimate configArray = fromMaybe [] $ do

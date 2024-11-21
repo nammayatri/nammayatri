@@ -1120,6 +1120,7 @@ getTa = Keymap {
 , please_stay_calm_team_alerted: (\appName -> "தயவுசெய்து சுமாராக இருங்கள், "<> appName <>" பாதுகாப்பு குழு அறிக்கை அளிக்கப்படும்!")
 , indication_to_emergency_contacts: (\appName -> appName <>" உங்கள் எதிர்கால உதவி தொடர்புகளுக்கு இது ஒரு சோதனை வழிமுறை என்று அறிவிக்கும்.")
 , book: (\name -> "முன்பதிவு " <> name)
+, book_for_: (\name -> name <> " க்கு புக் செய்யுங்கள்")
 , fare_for: (\limit -> limit <> " வரை கட்டணம்")
 , waiting_charge_limit: (\timeLimit -> "காத்திருப்பு கட்டணம் ("<> timeLimit <>" நிமிடங்கள் பின்பு)")
 , time_taken: "மொத்த நேரம்"

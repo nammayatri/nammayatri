@@ -1121,6 +1121,7 @@ getTe = Keymap {
 , please_stay_calm_team_alerted: (\appName -> "దయచేసి స్థిరంగా ఉండండి, "<> appName <>" భద్రత టీమ్‌కు అలర్ట్ అయినది!")
 , indication_to_emergency_contacts: (\appName -> appName <>" మీ అత్యంత కాలంగా సంక్రాంతి చేసే అనుకూలతనాన్ని అనుసరించడానికి మీ ఎత్తుచేయుటకు చెందిన మీ అత్యంత కాలంగా సంక్రాంతి చేసే అనుకూలతనాన్ని అనుసరించడానికి సూచనలు ఇవ్వించినది.")
 , book: (\name -> "బుక్ " <> name)
+, book_for_: (\name -> name <> " కి బుక్ చేయండి")
 , fare_for: (\limit -> limit <> " కోసం ధర")
 , waiting_charge_limit: (\timeLimit -> "వైటింగ్ ఛార్జీలు ("<> timeLimit <>" నిమిషాల తర్వాత)")
 , time_taken: "మొత్తం సమయం"

@@ -1216,6 +1216,7 @@ getProxy str =
     APPLICABLE_TOLL_CHARGES -> \a -> a @~ applicable_toll_charges
     UPDATE_TIP_STR -> \a -> a @~ update_tip_str
     BOOK arg1 -> \a -> (a @~ book) arg1
+    BOOK_FOR_ arg1 -> \a -> (a @~ book_for_) arg1
     FARE_FOR arg1 -> \a -> (a @~ fare_for) arg1
     WAITING_CHARGE_LIMIT arg1 -> \a -> (a @~ waiting_charge_limit) arg1
     TIME_TAKEN -> \a -> a @~ time_taken
