@@ -2746,8 +2746,7 @@ rideSearchRequestFlow updatedState = do
         distance = if response.distance < 1000 then toStringJSON (response.distance) <> " m" else parseFloat (INT.toNumber (response.distance) / 1000.0) 2 <> " km"
 
         maxEstimatedDuration = max (response.duration / 60) $ (response.distance / 1000) * 3
-
-        duration = if (state.data.fareProductType == FPT.INTER_CITY) then (HU.formatDuration state.props.searchLocationModelProps.totalRideDuration) else (show (response.duration / 60)) <> " min"
+        duration = if (state.data.fareProductType == FPT.INTER_CITY && state.props.searchLocationModelProps.totalRideDuration /= 0) then (HU.formatDuration state.props.searchLocationModelProps.totalRideDuration) else ((show (response.duration / 60)) <> " min")
 
         Snapped points = response.points
 

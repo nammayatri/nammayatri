@@ -304,7 +304,7 @@ sourceDestinationView push config =
       locationTextWidthWhenFeatureEnabled = if os == "IOS" then V ((screenWidth unit) / 100 * 80) else V ((screenWidth unit) / 100 * 65)
       locationTextWidthWhenFeatureDisabled = V ((screenWidth unit) / 10 * 8)
       dropLocationTextWidth = if config.enableEditDestination && isNotRentalRide && config.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE then locationTextWidthWhenFeatureEnabled else locationTextWidthWhenFeatureDisabled
-      pickupLocationTextWidth = if config.isEditPickupEnabled && config.rideAccepted then locationTextWidthWhenFeatureEnabled else locationTextWidthWhenFeatureDisabled
+      pickupLocationTextWidth = if config.isEditPickupEnabled && config.rideAccepted && config.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE && not config.isOtpRideFlow then locationTextWidthWhenFeatureEnabled else locationTextWidthWhenFeatureDisabled
   in 
     PrestoAnim.animationSet [ scaleYAnimWithDelay 100] $ 
   linearLayout
@@ -364,8 +364,7 @@ sourceDestinationView push config =
         , cornerRadius if os == "IOS" then 20.0 else 32.0
         , stroke $ "1," <> Color.grey900
         , padding $ Padding 12 8 12 8
-        , visibility $ boolToVisibility $ (config.isEditPickupEnabled && config.rideAccepted) && (config.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE)
-        , onClick push $ const config.editingPickupLocation
+        , visibility $ boolToVisibility $ (config.isEditPickupEnabled && config.rideAccepted) && (config.fareProductType /= FPT.ONE_WAY_SPECIAL_ZONE) && not config.isOtpRideFlow
         , rippleColor Color.rippleShade
         , accessibility DISABLE
         ] <> FontStyle.body1 TypoGraphy
