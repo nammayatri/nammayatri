@@ -55,7 +55,7 @@ getCalculateFare (_, merchantId, merchanOperatingCityId) distanceWeightage dropL
       vehicleServiceTierItem <-
         CQVST.findByServiceTierTypeAndCityId fp.vehicleServiceTier merchanOperatingCityId
           >>= fromMaybeM (VehicleServiceTierNotFound $ show fp.vehicleServiceTier)
-      DBS.buildEstimate merchanOperatingCityId INR Meter Nothing now False Nothing False mbDistance Nothing mbTollCharges mbTollNames Nothing Nothing 0 Nothing False vehicleServiceTierItem fp
+      DBS.buildEstimate merchantId merchanOperatingCityId INR Meter Nothing now False Nothing False mbDistance Nothing mbTollCharges mbTollNames Nothing Nothing 0 Nothing False vehicleServiceTierItem fp
 
     selectFarePolicy distance' duration' mbIsAutoRickshawAllowed' mbIsTwoWheelerAllowed' =
       filter isValid
