@@ -125,6 +125,7 @@ groupDriverFeeByInvoices currency driverFees_ = do
           driverId = driverFee.driverId,
           lastStatusCheckedAt = Nothing,
           updatedAt = now,
+          merchantId = Just driverFee.merchantId,
           merchantOperatingCityId = driverFee.merchantOperatingCityId,
           serviceName = driverFee.serviceName,
           createdAt = now

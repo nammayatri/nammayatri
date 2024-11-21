@@ -436,6 +436,7 @@ mkInvoiceAgainstDriverFee driverFee (isCoinCleared, isAutoPay) = do
         driverId = driverFee.driverId,
         lastStatusCheckedAt = Nothing,
         serviceName = driverFee.serviceName,
+        merchantId = Just driverFee.merchantId,
         merchantOperatingCityId = driverFee.merchantOperatingCityId,
         updatedAt = now,
         createdAt = now
