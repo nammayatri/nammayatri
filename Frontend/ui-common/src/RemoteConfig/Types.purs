@@ -64,6 +64,19 @@ type RemoteConfig a
     , config :: Maybe Config
     }
 
+type VariantLevelRemoteConfig a = 
+    { autoRickshaw :: a,
+      suv :: a,
+      sedan :: a,
+      hatchback :: a,
+      bookAny :: a,
+      taxi :: a,
+      taxiPlus :: a,
+      default :: a,
+      deliveryBike :: a
+    }
+
+
 newtype RCCarousel
   = RCCarousel
   { text_color :: String
@@ -146,16 +159,7 @@ type TipsConfig
     }
 
 type SubscriptionConfigVariantLevel 
-  = { autoRickshaw :: Maybe SubscriptionConfigVariantLevelEntity,
-      suv :: Maybe SubscriptionConfigVariantLevelEntity,
-      sedan :: Maybe SubscriptionConfigVariantLevelEntity,
-      hatchback :: Maybe SubscriptionConfigVariantLevelEntity,
-      bookAny :: Maybe SubscriptionConfigVariantLevelEntity,
-      taxi :: Maybe SubscriptionConfigVariantLevelEntity,
-      taxiPlus :: Maybe SubscriptionConfigVariantLevelEntity,
-      default :: Maybe SubscriptionConfigVariantLevelEntity,
-      deliveryBike :: Maybe SubscriptionConfigVariantLevelEntity
-    }
+  = VariantLevelRemoteConfig (Maybe SubscriptionConfigVariantLevelEntity)
 
 
 type SubscriptionConfigVariantLevelEntity = {
