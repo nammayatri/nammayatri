@@ -25,6 +25,7 @@ import Data.Generic.Rep (class Generic)
 import Data.Eq.Generic (genericEq)
 import Foreign.Generic (class Decode, class Encode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
+import Common.RemoteConfig.Types as CRT
 
 type HVConfigs = {
   selfie_flow_id :: String,
@@ -139,4 +140,14 @@ type RideAssignedAudioConfig = {
 
 type ParcelConfig = {
   introductionVideo :: String
+}
+
+type MetroWarriorConfig = CRT.VariantLevelRemoteConfig MetroWarriorConfigEntity
+
+type MetroWarriorConfigEntity = {
+  videoUrl :: String,
+  isMetroWarriorEnabled :: Boolean,
+  cacheInvalidateCounter :: Int,
+  defaultSecondaryStations :: Array String,
+  defaultPrimaryStation :: String
 }

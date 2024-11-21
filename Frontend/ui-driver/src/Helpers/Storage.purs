@@ -163,6 +163,7 @@ data KeyStore = USER_NAME
                 | LAST_PLAYED_RIDE_ID 
                 | GO_TO_PLANS_PAGE
                 | SHOW_PARCEL_INTRODUCTION_POPUP
+                | METRO_STATIONS_LIST
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

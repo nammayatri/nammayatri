@@ -597,10 +597,9 @@ updateDriverInfoBT payload = do
             pure $ toast $ decodeErrorMessage errorPayload.response.errorMessage
             BackT $ pure GoBack
 
-mkUpdateDriverInfoReq :: String -> UpdateDriverInfoReq
+mkUpdateDriverInfoReq :: String -> UpdateDriverInfoReqEntity
 mkUpdateDriverInfoReq dummy
-  = UpdateDriverInfoReq
-    { middleName: Nothing
+  = { middleName: Nothing
     , firstName: Nothing
     , lastName: Nothing
     , deviceToken: Nothing
@@ -626,6 +625,7 @@ mkUpdateDriverInfoReq dummy
     , availableUpiApps: Nothing
     , canSwitchToRental: Nothing
     , canSwitchToInterCity: Nothing
+    , isSpecialLocWarrior: Nothing
     }
 
 
@@ -1856,3 +1856,4 @@ makeupdateHVSdkCallLogReq txnId status hvFlowId failureReason docType callbackRe
       "status" : status,
       "txnId" : txnId
     }
+    

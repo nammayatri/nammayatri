@@ -176,6 +176,7 @@ initData =
       , onRideBannerTimer : 0
       , scheduleRideCount : Nothing
       , blockExpiryTime : ""
+      , isSpecialLocWarrior : false
     }
   , props:
       { isFreeRide: false
@@ -274,6 +275,7 @@ initData =
       , showDeliveryCallPopup : false
       , retryRideList : false
       , showParcelIntroductionPopup : false
+      , showMetroWarriorWarningPopup : false
       }
   }
 

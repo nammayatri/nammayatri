@@ -1833,3 +1833,14 @@ getProxy str = case str of
   DROP_INSTRUCTION -> \a -> a @~ drop_instruction
   TRUCK -> \a -> a @~ truck
   REGISTER_YOUR_TRUCK -> \a -> a @~ register_your_truck
+  METRO_WARRIOR_MODE -> \a -> a @~ metro_warrior_mode
+  CHOOSE_METRO_STATION -> \a -> a @~ choose_metro_station
+  PRIMARY_METRO_STATION -> \a -> a @~ primary_metro_station
+  PRIMARY_STATION_INFO -> \a -> a @~ primary_station_info
+  NEARBY_STATIONS -> \a -> a @~ nearby_stations
+  NEARBY_STATION_INFO -> \a -> a @~ nearby_station_info
+  CHANGE -> \a -> a @~ change
+  DISABLE_METRO_WARRIORS_INFO -> \a -> a @~ disable_metro_warriors_info
+  CHOOSE_PREFERRED_METRO -> \a -> a @~ choose_preferred_metro
+  METRO_WARRIORS -> \a -> a @~ metro_warriors
+  SEARCH -> \a -> a @~ search

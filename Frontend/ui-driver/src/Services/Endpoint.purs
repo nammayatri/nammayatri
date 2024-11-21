@@ -404,3 +404,12 @@ driverReachedDestination rideId = (getBaseUrl "") <> "/driver/ride/" <> rideId <
 
 updateHVSdkCallLog :: String -> String
 updateHVSdkCallLog _ = (getBaseUrl "") <> "/driver/register/logHvSdkCall"
+
+updateMetroWarriorInfo :: String -> String
+updateMetroWarriorInfo driverId = (getBaseUrl "") <> "/updateInfo/specialLocWarrior?driverId=" <> driverId
+
+getMetroWarriorInfo :: String -> String
+getMetroWarriorInfo driverId = (getBaseUrl "") <> "/getInfo/specialLocWarrior?driverId=" <> driverId
+
+specialLocationListCategory :: String -> String
+specialLocationListCategory category = (getBaseUrl "") <> "/specialLocation/list/category?category=" <> category

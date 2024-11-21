@@ -1781,6 +1781,17 @@ newtype Keymap
   , no_plan_selected :: String
   , a_new_way_to_earn_parcel :: String
   , seamless_earning_experience_click_below :: String
+  , metro_warrior_mode :: String
+  , choose_metro_station :: String
+  , primary_metro_station :: String
+  , primary_station_info :: String
+  , nearby_stations :: String
+  , nearby_station_info :: String
+  , change :: String
+  , disable_metro_warriors_info :: String
+  , choose_preferred_metro :: String
+  , metro_warriors :: String
+  , search :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7072,3 +7083,36 @@ a_new_way_to_earn_parcel = a
 
 seamless_earning_experience_click_below :: Proxy "seamless_earning_experience_click_below"
 seamless_earning_experience_click_below = a
+
+metro_warrior_mode :: Proxy "metro_warrior_mode"
+metro_warrior_mode = Proxy
+
+choose_metro_station :: Proxy "choose_metro_station"
+choose_metro_station = Proxy
+
+primary_metro_station :: Proxy "primary_metro_station"
+primary_metro_station = Proxy
+
+primary_station_info :: Proxy "primary_station_info"
+primary_station_info = Proxy
+
+nearby_stations :: Proxy "nearby_stations"
+nearby_stations = Proxy
+
+nearby_station_info :: Proxy "nearby_station_info"
+nearby_station_info = Proxy
+
+change :: Proxy "change"
+change = Proxy
+
+disable_metro_warriors_info :: Proxy "disable_metro_warriors_info"
+disable_metro_warriors_info = Proxy
+
+choose_preferred_metro :: Proxy "choose_preferred_metro"
+choose_preferred_metro = Proxy
+
+metro_warriors :: Proxy "metro_warriors"
+metro_warriors = Proxy
+
+search :: Proxy "search"
+search = Proxy

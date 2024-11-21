@@ -83,6 +83,7 @@ import Screens.HotspotScreen.ScreenData as HotspotScreenData
 import Screens.RideRequestScreen.ScreenData as RideRequestScreenData
 import Screens.RideSummaryScreen.ScreenData as RideSummaryScreenData
 import Screens.ScheduledRideAcceptedScreen.ScreenData as ScheduledRideAcceptedScreenData
+import Screens.MetroWarriorsScreen.ScreenData as MetroWarriorsScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -144,6 +145,7 @@ newtype GlobalState = GlobalState {
   , rideSummaryScreen :: RideSummaryScreenData.RideSummaryScreenState
   , scheduledRideAcceptedScreen :: ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState
   , uploadParcelImageScreen :: UploadParcelImageScreenState
+  , metroWarriorsScreen :: MetroWarriorsScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -205,6 +207,7 @@ defaultGlobalState = GlobalState {
 , rideSummaryScreen : RideSummaryScreenData.initData
 , scheduledRideAcceptedScreen :ScheduledRideAcceptedScreenData.initData
 , uploadParcelImageScreen : UploadParcelImageScreenData.initData
+, metroWarriorsScreen : MetroWarriorsScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -277,6 +280,7 @@ data ScreenType =
   | RideSummaryScreenStateType (RideSummaryScreenData.RideSummaryScreenState -> RideSummaryScreenData.RideSummaryScreenState)
   | ScheduleRideAcceptedScreenStateType (ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState -> ScheduledRideAcceptedScreenData.ScheduleRideAcceptedScreenState )
   | UploadParcelImageScreenStateType (UploadParcelImageScreenState -> UploadParcelImageScreenState)
+  | MetroWarriorsScreenStateType (MetroWarriorsScreenState -> MetroWarriorsScreenState)
 
 data ScreenStage = HomeScreenStage HomeScreenStage
 
@@ -479,6 +483,8 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | GO_TO_RIDE_SUMMARY_SCREEN HomeScreenState
                           | GO_TO_UPLOAD_PARCEL_IMAGE HomeScreenState
                           | NOTIFY_DRIVER_REACHED_DESTINATION HomeScreenState
+                          | UPDATE_METRO_WARRIOR HomeScreenState
+                          | GO_TO_METRO_WARRIOR HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
@@ -616,3 +622,6 @@ data CUSTOMER_REFERRAL_TRACKER_SCREEN_OUTPUT = ADD_UPI_FLOW CustomerReferralScre
                                                | HOME_SCREEN_FROM_REFERRAL_TRACKER
 
 data UPLOAD_PARCEL_IMAGE_SCREEN_OUTPUT = GOTO_HOME_SCREEN | UPLOAD_IMAGE UploadParcelImageScreenState
+
+data METRO_WARRIOR_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_WARRIOR MetroWarriorsScreenState
+                                  | UPDATE_WARRIOR_SETTINGS MetroWarriorsScreenState UpdateSpecialLocWarriorInfoReq

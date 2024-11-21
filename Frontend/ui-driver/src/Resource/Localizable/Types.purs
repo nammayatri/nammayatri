@@ -1779,6 +1779,17 @@ data STR = LETS_GET_STARTED
         | DROP_INSTRUCTION
         | TRUCK
         | REGISTER_YOUR_TRUCK
+        | METRO_WARRIOR_MODE
+        | CHOOSE_METRO_STATION
+        | PRIMARY_METRO_STATION
+        | PRIMARY_STATION_INFO
+        | NEARBY_STATIONS
+        | NEARBY_STATION_INFO
+        | CHANGE
+        | DISABLE_METRO_WARRIORS_INFO
+        | CHOOSE_PREFERRED_METRO
+        | METRO_WARRIORS
+        | SEARCH
 
 -- instance showSTR :: Show STR
 --   show = case _ of
