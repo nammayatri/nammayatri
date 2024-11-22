@@ -1703,4 +1703,5 @@ getTe = Keymap {
 , bus_boarded_confirmation : "మీరు బస్సులో ఉన్నారా అని దయచేసి నిర్ధారించండి?"
 , towards_station : (\s -> s <> " వైపు")
 , bus_no : (\s -> "బస్ నంబర్: " <> s)
+, verified : "ధృవీకరించబడింది"
 }

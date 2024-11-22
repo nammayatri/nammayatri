@@ -409,7 +409,7 @@ ticketDetailsView push state =
         [ 
           imageView [
           width MATCH_PARENT
-        , height $ V 50
+        , height $ V 52
         , imageWithFallback $ fetchImage COMMON_ASSET case config.ticketStatus of
                                                               "ACTIVE" -> "ny_ic_active_state"
                                                               "EXPIRED" -> "ny_ic_expired_state"
@@ -426,7 +426,7 @@ ticketDetailsView push state =
         , background $ case config.ticketStatus of
                            "ACTIVE" -> Color.activeTicketColor
                            "EXPIRED" -> Color.expiredTicketColor
-                           _ -> Color.blue600
+                           _ -> Color.verifiedStateColor
         , cornerRadii $ Corners 15.0 false false true true
         ][
           metroHeaderView push state (FontStyle.body20 TypoGraphy) true
@@ -455,7 +455,7 @@ ticketDetailsView push state =
       , background $ case config.ticketStatus of
                            "ACTIVE" -> Color.activeTicketColor
                            "EXPIRED" -> Color.expiredTicketColor
-                           _ -> Color.blue600
+                           _ -> Color.verifiedStateColor
       , padding $ if isBusTicketBooking state then Padding 24 20 24 20 else Padding 16 30 16 16
       , margin $ MarginHorizontal 16 16 
       , cornerRadii $ Corners 15.0 true true true true

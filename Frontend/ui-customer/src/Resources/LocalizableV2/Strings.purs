@@ -1799,3 +1799,4 @@ getProxy str =
     BUS_BOARDED_CONFIRMATION -> \a -> a @~ bus_boarded_confirmation
     TOWARDS_STATION arg1 -> \a -> (a @~ towards_station) arg1
     BUS_NO arg1 -> \a -> (a @~ bus_no) arg1
+    VERIFIED -> \a -> a @~ verified

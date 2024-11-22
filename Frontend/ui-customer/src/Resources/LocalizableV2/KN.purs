@@ -1703,4 +1703,5 @@ getKn = Keymap {
 , bus_boarded_confirmation : "ನೀವು ಬಸ್ಸಿನಲ್ಲಿ ಇದ್ದೀರಾ ಎಂದು ದೃಢೀಕರಿಸಿ?"
 , towards_station : (\s -> s <> " ಕಡೆಗೆ")
 , bus_no : (\s -> "ಬಸ್ ಸಂಖ್ಯೆ: " <> s)
+, verified : "ಪರಿಶೀಲಿತ"
 }

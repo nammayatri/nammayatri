@@ -1717,6 +1717,7 @@ newtype Keymap = Keymap {
 , bus_boarded_confirmation :: String
 , towards_station :: String -> String
 , bus_no :: String -> String
+, verified :: String
 }
 
 
@@ -6839,3 +6840,6 @@ towards_station = a
 
 bus_no :: Proxy "bus_no"
 bus_no = a
+
+verified :: Proxy "verified"
+verified = a

@@ -1703,4 +1703,5 @@ getHi = Keymap {
 , bus_boarded_confirmation : "कृपया पुष्टि करें कि आप बस में हैं?"
 , towards_station : (\s -> s <> " की ओर")
 , bus_no : (\s -> "बस नंबर: " <> s)
+, verified : "सत्यापित"
 }
