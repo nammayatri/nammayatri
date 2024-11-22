@@ -51,7 +51,7 @@ import Effect.Aff (launchAff)
 import Effect.Uncurried (runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isTrue, flowRunner, liftFlow)
-import Helpers.Utils (updateLocListWithDistance, setText, getSavedLocationByTag, getCurrentLocationMarker, normalRoute, getFareProductTypeByData)
+import Helpers.Utils (updateLocListWithDistance, setText, getSavedLocationByTag, getCurrentLocationMarker, normalRoute, getFareProductTypeByData, fetchImage, FetchImageFrom(..))
 import JBridge (currentPosition, toast, hideKeyboardOnNavigation, updateInputString, locateOnMap, locateOnMapConfig, scrollViewFocus, showKeyboard, scrollViewFocus, animateCamera, hideKeyboardOnNavigation, exitLocateOnMap, removeMarker, Location, setMapPadding, getExtendedPath, drawRoute, defaultMarkerConfig, getLayoutBounds, mkRouteConfig, removeAllPolylines)
 import JBridge as JB
 import Log (trackAppActionClick)
@@ -72,6 +72,7 @@ import Components.ChooseYourRide.Controller as ChooseYourRideController
 import Language.Types (STR(..))
 import Helpers.TipConfig
 import Services.API as API
+import PrestoDOM.List as PList
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -110,6 +111,8 @@ data Action = NoAction
             | CurrentLocation 
             | ChooseYourRideAC ChooseYourRideController.Action
             | NotificationListener String NotificationBody
+            | SetListItem PList.ListItem
+            | StationOnClick Int
             
 
 data ScreenOutput = NoOutput SearchLocationScreenState
@@ -186,6 +189,49 @@ eval (LocationListItemAC savedLocations (LocationListItemController.FavClick ite
     void $ pure $ toast $ getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES
     continue state
     else exit $ SaveFavLoc state{data{saveFavouriteCard{ address = item.description , selectedItem = item, tag = "", tagExists = false, isBtnActive = false }}} savedLocations
+
+eval (StationOnClick index) state = do
+  let selectedLocation = (if state.props.focussedTextField == MB.Just SearchLocPickup then state.data.destLoc else state.data.srcLoc) <#> _.stationCode
+      filteredStations = DA.filter (\item -> MB.Just item.stationCode /= selectedLocation) state.data.updatedMetroStations
+      mbStation = filteredStations DA.!! index
+  case mbStation of
+    MB.Just station -> do 
+      continueWithCmd state [
+          pure (LocationListItemAC [] (LocationListItemController.OnClick $ transformStation station))
+              ]
+    MB.Nothing -> continue state
+  where
+    transformStation station = 
+      { prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
+      , postfixImageUrl : ""
+      , postfixImageVisibility : false
+      , title : station.stationName
+      , subTitle : ""
+      , placeId : MB.Nothing
+      , lat : MB.Nothing
+      , lon : MB.Nothing
+      , description : ""
+      , tag : station.stationCode
+      , tagType : MB.Nothing
+      , cardType : MB.Nothing
+      , address : ""
+      , tagName : ""
+      , isEditEnabled : true
+      , savedLocation : ""
+      , placeName : ""
+      , isClickable : true
+      , alpha : 1.0
+      , fullAddress : dummyAddress
+      , locationItemType : MB.Nothing
+      , distance : MB.Nothing
+      , showDistance : MB.Just false
+      , actualDistance : MB.Nothing
+      , frequencyCount : MB.Nothing
+      , recencyDate : MB.Nothing
+      , locationScore : MB.Nothing
+      , dynamicAction : MB.Nothing
+      , types : MB.Nothing
+      }
 
 eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state =
   if state.props.actionType == MetroStationSelectionAction then do
@@ -265,7 +311,6 @@ eval (LocationTagBarAC savedLoc (LocationTagBarController.TagClicked tag)) state
     _ -> do 
       void $ pure $ hideKeyboardOnNavigation true
       continue state{ props {searchLocStage = AllFavouritesStage}}
-
   where 
     handleAddLocation :: String -> Eval Action ScreenOutput SearchLocationScreenState
     handleAddLocation locationTag = 
@@ -280,6 +325,7 @@ eval (LocationTagBarAC savedLoc (LocationTagBarController.TagClicked tag)) state
       continueWithCmd state [ do 
         pure (LocationListItemAC savedLoc (LocationListItemController.OnClick loc))
       ]
+eval (SetListItem item) state = continue state { data { listItem = MB.Just item } }
 
 eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textField isEditText hasFocus)) state = do
   if (DA.any (_ == state.props.searchLocStage) [PredictionsStage, LocateOnMapStage]) then do

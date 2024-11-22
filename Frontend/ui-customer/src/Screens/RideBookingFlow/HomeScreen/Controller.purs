@@ -3410,6 +3410,9 @@ eval (ServicesOnClick service) state = do
     RC.DELIVERY -> do 
       let _ = EHE.addEvent (EHE.defaultEventObject "services_interacted_delivery") { module = "onboarding"}
       exit $ GoToParcelInstructions state
+    RC.DELIVERY -> exit $ GoToParcelInstructions state
+    RC.METRO -> exit $ GoToMetroTicketBookingFlow state
+    RC.METRO_OFFER -> exit $ GoToMetroTicketBookingFlow state
     _ -> continue state
 eval (IntercityBusPermissionAction (PopUpModal.OnButton1Click)) state = do
   void $ pure $ setValueToLocalStore INTERCITY_BUS_PHONE_NUMBER_PERMISSION "false"

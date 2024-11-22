@@ -1683,6 +1683,8 @@ getTe = Keymap {
 , confirm_contacts : "పరిచయాలను నిర్ధారించండి"
 , tickets_for_delhi_metro : "దిల్లీ మెట్రో టికెట్లు"
 , max_parcel_size : (\l b h -> "గరిష్ట పార్సల్ పరిమాణం: " <> l <> " cm x " <> b <> " cm x " <> h <> " cm")
+, metro_tickets : "మెట్రో టికెట్లు"
+, offers : "ఆఫ్స్"
 , boost_search_instantly : "మీ శోధనను తక్షణమే పెంచుకోండి!"
 , add_a_tip : "టిప్ ను జోడించండి"
 , updated_fare_str : "అప్‌డేట్ చేసిన ఛార్జీ"

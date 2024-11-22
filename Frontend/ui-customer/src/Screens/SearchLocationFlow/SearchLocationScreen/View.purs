@@ -67,10 +67,10 @@ import JBridge (showMap, debounceFunction, startLottieProcess, toast, lottieAnim
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Mobility.Prelude (boolToVisibility, boolToInvisibility)
-import Prelude ((<<<), (==), Unit, ($), (<>), (&&), (-), (/), (>), (/=), (+), (||), bind, show, pure, const, unit, not, void, discard, map, identity, (>=), (*), when, (<#>))
+import Mobility.Prelude (boolToVisibility, boolToInvisibility, noView)
+import Prelude ((<<<), (==), Unit, ($), (<>), (&&), (-), (/), (>), (/=), (+), (||), bind, show, pure, const, unit, not, void, discard, map, identity, (>=), (*), when, (<#>), (<$>))
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed, onAnimationEnd, adjustViewWithKeyboard, shimmerFrameLayout, accessibility, Accessiblity(..),accessibilityHint)
+import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed, onAnimationEnd, adjustViewWithKeyboard, shimmerFrameLayout, accessibility, Accessiblity(..),accessibilityHint, toPropValue)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -90,6 +90,7 @@ import Screens.SearchLocationScreen.ScreenData (dummyQuote)
 import Helpers.TipConfig
 import Components.LocationListItem (dummyAddress)
 import Screens (getScreen, ScreenName(..))
+import PrestoDOM.List as PList
 
 searchLocationScreen :: SearchLocationScreenState -> GlobalProps -> Screen Action SearchLocationScreenState ScreenOutput
 searchLocationScreen initialState globalProps = 
@@ -106,6 +107,7 @@ searchLocationScreen initialState globalProps =
   where 
     globalEventsFunc push = do
       void $ storeCallBackCustomer push NotificationListener "SearchLocationScreen" MB.Just MB.Nothing
+      void $ launchAff $ EHC.flowRunner defaultGlobalState $ computeListItem push
       case initialState.props.searchLocStage of 
         LocateOnMapStage -> do
           void $ runEffectFn2 storeCallBackLocateOnMap (\key lat lon -> push $ LocFromMap key lat lon) (handleLocateOnMapCallback "SearchLocationScreen")
@@ -118,7 +120,38 @@ searchLocationScreen initialState globalProps =
           pure unit
         _ -> pure unit 
       pure $ pure unit 
-
+    computeListItem push = do
+      listItem <- PList.preComputeListItem $ stationListCardView push
+      void $ EHC.liftFlow $ push (SetListItem listItem)
+    stationListCardView push =
+      linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , padding $ PaddingTop 8
+        , PList.visibilityHolder "visibility"
+        ]
+        [ linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , padding $ Padding 16 16 16 16
+            , cornerRadius 8.0
+            , stroke $ "1," <> Color.grey900
+            , gravity CENTER_VERTICAL
+            , PList.onClickHolder push StationOnClick
+            ]
+            [ imageView
+                [ height $ V 20
+                , width $ V 20
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_loc_grey"
+                , margin $ MarginRight 8
+                ]
+            , textView
+                $ [ PList.textHolder "stationName"
+                  , color Color.black800
+                  ]
+                <> FontStyle.body1 TypoGraphy
+            ]
+        ]
 
 view :: forall w. GlobalProps -> (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w 
 view globalProps push state = 
@@ -645,39 +678,81 @@ predictionsView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenStat
 predictionsView push state globalProps = let 
   viewVisibility = boolToVisibility $ 
     case state.props.actionType of 
-      MetroStationSelectionAction -> not $ DA.null state.data.updatedMetroStations
+      MetroStationSelectionAction -> false
       _ -> (not DA.null state.data.locationList) && (not state.props.locUnserviceable)
   headerText = if state.props.isAutoComplete then (getString SEARCH_RESULTS)
                 else if state.props.actionType == MetroStationSelectionAction then "Metro Stations"
                 else 
                   MB.maybe "" (\ currField -> if currField == SearchLocPickup then (getString PAST_SEARCHES) else (getString SUGGESTED_DESTINATION)) state.props.focussedTextField
   in
-  scrollView
+  linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , padding (PaddingBottom 60)
-    , background Color.white900
-    , scrollBarY false
-    , visibility viewVisibility
-    ][  linearLayout
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , padding $ PaddingHorizontal 16 16
-        ][  textView $
-              [ text headerText
-              , color Color.black700
-              , margin $ MarginVertical 14 8
-              ] <> FontStyle.body3 TypoGraphy
-          , predictionArrayView $ if state.props.actionType == MetroStationSelectionAction then metroStationsArray state.data.updatedMetroStations else state.data.locationList
-          , footerView
+    , orientation VERTICAL
+    ][ scrollView
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , padding (PaddingBottom 60)
+      , background Color.white900
+      , scrollBarY false
+      , visibility viewVisibility
+      ][  linearLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          , padding $ PaddingHorizontal 16 16
+          ][  textView $
+                [ text headerText
+                , color Color.black700
+                , margin $ MarginVertical 14 8
+                ] <> FontStyle.body3 TypoGraphy
+            , predictionArrayView state.data.locationList
+            , footerView
+          ]
         ]
-      ]
+    , metroStationListView push state
+  ]
   where
     footerView :: PrestoDOM (Effect Unit) w
     footerView = linearLayout
                   [ height $ V 80
                   , width MATCH_PARENT][]
+
+    metroStationListView push state =
+      linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , cornerRadius state.appConfig.primaryButtonCornerRadius
+        , stroke $ "1," <> Color.grey900
+        , orientation VERTICAL
+        , visibility $ boolToVisibility $ state.props.actionType == MetroStationSelectionAction
+        ]
+        [ stationListView
+    ]
+    stationListView = case state.data.listItem of
+      MB.Just lItem ->
+        linearLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          , margin $ Margin 16 8 16 0
+          ]
+          [ PList.list
+              [ height MATCH_PARENT
+              , scrollBarY false
+              , width MATCH_PARENT
+              , PList.listItem lItem
+              , PList.listDataV2 prestoListItems
+              ]
+          ]
+      _ -> noView
+      where
+        prestoListItems = DA.foldl (\acc station -> if selectedLocation /= MB.Just station.stationCode then acc <> [mkPlistItem station] else acc ) [] state.data.updatedMetroStations
+        mkPlistItem station =
+          { stationName: toPropValue station.stationName
+          , stationCode: toPropValue station.stationCode
+          , visibility: toPropValue (if selectedLocation /= MB.Just station.stationCode then "visible" else "gone")
+          }
+        selectedLocation = (if state.props.focussedTextField == MB.Just SearchLocPickup then state.data.destLoc else state.data.srcLoc) <#> _.stationCode
 
     predictionArrayView :: Array LocationListItemState -> PrestoDOM (Effect Unit) w
     predictionArrayView locList =
