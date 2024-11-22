@@ -324,8 +324,8 @@ editLocation rideId (personId, merchantId) req = do
       bookingUpdateReq <- buildbookingUpdateRequest booking
       origin <- QL.findById startLocMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId:" <> startLocMapping.locationId.getId)
       let sourceLatLong = Maps.LatLong {lat = origin.lat, lon = origin.lon}
-      let stopsLatLong = map (.gps) [destination]
-      void $ Serviceability.validateServiceabilityForEditDestination sourceLatLong stopsLatLong person
+      -- let stopsLatLong = map (.gps) [destination] -----start using after adding stops
+      void $ Serviceability.validateServiceabilityForEditDestination sourceLatLong destination.gps person
       QBUR.create bookingUpdateReq
       startLocMap <- SLM.buildPickUpLocationMapping startLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
       QLM.create startLocMap
