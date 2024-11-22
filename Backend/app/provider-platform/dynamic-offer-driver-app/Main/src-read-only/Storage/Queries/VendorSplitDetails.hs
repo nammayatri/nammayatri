@@ -6,7 +6,7 @@ module Storage.Queries.VendorSplitDetails where
 
 import qualified Data.Text
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.VehicleCategory
+import qualified Domain.Types.VehicleVariant
 import qualified Domain.Types.VendorSplitDetails
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -24,27 +24,27 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VendorSplitDetails.VendorSplitDetails] -> m ())
 createMany = traverse_ create
 
-findAllByAreaCityAndCategory ::
+findAllByAreaCityAndVariant ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Lib.Types.SpecialLocation.Area -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.VehicleCategory.VehicleCategory -> m [Domain.Types.VendorSplitDetails.VendorSplitDetails])
-findAllByAreaCityAndCategory area merchantOperatingCityId vehicleCategory = do
+  (Lib.Types.SpecialLocation.Area -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.VehicleVariant.VehicleVariant -> m [Domain.Types.VendorSplitDetails.VendorSplitDetails])
+findAllByAreaCityAndVariant area merchantOperatingCityId vehicleVariant = do
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.area $ Se.Eq area,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
+          Se.Is Beam.vehicleVariant $ Se.Eq vehicleVariant
         ]
     ]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Lib.Types.SpecialLocation.Area -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.VehicleCategory.VehicleCategory -> Data.Text.Text -> m (Maybe Domain.Types.VendorSplitDetails.VendorSplitDetails))
-findByPrimaryKey area merchantOperatingCityId vehicleCategory vendorId = do
+  (Lib.Types.SpecialLocation.Area -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.VehicleVariant.VehicleVariant -> Data.Text.Text -> m (Maybe Domain.Types.VendorSplitDetails.VendorSplitDetails))
+findByPrimaryKey area merchantOperatingCityId vehicleVariant vendorId = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.area $ Se.Eq area,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory,
+          Se.Is Beam.vehicleVariant $ Se.Eq vehicleVariant,
           Se.Is Beam.vendorId $ Se.Eq vendorId
         ]
     ]
@@ -57,7 +57,7 @@ updateByPrimaryKey (Domain.Types.VendorSplitDetails.VendorSplitDetails {..}) = d
     [ Se.And
         [ Se.Is Beam.area $ Se.Eq area,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory,
+          Se.Is Beam.vehicleVariant $ Se.Eq vehicleVariant,
           Se.Is Beam.vendorId $ Se.Eq vendorId
         ]
     ]
@@ -71,7 +71,7 @@ instance FromTType' Beam.VendorSplitDetails Domain.Types.VendorSplitDetails.Vend
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             splitType = splitType,
             splitValue = splitValue,
-            vehicleCategory = vehicleCategory,
+            vehicleVariant = vehicleVariant,
             vendorId = vendorId,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -84,7 +84,7 @@ instance ToTType' Beam.VendorSplitDetails Domain.Types.VendorSplitDetails.Vendor
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.splitType = splitType,
         Beam.splitValue = splitValue,
-        Beam.vehicleCategory = vehicleCategory,
+        Beam.vehicleVariant = vehicleVariant,
         Beam.vendorId = vendorId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

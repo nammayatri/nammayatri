@@ -123,6 +123,9 @@ updateRetryCountAndError id retryCount errorCode errorMessage = do
 
 instance FromTType' BeamPT.PaymentTransaction PaymentTransaction where
   fromTType' BeamPT.PaymentTransactionT {..} = do
+    splitSettlementResponse_ <- case splitSettlementResponse of
+      Just val -> eitherValue val
+      Nothing -> pure Nothing
     pure $
       Just
         PaymentTransaction
@@ -131,7 +134,7 @@ instance FromTType' BeamPT.PaymentTransaction PaymentTransaction where
             merchantId = Id merchantId,
             applicationFeeAmount = fromMaybe (HighPrecMoney 0.0) applicationFeeAmount,
             retryCount = fromMaybe 0 retryCount,
-            splitSettlementResponse = eitherValue =<< splitSettlementResponse,
+            splitSettlementResponse = splitSettlementResponse_,
             ..
           }
 
@@ -147,7 +150,9 @@ instance ToTType' BeamPT.PaymentTransaction PaymentTransaction where
         ..
       }
 
-eitherValue :: FromJSON KPayment.SplitSettlementResponse => A.Value -> Maybe KPayment.SplitSettlementResponse
+eitherValue :: (MonadFlow m, FromJSON KPayment.SplitSettlementResponse) => A.Value -> m (Maybe KPayment.SplitSettlementResponse)
 eitherValue value = case A.fromJSON value of
-  A.Success a -> Just a
-  A.Error _ -> Nothing -- error?
+  A.Success a -> pure $ Just a
+  A.Error err -> do
+    logError $ "parsing of SplitSettlementResponse failed : " <> show err
+    pure Nothing

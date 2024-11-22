@@ -3,7 +3,7 @@ imports:
   Text: Data.Text
   UTCTime: Kernel.Prelude
   Area: Lib.Types.SpecialLocation
-  VehicleCategory: Domain.Types.VehicleCategory
+  VehicleVariant: Domain.Types.VehicleVariant
 
 VendorSplitDetails:
   tableName: vendor_split_details
@@ -16,20 +16,20 @@ VendorSplitDetails:
     merchantOperatingCityId : Id MerchantOperatingCity
     area : Area
     vendorId : Text
-    vehicleCategory : VehicleCategory|NoRelation
+    vehicleVariant : VehicleVariant|NoRelation
     splitType : SplitType
     splitValue : Double
 
   constraints:
     merchantOperatingCityId: PrimaryKey
     area: PrimaryKey
-    vehicleCategory: PrimaryKey
+    vehicleVariant: PrimaryKey
     vendorId: PrimaryKey
 
   excludedFields: [merchantId]
 
   queries:
-    findAllByAreaCityAndCategory:
+    findAllByAreaCityAndVariant:
       kvFunction: findAllWithKV
       where:
-        and: [area, merchantOperatingCityId, vehicleCategory]
+        and: [area, merchantOperatingCityId, vehicleVariant]

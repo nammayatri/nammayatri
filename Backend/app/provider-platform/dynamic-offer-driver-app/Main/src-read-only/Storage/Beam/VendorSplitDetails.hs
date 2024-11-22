@@ -8,7 +8,7 @@ module Storage.Beam.VendorSplitDetails where
 import qualified Data.Text
 import qualified Database.Beam as B
 import Domain.Types.Common ()
-import qualified Domain.Types.VehicleCategory
+import qualified Domain.Types.VehicleVariant
 import qualified Domain.Types.VendorSplitDetails
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -21,7 +21,7 @@ data VendorSplitDetailsT f = VendorSplitDetailsT
     merchantOperatingCityId :: B.C f Data.Text.Text,
     splitType :: B.C f Domain.Types.VendorSplitDetails.SplitType,
     splitValue :: B.C f Kernel.Prelude.Double,
-    vehicleCategory :: B.C f Domain.Types.VehicleCategory.VehicleCategory,
+    vehicleVariant :: B.C f Domain.Types.VehicleVariant.VehicleVariant,
     vendorId :: B.C f Data.Text.Text,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
@@ -30,12 +30,12 @@ data VendorSplitDetailsT f = VendorSplitDetailsT
 
 instance B.Table VendorSplitDetailsT where
   data PrimaryKey VendorSplitDetailsT f
-    = VendorSplitDetailsId (B.C f Lib.Types.SpecialLocation.Area) (B.C f Data.Text.Text) (B.C f Domain.Types.VehicleCategory.VehicleCategory) (B.C f Data.Text.Text)
+    = VendorSplitDetailsId (B.C f Lib.Types.SpecialLocation.Area) (B.C f Data.Text.Text) (B.C f Domain.Types.VehicleVariant.VehicleVariant) (B.C f Data.Text.Text)
     deriving (Generic, B.Beamable)
-  primaryKey = VendorSplitDetailsId <$> area <*> merchantOperatingCityId <*> vehicleCategory <*> vendorId
+  primaryKey = VendorSplitDetailsId <$> area <*> merchantOperatingCityId <*> vehicleVariant <*> vendorId
 
 type VendorSplitDetails = VendorSplitDetailsT Identity
 
-$(enableKVPG ''VendorSplitDetailsT ['area, 'merchantOperatingCityId, 'vehicleCategory, 'vendorId] [])
+$(enableKVPG ''VendorSplitDetailsT ['area, 'merchantOperatingCityId, 'vehicleVariant, 'vendorId] [])
 
 $(mkTableInstances ''VendorSplitDetailsT "vendor_split_details")

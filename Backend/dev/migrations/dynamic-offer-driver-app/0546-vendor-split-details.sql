@@ -268,3 +268,7 @@ INSERT INTO atlas_driver_offer_bpp.vendor_split_details
 (area, merchant_operating_city_id, split_type, split_value, vehicle_category, vendor_id, created_at, updated_at)
 SELECT
 'Pickup_019b2a0a-54c0-4503-8057-8442dca1c2e9', id, 'FIXED', 2.0, 'TAXI', 'testing 5', now(), now() from atlas_driver_offer_bpp.merchant_operating_city where city = 'Siliguri';
+
+ALTER TABLE atlas_driver_offer_bpp.vendor_split_details RENAME COLUMN vehicle_category TO vehicle_variant;
+
+ALTER TABLE atlas_driver_offer_bpp.payment_transaction ADD COLUMN split_settlement_response json;

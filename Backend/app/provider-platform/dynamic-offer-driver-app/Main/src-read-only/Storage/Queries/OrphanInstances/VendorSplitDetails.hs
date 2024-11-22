@@ -21,7 +21,7 @@ instance FromTType' Beam.VendorSplitDetails Domain.Types.VendorSplitDetails.Vend
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             splitType = splitType,
             splitValue = splitValue,
-            vehicleCategory = vehicleCategory,
+            vehicleVariant = vehicleVariant,
             vendorId = vendorId,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -34,7 +34,7 @@ instance ToTType' Beam.VendorSplitDetails Domain.Types.VendorSplitDetails.Vendor
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.splitType = splitType,
         Beam.splitValue = splitValue,
-        Beam.vehicleCategory = vehicleCategory,
+        Beam.vehicleVariant = vehicleVariant,
         Beam.vendorId = vendorId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
