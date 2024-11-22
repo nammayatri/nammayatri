@@ -2915,13 +2915,40 @@ metroWarriorsToggleView push state =
           , color Color.blue800
           , weight 1.0
           ] <> FontStyle.body1 TypoGraphy
-        , imageView
-          [ imageWithFallback $ HU.fetchImage HU.GLOBAL_COMMON_ASSET if state.data.isSpecialLocWarrior then "ny_ic_switch_filled_blue" else "ny_ic_switch_inactive"
-          , height $ V 20
-          , width $ V 36
-          , onClick push $ const ToggleMetroWarriors
-          ]
+      , switchButtonView push state.data.isSpecialLocWarrior
       ]
     ]
   where
     metroWarriors = metroWarriorsConfig (getValueToLocalStore DRIVER_LOCATION) (getValueToLocalStore VEHICLE_VARIANT)
+
+    switchButtonView push isActive = 
+      let
+        backgroundColor = if isActive then Color.blue800 else Color.black600
+
+        align = if isActive then RIGHT else LEFT
+      in
+        linearLayout
+          [ width $ V 40
+          , height $ V 22
+          , cornerRadius 100.0
+          , background backgroundColor
+          , stroke $ "1," <> backgroundColor
+          , gravity CENTER_VERTICAL
+          , onClick push $ const ToggleMetroWarriors
+          ]
+          [ linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , gravity align
+              ]
+              [ linearLayout
+                  [ width $ V 16
+                  , height $ V 16
+                  , background Color.white900
+                  , cornerRadius 100.0
+                  , gravity CENTER_VERTICAL
+                  , margin (MarginHorizontal 2 2)
+                  ]
+                  []
+              ]
+          ]

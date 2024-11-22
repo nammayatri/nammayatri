@@ -72,8 +72,9 @@ eval (RefreshDataWithChanges toggle pStation secondaryStations) state = do
             Mb.Just primaryStation.id
         )
         pStation
+  void $ pure $ JB.hideKeyboardOnNavigation true
   exit
-    $ UpdateWarriorSettings state{props{showStationList = false}}
+    $ UpdateWarriorSettings state{props{showStationList = false}, data{searchString = Mb.Nothing}}
     $ API.UpdateSpecialLocWarriorInfoReq
         { isSpecialLocWarrior: toggle
         , preferredPrimarySpecialLocId: primaryStationId
